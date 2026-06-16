@@ -1,6 +1,5 @@
 import QtQuick
 import Quickshell
-import Quickshell.Hyprland
 import Quickshell.Io
 import "modules/bar"
 import "modules/osd"
@@ -15,20 +14,7 @@ ShellRoot {
     property bool pickerActive: false
     property bool pickerWatcherReady: false
 
-    readonly property ShellScreen activeOverlayScreen: {
-        const screens = Quickshell.screens
-        if (!screens || screens.length === 0) return null
-
-        const focused = Hyprland.focusedMonitor
-        if (focused) {
-            for (let i = 0; i < screens.length; i++) {
-                const mon = Hyprland.monitorFor(screens[i])
-                if (mon && mon.name === focused.name) return screens[i]
-            }
-        }
-
-        return screens[0]
-    }
+    readonly property ShellScreen activeOverlayScreen: Monitors.overlayScreen
 
     Connections {
         target: Quickshell
@@ -93,14 +79,14 @@ ShellRoot {
             LazyLoader {
                 id: _barLoader
                 active: false
-                readonly property bool settingsReady: ShellSettings.ready
+                readonly property bool barOn: ShellSettings.ready && Monitors.barEnabled(_barScope.modelData)
                 readonly property string barPos: ShellSettings.barPosition
-                onSettingsReadyChanged: if (settingsReady) active = true
-                Component.onCompleted: if (ShellSettings.ready) active = true
+                onBarOnChanged: active = barOn
+                Component.onCompleted: active = barOn
                 onBarPosChanged: {
                     if (!active) return
                     active = false
-                    Qt.callLater(() => _barLoader.active = true)
+                    Qt.callLater(() => _barLoader.active = _barLoader.barOn)
                 }
                 component: Bar { targetScreen: _barScope.modelData; pickerActive: root.pickerActive }
             }

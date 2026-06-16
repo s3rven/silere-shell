@@ -5,7 +5,11 @@ import "../../../services"
 Canvas {
     id: _viz
     anchors.fill: parent
-    visible: Media.shown && Media.playing && Media.cavaReady
+
+    property string barName: ""   // "" (single monitor / unknown) always paints
+    readonly property bool _onActiveBar: barName.length === 0 || Monitors.activeName === barName
+
+    visible: Media.shown && Media.playing && Media.cavaReady && _onActiveBar
     renderTarget:   Canvas.Image
     renderStrategy: Canvas.Threaded
 

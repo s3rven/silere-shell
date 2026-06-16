@@ -137,7 +137,7 @@ Item {
         Dot             { show: root._compact || root._vBright }
         BatteryWidget   { id: batteryWidget; anchors.verticalCenter: parent.verticalCenter }
         Dot             { show: root._vBattery }
-        MediaWidget     { id: mediaWidget; anchors.verticalCenter: parent.verticalCenter }
+        MediaWidget     { id: mediaWidget; anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
         Dot             { show: root._vMedia }
         Clock           { anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
     }

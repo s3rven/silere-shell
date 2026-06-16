@@ -13,6 +13,9 @@ Item {
 
     readonly property bool show: Media.shown
 
+    // Visualizer paints only on the active monitor.
+    property var screen: null
+
     // Marquee: slide speed (px/s) and per-end hold times.
     // Start hold is short — the user already sees the title beginning during
     // the track transition. End hold is long so the full title end can be read.
@@ -72,7 +75,7 @@ Item {
         id: _vizLoader
         anchors.fill: parent
         active: ShellSettings.mediaProgress
-        sourceComponent: Component { MediaVisualizer {} }
+        sourceComponent: Component { MediaVisualizer { barName: root.screen ? root.screen.name : "" } }
     }
 
     Item {

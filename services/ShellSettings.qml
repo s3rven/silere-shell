@@ -81,6 +81,8 @@ Singleton {
     property real   barShadowStrength:   1.0      // scales the floating shadow's depth, 0.3-2.0
     property string barPosition:         "top"     // "top" | "bottom"
     property real   barOpacity:          0.82
+    property string barDisabledMonitors: ""        // comma-joined connector names whose bar is hidden
+    property string overlayMonitor:      ""        // "" = follow focus; else a monitor connector name for notifs/OSD
 
     property int    nightLightTemp:      3500   // color temperature for hyprsunset, in Kelvin
     property real   nightLightLat:      45.0   // latitude for solar suggestion, degrees N (+) / S (-)
@@ -176,6 +178,8 @@ Singleton {
         { k: "barShadowStrength",   t: "real", min: 0.3,  max: 2.0 },
         { k: "barPosition",         t: "enum", vals: ["top", "bottom"] },
         { k: "barOpacity",          t: "real", min: 0.4,  max: 1.0 },
+        { k: "barDisabledMonitors", t: "re",   re: /^[A-Za-z0-9._,-]*$/ },
+        { k: "overlayMonitor",      t: "re",   re: /^[A-Za-z0-9._-]*$/ },
 
         { k: "nightLightTemp",      t: "int",  min: 1000, max: 6500 },
         { k: "nightLightLat",      t: "real", min: -90.0, max: 90.0 },

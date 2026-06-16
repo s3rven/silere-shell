@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import "../../config"
 import "../../services"
 
@@ -1162,6 +1163,34 @@ Item {
                         onChosen: (v) => ShellSettings.uiScale = v
                         topRadius: 10; bottomRadius: 10
                     }
+                }
+
+                SectionLabel { label: "MONITORS"; visible: Quickshell.screens.length > 1 }
+                SettingsCard {
+                    visible: Quickshell.screens.length > 1
+                    ChoiceChipRow {
+                        glyph: "󰍹"; label: "Notices & OSD on"
+                        currentValue: ShellSettings.overlayMonitor
+                        model: {
+                            const t = [{ value: "", label: "Focus" }]
+                            const s = Quickshell.screens || []
+                            for (let i = 0; i < s.length; i++) t.push({ value: s[i].name, label: s[i].name })
+                            return t
+                        }
+                        onChosen: (v) => ShellSettings.overlayMonitor = v
+                        topRadius: 10
+                    }
+                    Repeater {
+                        model: Quickshell.screens
+                        delegate: ToggleRow {
+                            required property var modelData
+                            glyph: "󰍺"
+                            label: "Bar on " + modelData.name
+                            checked: Monitors.barEnabled(modelData)
+                            onToggled: Monitors.setBarEnabled(modelData.name, !checked)
+                        }
+                    }
+                    HintText { text: "Pick which screens get a bar, and where notifications and the volume/brightness OSD appear." }
                 }
 
                 Item { width: 1; height: 12 }
