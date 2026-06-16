@@ -38,7 +38,7 @@ Item {
 
         Repeater {
             id: _items
-            model: ShellSettings.trayWidget ? SystemTray.items : null
+            model: SystemTray.items
 
             delegate: Item {
                 id: _tile

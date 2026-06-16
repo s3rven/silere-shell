@@ -38,8 +38,8 @@ PanelWindow {
     // masked to the surface, so the pad never catches the pointer.
     readonly property bool shadowOn: ShellSettings.barFloating && ShellSettings.barShadow
     // Always reserved when floating so toggling the shadow never resizes the window.
-    // 28 (a 4px-grid multiple) leaves room for the soft ambient layer to bleed.
-    readonly property int  shadowPad: ShellSettings.barFloating ? 28 : 0
+    // 24 (a 4px-grid multiple) leaves room for the ambient layer (blur 18 + offset 2 = 20px spread).
+    readonly property int  shadowPad: ShellSettings.barFloating ? 24 : 0
 
     // Hidden states share one exit/enter animation and also release the
     // reserved zone: during the overview the tiled windows expand into the
@@ -99,11 +99,10 @@ PanelWindow {
 
         readonly property real radius: Math.min(bar.cornerRadius, width / 2)
 
-        // Drop shadow grounding the floating surface: a wide, faint ambient halo
-        // plus a tighter, deeper contact shadow cast toward the desktop. Two
-        // analytic layers (no FBO, no per-frame cost) read as real elevation
-        // instead of one flat smear; built only while floating + enabled. The
-        // strength slider scales both alphas (clamped so it never blacks out).
+        // Drop shadow grounding the floating surface: a wide ambient halo plus a
+        // tighter contact shadow cast toward the desktop. Two analytic layers (no
+        // FBO, no per-frame cost) read as real elevation instead of one flat smear;
+        // built only while floating + enabled. Strength slider scales both alphas.
         Loader {
             anchors.fill: parent
             active: bar.shadowOn
@@ -114,16 +113,16 @@ PanelWindow {
                 RectangularShadow {
                     anchors.fill: parent
                     radius: surface.radius
-                    blur: 22
+                    blur: 18
                     offset: Qt.vector2d(0, bar.atBottom ? -2 : 2)
-                    color: Qt.rgba(0, 0, 0, Math.min(0.30, 0.15 * parent.strength))
+                    color: Qt.rgba(0, 0, 0, Math.min(0.38, 0.20 * parent.strength))
                 }
                 RectangularShadow {
                     anchors.fill: parent
                     radius: surface.radius
                     blur: 9
-                    offset: Qt.vector2d(0, bar.atBottom ? -5 : 5)
-                    color: Qt.rgba(0, 0, 0, Math.min(0.60, 0.34 * parent.strength))
+                    offset: Qt.vector2d(0, bar.atBottom ? -6 : 6)
+                    color: Qt.rgba(0, 0, 0, Math.min(0.58, 0.34 * parent.strength))
                 }
             }
         }

@@ -81,7 +81,7 @@ Item {
     Item {
         id: textClip
         anchors.verticalCenter: parent.verticalCenter
-        readonly property int  maxW: 160
+        readonly property int  maxW: ShellSettings.barCompact ? 120 : 160
         // Reduce-motion keeps the title elided and still, so it never scrolls.
         readonly property bool needsScroll: trackText.implicitWidth > maxW && !ShellSettings.reduceMotion
         readonly property real _overflow:   Math.max(0, trackText.implicitWidth - maxW)

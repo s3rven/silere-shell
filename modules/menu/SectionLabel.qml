@@ -13,7 +13,7 @@ Item {
     property string label: ""
     property bool   first: false
 
-    readonly property int _topGap: first ? 2 : 14
+    readonly property int _topGap: first ? 2 : 12
     readonly property int _botGap: 6
 
     width: parent ? parent.width : 0

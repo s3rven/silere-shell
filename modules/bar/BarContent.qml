@@ -15,7 +15,7 @@ Item {
 
     readonly property int gap:    10
     readonly property int dotGap: ShellSettings.barCompact
-        ? Math.max(7, ShellSettings.barSpacing - 3)
+        ? Math.max(5, ShellSettings.barSpacing - 5)
         : ShellSettings.barSpacing
     // Free span between the widget groups. The title prefers the bar's true
     // center but slides off-center as a group closes in, instead of clamping
@@ -27,9 +27,8 @@ Item {
     // Each separator is owned by the widget on its LEFT and shows only while that
     // widget shows, so a hidden widget takes its divider with it — never a leading,
     // trailing, or doubled dot. Volume is always present.
-    // Compact (β) fuses semantic neighbours — status (updates+network) and
-    // levels (volume+brightness) — so dividers only mark group boundaries:
-    // [updates network] · [vol bri] · [battery] · [media] · [clock]
+    // Compact (β) fuses semantic neighbours into fewer groups:
+    // [updates network] · [vol bri battery] · [media] · [clock]
     readonly property bool _compact: ShellSettings.barCompact
     readonly property bool _vUpdates: Updates.available || Updates.isChecking
     readonly property bool _vNetwork: !Network.toolAvailable || Network.available
@@ -131,10 +130,10 @@ Item {
         Volume          { anchors.verticalCenter: parent.verticalCenter }
         Dot             { show: !root._compact }                     // intra-group: fuses with brightness
         BrightnessWidget{ anchors.verticalCenter: parent.verticalCenter }
-        // Levels group trailing dot. Volume is always present, so the [vol bri]
-        // group always exists; in compact the boundary dot must show even when
-        // brightness is absent (no backlight), else volume fuses into battery.
-        Dot             { show: root._compact || root._vBright }
+        // Levels group trailing dot. Non-compact: shows when bri is present.
+        // Compact: hide when battery follows (battery's own dot marks the group
+        // boundary instead); show only when bri is present but battery is absent.
+        Dot             { show: root._vBright && (!root._compact || !root._vBattery) }
         BatteryWidget   { id: batteryWidget; anchors.verticalCenter: parent.verticalCenter }
         Dot             { show: root._vBattery }
         MediaWidget     { id: mediaWidget; anchors.verticalCenter: parent.verticalCenter; screen: root.screen }

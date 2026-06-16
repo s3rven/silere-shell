@@ -315,7 +315,7 @@ Item {
             peak:           _lineEffect._tempPeak
             floor:          _lineEffect._tempFloor
             duration:       _lineEffect._tempPulseDur
-            running:        (_lineEffect._glowEnabled && ShellSettings.underlineTempGlow) && CpuTemp.critical && !ShellSettings.reduceMotion
+            running:        (_lineEffect._glowEnabled && ShellSettings.underlineTempGlow) && CpuTemp.critical && !ShellSettings.reduceMotion && !Idle.isIdle
         }
     }
 

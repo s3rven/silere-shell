@@ -216,9 +216,9 @@ Item {
         sourceComponent: RectangularShadow {
             anchors.fill: parent
             radius: card._cardRadius
-            blur:   16
+            blur:   12
             offset: Qt.vector2d(0, ShellSettings.barPosition === "bottom" ? -3 : 3)
-            color:  Qt.rgba(0, 0, 0, 0.45)
+            color:  Qt.rgba(0, 0, 0, Math.min(0.55, 0.35 * ShellSettings.barShadowStrength))
         }
     }
 

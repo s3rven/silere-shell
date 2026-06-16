@@ -310,18 +310,16 @@ Item {
                             width: parent.width
                             height: _grp.isGroup ? root._navHdrH : root._navStdHdrH
 
-                            Text {
+                            Rectangle {
                                 id: _hdrTick
                                 visible:                _grp.isGroup
                                 anchors.left:           parent.left
                                 anchors.leftMargin:     4
                                 anchors.bottom:         parent.bottom
-                                anchors.bottomMargin:   5
-                                text:           "◆"
-                                color:          Theme.accent
-                                font.family:    Settings.font
-                                font.pixelSize: Settings.fontSize - 4
-                                renderType:     Text.NativeRendering
+                                anchors.bottomMargin:   9
+                                width:  12
+                                height: 1
+                                color:  Theme.withAlpha(Theme.accent, 0.55)
                             }
                             Text {
                                 id: _hdrLabel
@@ -470,8 +468,8 @@ Item {
                 width: parent.width
                 // 4px multiple: the body sits at this height, so an off-grid value
                 // would push every card (and its first divider) onto a half physical
-                // pixel at 1.25x and double the hairlines. 16 (tabContent.y) + 52 = 68.
-                height: 52
+                // pixel at 1.25x and double the hairlines. 16 (tabContent.y) + 44 = 60.
+                height: 44
                 readonly property var _meta: root._sectionMeta[root._shownSection]
                                             ?? ({ glyph: "", label: "", group: "" })
 
@@ -1254,6 +1252,7 @@ Item {
                 spacing: 0
                 visible: root._shownSection === "separators"
 
+                SectionLabel { label: "STYLE"; first: true }
                 SettingsCard {
                     ToggleRow {
                         glyph: "󰡍"; label: "Compact bar"; badge: "beta"
@@ -1282,7 +1281,12 @@ Item {
                             { value: 15, label: "Loose"  }
                         ]
                         onChosen: (v) => ShellSettings.barSpacing = v
+                        bottomRadius: 10
                     }
+                }
+
+                SectionLabel { label: "APPEARANCE" }
+                SettingsCard {
                     SliderRow {
                         glyph: ShellSettings.dotStyle === "line" ? "│" : ShellSettings.dotStyle
                         glyphColor: Theme.withAlpha(Theme.text, Math.max(0.35, ShellSettings.dotOpacity))
@@ -1291,7 +1295,7 @@ Item {
                         min: 0.10; max: 1.0; step: 0.05
                         displayValue: Math.round(ShellSettings.dotOpacity * 100) + "%"
                         onChanged: (v) => ShellSettings.dotOpacity = v
-                        bottomRadius: 10
+                        topRadius: 10; bottomRadius: 10
                     }
                 }
             }
@@ -1402,6 +1406,7 @@ Item {
                 spacing: 0
                 visible: root._shownSection === "clock"
 
+                SectionLabel { label: "FORMAT"; first: true }
                 SettingsCard {
                     ChoiceChipRow {
                         glyph: "󰃭"; label: "Date"
@@ -1447,6 +1452,7 @@ Item {
                 spacing: 0
                 visible: root._shownSection === "workspaces"
 
+                SectionLabel { label: "BEHAVIOR"; first: true }
                 SettingsCard {
                     ToggleRow {
                         glyph: "󰗘"; label: "Slide animation"
@@ -1463,11 +1469,18 @@ Item {
                         glyph: "󰂟"; label: "Notification pulse"
                         checked: ShellSettings.wsNotifPulse
                         onToggled: ShellSettings.wsNotifPulse = !ShellSettings.wsNotifPulse
+                        bottomRadius: 10
                     }
+                }
+
+                SectionLabel { label: "LABELS" }
+                SettingsCard {
                     ToggleRow {
                         glyph: "󰎠"; label: "Show numbers"
                         checked: ShellSettings.wsShowNumbers
                         onToggled: ShellSettings.wsShowNumbers = !ShellSettings.wsShowNumbers
+                        topRadius: 10
+                        bottomRadius: ShellSettings.wsShowNumbers ? 0 : 10
                     }
                     CollapsibleSection {
                         expanded: ShellSettings.wsShowNumbers
@@ -1475,12 +1488,18 @@ Item {
                             glyph: "󰮚"; label: "Roman numerals"
                             checked: ShellSettings.wsRomanNumerals
                             onToggled: ShellSettings.wsRomanNumerals = !ShellSettings.wsRomanNumerals
+                            bottomRadius: 10
                         }
                     }
+                }
+
+                SectionLabel { label: "DISPLAY" }
+                SettingsCard {
                     ToggleRow {
                         glyph: "󰀻"; label: "Show app icons"; badge: "beta"
                         checked: ShellSettings.wsShowAppIcons
                         onToggled: ShellSettings.wsShowAppIcons = !ShellSettings.wsShowAppIcons
+                        topRadius: 10
                     }
                     CollapsibleSection {
                         expanded: ShellSettings.wsShowAppIcons
@@ -1553,6 +1572,7 @@ Item {
                 spacing: 0
                 visible: root._shownSection === "underline"
 
+                SectionLabel { label: "EDGE EFFECT"; first: true }
                 SettingsCard {
                     ChoiceChipRow {
                         glyph: "󰍴"; label: "Style"
@@ -1583,8 +1603,17 @@ Item {
                             glyph: "󰐗"; label: "Wrap floating bar"; badge: "beta"
                             checked: ShellSettings.underlineFloatingWrap
                             onToggled: ShellSettings.underlineFloatingWrap = !ShellSettings.underlineFloatingWrap
+                            bottomRadius: 10
                         }
                     }
+                }
+
+                SectionLabel {
+                    label: "GLOW"
+                    visible: ShellSettings.underlineGlow || ShellSettings.barBorderVisible
+                }
+                SettingsCard {
+                    visible: ShellSettings.underlineGlow || ShellSettings.barBorderVisible
                     CollapsibleSection {
                         expanded: ShellSettings.underlineGlow
                         SliderRow {
@@ -1593,6 +1622,7 @@ Item {
                             min: 0.5; max: 2.0; step: 0.1
                             displayValue: Math.round(ShellSettings.glowStrength * 100) + "%"
                             onChanged: (v) => ShellSettings.glowStrength = v
+                            topRadius: 10
                         }
                     }
                     CollapsibleSection {
@@ -1603,6 +1633,7 @@ Item {
                             min: 0.5; max: 2.0; step: 0.1
                             displayValue: Math.round(ShellSettings.barLineStrength * 100) + "%"
                             onChanged: (v) => ShellSettings.barLineStrength = v
+                            topRadius: ShellSettings.underlineGlow ? 0 : 10
                             bottomRadius: ShellSettings.underlineGlow ? 0 : 10
                         }
                     }
@@ -1691,6 +1722,7 @@ Item {
                 spacing: 0
                 visible: root._shownSection === "popups"
 
+                SectionLabel { label: "ENABLE"; first: true }
                 SettingsCard {
                     ToggleRow {
                         glyph: "󰂚"; label: "Popup notifications"
@@ -1702,7 +1734,12 @@ Item {
                         glyph: "󰊓"; label: "Silence in fullscreen"
                         checked: ShellSettings.notifFullscreenSilence
                         onToggled: ShellSettings.notifFullscreenSilence = !ShellSettings.notifFullscreenSilence
+                        bottomRadius: 10
                     }
+                }
+
+                SectionLabel { label: "DISPLAY" }
+                SettingsCard {
                     ChoiceChipRow {
                         glyph: "󰔛"; label: "Dismiss after"
                         rowEnabled: ShellSettings.notifPopupEnabled
@@ -1714,6 +1751,7 @@ Item {
                             { value: 15000, label: "15s" }
                         ]
                         onChosen: (v) => ShellSettings.notifDefaultTimeout = v
+                        topRadius: 10
                     }
                     ChoiceChipRow {
                         glyph: "󰍹"; label: "Position"
@@ -1736,7 +1774,12 @@ Item {
                             { value: 0, label: "All" }
                         ]
                         onChosen: (v) => ShellSettings.notifMaxVisible = v
+                        bottomRadius: 10
                     }
+                }
+
+                SectionLabel { label: "ALERTS" }
+                SettingsCard {
                     ChoiceChipRow {
                         glyph: "󰀦"; label: "Silere alerts"
                         rowEnabled: ShellSettings.notifPopupEnabled
@@ -1748,7 +1791,7 @@ Item {
                             { value: 0,     label: "Stay" }
                         ]
                         onChosen: (v) => ShellSettings.sysAlertTimeout = v
-                        bottomRadius: 10
+                        topRadius: 10; bottomRadius: 10
                     }
                 }
             }

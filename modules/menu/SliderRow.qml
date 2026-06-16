@@ -35,11 +35,11 @@ Item {
         root.changed(_clamp(_snap(root.value + dir * root.step)))
     }
 
-    // 4px multiple (was 54) so row.y inside SettingsCard lands on whole physical
+    // 4px multiple so row.y inside SettingsCard lands on whole physical
     // px at 1.25x and every divider renders the same hairline thickness.
     width:          parent ? parent.width : 0
-    height:         56
-    implicitHeight: 56
+    height:         52
+    implicitHeight: 52
 
     HoverHandler { id: _rowHover; cursorShape: Qt.PointingHandCursor }
 
@@ -59,7 +59,7 @@ Item {
         anchors.left:       parent.left
         anchors.leftMargin: 12
         anchors.top:        parent.top
-        anchors.topMargin:  10
+        anchors.topMargin:  8
         spacing: 8
 
         Text {

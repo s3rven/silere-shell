@@ -14,7 +14,7 @@ PanelWindow {
 
     readonly property int _cardW: 320
     // Reserve so a floating card's drop shadow isn't clipped at the window edge.
-    readonly property int _shadowPad: (ShellSettings.barFloating && ShellSettings.barShadow) ? 22 : 0
+    readonly property int _shadowPad: (ShellSettings.barFloating && ShellSettings.barShadow) ? 16 : 0
     // The side gap a floating bar leaves (mirrors Bar.qml's surfaceWidth math); the
     // card's outer edge lines up with the bar's edge instead of hugging the screen
     // corner. Plain margin when the bar isn't floating.

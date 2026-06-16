@@ -19,22 +19,22 @@ Singleton {
     property bool   showSeconds:         false
     property bool   compactDate:         false
     property bool   clock12h:            false
-    property bool   showWindowTitle:     true
-    property bool   showWindowTitleApp:  true
+    property bool   showWindowTitle:     false
+    property bool   showWindowTitleApp:  false
     property real   windowTitleOpacity:  1.0   // opacity of the whole title line (app + title)
     property bool   updatesWidget:       false
-    property bool   trayWidget:          true
+    property bool   trayWidget:          false
     property bool   valuesOnHover:       false
     property bool   batteryAutoHide:     false
 
     property bool   osdEnabled:     true
     property int    osdTimeout:     2000
     property string osdKindFilter:  "both"   // "both" | "volume" | "brightness"
-    property bool   osdBatteryWarn: true
-    property bool   osdTempWarn:    true
+    property bool   osdBatteryWarn: false
+    property bool   osdTempWarn:    false
     property string osdPosition:    "top"    // "top" | "bottom"
-    property bool   osdShimmer:     true     // sweeping highlight on the volume bar
-    property bool   osdVolumeTint:  true     // warm "loud" tint as volume nears max
+    property bool   osdShimmer:     false
+    property bool   osdVolumeTint:  false    // warm "loud" tint as volume nears max
     property bool   osdChargedNotify: false  // one-shot OSD peek when the battery reaches full
     property bool   osdBarIntegrated: false  // β: show OSD inline in the bar center instead of a floating pill
     property bool   reduceMotion:        false
@@ -50,18 +50,18 @@ Singleton {
     property int    batteryLowThreshold: 20
     property int    notifDefaultTimeout: 5000
     property int    sysAlertTimeout:     10000  // auto-close (ms) for silere's battery/temp alert notifications; 0 = stay until clicked
-    property bool   clockShowDate:       true
-    property bool   barBorderVisible:    true
+    property bool   clockShowDate:       false
+    property bool   barBorderVisible:    false
     property real   barLineStrength:     1.0
 
-    property bool   underlineGlow:       true
-    property bool   underlineIdleGlow:   true   // subtle resting accent rim; traces the floating bar's outline
-    property bool   underlineNotifGlow:  true
-    property bool   underlineBattGlow:   true
-    property bool   underlineNetGlow:        true
-    property bool   underlineTempGlow:       true
-    property bool   underlineScreenshotGlow: true
-    property bool   underlineFloatingWrap:   true
+    property bool   underlineGlow:       false
+    property bool   underlineIdleGlow:   false
+    property bool   underlineNotifGlow:  false
+    property bool   underlineBattGlow:   false
+    property bool   underlineNetGlow:        false
+    property bool   underlineTempGlow:       false
+    property bool   underlineScreenshotGlow: false
+    property bool   underlineFloatingWrap:   false
     property real   glowStrength:            1.0
     property real   activeGlowStrength:      1.0
     property real   screenshotGlowStrength:  1.0
@@ -73,11 +73,11 @@ Singleton {
     property int    barSpacing:          11        // gap between bar widgets / separators
     property bool   barCompact:          false     // β: no separator dots, tighter gaps
     property int    barHeight:           36
-    property bool   barFloating:         true      // detached rounded surface, matches the menu/calendar/notif panels
+    property bool   barFloating:         false     // detached rounded surface, matches the menu/calendar/notif panels
     property real   barWidth:            0.90     // visual bar width, 0.5-1.0 of screen
     property string barCornerStyle:      "round"  // "flat" | "round"
     property int    barRadius:           14       // rounded-corner radius in px
-    property bool   barShadow:           true     // drop shadow under the floating surface
+    property bool   barShadow:           false    // drop shadow under the floating surface
     property real   barShadowStrength:   1.0      // scales the floating shadow's depth, 0.3-2.0
     property string barPosition:         "top"     // "top" | "bottom"
     property real   barOpacity:          0.82
@@ -93,7 +93,7 @@ Singleton {
     property bool   wsRomanNumerals:     false
     property bool   wsScrollSwitch:      true
     property bool   wsShowAppIcons:      false
-    property bool   wsNotifPulse:        true
+    property bool   wsNotifPulse:        false
     property real   wsIconOpacity:       0.85
     property int    wsIconSize:          16
 

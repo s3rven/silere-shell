@@ -40,11 +40,10 @@ Row {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 0
 
-            // Day name slides away in compact mode
             CollapsingText {
                 text:     DateTime.cachedDayName
                 color:    root._cSub
-                expanded: !ShellSettings.compactDate
+                expanded: !ShellSettings.compactDate && !ShellSettings.barCompact
             }
             RollingText {
                 text:  DateTime.cachedDateCore
