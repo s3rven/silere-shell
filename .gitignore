@@ -1,0 +1,5 @@
+*.qslog
+
+# matugen-generated theme (copied from MatugenTheme.default.qml on install)
+config/MatugenTheme.qml
+.claude/

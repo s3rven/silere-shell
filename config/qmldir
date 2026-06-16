@@ -1,0 +1,11 @@
+# theme
+singleton MatugenTheme  1.0 MatugenTheme.qml
+singleton Theme         1.0 Theme.qml
+
+# settings
+singleton Motion        1.0 Motion.qml
+singleton Settings      1.0 Settings.qml
+
+# helpers
+PulseLoop 1.0 PulseLoop.qml
+SupervisedProcess 1.0 SupervisedProcess.qml

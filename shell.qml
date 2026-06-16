@@ -1,0 +1,114 @@
+import QtQuick
+import Quickshell
+import Quickshell.Hyprland
+import Quickshell.Io
+import "modules/bar"
+import "modules/osd"
+import "modules/notifications"
+import "modules/menu"
+import "modules/calendar"
+import "services"
+
+ShellRoot {
+    id: root
+
+    property bool pickerActive: false
+    property bool pickerWatcherReady: false
+
+    readonly property ShellScreen activeOverlayScreen: {
+        const screens = Quickshell.screens
+        if (!screens || screens.length === 0) return null
+
+        const focused = Hyprland.focusedMonitor
+        if (focused) {
+            for (let i = 0; i < screens.length; i++) {
+                const mon = Hyprland.monitorFor(screens[i])
+                if (mon && mon.name === focused.name) return screens[i]
+            }
+        }
+
+        return screens[0]
+    }
+
+    Connections {
+        target: Quickshell
+        function onReloadCompleted() { Quickshell.inhibitReloadPopup() }
+    }
+
+    // Quickshell lazy-loads singletons, reading a member instantiates them; a
+    // bare type reference would not. These are startup diagnostics/alerts whose
+    // watchers must arm even before the user opens a related panel.
+    Component.onCompleted: {
+        void SystemAlerts.armed
+        void NotifWatch.armed
+        void Screenshot.armed
+    }
+
+    Timer {
+        interval: 250
+        running: true
+        repeat: false
+        onTriggered: root.pickerWatcherReady = true
+    }
+
+    // Watch picker lock, state dir gets many unrelated writes, filter to just this file
+    Process {
+        id: pickerWatcher
+        running: root.pickerWatcherReady && SystemTools.ready && SystemTools.hasInotifywait
+        // The shell resolves XDG_STATE_HOME, then execs inotifywait so reloads
+        // kill the watcher directly instead of orphaning a pipeline.
+        command: ["bash", "-c",
+            "state=\"${XDG_STATE_HOME:-$HOME/.local/state}\"; " +
+            "mkdir -p \"$state\"; " +
+            "lock=\"$state/wallpaper-picker.lock\"; " +
+            "[ -f \"$lock\" ] && echo active || echo inactive; " +
+            "exec inotifywait -m -q -e create,delete,moved_to,moved_from --format '%e|%f' \"$state\" 2>/dev/null"]
+        stdout: SplitParser {
+            onRead: line => {
+                const s = line.trim()
+                if (s === "active" || s === "inactive") {
+                    root.pickerActive = (s === "active")
+                    return
+                }
+                const parts = s.split("|")
+                if (parts.length < 2 || parts[1] !== "wallpaper-picker.lock") return
+                root.pickerActive = parts[0].indexOf("DELETE") < 0
+                    && parts[0].indexOf("MOVED_FROM") < 0
+            }
+        }
+        Component.onDestruction: running = false
+    }
+
+    Variants {
+        model: Quickshell.screens
+        delegate: Scope {
+            id: _barScope
+            required property ShellScreen modelData
+
+            // Recreate the bar window when it changes edges: remapping a live
+            // layer-shell surface's anchors leaves stale geometry on the old
+            // edge, so the surface must be torn down and mapped fresh. First
+            // map waits for settings so a saved bottom bar starts at the
+            // bottom instead of flashing top-then-recreating.
+            LazyLoader {
+                id: _barLoader
+                active: false
+                readonly property bool settingsReady: ShellSettings.ready
+                readonly property string barPos: ShellSettings.barPosition
+                onSettingsReadyChanged: if (settingsReady) active = true
+                Component.onCompleted: if (ShellSettings.ready) active = true
+                onBarPosChanged: {
+                    if (!active) return
+                    active = false
+                    Qt.callLater(() => _barLoader.active = true)
+                }
+                component: Bar { targetScreen: _barScope.modelData; pickerActive: root.pickerActive }
+            }
+        }
+    }
+
+    OsdWindow          { targetScreen: root.activeOverlayScreen }
+    NotificationPopups { targetScreen: root.activeOverlayScreen }
+    MenuWindow         { targetScreen: MenuState.triggerScreen ?? root.activeOverlayScreen }
+    CalendarPopup      { targetScreen: CalendarState.triggerScreen ?? root.activeOverlayScreen }
+}

@@ -1,0 +1,30 @@
+# hardware
+singleton Audio         1.0 Audio.qml
+singleton Battery       1.0 Battery.qml
+singleton Bluetooth     1.0 Bluetooth.qml
+singleton Brightness    1.0 Brightness.qml
+singleton CpuTemp       1.0 CpuTemp.qml
+singleton Network       1.0 Network.qml
+singleton SysInfo       1.0 SysInfo.qml
+
+# hyprland
+singleton HyprActions   1.0 HyprActions.qml
+singleton NightLight    1.0 NightLight.qml
+singleton OverviewState 1.0 OverviewState.qml
+singleton Screenshot    1.0 Screenshot.qml
+
+# shell
+singleton CalendarState 1.0 CalendarState.qml
+singleton DateTime      1.0 DateTime.qml
+singleton Idle          1.0 Idle.qml
+singleton Media         1.0 Media.qml
+singleton MenuState     1.0 MenuState.qml
+singleton NotifWatch    1.0 NotifWatch.qml
+singleton Notifications 1.0 Notifications.qml
+singleton OsdBarState   1.0 OsdBarState.qml
+singleton PowerProfiles 1.0 PowerProfiles.qml
+singleton Scroll        1.0 Scroll.qml
+singleton ShellSettings 1.0 ShellSettings.qml
+singleton SystemAlerts  1.0 SystemAlerts.qml
+singleton SystemTools   1.0 SystemTools.qml
+singleton Updates       1.0 Updates.qml

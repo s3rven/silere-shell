@@ -1,0 +1,93 @@
+pragma Singleton
+
+import QtQuick
+import Quickshell
+import Quickshell.Bluetooth as Bt
+
+// Thin wrapper over the native BlueZ DBus module, event-driven, no polling.
+// The default adapter is null when bluetoothd isn't running or there's no
+// radio, which is exactly when the tile should read as unavailable.
+// Namespaced import (Bt) so the bare name never clashes with this singleton.
+Singleton {
+    id: root
+
+    readonly property var adapter: Bt.Bluetooth.defaultAdapter
+    readonly property bool available: adapter !== null
+    readonly property bool enabled:   adapter ? adapter.enabled : false
+
+    readonly property var _devices: (adapter && adapter.devices) ? adapter.devices.values : []
+
+    readonly property int connectedCount: {
+        let n = 0
+        for (let i = 0; i < _devices.length; i++)
+            if (_devices[i] && _devices[i].connected) n++
+        return n
+    }
+
+    readonly property string connectedName: {
+        for (let i = 0; i < _devices.length; i++) {
+            const d = _devices[i]
+            if (d && d.connected) return d.deviceName || d.name || ""
+        }
+        return ""
+    }
+
+    // Battery % of the first connected device that reports one; -1 if none.
+    readonly property int connectedBattery: {
+        for (let i = 0; i < _devices.length; i++) {
+            const d = _devices[i]
+            if (d && d.connected && d.batteryAvailable)
+                return Math.round(d.battery > 1 ? d.battery : d.battery * 100)
+        }
+        return -1
+    }
+
+    readonly property var devices: {
+        const list = _devices.slice()
+        list.sort((a, b) => {
+            if (!a || !b) return 0
+            if (a.connected !== b.connected) return a.connected ? -1 : 1
+            if (a.paired !== b.paired)       return a.paired ? -1 : 1
+            const an = (a.deviceName || a.name || "").toLowerCase()
+            const bn = (b.deviceName || b.name || "").toLowerCase()
+            return an < bn ? -1 : (an > bn ? 1 : 0)
+        })
+        return list
+    }
+
+    function toggle(): void {
+        if (adapter) adapter.enabled = !adapter.enabled
+    }
+
+    function setScan(on: bool): void {
+        if (adapter) adapter.discovering = on && adapter.enabled
+    }
+
+    // Dispatch by address through the raw _devices array so we always call
+    // methods on the live C++ object, not a sorted JS copy that may lose binding.
+    function connectDevice(address: string): void {
+        for (let i = 0; i < _devices.length; i++) {
+            const d = _devices[i]
+            if (d && d.address === address) { d.connect(); return }
+        }
+    }
+    function disconnectDevice(address: string): void {
+        for (let i = 0; i < _devices.length; i++) {
+            const d = _devices[i]
+            if (d && d.address === address) { d.disconnect(); return }
+        }
+    }
+    function pairDevice(address: string): void {
+        if (adapter) adapter.pairable = true
+        for (let i = 0; i < _devices.length; i++) {
+            const d = _devices[i]
+            if (d && d.address === address) { d.pair(); return }
+        }
+    }
+    function cancelPair(address: string): void {
+        for (let i = 0; i < _devices.length; i++) {
+            const d = _devices[i]
+            if (d && d.address === address) { d.cancelPair(); return }
+        }
+    }
+}

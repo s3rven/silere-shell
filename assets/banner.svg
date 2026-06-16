@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="220" viewBox="0 0 1000 220" role="img" aria-label="silere shell — quiet by default.">
+  <defs>
+    <linearGradient id="g-silere" x1="0" y1="56" x2="0" y2="122" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#f0f0f4"/>
+      <stop offset="100%" stop-color="#8a8a9c"/>
+    </linearGradient>
+    <linearGradient id="g-shell" x1="0" y1="56" x2="0" y2="122" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#b8b8c8"/>
+      <stop offset="100%" stop-color="#62626e"/>
+    </linearGradient>
+    <linearGradient id="g-div" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#9090a0" stop-opacity="0"/>
+      <stop offset="50%"  stop-color="#9090a0" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#9090a0" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="f-bloom" x="-25%" y="-80%" width="150%" height="260%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="14"/>
+    </filter>
+  </defs>
+
+  <!-- light-mode only: pill shows when bg is white so the white text stays legible -->
+  <style>
+    .backdrop { display: none; }
+    @media (prefers-color-scheme: light) {
+      .backdrop { display: block; }
+    }
+  </style>
+  <rect class="backdrop" x="145" y="40" width="710" height="144" rx="22" fill="#0e0e12" fill-opacity="0.92"/>
+
+  <!-- bloom -->
+  <text
+    x="500" y="118"
+    font-family="'JetBrains Mono', 'JetBrainsMono Nerd Font', 'Cascadia Code', ui-monospace, monospace"
+    font-size="78"
+    font-weight="700"
+    text-anchor="middle"
+    fill="#c8c8e0"
+    opacity="0.09"
+    filter="url(#f-bloom)"
+  >silere shell</text>
+
+  <!-- wordmark -->
+  <text
+    x="500" y="118"
+    font-family="'JetBrains Mono', 'JetBrainsMono Nerd Font', 'Cascadia Code', ui-monospace, monospace"
+    font-size="78"
+    font-weight="700"
+    text-anchor="middle"
+    fill="url(#g-silere)"
+  >silere <tspan fill="url(#g-shell)">shell</tspan></text>
+
+  <!-- divider -->
+  <line x1="290" y1="138" x2="710" y2="138" stroke="url(#g-div)" stroke-width="1"/>
+
+  <!-- tagline -->
+  <text
+    x="500" y="168"
+    font-family="'JetBrains Mono', 'JetBrainsMono Nerd Font', 'Cascadia Code', ui-monospace, monospace"
+    font-size="13"
+    font-weight="400"
+    text-anchor="middle"
+    letter-spacing="4"
+    fill="#71717a"
+  >quiet by default.</text>
+</svg>

@@ -1,0 +1,12 @@
+Workspaces    1.0 Workspaces.qml
+WindowTitle   1.0 WindowTitle.qml
+Clock         1.0 Clock.qml
+Volume        1.0 Volume.qml
+BatteryWidget     1.0 BatteryWidget.qml
+BrightnessWidget  1.0 BrightnessWidget.qml
+NetworkWidget 1.0 NetworkWidget.qml
+MediaWidget   1.0 MediaWidget.qml
+MediaVisualizer 1.0 MediaVisualizer.qml
+UpdatesWidget 1.0 UpdatesWidget.qml
+TrayWidget    1.0 TrayWidget.qml
+OsdBarWidget  1.0 OsdBarWidget.qml
