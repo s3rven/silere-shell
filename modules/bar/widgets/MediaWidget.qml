@@ -121,7 +121,7 @@ Item {
             // that a flat dim can't give. Only while paused + visible + motion on;
             // when it stops, the binding above restores the rest value.
             SequentialAnimation on opacity {
-                running: !Media.playing && root.show && !ShellSettings.reduceMotion
+                running: !Media.playing && root.show && !ShellSettings.reduceMotion && !Idle.isIdle
                 loops: Animation.Infinite
                 NumberAnimation { to: 0.60; duration: Motion.ms(1400); easing.type: Easing.InOutSine }
                 NumberAnimation { to: 0.92; duration: Motion.ms(1400); easing.type: Easing.InOutSine }

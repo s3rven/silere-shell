@@ -151,7 +151,7 @@ Item {
     // this just shows how long is left and freezes while the card is hovered.
     property real _timeoutProgress: 1.0
     property real _countdownPulse:  1.0
-    readonly property bool _showCountdown: _autoClose.shouldRun && !ShellSettings.reduceMotion
+    readonly property bool _showCountdown: card.enabled && _autoClose.shouldRun && !ShellSettings.reduceMotion
     readonly property real _trueRemaining: Math.max(0, _autoClose.fullInterval - (Date.now() - card._createdAt) + card._hoverPausedMs)
 
     NumberAnimation {

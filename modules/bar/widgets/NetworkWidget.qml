@@ -70,7 +70,7 @@ Pill {
     }
 
     SequentialAnimation {
-        running: root._isPulsing
+        running: root._isPulsing && !Idle.isIdle
         loops:   Animation.Infinite
         NumberAnimation { target: root; property: "_pulseOpacity"; to: 0.3; duration: 800; easing.type: Easing.InOutSine }
         NumberAnimation { target: root; property: "_pulseOpacity"; to: 1.0; duration: 800; easing.type: Easing.InOutSine }

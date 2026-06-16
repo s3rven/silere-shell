@@ -21,6 +21,7 @@ Canvas {
     property real  _fillH:  -1
     property color _fillAc: "transparent"
     property real  _edgeW:  -1
+    property var   _cy:     []
 
     onPaint: {
         var ctx = getContext("2d")
@@ -35,7 +36,8 @@ Canvas {
         var maxPx = height * 0.75
         var ac    = Theme.accent
 
-        var cy = new Array(n)
+        var cy = _cy
+        if (cy.length !== n) { cy = new Array(n); _cy = cy }
         for (var k = 0; k < n; k++) cy[k] = height - (h[k] ?? 0) * maxPx
 
         if (!_fill || _fillH !== height || _fillAc !== ac) {

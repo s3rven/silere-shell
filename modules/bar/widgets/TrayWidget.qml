@@ -87,7 +87,7 @@ Item {
                 }
 
                 SequentialAnimation on attnPulse {
-                    running: _tile.needsAttention && !ShellSettings.reduceMotion
+                    running: _tile.needsAttention && !ShellSettings.reduceMotion && !Idle.isIdle
                     loops: Animation.Infinite
                     NumberAnimation { from: 1.0; to: 0.4; duration: Motion.ms(900); easing.type: Easing.InOutSine }
                     NumberAnimation { from: 0.4; to: 1.0; duration: Motion.ms(900); easing.type: Easing.InOutSine }

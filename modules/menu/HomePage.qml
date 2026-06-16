@@ -180,7 +180,7 @@ Item {
                         if (img !== _pendingLayer) return
                         _pendingLayer = null
                         _curUrl = ""
-                        if (_retries < 3) { _retries++; _artRetry.restart() }
+                        if (MenuState.open && _retries < 3) { _retries++; _artRetry.restart() }
                     }
 
                     function _promote(img, isA) {
