@@ -161,12 +161,15 @@ Singleton {
         history = next
     }
 
-    function dismissObject(notifId: int, notification): void {
+    function dismissObject(notifId: int, notification, expired): void {
         const n = list.find(e => e.id === notifId && e.notification === notification)
         if (!n) return
         const entry = root._historyEntry(n)
         root._markClosing(notifId, n.notification)
-        n.notification.tracked = false
+        // Honour the freedesktop close reason: a timeout expires, a user action
+        // dismisses. Both fire `closed`, consumed by _markClosing above.
+        if (expired === true) n.notification.expire()
+        else                  n.notification.dismiss()
         if (entry) history = [entry, ...history].slice(0, _maxHistory)
         root._forget(notifId)
     }
@@ -185,7 +188,7 @@ Singleton {
             if (entry) entries.unshift(entry)
             if (e && e.notification) {
                 root._markClosing(e.id, e.notification)
-                e.notification.tracked = false
+                e.notification.dismiss()
             }
         }
         _seen = {}
@@ -220,10 +223,15 @@ Singleton {
 
     NotificationServer {
         id: notifServer
-        keepOnReload:       true
-        bodySupported:      true
+        keepOnReload:        true
+        bodySupported:       true
         bodyMarkupSupported: false
-        actionsSupported:   true
+        actionsSupported:    true
+        // Advertised to match what the cards actually do: images render (card
+        // iconSource), and notifications persist to history across reloads/DND.
+        // Apps query GetCapabilities, so an unset flag makes them downgrade.
+        imageSupported:       true
+        persistenceSupported: true
 
         onNotification: (n) => {
             if (root.dnd && n.urgency !== NotificationUrgency.Critical) {

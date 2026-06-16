@@ -46,7 +46,10 @@ Rectangle {
         _sweep.stop(); _sweep.to = target; _sweep.restart()
     }
     Component.onCompleted: Qt.callLater(root._playSweep)
-    onShownChanged: if (shown) Qt.callLater(root._playSweep)   // sweep in when it appears
+    onShownChanged: {
+        if (shown) Qt.callLater(root._playSweep)
+        else       _sweep.stop()   // don't repaint a hidden canvas for 860ms
+    }
     Connections {
         target: MenuState
         function onOpenChanged() { if (root.shown && MenuState.open) Qt.callLater(root._playSweep) }
@@ -96,7 +99,11 @@ Rectangle {
         readonly property color fillTop:      Theme.withAlpha(Theme.warning, 0.02)
         readonly property color fillBot:      Theme.withAlpha(Theme.warning, 0.20)
         readonly property color strokePeak:   Theme.mix(Theme.warning, Theme.text, 0.45)
-        readonly property color moonColor:    Theme.withAlpha(Theme.subtext, 0.55)
+        readonly property color moonFillTop:  Theme.withAlpha(Theme.subtext, 0.04)
+        readonly property color moonFillBot:  Theme.withAlpha(Theme.subtext, 0.14)
+        readonly property color moonArcColor: Theme.withAlpha(Theme.subtext, 0.50)
+        readonly property color moonDisc:     Theme.withAlpha(Theme.text, 0.88)
+        readonly property color moonGlow:     Theme.withAlpha(Theme.subtext, 0.20)
         readonly property color cardColor:    root.color
         readonly property bool  isDay:        NightLight.isDaytime
         readonly property real  nightProg:    NightLight.nightProgress
@@ -107,13 +114,16 @@ Rectangle {
         property color _fgTop: "transparent"; property color _fgBot: "transparent"
         property var  _sg: null; property real _sgW: -1
         property color _sgSun: "transparent"; property color _sgPeak: "transparent"
+        property var  _nfg: null; property real _nfgH: -1
+        property color _nfgTop: "transparent"; property color _nfgBot: "transparent"
 
-        onHorizonColorChanged: requestPaint()
-        onArcColorChanged:     requestPaint()
-        onSunColorChanged:     requestPaint()
-        onIsDayChanged:        requestPaint()
-        onWidthChanged:        requestPaint()
-        onHeightChanged:       requestPaint()
+        onHorizonColorChanged:  requestPaint()
+        onArcColorChanged:      requestPaint()
+        onSunColorChanged:      requestPaint()
+        onMoonArcColorChanged:  requestPaint()
+        onIsDayChanged:         requestPaint()
+        onWidthChanged:         requestPaint()
+        onHeightChanged:        requestPaint()
 
         onPaint: {
             const ctx = getContext("2d")
@@ -122,8 +132,7 @@ Rectangle {
             if (w <= 0 || h <= 0) return
 
             const padX  = 22
-            // Horizon at 63% of canvas height: enough room above for sun glow (14px
-            // headroom clears the 12px radius), and below for the underground moon arc.
+            // Horizon at 63%: 14px headroom above the arc peak clears the glow radius.
             const baseY = Math.round(h * 0.63)
             const amp   = baseY - 14
             const N     = 40
@@ -146,28 +155,39 @@ Rectangle {
             ctx.stroke()
 
             if (!isDay) {
-                // Underground moon arc: reversed left↔right so it starts at the
-                // sunset side and ends at the sunrise side, mirroring how the sun
-                // would continue underground after setting.
-                const moonAmp  = Math.round((h - baseY) * 0.78)
-                const xMoonAt  = (t) => xAt(1 - t)
-                const yMoonAt  = (t) => baseY + hAt(t) * moonAmp
+                // Moon rides the same arc as the sun, traveling right→left (sunset→sunrise).
+                const np    = Math.max(0, Math.min(1, nightProg))
+                const moonT = 1 - np
+                const M     = Math.max(2, Math.ceil(N * np))
 
-                ctx.strokeStyle = horizonColor
-                ctx.lineWidth = 1.5
-                ctx.lineCap = "round"
-                ctx.setLineDash([4, 3])
-                ctx.beginPath()
-                for (let i = 0; i <= N; i++) { const t = i/N; i ? ctx.lineTo(xMoonAt(t), yMoonAt(t)) : ctx.moveTo(xMoonAt(t), yMoonAt(t)) }
-                ctx.stroke()
-                ctx.setLineDash([])
+                if (np > 0) {
+                    if (!_nfg || _nfgH !== h || _nfgTop !== moonFillTop || _nfgBot !== moonFillBot) {
+                        _nfg = ctx.createLinearGradient(0, baseY - amp, 0, baseY)
+                        _nfg.addColorStop(0, moonFillTop); _nfg.addColorStop(1, moonFillBot)
+                        _nfgH = h; _nfgTop = moonFillTop; _nfgBot = moonFillBot
+                    }
+                    ctx.beginPath()
+                    ctx.moveTo(xAt(moonT), baseY)
+                    for (let i = 0; i <= M; i++) { const t = moonT + (1 - moonT) * i / M; ctx.lineTo(xAt(t), yAt(t)) }
+                    ctx.lineTo(xAt(1), baseY)
+                    ctx.closePath()
+                    ctx.fillStyle = _nfg; ctx.fill()
 
-                const np = Math.max(0, Math.min(1, nightProg))
-                const mx = xMoonAt(np), my = yMoonAt(np)
-                ctx.fillStyle = moonColor
-                ctx.beginPath(); ctx.arc(mx, my, 6, 0, 2 * Math.PI); ctx.fill()
+                    ctx.strokeStyle = moonArcColor
+                    ctx.lineWidth = 2.5; ctx.lineCap = "round"
+                    ctx.beginPath()
+                    for (let i = 0; i <= M; i++) { const t = moonT + (1 - moonT) * i / M; i ? ctx.lineTo(xAt(t), yAt(t)) : ctx.moveTo(xAt(t), yAt(t)) }
+                    ctx.stroke()
+                }
+
+                const mx = xAt(moonT), my = yAt(moonT)
+                const gm = ctx.createRadialGradient(mx, my, 0, mx, my, 12)
+                gm.addColorStop(0, moonGlow); gm.addColorStop(1, "transparent")
+                ctx.fillStyle = gm; ctx.beginPath(); ctx.arc(mx, my, 12, 0, 2 * Math.PI); ctx.fill()
+                ctx.fillStyle = moonDisc
+                ctx.beginPath(); ctx.arc(mx, my, 4.5, 0, 2 * Math.PI); ctx.fill()
                 ctx.fillStyle = cardColor
-                ctx.beginPath(); ctx.arc(mx + 3.5, my - 2, 6.5, 0, 2 * Math.PI); ctx.fill()
+                ctx.beginPath(); ctx.arc(mx + 3, my - 1.5, 5.5, 0, 2 * Math.PI); ctx.fill()
                 return
             }
 

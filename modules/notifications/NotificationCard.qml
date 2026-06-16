@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Widgets
 import Quickshell.Services.Notifications
@@ -12,7 +13,11 @@ Item {
     required property int notifId
     required property var createdAt
 
-    signal dismissRequested(int notifId, var notification)
+    signal dismissRequested(int notifId, var notification, bool expired)
+
+    // Carries the close reason from dismiss() through the exit animation to the
+    // deferred dismissRequested emit: true = timed out, false = user closed it.
+    property bool _expired: false
 
     // Spec's "default" action belongs to the body click, not a button; the
     // rest render as chips (capped at 4 — more than that is app spam).
@@ -59,8 +64,15 @@ Item {
     readonly property bool hasBody:       bodyText.length > 0
     readonly property bool isCritical: notification.urgency === NotificationUrgency.Critical
 
-    function dismiss(): void {
+    // Mirror the bar's own corner: a flat/non-floating bar squares the card off,
+    // a floating rounded bar matches its radius — same rule the OSD pill follows.
+    readonly property real _cardRadius: (ShellSettings.barFloating && ShellSettings.barCornerStyle === "round")
+        ? Math.min(ShellSettings.barRadius, ShellSettings.barHeight / 2)
+        : 0
+
+    function dismiss(expired): void {
         if (!card.enabled) return
+        card._expired = expired === true
         _autoClose.stop()
         _arrivalShimmer.stop()
         _shimmer.opacity = 0
@@ -68,7 +80,7 @@ Item {
         cardRect.x = card._hiddenX
         card.enabled = false
         if (ShellSettings.reduceMotion) {
-            card.dismissRequested(card.notifId, card.notification)
+            card.dismissRequested(card.notifId, card.notification, card._expired)
             return
         }
         _collapseAnim.restart()
@@ -81,7 +93,7 @@ Item {
         to: 0; duration: Motion.ms(240); easing.type: Easing.InCubic
     }
 
-    Timer { id: _exitTimer; interval: Motion.ms(280) + 10; onTriggered: card.dismissRequested(card.notifId, card.notification) }
+    Timer { id: _exitTimer; interval: Motion.ms(280) + 10; onTriggered: card.dismissRequested(card.notifId, card.notification, card._expired) }
 
     readonly property var   _rawProgress: notification.hints ? notification.hints["value"] : undefined
     readonly property real  _progressNumber: Number(_rawProgress)
@@ -144,7 +156,7 @@ Item {
         // anchor to arrival time from model, not delegate creation, survives list rebuilds
         interval: Math.max(400, fullInterval - (Date.now() - card._createdAt) + card._hoverPausedMs)
         running:  shouldRun && !_cardHover.hovered
-        onTriggered: card.dismiss()
+        onTriggered: card.dismiss(true)
     }
 
     // Visual-only countdown for the timer above. The timer still owns dismissal;
@@ -194,11 +206,27 @@ Item {
     }
 
 
+    // Floating drop shadow, same elevation cue as the bar/OSD/menu. Sits beneath
+    // cardRect and tracks its slide + fade so it grounds the card consistently.
+    Loader {
+        active: ShellSettings.barFloating && ShellSettings.barShadow
+        anchors.fill: cardRect
+        opacity: cardRect.opacity
+        z: -1
+        sourceComponent: RectangularShadow {
+            anchors.fill: parent
+            radius: card._cardRadius
+            blur:   16
+            offset: Qt.vector2d(0, ShellSettings.barPosition === "bottom" ? -3 : 3)
+            color:  Qt.rgba(0, 0, 0, 0.45)
+        }
+    }
+
     Rectangle {
         id: cardRect
         width:  parent.implicitWidth
         height: Math.round(contentCol.implicitHeight) + 26
-        radius: Theme.radiusCard
+        radius: card._cardRadius
         clip:   true
         antialiasing: true
 
@@ -229,7 +257,11 @@ Item {
 
         // Fill only, the border lives in a separate overlay (_cardBorder) so the
         // layer/clip used for the shimmer can't clip the antialiased border edges.
-        color: Theme.rowFill(_cardHover.hovered, card.isCritical)
+        // Popup base: same opaque chrome tone as the menu/calendar (and the bar's
+        // hue) so a standalone card reads as one family, not a lighter floating row.
+        color: card.isCritical
+            ? Theme.mix(Theme.popup, Theme.error, _cardHover.hovered ? 0.17 : 0.12)
+            : (_cardHover.hovered ? Theme.mix(Theme.popup, Theme.subtext, 0.06) : Theme.popup)
 
         Behavior on color { ColorAnimation { duration: Motion.medium } }
 
@@ -584,11 +616,13 @@ Item {
         onHeightChanged:   if (visible) requestPaint()
         onArcColorChanged: if (visible) requestPaint()
         onTrackColorChanged: if (visible) requestPaint()
-        // _countdownAnim drives progress every frame, but a sub-1% arc change
-        // isn't visible on a 1.5px outline — skip those repaints (~10x fewer).
+        // Repaint per ~1px of endpoint travel along the perimeter rather than a
+        // fixed fraction: a fixed step jumps several px on a long timeout (steppy)
+        // and wastes paints on a short one. Sub-pixel moves are skipped.
         property real _painted: -1
         onProgressChanged: {
-            if (!visible || Math.abs(progress - _painted) < 0.008) return
+            if (!visible) return
+            if (Math.abs(progress - _painted) * 2 * (width + height) < 1.0) return
             _painted = progress
             requestPaint()
         }

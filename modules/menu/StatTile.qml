@@ -119,7 +119,9 @@ Item {
 
         property real _painted: -1
 
-        on_ProgChanged:       { if (Math.abs(_prog - _painted) < 0.006) return; _painted = _prog; requestPaint() }
+        // Repaint per ~1px of arc travel, not a fixed fraction, so the fill reads
+        // smooth instead of stepping; sub-pixel changes are skipped.
+        on_ProgChanged:       { if (Math.abs(_prog - _painted) * 2 * (width + height) < 1.0) return; _painted = _prog; requestPaint() }
         on_ArcColorChanged:   requestPaint()
         on_TrackColorChanged: requestPaint()
         onVisibleChanged:     { _painted = -1; requestPaint() }

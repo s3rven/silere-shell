@@ -11,8 +11,20 @@ PanelWindow {
     screen:         targetScreen
     color:          "transparent"
     exclusiveZone:  -1
-    implicitWidth:  344
-    implicitHeight: Math.max(1, outerCol.implicitHeight + 12)
+
+    readonly property int _cardW: 320
+    // Reserve so a floating card's drop shadow isn't clipped at the window edge.
+    readonly property int _shadowPad: (ShellSettings.barFloating && ShellSettings.barShadow) ? 22 : 0
+    // The side gap a floating bar leaves (mirrors Bar.qml's surfaceWidth math); the
+    // card's outer edge lines up with the bar's edge instead of hugging the screen
+    // corner. Plain margin when the bar isn't floating.
+    readonly property real _barSideGap: ShellSettings.barFloating && targetScreen
+        ? 4 * Math.round(targetScreen.width * (1.0 - ShellSettings.barWidth) / 8)
+        : 0
+    readonly property real _edgeMargin: ShellSettings.barFloating ? Math.max(0, _barSideGap) : 10
+
+    implicitWidth:  _cardW + 24 + _shadowPad
+    implicitHeight: Math.max(1, outerCol.implicitHeight + 12 + _shadowPad)
 
     // Unmap the surface while nothing is showing (same pattern as MenuWindow /
     // OsdWindow) instead of holding a mapped transparent strip at rest. Safe
@@ -26,19 +38,25 @@ PanelWindow {
     readonly property bool   _left:     _pos === "top-left"
     readonly property bool   _center:   _pos === "top-center"
     readonly property int    _slideDir: _center ? 0 : (_left ? -1 : 1)
+    readonly property bool   _barBottom: ShellSettings.barPosition === "bottom"
 
     anchors {
-        top:   true
-        left:  win._left
-        right: !win._left && !win._center
+        top:    !win._barBottom
+        bottom: win._barBottom
+        left:   win._left
+        right:  !win._left && !win._center
     }
 
     margins {
         // +4 mirrors Bar.qml's surfaceInset so popups clear a floating bar.
-        top:   ShellSettings.barPosition === "top"
-            ? (ShellSettings.barFloating ? 4 : 0) + ShellSettings.barHeight + 6 : 6
-        right: win._pos === "top-right" ? 10 : 0
-        left:  win._left ? 10 : 0
+        top:    win._barBottom ? 6
+            : (ShellSettings.barFloating ? 4 : 0) + ShellSettings.barHeight + 6
+        bottom: win._barBottom
+            ? (ShellSettings.barFloating ? 4 : 0) + ShellSettings.barHeight + 6 : 0
+        // _shadowPad backed out here, then re-added by outerCol's inset, so the
+        // visible card edge still lands at _edgeMargin from the screen edge.
+        right: win._pos === "top-right" ? Math.max(0, win._edgeMargin - win._shadowPad) : 0
+        left:  win._left              ? Math.max(0, win._edgeMargin - win._shadowPad) : 0
     }
     mask: Region { item: outerCol }
 
@@ -104,10 +122,16 @@ PanelWindow {
     Column {
         id: outerCol
         anchors {
-            top:   parent.top
-            right: parent.right
-            left:  parent.left
-            topMargin: 6
+            top:    win._barBottom ? undefined : parent.top
+            bottom: win._barBottom ? parent.bottom : undefined
+            right:  parent.right
+            left:   parent.left
+            // Shadow pad goes on the far edge so the drop shadow has room to bleed
+            // inside the window rather than clipping at the bar-facing edge.
+            topMargin:    win._barBottom ? 0 : 6
+            bottomMargin: win._barBottom ? 6 : 0
+            rightMargin: (win._left || win._center) ? 0 : win._shadowPad
+            leftMargin:  win._left ? win._shadowPad : 0
         }
         spacing: 6
 
@@ -233,12 +257,12 @@ PanelWindow {
                 // they're just hidden behind the "· N more" chip below.
                 visible: ShellSettings.notifMaxVisible <= 0 || index < ShellSettings.notifMaxVisible
 
-                onDismissRequested: (id, notification) => {
+                onDismissRequested: (id, notification, expired) => {
                     if (win._pendingDismissAll > 0) {
-                        Notifications.dismissObject(id, notification)
+                        Notifications.dismissObject(id, notification, expired)
                         win._forgetPendingDismiss(id, notification)
                     } else {
-                        Notifications.dismissObject(id, notification)
+                        Notifications.dismissObject(id, notification, expired)
                     }
                 }
             }
