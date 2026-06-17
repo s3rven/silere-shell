@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import "../../config"
 import "../../services"
 
@@ -117,7 +118,10 @@ Item {
             { glyph: "󱀅", label: "OSD",      section: "osd"      },
             { glyph: "󰀦", label: "Warnings", section: "warnings" }
         ]},
-        { glyph: "󰒓", label: "System", section: "system" }
+        { glyph: "󰒓", label: "System", children: [
+            { glyph: "󰒓", label: "General", section: "system"  },
+            { glyph: "󰚰", label: "Updates", section: "updates" }
+        ]}
     ]
 
     readonly property var _flatSections: {
@@ -429,6 +433,7 @@ Item {
                   : root._shownSection === "popups"     ? _secPopups.height
                   : root._shownSection === "osd"        ? _secOsd.height
                   : root._shownSection === "warnings"   ? _secWarnings.height
+                  : root._shownSection === "updates"    ? _secUpdates.height
                   :                                       _secSystem.height
 
             property real _slide: 0
@@ -1246,6 +1251,152 @@ Item {
                         }
                     }
                 }
+            }
+
+            // ── SYSTEM · Updates ────────────────────────────────────────
+            Column {
+                id: _secUpdates
+                width: parent.width
+                spacing: 0
+                visible: root._shownSection === "updates"
+
+                property bool checking: false
+                property string version: ""
+
+                Process {
+                    id: _versionProc
+                    command: ["git", "-C", Quickshell.shellDir, "rev-parse", "--short", "HEAD"]
+                    running: true
+                    stdout: StdioCollector { id: _versionOut }
+                    onExited: _secUpdates.version = (_versionOut.text || "").trim()
+                }
+
+                // check mode never errors loudly; just release the disabled state
+                // after a beat whether or not the flag file ends up changing.
+                Timer { id: _checkTimer; interval: 6000; onTriggered: _secUpdates.checking = false }
+
+                function _check() {
+                    if (_secUpdates.checking) return
+                    _secUpdates.checking = true
+                    _checkTimer.restart()
+                    Quickshell.execDetached(["bash", Quickshell.shellDir + "/scripts/update.sh"])
+                }
+
+                SectionLabel { label: "STATUS"; first: true }
+                SettingsCard {
+                    Item {
+                        width: parent.width; height: 44
+                        Row {
+                            anchors.left: parent.left; anchors.leftMargin: 12
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 8
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: ShellUpdate.pending ? "󰚰" : "󰄬"
+                                color: ShellUpdate.pending ? Theme.accent : Theme.withAlpha(Theme.success, 0.9)
+                                font.family: Settings.font; font.pixelSize: Settings.fontSize + 1
+                                renderType: Text.NativeRendering
+                            }
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: ShellUpdate.pending ? (ShellUpdate.count + " new "
+                                        + (ShellUpdate.count === 1 ? "commit" : "commits") + " pending")
+                                      : "Up to date"
+                                color: Theme.withAlpha(Theme.text, 0.85)
+                                font.family: Settings.font; font.pixelSize: Settings.fontSize
+                                renderType: Text.NativeRendering
+                            }
+                        }
+                        Text {
+                            anchors.right: parent.right; anchors.rightMargin: 12
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: _secUpdates.version.length > 0 ? "#" + _secUpdates.version : ""
+                            color: Theme.withAlpha(Theme.subtext, 0.55)
+                            font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
+                            renderType: Text.NativeRendering
+                        }
+                    }
+                    HintText {
+                        visible: ShellUpdate.pending && ShellUpdate.summary.length > 0
+                        text: ShellUpdate.summary
+                    }
+                }
+
+                SectionLabel { label: "ACTIONS" }
+                SettingsCard {
+                    Item {
+                        id: _checkRow
+                        width: parent.width; height: 44
+                        opacity: _secUpdates.checking ? 0.45 : 1.0
+                        Behavior on opacity { NumberAnimation { duration: Motion.medium } }
+                        HoverHandler { id: _checkHover; cursorShape: _secUpdates.checking ? Qt.ArrowCursor : Qt.PointingHandCursor }
+                        TapHandler { enabled: !_secUpdates.checking; onTapped: _secUpdates._check() }
+                        RowHoverBg {
+                            anchors.fill: parent
+                            topRadius: 10
+                            bottomRadius: ShellUpdate.pending ? 0 : 10
+                            active: _checkHover.hovered && !_secUpdates.checking
+                            fillOpacity: 0.08
+                        }
+                        Row {
+                            anchors.left: parent.left; anchors.leftMargin: 12
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 8
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "󰓦"
+                                color: Theme.withAlpha(Theme.subtext, 0.85)
+                                font.family: Settings.font; font.pixelSize: Settings.fontSize + 1
+                                renderType: Text.NativeRendering
+                            }
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: _secUpdates.checking ? "Checking…" : "Check now"
+                                color: Theme.withAlpha(Theme.text, 0.85)
+                                font.family: Settings.font; font.pixelSize: Settings.fontSize
+                                renderType: Text.NativeRendering
+                            }
+                        }
+                    }
+                    Item {
+                        id: _applyRow
+                        visible: ShellUpdate.pending
+                        width: parent.width; height: visible ? 44 : 0
+                        opacity: ShellUpdate.applying ? 0.45 : 1.0
+                        Behavior on opacity { NumberAnimation { duration: Motion.medium } }
+                        HoverHandler { id: _applyHover; cursorShape: ShellUpdate.applying ? Qt.ArrowCursor : Qt.PointingHandCursor }
+                        TapHandler { enabled: !ShellUpdate.applying; onTapped: ShellUpdate.apply() }
+                        RowHoverBg {
+                            anchors.fill: parent
+                            bottomRadius: 10
+                            active: _applyHover.hovered && !ShellUpdate.applying
+                            fillColor: Theme.accent
+                            fillOpacity: 0.10
+                        }
+                        Row {
+                            anchors.left: parent.left; anchors.leftMargin: 12
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 8
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "󰅢"
+                                color: Theme.accent
+                                font.family: Settings.font; font.pixelSize: Settings.fontSize + 1
+                                renderType: Text.NativeRendering
+                            }
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: ShellUpdate.applying ? "Applying…" : "Apply update"
+                                color: Theme.accent
+                                font.family: Settings.font; font.pixelSize: Settings.fontSize
+                                font.weight: Font.DemiBold
+                                renderType: Text.NativeRendering
+                            }
+                        }
+                    }
+                }
+
+                HintText { text: "Pulls the latest commits and restarts the shell. Checks run automatically on a schedule too." }
             }
 
             // ── BAR · Separators ───────────────────────────────────────

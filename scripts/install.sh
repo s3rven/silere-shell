@@ -311,8 +311,8 @@ fi
 
 # ── Hyprland autostart ───────────────────────────────────────────────────────────
 _section "Hyprland autostart"
-HYPR_CONF="$HOME/.config/hypr/hyprland.conf"
-HYPR_LUA="$HOME/.config/hypr/hyprland.lua"
+HYPR_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprland.conf"
+HYPR_LUA="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprland.lua"
 # Quickshell links jemalloc, which defaults to 4×nCPU arenas and no purge thread,
 # so memory freed after a spike (menu close, wifi scan, notification burst) is
 # retained rather than returned to the OS — RSS only ever climbs. Fewer arenas
@@ -341,17 +341,27 @@ LAUNCH_CMD="{ sleep 1; env MALLOC_CONF=$MALLOC_TUNE ${EGL_PIN}qs -p '$ROOT/shell
 
 _already_present() { grep -qF 'silere-shell begin' "$1" 2>/dev/null; }
 
+HYPR_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
+
+if [ -f "$HYPR_LUA" ] && [ -f "$HYPR_CONF" ]; then
+    _warn "both hyprland.lua and hyprland.conf found; Lua takes priority"
+fi
+
 if [ -f "$HYPR_LUA" ]; then
     LUA_EXEC_FILE=""
     for candidate in \
-        "$HOME/.config/hypr/custom/execs.lua" \
-        "$HOME/.config/hypr/hyprland/execs.lua" \
-        "$HOME/.config/hypr/execs.lua"
+        "$HYPR_DIR/custom/execs.lua" \
+        "$HYPR_DIR/hyprland/execs.lua" \
+        "$HYPR_DIR/execs.lua"
     do
         [ -f "$candidate" ] && { LUA_EXEC_FILE="$candidate"; break; }
     done
 
-    if [ -n "$LUA_EXEC_FILE" ] && _already_present "$LUA_EXEC_FILE"; then
+    # the snippet uses a framework-specific API; only emit it where that framework exists
+    if [ -n "$LUA_EXEC_FILE" ] && ! grep -qE 'hyprland\.lib|hl\.on' "$LUA_EXEC_FILE" "$HYPR_LUA" 2>/dev/null; then
+        _warn "Lua config found but no hyprland.lib/hl.on framework detected"
+        _warn "add manually: local h = require(\"hyprland.lib\"); h.exec(\"$LAUNCH_CMD\")"
+    elif [ -n "$LUA_EXEC_FILE" ] && _already_present "$LUA_EXEC_FILE"; then
         _ok "already present in $LUA_EXEC_FILE"
     elif [ -n "$LUA_EXEC_FILE" ]; then
         if _ask "Add autostart to ${LUA_EXEC_FILE##*/}?"; then

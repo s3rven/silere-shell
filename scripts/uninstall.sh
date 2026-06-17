@@ -108,10 +108,10 @@ fi
 _section "Hyprland autostart"
 
 AUTOSTART_FILES=(
-    "$HOME/.config/hypr/custom/execs.lua"
-    "$HOME/.config/hypr/hyprland/execs.lua"
-    "$HOME/.config/hypr/execs.lua"
-    "$HOME/.config/hypr/hyprland.conf"
+    "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/custom/execs.lua"
+    "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprland/execs.lua"
+    "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/execs.lua"
+    "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprland.conf"
 )
 
 found_any=false
