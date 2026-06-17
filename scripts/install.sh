@@ -233,7 +233,16 @@ if [ -d "$INSTALL_DIR/.git" ]; then
         _skip "using existing clone"
     fi
 elif [ -e "$INSTALL_DIR" ]; then
-    _die "$INSTALL_DIR exists but is not a git repo — pick a different path"
+    if _ask "Directory exists but is not a git repo. Remove it and clone fresh?"; then
+        rm -rf "$INSTALL_DIR"
+        spin_start "cloning..."
+        if ! GIT_TERMINAL_PROMPT=0 git clone --depth 1 --single-branch --quiet "$REPO_URL" "$INSTALL_DIR"; then
+            spin_stop; _die "git clone failed — check your connection"
+        fi
+        spin_stop; _ok "cloned to $INSTALL_DIR"
+    else
+        _die "$INSTALL_DIR exists but is not a git repo — pick a different path or clean it up manually"
+    fi
 else
     spin_start "cloning..."
     if ! GIT_TERMINAL_PROMPT=0 git clone --depth 1 --single-branch --quiet "$REPO_URL" "$INSTALL_DIR"; then
