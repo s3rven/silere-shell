@@ -29,17 +29,29 @@ _clean_tree() {
 # --apply: fast-forward to the already-fetched origin/main and restart the shell.
 # The flag carries the pending commit summary written by the check pass.
 if [ "${1:-}" = "--apply" ]; then
-    _clean_tree
     local_rev="$(git rev-parse HEAD)"
     remote_rev="$(git rev-parse origin/main 2>/dev/null || echo "$local_rev")"
     if [ "$local_rev" = "$remote_rev" ]; then
         rm -f "$FLAG"
         exit 0
     fi
+    stashed=0
+    if ! git -C "$ROOT" diff --quiet || ! git -C "$ROOT" diff --cached --quiet; then
+        git -C "$ROOT" stash push --include-untracked -m "silere-update pre-apply" >/dev/null && stashed=1
+    fi
     if ! GIT_TERMINAL_PROMPT=0 git pull --ff-only --quiet origin main; then
+        [ "$stashed" -eq 1 ] && git -C "$ROOT" stash pop >/dev/null 2>&1 || true
         _fail "fast-forward pull failed — local branch diverged"
     fi
+    # update succeeded; pop may conflict but the restart should still proceed
+    stash_conflict=0
+    if [ "$stashed" -eq 1 ] && ! git -C "$ROOT" stash pop >/dev/null 2>&1; then
+        stash_conflict=1
+    fi
     rm -f "$FLAG"
+    if [ "$stash_conflict" -eq 1 ]; then
+        _notify -u critical "Silere update applied with conflicts" "Your local changes conflicted and were kept in the stash — run 'git stash list' to find it, 'git stash pop' to retry"
+    fi
     count="$(git rev-list --count "${local_rev}..${remote_rev}")"
     plural="commit"; [ "$count" -ne 1 ] && plural="commits"
     # systemd unit only exists on dev installs; exec-once users restart by hand
