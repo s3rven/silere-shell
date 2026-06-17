@@ -8,5 +8,6 @@ NetworkWidget 1.0 NetworkWidget.qml
 MediaWidget   1.0 MediaWidget.qml
 MediaVisualizer 1.0 MediaVisualizer.qml
 UpdatesWidget 1.0 UpdatesWidget.qml
+ShellUpdateWidget 1.0 ShellUpdateWidget.qml
 TrayWidget    1.0 TrayWidget.qml
 OsdBarWidget  1.0 OsdBarWidget.qml

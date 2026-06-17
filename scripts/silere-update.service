@@ -1,0 +1,8 @@
+[Unit]
+Description=Silere Shell update check
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStartPre=-/usr/bin/dbus-update-activation-environment --systemd DBUS_SESSION_BUS_ADDRESS DISPLAY WAYLAND_DISPLAY
+ExecStart=__ROOT__/scripts/update.sh

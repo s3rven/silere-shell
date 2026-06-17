@@ -118,6 +118,8 @@ Item {
         spacing: root.dotGap
         Behavior on spacing { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
 
+        ShellUpdateWidget { id: shellUpdateWidget; anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
+        Dot             { show: ShellUpdate.pending }   // own group: shell self-update, only while pending
         TrayWidget      { id: trayWidget; anchors.verticalCenter: parent.verticalCenter }
         Dot             { show: trayWidget.show }   // tray stays its own group, even compact
         UpdatesWidget   { anchors.verticalCenter: parent.verticalCenter; screen: root.screen }

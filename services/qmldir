@@ -26,6 +26,7 @@ singleton OsdBarState   1.0 OsdBarState.qml
 singleton PowerProfiles 1.0 PowerProfiles.qml
 singleton Scroll        1.0 Scroll.qml
 singleton ShellSettings 1.0 ShellSettings.qml
+singleton ShellUpdate   1.0 ShellUpdate.qml
 singleton SystemAlerts  1.0 SystemAlerts.qml
 singleton SystemTools   1.0 SystemTools.qml
 singleton Updates       1.0 Updates.qml

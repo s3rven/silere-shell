@@ -46,7 +46,7 @@ while IFS= read -r qd; do
     git check-ignore -q "$dir/$f" 2>/dev/null && continue
     missing="$missing $dir/$f"
   done < <(awk 'NF>=2 && $NF ~ /\.qml$/ {print $NF}' "$qd")
-done < <(find . \( -path './.git' -o -path './.claude' -o -path './.agents' \) -prune -o -name qmldir -print)
+done < <(find . -path './.git' -prune -o -name qmldir -print)
 if [ -n "$missing" ]; then
   fail "qmldir references missing files:"
   for m in $missing; do printf '  %s\n' "$m"; done

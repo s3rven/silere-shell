@@ -217,7 +217,7 @@ INSTALL_DIR="$(_ask_path)"
 # The path is later embedded into Hyprland/matugen config as a quoted string.
 # Quotes, backslashes, spaces, or newlines would break that quoting, so reject them.
 case "$INSTALL_DIR" in
-    *[\"\\]* | *"'"* | *\ *) _die "install path may not contain quotes, backslashes, or spaces: $INSTALL_DIR" ;;
+    *'"'* | *'\'* | *'|'* | *"'"* | *\ *) _die "install path may not contain quotes, backslashes, pipes, or spaces: $INSTALL_DIR" ;;
 esac
 [ "$INSTALL_DIR" = "$(printf '%s' "$INSTALL_DIR" | tr -d '\n')" ] || _die "install path may not contain newlines"
 
@@ -243,7 +243,7 @@ else
 fi
 
 ROOT="$INSTALL_DIR"
-did_cava=false did_tmpl=false did_toml=false did_autostart=false
+did_cava=false did_tmpl=false did_toml=false did_autostart=false did_update=false
 
 # Seed the generated theme from the bundled default so the shell themes
 # correctly before matugen has run. matugen later overwrites this file.
@@ -383,6 +383,27 @@ else
     _warn "add manually: exec-once = $LAUNCH_CMD"
 fi
 
+# ── update-check timer ──────────────────────────────────────────────────────────────
+_section "update-check timer"
+SYSTEMD_USER="$HOME/.config/systemd/user"
+
+if ! command -v systemctl >/dev/null 2>&1; then
+    _skip "systemctl not found"
+elif _ask "Install daily update-check timer (flags pending updates in the bar)?"; then
+    mkdir -p "$SYSTEMD_USER"
+    sed "s|__ROOT__|$ROOT|g" "$ROOT/scripts/silere-update.service" > "$SYSTEMD_USER/silere-update.service"
+    cp "$ROOT/scripts/silere-update.timer" "$SYSTEMD_USER/silere-update.timer"
+    systemctl --user daemon-reload
+    if systemctl --user enable --now silere-update.timer 2>/dev/null; then
+        _ok "enabled — fires daily, flags new commits in the bar (apply from there)"
+        did_update=true
+    else
+        _warn "units installed but enable failed — run: systemctl --user enable --now silere-update.timer"
+    fi
+else
+    _skip "skipped — enable later with: systemctl --user enable --now silere-update.timer"
+fi
+
 # ── summary ──────────────────────────────────────────────────────────────────────
 printf "\n${BOLD}==> done${R}\n"
 printf "    ${GREEN}ok${R}      installed at %s\n" "$ROOT"
@@ -391,6 +412,7 @@ $did_cava      && printf "    ${GREEN}ok${R}      cava config\n"      || printf 
 $did_tmpl      && printf "    ${GREEN}ok${R}      matugen template\n" || printf "    ${DIM}skip${R}    matugen template\n"
 $did_toml      && printf "    ${GREEN}ok${R}      matugen toml\n"     || printf "    ${DIM}skip${R}    matugen toml\n"
 $did_autostart && printf "    ${GREEN}ok${R}      autostart\n"        || printf "    ${DIM}skip${R}    autostart\n"
+$did_update    && printf "    ${GREEN}ok${R}      auto-update timer\n" || printf "    ${DIM}skip${R}    auto-update timer\n"
 if $has_qs; then
     printf "\n  restart Hyprland to launch silere\n"
 else

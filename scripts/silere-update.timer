@@ -1,0 +1,10 @@
+[Unit]
+Description=Silere Shell update-check timer
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=1h
+Persistent=true
+
+[Install]
+WantedBy=timers.target
