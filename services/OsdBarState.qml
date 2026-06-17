@@ -30,6 +30,19 @@ Singleton {
     // volume bar warms toward the warning hue near max — a "loud" cue
     readonly property color barColor: _barColor(kind, value, muted, fillColor)
 
+    // A fast scroll burst pushes updates faster than an eased Behavior can
+    // settle, so it perpetually chases and looks stuck — display layers
+    // should snap instead of animate while this is true.
+    property real _lastUpdateAt: 0
+    property bool rapid: false
+    Timer { id: _rapidTimer; interval: 180; repeat: false; onTriggered: root.rapid = false }
+    function _markUpdate(): void {
+        const now = Date.now()
+        rapid = (now - _lastUpdateAt) < 150
+        _lastUpdateAt = now
+        _rapidTimer.restart()
+    }
+
     // skip the first brightness event, initial device scan can fire before we're ready
     property bool _seenInitialBrightness: false
 
@@ -131,11 +144,14 @@ Singleton {
         if (idx >= 0) {
             const old = _entries.get(idx)
             if (old.closing && _closingSig[kind] === sig) return false
-            for (const k in data) _entries.setProperty(idx, k, data[k])
+            for (const k in data) {
+                if (old[k] !== data[k]) _entries.setProperty(idx, k, data[k])
+            }
         } else {
             _entries.append(data)
         }
 
+        _markUpdate()
         _setExpiry(kind)
         _syncPrimary()
         return true

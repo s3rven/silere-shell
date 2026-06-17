@@ -26,13 +26,13 @@ Singleton {
     property bool   trayWidget:          false
     property bool   valuesOnHover:       false
     property bool   batteryAutoHide:     false
+    property bool   hasOpenedMenu:       false   // first-run state: gates the one-shot diamond hint
 
     property bool   osdEnabled:     true
     property int    osdTimeout:     2000
     property string osdKindFilter:  "both"   // "both" | "volume" | "brightness"
     property bool   osdBatteryWarn: false
     property bool   osdTempWarn:    false
-    property string osdPosition:    "top"    // "top" | "bottom"
     property bool   osdShimmer:     false
     property bool   osdVolumeTint:  false    // warm "loud" tint as volume nears max
     property bool   osdChargedNotify: false  // one-shot OSD peek when the battery reaches full
@@ -127,12 +127,12 @@ Singleton {
         { k: "trayWidget",          t: "bool" },
         { k: "valuesOnHover",       t: "bool" },
         { k: "batteryAutoHide",     t: "bool" },
+        { k: "hasOpenedMenu",       t: "bool" },
         { k: "osdEnabled",          t: "bool" },
         { k: "osdTimeout",          t: "int",  min: 500,  max: 10000 },
         { k: "osdKindFilter",       t: "enum", vals: ["both", "volume", "brightness"] },
         { k: "osdBatteryWarn",      t: "bool" },
         { k: "osdTempWarn",         t: "bool" },
-        { k: "osdPosition",         t: "enum", vals: ["top", "bottom"] },
         { k: "osdShimmer",          t: "bool" },
         { k: "osdVolumeTint",       t: "bool" },
         { k: "osdChargedNotify",    t: "bool" },

@@ -6,6 +6,8 @@ import "../../common"
 Pill {
     id: root
 
+    property var screen: null   // ShellScreen this bar sits on, for menu placement
+
     // Visible while a count exists OR a check is running, so enabling it gives
     // immediate feedback instead of nothing until the (slow) first check returns.
     readonly property bool _show: Updates.available || Updates.isChecking
@@ -47,5 +49,10 @@ Pill {
         id: _tap
         acceptedButtons: Qt.LeftButton
         onTapped: Updates.refresh()
+    }
+
+    TapHandler {
+        acceptedButtons: Qt.RightButton
+        onTapped: MenuState.toggleAt(root.mapToItem(null, root.width / 2, 0).x, root.screen)
     }
 }

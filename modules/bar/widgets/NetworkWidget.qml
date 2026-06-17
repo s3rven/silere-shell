@@ -5,6 +5,7 @@ import "../../common"
 
 Pill {
     id: root
+    property var screen: null   // ShellScreen this bar sits on, for menu placement
     readonly property bool canRead: Network.toolAvailable
     property real _pulseOpacity: 1.0
     readonly property real _baseOpacity: canRead ? (Network.available ? 1.0 : 0.0) : 0.45
@@ -86,5 +87,10 @@ Pill {
     Connections {
         target: Network
         function onConnectedChanged() { if (Network.connected) root._pulseSettled = false }
+    }
+
+    TapHandler {
+        acceptedButtons: Qt.RightButton
+        onTapped: MenuState.toggleAt(root.mapToItem(null, root.width / 2, 0).x, root.screen)
     }
 }

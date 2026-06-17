@@ -18,6 +18,7 @@ Singleton {
         triggerScreen = screen ?? null
         open = !open
         if (!open) triggerScreen = null
+        else ShellSettings.hasOpenedMenu = true
     }
     function close():               void { triggerScreen = null; if (open) open = false }
     function showTab(index: int):   void { if (!open) open = true; tabRequested(index) }

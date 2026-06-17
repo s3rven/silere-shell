@@ -1167,7 +1167,7 @@ Item {
                 SettingsCard {
                     visible: Quickshell.screens.length > 1
                     ChoiceChipRow {
-                        glyph: "󰍹"; label: "Notices & OSD on"
+                        glyph: "󰍹"; label: "Popups & OSD on"
                         currentValue: ShellSettings.overlayMonitor
                         model: {
                             const t = [{ value: "", label: "Focus" }]
@@ -1197,12 +1197,15 @@ Item {
                         id: _resetRow
                         width: parent.width; height: 44
                         property bool armed: false
-                        Timer { id: _resetDisarm; interval: 3000; onTriggered: _resetRow.armed = false }
-                        HoverHandler { id: _resetHover; cursorShape: Qt.PointingHandCursor }
+                        HoverHandler {
+                            id: _resetHover
+                            cursorShape: Qt.PointingHandCursor
+                            onHoveredChanged: if (!hovered) _resetRow.armed = false
+                        }
                         TapHandler {
                             onTapped: {
                                 if (_resetRow.armed) { _resetRow.armed = false; ShellSettings.resetToDefaults() }
-                                else { _resetRow.armed = true; _resetDisarm.restart() }
+                                else { _resetRow.armed = true }
                             }
                         }
                         RowHoverBg {
@@ -1255,7 +1258,7 @@ Item {
                 SectionLabel { label: "STYLE"; first: true }
                 SettingsCard {
                     ToggleRow {
-                        glyph: "󰡍"; label: "Compact bar"; badge: "beta"
+                        glyph: "󰡍"; label: "Dense bar"; badge: "beta"
                         checked: ShellSettings.barCompact
                         onToggled: ShellSettings.barCompact = !ShellSettings.barCompact
                         topRadius: 10
@@ -1337,27 +1340,27 @@ Item {
                 SectionLabel { label: "NETWORK" }
                 SettingsCard {
                     ToggleRow {
-                        glyph: "󰓅"; label: "Show network speed"
+                        glyph: "󰓅"; label: "Network speed"
                         checked: ShellSettings.networkTrafficStats
                         onToggled: ShellSettings.networkTrafficStats = !ShellSettings.networkTrafficStats
                         available: Network.toolAvailable
-                        dependsNote: "nmcli missing"
+                        dependsNote: "NetworkManager missing"
                         topRadius: 10
                     }
                     CollapsibleSection {
                         expanded: ShellSettings.networkTrafficStats
                         ToggleRow {
-                            glyph: "󰐃"; label: "Pin speed to bar"
+                            glyph: "󰐃"; label: "Always show speed"
                             checked: ShellSettings.networkSpeedInline
                             onToggled: ShellSettings.networkSpeedInline = !ShellSettings.networkSpeedInline
                         }
                     }
                     ToggleRow {
-                        glyph: "󰦝"; label: "Show link under VPN"
+                        glyph: "󰦝"; label: "Show connection under VPN"
                         checked: ShellSettings.netVpnShowLink
                         onToggled: ShellSettings.netVpnShowLink = !ShellSettings.netVpnShowLink
                         available: Network.toolAvailable
-                        dependsNote: "nmcli missing"
+                        dependsNote: "NetworkManager missing"
                         bottomRadius: 10
                     }
                 }
@@ -1393,7 +1396,7 @@ Item {
                         checked: ShellSettings.updatesWidget
                         onToggled: ShellSettings.updatesWidget = !ShellSettings.updatesWidget
                         available: !SystemTools.ready || Updates.supported
-                        dependsNote: "No package tool"
+                        dependsNote: "No package manager"
                         bottomRadius: 10
                     }
                 }
@@ -1555,7 +1558,7 @@ Item {
                         onToggled: ShellSettings.mediaProgress = !ShellSettings.mediaProgress
                         topRadius: 10
                         available: SystemTools.hasCava && SystemTools.hasCavaConfig
-                        dependsNote: SystemTools.hasCava ? "Config missing" : "cava missing"
+                        dependsNote: SystemTools.hasCava ? "cava config missing" : "cava missing"
                         bottomRadius: ShellSettings.mediaProgress && available ? 0 : 10
                     }
                     CollapsibleSection {
@@ -1652,7 +1655,7 @@ Item {
                     }
                 }
 
-                SectionLabel { label: "FLASHES" }
+                SectionLabel { label: "EVENT FLASHES" }
                 SettingsCard {
                     SliderRow {
                         glyph: "󰉁"; label: "Flash strength"
@@ -1669,21 +1672,21 @@ Item {
                         checked: ShellSettings.underlineNotifGlow
                         onToggled: ShellSettings.underlineNotifGlow = !ShellSettings.underlineNotifGlow
                         enabled: ShellSettings.underlineGlow
-                        dependsNote: "Glow off"
+                        dependsNote: "Needs glow"
                     }
                     ToggleRow {
-                        glyph: "󰤭"; label: "Network loss"
+                        glyph: "󰤭"; label: "Disconnect flash"
                         checked: ShellSettings.underlineNetGlow
                         onToggled: ShellSettings.underlineNetGlow = !ShellSettings.underlineNetGlow
                         enabled: ShellSettings.underlineGlow
-                        dependsNote: "Glow off"
+                        dependsNote: "Needs glow"
                     }
                     ToggleRow {
                         glyph: "󰄀"; label: "Screenshot flash"
                         checked: ShellSettings.underlineScreenshotGlow
                         onToggled: ShellSettings.underlineScreenshotGlow = !ShellSettings.underlineScreenshotGlow
                         enabled: ShellSettings.underlineGlow
-                        dependsNote: "Glow off"
+                        dependsNote: "Needs glow"
                         bottomRadius: ShellSettings.underlineScreenshotGlow && ShellSettings.underlineGlow ? 0 : 10
                     }
                     CollapsibleSection {
@@ -1781,7 +1784,7 @@ Item {
                 SectionLabel { label: "ALERTS" }
                 SettingsCard {
                     ChoiceChipRow {
-                        glyph: "󰀦"; label: "Silere alerts"
+                        glyph: "󰀦"; label: "Alert duration"
                         rowEnabled: ShellSettings.notifPopupEnabled
                         currentValue: ShellSettings.sysAlertTimeout
                         model: [
@@ -1819,7 +1822,7 @@ Item {
                         onToggled: ShellSettings.osdBarIntegrated = !ShellSettings.osdBarIntegrated
                     }
                     ChoiceChipRow {
-                        glyph: "󰔛"; label: "Timeout"
+                        glyph: "󰔛"; label: "Dismiss after"
                         rowEnabled: ShellSettings.osdEnabled
                         currentValue: ShellSettings.osdTimeout
                         model: [
@@ -1840,17 +1843,6 @@ Item {
                             { value: "brightness", glyph: "󰃟", label: "Brt"  }
                         ]
                         onChosen: (v) => ShellSettings.osdKindFilter = v
-                    }
-                    // Position is floating-pill only; dim when bar mode is on.
-                    ChoiceChipRow {
-                        glyph: "󰍹"; label: "Position"
-                        rowEnabled: ShellSettings.osdEnabled && !ShellSettings.osdBarIntegrated
-                        currentValue: ShellSettings.osdPosition
-                        model: [
-                            { value: "top",    label: "Top"    },
-                            { value: "bottom", label: "Bottom" }
-                        ]
-                        onChosen: (v) => ShellSettings.osdPosition = v
                         bottomRadius: 10
                     }
                 }
@@ -1863,7 +1855,7 @@ Item {
                         checked: ShellSettings.osdShimmer
                         onToggled: ShellSettings.osdShimmer = !ShellSettings.osdShimmer
                         // only when bar mode is the blocker; OSD-off just dims like its neighbours
-                        dependsNote: ShellSettings.osdEnabled ? "Shown in bar" : ""
+                        dependsNote: ShellSettings.osdEnabled ? "Pill only" : ""
                         topRadius: 10
                     }
                     ToggleRow {

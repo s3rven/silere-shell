@@ -6,6 +6,8 @@ import "../../common"
 Pill {
     id: root
 
+    property var screen: null   // ShellScreen this bar sits on, for menu placement
+
     readonly property bool canControl: Brightness.toolAvailable && Brightness.maxBrightness > 0
 
     opacity:     canControl ? 1.0 : 0.45
@@ -28,5 +30,10 @@ Pill {
             const n = Scroll.processControlWheel(event, "brightness")
             if (n !== 0) Brightness.bumpBy(n * 5)
         }
+    }
+
+    TapHandler {
+        acceptedButtons: Qt.RightButton
+        onTapped: MenuState.toggleAt(root.mapToItem(null, root.width / 2, 0).x, root.screen)
     }
 }

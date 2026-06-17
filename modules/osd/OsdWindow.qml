@@ -18,8 +18,7 @@ PanelWindow {
 
     implicitHeight: 150
 
-    readonly property bool _bottom: ShellSettings.osdPosition === "bottom"
-    readonly property bool _barBottom: ShellSettings.barPosition === "bottom"
+    readonly property bool _bottom: ShellSettings.barPosition === "bottom"
     readonly property int _barInset: ShellSettings.barFloating ? 4 : 0
     readonly property int _edgeY: _barInset + ShellSettings.barHeight + 8
     readonly property bool _active: !ShellSettings.osdBarIntegrated || OverviewState.active
@@ -31,8 +30,8 @@ PanelWindow {
         right:  true
     }
 
-    margins.top:    osd._bottom  ? 0 : (osd._barBottom ? 8 : osd._edgeY)
-    margins.bottom: !osd._bottom ? 0 : (osd._barBottom ? osd._edgeY : 12)
+    margins.top:    osd._bottom ? 0 : osd._edgeY
+    margins.bottom: osd._bottom ? osd._edgeY : 0
     mask: Region {}
 
     visible: osd._active && OsdBarState.activeCount > 0
@@ -276,7 +275,7 @@ PanelWindow {
                                         }
 
                                         Behavior on width {
-                                            enabled: !ShellSettings.reduceMotion && !card.closing
+                                            enabled: !ShellSettings.reduceMotion && !card.closing && !OsdBarState.rapid
                                             NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
                                         }
                                     }

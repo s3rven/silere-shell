@@ -6,6 +6,8 @@ import "../../common"
 Pill {
     id: root
 
+    property var screen: null   // ShellScreen this bar sits on, for menu placement
+
     glyph:      Audio.icon
     glyphColor: Audio.muted ? Theme.subtext : Theme.text
     textColor:  Theme.subtext
@@ -35,5 +37,10 @@ Pill {
         id: _tap
         acceptedButtons: Qt.LeftButton
         onTapped: Audio.toggleMute()
+    }
+
+    TapHandler {
+        acceptedButtons: Qt.RightButton
+        onTapped: MenuState.toggleAt(root.mapToItem(null, root.width / 2, 0).x, root.screen)
     }
 }

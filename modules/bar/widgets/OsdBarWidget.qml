@@ -32,11 +32,14 @@ Item {
         enabled: ShellSettings.osdBarIntegrated
         function onShowingChanged() { root._sync() }
         function onBumped() { if (root.state === "visible" && !_bumpAnim.running) _bumpAnim.restart() }
-        // queued icon swap → stamp while visible (matches the pill)
+        // queued icon swap → stamp while visible (matches the pill); during a
+        // rapid burst just snap, a queued stamp-on-stamp reads as thrashing
         function onNextIconChanged() {
             if (OsdBarState.nextIcon === OsdBarState.icon) return
-            if (root.state !== "visible") { OsdBarState.icon = OsdBarState.nextIcon; return }
-            if (ShellSettings.reduceMotion) { OsdBarState.icon = OsdBarState.nextIcon; return }
+            if (root.state !== "visible" || ShellSettings.reduceMotion || OsdBarState.rapid) {
+                OsdBarState.icon = OsdBarState.nextIcon
+                return
+            }
             if (!_iconStamp.running) _iconStamp.start()
         }
     }
@@ -148,7 +151,7 @@ Item {
                 }
 
                 Behavior on width {
-                    enabled: !ShellSettings.reduceMotion && root.state === "visible"
+                    enabled: !ShellSettings.reduceMotion && root.state === "visible" && !OsdBarState.rapid
                     NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
                 }
             }

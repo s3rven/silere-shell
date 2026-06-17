@@ -519,6 +519,37 @@ Item {
                     card.dismiss()
             }
         }
+
+        Rectangle {
+            anchors.top:         parent.top
+            anchors.right:       parent.right
+            anchors.topMargin:   7
+            anchors.rightMargin: 7
+            width: 18; height: 18; radius: 9
+            antialiasing: true
+            color:        _closeHover.hovered ? Theme.withAlpha(Theme.error, 0.18) : Theme.withAlpha(Theme.subtext, 0.10)
+            border.width: 1
+            border.color: _closeHover.hovered ? Theme.withAlpha(Theme.error, 0.32) : Theme.withAlpha(Theme.subtext, 0.14)
+            opacity: _cardHover.hovered ? 1.0 : 0.0
+            scale:   _cardHover.hovered ? 1.0 : 0.6
+            transformOrigin: Item.Center
+            z: 2
+            Behavior on opacity      { NumberAnimation { duration: Motion.fast } }
+            Behavior on scale        { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+            Behavior on color        { ColorAnimation  { duration: Motion.fast } }
+            Behavior on border.color { ColorAnimation  { duration: Motion.fast } }
+            HoverHandler { id: _closeHover; cursorShape: Qt.PointingHandCursor }
+            TapHandler   { onTapped: card.dismiss() }
+            Text {
+                anchors.centerIn: parent
+                text:  "󰅖"
+                color: _closeHover.hovered ? Theme.error : Theme.withAlpha(Theme.subtext, 0.55)
+                font.family:    Settings.font
+                font.pixelSize: Settings.fontSize - 2
+                renderType:     Text.NativeRendering
+                Behavior on color { ColorAnimation { duration: Motion.fast } }
+            }
+        }
     }
 
     // Border drawn on top, outside the clip/layer, so it renders crisp and

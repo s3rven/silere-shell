@@ -120,21 +120,21 @@ Item {
 
         TrayWidget      { id: trayWidget; anchors.verticalCenter: parent.verticalCenter }
         Dot             { show: trayWidget.show }   // tray stays its own group, even compact
-        UpdatesWidget   { anchors.verticalCenter: parent.verticalCenter }
+        UpdatesWidget   { anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
         Dot             { show: root._vUpdates && !root._compact }   // intra-group: fuses with network
-        NetworkWidget   { anchors.verticalCenter: parent.verticalCenter }
+        NetworkWidget   { anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
         // Status group trailing dot. Compact fuses [updates network], so this
         // marks the group boundary whenever *either* member shows — not just
         // network — or a hidden network would drop the whole group's divider.
         Dot             { show: root._compact ? (root._vUpdates || root._vNetwork) : root._vNetwork }
-        Volume          { anchors.verticalCenter: parent.verticalCenter }
+        Volume          { anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
         Dot             { show: !root._compact }                     // intra-group: fuses with brightness
-        BrightnessWidget{ anchors.verticalCenter: parent.verticalCenter }
+        BrightnessWidget{ anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
         // Levels group trailing dot. Non-compact: shows when bri is present.
         // Compact: hide when battery follows (battery's own dot marks the group
         // boundary instead); show only when bri is present but battery is absent.
         Dot             { show: root._vBright && (!root._compact || !root._vBattery) }
-        BatteryWidget   { id: batteryWidget; anchors.verticalCenter: parent.verticalCenter }
+        BatteryWidget   { id: batteryWidget; anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
         Dot             { show: root._vBattery }
         MediaWidget     { id: mediaWidget; anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
         Dot             { show: root._vMedia }

@@ -299,10 +299,9 @@ Item {
         readonly property real _tail: diamond._trailX + diamond.width / 2
         readonly property real _gap:  Math.abs(_head - _tail)
         readonly property bool _rightward: _head >= _tail
-        // strong even on a single-step hop; longer jumps just stretch the streak
-        readonly property real _strength: (ShellSettings.workspaceShift && !root._paging) ? Math.min(1, _gap / 22) : 0
+        readonly property real _strength: (ShellSettings.workspaceShift && !root._paging) ? Math.min(1, _gap / 13) : 0
 
-        height: 2.5 + _strength * 2.5
+        height: 4 + _strength * 4
         radius: height / 2
         antialiasing: true
         y: (root.btnH - height) / 2
@@ -313,7 +312,41 @@ Item {
             GradientStop { position: 0.0; color: trail._rightward ? "transparent" : diamond.tint }
             GradientStop { position: 1.0; color: trail._rightward ? diamond.tint : "transparent" }
         }
-        opacity: _strength * 0.62
+        opacity: _strength * 0.93
+        visible: opacity > 0.01
+    }
+
+    Rectangle {
+        id: trailGlow
+        height: 10 + trail._strength * 4
+        radius: height / 2
+        antialiasing: true
+        y: (root.btnH - height) / 2
+        x: trail.x
+        width: trail.width
+        gradient: Gradient {
+            orientation: Gradient.Horizontal
+            GradientStop { position: 0.0; color: trail._rightward ? "transparent" : diamond.tint }
+            GradientStop { position: 1.0; color: trail._rightward ? diamond.tint : "transparent" }
+        }
+        opacity: trail._strength * 0.20
+        visible: opacity > 0.01
+    }
+
+    Rectangle {
+        id: trailCore
+        height: 2
+        radius: height / 2
+        antialiasing: true
+        y: (root.btnH - height) / 2
+        x: trail.x
+        width: trail.width
+        gradient: Gradient {
+            orientation: Gradient.Horizontal
+            GradientStop { position: 0.0; color: trail._rightward ? "transparent" : Qt.rgba(1, 1, 1, 0.95) }
+            GradientStop { position: 1.0; color: trail._rightward ? Qt.rgba(1, 1, 1, 0.95) : "transparent" }
+        }
+        opacity: trail._strength * 0.88
         visible: opacity > 0.01
     }
 
@@ -560,7 +593,7 @@ Item {
         Behavior on x           { enabled: ShellSettings.workspaceShift && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(190); easing.type: Easing.OutQuart } }
         Behavior on opacity     { NumberAnimation { duration: Motion.ms(150) } }
         Behavior on _hoverScale { NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
-        Behavior on _trailX     { enabled: ShellSettings.workspaceShift && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(300); easing.type: Easing.OutCubic } }
+        Behavior on _trailX     { enabled: ShellSettings.workspaceShift && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(480); easing.type: Easing.OutCubic } }
 
         onTargetXChanged: {
             if (!root.monitorReady) return
@@ -583,6 +616,18 @@ Item {
             NumberAnimation { target: diamond; property: "_tapScale"; to: 1.0;  duration: Motion.ms(145); easing.type: Easing.OutCubic }
         }
 
+        // First-run nudge toward the menu: nobody's told the diamond is clickable.
+        // Reuses the same ack as a real tap; stops mattering for good once any
+        // bar widget opens the menu (ShellSettings.hasOpenedMenu).
+        Timer {
+            interval: 1400
+            running: !ShellSettings.hasOpenedMenu && !ShellSettings.reduceMotion
+            onTriggered: {
+                if (root.activeIndex < 0) return
+                _tapPulse.restart()
+                _glintAnim.restart()
+            }
+        }
     }
 
     Row {

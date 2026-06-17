@@ -6,6 +6,8 @@ import "../../common"
 Pill {
     id: batteryPill
 
+    property var screen: null   // ShellScreen this bar sits on, for menu placement
+
     // Opt-in: drop the indicator while charging or full, since it's not telling
     // you anything useful then. shown also drives the separator dot.
     readonly property bool autoHidden: ShellSettings.batteryAutoHide && (Battery.charging || Battery.full)
@@ -15,6 +17,7 @@ Pill {
     glyph:          Battery.icon
     glyphColor:     Battery.iconColor
     textColor:      Battery.iconColor
+    cursorShape:    Qt.PointingHandCursor
     animateGlyph:   false
     shrinkDelay:    0
     reserveText:    "100%"
@@ -33,5 +36,10 @@ Pill {
             return Battery.label
         }
         return ShellSettings.valuesOnHover ? "" : Battery.label
+    }
+
+    TapHandler {
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        onTapped: MenuState.toggleAt(batteryPill.mapToItem(null, batteryPill.width / 2, 0).x, batteryPill.screen)
     }
 }
