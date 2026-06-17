@@ -157,7 +157,11 @@ _optdep_any() {
     fi
 }
 
-_optdep pipewire      "volume + sound popup"
+if [ -f /usr/lib/qt6/qml/Quickshell/Services/Pipewire/qmldir ]; then
+    printf "    ${GREEN}ok${R}      %-13s ${DIM}%s${R}\n" "pipewire" "volume + sound popup"
+else
+    printf "    ${DIM}–       %-13s %s${R}\n" "pipewire" "volume + sound popup"
+fi
 _optdep brightnessctl "brightness control + popup"
 _optdep inotifywait   "instant brightness, screenshot flash"
 _optdep nmcli         "Wi-Fi name, signal, VPN"
