@@ -11,6 +11,10 @@ A Quickshell shell for Hyprland. Most shells come pre-loaded. Silere starts quie
   <a href="https://quickshell.outfoxxed.me/"><img src="https://img.shields.io/badge/quickshell-hyprland-5a4b6e?style=flat-square&labelColor=1c1c1c" alt="built on quickshell for hyprland"/></a>
 </p>
 
+<p align="center">
+  <img src="assets/showcase.png" alt="silere shell showcase" width="900"/>
+</p>
+
 ---
 
 **bar:** workspaces, clock, media, volume, brightness, battery, network, tray.
