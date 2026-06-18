@@ -15,6 +15,7 @@ Item {
         anchors { top: parent.top; left: parent.left; right: parent.right }
         height: root.thickness
         opacity: Math.min(1.0, root.list.contentY / root.ramp)
+        visible: opacity > 0.001
         gradient: Gradient {
             GradientStop { position: 0.0; color: root.fadeColor }
             GradientStop { position: 1.0; color: "transparent" }
@@ -25,6 +26,7 @@ Item {
         height: root.thickness
         opacity: Math.min(1.0, Math.max(0,
             (root.list.contentHeight - root.list.contentY - root.list.height) / root.ramp))
+        visible: opacity > 0.001
         gradient: Gradient {
             GradientStop { position: 0.0; color: "transparent" }
             GradientStop { position: 1.0; color: root.fadeColor }

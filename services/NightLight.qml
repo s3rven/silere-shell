@@ -11,7 +11,7 @@ Singleton {
     property bool enabled:        false
     property bool _stopping:      false
     property bool _pendingEnable: false
-    readonly property bool toolAvailable: SystemTools.hasHyprsunset && SystemTools.hasPgrep && SystemTools.hasPkill
+    readonly property bool toolAvailable: SystemTools.hasHyprsunset
     readonly property int  temperature: ShellSettings.nightLightTemp
 
     // Location from the system timezone's zoneinfo coords (offline, no GPS); falls
@@ -166,11 +166,13 @@ Singleton {
         if (!root.enabled || !root.toolAvailable) return
         // Restart hyprsunset with the new temperature while staying enabled.
         _pendingEnable = true
-        if (_sunsetProc.running) {
+        if (_sunsetProc.running || _stopping) {
             _stopping = true
-            _sunsetProc.running = false
-        } else if (!_killProc.running) {
+            if (_sunsetProc.running) _sunsetProc.running = false
+        } else if (SystemTools.hasPkill && !_killProc.running) {
             _killProc.exec(["pkill", "-x", "hyprsunset"])
+        } else if (!_killProc.running) {
+            _pendingEnable = false
         }
         // If _killProc is already running, _pendingEnable is set; its
         // onExited handler will call _startSunset() with the new temperature.
@@ -180,11 +182,17 @@ Singleton {
         if (!toolAvailable) return
         if (enabled) {
             _pendingEnable = false
-            if (_killProc.running) return
+            if (_killProc.running) { enabled = false; return }
             // Kill only the process we spawned; fall back to pkill only if we
             // didn't start it (i.e. it was already running when the shell launched).
-            if (_sunsetProc.running) { _stopping = true; _sunsetProc.running = false }
-            else _killProc.exec(["pkill", "-x", "hyprsunset"])
+            if (_sunsetProc.running || _stopping) {
+                _stopping = true
+                if (_sunsetProc.running) _sunsetProc.running = false
+            } else if (SystemTools.hasPkill) {
+                _killProc.exec(["pkill", "-x", "hyprsunset"])
+            } else {
+                return
+            }
             enabled = false
         } else {
             if (_sunsetProc.running || _stopping) { _pendingEnable = true; return }
@@ -213,6 +221,8 @@ Singleton {
     function _init(): void {
         if (!SystemTools.ready) return
         if (!toolAvailable) { enabled = false; return }
+        if (!SystemTools.hasPgrep) { enabled = _sunsetProc.running; return }
+        if (!_sunsetProc.running) enabled = false
         if (!_checkProc.running) _checkProc.exec(["pgrep", "-x", "hyprsunset"])
     }
 

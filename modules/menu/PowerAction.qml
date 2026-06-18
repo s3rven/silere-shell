@@ -40,7 +40,6 @@ Item {
 
     function disarm(): void {
         root.armed = false
-        _armTimer.stop()
     }
 
     HoverHandler {

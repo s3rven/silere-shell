@@ -25,7 +25,7 @@ Pill {
     // No number yet while the first check runs, show just the icon + sweep instead
     // of a misleading "0"; the count lands as soon as the query returns.
     // "stale" flags a count held over from before a failed check.
-    text:           hoverActive ? (Updates.lastFailed ? Updates.label + " · stale" : Updates.label)
+    text:           hoverActive ? (Updates.lastFailed ? Updates.statusText + " · " + Updates.lastError : Updates.statusText)
                   : Updates.count > 0 ? String(Updates.count) : ""
     textColor:      Theme.text
     cursorShape:    Qt.PointingHandCursor

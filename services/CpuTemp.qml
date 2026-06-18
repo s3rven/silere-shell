@@ -10,6 +10,9 @@ Singleton {
 
     property real temp: 0
     property bool _started: false
+    readonly property bool needed: MenuState.open && MenuState.activeTab === 0
+    readonly property bool _persistentNeed: ShellSettings.osdTempWarn
+        || (ShellSettings.underlineGlow && ShellSettings.underlineTempGlow)
 
     property int _hotCount:      0
     property int _criticalCount: 0
@@ -33,7 +36,7 @@ Singleton {
         duration:       root.pulseDuration
         // alertPulse is only consumed by the menu gauges (the bar underline glows off
         // hot/critical, not the pulse), so don't run the 60fps loop while menu's closed.
-        running:        root.hot && !ShellSettings.reduceMotion && MenuState.open
+        running:        root.hot && !ShellSettings.reduceMotion && root.needed
     }
 
     // Called once per sensor read, not from onTempChanged: identical consecutive
@@ -67,7 +70,7 @@ Singleton {
 
     SupervisedProcess {
         id: _proc
-        superviseWhen: root._started && !Idle.isIdle
+        superviseWhen: root._started && root._persistentNeed && !Idle.isIdle
         restartDelay:  2000
         giveUpCodes:   [3]            // exit 3 = no usable temperature sensor
         command: ["bash", "-c",

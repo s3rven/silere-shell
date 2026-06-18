@@ -11,6 +11,7 @@ Item {
     property string text: ""
     property color  color: Theme.text
 
+    clip: true
     anchors.verticalCenter: parent ? parent.verticalCenter : undefined
     // Whole px so neighbours in a Row don't land on fractional pixels.
     implicitWidth:  Math.ceil(_main.implicitWidth)

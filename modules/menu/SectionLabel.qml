@@ -22,7 +22,7 @@ Item {
     implicitHeight: 4 * Math.ceil((_topGap + _text.implicitHeight + _botGap) / 4)
     height: implicitHeight
 
-    // Accent tick — ties the sub-headers into the panel's accent system.
+    // Accent tick ties the sub-headers into the panel's accent system.
     Rectangle {
         id: _tick
         anchors.left:           parent.left
@@ -48,7 +48,7 @@ Item {
         color:       Theme.withAlpha(Theme.mix(Theme.subtext, Theme.accent, 0.12), 0.60)
         font.family: Settings.font
         font.pixelSize: Settings.fontSize - 3
-        font.letterSpacing:  1.4
+        font.letterSpacing:  0
         font.weight: Font.DemiBold
         font.capitalization: Font.AllUppercase
         renderType:  Text.NativeRendering

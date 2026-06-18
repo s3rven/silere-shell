@@ -75,12 +75,11 @@ Singleton {
             else root._fullscreenActive = false
         }
     }
-    Timer { id: _fsRefresh; interval: 50; onTriggered: { Hyprland.refreshToplevels(); _fsSettle.restart() } }
-    // settle delay so the refreshed IPC data has landed before reading it
     Timer {
-        id: _fsSettle
-        interval: 80
+        id: _fsRefresh
+        interval: 100
         onTriggered: {
+            Hyprland.refreshToplevels()
             const o = Hyprland.activeToplevel ? Hyprland.activeToplevel.lastIpcObject : null
             root._fullscreenActive = !!(o && o.fullscreen)
         }
@@ -91,7 +90,12 @@ Singleton {
     function isSeen(id: int):   bool { return !!_seen[id] }
 
     function clearHistory(): void {
-        if (history.length > 0) history = []
+        if (history.length === 0) return
+        for (let i = 0; i < history.length; i++) {
+            const id = history[i]?.id
+            if (id !== undefined) { delete root._seen[id]; delete root._times[id] }
+        }
+        history = []
     }
 
     function _historyEntry(e): var {
@@ -154,11 +158,13 @@ Singleton {
             .replace(/&amp;/g, "&")
     }
 
-    function removeFromHistory(index: int): void {
-        if (index < 0 || index >= history.length) return
+    function removeFromHistory(entry): void {
+        const idx = (typeof entry === "number") ? entry : history.indexOf(entry)
+        if (idx < 0 || idx >= history.length) return
         const next = [...history]
-        next.splice(index, 1)
+        const id = next.splice(idx, 1)[0]?.id
         history = next
+        if (id !== undefined) { delete root._seen[id]; delete root._times[id] }
     }
 
     function dismissObject(notifId: int, notification, expired): void {
@@ -248,6 +254,7 @@ Singleton {
                     urgency: n.urgency,
                     time:    Date.now()
                 }, ...root.history].slice(0, _maxHistory)
+                root.missedCount++
                 n.tracked = false
                 return
             }

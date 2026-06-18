@@ -10,12 +10,14 @@ Rectangle {
 
     default property alias rows: col.data
     property color rowDivider: Theme.menuDivider
+    readonly property real _dividerInset: Math.min(Settings.hPad, Math.max(0, width / 2))
 
     width:  parent ? parent.width : 0
     implicitHeight: col.implicitHeight
     height: implicitHeight
     radius: Theme.radiusControl
     antialiasing: true
+    clip: true
     color: Theme.menuCard
     border.width: 1
     border.color: Theme.menuCardBorder
@@ -26,29 +28,35 @@ Rectangle {
         spacing: 0
     }
 
+    readonly property var _sepVisible: {
+        const result = []
+        const children = col.children
+        let hasAbove = false
+        for (let i = 0; i < children.length; i++) {
+            result.push(hasAbove)
+            const c = children[i]
+            if (c && c.visible && c.height > 0.5) hasAbove = true
+        }
+        return result
+    }
+
     Repeater {
-        model: col.children.length
+        model: root.visible ? col.children.length : 0
         delegate: Rectangle {
             required property int index
             readonly property Item row: col.children[index] ?? null
 
             // separator only above a row that has a visible row before it
-            readonly property bool hasRowAbove: {
-                for (let i = 0; i < index; i++) {
-                    const c = col.children[i]
-                    if (c && c.visible && c.height > 0.5) return true
-                }
-                return false
-            }
+            readonly property bool hasRowAbove: root._sepVisible[index] ?? false
 
             visible: row !== null && row.visible && hasRowAbove
                   && !(row.suppressDividerAbove ?? false) && opacity > 0.01
-            x: 14
+            x: root._dividerInset
             // Row heights and panel offsets sit on the 4px grid (see
             // fractional-scaling notes), so row.y lands on whole physical px
             // and every divider renders the same thickness.
             y: row ? Math.round(row.y) : 0
-            width:  root.width - 28
+            width:  Math.max(0, root.width - root._dividerInset * 2)
             height: 1
             // Hairline: skip antialiasing (smears a 1px line at 1.25x rather than
             // sharpening it) and keep the colour faint so even a 2px-rounded

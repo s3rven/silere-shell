@@ -37,7 +37,7 @@ Singleton {
 
     SupervisedProcess {
         superviseWhen: SystemTools.ready && SystemTools.hasInotifywait
-        cleanExitOnly: true
+        restartDelay: 60000
         command: ["bash", "-c",
             "dirs=(); " +
             "add_dir() { local d=\"$1\" e; [ -n \"$d\" ] && [ -d \"$d\" ] || return; " +
@@ -46,12 +46,16 @@ Singleton {
             "if [ -z \"$pic\" ] && command -v xdg-user-dir >/dev/null 2>&1; then pic=$(xdg-user-dir PICTURES 2>/dev/null || true); fi; " +
             "[ -n \"$pic\" ] || pic=\"$HOME/Pictures\"; " +
             "add_dir \"${HYPRSHOT_DIR:-}\"; " +
+            "add_dir \"${GRIM_DEFAULT_DIR:-}\"; " +
+            "add_dir \"${SCREENSHOT_DIR:-}\"; " +
+            "add_dir \"${XDG_SCREENSHOTS_DIR:-}\"; " +
             "add_dir \"$pic\"; " +
             "add_dir \"$pic/Screenshots\"; " +
             "add_dir \"$HOME/Pictures\"; " +
             "add_dir \"$HOME/Pictures/Screenshots\"; " +
+            "add_dir \"$HOME/Screenshots\"; " +
             "add_dir \"$HOME/.nxc/screenshots\"; " +
-            "[ \"${#dirs[@]}\" -gt 0 ] || exec sleep infinity; " +
+            "[ \"${#dirs[@]}\" -gt 0 ] || exit 3; " +
             "exec inotifywait -m -q -e close_write,moved_to --format '%w%f' \"${dirs[@]}\" 2>/dev/null"]
         stdout: SplitParser {
             onRead: line => root._maybeFlash(line)

@@ -58,9 +58,14 @@ Singleton {
     }
 
     // The system stats are only shown on the menu's "Now" page, so the polling
-    // runs only while the menu is open. Last values persist between opens, so
-    // reopening shows them instantly and they refresh within one tick.
+    // runs only while that tab is visible.
     property bool _active: false
+    readonly property bool _wanted: MenuState.open && MenuState.activeTab === 0
+
+    on_WantedChanged: {
+        if (_wanted) _startDelay.restart()
+        else root._deactivate()
+    }
 
     function _activate(): void {
         if (_active) return
@@ -82,13 +87,13 @@ Singleton {
     Connections {
         target: MenuState
         function onOpenChanged() {
-            if (MenuState.open) _startDelay.restart()
+            if (root._wanted) _startDelay.restart()
             else root._deactivate()
         }
     }
 
     // Created lazily on first open, after open already flipped true, catch that missed edge.
-    Component.onCompleted: if (MenuState.open) _startDelay.restart()
+    Component.onCompleted: if (_wanted) _startDelay.restart()
 
     // Small delay so the loop isn't spawned during the open animation.
     Timer { id: _startDelay; interval: 120; onTriggered: root._activate() }
@@ -133,9 +138,8 @@ Singleton {
         printErrors: false
     }
 
-    function _readFile(view): string {
+    function _readView(view): string {
         try {
-            view.reload()
             view.waitForJob()
             return view.text()
         } catch (e) {
@@ -150,7 +154,11 @@ Singleton {
         _fastRefreshing = true
         try {
 
-        const mem = _readFile(_meminfoFile)
+        _meminfoFile.reload()
+        _uptimeFile.reload()
+        _statFile.reload()
+
+        const mem = _readView(_meminfoFile)
         const total = mem.match(/^MemTotal:\s+(\d+)/m)
         const avail = mem.match(/^MemAvailable:\s+(\d+)/m)
         if (total && avail) {
@@ -158,10 +166,10 @@ Singleton {
             root.memAvailKb = parseInt(avail[1]) || 0
         }
 
-        const up = _readFile(_uptimeFile).trim().split(/\s+/)
+        const up = _readView(_uptimeFile).trim().split(/\s+/)
         if (up.length > 0) root.uptimeSecs = parseFloat(up[0]) || 0
 
-        const _cpuRaw = _readFile(_statFile)
+        const _cpuRaw = _readView(_statFile)
         const _cpuNl  = _cpuRaw.indexOf('\n')
         const cpuLine = _cpuNl < 0 ? _cpuRaw.trim() : _cpuRaw.slice(0, _cpuNl)
         const p = cpuLine.trim().split(/\s+/)

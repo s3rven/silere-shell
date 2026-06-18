@@ -27,6 +27,10 @@ Singleton {
         printErrors: false
     }
 
+    property var _parentPidCache: ({})
+    readonly property int _parentPidCacheTtlMs: 1500
+    readonly property int _parentPidCacheLimit: 128
+
     function _quote(value): string {
         return "\"" + String(value).replace(/\\/g, "\\\\").replace(/"/g, "\\\"") + "\""
     }
@@ -76,29 +80,8 @@ Singleton {
         return root._norm(value).replace(/[^a-z0-9]/g, "")
     }
 
-    // Pick the most likely source window from an app-match pool. A notification
-    // (or media) source is only worth pulsing / jumping to when it's somewhere
-    // you aren't already looking, so prefer windows off the current workspace,
-    // then the most recently focused among them. Single-window apps return
-    // trivially, and the pulse never lands on the workspace you're already on.
     function _chooseSource(pool) {
-        const hereId    = root._hereWorkspaceId()
-        let bestAny = null
-        let bestElsewhere = null
-        const list = pool || []
-
-        for (let i = 0; i < list.length; i++) {
-            const c = list[i]
-            if (!c || !c.address || !c.workspace) continue
-
-            const rank = c.focusHistoryID ?? 9999
-            if (!bestAny || rank < (bestAny.focusHistoryID ?? 9999))
-                bestAny = c
-            if (c.workspace.id !== hereId && (!bestElsewhere || rank < (bestElsewhere.focusHistoryID ?? 9999)))
-                bestElsewhere = c
-        }
-
-        return bestElsewhere || bestAny
+        return root._chooseMatchingSource(pool || [], function() { return true })
     }
 
     function _chooseMatchingSource(clients, matches) {
@@ -141,14 +124,43 @@ Singleton {
         }
     }
 
-    function _parentPid(pid): int {
-        const stat = root._readProcStat(pid)
-        const end = stat.lastIndexOf(")")
-        if (end < 0) return -1
+    function _pruneParentPidCache(now): void {
+        const cache = root._parentPidCache
+        const keys = Object.keys(cache)
+        for (let i = 0; i < keys.length; i++) {
+            const item = cache[keys[i]]
+            if (!item || now - Number(item.time || 0) > root._parentPidCacheTtlMs)
+                delete cache[keys[i]]
+        }
 
-        const parts = stat.slice(end + 1).trim().split(/\s+/)
-        // /proc/<pid>/stat fields after comm start with: state ppid ...
-        return parts.length >= 2 ? root._toPid(parts[1]) : -1
+        const kept = Object.keys(cache)
+        if (kept.length > root._parentPidCacheLimit)
+            root._parentPidCache = ({})
+    }
+
+    function _parentPid(pid): int {
+        const p = root._toPid(pid)
+        if (p <= 1) return -1
+
+        const now = Date.now()
+        const key = String(p)
+        const cached = root._parentPidCache[key]
+        if (cached && now - Number(cached.time || 0) <= root._parentPidCacheTtlMs)
+            return root._toPid(cached.value)
+
+        const stat = root._readProcStat(p)
+        const end = stat.lastIndexOf(")")
+        let parent = -1
+        if (end >= 0) {
+            const parts = stat.slice(end + 1).trim().split(/\s+/)
+            // /proc/<pid>/stat fields after comm start with: state ppid ...
+            parent = parts.length >= 2 ? root._toPid(parts[1]) : -1
+        }
+
+        root._parentPidCache[key] = { value: parent, time: now }
+        if (Object.keys(root._parentPidCache).length > root._parentPidCacheLimit)
+            root._pruneParentPidCache(now)
+        return parent
     }
 
     function _senderPid(notification): int {
@@ -174,8 +186,8 @@ Singleton {
         const seen = ({})
 
         // Each level is a blocking /proc read; a notifier sits a few forks below
-        // its window (term → shell → notify-send), so 12 is ample without a deep scan.
-        for (let depth = 0; p > 1 && depth < 12 && !seen[p]; depth++) {
+        // its window (term → shell → notify-send), so 6 is ample without a deep scan.
+        for (let depth = 0; p > 1 && depth < 6 && !seen[p]; depth++) {
             seen[p] = true
 
             const pool = root._pidMatches(clients, p)

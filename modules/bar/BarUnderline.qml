@@ -76,7 +76,7 @@ Item {
 
         readonly property color _screenshotColor: Theme.text
 
-        property color _effectColor: {
+        readonly property color _effectColorTarget: {
             if (CpuTemp.critical)                         return Theme.error
             if (Battery.critical)                         return Theme.error
             if (Battery.low)                              return Theme.warning
@@ -86,14 +86,17 @@ Item {
             if (CpuTemp.hot)                              return Theme.warning
             return Theme.accent
         }
+        property color _effectColor: _effectColorTarget
         Behavior on _effectColor { ColorAnimation { duration: Motion.ms(350) } }
 
-        readonly property color _stopColor: Qt.rgba(
-            _effectColor.r, _effectColor.g, _effectColor.b, 0.9
+        property color _stopColor: Qt.rgba(
+            _effectColorTarget.r, _effectColorTarget.g, _effectColorTarget.b, 0.9
         )
-        readonly property color _stopColorMid: Qt.rgba(
-            _effectColor.r, _effectColor.g, _effectColor.b, 0.45
+        Behavior on _stopColor { ColorAnimation { duration: Motion.ms(350) } }
+        property color _stopColorMid: Qt.rgba(
+            _effectColorTarget.r, _effectColorTarget.g, _effectColorTarget.b, 0.45
         )
+        Behavior on _stopColorMid { ColorAnimation { duration: Motion.ms(350) } }
         property real _sweepSpread: 0.28
         property real _bloomBoost:  0.0
         property real _screenshotSweepCenter: 0.50
@@ -225,13 +228,13 @@ Item {
                 if (_lineEffect._settingsReady && !ShellSettings.reduceMotion) _previewTimer.restart()
             }
             function onScreenshotGlowStrengthChanged() {
-                if (_lineEffect._settingsReady && ShellSettings.underlineScreenshotGlow && ShellSettings.underlineGlow) _screenshotFlash.restart()
+                if (_lineEffect._settingsReady && !_lineEffect._shotActive && ShellSettings.underlineScreenshotGlow && ShellSettings.underlineGlow) _screenshotFlash.restart()
             }
             function onScreenshotGlowDurationChanged() {
-                if (_lineEffect._settingsReady && ShellSettings.underlineScreenshotGlow && ShellSettings.underlineGlow) _screenshotFlash.restart()
+                if (_lineEffect._settingsReady && !_lineEffect._shotActive && ShellSettings.underlineScreenshotGlow && ShellSettings.underlineGlow) _screenshotFlash.restart()
             }
             function onScreenshotGlowSweepChanged() {
-                if (_lineEffect._settingsReady && ShellSettings.underlineScreenshotGlow && ShellSettings.underlineGlow) _screenshotFlash.restart()
+                if (_lineEffect._settingsReady && !_lineEffect._shotActive && ShellSettings.underlineScreenshotGlow && ShellSettings.underlineGlow) _screenshotFlash.restart()
             }
             function onReduceMotionChanged() {
                 if (!ShellSettings.reduceMotion) return

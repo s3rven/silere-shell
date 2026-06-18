@@ -33,7 +33,8 @@ Item {
     readonly property bool _vUpdates: Updates.available || Updates.isChecking
     readonly property bool _vNetwork: !Network.toolAvailable || Network.available
     readonly property bool _vBright:  Brightness.maxBrightness > 0
-    readonly property bool _vBattery: batteryWidget.shown
+    readonly property bool _vBattery: Battery.available
+        && !(ShellSettings.batteryAutoHide && (Battery.charging || Battery.full))
     readonly property bool _vMedia:   mediaWidget.show
 
     // ── Left ────────────────────────────────────────────────────────────────
@@ -136,7 +137,7 @@ Item {
         // Compact: hide when battery follows (battery's own dot marks the group
         // boundary instead); show only when bri is present but battery is absent.
         Dot             { show: root._vBright && (!root._compact || !root._vBattery) }
-        BatteryWidget   { id: batteryWidget; anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
+        BatteryWidget   { anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
         Dot             { show: root._vBattery }
         MediaWidget     { id: mediaWidget; anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
         Dot             { show: root._vMedia }

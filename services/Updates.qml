@@ -16,7 +16,8 @@ Singleton {
     // Last check errored (network down, mirror hung). The count is held and a
     // faster retry is armed instead of waiting out the full poll.
     property bool lastFailed: false
-    property real _lastCheckMs: 0
+    property string lastError: ""
+    property real lastCheckMs: 0
 
     readonly property bool enabled: ShellSettings.updatesWidget
     // assume online when there's no nmcli to ask
@@ -37,6 +38,29 @@ Singleton {
     readonly property bool   isChecking: _proc.running
     readonly property string icon:      (manager === "pacman" || manager === "aur") ? "󰮯" : "󰚰"
     readonly property string label:     count + (count === 1 ? " update" : " updates")
+    readonly property string managerLabel: {
+        switch (manager) {
+        case "pacman":
+            if (SystemTools.hasParu) return "pacman + paru"
+            if (SystemTools.hasYay)  return "pacman + yay"
+            return "pacman"
+        case "aur":    return SystemTools.hasParu ? "paru" : "yay"
+        case "apt":    return "apt"
+        case "dnf":    return "dnf"
+        case "zypper": return "zypper"
+        case "xbps":   return "xbps"
+        }
+        return SystemTools.ready ? "Unsupported" : "Detecting..."
+    }
+    readonly property string lastCheckTime: lastCheckMs > 0
+        ? Qt.formatDateTime(new Date(lastCheckMs), ShellSettings.clock12h ? "MMM d, h:mm AP" : "MMM d, HH:mm")
+        : "Never"
+    readonly property string statusText: isChecking ? "Checking"
+        : lastFailed ? "Check failed"
+        : !enabled ? "Disabled"
+        : !supported ? "Unsupported"
+        : ready ? (count > 0 ? label : "Up to date")
+        : "Waiting"
 
     function _cmd(): string {
         switch (root.manager) {
@@ -48,8 +72,8 @@ Singleton {
             const aur = SystemTools.hasParu ? "timeout 60 paru -Qua 2>/dev/null | grep -c ."
                       : SystemTools.hasYay  ? "timeout 60 yay -Qua 2>/dev/null | grep -c ."
                       : "echo 0"
-            return "out=$(timeout 90 checkupdates 2>/dev/null); rc=$?; " +
-                   "if [ \"$rc\" -ne 0 ] && [ \"$rc\" -ne 2 ]; then echo ERR; exit 0; fi; " +
+            return "out=$(timeout 90 checkupdates 2>&1); rc=$?; " +
+                   "if [ \"$rc\" -ne 0 ] && [ \"$rc\" -ne 2 ]; then echo \"ERR checkupdates failed (exit $rc)\"; exit 0; fi; " +
                    "repo=$(printf '%s' \"$out\" | grep -c .); " +
                    "aur=$(" + aur + "); " +
                    "echo $((repo + aur))"
@@ -58,12 +82,22 @@ Singleton {
         // last-synced db. No fresh sync, but far better than "unsupported".
         case "aur": {
             const tool = SystemTools.hasParu ? "paru" : "yay"
-            return "timeout 90 " + tool + " -Qu 2>/dev/null | grep -c ."
+            return "out=$(timeout 90 " + tool + " -Qu 2>&1); rc=$?; " +
+                   "if [ \"$rc\" -ne 0 ] && [ -n \"$out\" ]; then echo \"ERR " + tool + " check failed (exit $rc)\"; exit 0; fi; " +
+                   "printf '%s\\n' \"$out\" | grep -c ."
         }
-        case "apt":    return "apt list --upgradable 2>/dev/null | grep -c /"
-        case "dnf":    return "dnf -q check-update 2>/dev/null | grep -cE '^[a-zA-Z0-9]'"
-        case "zypper": return "zypper -q list-updates 2>/dev/null | grep -c '^v '"
-        case "xbps":   return "xbps-install -Mun 2>/dev/null | grep -c ."
+        case "apt":    return "out=$(apt list --upgradable 2>&1); rc=$?; " +
+                              "if [ \"$rc\" -ne 0 ]; then echo \"ERR apt check failed (exit $rc)\"; exit 0; fi; " +
+                              "printf '%s\\n' \"$out\" | grep -c /"
+        case "dnf":    return "out=$(timeout 120 dnf -q check-update 2>&1); rc=$?; " +
+                              "if [ \"$rc\" -ne 0 ] && [ \"$rc\" -ne 100 ]; then echo \"ERR dnf check failed (exit $rc)\"; exit 0; fi; " +
+                              "printf '%s\\n' \"$out\" | grep -cE '^[a-zA-Z0-9]'"
+        case "zypper": return "out=$(timeout 120 zypper -q list-updates 2>&1); rc=$?; " +
+                              "if [ \"$rc\" -ne 0 ]; then echo \"ERR zypper check failed (exit $rc)\"; exit 0; fi; " +
+                              "printf '%s\\n' \"$out\" | grep -c '^v '"
+        case "xbps":   return "out=$(timeout 120 xbps-install -Mun 2>&1); rc=$?; " +
+                              "if [ \"$rc\" -ne 0 ]; then echo \"ERR xbps check failed (exit $rc)\"; exit 0; fi; " +
+                              "printf '%s\\n' \"$out\" | grep -c ."
         }
         return "echo 0"
     }
@@ -79,6 +113,7 @@ Singleton {
         id: _proc
         stdout: StdioCollector { id: _out }
         onExited: {
+            root.lastCheckMs = Date.now()
             if (!ShellSettings.updatesWidget) {
                 root.count = 0
                 root.ready = true
@@ -86,12 +121,13 @@ Singleton {
             }
             const t = (_out.text || "").trim()
             const n = parseInt(t)
-            if (t !== "ERR" && !isNaN(n)) {
+            if (!t.startsWith("ERR") && !isNaN(n)) {
                 root.count = n
                 root.lastFailed = false
-                root._lastCheckMs = Date.now()
+                root.lastError = ""
             } else {
                 root.lastFailed = true
+                root.lastError = t.startsWith("ERR") ? t.substring(3).trim() : "Package check returned no count"
                 _retry.restart()
             }
             root.ready = true
@@ -118,7 +154,7 @@ Singleton {
         target: Idle
         function onIsIdleChanged() {
             if (Idle.isIdle || !root.enabled || !root.supported || !root._online) return
-            if (Date.now() - root._lastCheckMs >= _poll.interval) root.refresh()
+            if (Date.now() - root.lastCheckMs >= _poll.interval) root.refresh()
         }
     }
 
@@ -150,6 +186,7 @@ Singleton {
                 if (_proc.running) _proc.running = false
                 root.count = 0                                // hide the widget at once when off
                 root.lastFailed = false
+                root.lastError = ""
             }
         }
     }

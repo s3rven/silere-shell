@@ -3,15 +3,15 @@ import "../../../config"
 import "../../../services"
 import "../../common"
 
-// Pending shell self-update. Hidden entirely until the flag file exists, so it
-// costs nothing in the common case. Left-click applies (pull + restart);
+// Pending shell self-update. Hidden until a check, install, or pending update is
+// active. Left-click checks or applies (pull + restart);
 // right-click opens the menu like the other status pills.
 Pill {
     id: root
 
     property var screen: null
 
-    readonly property bool _show: ShellUpdate.pending
+    readonly property bool _show: ShellUpdate.pending || ShellUpdate.checking || ShellUpdate.applying
 
     visible: opacity > 0.01
     opacity: _show ? 1.0 : 0.0
@@ -23,18 +23,18 @@ Pill {
     glyph:          "󰚰"
     glyphPixelSize: Settings.fontSize + 1
     glyphColor:     Theme.accent
-    text:           hoverActive ? (ShellUpdate.applying ? "updating…" : ShellUpdate.label) : ""
+    text:           hoverActive ? ShellUpdate.statusText : ""
     textColor:      Theme.text
     cursorShape:    Qt.PointingHandCursor
     animateGlyph:   false
     shrinkDelay:    0
 
-    contentScanEnabled: ShellUpdate.applying && !ShellSettings.reduceMotion
+    contentScanEnabled: (ShellUpdate.applying || ShellUpdate.checking) && !ShellSettings.reduceMotion
     contentScanColor:   Theme.withAlpha(Theme.accent, 0.35)
     contentScanWidth:   20
 
     SequentialAnimation {
-        running: ShellUpdate.applying && !ShellSettings.reduceMotion
+        running: (ShellUpdate.applying || ShellUpdate.checking) && !ShellSettings.reduceMotion
         loops:   Animation.Infinite
         onRunningChanged: if (!running) root.contentScanProgress = 0
         NumberAnimation { target: root; property: "contentScanProgress"; from: 0; to: 1; duration: 900; easing.type: Easing.InOutSine }
@@ -45,7 +45,7 @@ Pill {
     TapHandler {
         id: _tap
         acceptedButtons: Qt.LeftButton
-        onTapped: ShellUpdate.apply()
+        onTapped: ShellUpdate.pending ? ShellUpdate.apply() : ShellUpdate.check()
     }
 
     TapHandler {

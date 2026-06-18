@@ -19,5 +19,5 @@ Singleton {
         if (screen) triggerScreen = screen
         open = true
     }
-    function close(): void { triggerScreen = null; if (open) open = false }
+    function close(): void { if (open) open = false; triggerScreen = null }
 }

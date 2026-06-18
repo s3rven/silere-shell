@@ -23,6 +23,8 @@ Singleton {
     property string wifiConnecting: ""     // ssid mid-connect, "" when idle
     property string wifiError:      ""     // ssid that last failed to connect, cleared on retry
     property var    _savedWifi:     ({})   // ssid -> true for saved wifi connections
+    property bool   _wifiScanRescan: false
+    property bool   _pendingWifiRescan: false
     property int signalStrength:    0
     property real downBps:          0
     property real upBps:            0
@@ -72,17 +74,26 @@ Singleton {
         _radioSet.exec(["nmcli", "radio", "wifi", root.wifiEnabled ? "off" : "on"])
     }
 
-    function scanWifi(): void {
+    function scanWifi(forceRescan: bool): void {
         if (!toolAvailable || !wifiEnabled) {
             clearWifiScan()
             return
         }
-        if (_savedProc.running || _wifiScanProc.running) return
+        if (forceRescan) _pendingWifiRescan = true
+        _beginWifiScan()
+    }
+
+    function _beginWifiScan(): void {
+        if (!toolAvailable || !wifiEnabled || _savedProc.running || _wifiScanProc.running) return
+        _wifiScanRescan = _pendingWifiRescan
+        _pendingWifiRescan = false
         _savedProc.running = true
     }
 
     function clearWifiScan(): void {
         wifiError = ""
+        _wifiScanRescan = false
+        _pendingWifiRescan = false
         if (wifiNetworks.length > 0) wifiNetworks = []
     }
 
@@ -267,7 +278,7 @@ Singleton {
             if (code !== 0) return
             const lines = (_signalOut.text || "").trim().split("\n")
             for (let i = 0; i < lines.length; i++) {
-                const parts = lines[i].split(":")
+                const parts = root._splitNmcliLine(lines[i])
                 if (parts.length >= 2 && parts[0] === "*") {
                     root.signalStrength = parseInt(parts[1]) || 0
                     return
@@ -304,19 +315,23 @@ Singleton {
                 if (p.length >= 2 && p[1].indexOf("wireless") >= 0) set[p[0]] = true
             }
             root._savedWifi = set
-            if (root.toolAvailable && root.wifiEnabled && !_wifiScanProc.running)
+            if (root.toolAvailable && root.wifiEnabled && !_wifiScanProc.running) {
+                root._wifiScanRescan = root._wifiScanRescan || root._pendingWifiRescan
+                root._pendingWifiRescan = false
                 _wifiScanProc.running = true
-            else
+            } else {
                 root.clearWifiScan()
+            }
         }
     }
 
     // Visible access points, deduped by SSID (strongest signal wins).
     Process {
         id: _wifiScanProc
-        command: ["nmcli", "-t", "-f", "ACTIVE,SSID,SIGNAL,SECURITY", "device", "wifi", "list", "--rescan", "no"]
+        command: ["nmcli", "-t", "-f", "ACTIVE,SSID,SIGNAL,SECURITY", "device", "wifi", "list", "--rescan", root._wifiScanRescan ? "yes" : "no"]
         stdout: StdioCollector { id: _wifiScanOut }
         onExited: (code) => {
+            root._wifiScanRescan = false
             if (code !== 0 || !root.toolAvailable || !root.wifiEnabled) {
                 root.clearWifiScan()
                 return
@@ -354,6 +369,7 @@ Singleton {
             // delegate (and would wipe an in-progress password entry)
             if (!root._sameWifiNetworks(out, root.wifiNetworks))
                 root.wifiNetworks = out
+            if (root._pendingWifiRescan) root._beginWifiScan()
         }
     }
 
@@ -371,19 +387,13 @@ Singleton {
 
     // Persistent stats loop, one long-running bash process instead of forking
     // cat every second. Restarts automatically on interface change.
-    property bool _statsRestartNeeded: false
-
     onDeviceNameChanged: {
-        if (root.statsDeviceReady) {
-            root._statsRestartNeeded = true
-            Qt.callLater(function() { root._statsRestartNeeded = false })
-        }
+        if (root.statsDeviceReady) _statsProc.running = false
     }
 
     Process {
         id: _statsProc
-        running: ShellSettings.networkTrafficStats && root.statsDeviceReady
-                 && !root._statsRestartNeeded && !Idle.isIdle
+        running: ShellSettings.networkTrafficStats && root.statsDeviceReady && !Idle.isIdle
         // /proc/net/dev field layout: iface: rx_bytes ... tx_bytes.
         // fd 3 pipe + read -t = fork-free sleep (same trick as CpuTemp).
         command: ["bash", "-c",

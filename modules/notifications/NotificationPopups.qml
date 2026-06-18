@@ -82,7 +82,7 @@ PanelWindow {
         win._pendingDismissItems = []
         win._pendingDismissAll = 0
         for (let i = 0; i < items.length; i++)
-            Notifications.dismissObject(items[i].id, items[i].notification)
+            Notifications.dismissObject(items[i].id, items[i].notification, items[i].expired)
     }
 
     // Dismiss-all plays as a top-to-bottom cascade, one card peels off per tick
@@ -218,7 +218,7 @@ PanelWindow {
                             var it = stack.itemAt(i)
                             if (it) {
                                 items.push(it)
-                                pending.push({ id: it.notifId, notification: it.notification })
+                                pending.push({ id: it.notifId, notification: it.notification, expired: false })
                             }
                         }
                         if (items.length === 0) { Notifications.dismissAll(); return }

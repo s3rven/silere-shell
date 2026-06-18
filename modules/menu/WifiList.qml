@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import "../../config"
 import "../../services"
@@ -22,7 +24,7 @@ Item {
 
     function _syncScanState(): void {
         if (_canScan()) {
-            Network.scanWifi()
+            Network.scanWifi(true)
         } else if (root.open) {
             _selected = ""
             Network.clearWifiScan()
@@ -40,7 +42,7 @@ Item {
         repeat: true
         // paused while a password row is open so a scan can't rebuild the field mid-typing
         running: root._canScan() && root._selected === ""
-        onTriggered: Network.scanWifi()
+        onTriggered: Network.scanWifi(false)
     }
 
     // Close the password row once a connect succeeds (failure keeps it open).

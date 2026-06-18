@@ -4,7 +4,7 @@ import Quickshell.Io
 // Process that relaunches itself after it exits, while superviseWhen holds.
 // Owns onExited; for teardown use onRunningChanged. command/stdout as usual.
 //   giveUpCodes  , exit codes that stop retries (e.g. [3] = no sensor)
-//   cleanExitOnly, only retry after a clean exit (0/130/143), else give up
+//   cleanExitOnly, only retry after a clean exit (0/2/130/143), else give up
 Process {
     id: proc
 
@@ -20,7 +20,7 @@ Process {
     onExited: code => {
         if (!superviseWhen) return   // stopped on purpose, not a crash
 
-        if (giveUpCodes.indexOf(code) >= 0 || (cleanExitOnly && code !== 0 && code !== 130 && code !== 143)) {
+        if (giveUpCodes.indexOf(code) >= 0 || (cleanExitOnly && code !== 0 && code !== 2 && code !== 130 && code !== 143)) {
             proc._gaveUp = true
             return
         }

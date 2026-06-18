@@ -42,7 +42,8 @@ Singleton {
         return -1
     }
 
-    readonly property var devices: {
+    property var devices: []
+    function _rebuildDevices(): void {
         const list = _devices.slice()
         list.sort((a, b) => {
             if (!a || !b) return 0
@@ -52,8 +53,10 @@ Singleton {
             const bn = (b.deviceName || b.name || "").toLowerCase()
             return an < bn ? -1 : (an > bn ? 1 : 0)
         })
-        return list
+        devices = list
     }
+    on_DevicesChanged: _rebuildDevices()
+    Component.onCompleted: _rebuildDevices()
 
     function toggle(): void {
         if (adapter) adapter.enabled = !adapter.enabled

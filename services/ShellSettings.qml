@@ -98,6 +98,8 @@ Singleton {
     property int    wsIconSize:          16
 
     property bool _loaded: false
+    property bool _configDirReady: false
+    property bool _savePendingForDir: false
     // Placement-dependent windows wait for this before mapping, so a saved
     // non-default barPosition doesn't flash at the wrong edge first.
     readonly property bool ready: _loaded
@@ -234,7 +236,9 @@ Singleton {
 
     Component.onDestruction: {
         _writeTimer.stop()
-        _save()   // blocking write, so the quit-time save actually lands
+        if (!_configDirReady)
+            console.warn("silere-shell: saving settings before config dir is ready:", _configDir)
+        _save(true)   // blocking write, so the quit-time save actually lands
     }
 
     Component.onCompleted: {
@@ -243,8 +247,7 @@ Singleton {
         // property, derived from the schema, so a new setting can't be forgotten.
         for (let i = 0; i < _schema.length; i++)
             root[_schema[i].k + "Changed"].connect(root._onSettingChanged)
-        // dir must exist before the first native write
-        Quickshell.execDetached(["mkdir", "-p", _configDir])
+        root._ensureConfigDir()
     }
 
     readonly property string _configDir: {
@@ -253,6 +256,25 @@ Singleton {
             ? String(env)
             : String(Quickshell.env("HOME")) + "/.config"
         return base + "/silere-shell"
+    }
+
+    function _ensureConfigDir(): void {
+        if (_configDirReady || _mkdirProc.running) return
+        _mkdirProc.running = true
+    }
+
+    Process {
+        id: _mkdirProc
+        command: ["mkdir", "-p", root._configDir]
+        onExited: (code) => {
+            root._configDirReady = true
+            if (code !== 0)
+                console.warn("silere-shell: failed to create settings directory:", root._configDir)
+            if (root._savePendingForDir) {
+                root._savePendingForDir = false
+                root._save()
+            }
+        }
     }
 
     // Native file IO (no bash spawns): atomic writes, and watchChanges means an
@@ -289,7 +311,12 @@ Singleton {
         onTriggered: _save()
     }
 
-    function _save(): void {
+    function _save(force): void {
+        if (!force && !_configDirReady) {
+            _savePendingForDir = true
+            _ensureConfigDir()
+            return
+        }
         const out = { __version: _settingsVersion }
         for (let i = 0; i < _schema.length; i++) {
             const key = _schema[i].k

@@ -8,6 +8,7 @@ Singleton {
     property bool open:    false
     property real anchorX: 10    // screen X of the trigger point; set before calling toggle()
     property var  triggerScreen: null  // ShellScreen the menu was opened from; null → focused
+    property int  activeTab: 0
 
     // Lets pages ask the menu to switch tabs (0 Home, 1 Settings, 2 Recent)
     // without holding a reference to the panel.

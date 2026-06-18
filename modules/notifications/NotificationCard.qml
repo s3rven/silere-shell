@@ -73,6 +73,7 @@ Item {
     function dismiss(expired): void {
         if (!card.enabled) return
         card._expired = expired === true
+        card._collapseBasis = cardRect.height
         _autoClose.stop()
         _arrivalShimmer.stop()
         _shimmer.opacity = 0
@@ -132,7 +133,9 @@ Item {
     implicitWidth:  320
     // collapses during dismiss so the cards below glide up instead of snapping
     property real _collapse: 1
-    implicitHeight: cardRect.height * _collapse
+
+    property real _collapseBasis: cardRect.height
+    implicitHeight: _collapseBasis * _collapse
     // Which way the card slides on enter/exit: +1 from the right, -1 from the left,
     // 0 = no horizontal slide (a centred popup just fades).
     property int slideDir: 1
@@ -424,7 +427,11 @@ Item {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: { _actBtn.modelData.invoke(); card.dismiss() }
+                            onClicked: {
+                                if (!card.enabled) return
+                                _actBtn.modelData.invoke()
+                                card.dismiss()
+                            }
                         }
                     }
                 }

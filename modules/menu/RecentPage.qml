@@ -188,12 +188,23 @@ Item {
                 // no remove transition, so peel the card first, then touch the model.
                 property bool _removing: false
                 readonly property int _fullH: _entryCol.implicitHeight + 26
+                property var _pendingRemove: null
                 function _deleteSelf(): void {
-                    if (ShellSettings.reduceMotion) { Notifications.removeFromHistory(index); return }
+                    if (ShellSettings.reduceMotion) { Notifications.removeFromHistory(modelData); return }
                     _removing = true
+                    _pendingRemove = _card.modelData
                     _delTimer.restart()
                 }
-                Timer { id: _delTimer; interval: Motion.fast + 40; onTriggered: Notifications.removeFromHistory(_card.index) }
+                Timer {
+                    id: _delTimer
+                    interval: Motion.fast + 40
+                    onTriggered: {
+                        if (_card._pendingRemove !== null) {
+                            Notifications.removeFromHistory(_card._pendingRemove)
+                            _card._pendingRemove = null
+                        }
+                    }
+                }
                 Connections {
                     target: root
                     function onClearAllRequested() {

@@ -53,7 +53,7 @@ Item {
         return s.length < 2 ? "0" + s : s
     }
 
-    readonly property int _navW:     142
+    readonly property int _navW:     146
     readonly property int _navGap:   16
     readonly property int _contentW: Math.max(0, width - _navW - _navGap)
 
@@ -219,9 +219,8 @@ Item {
                 anchors.fill: parent
                 radius: 11
                 antialiasing: true
-                color: Theme.menuSidebar
-                border.width: 1
-                border.color: Theme.menuCardBorder
+                color: Theme.mix(Theme.menuSidebar, Theme.background, 0.08)
+                border.width: 0
             }
 
             // ── Sliding selection ───────────────────────────────────────────
@@ -231,59 +230,54 @@ Item {
             // off until after that frame so the first paint snaps. Sits under
             // the rows (declared before _navCol) so row text/icons paint on top.
             readonly property real _selY: root._sectionRowY(root._section)
-            readonly property real _selH: root._navRowH
             property bool _selReady: false
             Component.onCompleted: Qt.callLater(function() { _nav._selReady = true })
 
             Item {
                 id: _selHighlight
-                x: 8
-                width: _nav.width - 16
+                x: 6
+                width: _nav.width - 12
                 y: _nav._selY
-                height: _nav._selH
+                height: root._navRowH
                 visible: true
 
                 Behavior on y {
                     enabled: _nav._selReady && !ShellSettings.reduceMotion
                     NumberAnimation { duration: Motion.ms(180); easing.type: Easing.OutCubic }
                 }
-                Behavior on height {
-                    enabled: _nav._selReady && !ShellSettings.reduceMotion
-                    NumberAnimation { duration: Motion.ms(150); easing.type: Easing.OutCubic }
-                }
 
-                // Soft glow bleeding just past the edge — fakes a glowing selector rim.
-                Rectangle {
-                    anchors.fill: parent
-                    anchors.margins: -1
-                    radius: 8
-                    antialiasing: true
-                    color: "transparent"
-                    border.width: 2
-                    border.color: Theme.withAlpha(Theme.accent, 0.10)
-                }
-
-                // Main fill: strong on the left, holds the color, fades to near-nothing.
+                // Quiet active wash: enough structure for keyboard navigation without
+                // turning every row into a boxed control.
                 Rectangle {
                     anchors.fill: parent
                     radius: 7
                     antialiasing: true
                     gradient: Gradient {
                         orientation: Gradient.Horizontal
-                        GradientStop { position: 0.0; color: Theme.withAlpha(Theme.accent, 0.42) }
-                        GradientStop { position: 0.35; color: Theme.withAlpha(Theme.accent, 0.26) }
-                        GradientStop { position: 1.0; color: Theme.withAlpha(Theme.accent, 0.03) }
+                        GradientStop { position: 0.0; color: Theme.withAlpha(Theme.accent, 0.18) }
+                        GradientStop { position: 0.45; color: Theme.withAlpha(Theme.accent, 0.09) }
+                        GradientStop { position: 1.0; color: Theme.withAlpha(Theme.accent, 0.018) }
                     }
                 }
 
-                // Uniform accent outline — the clear cheat-menu edge on the active row.
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 1
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 2
+                    height: 15
+                    radius: 1
+                    antialiasing: true
+                    color: Theme.withAlpha(Theme.accent, 0.82)
+                }
+
                 Rectangle {
                     anchors.fill: parent
                     radius: 7
                     antialiasing: true
                     color: "transparent"
                     border.width: 1
-                    border.color: Theme.withAlpha(Theme.accent, 0.40)
+                    border.color: Theme.withAlpha(Theme.accent, 0.34)
                 }
 
             }
@@ -309,37 +303,49 @@ Item {
 
                         readonly property bool isGroup: !!modelData.children
                         readonly property var  _leaves: isGroup ? modelData.children : [modelData]
+                        readonly property bool groupActive: {
+                            for (let i = 0; i < _leaves.length; i++) {
+                                if (_leaves[i].section === root._section) return true
+                            }
+                            return false
+                        }
 
                         Item {
                             width: parent.width
                             height: _grp.isGroup ? root._navHdrH : root._navStdHdrH
 
-                            Rectangle {
-                                id: _hdrTick
-                                visible:                _grp.isGroup
-                                anchors.left:           parent.left
-                                anchors.leftMargin:     4
-                                anchors.bottom:         parent.bottom
-                                anchors.bottomMargin:   9
-                                width:  12
-                                height: 1
-                                color:  Theme.withAlpha(Theme.accent, 0.55)
-                            }
                             Text {
                                 id: _hdrLabel
                                 visible:                _grp.isGroup
-                                anchors.left:           _hdrTick.right
-                                anchors.leftMargin:     6
+                                anchors.left:           parent.left
+                                anchors.leftMargin:     10
                                 anchors.bottom:         parent.bottom
                                 anchors.bottomMargin:   5
                                 text:           _grp.modelData.label
-                                color:          Theme.withAlpha(Theme.accent, 0.75)
+                                color:          _grp.groupActive
+                                    ? Theme.withAlpha(Theme.mix(Theme.accent, Theme.text, 0.34), 0.88)
+                                    : Theme.withAlpha(Theme.mix(Theme.accent, Theme.subtext, 0.28), 0.66)
                                 font.family:    Settings.font
                                 font.pixelSize: Settings.fontSize - 3
-                                font.letterSpacing:  1.4
+                                font.letterSpacing:  0
                                 font.weight:    Font.DemiBold
                                 font.capitalization: Font.AllUppercase
                                 renderType:     Text.NativeRendering
+                                Behavior on color { ColorAnimation { duration: Motion.fast } }
+                            }
+                            Rectangle {
+                                visible:              _grp.isGroup
+                                anchors.left:         _hdrLabel.right
+                                anchors.leftMargin:   9
+                                anchors.right:        parent.right
+                                anchors.rightMargin:  9
+                                anchors.verticalCenter: _hdrLabel.verticalCenter
+                                height: 1
+                                radius: 0.5
+                                color: _grp.groupActive
+                                    ? Theme.withAlpha(Theme.accent, 0.30)
+                                    : Theme.withAlpha(Theme.subtext, 0.10)
+                                Behavior on color { ColorAnimation { duration: Motion.fast } }
                             }
                         }
 
@@ -351,29 +357,34 @@ Item {
                                 required property var modelData
                                 readonly property bool   active: root._section === modelData.section
                                 readonly property string glyph:  modelData.glyph ?? ""
+                                property real _shift: active ? 1.5 : (_leafHover.hovered ? 1.0 : 0.0)
 
                                 readonly property color _fg: active
-                                    ? Theme.accent
-                                    : Theme.withAlpha(Theme.subtext, _leafHover.hovered ? 0.88 : 0.65)
+                                    ? Theme.text
+                                    : Theme.withAlpha(Theme.mix(Theme.subtext, Theme.text, 0.10), _leafHover.hovered ? 0.86 : 0.62)
                                 readonly property color _glyphFg: active
                                     ? Theme.accent
-                                    : Theme.withAlpha(Theme.subtext, _leafHover.hovered ? 0.70 : 0.45)
+                                    : Theme.withAlpha(Theme.subtext, _leafHover.hovered ? 0.68 : 0.42)
 
                                 width: parent.width
                                 height: root._navRowH
                                 radius: 7
                                 antialiasing: true
                                 color: (_leafHover.hovered && !active)
-                                    ? Theme.withAlpha(Theme.menuHover, 0.07) : "transparent"
+                                    ? Theme.withAlpha(Theme.menuHover, 0.055) : "transparent"
                                 Behavior on color { ColorAnimation { duration: Motion.fast } }
+                                Behavior on _shift {
+                                    enabled: !ShellSettings.reduceMotion
+                                    NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic }
+                                }
 
                                 HoverHandler { id: _leafHover; cursorShape: Qt.PointingHandCursor }
                                 TapHandler   { id: _leafTap; onTapped: root._setSection(_leaf.modelData.section) }
-                                scale: _leafTap.pressed ? 0.94 : 1.0
+                                scale: _leafTap.pressed ? 0.98 : 1.0
                                 transformOrigin: Item.Left
                                 Behavior on scale {
                                     enabled: !ShellSettings.reduceMotion
-                                    NumberAnimation { duration: Motion.ms(180); easing.type: Easing.OutBack; easing.overshoot: 2.0 }
+                                    NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic }
                                 }
 
                                 Text {
@@ -381,12 +392,14 @@ Item {
                                     anchors.left:           parent.left
                                     anchors.leftMargin:     12
                                     anchors.verticalCenter: parent.verticalCenter
-                                    width: Math.ceil(implicitWidth)
+                                    width: 18
+                                    horizontalAlignment: Text.AlignHCenter
                                     text:  _leaf.glyph
                                     color: _leaf._glyphFg
                                     font.family:    Settings.font
-                                    font.pixelSize: Settings.fontSize + 1
+                                    font.pixelSize: Settings.fontSize
                                     renderType:     Text.NativeRendering
+                                    transform: Translate { x: _leaf._shift }
                                     Behavior on color { ColorAnimation { duration: Motion.fast } }
                                 }
 
@@ -398,11 +411,12 @@ Item {
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: _leaf.modelData.label
                                     elide: Text.ElideRight
-                                    color: _leaf.active ? Theme.text : _leaf._fg
+                                    color: _leaf._fg
                                     font.family:    Settings.font
                                     font.pixelSize: Settings.fontSize - 1
                                     font.weight:    _leaf.active ? Font.DemiBold : Font.Normal
                                     renderType:     Text.NativeRendering
+                                    transform: Translate { x: _leaf._shift }
                                     Behavior on color { ColorAnimation { duration: Motion.fast } }
                                 }
                             }
@@ -526,7 +540,7 @@ Item {
                         color:          Theme.withAlpha(Theme.mix(Theme.subtext, Theme.accent, 0.40), 0.58)
                         font.family:    Settings.font
                         font.pixelSize: Settings.fontSize - 4
-                        font.letterSpacing: 1.5
+                        font.letterSpacing: 0
                         font.weight:    Font.DemiBold
                         renderType:     Text.NativeRendering
                     }
@@ -583,10 +597,12 @@ Item {
                         if (ShellSettings.neutralTheme) {
                             _themeOpenMatuTimer.stop()
                             _secTheme._showMatuContent    = false
+                            _themeOpenNeutralTimer.interval = Motion.fast + 20
                             _themeOpenNeutralTimer.restart()
                         } else {
                             _themeOpenNeutralTimer.stop()
                             _secTheme._showNeutralContent = false
+                            _themeOpenMatuTimer.interval = Motion.fast + 20
                             _themeOpenMatuTimer.restart()
                         }
                     }
@@ -675,12 +691,15 @@ Item {
                             }
                             Text {
                                 anchors.right:          parent.right; anchors.rightMargin: 12
+                                anchors.left:           _pickerHead.right; anchors.leftMargin: 8
                                 anchors.verticalCenter: _pickerHead.verticalCenter
+                                horizontalAlignment: Text.AlignRight
                                 text:           _accentPicker._shownName
                                 color:          Theme.withAlpha(Theme.subtext, 0.7)
                                 font.family:    Settings.font
                                 font.pixelSize: Settings.fontSize - 2
                                 renderType:     Text.NativeRendering
+                                elide:          Text.ElideRight
                             }
 
                             Row {
@@ -1177,7 +1196,10 @@ Item {
                         model: {
                             const t = [{ value: "", label: "Focus" }]
                             const s = Quickshell.screens || []
-                            for (let i = 0; i < s.length; i++) t.push({ value: s[i].name, label: s[i].name })
+                            for (let i = 0; i < s.length; i++) {
+                                const name = s[i].name
+                                t.push({ value: name, label: name.length > 12 ? name.slice(0, 9) + "..." : name })
+                            }
                             return t
                         }
                         onChosen: (v) => ShellSettings.overlayMonitor = v
@@ -1260,29 +1282,79 @@ Item {
                 spacing: 0
                 visible: root._shownSection === "updates"
 
-                property bool checking: false
-                property string version: ""
+                SectionLabel { label: "SILERE"; first: true }
+                SettingsCard {
+                    Item {
+                        width: parent.width; height: 44
+                        Row {
+                            anchors.left: parent.left; anchors.leftMargin: 12
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 8
+                            Text {
+                                id: _silereIcon
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: ShellUpdate.pending ? "󰚰" : "󰄬"
+                                color: ShellUpdate.lastCheckError.length > 0 || ShellUpdate.lastApplyError.length > 0
+                                    ? Theme.warning
+                                    : ShellUpdate.pending ? Theme.accent : Theme.withAlpha(Theme.success, 0.9)
+                                font.family: Settings.font; font.pixelSize: Settings.fontSize + 1
+                                renderType: Text.NativeRendering
+                                transformOrigin: Item.Center
+                                scale: 1.0
 
-                Process {
-                    id: _versionProc
-                    command: ["git", "-C", Quickshell.shellDir, "rev-parse", "--short", "HEAD"]
-                    running: true
-                    stdout: StdioCollector { id: _versionOut }
-                    onExited: _secUpdates.version = (_versionOut.text || "").trim()
+                                Behavior on color { ColorAnimation { duration: Motion.color } }
+
+                                // Spring pop when landing on "Up to date"
+                                SequentialAnimation {
+                                    id: _silerePopAnim
+                                    NumberAnimation {
+                                        target: _silereIcon; property: "scale"
+                                        to: 1.30; duration: Motion.fast; easing.type: Easing.OutQuad
+                                    }
+                                    NumberAnimation {
+                                        target: _silereIcon; property: "scale"
+                                        to: 1.0;  duration: Motion.slow; easing.type: Easing.OutBack
+                                    }
+                                }
+
+                                Connections {
+                                    target: ShellUpdate
+                                    function onCheckingChanged() {
+                                        if (ShellUpdate.checking) return
+                                        if (!ShellUpdate.pending
+                                                && ShellUpdate.lastCheckError.length === 0
+                                                && !ShellSettings.reduceMotion) {
+                                            _silerePopAnim.restart()
+                                        }
+                                    }
+                                }
+                            }
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: ShellUpdate.statusText
+                                color: Theme.withAlpha(Theme.text, 0.85)
+                                font.family: Settings.font; font.pixelSize: Settings.fontSize
+                                renderType: Text.NativeRendering
+                            }
+                        }
+                        Text {
+                            anchors.right: parent.right; anchors.rightMargin: 12
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: ShellUpdate.currentVersion.length > 0 ? "#" + ShellUpdate.currentVersion : ""
+                            color: Theme.withAlpha(Theme.subtext, 0.55)
+                            font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
+                            renderType: Text.NativeRendering
+                        }
+                    }
+                    HintText {
+                        visible: ShellUpdate.pending || ShellUpdate.lastCheckError.length > 0 || ShellUpdate.lastApplyError.length > 0
+                        text: ShellUpdate.lastApplyError.length > 0 ? ShellUpdate.lastApplyError
+                            : ShellUpdate.lastCheckError.length > 0 ? ShellUpdate.lastCheckError
+                            : ShellUpdate.summary
+                    }
                 }
 
-                // check mode never errors loudly; just release the disabled state
-                // after a beat whether or not the flag file ends up changing.
-                Timer { id: _checkTimer; interval: 6000; onTriggered: _secUpdates.checking = false }
-
-                function _check() {
-                    if (_secUpdates.checking) return
-                    _secUpdates.checking = true
-                    _checkTimer.restart()
-                    Quickshell.execDetached(["bash", Quickshell.shellDir + "/scripts/update.sh"])
-                }
-
-                SectionLabel { label: "STATUS"; first: true }
+                SectionLabel { label: "PACKAGES" }
                 SettingsCard {
                     Item {
                         width: parent.width; height: 44
@@ -1292,16 +1364,14 @@ Item {
                             spacing: 8
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: ShellUpdate.pending ? "󰚰" : "󰄬"
-                                color: ShellUpdate.pending ? Theme.accent : Theme.withAlpha(Theme.success, 0.9)
+                                text: Updates.icon
+                                color: Updates.lastFailed ? Theme.warning : Theme.withAlpha(Theme.subtext, 0.85)
                                 font.family: Settings.font; font.pixelSize: Settings.fontSize + 1
                                 renderType: Text.NativeRendering
                             }
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: ShellUpdate.pending ? (ShellUpdate.count + " new "
-                                        + (ShellUpdate.count === 1 ? "commit" : "commits") + " pending")
-                                      : "Up to date"
+                                text: "Packages"
                                 color: Theme.withAlpha(Theme.text, 0.85)
                                 font.family: Settings.font; font.pixelSize: Settings.fontSize
                                 renderType: Text.NativeRendering
@@ -1310,32 +1380,51 @@ Item {
                         Text {
                             anchors.right: parent.right; anchors.rightMargin: 12
                             anchors.verticalCenter: parent.verticalCenter
-                            text: _secUpdates.version.length > 0 ? "#" + _secUpdates.version : ""
+                            text: Updates.managerLabel
                             color: Theme.withAlpha(Theme.subtext, 0.55)
                             font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
                             renderType: Text.NativeRendering
                         }
                     }
+                    Item {
+                        property bool suppressDividerAbove: true
+                        width: parent.width; height: 32
+                        Text {
+                            anchors.left: parent.left; anchors.leftMargin: 38
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "Last checked · " + Updates.lastCheckTime
+                            color: Theme.withAlpha(Theme.subtext, 0.42)
+                            font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
+                            renderType: Text.NativeRendering
+                        }
+                        Text {
+                            anchors.right: parent.right; anchors.rightMargin: 12
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: Updates.statusText
+                            color: Updates.lastFailed ? Theme.warning : Theme.withAlpha(Theme.subtext, 0.50)
+                            font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
+                            renderType: Text.NativeRendering
+                        }
+                    }
                     HintText {
-                        visible: ShellUpdate.pending && ShellUpdate.summary.length > 0
-                        text: ShellUpdate.summary
+                        visible: Updates.lastFailed && Updates.lastError.length > 0
+                        text: Updates.lastError
                     }
                 }
 
-                SectionLabel { label: "ACTIONS" }
+                SectionLabel { label: "CONTROLS" }
                 SettingsCard {
                     Item {
                         id: _checkRow
                         width: parent.width; height: 44
-                        opacity: _secUpdates.checking ? 0.45 : 1.0
+                        opacity: ShellUpdate.checking ? 0.45 : 1.0
                         Behavior on opacity { NumberAnimation { duration: Motion.medium } }
-                        HoverHandler { id: _checkHover; cursorShape: _secUpdates.checking ? Qt.ArrowCursor : Qt.PointingHandCursor }
-                        TapHandler { enabled: !_secUpdates.checking; onTapped: _secUpdates._check() }
+                        HoverHandler { id: _checkHover; cursorShape: ShellUpdate.checking ? Qt.ArrowCursor : Qt.PointingHandCursor }
+                        TapHandler { enabled: !ShellUpdate.checking; onTapped: ShellUpdate.check() }
                         RowHoverBg {
                             anchors.fill: parent
-                            topRadius: 10
-                            bottomRadius: ShellUpdate.pending ? 0 : 10
-                            active: _checkHover.hovered && !_secUpdates.checking
+                            topRadius: 10; bottomRadius: 0
+                            active: _checkHover.hovered && !ShellUpdate.checking
                             fillOpacity: 0.08
                         }
                         Row {
@@ -1351,7 +1440,7 @@ Item {
                             }
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: _secUpdates.checking ? "Checking…" : "Check now"
+                                text: ShellUpdate.checking ? "Checking..." : "Check Silere"
                                 color: Theme.withAlpha(Theme.text, 0.85)
                                 font.family: Settings.font; font.pixelSize: Settings.fontSize
                                 renderType: Text.NativeRendering
@@ -1368,10 +1457,9 @@ Item {
                         TapHandler { enabled: !ShellUpdate.applying; onTapped: ShellUpdate.apply() }
                         RowHoverBg {
                             anchors.fill: parent
-                            bottomRadius: 10
+                            bottomRadius: 0
                             active: _applyHover.hovered && !ShellUpdate.applying
-                            fillColor: Theme.accent
-                            fillOpacity: 0.10
+                            fillColor: Theme.accent; fillOpacity: 0.10
                         }
                         Row {
                             anchors.left: parent.left; anchors.leftMargin: 12
@@ -1386,7 +1474,7 @@ Item {
                             }
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: ShellUpdate.applying ? "Applying…" : "Apply update"
+                                text: ShellUpdate.applying ? "Updating…" : "Install update"
                                 color: Theme.accent
                                 font.family: Settings.font; font.pixelSize: Settings.fontSize
                                 font.weight: Font.DemiBold
@@ -1394,9 +1482,64 @@ Item {
                             }
                         }
                     }
+                    Item {
+                        id: _packageCheckRow
+                        width: parent.width; height: 44
+                        readonly property bool canCheck: ShellSettings.updatesWidget && Updates.supported && !Updates.isChecking
+                        opacity: _packageCheckRow.canCheck ? 1.0 : 0.45
+                        Behavior on opacity { NumberAnimation { duration: Motion.medium } }
+                        HoverHandler { id: _packageCheckHover; cursorShape: _packageCheckRow.canCheck ? Qt.PointingHandCursor : Qt.ArrowCursor }
+                        TapHandler { enabled: _packageCheckRow.canCheck; onTapped: Updates.refresh() }
+                        RowHoverBg {
+                            anchors.fill: parent
+                            bottomRadius: 10
+                            active: _packageCheckHover.hovered && _packageCheckRow.canCheck
+                            fillOpacity: 0.08
+                        }
+                        Row {
+                            anchors.left: parent.left; anchors.leftMargin: 12
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 8
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "󰓦"
+                                color: Theme.withAlpha(Theme.subtext, 0.85)
+                                font.family: Settings.font; font.pixelSize: Settings.fontSize + 1
+                                renderType: Text.NativeRendering
+                            }
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: Updates.isChecking ? "Checking packages..." : "Check packages"
+                                color: Theme.withAlpha(Theme.text, 0.85)
+                                font.family: Settings.font; font.pixelSize: Settings.fontSize
+                                renderType: Text.NativeRendering
+                            }
+                        }
+                    }
                 }
 
-                HintText { text: "Pulls the latest commits and restarts the shell. Checks run automatically on a schedule too." }
+                Item { width: 1; height: 8 }
+
+                SettingsCard {
+                    ToggleRow {
+                        glyph: "󰚰"; label: "Package update badge"
+                        checked: ShellSettings.updatesWidget
+                        onToggled: ShellSettings.updatesWidget = !ShellSettings.updatesWidget
+                        available: !SystemTools.ready || Updates.supported
+                        dependsNote: "No package manager"
+                        topRadius: 10; bottomRadius: 0
+                    }
+                    ToggleRow {
+                        glyph: "󰥔"; label: "Notify me about updates"
+                        checked: ShellUpdate.timerEnabled
+                        enabled: !ShellUpdate.timerBusy
+                        available: ShellUpdate.timerSupported
+                        dependsNote: ShellUpdate.timerBusy ? "Working" : (!SystemTools.ready ? "Checking" : "No systemd")
+                        topRadius: 0; bottomRadius: 0
+                        onToggled: ShellUpdate.setTimerEnabled(!ShellUpdate.timerEnabled)
+                    }
+                    HintText { text: "Shows a bar badge when Silere has an update. Nothing installs until you press Install update." }
+                }
             }
 
             // ── BAR · Separators ───────────────────────────────────────
@@ -1543,7 +1686,7 @@ Item {
                         onToggled: ShellSettings.trayWidget = !ShellSettings.trayWidget
                     }
                     ToggleRow {
-                        glyph: "󰚰"; label: "Update count"
+                        glyph: "󰚰"; label: "Package update count"
                         checked: ShellSettings.updatesWidget
                         onToggled: ShellSettings.updatesWidget = !ShellSettings.updatesWidget
                         available: !SystemTools.ready || Updates.supported
@@ -1710,7 +1853,7 @@ Item {
                         topRadius: 10
                         available: SystemTools.hasCava && SystemTools.hasCavaConfig
                         dependsNote: SystemTools.hasCava ? "cava config missing" : "cava missing"
-                        bottomRadius: ShellSettings.mediaProgress && available ? 0 : 10
+                        bottomRadius: ShellSettings.mediaProgress && SystemTools.hasCava && SystemTools.hasCavaConfig ? 0 : 10
                     }
                     CollapsibleSection {
                         expanded: ShellSettings.mediaProgress && SystemTools.hasCava && SystemTools.hasCavaConfig
@@ -1842,8 +1985,11 @@ Item {
                     }
                     CollapsibleSection {
                         expanded: ShellSettings.underlineGlow && ShellSettings.underlineScreenshotGlow
+                        HintText { text: SystemTools.hasInotifywait
+                            ? "Flashes the bar edge when a new image lands in common screenshot folders."
+                            : "Install inotify-tools so Silere can notice screenshots saved by other apps." }
                         SliderRow {
-                            glyph: "󰓅"; label: "Screenshot intensity"
+                            glyph: "󰓅"; label: "Flash brightness"
                             value: ShellSettings.screenshotGlowStrength
                             min: 0.4; max: 1.8; step: 0.05
                             displayValue: Math.round(ShellSettings.screenshotGlowStrength * 100) + "%"
@@ -1851,7 +1997,7 @@ Item {
                             enabled: ShellSettings.underlineGlow && ShellSettings.underlineScreenshotGlow
                         }
                         SliderRow {
-                            glyph: "󰔛"; label: "Fade time"
+                            glyph: "󰔛"; label: "Fade duration"
                             value: ShellSettings.screenshotGlowDuration
                             min: 250; max: 1600; step: 50
                             displayValue: Math.round(ShellSettings.screenshotGlowDuration) + "ms"
@@ -1859,7 +2005,7 @@ Item {
                             enabled: ShellSettings.underlineGlow && ShellSettings.underlineScreenshotGlow
                         }
                         ToggleRow {
-                            glyph: "󰜎"; label: "Sweep flash"
+                            glyph: "󰜎"; label: "Moving streak"
                             checked: ShellSettings.screenshotGlowSweep
                             onToggled: ShellSettings.screenshotGlowSweep = !ShellSettings.screenshotGlowSweep
                             enabled: ShellSettings.underlineGlow && ShellSettings.underlineScreenshotGlow
@@ -2040,6 +2186,7 @@ Item {
                         model: root._alertChipModel
                         onChosen: (v) => root._setBattAlert(v)
                         topRadius: 10
+                        bottomRadius: root._battAlertMode === "off" ? 10 : 0
                     }
                     CollapsibleSection {
                         expanded: root._battAlertMode !== "off"
@@ -2063,6 +2210,7 @@ Item {
                         model: root._alertChipModel
                         onChosen: (v) => root._setTempAlert(v)
                         topRadius: 10
+                        bottomRadius: root._tempAlertMode === "off" ? 10 : 0
                     }
                     CollapsibleSection {
                         expanded: root._tempAlertMode !== "off"

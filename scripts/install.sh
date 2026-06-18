@@ -20,9 +20,50 @@ _die()  { _err "$*"; exit 1; }
 
 _section() { printf "\n${BOLD}==> %s${R}\n" "$1"; }
 
+_need_tty() {
+    [ -r /dev/tty ] || _die "interactive install requires a TTY — clone the repo and run scripts/install.sh from a terminal"
+}
+
+_reject_unsafe_path() {
+    if printf '%s' "$1" | LC_ALL=C grep -q '[[:cntrl:]]'; then
+        _die "install path may not contain control characters or newlines: $1"
+    fi
+}
+
+_shell_quote() {
+    local s="$1"
+    s="${s//\'/\'\\\'\'}"
+    printf "'%s'" "$s"
+}
+
+_shell_printf_bytes() {
+    local LC_ALL=C s="$1" out="" ch oct i
+    for ((i = 0; i < ${#s}; i++)); do
+        ch="${s:i:1}"
+        printf -v oct '%03o' "'$ch"
+        out+="\\$oct"
+    done
+    printf '%s' "$out"
+}
+
+_lua_string() {
+    local s="$1"
+    s="${s//\\/\\\\}"
+    s="${s//\"/\\\"}"
+    printf '"%s"' "$s"
+}
+
+_toml_basic_string() {
+    local s="$1"
+    s="${s//\\/\\\\}"
+    s="${s//\"/\\\"}"
+    printf '"%s"' "$s"
+}
+
 # Always read from /dev/tty so curl | bash works
 _ask() {
     local reply
+    _need_tty
     printf "  ${CYAN}::${R}  %s ${DIM}[Y/n]${R} " "$1"
     read -r reply </dev/tty
     [[ ! "$reply" =~ ^[Nn] ]]
@@ -30,6 +71,7 @@ _ask() {
 
 _ask_path() {
     local reply
+    _need_tty
     printf "  ${CYAN}::${R}  Use a different install path? ${DIM}[y/N]${R} " >&2
     read -r reply </dev/tty
     if [[ "$reply" =~ ^[Yy] ]]; then
@@ -171,8 +213,8 @@ _optdep_any "AUR helper" "AUR update count" paru yay
 _optdep busctl        "notification daemon check"
 _optdep upower        "battery percentage + warnings"
 _optdep hyprsunset    "night light toggle"
-_optdep pgrep         "night light state check"
-_optdep pkill         "night light fallback stop"
+_optdep pgrep         "optional night light external state check"
+_optdep pkill         "optional night light external stop fallback"
 _optdep hyprlock      "lock screen"
 _optdep systemctl     "suspend / reboot / shutdown"
 _optdep notify-send   "low-battery + hot-CPU alerts"
@@ -218,12 +260,7 @@ _section "silere-shell"
 printf "  ${CYAN}::${R}  Install to: ${CYAN}%s${R}\n" "$DEFAULT_DIR"
 INSTALL_DIR="$(_ask_path)"
 
-# The path is later embedded into Hyprland/matugen config as a quoted string.
-# Quotes, backslashes, spaces, or newlines would break that quoting, so reject them.
-case "$INSTALL_DIR" in
-    *'"'* | *'\'* | *'|'* | *"'"* | *\ *) _die "install path may not contain quotes, backslashes, pipes, or spaces: $INSTALL_DIR" ;;
-esac
-[ "$INSTALL_DIR" = "$(printf '%s' "$INSTALL_DIR" | tr -d '\n')" ] || _die "install path may not contain newlines"
+_reject_unsafe_path "$INSTALL_DIR"
 
 if [ -d "$INSTALL_DIR/.git" ]; then
     _ok "already cloned at $INSTALL_DIR"
@@ -257,6 +294,8 @@ fi
 
 ROOT="$INSTALL_DIR"
 did_cava=false did_tmpl=false did_toml=false did_autostart=false did_update=false
+ROOT_PRINTF_BYTES="$(_shell_quote "$(_shell_printf_bytes "$ROOT")")"
+MATUGEN_OUTPUT_TOML="$(_toml_basic_string "$ROOT/config/MatugenTheme.qml")"
 
 # Seed the generated theme from the bundled default so the shell themes
 # correctly before matugen has run. matugen later overwrites this file.
@@ -300,7 +339,7 @@ else
 # silere-shell begin
 [templates.silere-shell]
 input_path  = '~/.config/matugen/templates/silere-shell/Theme.qml'
-output_path = '$ROOT/config/MatugenTheme.qml'
+output_path = $MATUGEN_OUTPUT_TOML
 # silere-shell end
 EOF
         _ok "entry added"; did_toml=true
@@ -337,7 +376,11 @@ fi
 # sleep 1: at Hyprland start the Wayland socket may not be ready yet; without the
 # delay Qt's platform plugin aborts with SIGABRT in createEventDispatcher. Braces
 # group delay+launch so || short-circuits correctly in exec_unless_running.
-LAUNCH_CMD="{ sleep 1; env MALLOC_CONF=$MALLOC_TUNE ${EGL_PIN}qs -p '$ROOT/shell.qml'; }"
+MALLOC_TUNE_SHELL="$(_shell_quote "$MALLOC_TUNE")"
+EGL_ENV_ARG=""
+[ -n "$EGL_PIN" ] && EGL_ENV_ARG="__EGL_VENDOR_LIBRARY_FILENAMES=$(_shell_quote "$_mesa_egl") "
+LAUNCH_CMD="{ sleep 1; env MALLOC_CONF=$MALLOC_TUNE_SHELL ${EGL_ENV_ARG}qs -p \"\$(printf '%b' $ROOT_PRINTF_BYTES)/shell.qml\"; }"
+LAUNCH_CMD_LUA="$(_lua_string "$LAUNCH_CMD")"
 
 _already_present() { grep -qF 'silere-shell begin' "$1" 2>/dev/null; }
 
@@ -360,7 +403,7 @@ if [ -f "$HYPR_LUA" ]; then
     # the snippet uses a framework-specific API; only emit it where that framework exists
     if [ -n "$LUA_EXEC_FILE" ] && ! grep -qE 'hyprland\.lib|hl\.on' "$LUA_EXEC_FILE" "$HYPR_LUA" 2>/dev/null; then
         _warn "Lua config found but no hyprland.lib/hl.on framework detected"
-        _warn "add manually: local h = require(\"hyprland.lib\"); h.exec(\"$LAUNCH_CMD\")"
+        _warn "add manually: local h = require(\"hyprland.lib\"); h.exec($LAUNCH_CMD_LUA)"
     elif [ -n "$LUA_EXEC_FILE" ] && _already_present "$LUA_EXEC_FILE"; then
         _ok "already present in $LUA_EXEC_FILE"
     elif [ -n "$LUA_EXEC_FILE" ]; then
@@ -371,17 +414,17 @@ if [ -f "$HYPR_LUA" ]; then
 -- silere-shell begin
 local _silere_lib = require("hyprland.lib")
 hl.on("hyprland.start", function()
-    _silere_lib.exec("$LAUNCH_CMD")
+    _silere_lib.exec($LAUNCH_CMD_LUA)
 end)
 -- silere-shell end
 EOF
             _ok "added to $LUA_EXEC_FILE"; did_autostart=true
         else
-            _skip "skipped — add manually: _silere_lib.exec(\"$LAUNCH_CMD\")"
+            _skip "skipped — add manually: _silere_lib.exec($LAUNCH_CMD_LUA)"
         fi
     else
         _warn "Lua config detected but no execs.lua found"
-        _warn "add manually: local h = require(\"hyprland.lib\"); h.exec(\"$LAUNCH_CMD\")"
+        _warn "add manually: local h = require(\"hyprland.lib\"); h.exec($LAUNCH_CMD_LUA)"
     fi
 
 elif [ -f "$HYPR_CONF" ]; then
@@ -408,23 +451,18 @@ fi
 
 # ── update-check timer ──────────────────────────────────────────────────────────────
 _section "update-check timer"
-SYSTEMD_USER="$HOME/.config/systemd/user"
 
 if ! command -v systemctl >/dev/null 2>&1; then
     _skip "systemctl not found"
 elif _ask "Install daily update-check timer (flags pending updates in the bar)?"; then
-    mkdir -p "$SYSTEMD_USER"
-    sed "s|__ROOT__|$ROOT|g" "$ROOT/scripts/silere-update.service" > "$SYSTEMD_USER/silere-update.service"
-    cp "$ROOT/scripts/silere-update.timer" "$SYSTEMD_USER/silere-update.timer"
-    systemctl --user daemon-reload
-    if systemctl --user enable --now silere-update.timer 2>/dev/null; then
-        _ok "enabled — fires daily, flags new commits in the bar (apply from there)"
+    if "$ROOT/scripts/update.sh" --timer-enable 2>/dev/null; then
+        _ok "enabled — checks for Silere updates and shows a bar badge when one is ready"
         did_update=true
     else
         _warn "units installed but enable failed — run: systemctl --user enable --now silere-update.timer"
     fi
 else
-    _skip "skipped — enable later with: systemctl --user enable --now silere-update.timer"
+    _skip "skipped — enable later with: $ROOT/scripts/update.sh --timer-enable"
 fi
 
 # ── summary ──────────────────────────────────────────────────────────────────────

@@ -12,7 +12,7 @@ Item {
     readonly property real _slide: 6   // fixed slide keeps entrance snappy
 
     implicitHeight: parent ? parent.height : _barH
-    implicitWidth:  visible ? _content.implicitWidth : 0
+    implicitWidth:  _op > 0.001 ? _content.implicitWidth : 0
     visible: _op > 0.001 || state === "visible"
 
     property real _op:    0

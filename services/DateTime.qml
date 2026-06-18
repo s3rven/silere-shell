@@ -15,7 +15,7 @@ Singleton {
     property string cachedDayName:  ""  // "ddd " — trailing space is the separator
     property string cachedDateCore: ""  // "MMM dd"
     property string cachedTime:     ""  // "HH:mm" or "h:mm"
-    property string cachedAmPm:     ""  // " AM" / " PM" in 12h mode, "" in 24h
+    property string cachedAmPm:     ""  // "AM" / "PM" in 12h mode, "" in 24h
     property string cachedSeconds:  ""  // ":ss"
 
     Component.onCompleted: _update()
@@ -40,7 +40,7 @@ Singleton {
         }
         if (ShellSettings.clock12h) {
             cachedTime  = Qt.formatDateTime(clock.date, "h:mm")
-            cachedAmPm  = Qt.formatDateTime(clock.date, " AP")
+            cachedAmPm  = Qt.formatDateTime(clock.date, "AP")
         } else {
             cachedTime  = Qt.formatDateTime(clock.date, "HH:mm")
             cachedAmPm  = ""

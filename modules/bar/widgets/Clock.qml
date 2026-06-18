@@ -67,7 +67,7 @@ Row {
             reserveText: ":00"   // constant box; ticking digits can't shift the bar
         }
         CollapsingText {
-            text:     DateTime.cachedAmPm
+            text:     DateTime.cachedAmPm ? " " + DateTime.cachedAmPm : ""
             color:    root._cFaint
             expanded: ShellSettings.clock12h
         }

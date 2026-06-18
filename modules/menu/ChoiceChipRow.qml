@@ -54,16 +54,23 @@ Item {
         fillOpacity:  0.08
     }
 
-    Row {
+    Item {
         id: _labelRow
         x: 12
         y: root._stacked ? 11 : (root.height - height) / 2
-        spacing: 8
+        width: root._stacked ? root.width - 24 : Math.max(0, _segContainer.x - x - 10)
+        implicitWidth: (root.glyph.length > 0 ? 26 : 0) + _label.implicitWidth
+        implicitHeight: Math.max(_glyph.implicitHeight, _label.implicitHeight)
+        height: Math.max(_glyph.implicitHeight, _label.implicitHeight)
+        clip: true
 
         Text {
+            id: _glyph
+            anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
             visible: root.glyph.length > 0
-            width: Math.ceil(implicitWidth)   // whole px so the label lands on the pixel grid
+            width: visible ? 18 : 0
+            horizontalAlignment: Text.AlignHCenter
             text:           root.glyph
             color:          Theme.withAlpha(Theme.subtext, 0.85)
             font.family:    Settings.font
@@ -71,9 +78,14 @@ Item {
             renderType:     Text.NativeRendering
         }
         Text {
+            id: _label
+            anchors.left:           _glyph.right
+            anchors.leftMargin:     root.glyph.length > 0 ? 8 : 0
+            anchors.right:          parent.right
             anchors.verticalCenter: parent.verticalCenter
             text:           root.label
             textFormat:     Text.PlainText
+            elide:          Text.ElideRight
             color:          Theme.withAlpha(Theme.text, 0.85)
             font.family:    Settings.font
             font.pixelSize: Settings.fontSize
@@ -127,7 +139,7 @@ Item {
         readonly property real _naturalW: _maxNatW * root.model.length + 4
         // Stacked: segments divide the full row width evenly (12px gutter each side,
         // 4px for the segRow inset), floored so they stay on the pixel grid.
-        readonly property real _fullCellW: Math.floor((root.width - 28) / Math.max(1, root.model.length))
+        readonly property real _fullCellW: Math.max(1, Math.floor((root.width - 28) / Math.max(1, root.model.length)))
         readonly property real _cellW: root._stacked ? _fullCellW : _maxNatW
 
         Rectangle {
@@ -192,7 +204,17 @@ Item {
                         onTapped: root.chosen(_seg.modelData.value)
                     }
 
-                    scale: _tap.pressed ? 0.92 : 1.0
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: 2
+                        radius: 5
+                        antialiasing: true
+                        color: Theme.withAlpha(root.accentColor, 0.10)
+                        opacity: !_seg.active && _hover.hovered ? 1.0 : 0.0
+                        Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                    }
+
+                    scale: _tap.pressed ? 0.97 : 1.0
                     transformOrigin: Item.Center
                     Behavior on scale { enabled: !ShellSettings.reduceMotion; SpringAnimation { spring: 14; damping: 0.5; epsilon: 0.005 } }
 

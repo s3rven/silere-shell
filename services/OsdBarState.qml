@@ -84,18 +84,10 @@ Singleton {
     }
 
     function _setExpiry(kind: string): void {
-        const exp = Object.assign({}, _expiresAt)
-        exp[kind] = Date.now() + Math.max(500, ShellSettings.osdTimeout)
-        _expiresAt = exp
-
-        const rem = Object.assign({}, _removeAt)
-        delete rem[kind]
-        _removeAt = rem
-
-        const closing = Object.assign({}, _closingSig)
-        delete closing[kind]
-        _closingSig = closing
-
+        _expiresAt[kind] = Date.now() + Math.max(500, ShellSettings.osdTimeout)
+        _expiresAt = _expiresAt
+        delete _removeAt[kind];   _removeAt = _removeAt
+        delete _closingSig[kind]; _closingSig = _closingSig
         _scheduleSweep()
     }
 
@@ -163,13 +155,10 @@ Singleton {
 
         _entries.setProperty(index, "closing", true)
 
-        const rem = Object.assign({}, _removeAt)
-        rem[e.kind] = Date.now() + _removeDelay
-        _removeAt = rem
-
-        const closing = Object.assign({}, _closingSig)
-        closing[e.kind] = e.sig
-        _closingSig = closing
+        _removeAt[e.kind] = Date.now() + _removeDelay
+        _removeAt = _removeAt
+        _closingSig[e.kind] = e.sig
+        _closingSig = _closingSig
 
         _syncPrimary()
         _scheduleSweep()
@@ -182,10 +171,10 @@ Singleton {
         _syncPrimary()
     }
 
-    function _applyValues(kind: string, icon: string, value: real, label: string, muted: bool): void {
+    function _applyValues(kind: string, icon: string, value: real, label: string, muted: bool, color: color): void {
         const idx = _entryIndex(kind)
         const wasShowing = idx >= 0 && !_entries.get(idx).closing
-        if (!_upsertEntry(kind, icon, value, label, muted, root.fillColor)) return
+        if (!_upsertEntry(kind, icon, value, label, muted, color)) return
         if (wasShowing && !ShellSettings.reduceMotion) {
             root.bumped()
             root.entryBumped(kind)
@@ -202,13 +191,13 @@ Singleton {
         if (ShellSettings.osdKindFilter === "brightness" && kind !== "brightness") return
 
         root.fillColor = Theme.accent
-        _applyValues(kind, icon, value, label, muted)
+        _applyValues(kind, icon, value, label, muted, Theme.accent)
     }
 
     function showAlert(kind: string, icon: string, value: real, label: string, fillColor: color): void {
         if (!_armed || !ShellSettings.osdEnabled) return
         root.fillColor = fillColor
-        _applyValues(kind, icon, value, label, false)
+        _applyValues(kind, icon, value, label, false, fillColor)
     }
 
     function _nextDeadline(): real {
@@ -237,15 +226,9 @@ Singleton {
             const e = _entries.get(i)
             if (e.closing) {
                 if ((_removeAt[e.kind] || 0) <= now) {
-                    const exp = Object.assign({}, _expiresAt)
-                    const rem = Object.assign({}, _removeAt)
-                    const closing = Object.assign({}, _closingSig)
-                    delete exp[e.kind]
-                    delete rem[e.kind]
-                    delete closing[e.kind]
-                    _expiresAt = exp
-                    _removeAt = rem
-                    _closingSig = closing
+                    delete _expiresAt[e.kind];  _expiresAt = _expiresAt
+                    delete _removeAt[e.kind];   _removeAt = _removeAt
+                    delete _closingSig[e.kind]; _closingSig = _closingSig
                     _entries.remove(i)
                 }
             } else if ((_expiresAt[e.kind] || 0) <= now) {

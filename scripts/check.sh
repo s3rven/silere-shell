@@ -63,8 +63,8 @@ check_tool matugen "wallpaper-matched colors"
 check_any_tool "updates" "update count widget" checkupdates apt dnf zypper xbps-install
 check_any_tool "AUR helper" "optional AUR update count" paru yay
 check_tool hyprsunset "night light toggle"
-check_tool pgrep "night light state checks"
-check_tool pkill "night light fallback stop"
+check_tool pgrep "optional night light external state check"
+check_tool pkill "optional night light external stop fallback"
 check_tool hyprlock "lock screen"
 check_tool systemctl "power menu actions"
 check_tool notify-send "system alert notifications"

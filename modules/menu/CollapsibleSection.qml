@@ -15,6 +15,7 @@ Item {
     visible: height > 0.5
 
     Behavior on height {
+        enabled: !ShellSettings.reduceMotion
         NumberAnimation {
             duration:    root.expanded ? Motion.medium : Motion.fast
             easing.type: root.expanded ? Easing.OutQuart : Easing.InCubic
@@ -30,9 +31,6 @@ Item {
         opacity: root.expanded ? 1.0 : 0.0
         layer.enabled: _animating && !ShellSettings.reduceMotion
 
-        onYChanged:       if (!ShellSettings.reduceMotion) _animating = true
-        onOpacityChanged: if (!ShellSettings.reduceMotion) _animating = true
-
         Connections {
             target: ShellSettings
             function onReduceMotionChanged() {
@@ -41,18 +39,21 @@ Item {
         }
 
         Behavior on y {
+            enabled: !ShellSettings.reduceMotion
             NumberAnimation {
                 duration:    root.expanded ? Motion.medium : Motion.fast
                 easing.type: root.expanded ? Easing.OutQuart : Easing.InCubic
+                onStarted: _content._animating = true
+                onStopped: _content._animating = false
             }
         }
         Behavior on opacity {
-            SequentialAnimation {
-                NumberAnimation {
-                    duration:    root.expanded ? Motion.medium : Motion.fast
-                    easing.type: root.expanded ? Easing.OutCubic : Easing.InCubic
-                }
-                ScriptAction { script: _content._animating = false }
+            enabled: !ShellSettings.reduceMotion
+            NumberAnimation {
+                duration:    root.expanded ? Motion.medium : Motion.fast
+                easing.type: root.expanded ? Easing.OutCubic : Easing.InCubic
+                onStarted: _content._animating = true
+                onStopped: _content._animating = false
             }
         }
     }

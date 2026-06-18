@@ -238,11 +238,10 @@ Rectangle {
         }
 
         HoverHandler { id: _chevHover; enabled: root.expandable; cursorShape: Qt.PointingHandCursor }
-        MouseArea {
-            anchors.fill: parent
+        TapHandler {
             enabled: root.expandable
             cursorShape: Qt.PointingHandCursor
-            onClicked: root.expandToggled()
+            onTapped: root.expandToggled()
         }
     }
 }

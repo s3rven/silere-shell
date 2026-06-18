@@ -56,7 +56,7 @@ Item {
         bottomPadding: 4
 
         Text {
-            visible: !Bluetooth.available || !Bluetooth.enabled || Bluetooth.devices.length === 0
+            visible: root.open && (!Bluetooth.available || !Bluetooth.enabled || Bluetooth.devices.length === 0)
             width: parent.width
             horizontalAlignment: Text.AlignHCenter
             // Match reality instead of implying a scan that can't run when the
@@ -73,11 +73,11 @@ Item {
             id: _list
             width: parent.width
             height: Math.min(contentHeight, 240)
-            visible: Bluetooth.available && Bluetooth.enabled && Bluetooth.devices.length > 0
+            visible: root.open && Bluetooth.available && Bluetooth.enabled && Bluetooth.devices.length > 0
             clip: true
             boundsMovement: Flickable.StopAtBounds
             spacing: 4
-            model: Bluetooth.devices
+            model: root.open ? Bluetooth.devices : []
 
             delegate: Rectangle {
                 required property var modelData

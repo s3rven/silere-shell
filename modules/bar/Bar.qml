@@ -57,12 +57,13 @@ PanelWindow {
     // Animated strip height (bar + insets), kept separate from the shadow pad
     // so the reserved zone follows height changes smoothly but doesn't bounce
     // when the shadow toggles.
-    property real coreHeight: ShellSettings.barHeight + bar.surfaceInset * 2
+    readonly property int _targetCoreHeight: ShellSettings.barHeight + bar.surfaceInset * 2
+    property real coreHeight: bar._targetCoreHeight
     Behavior on coreHeight {
         enabled: !ShellSettings.reduceMotion
         NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
     }
-    exclusiveZone: bar.concealed ? 0 : bar.coreHeight
+    exclusiveZone: bar.concealed ? 0 : bar._targetCoreHeight
     implicitHeight: bar.coreHeight + bar.shadowPad
 
     // Input follows the visible surface: the concealed bar (overview, picker)

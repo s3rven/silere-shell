@@ -24,6 +24,9 @@ Item {
     readonly property bool _canToggle: root.enabled && (root.available || root.checked)
     readonly property bool _showDependsNote: root.dependsNote.length > 0
                                             && (!root.enabled || (!root.available && !root.checked))
+    readonly property real _rightSlotW: _showDependsNote
+        ? Math.min(_noteText.implicitWidth, Math.max(54, root.width * 0.34))
+        : 34
 
     // 4px multiple: keeps card dividers on whole physical px under
     // fractional scaling.
@@ -54,18 +57,21 @@ Item {
         fillOpacity:  0.08
     }
 
-    Row {
+    Item {
         anchors.left:           parent.left
         anchors.leftMargin:     12
         anchors.right:          _rightSlot.left
         anchors.rightMargin:    8
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 8
+        height: 22
         clip: true
 
         Text {
+            id: _glyph
+            anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
-            width: Math.ceil(implicitWidth)   // whole px so the label lands on the pixel grid
+            width: 18
+            horizontalAlignment: Text.AlignHCenter
             text:           root.glyph
             color:          root.checked
                 ? Theme.withAlpha(Theme.accent, 0.9)
@@ -77,8 +83,15 @@ Item {
         }
 
         Text {
+            id: _label
+            anchors.left:           _glyph.right
+            anchors.leftMargin:     8
+            anchors.right:          _badge.visible ? _badge.left : parent.right
+            anchors.rightMargin:    _badge.visible ? 8 : 0
             anchors.verticalCenter: parent.verticalCenter
             text:           root.label
+            textFormat:     Text.PlainText
+            elide:          Text.ElideRight
             color:          root.checked
                 ? Theme.text
                 : Theme.withAlpha(Theme.text, 0.85)
@@ -90,6 +103,8 @@ Item {
 
         // tag after the label (e.g. "beta", "net"), coloured by kind
         Rectangle {
+            id: _badge
+            anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             visible: root.badge.length > 0
             width:  _badgeText.implicitWidth + 10
@@ -108,7 +123,7 @@ Item {
                 font.pixelSize: Settings.fontSize - 4
                 font.weight:    Font.DemiBold
                 font.capitalization: Font.AllUppercase
-                font.letterSpacing:  0.6
+                font.letterSpacing:  0
                 renderType:     Text.NativeRendering
             }
         }
@@ -119,7 +134,7 @@ Item {
         anchors.right:          parent.right
         anchors.rightMargin:    12
         anchors.verticalCenter: parent.verticalCenter
-        width: _toggle.visible ? 34 : _noteText.implicitWidth
+        width: root._rightSlotW
         height: 18
 
         Rectangle {
@@ -189,7 +204,10 @@ Item {
             visible: root._showDependsNote
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
+            width: parent.width
+            horizontalAlignment: Text.AlignRight
             text: root.dependsNote
+            elide: Text.ElideRight
             color: Theme.withAlpha(Theme.subtext, 0.40)
             font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
             renderType: Text.NativeRendering

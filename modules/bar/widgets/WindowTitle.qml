@@ -204,7 +204,7 @@ Item {
     // title clipped at both ends (no ellipsis) while the box caught up; in the
     // animated swap path the snap happens while the text is faded out anyway.
     implicitWidth:  Math.ceil(content.implicitWidth)
-    implicitHeight: 24
+    implicitHeight: parent ? parent.height : ShellSettings.barHeight
 
     Item {
         anchors.fill: parent

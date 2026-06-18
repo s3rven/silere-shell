@@ -134,6 +134,7 @@ PanelWindow {
         readonly property int targetPanelH: Math.min(contentPane.targetH, _availablePanelH)
 
         property int activeTab: 0
+        onActiveTabChanged: MenuState.activeTab = activeTab
 
         readonly property bool _barBottom: ShellSettings.barPosition === "bottom"
 
@@ -220,7 +221,12 @@ PanelWindow {
         // it can't self-heal: re-place when the real width lands.
         Connections {
             target: win
-            function onWidthChanged() { if (MenuState.open) panel._place() }
+            function onWidthChanged() {
+                if (!MenuState.open) return
+                const t = Math.max(0, Math.min(win.width, MenuState.anchorX))
+                const nx = Math.round(panel._clampedPanelX(t - panel.panelW * t / Math.max(1, win.width)))
+                if (Math.abs(nx - panel.x) > 0.5) panel._place()
+            }
         }
 
         y: Math.round((_barBottom ? (win.height - _edgeY - height) : _edgeY) + edgeOffset)

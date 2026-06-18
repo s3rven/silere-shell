@@ -40,8 +40,10 @@ Item {
     width:          parent ? parent.width : 0
     height:         52
     implicitHeight: 52
+    opacity: root.enabled ? 1.0 : 0.45
+    Behavior on opacity { NumberAnimation { duration: Motion.medium } }
 
-    HoverHandler { id: _rowHover; cursorShape: Qt.PointingHandCursor }
+    HoverHandler { id: _rowHover; enabled: root.enabled; cursorShape: root.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor }
 
     // Hover background, clipped rounded rect (see RowHoverBg).
     RowHoverBg {
@@ -54,17 +56,24 @@ Item {
     }
 
     // ── Top line: glyph + label (left), value (right) ─────────────────────
-    Row {
+    Item {
         id: _head
         anchors.left:       parent.left
         anchors.leftMargin: 12
+        anchors.right:      _valueText.left
+        anchors.rightMargin: 10
         anchors.top:        parent.top
         anchors.topMargin:  8
-        spacing: 8
+        height: Math.max(_glyph.implicitHeight, _label.implicitHeight)
+        clip: true
 
         Text {
+            id: _glyph
+            anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
             visible: root.glyph.length > 0
+            width: visible ? 18 : 0
+            horizontalAlignment: Text.AlignHCenter
             text:           root.glyph
             color:          root.glyphColor
             font.family:    Settings.font
@@ -73,8 +82,14 @@ Item {
             Behavior on color { ColorAnimation { duration: Motion.slow } }
         }
         Text {
+            id: _label
+            anchors.left:           _glyph.right
+            anchors.leftMargin:     root.glyph.length > 0 ? 8 : 0
+            anchors.right:          parent.right
             anchors.verticalCenter: parent.verticalCenter
             text:           root.label
+            textFormat:     Text.PlainText
+            elide:          Text.ElideRight
             color:          Theme.withAlpha(Theme.text, 0.85)
             font.family:    Settings.font
             font.pixelSize: Settings.fontSize
@@ -176,6 +191,7 @@ Item {
 
         MouseArea {
             id: _trackMa
+            enabled: root.enabled
             anchors.fill: parent
             anchors.topMargin:    -8
             anchors.bottomMargin: -8
