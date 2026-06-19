@@ -25,6 +25,10 @@ Singleton {
     property var    _savedWifi:     ({})   // ssid -> true for saved wifi connections
     property bool   _wifiScanRescan: false
     property bool   _pendingWifiRescan: false
+    property bool   wifiScanFailed:  false
+    readonly property bool wifiScanning: _savedProc.running || _wifiScanProc.running
+    property bool   _refreshPending: false
+    property bool   _statsSuspended: false
     property int signalStrength:    0
     property real downBps:          0
     property real upBps:            0
@@ -65,7 +69,11 @@ Singleton {
 
     function refresh(): void {
         if (!toolAvailable) return
-        if (_proc.running) return
+        if (_proc.running) {
+            _refreshPending = true
+            return
+        }
+        _refreshPending = false
         _proc.running = true
     }
 
@@ -85,6 +93,7 @@ Singleton {
 
     function _beginWifiScan(): void {
         if (!toolAvailable || !wifiEnabled || _savedProc.running || _wifiScanProc.running) return
+        wifiScanFailed = false
         _wifiScanRescan = _pendingWifiRescan
         _pendingWifiRescan = false
         _savedProc.running = true
@@ -92,6 +101,7 @@ Singleton {
 
     function clearWifiScan(): void {
         wifiError = ""
+        wifiScanFailed = false
         _wifiScanRescan = false
         _pendingWifiRescan = false
         if (wifiNetworks.length > 0) wifiNetworks = []
@@ -213,49 +223,50 @@ Singleton {
                 root.deviceName = ""
                 root.deviceType = ""
                 root._resetTraffic()
-                return
-            }
-            let best = null
-            let vpn = false
-            let vpnConn = ""
-            const lines = (_procOut.text || "").trim().split("\n")
-            for (let i = 0; i < lines.length; i++) {
-                const parts = root._splitNmcliLine(lines[i])
-                if (parts.length < 4) continue
-                const type = parts[0]
-                const device = parts[1]
-                const state = parts[2]
-                const conn = parts.slice(3).join(":")
-                if (!state.startsWith("connected")) continue
-                if (root._isVpn(type)) { vpn = true; vpnConn = conn }
-                else {
-                    const priority = root._devicePriority(type)
-                    if (priority >= 0 && (!best || priority > best.priority))
-                        best = { type: type, device: device, conn: conn, priority: priority }
+            } else {
+                let best = null
+                let vpn = false
+                let vpnConn = ""
+                const lines = (_procOut.text || "").trim().split("\n")
+                for (let i = 0; i < lines.length; i++) {
+                    const parts = root._splitNmcliLine(lines[i])
+                    if (parts.length < 4) continue
+                    const type = parts[0]
+                    const device = parts[1]
+                    const state = parts[2]
+                    const conn = parts.slice(3).join(":")
+                    if (!state.startsWith("connected")) continue
+                    if (root._isVpn(type)) { vpn = true; vpnConn = conn }
+                    else {
+                        const priority = root._devicePriority(type)
+                        if (priority >= 0 && (!best || priority > best.priority))
+                            best = { type: type, device: device, conn: conn, priority: priority }
+                    }
                 }
+                const found = best !== null
+                if (found) {
+                    if (root.deviceName !== best.device) root._resetTraffic()
+                    root.isWifi = (best.type === "wifi")
+                    root.connectionName = best.conn
+                    root.deviceName = best.device
+                    root.deviceType = best.type
+                }
+                root.connected = found
+                root.hasVpn = vpn
+                root.vpnName = vpnConn
+                root.available = true
+                if (!found) {
+                    root.isWifi = false
+                    root.connectionName = ""
+                    root.deviceName = ""
+                    root.deviceType = ""
+                    root.signalStrength = 0
+                    root._resetTraffic()
+                }
+                if (root.isWifi) _signalDebounce.restart()
+                else root.signalStrength = 0
             }
-            const found = best !== null
-            if (found) {
-                if (root.deviceName !== best.device) root._resetTraffic()
-                root.isWifi = (best.type === "wifi")
-                root.connectionName = best.conn
-                root.deviceName = best.device
-                root.deviceType = best.type
-            }
-            root.connected = found
-            root.hasVpn = vpn
-            root.vpnName = vpnConn
-            root.available = true
-            if (!found) {
-                root.isWifi = false
-                root.connectionName = ""
-                root.deviceName = ""
-                root.deviceType = ""
-                root.signalStrength = 0
-                root._resetTraffic()
-            }
-            if (root.isWifi) _signalDebounce.restart()
-            else root.signalStrength = 0
+            if (root._refreshPending) Qt.callLater(root.refresh)
         }
     }
 
@@ -294,7 +305,7 @@ Singleton {
         id: _radioCheck
         command: ["nmcli", "-t", "radio", "wifi"]
         stdout: StdioCollector { id: _radioOut }
-        onExited: root.wifiEnabled = (_radioOut.text || "").trim() === "enabled"
+        onExited: (code) => { if (code === 0) root.wifiEnabled = (_radioOut.text || "").trim() === "enabled" }
     }
 
     onWifiEnabledChanged: if (!wifiEnabled) clearWifiScan()
@@ -333,9 +344,15 @@ Singleton {
         onExited: (code) => {
             root._wifiScanRescan = false
             if (code !== 0 || !root.toolAvailable || !root.wifiEnabled) {
-                root.clearWifiScan()
+                if (root.toolAvailable && root.wifiEnabled) {
+                    root.wifiScanFailed = true
+                    if (root.wifiNetworks.length > 0) root.wifiNetworks = []
+                } else {
+                    root.clearWifiScan()
+                }
                 return
             }
+            root.wifiScanFailed = false
             const bySsid = {}
             const order = []
             const lines = (_wifiScanOut.text || "").trim().split("\n")
@@ -388,12 +405,23 @@ Singleton {
     // Persistent stats loop, one long-running bash process instead of forking
     // cat every second. Restarts automatically on interface change.
     onDeviceNameChanged: {
-        if (root.statsDeviceReady) _statsProc.running = false
+        // Briefly drop the declarative run condition so the process restarts
+        // with the new interface argument. Assigning `_statsProc.running`
+        // directly would destroy its binding and permanently stop sampling.
+        root._statsSuspended = true
+        _statsRestart.restart()
+    }
+
+    Timer {
+        id: _statsRestart
+        interval: 50
+        onTriggered: root._statsSuspended = false
     }
 
     Process {
         id: _statsProc
-        running: ShellSettings.networkTrafficStats && root.statsDeviceReady && !Idle.isIdle
+        running: ShellSettings.networkTrafficStats && root.statsDeviceReady
+            && !Idle.isIdle && !root._statsSuspended
         // /proc/net/dev field layout: iface: rx_bytes ... tx_bytes.
         // fd 3 pipe + read -t = fork-free sleep (same trick as CpuTemp).
         command: ["bash", "-c",

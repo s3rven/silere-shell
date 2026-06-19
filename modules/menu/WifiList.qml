@@ -70,14 +70,17 @@ Item {
         bottomPadding: 4
 
         Text {
-            visible: Network.wifiNetworks.length === 0
+            visible: root.open && Network.wifiNetworks.length === 0
             width: parent.width
             horizontalAlignment: Text.AlignHCenter
             // Don't claim to be scanning when the radio is off — it never will.
             text: !Network.toolAvailable ? "Wi-Fi unavailable"
                 : !Network.wifiEnabled   ? "Wi-Fi is off"
-                :                          "Searching for networks…"
-            color: Theme.withAlpha(Theme.subtext, 0.5)
+                : Network.wifiScanFailed ? "Could not scan for networks"
+                : Network.wifiScanning   ? "Searching for networks…"
+                :                          "No networks found"
+            color: Network.wifiScanFailed ? Theme.withAlpha(Theme.error, 0.75)
+                                           : Theme.withAlpha(Theme.subtext, 0.5)
             font.family: Settings.font; font.pixelSize: Settings.fontSize - 1
             renderType: Text.NativeRendering
         }
@@ -86,11 +89,11 @@ Item {
             id: _list
             width: parent.width
             height: Math.min(contentHeight, 240)
-            visible: Network.wifiNetworks.length > 0
+            visible: root.open && Network.wifiNetworks.length > 0
             clip: true
             boundsMovement: Flickable.StopAtBounds
             spacing: 4
-            model: Network.wifiNetworks
+            model: root.open ? Network.wifiNetworks : []
 
             delegate: Column {
                 id: _entry
