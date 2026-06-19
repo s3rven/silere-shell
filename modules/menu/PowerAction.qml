@@ -143,7 +143,7 @@ Item {
             if (p <= 0) return
 
             const o   = 0.5
-            const r   = 9.5           // Rectangle.radius(10) - border.width/2(0.5)
+            const r   = Math.max(0.5, Theme.radiusControl - 0.5)
             const w   = width  - 1.0  // right edge center-line  (width  - 2*o)
             const h   = height - 1.0  // bottom edge center-line (height - 2*o)
             const arc = Math.PI / 2 * r

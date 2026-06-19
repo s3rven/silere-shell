@@ -184,6 +184,8 @@ Item {
                     readonly property bool   active:   index === root._activeIndex
                     readonly property string segGlyph: (modelData.glyph !== undefined && modelData.glyph !== null)
                         ? String(modelData.glyph) : ""
+                    readonly property string segBadge: (modelData.badge !== undefined && modelData.badge !== null)
+                        ? String(modelData.badge) : ""
 
                     // Natural (content) width; the container maxes these to size
                     // every segment equally. Never shrink below it so text can't clip.
@@ -221,7 +223,7 @@ Item {
                     Row {
                         id: _content
                         anchors.centerIn: parent
-                        spacing: _seg.segGlyph.length > 0 && _seg.modelData.label.length > 0 ? 4 : 0
+                        spacing: 4
 
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
@@ -249,6 +251,29 @@ Item {
                             font.weight:    _seg.active ? Font.DemiBold : Font.Medium
                             renderType:     Text.NativeRendering
                             Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        }
+                        Rectangle {
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: _seg.segBadge.length > 0
+                            width: visible ? _segBadgeText.implicitWidth + 8 : 0
+                            height: visible ? _segBadgeText.implicitHeight + 2 : 0
+                            radius: 3
+                            antialiasing: true
+                            color: Theme.withAlpha(Theme.warning, 0.08)
+                            border.width: 1
+                            border.color: Theme.withAlpha(Theme.warning, 0.32)
+
+                            Text {
+                                id: _segBadgeText
+                                anchors.centerIn: parent
+                                text: _seg.segBadge
+                                color: Theme.withAlpha(Theme.warning, 0.85)
+                                font.family: Settings.font
+                                font.pixelSize: Settings.fontSize - 5
+                                font.weight: Font.DemiBold
+                                font.capitalization: Font.AllUppercase
+                                renderType: Text.NativeRendering
+                            }
                         }
                     }
                 }

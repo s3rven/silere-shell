@@ -23,7 +23,7 @@ Pill {
     reserveText:    "100%"
     opacity: _baseOpacity * (Battery.critical ? 1.0 - Battery.alertPulse * 0.60
                            : (Battery.low     ? 1.0 - Battery.alertPulse * 0.18 : 1.0))
-    visible: opacity > 0
+    visible: _baseOpacity > 0
 
     Behavior on _baseOpacity { NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
 

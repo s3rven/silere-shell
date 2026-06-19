@@ -739,7 +739,7 @@ Item {
                     z: -1
                     color: ws._notifPulseCritical ? Theme.error : Theme.accent
                     opacity: ws._notifPulse * 0.10
-                    visible: opacity > 0.01
+                    visible: ShellSettings.wsNotifPulse && opacity > 0.01
                 }
                 Rectangle {
                     anchors.centerIn: parent
@@ -749,7 +749,7 @@ Item {
                     z: -1
                     color: ws._notifPulseCritical ? Theme.error : Theme.accent
                     opacity: ws._notifPulse * 0.22
-                    visible: opacity > 0.01
+                    visible: ShellSettings.wsNotifPulse && opacity > 0.01
                 }
                 Rectangle {
                     anchors.centerIn: parent
@@ -759,7 +759,7 @@ Item {
                     z: -1
                     color: ws._notifPulseCritical ? Theme.error : Theme.accent
                     opacity: ws._notifPulse * 0.50
-                    visible: opacity > 0.01
+                    visible: ShellSettings.wsNotifPulse && opacity > 0.01
                 }
                 Connections {
                     target: Notifications

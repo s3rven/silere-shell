@@ -107,7 +107,7 @@ Rectangle {
         readonly property color cardColor:    root.color
         readonly property bool  isDay:        NightLight.isDaytime
         readonly property real  nightProg:    NightLight.nightProgress
-        onNightProgChanged: if (!isDay) requestPaint()
+        onNightProgChanged: if (!isDay && root.shown && MenuState.open) requestPaint()
 
         // Gradient cache — rebuilt only when dimensions or colours change.
         property var  _fg: null; property real _fgH: -1

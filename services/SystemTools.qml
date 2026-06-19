@@ -21,7 +21,6 @@ Singleton {
     readonly property bool hasPgrep:         _tools.pgrep ?? false
     readonly property bool hasPkill:         _tools.pkill ?? false
     readonly property bool hasNotifySend:    _tools["notify-send"] ?? false
-    readonly property bool hasQs:            _tools.qs ?? false
     readonly property bool hasCavaConfig:    _tools["cava-config"] ?? false
     readonly property bool hasBusctl:        _tools.busctl ?? false
     readonly property bool hasCheckupdates:  _tools.checkupdates ?? false
@@ -38,7 +37,7 @@ Singleton {
         if (_checkProc.running) return
         ready = false
         _checkProc.exec(["bash", "-c",
-            "for t in brightnessctl inotifywait nmcli cava hyprsunset hyprlock systemctl hyprctl pgrep pkill notify-send qs " +
+            "for t in brightnessctl inotifywait nmcli cava hyprsunset hyprlock systemctl hyprctl pgrep pkill notify-send " +
             "busctl checkupdates paru yay apt dnf zypper xbps-install powerprofilesctl matugen; do " +
             "  command -v \"$t\" >/dev/null 2>&1 && echo \"$t\"; " +
             "done; " +

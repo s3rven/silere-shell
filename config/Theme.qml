@@ -35,7 +35,6 @@ Singleton {
     readonly property color popup: background
 
     readonly property color menuSidebar:     mix(background, surface, 0.58)
-    readonly property color menuSidebarLine: withAlpha(subtext, 0.12)
     readonly property color menuCard:        mix(surface, background, 0.16)
     readonly property color menuCardBorder:  withAlpha(mix(subtext, accent, 0.28), 0.17)
     readonly property color menuDivider:     withAlpha(subtext, 0.09)
