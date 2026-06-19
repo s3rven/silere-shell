@@ -70,7 +70,7 @@ Singleton {
 
     SupervisedProcess {
         id: _proc
-        superviseWhen: root._started && root._persistentNeed && !Idle.isIdle
+        superviseWhen: root._started && (root._persistentNeed || root.needed) && !Idle.isIdle
         restartDelay:  2000
         giveUpCodes:   [3]            // exit 3 = no usable temperature sensor
         command: ["bash", "-c",

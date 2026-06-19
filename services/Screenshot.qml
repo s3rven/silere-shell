@@ -36,7 +36,10 @@ Singleton {
     }
 
     SupervisedProcess {
+        // The IPC flash remains available unconditionally; the filesystem
+        // watcher is only useful when screenshot glow can display its events.
         superviseWhen: SystemTools.ready && SystemTools.hasInotifywait
+            && ShellSettings.underlineGlow && ShellSettings.underlineScreenshotGlow
         restartDelay: 60000
         command: ["bash", "-c",
             "dirs=(); " +

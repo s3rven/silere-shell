@@ -15,7 +15,17 @@ Process {
 
     property bool _cooldown: false
     property bool _gaveUp: false
-    running: superviseWhen && !_cooldown && !_gaveUp
+    // Avoid a declarative Process.running binding here. During a hot reload,
+    // Quickshell briefly detaches bindings and would otherwise try to assign an
+    // undefined value to the bool property once per supervised process.
+    function _syncRunning(): void {
+        const wanted = superviseWhen === true && !_cooldown && !_gaveUp
+        if (running !== wanted) running = wanted
+    }
+
+    Component.onCompleted: _syncRunning()
+    on_CooldownChanged: _syncRunning()
+    on_GaveUpChanged: _syncRunning()
 
     onExited: code => {
         if (!superviseWhen) return   // stopped on purpose, not a crash
@@ -28,10 +38,13 @@ Process {
         _coolTimer.restart()
     }
 
-    onSuperviseWhenChanged: if (!superviseWhen) {
-        _coolTimer.stop()
-        _cooldown = false
-        _gaveUp = false
+    onSuperviseWhenChanged: {
+        if (!superviseWhen) {
+            _coolTimer.stop()
+            _cooldown = false
+            _gaveUp = false
+        }
+        _syncRunning()
     }
 
     property Timer _coolTimer: Timer {

@@ -82,7 +82,7 @@ Singleton {
         id: _versionProc
         command: ["bash", root._script, "--version"]
         stdout: StdioCollector { id: _versionOut }
-        onExited: root.currentVersion = (_versionOut.text || "").trim()
+        onExited: (code) => { if (code === 0) root.currentVersion = (_versionOut.text || "").trim() }
         Component.onCompleted: running = true
     }
 
@@ -145,7 +145,8 @@ Singleton {
     Process {
         id: _timerStatus
         stdout: StdioCollector { id: _timerStatusOut }
-        onExited: {
+        onExited: (code) => {
+            if (code !== 0) return
             const lines = (_timerStatusOut.text || "").split(/\r?\n/)
             const state = {}
             for (let i = 0; i < lines.length; i++) {
