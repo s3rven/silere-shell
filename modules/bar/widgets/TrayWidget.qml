@@ -13,6 +13,7 @@ import "../../../services"
 Item {
     id: root
 
+    property var screen: null   // ShellScreen this bar sits on, for menu placement
     readonly property bool show: ShellSettings.trayWidget && _items.count > 0
     readonly property int iconSize: Math.max(14, Math.min(18, Math.round(ShellSettings.barHeight * 0.44)))
 
@@ -24,10 +25,12 @@ Item {
 
     function _openMenu(item, tile): void {
         if (!item.hasMenu) return
-        const win = QsWindow.window
-        if (!win) return
-        const p = tile.mapToItem(win.contentItem, tile.width / 2, ShellSettings.barPosition === "bottom" ? 0 : tile.height)
-        item.display(win, Math.round(p.x), Math.round(p.y))
+        TrayMenuState.openAt(
+            tile.mapToItem(null, tile.width / 2, 0).x,
+            root.screen,
+            item.menu,
+            ShellSettings.barPosition === "bottom"
+        )
     }
 
     Row {

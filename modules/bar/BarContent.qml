@@ -121,7 +121,7 @@ Item {
 
         ShellUpdateWidget { id: shellUpdateWidget; anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
         Dot             { show: ShellUpdate.pending }   // own group: shell self-update, only while pending
-        TrayWidget      { id: trayWidget; anchors.verticalCenter: parent.verticalCenter }
+        TrayWidget      { id: trayWidget; anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
         Dot             { show: trayWidget.show }   // tray stays its own group, even compact
         UpdatesWidget   { anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
         Dot             { show: root._vUpdates && !root._compact }   // intra-group: fuses with network

@@ -6,6 +6,7 @@ import "modules/osd"
 import "modules/notifications"
 import "modules/menu"
 import "modules/calendar"
+import "modules/traymenu"
 import "services"
 
 ShellRoot {
@@ -97,4 +98,5 @@ ShellRoot {
     NotificationPopups { targetScreen: root.activeOverlayScreen }
     MenuWindow         { targetScreen: MenuState.triggerScreen ?? root.activeOverlayScreen }
     CalendarPopup      { targetScreen: CalendarState.triggerScreen ?? root.activeOverlayScreen }
+    TrayMenuPopup      { targetScreen: TrayMenuState.triggerScreen ?? root.activeOverlayScreen }
 }
