@@ -50,9 +50,4 @@ Pill {
         acceptedButtons: Qt.LeftButton
         onTapped: Updates.refresh()
     }
-
-    TapHandler {
-        acceptedButtons: Qt.RightButton
-        onTapped: MenuState.toggleAt(root.mapToItem(null, root.width / 2, 0).x, root.screen)
-    }
 }

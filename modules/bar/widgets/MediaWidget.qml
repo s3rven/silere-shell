@@ -205,8 +205,7 @@ Item {
     // hit target, not just the one-line title.
     HoverHandler { id: _rootHover; cursorShape: Qt.PointingHandCursor }
 
-    // Left-click toggles playback; middle-click jumps to the player's window;
-    // right-click opens the menu.
+    // Left-click toggles playback; middle-click jumps to the player's window.
     TapHandler {
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
         onTapped: (eventPoint, button) => {
@@ -215,11 +214,6 @@ Item {
             else
                 Media.togglePlay()
         }
-    }
-
-    TapHandler {
-        acceptedButtons: Qt.RightButton
-        onTapped: MenuState.toggleAt(root.mapToItem(null, root.width / 2, 0).x, root.screen)
     }
 
     WheelHandler {

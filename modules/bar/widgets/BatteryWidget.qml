@@ -39,7 +39,7 @@ Pill {
     }
 
     TapHandler {
-        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        acceptedButtons: Qt.LeftButton
         onTapped: MenuState.toggleAt(batteryPill.mapToItem(null, batteryPill.width / 2, 0).x, batteryPill.screen)
     }
 }

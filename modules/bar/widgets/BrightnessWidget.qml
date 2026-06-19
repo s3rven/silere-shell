@@ -31,9 +31,4 @@ Pill {
             if (n !== 0) Brightness.bumpBy(n * 5)
         }
     }
-
-    TapHandler {
-        acceptedButtons: Qt.RightButton
-        onTapped: MenuState.toggleAt(root.mapToItem(null, root.width / 2, 0).x, root.screen)
-    }
 }

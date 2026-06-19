@@ -73,8 +73,8 @@ Row {
         }
     }
 
-    // Left-click opens the calendar; middle-click cycles date/seconds visibility;
-    // right-click opens the menu. (Date/seconds also live in Settings → Clock.)
+    // Left-click opens the calendar; middle-click cycles date/seconds visibility.
+    // (Date/seconds also live in Settings → Clock.)
     TapHandler {
         id: _calTap
         acceptedButtons: Qt.LeftButton
@@ -91,10 +91,5 @@ Row {
             else if (!s && d) { ShellSettings.showSeconds = true }
             else              { ShellSettings.showSeconds = false; ShellSettings.clockShowDate = false }
         }
-    }
-
-    TapHandler {
-        acceptedButtons: Qt.RightButton
-        onTapped: MenuState.toggleAt(root.mapToItem(null, root.width / 2, 0).x, root.screen)
     }
 }
