@@ -18,7 +18,8 @@ PanelWindow {
     readonly property real cornerRadius: ShellSettings.barFloating && ShellSettings.barCornerStyle === "round"
         ? Math.min(ShellSettings.barRadius, ShellSettings.barHeight / 2)
         : 0
-    readonly property bool wrapUnderline: ShellSettings.barFloating && ShellSettings.underlineFloatingWrap
+    // underline wraps automatically whenever the bar floats, no separate setting
+    readonly property bool wrapUnderline: ShellSettings.barFloating
     // Floating-width side gap snaps to a multiple of 8 so the segment's x
     // lands on the 4px grid: at effective scale 2.5× (DPR=2 × 1.25×
     // compositor) that maps to an integer output pixel, avoiding the

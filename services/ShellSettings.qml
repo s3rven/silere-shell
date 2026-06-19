@@ -61,7 +61,6 @@ Singleton {
     property bool   underlineNetGlow:        false
     property bool   underlineTempGlow:       false
     property bool   underlineScreenshotGlow: false
-    property bool   underlineFloatingWrap:   false
     property real   glowStrength:            1.0
     property real   activeGlowStrength:      1.0
     property real   screenshotGlowStrength:  1.0
@@ -161,7 +160,6 @@ Singleton {
         { k: "underlineNetGlow",    t: "bool" },
         { k: "underlineTempGlow",   t: "bool" },
         { k: "underlineScreenshotGlow", t: "bool" },
-        { k: "underlineFloatingWrap", t: "bool" },
         { k: "glowStrength",        t: "real", min: 0.5, max: 2.0 },
         { k: "activeGlowStrength",  t: "real", min: 0.1, max: 1.0 },
         { k: "screenshotGlowStrength", t: "real", min: 0.4, max: 1.8 },
