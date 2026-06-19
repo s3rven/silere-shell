@@ -238,10 +238,14 @@ Rectangle {
         }
 
         HoverHandler { id: _chevHover; enabled: root.expandable; cursorShape: Qt.PointingHandCursor }
-        TapHandler {
+        // Use an exclusive MouseArea here instead of another TapHandler. Nested
+        // TapHandlers can both accept the same tap, which would expand the row
+        // and toggle the device immediately afterward (closing it again).
+        MouseArea {
+            anchors.fill: parent
             enabled: root.expandable
             cursorShape: Qt.PointingHandCursor
-            onTapped: root.expandToggled()
+            onClicked: root.expandToggled()
         }
     }
 }

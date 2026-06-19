@@ -61,32 +61,23 @@ Item {
 
                 Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.color } }
 
-                // Faint accent wash on hover. A raster app icon can't lean its
-                // colour toward the accent like the text widgets, so it
-                // acknowledges the pointer with a backing pill instead.
+                // Unified backing pill: hover wash or attention halo (attention wins).
                 Rectangle {
                     anchors.centerIn: parent
                     width: parent.width + 6
                     height: parent.height + 6
                     radius: Math.min(width, height) / 2
-                    color: Theme.withAlpha(Theme.accent, 0.14)
-                    opacity: _iconHover.hovered ? 1.0 : 0.0
+                    color: _tile.needsAttention
+                        ? Theme.withAlpha(Theme.accent, 0.20)
+                        : Theme.withAlpha(Theme.accent, _ma.pressed ? 0.26 : 0.14)
+                    opacity: _tile.needsAttention ? _tile.attnPulse
+                           : _ma.pressed          ? 1.0
+                           : _iconHover.hovered   ? 1.0
+                           : 0.0
                     visible: opacity > 0.001
 
                     Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.color } }
-                }
-
-                // Attention halo, gently breathing so a flagged item pulls the eye.
-                Rectangle {
-                    anchors.centerIn: parent
-                    width: parent.width + 6
-                    height: parent.height + 6
-                    radius: Math.min(width, height) / 2
-                    color: Theme.withAlpha(Theme.accent, 0.20)
-                    opacity: _tile.needsAttention ? _tile.attnPulse : 0.0
-                    visible: opacity > 0.001
-
-                    Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.color } }
+                    Behavior on color   { enabled: !ShellSettings.reduceMotion; ColorAnimation  { duration: Motion.color } }
                 }
 
                 SequentialAnimation on attnPulse {
@@ -94,6 +85,7 @@ Item {
                     loops: Animation.Infinite
                     NumberAnimation { from: 1.0; to: 0.4; duration: Motion.ms(900); easing.type: Easing.InOutSine }
                     NumberAnimation { from: 0.4; to: 1.0; duration: Motion.ms(900); easing.type: Easing.InOutSine }
+                    onRunningChanged: if (!running) _tile.attnPulse = 1.0
                 }
 
                 Rectangle {
@@ -114,9 +106,9 @@ Item {
 
                 IconImage {
                     id: _icon
-                    readonly property bool ready: _tile.modelData.icon.length > 0 && status !== Image.Error
+                    readonly property bool ready: status === Image.Ready
                     anchors.fill: parent
-                    source: _tile.modelData.icon.length > 0 ? _tile.modelData.icon : ""
+                    source: _tile.modelData.icon
                     // generous request: SNI providers pick their largest pixmap,
                     // and downscaling beats upscaling a 22px app icon
                     implicitSize: root.iconSize
@@ -135,7 +127,6 @@ Item {
                 MouseArea {
                     id: _ma
                     anchors.fill: parent
-                    anchors.margins: -3
                     enabled: root.show
                     // MouseArea overrides the cursor beneath it, so the pointer
                     // shape must live here, not on the HoverHandler
