@@ -25,11 +25,13 @@ Item {
     // flip, so a stray audio signal landing a frame after dismiss fired
     // exit→enter — the OSD fading out, sweeping back in, then leaving again.
     state: "hidden"
-    function _sync(): void { state = _shouldShow ? "visible" : "hidden" }
+    function _sync(): void {
+        state = _shouldShow ? "visible" : "hidden"
+        if (!_shouldShow) _alertWidth = 0
+    }
 
     Connections {
         target: OsdBarState
-        enabled: ShellSettings.osdBarIntegrated
         function onShowingChanged() { root._sync() }
         function onBumped() { if (root.state === "visible" && !_bumpAnim.running) _bumpAnim.restart() }
         // queued icon swap → stamp while visible (matches the pill); during a
@@ -86,6 +88,22 @@ Item {
         font.pixelSize: Settings.fontSize
         font.weight:    Font.Medium
         text: "Muted"   // widest value text in hasBar context
+    }
+
+    // Alert (non-bar) labels vary in width; measure the live one and, during a
+    // rapid burst, latch to the widest seen so the centered Row can't shift.
+    TextMetrics {
+        id: _alertLabel
+        font.family:    Settings.font
+        font.pixelSize: Settings.fontSize
+        font.weight:    Font.Medium
+        text: !OsdBarState.hasBar ? OsdBarState.label : ""
+        onAdvanceWidthChanged: root._refreshAlertWidth()
+    }
+    property real _alertWidth: 0
+    function _refreshAlertWidth(): void {
+        const w = Math.ceil(_alertLabel.advanceWidth) + 2
+        _alertWidth = OsdBarState.rapid ? Math.max(_alertWidth, w) : w
     }
 
     Row {
@@ -163,8 +181,10 @@ Item {
                             : OsdBarState.muted ? "Muted"
                             : (Math.round(OsdBarState.clamped * 100) + "%")
             textFormat:     Text.PlainText
-            // Fixed width in hasBar mode keeps the Row centered as digits change.
-            width:          OsdBarState.hasBar ? Math.ceil(_maxLabel.advanceWidth) + 2 : implicitWidth
+            // Fixed width keeps the Row centered as digits/labels change.
+            width:          OsdBarState.hasBar
+                                ? Math.ceil(_maxLabel.advanceWidth) + 2
+                                : Math.max(implicitWidth, root._alertWidth)
             horizontalAlignment: OsdBarState.hasBar ? Text.AlignRight : Text.AlignLeft
             color:          OsdBarState.muted
                                 ? Theme.withAlpha(Theme.subtext, 0.7)

@@ -60,7 +60,12 @@ Singleton {
     property var _expiresAt: ({})
     property var _removeAt: ({})
     property var _closingSig: ({})
+    // Kind-keyed deadline: once a kind closes, ignore re-shows of that same kind
+    // until this passes, so a PipeWire echo (remapped %, different sig) can't
+    // bounce the OSD back open. A real later user change clears past it.
+    property var _commitClose: ({})
     readonly property int _removeDelay: Motion.ms(170) + 70
+    readonly property int _commitCloseWindow: Motion.ms(220) + 80
 
     function _sig(kind: string, value: real, muted: bool): string {
         return kind + ":" + Math.round(value * 100) + (muted ? ":m" : "")
@@ -86,8 +91,9 @@ Singleton {
     function _setExpiry(kind: string): void {
         _expiresAt[kind] = Date.now() + Math.max(500, ShellSettings.osdTimeout)
         _expiresAt = _expiresAt
-        delete _removeAt[kind];   _removeAt = _removeAt
-        delete _closingSig[kind]; _closingSig = _closingSig
+        delete _removeAt[kind];     _removeAt = _removeAt
+        delete _closingSig[kind];   _closingSig = _closingSig
+        delete _commitClose[kind]
         _scheduleSweep()
     }
 
@@ -104,9 +110,15 @@ Singleton {
             return
         }
 
+        // A fresh show (nothing visible, or the primary switched kind, or icon
+        // not yet set) jumps icon straight to its value — the entrance handles
+        // the reveal. An icon change on an already-visible same-kind entry sets
+        // nextIcon FIRST so onNextIconChanged sees nextIcon !== icon and stamps;
+        // the stamp's ScriptAction commits icon = nextIcon at its midpoint.
+        const fresh = !showing || kind !== best.kind || icon === ""
         kind = best.kind
-        icon = best.icon
         nextIcon = best.icon
+        if (fresh) icon = best.icon
         value = best.value
         label = best.label
         muted = best.muted
@@ -159,6 +171,7 @@ Singleton {
         _removeAt = _removeAt
         _closingSig[e.kind] = e.sig
         _closingSig = _closingSig
+        _commitClose[e.kind] = Date.now() + _commitCloseWindow
 
         _syncPrimary()
         _scheduleSweep()
@@ -173,9 +186,12 @@ Singleton {
 
     function _applyValues(kind: string, icon: string, value: real, label: string, muted: bool, color: color): void {
         const idx = _entryIndex(kind)
-        const wasShowing = idx >= 0 && !_entries.get(idx).closing
+        const live = idx >= 0 && !_entries.get(idx).closing
+        // Within the commit-close window with no live entry of this kind, the
+        // event is a trailing echo of the value we just dismissed — drop it.
+        if (!live && (_commitClose[kind] || 0) > Date.now()) return
         if (!_upsertEntry(kind, icon, value, label, muted, color)) return
-        if (wasShowing && !ShellSettings.reduceMotion) {
+        if (live && !ShellSettings.reduceMotion) {
             root.bumped()
             root.entryBumped(kind)
         }
@@ -231,6 +247,9 @@ Singleton {
                     delete _closingSig[e.kind]; _closingSig = _closingSig
                     _entries.remove(i)
                 }
+                // _commitClose intentionally outlives removal: the echo can
+                // land after the entry is gone, so the guard must persist
+                // until its own window expires.
             } else if ((_expiresAt[e.kind] || 0) <= now) {
                 _closeEntry(i)
             }
