@@ -78,6 +78,7 @@ _ask_path() {
         printf "  ${CYAN}::${R}  Install to: " >&2
         read -r reply </dev/tty
         reply="${reply/#\~/$HOME}"
+        [[ "$reply" =~ ^[[:space:]]*$ ]] && reply=""
         printf '%s' "${reply:-$DEFAULT_DIR}"
     else
         printf '%s' "$DEFAULT_DIR"
@@ -296,6 +297,7 @@ ROOT="$INSTALL_DIR"
 did_cava=false did_tmpl=false did_toml=false did_autostart=false did_update=false
 ROOT_PRINTF_BYTES="$(_shell_quote "$(_shell_printf_bytes "$ROOT")")"
 MATUGEN_OUTPUT_TOML="$(_toml_basic_string "$ROOT/config/MatugenTheme.qml")"
+MATUGEN_INPUT_TOML="$(_toml_basic_string "${XDG_CONFIG_HOME:-$HOME/.config}/matugen/templates/silere-shell/Theme.qml")"
 
 # Seed the generated theme from the bundled default so the shell themes
 # correctly before matugen has run. matugen later overwrites this file.
@@ -312,7 +314,7 @@ if _install_file "cava config" "$CAVA_SRC" "$CAVA_DST"; then did_cava=true; fi
 # ── matugen template ─────────────────────────────────────────────────────────────
 _section "matugen template"
 TMPL_SRC="$ROOT/assets/matugen-theme.qml"
-TMPL_DST="$HOME/.config/matugen/templates/silere-shell/Theme.qml"
+TMPL_DST="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/templates/silere-shell/Theme.qml"
 if ! $has_matugen; then
     _skip "matugen not installed"
 elif _install_file "matugen template" "$TMPL_SRC" "$TMPL_DST"; then
@@ -321,7 +323,7 @@ fi
 
 # ── matugen config.toml ──────────────────────────────────────────────────────────
 _section "matugen config.toml"
-MATUGEN_CFG="$HOME/.config/matugen/config.toml"
+MATUGEN_CFG="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
 
 if ! $has_matugen; then
     _skip "matugen not installed"
@@ -338,7 +340,7 @@ else
 
 # silere-shell begin
 [templates.silere-shell]
-input_path  = '~/.config/matugen/templates/silere-shell/Theme.qml'
+input_path  = $MATUGEN_INPUT_TOML
 output_path = $MATUGEN_OUTPUT_TOML
 # silere-shell end
 EOF

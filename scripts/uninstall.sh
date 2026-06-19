@@ -150,7 +150,7 @@ $found_any || _skip "no autostart entries found"
 
 # ── auto-update timer ──────────────────────────────────────────────────────────────
 _section "auto-update timer"
-SYSTEMD_USER="$HOME/.config/systemd/user"
+SYSTEMD_USER="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 
 if [ -f "$SYSTEMD_USER/silere-update.timer" ] || [ -f "$SYSTEMD_USER/silere-update.service" ]; then
     if _ask "Remove auto-update timer?"; then

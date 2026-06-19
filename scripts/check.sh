@@ -15,6 +15,12 @@ if ! git diff --cached --check; then
 fi
 
 echo
+echo "== structural lint =="
+if ! bash scripts/ci-lint.sh; then
+  status=1
+fi
+
+echo
 echo "== dependencies =="
 check_tool() {
   local tool="$1" desc="$2"
@@ -74,7 +80,9 @@ check_tool fc-cache "font install refresh"
 check_file "cava config" "$HOME/.config/cava/silere-shell.conf" "cp assets/cava.conf ~/.config/cava/silere-shell.conf"
 
 if command -v qs >/dev/null 2>&1; then
-  if qs list >/dev/null 2>&1; then
+  # Include instances on other displays when this runs from a terminal or CI
+  # environment without the active Wayland display variables.
+  if qs list --all >/dev/null 2>&1; then
     printf "ok   %-13s %s\n" "qs IPC" "available"
   else
     printf "miss %-13s %s\n" "qs IPC" "qs list failed (shell may not be running)"
@@ -115,6 +123,17 @@ if command -v pipewire >/dev/null 2>&1; then
   else
     printf "miss %-13s %s\n" "audio service" "pipewire.service not active or unavailable"
   fi
+  _qs_pw_found=false
+  for _d in /usr/lib/qt6 /usr/lib64/qt6 /usr/local/lib/qt6; do
+    if [ -f "$_d/qml/Quickshell/Services/Pipewire/qmldir" ]; then
+      _qs_pw_found=true; break
+    fi
+  done
+  if $_qs_pw_found; then
+    printf "ok   %-13s %s\n" "qs-pipewire" "Quickshell PipeWire QML module found"
+  else
+    printf "miss %-13s %s\n" "qs-pipewire" "Quickshell PipeWire QML module not found — audio widget will fail"
+  fi
 fi
 
 if command -v wireplumber >/dev/null 2>&1; then
@@ -153,6 +172,19 @@ if command -v matugen >/dev/null 2>&1; then
     printf "miss %-13s %s\n" "theme" "generated theme absent; default will be seeded for smoke test"
   else
     printf "miss %-13s %s\n" "theme" "config/MatugenTheme.default.qml missing"
+  fi
+  _cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+  _tmpl="$_cfg_home/matugen/templates/silere-shell/Theme.qml"
+  if [ -f "$_tmpl" ]; then
+    printf "ok   %-13s %s\n" "matugen tmpl" "$_tmpl"
+  else
+    printf "miss %-13s %s\n" "matugen tmpl" "template missing — run installer or: cp assets/matugen-theme.qml $_tmpl"
+  fi
+  _matugen_cfg="$_cfg_home/matugen/config.toml"
+  if [ -f "$_matugen_cfg" ] && grep -q '# silere-shell begin' "$_matugen_cfg"; then
+    printf "ok   %-13s %s\n" "matugen cfg" "silere-shell entry present in config.toml"
+  else
+    printf "miss %-13s %s\n" "matugen cfg" "silere-shell block missing from $_matugen_cfg — run installer"
   fi
 fi
 
@@ -198,6 +230,8 @@ if command -v qs >/dev/null 2>&1; then
         cat "$smoke_log"
         status=1
       fi
+    else
+      echo "ok   quickshell loaded without startup errors"
     fi
   fi
 else

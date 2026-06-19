@@ -93,7 +93,7 @@ if [ "${1:-}" = "--apply" ]; then
         fi
         stashed=1
     fi
-    if ! GIT_TERMINAL_PROMPT=0 git pull --ff-only --quiet origin main; then
+    if ! GIT_TERMINAL_PROMPT=0 git -C "$ROOT" pull --ff-only --quiet origin main; then
         [ "$stashed" -eq 1 ] && git -C "$ROOT" stash pop >/dev/null 2>&1 || true
         _fail "fast-forward pull failed — local branch diverged"
     fi
