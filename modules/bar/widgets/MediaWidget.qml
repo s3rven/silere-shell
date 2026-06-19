@@ -74,7 +74,10 @@ Item {
     Loader {
         id: _vizLoader
         anchors.fill: parent
-        active: ShellSettings.mediaProgress
+        // Avoid retaining a threaded Canvas on every monitor while media is
+        // hidden. Only the active monitor paints the visualizer.
+        active: ShellSettings.mediaProgress && root.show
+            && (!root.screen || Monitors.activeName === root.screen.name)
         sourceComponent: Component { MediaVisualizer { barName: root.screen ? root.screen.name : "" } }
     }
 
@@ -125,6 +128,7 @@ Item {
             // when it stops, the binding above restores the rest value.
             SequentialAnimation on opacity {
                 running: !Media.playing && root.show && !ShellSettings.reduceMotion && !Idle.isIdle
+                    && (!root.screen || Monitors.activeName === root.screen.name)
                 loops: Animation.Infinite
                 NumberAnimation { to: 0.60; duration: Motion.ms(1400); easing.type: Easing.InOutSine }
                 NumberAnimation { to: 0.92; duration: Motion.ms(1400); easing.type: Easing.InOutSine }
