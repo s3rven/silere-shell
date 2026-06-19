@@ -80,7 +80,7 @@ Item {
         cardRect.opacity = 0
         cardRect.x = card._hiddenX
         card.enabled = false
-        if (ShellSettings.reduceMotion) {
+        if (ShellSettings.reduceMotion || !card.visible) {
             card.dismissRequested(card.notifId, card.notification, card._expired)
             return
         }
@@ -121,11 +121,13 @@ Item {
     // Initial stamp too: a delegate rebuilt for an older notification (reload,
     // model churn) must not sit on the default "just now" until the timer ticks.
     Component.onCompleted: _updateTime()
+    onVisibleChanged: if (visible) _updateTime()
 
     Timer {
         id: _timeUpdate
         interval: 30000
-        running:  ShellSettings.notifPopupEnabled && card.enabled && card._timeLive
+        running:  card.visible && ShellSettings.notifPopupEnabled
+            && card.enabled && card._timeLive
         repeat:   true
         onTriggered: card._updateTime()
     }
@@ -166,7 +168,8 @@ Item {
     // this just shows how long is left and freezes while the card is hovered.
     property real _timeoutProgress: 1.0
     property real _countdownPulse:  1.0
-    readonly property bool _showCountdown: card.enabled && _autoClose.shouldRun && !ShellSettings.reduceMotion
+    readonly property bool _showCountdown: card.visible && card.enabled
+        && _autoClose.shouldRun && !ShellSettings.reduceMotion
     readonly property real _trueRemaining: Math.max(0, _autoClose.fullInterval - (Date.now() - card._createdAt) + card._hoverPausedMs)
 
     NumberAnimation {
@@ -212,7 +215,7 @@ Item {
     // Floating drop shadow, same elevation cue as the bar/OSD/menu. Sits beneath
     // cardRect and tracks its slide + fade so it grounds the card consistently.
     Loader {
-        active: ShellSettings.barFloating && ShellSettings.barShadow
+        active: card.visible && ShellSettings.barFloating && ShellSettings.barShadow
         anchors.fill: cardRect
         opacity: cardRect.opacity
         z: -1
@@ -237,7 +240,8 @@ Item {
         x:       card._hiddenX
 
         property bool _behaviorEnabled: false
-        layer.enabled: !ShellSettings.reduceMotion && (_arrivalShimmer.running || x > 0.5 || opacity < 0.999)
+        layer.enabled: card.visible && !ShellSettings.reduceMotion
+            && (_arrivalShimmer.running || x > 0.5 || opacity < 0.999)
 
         Component.onCompleted: {
             const isNew = !Notifications.isSeen(card.notifId)
@@ -246,7 +250,7 @@ Item {
                 _behaviorEnabled = true
                 opacity = 1.0
                 x = 0
-                if (!ShellSettings.reduceMotion) _arrivalShimmer.restart()
+                if (card.visible && !ShellSettings.reduceMotion) _arrivalShimmer.restart()
             } else {
                 x = 0
                 opacity = 1.0
@@ -254,9 +258,9 @@ Item {
             }
         }
 
-        Behavior on x       { enabled: cardRect._behaviorEnabled && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(280); easing.type: Easing.OutCubic } }
-        Behavior on opacity { enabled: cardRect._behaviorEnabled && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(200) } }
-        Behavior on height  { enabled: cardRect._behaviorEnabled && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
+        Behavior on x       { enabled: card.visible && cardRect._behaviorEnabled && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(280); easing.type: Easing.OutCubic } }
+        Behavior on opacity { enabled: card.visible && cardRect._behaviorEnabled && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(200) } }
+        Behavior on height  { enabled: card.visible && cardRect._behaviorEnabled && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
 
         // Fill only, the border lives in a separate overlay (_cardBorder) so the
         // layer/clip used for the shimmer can't clip the antialiased border edges.

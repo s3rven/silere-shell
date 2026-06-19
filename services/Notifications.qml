@@ -17,14 +17,25 @@ Singleton {
     property alias _seen:       _persist.seen
     property alias _times:      _persist.times
     readonly property int _maxHistory: 20
-    readonly property int activeCount: list.length
-    readonly property int historyCount: history.length
+    readonly property int activeCount: Array.isArray(list) ? list.length : 0
+    readonly property int historyCount: Array.isArray(history) ? history.length : 0
     readonly property bool hasHistory: historyCount > 0
 
     // popups use the live ObjectModel so new cards don't cause a full Repeater rebuild
     readonly property var popupModel: notifServer.trackedNotifications
 
-    function timeFor(id: int): real { return root._times[id] || Date.now() }
+    function _ensurePersistentState(): void {
+        // var properties can be undefined for one frame while
+        // PersistentProperties transfers them to a new hot-reload engine.
+        if (!Array.isArray(_persist.history)) _persist.history = []
+        if (!_persist.seen || typeof _persist.seen !== "object") _persist.seen = ({})
+        if (!_persist.times || typeof _persist.times !== "object") _persist.times = ({})
+    }
+
+    function timeFor(id: int): real {
+        root._ensurePersistentState()
+        return root._times[id] || Date.now()
+    }
 
     // Notification objects we're tearing down ourselves. Track the object, not just
     // the id: replaces_id can reuse an id while an old object's closed signal is
@@ -86,10 +97,11 @@ Singleton {
     }
 
     function toggleDnd(): void { dnd = !dnd }
-    function markSeen(id: int): void { _seen[id] = true }
-    function isSeen(id: int):   bool { return !!_seen[id] }
+    function markSeen(id: int): void { root._ensurePersistentState(); _seen[id] = true }
+    function isSeen(id: int):   bool { root._ensurePersistentState(); return !!_seen[id] }
 
     function clearHistory(): void {
+        root._ensurePersistentState()
         if (history.length === 0) return
         for (let i = 0; i < history.length; i++) {
             const id = history[i]?.id
@@ -130,6 +142,7 @@ Singleton {
     }
 
     function _forget(id: int): void {
+        root._ensurePersistentState()
         delete _seen[id]
         delete _times[id]
         const next = []
@@ -209,6 +222,7 @@ Singleton {
     // activeCount / dismiss-all stay correct across a shell reload instead of
     // resetting to zero while the popups live on.
     Component.onCompleted: {
+        root._ensurePersistentState()
         const vals = notifServer.trackedNotifications.values ?? []
         const rebuilt = []
         const live = {}
@@ -240,6 +254,7 @@ Singleton {
         persistenceSupported: true
 
         onNotification: (n) => {
+            root._ensurePersistentState()
             if (root.dnd && n.urgency !== NotificationUrgency.Critical) {
                 root.missedCount++
                 n.tracked = false
