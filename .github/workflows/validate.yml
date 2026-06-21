@@ -1,0 +1,40 @@
+name: Validate
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    container: archlinux:base
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install validation dependencies
+        run: pacman -Syu --noconfirm git shellcheck quickshell
+
+      - name: Structural and portability validation
+        run: bash scripts/ci-lint.sh
+
+      - name: Quickshell package compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          qs --version
+          source scripts/lib/qml-modules.sh
+          for module in "${SILERE_REQUIRED_QML_MODULES[@]}"; do
+            _qml_module_available "$module" || {
+              echo "::error::required Quickshell service module is missing: $module"
+              exit 1
+            }
+            echo "ok: $module"
+          done
+
+      - name: Headless QML import and type probe
+        run: bash scripts/test-qml-headless.sh

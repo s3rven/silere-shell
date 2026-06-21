@@ -5,7 +5,9 @@
 #   - merge conflict markers left in code
 #   - broken shell scripts
 #   - qmldir entries pointing at files that don't exist
+#   - required Quickshell service imports and local module packaging
 #   - ShellSettings properties and schema drifting apart
+#   - installer/updater portability regressions
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT" || exit 1
@@ -18,6 +20,26 @@ if git grep -n -I -E '^(<<<<<<< |=======$|>>>>>>> )' -- . ; then
 else
   echo "ok"
 fi
+
+echo
+echo "== required service modules =="
+check_service_module() {
+  local service="$1" module="$2"
+  if [ ! -f "services/$service.qml" ]; then
+    fail "services/$service.qml is missing"
+  elif ! grep -qE "^import[[:space:]]+$module([[:space:]]|$)" "services/$service.qml"; then
+    fail "services/$service.qml must import $module"
+  elif ! awk -v name="$service" '$1 == "singleton" && $2 == name && $NF == name ".qml" { found=1 } END { exit !found }' services/qmldir; then
+    fail "services/qmldir must package singleton $service"
+  else
+    printf 'ok   %-12s %s\n' "$service" "$module"
+  fi
+}
+check_service_module Audio Quickshell.Services.Pipewire
+check_service_module Battery Quickshell.Services.UPower
+check_service_module Media Quickshell.Services.Mpris
+check_service_module Notifications Quickshell.Services.Notifications
+check_service_module Bluetooth Quickshell.Bluetooth
 
 echo
 echo "== shell script syntax =="
@@ -80,6 +102,14 @@ if [ -f "$settings" ]; then
     fi
 else
     echo "skipped (ShellSettings.qml not found)"
+fi
+
+echo
+echo "== portability regressions =="
+if bash scripts/test-portability.sh; then
+  echo "ok"
+else
+  fail "portability regression tests failed"
 fi
 
 echo

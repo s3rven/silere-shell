@@ -5,6 +5,11 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT" || exit 1
 
 status=0
+warnings=0
+
+ok() { printf "ok   %-15s %s\n" "$1" "$2"; }
+warn() { printf "WARN %-15s %s\n" "$1" "$2"; warnings=$((warnings + 1)); }
+fail() { printf "FAIL %-15s %s\n" "$1" "$2" >&2; status=1; }
 
 echo "== git diff --check =="
 if ! git diff --check; then
@@ -22,16 +27,25 @@ fi
 
 echo
 echo "== dependencies =="
-check_tool() {
+require_tool() {
   local tool="$1" desc="$2"
   if command -v "$tool" >/dev/null 2>&1; then
-    printf "ok   %-13s %s\n" "$tool" "$desc"
+    ok "$tool" "$desc"
   else
-    printf "miss %-13s %s\n" "$tool" "$desc"
+    fail "$tool" "$desc is required but was not found in PATH"
   fi
 }
 
-check_any_tool() {
+optional_tool() {
+  local tool="$1" desc="$2"
+  if command -v "$tool" >/dev/null 2>&1; then
+    ok "$tool" "$desc"
+  else
+    warn "$tool" "$desc unavailable (optional)"
+  fi
+}
+
+optional_any_tool() {
   local label="$1" desc="$2" tool found=""
   shift 2
   for tool in "$@"; do
@@ -41,75 +55,76 @@ check_any_tool() {
     fi
   done
   if [ -n "$found" ]; then
-    printf "ok   %-13s %s (%s)\n" "$label" "$desc" "$found"
+    ok "$label" "$desc ($found)"
   else
-    printf "miss %-13s %s (need one of: %s)\n" "$label" "$desc" "$*"
+    warn "$label" "$desc unavailable (optional; need one of: $*)"
   fi
 }
 
 check_file() {
   local label="$1" path="$2" hint="$3"
   if [ -r "$path" ]; then
-    printf "ok   %-13s %s\n" "$label" "$path"
+    ok "$label" "$path"
   else
-    printf "miss %-13s %s\n" "$label" "$hint"
+    warn "$label" "$hint (optional)"
   fi
 }
 
-check_tool qs "Quickshell runtime"
-check_tool hyprctl "Hyprland dispatch/events"
-check_tool pipewire "volume service"
-check_tool wireplumber "PipeWire session manager"
-check_tool upower "battery widget + warnings"
-check_tool brightnessctl "brightness control + popup"
-check_tool inotifywait "instant brightness/screenshot updates"
-check_tool nmcli "Wi-Fi, VPN, network speed"
-check_tool cava "audio visualizer"
-check_tool matugen "wallpaper-matched colors"
-check_any_tool "updates" "update count widget" checkupdates apt dnf zypper xbps-install
-check_any_tool "AUR helper" "optional AUR update count" paru yay
-check_tool hyprsunset "night light toggle"
-check_tool pgrep "optional night light external state check"
-check_tool pkill "optional night light external stop fallback"
-check_tool hyprlock "lock screen"
-check_tool systemctl "power menu actions"
-check_tool notify-send "system alert notifications"
-check_tool busctl "notification daemon conflict check"
-check_tool fc-list "font detection"
-check_tool fc-cache "font install refresh"
-check_file "cava config" "$HOME/.config/cava/silere-shell.conf" "cp assets/cava.conf ~/.config/cava/silere-shell.conf"
+require_tool qs "Quickshell runtime"
+require_tool hyprctl "Hyprland runtime and dispatch client"
+optional_tool pipewire "volume service"
+optional_tool wireplumber "PipeWire session manager"
+optional_tool upower "battery widget + warnings"
+optional_tool brightnessctl "brightness control + popup"
+optional_tool inotifywait "instant brightness/screenshot updates"
+optional_tool nmcli "Wi-Fi, VPN, network speed"
+optional_tool cava "audio visualizer"
+optional_tool matugen "wallpaper-matched colors"
+optional_any_tool "updates" "update count widget" checkupdates apt dnf zypper xbps-install
+optional_any_tool "AUR helper" "AUR update count" paru yay
+optional_tool hyprsunset "night light toggle"
+optional_tool pgrep "night light external state check"
+optional_tool pkill "night light external stop fallback"
+optional_tool hyprlock "lock screen"
+optional_tool systemctl "power menu actions"
+optional_tool notify-send "system alert notifications"
+optional_tool busctl "notification daemon conflict check"
+optional_tool fc-list "font detection"
+optional_tool fc-cache "font install refresh"
+_cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+check_file "cava config" "$_cfg_home/cava/silere-shell.conf" "cp assets/cava.conf $_cfg_home/cava/silere-shell.conf"
 
 if command -v qs >/dev/null 2>&1; then
   # Include instances on other displays when this runs from a terminal or CI
   # environment without the active Wayland display variables.
   if qs list --all >/dev/null 2>&1; then
-    printf "ok   %-13s %s\n" "qs IPC" "available"
+    ok "qs IPC" "available"
   else
-    printf "miss %-13s %s\n" "qs IPC" "qs list failed (shell may not be running)"
+    warn "qs IPC" "qs list failed (shell may not be running)"
   fi
 fi
 
 if command -v busctl >/dev/null 2>&1; then
   if busctl --user call org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus GetNameOwner s org.freedesktop.Notifications >/dev/null 2>&1; then
-    printf "ok   %-13s %s\n" "notifications" "D-Bus owner present"
+    ok "notifications" "D-Bus owner present"
   else
-    printf "miss %-13s %s\n" "notifications" "no D-Bus notification owner"
+    warn "notifications" "no D-Bus notification owner"
   fi
 fi
 
 if command -v upower >/dev/null 2>&1; then
   if upower -e 2>/dev/null | grep -q '/battery_'; then
-    printf "ok   %-13s %s\n" "battery" "UPower battery detected"
+    ok "battery" "UPower battery detected"
   else
-    printf "miss %-13s %s\n" "battery" "no UPower battery detected"
+    warn "battery" "no UPower battery detected"
   fi
 fi
 
 if command -v fc-list >/dev/null 2>&1; then
   if fc-list : family 2>/dev/null | grep -qi "JetBrainsMono Nerd"; then
-    printf "ok   %-13s %s\n" "font" "JetBrainsMono Nerd Font"
+    ok "font" "JetBrainsMono Nerd Font"
   else
-    printf "miss %-13s %s\n" "font" "JetBrainsMono Nerd Font not found"
+    warn "font" "JetBrainsMono Nerd Font not found"
   fi
 fi
 
@@ -119,22 +134,34 @@ if command -v pipewire >/dev/null 2>&1; then
     pipewire_state="$(systemctl --user is-active pipewire.service 2>/dev/null || true)"
   fi
   if [ "$pipewire_state" = active ]; then
-    printf "ok   %-13s %s\n" "audio service" "pipewire.service active"
+    ok "audio service" "pipewire.service active"
   else
-    printf "miss %-13s %s\n" "audio service" "pipewire.service not active or unavailable"
-  fi
-  _qs_pw_found=false
-  for _d in /usr/lib/qt6 /usr/lib64/qt6 /usr/local/lib/qt6; do
-    if [ -f "$_d/qml/Quickshell/Services/Pipewire/qmldir" ]; then
-      _qs_pw_found=true; break
-    fi
-  done
-  if $_qs_pw_found; then
-    printf "ok   %-13s %s\n" "qs-pipewire" "Quickshell PipeWire QML module found"
-  else
-    printf "miss %-13s %s\n" "qs-pipewire" "Quickshell PipeWire QML module not found — audio widget will fail"
+    warn "audio service" "pipewire.service not active or unavailable"
   fi
 fi
+
+# These modules are imported unconditionally, so their packaging is required
+# even when the corresponding service/agent is not active in this session.
+# Shared with install.sh and CI so the module list and the import-root lookup
+# only exist in one place.
+source "$ROOT/scripts/lib/qml-modules.sh"
+
+require_qml_module() {
+  local module="$1" rel found=""
+  rel="${module//./\/}/qmldir"
+  for _d in "${_silere_qml_import_roots[@]}"; do
+    if [ -f "$_d/$rel" ]; then found="$_d/$rel"; break; fi
+  done
+  if [ -n "$found" ]; then
+    ok "$module" "$found"
+  else
+    fail "$module" "required Quickshell QML module not found in import paths"
+  fi
+}
+
+for _module in "${SILERE_REQUIRED_QML_MODULES[@]}"; do
+  require_qml_module "$_module"
+done
 
 if command -v wireplumber >/dev/null 2>&1; then
   wireplumber_state=""
@@ -142,67 +169,74 @@ if command -v wireplumber >/dev/null 2>&1; then
     wireplumber_state="$(systemctl --user is-active wireplumber.service 2>/dev/null || true)"
   fi
   if [ "$wireplumber_state" = active ]; then
-    printf "ok   %-13s %s\n" "session mgr" "wireplumber.service active"
+    ok "session mgr" "wireplumber.service active"
   else
-    printf "miss %-13s %s\n" "session mgr" "wireplumber.service not active or unavailable"
+    warn "session mgr" "wireplumber.service not active or unavailable"
   fi
 fi
 
 if command -v nmcli >/dev/null 2>&1; then
   nm_state="$(nmcli -t -f RUNNING general 2>/dev/null || true)"
   if [ "$nm_state" = running ]; then
-    printf "ok   %-13s %s\n" "network mgr" "NetworkManager running"
+    ok "network mgr" "NetworkManager running"
   else
-    printf "miss %-13s %s\n" "network mgr" "NetworkManager not running or unavailable"
+    warn "network mgr" "NetworkManager not running or unavailable"
   fi
 fi
 
 if command -v hyprctl >/dev/null 2>&1; then
   if hyprctl monitors >/dev/null 2>&1; then
-    printf "ok   %-13s %s\n" "hyprland" "hyprctl can query compositor"
+    ok "hyprland" "hyprctl can query compositor"
   else
-    printf "miss %-13s %s\n" "hyprland" "hyprctl cannot query compositor"
+    fail "hyprland" "hyprctl is installed but cannot query the compositor"
   fi
 fi
 
 if command -v matugen >/dev/null 2>&1; then
   if [ -f config/MatugenTheme.qml ]; then
-    printf "ok   %-13s %s\n" "theme" "config/MatugenTheme.qml"
+    ok "theme" "config/MatugenTheme.qml"
   elif [ -f config/MatugenTheme.default.qml ]; then
-    printf "miss %-13s %s\n" "theme" "generated theme absent; default will be seeded for smoke test"
+    warn "theme" "generated theme absent; default will be seeded for smoke test"
   else
-    printf "miss %-13s %s\n" "theme" "config/MatugenTheme.default.qml missing"
+    fail "theme" "config/MatugenTheme.default.qml missing"
   fi
-  _cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
   _tmpl="$_cfg_home/matugen/templates/silere-shell/Theme.qml"
   if [ -f "$_tmpl" ]; then
-    printf "ok   %-13s %s\n" "matugen tmpl" "$_tmpl"
+    ok "matugen tmpl" "$_tmpl"
   else
-    printf "miss %-13s %s\n" "matugen tmpl" "template missing — run installer or: cp assets/matugen-theme.qml $_tmpl"
+    warn "matugen tmpl" "template missing — run installer or: cp assets/matugen-theme.qml $_tmpl"
   fi
   _matugen_cfg="$_cfg_home/matugen/config.toml"
   if [ -f "$_matugen_cfg" ] && grep -q '# silere-shell begin' "$_matugen_cfg"; then
-    printf "ok   %-13s %s\n" "matugen cfg" "silere-shell entry present in config.toml"
+    ok "matugen cfg" "silere-shell entry present in config.toml"
   else
-    printf "miss %-13s %s\n" "matugen cfg" "silere-shell block missing from $_matugen_cfg — run installer"
+    warn "matugen cfg" "silere-shell block missing from $_matugen_cfg — run installer"
   fi
 fi
 
 if command -v cava >/dev/null 2>&1; then
   if pgrep -x cava >/dev/null 2>&1; then
-    printf "ok   %-13s %s\n" "visualizer" "cava running"
+    ok "visualizer" "cava running"
   else
-    printf "miss %-13s %s\n" "visualizer" "cava not running"
+    warn "visualizer" "cava not running"
   fi
+fi
+
+echo
+echo "== headless QML probe =="
+if ! bash scripts/test-qml-headless.sh; then
+  status=1
 fi
 
 echo
 echo "== quickshell smoke =="
 if command -v qs >/dev/null 2>&1; then
   if [ -z "${WAYLAND_DISPLAY:-}" ]; then
-    echo "no Wayland display; skipping smoke launch"
+    warn "startup" "no Wayland display; runtime smoke test skipped"
   elif [ -z "${XDG_RUNTIME_DIR:-}" ] || [ ! -d "$XDG_RUNTIME_DIR" ]; then
-    echo "no usable XDG_RUNTIME_DIR; skipping smoke launch"
+    warn "startup" "no usable XDG_RUNTIME_DIR; runtime smoke test skipped"
+  elif ! command -v timeout >/dev/null 2>&1; then
+    warn "startup" "timeout command unavailable; runtime smoke test skipped"
   else
     # The shell needs config/MatugenTheme.qml to exist. If it's missing (bare clone),
     # seed it from the default for the smoke test. One cleanup removes both the
@@ -225,18 +259,26 @@ if command -v qs >/dev/null 2>&1; then
     timeout 5s qs -p shell.qml --no-color >"$smoke_log" 2>&1 || code=$?
     if [ "$code" -ne 0 ] && [ "$code" -ne 124 ]; then
       if grep -qE 'Failed to create wl_display|could not connect to display|no Qt platform plugin could be initialized' "$smoke_log"; then
-        echo "display unavailable; skipping smoke launch"
+        warn "startup" "display inaccessible; runtime smoke test skipped"
       else
         cat "$smoke_log"
-        status=1
+        fail "startup" "Quickshell exited with status $code"
       fi
+    elif grep -qE 'Failed to load configuration|Type [^ ]+ unavailable|module ".*" is not installed' "$smoke_log"; then
+      cat "$smoke_log"
+      fail "startup" "Quickshell reported a QML compatibility error"
     else
-      echo "ok   quickshell loaded without startup errors"
+      ok "startup" "Quickshell stayed alive for 5 seconds without load errors"
     fi
   fi
 else
-  echo "qs missing; skipping smoke launch"
-  status=1
+  fail "startup" "Quickshell missing; runtime smoke test could not run"
 fi
 
+echo
+if [ "$status" -eq 0 ]; then
+  printf 'checks passed (%d warning(s))\n' "$warnings"
+else
+  printf 'checks failed (%d warning(s))\n' "$warnings"
+fi
 exit "$status"
