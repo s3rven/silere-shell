@@ -46,7 +46,6 @@ Rectangle {
             required property int index
             readonly property Item row: col.children[index] ?? null
 
-            // separator only above a row that has a visible row before it
             readonly property bool hasRowAbove: root._sepVisible[index] ?? false
 
             visible: row !== null && row.visible && hasRowAbove

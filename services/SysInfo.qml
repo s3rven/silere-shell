@@ -46,8 +46,7 @@ Singleton {
         return m + "m"
     }
 
-    // Exact wall-clock boot time, derived from uptime. Revealed on hover in the
-    // menu's system card. Minute precision, so it doesn't jitter between polls.
+    // Minute precision, so it doesn't jitter between polls.
     readonly property string bootTimeLabel: {
         if (uptimeSecs <= 0) return ""
         const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]

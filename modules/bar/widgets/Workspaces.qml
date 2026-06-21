@@ -335,7 +335,10 @@ Item {
 
     Rectangle {
         id: trailCore
-        height: 2
+        // Scales with the same ratio as `trail` (height/4 at rest, height/8 at
+        // full strength) so the bright core stays proportional to the band it
+        // sits inside instead of reading thicker on short hops than long ones.
+        height: 1.5 + trail._strength * 1.5
         radius: height / 2
         antialiasing: true
         y: (root.btnH - height) / 2
@@ -593,7 +596,7 @@ Item {
         Behavior on x           { enabled: ShellSettings.workspaceShift && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(190); easing.type: Easing.OutQuart } }
         Behavior on opacity     { NumberAnimation { duration: Motion.ms(150) } }
         Behavior on _hoverScale { NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
-        Behavior on _trailX     { enabled: ShellSettings.workspaceShift && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(480); easing.type: Easing.OutCubic } }
+        Behavior on _trailX     { enabled: ShellSettings.workspaceShift && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(260); easing.type: Easing.OutQuart } }
 
         onTargetXChanged: {
             if (!root.monitorReady) return
@@ -614,19 +617,6 @@ Item {
             id: _tapPulse
             NumberAnimation { target: diamond; property: "_tapScale"; to: 1.14; duration: Motion.ms(70);  easing.type: Easing.OutQuad }
             NumberAnimation { target: diamond; property: "_tapScale"; to: 1.0;  duration: Motion.ms(145); easing.type: Easing.OutCubic }
-        }
-
-        // First-run nudge toward the menu: nobody's told the diamond is clickable.
-        // Reuses the same ack as a real tap; stops mattering for good once any
-        // bar widget opens the menu (ShellSettings.hasOpenedMenu).
-        Timer {
-            interval: 1400
-            running: !ShellSettings.hasOpenedMenu && !ShellSettings.reduceMotion
-            onTriggered: {
-                if (root.activeIndex < 0) return
-                _tapPulse.restart()
-                _glintAnim.restart()
-            }
         }
     }
 
@@ -781,8 +771,8 @@ Item {
                 }
                 SequentialAnimation {
                     id: _notifPulseAnim
-                    NumberAnimation { target: ws; property: "_notifPulse"; to: 1.0; duration: 150;  easing.type: Easing.OutQuad }
-                    NumberAnimation { target: ws; property: "_notifPulse"; to: 0.0; duration: 1100; easing.type: Easing.OutCubic }
+                    NumberAnimation { target: ws; property: "_notifPulse"; to: 1.0; duration: Motion.ms(150);  easing.type: Easing.OutQuad }
+                    NumberAnimation { target: ws; property: "_notifPulse"; to: 0.0; duration: Motion.ms(1100); easing.type: Easing.OutCubic }
                 }
                 NumberAnimation {
                     id: _dotFadeOut
@@ -799,13 +789,13 @@ Item {
                     running: ws.urgent && !ws.active && !ShellSettings.reduceMotion && !Idle.isIdle
                     loops:   Animation.Infinite
                     onRunningChanged: if (!running) { ws._pulseOpacity = 1.0; ws._shakeX = 0 }
-                    NumberAnimation { target: ws; property: "_shakeX"; to:  2.5; duration: 55; easing.type: Easing.OutQuad  }
-                    NumberAnimation { target: ws; property: "_shakeX"; to: -2.5; duration: 55; easing.type: Easing.OutQuad  }
-                    NumberAnimation { target: ws; property: "_shakeX"; to:  2.5; duration: 55; easing.type: Easing.OutQuad  }
-                    NumberAnimation { target: ws; property: "_shakeX"; to:  0;   duration: 55; easing.type: Easing.OutCubic }
+                    NumberAnimation { target: ws; property: "_shakeX"; to:  2.5; duration: Motion.ms(55); easing.type: Easing.OutQuad  }
+                    NumberAnimation { target: ws; property: "_shakeX"; to: -2.5; duration: Motion.ms(55); easing.type: Easing.OutQuad  }
+                    NumberAnimation { target: ws; property: "_shakeX"; to:  2.5; duration: Motion.ms(55); easing.type: Easing.OutQuad  }
+                    NumberAnimation { target: ws; property: "_shakeX"; to:  0;   duration: Motion.ms(55); easing.type: Easing.OutCubic }
                     // Slow opacity pulse, affects both number text and dot
-                    NumberAnimation { target: ws; property: "_pulseOpacity"; to: 0.3; duration: 550; easing.type: Easing.InOutSine }
-                    NumberAnimation { target: ws; property: "_pulseOpacity"; to: 1.0; duration: 550; easing.type: Easing.InOutSine }
+                    NumberAnimation { target: ws; property: "_pulseOpacity"; to: 0.3; duration: Motion.ms(550); easing.type: Easing.InOutSine }
+                    NumberAnimation { target: ws; property: "_pulseOpacity"; to: 1.0; duration: Motion.ms(550); easing.type: Easing.InOutSine }
                 }
 
                 Text {
@@ -857,7 +847,9 @@ Item {
                     opacity: (ws._showIcons ? 1 : 0) * ws._pulseOpacity
                     Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
                     Repeater {
-                        model: ws._apps
+                        // _wsApps may stay cached while icons are off. Avoid
+                        // retaining image/effect delegates for invisible rows.
+                        model: ws._showIcons ? ws._apps : []
                         delegate: Item {
                             required property var modelData
                             width:  root._iconSz

@@ -11,6 +11,7 @@ Item {
     property real   value:     0
     property string valueText: ""
     property string wheelKey:  "quickslider"
+    property string accessibleName: wheelKey
     property bool   glyphClickable: false
 
     signal moved(real value)
@@ -18,6 +19,19 @@ Item {
 
     width:  parent ? parent.width : 0
     height: 36
+
+    function _nudge(dir: int): void {
+        root.moved(Math.max(0, Math.min(1, root.value + dir * 0.05)))
+    }
+
+    activeFocusOnTab: root.enabled
+    Accessible.role: Accessible.Slider
+    Accessible.name: root.accessibleName
+    Accessible.description: root.valueText
+    Keys.onLeftPressed:  root._nudge(-1)
+    Keys.onDownPressed:  root._nudge(-1)
+    Keys.onRightPressed: root._nudge(1)
+    Keys.onUpPressed:    root._nudge(1)
 
     Text {
         id: _g
@@ -79,7 +93,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             x: _track.ratio * (_track.width - width)
             color: _ma.pressed ? Theme.accent : Theme.text
-            scale: (_h.hovered || _ma.pressed) ? 1.0 : 0.0
+            scale: (_h.hovered || _ma.pressed || root.activeFocus) ? 1.0 : 0.0
             transformOrigin: Item.Center
             Behavior on scale { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutBack; easing.overshoot: 1.5 } }
             Behavior on color { ColorAnimation { duration: Motion.fast } }

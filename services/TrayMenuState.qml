@@ -3,7 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 
-// open/anchor state for the bar's tray context menu, mirrors CalendarState
+// mirrors CalendarState
 Singleton {
     id: root
 

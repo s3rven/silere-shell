@@ -118,7 +118,12 @@ PanelWindow {
         readonly property int _compactW:  400
         readonly property int _settingsW: 552
         readonly property int panelW: activeTab === 1 ? _settingsW : _compactW
-        readonly property int railW: 48
+        // Rail expands when Settings is active: the icon strip stays 48px and the
+        // category nav rides on beside it, so they read as one growing surface.
+        readonly property int railCollapsedW: 48
+        readonly property int navW: 150
+        readonly property int railExpandedW: railCollapsedW + navW
+        readonly property int railW: activeTab === 1 ? railExpandedW : railCollapsedW
         readonly property int contentW: panelW - railW
         readonly property int contentPad: 22
         readonly property int innerW: contentW - contentPad * 2
@@ -146,7 +151,7 @@ PanelWindow {
         readonly property real panelMaxX: Math.max(panelMinX, win.width - panelW - panelMinX)
 
         // Detached popup: starts just behind the bar-side edge, then settles into
-        // place. Keeping height measured separately avoids the old top-down grow.
+        // place via scale/offset — height is fixed up front, not animated.
         property real menuScale: 0.985
         property real edgeOffset: _closedOffset
         readonly property real _closedOffset: _barBottom ? 8 : -8
@@ -361,6 +366,12 @@ PanelWindow {
             clip: false  // allow hover pills to overflow into content area
             z: 6         // render above the content pane so pills aren't hidden
 
+            // Expand/collapse in step with the panel's width clock.
+            Behavior on width {
+                enabled: panel.state === "visible" && !ShellSettings.reduceMotion
+                NumberAnimation { duration: panel.heightAnimDuration; easing.type: Easing.OutCubic }
+            }
+
             // Background + divider live in a clipped sub-layer so the rounded
             // background (drawn wider than the rail) can't bleed past the rail's
             // right edge into the content pane. The icons/pills stay unclipped.
@@ -384,130 +395,114 @@ PanelWindow {
                     width: 1
                     color: Theme.withAlpha(Theme.subtext, 0.10)
                 }
-            }
 
-            // Top group: nav icons
-            Column {
-                id: _railNav
-                anchors.horizontalCenter: parent.horizontalCenter
-                y: 12
-                spacing: 4
+                // Divider between the icon strip and the categories — only while expanded.
+                Rectangle {
+                    x: panel.railCollapsedW
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    width: 1
+                    color: Theme.withAlpha(Theme.subtext, 0.10)
+                    opacity: panel.activeTab === 1 ? 1 : 0
+                    visible: opacity > 0.001
+                    Behavior on opacity {
+                        enabled: !ShellSettings.reduceMotion
+                        NumberAnimation { duration: Motion.medium }
+                    }
+                }
 
-                Repeater {
-                    // Rail order is visual only; index stays bound to the page
-                    // (0 Home / 1 Settings / 2 Recent) so loaders + jump-to-tab still work.
-                    model: [
-                        { glyph: "󰋜", label: "Home",     index: 0 },
-                        { glyph: "󰋚", label: "Recent",   index: 2 },
-                        { glyph: "󰒓", label: "Settings", index: 1 }
-                    ]
+                // Settings categories. Living in the clipped surface means the
+                // growing rail reveals them left-to-right and they can't paint
+                // past the rail edge mid-animation.
+                Item {
+                    x: panel.railCollapsedW
+                    width: panel.navW
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    opacity: panel.activeTab === 1 ? 1 : 0
+                    visible: opacity > 0.001
+                    enabled: panel.activeTab === 1 && !panel.powerOpen
+                    Behavior on opacity {
+                        enabled: !ShellSettings.reduceMotion
+                        NumberAnimation { duration: Motion.fast }
+                    }
 
-                    delegate: Item {
-                        id: _railItem
-                        required property var modelData
-                        width: panel.railW
-                        height: 38
-
-                        readonly property bool active: panel.activeTab === modelData.index
-
-                        HoverHandler { id: _railHover; cursorShape: Qt.PointingHandCursor }
-                        TapHandler   { id: _railTap; onTapped: panel.switchTab(_railItem.modelData.index) }
-
-                        Rectangle {
-                            id: _railAccent
-                            anchors.left: parent.left
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: 3
-                            height: 22
-                            radius: 1.5
-                            color: Theme.accent
-                            opacity: _railItem.active ? 1.0 : 0.0
-                            scale:   _railItem.active ? 1.0 : 0.4
-                            transformOrigin: Item.Left
-                            Behavior on opacity { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-                            Behavior on scale   { NumberAnimation { duration: Motion.medium; easing.type: Easing.OutBack; easing.overshoot: 0.6 } }
-                        }
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: _railItem.modelData.glyph
-                            color: _railItem.active
-                                ? Theme.accent
-                                : Theme.withAlpha(Theme.subtext, _railHover.hovered ? 0.8 : 0.5)
-                            font.family: Settings.font
-                            font.pixelSize: Settings.fontSize + 4
-                            renderType: Text.NativeRendering
-                            // Press-squish, then return to active/inactive baseline
-                            scale: _railTap.pressed ? 0.86 : (_railItem.active ? 1.05 : 1.0)
-                            transformOrigin: Item.Center
-                            Behavior on color { ColorAnimation  { duration: Motion.fast } }
-                            Behavior on scale { NumberAnimation { duration: Motion.medium; easing.type: Easing.OutBack; easing.overshoot: 0.4 } }
-                        }
-
-                        // Notification badge, Recent tab only
-                        Rectangle {
-                            readonly property bool _show: _railItem.modelData.index === 2
-                                && Notifications.hasHistory
-                                && !_railItem.active
-                            visible: _railItem.modelData.index === 2
-                            anchors.top: parent.top; anchors.topMargin: 3
-                            anchors.right: parent.right; anchors.rightMargin: 6
-                            width: Math.max(height, _railBadgeCount.implicitWidth + 6)
-                            height: 14; radius: 7
-                            color: Theme.accent; antialiasing: true
-                            opacity: _show ? 1.0 : 0.0
-                            scale:   _show ? 1.0 : 0.5
-                            transformOrigin: Item.Center
-                            Behavior on opacity { NumberAnimation { duration: Motion.fast } }
-                            Behavior on scale   { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutBack; easing.overshoot: 1.8 } }
-                            Text {
-                                id: _railBadgeCount
-                                anchors.fill: parent
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
-                                text: Notifications.historyCount > 99 ? "99+" : Notifications.historyCount
-                                color: Theme.surface
-                                font.family: Settings.font; font.pixelSize: Settings.fontSize - 4
-                                font.weight: Font.Bold
-                                renderType: Text.NativeRendering
-                            }
-                        }
-
-                        // Hover pill, label to the right of the icon
-                        Rectangle {
-                            x: panel.railW + 4
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: _pillLabel.implicitWidth + 16
-                            height: 22; radius: 11
-                            color: Theme.withAlpha(Theme.surface, 0.97)
-                            border.width: 1; border.color: Theme.withAlpha(Theme.subtext, 0.14)
-                            antialiasing: true
-                            opacity: _railHover.hovered && !_railItem.active ? 1.0 : 0.0
-                            scale:   _railHover.hovered && !_railItem.active ? 1.0 : 0.85
-                            transformOrigin: Item.Left
-                            z: 10
-                            Behavior on opacity { NumberAnimation { duration: Motion.fast } }
-                            Behavior on scale   { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-                            Text {
-                                id: _pillLabel
-                                anchors.centerIn: parent
-                                text: _railItem.modelData.label
-                                color: Theme.withAlpha(Theme.subtext, 0.85)
-                                font.family: Settings.font; font.pixelSize: Settings.fontSize - 1
-                                renderType: Text.NativeRendering
-                            }
-                        }
+                    SettingsNav {
+                        id: _settingsNav
+                        anchors.fill: parent
+                        powerOpen: panel.powerOpen
                     }
                 }
             }
 
-            // Bottom slot: divider + power icon
+            // Top group: nav icons. Rail order is visual only; tab index stays
+            // bound to the page (0 Home / 1 Settings / 2 Recent) so loaders and
+            // jump-to-tab keep working regardless of where an item sits here.
+            Column {
+                id: _railNav
+                width: panel.railCollapsedW
+                x: 0
+                y: 12
+                spacing: 4
+
+                RailNavItem {
+                    railW: panel.railCollapsedW
+                    glyph: "󰋜"
+                    label: "Home"
+                    active: panel.activeTab === 0
+                    onTapped: panel.switchTab(0)
+                }
+
+                RailNavItem {
+                    id: _railRecent
+                    railW: panel.railCollapsedW
+                    glyph: "󰋚"
+                    label: "Recent"
+                    active: panel.activeTab === 2
+                    onTapped: panel.switchTab(2)
+
+                    Rectangle {
+                        readonly property bool _show: Notifications.hasHistory && !_railRecent.active
+                        anchors.top: parent.top; anchors.topMargin: 3
+                        anchors.right: parent.right; anchors.rightMargin: 6
+                        width: Math.max(height, _railBadgeCount.implicitWidth + 6)
+                        height: 14; radius: 7
+                        color: Theme.accent; antialiasing: true
+                        opacity: _show ? 1.0 : 0.0
+                        scale:   _show ? 1.0 : 0.5
+                        visible: opacity > 0.01
+                        transformOrigin: Item.Center
+                        Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
+                        Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutBack; easing.overshoot: 1.8 } }
+                        Text {
+                            id: _railBadgeCount
+                            anchors.fill: parent
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                            text: Notifications.historyCount > 99 ? "99+" : Notifications.historyCount
+                            color: Theme.surface
+                            font.family: Settings.font; font.pixelSize: Settings.fontSize - 4
+                            font.weight: Font.Bold
+                            renderType: Text.NativeRendering
+                        }
+                    }
+                }
+
+                RailNavItem {
+                    railW: panel.railCollapsedW
+                    glyph: "󰒓"
+                    label: "Settings"
+                    active: panel.activeTab === 1
+                    onTapped: panel.switchTab(1)
+                }
+            }
+
             Item {
                 id: _railPowerSlot
                 anchors.bottom: parent.bottom
                 anchors.bottomMargin: 12
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: panel.railW
+                anchors.left: parent.left
+                width: panel.railCollapsedW
                 height: 1 + 10 + 38
 
                 Rectangle {
@@ -519,49 +514,16 @@ PanelWindow {
                     color: Theme.withAlpha(Theme.subtext, 0.13)
                 }
 
-                Item {
-                    id: _railPowerBtn
+                RailNavItem {
                     anchors.top: _railDivider.bottom
                     anchors.topMargin: 10
                     anchors.horizontalCenter: parent.horizontalCenter
-                    width: panel.railW
-                    height: 38
-
-                    readonly property bool active: panel.powerOpen
-
-                    HoverHandler { id: _railPowerHover; cursorShape: Qt.PointingHandCursor }
-                    TapHandler   { id: _railPowerTap; onTapped: panel.powerOpen = !panel.powerOpen }
-
-                    Rectangle {
-                        anchors.left: parent.left
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: 3
-                        height: 22
-                        radius: 1.5
-                        color: Theme.error
-                        opacity: _railPowerBtn.active ? 1.0 : 0.0
-                        scale:   _railPowerBtn.active ? 1.0 : 0.4
-                        transformOrigin: Item.Left
-                        Behavior on opacity { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-                        Behavior on scale   { NumberAnimation { duration: Motion.medium; easing.type: Easing.OutBack; easing.overshoot: 0.6 } }
-                    }
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "󰐥"
-                        color: _railPowerBtn.active
-                            ? Theme.withAlpha(Theme.error, 0.95)
-                            : (_railPowerHover.hovered
-                                ? Theme.withAlpha(Theme.error, 0.6)
-                                : Theme.withAlpha(Theme.subtext, 0.5))
-                        font.family: Settings.font
-                        font.pixelSize: Settings.fontSize + 4
-                        renderType: Text.NativeRendering
-                        scale: _railPowerTap.pressed ? 0.86 : (_railPowerBtn.active ? 1.05 : 1.0)
-                        transformOrigin: Item.Center
-                        Behavior on color { ColorAnimation  { duration: Motion.fast } }
-                        Behavior on scale { NumberAnimation { duration: Motion.medium; easing.type: Easing.OutBack; easing.overshoot: 0.4 } }
-                    }
+                    railW: panel.railCollapsedW
+                    glyph: "󰐥"
+                    label: "Power"
+                    accentColor: Theme.error
+                    active: panel.powerOpen
+                    onTapped: panel.powerOpen = !panel.powerOpen
                 }
             }
         }
@@ -573,15 +535,24 @@ PanelWindow {
             y: 0
             width: panel.contentW
             clip: true
-            // snapped to 4 so a bottom-bar panel's y stays on the divider grid
+
+            // Slide in step with the expanding rail so the rail's right edge and
+            // the content's left edge stay flush.
+            Behavior on x {
+                enabled: panel.state === "visible" && !ShellSettings.reduceMotion
+                NumberAnimation { duration: panel.heightAnimDuration; easing.type: Easing.OutCubic }
+            }
+
+            // snapped to 4 so a bottom-bar panel's y stays on the divider grid.
+            // The rail-borne settings nav can be taller than the detail pane, so it
+            // sets the floor too (the old single-page layout did this implicitly).
             readonly property int targetH: {
                 const contentH = tabContent.y + tabContent.height + 16
-                return 4 * Math.ceil(Math.max(panel.minRailFitH, panel.idealMinH, contentH) / 4)
+                const navH = panel.activeTab === 1 ? _settingsNav.implicitHeight + 20 : 0
+                return 4 * Math.ceil(Math.max(panel.minRailFitH, panel.idealMinH, contentH, navH) / 4)
             }
             height: panel.height
 
-
-            // History empty state, centered in the full content pane height
             Column {
                 id: _emptyState
                 anchors.centerIn: parent
@@ -715,7 +686,7 @@ PanelWindow {
                 id: powerStrip
                 // Fixed at the compact-tab width and centred, so the buttons keep
                 // one size instead of stretching when the Settings tab widens the panel.
-                readonly property int _stripW: panel._compactW - panel.railW - panel.contentPad * 2
+                readonly property int _stripW: panel._compactW - panel.railCollapsedW - panel.contentPad * 2
                 width: _stripW
                 x: Math.round((parent.width - _stripW) / 2)
                 height: 72

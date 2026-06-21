@@ -28,6 +28,14 @@ Item {
         ? Math.min(_noteText.implicitWidth, Math.max(54, root.width * 0.34))
         : 34
 
+    function _activate(): void {
+        if (!_canToggle) return
+        // Animate the knob only on a real user flip; section switches re-run
+        // layout and would otherwise slide every checked knob.
+        if (!ShellSettings.reduceMotion) { _knob._animateX = true; _knobDisarm.restart() }
+        root.toggled()
+    }
+
     // 4px multiple: keeps card dividers on whole physical px under
     // fractional scaling.
     width:          parent ? parent.width : 0
@@ -37,15 +45,19 @@ Item {
     opacity: _canToggle ? 1.0 : 0.45
     Behavior on opacity { NumberAnimation { duration: Motion.medium } }
 
+    activeFocusOnTab: _canToggle
+    Accessible.role: Accessible.CheckBox
+    Accessible.name: root.label
+    Accessible.description: root.dependsNote
+    Accessible.checked: root.checked
+    Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
+    Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
+    Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
+
     HoverHandler { id: _hover; cursorShape: root._canToggle ? Qt.PointingHandCursor : Qt.ArrowCursor }
     TapHandler {
         enabled: root._canToggle
-        onTapped: {
-            // Animate the knob only on a real user flip; section switches re-run
-            // layout and would otherwise slide every checked knob.
-            if (!ShellSettings.reduceMotion) { _knob._animateX = true; _knobDisarm.restart() }
-            root.toggled()
-        }
+        onTapped: root._activate()
     }
 
     RowHoverBg {
@@ -53,8 +65,8 @@ Item {
         topRadius:    root.topRadius
         bottomRadius: root.bottomRadius
         cardInset:    root.cardInset
-        active:       _hover.hovered && root._canToggle
-        fillOpacity:  0.08
+        active:       (_hover.hovered || root.activeFocus) && root._canToggle
+        fillOpacity:  root.activeFocus ? 0.13 : 0.08
     }
 
     Item {
@@ -101,7 +113,6 @@ Item {
             Behavior on color { ColorAnimation { duration: Motion.fast } }
         }
 
-        // tag after the label (e.g. "beta", "net"), coloured by kind
         Rectangle {
             id: _badge
             anchors.right: parent.right
@@ -160,10 +171,9 @@ Item {
                 x:     root.checked ? parent.width - width - 2 : 2
                 color: root.checked ? Theme.accent : Theme.mix(Theme.subtext, Theme.accent, 0.16)
 
-                // Stretch into a capsule while travelling, settle back round.
                 property real _stretch: 1.0
-                // Armed by the tap above; the disarm timer clears it once the
-                // spring has settled, so only deliberate flips animate the slide.
+                // Armed by the tap above; the disarm timer clears it after the
+                // bounded slide, so only deliberate flips animate the knob.
                 property bool _animateX: false
                 transform: Scale {
                     origin.x: _knob.width  / 2
@@ -174,7 +184,7 @@ Item {
 
                 Timer { id: _knobDisarm; interval: Motion.fast + Motion.medium + 80; onTriggered: _knob._animateX = false }
 
-                Behavior on x     { enabled: _knob._animateX && !ShellSettings.reduceMotion; SpringAnimation { spring: 10; damping: 0.88; epsilon: 0.5 } }
+                Behavior on x     { enabled: _knob._animateX && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutQuart } }
                 Behavior on color { ColorAnimation { duration: Motion.fast } }
 
                 Connections {

@@ -2,6 +2,7 @@ MenuWindow   1.0 MenuWindow.qml
 HomePage     1.0 HomePage.qml
 RecentPage   1.0 RecentPage.qml
 SettingsPage 1.0 SettingsPage.qml
+SettingsNav  1.0 SettingsNav.qml
 ChoiceChipRow   1.0 ChoiceChipRow.qml
 AccentSwatch    1.0 AccentSwatch.qml
 CollapsibleSection 1.0 CollapsibleSection.qml
@@ -17,5 +18,6 @@ QuickSlider     1.0 QuickSlider.qml
 HintText        1.0 HintText.qml
 RowHoverBg      1.0 RowHoverBg.qml
 MediaButton     1.0 MediaButton.qml
+RailNavItem     1.0 RailNavItem.qml
 WifiList        1.0 WifiList.qml
 BluetoothList   1.0 BluetoothList.qml

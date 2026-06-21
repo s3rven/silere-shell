@@ -26,7 +26,6 @@ Singleton {
     property bool   trayWidget:          false
     property bool   valuesOnHover:       false
     property bool   batteryAutoHide:     false
-    property bool   hasOpenedMenu:       false   // first-run state: gates the one-shot diamond hint
 
     property bool   osdEnabled:     true
     property int    osdTimeout:     2000
@@ -39,7 +38,7 @@ Singleton {
     property bool   osdBarIntegrated: false  // β: show OSD inline in the bar center instead of a floating pill
     property bool   reduceMotion:        false
     property real   animSpeed:           1.0
-    property real   uiScale:             1.0     // shell font scale, 0.8–1.0
+    property real   uiScale:             1.0     // shell font scale, 0.8–1.15
 
     property bool   notifPopupEnabled:   true
     property bool   notifFullscreenSilence: false  // archive popups while a window is fullscreen
@@ -128,7 +127,6 @@ Singleton {
         { k: "trayWidget",          t: "bool" },
         { k: "valuesOnHover",       t: "bool" },
         { k: "batteryAutoHide",     t: "bool" },
-        { k: "hasOpenedMenu",       t: "bool" },
         { k: "osdEnabled",          t: "bool" },
         { k: "osdTimeout",          t: "int",  min: 500,  max: 10000 },
         { k: "osdKindFilter",       t: "enum", vals: ["both", "volume", "brightness"] },
@@ -140,7 +138,7 @@ Singleton {
         { k: "osdBarIntegrated",    t: "bool" },
         { k: "reduceMotion",        t: "bool" },
         { k: "animSpeed",           t: "real", min: 0.5, max: 2.0 },
-        { k: "uiScale",             t: "real", min: 0.8, max: 1.0 },
+        { k: "uiScale",             t: "real", min: 0.8, max: 1.15 },
         { k: "notifPopupEnabled",   t: "bool" },
         { k: "notifFullscreenSilence", t: "bool" },
         { k: "notifPosition",       t: "enum", vals: ["top-right", "top-left", "top-center"] },

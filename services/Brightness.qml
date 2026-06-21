@@ -65,7 +65,6 @@ Singleton {
         function onReadyChanged() { root._init() }
     }
 
-    // Detect the backlight device
     Process {
         id: _listProc
         stdout: StdioCollector { id: _listOut }
@@ -81,7 +80,9 @@ Singleton {
             }
             for (let i = 0; i < prefs.length && !chosen; i++)
                 chosen = (devices.find(d => d.cls === "backlight" && d.name.startsWith(prefs[i])) || {}).name || ""
-            if (!chosen) chosen = (devices.find(d => d.cls === "backlight") || devices[0] || {}).name || ""
+            // Never fall back to an arbitrary LED device (keyboard/backlight
+            // LEDs are also reported by brightnessctl and are not displays).
+            if (!chosen) chosen = (devices.find(d => d.cls === "backlight") || {}).name || ""
             if (!chosen) {
                 root.ready = false
                 root.maxBrightness = 0

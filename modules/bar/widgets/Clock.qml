@@ -21,7 +21,7 @@ Row {
 
     scale: _calTap.pressed ? 0.95 : 1.0
     transformOrigin: Item.Center
-    Behavior on scale { enabled: !ShellSettings.reduceMotion; SpringAnimation { spring: 18; damping: 0.5; epsilon: 0.005 } }
+    Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
     Item {
         id: _dateSectionClip

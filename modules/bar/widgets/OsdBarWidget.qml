@@ -9,15 +9,15 @@ Item {
     readonly property bool _shouldShow: ShellSettings.osdBarIntegrated && OsdBarState.showing && !OverviewState.active
     readonly property int  _barH: ShellSettings.barHeight
 
-    readonly property real _slide: 6   // fixed slide keeps entrance snappy
+    readonly property real _slide: 5
 
     implicitHeight: parent ? parent.height : _barH
-    implicitWidth:  _op > 0.001 ? _content.implicitWidth : 0
+    implicitWidth:  _content.implicitWidth
     visible: _op > 0.001 || state === "visible"
 
     property real _op:    0
     property real _y:     _slide
-    property real _scale: 0.94
+    property real _scale: 0.97
     property real _bump:  1.0
 
     // State is set imperatively from OsdBarState.showing (synchronous, in the
@@ -29,6 +29,7 @@ Item {
         state = _shouldShow ? "visible" : "hidden"
         if (!_shouldShow) _alertWidth = 0
     }
+    Component.onCompleted: _sync()
 
     Connections {
         target: OsdBarState
@@ -51,16 +52,16 @@ Item {
     Connections { target: ShellSettings; function onOsdBarIntegratedChanged() { root._sync() } }
 
     states: [
-        State { name: "hidden";  PropertyChanges { target: root; _op: 0;   _y: root._slide; _scale: 0.94 } },
+        State { name: "hidden";  PropertyChanges { target: root; _op: 0;   _y: root._slide; _scale: 0.97 } },
         State { name: "visible"; PropertyChanges { target: root; _op: 1.0; _y: 0;           _scale: 1.0  } }
     ]
     transitions: [
         Transition {
             to: "visible"
             ParallelAnimation {
-                NumberAnimation { target: root; property: "_op";    duration: Motion.normal;  easing.type: Easing.OutCubic }
-                NumberAnimation { target: root; property: "_y";     duration: Motion.ms(240); easing.type: Easing.OutCubic }
-                NumberAnimation { target: root; property: "_scale"; duration: Motion.ms(240); easing.type: Easing.OutCubic }
+                NumberAnimation { target: root; property: "_op";    duration: Motion.ms(105); easing.type: Easing.OutCubic }
+                NumberAnimation { target: root; property: "_y";     duration: Motion.ms(165); easing.type: Easing.OutQuart }
+                NumberAnimation { target: root; property: "_scale"; duration: Motion.ms(150); easing.type: Easing.OutCubic }
             }
         },
         Transition {
@@ -68,17 +69,17 @@ Item {
             // Opacity is the longest leg so the content stays drawn through the
             // whole slide/scale and never blink-cuts at the tail.
             ParallelAnimation {
-                NumberAnimation { target: root; property: "_y";     duration: Motion.ms(120); easing.type: Easing.InCubic }
-                NumberAnimation { target: root; property: "_scale"; duration: Motion.ms(120); easing.type: Easing.InCubic }
-                NumberAnimation { target: root; property: "_op";    duration: Motion.ms(150); easing.type: Easing.InCubic }
+                NumberAnimation { target: root; property: "_y";     duration: Motion.ms(100); easing.type: Easing.InCubic }
+                NumberAnimation { target: root; property: "_scale"; duration: Motion.ms(100); easing.type: Easing.InCubic }
+                NumberAnimation { target: root; property: "_op";    duration: Motion.ms(115); easing.type: Easing.InCubic }
             }
         }
     ]
 
     SequentialAnimation {
         id: _bumpAnim
-        NumberAnimation { target: root; property: "_bump"; to: 1.03; duration: Motion.ms(90);  easing.type: Easing.OutQuad }
-        NumberAnimation { target: root; property: "_bump"; to: 1.0;  duration: Motion.ms(170); easing.type: Easing.OutCubic }
+        NumberAnimation { target: root; property: "_bump"; to: 1.018; duration: Motion.ms(65);  easing.type: Easing.OutQuad }
+        NumberAnimation { target: root; property: "_bump"; to: 1.0;   duration: Motion.ms(125); easing.type: Easing.OutCubic }
     }
 
     // Pins the value label width so the Row doesn't shift as the number changes.
@@ -109,17 +110,21 @@ Item {
     Row {
         id: _content
         anchors.centerIn: parent
-        anchors.verticalCenterOffset: root._y
         spacing: 8
         opacity: root._op
         scale:   root._scale
         transformOrigin: Item.Center
         // Bump rides its own transform so the tactile kick can't fight the
         // entrance/exit scale — multiplying both into `scale` made them jitter.
-        transform: Scale {
-            origin.x: _content.width / 2; origin.y: _content.height / 2
-            xScale: root._bump; yScale: root._bump
-        }
+        transform: [
+            // A transform stays in the scene graph; animating an anchor offset
+            // forced the bar's anchor/layout pass to run every frame.
+            Translate { y: root._y },
+            Scale {
+                origin.x: _content.width / 2; origin.y: _content.height / 2
+                xScale: root._bump; yScale: root._bump
+            }
+        ]
 
         Text {
             id: _iconText
@@ -202,9 +207,9 @@ Item {
 
     SequentialAnimation {
         id: _iconStamp
-        NumberAnimation { target: _iconText; property: "scale"; to: 0.0; duration: Motion.ms(60); easing.type: Easing.InBack; easing.overshoot: 1.2 }
+        NumberAnimation { target: _iconText; property: "scale"; to: 0.72; duration: Motion.ms(55); easing.type: Easing.InCubic }
         ScriptAction    { script: OsdBarState.icon = OsdBarState.nextIcon }
-        NumberAnimation { target: _iconText; property: "scale"; from: 0.0; to: 1.0; duration: Motion.ms(180); easing.type: Easing.OutBack; easing.overshoot: 2.2 }
+        NumberAnimation { target: _iconText; property: "scale"; from: 0.72; to: 1.0; duration: Motion.ms(125); easing.type: Easing.OutQuart }
         onFinished: { if (OsdBarState.nextIcon !== OsdBarState.icon) _iconStamp.start() }
     }
 }

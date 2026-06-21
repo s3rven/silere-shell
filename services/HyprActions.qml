@@ -15,7 +15,7 @@ Singleton {
 
     Process {
         id: _luaCheck
-        command: ["sh", "-c", "[ -f ~/.config/hypr/hyprland.lua ]"]
+        command: ["bash", Quickshell.shellDir + "/scripts/install.sh", "--hypr-config-kind"]
         onExited: (code) => { root._luaDetected = (code === 0) }
         Component.onCompleted: running = true
     }

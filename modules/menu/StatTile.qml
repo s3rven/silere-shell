@@ -22,6 +22,12 @@ Item {
 
     height: showGauge ? 56 : 44   // 4px multiples
 
+    // hoverValue is mouse-only by design; surface it here too so a screen
+    // reader gets it regardless of pointer state.
+    Accessible.role: Accessible.StaticText
+    Accessible.name: root.label
+    Accessible.description: root._hoverable ? root.value + "  " + root.hoverValue : root.value
+
     HoverHandler { id: _hover; enabled: root._hoverable }
 
     Rectangle {
@@ -87,7 +93,11 @@ Item {
 
     property string _valShown: root.value
     readonly property bool _valAlt: _hover.hovered && root._hoverable
-    on_ValAltChanged: if (root._hoverable && !ShellSettings.reduceMotion) _valSwap.restart()
+    on_ValAltChanged: {
+        if (!root._hoverable) return
+        if (ShellSettings.reduceMotion) { root._valShown = root._valAlt ? root.hoverValue : root.value; return }
+        _valSwap.restart()
+    }
 
     SequentialAnimation {
         id: _valSwap

@@ -4,12 +4,9 @@ import "../../../services"
 import "../../common"
 
 // Pending shell self-update. Hidden until a check, install, or pending update is
-// active. Left-click checks or applies (pull + restart);
-// right-click opens the menu like the other status pills.
+// active. Click checks or applies (pull + restart).
 Pill {
     id: root
-
-    property var screen: null
 
     readonly property bool _show: ShellUpdate.pending || ShellUpdate.checking || ShellUpdate.applying
 
@@ -18,14 +15,16 @@ Pill {
     scale:   _show ? 1.0 : 0.7
     transformOrigin: Item.Center
     Behavior on opacity { NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
-    Behavior on scale   { enabled: !ShellSettings.reduceMotion; SpringAnimation { spring: 6; damping: 0.6; epsilon: 0.01 } }
+    Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutQuart } }
 
     glyph:          "󰚰"
     glyphPixelSize: Settings.fontSize + 1
     glyphColor:     Theme.accent
-    text:           hoverActive ? ShellUpdate.statusText : ""
+    text:           expanded ? ShellUpdate.statusText : ""
     textColor:      Theme.text
-    cursorShape:    Qt.PointingHandCursor
+    interactive:    _show && !ShellUpdate.checking && !ShellUpdate.applying
+    accessibleName: `Shell update, ${ShellUpdate.statusText}`
+    accessibleDescription: "Activate to check for or apply the shell update."
     animateGlyph:   false
     shrinkDelay:    0
 
@@ -42,9 +41,11 @@ Pill {
     }
 
     pressed: _tap.pressed
+    onActivated: ShellUpdate.pending ? ShellUpdate.apply() : ShellUpdate.check()
     TapHandler {
         id: _tap
+        enabled: root.interactive
         acceptedButtons: Qt.LeftButton
-        onTapped: ShellUpdate.pending ? ShellUpdate.apply() : ShellUpdate.check()
+        onTapped: root.activated()
     }
 }

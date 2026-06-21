@@ -164,7 +164,6 @@ Singleton {
 
     onTemperatureChanged: {
         if (!root.enabled || !root.toolAvailable) return
-        // Restart hyprsunset with the new temperature while staying enabled.
         _pendingEnable = true
         if (_sunsetProc.running || _stopping) {
             _stopping = true

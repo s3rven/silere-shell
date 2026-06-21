@@ -22,7 +22,6 @@ Item {
     implicitHeight: 4 * Math.ceil((_topGap + _text.implicitHeight + _botGap) / 4)
     height: implicitHeight
 
-    // Accent tick ties the sub-headers into the panel's accent system.
     Rectangle {
         id: _tick
         anchors.left:           parent.left

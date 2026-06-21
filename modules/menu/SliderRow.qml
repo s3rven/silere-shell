@@ -43,6 +43,15 @@ Item {
     opacity: root.enabled ? 1.0 : 0.45
     Behavior on opacity { NumberAnimation { duration: Motion.medium } }
 
+    activeFocusOnTab: root.enabled
+    Accessible.role: Accessible.Slider
+    Accessible.name: root.label
+    Accessible.description: root.displayValue
+    Keys.onLeftPressed:  root._nudge(-1)
+    Keys.onDownPressed:  root._nudge(-1)
+    Keys.onRightPressed: root._nudge(1)
+    Keys.onUpPressed:    root._nudge(1)
+
     HoverHandler { id: _rowHover; enabled: root.enabled; cursorShape: root.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor }
 
     // Hover background, clipped rounded rect (see RowHoverBg).
@@ -51,8 +60,8 @@ Item {
         topRadius:    root.topRadius
         bottomRadius: root.bottomRadius
         cardInset:    root.cardInset
-        active:       _rowHover.hovered
-        fillOpacity:  0.08
+        active:       _rowHover.hovered || root.activeFocus
+        fillOpacity:  root.activeFocus ? 0.13 : 0.08
     }
 
     // ── Top line: glyph + label (left), value (right) ─────────────────────
@@ -165,7 +174,7 @@ Item {
             scale: _trackMa.pressed ? 0.86 : 1.0
             transformOrigin: Item.Center
 
-            Behavior on scale { enabled: !ShellSettings.reduceMotion; SpringAnimation { spring: 18; damping: 0.5; epsilon: 0.005 } }
+            Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
             Behavior on color { ColorAnimation { duration: Motion.fast } }
             Behavior on x {
                 enabled: !_trackMa.pressed

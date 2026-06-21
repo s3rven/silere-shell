@@ -19,7 +19,20 @@ Item {
     // (name, hovered) — caller threads this into the picker's shared readout.
     signal hoverChanged(string name, bool hovered)
 
+    function _activate(): void {
+        root.picked()
+        if (!ShellSettings.reduceMotion) _ripAnim.restart()
+    }
+
     width: 26; height: 32
+
+    activeFocusOnTab: true
+    Accessible.role: Accessible.RadioButton
+    Accessible.name: root.name
+    Accessible.checked: root.active
+    Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
+    Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
+    Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
 
     HoverHandler {
         id: _h
@@ -28,10 +41,9 @@ Item {
     }
     TapHandler {
         id: _t
-        onTapped: { root.picked(); if (!ShellSettings.reduceMotion) _ripAnim.restart() }
+        onTapped: root._activate()
     }
 
-    // Press ripple — a ring that scales out and fades on tap.
     Rectangle {
         id: _rip
         anchors.centerIn: parent
@@ -44,15 +56,14 @@ Item {
             NumberAnimation { target: _rip; property: "opacity"; from: 0.7;  to: 0.0; duration: Motion.ms(380); easing.type: Easing.OutCubic }
         }
     }
-    // Selection ring — solid when active, a faint preview on hover.
     Rectangle {
         anchors.centerIn: parent; width: 30; height: 30; radius: 15
         color: "transparent"; border.width: 2; border.color: root.chipColor
-        opacity: root.active ? 0.85 : (_h.hovered ? 0.4 : 0.0)
-        scale:   root.active ? 1.0 : (_h.hovered ? 0.92 : 0.5)
+        opacity: root.active ? 0.85 : ((_h.hovered || root.activeFocus) ? 0.4 : 0.0)
+        scale:   root.active ? 1.0 : ((_h.hovered || root.activeFocus) ? 0.92 : 0.5)
         transformOrigin: Item.Center; antialiasing: true
         Behavior on opacity { NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
-        Behavior on scale   { enabled: !ShellSettings.reduceMotion; SpringAnimation { spring: 5; damping: 0.5; epsilon: 0.01 } }
+        Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutQuart } }
     }
     Rectangle {
         id: _chip
@@ -61,6 +72,6 @@ Item {
         color: root.chipColor
         scale: _t.pressed ? 0.80 : root.active ? 1.0 : _h.hovered ? 1.08 : 1.0
         transformOrigin: Item.Center
-        Behavior on scale { enabled: !ShellSettings.reduceMotion; SpringAnimation { spring: 5; damping: 0.45; epsilon: 0.005 } }
+        Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
     }
 }

@@ -10,10 +10,8 @@ Item {
     required property bool active
     required property bool powerOpen
 
-    signal categoryChanged()
-
     width: parent ? parent.width : 0
-    implicitHeight: _page.implicitHeight
+    implicitHeight: _detail.height
     enabled: root.active && !root.powerOpen
     visible: opacity > 0.001
     transformOrigin: Item.Center
@@ -53,92 +51,16 @@ Item {
         return s.length < 2 ? "0" + s : s
     }
 
-    readonly property int _navW:     146
-    readonly property int _navGap:   16
-    readonly property int _contentW: Math.max(0, width - _navW - _navGap)
-
-    // Sidebar metrics — shared by the layout below AND the arithmetic that places
-    // the sliding selection, so the two can't drift. (The marker used to read its
-    // row via mapToItem in Component.onCompleted, which raced the async page load /
-    // open animation and sometimes landed on the group header instead of Theme.)
-    readonly property int _navTop:     10
-    readonly property int _navGapY:    10   // between groups
-    readonly property int _navRowH:    28
-    readonly property int _navRowGap:  2    // within a group
-    readonly property int _navHdrH:    22
-    readonly property int _navStdHdrH: 13   // standalone leaf's divider slot (System)
-
-    // y of a section's row inside _nav, computed straight from the tree — exact and
-    // synchronous, no dependency on layout having settled.
-    function _sectionRowY(section: string): real {
-        let y = _navTop
-        for (let i = 0; i < _tree.length; i++) {
-            const it = _tree[i]
-            if (i > 0) y += _navGapY
-            const isGroup = !!it.children
-            const hdr = isGroup ? _navHdrH : _navStdHdrH
-            const leaves = isGroup ? it.children : [it]
-            for (let j = 0; j < leaves.length; j++) {
-                if (leaves[j].section === section)
-                    return y + hdr + j * _navRowH + (j + 1) * _navRowGap
-            }
-            y += hdr + leaves.length * (_navRowH + _navRowGap)
-        }
-        return _navTop
-    }
-
-    property string _section:      "theme"
-    property string _shownSection: "theme"
-
-    function _setSection(s) {
-        if (s === _section) return
-        _section = s
-        root.categoryChanged()
-    }
-
-    readonly property var _tree: [
-        { glyph: "󰉦", label: "Appearance", children: [
-            { glyph: "󰉦", label: "Theme",       section: "theme"      },
-            { glyph: "󱖲", label: "Motion",      section: "motion"     },
-            { glyph: "󰖙", label: "Night Light", section: "nightlight" }
-        ]},
-        { glyph: "󰕮", label: "Bar", children: [
-            { glyph: "󰍹", label: "Surface",    section: "surface"    },
-            { glyph: "󰻂", label: "Separators", section: "separators" },
-            { glyph: "󰍴", label: "Underline",  section: "underline"  }
-        ]},
-        { glyph: "󰀻", label: "Widgets", children: [
-            { glyph: "󰅐", label: "Clock",      section: "clock"      },
-            { glyph: "󰕰", label: "Workspaces", section: "workspaces" },
-            { glyph: "󰝚", label: "Media",      section: "media"      },
-            { glyph: "󰈈", label: "Indicators", section: "indicators" }
-        ]},
-        { glyph: "󰂚", label: "Notifications", children: [
-            { glyph: "󰂚", label: "Popups",   section: "popups"   },
-            { glyph: "󱀅", label: "OSD",      section: "osd"      },
-            { glyph: "󰀦", label: "Warnings", section: "warnings" }
-        ]},
-        { glyph: "󰒓", label: "System", children: [
-            { glyph: "󰒓", label: "General", section: "system"  },
-            { glyph: "󰚰", label: "Updates", section: "updates" }
-        ]}
-    ]
-
-    readonly property var _flatSections: {
-        const out = []
-        for (let i = 0; i < _tree.length; i++) {
-            const it = _tree[i]
-            if (it.children) for (let j = 0; j < it.children.length; j++) out.push(it.children[j].section)
-            else out.push(it.section)
-        }
-        return out
-    }
+    // Lags behind MenuState.settingsSection during the swap animation; the
+    // detail pane renders whichever section this points at.
+    property string _shownSection: MenuState.settingsSection
 
     // section id → { glyph, label, group }, for the detail-pane page header.
     readonly property var _sectionMeta: {
         const m = ({})
-        for (let i = 0; i < _tree.length; i++) {
-            const it = _tree[i]
+        const tree = MenuState.settingsTree
+        for (let i = 0; i < tree.length; i++) {
+            const it = tree[i]
             if (it.children) {
                 for (let j = 0; j < it.children.length; j++) {
                     const c = it.children[j]
@@ -149,26 +71,6 @@ Item {
             }
         }
         return m
-    }
-
-    function _stepSection(delta: int): void {
-        const idx = _flatSections.indexOf(_section)
-        if (idx < 0) return
-        const next = Math.max(0, Math.min(_flatSections.length - 1, idx + delta))
-        if (next !== idx) _setSection(_flatSections[next])
-    }
-
-    Shortcut {
-        sequences: ["Down"]
-        context: Qt.ApplicationShortcut
-        enabled: root.active && !root.powerOpen && MenuState.open
-        onActivated: root._stepSection(1)
-    }
-    Shortcut {
-        sequences: ["Up"]
-        context: Qt.ApplicationShortcut
-        enabled: root.active && !root.powerOpen && MenuState.open
-        onActivated: root._stepSection(-1)
     }
 
     readonly property string _battAlertMode: {
@@ -265,236 +167,12 @@ Item {
         }
     }
 
-    Row {
-        id: _page
-        width: parent.width
-        spacing: root._navGap
-
-        // ── Side-nav tree ──────────────────────────────────────────────────
-        Item {
-            id: _nav
-            width: root._navW
-            implicitHeight: _navCol.implicitHeight + 20
-            height: implicitHeight
-
-            Rectangle {
-                anchors.fill: parent
-                radius: 11
-                antialiasing: true
-                color: Theme.mix(Theme.menuSidebar, Theme.background, 0.08)
-                border.width: 0
-            }
-
-            // ── Sliding selection ───────────────────────────────────────────
-            // One accent marker that glides between rows instead of a static box,
-            // mod-menu style. Position is computed from the tree (see _sectionRowY),
-            // so it's correct on the very first frame; _selReady just holds motion
-            // off until after that frame so the first paint snaps. Sits under
-            // the rows (declared before _navCol) so row text/icons paint on top.
-            readonly property real _selY: root._sectionRowY(root._section)
-            property bool _selReady: false
-            Component.onCompleted: Qt.callLater(function() { _nav._selReady = true })
-
-            Item {
-                id: _selHighlight
-                x: 6
-                width: _nav.width - 12
-                y: _nav._selY
-                height: root._navRowH
-                visible: true
-
-                Behavior on y {
-                    enabled: _nav._selReady && !ShellSettings.reduceMotion
-                    NumberAnimation { duration: Motion.ms(180); easing.type: Easing.OutCubic }
-                }
-
-                // Quiet active wash: enough structure for keyboard navigation without
-                // turning every row into a boxed control.
-                Rectangle {
-                    anchors.fill: parent
-                    radius: 7
-                    antialiasing: true
-                    gradient: Gradient {
-                        orientation: Gradient.Horizontal
-                        GradientStop { position: 0.0; color: Theme.withAlpha(Theme.accent, 0.18) }
-                        GradientStop { position: 0.45; color: Theme.withAlpha(Theme.accent, 0.09) }
-                        GradientStop { position: 1.0; color: Theme.withAlpha(Theme.accent, 0.018) }
-                    }
-                }
-
-                Rectangle {
-                    anchors.left: parent.left
-                    anchors.leftMargin: 1
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 2
-                    height: 15
-                    radius: 1
-                    antialiasing: true
-                    color: Theme.withAlpha(Theme.accent, 0.82)
-                }
-
-                Rectangle {
-                    anchors.fill: parent
-                    radius: 7
-                    antialiasing: true
-                    color: "transparent"
-                    border.width: 1
-                    border.color: Theme.withAlpha(Theme.accent, 0.34)
-                }
-
-            }
-
-            Column {
-                id: _navCol
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.leftMargin: 8
-                anchors.rightMargin: 8
-                anchors.top: parent.top
-                anchors.topMargin: root._navTop
-                spacing: root._navGapY
-
-                Repeater {
-                    model: root._tree
-
-                    delegate: Column {
-                        id: _grp
-                        required property var modelData
-                        width: parent.width
-                        spacing: root._navRowGap
-
-                        readonly property bool isGroup: !!modelData.children
-                        readonly property var  _leaves: isGroup ? modelData.children : [modelData]
-                        readonly property bool groupActive: {
-                            for (let i = 0; i < _leaves.length; i++) {
-                                if (_leaves[i].section === root._section) return true
-                            }
-                            return false
-                        }
-
-                        Item {
-                            width: parent.width
-                            height: _grp.isGroup ? root._navHdrH : root._navStdHdrH
-
-                            Text {
-                                id: _hdrLabel
-                                visible:                _grp.isGroup
-                                anchors.left:           parent.left
-                                anchors.leftMargin:     10
-                                anchors.bottom:         parent.bottom
-                                anchors.bottomMargin:   5
-                                text:           _grp.modelData.label
-                                color:          _grp.groupActive
-                                    ? Theme.withAlpha(Theme.mix(Theme.accent, Theme.text, 0.34), 0.88)
-                                    : Theme.withAlpha(Theme.mix(Theme.accent, Theme.subtext, 0.28), 0.66)
-                                font.family:    Settings.font
-                                font.pixelSize: Settings.fontSize - 3
-                                font.letterSpacing:  0
-                                font.weight:    Font.DemiBold
-                                font.capitalization: Font.AllUppercase
-                                renderType:     Text.NativeRendering
-                                Behavior on color { ColorAnimation { duration: Motion.fast } }
-                            }
-                            Rectangle {
-                                visible:              _grp.isGroup
-                                anchors.left:         _hdrLabel.right
-                                anchors.leftMargin:   9
-                                anchors.right:        parent.right
-                                anchors.rightMargin:  9
-                                anchors.verticalCenter: _hdrLabel.verticalCenter
-                                height: 1
-                                radius: 0.5
-                                color: _grp.groupActive
-                                    ? Theme.withAlpha(Theme.accent, 0.30)
-                                    : Theme.withAlpha(Theme.subtext, 0.10)
-                                Behavior on color { ColorAnimation { duration: Motion.fast } }
-                            }
-                        }
-
-                        Repeater {
-                            model: _grp._leaves
-
-                            delegate: Rectangle {
-                                id: _leaf
-                                required property var modelData
-                                readonly property bool   active: root._section === modelData.section
-                                readonly property string glyph:  modelData.glyph ?? ""
-                                property real _shift: active ? 1.5 : (_leafHover.hovered ? 1.0 : 0.0)
-
-                                readonly property color _fg: active
-                                    ? Theme.text
-                                    : Theme.withAlpha(Theme.mix(Theme.subtext, Theme.text, 0.10), _leafHover.hovered ? 0.86 : 0.62)
-                                readonly property color _glyphFg: active
-                                    ? Theme.accent
-                                    : Theme.withAlpha(Theme.subtext, _leafHover.hovered ? 0.68 : 0.42)
-
-                                width: parent.width
-                                height: root._navRowH
-                                radius: 7
-                                antialiasing: true
-                                color: (_leafHover.hovered && !active)
-                                    ? Theme.withAlpha(Theme.menuHover, 0.055) : "transparent"
-                                Behavior on color { ColorAnimation { duration: Motion.fast } }
-                                Behavior on _shift {
-                                    enabled: !ShellSettings.reduceMotion
-                                    NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic }
-                                }
-
-                                HoverHandler { id: _leafHover; cursorShape: Qt.PointingHandCursor }
-                                TapHandler   { id: _leafTap; onTapped: root._setSection(_leaf.modelData.section) }
-                                scale: _leafTap.pressed ? 0.98 : 1.0
-                                transformOrigin: Item.Left
-                                Behavior on scale {
-                                    enabled: !ShellSettings.reduceMotion
-                                    NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic }
-                                }
-
-                                Text {
-                                    id: _leafGlyph
-                                    anchors.left:           parent.left
-                                    anchors.leftMargin:     12
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    width: 18
-                                    horizontalAlignment: Text.AlignHCenter
-                                    text:  _leaf.glyph
-                                    color: _leaf._glyphFg
-                                    font.family:    Settings.font
-                                    font.pixelSize: Settings.fontSize
-                                    renderType:     Text.NativeRendering
-                                    transform: Translate { x: _leaf._shift }
-                                    Behavior on color { ColorAnimation { duration: Motion.fast } }
-                                }
-
-                                Text {
-                                    anchors.left:           _leafGlyph.right
-                                    anchors.leftMargin:     9
-                                    anchors.right:          parent.right
-                                    anchors.rightMargin:    10
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text: _leaf.modelData.label
-                                    elide: Text.ElideRight
-                                    color: _leaf._fg
-                                    font.family:    Settings.font
-                                    font.pixelSize: Settings.fontSize - 1
-                                    font.weight:    _leaf.active ? Font.DemiBold : Font.Normal
-                                    renderType:     Text.NativeRendering
-                                    transform: Translate { x: _leaf._shift }
-                                    Behavior on color { ColorAnimation { duration: Motion.fast } }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // ── Detail pane ────────────────────────────────────────────────────
-        Item {
-            id: _detail
-            width:  root._contentW
+    // ── Detail pane ────────────────────────────────────────────────────────
+    Item {
+        id: _detail
+        width:  root.width
             height: _detailHeader.height + _detailBody.height
 
-            // Height of whichever section is currently shown in the body.
             readonly property real _bodyH:
                     root._shownSection === "theme"      ? _secTheme.height
                   : root._shownSection === "motion"     ? _secMotion.height
@@ -516,10 +194,10 @@ Item {
             transform: Translate { y: _detail._slide }
 
             Connections {
-                target: root
-                function onCategoryChanged() {
+                target: MenuState
+                function onSettingsSectionChanged() {
                     if (ShellSettings.reduceMotion) {
-                        root._shownSection = root._section
+                        root._shownSection = MenuState.settingsSection
                         _detail.opacity = 1
                         _detail._slide = 0
                         return
@@ -531,17 +209,17 @@ Item {
             SequentialAnimation {
                 id: _detailSwap
                 NumberAnimation { target: _detail; property: "opacity"; to: 0.0; duration: Motion.ms(60); easing.type: Easing.InCubic }
-                ScriptAction    { script: { root._shownSection = root._section; _detail._slide = 8 } }
+                ScriptAction    { script: { root._shownSection = MenuState.settingsSection; _detail._slide = 8 } }
                 ParallelAnimation {
                     NumberAnimation { target: _detail; property: "opacity"; to: 1.0; duration: Motion.ms(120); easing.type: Easing.OutCubic }
                     NumberAnimation { target: _detail; property: "_slide";  to: 0.0; duration: Motion.ms(120); easing.type: Easing.OutQuart }
                 }
-                ScriptAction { script: if (root._shownSection !== root._section) _detailSwapAgain.restart() }
+                ScriptAction { script: if (root._shownSection !== MenuState.settingsSection) _detailSwapAgain.restart() }
             }
             Timer {
                 id: _detailSwapAgain
                 interval: 0
-                onTriggered: if (!ShellSettings.reduceMotion && root._shownSection !== root._section) _detailSwap.restart()
+                onTriggered: if (!ShellSettings.reduceMotion && root._shownSection !== MenuState.settingsSection) _detailSwap.restart()
             }
 
             Item {
@@ -554,9 +232,6 @@ Item {
                 readonly property var _meta: root._sectionMeta[root._shownSection]
                                             ?? ({ glyph: "", label: "", group: "" })
 
-                // Icon chip — the section glyph in a small accent-tinted tile, a
-                // focal point for the page (mod-menu style) and a touch more
-                // "designed" than a bare glyph.
                 Rectangle {
                     id: _hdrIconChip
                     anchors.left:           parent.left
@@ -566,8 +241,6 @@ Item {
                     height: 34
                     radius: 10
                     antialiasing: true
-                    // Subtle vertical lift so the chip reads as a raised tile, not a
-                    // flat tint — brighter accent at the top edge, settling darker.
                     gradient: Gradient {
                         GradientStop { position: 0.0; color: Theme.withAlpha(Theme.accent, 0.16) }
                         GradientStop { position: 1.0; color: Theme.withAlpha(Theme.accent, 0.09) }
@@ -595,9 +268,7 @@ Item {
 
                     Text {
                         visible: text.length > 0
-                        // Accent-leaning so the breadcrumb ties into the panel's accent
-                        // system (same family as the sidebar group headers), not a flat
-                        // grey caption floating above the title.
+                        // Accent-leaning to match the sidebar group headers.
                         text:           (_detailHeader._meta.group || "").toUpperCase()
                         color:          Theme.withAlpha(Theme.mix(Theme.subtext, Theme.accent, 0.40), 0.58)
                         font.family:    Settings.font
@@ -725,10 +396,6 @@ Item {
                             }
                             readonly property string _shownName: _hoverName.length > 0 ? _hoverName : _activeName
 
-                            // Header — glyph + label at the left like every other row,
-                            // live readout at the right (mirrors SliderRow's value), so
-                            // the picker reads as a labelled control instead of swatches
-                            // floating under the divider.
                             Row {
                                 id: _pickerHead
                                 anchors.top:        parent.top;  anchors.topMargin:  13
@@ -960,9 +627,6 @@ Item {
                                 ? "Matched to your wallpaper"
                                 : "matugen not installed"
 
-                            // Header — glyph + label left, live readout right, so the
-                            // showcase reads as the same kind of labelled control as the
-                            // accent picker on the neutral-theme side.
                             Row {
                                 id: _matuHead
                                 anchors.top:  parent.top;  anchors.topMargin:  13
@@ -1242,7 +906,9 @@ Item {
                         model: [
                             { value: 0.8, label: "80%"  },
                             { value: 0.9, label: "90%"  },
-                            { value: 1.0, label: "100%" }
+                            { value: 1.0, label: "100%" },
+                            { value: 1.1, label: "110%" },
+                            { value: 1.15, label: "115%" }
                         ]
                         onChosen: (v) => ShellSettings.uiScale = v
                         topRadius: 10; bottomRadius: 10
@@ -2229,6 +1895,5 @@ Item {
                 }
             }
             }   // _detailBody
-        }
     }
 }

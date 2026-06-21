@@ -111,25 +111,37 @@ Item {
                     radius: 10
                     antialiasing: true
                     color: Theme.rowFill(_rowHover.hovered, false)
-                    border.width: 1
-                    border.color: modelData.active ? Theme.withAlpha(Theme.accent, 0.45)
+                    border.width: activeFocus ? 2 : 1
+                    border.color: activeFocus ? Theme.withAlpha(Theme.accent, 0.55)
+                                : modelData.active ? Theme.withAlpha(Theme.accent, 0.45)
                                                    : Theme.withAlpha(Theme.subtext, 0.10)
                     Behavior on color { ColorAnimation { duration: Motion.fast } }
 
-                    HoverHandler { id: _rowHover; cursorShape: Qt.PointingHandCursor }
-                    TapHandler {
-                        onTapped: {
-                            if (modelData.active) { Network.disconnectWifi(); return }
-                            if (modelData.secured && !modelData.known) {
-                                const wasSel = _entry._sel
-                                root._selected = wasSel ? "" : modelData.ssid
-                                Network.clearWifiError()
-                                if (!wasSel) Qt.callLater(function() { _pw.forceActiveFocus() })
-                            } else {
-                                Network.connectWifi(modelData.ssid, "")
-                            }
+                    activeFocusOnTab: true
+                    Accessible.role: Accessible.ListItem
+                    Accessible.name: modelData.ssid
+                    Accessible.description: modelData.active ? "Connected"
+                        : _entry._connecting ? "Connecting"
+                        : modelData.secured ? "Secured network"
+                        : "Open network"
+
+                    function _activate(): void {
+                        if (modelData.active) { Network.disconnectWifi(); return }
+                        if (modelData.secured && !modelData.known) {
+                            const wasSel = _entry._sel
+                            root._selected = wasSel ? "" : modelData.ssid
+                            Network.clearWifiError()
+                            if (!wasSel) Qt.callLater(function() { _pw.forceActiveFocus() })
+                        } else {
+                            Network.connectWifi(modelData.ssid, "")
                         }
                     }
+                    Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) _activate(); event.accepted = true }
+                    Keys.onReturnPressed: event => { if (!event.isAutoRepeat) _activate(); event.accepted = true }
+                    Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) _activate(); event.accepted = true }
+
+                    HoverHandler { id: _rowHover; cursorShape: Qt.PointingHandCursor }
+                    TapHandler { onTapped: _activate() }
 
                     Text {
                         id: _sig
@@ -254,7 +266,6 @@ Item {
         }
     }
 
-    // Overflow cue: fades appear once the list scrolls.
     ListEdgeFade {
         x: 0; y: _col.y + _list.y
         width: parent.width; height: _list.height

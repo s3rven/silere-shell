@@ -6,8 +6,6 @@ import "../../common"
 Pill {
     id: root
 
-    property var screen: null   // ShellScreen this bar sits on, for menu placement
-
     readonly property bool canControl: Brightness.toolAvailable && Brightness.maxBrightness > 0
 
     opacity:     canControl ? 1.0 : 0.45
@@ -15,14 +13,16 @@ Pill {
     glyph:           Brightness.icon
     glyphColor:      canControl ? Theme.text : Theme.subtext
     reserveText: "100%"
-    text:        (ShellSettings.valuesOnHover && !hoverActive) ? ""
+    text:        (ShellSettings.valuesOnHover && !expanded) ? ""
                  : (canControl ? Brightness.label : "—")
     textColor:   Theme.subtext
-    cursorShape: canControl ? Qt.PointingHandCursor : Qt.ArrowCursor
+    accessibleName: canControl ? `Brightness ${Brightness.percent} percent` : "Brightness unavailable"
+    accessibleDescription: "Scroll to adjust brightness."
 
     Behavior on opacity { NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
 
     WheelHandler {
+        enabled: root.canControl
         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
         onWheel: (event) => {
             event.accepted = true

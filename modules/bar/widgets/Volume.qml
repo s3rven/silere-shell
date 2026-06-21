@@ -11,14 +11,19 @@ Pill {
     glyph:      Audio.icon
     glyphColor: Audio.muted ? Theme.subtext : Theme.text
     textColor:  Theme.subtext
-    cursorShape: Audio.ready ? Qt.PointingHandCursor : Qt.ArrowCursor
+    interactive: Audio.ready
+    accessibleName: !Audio.ready ? "Volume unavailable"
+        : Audio.muted ? `Volume muted, ${Math.round(Audio.effectiveVolume * 100)} percent`
+        : `Volume ${Math.round(Audio.effectiveVolume * 100)} percent`
+    accessibleDescription: "Scroll to adjust volume. Activate to toggle mute."
     // Icon signals mute; reserveText pins width to "100%" so it doesn't jitter.
     reserveText: "100%"
     text: !Audio.ready ? ""
-        : (ShellSettings.valuesOnHover && !hoverActive) ? ""
+        : (ShellSettings.valuesOnHover && !expanded) ? ""
         : (Math.round(Audio.effectiveVolume * 100) + "%")
 
     WheelHandler {
+        enabled: Audio.ready
         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
         onWheel: (event) => {
             event.accepted = true
@@ -32,10 +37,12 @@ Pill {
     }
 
     pressed: _tap.pressed && Audio.ready
+    onActivated: Audio.toggleMute()
 
     TapHandler {
         id: _tap
+        enabled: root.interactive
         acceptedButtons: Qt.LeftButton
-        onTapped: Audio.toggleMute()
+        onTapped: root.activated()
     }
 }

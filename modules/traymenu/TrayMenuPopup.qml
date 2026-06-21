@@ -15,7 +15,6 @@ PanelWindow {
 
     readonly property HyprlandMonitor _monitor: Hyprland.monitorFor(win.screen)
     readonly property int menuWidth: 220
-    // Square when the bar is square/docked, rounded to the bar's own radius when floating+round.
     readonly property real _cardRadius: (ShellSettings.barFloating && ShellSettings.barCornerStyle === "round")
         ? ShellSettings.barRadius : 0
     property bool _ignoreOutsideTap: false

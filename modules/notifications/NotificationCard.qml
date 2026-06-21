@@ -91,10 +91,10 @@ Item {
     NumberAnimation {
         id: _collapseAnim
         target: card; property: "_collapse"
-        to: 0; duration: Motion.ms(240); easing.type: Easing.InCubic
+        to: 0; duration: Motion.ms(190); easing.type: Easing.InCubic
     }
 
-    Timer { id: _exitTimer; interval: Motion.ms(280) + 10; onTriggered: card.dismissRequested(card.notifId, card.notification, card._expired) }
+    Timer { id: _exitTimer; interval: Motion.ms(210) + 10; onTriggered: card.dismissRequested(card.notifId, card.notification, card._expired) }
 
     readonly property var   _rawProgress: notification.hints ? notification.hints["value"] : undefined
     readonly property real  _progressNumber: Number(_rawProgress)
@@ -212,8 +212,7 @@ Item {
     }
 
 
-    // Floating drop shadow, same elevation cue as the bar/OSD/menu. Sits beneath
-    // cardRect and tracks its slide + fade so it grounds the card consistently.
+    // Floating drop shadow, same elevation cue as the bar/OSD/menu.
     Loader {
         active: card.visible && ShellSettings.barFloating && ShellSettings.barShadow
         anchors.fill: cardRect
@@ -258,8 +257,8 @@ Item {
             }
         }
 
-        Behavior on x       { enabled: card.visible && cardRect._behaviorEnabled && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(280); easing.type: Easing.OutCubic } }
-        Behavior on opacity { enabled: card.visible && cardRect._behaviorEnabled && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(200) } }
+        Behavior on x       { enabled: card.visible && cardRect._behaviorEnabled && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(200); easing.type: Easing.OutQuart } }
+        Behavior on opacity { enabled: card.visible && cardRect._behaviorEnabled && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(140) } }
         Behavior on height  { enabled: card.visible && cardRect._behaviorEnabled && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
 
         // Fill only, the border lives in a separate overlay (_cardBorder) so the
@@ -441,7 +440,6 @@ Item {
                 }
             }
 
-            // App name · time, quiet uppercase caption, last
             Row {
                 width: parent.width
                 spacing: 6
@@ -564,8 +562,7 @@ Item {
     }
 
     // Border drawn on top, outside the clip/layer, so it renders crisp and
-    // consistent regardless of the shimmer's layer toggle. Tracks the card's
-    // position and fade.
+    // consistent regardless of the shimmer's layer toggle.
     Rectangle {
         id: _cardBorder
         anchors.fill: cardRect
@@ -625,7 +622,6 @@ Item {
                 ctx.arc(x + r, y + r,         r, Math.PI, 3 * Math.PI / 2)
             }
 
-            // Track, full subtle outline.
             outline()
             ctx.lineWidth   = 1
             ctx.strokeStyle = _countdownArc.trackColor

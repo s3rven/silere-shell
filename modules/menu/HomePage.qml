@@ -174,7 +174,7 @@ Item {
                     Timer {
                         id: _artRetry
                         interval: 2500
-                        onTriggered: { _art._curUrl = ""; _art._apply() }
+                        onTriggered: { if (!MenuState.open) return; _art._curUrl = ""; _art._apply() }
                     }
                     function _failed(img) {
                         if (img !== _pendingLayer) return
@@ -234,9 +234,9 @@ Item {
                         onStatusChanged: status === Image.Error ? _art._failed(_artB) : _art._promote(_artB, false)
                     }
 
-                    NumberAnimation { id: _artIn;      property: "opacity"; to: _art.maxAlpha; duration: 380; easing.type: Easing.OutCubic }
-                    NumberAnimation { id: _artInScale; property: "scale";   to: 1.0;           duration: 520; easing.type: Easing.OutCubic }
-                    NumberAnimation { id: _artOut;     property: "opacity"; duration: 300;     easing.type: Easing.OutCubic }
+                    NumberAnimation { id: _artIn;      property: "opacity"; to: _art.maxAlpha; duration: Motion.ms(380); easing.type: Easing.OutCubic }
+                    NumberAnimation { id: _artInScale; property: "scale";   to: 1.0;           duration: Motion.ms(520); easing.type: Easing.OutCubic }
+                    NumberAnimation { id: _artOut;     property: "opacity"; duration: Motion.ms(300);     easing.type: Easing.OutCubic }
                 }
 
                 // Placeholder shown when there's no cover art.
@@ -324,7 +324,6 @@ Item {
                     spacing: 2
                     opacity: 1.0
 
-                    // Slide offset for the track-change transition.
                     property real _slide: 0
                     transform: Translate { y: _mediaCol._slide }
 
@@ -417,7 +416,6 @@ Item {
                     }
                 }
 
-                // Seek bar; drag to seek when the player supports it.
                 Item {
                     id: _seek
                     visible: Media.hasPosition
@@ -432,6 +430,20 @@ Item {
                     property bool _dragging: false
                     property real _dragRatio: 0
                     readonly property real _ratio: _dragging ? _dragRatio : Media.positionRatio
+
+                    function _nudge(dir: int): void {
+                        if (!Media.canSeek) return
+                        Media.seekToRatio(Math.max(0, Math.min(1, Media.positionRatio + dir * 0.05)))
+                    }
+
+                    activeFocusOnTab: Media.canSeek
+                    Accessible.role: Accessible.Slider
+                    Accessible.name: "Seek"
+                    Accessible.description: Media.formatTime(Media.positionNow) + " of " + Media.formatTime(Media.length)
+                    Keys.onLeftPressed:  _seek._nudge(-1)
+                    Keys.onDownPressed:  _seek._nudge(-1)
+                    Keys.onRightPressed: _seek._nudge(1)
+                    Keys.onUpPressed:    _seek._nudge(1)
 
                     Text {
                         id: _elapsedLabel
@@ -521,14 +533,14 @@ Item {
                             x: _seek._ratio * (_track.width - width)
                             anchors.verticalCenter: parent.verticalCenter
                             color: _trackMa.pressed ? Theme.accent : Theme.text
-                            scale: (_trackHover.hovered || _trackMa.pressed) ? 1.0 : 0.0
+                            scale: (_trackHover.hovered || _trackMa.pressed || _seek.activeFocus) ? 1.0 : 0.0
                             transformOrigin: Item.Center
                             Behavior on scale { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutBack; easing.overshoot: 2.0 } }
                             Behavior on color { ColorAnimation { duration: Motion.fast } }
                             Behavior on x {
                                 // Skip the per-tick glide while the thumb is hidden; it only
-                                // needs to animate when actually visible (hover/drag).
-                                enabled: !_seek._dragging && !ShellSettings.reduceMotion && (_trackHover.hovered || _trackMa.pressed)
+                                // needs to animate when actually visible (hover/drag/focus).
+                                enabled: !_seek._dragging && !ShellSettings.reduceMotion && (_trackHover.hovered || _trackMa.pressed || _seek.activeFocus)
                                 NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
                             }
                         }
@@ -560,6 +572,7 @@ Item {
 
                     MediaButton {
                         glyph: "󰒮"
+                        accessibleName: "Previous track"
                         available: Media.player ? Media.player.canGoPrevious : false
                         onTriggered: Media.previous()
                     }
@@ -574,7 +587,15 @@ Item {
                         scale: _playT.pressed ? 0.82 : 1.0
                         transformOrigin: Item.Center
                         Behavior on opacity { NumberAnimation { duration: Motion.fast } }
-                        Behavior on scale   { enabled: !ShellSettings.reduceMotion; SpringAnimation { spring: 18; damping: 0.5; epsilon: 0.005 } }
+                        Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+
+                        activeFocusOnTab: _playBtn._on
+                        Accessible.role: Accessible.Button
+                        Accessible.name: Media.playing ? "Pause" : "Play"
+                        Keys.onSpacePressed:  event => { if (!event.isAutoRepeat && _playBtn._on) Media.togglePlay(); event.accepted = true }
+                        Keys.onReturnPressed: event => { if (!event.isAutoRepeat && _playBtn._on) Media.togglePlay(); event.accepted = true }
+                        Keys.onEnterPressed:  event => { if (!event.isAutoRepeat && _playBtn._on) Media.togglePlay(); event.accepted = true }
+
                         HoverHandler { id: _playH; enabled: _playBtn._on; cursorShape: Qt.PointingHandCursor }
                         TapHandler   { id: _playT; enabled: _playBtn._on; onTapped: Media.togglePlay() }
 
@@ -584,7 +605,7 @@ Item {
                             antialiasing: true
                             color: "transparent"
                             border.width: 1
-                            border.color: Theme.withAlpha(Theme.accent, _playH.hovered ? 0.0 : 0.22)
+                            border.color: Theme.withAlpha(Theme.accent, (_playH.hovered || _playBtn.activeFocus) ? 0.0 : 0.22)
                             Behavior on border.color { ColorAnimation { duration: Motion.fast } }
                         }
                         Rectangle {
@@ -592,7 +613,7 @@ Item {
                             width: 48; height: 48; radius: 24
                             antialiasing: true
                             color: Theme.withAlpha(Theme.accent, _playT.pressed ? 0.26 : 0.16)
-                            opacity: (_playH.hovered || _playT.pressed) ? 1.0 : 0.0
+                            opacity: (_playH.hovered || _playT.pressed || _playBtn.activeFocus) ? 1.0 : 0.0
                             Behavior on opacity { NumberAnimation { duration: Motion.fast } }
                             Behavior on color   { ColorAnimation  { duration: Motion.fast } }
                         }
@@ -618,15 +639,16 @@ Item {
                             }
                             SequentialAnimation {
                                 id: _playStamp
-                                NumberAnimation { target: _playGlyph; property: "scale"; to: 0.0; duration: Motion.instant; easing.type: Easing.InBack;  easing.overshoot: 1.4 }
+                                NumberAnimation { target: _playGlyph; property: "scale"; to: 0.72; duration: Motion.instant; easing.type: Easing.InCubic }
                                 ScriptAction    { script: _playGlyph.shown = _playGlyph.target }
-                                NumberAnimation { target: _playGlyph; property: "scale"; from: 0.0; to: 1.0; duration: Motion.normal; easing.type: Easing.OutBack; easing.overshoot: 1.8 }
+                                NumberAnimation { target: _playGlyph; property: "scale"; from: 0.72; to: 1.0; duration: Motion.fast; easing.type: Easing.OutQuart }
                             }
                         }
                     }
 
                     MediaButton {
                         glyph: "󰒭"
+                        accessibleName: "Next track"
                         available: Media.player ? Media.player.canGoNext : false
                         onTriggered: Media.next()
                     }
@@ -635,13 +657,15 @@ Item {
         }
 
         Grid {
+            id: _toggleGrid
             width: parent.width
             columns: 2
             columnSpacing: 6
             rowSpacing: 8   // 4px multiple (tiles are 56), keeps rows below on the grid
+            readonly property real cellW: (width - columnSpacing) / 2
 
             QuickToggleTile {
-                width: (parent.width - 6) / 2
+                width: _toggleGrid.cellW
                 available: NightLight.toolAvailable
                 active: NightLight.enabled
                 activeGlyph: "󰖔"
@@ -657,7 +681,7 @@ Item {
             }
 
             QuickToggleTile {
-                width: (parent.width - 6) / 2
+                width: _toggleGrid.cellW
                 active: Notifications.dnd
                 activeGlyph: "󰂛"
                 inactiveGlyph: "󰂚"
@@ -668,7 +692,7 @@ Item {
             }
 
             QuickToggleTile {
-                width: (parent.width - 6) / 2
+                width: _toggleGrid.cellW
                 readonly property bool _ethActive: Network.connected && Network.deviceType === "ethernet"
                 available: Network.toolAvailable && !_ethActive
                 active: Network.wifiEnabled
@@ -685,7 +709,7 @@ Item {
             }
 
             QuickToggleTile {
-                width: (parent.width - 6) / 2
+                width: _toggleGrid.cellW
                 available: Bluetooth.available
                 active: Bluetooth.enabled
                 activeGlyph: "󰂯"
@@ -705,7 +729,7 @@ Item {
             // Tap cycles balanced → performance → power-saver. Keep the tile
             // visible while the first read is pending so it doesn't blink out.
             QuickToggleTile {
-                width: (parent.width - 6) / 2
+                width: _toggleGrid.cellW
                 visible: PowerProfiles.available
                 available: PowerProfiles.profile !== ""
                 active: PowerProfiles.profile !== "" && PowerProfiles.profile !== "balanced"
@@ -727,7 +751,7 @@ Item {
                     if (String(cmd[0]) === "hyprlock") return SystemTools.hasHyprlock
                     return true
                 }
-                width: (parent.width - 6) / 2
+                width: _toggleGrid.cellW
                 available: lockAvailable
                 activeGlyph: "󰍁"
                 inactiveGlyph: "󰍁"
@@ -774,7 +798,6 @@ Item {
             }
         }
 
-        // Volume / brightness, the two levels you actually reach for here.
         Item { width: 1; height: _quickSliders.visible ? 8 : 0 }
         SettingsCard {
             id: _quickSliders
@@ -784,6 +807,7 @@ Item {
                 visible: Audio.ready
                 glyph: Audio.icon
                 wheelKey: "volume"
+                accessibleName: "Volume"
                 value: Audio.uiVolume
                 valueText: Audio.label
                 glyphClickable: true
@@ -794,6 +818,7 @@ Item {
                 visible: Brightness.toolAvailable && Brightness.maxBrightness > 0
                 glyph: Brightness.icon
                 wheelKey: "brightness"
+                accessibleName: "Brightness"
                 value: Brightness.pendingPercent / 100
                 valueText: Brightness.pendingPercent + "%"
                 onMoved: (v) => Brightness.setPercent(Math.round(v * 100))
@@ -883,7 +908,7 @@ Item {
             }
         }
 
-        // Uptime — full-width tile, arc shows fraction of the current day elapsed.
+        // Arc shows fraction of the current day elapsed, not raw uptime.
         Item { width: 1; height: 8 }
         StatTile {
             id: _uptimeGauge

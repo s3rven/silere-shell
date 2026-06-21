@@ -11,9 +11,8 @@ Singleton {
 
     readonly property bool upowerReady: UPower.displayDevice && UPower.displayDevice.ready
     readonly property bool available: upowerReady && UPower.displayDevice.isPresent
-    // UPower reports 0-1 on some setups and 0-100 on others.
-    // Once we see a value above 1 we know it's the 0-100 kind and keep treating it that way.
-    // Without this a device at 1% still looks like 0-1 range and gets scaled to 100%.
+    // UPower reports 0-1 on some setups, 0-100 on others; once we see a value
+    // above 1 we know it's the 0-100 kind and keep treating it that way.
     readonly property real _raw: upowerReady ? UPower.displayDevice.percentage : 0
     property bool _scale100: false
     property real _pctOverride: -1

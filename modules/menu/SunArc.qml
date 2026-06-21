@@ -141,7 +141,6 @@ Rectangle {
             const hAt    = (t) => Math.pow((1 - Math.cos(2 * Math.PI * t)) / 2, 0.72)
             const yAt    = (t) => baseY - hAt(t) * amp
 
-            // horizon line
             ctx.strokeStyle = horizonColor
             ctx.lineWidth = 1
             ctx.beginPath(); ctx.moveTo(padX, baseY); ctx.lineTo(w - padX, baseY); ctx.stroke()
@@ -232,7 +231,6 @@ Rectangle {
         }
     }
 
-    // sunrise (bottom-left) / sunset (bottom-right)
     Row {
         x: 14
         anchors.bottom: parent.bottom; anchors.bottomMargin: 7

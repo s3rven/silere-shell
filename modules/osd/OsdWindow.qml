@@ -62,7 +62,10 @@ PanelWindow {
             ]
 
             Repeater {
-                model: OsdBarState.entries
+                // In integrated mode this window is hidden. Detach the model as
+                // well so its delegates do not continue measuring text,
+                // relaying out, and running transitions behind the bar OSD.
+                model: osd._active ? OsdBarState.entries : null
 
                 delegate: Item {
                     id: card

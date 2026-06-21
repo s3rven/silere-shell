@@ -41,7 +41,8 @@ Singleton {
             "busctl checkupdates paru yay apt dnf zypper xbps-install powerprofilesctl matugen; do " +
             "  command -v \"$t\" >/dev/null 2>&1 && echo \"$t\"; " +
             "done; " +
-            "if [ -r \"$HOME/.config/cava/silere-shell.conf\" ]; then echo cava-config; fi"])
+            "config=${XDG_CONFIG_HOME:-$HOME/.config}; " +
+            "if [ -r \"$config/cava/silere-shell.conf\" ]; then echo cava-config; fi"])
     }
 
     Component.onCompleted: refresh()

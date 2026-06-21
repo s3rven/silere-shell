@@ -136,7 +136,8 @@ Singleton {
 
     Process {
         id: _cavaProc
-        command: ["bash", "-c", "exec cava -p \"$HOME/.config/cava/silere-shell.conf\""]
+        command: ["bash", "-c",
+            "config=${XDG_CONFIG_HOME:-$HOME/.config}; exec cava -p \"$config/cava/silere-shell.conf\""]
         running: root.cavaReady && root.available && root.playing && !Idle.isIdle
         stdout: SplitParser {
             onRead: line => {

@@ -38,6 +38,20 @@ Singleton {
         return ("," + off + ",").indexOf("," + screen.name + ",") < 0
     }
 
+    // Integrated overlays should only render on one bar. Prefer the same
+    // screen as floating overlays, but fall back to a live bar when that
+    // screen has explicitly had its bar disabled.
+    readonly property ShellScreen overlayBarScreen: {
+        const preferred = overlayScreen
+        if (barEnabled(preferred)) return preferred
+
+        const screens = Quickshell.screens || []
+        for (let i = 0; i < screens.length; i++)
+            if (barEnabled(screens[i])) return screens[i]
+        return null
+    }
+    readonly property string overlayBarName: overlayBarScreen ? overlayBarScreen.name : ""
+
     function setBarEnabled(name: string, on: bool): void {
         if (!name || name.length === 0) return
         const parts = (ShellSettings.barDisabledMonitors || "").split(",").filter(s => s.length > 0)

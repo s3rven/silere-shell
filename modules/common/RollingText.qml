@@ -65,9 +65,9 @@ Item {
 
     ParallelAnimation {
         id: _roll
-        NumberAnimation { target: _ghost; property: "rise";    from: 0;           to: -root._dist; duration: Motion.ms(380); easing.type: Easing.OutCubic }
-        NumberAnimation { target: _ghost; property: "opacity"; from: 1;           to: 0;           duration: Motion.ms(300); easing.type: Easing.OutQuad  }
-        NumberAnimation { target: _main;  property: "rise";    from: root._dist;  to: 0;           duration: Motion.ms(420); easing.type: Easing.OutQuint }
-        NumberAnimation { target: _main;  property: "opacity"; from: 0;           to: 1;           duration: Motion.ms(320); easing.type: Easing.OutQuad  }
+        NumberAnimation { target: _ghost; property: "rise";    from: 0;          to: -root._dist; duration: Motion.ms(170); easing.type: Easing.InCubic  }
+        NumberAnimation { target: _ghost; property: "opacity"; from: 1;          to: 0;           duration: Motion.ms(130); easing.type: Easing.InCubic  }
+        NumberAnimation { target: _main;  property: "rise";    from: root._dist; to: 0;           duration: Motion.ms(220); easing.type: Easing.OutQuart }
+        NumberAnimation { target: _main;  property: "opacity"; from: 0;          to: 1;           duration: Motion.ms(170); easing.type: Easing.OutCubic }
     }
 }

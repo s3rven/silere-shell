@@ -41,7 +41,9 @@ Item {
 
         Repeater {
             id: _items
-            model: SystemTray.items
+            // Do not decode icons or create attention animations while the
+            // tray feature is disabled.
+            model: ShellSettings.trayWidget ? SystemTray.items : null
 
             delegate: Item {
                 id: _tile
@@ -119,7 +121,7 @@ Item {
                     visible: ready
                     transformOrigin: Item.Center
                     scale: _ma.pressed ? 0.86 : 1.0
-                    Behavior on scale { enabled: !ShellSettings.reduceMotion; SpringAnimation { spring: 18; damping: 0.5; epsilon: 0.005 } }
+                    Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
                 }
 
                 HoverHandler { id: _iconHover }

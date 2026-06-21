@@ -54,7 +54,6 @@ Item {
         onTriggered: root._timeTick++
     }
 
-    // Single human-friendly timestamp, picks the form that fits the age
     function formatTime(ms): string {
         const diff = Date.now() - ms
         if (diff < 60000)     return "just now"
@@ -286,7 +285,6 @@ Item {
                     }
                     spacing: 5
 
-                    // Summary, leads
                     Text {
                         // Reserve room for the hover-reveal delete button so a long
                         // summary never elides underneath it.
@@ -300,7 +298,6 @@ Item {
                         elide: Text.ElideRight
                     }
 
-                    // Body
                     Text {
                         width: parent.width
                         text: modelData.body || ""

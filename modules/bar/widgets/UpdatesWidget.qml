@@ -17,7 +17,7 @@ Pill {
     scale:   _show ? 1.0 : 0.7
     transformOrigin: Item.Center
     Behavior on opacity { NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
-    Behavior on scale   { enabled: !ShellSettings.reduceMotion; SpringAnimation { spring: 6; damping: 0.6; epsilon: 0.01 } }
+    Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutQuart } }
 
     glyph:          Updates.icon
     glyphPixelSize: Settings.fontSize + 1   // pacman ghost runs optically large
@@ -25,10 +25,15 @@ Pill {
     // No number yet while the first check runs, show just the icon + sweep instead
     // of a misleading "0"; the count lands as soon as the query returns.
     // "stale" flags a count held over from before a failed check.
-    text:           hoverActive ? (Updates.lastFailed ? Updates.statusText + " · " + Updates.lastError : Updates.statusText)
+    text:           expanded ? (Updates.lastFailed ? Updates.statusText + " · " + Updates.lastError : Updates.statusText)
                   : Updates.count > 0 ? String(Updates.count) : ""
     textColor:      Theme.text
-    cursorShape:    Qt.PointingHandCursor
+    interactive:    _show && !Updates.isChecking
+    accessibleName: Updates.lastFailed ? `Updates check failed, ${Updates.lastError}`
+        : Updates.isChecking ? "Checking for updates"
+        : Updates.count > 0 ? `${Updates.count} updates available`
+        : "System is up to date"
+    accessibleDescription: "Activate to check for updates."
     animateGlyph:   false
     shrinkDelay:    0
 
@@ -45,9 +50,11 @@ Pill {
     }
 
     pressed: _tap.pressed
+    onActivated: Updates.refresh()
     TapHandler {
         id: _tap
+        enabled: root.interactive
         acceptedButtons: Qt.LeftButton
-        onTapped: Updates.refresh()
+        onTapped: root.activated()
     }
 }

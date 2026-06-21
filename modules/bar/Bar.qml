@@ -187,12 +187,12 @@ PanelWindow {
                 running: false
                 NumberAnimation {
                     target: contents; property: "opacity"
-                    to: 1; duration: Motion.ms(340); easing.type: Easing.OutCubic
+                    to: 1; duration: Motion.ms(170); easing.type: Easing.OutCubic
                 }
                 NumberAnimation {
                     target: contents; property: "_slideY"
-                    to: 0; duration: Motion.ms(400)
-                    easing.type: Easing.OutBack; easing.overshoot: 0.65
+                    to: 0; duration: Motion.ms(220)
+                    easing.type: Easing.OutQuart
                 }
             }
 
@@ -201,12 +201,12 @@ PanelWindow {
                 running: false
                 NumberAnimation {
                     target: contents; property: "opacity"
-                    to: 0; duration: Motion.ms(210); easing.type: Easing.InCubic
+                    to: 0; duration: Motion.ms(125); easing.type: Easing.InCubic
                 }
                 NumberAnimation {
                     target: contents; property: "_slideY"
-                    to: contents._hideY * 0.7; duration: Motion.ms(210)
-                    easing.type: Easing.InBack; easing.overshoot: 0.5
+                    to: contents._hideY * 0.7; duration: Motion.ms(145)
+                    easing.type: Easing.InCubic
                 }
                 onFinished: contents._slideY = contents._hideY
             }
@@ -225,8 +225,10 @@ PanelWindow {
                 }
             }
 
-            BarUnderline {
+            Loader {
                 anchors.fill: parent
+                active: ShellSettings.underlineGlow
+                sourceComponent: Component { BarUnderline {} }
             }
 
             BarContent {

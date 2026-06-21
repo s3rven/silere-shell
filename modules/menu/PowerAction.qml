@@ -42,6 +42,27 @@ Item {
         root.armed = false
     }
 
+    function _activate(): void {
+        if (!root.enabled) return
+        if (!root.confirm) {
+            root.triggered()
+        } else if (!root.armed) {
+            root.armed = true
+            _armTimer.restart()
+            if (!ShellSettings.reduceMotion) _armCountdown.restart()
+        } else {
+            root.triggered()
+        }
+    }
+
+    activeFocusOnTab: root.enabled
+    Accessible.role: Accessible.Button
+    Accessible.name: root.label
+    Accessible.description: root.confirm && !root.armed ? "Requires confirmation" : ""
+    Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
+    Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
+    Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
+
     HoverHandler {
         id: _hover
         cursorShape: root.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
@@ -49,17 +70,7 @@ Item {
 
     TapHandler {
         enabled: root.enabled
-        onTapped: {
-            if (!root.confirm) {
-                root.triggered()
-            } else if (!root.armed) {
-                root.armed = true
-                _armTimer.restart()
-                if (!ShellSettings.reduceMotion) _armCountdown.restart()
-            } else {
-                root.triggered()
-            }
-        }
+        onTapped: root._activate()
     }
 
     // Gentle lift on hover so the strip feels responsive; destructive actions
@@ -82,8 +93,10 @@ Item {
                 ? Theme.withAlpha(Theme.subtext, 0.22)
                 : Theme.withAlpha(Theme.subtext, 0.10)
         }
-        border.width: 1
-        border.color: root.armed
+        border.width: root.activeFocus ? 2 : 1
+        border.color: root.activeFocus
+            ? Theme.withAlpha(root.armed ? root.confirmColor : Theme.accent, 0.82)
+            : root.armed
             ? Theme.withAlpha(root.confirmColor, 0.45)
             : root._danger
                 ? Theme.withAlpha(root.confirmColor, 0.30)

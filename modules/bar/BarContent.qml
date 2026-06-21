@@ -55,9 +55,12 @@ Item {
 
 
     // ── Center ──────────────────────────────────────────────────────────────
-    // Bar OSD (β) takes over the center while it's showing; the title fades out
-    // under it and back. The OsdBarWidget sits on top, singleton-driven.
-    readonly property bool _osdBarShowing: ShellSettings.osdBarIntegrated && OsdBarState.showing
+    // Bar OSD (β) takes over one bar center while it's showing. Loading it
+    // only on the overlay bar avoids duplicate text/layout/animation work on
+    // every monitor, including while the feature is disabled.
+    readonly property bool _isOverlayBar: root.screen && root.screen.name === Monitors.overlayBarName
+    readonly property bool _osdBarShowing: ShellSettings.osdBarIntegrated
+        && root._isOverlayBar && OsdBarState.showing
 
     WindowTitle {
         id: _wTitle
@@ -105,9 +108,11 @@ Item {
         ]
     }
 
-    OsdBarWidget {
+    Loader {
         anchors.centerIn: parent
         z: 1
+        active: ShellSettings.osdBarIntegrated && root._isOverlayBar
+        sourceComponent: Component { OsdBarWidget {} }
     }
 
     // ── Right ────────────────────────────────────────────────────────────────
@@ -119,20 +124,20 @@ Item {
         spacing: root.dotGap
         Behavior on spacing { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
 
-        ShellUpdateWidget { id: shellUpdateWidget; anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
-        Dot             { show: ShellUpdate.pending }   // own group: shell self-update, only while pending
+        ShellUpdateWidget { id: shellUpdateWidget; anchors.verticalCenter: parent.verticalCenter }
+        Dot             { show: shellUpdateWidget._show }   // own group: shell self-update activity
         TrayWidget      { id: trayWidget; anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
         Dot             { show: trayWidget.show }   // tray stays its own group, even compact
         UpdatesWidget   { anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
         Dot             { show: root._vUpdates && !root._compact }   // intra-group: fuses with network
-        NetworkWidget   { anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
+        NetworkWidget   { anchors.verticalCenter: parent.verticalCenter }
         // Status group trailing dot. Compact fuses [updates network], so this
         // marks the group boundary whenever *either* member shows — not just
         // network — or a hidden network would drop the whole group's divider.
         Dot             { show: root._compact ? (root._vUpdates || root._vNetwork) : root._vNetwork }
         Volume          { anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
         Dot             { show: !root._compact }                     // intra-group: fuses with brightness
-        BrightnessWidget{ anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
+        BrightnessWidget{ anchors.verticalCenter: parent.verticalCenter }
         // Levels group trailing dot. Non-compact: shows when bri is present.
         // Compact: hide when battery follows (battery's own dot marks the group
         // boundary instead); show only when bri is present but battery is absent.

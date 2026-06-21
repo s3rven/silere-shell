@@ -15,6 +15,7 @@ Singleton {
 
     property real targetVolume: ready ? audio.volume : 0
     property bool pendingApply: false
+    property bool _componentReady: false
 
     readonly property real effectiveVolume: Math.max(0, Math.min(1.0,
         pendingApply ? targetVolume : (ready ? audio.volume : 0)))
@@ -39,12 +40,23 @@ Singleton {
 
     PwObjectTracker { objects: sink ? [sink] : [] }
 
-    onReadyChanged: {
+    function _syncAudio(): void {
+        if (!_componentReady) return
+        writeThrottle.stop()
+        pendingSafety.stop()
+        muteSafety.stop()
         pendingApply = false
         targetVolume = ready ? audio.volume : 0
         _pendingMuted = ready ? audio.muted : false
         _desiredMuted = _pendingMuted
         _muteWritePending = false
+        _volRetries = 0
+        _muteRetries = 0
+    }
+    onAudioChanged: _syncAudio()
+    Component.onCompleted: {
+        _componentReady = true
+        _syncAudio()
     }
 
     Connections {

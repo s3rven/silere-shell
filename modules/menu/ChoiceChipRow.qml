@@ -157,8 +157,8 @@ Item {
             border.width: 1
             border.color: Theme.mix(Theme.menuCard, root.accentColor, 0.68)
 
-            Behavior on x        { enabled: _segContainer._animReady && !ShellSettings.reduceMotion; SpringAnimation { spring: 7; damping: 0.7; epsilon: 0.5 } }
-            Behavior on width    { enabled: _segContainer._animReady && !ShellSettings.reduceMotion; SpringAnimation { spring: 7; damping: 0.7; epsilon: 0.5 } }
+            Behavior on x        { enabled: _segContainer._animReady && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.width; easing.type: Easing.OutQuart } }
+            Behavior on width    { enabled: _segContainer._animReady && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.width; easing.type: Easing.OutQuart } }
             Behavior on opacity  { NumberAnimation { duration: Motion.fast } }
             Behavior on color        { ColorAnimation { duration: Motion.fast } }
             Behavior on border.color { ColorAnimation { duration: Motion.fast } }
@@ -195,6 +195,14 @@ Item {
                     width:  Math.max(natW, _segContainer._cellW)
                     height: 24
 
+                    activeFocusOnTab: root.rowEnabled
+                    Accessible.role: Accessible.RadioButton
+                    Accessible.name: root.label + ": " + String(_seg.modelData.label ?? "")
+                    Accessible.checked: _seg.active
+                    Keys.onSpacePressed: event => { if (!event.isAutoRepeat && root.rowEnabled) root.chosen(_seg.modelData.value); event.accepted = true }
+                    Keys.onReturnPressed: event => { if (!event.isAutoRepeat && root.rowEnabled) root.chosen(_seg.modelData.value); event.accepted = true }
+                    Keys.onEnterPressed: event => { if (!event.isAutoRepeat && root.rowEnabled) root.chosen(_seg.modelData.value); event.accepted = true }
+
                     HoverHandler {
                         id: _hover
                         enabled: root.rowEnabled
@@ -212,13 +220,15 @@ Item {
                         radius: 5
                         antialiasing: true
                         color: Theme.withAlpha(root.accentColor, 0.10)
-                        opacity: !_seg.active && _hover.hovered ? 1.0 : 0.0
+                        border.width: _seg.activeFocus ? 1 : 0
+                        border.color: Theme.withAlpha(root.accentColor, 0.72)
+                        opacity: !_seg.active && (_hover.hovered || _seg.activeFocus) ? 1.0 : 0.0
                         Behavior on opacity { NumberAnimation { duration: Motion.fast } }
                     }
 
                     scale: _tap.pressed ? 0.97 : 1.0
                     transformOrigin: Item.Center
-                    Behavior on scale { enabled: !ShellSettings.reduceMotion; SpringAnimation { spring: 14; damping: 0.5; epsilon: 0.005 } }
+                    Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
                     Row {
                         id: _content

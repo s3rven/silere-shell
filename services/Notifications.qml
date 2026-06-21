@@ -277,7 +277,6 @@ Singleton {
             if (root._times[n.id] === undefined) root._times[n.id] = Date.now()
             root.lastCritical = n.urgency === NotificationUrgency.Critical
 
-            // Replace existing notification with same id if it's an update
             const existing = root.list.findIndex(e => e.id === n.id)
             // Reuse of the same object (in-place update) is already tracked and
             // wired; only a new object needs the old torn down + a fresh handler.

@@ -19,8 +19,14 @@ Singleton {
     readonly property string glyph: profile === "performance" ? "󰓅"
                                   : profile === "power-saver" ? "󰾆" : "󰾅"
 
+    // Bumped on every cycle() so a get() issued before it can tell, on exit,
+    // that it's answering a question a newer write has already overtaken —
+    // _set.running alone misses this when the set finishes first.
+    property int _writeGen: 0
+
     function refresh(): void {
         if (!available || _get.running) return
+        _get._gen = root._writeGen
         _get.exec(["powerprofilesctl", "get"])
     }
 
@@ -31,6 +37,7 @@ Singleton {
         const order = ["balanced", "performance", "power-saver"]
         const next = order[(order.indexOf(profile) + 1) % order.length]
         profile = next   // optimistic; a failed set re-syncs below
+        root._writeGen++
         _set.exec(["powerprofilesctl", "set", next])
     }
 
@@ -47,13 +54,15 @@ Singleton {
 
     Process {
         id: _get
+        property int _gen: 0
         stdout: StdioCollector { id: _getOut }
         onExited: (code) => {
             if (code !== 0) return
-            // A set in flight means this read predates the new profile; applying it
-            // would clobber the optimistic value back to the old one. The set's own
+            // A set in flight, or one that already landed after this read started,
+            // means this read predates (or no longer matches) the new profile;
+            // applying it would clobber the optimistic value. The set's own
             // onExited re-syncs on failure, so dropping the stale read is safe.
-            if (_set.running) return
+            if (_set.running || _gen !== root._writeGen) return
             const p = (_getOut.text || "").trim()
             if (p.length > 0) root.profile = p
         }

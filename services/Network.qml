@@ -280,7 +280,6 @@ Singleton {
         }
     }
 
-    // Grabs signal strength of the active wifi network
     Process {
         id: _signalProc
         command: ["nmcli", "-t", "-f", "IN-USE,SIGNAL", "dev", "wifi", "list", "--rescan", "no"]

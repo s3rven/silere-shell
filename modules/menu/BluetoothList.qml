@@ -86,11 +86,17 @@ Item {
                 radius: 10
                 antialiasing: true
                 color: Theme.rowFill(_ma.containsMouse, false)
-                border.width: 1
+                border.width: activeFocus ? 2 : 1
                 border.color: (_armed || modelData.pairing) ? Theme.withAlpha(Theme.warning, 0.55)
                             : modelData.connected               ? Theme.withAlpha(Theme.accent,  0.45)
+                            : activeFocus                        ? Theme.withAlpha(Theme.accent,  0.45)
                             :                                     Theme.withAlpha(Theme.subtext, 0.10)
                 Behavior on color { ColorAnimation { duration: Motion.fast } }
+
+                activeFocusOnTab: true
+                Accessible.role: Accessible.ListItem
+                Accessible.name: modelData.deviceName || modelData.name || modelData.address || "Unknown device"
+                Accessible.description: _state
 
                 readonly property bool   _armed: root._armedAddr === modelData.address && modelData.connected
                 readonly property int _batt: Math.round(modelData.battery > 1 ? modelData.battery : modelData.battery * 100)
@@ -103,30 +109,35 @@ Item {
                     : modelData.paired    ? "Paired"
                     : "Pair"
 
+                function _activate(): void {
+                    const addr = modelData.address
+                    if (modelData.pairing) {
+                        Bluetooth.cancelPair(addr)
+                    } else if (modelData.connected) {
+                        if (root._armedAddr === addr) {
+                            root._armedAddr = ""
+                            _disarmTimer.stop()
+                            Bluetooth.disconnectDevice(addr)
+                        } else {
+                            root._armedAddr = addr
+                            _disarmTimer.restart()
+                        }
+                    } else if (modelData.paired) {
+                        Bluetooth.connectDevice(addr)
+                    } else {
+                        Bluetooth.pairDevice(addr)
+                    }
+                }
+                Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) _activate(); event.accepted = true }
+                Keys.onReturnPressed: event => { if (!event.isAutoRepeat) _activate(); event.accepted = true }
+                Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) _activate(); event.accepted = true }
+
                 MouseArea {
                     id: _ma
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        const addr = modelData.address
-                        if (modelData.pairing) {
-                            Bluetooth.cancelPair(addr)
-                        } else if (modelData.connected) {
-                            if (root._armedAddr === addr) {
-                                root._armedAddr = ""
-                                _disarmTimer.stop()
-                                Bluetooth.disconnectDevice(addr)
-                            } else {
-                                root._armedAddr = addr
-                                _disarmTimer.restart()
-                            }
-                        } else if (modelData.paired) {
-                            Bluetooth.connectDevice(addr)
-                        } else {
-                            Bluetooth.pairDevice(addr)
-                        }
-                    }
+                    onClicked: _activate()
                 }
 
                 Text {
@@ -167,7 +178,6 @@ Item {
         }
     }
 
-    // Overflow cue: fades appear once the list scrolls.
     ListEdgeFade {
         x: 0; y: _col.y + _list.y
         width: parent.width; height: _list.height

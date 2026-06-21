@@ -27,7 +27,6 @@ Item {
         clip: true
 
         Rectangle {
-            // Inner radius = card outer radius − card border width.
             readonly property real innerR: Math.max(
                 Math.max(0, root.topRadius    - root.cardInset),
                 Math.max(0, root.bottomRadius - root.cardInset)

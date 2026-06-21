@@ -5,7 +5,6 @@ import "../../common"
 
 Pill {
     id: root
-    property var screen: null   // ShellScreen this bar sits on, for menu placement
     readonly property bool canRead: Network.toolAvailable
     property real _pulseOpacity: 1.0
     readonly property real _baseOpacity: canRead ? (Network.available ? 1.0 : 0.0) : 0.45
@@ -30,6 +29,10 @@ Pill {
     Behavior on opacity { enabled: !root._isPulsing; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
     glyphColor:  canRead && Network.connected ? Theme.text : Theme.subtext
     textColor:   Theme.subtext
+    accessibleName: !canRead ? "Network status unavailable"
+        : !Network.available ? "Network unavailable"
+        : !Network.connected ? "Network disconnected"
+        : `Network connected, ${root._physicalLabel()}${Network.isWifi && Network.signalStrength > 0 ? `, ${Network.signalStrength} percent signal` : ""}`
 
     animateText: false
 
@@ -47,7 +50,7 @@ Pill {
     }
 
     text: {
-        if (!hoverActive) {
+        if (!expanded) {
             // Optionally keep just the live up/down speed pinned beside the icon;
             // hovering still expands to the full link / signal / VPN detail below.
             if (ShellSettings.networkSpeedInline && Network.trafficActive)

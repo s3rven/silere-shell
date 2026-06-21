@@ -148,9 +148,10 @@ Singleton {
         if (idx >= 0) {
             const old = _entries.get(idx)
             if (old.closing && _closingSig[kind] === sig) return false
-            for (const k in data) {
-                if (old[k] !== data[k]) _entries.setProperty(idx, k, data[k])
-            }
+            // One model update instead of one update per changed role. During
+            // volume/brightness bursts this avoids repeatedly re-evaluating
+            // every binding in the floating delegate.
+            _entries.set(idx, data)
         } else {
             _entries.append(data)
         }
@@ -191,7 +192,10 @@ Singleton {
         // event is a trailing echo of the value we just dismissed — drop it.
         if (!live && (_commitClose[kind] || 0) > Date.now()) return
         if (!_upsertEntry(kind, icon, value, label, muted, color)) return
-        if (live && !ShellSettings.reduceMotion) {
+        // A single deliberate step gets tactile feedback. A scroll burst is
+        // already visible in the level change and must not keep a transform
+        // animation alive on slower GPUs.
+        if (live && !root.rapid && !ShellSettings.reduceMotion) {
             root.bumped()
             root.entryBumped(kind)
         }

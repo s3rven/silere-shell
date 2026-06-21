@@ -28,7 +28,6 @@ Item {
         opacity: root.show ? 1.0 : 0.0
         Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal } }
 
-        // filled dot (·, •) or ring (◦)
         Rectangle {
             visible: root._style === "·" || root._style === "•" || root._style === "◦"
             anchors.centerIn: parent
@@ -40,7 +39,6 @@ Item {
             border.color: root._col
         }
 
-        // solid tick (|)
         Rectangle {
             visible: root._style === "|"
             anchors.centerIn: parent

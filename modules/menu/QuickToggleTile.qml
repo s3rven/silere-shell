@@ -40,13 +40,24 @@ Rectangle {
     transformOrigin: Item.Center
     layer.enabled: scale < 0.999 && !ShellSettings.reduceMotion
 
+    activeFocusOnTab: root.available
+    Accessible.role: Accessible.CheckBox
+    Accessible.name: root.title
+    Accessible.description: root.status
+    Accessible.checked: root.active
+    Keys.onSpacePressed: event => { if (!event.isAutoRepeat && root.available) root.toggled(); event.accepted = true }
+    Keys.onReturnPressed: event => { if (!event.isAutoRepeat && root.available) root.toggled(); event.accepted = true }
+    Keys.onEnterPressed: event => { if (!event.isAutoRepeat && root.available) root.toggled(); event.accepted = true }
+
     // Inactive is a deliberate flat control surface, not a faded accent; active
     // lifts to a quiet accent tint. Hover nudges both a notch brighter.
     color: active
         ? Theme.mix(Theme.menuControl, accentColor,   _hover.hovered ? 0.22 : 0.16)
         : Theme.mix(Theme.menuControl, Theme.subtext, _hover.hovered ? 0.06 : 0.0)
-    border.width: 1
-    border.color: active
+    border.width: root.activeFocus ? 2 : 1
+    border.color: root.activeFocus
+        ? Theme.withAlpha(root.accentColor, 0.90)
+        : active
         ? Theme.mix(Theme.surface, accentColor,   0.34)
         : Theme.menuControlLine
 
@@ -103,9 +114,9 @@ Rectangle {
             // Pop the glyph on active/inactive swap; pairs with the rail grow.
             SequentialAnimation {
                 id: _stamp
-                NumberAnimation { target: _icon; property: "scale"; to: 0.0; duration: Motion.instant; easing.type: Easing.InBack; easing.overshoot: 1.4 }
+                NumberAnimation { target: _icon; property: "scale"; to: 0.72; duration: Motion.instant; easing.type: Easing.InCubic }
                 ScriptAction    { script: _icon.shown = root.glyphText }
-                NumberAnimation { target: _icon; property: "scale"; from: 0.0; to: 1.0; duration: Motion.medium; easing.type: Easing.OutBack; easing.overshoot: 2.0 }
+                NumberAnimation { target: _icon; property: "scale"; from: 0.72; to: 1.0; duration: Motion.fast; easing.type: Easing.OutQuart }
             }
         }
 
@@ -123,7 +134,10 @@ Rectangle {
             color: root.accentColor
             border.width: 1
             border.color: Theme.mix(Theme.surface, root.accentColor, 0.55)
+            scale: _badgeHover.hovered ? 1.12 : 1.0
+            transformOrigin: Item.Center
             z: 2
+            Behavior on scale { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
             Text {
                 id: _badgeTxt
@@ -138,6 +152,7 @@ Rectangle {
 
             // Badge tap routes to history instead of toggling; the grab blocks
             // root's tap.
+            HoverHandler { id: _badgeHover; cursorShape: Qt.PointingHandCursor }
             MouseArea {
                 anchors.fill: parent
                 anchors.margins: -4
@@ -199,7 +214,6 @@ Rectangle {
         anchors.bottom: parent.bottom
         anchors.right: parent.right
 
-        // Hairline seam between the two press zones.
         Rectangle {
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter

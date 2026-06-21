@@ -9,8 +9,12 @@ Item {
     property string text:       ""
     property color  glyphColor: Theme.text
     property color  textColor:  Theme.subtext
-    property int    cursorShape: Qt.ArrowCursor
+    property bool   interactive: false
+    property string accessibleName: ""
+    property string accessibleDescription: ""
+    property int    cursorShape: interactive ? Qt.PointingHandCursor : Qt.ArrowCursor
     property int    maxTextWidth: 150
+    property int    horizontalPadding: ShellSettings.barCompact ? 3 : 5
     property bool   animateGlyph: true
     // Opt-in cross-fade when `text` changes. Off by default since widgets
     // like Volume/Brightness update text on every scroll tick and don't
@@ -31,10 +35,16 @@ Item {
     // true only after the pointer rests on the pill for hoverRevealDelay ms.
     property int    hoverRevealDelay: 80
     property bool   hoverActive: false
+    readonly property bool hovered: _pillHover.hovered
+    readonly property bool expanded: hoverActive || activeFocus
 
     // Opt-in press feedback: a clickable widget binds this to its own
     // handler's pressed state and the glyph dips, then springs back.
     property bool   pressed: false
+    property bool   _keyboardPressed: false
+    readonly property bool visualPressed: pressed || _keyboardPressed
+
+    signal activated()
 
     readonly property int  pillH:   24
     readonly property bool hasText: text.length > 0
@@ -49,7 +59,7 @@ Item {
     // Whole px: fractional text widths put the pill (and every widget after it
     // in the bar row) on fractional pixels, which blurs NativeRendering text.
     readonly property real rowWidth: Math.ceil(row.implicitWidth)
-    implicitWidth:  Math.max(rowWidth, _minW)
+    implicitWidth:  Math.max(rowWidth, _minW) + horizontalPadding * 2
 
     onRowWidthChanged: {
         if (shrinkDelay <= 0) {
@@ -105,9 +115,9 @@ Item {
 
     SequentialAnimation {
         id: _glyphStamp
-        NumberAnimation { target: _glyphText; property: "scale"; to: 0.0; duration: Motion.instant; easing.type: Easing.InBack;  easing.overshoot: 1.2 }
+        NumberAnimation { target: _glyphText; property: "scale"; to: 0.72; duration: Motion.instant; easing.type: Easing.InCubic }
         ScriptAction    { script: root._shownGlyph = root._nextGlyph }
-        NumberAnimation { target: _glyphText; property: "scale"; from: 0.0; to: 1.0; duration: Motion.width; easing.type: Easing.OutBack; easing.overshoot: 2.2 }
+        NumberAnimation { target: _glyphText; property: "scale"; from: 0.72; to: 1.0; duration: Motion.fast; easing.type: Easing.OutQuart }
         onFinished: { if (root._nextGlyph !== root._shownGlyph) _glyphStamp.start() }
     }
 
@@ -115,15 +125,57 @@ Item {
         enabled: root._ready && !ShellSettings.reduceMotion
         NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
     }
-    implicitHeight: pillH
+    // Use the bar row's full height as the input target while keeping the
+    // visible capsule compact. This matters when users choose a tall bar.
+    implicitHeight: Math.max(pillH, parent ? parent.height : 0)
+    clip: true
+    activeFocusOnTab: interactive
+
+    Accessible.role: interactive ? Accessible.Button : Accessible.StaticText
+    Accessible.name: accessibleName
+    Accessible.description: accessibleDescription
+    Accessible.focusable: interactive
+    Accessible.onPressAction: if (root.interactive) root.activated()
+
+    Keys.onPressed: event => {
+        if (!root.interactive || (event.key !== Qt.Key_Space && event.key !== Qt.Key_Return && event.key !== Qt.Key_Enter))
+            return
+        root._keyboardPressed = true
+        event.accepted = true
+    }
+    Keys.onReleased: event => {
+        if (!root._keyboardPressed || (event.key !== Qt.Key_Space && event.key !== Qt.Key_Return && event.key !== Qt.Key_Enter))
+            return
+        root._keyboardPressed = false
+        event.accepted = true
+        root.activated()
+    }
+
+    Rectangle {
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.verticalCenter: parent.verticalCenter
+        width: parent.width
+        height: root.pillH
+        radius: height / 2
+        color: root.activeFocus
+            ? Theme.withAlpha(Theme.accent, 0.14)
+            : "transparent"
+        opacity: root.interactive && root.activeFocus ? 1.0 : 0.0
+        border.width: root.activeFocus ? 1 : 0
+        border.color: Theme.withAlpha(Theme.accent, 0.72)
+        Behavior on opacity {
+            enabled: !ShellSettings.reduceMotion
+            NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
+        }
+    }
 
     // Default hover affordance: glyph and text lean toward the accent — the
     // widget acknowledges the pointer without geometry or chrome. Status
     // colours (battery warning…) stay dominant under the 1/3 mix.
-    readonly property color _hoverGlyphColor: _pillHover.hovered
-        ? Theme.mix(glyphColor, Theme.accent, 0.35) : glyphColor
-    readonly property color _hoverTextColor: _pillHover.hovered
-        ? Theme.mix(textColor, Theme.accent, 0.30) : textColor
+    readonly property color _hoverGlyphColor: (_pillHover.hovered || activeFocus)
+        ? Theme.mix(glyphColor, Theme.accent, 0.20) : glyphColor
+    readonly property color _hoverTextColor: (_pillHover.hovered || activeFocus)
+        ? Theme.mix(textColor, Theme.accent, 0.16) : textColor
 
     Row {
         id: row
@@ -136,9 +188,9 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             implicitWidth:  Math.ceil(_glyphText.implicitWidth)
             implicitHeight: _glyphText.implicitHeight
-            scale: root.pressed ? 0.84 : 1.0
+            scale: root.visualPressed ? 0.84 : 1.0
             transformOrigin: Item.Center
-            Behavior on scale { enabled: !ShellSettings.reduceMotion; SpringAnimation { spring: 18; damping: 0.5; epsilon: 0.005 } }
+            Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
             Text {
                 id: _glyphText
@@ -213,7 +265,9 @@ Item {
 
     Loader {
         id: _contentScan
-        active: root.contentScanEnabled && root.hasText && !ShellSettings.reduceMotion
+        // Glyph-only status pills (initial update checks) still need a visible
+        // activity sweep even though their detail text has not arrived yet.
+        active: root.contentScanEnabled && !ShellSettings.reduceMotion
         width: Math.max(1, root.contentScanWidth)
         height: row.height
         x: row.x - width + (row.width + width) * Math.max(0, Math.min(1, root.contentScanProgress))
@@ -270,10 +324,9 @@ Item {
 
     HoverHandler {
         id: _pillHover
-        // Extend the hover target past the tight text bounds so hover-reveal
-        // isn't pixel-precise. Compact mode tightens the gaps, so the margin
-        // shrinks with them — overlapping targets make neighbours fight.
-        margin: ShellSettings.barCompact ? 3 : 7
+        // Horizontal padding makes hover, click, wheel and focus use the same
+        // non-overlapping target instead of extending hover into neighbours.
+        margin: 0
         cursorShape: root.cursorShape
         onHoveredChanged: {
             if (hovered) _hoverRevealTimer.restart()
@@ -285,5 +338,12 @@ Item {
         id: _hoverRevealTimer
         interval: root.hoverRevealDelay
         onTriggered: root.hoverActive = true
+    }
+
+    onActiveFocusChanged: {
+        if (!activeFocus && !hovered) {
+            _keyboardPressed = false
+            hoverActive = false
+        }
     }
 }

@@ -108,7 +108,7 @@ PanelWindow {
         property int    _todayWeek:   -1
         property string todayWeekday: ""
 
-        // Grid metadata for the shown month, shared by all cells. Monday-start.
+        // Monday-start.
         readonly property int _firstJs:  new Date(shownYear, shownMonth, 1).getDay()   // 0 = Sun
         readonly property int _lead:     (_firstJs + 6) % 7
         readonly property int _daysThis: new Date(shownYear, shownMonth + 1, 0).getDate()
@@ -329,7 +329,6 @@ PanelWindow {
                     }
                 }
 
-                // Month label, tap to jump back to the current month.
                 Item {
                     anchors.centerIn: parent
                     width: _mLabel.implicitWidth + 16; height: 26
