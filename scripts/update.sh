@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/silere-shell"
@@ -12,7 +12,9 @@ SYSTEMD_USER_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 
 _notify() {
     command -v notify-send >/dev/null 2>&1 || return 0
-    notify-send -a "Silere Shell" "$@"
+    # Notifications are advisory. A missing/stale session bus must never turn a
+    # successful update check or apply into a failed systemd unit.
+    notify-send -a "Silere Shell" "$@" >/dev/null 2>&1 || true
 }
 
 _fail() {
@@ -36,8 +38,41 @@ _systemd_execstart() {
 }
 
 _timer_status() {
-    command -v systemctl >/dev/null 2>&1 && echo supported=1 || echo supported=0
-    systemctl --user is-enabled --quiet "$TIMER_UNIT" 2>/dev/null && echo enabled=1 || echo enabled=0
+    if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1; then
+        echo supported=1
+        systemctl --user is-enabled --quiet "$TIMER_UNIT" 2>/dev/null && echo enabled=1 || echo enabled=0
+    else
+        echo supported=0
+        echo enabled=0
+    fi
+}
+
+_write_update_units() {
+    local service_tmp timer_tmp
+    service_tmp="$(mktemp "$SYSTEMD_USER_DIR/.silere-update.service.XXXXXX")" || return 1
+    timer_tmp="$(mktemp "$SYSTEMD_USER_DIR/.silere-update.timer.XXXXXX")" || {
+        rm -f "$service_tmp"
+        return 1
+    }
+
+    if ! sed "s|^ExecStart=__ROOT__/scripts/update.sh$|ExecStart=$(_systemd_execstart)|" \
+        "$ROOT/scripts/$SERVICE_UNIT" > "$service_tmp" \
+        || ! cp "$ROOT/scripts/$TIMER_UNIT" "$timer_tmp"; then
+        rm -f "$service_tmp" "$timer_tmp"
+        return 1
+    fi
+    chmod --reference="$ROOT/scripts/$SERVICE_UNIT" "$service_tmp" 2>/dev/null || true
+    chmod --reference="$ROOT/scripts/$TIMER_UNIT" "$timer_tmp" 2>/dev/null || true
+
+    if ! mv -- "$service_tmp" "$SYSTEMD_USER_DIR/$SERVICE_UNIT"; then
+        rm -f "$service_tmp" "$timer_tmp"
+        return 1
+    fi
+    service_tmp=""
+    if ! mv -- "$timer_tmp" "$SYSTEMD_USER_DIR/$TIMER_UNIT"; then
+        rm -f "$timer_tmp"
+        return 1
+    fi
 }
 
 _set_timer() {
@@ -45,9 +80,7 @@ _set_timer() {
     command -v systemctl >/dev/null 2>&1 || _fail "systemctl not found"
     if [ "$want" = "1" ]; then
         mkdir -p "$SYSTEMD_USER_DIR"
-        sed "s|^ExecStart=__ROOT__/scripts/update.sh$|ExecStart=$(_systemd_execstart)|" \
-            "$ROOT/scripts/$SERVICE_UNIT" > "$SYSTEMD_USER_DIR/$SERVICE_UNIT"
-        cp "$ROOT/scripts/$TIMER_UNIT" "$SYSTEMD_USER_DIR/$TIMER_UNIT"
+        _write_update_units || _fail "failed to install systemd user units"
         systemctl --user daemon-reload
         systemctl --user enable --now "$TIMER_UNIT" >/dev/null
     else
@@ -55,6 +88,27 @@ _set_timer() {
         systemctl --user daemon-reload
     fi
 }
+
+# Exits 0 (clearing the pending-update flag) when local is already at or
+# ahead of remote. Calls _fail (exiting 1) when the branches have diverged;
+# clear_flag_on_diverge governs whether that also clears the flag — the
+# periodic check pass clears it so a non-actionable badge doesn't linger, but
+# an --apply retry should keep showing pending until the divergence is resolved.
+_exit_if_not_behind() {
+    local local_rev="$1" remote_rev="$2" clear_flag_on_diverge="$3"
+    if git merge-base --is-ancestor "$remote_rev" "$local_rev"; then
+        rm -f "$FLAG"
+        exit 0
+    fi
+    if ! git merge-base --is-ancestor "$local_rev" "$remote_rev"; then
+        [ "$clear_flag_on_diverge" = "1" ] && rm -f "$FLAG"
+        _fail "local branch has diverged from origin/main — update manually"
+    fi
+}
+
+if [ "${SILERE_SCRIPT_LIB_ONLY:-0}" = "1" ]; then
+    return 0 2>/dev/null || exit 0
+fi
 
 [ -d "$ROOT/.git" ] || _fail "not a git repo: $ROOT"
 
@@ -82,10 +136,7 @@ esac
 if [ "${1:-}" = "--apply" ]; then
     local_rev="$(git rev-parse HEAD)"
     remote_rev="$(git rev-parse origin/main 2>/dev/null || echo "$local_rev")"
-    if [ "$local_rev" = "$remote_rev" ]; then
-        rm -f "$FLAG"
-        exit 0
-    fi
+    _exit_if_not_behind "$local_rev" "$remote_rev" 0
     stashed=0
     if _has_local_changes; then
         if ! git -C "$ROOT" stash push --include-untracked -m "silere-update pre-apply" >/dev/null; then
@@ -94,7 +145,9 @@ if [ "${1:-}" = "--apply" ]; then
         stashed=1
     fi
     if ! GIT_TERMINAL_PROMPT=0 git -C "$ROOT" pull --ff-only --quiet origin main; then
-        [ "$stashed" -eq 1 ] && git -C "$ROOT" stash pop >/dev/null 2>&1 || true
+        if [ "$stashed" -eq 1 ] && ! git -C "$ROOT" stash pop >/dev/null 2>&1; then
+            _fail "fast-forward pull failed — local changes are stashed, run 'git stash list'/'git stash pop' to recover them"
+        fi
         _fail "fast-forward pull failed — local branch diverged"
     fi
     # update succeeded; pop may conflict but the restart should still proceed
@@ -124,10 +177,7 @@ GIT_TERMINAL_PROMPT=0 git fetch --quiet origin main || _fail "git fetch failed (
 
 local_rev="$(git rev-parse HEAD)"
 remote_rev="$(git rev-parse origin/main)"
-if [ "$local_rev" = "$remote_rev" ]; then
-    rm -f "$FLAG"
-    exit 0
-fi
+_exit_if_not_behind "$local_rev" "$remote_rev" 1
 
 count="$(git rev-list --count "${local_rev}..${remote_rev}")"
 summary="$(git log --oneline --no-decorate "${local_rev}..${remote_rev}" | head -5)"

@@ -2,7 +2,8 @@
 set -euo pipefail
 
 REPO_URL="https://github.com/s3rven/silere-shell.git"
-DEFAULT_DIR="$HOME/.config/silere-shell"
+CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+DEFAULT_DIR="$CONFIG_HOME/silere-shell"
 
 # ── colors ──────────────────────────────────────────────────────────────────────
 if [ -t 1 ]; then
@@ -59,6 +60,119 @@ _toml_basic_string() {
     s="${s//\"/\\\"}"
     printf '"%s"' "$s"
 }
+
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib/qml-modules.sh"
+
+# Resolve the Hyprland process that owns this shell session. Prefer an ancestor
+# (Quickshell and terminals are normally descendants of their compositor), then
+# accept a same-user process only when it is the sole candidate. Never guess
+# between multiple sessions.
+_HYPR_PROC_ROOT="${SILERE_PROC_ROOT:-/proc}"
+
+_proc_ppid() {
+    local pid="$1" stat rest
+    stat="$(cat "$_HYPR_PROC_ROOT/$pid/stat" 2>/dev/null)" || return 1
+    rest="${stat##*) }"
+    [ "$rest" != "$stat" ] || return 1
+    rest="${rest#* }"
+    printf '%s\n' "${rest%% *}"
+}
+
+_same_user_process() {
+    [ "$(stat -c '%u' "$_HYPR_PROC_ROOT/$1" 2>/dev/null)" = "$(id -u)" ]
+}
+
+_find_hyprland_pid() {
+    local pid="${SILERE_PARENT_PID:-$PPID}" parent comm candidate="" count=0
+
+    while [[ "$pid" =~ ^[0-9]+$ ]] && [ "$pid" -gt 1 ]; do
+        if _same_user_process "$pid"; then
+            comm="$(cat "$_HYPR_PROC_ROOT/$pid/comm" 2>/dev/null || true)"
+            if [ "$comm" = "Hyprland" ]; then
+                printf '%s\n' "$pid"
+                return 0
+            fi
+        fi
+        parent="$(_proc_ppid "$pid" 2>/dev/null || true)"
+        [[ "$parent" =~ ^[0-9]+$ ]] && [ "$parent" != "$pid" ] || break
+        pid="$parent"
+    done
+
+    for comm in "$_HYPR_PROC_ROOT"/[0-9]*/comm; do
+        [ -r "$comm" ] || continue
+        [ "$(cat "$comm" 2>/dev/null)" = "Hyprland" ] || continue
+        pid="${comm%/comm}"
+        pid="${pid##*/}"
+        _same_user_process "$pid" || continue
+        candidate="$pid"
+        count=$((count + 1))
+    done
+    [ "$count" -eq 1 ] || return 1
+    printf '%s\n' "$candidate"
+}
+
+_normalize_hypr_path() {
+    local path="$1" base="$2"
+    path="${path/#\~/$HOME}"
+    case "$path" in
+        /*) ;;
+        *) path="$base/$path" ;;
+    esac
+    readlink -m -- "$path" 2>/dev/null || printf '%s\n' "$path"
+}
+
+_hypr_config_for_pid() {
+    local pid="$1" cwd raw="" i
+    local -a args=()
+    mapfile -d '' -t args 2>/dev/null < "$_HYPR_PROC_ROOT/$pid/cmdline" || return 1
+    for ((i = 0; i < ${#args[@]}; i++)); do
+        if [ "${args[i]}" = "--config" ] || [ "${args[i]}" = "-c" ]; then
+            ((i + 1 < ${#args[@]})) || return 1
+            raw="${args[i + 1]}"
+            break
+        fi
+    done
+    [ -n "$raw" ] || return 1
+    cwd="$(readlink -f -- "$_HYPR_PROC_ROOT/$pid/cwd" 2>/dev/null)" || return 1
+    _normalize_hypr_path "$raw" "$cwd"
+}
+
+_hypr_config_path() {
+    local config pid
+    if [ -n "${SILERE_HYPR_CONFIG:-}" ]; then
+        _normalize_hypr_path "$SILERE_HYPR_CONFIG" "$PWD"
+        return
+    fi
+    pid="$(_find_hyprland_pid 2>/dev/null || true)"
+    if [ -n "$pid" ]; then
+        config="$(_hypr_config_for_pid "$pid" 2>/dev/null || true)"
+        if [ -n "$config" ]; then
+            printf '%s\n' "$config"
+            return
+        fi
+    fi
+    if [ -f "$CONFIG_HOME/hypr/hyprland.lua" ]; then
+        printf '%s\n' "$CONFIG_HOME/hypr/hyprland.lua"
+    elif [ -f "$CONFIG_HOME/hypr/hyprland.conf" ]; then
+        printf '%s\n' "$CONFIG_HOME/hypr/hyprland.conf"
+    fi
+}
+
+# Side-effect-free helpers used by the runtime detector and focused tests.
+case "${1:-}" in
+    --hypr-config-path)
+        _hypr_config_path
+        exit 0
+        ;;
+    --hypr-config-kind)
+        _hypr_kind="$(_hypr_config_path)"
+        [[ "$_hypr_kind" == *.lua ]] && exit 0
+        exit 1
+        ;;
+esac
+if [ "${SILERE_SCRIPT_LIB_ONLY:-0}" = "1" ]; then
+    return 0 2>/dev/null || exit 0
+fi
 
 # Always read from /dev/tty so curl | bash works
 _ask() {
@@ -164,6 +278,17 @@ else
     has_qs=false
 fi
 
+qs_modules_ok=true
+if $has_qs; then
+    for module in "${SILERE_REQUIRED_QML_MODULES[@]}"; do
+        if ! _qml_module_available "$module"; then
+            _warn "required Quickshell module missing: $module"
+            qs_modules_ok=false
+        fi
+    done
+    $qs_modules_ok || _warn "this Quickshell build cannot load Silere; install the full current package"
+fi
+
 has_matugen=true
 if command -v matugen >/dev/null 2>&1; then
     _ok "matugen"
@@ -200,7 +325,7 @@ _optdep_any() {
     fi
 }
 
-if [ -f /usr/lib/qt6/qml/Quickshell/Services/Pipewire/qmldir ]; then
+if _qml_module_available Quickshell.Services.Pipewire; then
     printf "    ${GREEN}ok${R}      %-13s ${DIM}%s${R}\n" "pipewire" "volume + sound popup"
 else
     printf "    ${DIM}–       %-13s %s${R}\n" "pipewire" "volume + sound popup"
@@ -297,7 +422,7 @@ ROOT="$INSTALL_DIR"
 did_cava=false did_tmpl=false did_toml=false did_autostart=false did_update=false
 ROOT_PRINTF_BYTES="$(_shell_quote "$(_shell_printf_bytes "$ROOT")")"
 MATUGEN_OUTPUT_TOML="$(_toml_basic_string "$ROOT/config/MatugenTheme.qml")"
-MATUGEN_INPUT_TOML="$(_toml_basic_string "${XDG_CONFIG_HOME:-$HOME/.config}/matugen/templates/silere-shell/Theme.qml")"
+MATUGEN_INPUT_TOML="$(_toml_basic_string "$CONFIG_HOME/matugen/templates/silere-shell/Theme.qml")"
 
 # Seed the generated theme from the bundled default so the shell themes
 # correctly before matugen has run. matugen later overwrites this file.
@@ -308,13 +433,13 @@ fi
 # ── cava config ──────────────────────────────────────────────────────────────────
 _section "cava config"
 CAVA_SRC="$ROOT/assets/cava.conf"
-CAVA_DST="$HOME/.config/cava/silere-shell.conf"
+CAVA_DST="$CONFIG_HOME/cava/silere-shell.conf"
 if _install_file "cava config" "$CAVA_SRC" "$CAVA_DST"; then did_cava=true; fi
 
 # ── matugen template ─────────────────────────────────────────────────────────────
 _section "matugen template"
 TMPL_SRC="$ROOT/assets/matugen-theme.qml"
-TMPL_DST="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/templates/silere-shell/Theme.qml"
+TMPL_DST="$CONFIG_HOME/matugen/templates/silere-shell/Theme.qml"
 if ! $has_matugen; then
     _skip "matugen not installed"
 elif _install_file "matugen template" "$TMPL_SRC" "$TMPL_DST"; then
@@ -323,7 +448,7 @@ fi
 
 # ── matugen config.toml ──────────────────────────────────────────────────────────
 _section "matugen config.toml"
-MATUGEN_CFG="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
+MATUGEN_CFG="$CONFIG_HOME/matugen/config.toml"
 
 if ! $has_matugen; then
     _skip "matugen not installed"
@@ -352,8 +477,22 @@ fi
 
 # ── Hyprland autostart ───────────────────────────────────────────────────────────
 _section "Hyprland autostart"
-HYPR_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprland.conf"
-HYPR_LUA="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprland.lua"
+HYPR_CONF="$CONFIG_HOME/hypr/hyprland.conf"
+HYPR_LUA="$CONFIG_HOME/hypr/hyprland.lua"
+
+# A compositor launched with `Hyprland --config /custom/path` does not expose
+# that choice through XDG_CONFIG_HOME. Prefer an explicit installer override,
+# then inspect the current same-user Hyprland session, and only then use the
+# standard roots. Relative process arguments are resolved via /proc/PID/cwd.
+HYPR_CONFIG="$(_hypr_config_path)"
+if [ -n "$HYPR_CONFIG" ]; then
+    _reject_unsafe_path "$HYPR_CONFIG"
+    [ -f "$HYPR_CONFIG" ] || _die "Hyprland config not found: $HYPR_CONFIG"
+    case "$HYPR_CONFIG" in
+        *.lua|*.conf) ;;
+        *) _die "Hyprland config must end in .lua or .conf: $HYPR_CONFIG" ;;
+    esac
+fi
 # Quickshell links jemalloc, which defaults to 4×nCPU arenas and no purge thread,
 # so memory freed after a spike (menu close, wifi scan, notification burst) is
 # retained rather than returned to the OS — RSS only ever climbs. Fewer arenas
@@ -386,13 +525,13 @@ LAUNCH_CMD_LUA="$(_lua_string "$LAUNCH_CMD")"
 
 _already_present() { grep -qF 'silere-shell begin' "$1" 2>/dev/null; }
 
-HYPR_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
+HYPR_DIR="$(dirname -- "${HYPR_CONFIG:-$CONFIG_HOME/hypr/hyprland.conf}")"
 
-if [ -f "$HYPR_LUA" ] && [ -f "$HYPR_CONF" ]; then
+if [ "$HYPR_CONFIG" = "$HYPR_LUA" ] && [ -f "$HYPR_CONF" ]; then
     _warn "both hyprland.lua and hyprland.conf found; Lua takes priority"
 fi
 
-if [ -f "$HYPR_LUA" ]; then
+if [[ "$HYPR_CONFIG" == *.lua ]]; then
     LUA_EXEC_FILE=""
     for candidate in \
         "$HYPR_DIR/custom/execs.lua" \
@@ -403,7 +542,7 @@ if [ -f "$HYPR_LUA" ]; then
     done
 
     # the snippet uses a framework-specific API; only emit it where that framework exists
-    if [ -n "$LUA_EXEC_FILE" ] && ! grep -qE 'hyprland\.lib|hl\.on' "$LUA_EXEC_FILE" "$HYPR_LUA" 2>/dev/null; then
+    if [ -n "$LUA_EXEC_FILE" ] && ! grep -qE 'hyprland\.lib|hl\.on' "$LUA_EXEC_FILE" "$HYPR_CONFIG" 2>/dev/null; then
         _warn "Lua config found but no hyprland.lib/hl.on framework detected"
         _warn "add manually: local h = require(\"hyprland.lib\"); h.exec($LAUNCH_CMD_LUA)"
     elif [ -n "$LUA_EXEC_FILE" ] && _already_present "$LUA_EXEC_FILE"; then
@@ -429,13 +568,13 @@ EOF
         _warn "add manually: local h = require(\"hyprland.lib\"); h.exec($LAUNCH_CMD_LUA)"
     fi
 
-elif [ -f "$HYPR_CONF" ]; then
-    if _already_present "$HYPR_CONF"; then
-        _ok "already present in $HYPR_CONF"
+elif [[ "$HYPR_CONFIG" == *.conf ]]; then
+    if _already_present "$HYPR_CONFIG"; then
+        _ok "already present in $HYPR_CONFIG"
     else
-        if _ask "Add exec-once to hyprland.conf?"; then
-            _backup "$HYPR_CONF"
-            cat >> "$HYPR_CONF" <<EOF
+        if _ask "Add exec-once to $HYPR_CONFIG?"; then
+            _backup "$HYPR_CONFIG"
+            cat >> "$HYPR_CONFIG" <<EOF
 
 # silere-shell begin
 exec-once = $LAUNCH_CMD
@@ -476,8 +615,10 @@ $did_tmpl      && printf "    ${GREEN}ok${R}      matugen template\n" || printf 
 $did_toml      && printf "    ${GREEN}ok${R}      matugen toml\n"     || printf "    ${DIM}skip${R}    matugen toml\n"
 $did_autostart && printf "    ${GREEN}ok${R}      autostart\n"        || printf "    ${DIM}skip${R}    autostart\n"
 $did_update    && printf "    ${GREEN}ok${R}      auto-update timer\n" || printf "    ${DIM}skip${R}    auto-update timer\n"
-if $has_qs; then
+if $has_qs && $qs_modules_ok; then
     printf "\n  restart Hyprland to launch silere\n"
+elif $has_qs; then
+    printf "\n  ${YELLOW}install a complete current Quickshell build${R}, then restart Hyprland\n"
 else
     printf "\n  ${YELLOW}install Quickshell${R}, then restart Hyprland to launch silere\n"
 fi
