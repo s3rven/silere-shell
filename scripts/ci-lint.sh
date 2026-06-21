@@ -15,7 +15,9 @@ status=0
 fail() { printf 'FAIL: %s\n' "$*"; status=1; }
 
 echo "== merge conflict markers =="
-if git grep -n -I -E '^(<<<<<<< |=======$|>>>>>>> )' -- . ; then
+# grep, not git grep: in CI the container may have no git at checkout time, so
+# the tree is checked out without a .git. This lint is meant to run on a plain tree.
+if grep -rn -I -E '^(<<<<<<< |=======$|>>>>>>> )' --exclude-dir=.git . ; then
   fail "conflict markers found"
 else
   echo "ok"
@@ -63,9 +65,10 @@ while IFS= read -r qd; do
   dir="$(dirname "$qd")"
   while read -r f; do
     [ -f "$dir/$f" ] && continue
-    # generated files (e.g. matugen's MatugenTheme.qml) are gitignored and only
-    # exist after install — absent on a fresh checkout, which is expected.
-    git check-ignore -q "$dir/$f" 2>/dev/null && continue
+    # generated files (e.g. matugen's MatugenTheme.qml) ship as a tracked
+    # *.default.qml and are copied into place on install — absent on a fresh
+    # checkout, which is expected. (No git here: CI may have no .git.)
+    [ -f "$dir/${f%.qml}.default.qml" ] && continue
     missing="$missing $dir/$f"
   done < <(awk 'NF>=2 && $NF ~ /\.qml$/ {print $NF}' "$qd")
 done < <(find . -path './.git' -prune -o -name qmldir -print)

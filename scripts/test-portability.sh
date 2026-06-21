@@ -45,7 +45,7 @@ test_marker_removal() (
         if _remove_block "$dir/$name.conf" '# silere-shell begin' '# silere-shell end'; then
             fail "$name markers were accepted"
         fi
-        cmp -s "$dir/$name.before" "$dir/$name.conf" || fail "$name markers changed the file"
+        [ "$(<"$dir/$name.before")" = "$(<"$dir/$name.conf")" ] || fail "$name markers changed the file"
     done
 
     printf '%s\n' before '-- silere-shell begin' managed '-- silere-shell end' after > "$dir/target.lua"
@@ -162,7 +162,7 @@ test_atomic_units() (
     printf 'old timer\n' > "$SYSTEMD_USER_DIR/$TIMER_UNIT"
 
     _write_update_units || fail "atomic unit writer failed"
-    cmp -s "$ROOT/scripts/$TIMER_UNIT" "$SYSTEMD_USER_DIR/$TIMER_UNIT" \
+    [ "$(<"$ROOT/scripts/$TIMER_UNIT")" = "$(<"$SYSTEMD_USER_DIR/$TIMER_UNIT")" ] \
         || fail "timer unit content mismatch"
     grep -qF '__ROOT__' "$SYSTEMD_USER_DIR/$SERVICE_UNIT" \
         && fail "service placeholder was not replaced"
