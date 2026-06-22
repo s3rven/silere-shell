@@ -93,7 +93,7 @@ Singleton {
     }
     Timer {
         interval: 500; repeat: true
-        running: root.playing && MenuState.open
+        running: root.playing && MenuState.open && root.hasPosition
         onTriggered: root._recompute()
     }
 

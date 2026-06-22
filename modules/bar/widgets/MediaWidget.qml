@@ -44,6 +44,7 @@ Item {
     }
 
     Behavior on implicitWidth {
+        enabled: !ShellSettings.reduceMotion
         NumberAnimation { duration: Motion.ms(220); easing.type: Easing.OutCubic }
     }
 

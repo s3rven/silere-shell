@@ -206,6 +206,7 @@ Singleton {
         id: _slowProc
         stdout: SplitParser {
             onRead: (line) => {
+                if (!root._active) return
                 if (line.startsWith("p")) {
                     root.processCount = parseInt(line.slice(1)) || 0
                 } else if (line.startsWith("d")) {

@@ -26,25 +26,19 @@ Item {
         id: _content
         width: parent.width
 
-        property bool _animating: false
+        property int _animCount: 0
+        readonly property bool _animating: _animCount > 0
         y:       root.expanded ? 0 : -10
         opacity: root.expanded ? 1.0 : 0.0
         layer.enabled: _animating && !ShellSettings.reduceMotion
-
-        Connections {
-            target: ShellSettings
-            function onReduceMotionChanged() {
-                if (ShellSettings.reduceMotion) _content._animating = false
-            }
-        }
 
         Behavior on y {
             enabled: !ShellSettings.reduceMotion
             NumberAnimation {
                 duration:    root.expanded ? Motion.medium : Motion.fast
                 easing.type: root.expanded ? Easing.OutQuart : Easing.InCubic
-                onStarted: _content._animating = true
-                onStopped: _content._animating = false
+                onStarted: _content._animCount++
+                onStopped: _content._animCount = Math.max(0, _content._animCount - 1)
             }
         }
         Behavior on opacity {
@@ -52,8 +46,8 @@ Item {
             NumberAnimation {
                 duration:    root.expanded ? Motion.medium : Motion.fast
                 easing.type: root.expanded ? Easing.OutCubic : Easing.InCubic
-                onStarted: _content._animating = true
-                onStopped: _content._animating = false
+                onStarted: _content._animCount++
+                onStopped: _content._animCount = Math.max(0, _content._animCount - 1)
             }
         }
     }

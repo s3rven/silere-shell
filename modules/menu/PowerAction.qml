@@ -69,7 +69,7 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        radius: 8
+        radius: Theme.radiusControl
         antialiasing: true
         color: root.armed
             ? Theme.withAlpha(root.confirmColor, 0.14)
@@ -133,7 +133,7 @@ Item {
             if (p <= 0) return
 
             const o = 0.5
-            const r = 7.5
+            const r = Theme.radiusControl - 0.5
             const w = width - 1.0
             const h = height - 1.0
             const arc = Math.PI / 2 * r

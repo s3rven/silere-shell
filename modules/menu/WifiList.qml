@@ -213,6 +213,13 @@ Item {
                                                       : Theme.withAlpha(Theme.accent, 0.3)
                         Behavior on border.color { ColorAnimation { duration: Motion.fast } }
 
+                        Connections {
+                            target: Network
+                            function onWifiErrorChanged() {
+                                if (_entry._failed) _pw.text = ""
+                            }
+                        }
+
                         TextInput {
                             id: _pw
                             anchors.left: parent.left; anchors.leftMargin: 12

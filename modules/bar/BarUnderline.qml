@@ -96,16 +96,16 @@ Item {
             return Theme.accent
         }
         property color _effectColor: _effectColorTarget
-        Behavior on _effectColor { ColorAnimation { duration: Motion.ms(350) } }
+        Behavior on _effectColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.ms(350) } }
 
         property color _stopColor: Qt.rgba(
             _effectColorTarget.r, _effectColorTarget.g, _effectColorTarget.b, 0.9
         )
-        Behavior on _stopColor { ColorAnimation { duration: Motion.ms(350) } }
+        Behavior on _stopColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.ms(350) } }
         property color _stopColorMid: Qt.rgba(
             _effectColorTarget.r, _effectColorTarget.g, _effectColorTarget.b, 0.45
         )
-        Behavior on _stopColorMid { ColorAnimation { duration: Motion.ms(350) } }
+        Behavior on _stopColorMid { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.ms(350) } }
         property real _sweepSpread: 0.28
         property real _bloomBoost:  0.0
         property real _screenshotSweepCenter: 0.50
@@ -260,14 +260,14 @@ Item {
             ScriptAction { script: { _lineEffect._sweepSpread = 0.02 } }
             ParallelAnimation {
                 NumberAnimation { target: _lineEffect; property: "_notifGlow";   to: Notifications.lastCritical ? 0.58 : 0.40; duration: Motion.ms(120); easing.type: Easing.OutCubic }
-                NumberAnimation { target: _lineEffect; property: "_sweepSpread"; to: 0.34; duration: 380; easing.type: Easing.OutCubic }
+                NumberAnimation { target: _lineEffect; property: "_sweepSpread"; to: 0.34; duration: Motion.ms(380); easing.type: Easing.OutCubic }
                 NumberAnimation { target: _lineEffect; property: "_bloomBoost";  to: 0.30; duration: Motion.ms(120); easing.type: Easing.OutCubic }
             }
-            PauseAnimation { duration: 220 }
+            PauseAnimation { duration: Motion.ms(220) }
             ParallelAnimation {
-                NumberAnimation { target: _lineEffect; property: "_notifGlow";   to: 0.0;  duration: 1200; easing.type: Easing.OutCubic }
-                NumberAnimation { target: _lineEffect; property: "_sweepSpread"; to: 0.28; duration: 800;  easing.type: Easing.OutCubic }
-                NumberAnimation { target: _lineEffect; property: "_bloomBoost";  to: 0.0;  duration: 900;  easing.type: Easing.OutCubic }
+                NumberAnimation { target: _lineEffect; property: "_notifGlow";   to: 0.0;  duration: Motion.ms(1200); easing.type: Easing.OutCubic }
+                NumberAnimation { target: _lineEffect; property: "_sweepSpread"; to: 0.28; duration: Motion.ms(800);  easing.type: Easing.OutCubic }
+                NumberAnimation { target: _lineEffect; property: "_bloomBoost";  to: 0.0;  duration: Motion.ms(900);  easing.type: Easing.OutCubic }
             }
         }
 
@@ -378,15 +378,15 @@ Item {
             id: _netLossFlash
             ScriptAction { script: { _lineEffect._sweepSpread = 0.04 } }
             ParallelAnimation {
-                NumberAnimation { target: _lineEffect; property: "_networkGlow";  to: 0.42; duration: 130;  easing.type: Easing.OutQuad  }
-                NumberAnimation { target: _lineEffect; property: "_sweepSpread";  to: 0.34; duration: 500;  easing.type: Easing.OutCubic }
-                NumberAnimation { target: _lineEffect; property: "_bloomBoost";   to: 0.22; duration: 130;  easing.type: Easing.OutQuad  }
+                NumberAnimation { target: _lineEffect; property: "_networkGlow";  to: 0.42; duration: Motion.ms(130); easing.type: Easing.OutQuad  }
+                NumberAnimation { target: _lineEffect; property: "_sweepSpread";  to: 0.34; duration: Motion.ms(500); easing.type: Easing.OutCubic }
+                NumberAnimation { target: _lineEffect; property: "_bloomBoost";   to: 0.22; duration: Motion.ms(130); easing.type: Easing.OutQuad  }
             }
-            PauseAnimation  { duration: 220 }
+            PauseAnimation  { duration: Motion.ms(220) }
             ParallelAnimation {
-                NumberAnimation { target: _lineEffect; property: "_networkGlow";  to: 0.0;  duration: 1400; easing.type: Easing.OutCubic }
-                NumberAnimation { target: _lineEffect; property: "_sweepSpread";  to: 0.28; duration: 900;  easing.type: Easing.OutCubic }
-                NumberAnimation { target: _lineEffect; property: "_bloomBoost";   to: 0.0;  duration: 1000; easing.type: Easing.OutCubic }
+                NumberAnimation { target: _lineEffect; property: "_networkGlow";  to: 0.0;  duration: Motion.ms(1400); easing.type: Easing.OutCubic }
+                NumberAnimation { target: _lineEffect; property: "_sweepSpread";  to: 0.28; duration: Motion.ms(900);  easing.type: Easing.OutCubic }
+                NumberAnimation { target: _lineEffect; property: "_bloomBoost";   to: 0.0;  duration: Motion.ms(1000); easing.type: Easing.OutCubic }
             }
         }
 

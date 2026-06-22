@@ -95,7 +95,7 @@ Singleton {
         stdout: StdioCollector { id: _percentProbeOut }
         onExited: {
             const n = Number((_percentProbeOut.text || "").trim())
-            if (!isNaN(n) && n >= 0 && n <= 100 && root._ambiguousRawOne)
+            if (!isNaN(n) && n > 0 && n <= 100 && root._ambiguousRawOne)
                 root._pctOverride = n
         }
     }

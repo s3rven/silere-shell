@@ -19,7 +19,7 @@ Pill {
     accessibleName: canControl ? `Brightness ${Brightness.percent} percent` : "Brightness unavailable"
     accessibleDescription: "Scroll to adjust brightness."
 
-    Behavior on opacity { NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+    Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
 
     WheelHandler {
         enabled: root.canControl

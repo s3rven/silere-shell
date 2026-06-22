@@ -102,9 +102,22 @@ ShellRoot {
     // after the delegate exit animation has completed.
     LazyLoader {
         id: _osdLoader
-        active: OsdBarState.activeCount > 0
+        active: false
+        Component.onCompleted: if (OsdBarState.activeCount > 0) active = true
         component: OsdWindow { targetScreen: root.activeOverlayScreen }
     }
+    Connections {
+        target: OsdBarState
+        function onActiveCountChanged() {
+            if (OsdBarState.activeCount > 0) {
+                _osdUnload.stop()
+                _osdLoader.active = true
+            } else {
+                _osdUnload.restart()
+            }
+        }
+    }
+    Timer { id: _osdUnload; interval: 50; onTriggered: _osdLoader.active = false }
 
     LazyLoader {
         id: _notificationLoader
