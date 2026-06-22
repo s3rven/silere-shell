@@ -11,6 +11,8 @@ PowerAction     1.0 PowerAction.qml
 QuickToggleTile 1.0 QuickToggleTile.qml
 SectionLabel    1.0 SectionLabel.qml
 SettingsCard    1.0 SettingsCard.qml
+SettingsActionButton 1.0 SettingsActionButton.qml
+UpdateStatusCard 1.0 UpdateStatusCard.qml
 SunArc          1.0 SunArc.qml
 ToggleRow       1.0 ToggleRow.qml
 SliderRow       1.0 SliderRow.qml

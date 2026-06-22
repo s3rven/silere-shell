@@ -95,9 +95,77 @@ ShellRoot {
         }
     }
 
-    OsdWindow          { targetScreen: root.activeOverlayScreen }
-    NotificationPopups { targetScreen: root.activeOverlayScreen }
-    MenuWindow         { targetScreen: MenuState.triggerScreen ?? root.activeOverlayScreen }
-    CalendarPopup      { targetScreen: CalendarState.triggerScreen ?? root.activeOverlayScreen }
-    TrayMenuPopup      { targetScreen: TrayMenuState.triggerScreen ?? root.activeOverlayScreen }
+    // Popup surfaces are relatively large object trees, even while their
+    // PanelWindow is unmapped. Build them only when they have content to show.
+    // Menu/calendar/tray loaders stay alive through their window's close
+    // animation; OSD and notification models remove their final entry only
+    // after the delegate exit animation has completed.
+    LazyLoader {
+        id: _osdLoader
+        active: OsdBarState.activeCount > 0
+        component: OsdWindow { targetScreen: root.activeOverlayScreen }
+    }
+
+    LazyLoader {
+        id: _notificationLoader
+        active: ShellSettings.notifPopupEnabled && Notifications.activeCount > 0
+        component: NotificationPopups { targetScreen: root.activeOverlayScreen }
+    }
+
+    LazyLoader {
+        id: _menuLoader
+        active: false
+        Component.onCompleted: if (MenuState.open) active = true
+        component: MenuWindow { targetScreen: MenuState.triggerScreen ?? root.activeOverlayScreen }
+    }
+    Connections {
+        target: MenuState
+        function onOpenChanged() {
+            if (MenuState.open) {
+                _menuUnload.stop()
+                _menuLoader.active = true
+            } else {
+                _menuUnload.restart()
+            }
+        }
+    }
+    Timer { id: _menuUnload; interval: 300; onTriggered: _menuLoader.active = false }
+
+    LazyLoader {
+        id: _calendarLoader
+        active: false
+        Component.onCompleted: if (CalendarState.open) active = true
+        component: CalendarPopup { targetScreen: CalendarState.triggerScreen ?? root.activeOverlayScreen }
+    }
+    Connections {
+        target: CalendarState
+        function onOpenChanged() {
+            if (CalendarState.open) {
+                _calendarUnload.stop()
+                _calendarLoader.active = true
+            } else {
+                _calendarUnload.restart()
+            }
+        }
+    }
+    Timer { id: _calendarUnload; interval: 300; onTriggered: _calendarLoader.active = false }
+
+    LazyLoader {
+        id: _trayMenuLoader
+        active: false
+        Component.onCompleted: if (TrayMenuState.open) active = true
+        component: TrayMenuPopup { targetScreen: TrayMenuState.triggerScreen ?? root.activeOverlayScreen }
+    }
+    Connections {
+        target: TrayMenuState
+        function onOpenChanged() {
+            if (TrayMenuState.open) {
+                _trayMenuUnload.stop()
+                _trayMenuLoader.active = true
+            } else {
+                _trayMenuUnload.restart()
+            }
+        }
+    }
+    Timer { id: _trayMenuUnload; interval: 300; onTriggered: _trayMenuLoader.active = false }
 }

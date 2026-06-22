@@ -254,7 +254,7 @@ Singleton {
     function moveActiveToWorkspace(workspaceId): void {
         if (workspaceId === undefined || workspaceId === null || workspaceId < 1) return
         if (_useLua)
-            _dispatch("hl.dsp.window.move({ workspace = " + _value(workspaceId) + ", silent = true })")
+            _dispatch("hl.dsp.window.move({ workspace = " + _value(workspaceId) + ", follow = false })")
         else
             _dispatch("movetoworkspacesilent", workspaceId)
     }

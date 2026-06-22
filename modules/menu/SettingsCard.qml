@@ -10,7 +10,9 @@ Rectangle {
 
     default property alias rows: col.data
     property color rowDivider: Theme.menuDivider
-    readonly property real _dividerInset: Math.min(Settings.hPad, Math.max(0, width / 2))
+    // 12 to match every row's content inset (glyphs sit at leftMargin 12) so a
+    // divider starts directly under the glyph column instead of 2px inboard.
+    readonly property real _dividerInset: Math.min(12, Math.max(0, width / 2))
 
     width:  parent ? parent.width : 0
     implicitHeight: col.implicitHeight

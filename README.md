@@ -83,7 +83,11 @@ Everything else is per-feature. A missing tool hides or trims the widget it back
 
 These are single-machine readings, not guarantees. Qt6 and Mesa versions, the widgets you enable, your GPU drivers, and the display count all move the numbers.
 
-On one local Hyprland session with the installer's launch environment applied, idle sat around **185 MB RAM and 0.5% CPU**. The same setup without that environment used about 316 MB RSS; the gap is jemalloc and EGL tuning the installer writes into the autostart line.
+On one local Hyprland session with the installer's launch environment applied, a 10-second idle sample used **175 MB RSS / 101 MB PSS / 76 MB USS** in Quickshell, or **196 MB RSS / 106 MB PSS** including Silere's four watcher processes, at 0.8% CPU. RSS counts shared Qt and graphics mappings in full; PSS apportions them and USS is memory private to Silere, so PSS/USS are the useful numbers when comparing shells. Hardware and enabled features will change these results.
+
+Measure the running checkout with `bash scripts/bench.sh 10`. It samples average/peak RSS, PSS, USS, the complete helper-process tree, CPU, threads, visualizer state, and whether the allocator tuning is active. It rejects samples if Quickshell restarts during the window instead of recording a misleading partial result.
+
+The same setup without the installer's launch environment previously used about 316 MB RSS; the gap is jemalloc and EGL tuning written into the autostart line. The benchmark prints `allocator default` when that launch tuning is missing.
 
 The cava visualizer is the one feature with a real CPU cost, and it scales with the framerate in `assets/cava.conf` (60 by default). It runs only while music is actually playing, drops to idle when you pause, and stops entirely when the screen blanks.
 

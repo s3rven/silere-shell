@@ -227,8 +227,8 @@ Item {
                 width: parent.width
                 // 4px multiple: the body sits at this height, so an off-grid value
                 // would push every card (and its first divider) onto a half physical
-                // pixel at 1.25x and double the hairlines. 16 (tabContent.y) + 44 = 60.
-                height: 44
+                // pixel at 1.25x and double the hairlines. 16 (tabContent.y) + 48 = 64.
+                height: 48
                 readonly property var _meta: root._sectionMeta[root._shownSection]
                                             ?? ({ glyph: "", label: "", group: "" })
 
@@ -242,17 +242,17 @@ Item {
                     radius: 10
                     antialiasing: true
                     gradient: Gradient {
-                        GradientStop { position: 0.0; color: Theme.withAlpha(Theme.accent, 0.16) }
-                        GradientStop { position: 1.0; color: Theme.withAlpha(Theme.accent, 0.09) }
+                        GradientStop { position: 0.0; color: Theme.withAlpha(Theme.accent, 0.24) }
+                        GradientStop { position: 1.0; color: Theme.withAlpha(Theme.accent, 0.12) }
                     }
                     border.width: 1
-                    border.color: Theme.withAlpha(Theme.accent, 0.24)
+                    border.color: Theme.withAlpha(Theme.accent, 0.34)
                     Text {
                         anchors.centerIn: parent
                         text:           _detailHeader._meta.glyph
                         color:          Theme.accent
                         font.family:    Settings.font
-                        font.pixelSize: Settings.fontSize + 4
+                        font.pixelSize: Settings.fontSize + 6
                         renderType:     Text.NativeRendering
                     }
                 }
@@ -263,8 +263,8 @@ Item {
                     // Vertically centred above the hairline so a title with no group
                     // breadcrumb (System) sits balanced, same as the two-line pages.
                     anchors.verticalCenter:       parent.verticalCenter
-                    anchors.verticalCenterOffset: -3
-                    spacing: 2
+                    anchors.verticalCenterOffset: -4
+                    spacing: 3
 
                     Text {
                         visible: text.length > 0
@@ -273,7 +273,7 @@ Item {
                         color:          Theme.withAlpha(Theme.mix(Theme.subtext, Theme.accent, 0.40), 0.58)
                         font.family:    Settings.font
                         font.pixelSize: Settings.fontSize - 4
-                        font.letterSpacing: 0
+                        font.letterSpacing: 0.4
                         font.weight:    Font.DemiBold
                         renderType:     Text.NativeRendering
                     }
@@ -292,11 +292,10 @@ Item {
                 Rectangle {
                     anchors.left:         parent.left
                     anchors.right:        parent.right
-                    anchors.rightMargin:  2
                     anchors.bottom:       parent.bottom
-                    anchors.bottomMargin: 4
+                    anchors.bottomMargin: 8
                     height: 1
-                    color:  Theme.withAlpha(Theme.subtext, 0.10)
+                    color:  Theme.withAlpha(Theme.subtext, 0.07)
                 }
             }
 
@@ -346,6 +345,7 @@ Item {
                 SettingsCard {
                     ToggleRow {
                         glyph: "󰉦"; label: "Neutral theme"
+                        description: "Use a fixed dark palette instead of colours pulled from your wallpaper"
                         checked: ShellSettings.neutralTheme
                         onToggled: ShellSettings.neutralTheme = !ShellSettings.neutralTheme
                         topRadius: 10
@@ -775,6 +775,7 @@ Item {
                 SettingsCard {
                     ToggleRow {
                         glyph: "󰖲"; label: "Floating bar"; badge: "beta"
+                        description: "Detach the bar into a rounded panel with a gap around it"
                         checked: ShellSettings.barFloating
                         onToggled: ShellSettings.barFloating = !ShellSettings.barFloating
                         topRadius: 10
@@ -840,6 +841,7 @@ Item {
                     visible: NightLight.toolAvailable
                     ToggleRow {
                         glyph: "󰖙"; label: "Follow sun position"
+                        description: "Warm the screen at night and cool it by day, automatically"
                         checked: ShellSettings.nightLightAuto
                         onToggled: ShellSettings.nightLightAuto = !ShellSettings.nightLightAuto
                         topRadius: 10; bottomRadius: 0
@@ -898,7 +900,6 @@ Item {
                 spacing: 0
                 visible: root._shownSection === "system"
 
-                SectionLabel { label: "INTERFACE"; first: true }
                 SettingsCard {
                     ChoiceChipRow {
                         glyph: "󰍉"; label: "UI scale"
@@ -946,7 +947,7 @@ Item {
                     HintText { text: "Pick which screens get a bar, and where notifications and the volume/brightness OSD appear." }
                 }
 
-                Item { width: 1; height: 12 }
+                Item { width: 1; height: 16 }
                 SettingsCard {
                     Item {
                         id: _resetRow
@@ -1010,263 +1011,82 @@ Item {
                 spacing: 0
                 visible: root._shownSection === "updates"
 
-                SectionLabel { label: "SILERE"; first: true }
                 SettingsCard {
-                    Item {
-                        width: parent.width; height: 44
-                        Row {
-                            anchors.left: parent.left; anchors.leftMargin: 12
-                            anchors.verticalCenter: parent.verticalCenter
-                            spacing: 8
-                            Text {
-                                id: _silereIcon
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: ShellUpdate.pending ? "󰚰" : "󰄬"
-                                color: ShellUpdate.lastCheckError.length > 0 || ShellUpdate.lastApplyError.length > 0
-                                    ? Theme.warning
-                                    : ShellUpdate.pending ? Theme.accent : Theme.withAlpha(Theme.success, 0.9)
-                                font.family: Settings.font; font.pixelSize: Settings.fontSize + 1
-                                renderType: Text.NativeRendering
-                                transformOrigin: Item.Center
-                                scale: 1.0
-
-                                Behavior on color { ColorAnimation { duration: Motion.color } }
-
-                                // Spring pop when landing on "Up to date"
-                                SequentialAnimation {
-                                    id: _silerePopAnim
-                                    NumberAnimation {
-                                        target: _silereIcon; property: "scale"
-                                        to: 1.30; duration: Motion.fast; easing.type: Easing.OutQuad
-                                    }
-                                    NumberAnimation {
-                                        target: _silereIcon; property: "scale"
-                                        to: 1.0;  duration: Motion.slow; easing.type: Easing.OutBack
-                                    }
-                                }
-
-                                Connections {
-                                    target: ShellUpdate
-                                    function onCheckingChanged() {
-                                        if (ShellUpdate.checking) return
-                                        if (!ShellUpdate.pending
-                                                && ShellUpdate.lastCheckError.length === 0
-                                                && !ShellSettings.reduceMotion) {
-                                            _silerePopAnim.restart()
-                                        }
-                                    }
-                                }
-                            }
-                            Text {
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: ShellUpdate.statusText
-                                color: Theme.withAlpha(Theme.text, 0.85)
-                                font.family: Settings.font; font.pixelSize: Settings.fontSize
-                                renderType: Text.NativeRendering
-                            }
-                        }
-                        Text {
-                            anchors.right: parent.right; anchors.rightMargin: 12
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: ShellUpdate.currentVersion.length > 0 ? "#" + ShellUpdate.currentVersion : ""
-                            color: Theme.withAlpha(Theme.subtext, 0.55)
-                            font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
-                            renderType: Text.NativeRendering
-                        }
-                    }
-                    HintText {
-                        visible: ShellUpdate.pending || ShellUpdate.lastCheckError.length > 0 || ShellUpdate.lastApplyError.length > 0
-                        text: ShellUpdate.lastApplyError.length > 0 ? ShellUpdate.lastApplyError
+                    UpdateStatusCard {
+                        flat: true
+                        glyph: ShellUpdate.checking || ShellUpdate.applying ? "󰓦"
+                            : ShellUpdate.lastCheckError.length > 0 || ShellUpdate.lastApplyError.length > 0 ? "󰀦"
+                            : ShellUpdate.pending ? "󰚰" : "󰄬"
+                        title: "Silere Shell"
+                        status: ShellUpdate.statusText
+                        meta: ShellUpdate.currentVersion.length > 0 ? "#" + ShellUpdate.currentVersion : ""
+                        checkedText: ShellUpdate.lastCheckTime
+                        detail: ShellUpdate.lastApplyError.length > 0 ? ShellUpdate.lastApplyError
                             : ShellUpdate.lastCheckError.length > 0 ? ShellUpdate.lastCheckError
-                            : ShellUpdate.summary
-                    }
-                }
+                            : ShellUpdate.pending ? ShellUpdate.summary : ""
+                        detailError: ShellUpdate.lastApplyError.length > 0 || ShellUpdate.lastCheckError.length > 0
+                        statusColor: ShellUpdate.lastCheckError.length > 0 || ShellUpdate.lastApplyError.length > 0
+                            ? Theme.warning : ShellUpdate.checking || ShellUpdate.applying || ShellUpdate.pending
+                                ? Theme.accent : Theme.success
+                        busy: ShellUpdate.checking || ShellUpdate.applying
 
-                SectionLabel { label: "PACKAGES" }
-                SettingsCard {
-                    Item {
-                        width: parent.width; height: 44
-                        Row {
-                            anchors.left: parent.left; anchors.leftMargin: 12
-                            anchors.verticalCenter: parent.verticalCenter
-                            spacing: 8
-                            Text {
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: Updates.icon
-                                color: Updates.lastFailed ? Theme.warning : Theme.withAlpha(Theme.subtext, 0.85)
-                                font.family: Settings.font; font.pixelSize: Settings.fontSize + 1
-                                renderType: Text.NativeRendering
-                            }
-                            Text {
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: "Packages"
-                                color: Theme.withAlpha(Theme.text, 0.85)
-                                font.family: Settings.font; font.pixelSize: Settings.fontSize
-                                renderType: Text.NativeRendering
-                            }
+                        primaryLabel: ShellUpdate.applying ? "Installing…"
+                            : ShellUpdate.checking ? "Checking…"
+                            : ShellUpdate.pending ? "Install" : "Check"
+                        primaryGlyph: ShellUpdate.pending ? "󰅢" : "󰓦"
+                        primaryEnabled: !ShellUpdate.checking && !ShellUpdate.applying
+                        primaryEmphasis: ShellUpdate.pending
+                        onPrimaryTriggered: {
+                            if (ShellUpdate.pending) ShellUpdate.apply()
+                            else ShellUpdate.check()
                         }
-                        Text {
-                            anchors.right: parent.right; anchors.rightMargin: 12
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: Updates.managerLabel
-                            color: Theme.withAlpha(Theme.subtext, 0.55)
-                            font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
-                            renderType: Text.NativeRendering
-                        }
-                    }
-                    Item {
-                        property bool suppressDividerAbove: true
-                        width: parent.width; height: 32
-                        Text {
-                            anchors.left: parent.left; anchors.leftMargin: 38
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: "Last checked · " + Updates.lastCheckTime
-                            color: Theme.withAlpha(Theme.subtext, 0.42)
-                            font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
-                            renderType: Text.NativeRendering
-                        }
-                        Text {
-                            anchors.right: parent.right; anchors.rightMargin: 12
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: Updates.statusText
-                            color: Updates.lastFailed ? Theme.warning : Theme.withAlpha(Theme.subtext, 0.50)
-                            font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
-                            renderType: Text.NativeRendering
-                        }
-                    }
-                    HintText {
-                        visible: Updates.lastFailed && Updates.lastError.length > 0
-                        text: Updates.lastError
-                    }
-                }
 
-                SectionLabel { label: "CONTROLS" }
-                SettingsCard {
-                    Item {
-                        id: _checkRow
-                        width: parent.width; height: 44
-                        opacity: ShellUpdate.checking ? 0.45 : 1.0
-                        Behavior on opacity { NumberAnimation { duration: Motion.medium } }
-                        HoverHandler { id: _checkHover; cursorShape: ShellUpdate.checking ? Qt.ArrowCursor : Qt.PointingHandCursor }
-                        TapHandler { enabled: !ShellUpdate.checking; onTapped: ShellUpdate.check() }
-                        RowHoverBg {
-                            anchors.fill: parent
-                            topRadius: 10; bottomRadius: 0
-                            active: _checkHover.hovered && !ShellUpdate.checking
-                            fillOpacity: 0.08
-                        }
-                        Row {
-                            anchors.left: parent.left; anchors.leftMargin: 12
-                            anchors.verticalCenter: parent.verticalCenter
-                            spacing: 8
-                            Text {
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: "󰓦"
-                                color: Theme.withAlpha(Theme.subtext, 0.85)
-                                font.family: Settings.font; font.pixelSize: Settings.fontSize + 1
-                                renderType: Text.NativeRendering
-                            }
-                            Text {
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: ShellUpdate.checking ? "Checking..." : "Check Silere"
-                                color: Theme.withAlpha(Theme.text, 0.85)
-                                font.family: Settings.font; font.pixelSize: Settings.fontSize
-                                renderType: Text.NativeRendering
-                            }
-                        }
+                        secondaryShown: ShellUpdate.pending && !ShellUpdate.applying
+                        secondaryGlyph: "󰑐"
+                        secondaryEnabled: !ShellUpdate.checking && !ShellUpdate.applying
+                        onSecondaryTriggered: ShellUpdate.check()
                     }
-                    Item {
-                        id: _applyRow
-                        visible: ShellUpdate.pending
-                        width: parent.width; height: visible ? 44 : 0
-                        opacity: ShellUpdate.applying ? 0.45 : 1.0
-                        Behavior on opacity { NumberAnimation { duration: Motion.medium } }
-                        HoverHandler { id: _applyHover; cursorShape: ShellUpdate.applying ? Qt.ArrowCursor : Qt.PointingHandCursor }
-                        TapHandler { enabled: !ShellUpdate.applying; onTapped: ShellUpdate.apply() }
-                        RowHoverBg {
-                            anchors.fill: parent
-                            bottomRadius: 0
-                            active: _applyHover.hovered && !ShellUpdate.applying
-                            fillColor: Theme.accent; fillOpacity: 0.10
-                        }
-                        Row {
-                            anchors.left: parent.left; anchors.leftMargin: 12
-                            anchors.verticalCenter: parent.verticalCenter
-                            spacing: 8
-                            Text {
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: "󰅢"
-                                color: Theme.accent
-                                font.family: Settings.font; font.pixelSize: Settings.fontSize + 1
-                                renderType: Text.NativeRendering
-                            }
-                            Text {
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: ShellUpdate.applying ? "Updating…" : "Install update"
-                                color: Theme.accent
-                                font.family: Settings.font; font.pixelSize: Settings.fontSize
-                                font.weight: Font.DemiBold
-                                renderType: Text.NativeRendering
-                            }
-                        }
-                    }
-                    Item {
-                        id: _packageCheckRow
-                        width: parent.width; height: 44
-                        readonly property bool canCheck: ShellSettings.updatesWidget && Updates.supported && !Updates.isChecking
-                        opacity: _packageCheckRow.canCheck ? 1.0 : 0.45
-                        Behavior on opacity { NumberAnimation { duration: Motion.medium } }
-                        HoverHandler { id: _packageCheckHover; cursorShape: _packageCheckRow.canCheck ? Qt.PointingHandCursor : Qt.ArrowCursor }
-                        TapHandler { enabled: _packageCheckRow.canCheck; onTapped: Updates.refresh() }
-                        RowHoverBg {
-                            anchors.fill: parent
-                            bottomRadius: 10
-                            active: _packageCheckHover.hovered && _packageCheckRow.canCheck
-                            fillOpacity: 0.08
-                        }
-                        Row {
-                            anchors.left: parent.left; anchors.leftMargin: 12
-                            anchors.verticalCenter: parent.verticalCenter
-                            spacing: 8
-                            Text {
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: "󰓦"
-                                color: Theme.withAlpha(Theme.subtext, 0.85)
-                                font.family: Settings.font; font.pixelSize: Settings.fontSize + 1
-                                renderType: Text.NativeRendering
-                            }
-                            Text {
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: Updates.isChecking ? "Checking packages..." : "Check packages"
-                                color: Theme.withAlpha(Theme.text, 0.85)
-                                font.family: Settings.font; font.pixelSize: Settings.fontSize
-                                renderType: Text.NativeRendering
-                            }
+
+                    UpdateStatusCard {
+                        flat: true
+                        glyph: Updates.isChecking ? "󰓦" : Updates.lastFailed ? "󰀦" : Updates.icon
+                        title: "System packages"
+                        status: Updates.statusText
+                        meta: Updates.managerLabel
+                        checkedText: Updates.lastCheckTime
+                        detail: Updates.lastFailed ? Updates.lastError : ""
+                        detailError: Updates.lastFailed
+                        statusColor: Updates.lastFailed ? Theme.warning
+                            : Updates.isChecking ? Theme.accent
+                            : Updates.ready && Updates.count === 0 ? Theme.success
+                            : Updates.count > 0 ? Theme.accent : Theme.subtext
+                        busy: Updates.isChecking
+
+                        primaryLabel: !SystemTools.ready ? "Detecting…"
+                            : !Updates.supported ? "Unavailable"
+                            : !ShellSettings.updatesWidget ? "Settings"
+                            : Updates.isChecking ? "Checking…" : "Check"
+                        primaryGlyph: ShellSettings.updatesWidget ? "󰓦" : "󰒓"
+                        primaryEnabled: SystemTools.ready && Updates.supported && !Updates.isChecking
+                        onPrimaryTriggered: {
+                            if (!ShellSettings.updatesWidget) MenuState.setSettingsSection("indicators")
+                            else Updates.refresh()
                         }
                     }
                 }
 
-                Item { width: 1; height: 8 }
-
+                SectionLabel { label: "AUTOMATIC CHECKS" }
                 SettingsCard {
                     ToggleRow {
-                        glyph: "󰚰"; label: "Package update badge"
-                        checked: ShellSettings.updatesWidget
-                        onToggled: ShellSettings.updatesWidget = !ShellSettings.updatesWidget
-                        available: !SystemTools.ready || Updates.supported
-                        dependsNote: "No package manager"
-                        topRadius: 10; bottomRadius: 0
-                    }
-                    ToggleRow {
-                        glyph: "󰥔"; label: "Notify me about updates"
+                        glyph: "󰥔"; label: "Daily Silere update check"
                         checked: ShellUpdate.timerEnabled
                         enabled: !ShellUpdate.timerBusy
                         available: ShellUpdate.timerSupported
                         dependsNote: ShellUpdate.timerBusy ? "Working" : (!SystemTools.ready ? "Checking" : "No systemd")
-                        topRadius: 0; bottomRadius: 0
+                        topRadius: 10; bottomRadius: 10
                         onToggled: ShellUpdate.setTimerEnabled(!ShellUpdate.timerEnabled)
                     }
-                    HintText { text: "Shows a bar badge when Silere has an update. Nothing installs until you press Install update." }
+                    HintText { text: "Background checks only update the bar badge. Silere never installs an update without your confirmation." }
                 }
             }
 
@@ -1277,10 +1097,10 @@ Item {
                 spacing: 0
                 visible: root._shownSection === "separators"
 
-                SectionLabel { label: "STYLE"; first: true }
                 SettingsCard {
                     ToggleRow {
                         glyph: "󰡍"; label: "Dense bar"; badge: "beta"
+                        description: "Tighter spacing with no separator dots"
                         checked: ShellSettings.barCompact
                         onToggled: ShellSettings.barCompact = !ShellSettings.barCompact
                         topRadius: 10
@@ -1332,7 +1152,6 @@ Item {
                 spacing: 0
                 visible: root._shownSection === "indicators"
 
-                SectionLabel { label: "WINDOW"; first: true }
                 SettingsCard {
                     ToggleRow {
                         glyph: "󰦩"; label: "Window title"
@@ -1431,7 +1250,6 @@ Item {
                 spacing: 0
                 visible: root._shownSection === "clock"
 
-                SectionLabel { label: "FORMAT"; first: true }
                 SettingsCard {
                     ChoiceChipRow {
                         glyph: "󰃭"; label: "Date"
@@ -1477,7 +1295,6 @@ Item {
                 spacing: 0
                 visible: root._shownSection === "workspaces"
 
-                SectionLabel { label: "BEHAVIOR"; first: true }
                 SettingsCard {
                     ToggleRow {
                         glyph: "󰗘"; label: "Slide animation"
@@ -1492,6 +1309,7 @@ Item {
                     }
                     ToggleRow {
                         glyph: "󰂟"; label: "Notification pulse"
+                        description: "Flash a workspace dot when an app there alerts you"
                         checked: ShellSettings.wsNotifPulse
                         onToggled: ShellSettings.wsNotifPulse = !ShellSettings.wsNotifPulse
                         bottomRadius: 10
@@ -1561,7 +1379,6 @@ Item {
                 spacing: 0
                 visible: root._shownSection === "media"
 
-                SectionLabel { label: "DISPLAY"; first: true }
                 SettingsCard {
                     ToggleRow {
                         glyph: "󰎇"; label: "Show artist + title"
@@ -1597,7 +1414,6 @@ Item {
                 spacing: 0
                 visible: root._shownSection === "underline"
 
-                SectionLabel { label: "UNDERLINE"; first: true }
                 SettingsCard {
                     ToggleRow {
                         glyph: "󰍴"; label: "Show underline"
@@ -1648,6 +1464,7 @@ Item {
                         SettingsCard {
                             ToggleRow {
                                 glyph: "󰊠"; label: "Always visible"
+                                description: "Keep the underline lit even when nothing needs attention"
                                 checked: ShellSettings.underlineIdleGlow
                                 onToggled: ShellSettings.underlineIdleGlow = !ShellSettings.underlineIdleGlow
                                 topRadius: 10
@@ -1690,7 +1507,6 @@ Item {
                 spacing: 0
                 visible: root._shownSection === "popups"
 
-                SectionLabel { label: "ENABLE"; first: true }
                 SettingsCard {
                     ToggleRow {
                         glyph: "󰂚"; label: "Popup notifications"
@@ -1700,6 +1516,7 @@ Item {
                     }
                     ToggleRow {
                         glyph: "󰊓"; label: "Silence in fullscreen"
+                        description: "Hold non-urgent notifications while a window is fullscreen"
                         checked: ShellSettings.notifFullscreenSilence
                         onToggled: ShellSettings.notifFullscreenSilence = !ShellSettings.notifFullscreenSilence
                         bottomRadius: 10
@@ -1771,10 +1588,10 @@ Item {
                 spacing: 0
                 visible: root._shownSection === "osd"
 
-                SectionLabel { label: "GENERAL"; first: true }
                 SettingsCard {
                     ToggleRow {
                         glyph: "󱀅"; label: "Show OSD"
+                        description: "The pop-up that shows volume and brightness when you change them"
                         checked: ShellSettings.osdEnabled
                         onToggled: ShellSettings.osdEnabled = !ShellSettings.osdEnabled
                         topRadius: 10
@@ -1782,6 +1599,7 @@ Item {
                     // Mode: floating pill vs bar-inline. Drives which sub-options apply.
                     ToggleRow {
                         glyph: "󰀱"; label: "Show in bar"; badge: "beta"
+                        description: "Show it inline in the bar instead of as a floating pill"
                         enabled: ShellSettings.osdEnabled
                         checked: ShellSettings.osdBarIntegrated
                         onToggled: ShellSettings.osdBarIntegrated = !ShellSettings.osdBarIntegrated

@@ -113,7 +113,7 @@ PanelWindow {
     Rectangle {
         id: panel
 
-        // Home/Recent read best compact; Settings needs room for the tree-nav
+        // Home/Notifications read best compact; Settings needs room for the tree-nav
         // plus the 4-chip option rows.
         readonly property int _compactW:  400
         readonly property int _settingsW: 552
@@ -160,9 +160,11 @@ PanelWindow {
         property bool powerOpen: false
         property bool _loaded:         false
         property bool _loadedDeferred: false
+        property bool _recentLoaded:   false
 
         function switchTab(idx: int): void {
             if (powerOpen) powerOpen = false
+            if (idx === 2) _recentLoaded = true
             if (idx === activeTab) return
             activeTab = idx
             contentFlick.contentY = 0
@@ -354,6 +356,7 @@ PanelWindow {
             onTriggered: if (panel.state === "hidden") {
                 panel._loadedDeferred = false
                 panel._loaded = false
+                panel._recentLoaded = false
             }
         }
 
@@ -436,7 +439,7 @@ PanelWindow {
             }
 
             // Top group: nav icons. Rail order is visual only; tab index stays
-            // bound to the page (0 Home / 1 Settings / 2 Recent) so loaders and
+            // bound to the page (0 Home / 1 Settings / 2 Notifications) so loaders and
             // jump-to-tab keep working regardless of where an item sits here.
             Column {
                 id: _railNav
@@ -457,7 +460,7 @@ PanelWindow {
                     id: _railRecent
                     railW: panel.railCollapsedW
                     glyph: "󰋚"
-                    label: "Recent"
+                    label: "Notifications"
                     active: panel.activeTab === 2
                     onTapped: panel.switchTab(2)
 
@@ -553,54 +556,6 @@ PanelWindow {
             }
             height: panel.height
 
-            Column {
-                id: _emptyState
-                anchors.centerIn: parent
-                spacing: 6
-                z: 1
-                visible: opacity > 0.001
-
-                property real _fade: recentLoader.item ? recentLoader.item.opacity : 0
-                property real _show: 0
-                opacity: _fade * _show
-
-                readonly property bool isEmpty: panel.activeTab === 2 && !Notifications.hasHistory
-                onIsEmptyChanged: _show = isEmpty ? 1.0 : 0.0
-
-                Behavior on _show {
-                    NumberAnimation {
-                        duration:    Motion.medium
-                        easing.type: _emptyState.isEmpty ? Easing.OutCubic : Easing.InCubic
-                    }
-                }
-
-                Component.onCompleted: {
-                    _show = isEmpty ? 1.0 : 0.0
-                }
-
-                Text {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    text: "󰂛"
-                    color: Theme.withAlpha(Theme.subtext, 0.25)
-                    font.family: Settings.font; font.pixelSize: 28
-                    renderType: Text.NativeRendering
-                }
-                Text {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    text: "No notifications yet"
-                    color: Theme.withAlpha(Theme.subtext, 0.45)
-                    font.family: Settings.font; font.pixelSize: Settings.fontSize
-                    renderType: Text.NativeRendering
-                }
-                Text {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    text: "They'll show up here when they arrive"
-                    color: Theme.withAlpha(Theme.subtext, 0.28)
-                    font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
-                    renderType: Text.NativeRendering
-                }
-            }
-
             TapHandler {
                 id: _powerDismiss
                 enabled: panel.powerOpen
@@ -622,7 +577,9 @@ PanelWindow {
                 boundsMovement: Flickable.StopAtBounds
                 flickDeceleration: 1800
                 maximumFlickVelocity: 2200
-                interactive: contentHeight > height + 1
+                // Notifications owns the only scroll surface on its tab; the
+                // other pages continue to use this outer content scroller.
+                interactive: !panel.powerOpen && panel.activeTab !== 2 && contentHeight > height + 1
 
                 Item {
                     id: tabContent
@@ -668,11 +625,15 @@ PanelWindow {
                     Loader {
                         id: recentLoader
                         width: parent.width
-                        active: panel._loadedDeferred   // preload, same reason as settingsLoader
+                        // Build the archive only after it is first opened. It then
+                        // stays cached until the menu's normal idle unload.
+                        active: panel._loadedDeferred && (panel._recentLoaded || panel.activeTab === 2)
                         asynchronous: true
                         sourceComponent: Component {
                             RecentPage {
                                 width: parent.width
+                                viewportHeight: Math.max(220,
+                                    Math.min(panel.idealMinH, panel._availablePanelH) - tabContent.y - 16)
                                 active: panel.activeTab === 2 && MenuState.open
                                 powerOpen: panel.powerOpen
                             }
@@ -681,45 +642,44 @@ PanelWindow {
                 }
             }
 
-            // ── Power overlay (compact strip pinned to bottom of content pane) ─
+            // ── Power overlay ───────────────────────────────────────────
             Item {
                 id: powerStrip
-                // Fixed at the compact-tab width and centred, so the buttons keep
-                // one size instead of stretching when the Settings tab widens the panel.
                 readonly property int _stripW: panel._compactW - panel.railCollapsedW - panel.contentPad * 2
                 width: _stripW
-                x: Math.round((parent.width - _stripW) / 2)
+                x: Math.round((parent.width - width) / 2)
                 height: 72
                 y: panel.powerOpen
-                    ? (contentPane.height - height - 16)
-                    : (contentPane.height - height + 20)
+                    ? contentPane.height - height - 12
+                    : contentPane.height - height - 4
                 opacity: panel.powerOpen ? 1.0 : 0.0
                 visible: opacity > 0.001
                 z: 5
 
-                Behavior on y       { NumberAnimation { duration: Motion.medium; easing.type: panel.powerOpen ? Easing.OutQuart : Easing.InCubic } }
-                Behavior on opacity { NumberAnimation { duration: Motion.fast;   easing.type: panel.powerOpen ? Easing.OutCubic : Easing.InCubic } }
+                Behavior on y       { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+                Behavior on opacity { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
                 Rectangle {
                     anchors.fill: parent
-                    radius: Theme.radiusPanel
+                    radius: Theme.radiusControl
                     antialiasing: true
                     color: Theme.surface
                     border.width: 1
                     border.color: Theme.outline
 
                     Row {
-                        anchors.fill: parent
-                        anchors.leftMargin:   8
-                        anchors.rightMargin:  8
-                        anchors.topMargin:    8
-                        anchors.bottomMargin: 8
-                        spacing: 8
+                        id: _powerRow
+                        x: 7
+                        y: 7
+                        width: parent.width - 14
+                        height: parent.height - 14
+                        spacing: 6
 
                         PowerAction {
                             id: _powLock
-                            width: (parent.width - 8 * 4 - 1) / 4
+                            width: Math.floor((_powerRow.width - _powerRow.spacing * 3) / 4)
                             label: "Lock"
+                            description: "Secure this session"
                             enabled: win.commandAvailable(Settings.lockCommand)
                             glyph: "󰍁"
                             onTriggered: { MenuState.close(); Quickshell.execDetached(Settings.lockCommand) }
@@ -727,50 +687,50 @@ PanelWindow {
 
                         PowerAction {
                             id: _powSusp
-                            width: (parent.width - 8 * 4 - 1) / 4
+                            width: _powLock.width
                             label: "Sleep"
+                            description: "Suspend to memory"
                             enabled: win.commandAvailable(Settings.suspendCommand)
                             glyph: "󰒲"
                             onTriggered: { MenuState.close(); Quickshell.execDetached(Settings.suspendCommand) }
                         }
 
-                        Rectangle {
-                            width: 1
-                            height: parent.height - 20
-                            anchors.verticalCenter: parent.verticalCenter
-                            color: Theme.withAlpha(Theme.subtext, 0.13)
-                            radius: 0.5
-                        }
-
                         PowerAction {
                             id: _powReb
-                            width: (parent.width - 8 * 4 - 1) / 4
+                            width: _powLock.width
                             label: "Reboot"
+                            description: "Restart the computer"
                             enabled: win.commandAvailable(Settings.rebootCommand)
                             glyph: "󰑐"
                             confirm: true
                             confirmColor: Theme.warning
-                            onTriggered: Quickshell.execDetached(Settings.rebootCommand)
+                            onArmedChanged: if (armed) _powOff.disarm()
+                            onTriggered: { MenuState.close(); Quickshell.execDetached(Settings.rebootCommand) }
                         }
 
                         PowerAction {
                             id: _powOff
-                            width: (parent.width - 8 * 4 - 1) / 4
-                            label: "Power"
+                            width: _powerRow.width - _powerRow.spacing * 3 - _powLock.width * 3
+                            label: "Shut down"
+                            description: "Turn off the computer"
                             enabled: win.commandAvailable(Settings.poweroffCommand)
                             glyph: "󰐥"
                             confirm: true
                             confirmColor: Theme.error
-                            onTriggered: Quickshell.execDetached(Settings.poweroffCommand)
+                            onArmedChanged: if (armed) _powReb.disarm()
+                            onTriggered: { MenuState.close(); Quickshell.execDetached(Settings.poweroffCommand) }
                         }
 
-                        Connections {
-                            target: panel
-                            function onPowerOpenChanged() {
-                                if (!panel.powerOpen) {
-                                    _powReb.disarm()
-                                    _powOff.disarm()
-                                }
+                    }
+
+                    Connections {
+                        target: panel
+                        function onPowerOpenChanged() {
+                            if (panel.powerOpen) {
+                                Qt.callLater(function() { powerStrip.forceActiveFocus() })
+                            } else {
+                                _powReb.disarm()
+                                _powOff.disarm()
                             }
                         }
                     }

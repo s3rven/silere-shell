@@ -25,7 +25,7 @@ Item {
     Rectangle {
         id: _tick
         anchors.left:           parent.left
-        anchors.leftMargin:     4
+        anchors.leftMargin:     2
         anchors.verticalCenter: _text.verticalCenter
         width:  3
         height: Math.round(_text.implicitHeight * 0.82)
@@ -37,17 +37,17 @@ Item {
     Text {
         id: _text
         anchors.left:         _tick.right
-        anchors.leftMargin:   8
+        anchors.leftMargin:   7
         anchors.bottom:       parent.bottom
         anchors.bottomMargin: root._botGap
         // A whisper of accent so the heading reads as part of the accent system
         // (like the sidebar group labels) rather than flat grey; the tick carries
         // most of the accent, the text only leans into it.
         text:        root.label
-        color:       Theme.withAlpha(Theme.mix(Theme.subtext, Theme.accent, 0.12), 0.60)
+        color:       Theme.withAlpha(Theme.mix(Theme.subtext, Theme.accent, 0.22), 0.74)
         font.family: Settings.font
         font.pixelSize: Settings.fontSize - 3
-        font.letterSpacing:  0
+        font.letterSpacing:  0.4
         font.weight: Font.DemiBold
         font.capitalization: Font.AllUppercase
         renderType:  Text.NativeRendering
@@ -57,7 +57,7 @@ Item {
         anchors.left:           _text.right
         anchors.leftMargin:     10
         anchors.right:          parent.right
-        anchors.rightMargin:    2
+        anchors.rightMargin:    0
         anchors.verticalCenter: _text.verticalCenter
         height: 1
         color:  Theme.withAlpha(Theme.subtext, 0.10)
