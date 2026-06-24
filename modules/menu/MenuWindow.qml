@@ -94,6 +94,21 @@ PanelWindow {
         return true
     }
 
+    function _shq(s): string {
+        return "'" + String(s).replace(/'/g, "'\\''") + "'"
+    }
+
+    // execDetached can't report failures; wrap so a non-zero exit (auth/inhibitor) notifies.
+    function runPower(command, failTitle): void {
+        if (!command || command.length === 0) return
+        if (!SystemTools.hasNotifySend) { Quickshell.execDetached(command); return }
+        const note = "notify-send --urgency=critical --app-name=silere-shell " +
+            _shq(failTitle) + " " + _shq("It may require authorization or be blocked by a running task.")
+        const argv = ["bash", "-c", '"$@" || ' + note, "bash"]
+        for (let i = 0; i < command.length; i++) argv.push(String(command[i]))
+        Quickshell.execDetached(argv)
+    }
+
     Item { id: _fillArea; anchors.fill: parent }
     mask: Region { item: MenuState.open ? _fillArea : null }
 
@@ -692,7 +707,7 @@ PanelWindow {
                             description: "Suspend to memory"
                             enabled: win.commandAvailable(Settings.suspendCommand)
                             glyph: "󰒲"
-                            onTriggered: { MenuState.close(); Quickshell.execDetached(Settings.suspendCommand) }
+                            onTriggered: { MenuState.close(); win.runPower(Settings.suspendCommand, "Suspend failed") }
                         }
 
                         PowerAction {
@@ -705,7 +720,7 @@ PanelWindow {
                             confirm: true
                             confirmColor: Theme.warning
                             onArmedChanged: if (armed) _powOff.disarm()
-                            onTriggered: { MenuState.close(); Quickshell.execDetached(Settings.rebootCommand) }
+                            onTriggered: { MenuState.close(); win.runPower(Settings.rebootCommand, "Reboot failed") }
                         }
 
                         PowerAction {
@@ -718,7 +733,7 @@ PanelWindow {
                             confirm: true
                             confirmColor: Theme.error
                             onArmedChanged: if (armed) _powReb.disarm()
-                            onTriggered: { MenuState.close(); Quickshell.execDetached(Settings.poweroffCommand) }
+                            onTriggered: { MenuState.close(); win.runPower(Settings.poweroffCommand, "Shut down failed") }
                         }
 
                     }
