@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import Quickshell.Bluetooth as Bt
 import "../../config"
@@ -80,6 +82,7 @@ Item {
             model: root.open ? Bluetooth.devices : []
 
             delegate: Rectangle {
+                id: _row
                 required property var modelData
                 width: _list.width
                 height: 40
@@ -137,15 +140,15 @@ Item {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: _activate()
+                    onClicked: _row._activate()
                 }
 
                 Text {
                     id: _g
                     anchors.left: parent.left; anchors.leftMargin: 12
                     anchors.verticalCenter: parent.verticalCenter
-                    text: root._devGlyph(modelData.icon)
-                    color: modelData.connected ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.8)
+                    text: root._devGlyph(_row.modelData.icon)
+                    color: _row.modelData.connected ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.8)
                     font.family: Settings.font; font.pixelSize: Settings.fontSize + 1
                     renderType: Text.NativeRendering
                 }
@@ -153,11 +156,11 @@ Item {
                     anchors.left: _g.right; anchors.leftMargin: 10
                     anchors.right: _stateText.left; anchors.rightMargin: 8
                     anchors.verticalCenter: parent.verticalCenter
-                    text: modelData.deviceName || modelData.name || modelData.address || "Unknown"
+                    text: _row.modelData.deviceName || _row.modelData.name || _row.modelData.address || "Unknown"
                     textFormat: Text.PlainText
-                    color: modelData.connected ? Theme.text : Theme.withAlpha(Theme.text, 0.85)
+                    color: _row.modelData.connected ? Theme.text : Theme.withAlpha(Theme.text, 0.85)
                     font.family: Settings.font; font.pixelSize: Settings.fontSize
-                    font.weight: modelData.connected ? Font.Medium : Font.Normal
+                    font.weight: _row.modelData.connected ? Font.Medium : Font.Normal
                     renderType: Text.NativeRendering
                     elide: Text.ElideRight
                 }
@@ -166,11 +169,11 @@ Item {
                     anchors.right: parent.right; anchors.rightMargin: 12
                     anchors.verticalCenter: parent.verticalCenter
                     text: parent._state
-                    color: (parent._armed || modelData.pairing) ? Theme.warning
-                         : modelData.connected ? Theme.accent
+                    color: (parent._armed || _row.modelData.pairing) ? Theme.warning
+                         : _row.modelData.connected ? Theme.accent
                          : Theme.withAlpha(Theme.subtext, 0.55)
                     font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
-                    font.weight: (parent._armed || modelData.pairing) ? Font.Medium : Font.Normal
+                    font.weight: (parent._armed || _row.modelData.pairing) ? Font.Medium : Font.Normal
                     renderType: Text.NativeRendering
                     Behavior on color { ColorAnimation { duration: Motion.fast } }
                 }

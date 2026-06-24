@@ -1,7 +1,8 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import "../../config"
 import "../../services"
-import "../common"
 
 Item {
     id: _ul

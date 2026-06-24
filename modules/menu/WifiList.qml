@@ -106,6 +106,7 @@ Item {
                 readonly property bool _failed:     Network.wifiError === modelData.ssid
 
                 Rectangle {
+                    id: _row
                     width: parent.width
                     height: 40
                     radius: 10
@@ -113,27 +114,27 @@ Item {
                     color: Theme.rowFill(_rowHover.hovered, false)
                     border.width: activeFocus ? 2 : 1
                     border.color: activeFocus ? Theme.withAlpha(Theme.accent, 0.55)
-                                : modelData.active ? Theme.withAlpha(Theme.accent, 0.45)
+                                : _entry.modelData.active ? Theme.withAlpha(Theme.accent, 0.45)
                                                    : Theme.withAlpha(Theme.subtext, 0.10)
                     Behavior on color { ColorAnimation { duration: Motion.fast } }
 
                     activeFocusOnTab: true
                     Accessible.role: Accessible.ListItem
-                    Accessible.name: modelData.ssid
-                    Accessible.description: modelData.active ? "Connected"
+                    Accessible.name: _entry.modelData.ssid
+                    Accessible.description: _entry.modelData.active ? "Connected"
                         : _entry._connecting ? "Connecting"
-                        : modelData.secured ? "Secured network"
+                        : _entry.modelData.secured ? "Secured network"
                         : "Open network"
 
                     function _activate(): void {
-                        if (modelData.active) { Network.disconnectWifi(); return }
-                        if (modelData.secured && !modelData.known) {
+                        if (_entry.modelData.active) { Network.disconnectWifi(); return }
+                        if (_entry.modelData.secured && !_entry.modelData.known) {
                             const wasSel = _entry._sel
-                            root._selected = wasSel ? "" : modelData.ssid
+                            root._selected = wasSel ? "" : _entry.modelData.ssid
                             Network.clearWifiError()
                             if (!wasSel) Qt.callLater(function() { _pw.forceActiveFocus() })
                         } else {
-                            Network.connectWifi(modelData.ssid, "")
+                            Network.connectWifi(_entry.modelData.ssid, "")
                         }
                     }
                     Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) _activate(); event.accepted = true }
@@ -141,14 +142,14 @@ Item {
                     Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) _activate(); event.accepted = true }
 
                     HoverHandler { id: _rowHover; cursorShape: Qt.PointingHandCursor }
-                    TapHandler { onTapped: _activate() }
+                    TapHandler { onTapped: _row._activate() }
 
                     Text {
                         id: _sig
                         anchors.left: parent.left; anchors.leftMargin: 12
                         anchors.verticalCenter: parent.verticalCenter
-                        text: root._sigGlyph(modelData.signal)
-                        color: modelData.active ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.8)
+                        text: root._sigGlyph(_entry.modelData.signal)
+                        color: _entry.modelData.active ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.8)
                         font.family: Settings.font; font.pixelSize: Settings.fontSize + 1
                         renderType: Text.NativeRendering
                     }
@@ -156,11 +157,11 @@ Item {
                         anchors.left: _sig.right; anchors.leftMargin: 10
                         anchors.right: _icons.left; anchors.rightMargin: 8
                         anchors.verticalCenter: parent.verticalCenter
-                        text: modelData.ssid
+                        text: _entry.modelData.ssid
                         textFormat: Text.PlainText
-                        color: modelData.active ? Theme.text : Theme.withAlpha(Theme.text, 0.85)
+                        color: _entry.modelData.active ? Theme.text : Theme.withAlpha(Theme.text, 0.85)
                         font.family: Settings.font; font.pixelSize: Settings.fontSize
-                        font.weight: modelData.active ? Font.Medium : Font.Normal
+                        font.weight: _entry.modelData.active ? Font.Medium : Font.Normal
                         renderType: Text.NativeRendering
                         elide: Text.ElideRight
                     }
@@ -177,14 +178,14 @@ Item {
                             renderType: Text.NativeRendering
                         }
                         Text {
-                            visible: modelData.active && !_entry._connecting
+                            visible: _entry.modelData.active && !_entry._connecting
                             text: "󰄬"
                             color: Theme.accent
                             font.family: Settings.font; font.pixelSize: Settings.fontSize
                             renderType: Text.NativeRendering
                         }
                         Text {
-                            visible: modelData.secured && !_entry._connecting
+                            visible: _entry.modelData.secured && !_entry._connecting
                             text: "󰌾"
                             color: Theme.withAlpha(Theme.subtext, 0.5)
                             font.family: Settings.font; font.pixelSize: Settings.fontSize - 2

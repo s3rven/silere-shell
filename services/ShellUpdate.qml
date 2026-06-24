@@ -3,7 +3,6 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
-import "../config"
 
 // Self-update state for the shell itself (distinct from Updates.qml, which counts
 // distro packages). The daily timer's update.sh runs check-only and drops a flag

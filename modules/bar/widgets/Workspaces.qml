@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Effects
 import Quickshell
@@ -855,6 +857,7 @@ Item {
                         // retaining image/effect delegates for invisible rows.
                         model: ws._showIcons ? ws._apps : []
                         delegate: Item {
+                            id: appIcon
                             required property var modelData
                             width:  root._iconSz
                             height: root._iconSz
@@ -872,7 +875,7 @@ Item {
                             Image {
                                 id: _iconSrc
                                 anchors.fill: parent
-                                source: modelData.icon
+                                source: appIcon.modelData.icon
                                 // decode at 3× logical: DPR=2 × 1.25× compositor = 2.5×
                                 // effective; 3× ensures no upscale blur on fractional
                                 // displays without wasting memory on normal DPR-2 ones
@@ -897,14 +900,14 @@ Item {
                             // Dot row when the same app has several windows here.
                             // Filled dots for exact count up to 3; an outline dot signals 4+.
                             Row {
-                                visible: modelData.count > 1
+                                visible: appIcon.modelData.count > 1
                                 anchors.right:        parent.right
                                 anchors.bottom:       parent.bottom
                                 anchors.rightMargin:  -2
                                 anchors.bottomMargin: -2
                                 spacing: 1.5
                                 Repeater {
-                                    model: Math.min(modelData.count, 3)
+                                    model: Math.min(appIcon.modelData.count, 3)
                                     Rectangle {
                                         width: 3.5; height: 3.5; radius: 1.75
                                         antialiasing: true
@@ -914,7 +917,7 @@ Item {
                                     }
                                 }
                                 Rectangle {
-                                    visible:      modelData.count > 3
+                                    visible:      appIcon.modelData.count > 3
                                     width: 3.5; height: 3.5; radius: 1.75
                                     antialiasing: true
                                     color:        "transparent"

@@ -1,6 +1,7 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import Quickshell
-import Quickshell.Io
 import "../../config"
 import "../../services"
 
@@ -366,7 +367,7 @@ Item {
                             readonly property real _accentL: 0.70
                             function _accentForHS(h, s) {
                                 const c = Qt.hsla(h, s, _accentL, 1.0)
-                                return "#" + _hex2(c.r) + _hex2(c.g) + _hex2(c.b)
+                                return "#" + root._hex2(c.r) + root._hex2(c.g) + root._hex2(c.b)
                             }
                             function _accentForHue(h) { return _accentForHS(h, 0.72) }
                             readonly property color _curColor: ShellSettings.neutralAccentAuto ? MatugenTheme.accent : ShellSettings.neutralAccent
@@ -386,7 +387,7 @@ Item {
                             property string _hoverName: ""
                             // exact applied accent (matugen's when auto), for a precise readout
                             readonly property string _curHex: ShellSettings.neutralAccentAuto
-                                ? ("#" + _hex2(MatugenTheme.accent.r) + _hex2(MatugenTheme.accent.g) + _hex2(MatugenTheme.accent.b)).toUpperCase()
+                                ? ("#" + root._hex2(MatugenTheme.accent.r) + root._hex2(MatugenTheme.accent.g) + root._hex2(MatugenTheme.accent.b)).toUpperCase()
                                 : ShellSettings.neutralAccent.toUpperCase()
                             readonly property string _activeName: {
                                 if (ShellSettings.neutralAccentAuto) return "Auto  ·  " + _curHex
@@ -607,7 +608,7 @@ Item {
                             implicitHeight: _matuCol.y + _matuCol.implicitHeight + 14
                             height: implicitHeight
 
-                            function _hex(c) { return ("#" + _hex2(c.r) + _hex2(c.g) + _hex2(c.b)).toUpperCase() }
+                            function _hex(c) { return ("#" + root._hex2(c.r) + root._hex2(c.g) + root._hex2(c.b)).toUpperCase() }
 
                             readonly property var _swatches: [
                                 { c: MatugenTheme.accent,     n: "Accent"  },

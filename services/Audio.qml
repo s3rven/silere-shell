@@ -1,4 +1,5 @@
 pragma Singleton
+pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
@@ -38,7 +39,7 @@ Singleton {
     readonly property string label: ready ? `${Math.round(uiVolume * 100)}%` : "--%"
     readonly property string sinkName: sink ? (sink.description || "") : ""
 
-    PwObjectTracker { objects: sink ? [sink] : [] }
+    PwObjectTracker { objects: root.sink ? [root.sink] : [] }
 
     function _syncAudio(): void {
         if (!_componentReady) return
@@ -60,25 +61,25 @@ Singleton {
     }
 
     Connections {
-        target: audio
+        target: root.audio
         enabled: root.ready
         function onVolumesChanged() {
-            if (root.pendingApply && Math.abs(audio.volume - root.targetVolume) < 0.005)
+            if (root.pendingApply && Math.abs(root.audio.volume - root.targetVolume) < 0.005)
                 root.pendingApply = false
             else if (!root.pendingApply)
-                root.targetVolume = audio.volume
+                root.targetVolume = root.audio.volume
         }
         function onMutedChanged() {
             if (root._muteWritePending) {
-                if (audio.muted === root._desiredMuted) {
-                    root._pendingMuted = audio.muted
+                if (root.audio.muted === root._desiredMuted) {
+                    root._pendingMuted = root.audio.muted
                     root._muteWritePending = false
                     muteSafety.stop()
                 }
                 return
             }
-            root._pendingMuted = audio.muted
-            root._desiredMuted = audio.muted
+            root._pendingMuted = root.audio.muted
+            root._desiredMuted = root.audio.muted
         }
     }
 

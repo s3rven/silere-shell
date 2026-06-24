@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import Quickshell
 import Quickshell.Wayland._WlrLayerShell
@@ -368,13 +370,14 @@ PanelWindow {
                 Repeater {
                     model: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
                     delegate: Item {
+                        id: dayHdr
                         required property int index
                         required property string modelData
                         width: card.cell; height: 22
                         Text {
                             anchors.centerIn: parent
-                            text: modelData
-                            color: Theme.withAlpha(Theme.subtext, index >= 5 ? 0.4 : 0.6)   // weekends quieter
+                            text: dayHdr.modelData
+                            color: Theme.withAlpha(Theme.subtext, dayHdr.index >= 5 ? 0.4 : 0.6)   // weekends quieter
                             font.family: Settings.font; font.pixelSize: Settings.fontSize - 3
                             font.weight: Font.Medium; font.capitalization: Font.AllUppercase
                             renderType: Text.NativeRendering

@@ -1,4 +1,5 @@
 pragma Singleton
+pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
@@ -304,7 +305,7 @@ Singleton {
     Timer {
         id: _writeTimer
         interval: 400
-        onTriggered: _save()
+        onTriggered: root._save()
     }
 
     function _save(force): void {

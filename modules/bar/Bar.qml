@@ -1,10 +1,11 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Effects
 import Quickshell
 import Quickshell.Wayland._WlrLayerShell
 import "../../config"
 import "../../services"
-import "../common"
 
 PanelWindow {
     id: bar

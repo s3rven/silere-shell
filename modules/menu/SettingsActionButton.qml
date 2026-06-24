@@ -1,6 +1,5 @@
 import QtQuick
 import "../../config"
-import "../../services"
 
 Item {
     id: root

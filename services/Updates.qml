@@ -3,7 +3,6 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
-import "../config"
 
 // Pending-package counter. Off unless ShellSettings.updatesWidget is on, since the
 // check does background package-DB work. Distro-agnostic: the first available

@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
@@ -146,17 +148,17 @@ Item {
         id: _debounce
         interval: 20
         onTriggered: {
-            const isWsSwitch = _wsJustChanged && monitorWsId !== _lastWsId
-            _wsJustChanged = false
+            const isWsSwitch = root._wsJustChanged && root.monitorWsId !== root._lastWsId
+            root._wsJustChanged = false
 
-            _dir = isWsSwitch ? (monitorWsId > _lastWsId ? 1 : -1) : 1
-            if (monitorWsId > 0) _lastWsId = monitorWsId
+            root._dir = isWsSwitch ? (root.monitorWsId > root._lastWsId ? 1 : -1) : 1
+            if (root.monitorWsId > 0) root._lastWsId = root.monitorWsId
 
             root._slideD     = isWsSwitch ? 5 : 0
             root._scaleStart = isWsSwitch ? 1.0 : 0.985
-            root._opTarget   = hasClient ? 1.0 : 0.0
-            root._pendApp    = root._clean(currentApp)
-            root._pendTitle  = currentTitle
+            root._opTarget   = root.hasClient ? 1.0 : 0.0
+            root._pendApp    = root._clean(root.currentApp)
+            root._pendTitle  = root.currentTitle
             root._pendShowApp = ShellSettings.showWindowTitleApp
 
             _yOut.to     = -root._slideD * root._dir

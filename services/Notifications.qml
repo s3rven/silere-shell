@@ -1,4 +1,5 @@
 pragma Singleton
+pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
@@ -250,7 +251,7 @@ Singleton {
                     body:    root.plainText(n.body),
                     urgency: n.urgency,
                     time:    Date.now()
-                }, ...root.history].slice(0, _maxHistory)
+                }, ...root.history].slice(0, root._maxHistory)
                 root.missedCount++
                 n.tracked = false
                 return
