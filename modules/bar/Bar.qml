@@ -178,8 +178,9 @@ PanelWindow {
             property real _slideY: _hideY
             transform: Translate { y: contents._slideY }
 
+            // Born concealed: stay parked hidden, onConcealedChanged reveals later.
             Component.onCompleted: Qt.callLater(function() {
-                _enterAnim.start()
+                if (!bar.concealed) _enterAnim.start()
             })
 
             ParallelAnimation {

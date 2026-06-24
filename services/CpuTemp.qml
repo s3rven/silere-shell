@@ -27,7 +27,7 @@ Singleton {
     property bool _warmedUp: false
     Timer { id: _warmup; interval: 6000; onTriggered: root._warmedUp = true }
 
-    readonly property int pulseDuration: critical ? 650 : 2000
+    readonly property int pulseDuration: critical ? Motion.ms(650) : Motion.ms(2000)
     property real alertPulse: 0
 
     PulseLoop {

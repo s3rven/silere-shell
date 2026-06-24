@@ -15,12 +15,9 @@ Item {
 
     signal dismissRequested(int notifId, var notification, bool expired)
 
-    // Carries the close reason from dismiss() through the exit animation to the
-    // deferred dismissRequested emit: true = timed out, false = user closed it.
     property bool _expired: false
 
-    // Spec's "default" action belongs to the body click, not a button; the
-    // rest render as chips (capped at 4 — more than that is app spam).
+    // "default" action maps to body click per spec, not a chip button
     readonly property var _defaultAction: {
         const acts = notification.actions ?? []
         for (let i = 0; i < acts.length; i++)
@@ -64,8 +61,6 @@ Item {
     readonly property bool hasBody:       bodyText.length > 0
     readonly property bool isCritical: notification.urgency === NotificationUrgency.Critical
 
-    // Mirror the bar's own corner: a flat/non-floating bar squares the card off,
-    // a floating rounded bar matches its radius — same rule the OSD pill follows.
     readonly property real _cardRadius: (ShellSettings.barFloating && ShellSettings.barCornerStyle === "round")
         ? Math.min(ShellSettings.barRadius, ShellSettings.barHeight / 2)
         : 0
@@ -118,8 +113,6 @@ Item {
         }
     }
 
-    // Initial stamp too: a delegate rebuilt for an older notification (reload,
-    // model churn) must not sit on the default "just now" until the timer ticks.
     Component.onCompleted: _updateTime()
     onVisibleChanged: if (visible) _updateTime()
 
@@ -133,13 +126,11 @@ Item {
     }
 
     implicitWidth:  320
-    // collapses during dismiss so the cards below glide up instead of snapping
+    // collapses during dismiss so cards below glide up
     property real _collapse: 1
 
     property real _collapseBasis: cardRect.height
     implicitHeight: _collapseBasis * _collapse
-    // Which way the card slides on enter/exit: +1 from the right, -1 from the left,
-    // 0 = no horizontal slide (a centred popup just fades).
     property int slideDir: 1
     readonly property real _hiddenX: slideDir * (implicitWidth + 16)
 
@@ -149,8 +140,7 @@ Item {
 
     Timer {
         id: _autoClose
-        // Critical is resident by spec; auto-close it only when the sender set an
-        // explicit timeout. Everything else runs on its own/the default timeout.
+        // critical stays resident unless sender sets explicit timeout
         readonly property bool shouldRun: card.isCritical
             ? card.notification.expireTimeout > 0
             : (card.notification.expireTimeout !== 0)
@@ -164,8 +154,6 @@ Item {
         onTriggered: card.dismiss(true)
     }
 
-    // Visual-only countdown for the timer above. The timer still owns dismissal;
-    // this just shows how long is left and freezes while the card is hovered.
     property real _timeoutProgress: 1.0
     property real _countdownPulse:  1.0
     readonly property bool _showCountdown: card.visible && card.enabled
@@ -181,8 +169,7 @@ Item {
         running:  card._showCountdown
     }
 
-    // Freeze the countdown while hovered, bound only while it's actually
-    // running, so paused is never assigned on a stopped animation (which warns).
+    // bound only while running — assigning paused on a stopped animation warns
     Binding {
         target: _countdownAnim
         property: "paused"
@@ -212,7 +199,6 @@ Item {
     }
 
 
-    // Floating drop shadow, same elevation cue as the bar/OSD/menu.
     Loader {
         active: card.visible && ShellSettings.barFloating && ShellSettings.barShadow
         anchors.fill: cardRect
@@ -303,7 +289,6 @@ Item {
             }
             spacing: 5
 
-            // Critical leads with a warning glyph, unmistakable beyond colour alone.
             Item {
                 width:  parent.width
                 height: _summary.implicitHeight
@@ -378,9 +363,6 @@ Item {
                 }
             }
 
-            // Action buttons (Reply / Open / …): equal-width row in the power-
-            // strip's language. Press darkens instead of scaling (scaling blurs
-            // NativeRendering text); critical cards tint the buttons to match.
             Row {
                 visible: card.actionList.length > 0
                 width: parent.width
@@ -561,8 +543,7 @@ Item {
         }
     }
 
-    // Border drawn on top, outside the clip/layer, so it renders crisp and
-    // consistent regardless of the shimmer's layer toggle.
+    // border outside clip/layer so shimmer doesn't cut antialiased edges
     Rectangle {
         id: _cardBorder
         anchors.fill: cardRect
@@ -570,8 +551,6 @@ Item {
         color:   "transparent"
         antialiasing: true
         opacity: cardRect.opacity
-        // Hidden while the countdown arc is drawing the border itself; critical and
-        // reduce-motion (no countdown) keep this static one.
         visible: !card._showCountdown
         border.width: 1
         border.color: card.isCritical
@@ -580,9 +559,6 @@ Item {
         Behavior on border.color { ColorAnimation { duration: Motion.medium } }
     }
 
-    // Auto-dismiss countdown drawn as the outline: a subtle track plus a brighter
-    // arc that depletes clockwise. Only for auto-closing cards; critical persists.
-    // Repaints only while counting down, frozen on hover.
     Canvas {
         id: _countdownArc
         anchors.fill: cardRect
@@ -608,7 +584,6 @@ Item {
             const sx = Math.max(0, w - 2 * r), sy = Math.max(0, h - 2 * r)
             const ar = Math.PI / 2 * r
 
-            // Build the rounded-rect outline once (shared by track + arc).
             function outline() {
                 ctx.beginPath()
                 ctx.moveTo(x + r, y)
@@ -627,8 +602,6 @@ Item {
             ctx.strokeStyle = _countdownArc.trackColor
             ctx.stroke()
 
-            // Remaining arc, walk clockwise from the top-left for `progress` of the
-            // perimeter, drawing partial edges/corners so it depletes smoothly.
             const p = _countdownArc.progress
             if (p <= 0.002) return
             let t = p * (2 * sx + 2 * sy + 4 * ar)
@@ -654,9 +627,7 @@ Item {
         onHeightChanged:   if (visible) requestPaint()
         onArcColorChanged: if (visible) requestPaint()
         onTrackColorChanged: if (visible) requestPaint()
-        // Repaint per ~1px of endpoint travel along the perimeter rather than a
-        // fixed fraction: a fixed step jumps several px on a long timeout (steppy)
-        // and wastes paints on a short one. Sub-pixel moves are skipped.
+        // repaint per ~1px of perimeter travel, skip sub-pixel moves
         property real _painted: -1
         onProgressChanged: {
             if (!visible) return

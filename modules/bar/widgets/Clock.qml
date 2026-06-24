@@ -19,6 +19,18 @@ Row {
 
     HoverHandler { id: _hover; cursorShape: Qt.PointingHandCursor }
 
+    activeFocusOnTab: true
+    Accessible.role: Accessible.Button
+    Accessible.name: "Clock"
+    Accessible.description: "Activate to open calendar."
+    Keys.onSpacePressed:  event => { root._openCalendar(); event.accepted = true }
+    Keys.onReturnPressed: event => { root._openCalendar(); event.accepted = true }
+    Keys.onEnterPressed:  event => { root._openCalendar(); event.accepted = true }
+
+    function _openCalendar(): void {
+        CalendarState.toggleAt(root.mapToItem(null, root.width / 2, 0).x, root.screen)
+    }
+
     scale: _calTap.pressed ? 0.95 : 1.0
     transformOrigin: Item.Center
     Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
@@ -78,7 +90,7 @@ Row {
     TapHandler {
         id: _calTap
         acceptedButtons: Qt.LeftButton
-        onTapped: CalendarState.toggleAt(root.mapToItem(null, root.width / 2, 0).x, root.screen)
+        onTapped: root._openCalendar()
     }
 
     TapHandler {

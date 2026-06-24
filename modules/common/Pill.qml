@@ -12,7 +12,6 @@ Item {
     property bool   interactive: false
     property string accessibleName: ""
     property string accessibleDescription: ""
-    property int    cursorShape: interactive ? Qt.PointingHandCursor : Qt.ArrowCursor
     property int    maxTextWidth: 150
     property int    horizontalPadding: ShellSettings.barCompact ? 3 : 5
     property bool   animateGlyph: true
@@ -327,7 +326,6 @@ Item {
         // Horizontal padding makes hover, click, wheel and focus use the same
         // non-overlapping target instead of extending hover into neighbours.
         margin: 0
-        cursorShape: root.cursorShape
         onHoveredChanged: {
             if (hovered) _hoverRevealTimer.restart()
             else { _hoverRevealTimer.stop(); root.hoverActive = false }

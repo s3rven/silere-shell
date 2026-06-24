@@ -19,7 +19,18 @@ Pill {
     accessibleName: canControl ? `Brightness ${Brightness.percent} percent` : "Brightness unavailable"
     accessibleDescription: "Scroll to adjust brightness."
 
+    activeFocusOnTab: canControl
+    Accessible.role: Accessible.Slider
+    Accessible.focusable: canControl
+
     Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+
+    HoverHandler { cursorShape: Qt.PointingHandCursor }
+
+    Keys.onLeftPressed:  event => { if (canControl) Brightness.bumpBy(-5); event.accepted = true }
+    Keys.onDownPressed:  event => { if (canControl) Brightness.bumpBy(-5); event.accepted = true }
+    Keys.onRightPressed: event => { if (canControl) Brightness.bumpBy(5);  event.accepted = true }
+    Keys.onUpPressed:    event => { if (canControl) Brightness.bumpBy(5);  event.accepted = true }
 
     WheelHandler {
         enabled: root.canControl

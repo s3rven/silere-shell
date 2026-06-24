@@ -142,7 +142,7 @@ Item {
         // Compact: hide when battery follows (battery's own dot marks the group
         // boundary instead); show only when bri is present but battery is absent.
         Dot             { show: root._vBright && (!root._compact || !root._vBattery) }
-        BatteryWidget   { anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
+        BatteryWidget   { anchors.verticalCenter: parent.verticalCenter }
         Dot             { show: root._vBattery }
         MediaWidget     { id: mediaWidget; anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
         Dot             { show: root._vMedia }

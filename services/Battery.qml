@@ -16,7 +16,7 @@ Singleton {
     readonly property real _raw: upowerReady ? UPower.displayDevice.percentage : 0
     property bool _scale100: false
     property real _pctOverride: -1
-    property bool _ambiguousTried: false
+    property int  _ambiguousAttempts: 0
     Binding {
         target: root
         property: "_scale100"
@@ -37,7 +37,7 @@ Singleton {
     readonly property bool critical: _validReading && pct < _critPct && onBattery
     readonly property bool charging: available && !onBattery
     readonly property bool full:     available && pct >= 99
-    readonly property int pulseDuration: critical ? 650 : 2000
+    readonly property int pulseDuration: critical ? Motion.ms(650) : Motion.ms(2000)
     property real alertPulse: 0
 
     readonly property color iconColor: {
@@ -76,11 +76,15 @@ Singleton {
 
     readonly property string label: _validReading ? `${Math.round(pct)}%` : ""
 
+    // Retries a few times in case the probe fails transiently (missing CLI on
+    // first boot, slow D-Bus); doesn't latch forever on one failed attempt.
     Timer {
-        interval: 0
-        running: root._ambiguousRawOne && root._pctOverride < 0 && !root._ambiguousTried
+        interval: 1500
+        repeat: true
+        running: root._ambiguousRawOne && root._pctOverride < 0
+            && root._ambiguousAttempts < 3 && !_percentProbe.running
         onTriggered: {
-            root._ambiguousTried = true
+            root._ambiguousAttempts++
             _percentProbe.running = true
         }
     }

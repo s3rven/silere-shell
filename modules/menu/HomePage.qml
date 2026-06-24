@@ -440,10 +440,10 @@ Item {
                     Accessible.role: Accessible.Slider
                     Accessible.name: "Seek"
                     Accessible.description: Media.formatTime(Media.positionNow) + " of " + Media.formatTime(Media.length)
-                    Keys.onLeftPressed:  _seek._nudge(-1)
-                    Keys.onDownPressed:  _seek._nudge(-1)
-                    Keys.onRightPressed: _seek._nudge(1)
-                    Keys.onUpPressed:    _seek._nudge(1)
+                    Keys.onLeftPressed:  event => { _seek._nudge(-1); event.accepted = true }
+                    Keys.onDownPressed:  event => { _seek._nudge(-1); event.accepted = true }
+                    Keys.onRightPressed: event => { _seek._nudge(1);  event.accepted = true }
+                    Keys.onUpPressed:    event => { _seek._nudge(1);  event.accepted = true }
 
                     Text {
                         id: _elapsedLabel
@@ -787,7 +787,7 @@ Item {
                     label: ShellSettings.nightLightAuto ? "Temperature  ·  auto" : "Temperature"
                     displayValue: ShellSettings.nightLightTemp + "K"
                     value: ShellSettings.nightLightTemp
-                    min: 3000; max: 6500; step: 100
+                    min: 1000; max: 6500; step: 100
                     glyphColor: Theme.withAlpha(Theme.warning, ShellSettings.nightLightAuto ? 0.45 : 0.85)
                     opacity: ShellSettings.nightLightAuto ? 0.45 : 1.0
                     onChanged: (v) => { if (!ShellSettings.nightLightAuto) ShellSettings.nightLightTemp = v }

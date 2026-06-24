@@ -36,6 +36,8 @@ Pill {
         }
     }
 
+    HoverHandler { cursorShape: Qt.PointingHandCursor }
+
     pressed: _tap.pressed && Audio.ready
     onActivated: Audio.toggleMute()
 

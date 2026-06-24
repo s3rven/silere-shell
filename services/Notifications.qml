@@ -9,8 +9,6 @@ Singleton {
     id: root
 
     property var list: []
-    // History, DND, and bookkeeping survive shell reloads (PersistentProperties);
-    // a config tweak + reload no longer wipes the notification archive.
     property alias history:     _persist.history
     property alias dnd:         _persist.dnd
     property alias missedCount: _persist.missedCount
@@ -25,8 +23,7 @@ Singleton {
     readonly property var popupModel: notifServer.trackedNotifications
 
     function _ensurePersistentState(): void {
-        // var properties can be undefined for one frame while
-        // PersistentProperties transfers them to a new hot-reload engine.
+        // var properties can be undefined for one frame during hot-reload
         if (!Array.isArray(_persist.history)) _persist.history = []
         if (!_persist.seen || typeof _persist.seen !== "object") _persist.seen = ({})
         if (!_persist.times || typeof _persist.times !== "object") _persist.times = ({})
@@ -37,9 +34,7 @@ Singleton {
         return root._times[id] || Date.now()
     }
 
-    // Notification objects we're tearing down ourselves. Track the object, not just
-    // the id: replaces_id can reuse an id while an old object's closed signal is
-    // still pending, and id-only guards can then skip/remove the wrong live entry.
+    // track object not just id — replaces_id reuses ids while old closed signal is pending
     property var _closing: ({})
     property bool lastCritical: false
 
@@ -54,18 +49,10 @@ Singleton {
         property var  times: ({})
     }
 
-    // Emitted when a notification arrives whose source window sits on workspace
-    // wsId, so the Workspaces widget can pulse that dot. critical picks the tint.
     signal sourcePulse(int wsId, bool critical)
 
     onDndChanged: { if (!dnd && missedCount !== 0) missedCount = 0 }
 
-    // ── Fullscreen silence ────────────────────────────────────────────────
-    // While the focused window is fullscreen, non-critical notifications skip
-    // the popup and archive straight to history. Event-driven: the relevant
-    // Hyprland events refresh the toplevel cache, then the active window's
-    // fullscreen flag is re-read — this also covers switching workspaces away
-    // from (or back to) a fullscreen window, which fires no fullscreen event.
     property bool _fullscreenActive: false
     readonly property bool fullscreenSilenced: ShellSettings.notifFullscreenSilence && _fullscreenActive
 
@@ -113,6 +100,7 @@ Singleton {
     function _historyEntry(e): var {
         if (!e || !e.notification) return null
         return {
+            id:      e.id,
             appName: e.notification.appName || "",
             summary: root.plainText(e.notification.summary),
             body:    root.plainText(e.notification.body),
@@ -172,7 +160,9 @@ Singleton {
     }
 
     function removeFromHistory(entry): void {
-        const idx = (typeof entry === "number") ? entry : history.indexOf(entry)
+        const idx = (typeof entry === "number")
+            ? entry
+            : history.findIndex(h => h.time === entry.time && h.summary === entry.summary)
         if (idx < 0 || idx >= history.length) return
         const next = [...history]
         const id = next.splice(idx, 1)[0]?.id
@@ -185,8 +175,7 @@ Singleton {
         if (!n) return
         const entry = root._historyEntry(n)
         root._markClosing(notifId, n.notification)
-        // Honour the freedesktop close reason: a timeout expires, a user action
-        // dismisses. Both fire `closed`, consumed by _markClosing above.
+        // expire = timed out, dismiss = user closed
         if (expired === true) n.notification.expire()
         else                  n.notification.dismiss()
         if (entry) history = [entry, ...history].slice(0, _maxHistory)
@@ -218,9 +207,6 @@ Singleton {
             history = [...entries, ...history].slice(0, _maxHistory)
     }
 
-    // Rebuild the active list from the server's kept-on-reload notifications, so
-    // activeCount / dismiss-all stay correct across a shell reload instead of
-    // resetting to zero while the popups live on.
     Component.onCompleted: {
         root._ensurePersistentState()
         const vals = notifServer.trackedNotifications.values ?? []
@@ -235,8 +221,7 @@ Singleton {
             n.closed.connect(() => root._onClosed(n.id, n))
         }
         if (rebuilt.length > 0) root.list = rebuilt
-        // _seen/_times persist across reloads; drop ids whose notifications
-        // closed while the shell was down, or they accumulate forever.
+        // purge ids that closed while the shell was down
         for (const id in root._seen)  if (!live[id]) delete root._seen[id]
         for (const id in root._times) if (!live[id]) delete root._times[id]
     }
@@ -247,9 +232,7 @@ Singleton {
         bodySupported:       true
         bodyMarkupSupported: false
         actionsSupported:    true
-        // Advertised to match what the cards actually do: images render (card
-        // iconSource), and notifications persist to history across reloads/DND.
-        // Apps query GetCapabilities, so an unset flag makes them downgrade.
+        // unset flag makes apps downgrade their content
         imageSupported:       true
         persistenceSupported: true
 
@@ -260,7 +243,6 @@ Singleton {
                 n.tracked = false
                 return
             }
-            // Fullscreen silence: no popup, but archived so nothing is lost.
             if (root.fullscreenSilenced && n.urgency !== NotificationUrgency.Critical) {
                 root.history = [{
                     appName: n.appName || "",
@@ -278,8 +260,6 @@ Singleton {
             root.lastCritical = n.urgency === NotificationUrgency.Critical
 
             const existing = root.list.findIndex(e => e.id === n.id)
-            // Reuse of the same object (in-place update) is already tracked and
-            // wired; only a new object needs the old torn down + a fresh handler.
             let isNewObject = true
             if (existing >= 0) {
                 const old = root.list[existing].notification
@@ -294,10 +274,8 @@ Singleton {
             } else {
                 root.list = [...root.list, { notification: n, id: n.id, time: root._times[n.id] }]
             }
-            // Reap our state if the app/server closes this one later. Connect once
-            // per object; a stacked handler would fire _onClosed twice for one close.
+            // connect once per object — stacked handlers fire _onClosed twice
             if (isNewObject) n.closed.connect(() => root._onClosed(n.id, n))
-            // Track last so the popup delegate is created after time/list are ready.
             n.tracked = true
 
             if (ShellSettings.wsNotifPulse) {

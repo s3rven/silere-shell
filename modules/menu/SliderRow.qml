@@ -47,10 +47,10 @@ Item {
     Accessible.role: Accessible.Slider
     Accessible.name: root.label
     Accessible.description: root.displayValue
-    Keys.onLeftPressed:  root._nudge(-1)
-    Keys.onDownPressed:  root._nudge(-1)
-    Keys.onRightPressed: root._nudge(1)
-    Keys.onUpPressed:    root._nudge(1)
+    Keys.onLeftPressed:  event => { root._nudge(-1); event.accepted = true }
+    Keys.onDownPressed:  event => { root._nudge(-1); event.accepted = true }
+    Keys.onRightPressed: event => { root._nudge(1);  event.accepted = true }
+    Keys.onUpPressed:    event => { root._nudge(1);  event.accepted = true }
 
     HoverHandler { id: _rowHover; enabled: root.enabled; cursorShape: root.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor }
 

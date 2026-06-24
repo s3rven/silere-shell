@@ -15,9 +15,6 @@ PanelWindow {
     readonly property int _cardW: 320
     // Reserve so a floating card's drop shadow isn't clipped at the window edge.
     readonly property int _shadowPad: (ShellSettings.barFloating && ShellSettings.barShadow) ? 16 : 0
-    // The side gap a floating bar leaves (mirrors Bar.qml's surfaceWidth math); the
-    // card's outer edge lines up with the bar's edge instead of hugging the screen
-    // corner. Plain margin when the bar isn't floating.
     readonly property real _barSideGap: ShellSettings.barFloating && targetScreen
         ? 4 * Math.round(targetScreen.width * (1.0 - ShellSettings.barWidth) / 8)
         : 0
@@ -26,14 +23,8 @@ PanelWindow {
     implicitWidth:  _cardW + 24 + _shadowPad
     implicitHeight: Math.max(1, outerCol.implicitHeight + 12 + _shadowPad)
 
-    // Unmap the surface while nothing is showing (same pattern as MenuWindow /
-    // OsdWindow) instead of holding a mapped transparent strip at rest. Safe
-    // across exit animations: a card's peel finishes before dismissRequested
-    // shrinks the model, so the count hits zero only after the last card is out.
     visible: ShellSettings.notifPopupEnabled && Notifications.activeCount > 0
 
-    // Corner, Settings → Notify. Drives the window anchor, the card alignment, and
-    // which way cards slide in (centre fades with no slide).
     readonly property string _pos:     ShellSettings.notifPosition
     readonly property bool   _left:     _pos === "top-left"
     readonly property bool   _center:   _pos === "top-center"
@@ -60,9 +51,6 @@ PanelWindow {
     }
     mask: Region { item: outerCol }
 
-    // When > 0, we're in dismiss-all mode: each card animates out individually,
-    // and only after the last one fires dismissRequested do we clear the model.
-    // Set after counting non-null delegates to avoid a stuck counter if itemAt returns null.
     property int _pendingDismissAll: 0
     property var _pendingDismissItems: []
 
@@ -85,8 +73,6 @@ PanelWindow {
             Notifications.dismissObject(items[i].id, items[i].notification, items[i].expired)
     }
 
-    // Dismiss-all plays as a top-to-bottom cascade, one card peels off per tick
-    // instead of all at once. reduceMotion skips straight to a bulk clear.
     property var _cascadeItems: []
     property int _cascadeIdx:   0
     Timer {
@@ -99,7 +85,6 @@ PanelWindow {
                 running = false
                 win._cascadeItems = []
                 // Don't clear the model here — each card finishes its own peel.
-                // The fallback covers a card that never reports back.
                 if (win._pendingDismissAll > 0) _cascadeSafety.restart()
                 return
             }
@@ -109,8 +94,7 @@ PanelWindow {
         }
     }
 
-    // Safety net: if the per-card dismissRequested chain doesn't drain the
-    // counter, clear what's left. Outlasts a card's exit animation.
+    // safety: clear stragglers if dismissRequested chain doesn't drain the counter
     Timer {
         id: _cascadeSafety
         interval: Math.max(400, Motion.ms(280) + 150)
@@ -126,8 +110,6 @@ PanelWindow {
             bottom: win._barBottom ? parent.bottom : undefined
             right:  parent.right
             left:   parent.left
-            // Shadow pad goes on the far edge so the drop shadow has room to bleed
-            // inside the window rather than clipping at the bar-facing edge.
             topMargin:    win._barBottom ? 0 : 6
             bottomMargin: win._barBottom ? 6 : 0
             rightMargin: (win._left || win._center) ? 0 : win._shadowPad
@@ -164,8 +146,7 @@ PanelWindow {
                 width:  _pillRow.implicitWidth + 22
                 radius: height / 2          // full pill, not a slightly-rounded box
                 antialiasing: true
-                // Press darkens the fill/border rather than scaling, scaling the
-                // pill would blur the NativeRendering text inside it.
+                // press darkens rather than scales — scaling blurs NativeRendering text
                 color: _dismissPress.pressed
                     ? Theme.withAlpha(Theme.error, 0.22)
                     : _pillHover.hovered

@@ -40,6 +40,8 @@ Pill {
         PauseAnimation  { duration: 300 }
     }
 
+    HoverHandler { cursorShape: Qt.PointingHandCursor; enabled: root.interactive }
+
     pressed: _tap.pressed
     onActivated: ShellUpdate.pending ? ShellUpdate.apply() : ShellUpdate.check()
     TapHandler {

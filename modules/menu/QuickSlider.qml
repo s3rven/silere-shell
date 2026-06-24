@@ -28,10 +28,10 @@ Item {
     Accessible.role: Accessible.Slider
     Accessible.name: root.accessibleName
     Accessible.description: root.valueText
-    Keys.onLeftPressed:  root._nudge(-1)
-    Keys.onDownPressed:  root._nudge(-1)
-    Keys.onRightPressed: root._nudge(1)
-    Keys.onUpPressed:    root._nudge(1)
+    Keys.onLeftPressed:  event => { root._nudge(-1); event.accepted = true }
+    Keys.onDownPressed:  event => { root._nudge(-1); event.accepted = true }
+    Keys.onRightPressed: event => { root._nudge(1);  event.accepted = true }
+    Keys.onUpPressed:    event => { root._nudge(1);  event.accepted = true }
 
     Text {
         id: _g

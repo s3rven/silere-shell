@@ -671,6 +671,10 @@ Item {
                     NumberAnimation { target: ws; property: "scale"; to: 1.0;  duration: Motion.ms(145); easing.type: Easing.OutCubic }
                 }
 
+                Accessible.role: Accessible.Button
+                Accessible.name: "Workspace " + wsId
+                Accessible.description: active ? "Current workspace" : (exists ? "Switch to workspace" : "Empty workspace")
+
                 HoverHandler { id: _hover; cursorShape: Qt.PointingHandCursor }
 
                 TapHandler {

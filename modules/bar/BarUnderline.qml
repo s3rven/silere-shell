@@ -390,7 +390,7 @@ Item {
             }
         }
 
-        readonly property int  _tempPulseDur: 700
+        readonly property int  _tempPulseDur: Motion.ms(700)
         readonly property real _tempPeak:     0.66
         readonly property real _tempFloor:    0.24
 

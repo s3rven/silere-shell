@@ -210,6 +210,17 @@ Item {
     // hit target, not just the one-line title.
     HoverHandler { id: _rootHover; cursorShape: Qt.PointingHandCursor }
 
+    activeFocusOnTab: root.show
+    Accessible.role: Accessible.Button
+    Accessible.name: Media.title.length > 0 ? "Now playing: " + Media.title : "Media"
+    Accessible.description: "Activate to toggle playback. Scroll to skip tracks."
+
+    Keys.onSpacePressed:  event => { Media.togglePlay(); event.accepted = true }
+    Keys.onReturnPressed: event => { Media.togglePlay(); event.accepted = true }
+    Keys.onEnterPressed:  event => { Media.togglePlay(); event.accepted = true }
+    Keys.onLeftPressed:   event => { Media.previous();   event.accepted = true }
+    Keys.onRightPressed:  event => { Media.next();       event.accepted = true }
+
     // Left-click toggles playback; middle-click jumps to the player's window.
     TapHandler {
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
