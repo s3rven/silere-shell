@@ -22,27 +22,12 @@ Item {
         : 0
     transform: Scale { origin.y: _ul.height / 2; yScale: _ul.atBottom ? -1 : 1 }
 
-    Rectangle {
+    // Non-visual host for all glow state, sources, animations and previews; the
+    // strips below read its properties. (It used to also draw the flat edge line,
+    // now broken out as _edgeLine.)
+    Item {
         id: _lineEffect
-
-        anchors.left:   parent.left
-        anchors.right:  parent.right
-        anchors.leftMargin:  _ul.wrapRadius
-        anchors.rightMargin: _ul.wrapRadius
-        anchors.bottom: parent.bottom
-        height: 1
-        antialiasing: false
-        visible: !_ul.wrapFloating && _glowEnabled && opacity > 0.001
-        opacity: Math.min(_ceiling, _combined * ShellSettings.glowStrength)
-
-        gradient: Gradient {
-            orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: "transparent" }
-            GradientStop { position: Math.max(0.01, _lineEffect._sweepCenter - _lineEffect._sweepSpread); color: _lineEffect._stopColorMid }
-            GradientStop { position: _lineEffect._sweepCenter; color: _lineEffect._stopColor }
-            GradientStop { position: Math.min(0.99, _lineEffect._sweepCenter + _lineEffect._sweepSpread); color: _lineEffect._stopColorMid }
-            GradientStop { position: 1.0; color: "transparent" }
-        }
+        anchors.fill: parent
 
         property real _notifGlow:   0
         readonly property real _batteryGlow: (_glowEnabled && ShellSettings.underlineBattGlow)
@@ -405,6 +390,23 @@ Item {
         }
     }
 
+    // flat edge line on the screen-facing side; non-floating bars only
+    GlowLine {
+        anchors.left:        parent.left
+        anchors.right:       parent.right
+        anchors.leftMargin:  _ul.wrapRadius
+        anchors.rightMargin: _ul.wrapRadius
+        anchors.bottom:      parent.bottom
+        visible: !_ul.wrapFloating && _lineEffect._glowEnabled && opacity > 0.001
+        opacity: Math.min(_lineEffect._ceiling, _lineEffect._combined * ShellSettings.glowStrength)
+        peak:    _lineEffect._stopColor
+        edge:    _lineEffect._stopColorMid
+        center:  _lineEffect._sweepCenter
+        spread:  _lineEffect._sweepSpread
+        loClamp: 0.01
+        hiClamp: 0.99
+    }
+
     // event-only unless Always visible is enabled, matching regular glow semantics
     Rectangle {
         id: _floatingRim
@@ -421,34 +423,24 @@ Item {
     }
 
     // insets past the corner arcs and fades out at both ends, no mask/FBO needed
-    Rectangle {
+    GlowLine {
         id: _floatingLine
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.leftMargin: _ul.wrapRadius
         anchors.rightMargin: _ul.wrapRadius
         anchors.bottom: parent.bottom
-        height: 1
-        antialiasing: false
         visible: _ul.wrapFloating && _lineEffect._glowEnabled && opacity > 0.001
         opacity: Math.min(0.72,
             (_lineEffect._combined * 0.58 + _lineEffect._bloomBoost * 0.28)
             * ShellSettings.glowStrength)
-
-        gradient: Gradient {
-            orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: "transparent" }
-            GradientStop {
-                position: Math.max(0.08, _lineEffect._sweepCenter - Math.max(0.20, _lineEffect._sweepSpread))
-                color: _lineEffect._stopColorMid
-            }
-            GradientStop { position: _lineEffect._sweepCenter; color: _lineEffect._stopColor }
-            GradientStop {
-                position: Math.min(0.92, _lineEffect._sweepCenter + Math.max(0.20, _lineEffect._sweepSpread))
-                color: _lineEffect._stopColorMid
-            }
-            GradientStop { position: 1.0; color: "transparent" }
-        }
+        peak:    _lineEffect._stopColor
+        edge:    _lineEffect._stopColorMid
+        center:  _lineEffect._sweepCenter
+        // a wider minimum fan than the flat line keeps the floating glow soft
+        spread:  Math.max(0.20, _lineEffect._sweepSpread)
+        loClamp: 0.08
+        hiClamp: 0.92
     }
 
     // six 1px gradient strips approximate a vertical halo without MultiEffect/offscreen targets
@@ -461,7 +453,7 @@ Item {
             { y: 4, c: 0.08, b: 0.11 },
             { y: 5, c: 0.04, b: 0.07 }
         ]
-        Rectangle {
+        GlowLine {
             required property var modelData
             anchors.left: parent.left
             anchors.right: parent.right
@@ -469,26 +461,14 @@ Item {
             anchors.rightMargin: _ul.wrapRadius
             anchors.bottom: parent.bottom
             anchors.bottomMargin: modelData.y
-            height: 1
-            antialiasing: false
             visible: _lineEffect._glowEnabled && opacity > 0.001
             opacity: Math.min(0.84,
                 (_lineEffect._combined * modelData.c + _lineEffect._bloomBoost * modelData.b)
                 * ShellSettings.glowStrength)
-            gradient: Gradient {
-                orientation: Gradient.Horizontal
-                GradientStop { position: 0.0; color: "transparent" }
-                GradientStop {
-                    position: Math.max(0.02, _lineEffect._sweepCenter - _lineEffect._sweepSpread)
-                    color: _lineEffect._stopColorMid
-                }
-                GradientStop { position: _lineEffect._sweepCenter; color: _lineEffect._stopColor }
-                GradientStop {
-                    position: Math.min(0.98, _lineEffect._sweepCenter + _lineEffect._sweepSpread)
-                    color: _lineEffect._stopColorMid
-                }
-                GradientStop { position: 1.0; color: "transparent" }
-            }
+            peak:   _lineEffect._stopColor
+            edge:   _lineEffect._stopColorMid
+            center: _lineEffect._sweepCenter
+            spread: _lineEffect._sweepSpread
         }
     }
 
