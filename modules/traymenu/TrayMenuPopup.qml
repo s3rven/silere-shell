@@ -22,6 +22,9 @@ PanelWindow {
     // holds the last handle through the close fade so rows don't collapse early
     property var _activeMenu: null
     onVisibleChanged: if (!visible) win._activeMenu = null
+    // lazy-loaded after openAt() already set the handle, so the change signal
+    // fired before this popup existed; seed from the current state on creation
+    Component.onCompleted: if (TrayMenuState.menuHandle !== null) win._activeMenu = TrayMenuState.menuHandle
     Connections {
         target: TrayMenuState
         function onMenuHandleChanged() {
