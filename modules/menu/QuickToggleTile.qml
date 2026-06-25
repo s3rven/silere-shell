@@ -61,10 +61,10 @@ Rectangle {
         ? Theme.mix(Theme.surface, accentColor,   0.34)
         : Theme.menuControlLine
 
-    Behavior on color        { ColorAnimation  { duration: Motion.medium } }
-    Behavior on border.color { ColorAnimation  { duration: Motion.medium } }
-    Behavior on opacity      { NumberAnimation { duration: Motion.normal } }
-    Behavior on scale        { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+    Behavior on color        { enabled: !ShellSettings.reduceMotion; ColorAnimation  { duration: Motion.medium } }
+    Behavior on border.color { enabled: !ShellSettings.reduceMotion; ColorAnimation  { duration: Motion.medium } }
+    Behavior on opacity      { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal } }
+    Behavior on scale        { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
     HoverHandler {
         id: _hover
@@ -88,7 +88,7 @@ Rectangle {
         radius: 1.5
         antialiasing: true
         color: root.accentColor
-        Behavior on width { NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+        Behavior on width { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: root.active ? Easing.OutCubic : Easing.InCubic } }
     }
 
     Item {
@@ -247,7 +247,7 @@ Rectangle {
             renderType: Text.NativeRendering
             rotation: root.expanded ? 180 : 0
             transformOrigin: Item.Center
-            Behavior on rotation { NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+            Behavior on rotation { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
             Behavior on color    { ColorAnimation  { duration: Motion.fast } }
         }
 

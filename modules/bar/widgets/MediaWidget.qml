@@ -47,7 +47,7 @@ Item {
 
     Behavior on implicitWidth {
         enabled: !ShellSettings.reduceMotion
-        NumberAnimation { duration: Motion.ms(220); easing.type: Easing.OutCubic }
+        NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
     }
 
     // Thin accent baseline — always-on playing indicator that requires no
@@ -62,7 +62,7 @@ Item {
         // as any player is connected, hides only when the media widget itself hides.
         opacity: !root.show || (_vizLoader.item ? _vizLoader.item.visible : false) || !ShellSettings.mediaProgress ? 0.0 : Media.playing ? 0.60 : 0.28
         visible: opacity > 0.01
-        Behavior on opacity { NumberAnimation { duration: Motion.medium } }
+        Behavior on opacity { NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
         gradient: Gradient {
             orientation: Gradient.Horizontal
             GradientStop { position: 0.0;  color: "transparent" }
@@ -124,7 +124,7 @@ Item {
             elide: ShellSettings.reduceMotion ? Text.ElideRight : Text.ElideNone
 
             opacity: Media.playing ? 1.0 : 0.72
-            Behavior on opacity { NumberAnimation { duration: Motion.medium } }
+            Behavior on opacity { NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
 
             // Paused "breathing": a slow opacity sway — a living-but-resting cue
             // that a flat dim can't give. Only while paused + visible + motion on;

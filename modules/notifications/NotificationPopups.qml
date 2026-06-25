@@ -141,8 +141,8 @@ PanelWindow {
                 y:       _dismissBar.shown ? 4 : 14
                 opacity: _dismissBar.shown ? 1.0 : 0.0
 
-                Behavior on y       { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
-                Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+                Behavior on y       { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+                Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
 
                 height: 24
                 width:  _pillRow.implicitWidth + 22

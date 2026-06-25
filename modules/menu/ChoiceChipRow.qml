@@ -34,7 +34,7 @@ Item {
     width:  parent ? parent.width : 0
     height: _stacked ? 72 : 44
     opacity: rowEnabled ? 1.0 : 0.45
-    Behavior on opacity { NumberAnimation { duration: Motion.medium } }
+    Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium } }
 
     readonly property int _activeIndex: {
         for (let i = 0; i < model.length; i++) {
@@ -159,9 +159,9 @@ Item {
 
             Behavior on x        { enabled: _segContainer._animReady && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.width; easing.type: Easing.OutQuart } }
             Behavior on width    { enabled: _segContainer._animReady && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.width; easing.type: Easing.OutQuart } }
-            Behavior on opacity  { NumberAnimation { duration: Motion.fast } }
-            Behavior on color        { ColorAnimation { duration: Motion.fast } }
-            Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+            Behavior on opacity  { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
+            Behavior on color        { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+            Behavior on border.color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
         }
 
         Row {

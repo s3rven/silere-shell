@@ -284,8 +284,8 @@ PanelWindow {
                                                 && ShellSettings.osdShimmer && !ShellSettings.reduceMotion
                                             paused: card.muted
                                             loops: Animation.Infinite
-                                            NumberAnimation { from: 0; to: 1; duration: 900; easing.type: Easing.Linear }
-                                            PauseAnimation  { duration: 800 }
+                                            NumberAnimation { from: 0; to: 1; duration: Motion.ms(900); easing.type: Easing.Linear }
+                                            PauseAnimation  { duration: Motion.ms(800) }
                                         }
 
                                         Behavior on width {

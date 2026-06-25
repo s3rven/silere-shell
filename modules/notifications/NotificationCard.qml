@@ -193,8 +193,8 @@ Item {
         running: card._showCountdown && card._timeoutProgress < 0.18 && !_cardHover.hovered && !card.timeoutPaused
         loops:   Animation.Infinite
         onRunningChanged: if (!running) card._countdownPulse = 1.0
-        NumberAnimation { target: card; property: "_countdownPulse"; to: 0.5; duration: 420; easing.type: Easing.InOutSine }
-        NumberAnimation { target: card; property: "_countdownPulse"; to: 1.0; duration: 420; easing.type: Easing.InOutSine }
+        NumberAnimation { target: card; property: "_countdownPulse"; to: 0.5; duration: Motion.ms(420); easing.type: Easing.InOutSine }
+        NumberAnimation { target: card; property: "_countdownPulse"; to: 1.0; duration: Motion.ms(420); easing.type: Easing.InOutSine }
     }
 
     HoverHandler {
@@ -277,7 +277,7 @@ Item {
             ? Theme.mix(Theme.popup, Theme.error, _cardHover.hovered ? 0.17 : 0.12)
             : (_cardHover.hovered ? Theme.mix(Theme.popup, Theme.subtext, 0.06) : Theme.popup)
 
-        Behavior on color { ColorAnimation { duration: Motion.medium } }
+        Behavior on color { ColorAnimation { duration: Motion.fast } }
 
         ClippingRectangle {
             visible: card.hasIcon
@@ -340,7 +340,7 @@ Item {
                     font.weight:    Font.DemiBold
                     renderType:     Text.NativeRendering
                     elide:          Text.ElideRight
-                    Behavior on color { ColorAnimation { duration: Motion.medium } }
+                    Behavior on color { ColorAnimation { duration: Motion.fast } }
                 }
             }
 
@@ -379,7 +379,7 @@ Item {
                         color:  Theme.accent
                         Behavior on width {
                             enabled: !ShellSettings.reduceMotion
-                            NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
+                            NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
                         }
                     }
                 }
@@ -505,13 +505,13 @@ Item {
 
         SequentialAnimation {
             id: _arrivalShimmer
-            PauseAnimation { duration: 120 }
+            PauseAnimation { duration: Motion.ms(120) }
             ParallelAnimation {
-                NumberAnimation { target: _shimmer; property: "x"; from: -_shimmer.width; to: cardRect.width + _shimmer.width; duration: 620; easing.type: Easing.Linear }
+                NumberAnimation { target: _shimmer; property: "x"; from: -_shimmer.width; to: cardRect.width + _shimmer.width; duration: Motion.ms(620); easing.type: Easing.Linear }
                 SequentialAnimation {
-                    NumberAnimation { target: _shimmer; property: "opacity"; from: 0; to: 1;   duration: 160; easing.type: Easing.OutCubic }
-                    PauseAnimation  { duration: 260 }
-                    NumberAnimation { target: _shimmer; property: "opacity"; to: 0;            duration: 300; easing.type: Easing.InCubic }
+                    NumberAnimation { target: _shimmer; property: "opacity"; from: 0; to: 1;   duration: Motion.ms(160); easing.type: Easing.OutCubic }
+                    PauseAnimation  { duration: Motion.ms(260) }
+                    NumberAnimation { target: _shimmer; property: "opacity"; to: 0;            duration: Motion.ms(300); easing.type: Easing.InCubic }
                 }
             }
             ScriptAction { script: { _shimmer.opacity = 0; _shimmer.x = -_shimmer.width } }

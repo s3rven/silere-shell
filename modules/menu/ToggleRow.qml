@@ -49,7 +49,7 @@ Item {
     implicitHeight: height
 
     opacity: _canToggle ? 1.0 : 0.45
-    Behavior on opacity { NumberAnimation { duration: Motion.medium } }
+    Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium } }
 
     activeFocusOnTab: _canToggle
     Accessible.role: Accessible.CheckBox
@@ -217,7 +217,7 @@ Item {
                     yScale: 1.0
                 }
 
-                Timer { id: _knobDisarm; interval: Motion.fast + Motion.medium + 80; onTriggered: _knob._animateX = false }
+                Timer { id: _knobDisarm; interval: Motion.fast + Motion.medium + Motion.ms(80); onTriggered: _knob._animateX = false }
 
                 Behavior on x     { enabled: _knob._animateX && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutQuart } }
                 Behavior on color { ColorAnimation { duration: Motion.fast } }
