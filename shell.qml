@@ -10,6 +10,7 @@ import "modules/menu"
 import "modules/calendar"
 import "modules/traymenu"
 import "services"
+import "config"
 
 ShellRoot {
     id: root
@@ -143,7 +144,7 @@ ShellRoot {
             }
         }
     }
-    Timer { id: _menuUnload; interval: 300; onTriggered: _menuLoader.active = false }
+    Timer { id: _menuUnload; interval: Math.max(80, Motion.ms(220) + 80); onTriggered: _menuLoader.active = false }
 
     LazyLoader {
         id: _calendarLoader
@@ -162,7 +163,7 @@ ShellRoot {
             }
         }
     }
-    Timer { id: _calendarUnload; interval: 300; onTriggered: _calendarLoader.active = false }
+    Timer { id: _calendarUnload; interval: Math.max(80, Motion.ms(210) + 80); onTriggered: _calendarLoader.active = false }
 
     LazyLoader {
         id: _trayMenuLoader
@@ -181,5 +182,5 @@ ShellRoot {
             }
         }
     }
-    Timer { id: _trayMenuUnload; interval: 300; onTriggered: _trayMenuLoader.active = false }
+    Timer { id: _trayMenuUnload; interval: Math.max(80, Motion.ms(210) + 80); onTriggered: _trayMenuLoader.active = false }
 }

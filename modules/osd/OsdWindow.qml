@@ -87,9 +87,7 @@ PanelWindow {
                     readonly property int pillH: 34
                     readonly property int chromeW: hasBar ? 216 : 70
                     readonly property int pillW: Math.max(268, Math.min(520, chromeW + Math.ceil(_labelMetrics.advanceWidth) + 2))
-                    readonly property real pillRadius: (ShellSettings.barFloating && ShellSettings.barCornerStyle === "round")
-                        ? Math.min(ShellSettings.barRadius, pillH / 2)
-                        : 0
+                    readonly property real pillRadius: Math.min(Theme.radiusPanel, pillH / 2)
                     readonly property real _hiddenSlide: osd._bottom ? 7 : -7
 
                     property bool _ready: false
@@ -185,12 +183,23 @@ PanelWindow {
                         Loader {
                             active: ShellSettings.barFloating && ShellSettings.barShadow
                             anchors.fill: parent
-                            sourceComponent: RectangularShadow {
+                            sourceComponent: Item {
                                 anchors.fill: parent
-                                radius: card.pillRadius
-                                blur: 12
-                                offset: Qt.vector2d(0, osd._bottom ? -3 : 3)
-                                color: Qt.rgba(0, 0, 0, Math.min(0.55, 0.35 * ShellSettings.barShadowStrength))
+                                readonly property real strength: ShellSettings.barShadowStrength
+                                RectangularShadow {
+                                    anchors.fill: parent
+                                    radius: card.pillRadius
+                                    blur: 14
+                                    offset: Qt.vector2d(0, osd._bottom ? -2 : 2)
+                                    color: Qt.rgba(0, 0, 0, Math.min(0.28, 0.13 * parent.strength))
+                                }
+                                RectangularShadow {
+                                    anchors.fill: parent
+                                    radius: card.pillRadius
+                                    blur: 7
+                                    offset: Qt.vector2d(0, osd._bottom ? -5 : 5)
+                                    color: Qt.rgba(0, 0, 0, Math.min(0.44, 0.26 * parent.strength))
+                                }
                             }
                         }
 

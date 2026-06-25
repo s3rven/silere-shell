@@ -40,6 +40,7 @@ Item {
 
     readonly property int groupStart: Math.floor((activeId - 1) / effectiveWsCount) * effectiveWsCount + 1
     readonly property int groupEnd:   groupStart + effectiveWsCount - 1
+    readonly property color _trailCoreClear: Qt.rgba(1, 1, 1, 0)
 
     // id → workspace lookup, rebuilt on change for O(1) delegate access
     readonly property var _wsMap: {
@@ -53,6 +54,16 @@ Item {
     }
 
     function wsObjFor(id) { return root._wsMap[id] ?? null }
+    function clearColor(c: color): color { return Qt.rgba(c.r, c.g, c.b, 0) }
+    function appsFor(id) { return root._wsApps[id] ?? [] }
+    function occupied(id: int): bool {
+        const ws = root.wsObjFor(id)
+        return ws !== null || root.appsFor(id).length > 0
+    }
+    function urgent(id: int): bool {
+        const ws = root.wsObjFor(id)
+        return ws !== null && ws.urgent
+    }
 
     // Per-workspace app icons (only when wsShowAppIcons is on). Window class →
     // desktop-entry icon, memoised so each class resolves once. Recomputes only
@@ -184,7 +195,7 @@ Item {
     // the diamond/trail track this.
     function _btnW(wsId: int): int {
         if (ShellSettings.wsShowAppIcons && wsId !== activeId) {
-            const apps = _wsApps[wsId]
+            const apps = root.appsFor(wsId)
             if (apps && apps.length > 0)
                 return apps.length * _iconSz + (apps.length - 1) * 4 + 10
         }
@@ -311,8 +322,8 @@ Item {
         width: _gap + height
         gradient: Gradient {
             orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: trail._rightward ? "transparent" : diamond.tint }
-            GradientStop { position: 1.0; color: trail._rightward ? diamond.tint : "transparent" }
+            GradientStop { position: 0.0; color: trail._rightward ? root.clearColor(diamond.tint) : diamond.tint }
+            GradientStop { position: 1.0; color: trail._rightward ? diamond.tint : root.clearColor(diamond.tint) }
         }
         opacity: _strength * 0.93
         visible: opacity > 0.01
@@ -328,8 +339,8 @@ Item {
         width: trail.width
         gradient: Gradient {
             orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: trail._rightward ? "transparent" : diamond.tint }
-            GradientStop { position: 1.0; color: trail._rightward ? diamond.tint : "transparent" }
+            GradientStop { position: 0.0; color: trail._rightward ? root.clearColor(diamond.tint) : diamond.tint }
+            GradientStop { position: 1.0; color: trail._rightward ? diamond.tint : root.clearColor(diamond.tint) }
         }
         opacity: trail._strength * 0.20
         visible: opacity > 0.01
@@ -348,8 +359,8 @@ Item {
         width: trail.width
         gradient: Gradient {
             orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: trail._rightward ? "transparent" : Qt.rgba(1, 1, 1, 0.95) }
-            GradientStop { position: 1.0; color: trail._rightward ? Qt.rgba(1, 1, 1, 0.95) : "transparent" }
+            GradientStop { position: 0.0; color: trail._rightward ? root._trailCoreClear : Qt.rgba(1, 1, 1, 0.95) }
+            GradientStop { position: 1.0; color: trail._rightward ? Qt.rgba(1, 1, 1, 0.95) : root._trailCoreClear }
         }
         opacity: trail._strength * 0.88
         visible: opacity > 0.01
@@ -635,13 +646,13 @@ Item {
                 readonly property int  wsId:    modelData
                 readonly property bool active:  root.monitorReady && root.activeId === wsId
                 readonly property var  wsObj:   root.wsObjFor(wsId)
-                readonly property bool exists:  wsObj !== null
-                readonly property bool urgent:  exists && wsObj.urgent
+                readonly property var  apps:    root.appsFor(wsId)
+                readonly property bool occupied: root.occupied(wsId)
+                readonly property bool urgent:  root.urgent(wsId)
                 readonly property bool hovered: _hover.hovered
                 // App icons shown on inactive occupied workspaces (the active one
                 // keeps its diamond). Empty/active fall back to the number/dot.
-                readonly property var  _apps:      root._wsApps[wsId] ?? []
-                readonly property bool _showIcons: ShellSettings.wsShowAppIcons && !active && _apps.length > 0
+                readonly property bool _showIcons: ShellSettings.wsShowAppIcons && !active && apps.length > 0
 
                 width:   root._btnW(wsId)
                 height:  root.btnH
@@ -675,7 +686,10 @@ Item {
 
                 Accessible.role: Accessible.Button
                 Accessible.name: "Workspace " + wsId
-                Accessible.description: active ? "Current workspace" : (exists ? "Switch to workspace" : "Empty workspace")
+                Accessible.description: active ? "Current workspace"
+                    : urgent ? "Urgent workspace"
+                    : occupied ? "Occupied workspace"
+                    : "Empty workspace"
 
                 HoverHandler { id: _hover; cursorShape: Qt.PointingHandCursor }
 
@@ -720,7 +734,7 @@ Item {
                 property real _pulseOpacity: 1.0
                 property real _shakeX:       0
                 property real _dotFade: 1.0
-                property real _dotAlpha: urgent ? 0.95 : exists ? 0.65 : 0.28
+                property real _dotAlpha: urgent ? 0.95 : occupied ? 0.65 : 0.28
                 Behavior on _dotAlpha { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
 
                 // Notification-source pulse: a soft accent (or error) wash behind
@@ -813,7 +827,7 @@ Item {
                     scale:   ws.active ? 0.6 : (ws.hovered ? 1.12 : 1)
                     color:   ws.urgent
                         ? Theme.warning
-                        : (ws.exists
+                        : (ws.occupied
                             ? (ws.hovered ? Theme.accent : Theme.withAlpha(Theme.text, 0.85))
                             : (ws.hovered ? Theme.withAlpha(Theme.accent, 0.65) : Theme.withAlpha(Theme.subtext, 0.45)))
                     font.pixelSize: Settings.fontSize - 1
@@ -828,7 +842,7 @@ Item {
                 Rectangle {
                     anchors.centerIn: parent
                     transform: Translate { x: ws._shakeX }
-                    width:  ws.urgent ? 6 : (ws.exists ? 5 : 4)
+                    width:  ws.urgent ? 6 : (ws.occupied ? 5 : 4)
                     height: width
                     radius: width / 2
                     antialiasing: true
@@ -855,7 +869,7 @@ Item {
                     Repeater {
                         // _wsApps may stay cached while icons are off. Avoid
                         // retaining image/effect delegates for invisible rows.
-                        model: ws._showIcons ? ws._apps : []
+                        model: ws._showIcons ? ws.apps : []
                         delegate: Item {
                             id: appIcon
                             required property var modelData

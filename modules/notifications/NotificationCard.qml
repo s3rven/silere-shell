@@ -14,6 +14,7 @@ Item {
     required property var notification
     required property int notifId
     required property var createdAt
+    property bool timeoutPaused: false
 
     signal dismissRequested(int notifId, var notification, bool expired)
 
@@ -63,9 +64,7 @@ Item {
     readonly property bool hasBody:       bodyText.length > 0
     readonly property bool isCritical: notification.urgency === NotificationUrgency.Critical
 
-    readonly property real _cardRadius: (ShellSettings.barFloating && ShellSettings.barCornerStyle === "round")
-        ? Math.min(ShellSettings.barRadius, ShellSettings.barHeight / 2)
-        : 0
+    readonly property real _cardRadius: Math.min(Theme.radiusPanel, ShellSettings.barHeight / 2)
 
     function dismiss(expired): void {
         if (!card.enabled) return
@@ -139,6 +138,16 @@ Item {
     // accumulated hover time, added back so timeout doesn't count time spent hovering
     property real _hoverPausedMs: 0
     property real _hoverStartMs:  0
+    property real _hiddenStartMs: 0
+
+    onTimeoutPausedChanged: {
+        if (timeoutPaused) {
+            if (_hiddenStartMs <= 0) _hiddenStartMs = Date.now()
+        } else if (_hiddenStartMs > 0) {
+            _hoverPausedMs += Date.now() - _hiddenStartMs
+            _hiddenStartMs = 0
+        }
+    }
 
     Timer {
         id: _autoClose
@@ -152,14 +161,14 @@ Item {
         }
         // anchor to arrival time from model, not delegate creation, survives list rebuilds
         interval: Math.max(400, fullInterval - (Date.now() - card._createdAt) + card._hoverPausedMs)
-        running:  shouldRun && !_cardHover.hovered
+        running:  shouldRun && !_cardHover.hovered && !card.timeoutPaused
         onTriggered: card.dismiss(true)
     }
 
     property real _timeoutProgress: 1.0
     property real _countdownPulse:  1.0
     readonly property bool _showCountdown: card.visible && card.enabled
-        && _autoClose.shouldRun && !ShellSettings.reduceMotion
+        && _autoClose.shouldRun && !card.timeoutPaused && !ShellSettings.reduceMotion
     readonly property real _trueRemaining: Math.max(0, _autoClose.fullInterval - (Date.now() - card._createdAt) + card._hoverPausedMs)
 
     NumberAnimation {
@@ -175,13 +184,13 @@ Item {
     Binding {
         target: _countdownAnim
         property: "paused"
-        value: _cardHover.hovered
+        value: _cardHover.hovered || card.timeoutPaused
         when: _countdownAnim.running
         restoreMode: Binding.RestoreNone
     }
 
     SequentialAnimation {
-        running: card._showCountdown && card._timeoutProgress < 0.18 && !_cardHover.hovered
+        running: card._showCountdown && card._timeoutProgress < 0.18 && !_cardHover.hovered && !card.timeoutPaused
         loops:   Animation.Infinite
         onRunningChanged: if (!running) card._countdownPulse = 1.0
         NumberAnimation { target: card; property: "_countdownPulse"; to: 0.5; duration: 420; easing.type: Easing.InOutSine }
@@ -206,12 +215,23 @@ Item {
         anchors.fill: cardRect
         opacity: cardRect.opacity
         z: -1
-        sourceComponent: RectangularShadow {
+        sourceComponent: Item {
             anchors.fill: parent
-            radius: card._cardRadius
-            blur:   12
-            offset: Qt.vector2d(0, ShellSettings.barPosition === "bottom" ? -3 : 3)
-            color:  Qt.rgba(0, 0, 0, Math.min(0.55, 0.35 * ShellSettings.barShadowStrength))
+            readonly property real strength: ShellSettings.barShadowStrength
+            RectangularShadow {
+                anchors.fill: parent
+                radius: card._cardRadius
+                blur: 14
+                offset: Qt.vector2d(0, ShellSettings.barPosition === "bottom" ? -2 : 2)
+                color: Qt.rgba(0, 0, 0, Math.min(0.28, 0.13 * parent.strength))
+            }
+            RectangularShadow {
+                anchors.fill: parent
+                radius: card._cardRadius
+                blur: 7
+                offset: Qt.vector2d(0, ShellSettings.barPosition === "bottom" ? -5 : 5)
+                color: Qt.rgba(0, 0, 0, Math.min(0.44, 0.26 * parent.strength))
+            }
         }
     }
 

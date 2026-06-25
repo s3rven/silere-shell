@@ -100,6 +100,7 @@ PanelWindow {
         property int shownYear:  2000
         property int shownMonth: 0
         property int navDir:     0      // -1 prev, +1 next — drives the slide direction
+        property bool _placementSettled: false
 
         // "Today" captured on each open. The card persists between opens, so a
         // readonly `new Date()` binding would freeze at first build and the wrong
@@ -163,7 +164,26 @@ PanelWindow {
 
         Connections {
             target: CalendarState
-            function onOpenChanged() { if (CalendarState.open) card._snapToday() }
+            function onAnchorXChanged() { card._place() }
+            function onOpenChanged() {
+                if (CalendarState.open) {
+                    card._placementSettled = false
+                    card._place()
+                    _placementSettle.restart()
+                    card._snapToday()
+                } else {
+                    _placementSettle.stop()
+                    card._placementSettled = false
+                }
+            }
+        }
+        Connections {
+            target: win
+            function onWidthChanged() {
+                if (!CalendarState.open) return
+                const nx = card._targetX()
+                if (Math.abs(nx - card.x) > 0.5) card._place()
+            }
         }
         // Keep "today" current if the popup is held open across midnight, without
         // yanking the user back from a month they've navigated to.
@@ -177,7 +197,10 @@ PanelWindow {
                 card.todayWeekday = Qt.formatDateTime(t, "dddd")
             }
         }
-        Component.onCompleted: _snapToday()
+        Component.onCompleted: {
+            _place()
+            _snapToday()
+        }
 
         // Month swap: old grid slides out + fades, the shown cursor catches up at 0
         // opacity, the new grid slides in from the other side + fades. Next moves the
@@ -208,10 +231,24 @@ PanelWindow {
         readonly property real _minX: radius + 4
         readonly property real _maxX: Math.max(_minX, win.width - panelW - _minX)
 
-        // Trigger-proportional like the menu (see MenuWindow._place), whole px
-        // so NativeRendering text stays crisp.
-        readonly property real _t: Math.max(0, Math.min(win.width, CalendarState.anchorX))
-        x: Math.round(Math.max(_minX, Math.min(_t - panelW * _t / Math.max(1, win.width), _maxX)))
+        function _clampedPanelX(px: real): real {
+            return Math.max(_minX, Math.min(px, _maxX))
+        }
+        function _targetX(): real {
+            const t = Math.max(0, Math.min(win.width, CalendarState.anchorX))
+            return Math.round(_clampedPanelX(t - panelW * t / Math.max(1, win.width)))
+        }
+        function _place(): void {
+            x = _targetX()
+        }
+        function _reclamp(): void {
+            const nx = Math.round(_clampedPanelX(x))
+            if (Math.abs(nx - x) > 0.5) x = nx
+        }
+
+        on_MinXChanged: _reclamp()
+        on_MaxXChanged: _reclamp()
+
         y: Math.round((_barBottom ? (win.height - _edgeY - height) : _edgeY) + edgeOffset)
         width:  panelW
         height: _col.implicitHeight + pad * 2
@@ -230,6 +267,18 @@ PanelWindow {
         transform: Scale { origin.x: card._originX; origin.y: card._barBottom ? card.height : 0; xScale: card.scaleAmt; yScale: card.scaleAmt }
         state: CalendarState.open ? "visible" : "hidden"
         layer.enabled: !ShellSettings.reduceMotion && opacity > 0.001 && scaleAmt < 0.999
+
+        Behavior on x {
+            enabled: card.state === "visible" && !ShellSettings.reduceMotion && card._placementSettled
+            NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
+        }
+
+        Timer {
+            id: _placementSettle
+            interval: Math.max(40, Motion.ms(180))
+            repeat: false
+            onTriggered: card._placementSettled = true
+        }
 
         states: [
             State { name: "hidden";  PropertyChanges { target: card; scaleAmt: 0.985; edgeOffset: card._closedOffset; opacity: 0 } },

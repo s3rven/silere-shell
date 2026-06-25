@@ -44,13 +44,13 @@ Item {
     }
 
     Shortcut {
-        sequences: ["Down"]
+        sequences: ["Ctrl+Down"]
         context: Qt.ApplicationShortcut
         enabled: root.active
         onActivated: MenuState.stepSettingsSection(1)
     }
     Shortcut {
-        sequences: ["Up"]
+        sequences: ["Ctrl+Up"]
         context: Qt.ApplicationShortcut
         enabled: root.active
         onActivated: MenuState.stepSettingsSection(-1)

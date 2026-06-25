@@ -231,13 +231,14 @@ PanelWindow {
                 notifId:      modelData.id
                 createdAt:    Notifications.timeFor(modelData.id)
                 slideDir:     win._slideDir
+                timeoutPaused: !visible
 
                 anchors.right:            (win._left || win._center) ? undefined : parent.right
                 anchors.left:             win._left   ? parent.left : undefined
                 anchors.horizontalCenter: win._center ? parent.horizontalCenter : undefined
 
-                // Cap the stack, extra cards still exist (and still auto-dismiss),
-                // they're just hidden behind the "· N more" chip below.
+                // Cap the stack. Hidden overflow cards pause their timeout, so
+                // they do not expire before ever becoming visible.
                 visible: ShellSettings.notifMaxVisible <= 0 || index < ShellSettings.notifMaxVisible
 
                 onDismissRequested: (id, notification, expired) => {

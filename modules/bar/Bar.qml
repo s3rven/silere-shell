@@ -40,7 +40,7 @@ PanelWindow {
     // masked to the surface, so the pad never catches the pointer.
     readonly property bool shadowOn: ShellSettings.barFloating && ShellSettings.barShadow
     // Always reserved when floating so toggling the shadow never resizes the window.
-    // 24 (a 4px-grid multiple) leaves room for the ambient layer (blur 18 + offset 2 = 20px spread).
+    // 24 (a 4px-grid multiple) leaves room for the ambient layer (blur 21 + offset 2 = 23px spread).
     readonly property int  shadowPad: ShellSettings.barFloating ? 24 : 0
 
     // Hidden states share one exit/enter animation and also release the
@@ -102,10 +102,9 @@ PanelWindow {
 
         readonly property real radius: Math.min(bar.cornerRadius, width / 2)
 
-        // Drop shadow grounding the floating surface: a wide ambient halo plus a
-        // tighter contact shadow cast toward the desktop. Two analytic layers (no
-        // FBO, no per-frame cost) read as real elevation instead of one flat smear;
-        // built only while floating + enabled. Strength slider scales both alphas.
+        // Drop shadow grounding the floating surface: a soft ambient halo plus a
+        // tighter contact shadow cast toward the desktop. Separate analytic layers
+        // avoid the flat, muddy look of one heavy blur.
         Loader {
             anchors.fill: parent
             active: bar.shadowOn
@@ -116,16 +115,16 @@ PanelWindow {
                 RectangularShadow {
                     anchors.fill: parent
                     radius: surface.radius
-                    blur: 18
+                    blur: 21
                     offset: Qt.vector2d(0, bar.atBottom ? -2 : 2)
-                    color: Qt.rgba(0, 0, 0, Math.min(0.38, 0.20 * parent.strength))
+                    color: Qt.rgba(0, 0, 0, Math.min(0.30, 0.13 * parent.strength))
                 }
                 RectangularShadow {
                     anchors.fill: parent
                     radius: surface.radius
-                    blur: 9
+                    blur: 8
                     offset: Qt.vector2d(0, bar.atBottom ? -6 : 6)
-                    color: Qt.rgba(0, 0, 0, Math.min(0.58, 0.34 * parent.strength))
+                    color: Qt.rgba(0, 0, 0, Math.min(0.48, 0.27 * parent.strength))
                 }
             }
         }
@@ -135,9 +134,35 @@ PanelWindow {
             radius: surface.radius
             antialiasing: surface.radius > 0
             color: Theme.panel
-            border.width: bar.wrapUnderline && ShellSettings.barBorderVisible ? 1 : 0
-            border.color: Theme.withAlpha(Theme.subtext, bar.lineAlpha)
             opacity: contents.opacity
+        }
+
+        Rectangle {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.leftMargin: surface.radius
+            anchors.rightMargin: surface.radius
+            y: bar.atBottom ? parent.height - 1 : 0
+            height: 1
+            antialiasing: false
+            visible: ShellSettings.barFloating && (bar.shadowOn || ShellSettings.barBorderVisible) && opacity > 0.001
+            opacity: contents.opacity
+            color: Theme.withAlpha(Theme.text, ShellSettings.neutralTheme ? 0.045 : 0.065)
+        }
+
+        Rectangle {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.leftMargin: surface.radius
+            anchors.rightMargin: surface.radius
+            y: bar.atBottom ? 0 : parent.height - 1
+            height: 1
+            antialiasing: false
+            visible: ShellSettings.barFloating && (bar.shadowOn || ShellSettings.barBorderVisible) && opacity > 0.001
+            opacity: contents.opacity
+            color: Qt.rgba(0, 0, 0, bar.shadowOn
+                ? Math.min(0.16, 0.07 + 0.035 * ShellSettings.barShadowStrength)
+                : Math.min(0.11, 0.045 * ShellSettings.barLineStrength))
         }
 
         // The edge line sits on the side facing the desktop (bottom for a top bar).
@@ -239,6 +264,18 @@ PanelWindow {
                 anchors.leftMargin:  Settings.hPad
                 anchors.rightMargin: Settings.hPad
             }
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            radius: surface.radius
+            antialiasing: surface.radius > 0
+            color: "transparent"
+            border.width: bar.wrapUnderline && ShellSettings.barBorderVisible ? 1 : 0
+            border.color: Theme.withAlpha(Theme.mix(Theme.subtext, Theme.accent, 0.30),
+                Math.min(0.42, 0.20 * ShellSettings.barLineStrength))
+            opacity: contents.opacity
+            visible: border.width > 0 && opacity > 0.001
         }
     }
 }

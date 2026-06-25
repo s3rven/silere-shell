@@ -13,9 +13,9 @@ Item {
 
     required property ShellScreen screen
 
-    readonly property int gap:    10
+    readonly property int gap:    ShellSettings.barCompact ? 7 : 10
     readonly property int dotGap: ShellSettings.barCompact
-        ? Math.max(5, ShellSettings.barSpacing - 5)
+        ? Math.max(3, ShellSettings.barSpacing - 6)
         : ShellSettings.barSpacing
     // Free span between the widget groups. The title prefers the bar's true
     // center but slides off-center as a group closes in, instead of clamping
@@ -27,7 +27,8 @@ Item {
     // Each separator is owned by the widget on its LEFT and shows only while that
     // widget shows, so a hidden widget takes its divider with it — never a leading,
     // trailing, or doubled dot. Volume is always present.
-    // Compact (β) fuses semantic neighbours into fewer groups:
+    // Compact (β) keeps the same scan order but uses tighter pill spacing and
+    // only marks semantic group edges:
     // [updates network] · [vol bri battery] · [media] · [clock]
     readonly property bool _compact: ShellSettings.barCompact
     readonly property bool _vUpdates: Updates.available || Updates.isChecking

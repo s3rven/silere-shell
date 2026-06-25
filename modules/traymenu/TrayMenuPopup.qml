@@ -17,8 +17,7 @@ PanelWindow {
 
     readonly property HyprlandMonitor _monitor: Hyprland.monitorFor(win.screen)
     readonly property int menuWidth: 220
-    readonly property real _cardRadius: (ShellSettings.barFloating && ShellSettings.barCornerStyle === "round")
-        ? ShellSettings.barRadius : 0
+    readonly property real _cardRadius: Theme.radiusPanel
     property bool _ignoreOutsideTap: false
 
     // holds the last handle through the close fade so rows don't collapse early
@@ -64,8 +63,14 @@ PanelWindow {
         target: TrayMenuState
         function onOpenChanged() {
             if (!TrayMenuState.open) {
+                _placementSettle.stop()
+                card._placementSettled = false
                 _outsideTapGuard.stop()
                 win._ignoreOutsideTap = false
+            } else {
+                card._placementSettled = false
+                card._place()
+                _placementSettle.restart()
             }
         }
     }
@@ -295,12 +300,23 @@ PanelWindow {
         anchors.fill: card
         opacity: card.opacity
         z: -1
-        sourceComponent: RectangularShadow {
+        sourceComponent: Item {
             anchors.fill: parent
-            radius: card.radius
-            blur:   12
-            offset: Qt.vector2d(0, card._barBottom ? -3 : 3)
-            color:  Qt.rgba(0, 0, 0, Math.min(0.55, 0.35 * ShellSettings.barShadowStrength))
+            readonly property real strength: ShellSettings.barShadowStrength
+            RectangularShadow {
+                anchors.fill: parent
+                radius: card.radius
+                blur: 14
+                offset: Qt.vector2d(0, card._barBottom ? -2 : 2)
+                color: Qt.rgba(0, 0, 0, Math.min(0.28, 0.13 * parent.strength))
+            }
+            RectangularShadow {
+                anchors.fill: parent
+                radius: card.radius
+                blur: 7
+                offset: Qt.vector2d(0, card._barBottom ? -5 : 5)
+                color: Qt.rgba(0, 0, 0, Math.min(0.44, 0.26 * parent.strength))
+            }
         }
     }
 
@@ -317,8 +333,24 @@ PanelWindow {
         readonly property real _minX: radius + 4
         readonly property real _maxX: Math.max(_minX, win.width - width - _minX)
 
-        readonly property real _t: Math.max(0, Math.min(win.width, TrayMenuState.anchorX))
-        x: Math.round(Math.max(_minX, Math.min(_t - width * _t / Math.max(1, win.width), _maxX)))
+        function _clampedPanelX(px: real): real {
+            return Math.max(_minX, Math.min(px, _maxX))
+        }
+        function _targetX(): real {
+            const t = Math.max(0, Math.min(win.width, TrayMenuState.anchorX))
+            return Math.round(_clampedPanelX(t - width * t / Math.max(1, win.width)))
+        }
+        function _place(): void {
+            x = _targetX()
+        }
+        function _reclamp(): void {
+            const nx = Math.round(_clampedPanelX(x))
+            if (Math.abs(nx - x) > 0.5) x = nx
+        }
+
+        on_MinXChanged: _reclamp()
+        on_MaxXChanged: _reclamp()
+
         y: Math.round((_barBottom ? (win.height - _edgeY - height) : _edgeY) + edgeOffset)
         width:  win.menuWidth + pad * 2
         height: _col.implicitHeight + pad * 2
@@ -330,10 +362,37 @@ PanelWindow {
 
         property real scaleAmt: 0.985
         property real edgeOffset: _closedOffset
+        property bool _placementSettled: false
         readonly property real _closedOffset: _barBottom ? 8 : -8
         transform: Scale { origin.x: card._originX; origin.y: card._barBottom ? card.height : 0; xScale: card.scaleAmt; yScale: card.scaleAmt }
         state: TrayMenuState.open ? "visible" : "hidden"
         layer.enabled: !ShellSettings.reduceMotion && opacity > 0.001 && scaleAmt < 0.999
+
+        Behavior on x {
+            enabled: card.state === "visible" && !ShellSettings.reduceMotion && card._placementSettled
+            NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
+        }
+
+        Connections {
+            target: TrayMenuState
+            function onAnchorXChanged() { card._place() }
+        }
+        Connections {
+            target: win
+            function onWidthChanged() {
+                if (!TrayMenuState.open) return
+                const nx = card._targetX()
+                if (Math.abs(nx - card.x) > 0.5) card._place()
+            }
+        }
+        Component.onCompleted: _place()
+
+        Timer {
+            id: _placementSettle
+            interval: Math.max(40, Motion.ms(180))
+            repeat: false
+            onTriggered: card._placementSettled = true
+        }
 
         states: [
             State { name: "hidden";  PropertyChanges { target: card; scaleAmt: 0.985; edgeOffset: card._closedOffset; opacity: 0 } },

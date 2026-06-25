@@ -15,7 +15,7 @@ Item {
     property string accessibleName: ""
     property string accessibleDescription: ""
     property int    maxTextWidth: 150
-    property int    horizontalPadding: ShellSettings.barCompact ? 3 : 5
+    property int    horizontalPadding: ShellSettings.barCompact ? 2 : 5
     property bool   animateGlyph: true
     // Opt-in cross-fade when `text` changes. Off by default since widgets
     // like Volume/Brightness update text on every scroll tick and don't
@@ -182,7 +182,7 @@ Item {
         id: row
         x: Math.round((parent.width - width) / 2)
         y: Math.round((parent.height - height) / 2)
-        spacing: 5
+        spacing: ShellSettings.barCompact ? 3 : 5
 
         Item {
             id: _glyphBox

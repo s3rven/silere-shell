@@ -259,7 +259,10 @@ Item {
 
         // previews settings changes through the real animation path while the menu is open
         property bool _settingsReady: false
-        Component.onCompleted: Qt.callLater(() => { _settingsReady = true })
+        Component.onCompleted: Qt.callLater(() => {
+            _settingsReady = true
+            if (_canPreview()) _previewTimer.restart()
+        })
         function _canPreview(): bool {
             return _settingsReady && MenuState.open && ShellSettings.underlineGlow
                 && !ShellSettings.reduceMotion
@@ -391,7 +394,8 @@ Item {
         }
     }
 
-    // flat edge line on the screen-facing side; non-floating bars only
+    // Faint base track so glow mode still visibly enables an underline when no
+    // event is active. Event glow draws over it below.
     GlowLine {
         anchors.left:        parent.left
         anchors.right:       parent.right
@@ -399,6 +403,25 @@ Item {
         anchors.rightMargin: _ul.wrapRadius
         anchors.bottom:      parent.bottom
         visible: !_ul.wrapFloating && _lineEffect._glowEnabled && opacity > 0.001
+        height: 2
+        opacity: Math.min(0.58, 0.34 * ShellSettings.glowStrength)
+        peak:    Theme.withAlpha(Theme.mix(Theme.subtext, _lineEffect._effectColor, 0.28), 0.72)
+        edge:    Theme.withAlpha(Theme.mix(Theme.subtext, _lineEffect._effectColor, 0.18), 0.30)
+        center:  0.50
+        spread:  0.46
+        loClamp: 0.03
+        hiClamp: 0.97
+    }
+
+    // flat event glow on the screen-facing side; non-floating bars only
+    GlowLine {
+        anchors.left:        parent.left
+        anchors.right:       parent.right
+        anchors.leftMargin:  _ul.wrapRadius
+        anchors.rightMargin: _ul.wrapRadius
+        anchors.bottom:      parent.bottom
+        visible: !_ul.wrapFloating && _lineEffect._glowEnabled && opacity > 0.001
+        height: 2
         opacity: Math.min(_lineEffect._ceiling, _lineEffect._combined * ShellSettings.glowStrength)
         peak:    _lineEffect._stopColor
         edge:    _lineEffect._stopColorMid
@@ -408,7 +431,36 @@ Item {
         hiClamp: 0.99
     }
 
-    // event-only unless Always visible is enabled, matching regular glow semantics
+    Rectangle {
+        id: _floatingBaseRim
+        anchors.fill: parent
+        radius: _ul.wrapRadius
+        antialiasing: true
+        color: "transparent"
+        border.width: 1
+        border.color: Theme.mix(Theme.subtext, _lineEffect._effectColor, 0.18)
+        visible: _ul.wrapFloating && _lineEffect._glowEnabled && opacity > 0.001
+        opacity: Math.min(0.20, 0.12 * ShellSettings.glowStrength)
+    }
+
+    GlowLine {
+        id: _floatingBaseLine
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.leftMargin: _ul.wrapRadius
+        anchors.rightMargin: _ul.wrapRadius
+        anchors.bottom: parent.bottom
+        visible: _ul.wrapFloating && _lineEffect._glowEnabled && opacity > 0.001
+        opacity: Math.min(0.42, 0.24 * ShellSettings.glowStrength)
+        peak:    Theme.withAlpha(Theme.mix(Theme.subtext, _lineEffect._effectColor, 0.28), 0.64)
+        edge:    Theme.withAlpha(Theme.mix(Theme.subtext, _lineEffect._effectColor, 0.18), 0.26)
+        center:  0.50
+        spread:  0.42
+        loClamp: 0.08
+        hiClamp: 0.92
+    }
+
+    // event layer over the faint floating base
     Rectangle {
         id: _floatingRim
         anchors.fill: parent
@@ -418,8 +470,8 @@ Item {
         border.width: 1
         border.color: _lineEffect._effectColor
         visible: _ul.wrapFloating && _lineEffect._glowEnabled && opacity > 0.001
-        opacity: Math.min(0.72,
-            (_lineEffect._combined * 0.62 + _lineEffect._bloomBoost * 0.30)
+        opacity: Math.min(0.42,
+            (_lineEffect._combined * 0.34 + _lineEffect._bloomBoost * 0.16)
             * ShellSettings.glowStrength)
     }
 
@@ -447,12 +499,12 @@ Item {
     // six 1px gradient strips approximate a vertical halo without MultiEffect/offscreen targets
     Repeater {
         model: [
-            { y: 0, c: 0.46, b: 0.50 },
-            { y: 1, c: 0.30, b: 0.34 },
-            { y: 2, c: 0.20, b: 0.24 },
-            { y: 3, c: 0.13, b: 0.17 },
-            { y: 4, c: 0.08, b: 0.11 },
-            { y: 5, c: 0.04, b: 0.07 }
+            { y: 1, c: 0.34, b: 0.38 },
+            { y: 2, c: 0.24, b: 0.28 },
+            { y: 3, c: 0.16, b: 0.20 },
+            { y: 4, c: 0.10, b: 0.14 },
+            { y: 5, c: 0.06, b: 0.09 },
+            { y: 6, c: 0.03, b: 0.05 }
         ]
         GlowLine {
             required property var modelData
@@ -475,8 +527,12 @@ Item {
 
     // localized moving streak, kept visually distinct from the centered bloom flash above
     Rectangle {
+        id: _shotStreak
         readonly property real _trackW: Math.max(0, parent.width - _ul.wrapRadius * 2)
-        readonly property real _streakW: Math.min(180, Math.max(64, _trackW * 0.16))
+        readonly property real _streakW: Math.min(_trackW, Math.min(180, Math.max(64, _trackW * 0.16)))
+        readonly property color _edgeColor: Qt.rgba(_lineEffect._screenshotColor.r,
+                                                    _lineEffect._screenshotColor.g,
+                                                    _lineEffect._screenshotColor.b, 0)
 
         x: Math.max(_ul.wrapRadius, Math.min(parent.width - _ul.wrapRadius - width,
             _ul.wrapRadius + _lineEffect._screenshotSweepCenter * _trackW - width / 2))
@@ -485,15 +541,15 @@ Item {
         height: 4
         antialiasing: false
         visible: _lineEffect._glowEnabled && ShellSettings.underlineScreenshotGlow
-            && ShellSettings.screenshotGlowSweep && _lineEffect._shotActive
+            && ShellSettings.screenshotGlowSweep && _lineEffect._shotActive && _trackW > 1
         opacity: Math.min(0.9,
             _lineEffect._screenshotGlow * 0.72 * _lineEffect._screenshotStrength)
 
         gradient: Gradient {
             orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: "transparent" }
+            GradientStop { position: 0.0; color: _shotStreak._edgeColor }
             GradientStop { position: 0.5; color: _lineEffect._screenshotColor }
-            GradientStop { position: 1.0; color: "transparent" }
+            GradientStop { position: 1.0; color: _shotStreak._edgeColor }
         }
     }
 

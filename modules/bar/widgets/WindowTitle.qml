@@ -108,9 +108,11 @@ Item {
         const titleCol = _hex(Theme.text, ShellSettings.windowTitleOpacity)
         if (_shownShowApp && _shownApp.length > 0 && _shownTitle.length > 0 && !_titleMatchesApp) {
             const dotCol = _hex(Theme.subtext, ShellSettings.dotOpacity)
-            // "line" and "|" are drawn shapes in Dot.qml; here they must be glyphs.
+            // Drawn separator styles in Dot.qml need a text equivalent here.
             // │ (U+2502) renders as a thinner stroke than ASCII | in most fonts.
-            const sep = (ShellSettings.dotStyle === "line" || ShellSettings.dotStyle === "|") ? "│" : ShellSettings.dotStyle
+            const sep = (ShellSettings.dotStyle === "line" || ShellSettings.dotStyle === "|") ? "│"
+                      : ShellSettings.dotStyle === "slash" ? "/"
+                      : ShellSettings.dotStyle
             return '<font color="' + appCol   + '">' + _esc(_shownApp) + '</font> '
                  + '<font color="' + dotCol   + '">' + _esc(sep) + '</font> '
                  + '<font color="' + titleCol + '">' + _esc(_shownTitle) + '</font>'

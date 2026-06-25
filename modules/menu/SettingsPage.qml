@@ -123,7 +123,7 @@ Item {
     readonly property bool _underlineEnabled:
         ShellSettings.barBorderVisible || ShellSettings.underlineGlow
     property string _lastUnderlineStyle:
-        ShellSettings.barBorderVisible && !ShellSettings.underlineGlow ? "static" : "glow"
+        ShellSettings.underlineGlow ? "glow" : "static"
     readonly property string _underlineStyle:
         ShellSettings.underlineGlow ? "glow" : "static"
 
@@ -811,7 +811,8 @@ Item {
                             }
                         }
                         ToggleRow {
-                            glyph: "󰘷"; label: "Drop shadow"
+                            glyph: "󰘷"; label: "Shell shadows"
+                            description: "Add elevation to the floating bar and shell popups"
                             checked: ShellSettings.barShadow
                             onToggled: ShellSettings.barShadow = !ShellSettings.barShadow
                             bottomRadius: ShellSettings.barShadow ? 0 : 10
@@ -1100,8 +1101,8 @@ Item {
 
                 SettingsCard {
                     ToggleRow {
-                        glyph: "󰡍"; label: "Dense bar"; badge: "beta"
-                        description: "Tighter spacing with no separator dots"
+                        glyph: "󰡍"; label: "Compact spacing"; badge: "beta"
+                        description: "Tighter pills with fewer, slimmer group dividers"
                         checked: ShellSettings.barCompact
                         onToggled: ShellSettings.barCompact = !ShellSettings.barCompact
                         topRadius: 10
@@ -1114,6 +1115,7 @@ Item {
                             { value: "•",    label: "•" },
                             { value: "◦",    label: "◦" },
                             { value: "|",    label: "|" },
+                            { value: "slash", label: "/" },
                             { value: "line", label: "│" }
                         ]
                         onChosen: (v) => ShellSettings.dotStyle = v
@@ -1134,7 +1136,9 @@ Item {
                 SectionLabel { label: "APPEARANCE" }
                 SettingsCard {
                     SliderRow {
-                        glyph: ShellSettings.dotStyle === "line" ? "│" : ShellSettings.dotStyle
+                        glyph: ShellSettings.dotStyle === "line" ? "│"
+                             : ShellSettings.dotStyle === "slash" ? "/"
+                             : ShellSettings.dotStyle
                         glyphColor: Theme.withAlpha(Theme.text, Math.max(0.35, ShellSettings.dotOpacity))
                         label: "Separator opacity"
                         value: ShellSettings.dotOpacity
@@ -1296,12 +1300,20 @@ Item {
                 spacing: 0
                 visible: root._shownSection === "workspaces"
 
+                SectionLabel { label: "LAYOUT" }
                 SettingsCard {
+                    SliderRow {
+                        glyph: "󰕰"; label: "Visible"
+                        value: ShellSettings.wsMinVisible
+                        min: 1; max: 10; step: 1
+                        displayValue: ShellSettings.wsMinVisible
+                        onChanged: (v) => ShellSettings.wsMinVisible = v
+                        topRadius: 10
+                    }
                     ToggleRow {
-                        glyph: "󰗘"; label: "Slide animation"
+                        glyph: "󰗘"; label: "Animated switch"
                         checked: ShellSettings.workspaceShift
                         onToggled: ShellSettings.workspaceShift = !ShellSettings.workspaceShift
-                        topRadius: 10
                     }
                     ToggleRow {
                         glyph: "󱕒"; label: "Scroll to switch"
@@ -1310,17 +1322,16 @@ Item {
                     }
                     ToggleRow {
                         glyph: "󰂟"; label: "Notification pulse"
-                        description: "Flash a workspace dot when an app there alerts you"
                         checked: ShellSettings.wsNotifPulse
                         onToggled: ShellSettings.wsNotifPulse = !ShellSettings.wsNotifPulse
                         bottomRadius: 10
                     }
                 }
 
-                SectionLabel { label: "LABELS" }
+                SectionLabel { label: "CONTENT" }
                 SettingsCard {
                     ToggleRow {
-                        glyph: "󰎠"; label: "Show numbers"
+                        glyph: "󰎠"; label: "Numbers"
                         checked: ShellSettings.wsShowNumbers
                         onToggled: ShellSettings.wsShowNumbers = !ShellSettings.wsShowNumbers
                         topRadius: 10
@@ -1332,18 +1343,14 @@ Item {
                             glyph: "󰮚"; label: "Roman numerals"
                             checked: ShellSettings.wsRomanNumerals
                             onToggled: ShellSettings.wsRomanNumerals = !ShellSettings.wsRomanNumerals
-                            bottomRadius: 10
+                            bottomRadius: ShellSettings.wsShowAppIcons ? 0 : 10
                         }
                     }
-                }
-
-                SectionLabel { label: "DISPLAY" }
-                SettingsCard {
                     ToggleRow {
-                        glyph: "󰀻"; label: "Show app icons"; badge: "beta"
+                        glyph: "󰀻"; label: "App icons"; badge: "beta"
                         checked: ShellSettings.wsShowAppIcons
                         onToggled: ShellSettings.wsShowAppIcons = !ShellSettings.wsShowAppIcons
-                        topRadius: 10
+                        bottomRadius: ShellSettings.wsShowAppIcons ? 0 : 10
                     }
                     CollapsibleSection {
                         expanded: ShellSettings.wsShowAppIcons
@@ -1360,15 +1367,8 @@ Item {
                             min: 12; max: 20; step: 1
                             displayValue: ShellSettings.wsIconSize + "px"
                             onChanged: (v) => ShellSettings.wsIconSize = v
+                            bottomRadius: 10
                         }
-                    }
-                    SliderRow {
-                        glyph: "󰕰"; label: "Visible workspaces"
-                        value: ShellSettings.wsMinVisible
-                        min: 1; max: 10; step: 1
-                        displayValue: ShellSettings.wsMinVisible
-                        onChanged: (v) => ShellSettings.wsMinVisible = v
-                        bottomRadius: 10
                     }
                 }
             }
@@ -1417,42 +1417,35 @@ Item {
 
                 SettingsCard {
                     ToggleRow {
-                        glyph: "󰍴"; label: "Show underline"
+                        glyph: "󰍴"; label: "Underline"
+                        description: "Line on the bar edge"
                         checked: root._underlineEnabled
                         onToggled: root._setUnderlineEnabled(!root._underlineEnabled)
                         topRadius: 10
-                        bottomRadius: 10
+                        bottomRadius: root._underlineEnabled ? 0 : 10
                     }
-                }
-
-                CollapsibleSection {
-                    expanded: root._underlineEnabled
-                    Column {
-                        width: parent.width
-                        SectionLabel { label: "STYLE" }
-                        SettingsCard {
-                            ChoiceChipRow {
-                                glyph: "󰒓"; label: "Style"
-                                currentValue: root._underlineStyle
-                                model: [
-                                    { value: "static", label: "Static" },
-                                    { value: "glow",   label: "Glow" }
-                                ]
-                                onChosen: (v) => root._setUnderlineStyle(v)
-                                topRadius: 10
-                            }
-                            ChoiceChipRow {
-                                glyph: "󰃠"
-                                label: ShellSettings.underlineGlow ? "Glow intensity" : "Line intensity"
-                                currentValue: root._underlineBrightness
-                                model: [
-                                    { value: "soft",   label: "Low" },
-                                    { value: "normal", label: "Medium" },
-                                    { value: "bright", label: "High" }
-                                ]
-                                onChosen: (v) => root._setUnderlineBrightness(v)
-                                bottomRadius: 10
-                            }
+                    CollapsibleSection {
+                        expanded: root._underlineEnabled
+                        ChoiceChipRow {
+                            glyph: "󰒓"; label: "Mode"
+                            currentValue: root._underlineStyle
+                            model: [
+                                { value: "static", label: "Line" },
+                                { value: "glow",   label: "Reactive" }
+                            ]
+                            onChosen: (v) => root._setUnderlineStyle(v)
+                        }
+                        ChoiceChipRow {
+                            glyph: "󰃠"
+                            label: ShellSettings.underlineGlow ? "Glow strength" : "Line strength"
+                            currentValue: root._underlineBrightness
+                            model: [
+                                { value: "soft",   label: "Low" },
+                                { value: "normal", label: "Med" },
+                                { value: "bright", label: "High" }
+                            ]
+                            onChosen: (v) => root._setUnderlineBrightness(v)
+                            bottomRadius: 10
                         }
                     }
                 }
@@ -1461,11 +1454,10 @@ Item {
                     expanded: ShellSettings.underlineGlow
                     Column {
                         width: parent.width
-                        SectionLabel { label: "GLOW FEEDBACK" }
+                        SectionLabel { label: "EVENTS" }
                         SettingsCard {
                             ToggleRow {
-                                glyph: "󰊠"; label: "Always visible"
-                                description: "Keep the underline lit even when nothing needs attention"
+                                glyph: "󰊠"; label: "Ambient glow"
                                 checked: ShellSettings.underlineIdleGlow
                                 onToggled: ShellSettings.underlineIdleGlow = !ShellSettings.underlineIdleGlow
                                 topRadius: 10
@@ -1479,6 +1471,16 @@ Item {
                                 glyph: "󰤭"; label: "Network disconnect"
                                 checked: ShellSettings.underlineNetGlow
                                 onToggled: ShellSettings.underlineNetGlow = !ShellSettings.underlineNetGlow
+                            }
+                            ToggleRow {
+                                glyph: "󱃍"; label: "Battery low"
+                                checked: ShellSettings.underlineBattGlow
+                                onToggled: ShellSettings.underlineBattGlow = !ShellSettings.underlineBattGlow
+                            }
+                            ToggleRow {
+                                glyph: "󰔏"; label: "Temperature"
+                                checked: ShellSettings.underlineTempGlow
+                                onToggled: ShellSettings.underlineTempGlow = !ShellSettings.underlineTempGlow
                             }
                             ChoiceChipRow {
                                 glyph: "󰄀"; label: "Screenshots"

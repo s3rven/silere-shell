@@ -134,7 +134,9 @@ PanelWindow {
         // plus the 4-chip option rows.
         readonly property int _compactW:  400
         readonly property int _settingsW: 552
-        readonly property int panelW: activeTab === 1 ? _settingsW : _compactW
+        readonly property int _targetPanelW: activeTab === 1 ? _settingsW : _compactW
+        readonly property int panelW: Math.max(320, Math.min(_targetPanelW,
+            win.width > 0 ? win.width - panelMinX * 2 : _targetPanelW))
         // Rail expands when Settings is active: the icon strip stays 48px and the
         // category nav rides on beside it, so they read as one growing surface.
         readonly property int railCollapsedW: 48
@@ -178,6 +180,7 @@ PanelWindow {
         property bool _loaded:         false
         property bool _loadedDeferred: false
         property bool _recentLoaded:   false
+        property bool _placementSettled: false
 
         function switchTab(idx: int): void {
             if (powerOpen) powerOpen = false
@@ -217,7 +220,7 @@ PanelWindow {
         }
         onPanelMinXChanged: _reclamp()
         onPanelMaxXChanged: _reclamp()
-        onPanelWChanged: if (MenuState.open) _place()
+        onPanelWChanged: if (MenuState.open) _reclamp()
         Component.onCompleted: _place()
 
         // Pages (e.g. the DND tile's missed-count badge) can ask to jump tabs.
@@ -230,9 +233,13 @@ PanelWindow {
             function onAnchorXChanged() { panel._place() }
             function onOpenChanged() {
                 if (MenuState.open) {
+                    panel._placementSettled = false
                     panel._place()
+                    _placementSettle.restart()
                     contentFlick.contentY = 0
                 } else {
+                    _placementSettle.stop()
+                    panel._placementSettled = false
                     _outsideTapGuard.stop()
                     win._ignoreOutsideTap = false
                 }
@@ -273,7 +280,7 @@ PanelWindow {
         }
 
         Behavior on x {
-            enabled: !ShellSettings.reduceMotion && panel.menuScale > 0.995
+            enabled: !ShellSettings.reduceMotion && panel.state === "visible" && panel._placementSettled
             NumberAnimation { duration: panel.heightAnimDuration; easing.type: Easing.OutCubic }
         }
 
@@ -354,6 +361,7 @@ PanelWindow {
         onStateChanged: {
             if (state === "hidden") {
                 powerOpen = false
+                _placementSettled = false
                 _idleUnload.restart()
             } else {
                 _idleUnload.stop()
@@ -375,6 +383,13 @@ PanelWindow {
                 panel._loaded = false
                 panel._recentLoaded = false
             }
+        }
+
+        Timer {
+            id: _placementSettle
+            interval: Math.max(40, Motion.ms(190))
+            repeat: false
+            onTriggered: panel._placementSettled = true
         }
 
         // ── Left rail ──────────────────────────────────────────────────────────

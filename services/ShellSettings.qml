@@ -68,9 +68,9 @@ Singleton {
     property bool   screenshotGlowSweep:     true
 
     property real   dotOpacity:          0.35
-    property string dotStyle:            "·"       // "·" | "•" | "◦" | "|" | "line"
+    property string dotStyle:            "·"       // "·" | "•" | "◦" | "|" | "slash" | "line"
     property int    barSpacing:          11        // gap between bar widgets / separators
-    property bool   barCompact:          false     // β: no separator dots, tighter gaps
+    property bool   barCompact:          false     // β: fewer separators, tighter gaps
     property int    barHeight:           36
     property bool   barFloating:         false     // detached rounded surface, matches the menu/calendar/notif panels
     property real   barWidth:            0.90     // visual bar width, 0.5-1.0 of screen
@@ -165,7 +165,7 @@ Singleton {
         { k: "screenshotGlowDuration", t: "int",  min: 250, max: 1600 },
         { k: "screenshotGlowSweep", t: "bool" },
         { k: "dotOpacity",          t: "real", min: 0.05, max: 1.0 },
-        { k: "dotStyle",            t: "enum", vals: ["·", "•", "◦", "|", "line"] },
+        { k: "dotStyle",            t: "enum", vals: ["·", "•", "◦", "|", "slash", "line"] },
         { k: "barSpacing",          t: "int",  min: 4, max: 24 },
         { k: "barCompact",          t: "bool" },
         { k: "barHeight",           t: "int",  min: 24,   max: 60 },

@@ -39,7 +39,7 @@ Row {
         id: _dateSectionClip
         anchors.verticalCenter: parent.verticalCenter
         height:  _dateRow.implicitHeight
-        width:   ShellSettings.clockShowDate ? _dateRow.implicitWidth + 8 : 0
+        width:   ShellSettings.clockShowDate ? _dateRow.implicitWidth + (ShellSettings.barCompact ? 4 : 8) : 0
         opacity: ShellSettings.clockShowDate ? 1.0 : 0.0
         visible: ShellSettings.clockShowDate || opacity > 0.001
         clip:    true
