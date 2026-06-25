@@ -27,6 +27,9 @@ Singleton {
     property bool   trayWidget:          false
     property bool   valuesOnHover:       false
     property bool   batteryAutoHide:     false
+    property bool   barShowBattery:      true
+    property bool   barShowNetwork:      true
+    property bool   barShowClock:        true
 
     property bool   osdEnabled:     true
     property int    osdTimeout:     2000
@@ -128,6 +131,9 @@ Singleton {
         { k: "trayWidget",          t: "bool" },
         { k: "valuesOnHover",       t: "bool" },
         { k: "batteryAutoHide",     t: "bool" },
+        { k: "barShowBattery",      t: "bool" },
+        { k: "barShowNetwork",      t: "bool" },
+        { k: "barShowClock",        t: "bool" },
         { k: "osdEnabled",          t: "bool" },
         { k: "osdTimeout",          t: "int",  min: 500,  max: 10000 },
         { k: "osdKindFilter",       t: "enum", vals: ["both", "volume", "brightness"] },

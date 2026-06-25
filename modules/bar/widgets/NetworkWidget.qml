@@ -7,12 +7,13 @@ Pill {
     id: root
     readonly property bool canRead: Network.toolAvailable
     property real _pulseOpacity: 1.0
-    readonly property real _baseOpacity: canRead ? (Network.available ? 1.0 : 0.0) : 0.45
+    readonly property real _baseOpacity: !ShellSettings.barShowNetwork ? 0.0
+        : canRead ? (Network.available ? 1.0 : 0.0) : 0.45
 
     // Pulse to alert on a dropped connection, but don't pulse *forever*, an
     // extended outage would drive the render loop for no new info. After a bit it
     // settles to a static (still-disconnected) icon; the next drop re-arms it.
-    readonly property bool _disconnected: canRead && Network.available && !Network.connected && !ShellSettings.reduceMotion
+    readonly property bool _disconnected: ShellSettings.barShowNetwork && canRead && Network.available && !Network.connected && !ShellSettings.reduceMotion
     property bool _pulseSettled: false
     readonly property bool _isPulsing: _disconnected && !_pulseSettled
 
@@ -76,8 +77,8 @@ Pill {
     SequentialAnimation {
         running: root._isPulsing && !Idle.isIdle
         loops:   Animation.Infinite
-        NumberAnimation { target: root; property: "_pulseOpacity"; to: 0.3; duration: 800; easing.type: Easing.InOutSine }
-        NumberAnimation { target: root; property: "_pulseOpacity"; to: 1.0; duration: 800; easing.type: Easing.InOutSine }
+        NumberAnimation { target: root; property: "_pulseOpacity"; to: 0.3; duration: Motion.ms(800); easing.type: Easing.InOutSine }
+        NumberAnimation { target: root; property: "_pulseOpacity"; to: 1.0; duration: Motion.ms(800); easing.type: Easing.InOutSine }
         onStopped: root._pulseOpacity = 1.0
     }
 

@@ -32,11 +32,13 @@ Item {
     // [updates network] · [vol bri battery] · [media] · [clock]
     readonly property bool _compact: ShellSettings.barCompact
     readonly property bool _vUpdates: Updates.available || Updates.isChecking
-    readonly property bool _vNetwork: !Network.toolAvailable || Network.available
+    readonly property bool _vNetwork: ShellSettings.barShowNetwork
+        && (!Network.toolAvailable || Network.available)
     readonly property bool _vBright:  Brightness.maxBrightness > 0
-    readonly property bool _vBattery: Battery.available
+    readonly property bool _vBattery: ShellSettings.barShowBattery && Battery.available
         && !(ShellSettings.batteryAutoHide && (Battery.charging || Battery.full))
     readonly property bool _vMedia:   mediaWidget.show
+    readonly property bool _vClock:   ShellSettings.barShowClock
 
     // ── Left ────────────────────────────────────────────────────────────────
     Row {
@@ -146,7 +148,7 @@ Item {
         BatteryWidget   { anchors.verticalCenter: parent.verticalCenter }
         Dot             { show: root._vBattery }
         MediaWidget     { id: mediaWidget; anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
-        Dot             { show: root._vMedia }
-        Clock           { anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
+        Dot             { show: root._vMedia && root._vClock }
+        Clock           { visible: root._vClock; anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
     }
 }

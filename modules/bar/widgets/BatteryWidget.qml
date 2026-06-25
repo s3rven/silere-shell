@@ -9,7 +9,7 @@ Pill {
     // Opt-in: drop the indicator while charging or full, since it's not telling
     // you anything useful then. shown also drives the separator dot.
     readonly property bool autoHidden: ShellSettings.batteryAutoHide && (Battery.charging || Battery.full)
-    readonly property bool shown: Battery.available && !autoHidden
+    readonly property bool shown: ShellSettings.barShowBattery && Battery.available && !autoHidden
     property real _baseOpacity: shown ? 1.0 : 0.0
 
     glyph:          Battery.icon

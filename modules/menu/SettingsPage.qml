@@ -346,7 +346,6 @@ Item {
                 SettingsCard {
                     ToggleRow {
                         glyph: "󰉦"; label: "Neutral theme"
-                        description: "Use a fixed dark palette instead of colours pulled from your wallpaper"
                         checked: ShellSettings.neutralTheme
                         onToggled: ShellSettings.neutralTheme = !ShellSettings.neutralTheme
                         topRadius: 10
@@ -362,7 +361,7 @@ Item {
                         Item {
                             id: _accentPicker
                             width: parent.width
-                            height: 140
+                            height: 132
 
                             readonly property real _accentL: 0.70
                             function _accentForHS(h, s) {
@@ -397,32 +396,10 @@ Item {
                             }
                             readonly property string _shownName: _hoverName.length > 0 ? _hoverName : _activeName
 
-                            Row {
-                                id: _pickerHead
-                                anchors.top:        parent.top;  anchors.topMargin:  13
-                                anchors.left:       parent.left; anchors.leftMargin: 12
-                                spacing: 8
-                                Text {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text:           "󰈊"
-                                    color:          Theme.withAlpha(Theme.subtext, 0.85)
-                                    font.family:    Settings.font
-                                    font.pixelSize: Settings.fontSize + 1
-                                    renderType:     Text.NativeRendering
-                                }
-                                Text {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text:           "Accent"
-                                    color:          Theme.withAlpha(Theme.text, 0.85)
-                                    font.family:    Settings.font
-                                    font.pixelSize: Settings.fontSize
-                                    renderType:     Text.NativeRendering
-                                }
-                            }
                             Text {
+                                anchors.top:            parent.top; anchors.topMargin: 13
+                                anchors.left:           parent.left; anchors.leftMargin: 12
                                 anchors.right:          parent.right; anchors.rightMargin: 12
-                                anchors.left:           _pickerHead.right; anchors.leftMargin: 8
-                                anchors.verticalCenter: _pickerHead.verticalCenter
                                 horizontalAlignment: Text.AlignRight
                                 text:           _accentPicker._shownName
                                 color:          Theme.withAlpha(Theme.subtext, 0.7)
@@ -435,7 +412,7 @@ Item {
                             Row {
                                 id: _swatchRow
                                 anchors.top:        parent.top
-                                anchors.topMargin:  44
+                                anchors.topMargin:  36
                                 anchors.left:       parent.left;  anchors.leftMargin:  12
                                 anchors.right:      parent.right; anchors.rightMargin: 12
                                 height: 32
@@ -602,9 +579,7 @@ Item {
                         Item {
                             id: _matuShowcase
                             width: parent.width
-                            // Top padding (13, matching the accent picker header) lifts
-                            // the content clear of the divider above; the trailing 14
-                            // balances it below.
+                            // Trailing 14 balances the top padding the readout/swatches sit under.
                             implicitHeight: _matuCol.y + _matuCol.implicitHeight + 14
                             height: implicitHeight
 
@@ -624,36 +599,11 @@ Item {
                             readonly property string _source:  SystemTools.hasMatugen ? "Matugen" : "Fallback"
                             // Top-right readout: a hovered swatch's name·hex, else the source.
                             readonly property string _readout: _hoverLabel.length > 0 ? _hoverLabel : _source
-                            readonly property string _caption: SystemTools.hasMatugen
-                                ? "Matched to your wallpaper"
-                                : "matugen not installed"
 
-                            Row {
-                                id: _matuHead
-                                anchors.top:  parent.top;  anchors.topMargin:  13
-                                anchors.left: parent.left; anchors.leftMargin: 12
-                                spacing: 8
-                                Text {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text:           "󰏘"
-                                    color:          Theme.withAlpha(Theme.subtext, 0.85)
-                                    font.family:    Settings.font
-                                    font.pixelSize: Settings.fontSize + 1
-                                    renderType:     Text.NativeRendering
-                                }
-                                Text {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text:           "Palette"
-                                    color:          Theme.withAlpha(Theme.text, 0.85)
-                                    font.family:    Settings.font
-                                    font.pixelSize: Settings.fontSize
-                                    renderType:     Text.NativeRendering
-                                }
-                            }
                             Text {
+                                anchors.top:            parent.top; anchors.topMargin: 13
+                                anchors.left:           parent.left; anchors.leftMargin: 12
                                 anchors.right:          parent.right; anchors.rightMargin: 12
-                                anchors.left:           _matuHead.right; anchors.leftMargin: 8
-                                anchors.verticalCenter: _matuHead.verticalCenter
                                 horizontalAlignment: Text.AlignRight
                                 text:           _matuShowcase._readout
                                 color:          Theme.withAlpha(Theme.subtext, 0.7)
@@ -667,7 +617,7 @@ Item {
                                 id: _matuCol
                                 anchors.left:  parent.left;  anchors.leftMargin:  12
                                 anchors.right: parent.right; anchors.rightMargin: 12
-                                anchors.top:   _matuHead.bottom; anchors.topMargin: 14
+                                anchors.top:   parent.top; anchors.topMargin: 38
                                 spacing: 10
 
                                 Row {
@@ -706,27 +656,6 @@ Item {
                                             }
                                         }
                                     }
-                                }
-
-                                Text {
-                                    width: parent.width
-                                    text:           _matuShowcase._caption
-                                    color:          Theme.withAlpha(Theme.subtext, 0.55)
-                                    font.family:    Settings.font
-                                    font.pixelSize: Settings.fontSize - 2
-                                    renderType:     Text.NativeRendering
-                                    elide:          Text.ElideRight
-                                }
-
-                                Text {
-                                    visible: !SystemTools.hasMatugen
-                                    width: parent.width
-                                    text:           "Install matugen and set a wallpaper to colour the shell from it."
-                                    color:          Theme.withAlpha(Theme.subtext, 0.45)
-                                    font.family:    Settings.font
-                                    font.pixelSize: Settings.fontSize - 3
-                                    renderType:     Text.NativeRendering
-                                    wrapMode:       Text.WordWrap
                                 }
                             }
                         }
@@ -776,7 +705,6 @@ Item {
                 SettingsCard {
                     ToggleRow {
                         glyph: "󰖲"; label: "Floating bar"; badge: "beta"
-                        description: "Detach the bar into a rounded panel with a gap around it"
                         checked: ShellSettings.barFloating
                         onToggled: ShellSettings.barFloating = !ShellSettings.barFloating
                         topRadius: 10
@@ -812,7 +740,6 @@ Item {
                         }
                         ToggleRow {
                             glyph: "󰘷"; label: "Shell shadows"
-                            description: "Add elevation to the floating bar and shell popups"
                             checked: ShellSettings.barShadow
                             onToggled: ShellSettings.barShadow = !ShellSettings.barShadow
                             bottomRadius: ShellSettings.barShadow ? 0 : 10
@@ -843,7 +770,6 @@ Item {
                     visible: NightLight.toolAvailable
                     ToggleRow {
                         glyph: "󰖙"; label: "Follow sun position"
-                        description: "Warm the screen at night and cool it by day, automatically"
                         checked: ShellSettings.nightLightAuto
                         onToggled: ShellSettings.nightLightAuto = !ShellSettings.nightLightAuto
                         topRadius: 10; bottomRadius: 0
@@ -903,14 +829,14 @@ Item {
                 visible: root._shownSection === "system"
 
                 SettingsCard {
-                    ChoiceChipRow {
+                    SelectRow {
                         glyph: "󰍉"; label: "UI scale"
                         currentValue: ShellSettings.uiScale
                         model: [
-                            { value: 0.8, label: "80%"  },
-                            { value: 0.9, label: "90%"  },
-                            { value: 1.0, label: "100%" },
-                            { value: 1.1, label: "110%" },
+                            { value: 0.8,  label: "80%"  },
+                            { value: 0.9,  label: "90%"  },
+                            { value: 1.0,  label: "100%" },
+                            { value: 1.1,  label: "110%" },
                             { value: 1.15, label: "115%" }
                         ]
                         onChosen: (v) => ShellSettings.uiScale = v
@@ -946,7 +872,7 @@ Item {
                             onToggled: Monitors.setBarEnabled(modelData.name, !checked)
                         }
                     }
-                    HintText { text: "Pick which screens get a bar, and where notifications and the volume/brightness OSD appear." }
+                    HintText { text: "Assign bars per screen and set which monitor receives notifications and the OSD." }
                 }
 
                 Item { width: 1; height: 16 }
@@ -1107,20 +1033,20 @@ Item {
                         onToggled: ShellSettings.barCompact = !ShellSettings.barCompact
                         topRadius: 10
                     }
-                    ChoiceChipRow {
+                    SelectRow {
                         glyph: "󰻂"; label: "Separator"
                         currentValue: ShellSettings.dotStyle
                         model: [
-                            { value: "·",    label: "·" },
-                            { value: "•",    label: "•" },
-                            { value: "◦",    label: "◦" },
-                            { value: "|",    label: "|" },
-                            { value: "slash", label: "/" },
-                            { value: "line", label: "│" }
+                            { value: "·",     label: "Dot ·"     },
+                            { value: "•",     label: "Bullet •"  },
+                            { value: "◦",     label: "Ring ◦"    },
+                            { value: "|",     label: "Pipe |"    },
+                            { value: "slash", label: "Slash /"   },
+                            { value: "line",  label: "Line │"    }
                         ]
                         onChosen: (v) => ShellSettings.dotStyle = v
                     }
-                    ChoiceChipRow {
+                    SelectRow {
                         glyph: "󰤼"; label: "Spacing"
                         currentValue: ShellSettings.barSpacing
                         model: [
@@ -1222,15 +1148,35 @@ Item {
                     HintText { text: "Hides volume, brightness, and battery values at rest; hover to reveal." }
                 }
 
-                SectionLabel { label: "OPTIONAL WIDGETS" }
+                SectionLabel { label: "VISIBILITY" }
                 SettingsCard {
                     ToggleRow {
-                        glyph: "󰂄"; label: "Hide when charging or full"
-                        checked: ShellSettings.batteryAutoHide
-                        onToggled: ShellSettings.batteryAutoHide = !ShellSettings.batteryAutoHide
+                        glyph: "󰂄"; label: "Battery"
+                        checked: ShellSettings.barShowBattery
+                        onToggled: ShellSettings.barShowBattery = !ShellSettings.barShowBattery
                         available: Battery.available
                         dependsNote: "No battery"
                         topRadius: 10
+                        bottomRadius: ShellSettings.barShowBattery && Battery.available ? 0 : 10
+                    }
+                    CollapsibleSection {
+                        expanded: ShellSettings.barShowBattery && Battery.available
+                        ToggleRow {
+                            glyph: "󰂃"; label: "Hide when charging or full"
+                            checked: ShellSettings.batteryAutoHide
+                            onToggled: ShellSettings.batteryAutoHide = !ShellSettings.batteryAutoHide
+                            bottomRadius: 10
+                        }
+                    }
+                    ToggleRow {
+                        glyph: "󰛳"; label: "Network"
+                        checked: ShellSettings.barShowNetwork
+                        onToggled: ShellSettings.barShowNetwork = !ShellSettings.barShowNetwork
+                    }
+                    ToggleRow {
+                        glyph: "󰅐"; label: "Clock"
+                        checked: ShellSettings.barShowClock
+                        onToggled: ShellSettings.barShowClock = !ShellSettings.barShowClock
                     }
                     ToggleRow {
                         glyph: "󰇘"; label: "System tray"
@@ -1418,7 +1364,6 @@ Item {
                 SettingsCard {
                     ToggleRow {
                         glyph: "󰍴"; label: "Underline"
-                        description: "Line on the bar edge"
                         checked: root._underlineEnabled
                         onToggled: root._setUnderlineEnabled(!root._underlineEnabled)
                         topRadius: 10
@@ -1519,7 +1464,6 @@ Item {
                     }
                     ToggleRow {
                         glyph: "󰊓"; label: "Silence in fullscreen"
-                        description: "Hold non-urgent notifications while a window is fullscreen"
                         checked: ShellSettings.notifFullscreenSilence
                         onToggled: ShellSettings.notifFullscreenSilence = !ShellSettings.notifFullscreenSilence
                         bottomRadius: 10
@@ -1594,7 +1538,6 @@ Item {
                 SettingsCard {
                     ToggleRow {
                         glyph: "󱀅"; label: "Show OSD"
-                        description: "The pop-up that shows volume and brightness when you change them"
                         checked: ShellSettings.osdEnabled
                         onToggled: ShellSettings.osdEnabled = !ShellSettings.osdEnabled
                         topRadius: 10
@@ -1602,7 +1545,6 @@ Item {
                     // Mode: floating pill vs bar-inline. Drives which sub-options apply.
                     ToggleRow {
                         glyph: "󰀱"; label: "Show in bar"; badge: "beta"
-                        description: "Show it inline in the bar instead of as a floating pill"
                         enabled: ShellSettings.osdEnabled
                         checked: ShellSettings.osdBarIntegrated
                         onToggled: ShellSettings.osdBarIntegrated = !ShellSettings.osdBarIntegrated
