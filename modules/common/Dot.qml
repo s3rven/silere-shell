@@ -9,19 +9,22 @@ Item {
     property bool show: true
 
     readonly property string _style: ShellSettings.dotStyle
+    // "none" draws no mark and reserves no slot, so the Row collapses to a single
+    // uniform gap between widgets — clean spacing, no group dividers at all.
+    readonly property bool   _none:  _style === "none"
     readonly property color  _base:  ShellSettings.neutralTheme ? Theme.subtext : Theme.mix(Theme.subtext, Theme.accent, 0.10)
     readonly property color  _col:   Theme.withAlpha(_base, ShellSettings.dotOpacity)
     readonly property bool   _slash: _style === "slash"
-    readonly property int    _slotW: ShellSettings.barCompact ? (_slash ? 5 : 4) : (_slash ? 9 : 8)
+    readonly property int    _slotW: Metrics.dotSlot(_slash)
 
     // Font-derived reference height so marks scale with the bar's text.
     TextMetrics { id: _tm; font.family: Settings.font; font.pixelSize: Settings.fontSize; text: "M" }
 
     anchors.verticalCenter: parent.verticalCenter
-    implicitWidth:  show ? _slotW : 0
+    implicitWidth:  (show && !_none) ? _slotW : 0
     implicitHeight: _tm.height
     clip: true
-    visible: show || _mark.opacity > 0
+    visible: !_none && (show || _mark.opacity > 0)
 
     Behavior on implicitWidth { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
 

@@ -112,6 +112,8 @@ Item {
             // │ (U+2502) renders as a thinner stroke than ASCII | in most fonts.
             const sep = (ShellSettings.dotStyle === "line" || ShellSettings.dotStyle === "|") ? "│"
                       : ShellSettings.dotStyle === "slash" ? "/"
+                      // app·title still needs a delimiter even when the bar drops its dividers
+                      : ShellSettings.dotStyle === "none" ? "·"
                       : ShellSettings.dotStyle
             return '<font color="' + appCol   + '">' + _esc(_shownApp) + '</font> '
                  + '<font color="' + dotCol   + '">' + _esc(sep) + '</font> '

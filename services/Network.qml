@@ -11,6 +11,7 @@ Singleton {
     property bool available:        false
     property bool connected:        false
     property bool isWifi:           false
+    property bool hasWifiDevice:    false   // any NM-managed wifi radio exists at all
     property bool hasVpn:           false
     property string connectionName: ""
     property string vpnName:        ""
@@ -196,6 +197,7 @@ Singleton {
             connected = false
             deviceName = ""
             deviceType = ""
+            hasWifiDevice = false
             wifiEnabled = false
             clearWifiScan()
             _resetTraffic()
@@ -222,11 +224,13 @@ Singleton {
                 root.available = false
                 root.deviceName = ""
                 root.deviceType = ""
+                root.hasWifiDevice = false
                 root._resetTraffic()
             } else {
                 let best = null
                 let vpn = false
                 let vpnConn = ""
+                let anyWifi = false
                 const lines = (_procOut.text || "").trim().split("\n")
                 for (let i = 0; i < lines.length; i++) {
                     const parts = root._splitNmcliLine(lines[i])
@@ -235,6 +239,7 @@ Singleton {
                     const device = parts[1]
                     const state = parts[2]
                     const conn = parts.slice(3).join(":")
+                    if (type === "wifi" && !state.startsWith("unmanaged")) anyWifi = true
                     if (!state.startsWith("connected")) continue
                     if (root._isVpn(type)) { vpn = true; vpnConn = conn }
                     else {
@@ -243,6 +248,7 @@ Singleton {
                             best = { type: type, device: device, conn: conn, priority: priority }
                     }
                 }
+                root.hasWifiDevice = anyWifi
                 const found = best !== null
                 if (found) {
                     if (root.deviceName !== best.device) root._resetTraffic()

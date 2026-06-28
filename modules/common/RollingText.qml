@@ -11,7 +11,9 @@ Item {
     property string text: ""
     property color  color: Theme.text
 
-    clip: true
+    // Clip only mid-roll: at rest the text fits its box, so the bar carries no
+    // permanent clip pass.
+    clip: _roll.running
     anchors.verticalCenter: parent ? parent.verticalCenter : undefined
     // Whole px so neighbours in a Row don't land on fractional pixels.
     implicitWidth:  Math.ceil(_main.implicitWidth)

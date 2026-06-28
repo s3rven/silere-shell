@@ -9,7 +9,6 @@ Rectangle {
     property string title: ""
     property string status: ""
     property string meta: ""
-    property string checkedText: ""
     property string detail: ""
     property bool   detailError: false
     property color statusColor: Theme.subtext
@@ -49,19 +48,19 @@ Rectangle {
         Item {
             id: _main
             width: parent.width
-            height: 40
+            height: 52
 
             Text {
                 id: _g
                 anchors.left: parent.left
-                anchors.leftMargin: 12
-                anchors.verticalCenter: parent.verticalCenter
+                anchors.leftMargin: 14
+                anchors.verticalCenter: _txt.verticalCenter
                 width: 20
                 horizontalAlignment: Text.AlignHCenter
                 text: root.glyph
                 color: root.statusColor
                 font.family: Settings.font
-                font.pixelSize: Settings.fontSize + 3
+                font.pixelSize: Settings.fontSize + 4
                 renderType: Text.NativeRendering
                 Behavior on color { ColorAnimation { duration: Motion.medium } }
 
@@ -87,77 +86,49 @@ Rectangle {
             Column {
                 id: _txt
                 anchors.left: _g.right
-                anchors.leftMargin: 9
+                anchors.leftMargin: 11
                 anchors.right: _actions.left
-                anchors.rightMargin: 10
+                anchors.rightMargin: 12
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 2
+                spacing: 3
 
-                Item {
+                Text {
+                    id: _title
                     width: parent.width
-                    height: _title.implicitHeight
-
-                    Text {
-                        id: _title
-                        anchors.left: parent.left
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: Math.min(implicitWidth, parent.width - (_meta.visible ? _meta.width + 7 : 0))
-                        text: root.title
-                        textFormat: Text.PlainText
-                        elide: Text.ElideRight
-                        color: Theme.text
-                        font.family: Settings.font
-                        font.pixelSize: Settings.fontSize
-                        font.weight: Font.Medium
-                        renderType: Text.NativeRendering
-                    }
-                    Text {
-                        id: _meta
-                        visible: root.meta.length > 0
-                        anchors.left: _title.right
-                        anchors.leftMargin: 7
-                        anchors.baseline: _title.baseline
-                        width: Math.min(implicitWidth, parent.width * 0.45)
-                        text: root.meta
-                        textFormat: Text.PlainText
-                        elide: Text.ElideRight
-                        color: Theme.withAlpha(Theme.subtext, 0.55)
-                        font.family: Settings.font
-                        font.pixelSize: Settings.fontSize - 3
-                        renderType: Text.NativeRendering
-                    }
+                    text: root.title
+                    textFormat: Text.PlainText
+                    elide: Text.ElideRight
+                    color: Theme.text
+                    font.family: Settings.font
+                    font.pixelSize: Settings.fontSize
+                    font.weight: Font.Medium
+                    renderType: Text.NativeRendering
                 }
 
-                Item {
+                Row {
                     width: parent.width
-                    height: _status.implicitHeight
+                    spacing: 0
 
                     Text {
                         id: _status
-                        anchors.left: parent.left
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: Math.min(implicitWidth, parent.width - (_checked.visible ? _checked.width + 8 : 0))
                         text: root.status
                         textFormat: Text.PlainText
-                        elide: Text.ElideRight
-                        color: Theme.withAlpha(root.statusColor, 0.85)
+                        color: Theme.withAlpha(root.statusColor, 0.9)
                         font.family: Settings.font
                         font.pixelSize: Settings.fontSize - 2
                         renderType: Text.NativeRendering
                         Behavior on color { ColorAnimation { duration: Motion.medium } }
                     }
                     Text {
-                        id: _checked
-                        visible: root.checkedText.length > 0
-                        anchors.right: parent.right
-                        anchors.baseline: _status.baseline
-                        width: Math.min(implicitWidth, parent.width * 0.5)
-                        text: root.checkedText
+                        id: _sub
+                        visible: root.meta.length > 0
+                        width: Math.min(implicitWidth, Math.max(0, parent.width - _status.width))
+                        text: "  ·  " + root.meta
                         textFormat: Text.PlainText
                         elide: Text.ElideRight
-                        color: Theme.withAlpha(Theme.subtext, 0.42)
+                        color: Theme.withAlpha(Theme.subtext, 0.5)
                         font.family: Settings.font
-                        font.pixelSize: Settings.fontSize - 3
+                        font.pixelSize: Settings.fontSize - 2
                         renderType: Text.NativeRendering
                     }
                 }
@@ -166,7 +137,7 @@ Rectangle {
             Row {
                 id: _actions
                 anchors.right: parent.right
-                anchors.rightMargin: 8
+                anchors.rightMargin: 10
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 6
 
@@ -202,9 +173,9 @@ Rectangle {
 
             Text {
                 id: _detailText
-                x: 41
+                x: 45
                 y: 3
-                width: parent.width - 41 - 13
+                width: parent.width - 45 - 13
                 text: root.detail
                 textFormat: Text.PlainText
                 wrapMode: Text.WordWrap

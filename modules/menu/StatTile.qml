@@ -40,7 +40,7 @@ Item {
     // Glyph slot — same position as QuickToggleTile.
     Item {
         id: _glyphSlot
-        anchors { left: parent.left; leftMargin: 14; verticalCenter: parent.verticalCenter }
+        anchors { left: parent.left; leftMargin: 13; verticalCenter: parent.verticalCenter }
         width: 22; height: 22
 
         Text {

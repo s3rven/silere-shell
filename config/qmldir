@@ -4,6 +4,7 @@ singleton Theme         1.0 Theme.qml
 
 # settings
 singleton Motion        1.0 Motion.qml
+singleton Metrics       1.0 Metrics.qml
 singleton Settings      1.0 Settings.qml
 
 # helpers

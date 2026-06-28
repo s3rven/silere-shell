@@ -51,9 +51,6 @@ Singleton {
         }
         return SystemTools.ready ? "Unsupported" : "Detecting..."
     }
-    readonly property string lastCheckTime: lastCheckMs > 0
-        ? Qt.formatDateTime(new Date(lastCheckMs), ShellSettings.clock12h ? "MMM d, h:mm AP" : "MMM d, HH:mm")
-        : "Never"
     readonly property string statusText: isChecking ? "Checking"
         : lastFailed ? "Check failed"
         : !enabled ? "Disabled"

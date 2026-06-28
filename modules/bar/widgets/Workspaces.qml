@@ -388,12 +388,16 @@ Item {
         property real _specialScale: 1.0
         property real _glint:        -1.15
         property real _trailX:       targetX
+        // Menu-open reveal (0→1, animated) and a sustained breath while it stays open.
+        property real _menuOn:    MenuState.open ? 1 : 0
+        property real _menuPulse: 0
+        Behavior on _menuOn { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(220); easing.type: Easing.OutCubic } }
 
         readonly property color tint: {
             const ws = root.wsObjFor(root.activeId)
             return (ws && ws.urgent) ? Theme.warning : Theme.accent
         }
-        readonly property real _energy: Math.max(MenuState.open ? 0.9 : 0,
+        readonly property real _energy: Math.max(diamond._menuOn * (0.70 + diamond._menuPulse * 0.30),
                                                   root.inSpecial ? 0.65 : 0,
                                                   (_hoverScale - 1.0) * 4.2,
                                                   (_tapScale   - 1.0) * 2.2,
@@ -416,8 +420,27 @@ Item {
             opacity: 0.06 + diamond._energy * 0.16
             scale: 0.70 + diamond._energy * 0.22
             visible: opacity > 0.01
-            Behavior on opacity { NumberAnimation { duration: Motion.ms(130); easing.type: Easing.OutCubic } }
-            Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(170); easing.type: Easing.OutCubic } }
+            // Disable during the breath loop: _energy changes every frame then, so
+            // Behaviors would restart 60×/s for no gain — the breath is already smooth.
+            Behavior on opacity { enabled: !_breathAnim.running; NumberAnimation { duration: Motion.ms(130); easing.type: Easing.OutCubic } }
+            Behavior on scale   { enabled: !ShellSettings.reduceMotion && !_breathAnim.running; NumberAnimation { duration: Motion.ms(170); easing.type: Easing.OutCubic } }
+        }
+
+        // One-shot shockwave the instant the menu opens: a tint halo radiates out
+        // and dissolves, so the open reads as an emanation rather than a state swap.
+        Rectangle {
+            id: _menuRipple
+            anchors.centerIn: parent
+            width:  parent.width + 6
+            height: width
+            radius: 4
+            rotation: 45
+            antialiasing: true
+            color: Theme.withAlpha(diamond.tint, 0.5)
+            opacity: 0
+            scale: 1.0
+            transformOrigin: Item.Center
+            visible: opacity > 0.01
         }
 
         // Special/scratchpad (super+S): a translucent accent diamond frames the
@@ -468,8 +491,8 @@ Item {
             scale: 1.0 + diamond._energy * 0.035
             visible: opacity > 0.01
             Behavior on color   { ColorAnimation { duration: Motion.ms(150) } }
-            Behavior on opacity { NumberAnimation { duration: Motion.ms(130); easing.type: Easing.OutCubic } }
-            Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(150); easing.type: Easing.OutCubic } }
+            Behavior on opacity { enabled: !_breathAnim.running; NumberAnimation { duration: Motion.ms(130); easing.type: Easing.OutCubic } }
+            Behavior on scale   { enabled: !ShellSettings.reduceMotion && !_breathAnim.running; NumberAnimation { duration: Motion.ms(150); easing.type: Easing.OutCubic } }
         }
 
         Rectangle {
@@ -542,23 +565,17 @@ Item {
             }
         }
 
-        // Menu-open state: a small dark socket opens dead-centre while the Silere
-        // menu is showing, so the anchor reads as engaged. Surface-coloured (never
-        // white); the gem is otherwise solid.
+        // Menu-open: the whole gem charges instead of punching a dark socket — its
+        // luminance lifts uniformly (centred by construction, nothing to misalign)
+        // and breathes for as long as the menu stays open.
         Rectangle {
-            anchors.centerIn: parent
-            width:  4
-            height: 4
-            radius: 1
+            anchors.fill: parent
+            radius: 2
             rotation: 45
             antialiasing: true
-            color: Theme.surface
-            opacity: MenuState.open ? 0.92 : 0
-            scale:   MenuState.open ? 1.0 : 0.45
-            transformOrigin: Item.Center
+            color: Qt.rgba(1, 1, 1, 1)
+            opacity: diamond._menuOn * (0.16 + diamond._menuPulse * 0.18)
             visible: opacity > 0.01
-            Behavior on opacity { NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
-            Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(140); easing.type: Easing.OutCubic } }
         }
 
         // Attention badge: a static dot on the crown when notifications were missed
@@ -630,6 +647,25 @@ Item {
             id: _tapPulse
             NumberAnimation { target: diamond; property: "_tapScale"; to: 1.14; duration: Motion.ms(70);  easing.type: Easing.OutQuad }
             NumberAnimation { target: diamond; property: "_tapScale"; to: 1.0;  duration: Motion.ms(145); easing.type: Easing.OutCubic }
+        }
+
+        ParallelAnimation {
+            id: _menuRippleAnim
+            NumberAnimation { target: _menuRipple; property: "scale";   from: 0.9;  to: 2.7; duration: Motion.ms(540); easing.type: Easing.OutCubic }
+            NumberAnimation { target: _menuRipple; property: "opacity"; from: 0.55; to: 0;   duration: Motion.ms(540); easing.type: Easing.OutCubic }
+        }
+        SequentialAnimation {
+            id: _breathAnim
+            running: MenuState.open && !ShellSettings.reduceMotion
+            loops:   Animation.Infinite
+            onRunningChanged: if (!running) diamond._menuPulse = 0
+            NumberAnimation { target: diamond; property: "_menuPulse"; from: 0; to: 1; duration: Motion.ms(950); easing.type: Easing.InOutSine }
+            NumberAnimation { target: diamond; property: "_menuPulse"; to: 0;          duration: Motion.ms(950); easing.type: Easing.InOutSine }
+        }
+        Connections {
+            target: MenuState
+            enabled: !ShellSettings.reduceMotion
+            function onOpenChanged() { if (MenuState.open) _menuRippleAnim.restart() }
         }
     }
 

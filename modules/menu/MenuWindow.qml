@@ -6,6 +6,7 @@ import Quickshell.Wayland._WlrLayerShell
 import Quickshell.Hyprland
 import "../../config"
 import "../../services"
+import "../common"
 
 PanelWindow {
     id: win
@@ -133,7 +134,9 @@ PanelWindow {
         // Home/Notifications read best compact; Settings needs room for the tree-nav
         // plus the 4-chip option rows.
         readonly property int _compactW:  400
-        readonly property int _settingsW: 552
+        // rail(198) + 352 content, so the content column is the same width as on
+        // the compact tabs — only the nav slides in, the content never reflows.
+        readonly property int _settingsW: 550
         readonly property int _targetPanelW: activeTab === 1 ? _settingsW : _compactW
         readonly property int panelW: Math.max(320, Math.min(_targetPanelW,
             win.width > 0 ? win.width - panelMinX * 2 : _targetPanelW))
@@ -144,7 +147,7 @@ PanelWindow {
         readonly property int railExpandedW: railCollapsedW + navW
         readonly property int railW: activeTab === 1 ? railExpandedW : railCollapsedW
         readonly property int contentW: panelW - railW
-        readonly property int contentPad: 22
+        readonly property int contentPad: 20
         readonly property int innerW: contentW - contentPad * 2
         // Shared height floor so every tab opens at the same size; taller
         // content grows above it and the panel animates the change.
@@ -171,7 +174,7 @@ PanelWindow {
 
         // Detached popup: starts just behind the bar-side edge, then settles into
         // place via scale/offset — height is fixed up front, not animated.
-        property real menuScale: 0.985
+        property real menuScale: Motion.popScaleFrom
         property real edgeOffset: _closedOffset
         readonly property real _closedOffset: _barBottom ? 8 : -8
         readonly property real _originX: Math.max(0, Math.min(panelW, MenuState.anchorX - x))
@@ -309,7 +312,7 @@ PanelWindow {
         states: [
             State {
                 name: "hidden"
-                PropertyChanges { target: panel; menuScale: 0.985; edgeOffset: panel._closedOffset; opacity: 0 }
+                PropertyChanges { target: panel; menuScale: Motion.popScaleFrom; edgeOffset: panel._closedOffset; opacity: 0 }
             },
             State {
                 name: "visible"
@@ -323,17 +326,17 @@ PanelWindow {
                 ParallelAnimation {
                     NumberAnimation {
                         target: panel; property: "menuScale"
-                        to: 1.0; duration: Motion.ms(170)
+                        to: 1.0; duration: Motion.popIn
                         easing.type: Easing.OutCubic
                     }
                     NumberAnimation {
                         target: panel; property: "edgeOffset"
-                        to: 0; duration: Motion.ms(170)
+                        to: 0; duration: Motion.popIn
                         easing.type: Easing.OutQuart
                     }
                     NumberAnimation {
                         target: panel; property: "opacity"
-                        to: 1.0; duration: Motion.ms(105); easing.type: Easing.OutCubic
+                        to: 1.0; duration: Motion.popInFade; easing.type: Easing.OutCubic
                     }
                 }
             },
@@ -342,17 +345,17 @@ PanelWindow {
                 ParallelAnimation {
                     NumberAnimation {
                         target: panel; property: "menuScale"
-                        to: 0.985; duration: Motion.ms(115)
+                        to: Motion.popScaleFrom; duration: Motion.popOut
                         easing.type: Easing.InCubic
                     }
                     NumberAnimation {
                         target: panel; property: "edgeOffset"
-                        to: panel._closedOffset; duration: Motion.ms(115)
+                        to: panel._closedOffset; duration: Motion.popOut
                         easing.type: Easing.InCubic
                     }
                     NumberAnimation {
                         target: panel; property: "opacity"
-                        to: 0.0; duration: Motion.ms(95); easing.type: Easing.InCubic
+                        to: 0.0; duration: Motion.popOutFade; easing.type: Easing.InCubic
                     }
                 }
             }
@@ -387,7 +390,7 @@ PanelWindow {
 
         Timer {
             id: _placementSettle
-            interval: Math.max(40, Motion.ms(190))
+            interval: Motion.popSettle
             repeat: false
             onTriggered: panel._placementSettled = true
         }
@@ -672,6 +675,16 @@ PanelWindow {
                         }
                     }
                 }
+            }
+
+            // Overflow cue for the shared Home/Settings scroller — without it,
+            // content taller than the clamped panel (media + sun arc) is clipped
+            // with no hint there's more. Notifications owns its own fade.
+            ListEdgeFade {
+                anchors.fill: contentFlick
+                list: contentFlick
+                visible: panel.activeTab !== 2 && contentFlick.contentHeight > contentFlick.height + 1
+                z: 4
             }
 
             // ── Power overlay ───────────────────────────────────────────

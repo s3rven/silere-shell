@@ -84,10 +84,14 @@ PanelWindow {
                     required property var fillColor
                     required property var barColor
 
-                    readonly property int pillH: 34
+                    readonly property int pillH: ShellSettings.osdMatchBar ? Math.max(28, ShellSettings.barHeight) : 34
                     readonly property int chromeW: hasBar ? 216 : 70
                     readonly property int pillW: Math.max(268, Math.min(520, chromeW + Math.ceil(_labelMetrics.advanceWidth) + 2))
-                    readonly property real pillRadius: Math.min(Theme.radiusPanel, pillH / 2)
+                    // Follow the bar's corner choice when matching (radius/corners hold
+                    // the user's pick even on a non-floating bar); else the panel radius.
+                    readonly property real pillRadius: ShellSettings.osdMatchBar
+                        ? (ShellSettings.barCornerStyle === "flat" ? 0 : Math.min(ShellSettings.barRadius, pillH / 2))
+                        : Math.min(Theme.radiusPanel, pillH / 2)
                     readonly property real _hiddenSlide: osd._bottom ? 7 : -7
 
                     property bool _ready: false

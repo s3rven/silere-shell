@@ -261,7 +261,7 @@ PanelWindow {
 
         // Detached popup: rises from the bar-side edge, centred on the clock,
         // with a restrained scale and fade.
-        property real scaleAmt: 0.985
+        property real scaleAmt: Motion.popScaleFrom
         property real edgeOffset: _closedOffset
         readonly property real _closedOffset: _barBottom ? 8 : -8
         transform: Scale { origin.x: card._originX; origin.y: card._barBottom ? card.height : 0; xScale: card.scaleAmt; yScale: card.scaleAmt }
@@ -275,30 +275,30 @@ PanelWindow {
 
         Timer {
             id: _placementSettle
-            interval: Math.max(40, Motion.ms(180))
+            interval: Motion.popSettle
             repeat: false
             onTriggered: card._placementSettled = true
         }
 
         states: [
-            State { name: "hidden";  PropertyChanges { target: card; scaleAmt: 0.985; edgeOffset: card._closedOffset; opacity: 0 } },
+            State { name: "hidden";  PropertyChanges { target: card; scaleAmt: Motion.popScaleFrom; edgeOffset: card._closedOffset; opacity: 0 } },
             State { name: "visible"; PropertyChanges { target: card; scaleAmt: 1.0;  edgeOffset: 0; opacity: 1 } }
         ]
         transitions: [
             Transition {
                 from: "*"; to: "visible"
                 ParallelAnimation {
-                    NumberAnimation { target: card; property: "scaleAmt";   to: 1.0; duration: Motion.ms(160); easing.type: Easing.OutCubic }
-                    NumberAnimation { target: card; property: "edgeOffset"; to: 0;   duration: Motion.ms(160); easing.type: Easing.OutQuart }
-                    NumberAnimation { target: card; property: "opacity";    to: 1.0; duration: Motion.ms(100); easing.type: Easing.OutCubic }
+                    NumberAnimation { target: card; property: "scaleAmt";   to: 1.0; duration: Motion.popIn; easing.type: Easing.OutCubic }
+                    NumberAnimation { target: card; property: "edgeOffset"; to: 0;   duration: Motion.popIn; easing.type: Easing.OutQuart }
+                    NumberAnimation { target: card; property: "opacity";    to: 1.0; duration: Motion.popInFade; easing.type: Easing.OutCubic }
                 }
             },
             Transition {
                 from: "visible"; to: "hidden"
                 ParallelAnimation {
-                    NumberAnimation { target: card; property: "scaleAmt";   to: 0.985;             duration: Motion.ms(105); easing.type: Easing.InCubic }
-                    NumberAnimation { target: card; property: "edgeOffset"; to: card._closedOffset; duration: Motion.ms(105); easing.type: Easing.InCubic }
-                    NumberAnimation { target: card; property: "opacity";    to: 0.0;               duration: Motion.ms(90);  easing.type: Easing.InCubic }
+                    NumberAnimation { target: card; property: "scaleAmt";   to: Motion.popScaleFrom; duration: Motion.popOut; easing.type: Easing.InCubic }
+                    NumberAnimation { target: card; property: "edgeOffset"; to: card._closedOffset;  duration: Motion.popOut; easing.type: Easing.InCubic }
+                    NumberAnimation { target: card; property: "opacity";    to: 0.0;                 duration: Motion.popOutFade;  easing.type: Easing.InCubic }
                 }
             }
         ]

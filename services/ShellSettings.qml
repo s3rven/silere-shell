@@ -40,6 +40,7 @@ Singleton {
     property bool   osdVolumeTint:  false    // warm "loud" tint as volume nears max
     property bool   osdChargedNotify: false  // one-shot OSD peek when the battery reaches full
     property bool   osdBarIntegrated: false  // β: show OSD inline in the bar center instead of a floating pill
+    property bool   osdMatchBar:      true   // floating OSD pill adopts the bar's height + corner radius
     property bool   reduceMotion:        false
     property real   animSpeed:           1.0
     property real   uiScale:             1.0     // shell font scale, 0.8–1.15
@@ -71,9 +72,10 @@ Singleton {
     property bool   screenshotGlowSweep:     true
 
     property real   dotOpacity:          0.35
-    property string dotStyle:            "·"       // "·" | "•" | "◦" | "|" | "slash" | "line"
+    property string dotStyle:            "·"       // "·" | "•" | "◦" | "|" | "slash" | "line" | "none"
     property int    barSpacing:          11        // gap between bar widgets / separators
     property bool   barCompact:          false     // β: fewer separators, tighter gaps
+    property bool   barHoverHighlight:   false     // soft capsule behind a bar widget while pointed at
     property int    barHeight:           36
     property bool   barFloating:         false     // detached rounded surface, matches the menu/calendar/notif panels
     property real   barWidth:            0.90     // visual bar width, 0.5-1.0 of screen
@@ -143,6 +145,7 @@ Singleton {
         { k: "osdVolumeTint",       t: "bool" },
         { k: "osdChargedNotify",    t: "bool" },
         { k: "osdBarIntegrated",    t: "bool" },
+        { k: "osdMatchBar",         t: "bool" },
         { k: "reduceMotion",        t: "bool" },
         { k: "animSpeed",           t: "real", min: 0.5, max: 2.0 },
         { k: "uiScale",             t: "real", min: 0.8, max: 1.15 },
@@ -171,9 +174,10 @@ Singleton {
         { k: "screenshotGlowDuration", t: "int",  min: 250, max: 1600 },
         { k: "screenshotGlowSweep", t: "bool" },
         { k: "dotOpacity",          t: "real", min: 0.05, max: 1.0 },
-        { k: "dotStyle",            t: "enum", vals: ["·", "•", "◦", "|", "slash", "line"] },
+        { k: "dotStyle",            t: "enum", vals: ["·", "•", "◦", "|", "slash", "line", "none"] },
         { k: "barSpacing",          t: "int",  min: 4, max: 24 },
         { k: "barCompact",          t: "bool" },
+        { k: "barHoverHighlight",   t: "bool" },
         { k: "barHeight",           t: "int",  min: 24,   max: 60 },
         { k: "barFloating",         t: "bool" },
         { k: "barWidth",            t: "real", min: 0.5,  max: 1.0 },

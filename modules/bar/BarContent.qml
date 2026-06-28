@@ -13,10 +13,8 @@ Item {
 
     required property ShellScreen screen
 
-    readonly property int gap:    ShellSettings.barCompact ? 7 : 10
-    readonly property int dotGap: ShellSettings.barCompact
-        ? Math.max(3, ShellSettings.barSpacing - 6)
-        : ShellSettings.barSpacing
+    readonly property int gap:    Metrics.titleGap
+    readonly property int dotGap: Metrics.widgetGap
     // Free span between the widget groups. The title prefers the bar's true
     // center but slides off-center as a group closes in, instead of clamping
     // its width to symmetric clearance and vanishing while space remains.
@@ -24,12 +22,6 @@ Item {
     readonly property real titleFreeRight: width - rightGroup.implicitWidth - gap
     readonly property real titleAvailableWidth: Math.max(0, titleFreeRight - titleFreeLeft)
 
-    // Each separator is owned by the widget on its LEFT and shows only while that
-    // widget shows, so a hidden widget takes its divider with it — never a leading,
-    // trailing, or doubled dot. Volume is always present.
-    // Compact (β) keeps the same scan order but uses tighter pill spacing and
-    // only marks semantic group edges:
-    // [updates network] · [vol bri battery] · [media] · [clock]
     readonly property bool _compact: ShellSettings.barCompact
     readonly property bool _vUpdates: Updates.available || Updates.isChecking
     readonly property bool _vNetwork: ShellSettings.barShowNetwork
@@ -39,6 +31,36 @@ Item {
         && !(ShellSettings.batteryAutoHide && (Battery.charging || Battery.full))
     readonly property bool _vMedia:   mediaWidget.show
     readonly property bool _vClock:   ShellSettings.barShowClock
+
+    // slot order: shell · tray · updates network · vol bri battery · media · clock
+    readonly property var _seps: {
+        const compact = root._compact
+        const s = [
+            { key: "shell",   v: shellUpdateWidget._show, g: "shell"  },
+            { key: "tray",    v: trayWidget.show,         g: "tray"   },
+            { key: "updates", v: root._vUpdates,          g: "status" },
+            { key: "network", v: root._vNetwork,          g: "status" },
+            { key: "volume",  v: true,                    g: "levels" },
+            { key: "bright",  v: root._vBright,           g: "levels" },
+            { key: "battery", v: root._vBattery,          g: "levels" },
+            { key: "media",   v: root._vMedia,            g: "media"  },
+            { key: "clock",   v: root._vClock,            g: "clock"  }
+        ]
+        const out = {}
+        for (let i = 0; i < s.length; i++) {
+            const cur = s[i]
+            if (!cur.v) { out[cur.key] = false; continue }
+            let after = false, sameGroupAfter = false
+            for (let j = i + 1; j < s.length; j++) {
+                if (!s[j].v) continue
+                after = true
+                if (!compact) break
+                if (s[j].g === cur.g) { sameGroupAfter = true; break }
+            }
+            out[cur.key] = after && (compact ? !sameGroupAfter : true)
+        }
+        return out
+    }
 
     // ── Left ────────────────────────────────────────────────────────────────
     Row {
@@ -128,27 +150,21 @@ Item {
         Behavior on spacing { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
 
         ShellUpdateWidget { id: shellUpdateWidget; anchors.verticalCenter: parent.verticalCenter }
-        Dot             { show: shellUpdateWidget._show }   // own group: shell self-update activity
+        Dot             { show: root._seps.shell }
         TrayWidget      { id: trayWidget; anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
-        Dot             { show: trayWidget.show }   // tray stays its own group, even compact
+        Dot             { show: root._seps.tray }
         UpdatesWidget   { anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
-        Dot             { show: root._vUpdates && !root._compact }   // intra-group: fuses with network
+        Dot             { show: root._seps.updates }
         NetworkWidget   { anchors.verticalCenter: parent.verticalCenter }
-        // Status group trailing dot. Compact fuses [updates network], so this
-        // marks the group boundary whenever *either* member shows — not just
-        // network — or a hidden network would drop the whole group's divider.
-        Dot             { show: root._compact ? (root._vUpdates || root._vNetwork) : root._vNetwork }
+        Dot             { show: root._seps.network }
         Volume          { anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
-        Dot             { show: !root._compact }                     // intra-group: fuses with brightness
+        Dot             { show: root._seps.volume }
         BrightnessWidget{ anchors.verticalCenter: parent.verticalCenter }
-        // Levels group trailing dot. Non-compact: shows when bri is present.
-        // Compact: hide when battery follows (battery's own dot marks the group
-        // boundary instead); show only when bri is present but battery is absent.
-        Dot             { show: root._vBright && (!root._compact || !root._vBattery) }
+        Dot             { show: root._seps.bright }
         BatteryWidget   { anchors.verticalCenter: parent.verticalCenter }
-        Dot             { show: root._vBattery }
+        Dot             { show: root._seps.battery }
         MediaWidget     { id: mediaWidget; anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
-        Dot             { show: root._vMedia && root._vClock }
+        Dot             { show: root._seps.media }
         Clock           { visible: root._vClock; anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
     }
 }

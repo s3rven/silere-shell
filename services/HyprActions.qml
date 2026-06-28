@@ -232,6 +232,19 @@ Singleton {
         "chrome", "chromium", "brave", "edge", "opera", "vivaldi", "thorium"
     ]
 
+    // display names ("Spotify") whose window class only the .desktop file knows
+    function _resolveByDesktopEntry(clients, name) {
+        const de = DesktopEntries.heuristicLookup(name)
+        const startupClass = de?.startupClass ? String(de.startupClass) : ""
+        const desktopId    = de?.id ? String(de.id) : ""
+        let best = null
+        if (startupClass.length > 0)
+            best = root._chooseMatchingSource(clients, c => root._classMatches(c, startupClass))
+        if (!best && desktopId.length > 0)
+            best = root._chooseMatchingSource(clients, c => root._classMatches(c, desktopId))
+        return best
+    }
+
     function focusMonitor(name: string): void {
         if (!name || name.length === 0) return
         if (_useLua)
@@ -304,18 +317,9 @@ Singleton {
 
         let bestApp = root._chooseMatchingSource(clients, c => root._appMatches(c, appName))
 
-        // 4. appName → desktop entry → StartupWMClass/id, the same resolution
-        // the workspace icons use; covers display names ("Spotify") whose
-        // window class only the .desktop file knows.
-        if (!bestApp) {
-            const de = DesktopEntries.heuristicLookup(appName)
-            const startupClass = de?.startupClass ? String(de.startupClass) : ""
-            const desktopId = de?.id ? String(de.id) : ""
-            if (startupClass.length > 0)
-                bestApp = root._chooseMatchingSource(clients, c => root._classMatches(c, startupClass))
-            if (!bestApp && desktopId.length > 0)
-                bestApp = root._chooseMatchingSource(clients, c => root._classMatches(c, desktopId))
-        }
+        // 4. desktop-entry database, the same resolution the workspace icons use.
+        if (!bestApp)
+            bestApp = root._resolveByDesktopEntry(clients, appName)
 
         return (bestApp && bestApp.workspace) ? bestApp : null
     }
@@ -380,17 +384,9 @@ Singleton {
             best = root._chooseMatchingSource(clients, c =>
                 root._classMatches(c, hints[i]) || root._appMatches(c, hints[i]))
 
-        // 2. desktop-entry resolution for display names whose window class only
-        //    the .desktop file knows.
-        for (let i = 0; i < hints.length && !best; i++) {
-            const de = DesktopEntries.heuristicLookup(hints[i])
-            const startupClass = de?.startupClass ? String(de.startupClass) : ""
-            const desktopId    = de?.id ? String(de.id) : ""
-            if (startupClass.length > 0)
-                best = root._chooseMatchingSource(clients, c => root._classMatches(c, startupClass))
-            if (!best && desktopId.length > 0)
-                best = root._chooseMatchingSource(clients, c => root._classMatches(c, desktopId))
-        }
+        // 2. desktop-entry database.
+        for (let i = 0; i < hints.length && !best; i++)
+            best = root._resolveByDesktopEntry(clients, hints[i])
 
         if (best && best.workspace) {
             focusWorkspaceWindow(best.workspace.id, best.address)

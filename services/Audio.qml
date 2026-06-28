@@ -39,7 +39,33 @@ Singleton {
     readonly property string label: ready ? `${Math.round(uiVolume * 100)}%` : "--%"
     readonly property string sinkName: sink ? (sink.description || "") : ""
 
-    PwObjectTracker { objects: root.sink ? [root.sink] : [] }
+    // ── Output devices ──────────────────────────────────────────────────────
+    // A handful of stable device nodes (not per-app streams), so enumerating and
+    // tracking them costs effectively nothing at idle.
+    readonly property var sinks: {
+        const out = []
+        const all = Pipewire.nodes.values
+        for (let i = 0; i < all.length; i++) {
+            const n = all[i]
+            if (n && n.isSink && !n.isStream) out.push(n)
+        }
+        return out
+    }
+    readonly property int sinkCount: sinks.length
+
+    // Shape for the SelectRow dropdown: [{ value: node, label }].
+    readonly property var sinkModel: sinks.map(n => ({ value: n, label: root.sinkLabel(n) }))
+
+    PwObjectTracker { objects: root.sinks }
+
+    function setSink(node): void {
+        if (node) Pipewire.preferredDefaultAudioSink = node
+    }
+
+    function sinkLabel(node): string {
+        if (!node) return ""
+        return node.description || node.nickname || node.name || "Output"
+    }
 
     function _syncAudio(): void {
         if (!_componentReady) return

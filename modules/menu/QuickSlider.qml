@@ -13,9 +13,17 @@ Item {
     property string wheelKey:  "quickslider"
     property string accessibleName: wheelKey
     property bool   glyphClickable: false
+    // Optional trailing chevron — toggles an owner-supplied dropdown.
+    property bool   expandable: false
+    property bool   expanded:   false
+    // Reserve the chevron gutter without a chevron, so a sibling slider's value
+    // column stays aligned with an expandable one above/below it.
+    property bool   reserveGutter: false
+    readonly property int _gutter: (expandable || reserveGutter) ? 26 : 0
 
     signal moved(real value)
     signal glyphClicked()
+    signal expandToggled()
 
     width:  parent ? parent.width : 0
     height: 36
@@ -48,10 +56,41 @@ Item {
         TapHandler   { enabled: root.glyphClickable; margin: 6; onTapped: root.glyphClicked() }
     }
 
+    // Chevron toggling the owner's dropdown; collapses to zero width when unused.
+    Item {
+        id: _chev
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        width: root.expandable ? 26 : 0
+        height: parent.height
+        visible: root.expandable
+        opacity: _chevHover.hovered ? 1.0 : 0.7
+
+        Accessible.role: Accessible.Button
+        Accessible.name: root.accessibleName + " output device"
+
+        Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+        HoverHandler { id: _chevHover; cursorShape: Qt.PointingHandCursor }
+        TapHandler   { onTapped: root.expandToggled() }
+
+        Text {
+            anchors.centerIn: parent
+            text: "󰅀"
+            color: root.expanded ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.85)
+            font.family: Settings.font
+            font.pixelSize: Settings.fontSize
+            renderType: Text.NativeRendering
+            rotation: root.expanded ? 180 : 0
+            transformOrigin: Item.Center
+            Behavior on rotation { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+            Behavior on color { ColorAnimation { duration: Motion.fast } }
+        }
+    }
+
     TextMetrics { id: _vm; font.family: Settings.font; font.pixelSize: Settings.fontSize - 1; text: "100%" }
     Text {
         id: _v
-        anchors.right: parent.right; anchors.rightMargin: 12
+        anchors.right: parent.right; anchors.rightMargin: 12 + root._gutter
         anchors.verticalCenter: parent.verticalCenter
         width: Math.ceil(_vm.advanceWidth)
         horizontalAlignment: Text.AlignRight
@@ -75,11 +114,15 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             width: parent.width; height: 4; radius: 2
             antialiasing: true
-            color: Theme.withAlpha(Theme.subtext, 0.18)
+            color: Theme.menuTrack
         }
         Rectangle {
             anchors.verticalCenter: parent.verticalCenter
-            width: _track.ratio <= 0 ? 0 : Math.max(4, _track.width * _track.ratio)
+            // At rest the thumb is hidden, so fill to the edge (100% must look full).
+            // Once the thumb shows, lock the fill to its centre so it can't overshoot.
+            width: _track.ratio <= 0 ? 0
+                 : (_thumb._shown ? Math.max(4, _thumb.x + _thumb.width / 2)
+                                  : Math.max(4, _track.width * _track.ratio))
             height: 4; radius: 2
             antialiasing: true
             // Solid, not translucent — see-through accent over the track looks washed.
@@ -88,15 +131,34 @@ Item {
             Behavior on color { ColorAnimation { duration: Motion.fast } }
         }
         Rectangle {
+            id: _thumb
             width: 12; height: 12; radius: 6
             antialiasing: true
             anchors.verticalCenter: parent.verticalCenter
             x: _track.ratio * (_track.width - width)
             color: _ma.pressed ? Theme.accent : Theme.text
-            scale: (_h.hovered || _ma.pressed || root.activeFocus) ? 1.0 : 0.0
+            border.width: 1
+            border.color: Theme.withAlpha(Theme.subtext, 0.12)
+            readonly property bool _shown: _h.hovered || _ma.pressed || root.activeFocus
+            scale: _thumb._shown ? (_ma.pressed ? 0.86 : 1.0) : 0.0
             transformOrigin: Item.Center
             Behavior on scale { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutBack; easing.overshoot: 1.5 } }
             Behavior on color { ColorAnimation { duration: Motion.fast } }
+            Behavior on x { enabled: !_ma.pressed && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.instant; easing.type: Easing.OutCubic } }
+
+            Rectangle {
+                anchors.centerIn: parent
+                readonly property bool _on: _h.hovered || _ma.pressed
+                width:  _on ? 20 : 16
+                height: width; radius: width / 2
+                antialiasing: true
+                color: _ma.pressed ? Theme.withAlpha(Theme.accent, 0.20)
+                                   : Theme.withAlpha(Theme.text, 0.06)
+                opacity: _on ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                Behavior on width   { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+                Behavior on color   { ColorAnimation  { duration: Motion.fast } }
+            }
         }
 
         HoverHandler { id: _h; cursorShape: Qt.PointingHandCursor }

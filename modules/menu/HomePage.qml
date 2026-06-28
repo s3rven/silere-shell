@@ -18,7 +18,7 @@ Item {
 
     property bool _entering: false
     property bool _firstActivation: true
-    property string _picker: ""   // "" | "wifi" | "bt" — which inline list is open
+    property string _picker: ""   // "" | "wifi" | "bt" | "nightlight" — open inline list
     layer.enabled: _entering && !ShellSettings.reduceMotion
 
     function _togglePicker(which: string): void { _picker = (_picker === which ? "" : which) }
@@ -63,6 +63,7 @@ Item {
             _enter.stop()
             _exit.restart()
             _picker = ""
+            _volumeRow.open = false
         }
     }
 
@@ -85,8 +86,50 @@ Item {
         width: parent.width
         spacing: 0
 
+        // Quiet masthead — just the date, with session uptime trailing.
+        Item {
+            id: _header
+            width: parent.width
+            height: 32
+
+            Text {
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                text: DateTime.cachedLongDate
+                color: Theme.withAlpha(Theme.text, 0.82)
+                font.family: Settings.font
+                font.pixelSize: Settings.fontSize
+                font.weight: Font.Medium
+                renderType: Text.NativeRendering
+            }
+
+            Row {
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 6
+                visible: SysInfo.uptimeSecs > 0
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "󰅐"
+                    color: Theme.withAlpha(Theme.subtext, 0.50)
+                    font.family: Settings.font
+                    font.pixelSize: Settings.fontSize - 1
+                    renderType: Text.NativeRendering
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: SysInfo.uptimeLabel
+                    color: Theme.withAlpha(Theme.subtext, 0.62)
+                    font.family: Settings.font
+                    font.pixelSize: Settings.fontSize - 1
+                    renderType: Text.NativeRendering
+                }
+            }
+        }
+
         // spacers are 4px multiples so card dividers below stay on the grid
-        Item { width: 1; height: 8 }
+        Item { width: 1; height: Theme.gapSection }
 
         Item {
             id: _mediaSection
@@ -656,199 +699,206 @@ Item {
             }
         }
 
-        Grid {
-            id: _toggleGrid
-            width: parent.width
-            columns: 2
-            columnSpacing: 6
-            rowSpacing: 8   // 4px multiple (tiles are 56), keeps rows below on the grid
-            readonly property real cellW: (width - columnSpacing) / 2
-
-            QuickToggleTile {
-                width: _toggleGrid.cellW
-                available: NightLight.toolAvailable
-                active: NightLight.enabled
-                activeGlyph: "󰖔"
-                inactiveGlyph: "󰖙"
-                title: "Night Light"
-                status: !NightLight.toolAvailable ? "hyprsunset missing"
-                      : NightLight.enabled ? NightLight.temperature + "K" : NightLight.recommendLabel
-                accentColor: Theme.warning
-                expandable: NightLight.toolAvailable && NightLight.enabled
-                expanded: root._picker === "nightlight"
-                onToggled: NightLight.toggle()
-                onExpandToggled: root._togglePicker("nightlight")
-            }
-
-            QuickToggleTile {
-                width: _toggleGrid.cellW
-                active: Notifications.dnd
-                activeGlyph: "󰂛"
-                inactiveGlyph: "󰂚"
-                title: "Do Not Disturb"
-                badgeCount: Notifications.dnd ? Notifications.missedCount : 0
-                onToggled: Notifications.toggleDnd()
-                onBadgeActivated: MenuState.showTab(2)
-            }
-
-            QuickToggleTile {
-                width: _toggleGrid.cellW
-                readonly property bool _ethActive: Network.connected && Network.deviceType === "ethernet"
-                available: Network.toolAvailable && !_ethActive
-                active: Network.wifiEnabled
-                activeGlyph: "󰤨"
-                inactiveGlyph: "󰤭"
-                title: "Wi-Fi"
-                status: !Network.toolAvailable ? "nmcli missing"
-                      : _ethActive ? "Ethernet"
-                      : (Network.wifiEnabled && Network.isWifi && Network.connected ? Network.connectionName : "")
-                expandable: Network.toolAvailable && Network.wifiEnabled && !_ethActive
-                expanded: root._picker === "wifi"
-                onToggled: Network.toggleWifi()
-                onExpandToggled: root._togglePicker("wifi")
-            }
-
-            QuickToggleTile {
-                width: _toggleGrid.cellW
-                available: Bluetooth.available
-                active: Bluetooth.enabled
-                activeGlyph: "󰂯"
-                inactiveGlyph: "󰂲"
-                title: "Bluetooth"
-                status: Bluetooth.connectedCount > 0
-                    ? (Bluetooth.connectedCount === 1
-                        ? Bluetooth.connectedName + (Bluetooth.connectedBattery >= 0 ? "  " + Bluetooth.connectedBattery + "%" : "")
-                        : Bluetooth.connectedCount + " connected")
-                    : ""
-                expandable: Bluetooth.available && Bluetooth.enabled
-                expanded: root._picker === "bt"
-                onToggled: Bluetooth.toggle()
-                onExpandToggled: root._togglePicker("bt")
-            }
-
-            // Tap cycles balanced → performance → power-saver. Keep the tile
-            // visible while the first read is pending so it doesn't blink out.
-            QuickToggleTile {
-                width: _toggleGrid.cellW
-                visible: PowerProfiles.available
-                available: PowerProfiles.profile !== ""
-                active: PowerProfiles.profile !== "" && PowerProfiles.profile !== "balanced"
-                activeGlyph: PowerProfiles.glyph
-                inactiveGlyph: PowerProfiles.glyph
-                title: "Power Mode"
-                status: PowerProfiles.profile !== "" ? PowerProfiles.label
-                      : PowerProfiles.syncing ? "Checking..."
-                      : "Unavailable"
-                onToggled: PowerProfiles.cycle()
-            }
-
-            QuickToggleTile {
-                // Gate on the configured command's tool (mirrors the power
-                // strip), not hyprlock specifically — lockCommand is editable.
-                readonly property bool lockAvailable: {
-                    const cmd = Settings.lockCommand
-                    if (!cmd || cmd.length === 0) return false
-                    if (String(cmd[0]) === "hyprlock") return SystemTools.hasHyprlock
-                    return true
-                }
-                width: _toggleGrid.cellW
-                available: lockAvailable
-                activeGlyph: "󰍁"
-                inactiveGlyph: "󰍁"
-                title: "Lock"
-                status: SystemTools.ready && !lockAvailable ? "hyprlock missing" : ""
-                onToggled: {
-                    MenuState.close()
-                    Quickshell.execDetached(Settings.lockCommand)
-                }
-            }
-        }
-
-        Item { width: 1; height: root._picker !== "" ? 8 : 0
-               Behavior on height { NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } } }
-
-        CollapsibleSection {
-            width: parent.width
-            expanded: root._picker === "wifi"
-            WifiList { width: parent.width; open: root._picker === "wifi" }
-        }
-        CollapsibleSection {
-            width: parent.width
-            expanded: root._picker === "bt"
-            BluetoothList { width: parent.width; open: root._picker === "bt" }
-        }
-        CollapsibleSection {
-            width: parent.width
-            expanded: root._picker === "nightlight"
-            SettingsCard {
-                width: parent.width
-                SliderRow {
-                    glyph: "󰔄"
-                    label: ShellSettings.nightLightAuto ? "Temperature  ·  auto" : "Temperature"
-                    displayValue: ShellSettings.nightLightTemp + "K"
-                    value: ShellSettings.nightLightTemp
-                    min: 1000; max: 6500; step: 100
-                    glyphColor: Theme.withAlpha(Theme.warning, ShellSettings.nightLightAuto ? 0.45 : 0.85)
-                    opacity: ShellSettings.nightLightAuto ? 0.45 : 1.0
-                    onChanged: (v) => { if (!ShellSettings.nightLightAuto) ShellSettings.nightLightTemp = v }
-                    // Sole row of its card → round both ends so the hover fill follows
-                    // the card corners instead of squaring off inside them.
-                    topRadius: 10; bottomRadius: 10
-                }
-            }
-        }
-
-        Item { width: 1; height: _quickSliders.visible ? 8 : 0 }
+        // High-frequency controls up top. Volume carries a built-in output-device
+        // dropdown (chevron) that expands inline beneath it.
         SettingsCard {
             id: _quickSliders
             visible: Audio.ready || Brightness.maxBrightness > 0
 
-            QuickSlider {
+            VolumeRow {
+                id: _volumeRow
                 visible: Audio.ready
-                glyph: Audio.icon
-                wheelKey: "volume"
-                accessibleName: "Volume"
-                value: Audio.uiVolume
-                valueText: Audio.label
-                glyphClickable: true
-                onGlyphClicked: Audio.toggleMute()
-                onMoved: (v) => Audio.setVolume(v)
             }
             QuickSlider {
+                id: _brightnessSlider
                 visible: Brightness.toolAvailable && Brightness.maxBrightness > 0
                 glyph: Brightness.icon
                 wheelKey: "brightness"
                 accessibleName: "Brightness"
                 value: Brightness.pendingPercent / 100
                 valueText: Brightness.pendingPercent + "%"
+                reserveGutter: _volumeRow.hasExpander
                 onMoved: (v) => Brightness.setPercent(Math.round(v * 100))
             }
         }
+        Item { width: 1; height: _quickSliders.visible ? Theme.gapItem : 0 }
 
-        // Sun-path arc — appears while night light is on, otherwise costs nothing.
-        Item {
-            id: _sunSection
+        // Quick toggles as explicit rows (not an auto-packing grid) so each
+        // expandable tile's picker can open directly beneath its own row instead
+        // of dropping below the whole grid.
+        Column {
+            id: _quickControls
             width: parent.width
-            // only while auto-following the sun; a fixed manual temp wouldn't track it
-            readonly property bool _show: NightLight.toolAvailable && NightLight.enabled && ShellSettings.nightLightAuto
-            // snap to 4px so rows below stay on whole physical px under fractional scaling
-            height: _show ? 4 * Math.ceil((_sunCard.implicitHeight + 12) / 4) : 0
-            clip: true
-            Behavior on height {
-                enabled: !ShellSettings.reduceMotion
-                NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
-            }
-            SunArc {
-                id: _sunCard
+            spacing: 0
+            readonly property real cellW: (width - Theme.gapItem) / 2
+
+            // Night Light · Do Not Disturb
+            Row {
                 width: parent.width
-                y: 12                       // gap sits above the card → no dead space below
-                shown: _sunSection._show && MenuState.open   // no canvas/buffer while the menu's closed
-                opacity: _sunSection._show ? 1 : 0
-                Behavior on opacity { NumberAnimation { duration: Motion.normal } }
+                spacing: Theme.gapItem
+
+                QuickToggleTile {
+                    width: _quickControls.cellW
+                    visible: NightLight.toolAvailable
+                    active: NightLight.enabled
+                    activeGlyph: "󰖔"
+                    inactiveGlyph: "󰖙"
+                    title: "Night Light"
+                    status: NightLight.enabled ? NightLight.temperature + "K" : NightLight.recommendLabel
+                    accentColor: Theme.warning
+                    expandable: NightLight.enabled
+                    expanded: root._picker === "nightlight"
+                    onToggled: NightLight.toggle()
+                    onExpandToggled: root._togglePicker("nightlight")
+                }
+
+                QuickToggleTile {
+                    width: _quickControls.cellW
+                    active: Notifications.dnd
+                    activeGlyph: "󰂛"
+                    inactiveGlyph: "󰂚"
+                    title: "Do Not Disturb"
+                    badgeCount: Notifications.dnd ? Notifications.missedCount : 0
+                    onToggled: Notifications.toggleDnd()
+                    onBadgeActivated: MenuState.showTab(2)
+                }
+            }
+
+            // Night Light temperature — opens right under its row.
+            Item { width: 1; height: Theme.gapItem }
+            CollapsibleSection {
+                width: parent.width
+                expanded: root._picker === "nightlight"
+                SettingsCard {
+                    width: parent.width
+                    SliderRow {
+                        glyph: "󰔄"
+                        label: ShellSettings.nightLightAuto ? "Temperature  ·  auto" : "Temperature"
+                        displayValue: ShellSettings.nightLightTemp + "K"
+                        value: ShellSettings.nightLightTemp
+                        min: 1000; max: 6500; step: 100
+                        glyphColor: Theme.withAlpha(Theme.warning, ShellSettings.nightLightAuto ? 0.45 : 0.85)
+                        opacity: ShellSettings.nightLightAuto ? 0.45 : 1.0
+                        onChanged: (v) => { if (!ShellSettings.nightLightAuto) ShellSettings.nightLightTemp = v }
+                    }
+                }
+            }
+            Item {
+                width: 1
+                height: root._picker === "nightlight" ? Theme.gapItem : 0
+                Behavior on height { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+            }
+
+            // Wi-Fi · Bluetooth — their pickers open right under this row.
+            Row {
+                id: _connRow
+                width: parent.width
+                spacing: Theme.gapItem
+                visible: _wifiTile.visible || _btTile.visible
+
+                QuickToggleTile {
+                    id: _wifiTile
+                    width: _quickControls.cellW
+                    readonly property bool _ethActive: Network.connected && Network.deviceType === "ethernet"
+                    visible: Network.toolAvailable && Network.hasWifiDevice
+                    available: !_ethActive
+                    active: Network.wifiEnabled
+                    activeGlyph: "󰤨"
+                    inactiveGlyph: "󰤭"
+                    title: "Wi-Fi"
+                    status: _ethActive ? "Ethernet"
+                          : (Network.wifiEnabled && Network.isWifi && Network.connected ? Network.connectionName : "")
+                    expandable: Network.wifiEnabled && !_ethActive
+                    expanded: root._picker === "wifi"
+                    onToggled: Network.toggleWifi()
+                    onExpandToggled: root._togglePicker("wifi")
+                }
+
+                QuickToggleTile {
+                    id: _btTile
+                    width: _quickControls.cellW
+                    visible: Bluetooth.available
+                    active: Bluetooth.enabled
+                    activeGlyph: "󰂯"
+                    inactiveGlyph: "󰂲"
+                    title: "Bluetooth"
+                    status: Bluetooth.connectedCount > 0
+                        ? (Bluetooth.connectedCount === 1
+                            ? Bluetooth.connectedName + (Bluetooth.connectedBattery >= 0 ? "  " + Bluetooth.connectedBattery + "%" : "")
+                            : Bluetooth.connectedCount + " connected")
+                        : ""
+                    expandable: Bluetooth.enabled
+                    expanded: root._picker === "bt"
+                    onToggled: Bluetooth.toggle()
+                    onExpandToggled: root._togglePicker("bt")
+                }
+            }
+
+            Item { width: 1; height: _connRow.visible ? Theme.gapItem : 0 }
+            CollapsibleSection {
+                width: parent.width
+                expanded: root._picker === "wifi"
+                WifiList { width: parent.width; open: root._picker === "wifi" }
+            }
+            CollapsibleSection {
+                width: parent.width
+                expanded: root._picker === "bt"
+                BluetoothList { width: parent.width; open: root._picker === "bt" }
+            }
+            Item {
+                width: 1
+                height: (root._picker === "wifi" || root._picker === "bt") ? Theme.gapItem : 0
+                Behavior on height { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+            }
+
+            // Power Mode · Lock
+            Row {
+                id: _actionRow
+                width: parent.width
+                spacing: Theme.gapItem
+                visible: _powerTile.visible || _lockTile.visible
+
+                // Tap cycles balanced → performance → power-saver. Keep the tile
+                // visible while the first read is pending so it doesn't blink out.
+                QuickToggleTile {
+                    id: _powerTile
+                    width: _quickControls.cellW
+                    visible: PowerProfiles.available
+                    available: PowerProfiles.profile !== ""
+                    active: PowerProfiles.profile !== "" && PowerProfiles.profile !== "balanced"
+                    activeGlyph: PowerProfiles.glyph
+                    inactiveGlyph: PowerProfiles.glyph
+                    title: "Power Mode"
+                    status: PowerProfiles.profile !== "" ? PowerProfiles.label
+                          : PowerProfiles.syncing ? "Checking..."
+                          : "Unavailable"
+                    onToggled: PowerProfiles.cycle()
+                }
+
+                QuickToggleTile {
+                    id: _lockTile
+                    // Gate on the configured command's tool (mirrors the power
+                    // strip), not hyprlock specifically — lockCommand is editable.
+                    readonly property bool lockAvailable: {
+                        const cmd = Settings.lockCommand
+                        if (!cmd || cmd.length === 0) return false
+                        if (String(cmd[0]) === "hyprlock") return SystemTools.hasHyprlock
+                        return true
+                    }
+                    width: _quickControls.cellW
+                    visible: lockAvailable
+                    activeGlyph: "󰍁"
+                    inactiveGlyph: "󰍁"
+                    title: "Lock"
+                    onToggled: {
+                        MenuState.close()
+                        Quickshell.execDetached(Settings.lockCommand)
+                    }
+                }
             }
         }
 
-        Item { width: 1; height: 12 }
+        Item { width: 1; height: Theme.gapSection }
 
         // 2-column tile grid — same visual vocabulary as the quick-toggle tiles
         // above: standalone cards with left accent rail + icon + label/value.
@@ -856,8 +906,8 @@ Item {
             id: _statGrid
             width: parent.width
             columns: 2
-            columnSpacing: 8
-            rowSpacing: 8
+            columnSpacing: Theme.gapItem
+            rowSpacing: Theme.gapItem
             readonly property real cellW: (width - columnSpacing) / 2
 
             StatTile {
@@ -908,20 +958,31 @@ Item {
             }
         }
 
-        // Arc shows fraction of the current day elapsed, not raw uptime.
-        Item { width: 1; height: 8 }
-        StatTile {
-            id: _uptimeGauge
-            active: root.active
+        // Sun-path arc — dashboard footer. Sits last so enabling night-light
+        // follow-sun never shoves the stat tiles off-screen; costs nothing when
+        // off. Its own 12px top gap separates it from the grid above.
+        Item {
+            id: _sunSection
             width: parent.width
-            glyph: "󰅐"
-            label: "Uptime"
-            value: SysInfo.uptimeLabel
-            hoverValue: SysInfo.bootTimeLabel
-                        + (SysInfo.processCount > 0 ? "  ·  " + SysInfo.processCount + " procs" : "")
-            progress: Math.min(SysInfo.uptimeSecs / 86400, 1.0)
+            // only while auto-following the sun; a fixed manual temp wouldn't track it
+            readonly property bool _show: NightLight.toolAvailable && NightLight.enabled && ShellSettings.nightLightAuto
+            // snap to 4px so the footer height stays on whole physical px under fractional scaling
+            height: _show ? 4 * Math.ceil((_sunCard.implicitHeight + 12) / 4) : 0
+            clip: true
+            Behavior on height {
+                enabled: !ShellSettings.reduceMotion
+                NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
+            }
+            SunArc {
+                id: _sunCard
+                width: parent.width
+                y: 12                       // gap sits above the card → separates from the grid
+                shown: _sunSection._show && MenuState.open   // no canvas/buffer while the menu's closed
+                opacity: _sunSection._show ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: Motion.normal } }
+            }
         }
 
-        Item { width: 1; height: 8 }
+        Item { width: 1; height: Theme.gapItem }
     }
 }

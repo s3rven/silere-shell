@@ -31,6 +31,21 @@ find_qmlcachegen() {
     return 1
 }
 
+find_qmllint() {
+    command -v qmllint 2>/dev/null && return 0
+    local candidate
+    for candidate in \
+        /usr/lib/qt6/bin/qmllint \
+        /usr/lib64/qt6/bin/qmllint \
+        /usr/lib/x86_64-linux-gnu/qt6/bin/qmllint \
+        /usr/lib/qt6/qmllint \
+        /usr/local/lib/qt6/bin/qmllint
+    do
+        [ -x "$candidate" ] && { printf '%s\n' "$candidate"; return 0; }
+    done
+    return 1
+}
+
 # Shared with install.sh/check.sh/CI: same QML2_IMPORT_PATH/qtpaths6-aware root
 # list, instead of a fourth hardcoded copy of just the distro fallback paths.
 source "$ROOT/scripts/lib/qml-modules.sh"
@@ -80,6 +95,23 @@ while IFS= read -r f; do
         had_failure=1
     fi
 done < <(find "$ROOT" -name "*.qml" -not -path "*/.git/*")
+
+# qmlcachegen --only-bytecode emits bytecode without erroring on a type left
+# unresolved by a missing import (RectangularShadow with no `import
+# QtQuick.Effects` still compiles). qmllint with the import category promoted to
+# an error catches exactly that, and is otherwise silent on the tree. Optional
+# like qmlcachegen: a missing qmllint downgrades to a note, not a failure.
+QMLLINT="$(find_qmllint || true)"
+if [ -z "$QMLLINT" ]; then
+    echo "note: qmllint not found; missing-import check skipped"
+else
+    while IFS= read -r f; do
+        if ! err="$("$QMLLINT" --import error -I "$ROOT" -I "$QML_IMPORT_ROOT" "$f" 2>&1)"; then
+            printf 'FAIL: %s\n%s\n' "${f#"$ROOT"/}" "$err" >&2
+            had_failure=1
+        fi
+    done < <(find "$ROOT" -name "*.qml" -not -path "*/.git/*")
+fi
 
 if [ "$had_failure" -ne 0 ]; then
     echo "FAIL: headless QML type-check found broken imports/types" >&2

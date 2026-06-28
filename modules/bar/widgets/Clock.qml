@@ -11,7 +11,7 @@ Row {
 
     // Match the Pill widgets' hover language: lean toward the accent so the
     // clock acknowledges the pointer (it's clickable — calendar / menu / cycle).
-    readonly property bool  _hov:    _hover.hovered
+    readonly property bool  _hov:    (_hover.hovered && ShellSettings.barHoverHighlight) || activeFocus
     readonly property color _cSub:   _hov ? Theme.mix(Theme.subtext, Theme.accent, 0.30) : Theme.subtext
     readonly property color _cText:  _hov ? Theme.mix(Theme.text,    Theme.accent, 0.30) : Theme.text
     readonly property color _cFaint: _hov ? Theme.mix(Theme.withAlpha(Theme.text, 0.65), Theme.accent, 0.30)
@@ -69,7 +69,12 @@ Row {
         spacing: 0
 
         RollingText {
-            text:  DateTime.cachedTime
+            text:  DateTime.cachedHour
+            color: root._cText
+        }
+        RollingText { text: ":"; color: root._cText }
+        RollingText {
+            text:  DateTime.cachedMinute
             color: root._cText
         }
         CollapsingText {

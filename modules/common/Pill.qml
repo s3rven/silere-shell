@@ -15,7 +15,7 @@ Item {
     property string accessibleName: ""
     property string accessibleDescription: ""
     property int    maxTextWidth: 150
-    property int    horizontalPadding: ShellSettings.barCompact ? 2 : 5
+    property int    horizontalPadding: Metrics.pillPad
     property bool   animateGlyph: true
     // Opt-in cross-fade when `text` changes. Off by default since widgets
     // like Volume/Brightness update text on every scroll tick and don't
@@ -152,37 +152,41 @@ Item {
         root.activated()
     }
 
+    // fill on hover, ring on focus; never on press — a press-driven version flashed on every click
     Rectangle {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
         width: parent.width
         height: root.pillH
         radius: height / 2
-        color: root.activeFocus
-            ? Theme.withAlpha(Theme.accent, 0.14)
-            : "transparent"
-        opacity: root.interactive && root.activeFocus ? 1.0 : 0.0
-        border.width: root.activeFocus ? 1 : 0
+        // keys off activeFocusOnTab so Tab-reachable non-button pills (e.g. brightness) still ring
+        readonly property bool _focus: root.activeFocusOnTab && root.activeFocus
+        color: _focus ? Theme.withAlpha(Theme.accent, 0.14)
+                      : Theme.withAlpha(Theme.text, 0.06)
+        opacity: ((_pillHover.hovered && ShellSettings.barHoverHighlight) || _focus) ? 1.0 : 0.0
+        visible: opacity > 0.001
+        border.width: _focus ? 1 : 0
         border.color: Theme.withAlpha(Theme.accent, 0.72)
         Behavior on opacity {
             enabled: !ShellSettings.reduceMotion
             NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
         }
+        Behavior on color {
+            enabled: !ShellSettings.reduceMotion
+            ColorAnimation { duration: Motion.fast }
+        }
     }
 
-    // Default hover affordance: glyph and text lean toward the accent — the
-    // widget acknowledges the pointer without geometry or chrome. Status
-    // colours (battery warning…) stay dominant under the 1/3 mix.
-    readonly property color _hoverGlyphColor: (_pillHover.hovered || activeFocus)
+    readonly property color _hoverGlyphColor: ((_pillHover.hovered && ShellSettings.barHoverHighlight) || activeFocus)
         ? Theme.mix(glyphColor, Theme.accent, 0.20) : glyphColor
-    readonly property color _hoverTextColor: (_pillHover.hovered || activeFocus)
+    readonly property color _hoverTextColor: ((_pillHover.hovered && ShellSettings.barHoverHighlight) || activeFocus)
         ? Theme.mix(textColor, Theme.accent, 0.16) : textColor
 
     Row {
         id: row
         x: Math.round((parent.width - width) / 2)
         y: Math.round((parent.height - height) / 2)
-        spacing: ShellSettings.barCompact ? 3 : 5
+        spacing: Metrics.pillGap
 
         Item {
             id: _glyphBox

@@ -46,6 +46,11 @@ Singleton {
     readonly property int radiusCard:    12
     readonly property int radiusControl: 10
 
+    // menu spacing on the 4px grid: section > item > tight
+    readonly property int gapSection: 12
+    readonly property int gapItem:    8
+    readonly property int gapTight:   4
+
     function withAlpha(c: color, a: real): color {
         return Qt.rgba(c.r, c.g, c.b, a)
     }

@@ -644,17 +644,22 @@ Item {
             ctx.stroke()
         }
 
-        onVisibleChanged:  { _painted = progress; requestPaint() }
+        onVisibleChanged:  { _painted = progress; _lastPaintMs = 0; requestPaint() }
         onWidthChanged:    if (visible) requestPaint()
         onHeightChanged:   if (visible) requestPaint()
         onArcColorChanged: if (visible) requestPaint()
         onTrackColorChanged: if (visible) requestPaint()
         // repaint per ~1px of perimeter travel, skip sub-pixel moves
         property real _painted: -1
+        // cap to ~33fps — the arc ticks every vsync frame otherwise, each a threaded-canvas upload
+        property real _lastPaintMs: 0
         onProgressChanged: {
             if (!visible) return
+            const now = Date.now()
+            if (now - _lastPaintMs < 30) return
             if (Math.abs(progress - _painted) * 2 * (width + height) < 1.0) return
             _painted = progress
+            _lastPaintMs = now
             requestPaint()
         }
     }

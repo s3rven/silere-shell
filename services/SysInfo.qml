@@ -12,7 +12,6 @@ Singleton {
     property real uptimeSecs: 0
     property real diskUsedKb: 0
     property real diskTotalKb: 0
-    property int  processCount: 0
     property real cpuPct: 0
     property real _lastCpuTotal: 0
     property real _lastCpuIdle: 0
@@ -44,16 +43,6 @@ Singleton {
         if (d > 0) return d + "d " + h + "h " + m + "m"   // keep minutes past a day
         if (h > 0) return h + "h " + m + "m"
         return m + "m"
-    }
-
-    // Minute precision, so it doesn't jitter between polls.
-    readonly property string bootTimeLabel: {
-        if (uptimeSecs <= 0) return ""
-        const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-        const dt = new Date(Date.now() - uptimeSecs * 1000)
-        const hh = ("0" + dt.getHours()).slice(-2)
-        const mm = ("0" + dt.getMinutes()).slice(-2)
-        return "up since " + days[dt.getDay()] + " " + hh + ":" + mm
     }
 
     // The system stats are only shown on the menu's "Now" page, so the polling
@@ -194,7 +183,6 @@ Singleton {
     function _refreshSlow(): void {
         if (_slowProc.running) return
         _slowProc.exec(["bash", "-c",
-            "set -- /proc/[0-9]*; printf 'p%s\\n' \"$#\"; " +
             "df -k / 2>/dev/null | { " +
             "  read -r _; " +
             "  read -r _ total used _; " +
@@ -207,9 +195,7 @@ Singleton {
         stdout: SplitParser {
             onRead: (line) => {
                 if (!root._active) return
-                if (line.startsWith("p")) {
-                    root.processCount = parseInt(line.slice(1)) || 0
-                } else if (line.startsWith("d")) {
+                if (line.startsWith("d")) {
                     const p = line.slice(1).trim().split(/\s+/)
                     if (p.length >= 2) {
                         root.diskUsedKb  = parseInt(p[0]) || 0

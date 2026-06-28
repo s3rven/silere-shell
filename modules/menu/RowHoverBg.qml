@@ -1,51 +1,36 @@
 import QtQuick
 import "../../config"
 
-// Hover/press fill for a row inside a rounded SettingsCard. One rounded
-// Rectangle, clipped so only the corners matching topRadius/bottomRadius round
-// off, square corners are pushed outside the clip and cut. A single rect keeps
-// the alpha uniform (overlapping rects stacked alpha into a two-tone seam where a
-// rounded cap met a flat body). Place with `anchors.fill: parent`.
+// Hover/press fill for a row inside a rounded SettingsCard. Per-corner radii
+// match whichever card edges this row is flush against (set by SettingsCard._applyRadii).
 Item {
     id: root
 
     property real  topRadius:    0
     property real  bottomRadius: 0
-    // Matches the card's border width so the fill sits inside the stroke, aligned
-    // with the card's INNER rounded edge.
     property real  cardInset:    1
     property bool  active:       false
     property real  fillOpacity:  0.07
     property color fillColor:    Theme.menuHover
 
-    Item {
+    Rectangle {
+        readonly property real _topR: Math.max(0, root.topRadius    - root.cardInset)
+        readonly property real _botR: Math.max(0, root.bottomRadius - root.cardInset)
+
         anchors.fill:         parent
         anchors.leftMargin:   root.cardInset
         anchors.rightMargin:  root.cardInset
         anchors.topMargin:    root.topRadius    > 0 ? root.cardInset : 0
         anchors.bottomMargin: root.bottomRadius > 0 ? root.cardInset : 0
-        clip: true
 
-        Rectangle {
-            readonly property real innerR: Math.max(
-                Math.max(0, root.topRadius    - root.cardInset),
-                Math.max(0, root.bottomRadius - root.cardInset)
-            )
+        topLeftRadius:     _topR
+        topRightRadius:    _topR
+        bottomLeftRadius:  _botR
+        bottomRightRadius: _botR
+        antialiasing:      _topR > 0 || _botR > 0
 
-            // Extend past the clip on any square side so its rounded portion lands
-            // outside the clip area and gets cut.
-            x: 0
-            y: root.topRadius > 0 ? 0 : -innerR
-            width:  parent.width
-            height: parent.height
-                  + (root.topRadius    > 0 ? 0 : innerR)
-                  + (root.bottomRadius > 0 ? 0 : innerR)
-
-            radius:       innerR
-            antialiasing: innerR > 0
-            color:        root.fillColor
-            opacity:      root.active ? root.fillOpacity : 0
-            Behavior on opacity { NumberAnimation { duration: Motion.fast } }
-        }
+        color:   root.fillColor
+        opacity: root.active ? root.fillOpacity : 0
+        Behavior on opacity { NumberAnimation { duration: Motion.fast } }
     }
 }

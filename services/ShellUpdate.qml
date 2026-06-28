@@ -31,9 +31,6 @@ Singleton {
         : lastCheckError.length > 0 ? "Check failed"
         : pending ? label
         : "Up to date"
-    readonly property string lastCheckTime: lastCheckMs > 0
-        ? Qt.formatDateTime(new Date(lastCheckMs), ShellSettings.clock12h ? "MMM d, h:mm AP" : "MMM d, HH:mm")
-        : "Never"
 
     readonly property string _cacheDir: {
         const env = Quickshell.env("XDG_CACHE_HOME")
