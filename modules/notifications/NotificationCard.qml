@@ -7,6 +7,7 @@ import Quickshell.Widgets
 import Quickshell.Services.Notifications
 import "../../config"
 import "../../services"
+import "../common"
 
 Item {
     id: card
@@ -19,6 +20,10 @@ Item {
     signal dismissRequested(int notifId, var notification, bool expired)
 
     property bool _expired: false
+
+    Accessible.role: Accessible.AlertMessage
+    Accessible.name: appNameText
+    Accessible.description: hasBody ? summaryText + ": " + bodyText : summaryText
 
     // "default" action maps to body click per spec, not a chip button
     readonly property var _defaultAction: {
@@ -215,23 +220,9 @@ Item {
         anchors.fill: cardRect
         opacity: cardRect.opacity
         z: -1
-        sourceComponent: Item {
-            anchors.fill: parent
-            readonly property real strength: ShellSettings.barShadowStrength
-            RectangularShadow {
-                anchors.fill: parent
-                radius: card._cardRadius
-                blur: 14
-                offset: Qt.vector2d(0, ShellSettings.barPosition === "bottom" ? -2 : 2)
-                color: Qt.rgba(0, 0, 0, Math.min(0.28, 0.13 * parent.strength))
-            }
-            RectangularShadow {
-                anchors.fill: parent
-                radius: card._cardRadius
-                blur: 7
-                offset: Qt.vector2d(0, ShellSettings.barPosition === "bottom" ? -5 : 5)
-                color: Qt.rgba(0, 0, 0, Math.min(0.44, 0.26 * parent.strength))
-            }
+        sourceComponent: FloatingShadow {
+            radius: card._cardRadius
+            atBottom: ShellSettings.barPosition === "bottom"
         }
     }
 
@@ -273,9 +264,7 @@ Item {
         // layer/clip used for the shimmer can't clip the antialiased border edges.
         // Popup base: same opaque chrome tone as the menu/calendar (and the bar's
         // hue) so a standalone card reads as one family, not a lighter floating row.
-        color: card.isCritical
-            ? Theme.mix(Theme.popup, Theme.error, _cardHover.hovered ? 0.17 : 0.12)
-            : (_cardHover.hovered ? Theme.mix(Theme.popup, Theme.subtext, 0.06) : Theme.popup)
+        color: Theme.rowFill(_cardHover.hovered, card.isCritical)
 
         Behavior on color { ColorAnimation { duration: Motion.fast } }
 
@@ -349,7 +338,7 @@ Item {
                 width:            parent.width
                 text:             card.bodyText
                 textFormat:       Text.PlainText
-                color:            Theme.withAlpha(Theme.text, 0.62)
+                color:            Theme.withAlpha(Theme.menuTextMuted, 0.82)
                 font.family:      Settings.font
                 font.pixelSize:   Settings.fontSize - 1
                 renderType:       Text.NativeRendering
@@ -368,7 +357,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     width:  parent.width
                     height: 3; radius: 1.5
-                    color:  Theme.withAlpha(Theme.subtext, 0.13)
+                    color:  Theme.menuTrack
 
                     Rectangle {
                         width: {
@@ -406,13 +395,16 @@ Item {
                         antialiasing: true
                         color: _actMa.pressed       ? Theme.withAlpha(_tint, 0.24)
                              : _actMa.containsMouse ? Theme.withAlpha(_tint, 0.13)
-                             :                        Theme.withAlpha(Theme.subtext, 0.08)
+                             :                        Theme.menuControl
                         border.width: 1
                         border.color: (_actMa.containsMouse || _actMa.pressed)
                             ? Theme.withAlpha(_tint, 0.50)
                             : Theme.withAlpha(_tint, 0.22)
                         Behavior on color        { ColorAnimation { duration: Motion.fast } }
                         Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+
+                        Accessible.role: Accessible.Button
+                        Accessible.name: _actBtn.modelData.text
 
                         Text {
                             anchors.centerIn: parent
@@ -454,7 +446,7 @@ Item {
                     visible:        text.length > 0
                     text:           card.appNameText
                     textFormat:     Text.PlainText
-                    color:          Theme.withAlpha(Theme.subtext, card.isCritical ? 0.85 : 0.50)
+                    color:          Theme.withAlpha(Theme.menuTextMuted, card.isCritical ? 0.92 : 0.62)
                     font.family:    Settings.font
                     font.pixelSize: Settings.fontSize - 3
                     font.weight:    Font.Medium
@@ -470,7 +462,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     visible: _appCap.visible
                     text:  "·"
-                    color: Theme.withAlpha(Theme.subtext, 0.32)
+                    color: Theme.withAlpha(Theme.menuTextFaint, 0.62)
                     font.family:    Settings.font
                     font.pixelSize: Settings.fontSize - 3
                     renderType:     Text.NativeRendering
@@ -481,7 +473,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     text:           card._timeLabel
                     textFormat:     Text.PlainText
-                    color:          Theme.withAlpha(Theme.subtext, 0.38)
+                    color:          Theme.withAlpha(Theme.menuTextFaint, 0.70)
                     font.family:    Settings.font
                     font.pixelSize: Settings.fontSize - 3
                     renderType:     Text.NativeRendering
@@ -540,9 +532,9 @@ Item {
             anchors.rightMargin: 7
             width: 18; height: 18; radius: 9
             antialiasing: true
-            color:        _closeHover.hovered ? Theme.withAlpha(Theme.error, 0.18) : Theme.withAlpha(Theme.subtext, 0.10)
+            color:        _closeHover.hovered ? Theme.withAlpha(Theme.error, 0.18) : Theme.menuControl
             border.width: 1
-            border.color: _closeHover.hovered ? Theme.withAlpha(Theme.error, 0.32) : Theme.withAlpha(Theme.subtext, 0.14)
+            border.color: _closeHover.hovered ? Theme.withAlpha(Theme.error, 0.32) : Theme.menuControlLine
             opacity: _cardHover.hovered ? 1.0 : 0.0
             scale:   _cardHover.hovered ? 1.0 : 0.6
             transformOrigin: Item.Center
@@ -551,12 +543,14 @@ Item {
             Behavior on scale        { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
             Behavior on color        { ColorAnimation  { duration: Motion.fast } }
             Behavior on border.color { ColorAnimation  { duration: Motion.fast } }
+            Accessible.role: Accessible.Button
+            Accessible.name: "Dismiss notification"
             HoverHandler { id: _closeHover; cursorShape: Qt.PointingHandCursor }
             TapHandler   { onTapped: card.dismiss() }
             Text {
                 anchors.centerIn: parent
                 text:  "󰅖"
-                color: _closeHover.hovered ? Theme.error : Theme.withAlpha(Theme.subtext, 0.55)
+                color: _closeHover.hovered ? Theme.error : Theme.withAlpha(Theme.menuTextMuted, 0.78)
                 font.family:    Settings.font
                 font.pixelSize: Settings.fontSize - 2
                 renderType:     Text.NativeRendering
@@ -577,7 +571,7 @@ Item {
         border.width: 1
         border.color: card.isCritical
             ? Theme.withAlpha(Theme.error,  0.55)
-            : Theme.withAlpha(Theme.accent, 0.30)
+            : Theme.menuCardBorder
         Behavior on border.color { ColorAnimation { duration: Motion.medium } }
     }
 
@@ -592,7 +586,7 @@ Item {
 
         readonly property color arcColor: card.isCritical ? Theme.error
                                         : (card._timeoutProgress < 0.30 ? Theme.warning : Theme.accent)
-        readonly property color trackColor: Theme.withAlpha(Theme.accent, 0.28)
+        readonly property color trackColor: Theme.menuControlLine
         property real progress: card._timeoutProgress
 
         onPaint: {

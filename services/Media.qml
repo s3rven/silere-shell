@@ -93,7 +93,7 @@ Singleton {
     }
     Timer {
         interval: 500; repeat: true
-        running: root.playing && MenuState.open && root.hasPosition
+        running: root.playing && MenuState.open && root.hasPosition && !Idle.isIdle
         onTriggered: root._recompute()
     }
 
@@ -130,15 +130,141 @@ Singleton {
             ? artist + " - " + title
             : (title.length > 0 ? title : artist)
 
-    property var barHeights: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-    readonly property bool cavaReady: SystemTools.hasCava && SystemTools.hasCavaConfig
-                                && ShellSettings.mediaProgress
+    property var barHeights: []
+    readonly property bool cavaReady: SystemTools.hasCava && ShellSettings.mediaProgress
+    property int _visualizerClients: 0
+    property int _visualizerDemand: 0
+    readonly property bool _visualizerLowPowerOnly: _visualizerClients > 0 && _visualizerDemand <= _visualizerClients
+
+    function registerVisualizer(lowPower): void {
+        const wasRunning = _cavaProc.running
+        _visualizerClients++
+        _visualizerDemand += lowPower ? 1 : 2
+        // skip the restart when this call is what starts cava fresh — it already
+        // spawns with up-to-date bars/fps, restarting it too just flashes to zero
+        if (wasRunning) Qt.callLater(root._restartCava)
+    }
+    function unregisterVisualizer(lowPower): void {
+        const wasRunning = _cavaProc.running
+        _visualizerClients = Math.max(0, _visualizerClients - 1)
+        _visualizerDemand = Math.max(0, _visualizerDemand - (lowPower ? 1 : 2))
+        if (wasRunning) Qt.callLater(root._restartCava)
+    }
+
+    readonly property int _cavaBars: {
+        const compact = ShellSettings.barCompact
+        if (_visualizerLowPowerOnly)
+            return ShellSettings.mediaVisualizerPreset === "smooth" ? 10
+                 : ShellSettings.mediaVisualizerPreset === "eco"    ? 6
+                 :                                                     8
+        if (ShellSettings.mediaVisualizerStyle === "pulse")
+            return ShellSettings.mediaVisualizerPreset === "smooth" ? (compact ? 12 : 14)
+                 : ShellSettings.mediaVisualizerPreset === "eco"    ? (compact ? 6 : 8)
+                 :                                                     (compact ? 8 : 10)
+        if (ShellSettings.mediaVisualizerStyle === "bars")
+            return ShellSettings.mediaVisualizerPreset === "smooth" ? (compact ? 14 : 18)
+                 : ShellSettings.mediaVisualizerPreset === "eco"    ? (compact ? 8 : 10)
+                 :                                                     (compact ? 11 : 14)
+        switch (ShellSettings.mediaVisualizerPreset) {
+        case "eco":    return compact ? 8 : 10
+        case "smooth": return compact ? 18 : 22
+        default:       return compact ? 12 : 16
+        }
+    }
+    readonly property int _cavaFps: {
+        if (_visualizerLowPowerOnly)
+            return ShellSettings.mediaVisualizerPreset === "smooth" ? 34
+                 : ShellSettings.mediaVisualizerPreset === "eco"    ? 18
+                 :                                                     26
+        const shapeTrim = ShellSettings.mediaVisualizerStyle === "pulse" ? 6
+                        : ShellSettings.mediaVisualizerStyle === "bars"  ? 3
+                        : 0
+        switch (ShellSettings.mediaVisualizerPreset) {
+        case "eco":    return Math.max(20, 26 - shapeTrim)
+        case "smooth": return Math.max(36, 50 - shapeTrim)
+        default:       return Math.max(28, 38 - shapeTrim)
+        }
+    }
+    readonly property real _cavaSensitivity: {
+        const base = ShellSettings.mediaVisualizerPreset === "eco" ? 120
+                   : ShellSettings.mediaVisualizerPreset === "smooth" ? 165
+                   : 145
+        return Math.round(base * ShellSettings.mediaVisualizerIntensity)
+    }
+    readonly property real _cavaNoiseReduction: {
+        switch (ShellSettings.mediaVisualizerPreset) {
+        case "eco":    return 0.72
+        case "smooth": return 0.46
+        default:       return 0.58
+        }
+    }
+    readonly property var _zeroBars: {
+        const out = []
+        for (let i = 0; i < _cavaBars; i++) out.push(0)
+        return out
+    }
+    readonly property string _cavaConfigText:
+        "[general]\n" +
+        "bars = " + _cavaBars + "\n" +
+        "sleep_timer = 0\n" +
+        "framerate = " + _cavaFps + "\n" +
+        "sensitivity = " + _cavaSensitivity + "\n" +
+        "\n[input]\n" +
+        "method = pipewire\n" +
+        "\n[output]\n" +
+        "method = raw\n" +
+        "raw_target = /dev/stdout\n" +
+        "data_format = ascii\n" +
+        "ascii_max_range = 12\n" +
+        "bar_delimiter = 59\n" +
+        "frame_delimiter = 10\n" +
+        "channels = mono\n" +
+        "\n[smoothing]\n" +
+        "noise_reduction = " + _cavaNoiseReduction + "\n"
+    readonly property string _cavaCommandScript: {
+        const cfg = _cavaConfigText.replace(/'/g, "'\\''")
+        return "base=\"${XDG_RUNTIME_DIR:-/tmp}\"; uid=\"${UID:-$(id -u 2>/dev/null || echo user)}\"; " +
+               "dir=\"$base/silere-shell-$uid\"; umask 077; mkdir -p \"$dir\" || exit 1; " +
+               "tmp=$(mktemp \"$dir/cava.XXXXXX.conf\") || exit 1; " +
+               "printf '%s' '" + cfg + "' > \"$tmp\" || { rm -f \"$tmp\"; exit 1; }; " +
+               "cava -p \"$tmp\"; code=$?; rm -f \"$tmp\"; exit $code"
+    }
+    property bool _cavaRestarting: false
+
+    function _restartCava(): void {
+        if (!_cavaProc.running) return
+        _cavaRestarting = true
+        _cavaRestart.start()
+    }
+
+    Connections {
+        target: ShellSettings
+        function onMediaVisualizerPresetChanged()    { root._restartCava() }
+        function onMediaVisualizerStyleChanged()     { root._restartCava() }
+        function onMediaVisualizerIntensityChanged() { root._restartCava() }
+        function onBarCompactChanged()               { root._restartCava() }
+    }
+    Timer {
+        id: _cavaRestart
+        interval: 80
+        onTriggered: root._cavaRestarting = false
+    }
+
+    // debounce on the stop side so brief alt-tabs don't restart cava
+    property bool _fsBlocked: false
+    Connections {
+        target: Notifications
+        function onFullscreenActiveChanged() {
+            if (Notifications.fullscreenActive) _fsBlockTimer.restart()
+            else { _fsBlockTimer.stop(); root._fsBlocked = false }
+        }
+    }
+    Timer { id: _fsBlockTimer; interval: 2000; onTriggered: root._fsBlocked = true }
 
     Process {
         id: _cavaProc
-        command: ["bash", "-c",
-            "config=${XDG_CONFIG_HOME:-$HOME/.config}; exec cava -p \"$config/cava/silere-shell.conf\""]
-        running: root.cavaReady && root.available && root.playing && !Idle.isIdle
+        command: ["bash", "-c", root._cavaCommandScript]
+        running: root.cavaReady && root._visualizerClients > 0 && root.available && root.playing && !Idle.isIdle && !root._fsBlocked && !root._cavaRestarting
         stdout: SplitParser {
             onRead: line => {
                 const parts = line.split(";")
@@ -147,9 +273,8 @@ Singleton {
                     if (parts[i].length === 0) continue
                     const value = Number(parts[i])
                     if (isNaN(value)) continue
-                    // Store normalized 0-1; canvas scales to actual px at paint time.
-                    // Divide by ascii_max_range (12); works gracefully at any bar count.
-                    result.push(Math.pow(value / 12, 1.3))
+                    const normalized = Math.max(0, Math.min(1, value / 12))
+                    result.push(Math.pow(normalized, 1.3))
                 }
                 if (result.length < 1) return
                 const prev = root.barHeights
@@ -159,7 +284,7 @@ Singleton {
                 if (changed) root.barHeights = result
             }
         }
-        onRunningChanged: if (!running) root.barHeights = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+        onRunningChanged: if (!running) root.barHeights = root._zeroBars
         Component.onDestruction: running = false
     }
 

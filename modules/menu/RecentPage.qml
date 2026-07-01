@@ -55,7 +55,7 @@ Item {
     Timer {
         interval: 60000
         repeat: true
-        running: root.active && MenuState.open
+        running: root.active && MenuState.open && !Idle.isIdle
         onTriggered: root._timeTick++
     }
 
@@ -123,7 +123,7 @@ Item {
         Item {
             id: _header
             width: parent.width
-            height: 34
+            height: 38
 
             Text {
                 id: _headerTitle
@@ -132,74 +132,87 @@ Item {
                 text: "Notifications"
                 color: Theme.text
                 font.family: Settings.font
-                font.pixelSize: Settings.fontSize + 1
+                font.pixelSize: Settings.fontSize + 4
                 font.weight: Font.DemiBold
                 renderType: Text.NativeRendering
             }
 
-            Text {
+            Rectangle {
+                id: _countChip
                 anchors.left: _headerTitle.right
-                anchors.leftMargin: 8
-                anchors.verticalCenter: parent.verticalCenter
-                text: Notifications.hasHistory ? String(Notifications.historyCount) : ""
-                color: Theme.withAlpha(Theme.subtext, 0.48)
-                font.family: Settings.font
-                font.pixelSize: Settings.fontSize - 2
-                renderType: Text.NativeRendering
+                anchors.leftMargin: 9
+                anchors.verticalCenter: _headerTitle.verticalCenter
+                visible: Notifications.hasHistory
+                width:  Math.max(18, _countTxt.implicitWidth + 12)
+                height: 18
+                radius: 9
+                antialiasing: true
+                color: Theme.withAlpha(Theme.subtext, 0.12)
+
+                Text {
+                    id: _countTxt
+                    anchors.centerIn: parent
+                    text: String(Notifications.historyCount)
+                    color: Theme.withAlpha(Theme.text, 0.62)
+                    font.family: Settings.font
+                    font.pixelSize: Settings.fontSize - 3
+                    font.weight: Font.DemiBold
+                    renderType: Text.NativeRendering
+                }
             }
 
             Rectangle {
-                    id: _clearButton
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                    visible: Notifications.hasHistory
-                    width: visible ? 68 : 0
-                    height: 30
-                    radius: 8
-                    antialiasing: true
-                    activeFocusOnTab: visible
+                id: _clearButton
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                visible: Notifications.hasHistory
+                width: visible ? 68 : 0
+                height: 30
+                radius: Theme.radiusControl
+                antialiasing: true
+                activeFocusOnTab: visible
 
-                    color: _clearTap.pressed
-                        ? Theme.withAlpha(Theme.error, 0.20)
-                        : _clearHover.hovered ? Theme.withAlpha(Theme.subtext, 0.16) : Theme.menuControl
-                    border.width: activeFocus ? 2 : 1
-                    border.color: activeFocus
-                        ? Theme.withAlpha(Theme.error, 0.88)
-                        : _clearHover.hovered ? Theme.withAlpha(Theme.subtext, 0.28) : Theme.menuControlLine
-                    opacity: root._clearing ? 0.45 : 1.0
+                color: _clearTap.pressed
+                    ? Theme.withAlpha(Theme.error, 0.20)
+                    : _clearHover.hovered ? Theme.withAlpha(Theme.subtext, 0.16) : Theme.menuControl
+                border.width: activeFocus ? 2 : 1
+                border.color: activeFocus
+                    ? Theme.withAlpha(Theme.error, 0.88)
+                    : _clearHover.hovered ? Theme.menuControlLineHot : Theme.menuControlLine
+                opacity: root._clearing ? 0.45 : 1.0
 
-                    Accessible.role: Accessible.Button
-                    Accessible.name: "Clear all notifications"
-                    Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root.clearAll(); event.accepted = true }
-                    Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root.clearAll(); event.accepted = true }
-                    Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root.clearAll(); event.accepted = true }
+                Accessible.role: Accessible.Button
+                Accessible.name: "Clear all notifications"
+                Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root.clearAll(); event.accepted = true }
+                Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root.clearAll(); event.accepted = true }
+                Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root.clearAll(); event.accepted = true }
 
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
-                    Behavior on border.color { ColorAnimation { duration: Motion.fast } }
-                    Behavior on opacity { NumberAnimation { duration: Motion.fast } }
-                    HoverHandler { id: _clearHover; enabled: !root._clearing; cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor }
-                    TapHandler { id: _clearTap; enabled: !root._clearing; onTapped: root.clearAll() }
+                Behavior on color { ColorAnimation { duration: Motion.fast } }
+                Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+                Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                HoverHandler { id: _clearHover; enabled: !root._clearing; cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor }
+                TapHandler { id: _clearTap; enabled: !root._clearing; onTapped: root.clearAll() }
 
-                    Row {
-                        anchors.centerIn: parent
-                        spacing: 4
-                        Text {
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: "󰆴"
-                            color: _clearHover.hovered ? Theme.withAlpha(Theme.text, 0.88) : Theme.withAlpha(Theme.subtext, 0.72)
-                            font.family: Settings.font
-                            font.pixelSize: Settings.fontSize
-                            renderType: Text.NativeRendering
-                        }
-                        Text {
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: "Clear"
-                            color: _clearHover.hovered ? Theme.withAlpha(Theme.text, 0.88) : Theme.withAlpha(Theme.text, 0.76)
-                            font.family: Settings.font
-                            font.pixelSize: Settings.fontSize - 2
-                            renderType: Text.NativeRendering
-                        }
+                Row {
+                    anchors.centerIn: parent
+                    spacing: 4
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "󰆴"
+                        color: _clearHover.hovered ? Theme.withAlpha(Theme.text, 0.88) : Theme.withAlpha(Theme.subtext, 0.72)
+                        font.family: Settings.font
+                        font.pixelSize: Settings.fontSize
+                        renderType: Text.NativeRendering
                     }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "Clear"
+                        color: _clearHover.hovered ? Theme.withAlpha(Theme.text, 0.88) : Theme.withAlpha(Theme.text, 0.76)
+                        font.family: Settings.font
+                        font.pixelSize: Settings.fontSize - 2
+                        renderType: Text.NativeRendering
+                    }
+                }
             }
         }
 
@@ -223,7 +236,7 @@ Item {
                     antialiasing: true
                     color: Theme.withAlpha(Theme.subtext, 0.07)
                     border.width: 1
-                    border.color: Theme.withAlpha(Theme.subtext, 0.11)
+                    border.color: Theme.menuCardBorder
 
                     Text {
                         anchors.centerIn: parent
@@ -323,19 +336,50 @@ Item {
                         }
                     }
 
-                    Text {
+                    // Day divider — mirrors the Now page's SectionLabel so both
+                    // tabs read as one app: accent tick, accent-leaning label, rule.
+                    Item {
                         visible: _entry._showSection
-                        anchors.left: parent.left
-                        anchors.verticalCenter: parent.top
-                        anchors.verticalCenterOffset: _entry._sectionHeight / 2
-                        text: { root._timeTick; return root.sectionLabel(_entry.modelData.time) }
-                        color: Theme.withAlpha(Theme.subtext, 0.48)
-                        font.family: Settings.font
-                        font.pixelSize: Settings.fontSize - 2
-                        font.weight: Font.DemiBold
-                        font.capitalization: Font.AllUppercase
-                        font.letterSpacing: 0.7
-                        renderType: Text.NativeRendering
+                        anchors.left:  parent.left
+                        anchors.right: parent.right
+                        anchors.top:   parent.top
+                        height: _entry._sectionHeight
+
+                        Rectangle {
+                            id: _secTick
+                            anchors.left:           parent.left
+                            anchors.leftMargin:     2
+                            anchors.verticalCenter: _secText.verticalCenter
+                            width:  3
+                            height: Math.round(_secText.implicitHeight * 0.82)
+                            radius: 1.5
+                            antialiasing: true
+                            color:  Theme.withAlpha(Theme.accent, 0.75)
+                        }
+
+                        Text {
+                            id: _secText
+                            anchors.left:           _secTick.right
+                            anchors.leftMargin:     7
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: { root._timeTick; return root.sectionLabel(_entry.modelData.time) }
+                            color: Theme.withAlpha(Theme.mix(Theme.subtext, Theme.accent, 0.22), 0.74)
+                            font.family: Settings.font
+                            font.pixelSize: Settings.fontSize - 3
+                            font.weight: Font.DemiBold
+                            font.capitalization: Font.AllUppercase
+                            font.letterSpacing: 0.4
+                            renderType: Text.NativeRendering
+                        }
+
+                        Rectangle {
+                            anchors.left:           _secText.right
+                            anchors.leftMargin:     10
+                            anchors.right:          parent.right
+                            anchors.verticalCenter: _secText.verticalCenter
+                            height: 1
+                            color:  Theme.withAlpha(Theme.subtext, 0.10)
+                        }
                     }
 
                     Rectangle {
@@ -450,7 +494,7 @@ Item {
                             border.width: activeFocus ? 2 : 1
                             border.color: activeFocus
                                 ? Theme.withAlpha(Theme.error, 0.88)
-                                : _removeHover.hovered ? Theme.withAlpha(Theme.error, 0.36) : Theme.withAlpha(Theme.subtext, 0.12)
+                                : _removeHover.hovered ? Theme.withAlpha(Theme.error, 0.36) : Theme.menuControlLine
                             opacity: _entryHover.hovered || activeFocus ? 1.0 : 0.46
                             scale: _entryHover.hovered || activeFocus ? 1.0 : 0.88
 

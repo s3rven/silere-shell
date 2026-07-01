@@ -97,8 +97,8 @@ fi
 # ── header ───────────────────────────────────────────────────────────────────────
 printf "\n${BOLD}:: silere-shell uninstaller${R}\n"
 
-# ── cava config ──────────────────────────────────────────────────────────────────
-_section "cava config"
+# ── legacy cava config ───────────────────────────────────────────────────────────
+_section "legacy cava config"
 CAVA_DST="$CONFIG_HOME/cava/silere-shell.conf"
 
 if [ -f "$CAVA_DST" ] || [ -f "${CAVA_DST}.bak" ]; then

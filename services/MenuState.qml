@@ -37,7 +37,7 @@ Singleton {
             { glyph: "󰀦", label: "Warnings", section: "warnings" }
         ]},
         { glyph: "󰒓", label: "System", children: [
-            { glyph: "󰒓", label: "General", section: "system"  },
+            { glyph: "󰢻", label: "General", section: "system"  },
             { glyph: "󰚰", label: "Updates", section: "updates" }
         ]}
     ]

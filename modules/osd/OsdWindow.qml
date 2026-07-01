@@ -6,6 +6,7 @@ import Quickshell
 import Quickshell.Wayland._WlrLayerShell
 import "../../config"
 import "../../services"
+import "../common"
 
 PanelWindow {
     id: osd
@@ -97,7 +98,6 @@ PanelWindow {
                     property bool _ready: false
                     property real _op: 0
                     property real _slide: _hiddenSlide
-                    property real _scale: 0.97
                     property real _bump: 1.0
 
                     width: pillW
@@ -125,12 +125,12 @@ PanelWindow {
                         State {
                             name: "hidden"
                             when: !card._ready || card.closing
-                            PropertyChanges { target: card; height: 0; _op: 0;   _slide: card._hiddenSlide; _scale: 0.985 }
+                            PropertyChanges { target: card; height: 0; _op: 0; _slide: card._hiddenSlide }
                         },
                         State {
                             name: "visible"
                             when: card._ready && !card.closing
-                            PropertyChanges { target: card; height: card.pillH; _op: 1.0; _slide: 0; _scale: 1.0 }
+                            PropertyChanges { target: card; height: card.pillH; _op: 1.0; _slide: 0 }
                         }
                     ]
 
@@ -141,14 +141,12 @@ PanelWindow {
                                 NumberAnimation { target: card; property: "height"; duration: Motion.ms(150); easing.type: Easing.OutCubic }
                                 NumberAnimation { target: card; property: "_op";    duration: Motion.ms(105); easing.type: Easing.OutCubic }
                                 NumberAnimation { target: card; property: "_slide"; duration: Motion.ms(165); easing.type: Easing.OutQuart }
-                                NumberAnimation { target: card; property: "_scale"; duration: Motion.ms(165); easing.type: Easing.OutCubic }
                             }
                         },
                         Transition {
                             to: "hidden"
                             ParallelAnimation {
                                 NumberAnimation { target: card; property: "_slide"; duration: Motion.ms(105); easing.type: Easing.InCubic }
-                                NumberAnimation { target: card; property: "_scale"; duration: Motion.ms(105); easing.type: Easing.InCubic }
                                 NumberAnimation { target: card; property: "_op";    duration: Motion.ms(115); easing.type: Easing.InCubic }
                                 NumberAnimation { target: card; property: "height"; duration: Motion.ms(165); easing.type: Easing.InCubic }
                             }
@@ -172,8 +170,6 @@ PanelWindow {
                         height: card.pillH
                         anchors.horizontalCenter: parent.horizontalCenter
                         opacity: card._op
-                        scale: card._scale
-                        transformOrigin: Item.Center
                         transform: [
                             Translate { y: card._slide },
                             Scale {
@@ -187,23 +183,9 @@ PanelWindow {
                         Loader {
                             active: ShellSettings.barFloating && ShellSettings.barShadow
                             anchors.fill: parent
-                            sourceComponent: Item {
-                                anchors.fill: parent
-                                readonly property real strength: ShellSettings.barShadowStrength
-                                RectangularShadow {
-                                    anchors.fill: parent
-                                    radius: card.pillRadius
-                                    blur: 14
-                                    offset: Qt.vector2d(0, osd._bottom ? -2 : 2)
-                                    color: Qt.rgba(0, 0, 0, Math.min(0.28, 0.13 * parent.strength))
-                                }
-                                RectangularShadow {
-                                    anchors.fill: parent
-                                    radius: card.pillRadius
-                                    blur: 7
-                                    offset: Qt.vector2d(0, osd._bottom ? -5 : 5)
-                                    color: Qt.rgba(0, 0, 0, Math.min(0.44, 0.26 * parent.strength))
-                                }
+                            sourceComponent: FloatingShadow {
+                                radius: card.pillRadius
+                                atBottom: osd._bottom
                             }
                         }
 
@@ -285,7 +267,7 @@ PanelWindow {
 
                                         SequentialAnimation on _shimmerPhase {
                                             running: osd._active && !card.closing && card.kind === "volume"
-                                                && ShellSettings.osdShimmer && !ShellSettings.reduceMotion
+                                                && ShellSettings.osdVolumeTint && !ShellSettings.reduceMotion
                                             paused: card.muted
                                             loops: Animation.Infinite
                                             NumberAnimation { from: 0; to: 1; duration: Motion.ms(900); easing.type: Easing.Linear }

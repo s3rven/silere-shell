@@ -6,9 +6,10 @@ import "../../common"
 Pill {
     id: root
     readonly property bool canRead: Network.toolAvailable
+    readonly property bool show: ShellSettings.barShowNetwork
+        && (canRead ? Network.available : true)
     property real _pulseOpacity: 1.0
-    readonly property real _baseOpacity: !ShellSettings.barShowNetwork ? 0.0
-        : canRead ? (Network.available ? 1.0 : 0.0) : 0.45
+    readonly property real _baseOpacity: !show ? 0.0 : canRead ? 1.0 : 0.45
 
     // Pulse to alert on a dropped connection, but don't pulse *forever*, an
     // extended outage would drive the render loop for no new info. After a bit it
@@ -18,7 +19,7 @@ Pill {
     readonly property bool _isPulsing: _disconnected && !_pulseSettled
 
     opacity:        _baseOpacity * _pulseOpacity
-    visible:        opacity > 0
+    visible:        show || opacity > 0
     // On a VPN, optionally append the underlying link's icon ("VPN / wifi") so you
     // can tell at a glance what you're tunnelling over (Settings → Bar → Widgets).
     glyph:          (Network.hasVpn && ShellSettings.netVpnShowLink)
@@ -77,7 +78,7 @@ Pill {
     SequentialAnimation {
         running: root._isPulsing && !Idle.isIdle
         loops:   Animation.Infinite
-        NumberAnimation { target: root; property: "_pulseOpacity"; to: 0.3; duration: Motion.ms(800); easing.type: Easing.InOutSine }
+        NumberAnimation { target: root; property: "_pulseOpacity"; to: 0.5; duration: Motion.ms(800); easing.type: Easing.InOutSine }
         NumberAnimation { target: root; property: "_pulseOpacity"; to: 1.0; duration: Motion.ms(800); easing.type: Easing.InOutSine }
         onStopped: root._pulseOpacity = 1.0
     }

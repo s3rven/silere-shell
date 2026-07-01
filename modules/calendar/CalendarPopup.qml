@@ -6,6 +6,7 @@ import Quickshell.Wayland._WlrLayerShell
 import Quickshell.Hyprland
 import "../../config"
 import "../../services"
+import "../common"
 
 // Month calendar that pops beneath the bar clock. Render-only, it exists while
 // open and holds nothing at rest. Click the clock to toggle; Escape or a click
@@ -84,13 +85,16 @@ PanelWindow {
         }
     }
 
-    Rectangle {
+    FloatingPopupCard {
         id: card
+        win: win
+        open: CalendarState.open
+        anchorX: CalendarState.anchorX
+        barBottom: ShellSettings.barPosition === "bottom"
 
         readonly property int  cell:     34
         readonly property int  pad:      14
         readonly property int  panelW:   cell * 7 + pad * 2
-        readonly property real _originX: Math.max(0, Math.min(panelW, CalendarState.anchorX - x))
 
         // Two month cursors: `disp*` leads (drives the header, updates instantly on
         // nav) while `shown*` trails, the grid renders `shown*` and only catches up
@@ -100,7 +104,6 @@ PanelWindow {
         property int shownYear:  2000
         property int shownMonth: 0
         property int navDir:     0      // -1 prev, +1 next — drives the slide direction
-        property bool _placementSettled: false
 
         // "Today" captured on each open. The card persists between opens, so a
         // readonly `new Date()` binding would freeze at first build and the wrong
@@ -164,25 +167,8 @@ PanelWindow {
 
         Connections {
             target: CalendarState
-            function onAnchorXChanged() { card._place() }
             function onOpenChanged() {
-                if (CalendarState.open) {
-                    card._placementSettled = false
-                    card._place()
-                    _placementSettle.restart()
-                    card._snapToday()
-                } else {
-                    _placementSettle.stop()
-                    card._placementSettled = false
-                }
-            }
-        }
-        Connections {
-            target: win
-            function onWidthChanged() {
-                if (!CalendarState.open) return
-                const nx = card._targetX()
-                if (Math.abs(nx - card.x) > 0.5) card._place()
+                if (CalendarState.open) card._snapToday()
             }
         }
         // Keep "today" current if the popup is held open across midnight, without
@@ -197,10 +183,7 @@ PanelWindow {
                 card.todayWeekday = Qt.formatDateTime(t, "dddd")
             }
         }
-        Component.onCompleted: {
-            _place()
-            _snapToday()
-        }
+        Component.onCompleted: card._snapToday()
 
         // Month swap: old grid slides out + fades, the shown cursor catches up at 0
         // opacity, the new grid slides in from the other side + fades. Next moves the
@@ -224,84 +207,8 @@ PanelWindow {
             }
         }
 
-        readonly property bool _barBottom: ShellSettings.barPosition === "bottom"
-
-        readonly property int _barInset: ShellSettings.barFloating ? 4 : 0
-        readonly property int _edgeY: _barInset + ShellSettings.barHeight + 8
-        readonly property real _minX: radius + 4
-        readonly property real _maxX: Math.max(_minX, win.width - panelW - _minX)
-
-        function _clampedPanelX(px: real): real {
-            return Math.max(_minX, Math.min(px, _maxX))
-        }
-        function _targetX(): real {
-            const t = Math.max(0, Math.min(win.width, CalendarState.anchorX))
-            return Math.round(_clampedPanelX(t - panelW * t / Math.max(1, win.width)))
-        }
-        function _place(): void {
-            x = _targetX()
-        }
-        function _reclamp(): void {
-            const nx = Math.round(_clampedPanelX(x))
-            if (Math.abs(nx - x) > 0.5) x = nx
-        }
-
-        on_MinXChanged: _reclamp()
-        on_MaxXChanged: _reclamp()
-
-        y: Math.round((_barBottom ? (win.height - _edgeY - height) : _edgeY) + edgeOffset)
         width:  panelW
         height: _col.implicitHeight + pad * 2
-        radius: Theme.radiusPanel
-        antialiasing: true
-        // Same material as the bar/menu so the family reads as one.
-        color: Theme.popup
-        border.width: 1
-        border.color: Theme.outline
-
-        // Detached popup: rises from the bar-side edge, centred on the clock,
-        // with a restrained scale and fade.
-        property real scaleAmt: Motion.popScaleFrom
-        property real edgeOffset: _closedOffset
-        readonly property real _closedOffset: _barBottom ? 8 : -8
-        transform: Scale { origin.x: card._originX; origin.y: card._barBottom ? card.height : 0; xScale: card.scaleAmt; yScale: card.scaleAmt }
-        state: CalendarState.open ? "visible" : "hidden"
-        layer.enabled: !ShellSettings.reduceMotion && opacity > 0.001 && scaleAmt < 0.999
-
-        Behavior on x {
-            enabled: card.state === "visible" && !ShellSettings.reduceMotion && card._placementSettled
-            NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
-        }
-
-        Timer {
-            id: _placementSettle
-            interval: Motion.popSettle
-            repeat: false
-            onTriggered: card._placementSettled = true
-        }
-
-        states: [
-            State { name: "hidden";  PropertyChanges { target: card; scaleAmt: Motion.popScaleFrom; edgeOffset: card._closedOffset; opacity: 0 } },
-            State { name: "visible"; PropertyChanges { target: card; scaleAmt: 1.0;  edgeOffset: 0; opacity: 1 } }
-        ]
-        transitions: [
-            Transition {
-                from: "*"; to: "visible"
-                ParallelAnimation {
-                    NumberAnimation { target: card; property: "scaleAmt";   to: 1.0; duration: Motion.popIn; easing.type: Easing.OutCubic }
-                    NumberAnimation { target: card; property: "edgeOffset"; to: 0;   duration: Motion.popIn; easing.type: Easing.OutQuart }
-                    NumberAnimation { target: card; property: "opacity";    to: 1.0; duration: Motion.popInFade; easing.type: Easing.OutCubic }
-                }
-            },
-            Transition {
-                from: "visible"; to: "hidden"
-                ParallelAnimation {
-                    NumberAnimation { target: card; property: "scaleAmt";   to: Motion.popScaleFrom; duration: Motion.popOut; easing.type: Easing.InCubic }
-                    NumberAnimation { target: card; property: "edgeOffset"; to: card._closedOffset;  duration: Motion.popOut; easing.type: Easing.InCubic }
-                    NumberAnimation { target: card; property: "opacity";    to: 0.0;                 duration: Motion.popOutFade;  easing.type: Easing.InCubic }
-                }
-            }
-        ]
 
         WheelHandler {
             acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
@@ -320,6 +227,9 @@ PanelWindow {
             Item {
                 width: parent.width
                 height: 40
+
+                Accessible.role: Accessible.Button
+                Accessible.name: "Jump to today"
 
                 HoverHandler { id: _todayH; cursorShape: Qt.PointingHandCursor }
                 TapHandler   { onTapped: card._goToday() }
@@ -370,6 +280,8 @@ PanelWindow {
                     antialiasing: true
                     color: _prevH.hovered ? Theme.withAlpha(Theme.subtext, 0.12) : "transparent"
                     Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    Accessible.role: Accessible.Button
+                    Accessible.name: "Previous month"
                     HoverHandler { id: _prevH; cursorShape: Qt.PointingHandCursor }
                     TapHandler   { onTapped: card._step(-1) }
                     Text {
@@ -383,6 +295,8 @@ PanelWindow {
                 Item {
                     anchors.centerIn: parent
                     width: _mLabel.implicitWidth + 16; height: 26
+                    Accessible.role: Accessible.Button
+                    Accessible.name: "Jump to today"
                     HoverHandler { id: _mH; cursorShape: Qt.PointingHandCursor }
                     TapHandler   { onTapped: card._goToday() }
                     Text {
@@ -403,6 +317,8 @@ PanelWindow {
                     antialiasing: true
                     color: _nextH.hovered ? Theme.withAlpha(Theme.subtext, 0.12) : "transparent"
                     Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    Accessible.role: Accessible.Button
+                    Accessible.name: "Next month"
                     HoverHandler { id: _nextH; cursorShape: Qt.PointingHandCursor }
                     TapHandler   { onTapped: card._step(1) }
                     Text {

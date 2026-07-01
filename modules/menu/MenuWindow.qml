@@ -133,27 +133,27 @@ PanelWindow {
 
         // Home/Notifications read best compact; Settings needs room for the tree-nav
         // plus the 4-chip option rows.
-        readonly property int _compactW:  400
-        // rail(198) + 352 content, so the content column is the same width as on
-        // the compact tabs — only the nav slides in, the content never reflows.
-        readonly property int _settingsW: 550
+        readonly property int _compactW:  398
+        // Expanded settings width is the collapsed icon rail plus category nav
+        // and a content column wide enough for dense settings rows.
+        readonly property int _settingsW: 566
         readonly property int _targetPanelW: activeTab === 1 ? _settingsW : _compactW
         readonly property int panelW: Math.max(320, Math.min(_targetPanelW,
             win.width > 0 ? win.width - panelMinX * 2 : _targetPanelW))
-        // Rail expands when Settings is active: the icon strip stays 48px and the
+        // Rail expands when Settings is active: the icon strip stays fixed and the
         // category nav rides on beside it, so they read as one growing surface.
-        readonly property int railCollapsedW: 48
-        readonly property int navW: 150
+        readonly property int railCollapsedW: 44
+        readonly property int navW: 168
         readonly property int railExpandedW: railCollapsedW + navW
         readonly property int railW: activeTab === 1 ? railExpandedW : railCollapsedW
         readonly property int contentW: panelW - railW
-        readonly property int contentPad: 20
+        readonly property int contentPad: activeTab === 1 ? 18 : 12
         readonly property int innerW: contentW - contentPad * 2
         // Shared height floor so every tab opens at the same size; taller
         // content grows above it and the panel animates the change.
         readonly property int idealMinH: 360
         // min height so rail icons never overlap the power slot
-        readonly property int minRailFitH: 304
+        readonly property int minRailFitH: 252
         readonly property int heightAnimDuration: Motion.medium
         readonly property int _availablePanelH: win.height > 0
             ? Math.max(minRailFitH, win.height - _edgeY - panelMinX)
@@ -423,7 +423,7 @@ PanelWindow {
                     height: parent.height
                     radius: panel.radius
                     antialiasing: true
-                    color: Theme.withAlpha(Theme.subtext, 0.05)
+                    color: Theme.menuPane
                 }
 
                 Rectangle {
@@ -431,7 +431,7 @@ PanelWindow {
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
                     width: 1
-                    color: Theme.withAlpha(Theme.subtext, 0.10)
+                    color: Theme.menuDivider
                 }
 
                 // Divider between the icon strip and the categories — only while expanded.
@@ -440,7 +440,7 @@ PanelWindow {
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
                     width: 1
-                    color: Theme.withAlpha(Theme.subtext, 0.10)
+                    color: Theme.menuDivider
                     opacity: panel.activeTab === 1 ? 1 : 0
                     visible: opacity > 0.001
                     Behavior on opacity {
@@ -480,8 +480,8 @@ PanelWindow {
                 id: _railNav
                 width: panel.railCollapsedW
                 x: 0
-                y: 12
-                spacing: 4
+                y: 10
+                spacing: 6
 
                 RailNavItem {
                     railW: panel.railCollapsedW
@@ -499,26 +499,33 @@ PanelWindow {
                     active: panel.activeTab === 2
                     onTapped: panel.switchTab(2)
 
+                    // Count badge rides the icon's top-right corner. Anchored to the
+                    // item centre (where the icon sits) so it stays glued to the glyph
+                    // regardless of rail width; a rail-coloured ring lifts it off the icon.
                     Rectangle {
                         readonly property bool _show: Notifications.hasHistory && !_railRecent.active
-                        anchors.top: parent.top; anchors.topMargin: 3
-                        anchors.right: parent.right; anchors.rightMargin: 6
-                        width: Math.max(height, _railBadgeCount.implicitWidth + 6)
-                        height: 14; radius: 7
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.horizontalCenterOffset: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.verticalCenterOffset: -8
+                        width: Math.max(height, _railBadgeCount.implicitWidth + 7)
+                        height: 14; radius: height / 2
                         color: Theme.accent; antialiasing: true
+                        border.width: 2
+                        border.color: Theme.menuPane
                         opacity: _show ? 1.0 : 0.0
                         scale:   _show ? 1.0 : 0.5
                         visible: opacity > 0.01
                         transformOrigin: Item.Center
                         Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
-                        Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutBack; easing.overshoot: 1.8 } }
+                        Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
                         Text {
                             id: _railBadgeCount
                             anchors.fill: parent
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                             text: Notifications.historyCount > 99 ? "99+" : Notifications.historyCount
-                            color: Theme.surface
+                            color: Theme.background
                             font.family: Settings.font; font.pixelSize: Settings.fontSize - 4
                             font.weight: Font.Bold
                             renderType: Text.NativeRendering
@@ -538,18 +545,18 @@ PanelWindow {
             Item {
                 id: _railPowerSlot
                 anchors.bottom: parent.bottom
-                anchors.bottomMargin: 12
+                anchors.bottomMargin: 10
                 anchors.left: parent.left
                 width: panel.railCollapsedW
-                height: 1 + 10 + 38
+                height: 1 + 10 + 34
 
                 Rectangle {
                     id: _railDivider
                     anchors.top: parent.top
                     anchors.horizontalCenter: parent.horizontalCenter
-                    width: 22
+                    width: 18
                     height: 1
-                    color: Theme.withAlpha(Theme.subtext, 0.13)
+                    color: Theme.menuDivider
                 }
 
                 RailNavItem {
@@ -574,6 +581,16 @@ PanelWindow {
             width: panel.contentW
             clip: true
 
+            Rectangle {
+                x: -panel.radius
+                y: 0
+                width: parent.width + panel.radius
+                height: parent.height
+                radius: panel.radius
+                antialiasing: true
+                color: Theme.menuPane
+            }
+
             // Slide in step with the expanding rail so the rail's right edge and
             // the content's left edge stay flush.
             Behavior on x {
@@ -585,8 +602,8 @@ PanelWindow {
             // The rail-borne settings nav can be taller than the detail pane, so it
             // sets the floor too (the old single-page layout did this implicitly).
             readonly property int targetH: {
-                const contentH = tabContent.y + tabContent.height + 16
-                const navH = panel.activeTab === 1 ? _settingsNav.implicitHeight + 20 : 0
+                const contentH = tabContent.y + tabContent.height + 12
+                const navH = panel.activeTab === 1 ? _settingsNav.implicitHeight + 16 : 0
                 return 4 * Math.ceil(Math.max(panel.minRailFitH, panel.idealMinH, contentH, navH) / 4)
             }
             height: panel.height
@@ -607,7 +624,7 @@ PanelWindow {
                 id: contentFlick
                 anchors.fill: parent
                 contentWidth: width
-                contentHeight: tabContent.y + tabContent.height + 16
+                contentHeight: tabContent.y + tabContent.height + 12
                 clip: true
                 boundsMovement: Flickable.StopAtBounds
                 flickDeceleration: 1800
@@ -619,7 +636,7 @@ PanelWindow {
                 Item {
                     id: tabContent
                     x: panel.contentPad
-                    y: 16   // 4px multiple, keeps card dividers on the grid
+                    y: 12   // 4px multiple, keeps card dividers on the grid
                     width: panel.innerW
                     height: panel.activeTab === 0 ? (homeLoader.item?.implicitHeight     ?? 0)
                           : panel.activeTab === 1 ? (settingsLoader.item?.implicitHeight ?? 0)
@@ -687,13 +704,29 @@ PanelWindow {
                 z: 4
             }
 
-            // ── Power overlay ───────────────────────────────────────────
+            // Dims the content so the power options read as a focused layer.
+            Rectangle {
+                anchors.fill: parent
+                color: Theme.background
+                opacity: panel.powerOpen ? 0.4 : 0.0
+                visible: opacity > 0.001
+                z: 4
+                Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+            }
+
+            // ── Power menu ──────────────────────────────────────────────
             Item {
                 id: powerStrip
-                readonly property int _stripW: panel._compactW - panel.railCollapsedW - panel.contentPad * 2
-                width: _stripW
+                readonly property int _pad:  8
+                readonly property int _gap:  8
+                readonly property int _tileH: 56
+                readonly property int _tileW: _tileH
+                readonly property int _rowW: _tileW * 4 + _gap * 3
+                readonly property color _surface: Qt.rgba(0.045, 0.048, 0.055, 1.0)
+                readonly property color _surfaceLine: Theme.menuCardBorder
+                width: _rowW + _pad * 2
                 x: Math.round((parent.width - width) / 2)
-                height: 72
+                height: _pad * 2 + _tileH
                 y: panel.powerOpen
                     ? contentPane.height - height - 12
                     : contentPane.height - height - 4
@@ -706,66 +739,92 @@ PanelWindow {
 
                 Rectangle {
                     anchors.fill: parent
-                    radius: Theme.radiusControl
+                    radius: 16
                     antialiasing: true
-                    color: Theme.surface
+                    color: powerStrip._surface
                     border.width: 1
-                    border.color: Theme.outline
+                    border.color: powerStrip._surfaceLine
+
+                    Rectangle {
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.margins: 1
+                        height: Math.round(parent.height * 0.45)
+                        radius: parent.radius - 1
+                        antialiasing: true
+                        gradient: Gradient {
+                            GradientStop { position: 0.0; color: Theme.withAlpha(Theme.text, 0.028) }
+                            GradientStop { position: 1.0; color: "transparent" }
+                        }
+                    }
 
                     Row {
                         id: _powerRow
-                        x: 7
-                        y: 7
-                        width: parent.width - 14
-                        height: parent.height - 14
-                        spacing: 6
+                        x: Math.round((parent.width - powerStrip._rowW) / 2)
+                        y: powerStrip._pad
+                        width: powerStrip._rowW
+                        height: powerStrip._tileH
+                        spacing: powerStrip._gap
 
                         PowerAction {
                             id: _powLock
-                            width: Math.floor((_powerRow.width - _powerRow.spacing * 3) / 4)
+                            width: powerStrip._tileW
+                            height: powerStrip._tileH
                             label: "Lock"
-                            description: "Secure this session"
+                            description: "Secure session"
                             enabled: win.commandAvailable(Settings.lockCommand)
                             glyph: "󰍁"
+                            glyphOffsetY: 1
+                            KeyNavigation.right: _powSusp
                             onTriggered: { MenuState.close(); Quickshell.execDetached(Settings.lockCommand) }
                         }
 
                         PowerAction {
                             id: _powSusp
-                            width: _powLock.width
+                            width: powerStrip._tileW
+                            height: powerStrip._tileH
                             label: "Sleep"
                             description: "Suspend to memory"
                             enabled: win.commandAvailable(Settings.suspendCommand)
                             glyph: "󰒲"
+                            glyphOffsetX: -1
+                            glyphOffsetY: 1
+                            KeyNavigation.left: _powLock
+                            KeyNavigation.right: _powReb
                             onTriggered: { MenuState.close(); win.runPower(Settings.suspendCommand, "Suspend failed") }
                         }
 
                         PowerAction {
                             id: _powReb
-                            width: _powLock.width
+                            width: powerStrip._tileW
+                            height: powerStrip._tileH
                             label: "Reboot"
-                            description: "Restart the computer"
+                            description: "Restart machine"
                             enabled: win.commandAvailable(Settings.rebootCommand)
                             glyph: "󰑐"
+                            glyphOffsetY: 1
                             confirm: true
-                            confirmColor: Theme.warning
+                            KeyNavigation.left: _powSusp
+                            KeyNavigation.right: _powOff
                             onArmedChanged: if (armed) _powOff.disarm()
                             onTriggered: { MenuState.close(); win.runPower(Settings.rebootCommand, "Reboot failed") }
                         }
 
                         PowerAction {
                             id: _powOff
-                            width: _powerRow.width - _powerRow.spacing * 3 - _powLock.width * 3
-                            label: "Shut down"
-                            description: "Turn off the computer"
+                            width: powerStrip._tileW
+                            height: powerStrip._tileH
+                            label: "Off"
+                            description: "Power off"
                             enabled: win.commandAvailable(Settings.poweroffCommand)
                             glyph: "󰐥"
+                            glyphOffsetY: 1
                             confirm: true
-                            confirmColor: Theme.error
+                            KeyNavigation.left: _powReb
                             onArmedChanged: if (armed) _powReb.disarm()
                             onTriggered: { MenuState.close(); win.runPower(Settings.poweroffCommand, "Shut down failed") }
                         }
-
                     }
 
                     Connections {

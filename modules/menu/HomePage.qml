@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Widgets
 import "../../config"
 import "../../services"
+import "../bar/widgets"
 
 Item {
     id: root
@@ -19,6 +20,8 @@ Item {
     property bool _entering: false
     property bool _firstActivation: true
     property string _picker: ""   // "" | "wifi" | "bt" | "nightlight" — open inline list
+    readonly property int _sectionGap: 12
+    readonly property int _itemGap: 8
     layer.enabled: _entering && !ShellSettings.reduceMotion
 
     function _togglePicker(which: string): void { _picker = (_picker === which ? "" : which) }
@@ -34,7 +37,6 @@ Item {
     Connections {
         target: Network
         function onWifiEnabledChanged() { if (root._picker === "wifi" && !Network.wifiEnabled) root._picker = "" }
-        function onDeviceTypeChanged()  { if (root._picker === "wifi" && Network.deviceType === "ethernet") root._picker = "" }
     }
     Connections {
         target: Bluetooth
@@ -54,10 +56,6 @@ Item {
             _enter.restart()
             if (_firstActivation) {
                 _firstActivation = false
-                _cpuGauge.animateIn(80)
-                _memGauge.animateIn(160)
-                _diskGauge.animateIn(240)
-                _battGauge.animateIn(320)
             }
         } else {
             _enter.stop()
@@ -86,24 +84,44 @@ Item {
         width: parent.width
         spacing: 0
 
-        // Quiet masthead — just the date, with session uptime trailing.
+        // Masthead — the date anchors the panel as a confident header, with the
+        // weekday carrying the weight and the full date sitting quieter beneath.
         Item {
             id: _header
             width: parent.width
-            height: 32
+            height: 40
 
-            Text {
+            Column {
                 anchors.left: parent.left
+                anchors.right: _uptimeRow.visible ? _uptimeRow.left : parent.right
+                anchors.rightMargin: 12
                 anchors.verticalCenter: parent.verticalCenter
-                text: DateTime.cachedLongDate
-                color: Theme.withAlpha(Theme.text, 0.82)
-                font.family: Settings.font
-                font.pixelSize: Settings.fontSize
-                font.weight: Font.Medium
-                renderType: Text.NativeRendering
+                spacing: 1
+
+                Text {
+                    width: parent.width
+                    text: DateTime.cachedWeekday
+                    color: Theme.text
+                    font.family: Settings.font
+                    font.pixelSize: Settings.fontSize + 5
+                    font.weight: Font.DemiBold
+                    renderType: Text.NativeRendering
+                    elide: Text.ElideRight
+                }
+                Text {
+                    width: parent.width
+                    text: DateTime.cachedMonthDay
+                    color: Theme.withAlpha(Theme.subtext, 0.78)
+                    font.family: Settings.font
+                    font.pixelSize: Settings.fontSize - 1
+                    font.weight: Font.Medium
+                    renderType: Text.NativeRendering
+                    elide: Text.ElideRight
+                }
             }
 
             Row {
+                id: _uptimeRow
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 6
@@ -129,7 +147,7 @@ Item {
         }
 
         // spacers are 4px multiples so card dividers below stay on the grid
-        Item { width: 1; height: Theme.gapSection }
+        Item { width: 1; height: root._sectionGap }
 
         Item {
             id: _mediaSection
@@ -147,17 +165,17 @@ Item {
             ClippingRectangle {
                 id: _mediaCard
                 width: parent.width
-                readonly property int _seekBlock: Media.hasPosition ? _seek.height + 12 : 0
-                height: Math.round(Math.max(180,
-                    16 + _controlsRow.height + _seekBlock + 12 + _mediaCol.implicitHeight + 26))
+                readonly property int _seekBlock: Media.hasPosition ? 26 : 0
+                // Snap to a 4px multiple: an integer-but-odd height lands the bottom
+                // border on a half physical pixel under fractional scaling and doubles it.
+                height: 4 * Math.ceil(Math.max(168,
+                    16 + _controlsRow.height + _seekBlock + 12 + _mediaCol.implicitHeight + 26) / 4)
                 radius: 12
-                contentUnderBorder: true
-                color: Theme.mix(Theme.surface, Theme.subtext, 0.06)
-                border.width: 1
-                border.color: Media.playing
-                    ? Theme.withAlpha(Theme.accent, 0.20)
-                    : Theme.withAlpha(Theme.subtext, 0.10)
-                Behavior on border.color { ColorAnimation { duration: Motion.medium } }
+                color: Theme.menuCard
+                // No stroke: a full-bleed art card is shaped by its fill + scrims.
+                // A 1px border doubles on fractional displays and the lit play button
+                // already signals playback, so the accent ring isn't needed.
+                border.width: 0
                 opacity: Media.shown ? 1.0 : 0.0
                 visible: opacity > 0.01
                 scale: Media.shown ? 1.0 : 0.97
@@ -185,7 +203,7 @@ Item {
                 Item {
                     id: _art
                     anchors.fill: parent
-                    readonly property real maxAlpha: 0.64
+                    readonly property real maxAlpha: 0.78
                     property bool _useA: true
                     property string _curUrl: ""
                     property var _pendingLayer: null
@@ -246,8 +264,9 @@ Item {
 
                     // a genuinely new URL gets a fresh retry budget
                     Connections { target: Media; function onStableArtUrlChanged() { _art._retries = 0; _art._apply() } }
-                    // catch up on whatever changed while closed (_curUrl makes this idempotent)
-                    Connections { target: MenuState; function onOpenChanged() { if (MenuState.open) _art._apply() } }
+                    // catch up on whatever changed while closed; also clear the retry budget
+                    // so a previously failed art URL gets another chance on each open
+                    Connections { target: MenuState; function onOpenChanged() { if (MenuState.open) { _art._retries = 0; _art._apply() } } }
                     Component.onCompleted: _apply()
 
                     Image {
@@ -296,16 +315,19 @@ Item {
                     visible: Media.shown && opacity > 0.01
                 }
 
-                // Top vignette, frames the art against the rounded top edge.
+                // Top scrim — fades the art into the card colour at the rounded top
+                // edge so the clip's corner stair-stepping doesn't read as a jagged
+                // border. Also lifts the source label's contrast.
                 Rectangle {
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.top: parent.top
-                    height: parent.height * 0.22
+                    height: parent.height * 0.26
                     visible: _art.shownAlpha > 0.01
                     gradient: Gradient {
                         orientation: Gradient.Vertical
-                        GradientStop { position: 0.0; color: Theme.withAlpha(_mediaCard.color, 0.45) }
+                        GradientStop { position: 0.0; color: _mediaCard.color }
+                        GradientStop { position: 0.5; color: Theme.withAlpha(_mediaCard.color, 0.5) }
                         GradientStop { position: 1.0; color: "transparent" }
                     }
                 }
@@ -339,6 +361,28 @@ Item {
                         orientation: Gradient.Horizontal
                         GradientStop { position: 0.0; color: Theme.withAlpha(_mediaCard.color, 0.42) }
                         GradientStop { position: 1.0; color: "transparent" }
+                    }
+                }
+
+                Loader {
+                    id: _menuVizLoader
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    height: Math.max(56, parent.height * 0.42)
+                    active: root.active && MenuState.open && Media.shown && Media.playing && Media.cavaReady
+                    opacity: _art.shownAlpha > 0.01 ? 0.16 : 0.26
+                    visible: opacity > 0.01
+                    sourceComponent: Component {
+                        MediaVisualizer {
+                            barName: ""
+                            lowPower: true
+                            styleOverride: "pulse"
+                        }
+                    }
+                    Behavior on opacity {
+                        enabled: !ShellSettings.reduceMotion
+                        NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
                     }
                 }
 
@@ -474,19 +518,38 @@ Item {
                     property real _dragRatio: 0
                     readonly property real _ratio: _dragging ? _dragRatio : Media.positionRatio
 
-                    function _nudge(dir: int): void {
+                    function _seekTo(ratio: real): void {
                         if (!Media.canSeek) return
-                        Media.seekToRatio(Math.max(0, Math.min(1, Media.positionRatio + dir * 0.05)))
+                        Media.seekToRatio(Math.max(0, Math.min(1, ratio)))
+                    }
+                    function _nudge(dir: int, mult: int): void {
+                        _seek._seekTo(Media.positionRatio + dir * 0.05 * mult)
+                    }
+                    function _handleKey(event): void {
+                        const big = (event.modifiers & Qt.ShiftModifier) ? 10 : 1
+                        switch (event.key) {
+                        case Qt.Key_Left:
+                        case Qt.Key_Down:
+                            _seek._nudge(-1, big); event.accepted = true; return
+                        case Qt.Key_Right:
+                        case Qt.Key_Up:
+                            _seek._nudge(1, big); event.accepted = true; return
+                        case Qt.Key_PageDown:
+                            _seek._nudge(-1, 10); event.accepted = true; return
+                        case Qt.Key_PageUp:
+                            _seek._nudge(1, 10); event.accepted = true; return
+                        case Qt.Key_Home:
+                            _seek._seekTo(0); event.accepted = true; return
+                        case Qt.Key_End:
+                            _seek._seekTo(1); event.accepted = true; return
+                        }
                     }
 
                     activeFocusOnTab: Media.canSeek
                     Accessible.role: Accessible.Slider
                     Accessible.name: "Seek"
                     Accessible.description: Media.formatTime(Media.positionNow) + " of " + Media.formatTime(Media.length)
-                    Keys.onLeftPressed:  event => { _seek._nudge(-1); event.accepted = true }
-                    Keys.onDownPressed:  event => { _seek._nudge(-1); event.accepted = true }
-                    Keys.onRightPressed: event => { _seek._nudge(1);  event.accepted = true }
-                    Keys.onUpPressed:    event => { _seek._nudge(1);  event.accepted = true }
+                    Keys.onPressed: event => _seek._handleKey(event)
 
                     Text {
                         id: _elapsedLabel
@@ -522,69 +585,35 @@ Item {
                         Rectangle {
                             id: _trackBg
                             anchors.verticalCenter: parent.verticalCenter
-                            width: parent.width; height: 3; radius: 1.5
+                            width: parent.width; height: 4; radius: height / 2
                             antialiasing: true
                             color: Theme.withAlpha(Theme.text, 0.20)
+                            clip: true
 
                             Rectangle {
-                                width:  _seek._ratio <= 0 ? 0 : Math.max(parent.radius * 2, parent.width * _seek._ratio)
+                                width:  parent.width * _seek._ratio
                                 height: parent.height; radius: parent.radius
                                 antialiasing: true
-                                clip: true
-
-                                property real _shimmerPhase: 0
-
-                                gradient: Gradient {
-                                    orientation: Gradient.Horizontal
-                                    GradientStop { position: 0.0; color: Theme.withAlpha(Theme.accent, 0.68) }
-                                    GradientStop { position: 1.0; color: Theme.withAlpha(Theme.accent, 0.92) }
-                                }
-
-                                Rectangle {
-                                    visible: !ShellSettings.reduceMotion
-                                    x: -36 + parent._shimmerPhase * (parent.width + 36)
-                                    width: 36; height: parent.height
-                                    gradient: Gradient {
-                                        orientation: Gradient.Horizontal
-                                        GradientStop { position: 0.0; color: "transparent" }
-                                        GradientStop { position: 0.5; color: Theme.withAlpha(Theme.text, 0.30) }
-                                        GradientStop { position: 1.0; color: "transparent" }
-                                    }
-                                }
-
-                                // root.active, not MenuState.open: the page keeps ticking
-                                // invisibly behind another tab otherwise.
-                                SequentialAnimation on _shimmerPhase {
-                                    running: root.active && Media.playing && !ShellSettings.reduceMotion
-                                    loops: Animation.Infinite
-                                    NumberAnimation { from: 0; to: 1; duration: 1400; easing.type: Easing.Linear }
-                                    PauseAnimation  { duration: 1200 }
-                                }
-
-                                Behavior on width {
-                                    enabled: !_seek._dragging && !ShellSettings.reduceMotion
-                                    NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
-                                }
+                                color: Theme.accent
                             }
                         }
 
-                        Rectangle {
+                        Item {
                             id: _seekThumb
                             visible: Media.canSeek
-                            width: 10; height: 10; radius: 5
-                            antialiasing: true
-                            x: _seek._ratio * (_track.width - width)
+                            width: 14; height: 14
+                            x: _track.width * _seek._ratio - width / 2
                             anchors.verticalCenter: parent.verticalCenter
-                            color: _trackMa.pressed ? Theme.accent : Theme.text
-                            scale: (_trackHover.hovered || _trackMa.pressed || _seek.activeFocus) ? 1.0 : 0.0
-                            transformOrigin: Item.Center
-                            Behavior on scale { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutBack; easing.overshoot: 2.0 } }
-                            Behavior on color { ColorAnimation { duration: Motion.fast } }
-                            Behavior on x {
-                                // Skip the per-tick glide while the thumb is hidden; it only
-                                // needs to animate when actually visible (hover/drag/focus).
-                                enabled: !_seek._dragging && !ShellSettings.reduceMotion && (_trackHover.hovered || _trackMa.pressed || _seek.activeFocus)
-                                NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
+
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: 12
+                                height: width
+                                radius: width / 2
+                                antialiasing: true
+                                color: _seek.activeFocus ? Theme.accent : Theme.mix(Theme.text, Theme.accent, 0.12)
+                                border.width: _seek.activeFocus ? 1 : 0
+                                border.color: Theme.withAlpha(Theme.accent, 0.55)
                             }
                         }
 
@@ -648,15 +677,15 @@ Item {
                             antialiasing: true
                             color: "transparent"
                             border.width: 1
-                            border.color: Theme.withAlpha(Theme.accent, (_playH.hovered || _playBtn.activeFocus) ? 0.0 : 0.22)
+                            border.color: Theme.withAlpha(Theme.accent, (Media.playing || _playH.hovered || _playBtn.activeFocus) ? 0.0 : 0.22)
                             Behavior on border.color { ColorAnimation { duration: Motion.fast } }
                         }
                         Rectangle {
                             anchors.centerIn: parent
                             width: 48; height: 48; radius: 24
                             antialiasing: true
-                            color: Theme.withAlpha(Theme.accent, _playT.pressed ? 0.26 : 0.16)
-                            opacity: (_playH.hovered || _playT.pressed || _playBtn.activeFocus) ? 1.0 : 0.0
+                            color: Theme.withAlpha(Theme.accent, _playT.pressed ? 0.28 : (_playH.hovered ? 0.22 : 0.16))
+                            opacity: (Media.playing || _playH.hovered || _playT.pressed || _playBtn.activeFocus) ? 1.0 : 0.0
                             Behavior on opacity { NumberAnimation { duration: Motion.fast } }
                             Behavior on color   { ColorAnimation  { duration: Motion.fast } }
                         }
@@ -669,7 +698,7 @@ Item {
                             readonly property string target: Media.playing ? "󰏤" : "󰐊"
                             property bool _ready: false
                             text: shown
-                            color: _playH.hovered ? Theme.accent : Theme.withAlpha(Theme.accent, 0.9)
+                            color: (_playH.hovered || Media.playing) ? Theme.accent : Theme.withAlpha(Theme.accent, 0.9)
                             font.family: Settings.font; font.pixelSize: Settings.fontSize + 16
                             renderType: Text.NativeRendering
                             transformOrigin: Item.Center
@@ -702,8 +731,9 @@ Item {
         // High-frequency controls up top. Volume carries a built-in output-device
         // dropdown (chevron) that expands inline beneath it.
         SettingsCard {
-            id: _quickSliders
+            id: _primaryControls
             visible: Audio.ready || Brightness.maxBrightness > 0
+            rowDivider: "transparent"
 
             VolumeRow {
                 id: _volumeRow
@@ -717,245 +747,150 @@ Item {
                 accessibleName: "Brightness"
                 value: Brightness.pendingPercent / 100
                 valueText: Brightness.pendingPercent + "%"
-                reserveGutter: _volumeRow.hasExpander
                 onMoved: (v) => Brightness.setPercent(Math.round(v * 100))
             }
         }
-        Item { width: 1; height: _quickSliders.visible ? Theme.gapItem : 0 }
+        // ── Connectivity ────────────────────────────────────────────────────
+        SectionLabel {
+            label: "Connectivity"
+            visible: _wifiRow.visible || _btRow.visible
+        }
+        SettingsCard {
+            visible: _wifiRow.visible || _btRow.visible
 
-        // Quick toggles as explicit rows (not an auto-packing grid) so each
-        // expandable tile's picker can open directly beneath its own row instead
-        // of dropping below the whole grid.
-        Column {
-            id: _quickControls
-            width: parent.width
-            spacing: 0
-            readonly property real cellW: (width - Theme.gapItem) / 2
-
-            // Night Light · Do Not Disturb
-            Row {
-                width: parent.width
-                spacing: Theme.gapItem
-
-                QuickToggleTile {
-                    width: _quickControls.cellW
-                    visible: NightLight.toolAvailable
-                    active: NightLight.enabled
-                    activeGlyph: "󰖔"
-                    inactiveGlyph: "󰖙"
-                    title: "Night Light"
-                    status: NightLight.enabled ? NightLight.temperature + "K" : NightLight.recommendLabel
-                    accentColor: Theme.warning
-                    expandable: NightLight.enabled
-                    expanded: root._picker === "nightlight"
-                    onToggled: NightLight.toggle()
-                    onExpandToggled: root._togglePicker("nightlight")
-                }
-
-                QuickToggleTile {
-                    width: _quickControls.cellW
-                    active: Notifications.dnd
-                    activeGlyph: "󰂛"
-                    inactiveGlyph: "󰂚"
-                    title: "Do Not Disturb"
-                    badgeCount: Notifications.dnd ? Notifications.missedCount : 0
-                    onToggled: Notifications.toggleDnd()
-                    onBadgeActivated: MenuState.showTab(2)
-                }
-            }
-
-            // Night Light temperature — opens right under its row.
-            Item { width: 1; height: Theme.gapItem }
-            CollapsibleSection {
-                width: parent.width
-                expanded: root._picker === "nightlight"
-                SettingsCard {
-                    width: parent.width
-                    SliderRow {
-                        glyph: "󰔄"
-                        label: ShellSettings.nightLightAuto ? "Temperature  ·  auto" : "Temperature"
-                        displayValue: ShellSettings.nightLightTemp + "K"
-                        value: ShellSettings.nightLightTemp
-                        min: 1000; max: 6500; step: 100
-                        glyphColor: Theme.withAlpha(Theme.warning, ShellSettings.nightLightAuto ? 0.45 : 0.85)
-                        opacity: ShellSettings.nightLightAuto ? 0.45 : 1.0
-                        onChanged: (v) => { if (!ShellSettings.nightLightAuto) ShellSettings.nightLightTemp = v }
-                    }
-                }
-            }
-            Item {
-                width: 1
-                height: root._picker === "nightlight" ? Theme.gapItem : 0
-                Behavior on height { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
-            }
-
-            // Wi-Fi · Bluetooth — their pickers open right under this row.
-            Row {
-                id: _connRow
-                width: parent.width
-                spacing: Theme.gapItem
-                visible: _wifiTile.visible || _btTile.visible
-
-                QuickToggleTile {
-                    id: _wifiTile
-                    width: _quickControls.cellW
-                    readonly property bool _ethActive: Network.connected && Network.deviceType === "ethernet"
-                    visible: Network.toolAvailable && Network.hasWifiDevice
-                    available: !_ethActive
-                    active: Network.wifiEnabled
-                    activeGlyph: "󰤨"
-                    inactiveGlyph: "󰤭"
-                    title: "Wi-Fi"
-                    status: _ethActive ? "Ethernet"
-                          : (Network.wifiEnabled && Network.isWifi && Network.connected ? Network.connectionName : "")
-                    expandable: Network.wifiEnabled && !_ethActive
-                    expanded: root._picker === "wifi"
-                    onToggled: Network.toggleWifi()
-                    onExpandToggled: root._togglePicker("wifi")
-                }
-
-                QuickToggleTile {
-                    id: _btTile
-                    width: _quickControls.cellW
-                    visible: Bluetooth.available
-                    active: Bluetooth.enabled
-                    activeGlyph: "󰂯"
-                    inactiveGlyph: "󰂲"
-                    title: "Bluetooth"
-                    status: Bluetooth.connectedCount > 0
-                        ? (Bluetooth.connectedCount === 1
-                            ? Bluetooth.connectedName + (Bluetooth.connectedBattery >= 0 ? "  " + Bluetooth.connectedBattery + "%" : "")
-                            : Bluetooth.connectedCount + " connected")
-                        : ""
-                    expandable: Bluetooth.enabled
-                    expanded: root._picker === "bt"
-                    onToggled: Bluetooth.toggle()
-                    onExpandToggled: root._togglePicker("bt")
-                }
-            }
-
-            Item { width: 1; height: _connRow.visible ? Theme.gapItem : 0 }
-            CollapsibleSection {
-                width: parent.width
+            ControlRow {
+                id: _wifiRow
+                readonly property bool _ethActive: Network.connected && Network.deviceType === "ethernet"
+                visible: Network.toolAvailable && Network.hasWifiDevice
+                active: Network.wifiEnabled
+                glyph: Network.wifiEnabled ? "󰤨" : "󰤭"
+                title: "Wi-Fi"
+                status: Network.wifiEnabled && Network.isWifi && Network.connected ? Network.connectionName
+                      : _ethActive ? "Ethernet active"
+                      : Network.wifiEnabled ? "On"
+                      : "Off"
+                showSwitch: true
+                expandable: Network.wifiEnabled
                 expanded: root._picker === "wifi"
-                WifiList { width: parent.width; open: root._picker === "wifi" }
+                onActivated: Network.toggleWifi()
+                onExpandToggled: root._togglePicker("wifi")
             }
-            CollapsibleSection {
-                width: parent.width
+
+            ControlRow {
+                id: _btRow
+                visible: Bluetooth.available
+                active: Bluetooth.enabled
+                glyph: Bluetooth.enabled ? "󰂯" : "󰂲"
+                title: "Bluetooth"
+                status: Bluetooth.connectedCount > 0
+                    ? (Bluetooth.connectedCount === 1
+                        ? Bluetooth.connectedName + (Bluetooth.connectedBattery >= 0 ? "  " + Bluetooth.connectedBattery + "%" : "")
+                        : Bluetooth.connectedCount + " connected")
+                    : ""
+                showSwitch: true
+                expandable: Bluetooth.enabled
                 expanded: root._picker === "bt"
-                BluetoothList { width: parent.width; open: root._picker === "bt" }
+                onActivated: Bluetooth.toggle()
+                onExpandToggled: root._togglePicker("bt")
             }
-            Item {
-                width: 1
-                height: (root._picker === "wifi" || root._picker === "bt") ? Theme.gapItem : 0
-                Behavior on height { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+        }
+
+        Item {
+            width: 1
+            height: (root._picker === "wifi" || root._picker === "bt") ? root._itemGap : 0
+            Behavior on height { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+        }
+        CollapsibleSection {
+            width: parent.width
+            expanded: root._picker === "wifi"
+            WifiList { width: parent.width; open: root._picker === "wifi" }
+        }
+        CollapsibleSection {
+            width: parent.width
+            expanded: root._picker === "bt"
+            BluetoothList { width: parent.width; open: root._picker === "bt" }
+        }
+
+        // ── Controls ────────────────────────────────────────────────────────
+        SectionLabel { label: "Controls" }
+        SettingsCard {
+            ControlRow {
+                id: _nightRow
+                visible: NightLight.toolAvailable
+                active: NightLight.enabled
+                glyph: NightLight.enabled ? "󰖔" : "󰖙"
+                title: "Night Light"
+                status: NightLight.enabled ? NightLight.temperature + "K" : NightLight.recommendLabel
+                accentColor: Theme.warning
+                showSwitch: true
+                expandable: NightLight.enabled
+                expanded: root._picker === "nightlight"
+                onActivated: NightLight.toggle()
+                onExpandToggled: root._togglePicker("nightlight")
             }
 
-            // Power Mode · Lock
-            Row {
-                id: _actionRow
-                width: parent.width
-                spacing: Theme.gapItem
-                visible: _powerTile.visible || _lockTile.visible
-
-                // Tap cycles balanced → performance → power-saver. Keep the tile
-                // visible while the first read is pending so it doesn't blink out.
-                QuickToggleTile {
-                    id: _powerTile
-                    width: _quickControls.cellW
-                    visible: PowerProfiles.available
-                    available: PowerProfiles.profile !== ""
-                    active: PowerProfiles.profile !== "" && PowerProfiles.profile !== "balanced"
-                    activeGlyph: PowerProfiles.glyph
-                    inactiveGlyph: PowerProfiles.glyph
-                    title: "Power Mode"
-                    status: PowerProfiles.profile !== "" ? PowerProfiles.label
-                          : PowerProfiles.syncing ? "Checking..."
-                          : "Unavailable"
-                    onToggled: PowerProfiles.cycle()
+            // Night-light temperature opens inline, right under its own row.
+            CollapsibleSection {
+                expanded: root._picker === "nightlight"
+                SliderRow {
+                    glyph: "󰔄"
+                    label: ShellSettings.nightLightAuto ? "Temperature  ·  auto" : "Temperature"
+                    enabled: !ShellSettings.nightLightAuto
+                    displayValue: ShellSettings.nightLightTemp + "K"
+                    value: ShellSettings.nightLightTemp
+                    min: 1000; max: 6500; step: 100
+                    glyphColor: Theme.withAlpha(Theme.warning, ShellSettings.nightLightAuto ? 0.45 : 0.85)
+                    onChanged: (v) => { if (!ShellSettings.nightLightAuto) ShellSettings.nightLightTemp = v }
                 }
+            }
 
-                QuickToggleTile {
-                    id: _lockTile
-                    // Gate on the configured command's tool (mirrors the power
-                    // strip), not hyprlock specifically — lockCommand is editable.
-                    readonly property bool lockAvailable: {
-                        const cmd = Settings.lockCommand
-                        if (!cmd || cmd.length === 0) return false
-                        if (String(cmd[0]) === "hyprlock") return SystemTools.hasHyprlock
-                        return true
-                    }
-                    width: _quickControls.cellW
-                    visible: lockAvailable
-                    activeGlyph: "󰍁"
-                    inactiveGlyph: "󰍁"
-                    title: "Lock"
-                    onToggled: {
-                        MenuState.close()
-                        Quickshell.execDetached(Settings.lockCommand)
-                    }
+            ControlRow {
+                id: _dndRow
+                active: Notifications.dnd
+                glyph: Notifications.dnd ? "󰂛" : "󰂚"
+                title: "Do Not Disturb"
+                showSwitch: true
+                badgeCount: Notifications.dnd ? Notifications.missedCount : 0
+                onActivated: Notifications.toggleDnd()
+                onBadgeActivated: MenuState.showTab(2)
+            }
+
+            ControlRow {
+                id: _powerRow
+                visible: PowerProfiles.available
+                available: PowerProfiles.profile !== ""
+                active: PowerProfiles.profile !== "" && PowerProfiles.profile !== "balanced"
+                glyph: PowerProfiles.glyph
+                title: "Power Mode"
+                valueText: PowerProfiles.profile !== "" ? PowerProfiles.label
+                         : PowerProfiles.syncing ? "Checking…"
+                         : "Unavailable"
+                onActivated: PowerProfiles.cycle()
+            }
+
+            ControlRow {
+                id: _lockRow
+                readonly property bool lockAvailable: {
+                    const cmd = Settings.lockCommand
+                    if (!cmd || cmd.length === 0) return false
+                    if (String(cmd[0]) === "hyprlock") return SystemTools.hasHyprlock
+                    return true
+                }
+                visible: lockAvailable
+                glyph: "󰍁"
+                title: "Lock"
+                onActivated: {
+                    MenuState.close()
+                    Quickshell.execDetached(Settings.lockCommand)
                 }
             }
         }
 
-        Item { width: 1; height: Theme.gapSection }
-
-        // 2-column tile grid — same visual vocabulary as the quick-toggle tiles
-        // above: standalone cards with left accent rail + icon + label/value.
-        Grid {
-            id: _statGrid
+        // ── System ──────────────────────────────────────────────────────────
+        SectionLabel { label: "System" }
+        VitalsStrip {
+            active: root.active
             width: parent.width
-            columns: 2
-            columnSpacing: Theme.gapItem
-            rowSpacing: Theme.gapItem
-            readonly property real cellW: (width - columnSpacing) / 2
-
-            StatTile {
-                id: _cpuGauge
-                active: root.active
-                width: _statGrid.cellW
-                glyph: "󰔏"
-                label: "CPU"
-                value: (SysInfo.cpuPct > 0 ? Math.round(SysInfo.cpuPct * 100) + "%" : "—") +
-                       (CpuTemp.temp > 0 ? "  " + Math.round(CpuTemp.temp) + "°" : "")
-                progress: SysInfo.cpuPct
-                accentColor: CpuTemp.critical ? Theme.error : (CpuTemp.hot ? Theme.warning : Theme.accent)
-                alertPulse: CpuTemp.alertPulse
-            }
-            StatTile {
-                id: _memGauge
-                active: root.active
-                width: _statGrid.cellW
-                glyph: "󰘚"
-                label: "Memory"
-                value: SysInfo.memLabel
-                progress: SysInfo.memPct
-            }
-            StatTile {
-                id: _diskGauge
-                active: root.active
-                width: _statGrid.cellW
-                glyph: "󰋊"
-                label: "Storage"
-                value: SysInfo.diskPct > 0 ? Math.round(SysInfo.diskPct * 100) + "%" : "—"
-                hoverValue: SysInfo.diskLabel
-                progress: SysInfo.diskPct
-                accentColor: SysInfo.diskPct > 0.9 ? Theme.error : (SysInfo.diskPct > 0.75 ? Theme.warning : Theme.accent)
-            }
-            StatTile {
-                id: _battGauge
-                active: root.active
-                visible: Battery.available
-                width: _statGrid.cellW
-                glyph: Battery.icon
-                label: "Battery"
-                value: Battery.label
-                       + (Battery.timeLabel !== "" ? "  " + Battery.timeLabel : "")
-                       + (Battery.charging && Battery.rateLabel !== "" ? "  " + Battery.rateLabel : "")
-                progress: Math.min(Battery.pct / 100, 1.0)
-                accentColor: Battery.critical ? Theme.error : (Battery.low ? Theme.warning : Theme.accent)
-                alertPulse: Battery.alertPulse
-            }
         }
 
         // Sun-path arc — dashboard footer. Sits last so enabling night-light
@@ -983,6 +918,6 @@ Item {
             }
         }
 
-        Item { width: 1; height: Theme.gapItem }
+        Item { width: 1; height: root._itemGap }
     }
 }

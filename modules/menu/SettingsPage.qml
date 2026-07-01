@@ -114,10 +114,6 @@ Item {
     function _setUnderlineScreenshotStyle(style) {
         ShellSettings.underlineScreenshotGlow = style !== "off"
         ShellSettings.screenshotGlowSweep = style === "sweep"
-        if (style !== "off") {
-            ShellSettings.screenshotGlowStrength = style === "sweep" ? 1.1 : 1.0
-            ShellSettings.screenshotGlowDuration = style === "sweep" ? 800 : 650
-        }
     }
 
     readonly property bool _underlineEnabled:
@@ -172,104 +168,102 @@ Item {
     Item {
         id: _detail
         width:  root.width
-            height: _detailHeader.height + _detailBody.height
+        height: _detailHeader.height + _bodyGap + _detailBody.height
 
-            readonly property real _bodyH:
-                    root._shownSection === "theme"      ? _secTheme.height
-                  : root._shownSection === "motion"     ? _secMotion.height
-                  : root._shownSection === "nightlight" ? _secNightLight.height
-                  : root._shownSection === "surface"    ? _secSurface.height
-                  : root._shownSection === "separators" ? _secSeparators.height
-                  : root._shownSection === "underline"  ? _secUnderline.height
-                  : root._shownSection === "clock"      ? _secClock.height
-                  : root._shownSection === "workspaces" ? _secWorkspaces.height
-                  : root._shownSection === "media"      ? _secMedia.height
-                  : root._shownSection === "indicators" ? _secIndicators.height
-                  : root._shownSection === "popups"     ? _secPopups.height
-                  : root._shownSection === "osd"        ? _secOsd.height
-                  : root._shownSection === "warnings"   ? _secWarnings.height
-                  : root._shownSection === "updates"    ? _secUpdates.height
-                  :                                       _secSystem.height
+        readonly property int _bodyGap: 8
 
-            property real _slide: 0
-            transform: Translate { y: _detail._slide }
+        readonly property real _bodyH:
+                root._shownSection === "theme"      ? _secTheme.implicitHeight
+              : root._shownSection === "motion"     ? _secMotion.implicitHeight
+              : root._shownSection === "nightlight" ? _secNightLight.implicitHeight
+              : root._shownSection === "surface"    ? _secSurface.implicitHeight
+              : root._shownSection === "separators" ? _secSeparators.implicitHeight
+              : root._shownSection === "underline"  ? _secUnderline.implicitHeight
+              : root._shownSection === "clock"      ? _secClock.implicitHeight
+              : root._shownSection === "workspaces" ? _secWorkspaces.implicitHeight
+              : root._shownSection === "media"      ? _secMedia.implicitHeight
+              : root._shownSection === "indicators" ? _secIndicators.implicitHeight
+              : root._shownSection === "popups"     ? _secPopups.implicitHeight
+              : root._shownSection === "osd"        ? _secOsd.implicitHeight
+              : root._shownSection === "warnings"   ? _secWarnings.implicitHeight
+              : root._shownSection === "updates"    ? _secUpdates.implicitHeight
+              :                                       _secSystem.implicitHeight
 
-            Connections {
-                target: MenuState
-                function onSettingsSectionChanged() {
-                    if (ShellSettings.reduceMotion) {
-                        root._shownSection = MenuState.settingsSection
-                        _detail.opacity = 1
-                        _detail._slide = 0
-                        return
-                    }
-                    if (!_detailSwap.running) _detailSwap.restart()
+        property real _slide: 0
+        transform: Translate { y: _detail._slide }
+
+        Connections {
+            target: MenuState
+            function onSettingsSectionChanged() {
+                if (ShellSettings.reduceMotion) {
+                    root._shownSection = MenuState.settingsSection
+                    _detail.opacity = 1
+                    _detail._slide = 0
+                    return
                 }
+                if (!_detailSwap.running) _detailSwap.restart()
             }
+        }
 
-            SequentialAnimation {
-                id: _detailSwap
-                NumberAnimation { target: _detail; property: "opacity"; to: 0.0; duration: Motion.ms(60); easing.type: Easing.InCubic }
-                ScriptAction    { script: { root._shownSection = MenuState.settingsSection; _detail._slide = 8 } }
-                ParallelAnimation {
-                    NumberAnimation { target: _detail; property: "opacity"; to: 1.0; duration: Motion.ms(120); easing.type: Easing.OutCubic }
-                    NumberAnimation { target: _detail; property: "_slide";  to: 0.0; duration: Motion.ms(120); easing.type: Easing.OutQuart }
-                }
-                ScriptAction { script: if (root._shownSection !== MenuState.settingsSection) _detailSwapAgain.restart() }
+        SequentialAnimation {
+            id: _detailSwap
+            NumberAnimation { target: _detail; property: "opacity"; to: 0.0; duration: Motion.ms(60); easing.type: Easing.InCubic }
+            ScriptAction    { script: { root._shownSection = MenuState.settingsSection; _detail._slide = 8 } }
+            ParallelAnimation {
+                NumberAnimation { target: _detail; property: "opacity"; to: 1.0; duration: Motion.ms(120); easing.type: Easing.OutCubic }
+                NumberAnimation { target: _detail; property: "_slide";  to: 0.0; duration: Motion.ms(120); easing.type: Easing.OutQuart }
             }
-            Timer {
-                id: _detailSwapAgain
-                interval: 0
-                onTriggered: if (!ShellSettings.reduceMotion && root._shownSection !== MenuState.settingsSection) _detailSwap.restart()
-            }
+            ScriptAction { script: if (root._shownSection !== MenuState.settingsSection) _detailSwapAgain.restart() }
+        }
+        Timer {
+            id: _detailSwapAgain
+            interval: 0
+            onTriggered: if (!ShellSettings.reduceMotion && root._shownSection !== MenuState.settingsSection) _detailSwap.restart()
+        }
 
             Item {
                 id: _detailHeader
                 width: parent.width
-                // 4px multiple keeps the body's first card divider on the physical
-                // pixel grid at 1.25x. 16 (tabContent.y) + 44 = 60.
-                height: 44
+                height: 32
                 readonly property var _meta: root._sectionMeta[root._shownSection]
                                             ?? ({ glyph: "", label: "", group: "" })
 
-                // Quiet glyph + title on one line. The rail already shows the group,
-                // so no breadcrumb, chip border, glow, or rule here — keep it light.
-                Rectangle {
-                    id: _hdrIconChip
+                // Compact section title: no badge or rule here, the card below
+                // already supplies the structure.
+                Item {
+                    id: _hdrIconSlot
                     anchors.left:           parent.left
-                    anchors.leftMargin:     2
                     anchors.verticalCenter: parent.verticalCenter
-                    width:  30
-                    height: 30
-                    radius: 9
-                    antialiasing: true
-                    color:  Theme.withAlpha(Theme.accent, 0.11)
+                    width:  24
+                    height: 24
                     Text {
                         anchors.centerIn: parent
                         text:           _detailHeader._meta.glyph
-                        color:          Theme.accent
+                        color:          Theme.withAlpha(Theme.menuTextMuted, 0.92)
                         font.family:    Settings.font
-                        font.pixelSize: Settings.fontSize + 3
+                        font.pixelSize: Settings.fontSize + 1
                         renderType:     Text.NativeRendering
                     }
                 }
                 Text {
                     id: _hdrTitle
-                    anchors.left:           _hdrIconChip.right
-                    anchors.leftMargin:     11
+                    anchors.left:           _hdrIconSlot.right
+                    anchors.leftMargin:     9
+                    anchors.right:          parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     text:           _detailHeader._meta.label
                     color:          Theme.text
                     font.family:    Settings.font
-                    font.pixelSize: Settings.fontSize + 4
+                    font.pixelSize: Settings.fontSize + 3
                     font.weight:    Font.DemiBold
                     renderType:     Text.NativeRendering
+                    elide:          Text.ElideRight
                 }
             }
 
             Item {
                 id: _detailBody
-                y:      _detailHeader.height
+                y:      _detailHeader.height + _detail._bodyGap
                 width:  parent.width
                 height: _detail._bodyH
 
@@ -311,22 +305,27 @@ Item {
                 Timer { id: _themeOpenMatuTimer;    interval: Motion.fast + 20; onTriggered: _secTheme._showMatuContent    = true }
 
                 SettingsCard {
-                    ToggleRow {
-                        glyph: "󰉦"; label: "Neutral theme"
-                        checked: ShellSettings.neutralTheme
-                        onToggled: ShellSettings.neutralTheme = !ShellSettings.neutralTheme
-                        // Always square: the accent picker expands below when neutral
-                        // is on, the matugen showcase when it's off — so this toggle is
-                        // never the card's bottom edge.
+                    ChoiceChipRow {
+                        glyph: "󰉦"; label: "Source"
+                        currentValue: ShellSettings.neutralTheme ? "neutral" : "wallpaper"
+                        model: [
+                            { value: "neutral",   label: "Neutral"   },
+                            { value: "wallpaper", label: "Wallpaper" }
+                        ]
+                        onChosen: (v) => ShellSettings.neutralTheme = (v === "neutral")
                     }
+                }
 
-                    CollapsibleSection {
-                        expanded: _secTheme._showNeutralContent
+                CollapsibleSection {
+                    expanded: _secTheme._showNeutralContent
+
+                    SectionLabel { label: "ACCENT" }
+                    SettingsCard {
 
                         Item {
                             id: _accentPicker
                             width: parent.width
-                            height: 132
+                            height: 110
 
                             readonly property real _accentL: 0.70
                             function _accentForHS(h, s) {
@@ -360,6 +359,10 @@ Item {
                                 return _curHex
                             }
                             readonly property string _shownName: _hoverName.length > 0 ? _hoverName : _activeName
+
+                            property real topRadius: 0
+                            property real bottomRadius: 0
+                            property real cardInset: 1
 
                             Text {
                                 anchors.top:            parent.top; anchors.topMargin: 13
@@ -439,7 +442,7 @@ Item {
 
                                 Rectangle {
                                     anchors.fill: parent; radius: height / 2; antialiasing: true
-                                    border.width: 1; border.color: Theme.withAlpha(Theme.subtext, 0.18)
+                                    border.width: 1; border.color: Theme.menuControlLineHot
                                     gradient: Gradient {
                                         orientation: Gradient.Horizontal
                                         GradientStop { position: 0.000; color: _accentPicker._accentForHue(0.000) }
@@ -476,54 +479,11 @@ Item {
                                     onPositionChanged: (m) => { if (pressed) _set(m.x) }
                                 }
                             }
-
-                            Item {
-                                id: _satStrip
-                                anchors.top:       _hueStrip.bottom; anchors.topMargin: 10
-                                anchors.left:      parent.left;  anchors.leftMargin:  12
-                                anchors.right:     parent.right; anchors.rightMargin: 12
-                                height: 14
-                                opacity: ShellSettings.neutralAccentAuto ? 0.4 : 1.0
-                                Behavior on opacity { NumberAnimation { duration: Motion.fast } }
-
-                                Rectangle {
-                                    anchors.fill: parent; radius: height / 2; antialiasing: true
-                                    border.width: 1; border.color: Theme.withAlpha(Theme.subtext, 0.18)
-                                    gradient: Gradient {
-                                        orientation: Gradient.Horizontal
-                                        GradientStop { position: 0.0; color: _accentPicker._accentForHS(_accentPicker._curHue, 0.0) }
-                                        GradientStop { position: 1.0; color: _accentPicker._accentForHS(_accentPicker._curHue, 1.0) }
-                                    }
-                                }
-                                Rectangle {
-                                    id: _satThumb
-                                    width: 16; height: 16; radius: 8; antialiasing: true
-                                    y: (parent.height - height) / 2
-                                    x: Math.round(_accentPicker._curSat * (_satStrip.width - width))
-                                    color: _accentPicker._curColor
-                                    border.width: 2; border.color: Theme.text
-                                    scale: _satMa.pressed ? 1.18 : (_satMa.containsMouse ? 1.08 : 1.0); transformOrigin: Item.Center
-                                    Behavior on x     { enabled: !_satMa.pressed && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-                                    Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
-                                }
-                                MouseArea {
-                                    id: _satMa
-                                    anchors.fill: parent; anchors.topMargin: -8; anchors.bottomMargin: -8
-                                    cursorShape: Qt.PointingHandCursor; preventStealing: true; hoverEnabled: true
-                                    function _set(mx) {
-                                        const t = _satThumb.width
-                                        const s = Math.max(0.12, Math.min(1, (mx - t / 2) / Math.max(1, width - t)))
-                                        ShellSettings.neutralAccentAuto = false
-                                        ShellSettings.neutralAccent = _accentPicker._accentForHS(_accentPicker._curHue, s)
-                                    }
-                                    onPressed:         (m) => _set(m.x)
-                                    onPositionChanged: (m) => { if (pressed) _set(m.x) }
-                                }
-                            }
                         }
                     }
-                    CollapsibleSection {
-                        expanded: _secTheme._showNeutralContent
+
+                    SectionLabel { label: "BASE" }
+                    SettingsCard {
                         ChoiceChipRow {
                             glyph: "󰃞"; label: "Background"
                             currentValue: ShellSettings.baseTone
@@ -534,18 +494,22 @@ Item {
                             onChosen: (v) => ShellSettings.baseTone = v
                         }
                     }
+                }
 
-                    // Neutral off → the shell themes from matugen. Show the live
-                    // palette as proof it's working; if matugen isn't installed
-                    // these are the bundled fallback tones, called out as such.
-                    CollapsibleSection {
-                        expanded: _secTheme._showMatuContent
+                // Neutral off -> the shell themes from matugen. Show the live
+                // palette as proof it's working; if matugen isn't installed
+                // these are the bundled fallback tones, called out as such.
+                CollapsibleSection {
+                    expanded: _secTheme._showMatuContent
+
+                    SectionLabel { label: "PALETTE" }
+                    SettingsCard {
 
                         Item {
                             id: _matuShowcase
                             width: parent.width
                             // Trailing 14 balances the top padding the readout/swatches sit under.
-                            implicitHeight: _matuCol.y + _matuCol.implicitHeight + 14
+                            implicitHeight: _matuCol.y + _matuCol.implicitHeight + 16
                             height: implicitHeight
 
                             function _hex(c) { return ("#" + root._hex2(c.r) + root._hex2(c.g) + root._hex2(c.b)).toUpperCase() }
@@ -564,25 +528,69 @@ Item {
                             readonly property string _source:  SystemTools.hasMatugen ? "Matugen" : "Fallback"
                             // Top-right readout: a hovered swatch's name·hex, else the source.
                             readonly property string _readout: _hoverLabel.length > 0 ? _hoverLabel : _source
+                            property real topRadius: 0
+                            property real bottomRadius: 0
+                            property real cardInset: 1
 
-                            Text {
-                                anchors.top:            parent.top; anchors.topMargin: 13
-                                anchors.left:           parent.left; anchors.leftMargin: 12
-                                anchors.right:          parent.right; anchors.rightMargin: 12
-                                horizontalAlignment: Text.AlignRight
-                                text:           _matuShowcase._readout
-                                color:          Theme.withAlpha(Theme.subtext, 0.7)
-                                font.family:    Settings.font
-                                font.pixelSize: Settings.fontSize - 2
-                                renderType:     Text.NativeRendering
-                                elide:          Text.ElideRight
+                            Row {
+                                anchors.left: parent.left
+                                anchors.leftMargin: 12
+                                anchors.right: parent.right
+                                anchors.rightMargin: 12
+                                anchors.top: parent.top
+                                anchors.topMargin: 13
+                                height: 34
+                                spacing: 10
+
+                                Rectangle {
+                                    width: 34; height: 34; radius: 10
+                                    antialiasing: true
+                                    color: Theme.mix(Theme.menuControl, MatugenTheme.accent, 0.32)
+                                    border.width: 1
+                                    border.color: Theme.withAlpha(MatugenTheme.accent, 0.56)
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: "󰔎"
+                                        color: MatugenTheme.accent
+                                        font.family: Settings.font
+                                        font.pixelSize: Settings.fontSize + 2
+                                        renderType: Text.NativeRendering
+                                    }
+                                }
+
+                                Column {
+                                    width: parent.width - 44
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    spacing: 2
+
+                                    Text {
+                                        width: parent.width
+                                        text: _matuShowcase._readout
+                                        color: Theme.text
+                                        font.family: Settings.font
+                                        font.pixelSize: Settings.fontSize
+                                        font.weight: Font.DemiBold
+                                        renderType: Text.NativeRendering
+                                        elide: Text.ElideRight
+                                    }
+
+                                    Text {
+                                        width: parent.width
+                                        text: SystemTools.hasMatugen ? "Generated from wallpaper" : "Using bundled fallback colors"
+                                        color: Theme.withAlpha(Theme.subtext, 0.62)
+                                        font.family: Settings.font
+                                        font.pixelSize: Settings.fontSize - 2
+                                        renderType: Text.NativeRendering
+                                        elide: Text.ElideRight
+                                    }
+                                }
                             }
 
                             Column {
                                 id: _matuCol
                                 anchors.left:  parent.left;  anchors.leftMargin:  12
                                 anchors.right: parent.right; anchors.rightMargin: 12
-                                anchors.top:   parent.top; anchors.topMargin: 38
+                                anchors.top:   parent.top; anchors.topMargin: 62
                                 spacing: 10
 
                                 Row {
@@ -607,7 +615,7 @@ Item {
                                             border.color: _mswHover.hovered
                                                 ? Theme.withAlpha(Theme.text, 0.7)
                                                 : (_isAccent ? Theme.withAlpha(Theme.text, 0.5)
-                                                             : Theme.withAlpha(Theme.subtext, 0.28))
+                                                             : Theme.menuControlLineHot)
                                             Behavior on border.color { ColorAnimation { duration: Motion.fast } }
                                             scale: _mswHover.hovered ? 1.08 : 1.0
                                             transformOrigin: Item.Center
@@ -668,6 +676,7 @@ Item {
                 SettingsCard {
                     ToggleRow {
                         glyph: "󰖲"; label: "Floating bar"; badge: "beta"
+                        description: "Detached surface with reserved input only over the visible bar"
                         checked: ShellSettings.barFloating
                         onToggled: ShellSettings.barFloating = !ShellSettings.barFloating
                     }
@@ -746,6 +755,10 @@ Item {
                     visible: !NightLight.toolAvailable
                     text: "hyprsunset is not installed."
                 }
+                HintText {
+                    visible: NightLight.toolAvailable && !NightLight.enabled
+                    text: "Night Light is off — turn it on from the menu to preview changes."
+                }
             }
 
             // ── APPEARANCE · Motion ─────────────────────────────────────
@@ -760,16 +773,6 @@ Item {
                         glyph: "󱖳"; label: "Reduce motion"
                         checked: ShellSettings.reduceMotion
                         onToggled: ShellSettings.reduceMotion = !ShellSettings.reduceMotion
-                    }
-                    CollapsibleSection {
-                        expanded: !ShellSettings.reduceMotion
-                        SliderRow {
-                            glyph: "󰣿"; label: "Animation speed"
-                            value: ShellSettings.animSpeed
-                            min: 0.5; max: 2.0; step: 0.1
-                            displayValue: ShellSettings.animSpeed.toFixed(1) + "×"
-                            onChanged: (v) => ShellSettings.animSpeed = v
-                        }
                     }
                 }
 
@@ -945,14 +948,19 @@ Item {
 
                         primaryLabel: !SystemTools.ready ? "Detecting…"
                             : !Updates.supported ? "Unavailable"
-                            : !ShellSettings.updatesWidget ? "Settings"
+                            : !ShellSettings.updatesWidget ? "Off"
                             : Updates.isChecking ? "Checking…" : "Check"
-                        primaryGlyph: ShellSettings.updatesWidget ? "󰓦" : "󰒓"
-                        primaryEnabled: SystemTools.ready && Updates.supported && !Updates.isChecking
-                        onPrimaryTriggered: {
-                            if (!ShellSettings.updatesWidget) MenuState.setSettingsSection("indicators")
-                            else Updates.refresh()
-                        }
+                        primaryGlyph: "󰓦"
+                        primaryEnabled: SystemTools.ready && Updates.supported && ShellSettings.updatesWidget && !Updates.isChecking
+                        onPrimaryTriggered: Updates.refresh()
+                    }
+                    ToggleRow {
+                        glyph: "󰚰"; label: "Track package updates"
+                        description: "Counts pending packages and shows a badge in the bar"
+                        checked: ShellSettings.updatesWidget
+                        onToggled: ShellSettings.updatesWidget = !ShellSettings.updatesWidget
+                        available: !SystemTools.ready || Updates.supported
+                        dependsNote: "No package manager"
                     }
                 }
 
@@ -980,7 +988,7 @@ Item {
                 SettingsCard {
                     ToggleRow {
                         glyph: "󰡍"; label: "Compact spacing"; badge: "beta"
-                        description: "Tighter pills with fewer, slimmer group dividers"
+                        description: "Tighter widget groups with separators only between groups"
                         checked: ShellSettings.barCompact
                         onToggled: ShellSettings.barCompact = !ShellSettings.barCompact
                     }
@@ -998,7 +1006,7 @@ Item {
                         ]
                         onChosen: (v) => ShellSettings.dotStyle = v
                     }
-                    SelectRow {
+                    ChoiceChipRow {
                         glyph: "󰤼"; label: "Spacing"
                         currentValue: ShellSettings.barSpacing
                         model: [
@@ -1048,23 +1056,39 @@ Item {
                             checked: ShellSettings.showWindowTitleApp
                             onToggled: ShellSettings.showWindowTitleApp = !ShellSettings.showWindowTitleApp
                         }
-                        SliderRow {
-                            glyph: "󰦩"; label: "Title opacity"
-                            value: ShellSettings.windowTitleOpacity
-                            min: 0.2; max: 1.0; step: 0.05
-                            displayValue: Math.round(ShellSettings.windowTitleOpacity * 100) + "%"
-                            onChanged: (v) => ShellSettings.windowTitleOpacity = v
-                        }
                     }
                 }
 
-                SectionLabel { label: "NETWORK" }
+                SectionLabel { label: "INTERACTION" }
                 SettingsCard {
+                    ToggleRow {
+                        glyph: "󰍽"; label: "Hover highlight"
+                        checked: ShellSettings.barHoverHighlight
+                        onToggled: ShellSettings.barHoverHighlight = !ShellSettings.barHoverHighlight
+                    }
+                    ToggleRow {
+                        glyph: "󰈈"; label: "Show values on hover"
+                        checked: ShellSettings.valuesOnHover
+                        onToggled: ShellSettings.valuesOnHover = !ShellSettings.valuesOnHover
+                    }
+                }
+
+                SectionLabel { label: "WIDGETS" }
+                DraggableWidgetList { width: parent.width }
+                HintText { text: "Drag the handle to reorder, tap L/R to move a widget between the two sides of the bar." }
+
+                SettingsCard {
+                    ToggleRow {
+                        glyph: "󰂃"; label: "Hide battery when charging or full"
+                        checked: ShellSettings.batteryAutoHide
+                        onToggled: ShellSettings.batteryAutoHide = !ShellSettings.batteryAutoHide
+                        available: ShellSettings.barShowBattery && Battery.available
+                    }
                     ToggleRow {
                         glyph: "󰓅"; label: "Network speed"
                         checked: ShellSettings.networkTrafficStats
                         onToggled: ShellSettings.networkTrafficStats = !ShellSettings.networkTrafficStats
-                        available: Network.toolAvailable
+                        available: ShellSettings.barShowNetwork && Network.toolAvailable
                         dependsNote: "NetworkManager missing"
                     }
                     CollapsibleSection {
@@ -1079,65 +1103,8 @@ Item {
                         glyph: "󰦝"; label: "Show connection under VPN"
                         checked: ShellSettings.netVpnShowLink
                         onToggled: ShellSettings.netVpnShowLink = !ShellSettings.netVpnShowLink
-                        available: Network.toolAvailable
+                        available: ShellSettings.barShowNetwork && Network.toolAvailable
                         dependsNote: "NetworkManager missing"
-                    }
-                }
-
-                SectionLabel { label: "DISPLAY" }
-                SettingsCard {
-                    ToggleRow {
-                        glyph: "󰍽"; label: "Hover highlight"
-                        description: "Soft capsule behind a widget while you point at it"
-                        checked: ShellSettings.barHoverHighlight
-                        onToggled: ShellSettings.barHoverHighlight = !ShellSettings.barHoverHighlight
-                    }
-                    ToggleRow {
-                        glyph: "󰈈"; label: "Show values on hover"
-                        checked: ShellSettings.valuesOnHover
-                        onToggled: ShellSettings.valuesOnHover = !ShellSettings.valuesOnHover
-                    }
-                    HintText { text: "Hides volume, brightness, and battery values at rest; hover to reveal." }
-                }
-
-                SectionLabel { label: "VISIBILITY" }
-                SettingsCard {
-                    ToggleRow {
-                        glyph: "󰂄"; label: "Battery"
-                        checked: ShellSettings.barShowBattery
-                        onToggled: ShellSettings.barShowBattery = !ShellSettings.barShowBattery
-                        available: Battery.available
-                        dependsNote: "No battery"
-                    }
-                    CollapsibleSection {
-                        expanded: ShellSettings.barShowBattery && Battery.available
-                        ToggleRow {
-                            glyph: "󰂃"; label: "Hide when charging or full"
-                            checked: ShellSettings.batteryAutoHide
-                            onToggled: ShellSettings.batteryAutoHide = !ShellSettings.batteryAutoHide
-                        }
-                    }
-                    ToggleRow {
-                        glyph: "󰛳"; label: "Network"
-                        checked: ShellSettings.barShowNetwork
-                        onToggled: ShellSettings.barShowNetwork = !ShellSettings.barShowNetwork
-                    }
-                    ToggleRow {
-                        glyph: "󰅐"; label: "Clock"
-                        checked: ShellSettings.barShowClock
-                        onToggled: ShellSettings.barShowClock = !ShellSettings.barShowClock
-                    }
-                    ToggleRow {
-                        glyph: "󰇘"; label: "System tray"
-                        checked: ShellSettings.trayWidget
-                        onToggled: ShellSettings.trayWidget = !ShellSettings.trayWidget
-                    }
-                    ToggleRow {
-                        glyph: "󰚰"; label: "Package update count"
-                        checked: ShellSettings.updatesWidget
-                        onToggled: ShellSettings.updatesWidget = !ShellSettings.updatesWidget
-                        available: !SystemTools.ready || Updates.supported
-                        dependsNote: "No package manager"
                     }
                 }
             }
@@ -1173,14 +1140,10 @@ Item {
                         ]
                         onChosen: (v) => ShellSettings.clock12h = v === "12h"
                     }
-                    ChoiceChipRow {
+                    ToggleRow {
                         glyph: "󱑂"; label: "Seconds"
-                        currentValue: ShellSettings.showSeconds ? "on" : "off"
-                        model: [
-                            { value: "off", label: "Off" },
-                            { value: "on",  label: "On"  }
-                        ]
-                        onChosen: (v) => ShellSettings.showSeconds = v === "on"
+                        checked: ShellSettings.showSeconds
+                        onToggled: ShellSettings.showSeconds = !ShellSettings.showSeconds
                     }
                 }
             }
@@ -1233,8 +1196,20 @@ Item {
                             onToggled: ShellSettings.wsRomanNumerals = !ShellSettings.wsRomanNumerals
                         }
                     }
+                    SliderRow {
+                        glyph: ShellSettings.wsShowNumbers
+                            ? (ShellSettings.wsRomanNumerals ? "Ⅰ" : "1")
+                            : "•"
+                        glyphColor: Theme.withAlpha(Theme.text, Math.max(0.35, ShellSettings.wsMarkerOpacity))
+                        label: "Marker opacity"
+                        value: ShellSettings.wsMarkerOpacity
+                        min: 0.2; max: 1.0; step: 0.05
+                        displayValue: Math.round(ShellSettings.wsMarkerOpacity * 100) + "%"
+                        onChanged: (v) => ShellSettings.wsMarkerOpacity = v
+                    }
                     ToggleRow {
                         glyph: "󰀻"; label: "App icons"; badge: "beta"
+                        description: "Shows up to three app icons on inactive occupied workspaces"
                         checked: ShellSettings.wsShowAppIcons
                         onToggled: ShellSettings.wsShowAppIcons = !ShellSettings.wsShowAppIcons
                     }
@@ -1246,13 +1221,6 @@ Item {
                             min: 0.3; max: 1.0; step: 0.05
                             displayValue: Math.round(ShellSettings.wsIconOpacity * 100) + "%"
                             onChanged: (v) => ShellSettings.wsIconOpacity = v
-                        }
-                        SliderRow {
-                            glyph: "󰍉"; label: "Icon size"
-                            value: ShellSettings.wsIconSize
-                            min: 12; max: 20; step: 1
-                            displayValue: ShellSettings.wsIconSize + "px"
-                            onChanged: (v) => ShellSettings.wsIconSize = v
                         }
                     }
                 }
@@ -1277,14 +1245,41 @@ Item {
                 SettingsCard {
                     ToggleRow {
                         glyph: "󰱐"; label: "Audio visualizer"; badge: "beta"
+                        description: "Starts cava only while media is playing and the visualizer is visible"
                         checked: ShellSettings.mediaProgress
                         onToggled: ShellSettings.mediaProgress = !ShellSettings.mediaProgress
-                        available: SystemTools.hasCava && SystemTools.hasCavaConfig
-                        dependsNote: SystemTools.hasCava ? "cava config missing" : "cava missing"
+                        available: SystemTools.hasCava
+                        dependsNote: "cava missing"
                     }
                     CollapsibleSection {
-                        expanded: ShellSettings.mediaProgress && SystemTools.hasCava && SystemTools.hasCavaConfig
-                        HintText { text: "Uses more CPU while music is playing. Stops automatically when idle." }
+                        expanded: ShellSettings.mediaProgress && SystemTools.hasCava
+                        ChoiceChipRow {
+                            glyph: "󰓅"; label: "Preset"
+                            currentValue: ShellSettings.mediaVisualizerPreset
+                            model: [
+                                { value: "eco",      label: "Eco" },
+                                { value: "balanced", label: "Bal" },
+                                { value: "smooth",   label: "Smooth" }
+                            ]
+                            onChosen: (v) => ShellSettings.mediaVisualizerPreset = v
+                        }
+                        ChoiceChipRow {
+                            glyph: "󰝚"; label: "Shape"
+                            currentValue: ShellSettings.mediaVisualizerStyle
+                            model: [
+                                { value: "wave",  label: "Wave" },
+                                { value: "bars",  label: "Bars" },
+                                { value: "pulse", label: "Pulse" }
+                            ]
+                            onChosen: (v) => ShellSettings.mediaVisualizerStyle = v
+                        }
+                        SliderRow {
+                            glyph: "󰓃"; label: "Intensity"
+                            value: ShellSettings.mediaVisualizerIntensity
+                            min: 0.55; max: 1.65; step: 0.05
+                            displayValue: Math.round(ShellSettings.mediaVisualizerIntensity * 100) + "%"
+                            onChanged: (v) => ShellSettings.mediaVisualizerIntensity = v
+                        }
                     }
                 }
             }
@@ -1324,6 +1319,14 @@ Item {
                             ]
                             onChosen: (v) => root._setUnderlineBrightness(v)
                         }
+                        CollapsibleSection {
+                            expanded: ShellSettings.underlineGlow
+                            ToggleRow {
+                                glyph: "󰊠"; label: "Ambient glow"
+                                checked: ShellSettings.underlineIdleGlow
+                                onToggled: ShellSettings.underlineIdleGlow = !ShellSettings.underlineIdleGlow
+                            }
+                        }
                     }
                 }
 
@@ -1333,11 +1336,6 @@ Item {
                         width: parent.width
                         SectionLabel { label: "EVENTS" }
                         SettingsCard {
-                            ToggleRow {
-                                glyph: "󰊠"; label: "Ambient glow"
-                                checked: ShellSettings.underlineIdleGlow
-                                onToggled: ShellSettings.underlineIdleGlow = !ShellSettings.underlineIdleGlow
-                            }
                             ToggleRow {
                                 glyph: "󰂚"; label: "Notifications"
                                 checked: ShellSettings.underlineNotifGlow
@@ -1392,7 +1390,8 @@ Item {
                         onToggled: ShellSettings.notifPopupEnabled = !ShellSettings.notifPopupEnabled
                     }
                     ToggleRow {
-                        glyph: "󰊓"; label: "Silence in fullscreen"
+                        glyph: "󰊓"; label: "Hide in fullscreen"
+                        enabled: ShellSettings.notifPopupEnabled
                         checked: ShellSettings.notifFullscreenSilence
                         onToggled: ShellSettings.notifFullscreenSilence = !ShellSettings.notifFullscreenSilence
                     }
@@ -1436,21 +1435,6 @@ Item {
                     }
                 }
 
-                SectionLabel { label: "ALERTS" }
-                SettingsCard {
-                    ChoiceChipRow {
-                        glyph: "󰀦"; label: "Alert duration"
-                        rowEnabled: ShellSettings.notifPopupEnabled
-                        currentValue: ShellSettings.sysAlertTimeout
-                        model: [
-                            { value: 5000,  label: "5s"   },
-                            { value: 10000, label: "10s"  },
-                            { value: 20000, label: "20s"  },
-                            { value: 0,     label: "Stay" }
-                        ]
-                        onChosen: (v) => ShellSettings.sysAlertTimeout = v
-                    }
-                }
             }
 
             // ── NOTIFICATIONS · OSD ─────────────────────────────────────
@@ -1469,6 +1453,7 @@ Item {
                     // Mode: floating pill vs bar-inline. Drives which sub-options apply.
                     ToggleRow {
                         glyph: "󰀱"; label: "Show in bar"; badge: "beta"
+                        description: "Uses the overlay monitor's bar center instead of the floating OSD pill"
                         enabled: ShellSettings.osdEnabled
                         checked: ShellSettings.osdBarIntegrated
                         onToggled: ShellSettings.osdBarIntegrated = !ShellSettings.osdBarIntegrated
@@ -1506,27 +1491,14 @@ Item {
                     }
                 }
 
-                SectionLabel { label: "EXTRAS" }
+                SectionLabel { label: "VOLUME" }
                 SettingsCard {
                     ToggleRow {
-                        glyph: "󰓎"; label: "Volume shimmer"
-                        enabled: ShellSettings.osdEnabled && !ShellSettings.osdBarIntegrated
-                        checked: ShellSettings.osdShimmer
-                        onToggled: ShellSettings.osdShimmer = !ShellSettings.osdShimmer
-                        // only when bar mode is the blocker; OSD-off just dims like its neighbours
-                        dependsNote: ShellSettings.osdEnabled ? "Pill only" : ""
-                    }
-                    ToggleRow {
-                        glyph: "󰕾"; label: "Loud volume tint"
+                        glyph: "󰓎"; label: "Volume emphasis"
+                        description: "Warm tint and a soft shimmer as volume nears maximum"
                         enabled: ShellSettings.osdEnabled
                         checked: ShellSettings.osdVolumeTint
                         onToggled: ShellSettings.osdVolumeTint = !ShellSettings.osdVolumeTint
-                    }
-                    ToggleRow {
-                        glyph: "󰂄"; label: "Fully-charged alert"
-                        enabled: ShellSettings.osdEnabled && Battery.available
-                        checked: ShellSettings.osdChargedNotify
-                        onToggled: ShellSettings.osdChargedNotify = !ShellSettings.osdChargedNotify
                     }
                 }
             }
@@ -1558,6 +1530,12 @@ Item {
                         }
                         HintText { text: "Escalates to critical at " + Math.max(5, Math.round(ShellSettings.batteryLowThreshold / 2)) + "%." }
                     }
+                    ToggleRow {
+                        glyph: "󰂄"; label: "Fully-charged alert"
+                        enabled: ShellSettings.osdEnabled && Battery.available
+                        checked: ShellSettings.osdChargedNotify
+                        onToggled: ShellSettings.osdChargedNotify = !ShellSettings.osdChargedNotify
+                    }
                 }
 
                 SectionLabel { label: "CPU TEMPERATURE" }
@@ -1579,6 +1557,27 @@ Item {
                             glyphColor: CpuTemp.critical ? Theme.error : (CpuTemp.hot ? Theme.warning : Theme.withAlpha(Theme.subtext, 0.85))
                         }
                         HintText { text: "Escalates to critical at " + (ShellSettings.tempHotThreshold + 8) + "°." }
+                    }
+                }
+
+                CollapsibleSection {
+                    expanded: ShellSettings.osdBatteryWarn || ShellSettings.osdTempWarn
+                    Column {
+                        width: parent.width
+                        SectionLabel { label: "ALERTS" }
+                        SettingsCard {
+                            ChoiceChipRow {
+                                glyph: "󰀦"; label: "Auto-dismiss"
+                                currentValue: ShellSettings.sysAlertTimeout
+                                model: [
+                                    { value: 5000,  label: "5s"   },
+                                    { value: 10000, label: "10s"  },
+                                    { value: 20000, label: "20s"  },
+                                    { value: 0,     label: "Stay" }
+                                ]
+                                onChosen: (v) => ShellSettings.sysAlertTimeout = v
+                            }
+                        }
                     }
                 }
             }

@@ -48,7 +48,7 @@ Singleton {
     // The system stats are only shown on the menu's "Now" page, so the polling
     // runs only while that tab is visible.
     property bool _active: false
-    readonly property bool _wanted: MenuState.open && MenuState.activeTab === 0
+    readonly property bool _wanted: MenuState.open && MenuState.activeTab === 0 && !Idle.isIdle
 
     on_WantedChanged: {
         if (_wanted) _startDelay.restart()

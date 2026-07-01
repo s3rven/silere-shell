@@ -31,7 +31,7 @@ Item {
         height: Math.round(_text.implicitHeight * 0.82)
         radius: 1.5
         antialiasing: true
-        color:  Theme.withAlpha(Theme.accent, 0.75)
+        color:  Theme.withAlpha(Theme.menuTextMuted, 0.66)
     }
 
     Text {
@@ -40,11 +40,8 @@ Item {
         anchors.leftMargin:   7
         anchors.bottom:       parent.bottom
         anchors.bottomMargin: root._botGap
-        // A whisper of accent so the heading reads as part of the accent system
-        // (like the sidebar group labels) rather than flat grey; the tick carries
-        // most of the accent, the text only leans into it.
         text:        root.label
-        color:       Theme.withAlpha(Theme.mix(Theme.subtext, Theme.accent, 0.22), 0.74)
+        color:       Theme.withAlpha(Theme.menuTextMuted, 0.82)
         font.family: Settings.font
         font.pixelSize: Settings.fontSize - 3
         font.letterSpacing:  0.4
@@ -57,9 +54,8 @@ Item {
         anchors.left:           _text.right
         anchors.leftMargin:     10
         anchors.right:          parent.right
-        anchors.rightMargin:    0
         anchors.verticalCenter: _text.verticalCenter
         height: 1
-        color:  Theme.withAlpha(Theme.subtext, 0.10)
+        color:  Theme.menuDivider
     }
 }

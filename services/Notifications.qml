@@ -55,23 +55,16 @@ Singleton {
     onDndChanged: { if (!dnd && missedCount !== 0) missedCount = 0 }
 
     property bool _fullscreenActive: false
+    readonly property bool fullscreenActive: _fullscreenActive
     readonly property bool fullscreenSilenced: ShellSettings.notifFullscreenSilence && _fullscreenActive
 
     Connections {
         target: Hyprland
-        enabled: ShellSettings.notifFullscreenSilence
         function onRawEvent(event) {
             const n = event.name
             if (n === "fullscreen" || n === "activewindow" || n === "workspace"
                 || n === "focusedmon" || n === "closewindow")
                 _fsRefresh.restart()
-        }
-    }
-    Connections {
-        target: ShellSettings
-        function onNotifFullscreenSilenceChanged() {
-            if (ShellSettings.notifFullscreenSilence) _fsRefresh.restart()
-            else root._fullscreenActive = false
         }
     }
     Timer {
@@ -225,6 +218,7 @@ Singleton {
         // purge ids that closed while the shell was down
         for (const id in root._seen)  if (!live[id]) delete root._seen[id]
         for (const id in root._times) if (!live[id]) delete root._times[id]
+        _fsRefresh.restart()
     }
 
     NotificationServer {

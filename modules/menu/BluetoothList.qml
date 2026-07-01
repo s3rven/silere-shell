@@ -78,6 +78,8 @@ Item {
             visible: root.open && Bluetooth.available && Bluetooth.enabled && Bluetooth.devices.length > 0
             clip: true
             boundsMovement: Flickable.StopAtBounds
+            flickDeceleration: 1800
+            maximumFlickVelocity: 2200
             spacing: 4
             model: root.open ? Bluetooth.devices : []
 
@@ -93,7 +95,7 @@ Item {
                 border.color: (_armed || modelData.pairing) ? Theme.withAlpha(Theme.warning, 0.55)
                             : modelData.connected               ? Theme.withAlpha(Theme.accent,  0.45)
                             : activeFocus                        ? Theme.withAlpha(Theme.accent,  0.45)
-                            :                                     Theme.withAlpha(Theme.subtext, 0.10)
+                            :                                     Theme.menuCardBorder
                 Behavior on color { ColorAnimation { duration: Motion.fast } }
 
                 activeFocusOnTab: true

@@ -31,28 +31,32 @@ Item {
         anchors.fill: parent
 
         property real _notifGlow:   0
-        readonly property real _batteryGlow: (_glowEnabled && ShellSettings.underlineBattGlow)
+        readonly property bool _batteryGlowEnabled: _glowEnabled && ShellSettings.underlineBattGlow
+        readonly property bool _tempGlowEnabled: _glowEnabled && ShellSettings.underlineTempGlow
+        readonly property bool _networkGlowEnabled: _glowEnabled && ShellSettings.underlineNetGlow
+        readonly property real _batteryGlow: _batteryGlowEnabled
             ? (Battery.critical ? 0.64 - Battery.alertPulse * 0.26
                : (Battery.low   ? 0.44 - Battery.alertPulse * 0.20 : 0))
             : 0
         property real _networkGlow: 0
         property bool _netKnown: false
         property bool _lastNetConnected: false
-        readonly property real _tempGlowBase: (_glowEnabled && ShellSettings.underlineTempGlow && CpuTemp.hot && !CpuTemp.critical) ? 0.32 : 0
+        readonly property real _tempGlowBase: (_tempGlowEnabled && CpuTemp.hot && !CpuTemp.critical) ? 0.32 : 0
         property real _tempPulseGlow: 0
         // Reduce-motion: hold a static elevated glow on critical instead of pulsing.
-        readonly property real _tempGlow: (ShellSettings.reduceMotion && ShellSettings.underlineTempGlow && _glowEnabled && CpuTemp.critical)
+        readonly property real _tempGlow: (ShellSettings.reduceMotion && _tempGlowEnabled && CpuTemp.critical)
             ? 0.5
             : _tempGlowBase + _tempPulseGlow
-        readonly property real _screenshotStrength: Math.max(0.4, Math.min(1.8, ShellSettings.screenshotGlowStrength))
+        readonly property real _screenshotStrength: ShellSettings.screenshotGlowSweep ? 1.1 : 1.0
+        readonly property int  _screenshotDuration: ShellSettings.screenshotGlowSweep ? 800 : 650
         readonly property real _screenshotEventGlow: (_glowEnabled && ShellSettings.underlineScreenshotGlow)
             ? _screenshotGlow * (ShellSettings.screenshotGlowSweep ? 0.24 : 0.62) * _screenshotStrength : 0
-        readonly property real _primaryGlow: Math.max(_notifGlow, _batteryGlow, _networkGlow, _tempGlow, _screenshotEventGlow)
-        readonly property real _stackedGlow: _notifGlow + _batteryGlow + _networkGlow + _tempGlow + _screenshotEventGlow
+        readonly property real _primaryGlow: Math.max(_notifGlow, _batteryGlow, _networkGlowEnabled ? _networkGlow : 0, _tempGlow, _screenshotEventGlow)
+        readonly property real _stackedGlow: _notifGlow + _batteryGlow + (_networkGlowEnabled ? _networkGlow : 0) + _tempGlow + _screenshotEventGlow
         readonly property real _stackBonus:  Math.min(0.12, Math.max(0, _stackedGlow - _primaryGlow) * 0.18)
         readonly property real _ceiling:     _shotActive
             ? Math.min(0.95, 0.70 + 0.10 * _screenshotStrength)
-            : ((CpuTemp.critical || Battery.critical) ? 0.74 : 0.62)
+            : (((_tempGlowEnabled && CpuTemp.critical) || (_batteryGlowEnabled && Battery.critical)) ? 0.74 : 0.62)
         property real _idleFloor: (_glowEnabled && ShellSettings.underlineIdleGlow) ? 0.20 : 0
         Behavior on _idleFloor {
             enabled: !ShellSettings.reduceMotion
@@ -70,15 +74,17 @@ Item {
         readonly property real _combined:    _glowEnabled ? Math.min(_ceiling, Math.max(_idleFloor, _eventGlow, _mediaGlow)) : 0
 
         readonly property color _screenshotColor: Theme.text
+        readonly property bool _batteryCritical: _batteryGlowEnabled && Battery.critical
+        readonly property bool _tempCritical: _tempGlowEnabled && CpuTemp.critical
 
         readonly property color _effectColorTarget: {
-            if (CpuTemp.critical)                         return Theme.error
-            if (Battery.critical)                         return Theme.error
-            if (Battery.low)                              return Theme.warning
+            if (_tempCritical) return Theme.error
+            if (_batteryCritical) return Theme.error
+            if (_batteryGlowEnabled && Battery.low)       return Theme.warning
             if (_shotActive)                              return _screenshotColor
             if (Notifications.lastCritical && _notifFlash.running) return Theme.error
             if (_notifFlash.running)                      return Theme.accent
-            if (CpuTemp.hot)                              return Theme.warning
+            if (_tempGlowEnabled && CpuTemp.hot)          return Theme.warning
             return Theme.accent
         }
         property color _effectColor: _effectColorTarget
@@ -98,10 +104,8 @@ Item {
         // gradient peak: right-biased for right-side widgets, centred otherwise
         readonly property real _sweepCenterTarget: {
             if (_notifFlash.running)                                         return 0.50
-            if (_glowEnabled && ShellSettings.underlineBattGlow
-                && (Battery.low || Battery.critical))                        return 0.68
-            if (_glowEnabled && ShellSettings.underlineTempGlow
-                && (CpuTemp.hot || CpuTemp.critical))                        return 0.68
+            if (_batteryGlowEnabled && (Battery.low || Battery.critical))    return 0.68
+            if (_tempGlowEnabled && (CpuTemp.hot || CpuTemp.critical))       return 0.68
             if (_glowEnabled && ShellSettings.underlineScreenshotGlow
                 && _shotActive)                                              return ShellSettings.screenshotGlowSweep && !ShellSettings.reduceMotion
                                                                                   ? _screenshotSweepCenter : 0.50
@@ -158,24 +162,24 @@ Item {
                 NumberAnimation { target: _lineEffect; property: "_sweepSpread"; to: 0.38; duration: Motion.ms(260); easing.type: Easing.OutCubic }
                 NumberAnimation { target: _lineEffect; property: "_bloomBoost"; to: 0.30 * _lineEffect._screenshotStrength; duration: Motion.ms(120); easing.type: Easing.OutCubic }
             }
-            PauseAnimation { duration: Math.max(50, ShellSettings.screenshotGlowDuration * 0.10) }
+            PauseAnimation { duration: Math.max(50, _lineEffect._screenshotDuration * 0.10) }
             ParallelAnimation {
                 NumberAnimation {
                     target: _lineEffect; property: "_screenshotGlow"
                     to: 0.0
-                    duration: ShellSettings.screenshotGlowDuration
+                    duration: _lineEffect._screenshotDuration
                     easing.type: Easing.OutCubic
                 }
                 NumberAnimation {
                     target: _lineEffect; property: "_sweepSpread"
                     to: 0.28
-                    duration: Math.max(220, ShellSettings.screenshotGlowDuration * 0.65)
+                    duration: Math.max(220, _lineEffect._screenshotDuration * 0.65)
                     easing.type: Easing.OutCubic
                 }
                 NumberAnimation {
                     target: _lineEffect; property: "_bloomBoost"
                     to: 0.0
-                    duration: Math.max(260, ShellSettings.screenshotGlowDuration * 0.70)
+                    duration: Math.max(260, _lineEffect._screenshotDuration * 0.70)
                     easing.type: Easing.OutCubic
                 }
             }
@@ -193,7 +197,7 @@ Item {
             NumberAnimation {
                 target: _lineEffect; property: "_screenshotSweepCenter"
                 to: 0.96
-                duration: Math.max(480, ShellSettings.screenshotGlowDuration)
+                duration: Math.max(480, _lineEffect._screenshotDuration)
                 easing.type: Easing.InOutCubic
             }
             SequentialAnimation {
@@ -201,7 +205,7 @@ Item {
                 PauseAnimation { duration: Motion.ms(90) }
                 NumberAnimation {
                     target: _lineEffect; property: "_screenshotGlow"; to: 0.0
-                    duration: Math.max(300, ShellSettings.screenshotGlowDuration - Motion.ms(180))
+                    duration: Math.max(300, _lineEffect._screenshotDuration - Motion.ms(180))
                     easing.type: Easing.InCubic
                 }
             }
@@ -209,7 +213,7 @@ Item {
                 NumberAnimation { target: _lineEffect; property: "_sweepSpread"; to: 0.10; duration: Motion.ms(180); easing.type: Easing.OutCubic }
                 NumberAnimation {
                     target: _lineEffect; property: "_sweepSpread"; to: 0.045
-                    duration: Math.max(300, ShellSettings.screenshotGlowDuration - Motion.ms(180))
+                    duration: Math.max(300, _lineEffect._screenshotDuration - Motion.ms(180))
                     easing.type: Easing.InOutCubic
                 }
             }
@@ -217,7 +221,7 @@ Item {
                 NumberAnimation { target: _lineEffect; property: "_bloomBoost"; to: 0.06 * _lineEffect._screenshotStrength; duration: Motion.ms(100); easing.type: Easing.OutCubic }
                 NumberAnimation {
                     target: _lineEffect; property: "_bloomBoost"; to: 0.0
-                    duration: Math.max(300, ShellSettings.screenshotGlowDuration - Motion.ms(100))
+                    duration: Math.max(300, _lineEffect._screenshotDuration - Motion.ms(100))
                     easing.type: Easing.InCubic
                 }
             }
@@ -302,12 +306,6 @@ Item {
             function onUnderlineScreenshotGlowChanged() {
                 if (ShellSettings.underlineScreenshotGlow && _lineEffect._canPreview()) _screenshotPreviewTimer.restart()
             }
-            function onScreenshotGlowStrengthChanged() {
-                if (_lineEffect._canPreview() && ShellSettings.underlineScreenshotGlow) _screenshotPreviewTimer.restart()
-            }
-            function onScreenshotGlowDurationChanged() {
-                if (_lineEffect._canPreview() && ShellSettings.underlineScreenshotGlow) _screenshotPreviewTimer.restart()
-            }
             function onScreenshotGlowSweepChanged() {
                 if (_lineEffect._canPreview() && ShellSettings.underlineScreenshotGlow) _screenshotPreviewTimer.restart()
             }
@@ -352,7 +350,7 @@ Item {
         }
 
         Connections {
-            target: Network
+            target: _lineEffect._networkGlowEnabled ? Network : null
             function onConnectedChanged() { _lineEffect._updateNetGlow() }
             function onAvailableChanged()  { _lineEffect._updateNetGlow() }
         }
@@ -390,7 +388,7 @@ Item {
             peak:           _lineEffect._tempPeak
             floor:          _lineEffect._tempFloor
             duration:       _lineEffect._tempPulseDur
-            running:        (_lineEffect._glowEnabled && ShellSettings.underlineTempGlow) && CpuTemp.critical && !ShellSettings.reduceMotion && !Idle.isIdle
+            running:        _lineEffect._tempGlowEnabled && CpuTemp.critical && !ShellSettings.reduceMotion && !Idle.isIdle
         }
     }
 

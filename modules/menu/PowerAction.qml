@@ -8,153 +8,138 @@ Item {
     property string glyph: ""
     property string label: ""
     property string description: ""
-    property color confirmColor: Theme.warning
+    property real glyphOffsetX: 0
+    property real glyphOffsetY: 0
+    property int glyphPixelSize: Settings.fontSize + 8
     property bool confirm: false
     property bool armed: false
-    property real _armProgress: 0
+
+    readonly property color _box:       Theme.menuControl
+    readonly property color _boxHot:    Theme.mix(Theme.menuControl, Theme.text, 0.035)
+    readonly property color _boxArmed:  Theme.mix(Theme.menuControl, Theme.text, 0.055)
+    readonly property color _line:      Theme.menuControlLine
+    readonly property color _lineHot:   Theme.menuControlLineHot
+    readonly property color _lineArmed: Theme.withAlpha(Theme.subtext, 0.24)
+    readonly property color _text:      Theme.text
+    readonly property color _textDim:   Theme.withAlpha(Theme.text, 0.72)
+    readonly property bool _hot: root.enabled && (_hover.hovered || root.activeFocus || root.armed)
+    readonly property bool _pressed: _tap.pressed
 
     signal triggered()
 
-    height: parent ? parent.height : 44
+    width: parent ? parent.width : 0
+    height: 54
     opacity: root.enabled ? 1.0 : 0.38
-
-    Timer {
-        id: _armTimer
-        interval: 3000
-        onTriggered: root.armed = false
-    }
-    NumberAnimation {
-        id: _armCountdown
-        target: root
-        property: "_armProgress"
-        from: 1.0
-        to: 0.0
-        duration: 3000
-        easing.type: Easing.Linear
-    }
-
-    onArmedChanged: {
-        if (!armed) {
-            _armTimer.stop()
-            _armCountdown.stop()
-            _armProgress = 0
-        }
-    }
-    onEnabledChanged: if (!root.enabled) root.disarm()
+    scale: root._pressed ? 0.965 : 1.0
+    transformOrigin: Item.Center
+    Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
+    Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
     function disarm(): void { root.armed = false }
     function _activate(): void {
         if (!root.enabled) return
-        if (!root.confirm) {
-            root.triggered()
-        } else if (!root.armed) {
-            root.armed = true
-            _armTimer.restart()
-            if (!ShellSettings.reduceMotion) _armCountdown.restart()
-        } else {
-            root.triggered()
-        }
+        if (!root.confirm || root.armed) root.triggered()
+        else { root.armed = true; _armTimer.restart() }
     }
+
+    Timer { id: _armTimer; interval: 3000; onTriggered: root.disarm() }
+    onEnabledChanged: if (!root.enabled) root.disarm()
 
     activeFocusOnTab: root.enabled
     Accessible.role: Accessible.Button
     Accessible.name: root.label
-    Accessible.description: root.armed ? "Press again to confirm" : root.description
-    Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
-    Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
-    Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
+    Accessible.description: root.armed ? "Activate again to confirm" : root.description
+    Keys.onSpacePressed:  e => { if (!e.isAutoRepeat) root._activate(); e.accepted = true }
+    Keys.onReturnPressed: e => { if (!e.isAutoRepeat) root._activate(); e.accepted = true }
+    Keys.onEnterPressed:  e => { if (!e.isAutoRepeat) root._activate(); e.accepted = true }
 
     HoverHandler { id: _hover; cursorShape: root.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor }
-    TapHandler { enabled: root.enabled; onTapped: root._activate() }
+    TapHandler   { id: _tap; enabled: root.enabled; onTapped: root._activate() }
 
     Rectangle {
+        id: _surface
         anchors.fill: parent
-        radius: Theme.radiusControl
+        radius: 13
         antialiasing: true
-        color: root.armed
-            ? Theme.withAlpha(root.confirmColor, 0.14)
-            : _hover.hovered && root.enabled
-                ? Theme.withAlpha(root.confirm ? root.confirmColor : Theme.subtext, root.confirm ? 0.09 : 0.14)
-                : Theme.withAlpha(Theme.subtext, 0.06)
+        color: root.armed ? root._boxArmed
+             : root._hot ? root._boxHot
+             : root._box
         border.width: root.activeFocus ? 2 : 1
-        border.color: root.activeFocus
-            ? Theme.withAlpha(root.armed ? root.confirmColor : Theme.accent, 0.78)
-            : root.armed
-                ? Theme.withAlpha(root.confirmColor, 0.42)
-                : Theme.withAlpha(Theme.subtext, 0.16)
+        border.color: root.activeFocus ? Theme.withAlpha(Theme.text, 0.34)
+                    : root.armed ? root._lineArmed
+                    : root._hot ? root._lineHot
+                    : root._line
+        Behavior on color        { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+        Behavior on border.color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
 
-        Behavior on color { ColorAnimation { duration: Motion.fast } }
-        Behavior on border.color { ColorAnimation { duration: Motion.fast } }
-
-        Column {
-            anchors.centerIn: parent
-            spacing: 2
-
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: root.glyph
-                color: root.armed ? root.confirmColor
-                    : root.confirm ? Theme.withAlpha(root.confirmColor, 0.88)
-                    : (_hover.hovered ? Theme.text : Theme.withAlpha(Theme.text, 0.76))
-                font.family: Settings.font
-                font.pixelSize: Settings.fontSize + 3
-                font.weight: root.armed ? Font.DemiBold : Font.Normal
-                renderType: Text.NativeRendering
-                Behavior on color { ColorAnimation { duration: Motion.fast } }
+        Rectangle {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.margins: 1
+            height: Math.round(parent.height * 0.46)
+            radius: parent.radius - 1
+            antialiasing: true
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: Theme.withAlpha(Theme.text, root._hot ? 0.052 : 0.030) }
+                GradientStop { position: 1.0; color: "transparent" }
             }
+        }
+
+        Item {
+            id: _icon
+            anchors.fill: parent
 
             Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: root.armed ? "Confirm" : root.label
-                color: root.armed ? root.confirmColor : Theme.withAlpha(Theme.subtext, 0.62)
+                anchors.fill: parent
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                text: root.glyph
+                color: root.armed || root._hot ? root._text : root._textDim
                 font.family: Settings.font
-                font.pixelSize: Settings.fontSize - 3
-                font.weight: root.armed ? Font.DemiBold : Font.Normal
+                font.pixelSize: root.glyphPixelSize
+                font.weight: Font.Normal
                 renderType: Text.NativeRendering
-                Behavior on color { ColorAnimation { duration: Motion.fast } }
+                transform: Translate {
+                    x: root.glyphOffsetX
+                    y: root.glyphOffsetY
+                }
+                Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
             }
         }
     }
 
-    Canvas {
-        anchors.fill: parent
-        renderTarget: Canvas.Image
-        renderStrategy: Canvas.Threaded
-        visible: root.armed
+    // The hover chip carries the longer hint without making the row taller.
+    Rectangle {
+        readonly property bool _show: (_hover.hovered || root.activeFocus || root.armed) && root.enabled
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.top
+        anchors.bottomMargin: 7
+        width: _tipText.implicitWidth + 16
+        height: 22
+        radius: 8
+        antialiasing: true
+        color: Qt.rgba(0.055, 0.058, 0.066, 1.0)
+        border.width: 1
+        border.color: root.armed ? Theme.withAlpha(Theme.subtext, 0.24)
+                    : root._hot ? Theme.menuControlLineHot
+                    : Theme.menuCardBorder
+        opacity: _show ? 1 : 0
+        scale: _show ? 1 : 0.96
+        visible: opacity > 0.01
+        z: 10
+        Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
+        Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
-        property real progress: root._armProgress
-        onProgressChanged: requestPaint()
-        onVisibleChanged: if (visible) requestPaint()
-
-        onPaint: {
-            const ctx = getContext("2d")
-            ctx.clearRect(0, 0, width, height)
-            const p = root._armProgress
-            if (p <= 0) return
-
-            const o = 0.5
-            const r = Theme.radiusControl - 0.5
-            const w = width - 1.0
-            const h = height - 1.0
-            const arc = Math.PI / 2 * r
-            const sH = w - 2 * r
-            const sV = h - 2 * r
-            let rem = p * (2*sH + 2*sV + 4*arc)
-
-            ctx.strokeStyle = root.confirmColor
-            ctx.lineWidth = 1.0
-            ctx.lineCap = "round"
-            ctx.beginPath()
-            ctx.moveTo(o + r, o)
-            if (rem > 0) { const d = Math.min(rem, sH);  ctx.lineTo(o+r+d, o); rem -= d }
-            if (rem > 0) { const d = Math.min(rem, arc); ctx.arc(w+o-r, o+r, r, -Math.PI/2, -Math.PI/2+d/r, false); rem -= d }
-            if (rem > 0) { const d = Math.min(rem, sV);  ctx.lineTo(w+o, o+r+d); rem -= d }
-            if (rem > 0) { const d = Math.min(rem, arc); ctx.arc(w+o-r, h+o-r, r, 0, d/r, false); rem -= d }
-            if (rem > 0) { const d = Math.min(rem, sH);  ctx.lineTo(w+o-r-d, h+o); rem -= d }
-            if (rem > 0) { const d = Math.min(rem, arc); ctx.arc(o+r, h+o-r, r, Math.PI/2, Math.PI/2+d/r, false); rem -= d }
-            if (rem > 0) { const d = Math.min(rem, sV);  ctx.lineTo(o, h+o-r-d); rem -= d }
-            if (rem > 0) { const d = Math.min(rem, arc); ctx.arc(o+r, o+r, r, Math.PI, Math.PI+d/r, false) }
-            ctx.stroke()
+        Text {
+            id: _tipText
+            anchors.centerIn: parent
+            text: root.armed ? "Press again: " + root.description : root.description
+            color: root.armed ? root._text : Theme.withAlpha(Theme.text, 0.82)
+            font.family: Settings.font
+            font.pixelSize: Settings.fontSize - 2
+            font.weight: root.armed ? Font.DemiBold : Font.Medium
+            renderType: Text.NativeRendering
         }
     }
 }

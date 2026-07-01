@@ -419,7 +419,7 @@ else
 fi
 
 ROOT="$INSTALL_DIR"
-did_cava=false did_tmpl=false did_toml=false did_autostart=false did_update=false
+did_tmpl=false did_toml=false did_autostart=false did_update=false
 ROOT_PRINTF_BYTES="$(_shell_quote "$(_shell_printf_bytes "$ROOT")")"
 MATUGEN_OUTPUT_TOML="$(_toml_basic_string "$ROOT/config/MatugenTheme.qml")"
 MATUGEN_INPUT_TOML="$(_toml_basic_string "$CONFIG_HOME/matugen/templates/silere-shell/Theme.qml")"
@@ -429,12 +429,6 @@ MATUGEN_INPUT_TOML="$(_toml_basic_string "$CONFIG_HOME/matugen/templates/silere-
 if [ ! -f "$ROOT/config/MatugenTheme.qml" ] && [ -f "$ROOT/config/MatugenTheme.default.qml" ]; then
     cp "$ROOT/config/MatugenTheme.default.qml" "$ROOT/config/MatugenTheme.qml"
 fi
-
-# ── cava config ──────────────────────────────────────────────────────────────────
-_section "cava config"
-CAVA_SRC="$ROOT/assets/cava.conf"
-CAVA_DST="$CONFIG_HOME/cava/silere-shell.conf"
-if _install_file "cava config" "$CAVA_SRC" "$CAVA_DST"; then did_cava=true; fi
 
 # ── matugen template ─────────────────────────────────────────────────────────────
 _section "matugen template"
@@ -610,7 +604,6 @@ fi
 printf "\n${BOLD}==> done${R}\n"
 printf "    ${GREEN}ok${R}      installed at %s\n" "$ROOT"
 $did_font      && printf "    ${GREEN}ok${R}      JetBrainsMono Nerd Font\n" || printf "    ${DIM}skip${R}    JetBrainsMono Nerd Font\n"
-$did_cava      && printf "    ${GREEN}ok${R}      cava config\n"      || printf "    ${DIM}skip${R}    cava config\n"
 $did_tmpl      && printf "    ${GREEN}ok${R}      matugen template\n" || printf "    ${DIM}skip${R}    matugen template\n"
 $did_toml      && printf "    ${GREEN}ok${R}      matugen toml\n"     || printf "    ${DIM}skip${R}    matugen toml\n"
 $did_autostart && printf "    ${GREEN}ok${R}      autostart\n"        || printf "    ${DIM}skip${R}    autostart\n"

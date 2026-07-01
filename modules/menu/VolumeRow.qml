@@ -13,7 +13,7 @@ Item {
     property bool open: false
     property real topRadius:    0
     property real bottomRadius: 0
-    readonly property bool hasExpander: Audio.sinkCount > 1
+    property real cardInset:    1
 
     width: parent ? parent.width : 0
     implicitHeight: _slider.height + _options.height
@@ -100,6 +100,7 @@ Item {
                     RowHoverBg {
                         anchors.fill: parent
                         bottomRadius: _opt.index === Audio.sinkModel.length - 1 ? root.bottomRadius : 0
+                        cardInset:    root.cardInset
                         active:       _optHov.hovered
                         fillOpacity:  0.08
                     }

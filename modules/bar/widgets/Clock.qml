@@ -9,6 +9,9 @@ Row {
 
     property var screen: null   // ShellScreen this bar sits on, for menu placement
 
+    readonly property bool show: ShellSettings.barShowClock
+    visible: show
+
     // Match the Pill widgets' hover language: lean toward the accent so the
     // clock acknowledges the pointer (it's clickable — calendar / menu / cycle).
     readonly property bool  _hov:    (_hover.hovered && ShellSettings.barHoverHighlight) || activeFocus

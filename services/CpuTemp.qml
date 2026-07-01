@@ -9,6 +9,7 @@ Singleton {
     id: root
 
     property real temp: 0
+    readonly property bool available: temp > 0
     property bool _started: false
     readonly property bool needed: MenuState.open && MenuState.activeTab === 0
     readonly property bool _persistentNeed: ShellSettings.osdTempWarn
@@ -36,7 +37,7 @@ Singleton {
         duration:       root.pulseDuration
         // alertPulse is only consumed by the menu gauges (the bar underline glows off
         // hot/critical, not the pulse), so don't run the 60fps loop while menu's closed.
-        running:        root.hot && !ShellSettings.reduceMotion && root.needed
+        running:        root.hot && !ShellSettings.reduceMotion && root.needed && !Idle.isIdle
     }
 
     // Called once per sensor read, not from onTempChanged: identical consecutive
@@ -63,6 +64,14 @@ Singleton {
         }
     }
 
+    function _normalizedTemp(raw: real): real {
+        if (isNaN(raw) || raw <= 0) return 0
+        const t = raw >= 1000 ? raw / 1000 : raw
+        // Ignore impossible values so a bogus fallback sensor does not trigger
+        // hot/critical state or paint the stat tile as an alert.
+        return (t >= 5 && t <= 125) ? t : 0
+    }
+
     Component.onCompleted: {
         root._started = true
         _warmup.restart()
@@ -75,26 +84,42 @@ Singleton {
         giveUpCodes:   [3]            // exit 3 = no usable temperature sensor
         command: ["bash", "-c",
             "detect_sensor() { " +
-            "  local p=\"\" name n dir pkg first f lf lbl; " +
+            "  local best=\"\" best_score=0 name n dir f lf lbl score type tf; " +
             "  for name in /sys/class/hwmon/hwmon*/name; do " +
             "    [ -r \"$name\" ] || continue; " +
             "    n=$(cat \"$name\" 2>/dev/null); " +
-            "    case \"$n\" in k10temp|coretemp|zenpower|cpu_thermal|acpitz) " +
-            "      dir=${name%/name}; pkg=\"\"; first=\"\"; " +
+            "    case \"$n\" in k10temp|coretemp|zenpower|cpu_thermal|cpu-thermal|soc_thermal|acpitz) " +
+            "      dir=${name%/name}; " +
             "      for f in \"$dir\"/temp*_input; do " +
             "        [ -r \"$f\" ] || continue; " +
             "        lf=\"${f%_input}_label\"; lbl=\"\"; " +
             "        [ -r \"$lf\" ] && lbl=$(cat \"$lf\" 2>/dev/null); " +
-            "        case \"$lbl\" in *Package*|*Tdie*|*Tccd0*) [ -z \"$pkg\" ] && pkg=\"$f\" ;; esac; " +
-            "        [ -z \"$first\" ] && first=\"$f\"; " +
+            "        score=1; " +
+            "        case \"$n:$lbl\" in " +
+            "          k10temp:*Tdie*|zenpower:*Tdie*) score=100 ;; " +
+            "          k10temp:*Tctl*|zenpower:*Tctl*) score=90 ;; " +
+            "          coretemp:*Package*|coretemp:*Physical*) score=100 ;; " +
+            "          k10temp:*Package*|zenpower:*Package*) score=85 ;; " +
+            "          k10temp:*Tccd0*|zenpower:*Tccd0*) score=75 ;; " +
+            "          coretemp:*Core*) score=60 ;; " +
+            "          cpu_thermal:*|cpu-thermal:*|soc_thermal:*) score=55 ;; " +
+            "          acpitz:*) score=15 ;; " +
+            "        esac; " +
+            "        if [ \"$score\" -gt \"$best_score\" ]; then best_score=\"$score\"; best=\"$f\"; fi; " +
             "      done; " +
-            "      p=\"${pkg:-$first}\"; [ -n \"$p\" ] && break; " +
             "    esac; " +
             "  done; " +
-            "  [ -z \"$p\" ] && for f in /sys/class/thermal/thermal_zone*/temp; do " +
-            "    [ -r \"$f\" ] && { p=\"$f\"; break; }; " +
+            "  for tf in /sys/class/thermal/thermal_zone*/temp; do " +
+            "    [ -r \"$tf\" ] || continue; " +
+            "    type=\"\"; [ -r \"${tf%/temp}/type\" ] && type=$(cat \"${tf%/temp}/type\" 2>/dev/null); " +
+            "    case \"$type\" in " +
+            "      x86_pkg_temp|cpu_thermal|cpu-thermal|soc_thermal) score=50 ;; " +
+            "      acpitz) score=10 ;; " +
+            "      *) score=0 ;; " +
+            "    esac; " +
+            "    if [ \"$score\" -gt \"$best_score\" ]; then best_score=\"$score\"; best=\"$tf\"; fi; " +
             "  done; " +
-            "  echo \"$p\"; " +
+            "  echo \"$best\"; " +
             "}; " +
             "p=$(detect_sensor); [ -z \"$p\" ] && exit 3; " +
             // fd 3 holds both ends of a pipe, so read -t sleeps the full
@@ -107,8 +132,8 @@ Singleton {
             "done"]
         stdout: SplitParser {
             onRead: line => {
-                const v = parseInt(line.trim())
-                if (!isNaN(v) && v > 0) root._sample(v / 1000)
+                const t = root._normalizedTemp(parseFloat(line.trim()))
+                if (t > 0) root._sample(t)
             }
         }
         onRunningChanged: {

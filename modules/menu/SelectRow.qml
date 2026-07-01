@@ -32,6 +32,15 @@ Item {
     implicitHeight: height
 
     // ── Header row ──────────────────────────────────────────────────────
+    activeFocusOnTab: root.enabled
+    Accessible.role: Accessible.ComboBox
+    Accessible.name: root.label
+    Accessible.description: root._activeLabel
+    Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root._open = !root._open; event.accepted = true }
+    Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._open = !root._open; event.accepted = true }
+    Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root._open = !root._open; event.accepted = true }
+    Keys.onEscapePressed: event => { root._open = false; event.accepted = true }
+
     HoverHandler { id: _hov; cursorShape: Qt.PointingHandCursor }
     TapHandler   { onTapped: root._open = !root._open }
 
@@ -41,8 +50,8 @@ Item {
         topRadius:    root.topRadius
         bottomRadius: root._open ? 0 : root.bottomRadius
         cardInset:    root.cardInset
-        active:       _hov.hovered
-        fillOpacity:  0.08
+        active:       _hov.hovered || root.activeFocus
+        fillOpacity:  root.activeFocus ? 0.13 : 0.08
     }
 
     Text {
@@ -81,12 +90,14 @@ Item {
         id: _chevronSlot
         anchors.right:          parent.right; anchors.rightMargin: 12
         anchors.verticalCenter: _header.verticalCenter
-        width:  _valText.implicitWidth + 18
+        width:  Math.min(_valText.implicitWidth + 18, Math.max(72, root.width * 0.38))
         height: 22
 
         Text {
             id: _valText
             anchors.left:           parent.left
+            anchors.right:          parent.right
+            anchors.rightMargin:    18
             anchors.verticalCenter: parent.verticalCenter
             text:           root._activeLabel
             textFormat:     Text.PlainText
@@ -164,7 +175,7 @@ Item {
                     HoverHandler { id: _optHov; cursorShape: Qt.PointingHandCursor }
                     TapHandler {
                         onTapped: {
-                            root.chosen(modelData.value)
+                            root.chosen(_opt.modelData.value)
                             root._open = false
                         }
                     }
@@ -172,7 +183,7 @@ Item {
                     RowHoverBg {
                         anchors.fill: parent
                         // Only the last option rounds at the card bottom
-                        bottomRadius: index === root.model.length - 1 ? root.bottomRadius : 0
+                        bottomRadius: _opt.index === root.model.length - 1 ? root.bottomRadius : 0
                         cardInset:    root.cardInset
                         active:       _optHov.hovered
                         fillOpacity:  0.08
@@ -183,7 +194,7 @@ Item {
                         anchors.left:           parent.left
                         anchors.leftMargin:     (root.glyph.length > 0 ? 42 : 24)
                         anchors.verticalCenter: parent.verticalCenter
-                        text:       modelData.label
+                        text:       _opt.modelData.label
                         textFormat: Text.PlainText
                         color:      _opt.active
                             ? Theme.accent

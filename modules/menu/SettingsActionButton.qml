@@ -48,7 +48,7 @@ Item {
             ? Theme.withAlpha(root.accentColor, 0.82)
             : root.emphasis
                 ? Theme.withAlpha(root.accentColor, 0.48)
-                : Theme.menuControlLine
+                : _hover.hovered ? Theme.menuControlLineHot : Theme.menuControlLine
 
         Behavior on color { ColorAnimation { duration: Motion.fast } }
         Behavior on border.color { ColorAnimation { duration: Motion.fast } }

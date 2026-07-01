@@ -14,11 +14,11 @@ Singleton {
     readonly property int  temperature: ShellSettings.nightLightTemp
 
     // Location from the system timezone's zoneinfo coords (offline, no GPS); falls
-    // back to nightLightLat + tz offset if the lookup fails.
+    // back to a default latitude + tz offset if the lookup fails.
     property bool _geoResolved: false
     property real _autoLat: 0
     property real _autoLon: 0
-    readonly property real _useLat: _geoResolved ? _autoLat : ShellSettings.nightLightLat
+    readonly property real _useLat: _geoResolved ? _autoLat : 45.0
     readonly property real _useLon: _geoResolved ? _autoLon
                                                  : -(new Date().getTimezoneOffset()) / 4  // tz minutes-west → degrees-east
     readonly property string locationLabel:

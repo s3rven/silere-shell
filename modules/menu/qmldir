@@ -6,9 +6,9 @@ SettingsNav  1.0 SettingsNav.qml
 ChoiceChipRow   1.0 ChoiceChipRow.qml
 AccentSwatch    1.0 AccentSwatch.qml
 CollapsibleSection 1.0 CollapsibleSection.qml
-StatTile        1.0 StatTile.qml
 PowerAction     1.0 PowerAction.qml
-QuickToggleTile 1.0 QuickToggleTile.qml
+ControlRow      1.0 ControlRow.qml
+VitalsStrip     1.0 VitalsStrip.qml
 SectionLabel    1.0 SectionLabel.qml
 SelectRow       1.0 SelectRow.qml
 SettingsCard    1.0 SettingsCard.qml
@@ -16,6 +16,7 @@ SettingsActionButton 1.0 SettingsActionButton.qml
 UpdateStatusCard 1.0 UpdateStatusCard.qml
 SunArc          1.0 SunArc.qml
 ToggleRow       1.0 ToggleRow.qml
+ToggleSwitch    1.0 ToggleSwitch.qml
 SliderRow       1.0 SliderRow.qml
 QuickSlider     1.0 QuickSlider.qml
 VolumeRow       1.0 VolumeRow.qml
@@ -26,3 +27,4 @@ MediaButton     1.0 MediaButton.qml
 RailNavItem     1.0 RailNavItem.qml
 WifiList        1.0 WifiList.qml
 BluetoothList   1.0 BluetoothList.qml
+DraggableWidgetList 1.0 DraggableWidgetList.qml

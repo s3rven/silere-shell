@@ -32,7 +32,7 @@ Item {
     // 4px multiples: keep card dividers on whole physical px under
     // fractional scaling.
     width:  parent ? parent.width : 0
-    height: _stacked ? 72 : 44
+    height: _stacked ? 76 : 44
     opacity: rowEnabled ? 1.0 : 0.45
     Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium } }
 
@@ -51,13 +51,13 @@ Item {
         bottomRadius: root.bottomRadius
         cardInset:    root.cardInset
         active:       _rowHover.hovered && root.rowEnabled
-        fillOpacity:  0.08
+        fillOpacity:  root._stacked ? 0.06 : 0.08
     }
 
     Item {
         id: _labelRow
         x: 12
-        y: root._stacked ? 11 : (root.height - height) / 2
+        y: root._stacked ? 10 : (root.height - height) / 2
         width: root._stacked ? root.width - 24 : Math.max(0, _segContainer.x - x - 10)
         implicitWidth: (root.glyph.length > 0 ? 26 : 0) + _label.implicitWidth
         implicitHeight: Math.max(_glyph.implicitHeight, _label.implicitHeight)
@@ -96,14 +96,17 @@ Item {
     Rectangle {
         id: _segContainer
         x: root._stacked ? 12 : (root.width - 12 - width)
-        y: root._stacked ? (_labelRow.y + _labelRow.height + 8) : (root.height - height) / 2
-        height:       26
-        width:        _segRow.implicitWidth + 4
-        radius:       8
+        y: root._stacked ? (_labelRow.y + _labelRow.height + 9) : (root.height - height) / 2
+        height:       30
+        width:        root._stacked ? Math.max(1, root.width - 24) : _segRow.implicitWidth + 6
+        radius:       9
         antialiasing: true
-        color:        Theme.menuControl
+        color:        Theme.mix(Theme.menuControl, Theme.text, _rowHover.hovered ? 0.035 : 0.015)
         border.width: 1
-        border.color: Theme.menuControlLine
+        border.color: _rowHover.hovered ? Theme.menuControlLineHot : Theme.menuControlLine
+
+        Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+        Behavior on border.color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
 
         // Bumped when delegates are (re)created. itemAt() returns null while the
         // Repeater is still populating; without this the binding caches that null
@@ -136,26 +139,28 @@ Item {
             _maxNatW = m
         }
         // Natural inline width of the whole control (drives the stack decision).
-        readonly property real _naturalW: _maxNatW * root.model.length + 4
+        readonly property real _naturalW: _maxNatW * root.model.length + 6
         // Stacked: segments divide the full row width evenly (12px gutter each side,
-        // 4px for the segRow inset), floored so they stay on the pixel grid.
-        readonly property real _fullCellW: Math.max(1, Math.floor((root.width - 28) / Math.max(1, root.model.length)))
+        // 6px for the segRow inset), floored so they stay on the pixel grid.
+        readonly property real _fullCellW: Math.max(1, Math.floor((root.width - 30) / Math.max(1, root.model.length)))
         readonly property real _cellW: root._stacked ? _fullCellW : _maxNatW
 
         Rectangle {
             id: _indicator
             x:      _segContainer._activeSeg ? _segContainer._activeSeg.x + _segRow.x : 2
-            y:      2
+            y:      3
             width:  _segContainer._activeSeg ? _segContainer._activeSeg.width : 0
-            height: parent.height - 4
-            radius:       6
+            height: parent.height - 6
+            radius:       7
             antialiasing: true
             opacity:      _segContainer._activeSeg ? 1.0 : 0.0
             visible:      opacity > 0.001
 
-            color:        Theme.mix(Theme.menuCard, root.accentColor, 0.38)
+            color:        Theme.mix(Theme.menuControl, root.accentColor, ShellSettings.neutralTheme ? 0.28 : 0.42)
             border.width: 1
-            border.color: Theme.mix(Theme.menuCard, root.accentColor, 0.68)
+            border.color: ShellSettings.neutralTheme
+                ? Theme.withAlpha(root.accentColor, 0.50)
+                : Theme.mix(Theme.menuCard, root.accentColor, 0.72)
 
             Behavior on x        { enabled: _segContainer._animReady && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.width; easing.type: Easing.OutQuart } }
             Behavior on width    { enabled: _segContainer._animReady && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.width; easing.type: Easing.OutQuart } }
@@ -166,7 +171,7 @@ Item {
 
         Row {
             id: _segRow
-            x: 2
+            x: 3
             anchors.verticalCenter: parent.verticalCenter
             spacing: 0
 
@@ -189,11 +194,12 @@ Item {
 
                     // Natural (content) width; the container maxes these to size
                     // every segment equally. Never shrink below it so text can't clip.
-                    readonly property real natW: Math.ceil(_content.implicitWidth) + 20
+                    readonly property real natW: Math.ceil(_content.implicitWidth) + 24
                     onNatWChanged: _segContainer._recalcNat()
 
-                    width:  Math.max(natW, _segContainer._cellW)
-                    height: 24
+                    width:  root._stacked ? _segContainer._cellW : Math.max(natW, _segContainer._cellW)
+                    height: 28
+                    clip: true
 
                     activeFocusOnTab: root.rowEnabled
                     Accessible.role: Accessible.RadioButton
@@ -216,10 +222,10 @@ Item {
 
                     Rectangle {
                         anchors.fill: parent
-                        anchors.margins: 2
-                        radius: 5
+                        anchors.margins: 3
+                        radius: 6
                         antialiasing: true
-                        color: Theme.withAlpha(root.accentColor, 0.10)
+                        color: Theme.withAlpha(root.accentColor, 0.09)
                         border.width: _seg.activeFocus ? 1 : 0
                         border.color: Theme.withAlpha(root.accentColor, 0.72)
                         opacity: !_seg.active && (_hover.hovered || _seg.activeFocus) ? 1.0 : 0.0
@@ -240,10 +246,10 @@ Item {
                             visible:        _seg.segGlyph.length > 0
                             text:           _seg.segGlyph
                             color:          _seg.active
-                                ? root.accentColor
-                                : Theme.withAlpha(Theme.subtext, _hover.hovered ? 0.95 : 0.70)
+                                ? Theme.text
+                                : (_hover.hovered ? Theme.withAlpha(Theme.text, 0.86) : Theme.withAlpha(Theme.subtext, 0.66))
                             font.family:    Settings.font
-                            font.pixelSize: Settings.fontSize
+                            font.pixelSize: Math.max(9, Settings.fontSize - 1)
                             font.weight:    Font.Medium
                             renderType:     Text.NativeRendering
                             Behavior on color { ColorAnimation { duration: Motion.fast } }
@@ -253,11 +259,17 @@ Item {
                             visible:        _seg.modelData.label.length > 0
                             text:           _seg.modelData.label
                             textFormat:     Text.PlainText
+                            width: root._stacked
+                                ? Math.min(implicitWidth, Math.max(18, _seg.width - 18
+                                    - (_seg.segGlyph.length > 0 ? 18 : 0)
+                                    - (_seg.segBadge.length > 0 ? 28 : 0)))
+                                : implicitWidth
+                            elide:          Text.ElideRight
                             color:          _seg.active
-                                ? root.accentColor
-                                : Theme.withAlpha(Theme.subtext, _hover.hovered ? 0.95 : 0.70)
+                                ? Theme.text
+                                : (_hover.hovered ? Theme.withAlpha(Theme.text, 0.86) : Theme.withAlpha(Theme.subtext, 0.66))
                             font.family:    Settings.font
-                            font.pixelSize: Settings.fontSize
+                            font.pixelSize: Math.max(9, Settings.fontSize - 1)
                             font.weight:    _seg.active ? Font.DemiBold : Font.Medium
                             renderType:     Text.NativeRendering
                             Behavior on color { ColorAnimation { duration: Motion.fast } }

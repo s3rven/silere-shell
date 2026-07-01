@@ -9,6 +9,9 @@ Singleton {
     id: root
 
     property bool   mediaProgress:       false
+    property string mediaVisualizerPreset: "balanced" // "eco" | "balanced" | "smooth"
+    property string mediaVisualizerStyle:  "wave"     // "wave" | "bars" | "pulse"
+    property real   mediaVisualizerIntensity: 1.0
     property bool   workspaceShift:      true
     property bool   neutralTheme:        true
     property bool   neutralAccentAuto:   false
@@ -22,7 +25,6 @@ Singleton {
     property bool   clock12h:            false
     property bool   showWindowTitle:     false
     property bool   showWindowTitleApp:  false
-    property real   windowTitleOpacity:  1.0   // opacity of the whole title line (app + title)
     property bool   updatesWidget:       false
     property bool   trayWidget:          false
     property bool   valuesOnHover:       false
@@ -30,19 +32,21 @@ Singleton {
     property bool   barShowBattery:      true
     property bool   barShowNetwork:      true
     property bool   barShowClock:        true
+    property bool   barShowShellUpdate:  true
+    property bool   barShowVolume:       true
+    property bool   barShowBrightness:   true
+    property bool   barShowMedia:        true
 
     property bool   osdEnabled:     true
     property int    osdTimeout:     2000
     property string osdKindFilter:  "both"   // "both" | "volume" | "brightness"
     property bool   osdBatteryWarn: false
     property bool   osdTempWarn:    false
-    property bool   osdShimmer:     false
-    property bool   osdVolumeTint:  false    // warm "loud" tint as volume nears max
+    property bool   osdVolumeTint:  false    // volume emphasis: warm tint + slow shimmer as volume nears max
     property bool   osdChargedNotify: false  // one-shot OSD peek when the battery reaches full
     property bool   osdBarIntegrated: false  // β: show OSD inline in the bar center instead of a floating pill
     property bool   osdMatchBar:      true   // floating OSD pill adopts the bar's height + corner radius
     property bool   reduceMotion:        false
-    property real   animSpeed:           1.0
     property real   uiScale:             1.0     // shell font scale, 0.8–1.15
 
     property bool   notifPopupEnabled:   true
@@ -67,8 +71,6 @@ Singleton {
     property bool   underlineScreenshotGlow: false
     property real   glowStrength:            1.0
     property real   activeGlowStrength:      1.0
-    property real   screenshotGlowStrength:  1.0
-    property int    screenshotGlowDuration:  700
     property bool   screenshotGlowSweep:     true
 
     property real   dotOpacity:          0.35
@@ -88,8 +90,92 @@ Singleton {
     property string barDisabledMonitors: ""        // comma-joined connector names whose bar is hidden
     property string overlayMonitor:      ""        // "" = follow focus; else a monitor connector name for notifs/OSD
 
+    readonly property var _allBarWidgetKeys: ["workspaces", "shellUpdate", "tray", "updates", "network", "volume", "brightness", "battery", "media", "clock"]
+
+    property string barWidgetOrderLeft:  "workspaces"
+    property string barWidgetOrderRight: "shellUpdate,tray,updates,network,volume,brightness,battery,media,clock"
+
+    // Self-healing, mutually exclusive: unknown/duplicate tokens dropped; any
+    // canonical key missing from BOTH lists (corrupted data, or a key added
+    // in a later version) falls back to its default zone — a widget can
+    // never silently vanish from the bar.
+    readonly property var _zoneKeys: {
+        const all = root._allBarWidgetKeys
+        const parse = s => (s || "").split(",").map(x => x.trim()).filter(x => x.length > 0)
+        const seen = {}
+        const left = [], right = []
+        const leftRaw = parse(root.barWidgetOrderLeft)
+        for (let i = 0; i < leftRaw.length; i++) {
+            const k = leftRaw[i]
+            if (seen[k] || all.indexOf(k) < 0) continue
+            seen[k] = true; left.push(k)
+        }
+        const rightRaw = parse(root.barWidgetOrderRight)
+        for (let i = 0; i < rightRaw.length; i++) {
+            const k = rightRaw[i]
+            if (seen[k] || all.indexOf(k) < 0) continue
+            seen[k] = true; right.push(k)
+        }
+        for (let i = 0; i < all.length; i++) {
+            const k = all[i]
+            if (seen[k]) continue
+            if (k === "workspaces") left.push(k); else right.push(k)
+        }
+        return { left: left, right: right }
+    }
+    readonly property var barWidgetOrderLeftKeys:  root._zoneKeys.left
+    readonly property var barWidgetOrderRightKeys: root._zoneKeys.right
+
+    // Single scan for both zone and in-zone position.
+    function barWidgetLocate(key: string): var {
+        const li = root.barWidgetOrderLeftKeys.indexOf(key)
+        if (li >= 0) return { zone: "left", index: li }
+        return { zone: "right", index: root.barWidgetOrderRightKeys.indexOf(key) }
+    }
+
+    // Adjacent swap within whichever zone currently holds `key` — keyboard
+    // (Ctrl+Up/Down) and the drag handle's live reflow both funnel through this.
+    function moveBarWidget(key: string, delta: int): void {
+        const loc = root.barWidgetLocate(key)
+        const arr = (loc.zone === "left" ? root.barWidgetOrderLeftKeys : root.barWidgetOrderRightKeys).slice()
+        const j = loc.index + delta
+        if (j < 0 || j >= arr.length) return
+        const t = arr[loc.index]; arr[loc.index] = arr[j]; arr[j] = t
+        if (loc.zone === "left") root.barWidgetOrderLeft = arr.join(",")
+        else                     root.barWidgetOrderRight = arr.join(",")
+    }
+
+    // Moves `key` into `zone` ("left"|"right") at `atIndex`, removing it from
+    // its current zone first. Used by the drag handle crossing zones and the
+    // per-row zone toggle.
+    function setBarWidgetZone(key: string, zone: string, atIndex: int): void {
+        const left  = root.barWidgetOrderLeftKeys.filter(k => k !== key)
+        const right = root.barWidgetOrderRightKeys.filter(k => k !== key)
+        const target = (zone === "left") ? left : right
+        const clamped = Math.max(0, Math.min(target.length, atIndex))
+        target.splice(clamped, 0, key)
+        root.barWidgetOrderLeft  = left.join(",")
+        root.barWidgetOrderRight = right.join(",")
+    }
+
+    // glyph/label/group/setting shared by the consolidated widgets settings
+    // list; group feeds BarContent's compact-mode divider fusing; setting is
+    // the ShellSettings bool property that row's toggle reads/writes (empty
+    // for workspaces — it has no hide toggle, only placement).
+    readonly property var barWidgetMeta: ({
+        workspaces:  { glyph: "󰊗", label: "Workspaces",      group: "workspaces", setting: "" },
+        shellUpdate: { glyph: "󰑐", label: "Shell update",    group: "shell",  setting: "barShowShellUpdate" },
+        tray:        { glyph: "󰇘", label: "System tray",     group: "tray",   setting: "trayWidget" },
+        updates:     { glyph: "󰚰", label: "Package updates", group: "status", setting: "updatesWidget" },
+        network:     { glyph: "󰛳", label: "Network",         group: "status", setting: "barShowNetwork" },
+        volume:      { glyph: "󰕾", label: "Volume",          group: "levels", setting: "barShowVolume" },
+        brightness:  { glyph: "󰃟", label: "Brightness",      group: "levels", setting: "barShowBrightness" },
+        battery:     { glyph: "󰂄", label: "Battery",         group: "levels", setting: "barShowBattery" },
+        media:       { glyph: "󰝚", label: "Media",           group: "media",  setting: "barShowMedia" },
+        clock:       { glyph: "󰅐", label: "Clock",           group: "clock",  setting: "barShowClock" }
+    })
+
     property int    nightLightTemp:      3500   // color temperature for hyprsunset, in Kelvin
-    property real   nightLightLat:      45.0   // latitude for solar suggestion, degrees N (+) / S (-)
     property bool   nightLightAuto:     false  // auto-follow solar position
 
     property int    wsMinVisible:        5
@@ -98,8 +184,8 @@ Singleton {
     property bool   wsScrollSwitch:      true
     property bool   wsShowAppIcons:      false
     property bool   wsNotifPulse:        false
+    property real   wsMarkerOpacity:     1.0
     property real   wsIconOpacity:       0.85
-    property int    wsIconSize:          16
 
     property bool _loaded: false
     property bool _configDirReady: false
@@ -115,6 +201,9 @@ Singleton {
     // int/real use min/max, enum uses vals, re uses a pattern.
     readonly property var _schema: [
         { k: "mediaProgress",       t: "bool" },
+        { k: "mediaVisualizerPreset", t: "enum", vals: ["eco", "balanced", "smooth"] },
+        { k: "mediaVisualizerStyle",  t: "enum", vals: ["wave", "bars", "pulse"] },
+        { k: "mediaVisualizerIntensity", t: "real", min: 0.55, max: 1.65 },
         { k: "workspaceShift",      t: "bool" },
         { k: "neutralTheme",        t: "bool" },
         { k: "neutralAccentAuto",   t: "bool" },
@@ -128,7 +217,6 @@ Singleton {
         { k: "clock12h",            t: "bool" },
         { k: "showWindowTitle",     t: "bool" },
         { k: "showWindowTitleApp",  t: "bool" },
-        { k: "windowTitleOpacity",  t: "real", min: 0.2, max: 1.0 },
         { k: "updatesWidget",       t: "bool" },
         { k: "trayWidget",          t: "bool" },
         { k: "valuesOnHover",       t: "bool" },
@@ -136,18 +224,20 @@ Singleton {
         { k: "barShowBattery",      t: "bool" },
         { k: "barShowNetwork",      t: "bool" },
         { k: "barShowClock",        t: "bool" },
+        { k: "barShowShellUpdate",  t: "bool" },
+        { k: "barShowVolume",       t: "bool" },
+        { k: "barShowBrightness",   t: "bool" },
+        { k: "barShowMedia",        t: "bool" },
         { k: "osdEnabled",          t: "bool" },
         { k: "osdTimeout",          t: "int",  min: 500,  max: 10000 },
         { k: "osdKindFilter",       t: "enum", vals: ["both", "volume", "brightness"] },
         { k: "osdBatteryWarn",      t: "bool" },
         { k: "osdTempWarn",         t: "bool" },
-        { k: "osdShimmer",          t: "bool" },
         { k: "osdVolumeTint",       t: "bool" },
         { k: "osdChargedNotify",    t: "bool" },
         { k: "osdBarIntegrated",    t: "bool" },
         { k: "osdMatchBar",         t: "bool" },
         { k: "reduceMotion",        t: "bool" },
-        { k: "animSpeed",           t: "real", min: 0.5, max: 2.0 },
         { k: "uiScale",             t: "real", min: 0.8, max: 1.15 },
         { k: "notifPopupEnabled",   t: "bool" },
         { k: "notifFullscreenSilence", t: "bool" },
@@ -170,8 +260,6 @@ Singleton {
         { k: "underlineScreenshotGlow", t: "bool" },
         { k: "glowStrength",        t: "real", min: 0.5, max: 2.0 },
         { k: "activeGlowStrength",  t: "real", min: 0.1, max: 1.0 },
-        { k: "screenshotGlowStrength", t: "real", min: 0.4, max: 1.8 },
-        { k: "screenshotGlowDuration", t: "int",  min: 250, max: 1600 },
         { k: "screenshotGlowSweep", t: "bool" },
         { k: "dotOpacity",          t: "real", min: 0.05, max: 1.0 },
         { k: "dotStyle",            t: "enum", vals: ["·", "•", "◦", "|", "slash", "line", "none"] },
@@ -189,9 +277,10 @@ Singleton {
         { k: "barOpacity",          t: "real", min: 0.4,  max: 1.0 },
         { k: "barDisabledMonitors", t: "re",   re: /^[A-Za-z0-9._,-]*$/ },
         { k: "overlayMonitor",      t: "re",   re: /^[A-Za-z0-9._-]*$/ },
+        { k: "barWidgetOrderLeft",  t: "re",   re: /^[a-zA-Z]*(,[a-zA-Z]+)*$/ },
+        { k: "barWidgetOrderRight", t: "re",   re: /^[a-zA-Z]*(,[a-zA-Z]+)*$/ },
 
         { k: "nightLightTemp",      t: "int",  min: 1000, max: 6500 },
-        { k: "nightLightLat",      t: "real", min: -90.0, max: 90.0 },
         { k: "nightLightAuto",     t: "bool" },
         { k: "wsMinVisible",        t: "int",  min: 1,    max: 10 },
         { k: "wsShowNumbers",       t: "bool" },
@@ -199,8 +288,8 @@ Singleton {
         { k: "wsScrollSwitch",      t: "bool" },
         { k: "wsShowAppIcons",      t: "bool" },
         { k: "wsNotifPulse",        t: "bool" },
-        { k: "wsIconOpacity",       t: "real", min: 0.3, max: 1.0 },
-        { k: "wsIconSize",          t: "int",  min: 12,  max: 20 }
+        { k: "wsMarkerOpacity",     t: "real", min: 0.2, max: 1.0 },
+        { k: "wsIconOpacity",       t: "real", min: 0.3, max: 1.0 }
     ]
 
     function _coerce(s, v): void {

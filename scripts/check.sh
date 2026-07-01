@@ -92,7 +92,14 @@ optional_tool busctl "notification daemon conflict check"
 optional_tool fc-list "font detection"
 optional_tool fc-cache "font install refresh"
 _cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
-check_file "cava config" "$_cfg_home/cava/silere-shell.conf" "cp assets/cava.conf $_cfg_home/cava/silere-shell.conf"
+_wayland_socket() {
+  [ -n "${WAYLAND_DISPLAY:-}" ] || return 1
+  case "$WAYLAND_DISPLAY" in
+    /*) printf '%s\n' "$WAYLAND_DISPLAY" ;;
+    *)  [ -n "${XDG_RUNTIME_DIR:-}" ] || return 1
+        printf '%s\n' "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ;;
+  esac
+}
 
 if command -v qs >/dev/null 2>&1; then
   # Include instances on other displays when this runs from a terminal or CI
@@ -185,8 +192,15 @@ if command -v nmcli >/dev/null 2>&1; then
 fi
 
 if command -v hyprctl >/dev/null 2>&1; then
-  if hyprctl monitors >/dev/null 2>&1; then
+  hyprctl_out="$(hyprctl monitors 2>&1)" && hyprctl_ok=true || hyprctl_ok=false
+  wayland_sock="$(_wayland_socket || true)"
+  if $hyprctl_ok; then
     ok "hyprland" "hyprctl can query compositor"
+  elif [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || [ -z "${WAYLAND_DISPLAY:-}" ] \
+    || [ -z "$wayland_sock" ] || [ ! -S "$wayland_sock" ]; then
+    warn "hyprland" "not in a Hyprland session; compositor query skipped"
+  elif printf '%s\n' "$hyprctl_out" | grep -q "Couldn't set socket timeout"; then
+    warn "hyprland" "compositor socket inaccessible; hyprctl query skipped"
   else
     fail "hyprland" "hyprctl is installed but cannot query the compositor"
   fi
@@ -215,11 +229,7 @@ if command -v matugen >/dev/null 2>&1; then
 fi
 
 if command -v cava >/dev/null 2>&1; then
-  if pgrep -x cava >/dev/null 2>&1; then
-    ok "visualizer" "cava running"
-  else
-    warn "visualizer" "cava not running"
-  fi
+  ok "visualizer" "cava available; starts while media visualizer is visible"
 fi
 
 echo

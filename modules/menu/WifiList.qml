@@ -41,7 +41,7 @@ Item {
         interval: 8000
         repeat: true
         // paused while a password row is open so a scan can't rebuild the field mid-typing
-        running: root._canScan() && root._selected === ""
+        running: root._canScan() && root._selected === "" && !Idle.isIdle
         onTriggered: Network.scanWifi(false)
     }
 
@@ -92,6 +92,8 @@ Item {
             visible: root.open && Network.wifiNetworks.length > 0
             clip: true
             boundsMovement: Flickable.StopAtBounds
+            flickDeceleration: 1800
+            maximumFlickVelocity: 2200
             spacing: 4
             model: root.open ? Network.wifiNetworks : []
 
@@ -115,7 +117,7 @@ Item {
                     border.width: activeFocus ? 2 : 1
                     border.color: activeFocus ? Theme.withAlpha(Theme.accent, 0.55)
                                 : _entry.modelData.active ? Theme.withAlpha(Theme.accent, 0.45)
-                                                   : Theme.withAlpha(Theme.subtext, 0.10)
+                                                   : Theme.menuCardBorder
                     Behavior on color { ColorAnimation { duration: Motion.fast } }
 
                     activeFocusOnTab: true

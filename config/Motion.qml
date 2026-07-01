@@ -6,10 +6,9 @@ import "../services"
 
 Singleton {
     readonly property bool _rm: ShellSettings.reduceMotion
-    readonly property real _s:  Math.max(0.1, ShellSettings.animSpeed)
+    readonly property real _s:  1.0
 
-    // For one-off durations that don't fit a token: honours reduceMotion and
-    // animSpeed the same way the tokens do.
+    // For one-off durations that don't fit a token: honours reduceMotion the same way the tokens do.
     function ms(base: int): int { return _rm ? 0 : Math.round(base / _s) }
 
     readonly property int instant: _rm ? 0 : Math.round(80  / _s)

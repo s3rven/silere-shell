@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install validation dependencies
-        run: pacman -Syu --noconfirm git shellcheck quickshell
+        run: pacman -Syu --noconfirm shellcheck quickshell
 
       - name: Structural and portability validation
         run: bash scripts/ci-lint.sh

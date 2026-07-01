@@ -7,9 +7,10 @@ Pill {
     id: root
 
     readonly property bool canControl: Brightness.toolAvailable && Brightness.maxBrightness > 0
+    readonly property bool show: ShellSettings.barShowBrightness && Brightness.maxBrightness > 0
 
     opacity:     canControl ? 1.0 : 0.45
-    visible: Brightness.maxBrightness > 0
+    visible: show
     glyph:           Brightness.icon
     glyphColor:      canControl ? Theme.text : Theme.subtext
     reserveText: "100%"
@@ -25,12 +26,12 @@ Pill {
 
     Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
 
-    HoverHandler { cursorShape: Qt.PointingHandCursor }
+    HoverHandler { cursorShape: root.canControl ? Qt.PointingHandCursor : Qt.ArrowCursor }
 
-    Keys.onLeftPressed:  event => { if (canControl) Brightness.bumpBy(-5); event.accepted = true }
-    Keys.onDownPressed:  event => { if (canControl) Brightness.bumpBy(-5); event.accepted = true }
-    Keys.onRightPressed: event => { if (canControl) Brightness.bumpBy(5);  event.accepted = true }
-    Keys.onUpPressed:    event => { if (canControl) Brightness.bumpBy(5);  event.accepted = true }
+    Keys.onLeftPressed:  event => { if (canControl) { Brightness.bumpBy(-5); event.accepted = true } else event.accepted = false }
+    Keys.onDownPressed:  event => { if (canControl) { Brightness.bumpBy(-5); event.accepted = true } else event.accepted = false }
+    Keys.onRightPressed: event => { if (canControl) { Brightness.bumpBy(5);  event.accepted = true } else event.accepted = false }
+    Keys.onUpPressed:    event => { if (canControl) { Brightness.bumpBy(5);  event.accepted = true } else event.accepted = false }
 
     WheelHandler {
         enabled: root.canControl

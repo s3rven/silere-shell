@@ -23,32 +23,65 @@ Item {
     readonly property real titleAvailableWidth: Math.max(0, titleFreeRight - titleFreeLeft)
 
     readonly property bool _compact: ShellSettings.barCompact
-    readonly property bool _vUpdates: Updates.available || Updates.isChecking
-    readonly property bool _vNetwork: ShellSettings.barShowNetwork
-        && (!Network.toolAvailable || Network.available)
-    readonly property bool _vBright:  Brightness.maxBrightness > 0
-    readonly property bool _vBattery: ShellSettings.barShowBattery && Battery.available
-        && !(ShellSettings.batteryAutoHide && (Battery.charging || Battery.full))
-    readonly property bool _vMedia:   mediaWidget.show
-    readonly property bool _vClock:   ShellSettings.barShowClock
 
-    // slot order: shell · tray · updates network · vol bri battery · media · clock
-    readonly property var _seps: {
+    // One Component per widget kind, chosen per-slot by whichever zone array
+    // currently holds that slot's key. Both zones share this one map.
+    //
+    // Widgets whose own implicitHeight formula reads `parent.height` (the
+    // Pill-based ones, plus Tray/Media) get an explicit `height: root.height`
+    // here instead of leaning on a Loader with a forced height: Loader's
+    // "resize the loaded item to fit" behavior (triggered by giving the
+    // Loader itself an explicit height) stretches the OUTER item, but a
+    // widget whose internal layout positions content by a small fixed
+    // reference size (Workspaces' diamond, sized off `btnH`, not an anchor)
+    // stays pinned to the top of that stretched box instead of recentring.
+    // Binding height straight to `root.height` gets every Pill-based widget
+    // the same end result without forcing Workspaces/Clock's own height too.
+    Component { id: _cWorkspaces;  Workspaces       { anchors.verticalCenter: parent.verticalCenter; screen: root.screen } }
+    Component { id: _cShellUpdate; ShellUpdateWidget { anchors.verticalCenter: parent.verticalCenter; height: root.height } }
+    Component { id: _cTray;        TrayWidget       { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen } }
+    Component { id: _cUpdates;     UpdatesWidget    { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen } }
+    Component { id: _cNetwork;     NetworkWidget    { anchors.verticalCenter: parent.verticalCenter; height: root.height } }
+    Component { id: _cVolume;      Volume           { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen } }
+    Component { id: _cBrightness;  BrightnessWidget { anchors.verticalCenter: parent.verticalCenter; height: root.height } }
+    Component { id: _cBattery;     BatteryWidget    { anchors.verticalCenter: parent.verticalCenter; height: root.height } }
+    Component { id: _cMedia;       MediaWidget      { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen } }
+    Component { id: _cClock;       Clock            { anchors.verticalCenter: parent.verticalCenter; screen: root.screen } }
+
+    readonly property var _widgetComponents: ({
+        workspaces: _cWorkspaces, shellUpdate: _cShellUpdate, tray: _cTray, updates: _cUpdates,
+        network: _cNetwork, volume: _cVolume, brightness: _cBrightness, battery: _cBattery,
+        media: _cMedia, clock: _cClock
+    })
+
+    function _widgetEnabled(key: string): bool {
+        if (key.length === 0) return false
+        const meta = ShellSettings.barWidgetMeta[key]
+        if (!meta) return false
+        const setting = meta.setting || ""
+        return setting.length === 0 || ShellSettings[setting] !== false
+    }
+
+    // Order-agnostic: reads each live slot through the Repeater instead of
+    // fixed named widget ids, so the divider logic holds under any user order
+    // or zone assignment. _repRev is bumped as delegates populate
+    // (Repeater.itemAt() can return null before that finishes — see
+    // ChoiceChipRow's identical _rev pattern).
+    property int _repRev: 0
+    function _computeSeps(rep): var {
+        root._repRev
         const compact = root._compact
-        const s = [
-            { key: "shell",   v: shellUpdateWidget._show, g: "shell"  },
-            { key: "tray",    v: trayWidget.show,         g: "tray"   },
-            { key: "updates", v: root._vUpdates,          g: "status" },
-            { key: "network", v: root._vNetwork,          g: "status" },
-            { key: "volume",  v: true,                    g: "levels" },
-            { key: "bright",  v: root._vBright,           g: "levels" },
-            { key: "battery", v: root._vBattery,          g: "levels" },
-            { key: "media",   v: root._vMedia,            g: "media"  },
-            { key: "clock",   v: root._vClock,            g: "clock"  }
-        ]
+        const n = rep.count
+        const s = []
+        for (let i = 0; i < n; i++) {
+            const it = rep.itemAt(i)
+            const k = it ? it.key : ""
+            s.push({ key: k, v: it ? it.show : false, g: k ? ShellSettings.barWidgetMeta[k].group : "" })
+        }
         const out = {}
         for (let i = 0; i < s.length; i++) {
             const cur = s[i]
+            if (!cur.key) continue
             if (!cur.v) { out[cur.key] = false; continue }
             let after = false, sameGroupAfter = false
             for (let j = i + 1; j < s.length; j++) {
@@ -61,6 +94,8 @@ Item {
         }
         return out
     }
+    readonly property var _sepsLeft:  _computeSeps(_repLeft)
+    readonly property var _sepsRight: _computeSeps(_repRight)
 
     // ── Left ────────────────────────────────────────────────────────────────
     Row {
@@ -71,20 +106,48 @@ Item {
         spacing: root.dotGap
         Behavior on spacing { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
 
-        Workspaces {
-            anchors.verticalCenter: parent.verticalCenter
-            screen: root.screen
+        // Fixed integer model, sized to the full canonical key count: slots
+        // beyond the zone's real membership resolve to an empty key and
+        // render nothing. Never torn down on reorder/zone changes — only the
+        // slot(s) whose resolved key actually changed reload their Loader.
+        Repeater {
+            id: _repLeft
+            model: ShellSettings._allBarWidgetKeys.length
+            onItemAdded: root._repRev++
+
+            delegate: Row {
+                id: _slotL
+                required property int index
+                readonly property string key:  ShellSettings.barWidgetOrderLeftKeys[index] || ""
+                readonly property bool widgetEnabled: root._widgetEnabled(key)
+                readonly property bool   show: _loaderL.item ? _loaderL.item.show : false
+                // Matches the row's own height, not derived from children —
+                // the widgets themselves carry their own height binding now.
+                height: parent.height
+                spacing: root.dotGap
+                // Read the plain `show` property, never `.visible` — Item.visible
+                // cascades from ancestors in Qt Quick, so binding this row's own
+                // visible to its descendant's visible is a genuine deadlock (an
+                // ancestor cannot resolve its visibility from a child whose
+                // effective visibility depends on that same ancestor).
+                visible: key.length > 0 && show
+
+                Loader {
+                    id: _loaderL
+                    anchors.verticalCenter: parent.verticalCenter
+                    sourceComponent: _slotL.widgetEnabled ? root._widgetComponents[_slotL.key] : null
+                }
+                Dot { show: root._sepsLeft[_slotL.key] === true }
+            }
         }
-
     }
-
 
     // ── Center ──────────────────────────────────────────────────────────────
     // Bar OSD (β) takes over one bar center while it's showing. Loading it
     // only on the overlay bar avoids duplicate text/layout/animation work on
     // every monitor, including while the feature is disabled.
     readonly property bool _isOverlayBar: root.screen && root.screen.name === Monitors.overlayBarName
-    readonly property bool _osdBarShowing: ShellSettings.osdBarIntegrated
+    readonly property bool _osdBarShowing: ShellSettings.osdEnabled && ShellSettings.osdBarIntegrated
         && root._isOverlayBar && OsdBarState.showing
 
     WindowTitle {
@@ -136,7 +199,7 @@ Item {
     Loader {
         anchors.centerIn: parent
         z: 1
-        active: ShellSettings.osdBarIntegrated && root._isOverlayBar
+        active: ShellSettings.osdEnabled && ShellSettings.osdBarIntegrated && root._isOverlayBar
         sourceComponent: Component { OsdBarWidget {} }
     }
 
@@ -149,22 +212,28 @@ Item {
         spacing: root.dotGap
         Behavior on spacing { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
 
-        ShellUpdateWidget { id: shellUpdateWidget; anchors.verticalCenter: parent.verticalCenter }
-        Dot             { show: root._seps.shell }
-        TrayWidget      { id: trayWidget; anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
-        Dot             { show: root._seps.tray }
-        UpdatesWidget   { anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
-        Dot             { show: root._seps.updates }
-        NetworkWidget   { anchors.verticalCenter: parent.verticalCenter }
-        Dot             { show: root._seps.network }
-        Volume          { anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
-        Dot             { show: root._seps.volume }
-        BrightnessWidget{ anchors.verticalCenter: parent.verticalCenter }
-        Dot             { show: root._seps.bright }
-        BatteryWidget   { anchors.verticalCenter: parent.verticalCenter }
-        Dot             { show: root._seps.battery }
-        MediaWidget     { id: mediaWidget; anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
-        Dot             { show: root._seps.media }
-        Clock           { visible: root._vClock; anchors.verticalCenter: parent.verticalCenter; screen: root.screen }
+        Repeater {
+            id: _repRight
+            model: ShellSettings._allBarWidgetKeys.length
+            onItemAdded: root._repRev++
+
+            delegate: Row {
+                id: _slotR
+                required property int index
+                readonly property string key:  ShellSettings.barWidgetOrderRightKeys[index] || ""
+                readonly property bool widgetEnabled: root._widgetEnabled(key)
+                readonly property bool   show: _loaderR.item ? _loaderR.item.show : false
+                height: parent.height
+                spacing: root.dotGap
+                visible: key.length > 0 && show
+
+                Loader {
+                    id: _loaderR
+                    anchors.verticalCenter: parent.verticalCenter
+                    sourceComponent: _slotR.widgetEnabled ? root._widgetComponents[_slotR.key] : null
+                }
+                Dot { show: root._sepsRight[_slotR.key] === true }
+            }
+        }
     }
 }

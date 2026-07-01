@@ -34,6 +34,13 @@ Item {
         )
     }
 
+    function _activateItem(item, tile): void {
+        if (!HyprActions.focusTrayItem(item.id, item.title, item.tooltipTitle)) {
+            if (item.onlyMenu) root._openMenu(item, tile)
+            else item.activate()
+        }
+    }
+
     Row {
         id: _row
         anchors.verticalCenter: parent.verticalCenter
@@ -75,7 +82,7 @@ Item {
                         : Theme.withAlpha(Theme.accent, _ma.pressed ? 0.26 : 0.14)
                     opacity: _tile.needsAttention ? _tile.attnPulse
                            : _ma.pressed          ? 1.0
-                           : _iconHover.hovered   ? 1.0
+                           : (_iconHover.hovered && ShellSettings.barHoverHighlight) ? 1.0
                            : 0.0
                     visible: opacity > 0.001
 
@@ -146,10 +153,7 @@ Item {
                         // do we fall through to its own activation. Menu is a
                         // right-click concern; onlyMenu means the item explicitly
                         // has no activate path (system indicators, etc.).
-                        else if (!HyprActions.focusTrayItem(it.id, it.title, it.tooltipTitle)) {
-                            if (it.onlyMenu) root._openMenu(it, _tile)
-                            else it.activate()
-                        }
+                        else root._activateItem(it, _tile)
                     }
                     onWheel: (wheel) => {
                         wheel.accepted = true
@@ -162,6 +166,19 @@ Item {
                 Accessible.role: Accessible.Button
                 Accessible.name: label
                 Accessible.description: modelData.tooltipDescription
+                activeFocusOnTab: root.show
+                Keys.onSpacePressed: event => {
+                    if (!event.isAutoRepeat) root._activateItem(_tile.modelData, _tile)
+                    event.accepted = true
+                }
+                Keys.onReturnPressed: event => {
+                    if (!event.isAutoRepeat) root._activateItem(_tile.modelData, _tile)
+                    event.accepted = true
+                }
+                Keys.onEnterPressed: event => {
+                    if (!event.isAutoRepeat) root._activateItem(_tile.modelData, _tile)
+                    event.accepted = true
+                }
             }
         }
     }

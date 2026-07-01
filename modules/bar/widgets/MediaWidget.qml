@@ -7,27 +7,25 @@ import "../../../services"
 Item {
     id: root
 
+    // no forced canvas expansion; width follows the title text
     implicitWidth:  root.show ? textClip.width : 0
     // Full bar height so the visualizer baseline sits on the bottom line.
-    implicitHeight: parent ? parent.height : 24
+    implicitHeight: parent ? parent.height : ShellSettings.barHeight
     clip: true
     enabled: root.show
 
-    readonly property bool show: Media.shown
+    readonly property bool show: ShellSettings.barShowMedia && Media.shown
 
     // Visualizer paints only on the active monitor.
     property var screen: null
+    readonly property bool _onActiveBar: !root.screen || Monitors.activeName === root.screen.name
+    readonly property bool _visualizerActive: ShellSettings.mediaProgress
+        && root.show && Media.playing && Media.cavaReady && root._onActiveBar && !MenuState.open
 
-    // Marquee: slide speed (px/s) and per-end hold times.
-    // Start hold is short — the user already sees the title beginning during
-    // the track transition. End hold is long so the full title end can be read.
     readonly property real _scrollSpeed:     38    // px/sec
-    readonly property int  _scrollHoldStart: 900   // ms at x=0 (start already visible)
-    readonly property int  _scrollHoldEnd:   2200  // ms at x=-overflow (user reads end)
+    readonly property int  _scrollHoldStart: 900   // short: title start already visible on entry
+    readonly property int  _scrollHoldEnd:   2200  // long: user reads the end
 
-    // Shared marquee plumbing: every state change (show/hide, label swap,
-    // reduce-motion, idle) either resets to a parked title or resumes the
-    // scroll if the current title still overflows.
     function _resetMarquee(): void {
         _scroll.stop()
         _trackTransition.stop()
@@ -36,7 +34,7 @@ Item {
         textClip.opacity = 1.0
     }
     function _startMarquee(): void {
-        if (show && textClip.needsScroll && !_trackTransition.running)
+        if (show && _onActiveBar && textClip.needsScroll && !_trackTransition.running)
             _scroll.start()
     }
 
@@ -50,16 +48,12 @@ Item {
         NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
     }
 
-    // Thin accent baseline — always-on playing indicator that requires no
-    // cava and no settings. Hides automatically when the full canvas
-    // visualizer is active (it provides its own outline at the same position).
+    // always-on playing indicator; hides when canvas visualizer is active
     Rectangle {
         anchors.bottom: parent.bottom
         anchors.left:   parent.left
         anchors.right:  parent.right
         height: 1.5
-        // Full opacity while playing, half while paused — stays visible as long
-        // as any player is connected, hides only when the media widget itself hides.
         opacity: !root.show || (_vizLoader.item ? _vizLoader.item.visible : false) || !ShellSettings.mediaProgress ? 0.0 : Media.playing ? 0.60 : 0.28
         visible: opacity > 0.01
         Behavior on opacity { NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
@@ -72,15 +66,10 @@ Item {
         }
     }
 
-    // Visualizer (Loader-gated): the threaded Canvas only exists when the
-    // visualizer setting is on, so default users pay nothing for it.
     Loader {
         id: _vizLoader
         anchors.fill: parent
-        // Avoid retaining a threaded Canvas on every monitor while media is
-        // hidden. Only the active monitor paints the visualizer.
-        active: ShellSettings.mediaProgress && root.show
-            && (!root.screen || Monitors.activeName === root.screen.name)
+        active: root._visualizerActive
         sourceComponent: Component { MediaVisualizer { barName: root.screen ? root.screen.name : "" } }
     }
 
@@ -99,7 +88,6 @@ Item {
         height: trackText.implicitHeight
         clip:   true
 
-        // Held value, swapped at opacity 0 during the crossfade.
         property string _shown: ""
 
         Component.onCompleted: {
@@ -111,11 +99,10 @@ Item {
             id: trackText
             text:           textClip._shown
             textFormat:     Text.PlainText
-            // Paused desaturates toward subtext (a colour cue, not just dimming)
-            // so a stalled title doesn't read as a styling bug.
+            // paused: drift toward subtext as a colour cue, not just dim
             readonly property color _base: Media.playing ? Theme.text
                                                           : Theme.mix(Theme.text, Theme.subtext, 0.55)
-            color:          _rootHover.hovered ? Theme.mix(_base, Theme.accent, 0.30) : _base
+            color:          (_rootHover.hovered && ShellSettings.barHoverHighlight) ? Theme.mix(_base, Theme.accent, 0.30) : _base
             Behavior on color { ColorAnimation { duration: Motion.fast } }
             font.family:    Settings.font
             font.pixelSize: Settings.fontSize
@@ -124,11 +111,13 @@ Item {
             elide: ShellSettings.reduceMotion ? Text.ElideRight : Text.ElideNone
 
             opacity: Media.playing ? 1.0 : 0.72
-            Behavior on opacity { NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+            Behavior on opacity {
+                // only animate paused→playing; breathing takes ownership on pause
+                enabled: Media.playing && !ShellSettings.reduceMotion
+                NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
+            }
 
-            // Paused "breathing": a slow opacity sway — a living-but-resting cue
-            // that a flat dim can't give. Only while paused + visible + motion on;
-            // when it stops, the binding above restores the rest value.
+            // breathing: slow sway while paused; Behavior restores 0.72 when it stops
             SequentialAnimation on opacity {
                 running: !Media.playing && root.show && !ShellSettings.reduceMotion && !Idle.isIdle
                     && (!root.screen || Monitors.activeName === root.screen.name)
@@ -150,7 +139,6 @@ Item {
             }
         }
 
-        // Stop/resume the marquee when reduce-motion is toggled at runtime.
         Connections {
             target: ShellSettings
             function onReduceMotionChanged() {
@@ -168,11 +156,15 @@ Item {
             }
         }
 
-        // Ping-pong marquee. Forward: OutCubic — snaps past the already-read
-        // start, decelerates into the end so it's comfortable to read.
-        // Return: InOutSine at 65% of forward duration — smooth, unobtrusive.
-        // Asymmetric holds: short at start (title beginning is already in view),
-        // long at end so the user can finish reading the title.
+        // Only the active monitor's bar scrolls the title (mirrors visualizer/breathing).
+        Connections {
+            target: Monitors
+            function onActiveNameChanged() {
+                if (root._onActiveBar) root._startMarquee()
+                else { _scroll.stop(); trackText.x = 0 }
+            }
+        }
+
         SequentialAnimation {
             id: _scroll
             loops: Animation.Infinite
@@ -190,7 +182,6 @@ Item {
             }
         }
 
-        // Crossfade on track change: fade out, swap text, fade in, then scroll.
         SequentialAnimation {
             id: _trackTransition
             NumberAnimation { target: textClip; property: "opacity"; to: 0;   duration: Motion.ms(100); easing.type: Easing.InCubic  }
@@ -203,13 +194,14 @@ Item {
             if (!needsScroll) {
                 _scroll.stop()
                 trackText.x = 0
+            } else if (!_scroll.running) {
+                root._startMarquee()
             }
         }
 
     }
 
-    // On the root so the whole bar-height widget (visualizer included) is the
-    // hit target, not just the one-line title.
+    // root hit target so the visualizer zone is also clickable
     HoverHandler { id: _rootHover; cursorShape: Qt.PointingHandCursor }
 
     activeFocusOnTab: root.show
@@ -223,7 +215,6 @@ Item {
     Keys.onLeftPressed:   event => { Media.previous();   event.accepted = true }
     Keys.onRightPressed:  event => { Media.next();       event.accepted = true }
 
-    // Left-click toggles playback; middle-click jumps to the player's window.
     TapHandler {
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
         onTapped: (eventPoint, button) => {

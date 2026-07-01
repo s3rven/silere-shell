@@ -8,6 +8,9 @@ Pill {
 
     property var screen: null   // ShellScreen this bar sits on, for menu placement
 
+    readonly property bool show: ShellSettings.barShowVolume
+    visible: show
+
     glyph:      Audio.icon
     glyphColor: Audio.muted ? Theme.subtext : Theme.text
     textColor:  Theme.subtext
@@ -21,6 +24,13 @@ Pill {
     text: !Audio.ready ? ""
         : (ShellSettings.valuesOnHover && !expanded) ? ""
         : (Math.round(Audio.effectiveVolume * 100) + "%")
+
+    Accessible.role: Accessible.Slider
+
+    Keys.onLeftPressed:  event => { if (Audio.ready) { if (Audio.muted) Audio.unmute(); Audio.bumpBy(-Audio.stepPct); event.accepted = true } else event.accepted = false }
+    Keys.onDownPressed:  event => { if (Audio.ready) { if (Audio.muted) Audio.unmute(); Audio.bumpBy(-Audio.stepPct); event.accepted = true } else event.accepted = false }
+    Keys.onRightPressed: event => { if (Audio.ready) { if (Audio.muted) Audio.unmute(); Audio.bumpBy(Audio.stepPct);  event.accepted = true } else event.accepted = false }
+    Keys.onUpPressed:    event => { if (Audio.ready) { if (Audio.muted) Audio.unmute(); Audio.bumpBy(Audio.stepPct);  event.accepted = true } else event.accepted = false }
 
     WheelHandler {
         enabled: Audio.ready
@@ -36,7 +46,7 @@ Pill {
         }
     }
 
-    HoverHandler { cursorShape: Qt.PointingHandCursor }
+    HoverHandler { cursorShape: root.interactive ? Qt.PointingHandCursor : Qt.ArrowCursor }
 
     pressed: _tap.pressed && Audio.ready
     onActivated: Audio.toggleMute()

@@ -10,7 +10,8 @@ Pill {
 
     // Visible while a count exists OR a check is running, so enabling it gives
     // immediate feedback instead of nothing until the (slow) first check returns.
-    readonly property bool _show: Updates.available || Updates.isChecking
+    readonly property bool show: Updates.available || Updates.isChecking
+    readonly property bool _show: show
 
     visible: opacity > 0.01
     opacity: _show ? 1.0 : 0.0
@@ -42,7 +43,7 @@ Pill {
     contentScanWidth:   20
 
     SequentialAnimation {
-        running: Updates.isChecking && !ShellSettings.reduceMotion
+        running: Updates.isChecking && !ShellSettings.reduceMotion && !Idle.isIdle
         loops:   Animation.Infinite
         onRunningChanged: if (!running) root.contentScanProgress = 0
         NumberAnimation { target: root; property: "contentScanProgress"; from: 0; to: 1; duration: 900; easing.type: Easing.InOutSine }

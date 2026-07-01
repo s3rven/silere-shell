@@ -3,11 +3,13 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Effects
 import Quickshell
+import Quickshell.DBusMenu
 import Quickshell.Widgets
 import Quickshell.Wayland._WlrLayerShell
 import Quickshell.Hyprland
 import "../../config"
 import "../../services"
+import "../common"
 
 // Tray context menu rendered in QML so it speaks Theme instead of the native platform menu.
 PanelWindow {
@@ -22,14 +24,54 @@ PanelWindow {
 
     // holds the last handle through the close fade so rows don't collapse early
     property var _activeMenu: null
-    onVisibleChanged: if (!visible) win._activeMenu = null
+    property bool _rootOpenedSent: false
+
+    function _menuRoot() {
+        return win._activeMenu?.menu ?? win._activeMenu
+    }
+    function _emitMenuSignal(entry, signalName: string, fallbackName: string): bool {
+        if (entry === null || entry === undefined) return false
+
+        const fn = entry[signalName]
+        if (typeof fn === "function") {
+            fn()
+            return true
+        }
+
+        const fallback = entry[fallbackName]
+        if (typeof fallback === "function") {
+            fallback()
+            return true
+        }
+
+        console.warn("silere-shell: tray menu entry has no", signalName, "signal")
+        return false
+    }
+    function _sendRootOpened(): void {
+        if (_rootOpenedSent || !TrayMenuState.open) return
+        if (_emitMenuSignal(_menuRoot(), "opened", "sendOpened"))
+            _rootOpenedSent = true
+    }
+    function _sendRootClosed(): void {
+        if (!_rootOpenedSent) return
+        _emitMenuSignal(_menuRoot(), "closed", "sendClosed")
+        _rootOpenedSent = false
+    }
+    function _setActiveMenu(handle): void {
+        if (win._activeMenu === handle) return
+        win._sendRootClosed()
+        win._activeMenu = handle
+        win._sendRootOpened()
+    }
+
+    onVisibleChanged: if (!visible) win._setActiveMenu(null)
     // lazy-loaded after openAt() already set the handle, so the change signal
     // fired before this popup existed; seed from the current state on creation
-    Component.onCompleted: if (TrayMenuState.menuHandle !== null) win._activeMenu = TrayMenuState.menuHandle
+    Component.onCompleted: if (TrayMenuState.menuHandle !== null) win._setActiveMenu(TrayMenuState.menuHandle)
     Connections {
         target: TrayMenuState
         function onMenuHandleChanged() {
-            if (TrayMenuState.menuHandle !== null) win._activeMenu = TrayMenuState.menuHandle
+            if (TrayMenuState.menuHandle !== null) win._setActiveMenu(TrayMenuState.menuHandle)
         }
     }
 
@@ -63,14 +105,11 @@ PanelWindow {
         target: TrayMenuState
         function onOpenChanged() {
             if (!TrayMenuState.open) {
-                _placementSettle.stop()
-                card._placementSettled = false
                 _outsideTapGuard.stop()
                 win._ignoreOutsideTap = false
+                win._sendRootClosed()
             } else {
-                card._placementSettled = false
-                card._place()
-                _placementSettle.restart()
+                win._sendRootOpened()
             }
         }
     }
@@ -84,7 +123,7 @@ PanelWindow {
 
     QsMenuOpener {
         id: _opener
-        menu: win._activeMenu
+        menu: win._menuRoot()
     }
 
     Item { id: _fillArea; anchors.fill: parent }
@@ -156,7 +195,7 @@ PanelWindow {
             TapHandler {
                 enabled: _entry.on && !_entry.sub
                 onTapped: {
-                    _entry.modelData.sendTriggered()
+                    win._emitMenuSignal(_entry.modelData, "triggered", "sendTriggered")
                     TrayMenuState.close()
                 }
             }
@@ -246,23 +285,25 @@ PanelWindow {
                 readonly property int  pad: 6
                 readonly property point _origin: _entry.mapToItem(null, 0, 0)
                 readonly property bool  _flip: _origin.x + _entry.width + 4 + _w > win.width
+                readonly property real _panelH: Math.min(_subCol.implicitHeight + pad * 2, Math.max(48, win.height - 8))
+                readonly property real _targetY: Math.max(4 - _origin.y, Math.min(-pad, win.height - 4 - _origin.y - _panelH))
                 x: _flip ? -(_w + 4) : (_entry.width + 4)
-                y: -pad
+                y: _targetY
                 width:  _w
-                height: _subCol.implicitHeight + pad * 2
+                height: _panelH
                 radius: Math.min(win._cardRadius, height / 2)
                 antialiasing: true
                 color: Theme.popup
                 border.width: 1
                 border.color: Theme.outline
 
-                // apps populate submenu children lazily, only after sendOpened()
+                // apps populate submenu children lazily, only after the opened signal.
                 onVisibleChanged: {
                     if (!_entry.sub) return
-                    if (visible) _entry.modelData.sendOpened()
-                    else _entry.modelData.sendClosed()
+                    if (visible) win._emitMenuSignal(_entry.modelData, "opened", "sendOpened")
+                    else win._emitMenuSignal(_entry.modelData, "closed", "sendClosed")
                 }
-                Component.onDestruction: if (_entry.sub && _flyout.visible) _entry.modelData?.sendClosed()
+                Component.onDestruction: if (_entry.sub && _flyout.visible) win._emitMenuSignal(_entry.modelData, "closed", "sendClosed")
 
                 HoverHandler { id: _flyHover }
 
@@ -280,15 +321,34 @@ PanelWindow {
                     function onHoveredChanged() { if (!_rowHover.hovered && _flyout.visible) _flyClose.restart() }
                 }
 
-                Column {
-                    id: _subCol
+                Flickable {
+                    id: _subScroll
                     x: _flyout.pad; y: _flyout.pad
                     width: win.menuWidth
-                    spacing: 1
-                    Repeater {
-                        model: _subOpener.children
-                        delegate: _rowDelegate
+                    height: Math.max(0, _flyout.height - _flyout.pad * 2)
+                    contentWidth: width
+                    contentHeight: _subCol.implicitHeight
+                    boundsBehavior: Flickable.StopAtBounds
+                    flickDeceleration: 1800
+                    maximumFlickVelocity: 2200
+                    clip: true
+                    interactive: contentHeight > height
+
+                    Column {
+                        id: _subCol
+                        width: win.menuWidth
+                        spacing: 1
+                        Repeater {
+                            model: _subOpener.children
+                            delegate: _rowDelegate
+                        }
                     }
+                }
+
+                ListEdgeFade {
+                    anchors.fill: _subScroll
+                    visible: _subScroll.interactive
+                    list: _subScroll
                 }
             }
         }
@@ -300,133 +360,55 @@ PanelWindow {
         anchors.fill: card
         opacity: card.opacity
         z: -1
-        sourceComponent: Item {
-            anchors.fill: parent
-            readonly property real strength: ShellSettings.barShadowStrength
-            RectangularShadow {
-                anchors.fill: parent
-                radius: card.radius
-                blur: 14
-                offset: Qt.vector2d(0, card._barBottom ? -2 : 2)
-                color: Qt.rgba(0, 0, 0, Math.min(0.28, 0.13 * parent.strength))
-            }
-            RectangularShadow {
-                anchors.fill: parent
-                radius: card.radius
-                blur: 7
-                offset: Qt.vector2d(0, card._barBottom ? -5 : 5)
-                color: Qt.rgba(0, 0, 0, Math.min(0.44, 0.26 * parent.strength))
-            }
+        sourceComponent: FloatingShadow {
+            radius: card.radius
+            atBottom: card.barBottom
         }
     }
 
-    Rectangle {
+    FloatingPopupCard {
         id: card
+        win: win
+        open: TrayMenuState.open
+        anchorX: TrayMenuState.anchorX
+        barBottom: TrayMenuState.barBottom
 
         readonly property int pad: 6
+        readonly property real _maxContentH: Math.max(48, win.height - _edgeY - pad * 2 - 8)
 
-        readonly property real _originX: Math.max(0, Math.min(width, TrayMenuState.anchorX - x))
-        readonly property bool _barBottom: TrayMenuState.barBottom
-
-        readonly property int  _barInset: ShellSettings.barFloating ? 4 : 0
-        readonly property int  _edgeY: _barInset + ShellSettings.barHeight + 8
-        readonly property real _minX: radius + 4
-        readonly property real _maxX: Math.max(_minX, win.width - width - _minX)
-
-        function _clampedPanelX(px: real): real {
-            return Math.max(_minX, Math.min(px, _maxX))
-        }
-        function _targetX(): real {
-            const t = Math.max(0, Math.min(win.width, TrayMenuState.anchorX))
-            return Math.round(_clampedPanelX(t - width * t / Math.max(1, win.width)))
-        }
-        function _place(): void {
-            x = _targetX()
-        }
-        function _reclamp(): void {
-            const nx = Math.round(_clampedPanelX(x))
-            if (Math.abs(nx - x) > 0.5) x = nx
-        }
-
-        on_MinXChanged: _reclamp()
-        on_MaxXChanged: _reclamp()
-
-        y: Math.round((_barBottom ? (win.height - _edgeY - height) : _edgeY) + edgeOffset)
         width:  win.menuWidth + pad * 2
-        height: _col.implicitHeight + pad * 2
+        height: Math.min(_col.implicitHeight, _maxContentH) + pad * 2
         radius: Math.min(win._cardRadius, height / 2)
-        antialiasing: true
-        color: Theme.popup
-        border.width: 1
-        border.color: Theme.outline
 
-        property real scaleAmt: Motion.popScaleFrom
-        property real edgeOffset: _closedOffset
-        property bool _placementSettled: false
-        readonly property real _closedOffset: _barBottom ? 8 : -8
-        transform: Scale { origin.x: card._originX; origin.y: card._barBottom ? card.height : 0; xScale: card.scaleAmt; yScale: card.scaleAmt }
-        state: TrayMenuState.open ? "visible" : "hidden"
-        layer.enabled: !ShellSettings.reduceMotion && opacity > 0.001 && scaleAmt < 0.999
-
-        Behavior on x {
-            enabled: card.state === "visible" && !ShellSettings.reduceMotion && card._placementSettled
-            NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
-        }
-
-        Connections {
-            target: TrayMenuState
-            function onAnchorXChanged() { card._place() }
-        }
-        Connections {
-            target: win
-            function onWidthChanged() {
-                if (!TrayMenuState.open) return
-                const nx = card._targetX()
-                if (Math.abs(nx - card.x) > 0.5) card._place()
-            }
-        }
-        Component.onCompleted: _place()
-
-        Timer {
-            id: _placementSettle
-            interval: Motion.popSettle
-            repeat: false
-            onTriggered: card._placementSettled = true
-        }
-
-        states: [
-            State { name: "hidden";  PropertyChanges { target: card; scaleAmt: Motion.popScaleFrom; edgeOffset: card._closedOffset; opacity: 0 } },
-            State { name: "visible"; PropertyChanges { target: card; scaleAmt: 1.0;  edgeOffset: 0; opacity: 1 } }
-        ]
-        transitions: [
-            Transition {
-                from: "*"; to: "visible"
-                ParallelAnimation {
-                    NumberAnimation { target: card; property: "scaleAmt";   to: 1.0; duration: Motion.popIn; easing.type: Easing.OutCubic }
-                    NumberAnimation { target: card; property: "edgeOffset"; to: 0;   duration: Motion.popIn; easing.type: Easing.OutQuart }
-                    NumberAnimation { target: card; property: "opacity";    to: 1.0; duration: Motion.popInFade; easing.type: Easing.OutCubic }
-                }
-            },
-            Transition {
-                from: "visible"; to: "hidden"
-                ParallelAnimation {
-                    NumberAnimation { target: card; property: "scaleAmt";   to: Motion.popScaleFrom; duration: Motion.popOut; easing.type: Easing.InCubic }
-                    NumberAnimation { target: card; property: "edgeOffset"; to: card._closedOffset;  duration: Motion.popOut; easing.type: Easing.InCubic }
-                    NumberAnimation { target: card; property: "opacity";    to: 0.0;                 duration: Motion.popOutFade;  easing.type: Easing.InCubic }
-                }
-            }
-        ]
-
-        Column {
-            id: _col
+        Flickable {
+            id: _scroll
             x: card.pad; y: card.pad
             width: win.menuWidth
-            spacing: 1
+            height: Math.max(0, card.height - card.pad * 2)
+            contentWidth: width
+            contentHeight: _col.implicitHeight
+            boundsBehavior: Flickable.StopAtBounds
+            flickDeceleration: 1800
+            maximumFlickVelocity: 2200
+            clip: true
+            interactive: contentHeight > height
 
-            Repeater {
-                model: _opener.children
-                delegate: _rowDelegate
+            Column {
+                id: _col
+                width: win.menuWidth
+                spacing: 1
+
+                Repeater {
+                    model: _opener.children
+                    delegate: _rowDelegate
+                }
             }
+        }
+
+        ListEdgeFade {
+            anchors.fill: _scroll
+            visible: _scroll.interactive
+            list: _scroll
         }
     }
 }

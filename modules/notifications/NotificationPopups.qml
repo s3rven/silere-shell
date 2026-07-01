@@ -153,16 +153,19 @@ PanelWindow {
                     ? Theme.withAlpha(Theme.error, 0.22)
                     : _pillHover.hovered
                         ? Theme.withAlpha(Theme.error, 0.12)
-                        : Theme.surface
+                        : Theme.menuControl
                 border.width: 1
                 border.color: _dismissPress.pressed
                     ? Theme.withAlpha(Theme.error, 0.60)
                     : _pillHover.hovered
                         ? Theme.withAlpha(Theme.error,   0.38)
-                        : Theme.withAlpha(Theme.subtext, 0.20)
+                        : Theme.menuControlLine
 
                 Behavior on color        { ColorAnimation { duration: Motion.fast } }
                 Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+
+                Accessible.role: Accessible.Button
+                Accessible.name: "Dismiss all notifications"
 
                 Row {
                     id: _pillRow
@@ -172,7 +175,7 @@ PanelWindow {
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text:           "󰆴"
-                        color:          _pillHover.hovered ? Theme.withAlpha(Theme.error, 0.85) : Theme.withAlpha(Theme.subtext, 0.45)
+                        color:          _pillHover.hovered ? Theme.withAlpha(Theme.error, 0.85) : Theme.withAlpha(Theme.menuTextMuted, 0.62)
                         font.family:    Settings.font
                         font.pixelSize: Settings.fontSize
                         renderType:     Text.NativeRendering
@@ -182,7 +185,7 @@ PanelWindow {
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text:           "Dismiss all"
-                        color:          _pillHover.hovered ? Theme.withAlpha(Theme.error, 0.85) : Theme.withAlpha(Theme.subtext, 0.65)
+                        color:          _pillHover.hovered ? Theme.withAlpha(Theme.error, 0.85) : Theme.withAlpha(Theme.menuTextMuted, 0.84)
                         font.family:    Settings.font
                         font.pixelSize: Settings.fontSize - 1
                         renderType:     Text.NativeRendering
@@ -271,14 +274,14 @@ PanelWindow {
                 height: 18
                 radius: 9
                 antialiasing: true
-                color: Theme.withAlpha(Theme.surface, 0.97)
+                color: Theme.menuControl
                 border.width: 1
-                border.color: Theme.withAlpha(Theme.subtext, 0.18)
+                border.color: Theme.menuControlLine
                 Text {
                     id: _moreTxt
                     anchors.centerIn: parent
                     text: "· " + _moreChip._extra + " more"
-                    color: Theme.withAlpha(Theme.subtext, 0.7)
+                    color: Theme.withAlpha(Theme.menuTextMuted, 0.86)
                     font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
                     renderType: Text.NativeRendering
                 }

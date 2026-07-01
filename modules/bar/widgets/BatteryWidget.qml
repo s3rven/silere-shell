@@ -7,15 +7,16 @@ Pill {
     id: batteryPill
 
     // Opt-in: drop the indicator while charging or full, since it's not telling
-    // you anything useful then. shown also drives the separator dot.
+    // you anything useful then. show also drives the separator dot.
     readonly property bool autoHidden: ShellSettings.batteryAutoHide && (Battery.charging || Battery.full)
-    readonly property bool shown: ShellSettings.barShowBattery && Battery.available && !autoHidden
-    property real _baseOpacity: shown ? 1.0 : 0.0
+    readonly property bool show: ShellSettings.barShowBattery && Battery.available && !autoHidden
+    property real _baseOpacity: show ? 1.0 : 0.0
 
     glyph:          Battery.icon
+    glyphPixelSize: Settings.fontSize + 3   // horizontal battery glyph reads optically short
     glyphColor:     Battery.iconColor
     textColor:      Battery.iconColor
-    accessibleName: !shown ? "Battery unavailable"
+    accessibleName: !show ? "Battery unavailable"
         : `Battery ${Battery.label}${Battery.statusLabel.length > 0 ? `, ${Battery.statusLabel}` : ""}${Battery.timeLabel.length > 0 ? `, ${Battery.timeLabel}` : ""}`
     animateGlyph:   false
     shrinkDelay:    0
@@ -34,6 +35,8 @@ Pill {
                 return Battery.label + " · " + Battery.statusLabel
             return Battery.label
         }
-        return ShellSettings.valuesOnHover ? "" : Battery.label
+        // Battery is status, not a control — always show it, even when
+        // valuesOnHover hides the adjustable levels (volume/brightness).
+        return Battery.label
     }
 }

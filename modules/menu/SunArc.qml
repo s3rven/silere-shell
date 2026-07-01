@@ -15,7 +15,7 @@ Rectangle {
     antialiasing: true
     color: Theme.mix(Theme.surface, Theme.subtext, 0.06)
     border.width: 1
-    border.color: Theme.withAlpha(Theme.subtext, 0.10)
+    border.color: Theme.menuCardBorder
 
     readonly property bool _isDay: NightLight.isDaytime
 

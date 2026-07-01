@@ -36,7 +36,7 @@ Item {
         if (!_canToggle) return
         // Animate the knob only on a real user flip; section switches re-run
         // layout and would otherwise slide every checked knob.
-        if (!ShellSettings.reduceMotion) { _knob._animateX = true; _knobDisarm.restart() }
+        _toggle.armFlipAnimation()
         root.toggled()
     }
 
@@ -183,65 +183,11 @@ Item {
         width: root._rightSlotW
         height: 18
 
-        Rectangle {
+        ToggleSwitch {
             id: _toggle
             anchors.fill: parent
             visible: !root._showDependsNote
-            radius: 9; antialiasing: true
-            color: root.checked
-                ? Theme.mix(Theme.menuControl, Theme.accent, 0.38)
-                : Theme.menuControl
-            border.width: 1
-            border.color: root.checked
-                ? Theme.mix(Theme.menuCard, Theme.accent, 0.62)
-                : Theme.menuControlLine
-            Behavior on color { ColorAnimation { duration: Motion.fast } }
-            Behavior on border.color { ColorAnimation { duration: Motion.fast } }
-
-            Rectangle {
-                id: _knob
-                anchors.verticalCenter: parent.verticalCenter
-                width: 14; height: 14; radius: 7
-                antialiasing: true
-                x:     root.checked ? parent.width - width - 2 : 2
-                color: root.checked ? Theme.accent : Theme.mix(Theme.subtext, Theme.accent, 0.16)
-
-                property real _stretch: 1.0
-                // Armed by the tap above; the disarm timer clears it after the
-                // bounded slide, so only deliberate flips animate the knob.
-                property bool _animateX: false
-                transform: Scale {
-                    origin.x: _knob.width  / 2
-                    origin.y: _knob.height / 2
-                    xScale: _knob._stretch
-                    yScale: 1.0
-                }
-
-                Timer { id: _knobDisarm; interval: Motion.fast + Motion.medium + Motion.ms(80); onTriggered: _knob._animateX = false }
-
-                Behavior on x     { enabled: _knob._animateX && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutQuart } }
-                Behavior on color { ColorAnimation { duration: Motion.fast } }
-
-                Connections {
-                    target: root
-                    function onCheckedChanged() {
-                        if (ShellSettings.reduceMotion) { _knob._stretch = 1.0; return }
-                        if (!_knob._animateX) { _knob._stretch = 1.0; return }
-                        _knobStretch.restart()
-                    }
-                }
-                Connections {
-                    target: ShellSettings
-                    function onReduceMotionChanged() {
-                        if (ShellSettings.reduceMotion) { _knobStretch.stop(); _knob._stretch = 1.0 }
-                    }
-                }
-                SequentialAnimation {
-                    id: _knobStretch
-                    NumberAnimation { target: _knob; property: "_stretch"; to: 1.22; duration: Motion.fast;   easing.type: Easing.OutQuad }
-                    NumberAnimation { target: _knob; property: "_stretch"; to: 1.0;  duration: Motion.medium; easing.type: Easing.OutCubic }
-                }
-            }
+            checked: root.checked
         }
 
         Text {
@@ -253,7 +199,7 @@ Item {
             horizontalAlignment: Text.AlignRight
             text: root.dependsNote
             elide: Text.ElideRight
-            color: Theme.withAlpha(Theme.subtext, 0.40)
+            color: Theme.withAlpha(Theme.subtext, 0.55)
             font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
             renderType: Text.NativeRendering
         }

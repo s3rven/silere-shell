@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="assets/banner.svg" alt="silere shell — quiet by default." width="720"/>
+  <img src="assets/banner.svg" alt="silere shell - quiet by default." width="720"/>
 </p>
 
 > *silere*, from Latin: to be silent.
 
-A Quickshell shell for Hyprland. Most shells come pre-loaded. Silere starts quiet and you turn things on.
+Silere is a Quickshell shell for Hyprland: bar, control menu, notifications, matugen/manual theming, night light, and optional cava visualizer.
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-3b3b3b?style=flat-square&labelColor=1c1c1c" alt="license: MIT"/></a>
@@ -15,19 +15,7 @@ A Quickshell shell for Hyprland. Most shells come pre-loaded. Silere starts quie
   <img src="assets/showcase.png" alt="silere shell showcase" width="900"/>
 </p>
 
----
-
-**bar:** workspaces, clock, media, volume, brightness, battery, network, tray.
-
-**menu:** control center with quick toggles, sliders, and a full settings UI.
-
-**notifications:** native server with a popup stack, do-not-disturb, and history.
-
-**theming:** wallpaper-based via [matugen](https://github.com/InioX/matugen), or set your own accent. night light included. optional [cava](https://github.com/karlstav/cava) visualizer.
-
----
-
-## install
+## Install
 
 ```bash
 git clone https://github.com/s3rven/silere-shell
@@ -35,68 +23,61 @@ cd silere-shell
 bash scripts/install.sh
 ```
 
-The installer puts everything in `$XDG_CONFIG_HOME/silere-shell` — the clone is just to fetch and run this script and can be deleted after. It seeds cava and matugen configs, optionally installs JetBrainsMono Nerd Font, and wires autostart into your Hyprland config. Existing files are backed up. Uninstall removes only Silere's marked blocks and leaves the rest alone.
-
-Restart Hyprland once it's done, then:
+The installer copies Silere to `$XDG_CONFIG_HOME/silere-shell`, backs up existing files, and adds a marked Hyprland autostart block. Restart Hyprland, then check the install:
 
 ```bash
-bash scripts/check.sh   # verify deps + smoke launch
+bash scripts/check.sh
 ```
 
----
+Uninstall:
 
-## first use
+```bash
+bash scripts/uninstall.sh
+```
 
-The bar is the only thing on screen by default. Everything below is a click away.
+## Controls
 
-- **menu:** click the active workspace diamond, then **Settings** for appearance, widgets, behavior, and updates.
-- **calendar:** click the clock. Scroll or use the arrows to change month; click the month label to jump back to today. Middle-click the clock to cycle date and seconds visibility.
-- **bar:** click a workspace to switch; middle-click to send the active window there. Scroll over volume or brightness to adjust, click volume to mute. Right-click tray icons for their menus.
-- **updates:** **Settings → Updates** checks for and applies Silere updates. A daily background check can be enabled; it only raises a badge in the bar and never installs anything on its own. A separate package update count (distro packages, not Silere) lives under **Settings → Indicators** and requires a supported package manager — see the deps table below.
-
-Escape or a click outside closes any popup.
-
----
-
-## dependencies
-
-`git`, Hyprland, and a current Quickshell build (`qs`) are required. Silere imports the Hyprland, Wayland layer-shell, Widgets, Io, Bluetooth, Mpris, Notifications, PipeWire, SystemTray, and UPower modules unconditionally, so a build that splits or disables any of them won't load. `bash scripts/check.sh` reports which modules are present and catches import failures at startup.
-
-Everything else is per-feature. Missing tools hide or trim the widget they back rather than blocking the shell.
-
-| tool | feature |
+| area | action |
 |---|---|
-| pipewire / wireplumber | audio |
-| upower | battery status + warnings |
-| networkmanager / nmcli | network |
-| brightnessctl | brightness |
-| inotify-tools | instant brightness + screenshot flash |
-| cava | media visualizer |
-| matugen | wallpaper theming |
-| hyprsunset | night light |
-| power-profiles-daemon | power profiles |
-| checkupdates / apt / dnf / zypper / xbps-install | package update badge |
+| workspaces | left-click inactive to switch; left/right-click active marker to open the menu; middle-click to move the focused window; scroll to switch when `Scroll to switch` is enabled |
+| menu | Escape closes an open picker or power confirmation first, then the menu; click outside to close |
+| clock | left-click opens calendar; middle-click cycles seconds/date display |
+| calendar | scroll, arrow buttons, or Left/Right changes month; today header or month label jumps back to the current month |
+| media | left-click toggles play/pause; middle-click focuses the player; scroll skips tracks |
+| volume | scroll adjusts; left-click mutes/unmutes |
+| brightness | scroll adjusts; arrow keys work when focused |
+| tray | left-click focuses or activates the item; middle-click sends secondary activate; right-click opens native menu; scroll passes through |
 
----
+Updates are under `Settings -> Updates`. Shell updates install only after confirmation. Daily shell checks only update the badge.
 
-## performance
+## Requirements
 
-One machine, idle, with the installer's launch environment: **101 MB PSS / 76 MB USS** in Quickshell (or **106 MB PSS** including Silere's watcher processes), at 0.8% CPU. RSS reads higher (175 MB) because it counts shared Qt and graphics mappings in full; PSS and USS are the numbers worth comparing between shells.
+Required: `git`, Hyprland, and a current Quickshell build with the Hyprland, Wayland layer-shell, Widgets, Io, Bluetooth, Mpris, Notifications, PipeWire, SystemTray, and UPower modules.
 
-Run `bash scripts/bench.sh 10` against a live checkout for your own numbers. Without the installer's launch environment you'll see around 316 MB RSS and `allocator default` in the output — the gap is jemalloc and EGL tuning written into the autostart line.
+Optional widgets use `pipewire`/`wireplumber`, `upower`, `nmcli`, `brightnessctl`, `inotifywait`, `cava`, `matugen`, `hyprsunset`, `power-profiles-daemon`, and one supported package manager (`checkupdates`, `apt`, `dnf`, `zypper`, or `xbps-install`). Missing optional tools disable or trim the related widget. `scripts/check.sh` reports what is available and runs a smoke launch.
 
-The cava visualizer is the one feature with a real CPU cost. It scales with the framerate in `assets/cava.conf` (60 by default), runs only while music is playing, and stops when the screen blanks.
+## Resource Use
 
----
+Memory varies by Qt, graphics drivers, allocator, enabled widgets, and helper processes. RSS around 175-200 MB idle is not unusual because RSS counts shared Qt and graphics mappings in full. PSS/USS are better for comparing shell-private memory; one sample was 101 MB PSS / 76 MB USS for `qs`, or 106 MB PSS including helpers, at about 0.8% CPU.
 
-## troubleshooting
+Measure your session:
 
-`bash scripts/check.sh` is the first stop. It checks modules, tools, notification-daemon ownership, generated config files, and does a short smoke launch. A warning on an optional feature is fine; a `FAIL` on the smoke launch means something's actually broken.
+```bash
+bash scripts/bench.sh 10
+```
 
-For a readable startup error, stop the running instance and run `qs -p shell.qml` from the repo inside a Hyprland session. `qs list --all` lists running instances. Re-running the installer repairs generated files and autostart wiring. If notifications never appear, check that nothing else owns `org.freedesktop.Notifications`.
+The cava visualizer is the main optional CPU cost and only runs while media is playing.
 
----
+## Troubleshooting
 
-## license
+```bash
+bash scripts/check.sh
+qs list --all
+qs -p shell.qml
+```
 
-MIT © s3rven
+Optional warnings from `check.sh` are usually fine. A smoke-launch `FAIL` means startup broke. If notifications never appear, check whether another daemon owns `org.freedesktop.Notifications`.
+
+## License
+
+MIT (c) s3rven

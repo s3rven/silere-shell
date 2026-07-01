@@ -104,8 +104,8 @@ Item {
     // present when the title is empty or just echoes the app; overflow is
     // elided by the Text below.
     readonly property string _formatted: {
-        const appCol   = _hex(Theme.subtext, ShellSettings.windowTitleOpacity)
-        const titleCol = _hex(Theme.text, ShellSettings.windowTitleOpacity)
+        const appCol   = _hex(Theme.subtext, 1.0)
+        const titleCol = _hex(Theme.text, 1.0)
         if (_shownShowApp && _shownApp.length > 0 && _shownTitle.length > 0 && !_titleMatchesApp) {
             const dotCol = _hex(Theme.subtext, ShellSettings.dotOpacity)
             // Drawn separator styles in Dot.qml need a text equivalent here.

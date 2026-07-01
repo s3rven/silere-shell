@@ -15,6 +15,8 @@ Singleton {
     property string cachedDayName:  ""  // "ddd " — trailing space is the separator
     property string cachedDateCore: ""  // "MMM dd"
     property string cachedLongDate: ""  // "dddd, MMMM d" — menu header
+    property string cachedWeekday:  ""  // "dddd" — menu masthead, weighted line
+    property string cachedMonthDay: ""  // "MMMM d" — menu masthead, quiet line
     property string cachedHour:     ""  // "HH" or "h"
     property string cachedMinute:   ""  // "mm" — split from the hour so only the changed field rolls
     property string cachedAmPm:     ""  // "AM" / "PM" in 12h mode, "" in 24h
@@ -40,6 +42,8 @@ Singleton {
             cachedDayName   = Qt.formatDateTime(clock.date, "ddd ")
             cachedDateCore  = Qt.formatDateTime(clock.date, "MMM dd")
             cachedLongDate  = Qt.formatDateTime(clock.date, "dddd, MMMM d")
+            cachedWeekday   = Qt.formatDateTime(clock.date, "dddd")
+            cachedMonthDay  = Qt.formatDateTime(clock.date, "MMMM d")
         }
         cachedMinute = Qt.formatDateTime(clock.date, "mm")
         if (ShellSettings.clock12h) {

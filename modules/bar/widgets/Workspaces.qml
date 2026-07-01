@@ -15,7 +15,7 @@ Item {
     readonly property int minVisible: ShellSettings.wsMinVisible
     readonly property int btnW:       26
     readonly property int btnH:       24
-    readonly property int _iconSz: ShellSettings.wsIconSize
+    readonly property int _iconSz: 16
     readonly property int gap:        3
 
     readonly property int effectiveWsCount: Math.max(1, minVisible)
@@ -29,6 +29,12 @@ Item {
 
     readonly property HyprlandMonitor monitor:    Hyprland.monitorFor(root.screen)
     readonly property bool monitorReady: monitor !== null && monitor.activeWorkspace !== null
+    // No user hide toggle — it's the bar's only workspace-switch affordance,
+    // not a status pill. Present purely so BarContent's generic per-slot
+    // system (which reads `.show` uniformly for every zone-assignable
+    // widget) can treat it like any other entry.
+    readonly property bool show: true
+    visible: show
     readonly property int  rawActiveId:  monitor?.activeWorkspace?.id ?? _lastNormalActiveId
     readonly property int  activeId:     rawActiveId > 0 ? rawActiveId : _lastNormalActiveId
 
@@ -70,13 +76,16 @@ Item {
     // when Hyprland's toplevel list changes, no polling.
     property var _iconCache: ({})
     function _iconForClass(cls: string): string {
-        const key = String(cls || "").toLowerCase()
+        const raw = String(cls || "").trim()
+        const key = raw.toLowerCase()
         if (!key) return ""
         if (root._iconCache[key] !== undefined) return root._iconCache[key]
         // Try the desktop-entry icon first (zen → zen-browser), then the bare
-        // class (kitty → kitty); take whichever actually exists in the theme.
-        const de = DesktopEntries.heuristicLookup(cls)
-        const candidates = (de && de.icon) ? [de.icon, key] : [key]
+        // class (kitty → kitty). A few apps expose reverse-DNS app IDs, so also
+        // try the final segment (org.wezfurlong.wezterm → wezterm).
+        const de = DesktopEntries.heuristicLookup(raw)
+        const tail = key.indexOf(".") >= 0 ? key.split(".").pop() : ""
+        const candidates = [de && de.icon, key, tail].filter(Boolean)
         let src = ""
         for (let i = 0; i < candidates.length && !src; i++)
             src = Quickshell.iconPath(candidates[i], true)
@@ -656,7 +665,7 @@ Item {
         }
         SequentialAnimation {
             id: _breathAnim
-            running: MenuState.open && !ShellSettings.reduceMotion
+            running: MenuState.open && !ShellSettings.reduceMotion && !Idle.isIdle
             loops:   Animation.Infinite
             onRunningChanged: if (!running) diamond._menuPulse = 0
             NumberAnimation { target: diamond; property: "_menuPulse"; from: 0; to: 1; duration: Motion.ms(950); easing.type: Easing.InOutSine }
@@ -686,6 +695,9 @@ Item {
                 readonly property bool occupied: root.occupied(wsId)
                 readonly property bool urgent:  root.urgent(wsId)
                 readonly property bool hovered: _hover.hovered
+                // gated separately from `hovered` so hover-driven scale/color/tint
+                // pumps respect the barHoverHighlight setting (default off)
+                readonly property bool _hoverFx: hovered && ShellSettings.barHoverHighlight
                 // App icons shown on inactive occupied workspaces (the active one
                 // keeps its diamond). Empty/active fall back to the number/dot.
                 readonly property bool _showIcons: ShellSettings.wsShowAppIcons && !active && apps.length > 0
@@ -699,6 +711,8 @@ Item {
                     enabled: ShellSettings.wsShowAppIcons && !ShellSettings.reduceMotion
                     NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
                 }
+
+                activeFocusOnTab: root.monitorReady
 
                 Component.onCompleted: {
                     _dotFade = active ? 0 : 1
@@ -726,8 +740,47 @@ Item {
                     : urgent ? "Urgent workspace"
                     : occupied ? "Occupied workspace"
                     : "Empty workspace"
+                Accessible.focusable: root.monitorReady
+
+                function _activateFromKeyboard(): void {
+                    if (!root.monitorReady) return
+                    if (ws.active) {
+                        _tapPulse.restart()
+                        if (!ShellSettings.reduceMotion) _glintAnim.restart()
+                        root.openAnchorMenu()
+                    } else {
+                        root.activate(ws.wsId)
+                    }
+                }
+
+                Keys.onSpacePressed: event => {
+                    if (!event.isAutoRepeat) ws._activateFromKeyboard()
+                    event.accepted = true
+                }
+                Keys.onReturnPressed: event => {
+                    if (!event.isAutoRepeat) ws._activateFromKeyboard()
+                    event.accepted = true
+                }
+                Keys.onEnterPressed: event => {
+                    if (!event.isAutoRepeat) ws._activateFromKeyboard()
+                    event.accepted = true
+                }
 
                 HoverHandler { id: _hover; cursorShape: Qt.PointingHandCursor }
+
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: Math.min(parent.width, root.btnW)
+                    height: root.btnH
+                    radius: height / 2
+                    antialiasing: true
+                    color: Theme.withAlpha(Theme.accent, 0.10)
+                    border.width: 1
+                    border.color: Theme.withAlpha(Theme.accent, 0.72)
+                    opacity: ws.activeFocus ? 1.0 : 0.0
+                    visible: opacity > 0.001
+                    Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+                }
 
                 TapHandler {
                     acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
@@ -758,9 +811,9 @@ Item {
                     }
                 }
 
-                onHoveredChanged: { if (active) diamond._hoverScale = hovered ? 1.10 : 1.0 }
+                onHoveredChanged: { if (active) diamond._hoverScale = _hoverFx ? 1.10 : 1.0 }
                 onActiveChanged: {
-                    diamond._hoverScale = (active && hovered) ? 1.10 : 1.0
+                    diamond._hoverScale = (active && _hoverFx) ? 1.10 : 1.0
                     if (ShellSettings.reduceMotion) { _dotFade = active ? 0 : 1; return }
                     _dotFadeOut.stop(); _dotFadeIn.stop()
                     if (active) _dotFadeOut.restart()
@@ -824,6 +877,12 @@ Item {
                             ws._notifPulse = 0
                         }
                     }
+                    // resync the shared diamond if the setting flips while this
+                    // workspace is the active + hovered one (onHoveredChanged/
+                    // onActiveChanged won't fire on their own for this)
+                    function onBarHoverHighlightChanged() {
+                        if (ws.active) diamond._hoverScale = ws._hoverFx ? 1.10 : 1.0
+                    }
                 }
                 SequentialAnimation {
                     id: _notifPulseAnim
@@ -858,14 +917,16 @@ Item {
                     anchors.centerIn: parent
                     transform: Translate { x: ws._shakeX }
                     text:    ShellSettings.wsRomanNumerals ? root.toRoman(ws.wsId) : ws.wsId
-                    opacity: (ShellSettings.wsShowNumbers && !ws._showIcons) ? (ws.active ? 0 : 1) * ws._pulseOpacity : 0
+                    opacity: (ShellSettings.wsShowNumbers && !ws._showIcons)
+                        ? (ws.active ? 0 : 1) * ws._pulseOpacity * ShellSettings.wsMarkerOpacity
+                        : 0
                     // hover lift matches the dot (1.2) and app-icon (1.08) modes
-                    scale:   ws.active ? 0.6 : (ws.hovered ? 1.12 : 1)
+                    scale:   ws.active ? 0.6 : (ws._hoverFx ? 1.12 : 1)
                     color:   ws.urgent
                         ? Theme.warning
                         : (ws.occupied
-                            ? (ws.hovered ? Theme.accent : Theme.withAlpha(Theme.text, 0.85))
-                            : (ws.hovered ? Theme.withAlpha(Theme.accent, 0.65) : Theme.withAlpha(Theme.subtext, 0.45)))
+                            ? (ws._hoverFx ? Theme.accent : Theme.withAlpha(Theme.text, 0.85))
+                            : (ws._hoverFx ? Theme.withAlpha(Theme.accent, 0.65) : Theme.withAlpha(Theme.subtext, 0.45)))
                     font.pixelSize: Settings.fontSize - 1
                     font.family:    Settings.font
                     renderType:     Text.NativeRendering
@@ -883,11 +944,11 @@ Item {
                     radius: width / 2
                     antialiasing: true
                     visible: !ShellSettings.wsShowNumbers && !ws._showIcons
-                    opacity: ws._dotFade * (ws.hovered && !ws.urgent
+                    opacity: ws._dotFade * (ws._hoverFx && !ws.urgent
                              ? Math.min(1, ws._dotAlpha + 0.18)
-                             : ws._dotAlpha) * ws._pulseOpacity
+                             : ws._dotAlpha) * ws._pulseOpacity * ShellSettings.wsMarkerOpacity
                     color: ws.urgent ? Theme.warning : Theme.withAlpha(Theme.subtext, 0.85)
-                    scale: ws.hovered ? 1.2 : 1.0
+                    scale: ws._hoverFx ? 1.2 : 1.0
 
                     Behavior on color { ColorAnimation { duration: Motion.color } }
                     Behavior on scale { NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
@@ -911,7 +972,7 @@ Item {
                             required property var modelData
                             width:  root._iconSz
                             height: root._iconSz
-                            scale:  ws.hovered ? 1.08 : 1.0
+                            scale:  ws._hoverFx ? 1.08 : 1.0
 
                             Behavior on scale {
                                 enabled: !ShellSettings.reduceMotion
@@ -941,8 +1002,8 @@ Item {
                                 anchors.fill: _iconSrc
                                 source: _iconSrc
                                 visible: parent._fxNeeded
-                                opacity:      ws.hovered ? 1.0 : ShellSettings.wsIconOpacity
-                                colorization: ws.hovered ? 0.0 : 1.0 - ShellSettings.wsIconOpacity
+                                opacity:      ws._hoverFx ? 1.0 : ShellSettings.wsIconOpacity
+                                colorization: ws._hoverFx ? 0.0 : 1.0 - ShellSettings.wsIconOpacity
                                 colorizationColor: Theme.accent
                                 Behavior on opacity      { NumberAnimation { duration: Motion.fast } }
                                 Behavior on colorization { NumberAnimation { duration: Motion.fast } }

@@ -8,11 +8,12 @@ import "../../common"
 Pill {
     id: root
 
-    readonly property bool _show: ShellUpdate.pending || ShellUpdate.checking || ShellUpdate.applying
+    readonly property bool show: ShellSettings.barShowShellUpdate
+        && (ShellUpdate.pending || ShellUpdate.checking || ShellUpdate.applying)
 
     visible: opacity > 0.01
-    opacity: _show ? 1.0 : 0.0
-    scale:   _show ? 1.0 : 0.7
+    opacity: show ? 1.0 : 0.0
+    scale:   show ? 1.0 : 0.7
     transformOrigin: Item.Center
     Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
     Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutQuart } }
@@ -22,7 +23,7 @@ Pill {
     glyphColor:     Theme.accent
     text:           expanded ? ShellUpdate.statusText : ""
     textColor:      Theme.text
-    interactive:    _show && !ShellUpdate.checking && !ShellUpdate.applying
+    interactive:    show && !ShellUpdate.checking && !ShellUpdate.applying
     accessibleName: `Shell update, ${ShellUpdate.statusText}`
     accessibleDescription: "Activate to check for or apply the shell update."
     animateGlyph:   false
@@ -33,7 +34,7 @@ Pill {
     contentScanWidth:   20
 
     SequentialAnimation {
-        running: (ShellUpdate.applying || ShellUpdate.checking) && !ShellSettings.reduceMotion
+        running: (ShellUpdate.applying || ShellUpdate.checking) && !ShellSettings.reduceMotion && !Idle.isIdle
         loops:   Animation.Infinite
         onRunningChanged: if (!running) root.contentScanProgress = 0
         NumberAnimation { target: root; property: "contentScanProgress"; from: 0; to: 1; duration: 900; easing.type: Easing.InOutSine }
