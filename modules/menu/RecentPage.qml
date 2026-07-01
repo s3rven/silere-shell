@@ -529,6 +529,9 @@ Item {
             visible: Notifications.hasHistory
             z: 2
             list: _historyList
+            fadeColor: Theme.menuPane
+            thickness: 10
+            maxOpacity: 0.42
         }
     }
 }
