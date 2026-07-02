@@ -11,3 +11,4 @@ UpdatesWidget 1.0 UpdatesWidget.qml
 ShellUpdateWidget 1.0 ShellUpdateWidget.qml
 TrayWidget    1.0 TrayWidget.qml
 OsdBarWidget  1.0 OsdBarWidget.qml
+StatusActionPill 1.0 StatusActionPill.qml

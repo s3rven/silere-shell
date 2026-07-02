@@ -25,6 +25,7 @@ Singleton {
     readonly property bool hasCheckupdates:  _tools.checkupdates ?? false
     readonly property bool hasParu:          _tools.paru ?? false
     readonly property bool hasYay:           _tools.yay ?? false
+    readonly property bool hasTimeout:       _tools.timeout ?? false
     readonly property bool hasApt:           _tools.apt ?? false
     readonly property bool hasDnf:           _tools.dnf ?? false
     readonly property bool hasZypper:        _tools.zypper ?? false
@@ -37,7 +38,7 @@ Singleton {
         ready = false
         _checkProc.exec(["bash", "-c",
             "for t in brightnessctl inotifywait nmcli cava hyprsunset hyprlock systemctl hyprctl pgrep pkill notify-send " +
-            "busctl checkupdates paru yay apt dnf zypper xbps-install powerprofilesctl matugen; do " +
+            "busctl checkupdates paru yay timeout apt dnf zypper xbps-install powerprofilesctl matugen; do " +
             "  command -v \"$t\" >/dev/null 2>&1 && echo \"$t\"; " +
             "done"])
     }

@@ -137,12 +137,17 @@ Singleton {
     // per-minute tick while auto is tracking the sun; single fresh tick on menu open
     Timer {
         interval: 60000; repeat: true
-        running: root.toolAvailable && ShellSettings.nightLightAuto
+        running: root.toolAvailable && ShellSettings.nightLightAuto && !Idle.isIdle
         onTriggered: root._solarTick++
     }
     Connections {
         target: MenuState
         function onOpenChanged() { if (MenuState.open) root._solarTick++ }
+    }
+    // catch up a sunset/sunrise that passed while idle
+    Connections {
+        target: Idle
+        function onIsIdleChanged() { if (!Idle.isIdle && ShellSettings.nightLightAuto) root._solarTick++ }
     }
 
     onSuggestedTempChanged: {

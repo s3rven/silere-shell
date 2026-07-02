@@ -85,6 +85,18 @@ PanelWindow {
         }
     }
 
+    // Floating drop shadow, same elevation cue as the bar/OSD/tray menu.
+    Loader {
+        active: CalendarState.open && ShellSettings.barFloating && ShellSettings.barShadow
+        anchors.fill: card
+        opacity: card.opacity
+        z: -1
+        sourceComponent: FloatingShadow {
+            radius: card.radius
+            atBottom: card.barBottom
+        }
+    }
+
     FloatingPopupCard {
         id: card
         win: win

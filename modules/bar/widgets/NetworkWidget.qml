@@ -27,6 +27,9 @@ Pill {
                         : Network.icon
     maxTextWidth:   220
     shrinkDelay:    0
+    // status pill: Tab-reachable so AT can read it, Enter/Space stay no-ops
+    activeFocusOnTab: show
+    Accessible.focusable: true
 
     Behavior on opacity { enabled: !root._isPulsing; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
     glyphColor:  canRead && Network.connected ? Theme.text : Theme.subtext
@@ -75,12 +78,11 @@ Pill {
         return root._join([physical, signal])
     }
 
-    SequentialAnimation {
+    PulseLoop {
         running: root._isPulsing && !Idle.isIdle
-        loops:   Animation.Infinite
-        NumberAnimation { target: root; property: "_pulseOpacity"; to: 0.5; duration: Motion.ms(800); easing.type: Easing.InOutSine }
-        NumberAnimation { target: root; property: "_pulseOpacity"; to: 1.0; duration: Motion.ms(800); easing.type: Easing.InOutSine }
-        onStopped: root._pulseOpacity = 1.0
+        target: root; targetProperty: "_pulseOpacity"
+        peak: 0.5; floor: 1.0; restValue: 1.0
+        duration: Motion.ms(800)
     }
 
     Timer {

@@ -91,6 +91,7 @@ Item {
             height: Math.min(contentHeight, 240)
             visible: root.open && Network.wifiNetworks.length > 0
             clip: true
+            interactive: contentHeight > height
             boundsMovement: Flickable.StopAtBounds
             flickDeceleration: 1800
             maximumFlickVelocity: 2200

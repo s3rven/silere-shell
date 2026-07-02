@@ -19,6 +19,16 @@ Item {
     property string _armedAddr: ""
     Timer { id: _disarmTimer; interval: 3000; onTriggered: root._armedAddr = "" }
 
+    // Discovery never "finishes" like a wifi scan; call it after a quiet spell
+    // (scanning keeps running, a late device still appears).
+    property bool _searchLapsed: false
+    Timer {
+        interval: 10000
+        running: root.open && Bluetooth.available && Bluetooth.enabled && Bluetooth.devices.length === 0
+        onRunningChanged: if (running) root._searchLapsed = false
+        onTriggered: root._searchLapsed = true
+    }
+
     function _syncScanState(): void {
         Bluetooth.setScan(root.open && Bluetooth.available && Bluetooth.enabled)
         if (!Bluetooth.available || !Bluetooth.enabled) {
@@ -65,6 +75,7 @@ Item {
             // adapter is off or absent.
             text: !Bluetooth.available ? "Bluetooth unavailable"
                 : !Bluetooth.enabled   ? "Bluetooth is off"
+                : root._searchLapsed   ? "No devices found"
                 :                        "Searching for devices…"
             color: Theme.withAlpha(Theme.subtext, 0.5)
             font.family: Settings.font; font.pixelSize: Settings.fontSize - 1
@@ -77,6 +88,7 @@ Item {
             height: Math.min(contentHeight, 240)
             visible: root.open && Bluetooth.available && Bluetooth.enabled && Bluetooth.devices.length > 0
             clip: true
+            interactive: contentHeight > height
             boundsMovement: Flickable.StopAtBounds
             flickDeceleration: 1800
             maximumFlickVelocity: 2200

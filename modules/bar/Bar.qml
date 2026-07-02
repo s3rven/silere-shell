@@ -1,11 +1,11 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Effects
 import Quickshell
 import Quickshell.Wayland._WlrLayerShell
 import "../../config"
 import "../../services"
+import "../common"
 
 PanelWindow {
     id: bar
@@ -102,30 +102,18 @@ PanelWindow {
 
         readonly property real radius: Math.min(bar.cornerRadius, width / 2)
 
-        // Drop shadow grounding the floating surface: a soft ambient halo plus a
-        // tighter contact shadow cast toward the desktop. Separate analytic layers
-        // avoid the flat, muddy look of one heavy blur.
+        // Drop shadow grounding the floating surface, shared with the popups;
+        // the bar spreads both layers wider than a card.
         Loader {
             anchors.fill: parent
             active: bar.shadowOn
             opacity: contents.opacity
-            sourceComponent: Item {
-                anchors.fill: parent
-                readonly property real strength: ShellSettings.barShadowStrength
-                RectangularShadow {
-                    anchors.fill: parent
-                    radius: surface.radius
-                    blur: 21
-                    offset: Qt.vector2d(0, bar.atBottom ? -2 : 2)
-                    color: Qt.rgba(0, 0, 0, Math.min(0.30, 0.13 * parent.strength))
-                }
-                RectangularShadow {
-                    anchors.fill: parent
-                    radius: surface.radius
-                    blur: 8
-                    offset: Qt.vector2d(0, bar.atBottom ? -6 : 6)
-                    color: Qt.rgba(0, 0, 0, Math.min(0.48, 0.27 * parent.strength))
-                }
+            sourceComponent: FloatingShadow {
+                radius: surface.radius
+                atBottom: bar.atBottom
+                ambientBlur: 21
+                contactBlur: 8
+                contactOffset: 6
             }
         }
 

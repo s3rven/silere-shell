@@ -5,24 +5,20 @@ import "../../config"
 import "../../services"
 import "../bar/widgets"
 
-Item {
+PageShell {
     id: root
 
-    required property bool active
-    required property bool powerOpen
-
-    width: parent ? parent.width : 0
     implicitHeight: _col.implicitHeight
-    enabled: root.active && !root.powerOpen
-    visible: opacity > 0.001
-    transformOrigin: Item.Center
+    scaleFrom: 0.96
+    enterFade: 160; enterScale: 210; exitFade: 110
+    onPageHidden: {
+        _picker = ""
+        _volumeRow.open = false
+    }
 
-    property bool _entering: false
-    property bool _firstActivation: true
     property string _picker: ""   // "" | "wifi" | "bt" | "nightlight" — open inline list
     readonly property int _sectionGap: 12
     readonly property int _itemGap: 8
-    layer.enabled: _entering && !ShellSettings.reduceMotion
 
     function _togglePicker(which: string): void { _picker = (_picker === which ? "" : which) }
 
@@ -45,38 +41,6 @@ Item {
     Connections {
         target: NightLight
         function onEnabledChanged() { if (root._picker === "nightlight" && !NightLight.enabled) root._picker = "" }
-    }
-
-    Component.onCompleted: opacity = root.active ? 1.0 : 0.0
-
-    onActiveChanged: {
-        if (root.active) {
-            _exit.stop()
-            if (root.opacity < 0.001) root.scale = 0.96
-            _enter.restart()
-            if (_firstActivation) {
-                _firstActivation = false
-            }
-        } else {
-            _enter.stop()
-            _exit.restart()
-            _picker = ""
-            _volumeRow.open = false
-        }
-    }
-
-    ParallelAnimation {
-        id: _enter
-        onStarted: root._entering = true
-        onStopped: root._entering = false
-        NumberAnimation { target: root; property: "opacity"; to: 1.0; duration: Motion.ms(160); easing.type: Easing.OutCubic }
-        NumberAnimation { target: root; property: "scale";   to: 1.0; duration: Motion.ms(210); easing.type: Easing.OutCubic }
-    }
-
-    SequentialAnimation {
-        id: _exit
-        NumberAnimation { target: root; property: "opacity"; to: 0; duration: Motion.ms(110); easing.type: Easing.InCubic }
-        ScriptAction { script: { root.scale = 1.0 } }
     }
 
     Column {
@@ -514,42 +478,11 @@ Item {
                     }
                     height: visible ? 14 : 0
 
-                    property bool _dragging: false
-                    property real _dragRatio: 0
-                    readonly property real _ratio: _dragging ? _dragRatio : Media.positionRatio
-
-                    function _seekTo(ratio: real): void {
-                        if (!Media.canSeek) return
-                        Media.seekToRatio(Math.max(0, Math.min(1, ratio)))
-                    }
-                    function _nudge(dir: int, mult: int): void {
-                        _seek._seekTo(Media.positionRatio + dir * 0.05 * mult)
-                    }
-                    function _handleKey(event): void {
-                        const big = (event.modifiers & Qt.ShiftModifier) ? 10 : 1
-                        switch (event.key) {
-                        case Qt.Key_Left:
-                        case Qt.Key_Down:
-                            _seek._nudge(-1, big); event.accepted = true; return
-                        case Qt.Key_Right:
-                        case Qt.Key_Up:
-                            _seek._nudge(1, big); event.accepted = true; return
-                        case Qt.Key_PageDown:
-                            _seek._nudge(-1, 10); event.accepted = true; return
-                        case Qt.Key_PageUp:
-                            _seek._nudge(1, 10); event.accepted = true; return
-                        case Qt.Key_Home:
-                            _seek._seekTo(0); event.accepted = true; return
-                        case Qt.Key_End:
-                            _seek._seekTo(1); event.accepted = true; return
-                        }
-                    }
-
                     activeFocusOnTab: Media.canSeek
                     Accessible.role: Accessible.Slider
                     Accessible.name: "Seek"
                     Accessible.description: Media.formatTime(Media.positionNow) + " of " + Media.formatTime(Media.length)
-                    Keys.onPressed: event => _seek._handleKey(event)
+                    Keys.onPressed: event => _seekTrack.handleKey(event)
 
                     Text {
                         id: _elapsedLabel
@@ -558,7 +491,7 @@ Item {
                         horizontalAlignment: Text.AlignRight
                         anchors.left: parent.left
                         anchors.verticalCenter: parent.verticalCenter
-                        text:           Media.formatTime(_seek._dragging ? _seek._dragRatio * Media.length : Media.positionNow)
+                        text:           Media.formatTime(_seekTrack.dragging ? _seekTrack.shownValue * Media.length : Media.positionNow)
                         color:          Theme.withAlpha(Theme.text, 0.62)
                         font.family:    Settings.font
                         font.pixelSize: Settings.fontSize - 3
@@ -575,62 +508,22 @@ Item {
                         renderType:     Text.NativeRendering
                     }
 
-                    Item {
-                        id: _track
+                    SliderTrack {
+                        id: _seekTrack
                         anchors.left:  _elapsedLabel.right; anchors.leftMargin:  8
                         anchors.right: _totalLabel.left;    anchors.rightMargin: 8
                         anchors.verticalCenter: parent.verticalCenter
                         height: 12
 
-                        Rectangle {
-                            id: _trackBg
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: parent.width; height: 4; radius: height / 2
-                            antialiasing: true
-                            color: Theme.withAlpha(Theme.text, 0.20)
-                            clip: true
-
-                            Rectangle {
-                                width:  parent.width * _seek._ratio
-                                height: parent.height; radius: parent.radius
-                                antialiasing: true
-                                color: Theme.accent
-                            }
-                        }
-
-                        Item {
-                            id: _seekThumb
-                            visible: Media.canSeek
-                            width: 14; height: 14
-                            x: _track.width * _seek._ratio - width / 2
-                            anchors.verticalCenter: parent.verticalCenter
-
-                            Rectangle {
-                                anchors.centerIn: parent
-                                width: 12
-                                height: width
-                                radius: width / 2
-                                antialiasing: true
-                                color: _seek.activeFocus ? Theme.accent : Theme.mix(Theme.text, Theme.accent, 0.12)
-                                border.width: _seek.activeFocus ? 1 : 0
-                                border.color: Theme.withAlpha(Theme.accent, 0.55)
-                            }
-                        }
-
-                        HoverHandler { id: _trackHover; enabled: Media.canSeek; cursorShape: Qt.PointingHandCursor }
-
-                        MouseArea {
-                            id: _trackMa
-                            anchors.fill: parent
-                            anchors.topMargin: -10; anchors.bottomMargin: -10
-                            enabled: Media.canSeek
-                            preventStealing: true
-                            function _ratioAt(px) { return _track.width > 0 ? Math.max(0, Math.min(1, px / _track.width)) : 0 }
-                            onPressed:         (m) => { _seek._dragging = true; _seek._dragRatio = _ratioAt(m.x) }
-                            onPositionChanged: (m) => { if (pressed) _seek._dragRatio = _ratioAt(m.x) }
-                            onReleased:        { Media.seekToRatio(_seek._dragRatio); _seek._dragging = false }
-                            onCanceled:        _seek._dragging = false
-                        }
+                        interactive: Media.canSeek
+                        focused:     _seek.activeFocus
+                        showThumb:   Media.canSeek
+                        hoverGrow:   false
+                        animate:     false
+                        commitOnRelease: true
+                        trackColor:  Theme.withAlpha(Theme.text, 0.20)
+                        value: Media.positionRatio
+                        onChanged: value => { if (Media.canSeek) Media.seekToRatio(value) }
                     }
                 }
 

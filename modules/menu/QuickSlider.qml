@@ -15,7 +15,10 @@ Item {
     // Optional trailing chevron — toggles an owner-supplied dropdown.
     property bool   expandable: false
     property bool   expanded:   false
-    property real   _shownValue: value
+    // Card-edge rounding for the hover fill — assigned by SettingsCard.
+    property real   topRadius:    0
+    property real   bottomRadius: 0
+    property real   cardInset:    1
 
     signal moved(real value)
     signal glyphClicked()
@@ -24,43 +27,21 @@ Item {
     width:  parent ? parent.width : 0
     height: 40
 
-    onValueChanged: if (!_ma.pressed) _shownValue = value
-
-    function _clamp(v: real): real { return Math.max(0, Math.min(1, v)) }
-    function _setFromUser(v: real): void {
-        const next = _clamp(v)
-        if (Math.abs(next - root._shownValue) < 0.000001) return
-        root._shownValue = next
-        root.moved(next)
-    }
-    function _nudge(dir: int, mult: int): void {
-        root._setFromUser(root._shownValue + dir * 0.05 * mult)
-    }
-    function _handleKey(event): void {
-        const big = (event.modifiers & Qt.ShiftModifier) ? 10 : 1
-        switch (event.key) {
-        case Qt.Key_Left:
-        case Qt.Key_Down:
-            root._nudge(-1, big); event.accepted = true; return
-        case Qt.Key_Right:
-        case Qt.Key_Up:
-            root._nudge(1, big); event.accepted = true; return
-        case Qt.Key_PageDown:
-            root._nudge(-1, 10); event.accepted = true; return
-        case Qt.Key_PageUp:
-            root._nudge(1, 10); event.accepted = true; return
-        case Qt.Key_Home:
-            root._setFromUser(0); event.accepted = true; return
-        case Qt.Key_End:
-            root._setFromUser(1); event.accepted = true; return
-        }
-    }
-
     activeFocusOnTab: root.enabled
     Accessible.role: Accessible.Slider
     Accessible.name: root.accessibleName
     Accessible.description: root.valueText
-    Keys.onPressed: event => root._handleKey(event)
+    Keys.onPressed: event => _track.handleKey(event)
+
+    HoverHandler { id: _rowHover; enabled: root.enabled }
+    RowHoverBg {
+        anchors.fill: parent
+        topRadius:    root.topRadius
+        bottomRadius: root.bottomRadius
+        cardInset:    root.cardInset
+        active:       (_rowHover.hovered || root.activeFocus) && root.enabled
+        fillOpacity:  root.activeFocus ? 0.13 : 0.08
+    }
 
     // matches ControlRow icon slot so all rows share one left edge
     Item {
@@ -126,7 +107,7 @@ Item {
         }
     }
 
-    Item {
+    SliderTrack {
         id: _track
         anchors.left: _g.right;  anchors.leftMargin: 10
         anchors.right: root.expandable ? _chev.left : _v.left
@@ -134,56 +115,10 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         height: 16
 
-        readonly property real ratio: root._clamp(root._shownValue)
-
-        Rectangle {
-            id: _trackBg
-            anchors.verticalCenter: parent.verticalCenter
-            width: parent.width; height: 4; radius: height / 2
-            antialiasing: true
-            color: Theme.menuTrack
-            clip: true
-
-            Rectangle {
-                width: parent.width * _track.ratio
-                height: parent.height
-                radius: parent.radius
-                antialiasing: true
-                color: Theme.accent
-            }
-        }
-        Item {
-            id: _thumb
-            width: 14; height: 14
-            anchors.verticalCenter: parent.verticalCenter
-            x: _track.width * _track.ratio - width / 2
-
-            Rectangle {
-                anchors.centerIn: parent
-                width: 12
-                height: width
-                radius: width / 2
-                antialiasing: true
-                color: root.activeFocus ? Theme.accent : Theme.mix(Theme.text, Theme.accent, 0.12)
-                border.width: root.activeFocus ? 1 : 0
-                border.color: Theme.withAlpha(Theme.accent, 0.55)
-            }
-        }
-
-        MouseArea {
-            id: _ma
-            anchors.fill: parent
-            anchors.topMargin: -10; anchors.bottomMargin: -10
-            preventStealing: true
-            cursorShape: Qt.PointingHandCursor
-            function _r(px) { return _track.width > 0 ? Math.max(0, Math.min(1, px / _track.width)) : 0 }
-            onPressed:         (m) => root._setFromUser(_r(m.x))
-            onPositionChanged: (m) => { if (pressed) root._setFromUser(_r(m.x)) }
-            onCanceled:        root._shownValue = root.value
-            onWheel: (w) => {
-                const n = Scroll.processControlWheel(w, "qslider:" + root.wheelKey)
-                if (n !== 0) root._nudge(n, 1)
-            }
-        }
+        interactive: root.enabled
+        focused:     root.activeFocus
+        value: root.value
+        wheelKey: "qslider:" + root.wheelKey
+        onChanged: value => root.moved(value)
     }
 }

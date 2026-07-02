@@ -240,6 +240,10 @@ PanelWindow {
                     panel._place()
                     _placementSettle.restart()
                     contentFlick.contentY = 0
+                    // Deterministic Tab start, no ring: the panel paints nothing
+                    // on focus, and this clears any stale child focus from the
+                    // previous open.
+                    panel.forceActiveFocus()
                 } else {
                     _placementSettle.stop()
                     panel._placementSettled = false
@@ -722,7 +726,8 @@ PanelWindow {
                 readonly property int _tileH: 56
                 readonly property int _tileW: _tileH
                 readonly property int _rowW: _tileW * 4 + _gap * 3
-                readonly property color _surface: Qt.rgba(0.045, 0.048, 0.055, 1.0)
+                // recessed a step below menuPane; theme-derived so matugen/black tones follow
+                readonly property color _surface: Theme.mix(Theme.background, Theme.text, 0.010)
                 readonly property color _surfaceLine: Theme.menuCardBorder
                 width: _rowW + _pad * 2
                 x: Math.round((parent.width - width) / 2)
@@ -772,7 +777,6 @@ PanelWindow {
                             width: powerStrip._tileW
                             height: powerStrip._tileH
                             label: "Lock"
-                            description: "Secure session"
                             enabled: win.commandAvailable(Settings.lockCommand)
                             glyph: "󰍁"
                             glyphOffsetY: 1
@@ -785,7 +789,6 @@ PanelWindow {
                             width: powerStrip._tileW
                             height: powerStrip._tileH
                             label: "Sleep"
-                            description: "Suspend to memory"
                             enabled: win.commandAvailable(Settings.suspendCommand)
                             glyph: "󰒲"
                             glyphOffsetX: -1
@@ -800,7 +803,6 @@ PanelWindow {
                             width: powerStrip._tileW
                             height: powerStrip._tileH
                             label: "Reboot"
-                            description: "Restart machine"
                             enabled: win.commandAvailable(Settings.rebootCommand)
                             glyph: "󰑐"
                             glyphOffsetY: 1
@@ -815,8 +817,7 @@ PanelWindow {
                             id: _powOff
                             width: powerStrip._tileW
                             height: powerStrip._tileH
-                            label: "Off"
-                            description: "Power off"
+                            label: "Power off"
                             enabled: win.commandAvailable(Settings.poweroffCommand)
                             glyph: "󰐥"
                             glyphOffsetY: 1

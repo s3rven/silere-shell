@@ -18,6 +18,7 @@ Singleton {
 
     readonly property real   pct:   maxBrightness > 0 ? currentBrightness / maxBrightness : 0
     readonly property int    percent: Math.round(pct * 100)
+    readonly property int    stepPct: 5
     readonly property string label:   `${percent}%`
     readonly property string icon: {
         if (pct <= 0)        return "󰃞"

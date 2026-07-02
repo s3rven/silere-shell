@@ -156,9 +156,61 @@ PanelWindow {
             readonly property bool checkable: btnType !== 0
             readonly property bool checked:   (modelData?.checkState ?? Qt.Unchecked) === Qt.Checked
             readonly property string iconSrc: modelData?.icon ?? ""
+            // duck-type marker so focus movement can skip the Repeater and separators
+            readonly property bool isMenuRow: !sep
 
             width: win.menuWidth
             height: sep ? 11 : 32
+
+            function _moveFocus(dir: int): void {
+                const sibs = _entry.parent ? _entry.parent.children : []
+                let i = -1
+                for (let k = 0; k < sibs.length; k++) if (sibs[k] === _entry) { i = k; break }
+                if (i < 0) return
+                for (let k = i + dir; k >= 0 && k < sibs.length; k += dir) {
+                    const c = sibs[k]
+                    if (c && c.isMenuRow === true && c.on) { c.forceActiveFocus(); return }
+                }
+            }
+            function _focusFirstSub(): void {
+                const subs = _subCol.children
+                for (let k = 0; k < subs.length; k++) {
+                    const c = subs[k]
+                    if (c && c.isMenuRow === true && c.on) { c.forceActiveFocus(); return }
+                }
+            }
+            function _activate(): void {
+                if (!_entry.on) return
+                if (_entry.sub) {
+                    _flyout.visible = !_flyout.visible
+                    if (_flyout.visible) Qt.callLater(_entry._focusFirstSub)
+                } else {
+                    win._emitMenuSignal(_entry.modelData, "triggered", "sendTriggered")
+                    TrayMenuState.close()
+                }
+            }
+
+            activeFocusOnTab: _entry.on
+            Accessible.role: Accessible.MenuItem
+            Accessible.name: _entry.modelData?.text ?? ""
+            Keys.onUpPressed:     e => { _entry._moveFocus(-1); e.accepted = true }
+            Keys.onDownPressed:   e => { _entry._moveFocus(1);  e.accepted = true }
+            Keys.onSpacePressed:  e => { if (!e.isAutoRepeat) _entry._activate(); e.accepted = true }
+            Keys.onReturnPressed: e => { if (!e.isAutoRepeat) _entry._activate(); e.accepted = true }
+            Keys.onEnterPressed:  e => { if (!e.isAutoRepeat) _entry._activate(); e.accepted = true }
+            Keys.onRightPressed:  e => {
+                if (_entry.sub) {
+                    if (!_flyout.visible) _flyout.visible = true
+                    Qt.callLater(_entry._focusFirstSub)
+                    e.accepted = true
+                } else {
+                    e.accepted = false
+                }
+            }
+            Keys.onLeftPressed: e => {
+                if (_entry.sub && _flyout.visible) { _flyout.visible = false; e.accepted = true }
+                else e.accepted = false
+            }
 
             QsMenuOpener {
                 id: _subOpener
@@ -181,7 +233,7 @@ PanelWindow {
                 anchors.fill: parent
                 radius: Theme.radiusControl
                 antialiasing: true
-                color: (_entry.on && (_rowHover.hovered || _flyout.visible))
+                color: (_entry.on && (_rowHover.hovered || _flyout.visible || _entry.activeFocus))
                     ? Theme.withAlpha(Theme.menuHover, 0.12) : "transparent"
                 Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
             }
@@ -379,6 +431,23 @@ PanelWindow {
         width:  win.menuWidth + pad * 2
         height: Math.min(_col.implicitHeight, _maxContentH) + pad * 2
         radius: Math.min(win._cardRadius, height / 2)
+
+        // The card holds focus on open (paints nothing) so a mouse-open shows
+        // no row highlight; Down/Tab hands focus to the first usable row.
+        function _focusFirstRow(): void {
+            const sibs = _col.children
+            for (let k = 0; k < sibs.length; k++) {
+                const c = sibs[k]
+                if (c && c.isMenuRow === true && c.on) { c.forceActiveFocus(); return }
+            }
+        }
+        Keys.onDownPressed: e => { card._focusFirstRow(); e.accepted = true }
+        Keys.onUpPressed:   e => { card._focusFirstRow(); e.accepted = true }
+        Connections {
+            target: TrayMenuState
+            function onOpenChanged() { if (TrayMenuState.open) card.forceActiveFocus() }
+        }
+        Component.onCompleted: if (TrayMenuState.open) card.forceActiveFocus()
 
         Flickable {
             id: _scroll

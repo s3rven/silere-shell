@@ -58,6 +58,10 @@ Singleton {
         : ready ? (count > 0 ? label : "Up to date")
         : "Waiting"
 
+    function _limit(seconds: int, command: string): string {
+        return SystemTools.hasTimeout ? ("timeout " + seconds + " " + command) : command
+    }
+
     function _cmd(): string {
         switch (root.manager) {
         case "pacman": {
@@ -65,10 +69,10 @@ Singleton {
             // system db); rc 2 just means "no updates". Any real failure prints
             // ERR so a network blip holds the last count instead of zeroing the
             // badge; timeout caps a hung mirror sync.
-            const aur = SystemTools.hasParu ? "timeout 60 paru -Qua 2>/dev/null | grep -c ."
-                      : SystemTools.hasYay  ? "timeout 60 yay -Qua 2>/dev/null | grep -c ."
+            const aur = SystemTools.hasParu ? root._limit(60, "paru -Qua") + " 2>/dev/null | grep -c ."
+                      : SystemTools.hasYay  ? root._limit(60, "yay -Qua") + " 2>/dev/null | grep -c ."
                       : "echo 0"
-            return "out=$(timeout 90 checkupdates 2>&1); rc=$?; " +
+            return "out=$(" + root._limit(90, "checkupdates") + " 2>&1); rc=$?; " +
                    "if [ \"$rc\" -ne 0 ] && [ \"$rc\" -ne 2 ]; then echo \"ERR checkupdates failed (exit $rc)\"; exit 0; fi; " +
                    "repo=$(printf '%s' \"$out\" | grep -c .); " +
                    "aur=$(" + aur + "); " +
@@ -78,20 +82,20 @@ Singleton {
         // last-synced db. No fresh sync, but far better than "unsupported".
         case "aur": {
             const tool = SystemTools.hasParu ? "paru" : "yay"
-            return "out=$(timeout 90 " + tool + " -Qu 2>&1); rc=$?; " +
+            return "out=$(" + root._limit(90, tool + " -Qu") + " 2>&1); rc=$?; " +
                    "if [ \"$rc\" -ne 0 ] && [ -n \"$out\" ]; then echo \"ERR " + tool + " check failed (exit $rc)\"; exit 0; fi; " +
                    "printf '%s\\n' \"$out\" | grep -c ."
         }
         case "apt":    return "out=$(apt list --upgradable 2>&1); rc=$?; " +
                               "if [ \"$rc\" -ne 0 ]; then echo \"ERR apt check failed (exit $rc)\"; exit 0; fi; " +
                               "printf '%s\\n' \"$out\" | grep -c /"
-        case "dnf":    return "out=$(timeout 120 dnf -q check-update 2>&1); rc=$?; " +
+        case "dnf":    return "out=$(" + root._limit(120, "dnf -q check-update") + " 2>&1); rc=$?; " +
                               "if [ \"$rc\" -ne 0 ] && [ \"$rc\" -ne 100 ]; then echo \"ERR dnf check failed (exit $rc)\"; exit 0; fi; " +
                               "printf '%s\\n' \"$out\" | grep -cE '^[a-zA-Z0-9]'"
-        case "zypper": return "out=$(timeout 120 zypper -q list-updates 2>&1); rc=$?; " +
+        case "zypper": return "out=$(" + root._limit(120, "zypper -q list-updates") + " 2>&1); rc=$?; " +
                               "if [ \"$rc\" -ne 0 ]; then echo \"ERR zypper check failed (exit $rc)\"; exit 0; fi; " +
                               "printf '%s\\n' \"$out\" | grep -c '^v '"
-        case "xbps":   return "out=$(timeout 120 xbps-install -Mun 2>&1); rc=$?; " +
+        case "xbps":   return "out=$(" + root._limit(120, "xbps-install -Mun") + " 2>&1); rc=$?; " +
                               "if [ \"$rc\" -ne 0 ]; then echo \"ERR xbps check failed (exit $rc)\"; exit 0; fi; " +
                               "printf '%s\\n' \"$out\" | grep -c ."
         }

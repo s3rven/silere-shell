@@ -9,6 +9,7 @@ Singleton {
     id: root
 
     property bool   mediaProgress:       false
+    property bool   mediaWidgetHelper:   false
     property string mediaVisualizerPreset: "balanced" // "eco" | "balanced" | "smooth"
     property string mediaVisualizerStyle:  "wave"     // "wave" | "bars" | "pulse"
     property real   mediaVisualizerIntensity: 1.0
@@ -158,6 +159,15 @@ Singleton {
         root.barWidgetOrderRight = right.join(",")
     }
 
+    function resetBarWidgets(): void {
+        root.barWidgetOrderLeft = _defaults.barWidgetOrderLeft
+        root.barWidgetOrderRight = _defaults.barWidgetOrderRight
+        for (const key in root.barWidgetMeta) {
+            const setting = root.barWidgetMeta[key].setting
+            if (setting.length > 0) root[setting] = _defaults[setting]
+        }
+    }
+
     // glyph/label/group/setting shared by the consolidated widgets settings
     // list; group feeds BarContent's compact-mode divider fusing; setting is
     // the ShellSettings bool property that row's toggle reads/writes (empty
@@ -201,6 +211,7 @@ Singleton {
     // int/real use min/max, enum uses vals, re uses a pattern.
     readonly property var _schema: [
         { k: "mediaProgress",       t: "bool" },
+        { k: "mediaWidgetHelper",   t: "bool" },
         { k: "mediaVisualizerPreset", t: "enum", vals: ["eco", "balanced", "smooth"] },
         { k: "mediaVisualizerStyle",  t: "enum", vals: ["wave", "bars", "pulse"] },
         { k: "mediaVisualizerIntensity", t: "real", min: 0.55, max: 1.65 },

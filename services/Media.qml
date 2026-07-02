@@ -93,7 +93,8 @@ Singleton {
     }
     Timer {
         interval: 500; repeat: true
-        running: root.playing && MenuState.open && root.hasPosition && !Idle.isIdle
+        running: root.playing && root.hasPosition && !Idle.isIdle
+            && (MenuState.open || (root.shown && ShellSettings.mediaWidgetHelper))
         onTriggered: root._recompute()
     }
 
@@ -125,10 +126,15 @@ Singleton {
         identity.length > 0     ? identity :
         player.dbusName || ""
 
-    readonly property string label:
-        (ShellSettings.mediaWidgetFormat === "artist-title" && artist.length > 0 && title.length > 0)
-            ? artist + " - " + title
-            : (title.length > 0 ? title : artist)
+    readonly property string label: {
+        if (ShellSettings.mediaWidgetFormat === "artist-title" && artist.length > 0 && title.length > 0)
+            return artist + " - " + title
+        if (title.length > 0) return title
+        if (artist.length > 0) return artist
+        if (identity.length > 0) return identity
+        if (desktopEntry.length > 0) return desktopEntry
+        return player ? "Media" : ""
+    }
 
     property var barHeights: []
     readonly property bool cavaReady: SystemTools.hasCava && ShellSettings.mediaProgress

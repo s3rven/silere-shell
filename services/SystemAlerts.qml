@@ -30,32 +30,48 @@ Singleton {
         ])
     }
 
+    // Latch only when a notification is actually sent, so enabling the toggle
+    // mid-condition still alerts (the toggle Connections below re-check).
+    function _checkBattLow(): void {
+        if (Battery.low && ShellSettings.osdBatteryWarn && !_battLowSent) {
+            _battLowSent = true
+            _send("Battery Low",
+                Math.round(Battery.pct) + "% remaining — consider plugging in",
+                "normal")
+        }
+    }
+    function _checkBattCrit(): void {
+        if (Battery.critical && ShellSettings.osdBatteryWarn && !_battCritSent) {
+            _battCritSent = true
+            _send("Battery Critical",
+                Math.round(Battery.pct) + "% — plug in now",
+                "critical")
+        }
+    }
+    function _checkCpuCrit(): void {
+        if (CpuTemp.critical && ShellSettings.osdTempWarn && !_cpuCritSent) {
+            _cpuCritSent = true
+            _send("CPU Critical Temperature",
+                Math.round(CpuTemp.temp) + "°C — reduce load immediately",
+                "critical")
+        }
+    }
+
     Connections {
         target: Battery
 
         function onLowChanged(): void {
-            if (Battery.low && !root._battLowSent) {
-                root._battLowSent = true
-                if (ShellSettings.osdBatteryWarn)
-                    root._send("Battery Low",
-                        Math.round(Battery.pct) + "% remaining — consider plugging in",
-                        "normal")
-            } else if (!Battery.low) {
+            if (Battery.low) {
+                root._checkBattLow()
+            } else {
                 root._battLowSent  = false
                 root._battCritSent = false
             }
         }
 
         function onCriticalChanged(): void {
-            if (Battery.critical && !root._battCritSent) {
-                root._battCritSent = true
-                if (ShellSettings.osdBatteryWarn)
-                    root._send("Battery Critical",
-                        Math.round(Battery.pct) + "% — plug in now",
-                        "critical")
-            } else if (!Battery.critical) {
-                root._battCritSent = false
-            }
+            if (Battery.critical) root._checkBattCrit()
+            else root._battCritSent = false
         }
     }
 
@@ -64,15 +80,20 @@ Singleton {
 
         // only critical notifies — "hot" is normal under load and already shown by OSD/glow
         function onCriticalChanged(): void {
-            if (CpuTemp.critical && !root._cpuCritSent) {
-                root._cpuCritSent = true
-                if (ShellSettings.osdTempWarn)
-                    root._send("CPU Critical Temperature",
-                        Math.round(CpuTemp.temp) + "°C — reduce load immediately",
-                        "critical")
-            } else if (!CpuTemp.critical) {
-                root._cpuCritSent = false
-            }
+            if (CpuTemp.critical) root._checkCpuCrit()
+            else root._cpuCritSent = false
+        }
+    }
+
+    Connections {
+        target: ShellSettings
+
+        function onOsdBatteryWarnChanged(): void {
+            if (Battery.critical) root._checkBattCrit()
+            else root._checkBattLow()
+        }
+        function onOsdTempWarnChanged(): void {
+            root._checkCpuCrit()
         }
     }
 }

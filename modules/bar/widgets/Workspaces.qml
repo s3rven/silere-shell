@@ -305,6 +305,11 @@ Item {
         MenuState.toggleAt(pt.x, root.screen)
     }
 
+    function openQuickActions(): void {
+        const pt = root.mapToItem(null, diamond.x + diamond.width / 2, 0)
+        QuickActionsState.toggleAt(pt.x, root.screen, ShellSettings.barPosition === "bottom")
+    }
+
     WheelHandler {
         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
         enabled: root.monitorReady && ShellSettings.wsScrollSwitch
@@ -663,13 +668,11 @@ Item {
             NumberAnimation { target: _menuRipple; property: "scale";   from: 0.9;  to: 2.7; duration: Motion.ms(540); easing.type: Easing.OutCubic }
             NumberAnimation { target: _menuRipple; property: "opacity"; from: 0.55; to: 0;   duration: Motion.ms(540); easing.type: Easing.OutCubic }
         }
-        SequentialAnimation {
-            id: _breathAnim
+        PulseLoop {
             running: MenuState.open && !ShellSettings.reduceMotion && !Idle.isIdle
-            loops:   Animation.Infinite
-            onRunningChanged: if (!running) diamond._menuPulse = 0
-            NumberAnimation { target: diamond; property: "_menuPulse"; from: 0; to: 1; duration: Motion.ms(950); easing.type: Easing.InOutSine }
-            NumberAnimation { target: diamond; property: "_menuPulse"; to: 0;          duration: Motion.ms(950); easing.type: Easing.InOutSine }
+            target: diamond; targetProperty: "_menuPulse"
+            peak: 1; floor: 0; restValue: 0
+            duration: Motion.ms(950)
         }
         Connections {
             target: MenuState
@@ -791,13 +794,13 @@ Item {
                             return
                         }
                         // Right-click is the anchor's own gesture: only the active
-                        // diamond claims it (→ menu for now, quick-actions later);
+                        // diamond claims it (quick actions beneath the gem);
                         // on inactive workspaces it's inert, never a switch.
                         if (button === Qt.RightButton) {
                             if (ws.active) {
                                 _tapPulse.restart()
                                 if (!ShellSettings.reduceMotion) _glintAnim.restart()
-                                root.openAnchorMenu()
+                                root.openQuickActions()
                             }
                             return
                         }

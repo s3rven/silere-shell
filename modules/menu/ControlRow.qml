@@ -28,6 +28,13 @@ Item {
 
     readonly property bool _canTap: root.enabled && root.available
 
+    function _activate(): void {
+        if (!_canTap) return
+        // animate the knob only on a real user flip, not section-driven re-checks
+        if (showSwitch) _switch.armFlipAnimation()
+        root.activated()
+    }
+
     function _insideChevron(pos): bool {
         if (!root.expandable || !_chevron.visible) return false
         const x0 = _rightSlot.x + _chevron.x - 4
@@ -54,9 +61,9 @@ Item {
     Accessible.name: root.title
     Accessible.description: root.status
     Accessible.checked: root.active
-    Keys.onSpacePressed:  event => { if (!event.isAutoRepeat && root._canTap) root.activated(); event.accepted = true }
-    Keys.onReturnPressed: event => { if (!event.isAutoRepeat && root._canTap) root.activated(); event.accepted = true }
-    Keys.onEnterPressed:  event => { if (!event.isAutoRepeat && root._canTap) root.activated(); event.accepted = true }
+    Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
+    Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
+    Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
     Keys.onRightPressed: event => {
         if (root._canTap && root.expandable && !root.expanded) {
             root.expandToggled()
@@ -78,7 +85,7 @@ Item {
     TapHandler {
         enabled: root._canTap
         onTapped: (eventPoint, button) => {
-            if (!root._insideChevron(eventPoint.position) && !root._insideBadge(eventPoint.position)) root.activated()
+            if (!root._insideChevron(eventPoint.position) && !root._insideBadge(eventPoint.position)) root._activate()
         }
     }
 
@@ -212,33 +219,14 @@ Item {
 
         TextMetrics { id: _valMetrics; font.family: Settings.font; font.pixelSize: Settings.fontSize - 1; text: root.valueText }
 
-        // Toggle switch — mirrors the settings ToggleRow knob so they read alike.
-        Rectangle {
+        // Shared switch visual, same knob as the settings ToggleRow.
+        ToggleSwitch {
             id: _switch
             visible: root.showSwitch
             anchors.right:          parent.right
             anchors.verticalCenter: parent.verticalCenter
-            width: 34; height: 18; radius: 9
-            antialiasing: true
-            color: root.active ? Theme.mix(Theme.menuControl, root.accentColor, ShellSettings.neutralTheme ? 0.24 : 0.42) : Theme.menuControl
-            border.width: 1
-            border.color: root.active
-                ? (ShellSettings.neutralTheme ? Theme.withAlpha(root.accentColor, 0.48)
-                                              : Theme.mix(Theme.menuCard, root.accentColor, 0.62))
-                : Theme.menuControlLine
-            Behavior on color        { ColorAnimation { duration: Motion.fast } }
-            Behavior on border.color { ColorAnimation { duration: Motion.fast } }
-
-            Rectangle {
-                id: _knob
-                anchors.verticalCenter: parent.verticalCenter
-                width: 14; height: 14; radius: 7
-                antialiasing: true
-                x: root.active ? parent.width - width - 2 : 2
-                color: root.active ? root.accentColor : Theme.mix(Theme.subtext, root.accentColor, 0.16)
-                Behavior on x     { enabled: root._ready && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutQuart } }
-                Behavior on color { ColorAnimation { duration: Motion.fast } }
-            }
+            checked:     root.active
+            accentColor: root.accentColor
         }
 
         Text {

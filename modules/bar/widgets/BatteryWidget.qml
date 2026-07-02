@@ -21,6 +21,9 @@ Pill {
     animateGlyph:   false
     shrinkDelay:    0
     reserveText:    "100%"
+    // status pill: Tab-reachable so AT can read it, Enter/Space stay no-ops
+    activeFocusOnTab: show
+    Accessible.focusable: true
     opacity: _baseOpacity * (Battery.critical ? 1.0 - Battery.alertPulse * 0.60
                            : (Battery.low     ? 1.0 - Battery.alertPulse * 0.18 : 1.0))
     visible: _baseOpacity > 0

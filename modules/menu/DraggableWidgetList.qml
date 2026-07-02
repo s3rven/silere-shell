@@ -16,12 +16,13 @@ Item {
 
     readonly property int _rowH: 44
     readonly property int _headerH: 28
+    readonly property int _footerH: 40
     readonly property var _allKeys: ShellSettings._allBarWidgetKeys
     readonly property int _leftCount:  ShellSettings.barWidgetOrderLeftKeys.length
     readonly property int _rightCount: ShellSettings.barWidgetOrderRightKeys.length
 
     width:  parent ? parent.width : 0
-    height: 12 + _leftCount * _rowH + _headerH + _rightCount * _rowH + 10
+    height: 12 + _headerH + _leftCount * _rowH + _headerH + _rightCount * _rowH + _footerH
     implicitHeight: height
 
     property string _draggingKey: ""
@@ -32,8 +33,8 @@ Item {
     // the left zone's rows are exhausted).
     function _yForSlot(slot: real): real {
         return slot < root._leftCount
-            ? 12 + slot * root._rowH
-            : 12 + root._leftCount * root._rowH + root._headerH + (slot - root._leftCount) * root._rowH
+            ? 12 + root._headerH + slot * root._rowH
+            : 12 + root._headerH + root._leftCount * root._rowH + root._headerH + (slot - root._leftCount) * root._rowH
     }
     function _slotForY(y: real): int {
         // Boundary = the vertical midpoint of the last left-zone row, backed
@@ -44,7 +45,7 @@ Item {
             ? root._yForSlot(root._leftCount - 1) + root._rowH / 2
             : -Infinity
         if (y < boundary)
-            return Math.max(0, Math.round((y - 12) / root._rowH))
+            return Math.max(0, Math.round((y - 12 - root._headerH) / root._rowH))
         const rightRaw = y - root._yForSlot(root._leftCount)
         const rightSlot = Math.round(rightRaw / root._rowH)
         return root._leftCount + Math.max(0, Math.min(root._rightCount, rightSlot))
@@ -60,9 +61,22 @@ Item {
     }
 
     Text {
+        y: 20
+        anchors.left: parent.left; anchors.leftMargin: 14
+        text: "LEFT"
+        color: Theme.withAlpha(Theme.subtext, 0.5)
+        font.family: Settings.font
+        font.pixelSize: Settings.fontSize - 4
+        font.weight: Font.DemiBold
+        font.capitalization: Font.AllUppercase
+        font.letterSpacing: 0.5
+        renderType: Text.NativeRendering
+    }
+
+    Text {
         y: root._yForSlot(root._leftCount) - root._headerH + 8
         anchors.left: parent.left; anchors.leftMargin: 14
-        text: "RIGHT SIDE OF BAR"
+        text: "RIGHT"
         color: Theme.withAlpha(Theme.subtext, 0.5)
         font.family: Settings.font
         font.pixelSize: Settings.fontSize - 4
@@ -106,9 +120,9 @@ Item {
                 cardInset:    2
                 topRadius:    10
                 bottomRadius: 10
-                active:       _row._dragging || _handleHover.hovered
+                active:       _row._dragging || _handleHover.hovered || _keyFocus.activeFocus
                 fillColor:    _row._dragging ? Theme.accent : Theme.text
-                fillOpacity:  _row._dragging ? 0.10 : 0.05
+                fillOpacity:  _row._dragging ? 0.10 : (_keyFocus.activeFocus ? 0.08 : 0.05)
             }
             // RowHoverBg has no border; the drag-state ring is its own thin overlay.
             Rectangle {
@@ -162,8 +176,9 @@ Item {
                     }
                     onTranslationChanged: {
                         if (!active) return
+                        const minY = root._yForSlot(0)
                         const maxY = root._yForSlot(root._allKeys.length - 1)
-                        root._dragY = Math.max(12, Math.min(maxY, _dragH._startY + translation.y))
+                        root._dragY = Math.max(minY, Math.min(maxY, _dragH._startY + translation.y))
                         const targetSlot = root._slotForY(root._dragY)
                         if (targetSlot === _row._combinedSlot) return
                         const targetZone = targetSlot < root._leftCount ? "left" : "right"
@@ -190,7 +205,7 @@ Item {
             Text {
                 anchors.left: _glyph.right
                 anchors.leftMargin: 8
-                anchors.right: _zoneChip.left
+                anchors.right: _toggle.left
                 anchors.rightMargin: 8
                 anchors.verticalCenter: parent.verticalCenter
                 text: _row.meta.label
@@ -200,50 +215,6 @@ Item {
                 font.family: Settings.font
                 font.pixelSize: Settings.fontSize
                 renderType: Text.NativeRendering
-            }
-
-            // Zone chip: instant L/R reassignment without needing a drag.
-            Row {
-                id: _zoneChip
-                anchors.right: _toggle.visible ? _toggle.left : parent.right
-                anchors.rightMargin: _toggle.visible ? 10 : 12
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 1
-
-                Repeater {
-                    model: [{ z: "left", t: "L" }, { z: "right", t: "R" }]
-                    delegate: Rectangle {
-                        id: _zoneBtn
-                        required property var modelData
-                        readonly property bool _active: _row.zone === modelData.z
-                        width: 20; height: 20
-                        radius: 6
-                        antialiasing: true
-                        color: _active ? Theme.withAlpha(Theme.accent, 0.20) : "transparent"
-                        border.width: _active ? 1 : 0
-                        border.color: Theme.withAlpha(Theme.accent, 0.45)
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: _zoneBtn.modelData.t
-                            color: _zoneBtn._active ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.55)
-                            font.family: Settings.font
-                            font.pixelSize: Settings.fontSize - 3
-                            font.weight: Font.DemiBold
-                            renderType: Text.NativeRendering
-                        }
-                        HoverHandler { cursorShape: Qt.PointingHandCursor }
-                        TapHandler {
-                            onTapped: {
-                                if (_zoneBtn._active) return
-                                const target = _zoneBtn.modelData.z === "left"
-                                    ? ShellSettings.barWidgetOrderLeftKeys.length
-                                    : ShellSettings.barWidgetOrderRightKeys.length
-                                ShellSettings.setBarWidgetZone(_row.key, _zoneBtn.modelData.z, target)
-                            }
-                        }
-                    }
-                }
             }
 
             // Show/hide toggle — absent for workspaces (no hide capability).
@@ -267,11 +238,59 @@ Item {
             // Keyboard fallback: focus the row, Ctrl+Up/Down reorders within
             // its current zone (mirrors the drag handle for a11y/no-mouse use).
             FocusScope {
+                id: _keyFocus
                 anchors.fill: parent
                 activeFocusOnTab: true
+                function flipVisibility(event: var): void {
+                    if (!event.isAutoRepeat && _row._hasToggle)
+                        ShellSettings[_row.meta.setting] = !ShellSettings[_row.meta.setting]
+                    event.accepted = _row._hasToggle
+                }
+                function moveToZone(zone: string, event: var): void {
+                    if (_row.zone === zone) return
+                    const end = zone === "left"
+                        ? ShellSettings.barWidgetOrderLeftKeys.length
+                        : ShellSettings.barWidgetOrderRightKeys.length
+                    ShellSettings.setBarWidgetZone(_row.key, zone, end)
+                    event.accepted = true
+                }
+                Keys.onSpacePressed:  event => _keyFocus.flipVisibility(event)
+                Keys.onReturnPressed: event => _keyFocus.flipVisibility(event)
+                Keys.onEnterPressed:  event => _keyFocus.flipVisibility(event)
+                Keys.onLeftPressed:   event => _keyFocus.moveToZone("left", event)
+                Keys.onRightPressed:  event => _keyFocus.moveToZone("right", event)
                 Keys.onUpPressed:   event => { if (event.modifiers & Qt.ControlModifier) { ShellSettings.moveBarWidget(_row.key, -1); event.accepted = true } }
                 Keys.onDownPressed: event => { if (event.modifiers & Qt.ControlModifier) { ShellSettings.moveBarWidget(_row.key, +1); event.accepted = true } }
             }
+        }
+    }
+
+    Item {
+        id: _footer
+        y: root.height - root._footerH
+        width: parent.width
+        height: root._footerH
+
+        Rectangle {
+            anchors.left: parent.left
+            anchors.leftMargin: 1
+            anchors.right: parent.right
+            anchors.rightMargin: 1
+            anchors.top: parent.top
+            height: 1
+            color: Theme.menuDivider
+        }
+
+        SettingsActionButton {
+            id: _resetBtn
+            anchors.right: parent.right
+            anchors.rightMargin: 10
+            anchors.verticalCenter: parent.verticalCenter
+            width: contentWidth
+            height: 28
+            glyph: "󰑐"
+            label: "Reset"
+            onTriggered: ShellSettings.resetBarWidgets()
         }
     }
 }

@@ -7,19 +7,19 @@ Item {
 
     property string glyph: ""
     property string label: ""
-    property string description: ""
     property real glyphOffsetX: 0
     property real glyphOffsetY: 0
-    property int glyphPixelSize: Settings.fontSize + 8
     property bool confirm: false
     property bool armed: false
 
     readonly property color _box:       Theme.menuControl
     readonly property color _boxHot:    Theme.mix(Theme.menuControl, Theme.text, 0.035)
-    readonly property color _boxArmed:  Theme.mix(Theme.menuControl, Theme.text, 0.055)
+    // armed = one press from firing; error-tinted so the wait-to-confirm state
+    // is unmistakable without a second chrome element
+    readonly property color _boxArmed:  Theme.mix(Theme.menuControl, Theme.error, 0.12)
     readonly property color _line:      Theme.menuControlLine
     readonly property color _lineHot:   Theme.menuControlLineHot
-    readonly property color _lineArmed: Theme.withAlpha(Theme.subtext, 0.24)
+    readonly property color _lineArmed: Theme.withAlpha(Theme.error, 0.38)
     readonly property color _text:      Theme.text
     readonly property color _textDim:   Theme.withAlpha(Theme.text, 0.72)
     readonly property bool _hot: root.enabled && (_hover.hovered || root.activeFocus || root.armed)
@@ -48,7 +48,7 @@ Item {
     activeFocusOnTab: root.enabled
     Accessible.role: Accessible.Button
     Accessible.name: root.label
-    Accessible.description: root.armed ? "Activate again to confirm" : root.description
+    Accessible.description: root.armed ? "Activate again to confirm" : ""
     Keys.onSpacePressed:  e => { if (!e.isAutoRepeat) root._activate(); e.accepted = true }
     Keys.onReturnPressed: e => { if (!e.isAutoRepeat) root._activate(); e.accepted = true }
     Keys.onEnterPressed:  e => { if (!e.isAutoRepeat) root._activate(); e.accepted = true }
@@ -97,7 +97,7 @@ Item {
                 text: root.glyph
                 color: root.armed || root._hot ? root._text : root._textDim
                 font.family: Settings.font
-                font.pixelSize: root.glyphPixelSize
+                font.pixelSize: Settings.fontSize + 8
                 font.weight: Font.Normal
                 renderType: Text.NativeRendering
                 transform: Translate {
@@ -109,7 +109,7 @@ Item {
         }
     }
 
-    // The hover chip carries the longer hint without making the row taller.
+    // glyph-only tile: the hover chip is its visible name
     Rectangle {
         readonly property bool _show: (_hover.hovered || root.activeFocus || root.armed) && root.enabled
         anchors.horizontalCenter: parent.horizontalCenter
@@ -119,9 +119,10 @@ Item {
         height: 22
         radius: 8
         antialiasing: true
-        color: Qt.rgba(0.055, 0.058, 0.066, 1.0)
+        // theme-derived so matugen/black tones restyle it; ~the old charcoal value
+        color: Theme.mix(Theme.background, Theme.text, 0.020)
         border.width: 1
-        border.color: root.armed ? Theme.withAlpha(Theme.subtext, 0.24)
+        border.color: root.armed ? Theme.withAlpha(Theme.error, 0.38)
                     : root._hot ? Theme.menuControlLineHot
                     : Theme.menuCardBorder
         opacity: _show ? 1 : 0
@@ -134,7 +135,7 @@ Item {
         Text {
             id: _tipText
             anchors.centerIn: parent
-            text: root.armed ? "Press again: " + root.description : root.description
+            text: root.armed ? "Press again: " + root.label : root.label
             color: root.armed ? root._text : Theme.withAlpha(Theme.text, 0.82)
             font.family: Settings.font
             font.pixelSize: Settings.fontSize - 2

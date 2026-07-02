@@ -28,10 +28,10 @@ Pill {
 
     HoverHandler { cursorShape: root.canControl ? Qt.PointingHandCursor : Qt.ArrowCursor }
 
-    Keys.onLeftPressed:  event => { if (canControl) { Brightness.bumpBy(-5); event.accepted = true } else event.accepted = false }
-    Keys.onDownPressed:  event => { if (canControl) { Brightness.bumpBy(-5); event.accepted = true } else event.accepted = false }
-    Keys.onRightPressed: event => { if (canControl) { Brightness.bumpBy(5);  event.accepted = true } else event.accepted = false }
-    Keys.onUpPressed:    event => { if (canControl) { Brightness.bumpBy(5);  event.accepted = true } else event.accepted = false }
+    Keys.onLeftPressed:  event => { if (canControl) { Brightness.bumpBy(-Brightness.stepPct); event.accepted = true } else event.accepted = false }
+    Keys.onDownPressed:  event => { if (canControl) { Brightness.bumpBy(-Brightness.stepPct); event.accepted = true } else event.accepted = false }
+    Keys.onRightPressed: event => { if (canControl) { Brightness.bumpBy(Brightness.stepPct);  event.accepted = true } else event.accepted = false }
+    Keys.onUpPressed:    event => { if (canControl) { Brightness.bumpBy(Brightness.stepPct);  event.accepted = true } else event.accepted = false }
 
     WheelHandler {
         enabled: root.canControl
@@ -40,7 +40,7 @@ Pill {
             event.accepted = true
             if (!root.canControl) return
             const n = Scroll.processControlWheel(event, "brightness")
-            if (n !== 0) Brightness.bumpBy(n * 5)
+            if (n !== 0) Brightness.bumpBy(n * Brightness.stepPct)
         }
     }
 }

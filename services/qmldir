@@ -24,6 +24,7 @@ singleton NotifWatch    1.0 NotifWatch.qml
 singleton Notifications 1.0 Notifications.qml
 singleton OsdBarState   1.0 OsdBarState.qml
 singleton PowerProfiles 1.0 PowerProfiles.qml
+singleton QuickActionsState 1.0 QuickActionsState.qml
 singleton Scroll        1.0 Scroll.qml
 singleton ShellSettings 1.0 ShellSettings.qml
 singleton ShellUpdate   1.0 ShellUpdate.qml

@@ -12,8 +12,6 @@ Item {
     property var    model: []
     property var    currentValue
     property color  accentColor: Theme.accent
-    property bool   rowEnabled: true
-    property bool   stacked:    false
     // Card-edge rounding for the hover fill — set on the first/last row of a card
     // so the fill rounds only where the card itself does (see RowHoverBg).
     property real   topRadius:    0
@@ -23,9 +21,8 @@ Item {
     // anchors) so the layout switch is glitch-free. Gauged off the control's
     // *natural* inline width, not its live width — segment widths depend on
     // _stacked, so reading the live width here would close a binding loop.
-    readonly property bool _stacked: stacked
-        || (width > 0 && _segContainer._maxNatW > 0
-            && _labelRow.implicitWidth + _segContainer._naturalW + 40 > width)
+    readonly property bool _stacked: width > 0 && _segContainer._maxNatW > 0
+        && _labelRow.implicitWidth + _segContainer._naturalW + 40 > width
 
     signal chosen(var value)
 
@@ -33,7 +30,7 @@ Item {
     // fractional scaling.
     width:  parent ? parent.width : 0
     height: _stacked ? 76 : 44
-    opacity: rowEnabled ? 1.0 : 0.45
+    opacity: enabled ? 1.0 : 0.45
     Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium } }
 
     readonly property int _activeIndex: {
@@ -43,23 +40,34 @@ Item {
         return -1
     }
 
+    // One tab stop for the whole row: entering lands on the active chip,
+    // ←/→ move between chips, Space/Enter pick. (Item, not FocusScope, so
+    // this only fires when the row itself receives focus via Tab.)
+    activeFocusOnTab: enabled
+    onActiveFocusChanged: {
+        if (activeFocus && _segRepeater.count > 0) {
+            const it = _segRepeater.itemAt(Math.max(0, _activeIndex))
+            if (it) it.forceActiveFocus()
+        }
+    }
+
     // Hover fill, matching the toggle/slider rows.
-    HoverHandler { id: _rowHover; enabled: root.rowEnabled }
+    HoverHandler { id: _rowHover; enabled: root.enabled }
     RowHoverBg {
         anchors.fill: parent
         topRadius:    root.topRadius
         bottomRadius: root.bottomRadius
         cardInset:    root.cardInset
-        active:       _rowHover.hovered && root.rowEnabled
-        fillOpacity:  root._stacked ? 0.06 : 0.08
+        active:       _rowHover.hovered && root.enabled
+        fillOpacity:  0.08
     }
 
     Item {
         id: _labelRow
-        x: 12
+        x: 14
         y: root._stacked ? 10 : (root.height - height) / 2
-        width: root._stacked ? root.width - 24 : Math.max(0, _segContainer.x - x - 10)
-        implicitWidth: (root.glyph.length > 0 ? 26 : 0) + _label.implicitWidth
+        width: root._stacked ? root.width - 26 : Math.max(0, _segContainer.x - x - 10)
+        implicitWidth: (root.glyph.length > 0 ? 28 : 0) + _label.implicitWidth
         implicitHeight: Math.max(_glyph.implicitHeight, _label.implicitHeight)
         height: Math.max(_glyph.implicitHeight, _label.implicitHeight)
         clip: true
@@ -74,13 +82,13 @@ Item {
             text:           root.glyph
             color:          Theme.withAlpha(Theme.subtext, 0.85)
             font.family:    Settings.font
-            font.pixelSize: Settings.fontSize + 1
+            font.pixelSize: Settings.fontSize + 2
             renderType:     Text.NativeRendering
         }
         Text {
             id: _label
             anchors.left:           _glyph.right
-            anchors.leftMargin:     root.glyph.length > 0 ? 8 : 0
+            anchors.leftMargin:     root.glyph.length > 0 ? 10 : 0
             anchors.right:          parent.right
             anchors.verticalCenter: parent.verticalCenter
             text:           root.label
@@ -95,10 +103,10 @@ Item {
 
     Rectangle {
         id: _segContainer
-        x: root._stacked ? 12 : (root.width - 12 - width)
+        x: root._stacked ? 14 : (root.width - 12 - width)
         y: root._stacked ? (_labelRow.y + _labelRow.height + 9) : (root.height - height) / 2
         height:       30
-        width:        root._stacked ? Math.max(1, root.width - 24) : _segRow.implicitWidth + 6
+        width:        root._stacked ? Math.max(1, root.width - 26) : _segRow.implicitWidth + 6
         radius:       9
         antialiasing: true
         color:        Theme.mix(Theme.menuControl, Theme.text, _rowHover.hovered ? 0.035 : 0.015)
@@ -201,22 +209,31 @@ Item {
                     height: 28
                     clip: true
 
-                    activeFocusOnTab: root.rowEnabled
                     Accessible.role: Accessible.RadioButton
                     Accessible.name: root.label + ": " + String(_seg.modelData.label ?? "")
                     Accessible.checked: _seg.active
-                    Keys.onSpacePressed: event => { if (!event.isAutoRepeat && root.rowEnabled) root.chosen(_seg.modelData.value); event.accepted = true }
-                    Keys.onReturnPressed: event => { if (!event.isAutoRepeat && root.rowEnabled) root.chosen(_seg.modelData.value); event.accepted = true }
-                    Keys.onEnterPressed: event => { if (!event.isAutoRepeat && root.rowEnabled) root.chosen(_seg.modelData.value); event.accepted = true }
+                    Keys.onSpacePressed: event => { if (!event.isAutoRepeat && root.enabled) root.chosen(_seg.modelData.value); event.accepted = true }
+                    Keys.onReturnPressed: event => { if (!event.isAutoRepeat && root.enabled) root.chosen(_seg.modelData.value); event.accepted = true }
+                    Keys.onEnterPressed: event => { if (!event.isAutoRepeat && root.enabled) root.chosen(_seg.modelData.value); event.accepted = true }
+                    Keys.onLeftPressed: event => {
+                        const it = _segRepeater.itemAt(_seg.index - 1)
+                        if (it) it.forceActiveFocus()
+                        event.accepted = true
+                    }
+                    Keys.onRightPressed: event => {
+                        const it = _segRepeater.itemAt(_seg.index + 1)
+                        if (it) it.forceActiveFocus()
+                        event.accepted = true
+                    }
 
                     HoverHandler {
                         id: _hover
-                        enabled: root.rowEnabled
-                        cursorShape: root.rowEnabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        enabled: root.enabled
+                        cursorShape: root.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                     }
                     TapHandler {
                         id: _tap
-                        enabled: root.rowEnabled
+                        enabled: root.enabled
                         onTapped: root.chosen(_seg.modelData.value)
                     }
 

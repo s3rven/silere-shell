@@ -5,52 +5,16 @@ import "../../config"
 import "../../services"
 import "../common"
 
-Item {
+PageShell {
     id: root
 
-    required property bool active
-    required property bool powerOpen
     required property int viewportHeight
 
-    width: parent ? parent.width : 0
     implicitHeight: viewportHeight
-    enabled: root.active && !root.powerOpen
-    visible: opacity > 0.001
-    transformOrigin: Item.Center
+    onPageShown: _timeTick++
 
-    property bool _entering: false
     property bool _clearing: false
     property int _timeTick: 0
-
-    layer.enabled: _entering && !ShellSettings.reduceMotion
-
-    Component.onCompleted: opacity = root.active ? 1.0 : 0.0
-
-    onActiveChanged: {
-        if (root.active) {
-            _timeTick++
-            _exit.stop()
-            if (root.opacity < 0.001) root.scale = 0.97
-            _enter.restart()
-        } else {
-            _enter.stop()
-            _exit.restart()
-        }
-    }
-
-    ParallelAnimation {
-        id: _enter
-        onStarted: root._entering = true
-        onStopped: root._entering = false
-        NumberAnimation { target: root; property: "opacity"; to: 1.0; duration: Motion.ms(140); easing.type: Easing.OutCubic }
-        NumberAnimation { target: root; property: "scale"; to: 1.0; duration: Motion.ms(180); easing.type: Easing.OutCubic }
-    }
-
-    SequentialAnimation {
-        id: _exit
-        NumberAnimation { target: root; property: "opacity"; to: 0; duration: Motion.ms(100); easing.type: Easing.InCubic }
-        ScriptAction { script: root.scale = 1.0 }
-    }
 
     Timer {
         interval: 60000
@@ -259,15 +223,6 @@ Item {
                     font.weight: Font.Medium
                     renderType: Text.NativeRendering
                 }
-
-                Text {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    text: "Dismissed notifications will appear here"
-                    color: Theme.withAlpha(Theme.subtext, 0.42)
-                    font.family: Settings.font
-                    font.pixelSize: Settings.fontSize - 2
-                    renderType: Text.NativeRendering
-                }
             }
         }
 
@@ -299,7 +254,14 @@ Item {
                     readonly property int _cardHeight: Math.max(70, _entryContent.implicitHeight + 20)
                     readonly property int _fullHeight: _sectionHeight + _cardHeight
                     property bool _removing: false
+                    property bool _expanded: false
                     property var _pendingRemove: null
+
+                    // expand only when the body is actually clipped; collapse always works
+                    function _toggleExpand(): void {
+                        if (_expanded) _expanded = false
+                        else if (_body.truncated) _expanded = true
+                    }
 
                     width: _historyList.width
                     height: _removing ? 0 : _fullHeight
@@ -392,13 +354,34 @@ Item {
                         antialiasing: true
                         clip: true
                         color: Theme.rowFill(_entryHover.hovered, _entry._critical)
-                        border.width: 1
+                        border.width: activeFocus ? 2 : 1
                         border.color: _entry._critical
                             ? Theme.withAlpha(Theme.error, 0.50)
+                            : activeFocus ? Theme.withAlpha(Theme.accent, 0.45)
                             : Theme.menuCardBorder
 
                         Behavior on color { ColorAnimation { duration: Motion.fast } }
-                        HoverHandler { id: _entryHover }
+                        HoverHandler {
+                            id: _entryHover
+                            cursorShape: (_body.truncated || _entry._expanded) ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        }
+                        TapHandler {
+                            enabled: !root._clearing && !_entry._removing
+                            onTapped: eventPoint => {
+                                const p = _removeButton.mapFromItem(_card, eventPoint.position.x, eventPoint.position.y)
+                                if (p.x >= -4 && p.x <= _removeButton.width + 4 &&
+                                    p.y >= -4 && p.y <= _removeButton.height + 4) return
+                                _entry._toggleExpand()
+                            }
+                        }
+
+                        activeFocusOnTab: _body.truncated || _entry._expanded
+                        Accessible.role: Accessible.Button
+                        Accessible.name: String(_entry.modelData.summary || "Notification")
+                        Accessible.description: _entry._expanded ? "Activate to collapse" : "Activate to expand"
+                        Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) _entry._toggleExpand(); event.accepted = true }
+                        Keys.onReturnPressed: event => { if (!event.isAutoRepeat) _entry._toggleExpand(); event.accepted = true }
+                        Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) _entry._toggleExpand(); event.accepted = true }
 
                         Rectangle {
                             anchors.left: parent.left
@@ -461,6 +444,7 @@ Item {
                             }
 
                             Text {
+                                id: _body
                                 width: parent.width
                                 visible: text.length > 0
                                 text: _entry.modelData.body || ""
@@ -470,7 +454,8 @@ Item {
                                 font.pixelSize: Settings.fontSize - 1
                                 renderType: Text.NativeRendering
                                 wrapMode: Text.WordWrap
-                                maximumLineCount: 2
+                                // matches the live popup's hover expansion cap
+                                maximumLineCount: _entry._expanded ? 12 : 2
                                 elide: Text.ElideRight
                             }
                         }

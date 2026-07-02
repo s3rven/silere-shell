@@ -5,6 +5,7 @@ import Quickshell.Services.SystemTray
 import Quickshell.Widgets
 import "../../../config"
 import "../../../services"
+import "../../common"
 
 // StatusNotifier tray. Invisible while no app exposes an item, so it costs
 // nothing at rest. Left-click jumps to the app's window (switching workspace),
@@ -63,19 +64,29 @@ Item {
                 readonly property bool needsAttention: modelData.status === Status.NeedsAttention
                 // Drives the attention halo; stays at full for the reduceMotion path.
                 property real attnPulse: 1.0
+                // SNI tooltip title as a quiet inline reveal: only after the
+                // pointer rests a beat, or on keyboard focus.
+                property bool _dwelled: false
 
-                width: root.iconSize
+                width: root.iconSize + (_hoverLabel.width > 0 ? _hoverLabel.width + 5 : 0)
                 height: root.iconSize
                 opacity: passive ? 0.78 : 1.0
                 anchors.verticalCenter: parent.verticalCenter
 
                 Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.color } }
 
+                Timer {
+                    id: _labelDwell
+                    interval: 350
+                    onTriggered: _tile._dwelled = true
+                }
+
                 // Unified backing pill: hover wash or attention halo (attention wins).
                 Rectangle {
-                    anchors.centerIn: parent
-                    width: parent.width + 6
-                    height: parent.height + 6
+                    x: -3
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: root.iconSize + 6
+                    height: root.iconSize + 6
                     radius: Math.min(width, height) / 2
                     color: _tile.needsAttention
                         ? Theme.withAlpha(Theme.accent, 0.20)
@@ -83,6 +94,7 @@ Item {
                     opacity: _tile.needsAttention ? _tile.attnPulse
                            : _ma.pressed          ? 1.0
                            : (_iconHover.hovered && ShellSettings.barHoverHighlight) ? 1.0
+                           : _tile.activeFocus    ? 1.0
                            : 0.0
                     visible: opacity > 0.001
 
@@ -90,16 +102,17 @@ Item {
                     Behavior on color   { enabled: !ShellSettings.reduceMotion; ColorAnimation  { duration: Motion.color } }
                 }
 
-                SequentialAnimation on attnPulse {
+                PulseLoop {
                     running: _tile.needsAttention && !ShellSettings.reduceMotion && !Idle.isIdle
-                    loops: Animation.Infinite
-                    NumberAnimation { from: 1.0; to: 0.4; duration: Motion.ms(900); easing.type: Easing.InOutSine }
-                    NumberAnimation { from: 0.4; to: 1.0; duration: Motion.ms(900); easing.type: Easing.InOutSine }
-                    onRunningChanged: if (!running) _tile.attnPulse = 1.0
+                    target: _tile; targetProperty: "attnPulse"
+                    peak: 0.4; floor: 1.0; restValue: 1.0
+                    duration: Motion.ms(900)
                 }
 
                 Rectangle {
-                    anchors.fill: parent
+                    width: root.iconSize
+                    height: root.iconSize
+                    anchors.verticalCenter: parent.verticalCenter
                     radius: Math.min(width, height) / 2
                     color: Theme.withAlpha(Theme.subtext, 0.12)
                     visible: !_icon.ready
@@ -114,10 +127,21 @@ Item {
                     }
                 }
 
+                CollapsingText {
+                    id: _hoverLabel
+                    x: root.iconSize + 5
+                    color: Theme.subtext
+                    text: _tile.label.length > 22 ? _tile.label.slice(0, 21) + "…" : _tile.label
+                    expanded: (_tile._dwelled || _tile.activeFocus)
+                        && _tile.label.length > 0 && !TrayMenuState.open
+                }
+
                 IconImage {
                     id: _icon
                     readonly property bool ready: status === Image.Ready
-                    anchors.fill: parent
+                    width: root.iconSize
+                    height: root.iconSize
+                    anchors.verticalCenter: parent.verticalCenter
                     source: _tile.modelData.icon
                     // generous request: SNI providers pick their largest pixmap,
                     // and downscaling beats upscaling a 22px app icon
@@ -132,7 +156,13 @@ Item {
                     Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
                 }
 
-                HoverHandler { id: _iconHover }
+                HoverHandler {
+                    id: _iconHover
+                    onHoveredChanged: {
+                        if (hovered) _labelDwell.restart()
+                        else { _labelDwell.stop(); _tile._dwelled = false }
+                    }
+                }
 
                 MouseArea {
                     id: _ma
@@ -167,16 +197,19 @@ Item {
                 Accessible.name: label
                 Accessible.description: modelData.tooltipDescription
                 activeFocusOnTab: root.show
-                Keys.onSpacePressed: event => {
-                    if (!event.isAutoRepeat) root._activateItem(_tile.modelData, _tile)
+                // Shift+activate or the Menu key opens the context menu, the
+                // keyboard mirror of right-click.
+                function _keyActivate(event): void {
+                    if (event.isAutoRepeat) { event.accepted = true; return }
+                    if (event.modifiers & Qt.ShiftModifier) root._openMenu(_tile.modelData, _tile)
+                    else root._activateItem(_tile.modelData, _tile)
                     event.accepted = true
                 }
-                Keys.onReturnPressed: event => {
-                    if (!event.isAutoRepeat) root._activateItem(_tile.modelData, _tile)
-                    event.accepted = true
-                }
-                Keys.onEnterPressed: event => {
-                    if (!event.isAutoRepeat) root._activateItem(_tile.modelData, _tile)
+                Keys.onSpacePressed:  event => _tile._keyActivate(event)
+                Keys.onReturnPressed: event => _tile._keyActivate(event)
+                Keys.onEnterPressed:  event => _tile._keyActivate(event)
+                Keys.onMenuPressed:   event => {
+                    if (!event.isAutoRepeat) root._openMenu(_tile.modelData, _tile)
                     event.accepted = true
                 }
             }

@@ -9,6 +9,7 @@ import "modules/notifications"
 import "modules/menu"
 import "modules/calendar"
 import "modules/traymenu"
+import "modules/quickactions"
 import "services"
 import "config"
 
@@ -183,4 +184,23 @@ ShellRoot {
         }
     }
     Timer { id: _trayMenuUnload; interval: Math.max(80, Motion.ms(210) + 80); onTriggered: _trayMenuLoader.active = false }
+
+    LazyLoader {
+        id: _quickActionsLoader
+        active: false
+        Component.onCompleted: if (QuickActionsState.open) active = true
+        component: QuickActionsPopup { targetScreen: QuickActionsState.triggerScreen ?? root.activeOverlayScreen }
+    }
+    Connections {
+        target: QuickActionsState
+        function onOpenChanged() {
+            if (QuickActionsState.open) {
+                _quickActionsUnload.stop()
+                _quickActionsLoader.active = true
+            } else {
+                _quickActionsUnload.restart()
+            }
+        }
+    }
+    Timer { id: _quickActionsUnload; interval: Math.max(80, Motion.ms(210) + 80); onTriggered: _quickActionsLoader.active = false }
 }

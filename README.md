@@ -17,66 +17,60 @@ Silere is a Quickshell shell for Hyprland: bar, control menu, notifications, mat
 
 ## Install
 
+Requires `git`, Hyprland, and a current Quickshell build with the Hyprland, Wayland layer-shell, Widgets, Io, Bluetooth, Mpris, Notifications, PipeWire, SystemTray, and UPower modules.
+
 ```bash
 git clone https://github.com/s3rven/silere-shell
 cd silere-shell
 bash scripts/install.sh
 ```
 
-The installer copies Silere to `$XDG_CONFIG_HOME/silere-shell`, backs up existing files, and adds a marked Hyprland autostart block. Restart Hyprland, then check the install:
+The installer copies Silere to `$XDG_CONFIG_HOME/silere-shell`, backs up existing files, and adds a marked Hyprland autostart block. Restart Hyprland, then verify with `bash scripts/check.sh`. Remove everything again with `bash scripts/uninstall.sh`.
 
-```bash
-bash scripts/check.sh
-```
+## Optional tools
 
-Uninstall:
+Each widget detects its tool at runtime; missing tools hide or trim the widget, nothing breaks.
 
-```bash
-bash scripts/uninstall.sh
-```
+| tool | enables |
+|---|---|
+| `pipewire` + `wireplumber` | volume, output picker |
+| `upower` | battery |
+| `nmcli` | network, Wi-Fi list |
+| `brightnessctl` | brightness |
+| `hyprsunset` | night light |
+| `matugen` | wallpaper theming |
+| `cava` | media visualizer |
+| `powerprofilesctl` | power profiles |
+| `inotifywait` | screenshot feedback |
+| `checkupdates` / `apt` / `dnf` / `zypper` / `xbps-install` | package update badge |
 
 ## Controls
 
 | area | action |
 |---|---|
-| workspaces | left-click inactive to switch; left/right-click active marker to open the menu; middle-click to move the focused window; scroll to switch when `Scroll to switch` is enabled |
-| menu | Escape closes an open picker or power confirmation first, then the menu; click outside to close |
-| clock | left-click opens calendar; middle-click cycles seconds/date display |
-| calendar | scroll, arrow buttons, or Left/Right changes month; today header or month label jumps back to the current month |
-| media | left-click toggles play/pause; middle-click focuses the player; scroll skips tracks |
-| volume | scroll adjusts; left-click mutes/unmutes |
-| brightness | scroll adjusts; arrow keys work when focused |
-| tray | left-click focuses or activates the item; middle-click sends secondary activate; right-click opens native menu; scroll passes through |
+| workspaces | left-click switches; click the active marker to open the menu, right-click it for quick actions; middle-click moves the focused window; scroll switches when enabled |
+| menu | Escape closes pickers and confirmations first, then the menu; click outside to close |
+| clock | left-click opens the calendar; middle-click cycles seconds/date |
+| calendar | scroll, arrows, or Left/Right changes month; the header jumps back to today |
+| media | left-click play/pause; middle-click focuses the player; scroll skips tracks |
+| volume | scroll adjusts; left-click mutes |
+| brightness | scroll adjusts; arrow keys when focused |
+| tray | left-click focuses/activates; middle-click secondary activate; right-click opens the menu; resting the pointer reveals the app name |
+| history | click an entry to expand its full text; hover for per-item dismiss |
+| updates | shell updates install only after confirmation; background checks only update the badge |
 
-Updates are under `Settings -> Updates`. Shell updates install only after confirmation. Daily shell checks only update the badge.
+## Resource use
 
-## Requirements
-
-Required: `git`, Hyprland, and a current Quickshell build with the Hyprland, Wayland layer-shell, Widgets, Io, Bluetooth, Mpris, Notifications, PipeWire, SystemTray, and UPower modules.
-
-Optional widgets use `pipewire`/`wireplumber`, `upower`, `nmcli`, `brightnessctl`, `inotifywait`, `cava`, `matugen`, `hyprsunset`, `power-profiles-daemon`, and one supported package manager (`checkupdates`, `apt`, `dnf`, `zypper`, or `xbps-install`). Missing optional tools disable or trim the related widget. `scripts/check.sh` reports what is available and runs a smoke launch.
-
-## Resource Use
-
-Memory varies by Qt, graphics drivers, allocator, enabled widgets, and helper processes. RSS around 175-200 MB idle is not unusual because RSS counts shared Qt and graphics mappings in full. PSS/USS are better for comparing shell-private memory; one sample was 101 MB PSS / 76 MB USS for `qs`, or 106 MB PSS including helpers, at about 0.8% CPU.
-
-Measure your session:
-
-```bash
-bash scripts/bench.sh 10
-```
-
-The cava visualizer is the main optional CPU cost and only runs while media is playing.
+Idle sits around 0.8% CPU and ~100 MB PSS (RSS reads higher because it counts shared Qt/graphics mappings in full). The cava visualizer is the main optional cost and runs only while media is playing. Measure your own session with `bash scripts/bench.sh 10`.
 
 ## Troubleshooting
 
 ```bash
-bash scripts/check.sh
-qs list --all
-qs -p shell.qml
+bash scripts/check.sh   # tool/service checks + smoke launch
+qs -p shell.qml         # run in the foreground to see errors
 ```
 
-Optional warnings from `check.sh` are usually fine. A smoke-launch `FAIL` means startup broke. If notifications never appear, check whether another daemon owns `org.freedesktop.Notifications`.
+Optional warnings from `check.sh` are usually fine; a smoke-launch `FAIL` means startup broke. If notifications never appear, another daemon likely owns `org.freedesktop.Notifications`.
 
 ## License
 

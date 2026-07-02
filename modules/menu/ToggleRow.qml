@@ -15,9 +15,11 @@ Item {
     property real   bottomRadius: 0
     property bool   available:    true
     property string dependsNote:  ""
-    property string badge:        ""   // small tag after the label, e.g. "beta"
-    // tag colour by kind: warning for experimental ("beta"), neutral for info ("net")
-    readonly property color _badgeColor: badge === "beta" ? Theme.warning : Theme.subtext
+    property string badge:        ""   // small tag after the label, e.g. "beta" or "cava"
+    // tag colour by kind: warning for experimental, accent for capability tags
+    readonly property color _badgeColor: badge === "beta" ? Theme.warning
+                                       : badge === "cava" ? Theme.accent
+                                       : Theme.subtext
     // Matches the enclosing card's border width, keeps the hover fill inside
     // the stroke and aligned with the card's INNER rounded edge.
     property real   cardInset:    1
@@ -78,7 +80,7 @@ Item {
     Text {
         id: _glyph
         anchors.left:           parent.left
-        anchors.leftMargin:     12
+        anchors.leftMargin:     14
         anchors.verticalCenter: parent.verticalCenter
         width: 18
         horizontalAlignment: Text.AlignHCenter
@@ -87,7 +89,7 @@ Item {
             ? Theme.withAlpha(Theme.accent, 0.9)
             : Theme.withAlpha(Theme.subtext, 0.85)
         font.family:    Settings.font
-        font.pixelSize: Settings.fontSize + 1
+        font.pixelSize: Settings.fontSize + 2
         renderType:     Text.NativeRendering
         Behavior on color { ColorAnimation { duration: Motion.fast } }
     }
@@ -98,7 +100,7 @@ Item {
     Column {
         id: _textCol
         anchors.left:           _glyph.right
-        anchors.leftMargin:     8
+        anchors.leftMargin:     10
         anchors.right:          _rightSlot.left
         anchors.rightMargin:    8
         anchors.verticalCenter: parent.verticalCenter

@@ -135,9 +135,9 @@ PanelWindow {
 
             Rectangle {
                 id: _pillRect
-                anchors.right:            (win._left || win._center) ? undefined : parent.right
-                anchors.left:             win._left   ? parent.left : undefined
-                anchors.horizontalCenter: win._center ? parent.horizontalCenter : undefined
+                anchors.right:            (win._left || win._center) ? undefined : parent?.right
+                anchors.left:             win._left   ? parent?.left : undefined
+                anchors.horizontalCenter: win._center ? parent?.horizontalCenter : undefined
                 y:       _dismissBar.shown ? 4 : 14
                 opacity: _dismissBar.shown ? 1.0 : 0.0
 
@@ -236,9 +236,9 @@ PanelWindow {
                 slideDir:     win._slideDir
                 timeoutPaused: !visible
 
-                anchors.right:            (win._left || win._center) ? undefined : parent.right
-                anchors.left:             win._left   ? parent.left : undefined
-                anchors.horizontalCenter: win._center ? parent.horizontalCenter : undefined
+                anchors.right:            (win._left || win._center) ? undefined : parent?.right
+                anchors.left:             win._left   ? parent?.left : undefined
+                anchors.horizontalCenter: win._center ? parent?.horizontalCenter : undefined
 
                 // Cap the stack. Hidden overflow cards pause their timeout, so
                 // they do not expire before ever becoming visible.
@@ -266,9 +266,9 @@ PanelWindow {
             Behavior on height { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
 
             Rectangle {
-                anchors.right:            (win._left || win._center) ? undefined : parent.right
-                anchors.left:             win._left   ? parent.left : undefined
-                anchors.horizontalCenter: win._center ? parent.horizontalCenter : undefined
+                anchors.right:            (win._left || win._center) ? undefined : parent?.right
+                anchors.left:             win._left   ? parent?.left : undefined
+                anchors.horizontalCenter: win._center ? parent?.horizontalCenter : undefined
                 anchors.verticalCenter:   parent.verticalCenter
                 width:  _moreTxt.implicitWidth + 16
                 height: 18

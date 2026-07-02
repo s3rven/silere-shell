@@ -9,7 +9,7 @@ Item {
     property string label: ""
     property bool active: false
     property color accentColor: Theme.accent
-    property int railW: 36
+    property int railW: 44
 
     signal tapped()
 

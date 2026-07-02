@@ -10,6 +10,7 @@ Item {
     id: root
 
     property bool checked: false
+    property color accentColor: Theme.accent
     implicitWidth:  34
     implicitHeight: 18
 
@@ -24,12 +25,12 @@ Item {
         anchors.fill: parent
         radius: 9; antialiasing: true
         color: root.checked
-            ? Theme.mix(Theme.menuControl, Theme.accent, ShellSettings.neutralTheme ? 0.22 : 0.38)
+            ? Theme.mix(Theme.menuControl, root.accentColor, ShellSettings.neutralTheme ? 0.22 : 0.38)
             : Theme.menuControl
         border.width: 1
         border.color: root.checked
-            ? (ShellSettings.neutralTheme ? Theme.withAlpha(Theme.accent, 0.46)
-                                          : Theme.mix(Theme.menuCard, Theme.accent, 0.62))
+            ? (ShellSettings.neutralTheme ? Theme.withAlpha(root.accentColor, 0.46)
+                                          : Theme.mix(Theme.menuCard, root.accentColor, 0.62))
             : Theme.menuControlLine
         Behavior on color        { ColorAnimation { duration: Motion.fast } }
         Behavior on border.color { ColorAnimation { duration: Motion.fast } }
@@ -40,7 +41,7 @@ Item {
             width: 14; height: 14; radius: 7
             antialiasing: true
             x:     root.checked ? parent.width - width - 2 : 2
-            color: root.checked ? Theme.accent : Theme.mix(Theme.subtext, Theme.accent, 0.16)
+            color: root.checked ? root.accentColor : Theme.mix(Theme.subtext, root.accentColor, 0.16)
 
             property real _stretch: 1.0
             transform: Scale {

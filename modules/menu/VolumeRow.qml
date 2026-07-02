@@ -29,6 +29,9 @@ Item {
         id: _slider
         y: 0
         width: parent.width
+        topRadius:    root.topRadius
+        bottomRadius: root.open ? 0 : root.bottomRadius
+        cardInset:    root.cardInset
         glyph: Audio.icon
         wheelKey: "volume"
         accessibleName: "Volume"

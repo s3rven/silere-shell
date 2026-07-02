@@ -341,9 +341,11 @@ _optdep upower        "battery percentage + warnings"
 _optdep hyprsunset    "night light toggle"
 _optdep pgrep         "optional night light external state check"
 _optdep pkill         "optional night light external stop fallback"
+_optdep powerprofilesctl "power profile selector"
 _optdep hyprlock      "lock screen"
 _optdep systemctl     "suspend / reboot / shutdown"
 _optdep notify-send   "low-battery + hot-CPU alerts"
+_optdep timeout       "bounded update checks"
 
 # ── font ─────────────────────────────────────────────────────────────────────────
 _section "JetBrainsMono Nerd Font"

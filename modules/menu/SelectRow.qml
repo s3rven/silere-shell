@@ -30,6 +30,8 @@ Item {
     // Header row height + expanded options height
     height: 44 + _options.height
     implicitHeight: height
+    opacity: enabled ? 1.0 : 0.45
+    Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium } }
 
     // ── Header row ──────────────────────────────────────────────────────
     activeFocusOnTab: root.enabled
@@ -56,20 +58,20 @@ Item {
 
     Text {
         id: _glyph
-        anchors.left:           parent.left; anchors.leftMargin: 12
+        anchors.left:           parent.left; anchors.leftMargin: 14
         anchors.verticalCenter: _header.verticalCenter
         width: root.glyph.length > 0 ? 18 : 0
         horizontalAlignment: Text.AlignHCenter
         text:           root.glyph
         color:          Theme.withAlpha(Theme.subtext, 0.85)
         font.family:    Settings.font
-        font.pixelSize: Settings.fontSize + 1
+        font.pixelSize: Settings.fontSize + 2
         renderType:     Text.NativeRendering
     }
     Item {
         id: _header
         anchors.top:    parent.top
-        anchors.left:   _glyph.right; anchors.leftMargin: root.glyph.length > 0 ? 8 : 0
+        anchors.left:   _glyph.right; anchors.leftMargin: root.glyph.length > 0 ? 10 : 0
         anchors.right:  _chevronSlot.left; anchors.rightMargin: 8
         height: 44
         Text {
@@ -172,6 +174,14 @@ Item {
                     width:  parent.width
                     height: 36
 
+                    function choose(event: var): void {
+                        if (!event.isAutoRepeat) {
+                            root.chosen(_opt.modelData.value)
+                            root._open = false
+                        }
+                        event.accepted = true
+                    }
+
                     HoverHandler { id: _optHov; cursorShape: Qt.PointingHandCursor }
                     TapHandler {
                         onTapped: {
@@ -179,14 +189,22 @@ Item {
                             root._open = false
                         }
                     }
+                    activeFocusOnTab: root.enabled && root._open
+                    Accessible.role: Accessible.RadioButton
+                    Accessible.name: root.label + ": " + String(_opt.modelData.label ?? "")
+                    Accessible.checked: _opt.active
+                    Keys.onSpacePressed:  event => _opt.choose(event)
+                    Keys.onReturnPressed: event => _opt.choose(event)
+                    Keys.onEnterPressed:  event => _opt.choose(event)
+                    Keys.onEscapePressed: event => { root._open = false; root.forceActiveFocus(); event.accepted = true }
 
                     RowHoverBg {
                         anchors.fill: parent
                         // Only the last option rounds at the card bottom
                         bottomRadius: _opt.index === root.model.length - 1 ? root.bottomRadius : 0
                         cardInset:    root.cardInset
-                        active:       _optHov.hovered
-                        fillOpacity:  0.08
+                        active:       _optHov.hovered || _opt.activeFocus
+                        fillOpacity:  _opt.activeFocus ? 0.13 : 0.08
                     }
 
                     // Indent to align with the header label
@@ -198,7 +216,7 @@ Item {
                         textFormat: Text.PlainText
                         color:      _opt.active
                             ? Theme.accent
-                            : Theme.withAlpha(Theme.text, _optHov.hovered ? 0.90 : 0.70)
+                            : Theme.withAlpha(Theme.text, (_optHov.hovered || _opt.activeFocus) ? 0.90 : 0.70)
                         font.family:    Settings.font
                         font.pixelSize: Settings.fontSize
                         font.weight:    _opt.active ? Font.DemiBold : Font.Normal
