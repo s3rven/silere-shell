@@ -696,12 +696,32 @@ PageShell {
         CollapsibleSection {
             width: parent.width
             expanded: root._picker === "wifi"
-            WifiList { width: parent.width; open: root._picker === "wifi" }
+            Loader {
+                width: parent.width
+                active: root._picker === "wifi"
+                height: item ? item.implicitHeight : 0
+                sourceComponent: Component {
+                    WifiList {
+                        width: parent.width
+                        open: true
+                    }
+                }
+            }
         }
         CollapsibleSection {
             width: parent.width
             expanded: root._picker === "bt"
-            BluetoothList { width: parent.width; open: root._picker === "bt" }
+            Loader {
+                width: parent.width
+                active: root._picker === "bt"
+                height: item ? item.implicitHeight : 0
+                sourceComponent: Component {
+                    BluetoothList {
+                        width: parent.width
+                        open: true
+                    }
+                }
+            }
         }
 
         // ── Controls ────────────────────────────────────────────────────────

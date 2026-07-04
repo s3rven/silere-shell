@@ -408,8 +408,7 @@ Item {
         Behavior on _menuOn { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(220); easing.type: Easing.OutCubic } }
 
         readonly property color tint: {
-            const ws = root.wsObjFor(root.activeId)
-            return (ws && ws.urgent) ? Theme.warning : Theme.accent
+            return root.urgent(root.activeId) ? Theme.warning : Theme.accent
         }
         readonly property real _energy: Math.max(diamond._menuOn * (0.70 + diamond._menuPulse * 0.30),
                                                   root.inSpecial ? 0.65 : 0,
@@ -669,6 +668,7 @@ Item {
             NumberAnimation { target: _menuRipple; property: "opacity"; from: 0.55; to: 0;   duration: Motion.ms(540); easing.type: Easing.OutCubic }
         }
         PulseLoop {
+            id: _breathAnim
             running: MenuState.open && !ShellSettings.reduceMotion && !Idle.isIdle
             target: diamond; targetProperty: "_menuPulse"
             peak: 1; floor: 0; restValue: 0

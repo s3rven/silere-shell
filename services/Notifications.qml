@@ -30,9 +30,43 @@ Singleton {
         if (!_persist.times || typeof _persist.times !== "object") _persist.times = ({})
     }
 
-    function timeFor(id: int): real {
+    function _cloneMap(map): var {
+        const out = {}
+        if (!map || typeof map !== "object") return out
+        for (const k in map) out[k] = map[k]
+        return out
+    }
+
+    function _ensureTime(id: int): real {
         root._ensurePersistentState()
-        return root._times[id] || Date.now()
+        const key = String(id)
+        const existing = root._times[key]
+        if (existing !== undefined) return existing
+
+        const now = Date.now()
+        const next = root._cloneMap(root._times)
+        next[key] = now
+        root._times = next
+        return now
+    }
+
+    function _forgetState(id: int): void {
+        root._ensurePersistentState()
+        const key = String(id)
+        if (key in root._seen) {
+            const nextSeen = root._cloneMap(root._seen)
+            delete nextSeen[key]
+            root._seen = nextSeen
+        }
+        if (key in root._times) {
+            const nextTimes = root._cloneMap(root._times)
+            delete nextTimes[key]
+            root._times = nextTimes
+        }
+    }
+
+    function timeFor(id: int): real {
+        return root._ensureTime(id)
     }
 
     // track object not just id — replaces_id reuses ids while old closed signal is pending
@@ -78,7 +112,14 @@ Singleton {
     }
 
     function toggleDnd(): void { dnd = !dnd }
-    function markSeen(id: int): void { root._ensurePersistentState(); _seen[id] = true }
+    function markSeen(id: int): void {
+        root._ensurePersistentState()
+        const key = String(id)
+        if (root._seen[key] === true) return
+        const next = root._cloneMap(root._seen)
+        next[key] = true
+        root._seen = next
+    }
     function isSeen(id: int):   bool { root._ensurePersistentState(); return !!_seen[id] }
 
     function clearHistory(): void {
@@ -86,7 +127,7 @@ Singleton {
         if (history.length === 0) return
         for (let i = 0; i < history.length; i++) {
             const id = history[i]?.id
-            if (id !== undefined) { delete root._seen[id]; delete root._times[id] }
+            if (id !== undefined) root._forgetState(id)
         }
         history = []
     }
@@ -124,9 +165,7 @@ Singleton {
     }
 
     function _forget(id: int): void {
-        root._ensurePersistentState()
-        delete _seen[id]
-        delete _times[id]
+        root._forgetState(id)
         const next = []
         let changed = false
         for (let i = 0; i < list.length; i++) {
@@ -161,7 +200,7 @@ Singleton {
         const next = [...history]
         const id = next.splice(idx, 1)[0]?.id
         history = next
-        if (id !== undefined) { delete root._seen[id]; delete root._times[id] }
+        if (id !== undefined) root._forgetState(id)
     }
 
     function dismissObject(notifId: int, notification, expired): void {
@@ -206,18 +245,37 @@ Singleton {
         const vals = notifServer.trackedNotifications.values ?? []
         const rebuilt = []
         const live = {}
+        const nextTimes = root._cloneMap(root._times)
+        let timesChanged = false
         for (let i = 0; i < vals.length; i++) {
             const n = vals[i]
             if (!n) continue
-            if (root._times[n.id] === undefined) root._times[n.id] = Date.now()
+            if (nextTimes[n.id] === undefined) {
+                nextTimes[n.id] = Date.now()
+                timesChanged = true
+            }
             live[n.id] = true
-            rebuilt.push({ notification: n, id: n.id, time: root._times[n.id] })
+            rebuilt.push({ notification: n, id: n.id, time: nextTimes[n.id] })
             n.closed.connect(() => root._onClosed(n.id, n))
         }
         if (rebuilt.length > 0) root.list = rebuilt
         // purge ids that closed while the shell was down
-        for (const id in root._seen)  if (!live[id]) delete root._seen[id]
-        for (const id in root._times) if (!live[id]) delete root._times[id]
+        const nextSeen = root._cloneMap(root._seen)
+        let seenChanged = false
+        for (const id in nextSeen) {
+            if (!live[id]) {
+                delete nextSeen[id]
+                seenChanged = true
+            }
+        }
+        for (const id in nextTimes) {
+            if (!live[id]) {
+                delete nextTimes[id]
+                timesChanged = true
+            }
+        }
+        if (seenChanged) root._seen = nextSeen
+        if (timesChanged) root._times = nextTimes
         _fsRefresh.restart()
     }
 
@@ -251,7 +309,7 @@ Singleton {
                 return
             }
             // Stamp arrival time once per id; a content update keeps the original.
-            if (root._times[n.id] === undefined) root._times[n.id] = Date.now()
+            const arrivalTime = root._ensureTime(n.id)
             root.lastCritical = n.urgency === NotificationUrgency.Critical
 
             const existing = root.list.findIndex(e => e.id === n.id)
@@ -267,7 +325,7 @@ Singleton {
                 next[existing] = { notification: n, id: n.id, time: root.list[existing].time }
                 root.list = next
             } else {
-                root.list = [...root.list, { notification: n, id: n.id, time: root._times[n.id] }]
+                root.list = [...root.list, { notification: n, id: n.id, time: arrivalTime }]
             }
             // connect once per object — stacked handlers fire _onClosed twice
             if (isNewObject) n.closed.connect(() => root._onClosed(n.id, n))

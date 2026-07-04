@@ -481,130 +481,141 @@ PageShell {
                 CollapsibleSection {
                     expanded: _secTheme._showMatuContent
 
-                    SectionLabel { label: "PALETTE" }
-                    SettingsCard {
-
-                        Item {
-                            id: _matuShowcase
-                            width: parent.width
-                            // Trailing 14 balances the top padding the readout/swatches sit under.
-                            implicitHeight: _matuCol.y + _matuCol.implicitHeight + 16
-                            height: implicitHeight
-
-                            function _hex(c) { return ("#" + root._hex2(c.r) + root._hex2(c.g) + root._hex2(c.b)).toUpperCase() }
-
-                            readonly property var _swatches: [
-                                { c: MatugenTheme.accent,     n: "Accent"  },
-                                { c: MatugenTheme.background, n: "Base"    },
-                                { c: MatugenTheme.surface,    n: "Surface" },
-                                { c: MatugenTheme.text,       n: "Text"    },
-                                { c: MatugenTheme.error,      n: "Error"   },
-                                { c: MatugenTheme.warning,    n: "Warning" },
-                                { c: MatugenTheme.success,    n: "Success" }
-                            ]
-
-                            property string _hoverLabel: ""
-                            readonly property string _source:  SystemTools.hasMatugen ? "Matugen" : "Fallback"
-                            // Top-right readout: a hovered swatch's name·hex, else the source.
-                            readonly property string _readout: _hoverLabel.length > 0 ? _hoverLabel : _source
-                            property real topRadius: 0
-                            property real bottomRadius: 0
-                            property real cardInset: 1
-
-                            Row {
-                                anchors.left: parent.left
-                                anchors.leftMargin: 12
-                                anchors.right: parent.right
-                                anchors.rightMargin: 12
-                                anchors.top: parent.top
-                                anchors.topMargin: 13
-                                height: 34
-                                spacing: 10
-
-                                Rectangle {
-                                    width: 34; height: 34; radius: 10
-                                    antialiasing: true
-                                    color: Theme.mix(Theme.menuControl, MatugenTheme.accent, 0.32)
-                                    border.width: 1
-                                    border.color: Theme.withAlpha(MatugenTheme.accent, 0.56)
-                                    Text {
-                                        anchors.centerIn: parent
-                                        text: "󰔎"
-                                        color: MatugenTheme.accent
-                                        font.family: Settings.font
-                                        font.pixelSize: Settings.fontSize + 2
-                                        renderType: Text.NativeRendering
-                                    }
-                                }
-
-                                Column {
-                                    width: parent.width - 44
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    spacing: 2
-
-                                    Text {
-                                        width: parent.width
-                                        text: _matuShowcase._readout
-                                        color: Theme.text
-                                        font.family: Settings.font
-                                        font.pixelSize: Settings.fontSize
-                                        font.weight: Font.DemiBold
-                                        renderType: Text.NativeRendering
-                                        elide: Text.ElideRight
-                                    }
-
-                                    Text {
-                                        width: parent.width
-                                        text: SystemTools.hasMatugen ? "Generated from wallpaper" : "Using bundled fallback colors"
-                                        color: Theme.withAlpha(Theme.subtext, 0.62)
-                                        font.family: Settings.font
-                                        font.pixelSize: Settings.fontSize - 2
-                                        renderType: Text.NativeRendering
-                                        elide: Text.ElideRight
-                                    }
-                                }
-                            }
-
+                    Loader {
+                        width: parent.width
+                        active: _secTheme._showMatuContent || parent.height > 0.5
+                        height: item ? item.implicitHeight : 0
+                        sourceComponent: Component {
                             Column {
-                                id: _matuCol
-                                anchors.left:  parent.left;  anchors.leftMargin:  12
-                                anchors.right: parent.right; anchors.rightMargin: 12
-                                anchors.top:   parent.top; anchors.topMargin: 62
-                                spacing: 10
+                                width: parent.width
 
-                                Row {
-                                    width: parent.width
-                                    height: 30
-                                    spacing: Math.max(4, (width - 7 * 28) / 6)
+                                SectionLabel { label: "PALETTE" }
+                                SettingsCard {
 
-                                    Repeater {
-                                        model: _matuShowcase._swatches
-                                        delegate: Rectangle {
-                                            id: _msw
-                                            required property var modelData
-                                            required property int index
-                                            readonly property bool _isAccent: index === 0
-                                            readonly property string _label: modelData.n + "  ·  " + _matuShowcase._hex(modelData.c)
-                                            width: 28; height: 30; radius: 8
-                                            antialiasing: true
-                                            color: modelData.c
-                                            // Accent keeps a brighter rim so the headline colour
-                                            // reads first; any swatch brightens on hover.
-                                            border.width: 1
-                                            border.color: _mswHover.hovered
-                                                ? Theme.withAlpha(Theme.text, 0.7)
-                                                : (_isAccent ? Theme.withAlpha(Theme.text, 0.5)
-                                                             : Theme.menuControlLineHot)
-                                            Behavior on border.color { ColorAnimation { duration: Motion.fast } }
-                                            scale: _mswHover.hovered ? 1.08 : 1.0
-                                            transformOrigin: Item.Center
-                                            Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
-                                            HoverHandler {
-                                                id: _mswHover
-                                                cursorShape: Qt.PointingHandCursor
-                                                onHoveredChanged: _matuShowcase._hoverLabel =
-                                                    hovered ? _msw._label
-                                                            : (_matuShowcase._hoverLabel === _msw._label ? "" : _matuShowcase._hoverLabel)
+                                    Item {
+                                        id: _matuShowcase
+                                        width: parent.width
+                                        // Trailing 14 balances the top padding the readout/swatches sit under.
+                                        implicitHeight: _matuCol.y + _matuCol.implicitHeight + 16
+                                        height: implicitHeight
+
+                                        function _hex(c) { return ("#" + root._hex2(c.r) + root._hex2(c.g) + root._hex2(c.b)).toUpperCase() }
+
+                                        readonly property var _swatches: [
+                                            { c: MatugenTheme.accent,     n: "Accent"  },
+                                            { c: MatugenTheme.background, n: "Base"    },
+                                            { c: MatugenTheme.surface,    n: "Surface" },
+                                            { c: MatugenTheme.text,       n: "Text"    },
+                                            { c: MatugenTheme.error,      n: "Error"   },
+                                            { c: MatugenTheme.warning,    n: "Warning" },
+                                            { c: MatugenTheme.success,    n: "Success" }
+                                        ]
+
+                                        property string _hoverLabel: ""
+                                        readonly property string _source:  SystemTools.hasMatugen ? "Matugen" : "Fallback"
+                                        // Top-right readout: a hovered swatch's name·hex, else the source.
+                                        readonly property string _readout: _hoverLabel.length > 0 ? _hoverLabel : _source
+                                        property real topRadius: 0
+                                        property real bottomRadius: 0
+                                        property real cardInset: 1
+
+                                        Row {
+                                            anchors.left: parent.left
+                                            anchors.leftMargin: 12
+                                            anchors.right: parent.right
+                                            anchors.rightMargin: 12
+                                            anchors.top: parent.top
+                                            anchors.topMargin: 13
+                                            height: 34
+                                            spacing: 10
+
+                                            Rectangle {
+                                                width: 34; height: 34; radius: 10
+                                                antialiasing: true
+                                                color: Theme.mix(Theme.menuControl, MatugenTheme.accent, 0.32)
+                                                border.width: 1
+                                                border.color: Theme.withAlpha(MatugenTheme.accent, 0.56)
+                                                Text {
+                                                    anchors.centerIn: parent
+                                                    text: "󰔎"
+                                                    color: MatugenTheme.accent
+                                                    font.family: Settings.font
+                                                    font.pixelSize: Settings.fontSize + 2
+                                                    renderType: Text.NativeRendering
+                                                }
+                                            }
+
+                                            Column {
+                                                width: parent.width - 44
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                spacing: 2
+
+                                                Text {
+                                                    width: parent.width
+                                                    text: _matuShowcase._readout
+                                                    color: Theme.text
+                                                    font.family: Settings.font
+                                                    font.pixelSize: Settings.fontSize
+                                                    font.weight: Font.DemiBold
+                                                    renderType: Text.NativeRendering
+                                                    elide: Text.ElideRight
+                                                }
+
+                                                Text {
+                                                    width: parent.width
+                                                    text: SystemTools.hasMatugen ? "Generated from wallpaper" : "Using bundled fallback colors"
+                                                    color: Theme.withAlpha(Theme.subtext, 0.62)
+                                                    font.family: Settings.font
+                                                    font.pixelSize: Settings.fontSize - 2
+                                                    renderType: Text.NativeRendering
+                                                    elide: Text.ElideRight
+                                                }
+                                            }
+                                        }
+
+                                        Column {
+                                            id: _matuCol
+                                            anchors.left:  parent.left;  anchors.leftMargin:  12
+                                            anchors.right: parent.right; anchors.rightMargin: 12
+                                            anchors.top:   parent.top; anchors.topMargin: 62
+                                            spacing: 10
+
+                                            Row {
+                                                width: parent.width
+                                                height: 30
+                                                spacing: Math.max(4, (width - 7 * 28) / 6)
+
+                                                Repeater {
+                                                    model: _matuShowcase._swatches
+                                                    delegate: Rectangle {
+                                                        id: _msw
+                                                        required property var modelData
+                                                        required property int index
+                                                        readonly property bool _isAccent: index === 0
+                                                        readonly property string _label: modelData.n + "  ·  " + _matuShowcase._hex(modelData.c)
+                                                        width: 28; height: 30; radius: 8
+                                                        antialiasing: true
+                                                        color: modelData.c
+                                                        // Accent keeps a brighter rim so the headline colour
+                                                        // reads first; any swatch brightens on hover.
+                                                        border.width: 1
+                                                        border.color: _mswHover.hovered
+                                                            ? Theme.withAlpha(Theme.text, 0.7)
+                                                            : (_isAccent ? Theme.withAlpha(Theme.text, 0.5)
+                                                                         : Theme.menuControlLineHot)
+                                                        Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+                                                        scale: _mswHover.hovered ? 1.08 : 1.0
+                                                        transformOrigin: Item.Center
+                                                        Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
+                                                        HoverHandler {
+                                                            id: _mswHover
+                                                            cursorShape: Qt.PointingHandCursor
+                                                            onHoveredChanged: _matuShowcase._hoverLabel =
+                                                                hovered ? _msw._label
+                                                                        : (_matuShowcase._hoverLabel === _msw._label ? "" : _matuShowcase._hoverLabel)
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -863,44 +874,51 @@ PageShell {
 
                 CollapsibleSection {
                     expanded: ShellSettings.underlineGlow
-                    Column {
+                    Loader {
                         width: parent.width
-                        SectionLabel { label: "EVENTS" }
-                        SettingsCard {
-                            ToggleRow {
-                                glyph: "󰂚"; label: "Notifications"
-                                checked: ShellSettings.underlineNotifGlow
-                                onToggled: ShellSettings.underlineNotifGlow = !ShellSettings.underlineNotifGlow
-                            }
-                            ToggleRow {
-                                glyph: "󰤭"; label: "Network disconnect"
-                                checked: ShellSettings.underlineNetGlow
-                                onToggled: ShellSettings.underlineNetGlow = !ShellSettings.underlineNetGlow
-                            }
-                            ToggleRow {
-                                glyph: "󱃍"; label: "Battery low"
-                                checked: ShellSettings.underlineBattGlow
-                                onToggled: ShellSettings.underlineBattGlow = !ShellSettings.underlineBattGlow
-                            }
-                            ToggleRow {
-                                glyph: "󰔏"; label: "Temperature"
-                                checked: ShellSettings.underlineTempGlow
-                                onToggled: ShellSettings.underlineTempGlow = !ShellSettings.underlineTempGlow
-                            }
-                            ChoiceChipRow {
-                                glyph: "󰄀"; label: "Screenshots"
-                                enabled: SystemTools.hasInotifywait
-                                currentValue: root._underlineScreenshotStyle
-                                model: [
-                                    { value: "off",   label: "Off" },
-                                    { value: "flash", label: "Flash" },
-                                    { value: "sweep", label: "Sweep" }
-                                ]
-                                onChosen: (v) => root._setUnderlineScreenshotStyle(v)
-                            }
-                            HintText {
-                                visible: !SystemTools.hasInotifywait
-                                text: "Screenshot feedback needs inotify-tools."
+                        active: ShellSettings.underlineGlow || parent.height > 0.5
+                        height: item ? item.implicitHeight : 0
+                        sourceComponent: Component {
+                            Column {
+                                width: parent.width
+                                SectionLabel { label: "EVENTS" }
+                                SettingsCard {
+                                    ToggleRow {
+                                        glyph: "󰂚"; label: "Notifications"
+                                        checked: ShellSettings.underlineNotifGlow
+                                        onToggled: ShellSettings.underlineNotifGlow = !ShellSettings.underlineNotifGlow
+                                    }
+                                    ToggleRow {
+                                        glyph: "󰤭"; label: "Network disconnect"
+                                        checked: ShellSettings.underlineNetGlow
+                                        onToggled: ShellSettings.underlineNetGlow = !ShellSettings.underlineNetGlow
+                                    }
+                                    ToggleRow {
+                                        glyph: "󱃍"; label: "Battery low"
+                                        checked: ShellSettings.underlineBattGlow
+                                        onToggled: ShellSettings.underlineBattGlow = !ShellSettings.underlineBattGlow
+                                    }
+                                    ToggleRow {
+                                        glyph: "󰔏"; label: "Temperature"
+                                        checked: ShellSettings.underlineTempGlow
+                                        onToggled: ShellSettings.underlineTempGlow = !ShellSettings.underlineTempGlow
+                                    }
+                                    ChoiceChipRow {
+                                        glyph: "󰄀"; label: "Screenshots"
+                                        enabled: SystemTools.hasInotifywait
+                                        currentValue: root._underlineScreenshotStyle
+                                        model: [
+                                            { value: "off",   label: "Off" },
+                                            { value: "flash", label: "Flash" },
+                                            { value: "sweep", label: "Sweep" }
+                                        ]
+                                        onChosen: (v) => root._setUnderlineScreenshotStyle(v)
+                                    }
+                                    HintText {
+                                        visible: !SystemTools.hasInotifywait
+                                        text: "Screenshot feedback needs inotify-tools."
+                                    }
+                                }
                             }
                         }
                     }
@@ -1126,7 +1144,14 @@ PageShell {
                 }
 
                 SectionLabel { label: "WIDGETS" }
-                DraggableWidgetList { width: parent.width }
+                Loader {
+                    width: parent.width
+                    active: root._shownSection === "indicators"
+                    height: item ? item.implicitHeight : 0
+                    sourceComponent: Component {
+                        DraggableWidgetList { width: parent.width }
+                    }
+                }
                 Item { width: 1; height: 16 }
 
                 SettingsCard {
@@ -1350,20 +1375,27 @@ PageShell {
 
                 CollapsibleSection {
                     expanded: ShellSettings.osdBatteryWarn || ShellSettings.osdTempWarn
-                    Column {
+                    Loader {
                         width: parent.width
-                        SectionLabel { label: "ALERTS" }
-                        SettingsCard {
-                            ChoiceChipRow {
-                                glyph: "󰀦"; label: "Auto-dismiss"
-                                currentValue: ShellSettings.sysAlertTimeout
-                                model: [
-                                    { value: 5000,  label: "5s"   },
-                                    { value: 10000, label: "10s"  },
-                                    { value: 20000, label: "20s"  },
-                                    { value: 0,     label: "Stay" }
-                                ]
-                                onChosen: (v) => ShellSettings.sysAlertTimeout = v
+                        active: ShellSettings.osdBatteryWarn || ShellSettings.osdTempWarn || parent.height > 0.5
+                        height: item ? item.implicitHeight : 0
+                        sourceComponent: Component {
+                            Column {
+                                width: parent.width
+                                SectionLabel { label: "ALERTS" }
+                                SettingsCard {
+                                    ChoiceChipRow {
+                                        glyph: "󰀦"; label: "Auto-dismiss"
+                                        currentValue: ShellSettings.sysAlertTimeout
+                                        model: [
+                                            { value: 5000,  label: "5s"   },
+                                            { value: 10000, label: "10s"  },
+                                            { value: 20000, label: "20s"  },
+                                            { value: 0,     label: "Stay" }
+                                        ]
+                                        onChosen: (v) => ShellSettings.sysAlertTimeout = v
+                                    }
+                                }
                             }
                         }
                     }
@@ -1392,31 +1424,40 @@ PageShell {
                     }
                 }
 
-                SectionLabel { label: "MONITORS"; visible: Quickshell.screens.length > 1 }
-                SettingsCard {
-                    visible: Quickshell.screens.length > 1
-                    ChoiceChipRow {
-                        glyph: "󰍹"; label: "Popups & OSD on"
-                        currentValue: ShellSettings.overlayMonitor
-                        model: {
-                            const t = [{ value: "", label: "Focus" }]
-                            const s = Quickshell.screens || []
-                            for (let i = 0; i < s.length; i++) {
-                                const name = s[i].name
-                                t.push({ value: name, label: name.length > 12 ? name.slice(0, 9) + "..." : name })
+                Loader {
+                    width: parent.width
+                    active: root._shownSection === "system" && Quickshell.screens.length > 1
+                    height: item ? item.implicitHeight : 0
+                    sourceComponent: Component {
+                        Column {
+                            width: parent.width
+                            SectionLabel { label: "MONITORS" }
+                            SettingsCard {
+                                ChoiceChipRow {
+                                    glyph: "󰍹"; label: "Popups & OSD on"
+                                    currentValue: ShellSettings.overlayMonitor
+                                    model: {
+                                        const t = [{ value: "", label: "Focus" }]
+                                        const s = Quickshell.screens || []
+                                        for (let i = 0; i < s.length; i++) {
+                                            const name = s[i].name
+                                            t.push({ value: name, label: name.length > 12 ? name.slice(0, 9) + "..." : name })
+                                        }
+                                        return t
+                                    }
+                                    onChosen: (v) => ShellSettings.overlayMonitor = v
+                                }
+                                Repeater {
+                                    model: Quickshell.screens
+                                    delegate: ToggleRow {
+                                        required property var modelData
+                                        glyph: "󰍺"
+                                        label: "Bar on " + modelData.name
+                                        checked: Monitors.barEnabled(modelData)
+                                        onToggled: Monitors.setBarEnabled(modelData.name, !checked)
+                                    }
+                                }
                             }
-                            return t
-                        }
-                        onChosen: (v) => ShellSettings.overlayMonitor = v
-                    }
-                    Repeater {
-                        model: Quickshell.screens
-                        delegate: ToggleRow {
-                            required property var modelData
-                            glyph: "󰍺"
-                            label: "Bar on " + modelData.name
-                            checked: Monitors.barEnabled(modelData)
-                            onToggled: Monitors.setBarEnabled(modelData.name, !checked)
                         }
                     }
                 }
@@ -1500,84 +1541,95 @@ PageShell {
                 spacing: 0
                 visible: root._shownSection === "updates"
 
-                SettingsCard {
-                    UpdateStatusCard {
-                        flat: true
-                        glyph: ShellUpdate.checking || ShellUpdate.applying ? "󰓦"
-                            : ShellUpdate.lastCheckError.length > 0 || ShellUpdate.lastApplyError.length > 0 ? "󰀦"
-                            : ShellUpdate.pending ? "󰚰" : "󰄬"
-                        title: "Silere Shell"
-                        status: ShellUpdate.statusText
-                        meta: ShellUpdate.currentVersion.length > 0 ? "#" + ShellUpdate.currentVersion : ""
-                        detail: ShellUpdate.lastApplyError.length > 0 ? ShellUpdate.lastApplyError
-                            : ShellUpdate.lastCheckError.length > 0 ? ShellUpdate.lastCheckError
-                            : ShellUpdate.pending ? ShellUpdate.summary : ""
-                        detailError: ShellUpdate.lastApplyError.length > 0 || ShellUpdate.lastCheckError.length > 0
-                        statusColor: ShellUpdate.lastCheckError.length > 0 || ShellUpdate.lastApplyError.length > 0
-                            ? Theme.warning : ShellUpdate.checking || ShellUpdate.applying || ShellUpdate.pending
-                                ? Theme.accent : Theme.success
-                        busy: ShellUpdate.checking || ShellUpdate.applying
+                Loader {
+                    width: parent.width
+                    active: root._shownSection === "updates"
+                    height: item ? item.implicitHeight : 0
+                    sourceComponent: Component {
+                        Column {
+                            width: parent.width
 
-                        primaryLabel: ShellUpdate.applying ? "Installing…"
-                            : ShellUpdate.checking ? "Checking…"
-                            : ShellUpdate.pending ? "Install" : "Check"
-                        primaryGlyph: ShellUpdate.pending ? "󰅢" : "󰓦"
-                        primaryEnabled: !ShellUpdate.checking && !ShellUpdate.applying
-                        primaryEmphasis: ShellUpdate.pending
-                        onPrimaryTriggered: {
-                            if (ShellUpdate.pending) ShellUpdate.apply()
-                            else ShellUpdate.check()
+                            SettingsCard {
+                                UpdateStatusCard {
+                                    flat: true
+                                    glyph: ShellUpdate.checking || ShellUpdate.applying ? "󰓦"
+                                        : ShellUpdate.lastCheckError.length > 0 || ShellUpdate.lastApplyError.length > 0 ? "󰀦"
+                                        : ShellUpdate.pending ? "󰚰" : "󰄬"
+                                    title: "Silere Shell"
+                                    status: ShellUpdate.statusText
+                                    meta: ShellUpdate.currentVersion.length > 0 ? "#" + ShellUpdate.currentVersion : ""
+                                    detail: ShellUpdate.lastApplyError.length > 0 ? ShellUpdate.lastApplyError
+                                        : ShellUpdate.lastCheckError.length > 0 ? ShellUpdate.lastCheckError
+                                        : ShellUpdate.pending ? ShellUpdate.summary : ""
+                                    detailError: ShellUpdate.lastApplyError.length > 0 || ShellUpdate.lastCheckError.length > 0
+                                    statusColor: ShellUpdate.lastCheckError.length > 0 || ShellUpdate.lastApplyError.length > 0
+                                        ? Theme.warning : ShellUpdate.checking || ShellUpdate.applying || ShellUpdate.pending
+                                            ? Theme.accent : Theme.success
+                                    busy: ShellUpdate.checking || ShellUpdate.applying
+
+                                    primaryLabel: ShellUpdate.applying ? "Installing…"
+                                        : ShellUpdate.checking ? "Checking…"
+                                        : ShellUpdate.pending ? "Install" : "Check"
+                                    primaryGlyph: ShellUpdate.pending ? "󰅢" : "󰓦"
+                                    primaryEnabled: !ShellUpdate.checking && !ShellUpdate.applying
+                                    primaryEmphasis: ShellUpdate.pending
+                                    onPrimaryTriggered: {
+                                        if (ShellUpdate.pending) ShellUpdate.apply()
+                                        else ShellUpdate.check()
+                                    }
+
+                                    secondaryShown: ShellUpdate.pending && !ShellUpdate.applying
+                                    secondaryGlyph: "󰑐"
+                                    secondaryEnabled: !ShellUpdate.checking && !ShellUpdate.applying
+                                    onSecondaryTriggered: ShellUpdate.check()
+                                }
+
+                                UpdateStatusCard {
+                                    flat: true
+                                    glyph: Updates.isChecking ? "󰓦" : Updates.lastFailed ? "󰀦" : Updates.icon
+                                    title: "System packages"
+                                    status: Updates.statusText
+                                    meta: Updates.managerLabel
+                                    detail: Updates.lastFailed ? Updates.lastError : ""
+                                    detailError: Updates.lastFailed
+                                    statusColor: Updates.lastFailed ? Theme.warning
+                                        : Updates.isChecking ? Theme.accent
+                                        : Updates.ready && Updates.count === 0 ? Theme.success
+                                        : Updates.count > 0 ? Theme.accent : Theme.subtext
+                                    busy: Updates.isChecking
+
+                                    primaryLabel: !SystemTools.ready ? "Detecting…"
+                                        : !Updates.supported ? "Unavailable"
+                                        : !ShellSettings.updatesWidget ? "Off"
+                                        : Updates.isChecking ? "Checking…" : "Check"
+                                    primaryGlyph: "󰓦"
+                                    primaryEnabled: SystemTools.ready && Updates.supported && ShellSettings.updatesWidget && !Updates.isChecking
+                                    onPrimaryTriggered: Updates.refresh()
+                                }
+                                ToggleRow {
+                                    glyph: "󰚰"; label: "Track package updates"
+                                    description: "Counts pending packages and shows a badge in the bar"
+                                    checked: ShellSettings.updatesWidget
+                                    onToggled: ShellSettings.updatesWidget = !ShellSettings.updatesWidget
+                                    available: !SystemTools.ready || Updates.supported
+                                    dependsNote: "No package manager"
+                                }
+                            }
+
+                            SectionLabel { label: "AUTOMATIC CHECKS" }
+                            SettingsCard {
+                                ToggleRow {
+                                    glyph: "󰥔"; label: "Daily Silere update check"
+                                    checked: ShellUpdate.timerEnabled
+                                    enabled: !ShellUpdate.timerBusy
+                                    available: ShellUpdate.timerSupported
+                                    dependsNote: ShellUpdate.timerBusy ? "Working" : (!SystemTools.ready ? "Checking" : "No systemd")
+                                    onToggled: ShellUpdate.setTimerEnabled(!ShellUpdate.timerEnabled)
+                                }
+                                HintText { text: "Checks only update the badge — nothing installs without your confirmation." }
+                            }
                         }
-
-                        secondaryShown: ShellUpdate.pending && !ShellUpdate.applying
-                        secondaryGlyph: "󰑐"
-                        secondaryEnabled: !ShellUpdate.checking && !ShellUpdate.applying
-                        onSecondaryTriggered: ShellUpdate.check()
                     }
-
-                    UpdateStatusCard {
-                        flat: true
-                        glyph: Updates.isChecking ? "󰓦" : Updates.lastFailed ? "󰀦" : Updates.icon
-                        title: "System packages"
-                        status: Updates.statusText
-                        meta: Updates.managerLabel
-                        detail: Updates.lastFailed ? Updates.lastError : ""
-                        detailError: Updates.lastFailed
-                        statusColor: Updates.lastFailed ? Theme.warning
-                            : Updates.isChecking ? Theme.accent
-                            : Updates.ready && Updates.count === 0 ? Theme.success
-                            : Updates.count > 0 ? Theme.accent : Theme.subtext
-                        busy: Updates.isChecking
-
-                        primaryLabel: !SystemTools.ready ? "Detecting…"
-                            : !Updates.supported ? "Unavailable"
-                            : !ShellSettings.updatesWidget ? "Off"
-                            : Updates.isChecking ? "Checking…" : "Check"
-                        primaryGlyph: "󰓦"
-                        primaryEnabled: SystemTools.ready && Updates.supported && ShellSettings.updatesWidget && !Updates.isChecking
-                        onPrimaryTriggered: Updates.refresh()
-                    }
-                    ToggleRow {
-                        glyph: "󰚰"; label: "Track package updates"
-                        description: "Counts pending packages and shows a badge in the bar"
-                        checked: ShellSettings.updatesWidget
-                        onToggled: ShellSettings.updatesWidget = !ShellSettings.updatesWidget
-                        available: !SystemTools.ready || Updates.supported
-                        dependsNote: "No package manager"
-                    }
-                }
-
-                SectionLabel { label: "AUTOMATIC CHECKS" }
-                SettingsCard {
-                    ToggleRow {
-                        glyph: "󰥔"; label: "Daily Silere update check"
-                        checked: ShellUpdate.timerEnabled
-                        enabled: !ShellUpdate.timerBusy
-                        available: ShellUpdate.timerSupported
-                        dependsNote: ShellUpdate.timerBusy ? "Working" : (!SystemTools.ready ? "Checking" : "No systemd")
-                        onToggled: ShellUpdate.setTimerEnabled(!ShellUpdate.timerEnabled)
-                    }
-                    HintText { text: "Checks only update the badge — nothing installs without your confirmation." }
                 }
             }
             }   // _detailBody

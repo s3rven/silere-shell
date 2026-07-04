@@ -182,11 +182,13 @@ PanelWindow {
         property bool powerOpen: false
         property bool _loaded:         false
         property bool _loadedDeferred: false
+        property bool _settingsLoaded: false
         property bool _recentLoaded:   false
         property bool _placementSettled: false
 
         function switchTab(idx: int): void {
             if (powerOpen) powerOpen = false
+            if (idx === 1) _settingsLoaded = true
             if (idx === 2) _recentLoaded = true
             if (idx === activeTab) return
             activeTab = idx
@@ -372,6 +374,8 @@ PanelWindow {
                 _idleUnload.restart()
             } else {
                 _idleUnload.stop()
+                if (activeTab === 1) _settingsLoaded = true
+                if (activeTab === 2) _recentLoaded = true
                 if (!_loaded) {
                     _loaded = true
                     Qt.callLater(function() { _loadedDeferred = true })
@@ -388,6 +392,7 @@ PanelWindow {
             onTriggered: if (panel.state === "hidden") {
                 panel._loadedDeferred = false
                 panel._loaded = false
+                panel._settingsLoaded = false
                 panel._recentLoaded = false
             }
         }
@@ -665,9 +670,10 @@ PanelWindow {
                     Loader {
                         id: settingsLoader
                         width: parent.width
-                        // Preload so switching in doesn't async-reload mid-animation;
-                        // unloads with the menu via _loadedDeferred.
-                        active: panel._loadedDeferred
+                        // Build Settings only once the tab is actually used. It
+                        // is the largest menu subtree, so preloading it on every
+                        // ordinary Home open costs memory and startup work.
+                        active: panel._loadedDeferred && (panel._settingsLoaded || panel.activeTab === 1)
                         asynchronous: true
                         sourceComponent: Component {
                             SettingsPage {

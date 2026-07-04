@@ -35,6 +35,10 @@ Item {
         if (open) _syncScanState()
         else      { _selected = ""; Network.clearWifiScan() }
     }
+    Component.onCompleted: _syncScanState()
+    Component.onDestruction: {
+        if (open) Network.clearWifiScan()
+    }
 
     Timer {
         id: _rescan

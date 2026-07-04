@@ -58,8 +58,24 @@ rollup_kb() {
     printf '%s\n' "${value:-0}"
 }
 
+cpu_ticks() {
+    local target="$1"
+    awk '{print ($14 + $15)}' "/proc/$target/stat" 2>/dev/null || printf '0\n'
+}
+
+tree_cpu_ticks() {
+    local total member
+    total="$(cpu_ticks "$pid")"
+    while IFS= read -r member; do
+        [ -n "$member" ] || continue
+        total=$((total + $(cpu_ticks "$member")))
+    done < <(descendants "$pid")
+    printf '%s\n' "$total"
+}
+
 # Main-process CPU baseline before the sample window.
 read -r u1 s1 < <(awk '{print $14, $15}' "/proc/$pid/stat")
+tree_ticks1="$(tree_cpu_ticks)"
 
 # Sample both the Quickshell process and its helper-process tree. Helpers can
 # appear or disappear during the window, so discover them on every sample.
@@ -124,6 +140,9 @@ vmpeak="$(awk '/^VmHWM:/{printf "%.0f", $2/1024; found=1; exit} END{if (!found) 
 read -r u2 s2 < <(awk '{print $14, $15}' "/proc/$pid/stat")
 cpu="$(awk -v a="$u1" -v b="$s1" -v c="$u2" -v d="$s2" -v k="$clk" -v s="$secs" \
     'BEGIN{printf "%.1f", ((c+d)-(a+b))/k/s*100}')"
+tree_ticks2="$(tree_cpu_ticks)"
+tree_cpu="$(awk -v a="$tree_ticks1" -v b="$tree_ticks2" -v k="$clk" -v s="$secs" \
+    'BEGIN{printf "%.1f", (b-a)/k/s*100}')"
 
 threads="$(awk '/^Threads:/{print $2; exit}' "/proc/$pid/status")"
 visualizer="stopped"
@@ -143,6 +162,6 @@ if [ -r "/proc/$pid/environ" ]; then
     fi
 fi
 
-printf 'qs %s | rss %d avg / %d peak MB | pss %s MB | uss %s MB | tree %d avg / %d peak RSS, %s PSS MB | hwm %s MB | cpu %s%% over %ss | threads %s + %s helpers | visualizer %s | allocator %s\n' \
+printf 'qs %s | rss %d avg / %d peak MB | pss %s MB | uss %s MB | tree %d avg / %d peak RSS, %s PSS MB | hwm %s MB | cpu %s%% main / %s%% tree over %ss | threads %s + %s helpers | visualizer %s | allocator %s\n' \
     "$pid" "$rss_avg" "$rss_peak" "$pss" "$uss" "$tree_avg" "$tree_peak" "$tree_pss" \
-    "$vmpeak" "$cpu" "$secs" "$threads" "$helpers" "$visualizer" "$allocator"
+    "$vmpeak" "$cpu" "$tree_cpu" "$secs" "$threads" "$helpers" "$visualizer" "$allocator"

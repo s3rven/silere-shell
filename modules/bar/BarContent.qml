@@ -150,15 +150,21 @@ Item {
     readonly property bool _osdBarShowing: ShellSettings.osdEnabled && ShellSettings.osdBarIntegrated
         && root._isOverlayBar && OsdBarState.showing
 
-    WindowTitle {
+    Loader {
         id: _wTitle
         anchors.verticalCenter: parent.verticalCenter
         x: Math.round(Math.max(root.titleFreeLeft,
                                Math.min((root.width - width) / 2,
                                         root.titleFreeRight - width)))
-        screen: root.screen
-        width:   Math.min(implicitWidth, root.titleAvailableWidth)
-        availableWidth: root.titleAvailableWidth
+        width: item ? Math.min(item.implicitWidth, root.titleAvailableWidth) : 0
+        height: parent.height
+        active: ShellSettings.showWindowTitle
+        sourceComponent: Component {
+            WindowTitle {
+                screen: root.screen
+                availableWidth: root.titleAvailableWidth
+            }
+        }
         transformOrigin: Item.Center
         visible: opacity > 0.001
 

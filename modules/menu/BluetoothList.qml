@@ -41,6 +41,7 @@ Item {
         _syncScanState()
         if (!open) { _disarmTimer.stop(); root._armedAddr = "" }
     }
+    Component.onCompleted: _syncScanState()
     Component.onDestruction: Bluetooth.setScan(false)
 
     Connections {

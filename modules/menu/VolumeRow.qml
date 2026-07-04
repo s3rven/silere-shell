@@ -83,7 +83,7 @@ Item {
             }
 
             Repeater {
-                model: Audio.sinkModel
+                model: root.open ? Audio.sinkModel : []
                 delegate: Item {
                     id: _opt
                     required property var modelData
