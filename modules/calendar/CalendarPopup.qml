@@ -104,7 +104,8 @@ PanelWindow {
 
         readonly property int  cell:     34
         readonly property int  pad:      14
-        readonly property int  panelW:   cell * 7 + pad * 2
+        readonly property int  weekCol:  22   // ISO week-number axis, left of the grid
+        readonly property int  panelW:   weekCol + cell * 7 + pad * 2
 
         // Two month cursors: `disp*` leads (drives the header, updates instantly on
         // nav) while `shown*` trails, the grid renders `shown*` and only catches up
@@ -136,19 +137,16 @@ PanelWindow {
         // bound to the trailing cursor so the title swaps with the grid mid-slide
         readonly property string monthLabel: Qt.formatDateTime(new Date(shownYear, shownMonth, 1), "MMMM yyyy")
 
-        // ISO 8601 week number (Monday-start).
-        function _isoWeek(d): int {
-            const t = new Date(d); t.setHours(0, 0, 0, 0)
-            t.setDate(t.getDate() + 3 - (t.getDay() + 6) % 7)
-            const w1 = new Date(t.getFullYear(), 0, 4)
-            return 1 + Math.round(((t - w1) / 86400000 - 3 + (w1.getDay() + 6) % 7) / 7)
+        // ISO week for grid row r — column 0 is the row's Monday; JS normalises the offset.
+        function _weekForRow(r: int): int {
+            return DateTime.isoWeek(new Date(card.shownYear, card.shownMonth, 1 - card._lead + r * 7))
         }
 
         // Snap both cursors (no slide), used on open so it just shows this month.
         function _snapToday(): void {
             const t = new Date()
             _todayY = t.getFullYear(); _todayM = t.getMonth(); _todayD = t.getDate()
-            _todayWeek = card._isoWeek(t)
+            _todayWeek = DateTime.isoWeek(t)
             todayWeekday = Qt.formatDateTime(t, "dddd")
             dispYear  = _todayY; dispMonth  = _todayM
             shownYear = _todayY; shownMonth = _todayM
@@ -200,7 +198,7 @@ PanelWindow {
                 if (!CalendarState.open) return
                 const t = new Date()
                 card._todayY = t.getFullYear(); card._todayM = t.getMonth(); card._todayD = t.getDate()
-                card._todayWeek = card._isoWeek(t)
+                card._todayWeek = DateTime.isoWeek(t)
                 card.todayWeekday = Qt.formatDateTime(t, "dddd")
             }
         }
@@ -391,6 +389,7 @@ PanelWindow {
 
             Row {
                 width: parent.width
+                Item { width: card.weekCol; height: 22 }   // week-axis header slot
                 Repeater {
                     model: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
                     delegate: Item {
@@ -421,11 +420,46 @@ PanelWindow {
                     NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
                 }
 
+                // ISO week axis — a fixed reference the month slides beneath. Fades
+                // with the grid swap so the numbers change while they're invisible.
+                Column {
+                    id: _weekAxis
+                    x: 0
+                    width: card.weekCol
+                    opacity: _grid.opacity
+                    Repeater {
+                        model: card._rowCount
+                        delegate: Item {
+                            id: _weekRow
+                            required property int index
+                            width: card.weekCol
+                            height: card.cell
+                            Text {
+                                anchors.centerIn: parent
+                                text: card._weekForRow(_weekRow.index)
+                                color: Theme.withAlpha(Theme.subtext, 0.38)
+                                font.family: Settings.font
+                                font.pixelSize: Settings.fontSize - 4
+                                font.weight: Font.Medium
+                                renderType: Text.NativeRendering
+                            }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    x: card.weekCol - 1
+                    y: 0
+                    width: 1
+                    height: parent.height
+                    color: Theme.withAlpha(Theme.subtext, 0.10)
+                }
+
                 Grid {
                     id: _grid
                     property real xOff: 0
-                    x: xOff
-                    width: parent.width
+                    x: card.weekCol + xOff
+                    width: card.cell * 7
                     columns: 7
                     // Layer only during the slide so translated NativeRendering text stays crisp.
                     layer.enabled: _gridSwap.running && !ShellSettings.reduceMotion

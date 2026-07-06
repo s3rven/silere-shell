@@ -74,7 +74,9 @@ PageShell {
                 }
                 Text {
                     width: parent.width
-                    text: DateTime.cachedMonthDay
+                    text: DateTime.cachedWeek.length > 0
+                        ? DateTime.cachedMonthDay + "   ·   Week " + DateTime.cachedWeek
+                        : DateTime.cachedMonthDay
                     color: Theme.withAlpha(Theme.subtext, 0.78)
                     font.family: Settings.font
                     font.pixelSize: Settings.fontSize - 1

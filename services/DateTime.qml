@@ -17,12 +17,21 @@ Singleton {
     property string cachedLongDate: ""  // "dddd, MMMM d" — menu header
     property string cachedWeekday:  ""  // "dddd" — menu masthead, weighted line
     property string cachedMonthDay: ""  // "MMMM d" — menu masthead, quiet line
+    property string cachedWeek:     ""  // ISO 8601 week number, e.g. "27"
     property string cachedHour:     ""  // "HH" or "h"
     property string cachedMinute:   ""  // "mm" — split from the hour so only the changed field rolls
     property string cachedAmPm:     ""  // "AM" / "PM" in 12h mode, "" in 24h
     property string cachedSeconds:  ""  // ":ss"
 
     Component.onCompleted: _update()
+
+    // ISO 8601 week number (Monday-start). Canonical — the calendar axis reads this too.
+    function isoWeek(d): int {
+        const t = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+        t.setDate(t.getDate() + 3 - (t.getDay() + 6) % 7)
+        const w1 = new Date(t.getFullYear(), 0, 4)
+        return 1 + Math.round(((t - w1) / 86400000 - 3 + (w1.getDay() + 6) % 7) / 7)
+    }
 
     Connections {
         target: clock
@@ -44,6 +53,7 @@ Singleton {
             cachedLongDate  = Qt.formatDateTime(clock.date, "dddd, MMMM d")
             cachedWeekday   = Qt.formatDateTime(clock.date, "dddd")
             cachedMonthDay  = Qt.formatDateTime(clock.date, "MMMM d")
+            cachedWeek      = String(isoWeek(clock.date))
         }
         cachedMinute = Qt.formatDateTime(clock.date, "mm")
         if (ShellSettings.clock12h) {
