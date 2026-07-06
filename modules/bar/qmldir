@@ -1,4 +1,5 @@
 Bar          1.0 Bar.qml
 BarContent   1.0 BarContent.qml
+BarZone      1.0 BarZone.qml
 BarUnderline 1.0 BarUnderline.qml
 GlowLine     1.0 GlowLine.qml
