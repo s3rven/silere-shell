@@ -27,12 +27,28 @@ Item {
     signal badgeActivated()
 
     readonly property bool _canTap: root.enabled && root.available
+    readonly property string _accessibleDetail: {
+        let detail = root.status.length > 0 ? root.status : root.valueText
+        if (root.expandable) {
+            const state = root.expanded ? "Expanded" : "Collapsed"
+            detail = detail.length > 0 ? detail + ", " + state : state
+        }
+        return detail
+    }
 
     function _activate(): void {
         if (!_canTap) return
         // animate the knob only on a real user flip, not section-driven re-checks
         if (showSwitch) _switch.armFlipAnimation()
         root.activated()
+    }
+
+    function _activateBadge(): void {
+        if (root.badgeCount > 0) root.badgeActivated()
+    }
+
+    function _toggleExpanded(): void {
+        if (root._canTap && root.expandable) root.expandToggled()
     }
 
     function _insideChevron(pos): bool {
@@ -59,7 +75,7 @@ Item {
     activeFocusOnTab: _canTap
     Accessible.role: root.showSwitch ? Accessible.CheckBox : Accessible.Button
     Accessible.name: root.title
-    Accessible.description: root.status
+    Accessible.description: root._accessibleDetail
     Accessible.checked: root.active
     Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
     Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
@@ -142,10 +158,25 @@ Item {
             height: 15
             radius: 7.5
             antialiasing: true
-            color: root.accentColor
-            border.width: 1
-            border.color: Theme.mix(Theme.menuCard, root.accentColor, 0.55)
             z: 2
+            activeFocusOnTab: visible
+            Accessible.role: Accessible.Button
+            Accessible.name: "Open missed notifications"
+            Accessible.description: root.badgeCount + (root.badgeCount === 1 ? " missed notification" : " missed notifications")
+
+            Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) root._activateBadge(); event.accepted = true }
+            Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._activateBadge(); event.accepted = true }
+            Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) root._activateBadge(); event.accepted = true }
+
+            color: (_badgeMouse.containsMouse || activeFocus)
+                ? Theme.mix(root.accentColor, Theme.text, 0.10)
+                : root.accentColor
+            border.width: activeFocus ? 2 : 1
+            border.color: activeFocus
+                ? Theme.withAlpha(Theme.text, 0.66)
+                : Theme.mix(Theme.menuCard, root.accentColor, _badgeMouse.containsMouse ? 0.42 : 0.55)
+            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+            Behavior on border.color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
 
             Text {
                 id: _badgeTxt
@@ -159,10 +190,12 @@ Item {
             }
 
             MouseArea {
+                id: _badgeMouse
                 anchors.fill: parent
                 anchors.margins: -4
+                hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: root.badgeActivated()
+                onClicked: root._activateBadge()
             }
         }
     }
@@ -253,11 +286,24 @@ Item {
             x: (root.showSwitch || root.valueText.length > 0)
                 ? parent.width - _rightSlot._ctrlW - 8 - width
                 : 0
+            activeFocusOnTab: root._canTap && root.expandable
+
+            Accessible.role: Accessible.Button
+            Accessible.name: root.title + " details"
+            Accessible.description: root.expanded ? "Expanded" : "Collapsed"
+
+            Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) root._toggleExpanded(); event.accepted = true }
+            Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._toggleExpanded(); event.accepted = true }
+            Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) root._toggleExpanded(); event.accepted = true }
+            Keys.onEscapePressed: event => {
+                if (root.expanded) root._toggleExpanded()
+                event.accepted = true
+            }
 
             Text {
                 anchors.centerIn: parent
                 text: "󰅀"
-                color: _chevHover.hovered ? Theme.text
+                color: (_chevHover.hovered || _chevron.activeFocus) ? Theme.text
                      : Theme.withAlpha(Theme.subtext, root.expanded ? 0.85 : 0.55)
                 font.family: Settings.font
                 font.pixelSize: Settings.fontSize
@@ -274,7 +320,7 @@ Item {
                 anchors.margins: -4
                 enabled: root.expandable
                 cursorShape: Qt.PointingHandCursor
-                onClicked: root.expandToggled()
+                onClicked: root._toggleExpanded()
             }
         }
     }

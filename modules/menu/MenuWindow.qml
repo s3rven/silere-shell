@@ -745,6 +745,19 @@ PanelWindow {
                 visible: opacity > 0.001
                 z: 5
 
+                // Focus held on the strip on open (no ring on mouse-open); an
+                // arrow enters the first tile, then KeyNavigation walks the row.
+                function _focusFirstTile(): void {
+                    if (_powLock.enabled)      _powLock.forceActiveFocus()
+                    else if (_powSusp.enabled) _powSusp.forceActiveFocus()
+                    else if (_powReb.enabled)  _powReb.forceActiveFocus()
+                    else if (_powOff.enabled)  _powOff.forceActiveFocus()
+                }
+                Keys.onDownPressed:  e => { powerStrip._focusFirstTile(); e.accepted = true }
+                Keys.onUpPressed:    e => { powerStrip._focusFirstTile(); e.accepted = true }
+                Keys.onRightPressed: e => { powerStrip._focusFirstTile(); e.accepted = true }
+                Keys.onLeftPressed:  e => { powerStrip._focusFirstTile(); e.accepted = true }
+
                 Behavior on y       { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
                 Behavior on opacity { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
