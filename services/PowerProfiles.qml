@@ -10,7 +10,9 @@ Singleton {
     id: root
 
     readonly property bool available: SystemTools.hasPowerProfilesCtl
-    readonly property bool syncing: _get.running
+    // syncing spans the retry backoff too, so a transient failure keeps reading
+    // "Checking…" instead of flashing "Unavailable" between attempts.
+    readonly property bool syncing: _get.running || _getRetry.running
     property string profile: ""   // "" until the first successful read
 
     readonly property string label: profile === "performance" ? "Performance"
@@ -23,6 +25,13 @@ Singleton {
     // that it's answering a question a newer write has already overtaken —
     // _set.running alone misses this when the set finishes first.
     property int _writeGen: 0
+
+    // Bounded read retry: a failed/empty get while the menu is open self-heals
+    // instead of sticking on "Unavailable". Only runs while a consumer is open,
+    // so idle cost stays zero.
+    property int _getRetries: 0
+    readonly property int _getRetryMax: 4
+    Timer { id: _getRetry; interval: 600; onTriggered: root.refresh() }
 
     function refresh(): void {
         if (!available || _get.running) return
@@ -43,7 +52,10 @@ Singleton {
 
     Connections {
         target: MenuState
-        function onOpenChanged() { if (MenuState.open) root.refresh() }
+        function onOpenChanged() {
+            if (MenuState.open) { root._getRetries = 0; root.refresh() }
+            else _getRetry.stop()
+        }
     }
     // First read can race the tool scan; catch up once it lands.
     Connections {
@@ -55,14 +67,21 @@ Singleton {
         property int _gen: 0
         stdout: StdioCollector { id: _getOut }
         onExited: (code) => {
-            if (code !== 0) return
             // A set in flight, or one that already landed after this read started,
             // means this read predates (or no longer matches) the new profile;
             // applying it would clobber the optimistic value. The set's own
             // onExited re-syncs on failure, so dropping the stale read is safe.
             if (_set.running || _gen !== root._writeGen) return
-            const p = (_getOut.text || "").trim()
-            if (p.length > 0) root.profile = p
+            if (code === 0) {
+                const p = (_getOut.text || "").trim()
+                if (p.length > 0) { root.profile = p; root._getRetries = 0; return }
+            }
+            // Failed or empty read: retry while the menu's open and we still have
+            // no profile, so a transient daemon hiccup doesn't stick on "Unavailable".
+            if (root.profile === "" && root.available && MenuState.open && root._getRetries < root._getRetryMax) {
+                root._getRetries++
+                _getRetry.restart()
+            }
         }
     }
     Process {
