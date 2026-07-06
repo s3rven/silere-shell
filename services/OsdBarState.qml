@@ -19,6 +19,10 @@ Singleton {
     property color  fillColor: Theme.accent
     readonly property bool hasBar: _hasBarKind(kind)
     readonly property real clamped: Math.max(0, Math.min(1, value))
+    // The bar-integrated OSD has no visible surface while the overview or a
+    // fullscreen window covers the bar; display layers hand off to the
+    // floating pill so volume/brightness feedback never silently vanishes.
+    readonly property bool barConcealed: OverviewState.active || Notifications.fullscreenActive
     property alias entries: _entries
     readonly property int activeCount: _entries.count
     Behavior on fillColor { ColorAnimation { duration: Motion.medium } }

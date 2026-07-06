@@ -96,9 +96,21 @@ Item {
             spacing: 4
             model: root.open ? Bluetooth.devices : []
 
+            function _focusIndex(index: int): void {
+                if (count <= 0) return
+                const i = Math.max(0, Math.min(count - 1, index))
+                currentIndex = i
+                positionViewAtIndex(i, ListView.Contain)
+                Qt.callLater(function() {
+                    const item = _list.itemAtIndex(i)
+                    if (item) item.forceActiveFocus()
+                })
+            }
+
             delegate: Rectangle {
                 id: _row
                 required property var modelData
+                required property int index
                 width: _list.width
                 height: 40
                 radius: 10
@@ -149,6 +161,17 @@ Item {
                 Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) _activate(); event.accepted = true }
                 Keys.onReturnPressed: event => { if (!event.isAutoRepeat) _activate(); event.accepted = true }
                 Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) _activate(); event.accepted = true }
+                Keys.onUpPressed:     event => { _list._focusIndex(_row.index - 1); event.accepted = true }
+                Keys.onDownPressed:   event => { _list._focusIndex(_row.index + 1); event.accepted = true }
+                Keys.onPressed: event => {
+                    if (event.key === Qt.Key_Home) {
+                        _list._focusIndex(0)
+                        event.accepted = true
+                    } else if (event.key === Qt.Key_End) {
+                        _list._focusIndex(_list.count - 1)
+                        event.accepted = true
+                    }
+                }
 
                 MouseArea {
                     id: _ma

@@ -19,6 +19,31 @@ Item {
 
     property bool _open: false
 
+    function _focusOption(index: int): void {
+        if (!_open || _optRepeater.count <= 0) return
+        const i = Math.max(0, Math.min(_optRepeater.count - 1, index))
+        const item = _optRepeater.itemAt(i)
+        if (item) item.forceActiveFocus()
+    }
+
+    function _focusActiveOption(): void {
+        _focusOption(Math.max(0, _activeIndex))
+    }
+
+    function _setOpen(next: bool): void {
+        if (!root.enabled) return
+        if (_open === next) {
+            if (_open) Qt.callLater(root._focusActiveOption)
+            return
+        }
+        _open = next
+        if (_open) Qt.callLater(root._focusActiveOption)
+    }
+
+    function _toggleOpen(): void {
+        _setOpen(!_open)
+    }
+
     readonly property int _activeIndex: {
         for (let i = 0; i < model.length; i++)
             if (model[i].value === currentValue) return i
@@ -38,13 +63,15 @@ Item {
     Accessible.role: Accessible.ComboBox
     Accessible.name: root.label
     Accessible.description: root._activeLabel
-    Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root._open = !root._open; event.accepted = true }
-    Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._open = !root._open; event.accepted = true }
-    Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root._open = !root._open; event.accepted = true }
-    Keys.onEscapePressed: event => { root._open = false; event.accepted = true }
+    Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root._toggleOpen(); event.accepted = true }
+    Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._toggleOpen(); event.accepted = true }
+    Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root._toggleOpen(); event.accepted = true }
+    Keys.onEscapePressed: event => { root._setOpen(false); event.accepted = true }
+    Keys.onDownPressed: event => { root._setOpen(true); event.accepted = true }
+    Keys.onUpPressed: event => { root._setOpen(true); event.accepted = true }
 
     HoverHandler { id: _hov; cursorShape: Qt.PointingHandCursor }
-    TapHandler   { onTapped: root._open = !root._open }
+    TapHandler   { onTapped: root._toggleOpen() }
 
     RowHoverBg {
         width:  parent.width
@@ -164,6 +191,7 @@ Item {
             }
 
             Repeater {
+                id: _optRepeater
                 model: root.model
                 delegate: Item {
                     id: _opt
@@ -177,7 +205,8 @@ Item {
                     function choose(event: var): void {
                         if (!event.isAutoRepeat) {
                             root.chosen(_opt.modelData.value)
-                            root._open = false
+                            root._setOpen(false)
+                            root.forceActiveFocus()
                         }
                         event.accepted = true
                     }
@@ -196,7 +225,18 @@ Item {
                     Keys.onSpacePressed:  event => _opt.choose(event)
                     Keys.onReturnPressed: event => _opt.choose(event)
                     Keys.onEnterPressed:  event => _opt.choose(event)
-                    Keys.onEscapePressed: event => { root._open = false; root.forceActiveFocus(); event.accepted = true }
+                    Keys.onEscapePressed: event => { root._setOpen(false); root.forceActiveFocus(); event.accepted = true }
+                    Keys.onUpPressed:     event => { root._focusOption(_opt.index - 1); event.accepted = true }
+                    Keys.onDownPressed:   event => { root._focusOption(_opt.index + 1); event.accepted = true }
+                    Keys.onPressed: event => {
+                        if (event.key === Qt.Key_Home) {
+                            root._focusOption(0)
+                            event.accepted = true
+                        } else if (event.key === Qt.Key_End) {
+                            root._focusOption(root.model.length - 1)
+                            event.accepted = true
+                        }
+                    }
 
                     RowHoverBg {
                         anchors.fill: parent

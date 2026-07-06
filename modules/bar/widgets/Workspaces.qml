@@ -22,10 +22,10 @@ Item {
     property int _lastNormalActiveId: 1
     property bool _initialized: false
 
-    implicitWidth:  wsRow.implicitWidth
+    implicitWidth:  wsRow.implicitWidth + (urgentOffPage > 0 ? 12 : 0)
     implicitHeight: btnH
 
-    Behavior on implicitWidth { NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic } }
+    Behavior on implicitWidth { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic } }
 
     readonly property HyprlandMonitor monitor:    Hyprland.monitorFor(root.screen)
     readonly property bool monitorReady: monitor !== null && monitor.activeWorkspace !== null
@@ -69,6 +69,18 @@ Item {
     function urgent(id: int): bool {
         const ws = root.wsObjFor(id)
         return ws !== null && ws.urgent
+    }
+
+    // Paging hides urgent workspaces on other pages entirely; surface the first
+    // one as a tap-to-jump tick beside the row instead of losing the signal.
+    readonly property int urgentOffPage: {
+        const vals = Hyprland.workspaces.values ?? []
+        for (let i = 0; i < vals.length; i++) {
+            const ws = vals[i]
+            if (ws && ws.urgent && ws.id > 0 && (ws.id < groupStart || ws.id > groupEnd))
+                return ws.id
+        }
+        return 0
     }
 
     // Per-workspace app icons (only when wsShowAppIcons is on). Window class →
@@ -296,6 +308,13 @@ Item {
     function activate(id: int): void {
         if (!monitorReady || id < 1 || id === activeId) return
         HyprActions.focusWorkspace(id, monitor?.name ?? "")
+    }
+
+    function _focusWsIndex(index: int): void {
+        if (_wsRepeater.count <= 0) return
+        const i = Math.max(0, Math.min(_wsRepeater.count - 1, index))
+        const item = _wsRepeater.itemAt(i)
+        if (item) item.forceActiveFocus()
     }
 
     // The active diamond is the Silere Anchor: a tap opens the menu beneath the
@@ -686,11 +705,13 @@ Item {
         spacing: root.gap
 
         Repeater {
+            id: _wsRepeater
             model: root.visibleIds
 
             Item {
                 id: ws
                 required property int modelData
+                required property int index
                 readonly property int  wsId:    modelData
                 readonly property bool active:  root.monitorReady && root.activeId === wsId
                 readonly property var  wsObj:   root.wsObjFor(wsId)
@@ -768,6 +789,17 @@ Item {
                     if (!event.isAutoRepeat) ws._activateFromKeyboard()
                     event.accepted = true
                 }
+                Keys.onLeftPressed:  event => { root._focusWsIndex(ws.index - 1); event.accepted = true }
+                Keys.onRightPressed: event => { root._focusWsIndex(ws.index + 1); event.accepted = true }
+                Keys.onPressed: event => {
+                    if (event.key === Qt.Key_Home) {
+                        root._focusWsIndex(0)
+                        event.accepted = true
+                    } else if (event.key === Qt.Key_End) {
+                        root._focusWsIndex(_wsRepeater.count - 1)
+                        event.accepted = true
+                    }
+                }
 
                 HoverHandler { id: _hover; cursorShape: Qt.PointingHandCursor }
 
@@ -789,6 +821,8 @@ Item {
                     acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
                     onTapped: (eventPoint, button) => {
                         if (button === Qt.MiddleButton) {
+                            // No focused window means nothing moves — don't fake an ack.
+                            if (!Hyprland.activeToplevel) return
                             HyprActions.moveActiveToWorkspace(ws.wsId)
                             if (!ShellSettings.reduceMotion) _dropPulse.restart()
                             return
@@ -826,6 +860,12 @@ Item {
                 property real _pulseOpacity: 1.0
                 property real _shakeX:       0
                 property real _dotFade: 1.0
+                // Dot mode tells you nothing about which workspace you're
+                // about to jump to; hover swaps the dot for its number.
+                readonly property bool _hoverReveal: ShellSettings.valuesOnHover && hovered
+                    && !active && !ShellSettings.wsShowNumbers && !_showIcons
+                property real _revealAmt: _hoverReveal ? 1 : 0
+                Behavior on _revealAmt { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
                 property real _dotAlpha: urgent ? 0.95 : occupied ? 0.65 : 0.28
                 Behavior on _dotAlpha { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
 
@@ -920,8 +960,9 @@ Item {
                     anchors.centerIn: parent
                     transform: Translate { x: ws._shakeX }
                     text:    ShellSettings.wsRomanNumerals ? root.toRoman(ws.wsId) : ws.wsId
-                    opacity: (ShellSettings.wsShowNumbers && !ws._showIcons)
-                        ? (ws.active ? 0 : 1) * ws._pulseOpacity * ShellSettings.wsMarkerOpacity
+                    opacity: !ws._showIcons
+                        ? Math.max(ShellSettings.wsShowNumbers ? 1 : 0, ws._revealAmt)
+                          * (ws.active ? 0 : 1) * ws._pulseOpacity * ShellSettings.wsMarkerOpacity
                         : 0
                     // hover lift matches the dot (1.2) and app-icon (1.08) modes
                     scale:   ws.active ? 0.6 : (ws._hoverFx ? 1.12 : 1)
@@ -947,7 +988,7 @@ Item {
                     radius: width / 2
                     antialiasing: true
                     visible: !ShellSettings.wsShowNumbers && !ws._showIcons
-                    opacity: ws._dotFade * (ws._hoverFx && !ws.urgent
+                    opacity: (1 - ws._revealAmt) * ws._dotFade * (ws._hoverFx && !ws.urgent
                              ? Math.min(1, ws._dotAlpha + 0.18)
                              : ws._dotAlpha) * ws._pulseOpacity * ShellSettings.wsMarkerOpacity
                     color: ws.urgent ? Theme.warning : Theme.withAlpha(Theme.subtext, 0.85)
@@ -1043,6 +1084,57 @@ Item {
                     }
                 }
             }
+        }
+    }
+
+    Item {
+        id: _urgentTick
+        readonly property bool shown: root.urgentOffPage > 0
+        // Hold the last id while fading out so the jump target doesn't blank mid-tap.
+        property int targetWs: 0
+        readonly property int _live: root.urgentOffPage
+        on_LiveChanged: if (_live > 0) targetWs = _live
+        Component.onCompleted: if (_live > 0) targetWs = _live
+
+        x: wsRow.implicitWidth + 2
+        width: 10
+        height: root.btnH
+        opacity: shown ? 1 : 0
+        visible: opacity > 0.01
+        Behavior on opacity { NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
+
+        activeFocusOnTab: shown
+        Accessible.role: Accessible.Button
+        Accessible.name: "Urgent workspace " + targetWs
+        Accessible.description: "Activate to jump to it."
+
+        function _jump(): void { if (shown) root.activate(targetWs) }
+        Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) _urgentTick._jump(); event.accepted = true }
+        Keys.onReturnPressed: event => { if (!event.isAutoRepeat) _urgentTick._jump(); event.accepted = true }
+        Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) _urgentTick._jump(); event.accepted = true }
+
+        HoverHandler { id: _tickHover; enabled: _urgentTick.shown; cursorShape: Qt.PointingHandCursor }
+        TapHandler   { enabled: _urgentTick.shown; onTapped: _urgentTick._jump() }
+
+        property real _pulse: 1.0
+        SequentialAnimation {
+            running: _urgentTick.shown && !ShellSettings.reduceMotion && !Idle.isIdle
+            loops:   Animation.Infinite
+            onRunningChanged: if (!running) _urgentTick._pulse = 1.0
+            NumberAnimation { target: _urgentTick; property: "_pulse"; to: 0.35; duration: Motion.ms(550); easing.type: Easing.InOutSine }
+            NumberAnimation { target: _urgentTick; property: "_pulse"; to: 1.0;  duration: Motion.ms(550); easing.type: Easing.InOutSine }
+        }
+
+        Rectangle {
+            anchors.centerIn: parent
+            width:  5
+            height: 5
+            radius: 2.5
+            antialiasing: true
+            color: Theme.warning
+            opacity: _urgentTick._pulse * ((_tickHover.hovered || _urgentTick.activeFocus) ? 1.0 : 0.9)
+            scale: (_tickHover.hovered && ShellSettings.barHoverHighlight) || _urgentTick.activeFocus ? 1.25 : 1.0
+            Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
         }
     }
 }

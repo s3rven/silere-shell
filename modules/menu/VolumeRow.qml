@@ -19,6 +19,26 @@ Item {
     implicitHeight: _slider.height + _options.height
     height: implicitHeight
 
+    function _focusCurrentSink(): void {
+        if (!root.open) return
+        for (let i = 0; i < _sinkRepeater.count; i++) {
+            const item = _sinkRepeater.itemAt(i)
+            if (item && item.active) {
+                item.forceActiveFocus()
+                return
+            }
+        }
+        const first = _sinkRepeater.itemAt(0)
+        if (first) first.forceActiveFocus()
+    }
+
+    function _focusSinkIndex(index: int): void {
+        if (!root.open || _sinkRepeater.count <= 0) return
+        const i = Math.max(0, Math.min(_sinkRepeater.count - 1, index))
+        const item = _sinkRepeater.itemAt(i)
+        if (item) item.forceActiveFocus()
+    }
+
     // Fold the dropdown away if the extra devices vanish.
     Connections {
         target: Audio
@@ -41,7 +61,10 @@ Item {
         expandable: Audio.sinkCount > 1
         expanded: root.open
         onGlyphClicked: Audio.toggleMute()
-        onExpandToggled: root.open = !root.open
+        onExpandToggled: {
+            root.open = !root.open
+            if (root.open) Qt.callLater(root._focusCurrentSink)
+        }
         onMoved: (v) => Audio.setVolume(v)
     }
 
@@ -83,6 +106,7 @@ Item {
             }
 
             Repeater {
+                id: _sinkRepeater
                 model: root.open ? Audio.sinkModel : []
                 delegate: Item {
                     id: _opt
@@ -93,19 +117,41 @@ Item {
                     width:  _optCol.width
                     height: 36
 
+                    function _choose(): void {
+                        Audio.setSink(_opt.modelData.value)
+                        root.open = false
+                        _slider.forceActiveFocus()
+                    }
+
                     Accessible.role: Accessible.ListItem
                     Accessible.name: _opt.modelData.label
                     Accessible.description: _opt.active ? "Current output" : "Output device"
+                    activeFocusOnTab: root.open
+                    Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) _opt._choose(); event.accepted = true }
+                    Keys.onReturnPressed: event => { if (!event.isAutoRepeat) _opt._choose(); event.accepted = true }
+                    Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) _opt._choose(); event.accepted = true }
+                    Keys.onEscapePressed: event => { root.open = false; _slider.forceActiveFocus(); event.accepted = true }
+                    Keys.onUpPressed:     event => { root._focusSinkIndex(_opt.index - 1); event.accepted = true }
+                    Keys.onDownPressed:   event => { root._focusSinkIndex(_opt.index + 1); event.accepted = true }
+                    Keys.onPressed: event => {
+                        if (event.key === Qt.Key_Home) {
+                            root._focusSinkIndex(0)
+                            event.accepted = true
+                        } else if (event.key === Qt.Key_End) {
+                            root._focusSinkIndex(_sinkRepeater.count - 1)
+                            event.accepted = true
+                        }
+                    }
 
                     HoverHandler { id: _optHov; cursorShape: Qt.PointingHandCursor }
-                    TapHandler { onTapped: { Audio.setSink(_opt.modelData.value); root.open = false } }
+                    TapHandler { onTapped: _opt._choose() }
 
                     RowHoverBg {
                         anchors.fill: parent
                         bottomRadius: _opt.index === Audio.sinkModel.length - 1 ? root.bottomRadius : 0
                         cardInset:    root.cardInset
-                        active:       _optHov.hovered
-                        fillOpacity:  0.08
+                        active:       _optHov.hovered || _opt.activeFocus
+                        fillOpacity:  _opt.activeFocus ? 0.13 : 0.08
                     }
 
                     Rectangle {
@@ -129,7 +175,7 @@ Item {
                         elide:      Text.ElideRight
                         color: _opt.active
                             ? Theme.accent
-                            : Theme.withAlpha(Theme.text, _optHov.hovered ? 0.90 : 0.70)
+                            : Theme.withAlpha(Theme.text, (_optHov.hovered || _opt.activeFocus) ? 0.90 : 0.70)
                         font.family:    Settings.font
                         font.pixelSize: Settings.fontSize
                         font.weight:    _opt.active ? Font.DemiBold : Font.Normal

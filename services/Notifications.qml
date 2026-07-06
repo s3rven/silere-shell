@@ -89,11 +89,15 @@ Singleton {
     onDndChanged: { if (!dnd && missedCount !== 0) missedCount = 0 }
 
     property bool _fullscreenActive: false
+    readonly property bool _fullscreenWatchWanted: ShellSettings.notifFullscreenSilence
+        || (ShellSettings.mediaVisualizerPauseFullscreen && ShellSettings.mediaProgress)
+        || (ShellSettings.osdEnabled && ShellSettings.osdBarIntegrated)
     readonly property bool fullscreenActive: _fullscreenActive
     readonly property bool fullscreenSilenced: ShellSettings.notifFullscreenSilence && _fullscreenActive
 
     Connections {
         target: Hyprland
+        enabled: root._fullscreenWatchWanted
         function onRawEvent(event) {
             const n = event.name
             if (n === "fullscreen" || n === "activewindow" || n === "workspace"
@@ -110,7 +114,14 @@ Singleton {
             root._fullscreenActive = !!(o && o.fullscreen)
         }
     }
-
+    on_FullscreenWatchWantedChanged: {
+        if (_fullscreenWatchWanted) {
+            _fsRefresh.restart()
+        } else {
+            _fsRefresh.stop()
+            _fullscreenActive = false
+        }
+    }
     function toggleDnd(): void { dnd = !dnd }
     function markSeen(id: int): void {
         root._ensurePersistentState()
@@ -276,7 +287,7 @@ Singleton {
         }
         if (seenChanged) root._seen = nextSeen
         if (timesChanged) root._times = nextTimes
-        _fsRefresh.restart()
+        if (root._fullscreenWatchWanted) _fsRefresh.restart()
     }
 
     NotificationServer {

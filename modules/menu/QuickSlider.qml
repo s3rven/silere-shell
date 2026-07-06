@@ -27,11 +27,32 @@ Item {
     width:  parent ? parent.width : 0
     height: 40
 
+    function _handleKey(event): void {
+        if (root.expandable && (event.modifiers & Qt.AltModifier)) {
+            if (event.key === Qt.Key_Down) {
+                if (!root.expanded) root.expandToggled()
+                event.accepted = true
+                return
+            }
+            if (event.key === Qt.Key_Up) {
+                if (root.expanded) root.expandToggled()
+                event.accepted = true
+                return
+            }
+        }
+        if (root.expandable && root.expanded && event.key === Qt.Key_Escape) {
+            root.expandToggled()
+            event.accepted = true
+            return
+        }
+        _track.handleKey(event)
+    }
+
     activeFocusOnTab: root.enabled
     Accessible.role: Accessible.Slider
     Accessible.name: root.accessibleName
-    Accessible.description: root.valueText
-    Keys.onPressed: event => _track.handleKey(event)
+    Accessible.description: root.valueText + (root.expandable ? (root.expanded ? ", output devices open" : ", output devices closed") : "")
+    Keys.onPressed: event => root._handleKey(event)
 
     HoverHandler { id: _rowHover; enabled: root.enabled }
     RowHoverBg {
@@ -87,10 +108,18 @@ Item {
         width: root.expandable ? 24 : 0
         height: parent.height
         visible: root.expandable
-        opacity: _chevHover.hovered ? 1.0 : 0.7
+        opacity: (_chevHover.hovered || activeFocus) ? 1.0 : 0.7
+
+        activeFocusOnTab: root.enabled && root.expandable
 
         Accessible.role: Accessible.Button
         Accessible.name: root.accessibleName + " output device"
+        Accessible.description: root.expanded ? "Open" : "Closed"
+
+        Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) root.expandToggled(); event.accepted = true }
+        Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root.expandToggled(); event.accepted = true }
+        Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) root.expandToggled(); event.accepted = true }
+        Keys.onEscapePressed: event => { if (root.expanded) root.expandToggled(); event.accepted = true }
 
         HoverHandler { id: _chevHover; cursorShape: Qt.PointingHandCursor }
         TapHandler   { onTapped: root.expandToggled() }
@@ -98,7 +127,7 @@ Item {
         Text {
             anchors.centerIn: parent
             text: "󰅀"
-            color: root.expanded ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.85)
+            color: root.expanded || _chev.activeFocus ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.85)
             font.family: Settings.font
             font.pixelSize: Settings.fontSize
             renderType: Text.NativeRendering

@@ -24,7 +24,7 @@ PanelWindow {
     readonly property bool _bottom: ShellSettings.barPosition === "bottom"
     readonly property int _barInset: ShellSettings.barFloating ? 4 : 0
     readonly property int _edgeY: _barInset + ShellSettings.barHeight + 8
-    readonly property bool _active: !ShellSettings.osdBarIntegrated || OverviewState.active
+    readonly property bool _active: !ShellSettings.osdBarIntegrated || OsdBarState.barConcealed
 
     anchors {
         top:    !osd._bottom

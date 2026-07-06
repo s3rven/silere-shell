@@ -41,7 +41,8 @@ Singleton {
         && deviceName.length > 0
         && deviceName.indexOf("/") < 0
         && deviceName.indexOf("..") < 0
-    readonly property bool trafficActive: ShellSettings.networkTrafficStats
+    readonly property bool statsWanted: ShellSettings.barShowNetwork && ShellSettings.networkTrafficStats
+    readonly property bool trafficActive: statsWanted
         && connected
         && deviceName.length > 0
         && (downBps >= 1024 || upBps >= 1024)
@@ -269,7 +270,7 @@ Singleton {
                     root.signalStrength = 0
                     root._resetTraffic()
                 }
-                if (root.isWifi) _signalDebounce.restart()
+                if (root.isWifi && ShellSettings.barShowNetwork) _signalDebounce.restart()
                 else root.signalStrength = 0
             }
             if (root._refreshPending) Qt.callLater(root.refresh)
@@ -281,8 +282,16 @@ Singleton {
         id: _signalDebounce
         interval: 500
         onTriggered: {
-            if (!root.toolAvailable || !root.isWifi || _signalProc.running) return
+            if (!root.toolAvailable || !root.isWifi || !ShellSettings.barShowNetwork || _signalProc.running) return
             _signalProc.running = true
+        }
+    }
+
+    Connections {
+        target: ShellSettings
+        function onBarShowNetworkChanged() {
+            if (ShellSettings.barShowNetwork && root.isWifi) _signalDebounce.restart()
+            else root.signalStrength = 0
         }
     }
 
@@ -425,7 +434,7 @@ Singleton {
 
     Process {
         id: _statsProc
-        running: ShellSettings.networkTrafficStats && root.statsDeviceReady
+        running: root.statsWanted && root.statsDeviceReady
             && !Idle.isIdle && !root._statsSuspended
         // /proc/net/dev field layout: iface: rx_bytes ... tx_bytes.
         // fd 3 pipe + read -t = fork-free sleep (same trick as CpuTemp).

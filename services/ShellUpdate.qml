@@ -79,7 +79,6 @@ Singleton {
         command: ["bash", root._script, "--version"]
         stdout: StdioCollector { id: _versionOut }
         onExited: (code) => { if (code === 0) root.currentVersion = (_versionOut.text || "").trim() }
-        Component.onCompleted: running = true
     }
 
     FileView {
@@ -162,9 +161,22 @@ Singleton {
         }
     }
 
-    Component.onCompleted: root.refreshTimer()
+    // Version + timer status only surface in Settings; probe once on first
+    // menu open instead of spawning bash during every shell startup.
+    property bool _probed: false
+    function _probe(): void {
+        if (_probed) return
+        _probed = true
+        if (currentVersion.length === 0) _versionProc.running = true
+        refreshTimer()
+    }
+    Connections {
+        target: MenuState
+        function onOpenChanged() { if (MenuState.open) root._probe() }
+    }
+    // First read can race the tool scan; catch up once it lands.
     Connections {
         target: SystemTools
-        function onReadyChanged() { root.refreshTimer() }
+        function onReadyChanged() { if (root._probed) root.refreshTimer() }
     }
 }

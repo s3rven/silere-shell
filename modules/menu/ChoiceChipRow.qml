@@ -199,6 +199,9 @@ Item {
                         ? String(modelData.glyph) : ""
                     readonly property string segBadge: (modelData.badge !== undefined && modelData.badge !== null)
                         ? String(modelData.badge) : ""
+                    readonly property bool segHasSwatch: modelData.color !== undefined && modelData.color !== null
+                        && String(modelData.color).length > 0
+                    readonly property color segSwatchColor: segHasSwatch ? modelData.color : "transparent"
 
                     // Natural (content) width; the container maxes these to size
                     // every segment equally. Never shrink below it so text can't clip.
@@ -271,6 +274,20 @@ Item {
                             renderType:     Text.NativeRendering
                             Behavior on color { ColorAnimation { duration: Motion.fast } }
                         }
+                        Rectangle {
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible:        _seg.segHasSwatch
+                            width:          visible ? 12 : 0
+                            height:         visible ? 12 : 0
+                            radius:         4
+                            antialiasing:   true
+                            color:          _seg.segSwatchColor
+                            border.width:   1
+                            border.color:   _seg.active
+                                ? Theme.withAlpha(Theme.text, 0.42)
+                                : (_hover.hovered ? Theme.withAlpha(Theme.text, 0.30) : Theme.withAlpha(Theme.subtext, 0.22))
+                            Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+                        }
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             visible:        _seg.modelData.label.length > 0
@@ -279,6 +296,7 @@ Item {
                             width: root._stacked
                                 ? Math.min(implicitWidth, Math.max(18, _seg.width - 18
                                     - (_seg.segGlyph.length > 0 ? 18 : 0)
+                                    - (_seg.segHasSwatch ? 16 : 0)
                                     - (_seg.segBadge.length > 0 ? 28 : 0)))
                                 : implicitWidth
                             elide:          Text.ElideRight

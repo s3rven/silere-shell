@@ -13,6 +13,7 @@ Singleton {
     property string mediaVisualizerPreset: "balanced" // "eco" | "balanced" | "smooth"
     property string mediaVisualizerStyle:  "wave"     // "wave" | "bars" | "pulse"
     property real   mediaVisualizerIntensity: 1.0
+    property bool   mediaVisualizerPauseFullscreen: true
     property bool   workspaceShift:      true
     property bool   neutralTheme:        true
     property bool   neutralAccentAuto:   false
@@ -215,6 +216,7 @@ Singleton {
         { k: "mediaVisualizerPreset", t: "enum", vals: ["eco", "balanced", "smooth"] },
         { k: "mediaVisualizerStyle",  t: "enum", vals: ["wave", "bars", "pulse"] },
         { k: "mediaVisualizerIntensity", t: "real", min: 0.55, max: 1.65 },
+        { k: "mediaVisualizerPauseFullscreen", t: "bool" },
         { k: "workspaceShift",      t: "bool" },
         { k: "neutralTheme",        t: "bool" },
         { k: "neutralAccentAuto",   t: "bool" },

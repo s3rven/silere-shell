@@ -208,15 +208,15 @@ Singleton {
         }
     }
 
-    Component.onCompleted: { _init(); _startGeo() }
+    Component.onCompleted: _init()
 
-    // Geo probe (timedatectl + zoneinfo lookup) only matters for auto-tracking,
-    // which needs hyprsunset — don't spawn it when night light can't run. Guarded
-    // one-shot so it still fires if toolAvailable only resolves once SystemTools
-    // settles (called again from onReadyChanged).
+    // Geo probe (timedatectl + zoneinfo lookup) only matters for auto-tracking
+    // and menu recommendations. Defer the one-shot until one of those surfaces
+    // needs it instead of spawning during every shell startup.
     property bool _geoStarted: false
+    readonly property bool _geoWanted: toolAvailable && (ShellSettings.nightLightAuto || MenuState.open)
     function _startGeo(): void {
-        if (_geoStarted || !toolAvailable) return
+        if (_geoStarted || !_geoWanted) return
         _geoStarted = true
         _geoProc.running = true
     }
@@ -232,6 +232,14 @@ Singleton {
     Connections {
         target: SystemTools
         function onReadyChanged() { root._init(); root._startGeo() }
+    }
+    Connections {
+        target: ShellSettings
+        function onNightLightAutoChanged() { root._startGeo() }
+    }
+    Connections {
+        target: MenuState
+        function onOpenChanged() { root._startGeo() }
     }
 
     Process {

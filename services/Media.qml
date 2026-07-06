@@ -54,6 +54,8 @@ Singleton {
     property real  _anchorMs:   0
     property real  positionNow: 0
     readonly property real positionRatio: length > 0 ? Math.max(0, Math.min(1, positionNow / length)) : 0
+    readonly property bool positionVisible: (MenuState.open && MenuState.activeTab === 0)
+        || (ShellSettings.barShowMedia && root.shown && ShellSettings.mediaWidgetHelper)
 
     function _reanchor(): void {
         root._anchorPos = (player && player.positionSupported) ? Math.max(0, player.position) : 0
@@ -87,14 +89,11 @@ Singleton {
         enabled: root.player !== null
         function onPositionChanged() { root._reanchor() }
     }
-    Connections {
-        target: MenuState
-        function onOpenChanged() { if (MenuState.open) root._reanchor() }
-    }
+    onPositionVisibleChanged: if (positionVisible) root._reanchor()
     Timer {
         interval: 500; repeat: true
         running: root.playing && root.hasPosition && !Idle.isIdle
-            && (MenuState.open || (root.shown && ShellSettings.mediaWidgetHelper))
+            && root.positionVisible
         onTriggered: root._recompute()
     }
 
@@ -258,14 +257,24 @@ Singleton {
 
     // debounce on the stop side so brief alt-tabs don't restart cava
     property bool _fsBlocked: false
+    readonly property bool _fullscreenPauseWanted: ShellSettings.mediaVisualizerPauseFullscreen && ShellSettings.mediaProgress
     Connections {
         target: Notifications
+        enabled: root._fullscreenPauseWanted
         function onFullscreenActiveChanged() {
             if (Notifications.fullscreenActive) _fsBlockTimer.restart()
             else { _fsBlockTimer.stop(); root._fsBlocked = false }
         }
     }
     Timer { id: _fsBlockTimer; interval: 2000; onTriggered: root._fsBlocked = true }
+    on_FullscreenPauseWantedChanged: {
+        if (!root._fullscreenPauseWanted) {
+            _fsBlockTimer.stop()
+            root._fsBlocked = false
+        } else if (Notifications.fullscreenActive) {
+            _fsBlockTimer.restart()
+        }
+    }
 
     Process {
         id: _cavaProc

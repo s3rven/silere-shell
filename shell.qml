@@ -99,108 +99,59 @@ ShellRoot {
     }
 
     // Popup surfaces are relatively large object trees, even while their
-    // PanelWindow is unmapped. Build them only when they have content to show.
-    // Menu/calendar/tray loaders stay alive through their window's close
-    // animation; OSD and notification models remove their final entry only
-    // after the delegate exit animation has completed.
-    LazyLoader {
-        id: _osdLoader
-        active: false
-        Component.onCompleted: if (OsdBarState.activeCount > 0) active = true
-        component: OsdWindow { targetScreen: root.activeOverlayScreen }
-    }
-    Connections {
-        target: OsdBarState
-        function onActiveCountChanged() {
-            if (OsdBarState.activeCount > 0) {
-                _osdUnload.stop()
-                _osdLoader.active = true
-            } else {
-                _osdUnload.restart()
-            }
+    // PanelWindow is unmapped. Build them only when they have content to show,
+    // and tear down unloadDelay after close so the exit animation finishes on
+    // a live surface. Notification popups skip the delay: their model removes
+    // the final entry only after the delegate exit animation has completed.
+    component PopupLoader: Scope {
+        id: _pl
+        required property bool wantOpen
+        required property Component surface
+        property int unloadDelay: Math.max(80, Motion.ms(210) + 80)
+        onWantOpenChanged: {
+            if (wantOpen) { _plUnload.stop(); _plLoader.active = true }
+            else _plUnload.restart()
         }
+        LazyLoader {
+            id: _plLoader
+            active: false
+            // wantOpen can already be true when the shell (re)loads; the
+            // binding won't fire a change for the initial value.
+            Component.onCompleted: if (_pl.wantOpen) active = true
+            component: _pl.surface
+        }
+        Timer { id: _plUnload; interval: _pl.unloadDelay; onTriggered: _plLoader.active = false }
     }
-    Timer { id: _osdUnload; interval: 50; onTriggered: _osdLoader.active = false }
+
+    PopupLoader {
+        wantOpen: OsdBarState.activeCount > 0
+        unloadDelay: 50
+        surface: Component { OsdWindow { targetScreen: root.activeOverlayScreen } }
+    }
 
     LazyLoader {
-        id: _notificationLoader
         active: ShellSettings.notifPopupEnabled && Notifications.activeCount > 0
         component: NotificationPopups { targetScreen: root.activeOverlayScreen }
     }
 
-    LazyLoader {
-        id: _menuLoader
-        active: false
-        Component.onCompleted: if (MenuState.open) active = true
-        component: MenuWindow { targetScreen: MenuState.triggerScreen ?? root.activeOverlayScreen }
+    PopupLoader {
+        wantOpen: MenuState.open
+        unloadDelay: Math.max(80, Motion.ms(220) + 80)
+        surface: Component { MenuWindow { targetScreen: MenuState.triggerScreen ?? root.activeOverlayScreen } }
     }
-    Connections {
-        target: MenuState
-        function onOpenChanged() {
-            if (MenuState.open) {
-                _menuUnload.stop()
-                _menuLoader.active = true
-            } else {
-                _menuUnload.restart()
-            }
-        }
-    }
-    Timer { id: _menuUnload; interval: Math.max(80, Motion.ms(220) + 80); onTriggered: _menuLoader.active = false }
 
-    LazyLoader {
-        id: _calendarLoader
-        active: false
-        Component.onCompleted: if (CalendarState.open) active = true
-        component: CalendarPopup { targetScreen: CalendarState.triggerScreen ?? root.activeOverlayScreen }
+    PopupLoader {
+        wantOpen: CalendarState.open
+        surface: Component { CalendarPopup { targetScreen: CalendarState.triggerScreen ?? root.activeOverlayScreen } }
     }
-    Connections {
-        target: CalendarState
-        function onOpenChanged() {
-            if (CalendarState.open) {
-                _calendarUnload.stop()
-                _calendarLoader.active = true
-            } else {
-                _calendarUnload.restart()
-            }
-        }
-    }
-    Timer { id: _calendarUnload; interval: Math.max(80, Motion.ms(210) + 80); onTriggered: _calendarLoader.active = false }
 
-    LazyLoader {
-        id: _trayMenuLoader
-        active: false
-        Component.onCompleted: if (TrayMenuState.open) active = true
-        component: TrayMenuPopup { targetScreen: TrayMenuState.triggerScreen ?? root.activeOverlayScreen }
+    PopupLoader {
+        wantOpen: TrayMenuState.open
+        surface: Component { TrayMenuPopup { targetScreen: TrayMenuState.triggerScreen ?? root.activeOverlayScreen } }
     }
-    Connections {
-        target: TrayMenuState
-        function onOpenChanged() {
-            if (TrayMenuState.open) {
-                _trayMenuUnload.stop()
-                _trayMenuLoader.active = true
-            } else {
-                _trayMenuUnload.restart()
-            }
-        }
-    }
-    Timer { id: _trayMenuUnload; interval: Math.max(80, Motion.ms(210) + 80); onTriggered: _trayMenuLoader.active = false }
 
-    LazyLoader {
-        id: _quickActionsLoader
-        active: false
-        Component.onCompleted: if (QuickActionsState.open) active = true
-        component: QuickActionsPopup { targetScreen: QuickActionsState.triggerScreen ?? root.activeOverlayScreen }
+    PopupLoader {
+        wantOpen: QuickActionsState.open
+        surface: Component { QuickActionsPopup { targetScreen: QuickActionsState.triggerScreen ?? root.activeOverlayScreen } }
     }
-    Connections {
-        target: QuickActionsState
-        function onOpenChanged() {
-            if (QuickActionsState.open) {
-                _quickActionsUnload.stop()
-                _quickActionsLoader.active = true
-            } else {
-                _quickActionsUnload.restart()
-            }
-        }
-    }
-    Timer { id: _quickActionsUnload; interval: Math.max(80, Motion.ms(210) + 80); onTriggered: _quickActionsLoader.active = false }
 }

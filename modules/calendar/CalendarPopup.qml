@@ -38,8 +38,6 @@ PanelWindow {
     anchors { top: true; left: true; right: true; bottom: true }
 
     Shortcut { sequence: "Escape"; context: Qt.ApplicationShortcut; enabled: CalendarState.open; onActivated: CalendarState.close() }
-    Shortcut { sequences: ["Left"];  context: Qt.ApplicationShortcut; enabled: CalendarState.open; onActivated: card._step(-1) }
-    Shortcut { sequences: ["Right"]; context: Qt.ApplicationShortcut; enabled: CalendarState.open; onActivated: card._step(1)  }
 
     Connections {
         target: ShellSettings
@@ -176,11 +174,22 @@ PanelWindow {
             if (tgt === cur) return
             _go(t.getFullYear(), t.getMonth(), tgt > cur ? 1 : -1)
         }
+        function _activateToday(event): void {
+            if (!event.isAutoRepeat) card._goToday()
+            event.accepted = true
+        }
+        function _activateStep(delta: int, event): void {
+            if (!event.isAutoRepeat) card._step(delta)
+            event.accepted = true
+        }
 
         Connections {
             target: CalendarState
             function onOpenChanged() {
-                if (CalendarState.open) card._snapToday()
+                if (CalendarState.open) {
+                    card._snapToday()
+                    card.forceActiveFocus()
+                }
             }
         }
         // Keep "today" current if the popup is held open across midnight, without
@@ -221,6 +230,24 @@ PanelWindow {
 
         width:  panelW
         height: _col.implicitHeight + pad * 2
+        activeFocusOnTab: true
+        Accessible.role: Accessible.Pane
+        Accessible.name: "Calendar"
+
+        Keys.onLeftPressed:  event => { card._step(-1); event.accepted = true }
+        Keys.onRightPressed: event => { card._step(1);  event.accepted = true }
+        Keys.onPressed: event => {
+            if (event.key === Qt.Key_PageUp) {
+                card._step(-1)
+                event.accepted = true
+            } else if (event.key === Qt.Key_PageDown) {
+                card._step(1)
+                event.accepted = true
+            } else if (event.key === Qt.Key_Home) {
+                card._goToday()
+                event.accepted = true
+            }
+        }
 
         WheelHandler {
             acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
@@ -237,11 +264,16 @@ PanelWindow {
             spacing: 6
 
             Item {
+                id: _todayButton
                 width: parent.width
                 height: 40
+                activeFocusOnTab: true
 
                 Accessible.role: Accessible.Button
                 Accessible.name: "Jump to today"
+                Keys.onSpacePressed:  event => card._activateToday(event)
+                Keys.onReturnPressed: event => card._activateToday(event)
+                Keys.onEnterPressed:  event => card._activateToday(event)
 
                 HoverHandler { id: _todayH; cursorShape: Qt.PointingHandCursor }
                 TapHandler   { onTapped: card._goToday() }
@@ -263,7 +295,7 @@ PanelWindow {
                         spacing: 1
                         Text {
                             text: card.todayWeekday
-                            color: _todayH.hovered ? Theme.text : Theme.withAlpha(Theme.text, 0.9)
+                            color: (_todayH.hovered || _todayButton.activeFocus) ? Theme.text : Theme.withAlpha(Theme.text, 0.9)
                             font.family: Settings.font; font.pixelSize: Settings.fontSize + 1; font.weight: Font.DemiBold
                             renderType: Text.NativeRendering
                             Behavior on color { ColorAnimation { duration: Motion.fast } }
@@ -286,36 +318,46 @@ PanelWindow {
                 height: 30
 
                 Rectangle {
+                    id: _prevButton
                     width: 26; height: 26; radius: 13
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
+                    activeFocusOnTab: true
                     antialiasing: true
-                    color: _prevH.hovered ? Theme.withAlpha(Theme.subtext, 0.12) : "transparent"
+                    color: (_prevH.hovered || activeFocus) ? Theme.withAlpha(Theme.subtext, 0.12) : "transparent"
                     Behavior on color { ColorAnimation { duration: Motion.fast } }
                     Accessible.role: Accessible.Button
                     Accessible.name: "Previous month"
+                    Keys.onSpacePressed:  event => card._activateStep(-1, event)
+                    Keys.onReturnPressed: event => card._activateStep(-1, event)
+                    Keys.onEnterPressed:  event => card._activateStep(-1, event)
                     HoverHandler { id: _prevH; cursorShape: Qt.PointingHandCursor }
                     TapHandler   { onTapped: card._step(-1) }
                     Text {
                         anchors.centerIn: parent; text: "󰅁"
-                        color: Theme.withAlpha(Theme.subtext, _prevH.hovered ? 0.95 : 0.7)
+                        color: Theme.withAlpha(Theme.subtext, (_prevH.hovered || _prevButton.activeFocus) ? 0.95 : 0.7)
                         font.family: Settings.font; font.pixelSize: Settings.fontSize + 2
                         renderType: Text.NativeRendering
                     }
                 }
 
                 Item {
+                    id: _monthButton
                     anchors.centerIn: parent
                     width: _mLabel.implicitWidth + 16; height: 26
+                    activeFocusOnTab: true
                     Accessible.role: Accessible.Button
                     Accessible.name: "Jump to today"
+                    Keys.onSpacePressed:  event => card._activateToday(event)
+                    Keys.onReturnPressed: event => card._activateToday(event)
+                    Keys.onEnterPressed:  event => card._activateToday(event)
                     HoverHandler { id: _mH; cursorShape: Qt.PointingHandCursor }
                     TapHandler   { onTapped: card._goToday() }
                     Text {
                         id: _mLabel
                         anchors.centerIn: parent
                         text: card.monthLabel
-                        color: _mH.hovered ? Theme.text : Theme.withAlpha(Theme.text, 0.9)
+                        color: (_mH.hovered || _monthButton.activeFocus) ? Theme.text : Theme.withAlpha(Theme.text, 0.9)
                         font.family: Settings.font; font.pixelSize: Settings.fontSize + 1; font.weight: Font.DemiBold
                         renderType: Text.NativeRendering
                         Behavior on color { ColorAnimation { duration: Motion.fast } }
@@ -323,19 +365,24 @@ PanelWindow {
                 }
 
                 Rectangle {
+                    id: _nextButton
                     width: 26; height: 26; radius: 13
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
+                    activeFocusOnTab: true
                     antialiasing: true
-                    color: _nextH.hovered ? Theme.withAlpha(Theme.subtext, 0.12) : "transparent"
+                    color: (_nextH.hovered || activeFocus) ? Theme.withAlpha(Theme.subtext, 0.12) : "transparent"
                     Behavior on color { ColorAnimation { duration: Motion.fast } }
                     Accessible.role: Accessible.Button
                     Accessible.name: "Next month"
+                    Keys.onSpacePressed:  event => card._activateStep(1, event)
+                    Keys.onReturnPressed: event => card._activateStep(1, event)
+                    Keys.onEnterPressed:  event => card._activateStep(1, event)
                     HoverHandler { id: _nextH; cursorShape: Qt.PointingHandCursor }
                     TapHandler   { onTapped: card._step(1) }
                     Text {
                         anchors.centerIn: parent; text: "󰅂"
-                        color: Theme.withAlpha(Theme.subtext, _nextH.hovered ? 0.95 : 0.7)
+                        color: Theme.withAlpha(Theme.subtext, (_nextH.hovered || _nextButton.activeFocus) ? 0.95 : 0.7)
                         font.family: Settings.font; font.pixelSize: Settings.fontSize + 2
                         renderType: Text.NativeRendering
                     }

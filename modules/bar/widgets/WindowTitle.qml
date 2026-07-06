@@ -209,7 +209,7 @@ Item {
     // in the same frame. Animating the box after the text changed left the new
     // title clipped at both ends (no ellipsis) while the box caught up; in the
     // animated swap path the snap happens while the text is faded out anyway.
-    implicitWidth:  Math.ceil(content.implicitWidth)
+    implicitWidth:  Math.ceil(content.width)
     implicitHeight: parent ? parent.height : ShellSettings.barHeight
 
     Item {

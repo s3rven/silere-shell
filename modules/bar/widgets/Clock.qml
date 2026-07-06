@@ -26,9 +26,9 @@ Row {
     Accessible.role: Accessible.Button
     Accessible.name: "Clock"
     Accessible.description: "Activate to open calendar."
-    Keys.onSpacePressed:  event => { root._openCalendar(); event.accepted = true }
-    Keys.onReturnPressed: event => { root._openCalendar(); event.accepted = true }
-    Keys.onEnterPressed:  event => { root._openCalendar(); event.accepted = true }
+    Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) root._openCalendar(); event.accepted = true }
+    Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._openCalendar(); event.accepted = true }
+    Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) root._openCalendar(); event.accepted = true }
 
     function _openCalendar(): void {
         CalendarState.toggleAt(root.mapToItem(null, root.width / 2, 0).x, root.screen)

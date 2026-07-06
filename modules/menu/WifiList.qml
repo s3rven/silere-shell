@@ -102,15 +102,31 @@ Item {
             spacing: 4
             model: root.open ? Network.wifiNetworks : []
 
+            function _focusIndex(index: int): void {
+                if (count <= 0) return
+                const i = Math.max(0, Math.min(count - 1, index))
+                currentIndex = i
+                positionViewAtIndex(i, ListView.Contain)
+                Qt.callLater(function() {
+                    const item = _list.itemAtIndex(i)
+                    if (item && item.focusRow) item.focusRow()
+                })
+            }
+
             delegate: Column {
                 id: _entry
                 required property var modelData
+                required property int index
                 width: _list.width
                 spacing: 0
 
                 readonly property bool _sel:        root._selected === modelData.ssid
                 readonly property bool _connecting: Network.wifiConnecting === modelData.ssid
                 readonly property bool _failed:     Network.wifiError === modelData.ssid
+
+                function focusRow(): void {
+                    _row.forceActiveFocus()
+                }
 
                 Rectangle {
                     id: _row
@@ -130,6 +146,7 @@ Item {
                     Accessible.name: _entry.modelData.ssid
                     Accessible.description: _entry.modelData.active ? "Connected"
                         : _entry._connecting ? "Connecting"
+                        : _entry._failed ? "Connection failed"
                         : _entry.modelData.secured ? "Secured network"
                         : "Open network"
 
@@ -147,6 +164,17 @@ Item {
                     Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) _activate(); event.accepted = true }
                     Keys.onReturnPressed: event => { if (!event.isAutoRepeat) _activate(); event.accepted = true }
                     Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) _activate(); event.accepted = true }
+                    Keys.onUpPressed:     event => { _list._focusIndex(_entry.index - 1); event.accepted = true }
+                    Keys.onDownPressed:   event => { _list._focusIndex(_entry.index + 1); event.accepted = true }
+                    Keys.onPressed: event => {
+                        if (event.key === Qt.Key_Home) {
+                            _list._focusIndex(0)
+                            event.accepted = true
+                        } else if (event.key === Qt.Key_End) {
+                            _list._focusIndex(_list.count - 1)
+                            event.accepted = true
+                        }
+                    }
 
                     HoverHandler { id: _rowHover; cursorShape: Qt.PointingHandCursor }
                     TapHandler { onTapped: _row._activate() }
@@ -241,6 +269,9 @@ Item {
                             renderType: Text.NativeRendering
                             clip: true
                             onAccepted: if (text.length > 0) Network.connectWifi(_entry.modelData.ssid, text)
+                            Accessible.role: Accessible.EditableText
+                            Accessible.name: "Password for " + _entry.modelData.ssid
+                            Keys.onEscapePressed: event => { root._selected = ""; event.accepted = true }
 
                             Text {
                                 anchors.fill: parent
@@ -261,12 +292,24 @@ Item {
                             width: 30; height: 28; radius: 8
                             antialiasing: true
                             enabled: _pw.text.length > 0 && !_entry._connecting
+                            activeFocusOnTab: enabled
                             opacity: enabled ? 1.0 : 0.4
-                            color: _joinHover.hovered ? Theme.withAlpha(Theme.accent, 0.30)
-                                                      : Theme.withAlpha(Theme.accent, 0.18)
+                            color: (_joinHover.hovered || activeFocus) ? Theme.withAlpha(Theme.accent, 0.30)
+                                                                        : Theme.withAlpha(Theme.accent, 0.18)
                             Behavior on color { ColorAnimation { duration: Motion.fast } }
+
+                            Accessible.role: Accessible.Button
+                            Accessible.name: "Connect to " + _entry.modelData.ssid
+                            function _activate(): void {
+                                if (_join.enabled) Network.connectWifi(_entry.modelData.ssid, _pw.text)
+                            }
+                            Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) _join._activate(); event.accepted = true }
+                            Keys.onReturnPressed: event => { if (!event.isAutoRepeat) _join._activate(); event.accepted = true }
+                            Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) _join._activate(); event.accepted = true }
+                            Keys.onEscapePressed: event => { root._selected = ""; _row.forceActiveFocus(); event.accepted = true }
+
                             HoverHandler { id: _joinHover; enabled: _join.enabled; cursorShape: Qt.PointingHandCursor }
-                            TapHandler   { enabled: _join.enabled; onTapped: Network.connectWifi(_entry.modelData.ssid, _pw.text) }
+                            TapHandler   { enabled: _join.enabled; onTapped: _join._activate() }
                             Text {
                                 anchors.centerIn: parent
                                 text: "󰌑"

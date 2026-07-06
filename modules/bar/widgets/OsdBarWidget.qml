@@ -5,9 +5,10 @@ import "../../../services"
 Item {
     id: root
 
-    // Hands off to the floating pill while the overview conceals the bar.
+    // Hands off to the floating pill while the overview or a fullscreen
+    // window conceals the bar.
     readonly property bool _shouldShow: ShellSettings.osdEnabled
-        && ShellSettings.osdBarIntegrated && OsdBarState.showing && !OverviewState.active
+        && ShellSettings.osdBarIntegrated && OsdBarState.showing && !OsdBarState.barConcealed
     readonly property int  _barH: ShellSettings.barHeight
 
     readonly property real _slide: 5
@@ -34,6 +35,9 @@ Item {
     Connections {
         target: OsdBarState
         function onShowingChanged() { root._sync() }
+        // Mode flips (overview/fullscreen conceal) aren't audio-race prone,
+        // so a plain resync covers them too.
+        function onBarConcealedChanged() { root._sync() }
         function onBumped() { if (root.state === "visible" && !_bumpAnim.running) _bumpAnim.restart() }
         // queued icon swap → stamp while visible (matches the pill); during a
         // rapid burst just snap, a queued stamp-on-stamp reads as thrashing
@@ -46,9 +50,6 @@ Item {
             if (!_iconStamp.running) _iconStamp.start()
         }
     }
-    // Mode flips (overview reveal/conceal, bar-OSD toggle) aren't audio-race
-    // prone, so a plain resync covers them.
-    Connections { target: OverviewState; function onActiveChanged() { root._sync() } }
     Connections { target: ShellSettings; function onOsdBarIntegratedChanged() { root._sync() } }
 
     states: [

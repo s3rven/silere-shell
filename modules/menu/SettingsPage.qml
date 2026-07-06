@@ -464,11 +464,11 @@ PageShell {
                     SectionLabel { label: "BASE" }
                     SettingsCard {
                         ChoiceChipRow {
-                            glyph: "󰃞"; label: "Background"
+                            glyph: "◐"; label: "Base tone"
                             currentValue: ShellSettings.baseTone
                             model: [
-                                { value: "charcoal", label: "Charcoal" },
-                                { value: "black",    label: "Black"    }
+                                { value: "charcoal", label: "Charcoal", color: "#17191d" },
+                                { value: "black",    label: "Black",    color: "#030303" }
                             ]
                             onChosen: (v) => ShellSettings.baseTone = v
                         }
@@ -491,7 +491,6 @@ PageShell {
 
                                 SectionLabel { label: "PALETTE" }
                                 SettingsCard {
-
                                     Item {
                                         id: _matuShowcase
                                         width: parent.width
@@ -513,7 +512,7 @@ PageShell {
 
                                         property string _hoverLabel: ""
                                         readonly property string _source:  SystemTools.hasMatugen ? "Matugen" : "Fallback"
-                                        // Top-right readout: a hovered swatch's name·hex, else the source.
+                                        // Top-right readout: a hovered swatch's name/hex, else the source.
                                         readonly property string _readout: _hoverLabel.length > 0 ? _hoverLabel : _source
                                         property real topRadius: 0
                                         property real bottomRadius: 0
@@ -670,10 +669,6 @@ PageShell {
                 HintText {
                     visible: !NightLight.toolAvailable
                     text: "hyprsunset is not installed."
-                }
-                HintText {
-                    visible: NightLight.toolAvailable && !NightLight.enabled
-                    text: "Night Light is off — turn it on from the menu to preview changes."
                 }
             }
 
@@ -1101,6 +1096,12 @@ PageShell {
                             min: 0.55; max: 1.65; step: 0.05
                             displayValue: Math.round(ShellSettings.mediaVisualizerIntensity * 100) + "%"
                             onChanged: (v) => ShellSettings.mediaVisualizerIntensity = v
+                        }
+                        ToggleRow {
+                            glyph: "󰊓"; label: "Pause in fullscreen"
+                            description: "Stops cava while a fullscreen window is active"
+                            checked: ShellSettings.mediaVisualizerPauseFullscreen
+                            onToggled: ShellSettings.mediaVisualizerPauseFullscreen = !ShellSettings.mediaVisualizerPauseFullscreen
                         }
                     }
                 }

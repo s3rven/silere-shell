@@ -20,10 +20,11 @@ Item {
     property var screen: null
     readonly property bool _onActiveBar: !root.screen || Monitors.activeName === root.screen.name
     readonly property bool _visualizerActive: ShellSettings.mediaProgress
-        && root.show && Media.playing && Media.cavaReady && root._onActiveBar && !MenuState.open
+        && root.show && Media.playing && Media.cavaReady && root._onActiveBar
     readonly property bool _vizVisible: _vizLoader.item ? _vizLoader.item.visible : false
     readonly property bool _helperEnabled: ShellSettings.mediaWidgetHelper
     readonly property string _playGlyph: Media.playing ? "󰏤" : "󰐊"
+    property real textBudget: -1
 
     readonly property real _scrollSpeed:     38    // px/sec
     readonly property int  _scrollHoldStart: 900   // short: title start already visible on entry
@@ -136,7 +137,10 @@ Item {
         Item {
             id: textClip
             anchors.verticalCenter: parent.verticalCenter
-            readonly property int  maxW: ShellSettings.barCompact ? 120 : 160
+            readonly property int  maxW: Math.round(Math.max(52, Math.min(
+                ShellSettings.barCompact ? 120 : 160,
+                root.textBudget > 0 ? root.textBudget : 9999
+            )))
             // Reduce-motion keeps the title elided and still, so it never scrolls.
             readonly property bool needsScroll: trackText.implicitWidth > maxW && !ShellSettings.reduceMotion
             readonly property real _overflow:   Math.max(0, trackText.implicitWidth - maxW)
@@ -149,6 +153,11 @@ Item {
             clip:   true
 
             property string _shown: ""
+            onMaxWChanged: {
+                _scroll.stop()
+                trackText.x = 0
+                if (needsScroll) Qt.callLater(root._startMarquee)
+            }
 
             Component.onCompleted: {
                 _shown = Media.label
@@ -272,11 +281,11 @@ Item {
         ? Media.formatTime(Media.positionNow) + " of " + Media.formatTime(Media.length) + ". "
         : "") + "Activate to toggle playback. Scroll to skip tracks."
 
-    Keys.onSpacePressed:  event => { Media.togglePlay(); event.accepted = true }
-    Keys.onReturnPressed: event => { Media.togglePlay(); event.accepted = true }
-    Keys.onEnterPressed:  event => { Media.togglePlay(); event.accepted = true }
-    Keys.onLeftPressed:   event => { Media.previous();   event.accepted = true }
-    Keys.onRightPressed:  event => { Media.next();       event.accepted = true }
+    Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) Media.togglePlay(); event.accepted = true }
+    Keys.onReturnPressed: event => { if (!event.isAutoRepeat) Media.togglePlay(); event.accepted = true }
+    Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) Media.togglePlay(); event.accepted = true }
+    Keys.onLeftPressed:   event => { if (!event.isAutoRepeat) Media.previous();   event.accepted = true }
+    Keys.onRightPressed:  event => { if (!event.isAutoRepeat) Media.next();       event.accepted = true }
 
     TapHandler {
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton

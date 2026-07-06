@@ -21,8 +21,14 @@ Item {
     readonly property real titleFreeLeft:  leftGroup.implicitWidth + gap
     readonly property real titleFreeRight: width - rightGroup.implicitWidth - gap
     readonly property real titleAvailableWidth: Math.max(0, titleFreeRight - titleFreeLeft)
+    readonly property bool titleHasRoom: titleAvailableWidth >= 96
 
     readonly property bool _compact: ShellSettings.barCompact
+    readonly property int mediaTextBudget: {
+        const base = _compact ? 120 : 160
+        if (!ShellSettings.showWindowTitle) return base
+        return Math.max(76, Math.min(base, Math.round(width * 0.065)))
+    }
 
     // One Component per widget kind, chosen per-slot by whichever zone array
     // currently holds that slot's key. Both zones share this one map.
@@ -45,7 +51,7 @@ Item {
     Component { id: _cVolume;      Volume           { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen } }
     Component { id: _cBrightness;  BrightnessWidget { anchors.verticalCenter: parent.verticalCenter; height: root.height } }
     Component { id: _cBattery;     BatteryWidget    { anchors.verticalCenter: parent.verticalCenter; height: root.height } }
-    Component { id: _cMedia;       MediaWidget      { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen } }
+    Component { id: _cMedia;       MediaWidget      { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; textBudget: root.mediaTextBudget } }
     Component { id: _cClock;       Clock            { anchors.verticalCenter: parent.verticalCenter; screen: root.screen } }
 
     readonly property var _widgetComponents: ({
@@ -156,13 +162,13 @@ Item {
         x: Math.round(Math.max(root.titleFreeLeft,
                                Math.min((root.width - width) / 2,
                                         root.titleFreeRight - width)))
-        width: item ? Math.min(item.implicitWidth, root.titleAvailableWidth) : 0
+        width: item && root.titleHasRoom ? Math.min(item.implicitWidth, root.titleAvailableWidth) : 0
         height: parent.height
         active: ShellSettings.showWindowTitle
         sourceComponent: Component {
             WindowTitle {
                 screen: root.screen
-                availableWidth: root.titleAvailableWidth
+                availableWidth: root.titleHasRoom ? root.titleAvailableWidth : 0
             }
         }
         transformOrigin: Item.Center
@@ -173,7 +179,7 @@ Item {
         // those and made the title drift sideways during title swaps (the
         // width change recomputes x while the new text fades in).
 
-        readonly property bool _want: ShellSettings.showWindowTitle && !root._osdBarShowing
+        readonly property bool _want: ShellSettings.showWindowTitle && root.titleHasRoom && !root._osdBarShowing
         state: _want ? "shown" : "hidden"
 
         states: [

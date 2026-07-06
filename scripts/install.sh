@@ -354,13 +354,25 @@ _font_installed() {
     command -v fc-list >/dev/null 2>&1 && fc-list : family 2>/dev/null | grep -qi "JetBrainsMono Nerd"
 }
 
+_font_download_tools_ready() {
+    local -a missing=()
+    command -v curl >/dev/null 2>&1 || missing+=("curl")
+    command -v tar  >/dev/null 2>&1 || missing+=("tar")
+    if [ "${#missing[@]}" -eq 0 ]; then
+        return 0
+    fi
+    _warn "font auto-install needs: ${missing[*]}"
+    _warn "install those tools or install JetBrainsMono Nerd Font manually"
+    return 1
+}
+
 did_font=false
 
 if _font_installed; then
     _ok "already installed"
 else
     _warn "JetBrainsMono Nerd Font not found"
-    if _ask "Download and install it now?"; then
+    if _font_download_tools_ready && _ask "Download and install it now?"; then
         FONT_DIR="$HOME/.local/share/fonts/JetBrainsMono"
         mkdir -p "$FONT_DIR"
         font_tmp="$(mktemp "${TMPDIR:-/tmp}/silere-font.XXXXXX.tar.xz")"

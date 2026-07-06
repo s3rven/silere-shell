@@ -50,8 +50,6 @@ Singleton {
         target: SystemTools
         function onReadyChanged() { if (SystemTools.ready && MenuState.open) root.refresh() }
     }
-    Component.onCompleted: Qt.callLater(root.refresh)
-
     Process {
         id: _get
         property int _gen: 0
