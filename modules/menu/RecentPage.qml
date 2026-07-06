@@ -14,6 +14,7 @@ PageShell {
     onPageShown: _timeTick++
 
     property bool _clearing: false
+    property bool _clearArmed: false
     property int _timeTick: 0
 
     Timer {
@@ -22,6 +23,10 @@ PageShell {
         running: root.active && MenuState.open && !Idle.isIdle
         onTriggered: root._timeTick++
     }
+
+    // Auto-disarm the clear-all confirm if the second press doesn't come.
+    Timer { id: _clearArmTimer; interval: 3000; onTriggered: root._clearArmed = false }
+    onPageHidden: root._clearArmed = false
 
     function formatTime(ms): string {
         const diff = Math.max(0, Date.now() - Number(ms || Date.now()))
@@ -49,6 +54,14 @@ PageShell {
         if (age < 172800000) return "Yesterday"
         if (age < 604800000) return Qt.formatDateTime(d, "dddd")
         return Qt.formatDateTime(d, "MMM d, yyyy")
+    }
+
+    // Destructive + irreversible → arm-to-confirm like reset-all: first press
+    // arms, a second within 3s commits.
+    function requestClearAll(): void {
+        if (_clearing || Notifications.historyCount === 0) return
+        if (_clearArmed) { _clearArmed = false; _clearArmTimer.stop(); clearAll() }
+        else { _clearArmed = true; _clearArmTimer.restart() }
     }
 
     function clearAll(): void {
@@ -130,32 +143,39 @@ PageShell {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 visible: Notifications.hasHistory
-                width: visible ? 68 : 0
+                width: visible ? (root._clearArmed ? 92 : 68) : 0
                 height: 30
                 radius: Theme.radiusControl
                 antialiasing: true
                 activeFocusOnTab: visible
+                onVisibleChanged:     if (!visible) root._clearArmed = false
+                onActiveFocusChanged: if (!activeFocus) root._clearArmed = false
 
-                color: _clearTap.pressed
-                    ? Theme.withAlpha(Theme.error, 0.20)
+                color: root._clearArmed
+                    ? Theme.withAlpha(Theme.error, _clearTap.pressed ? 0.28 : 0.16)
+                    : _clearTap.pressed ? Theme.withAlpha(Theme.error, 0.20)
                     : _clearHover.hovered ? Theme.withAlpha(Theme.subtext, 0.16) : Theme.menuControl
-                border.width: activeFocus ? 2 : 1
-                border.color: activeFocus
-                    ? Theme.withAlpha(Theme.error, 0.88)
+                border.width: (activeFocus || root._clearArmed) ? 2 : 1
+                border.color: root._clearArmed
+                    ? Theme.withAlpha(Theme.error, 0.72)
+                    : activeFocus ? Theme.withAlpha(Theme.error, 0.88)
                     : _clearHover.hovered ? Theme.menuControlLineHot : Theme.menuControlLine
                 opacity: root._clearing ? 0.45 : 1.0
 
                 Accessible.role: Accessible.Button
                 Accessible.name: "Clear all notifications"
-                Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root.clearAll(); event.accepted = true }
-                Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root.clearAll(); event.accepted = true }
-                Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root.clearAll(); event.accepted = true }
+                Accessible.description: root._clearArmed ? "Activate again to confirm" : ""
+                Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root.requestClearAll(); event.accepted = true }
+                Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root.requestClearAll(); event.accepted = true }
+                Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root.requestClearAll(); event.accepted = true }
+                Keys.onEscapePressed: event => { if (root._clearArmed) { root._clearArmed = false; event.accepted = true } else event.accepted = false }
 
+                Behavior on width { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
                 Behavior on color { ColorAnimation { duration: Motion.fast } }
                 Behavior on border.color { ColorAnimation { duration: Motion.fast } }
                 Behavior on opacity { NumberAnimation { duration: Motion.fast } }
                 HoverHandler { id: _clearHover; enabled: !root._clearing; cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor }
-                TapHandler { id: _clearTap; enabled: !root._clearing; onTapped: root.clearAll() }
+                TapHandler { id: _clearTap; enabled: !root._clearing; onTapped: root.requestClearAll() }
 
                 Row {
                     anchors.centerIn: parent
@@ -163,18 +183,23 @@ PageShell {
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: "󰆴"
-                        color: _clearHover.hovered ? Theme.withAlpha(Theme.text, 0.88) : Theme.withAlpha(Theme.subtext, 0.72)
+                        color: root._clearArmed ? Theme.error
+                            : _clearHover.hovered ? Theme.withAlpha(Theme.text, 0.88) : Theme.withAlpha(Theme.subtext, 0.72)
                         font.family: Settings.font
                         font.pixelSize: Settings.fontSize
                         renderType: Text.NativeRendering
+                        Behavior on color { ColorAnimation { duration: Motion.fast } }
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "Clear"
-                        color: _clearHover.hovered ? Theme.withAlpha(Theme.text, 0.88) : Theme.withAlpha(Theme.text, 0.76)
+                        text: root._clearArmed ? "Confirm?" : "Clear"
+                        color: root._clearArmed ? Theme.error
+                            : _clearHover.hovered ? Theme.withAlpha(Theme.text, 0.88) : Theme.withAlpha(Theme.text, 0.76)
                         font.family: Settings.font
                         font.pixelSize: Settings.fontSize - 2
+                        font.weight: root._clearArmed ? Font.DemiBold : Font.Normal
                         renderType: Text.NativeRendering
+                        Behavior on color { ColorAnimation { duration: Motion.fast } }
                     }
                 }
             }
