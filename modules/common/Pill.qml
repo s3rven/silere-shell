@@ -161,8 +161,9 @@ Item {
         radius: height / 2
         // keys off activeFocusOnTab so Tab-reachable non-button pills (e.g. brightness) still ring
         readonly property bool _focus: root.activeFocusOnTab && root.activeFocus
+        // hover capsule leans faintly accent to match the glyph/text hover tint
         color: _focus ? Theme.withAlpha(Theme.accent, 0.14)
-                      : Theme.withAlpha(Theme.text, 0.06)
+                      : Theme.withAlpha(Theme.mix(Theme.text, Theme.accent, 0.30), 0.07)
         opacity: ((_pillHover.hovered && ShellSettings.barHoverHighlight) || _focus) ? 1.0 : 0.0
         visible: opacity > 0.001
         border.width: _focus ? 1 : 0
