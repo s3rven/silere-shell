@@ -589,7 +589,11 @@ Item {
                     height: parent.height + 8
                     radius: 1
                     antialiasing: true
-                    x: Math.round((diamond._glint + 1.15) / 2.3 * (parent.width + width)) - width
+                    x: {
+                        const t = (diamond._glint + 1.15) / 2.3
+                        const p = diamond._glintDir >= 0 ? t : 1 - t
+                        return Math.round(p * (parent.width + width)) - width
+                    }
                     y: -4
                     rotation: -18
                     color: Qt.rgba(1, 1, 1, 0.48)
@@ -638,9 +642,15 @@ Item {
             NumberAnimation { target: diamond; property: "_specialScale"; to: 1.055; duration: Motion.ms(90);  easing.type: Easing.OutCubic }
             NumberAnimation { target: diamond; property: "_specialScale"; to: 1.0;   duration: Motion.ms(185); easing.type: Easing.OutQuart }
         }
+        // 1 = sweep left→right, -1 = right→left. Captured at glint start so the
+        // gem's shimmer flows with its travel, like the motion trail does.
+        property int _glintDir: 1
         SequentialAnimation {
             id: _glintAnim
-            ScriptAction { script: diamond._glint = -1.15 }
+            ScriptAction { script: {
+                diamond._glintDir = (diamond.targetX >= diamond.x) ? 1 : -1
+                diamond._glint = -1.15
+            } }
             NumberAnimation { target: diamond; property: "_glint"; to: 1.15; duration: Motion.ms(260); easing.type: Easing.OutCubic }
             ScriptAction { script: diamond._glint = -1.15 }
         }
