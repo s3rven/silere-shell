@@ -133,6 +133,8 @@ Item {
             renderType: Text.NativeRendering
             rotation: root.expanded ? 180 : 0
             transformOrigin: Item.Center
+            Behavior on rotation { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+            Behavior on color    { ColorAnimation { duration: Motion.fast } }
         }
     }
 
