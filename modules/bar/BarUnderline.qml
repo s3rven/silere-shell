@@ -101,15 +101,20 @@ Item {
         property real _sweepSpread: 0.28
         property real _bloomBoost:  0.0
         property real _screenshotSweepCenter: 0.50
-        // gradient peak: right-biased for right-side widgets, centred otherwise
+        // Lean toward the alerting widget's live zone — the bar order is
+        // user-configurable, so a hardcoded side would sweep the wrong way.
+        function _widgetSweep(key: string): real {
+            return ShellSettings.barWidgetLocate(key).zone === "left" ? 0.32 : 0.68
+        }
+        // gradient peak: leans toward the widget that owns the event, centred otherwise
         readonly property real _sweepCenterTarget: {
             if (_notifFlash.running)                                         return 0.50
-            if (_batteryGlowEnabled && (Battery.low || Battery.critical))    return 0.68
-            if (_tempGlowEnabled && (CpuTemp.hot || CpuTemp.critical))       return 0.68
+            if (_batteryGlowEnabled && (Battery.low || Battery.critical))    return _widgetSweep("battery")
+            if (_tempGlowEnabled && (CpuTemp.hot || CpuTemp.critical))       return _widgetSweep("battery")
             if (_glowEnabled && ShellSettings.underlineScreenshotGlow
                 && _shotActive)                                              return ShellSettings.screenshotGlowSweep && !ShellSettings.reduceMotion
                                                                                   ? _screenshotSweepCenter : 0.50
-            if (_netLossFlash.running)                                       return 0.68
+            if (_netLossFlash.running)                                       return _widgetSweep("network")
             return 0.50
         }
         property real _sweepCenter: _sweepCenterTarget
