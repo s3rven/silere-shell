@@ -65,8 +65,15 @@ Singleton {
         }
     }
 
+    // Pure read — the write lives in the arrival path. Stamping here loops:
+    // createdAt's binding reads _times, then would write it.
     function timeFor(id: int): real {
-        return root._ensureTime(id)
+        const times = _persist.times
+        if (times && typeof times === "object") {
+            const v = times[String(id)]
+            if (v !== undefined) return v
+        }
+        return Date.now()
     }
 
     // track object not just id — replaces_id reuses ids while old closed signal is pending

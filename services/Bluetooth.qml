@@ -63,7 +63,11 @@ Singleton {
     }
 
     function setScan(on: bool): void {
-        if (adapter) adapter.discovering = on && adapter.enabled
+        if (!adapter) return
+        // discovering is a D-Bus proxy: re-asserting the current value fires a
+        // redundant Start/StopDiscovery that bluez rejects. Only write on change.
+        const want = on && adapter.enabled
+        if (adapter.discovering !== want) adapter.discovering = want
     }
 
     // Dispatch by address through the raw _devices array so we always call
