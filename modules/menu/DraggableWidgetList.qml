@@ -4,48 +4,74 @@ import QtQuick
 import "../../config"
 import "../../services"
 
-// Standalone card (draws its own chrome, doesn't nest in a SettingsCard —
-// its rows are absolutely positioned for the drag reflow, which breaks
-// SettingsCard's column-order-based corner/divider auto-derivation).
-// One Repeater over the FIXED canonical key list gives every widget a
-// stable delegate identity that survives reorders and zone moves — a
-// Repeater bound directly to the live order arrays would tear down and
-// recreate delegates on every drag step, killing the gesture mid-drag.
 Item {
     id: root
 
     readonly property int _rowH: 44
+    readonly property int _optRowH: 40
     readonly property int _headerH: 28
     readonly property int _footerH: 40
     readonly property var _allKeys: ShellSettings._allBarWidgetKeys
     readonly property int _leftCount:  ShellSettings.barWidgetOrderLeftKeys.length
     readonly property int _rightCount: ShellSettings.barWidgetOrderRightKeys.length
+    readonly property bool _leftEmpty:  _leftCount === 0
+    readonly property bool _rightEmpty: _rightCount === 0
+    readonly property int  _leftPad:  _leftEmpty  ? _rowH : 0
+    readonly property int  _rightPad: _rightEmpty ? _rowH : 0
+
+    property string _expandedKey: ""
+    readonly property int _expandedSlot: {
+        if (!_expandedKey) return -1
+        const loc = ShellSettings.barWidgetLocate(_expandedKey)
+        return loc.zone === "left" ? loc.index : _leftCount + loc.index
+    }
+    readonly property int _expandedExtra: _expandedKey ? _optionsHeightFor(_expandedKey) : 0
 
     width:  parent ? parent.width : 0
-    height: 12 + _headerH + _leftCount * _rowH + _headerH + _rightCount * _rowH + _footerH
+    height: 12 + _headerH + _leftCount * _rowH + _leftPad + _headerH + _rightCount * _rowH + _rightPad + _footerH + _expandedExtra
     implicitHeight: height
+    Behavior on height { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
     property string _draggingKey: ""
     property real   _dragY: 0
 
-    // Combined slot index (0-based, spans both zones back-to-back) <-> the
-    // pixel Y a row sits at while NOT mid-drag (header height inserted once
-    // the left zone's rows are exhausted).
+    function _hasOptions(key: string): bool { return key === "battery" || key === "network" }
+
+    function _optionsFor(key: string): var {
+        if (key === "battery") return [
+            { glyph: "󰂃", label: "Hide when charging or full", setting: "batteryAutoHide",
+              available: ShellSettings.barShowBattery && Battery.available,
+              note: !Battery.available ? "No battery" : "Battery hidden", nested: false }
+        ]
+        if (key === "network") {
+            const a = ShellSettings.barShowNetwork && Network.toolAvailable
+            const note = !Network.toolAvailable ? "NetworkManager missing" : "Network hidden"
+            const rows = [ { glyph: "󰓅", label: "Network speed", setting: "networkTrafficStats", available: a, note: note, nested: false } ]
+            if (ShellSettings.networkTrafficStats)
+                rows.push({ glyph: "󰐃", label: "Always show speed", setting: "networkSpeedInline", available: a, note: note, nested: true })
+            rows.push({ glyph: "󰦝", label: "Show connection under VPN", setting: "netVpnShowLink", available: a, note: note, nested: false })
+            return rows
+        }
+        return []
+    }
+    function _optionsHeightFor(key: string): int {
+        const n = _optionsFor(key).length
+        return n > 0 ? n * root._optRowH + 8 : 0
+    }
+
     function _yForSlot(slot: real): real {
-        return slot < root._leftCount
+        let y = slot < root._leftCount
             ? 12 + root._headerH + slot * root._rowH
-            : 12 + root._headerH + root._leftCount * root._rowH + root._headerH + (slot - root._leftCount) * root._rowH
+            : 12 + root._headerH + root._leftCount * root._rowH + root._leftPad + root._headerH + (slot - root._leftCount) * root._rowH
+        if (root._expandedSlot >= 0 && slot > root._expandedSlot)
+            y += root._expandedExtra
+        return y
     }
     function _slotForY(y: real): int {
-        // Boundary = the vertical midpoint of the last left-zone row, backed
-        // out of _yForSlot rather than re-deriving the left-block height by
-        // hand. An empty left zone has no "last row" to sit below, so any y
-        // unconditionally resolves into the right zone.
-        const boundary = root._leftCount > 0
-            ? root._yForSlot(root._leftCount - 1) + root._rowH / 2
-            : -Infinity
+        const leftBottom = 12 + root._headerH + root._leftCount * root._rowH + root._leftPad
+        const boundary = leftBottom - root._rowH / 2
         if (y < boundary)
-            return Math.max(0, Math.round((y - 12 - root._headerH) / root._rowH))
+            return root._leftEmpty ? 0 : Math.max(0, Math.round((y - 12 - root._headerH) / root._rowH))
         const rightRaw = y - root._yForSlot(root._leftCount)
         const rightSlot = Math.round(rightRaw / root._rowH)
         return root._leftCount + Math.max(0, Math.min(root._rightCount, rightSlot))
@@ -102,10 +128,12 @@ Item {
             readonly property bool _dragging: root._draggingKey === key
             readonly property bool _hasToggle: meta.setting.length > 0
             readonly property bool _checked: _hasToggle ? ShellSettings[meta.setting] : true
+            readonly property bool _hasOptions: root._hasOptions(key)
+            readonly property bool _expanded: root._expandedKey === key
 
             x: 0
             width:  root.width
-            height: root._rowH
+            height: root._rowH + (_expanded ? root._expandedExtra : 0)
             z: _dragging ? 20 : 1
             y: _dragging ? root._dragY : root._yForSlot(_combinedSlot)
             Behavior on y { enabled: !_row._dragging && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
@@ -115,131 +143,291 @@ Item {
             Accessible.role: Accessible.ListItem
             Accessible.name: _row.meta.label
 
-            RowHoverBg {
-                anchors.fill: parent
-                cardInset:    2
-                topRadius:    10
-                bottomRadius: 10
-                active:       _row._dragging || _handleHover.hovered || _keyFocus.activeFocus
-                fillColor:    _row._dragging ? Theme.accent : Theme.text
-                fillOpacity:  _row._dragging ? 0.10 : (_keyFocus.activeFocus ? 0.08 : 0.05)
-            }
-            // RowHoverBg has no border; the drag-state ring is its own thin overlay.
-            Rectangle {
-                anchors.fill: parent
-                anchors.margins: 2
-                radius: 8
-                antialiasing: true
-                color: "transparent"
-                visible: _row._dragging
-                border.width: 1
-                border.color: Theme.withAlpha(Theme.accent, 0.35)
-            }
-
-            // Drag handle — the only part of the row that initiates a drag,
-            // so tapping the toggle/zone chip elsewhere on the row still works.
             Item {
-                id: _handle
-                anchors.left: parent.left
-                anchors.leftMargin: 6
-                anchors.verticalCenter: parent.verticalCenter
-                width: 22; height: 32
+                id: _header
+                width: parent.width
+                height: root._rowH
 
-                Text {
-                    anchors.centerIn: parent
-                    text: "⣿"
-                    color: _row._dragging ? Theme.accent : Theme.withAlpha(Theme.subtext, _handleHover.hovered ? 0.75 : 0.45)
-                    font.pixelSize: Settings.fontSize
-                    renderType: Text.NativeRendering
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                RowHoverBg {
+                    anchors.fill: parent
+                    cardInset:    2
+                    topRadius:    10
+                    bottomRadius: 10
+                    active:       _row._dragging || _handleHover.hovered || _keyFocus.activeFocus
+                    fillColor:    _row._dragging ? Theme.accent : Theme.text
+                    fillOpacity:  _row._dragging ? 0.10 : (_keyFocus.activeFocus ? 0.08 : 0.05)
+                }
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: 2
+                    radius: 8
+                    antialiasing: true
+                    color: "transparent"
+                    visible: _row._dragging
+                    border.width: 1
+                    border.color: Theme.withAlpha(Theme.accent, 0.35)
                 }
 
-                HoverHandler { id: _handleHover; cursorShape: Qt.OpenHandCursor }
-                DragHandler {
-                    id: _dragH
-                    target: null
-                    // Captured once per gesture: DragHandler.translation is
-                    // cumulative from the press point, not a per-frame delta.
-                    // Re-deriving the base from _row._combinedSlot on every
-                    // change (as this used to) re-adds the full cumulative
-                    // translation on top of an already-shifted base after
-                    // each swap, snowballing the row toward one end.
-                    property real _startY: 0
-                    onActiveChanged: {
-                        if (active) {
-                            _dragH._startY = root._yForSlot(_row._combinedSlot)
-                            root._draggingKey = _row.key
-                            root._dragY = _dragH._startY
-                        } else {
-                            root._draggingKey = ""
+                Item {
+                    id: _handle
+                    anchors.left: parent.left
+                    anchors.leftMargin: 6
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 22; height: 32
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "⣿"
+                        color: _row._dragging ? Theme.accent : Theme.withAlpha(Theme.subtext, _handleHover.hovered ? 0.75 : 0.45)
+                        font.pixelSize: Settings.fontSize
+                        renderType: Text.NativeRendering
+                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    }
+
+                    HoverHandler { id: _handleHover; cursorShape: Qt.OpenHandCursor }
+                    DragHandler {
+                        id: _dragH
+                        target: null
+                        // captured once: translation is cumulative from press, so re-deriving the base each swap would snowball the row
+                        property real _startY: 0
+                        onActiveChanged: {
+                            if (active) {
+                                root._expandedKey = ""
+                                _dragH._startY = root._yForSlot(_row._combinedSlot)
+                                root._draggingKey = _row.key
+                                root._dragY = _dragH._startY
+                            } else {
+                                root._draggingKey = ""
+                            }
+                        }
+                        onTranslationChanged: {
+                            if (!active) return
+                            const minY = 12 + root._headerH
+                            const maxY = root._rightEmpty
+                                ? root._yForSlot(root._leftCount)
+                                : root._yForSlot(root._allKeys.length - 1)
+                            root._dragY = Math.max(minY, Math.min(maxY, _dragH._startY + translation.y))
+                            const targetSlot = root._slotForY(root._dragY)
+                            // derive the zone from the drop position, not the combined slot — an empty left zone has no slot index to encode "left"
+                            const leftBottom = 12 + root._headerH + root._leftCount * root._rowH + root._leftPad
+                            const targetZone = root._dragY < leftBottom - root._rowH / 2 ? "left" : "right"
+                            const targetIdxInZone = targetZone === "left"
+                                ? (root._leftEmpty ? 0 : targetSlot)
+                                : targetSlot - root._leftCount
+                            if (targetZone === _row.zone && targetIdxInZone === _row._zoneIdx) return
+                            ShellSettings.setBarWidgetZone(_row.key, targetZone, targetIdxInZone)
                         }
                     }
-                    onTranslationChanged: {
-                        if (!active) return
-                        const minY = root._yForSlot(0)
-                        const maxY = root._yForSlot(root._allKeys.length - 1)
-                        root._dragY = Math.max(minY, Math.min(maxY, _dragH._startY + translation.y))
-                        const targetSlot = root._slotForY(root._dragY)
-                        if (targetSlot === _row._combinedSlot) return
-                        const targetZone = targetSlot < root._leftCount ? "left" : "right"
-                        const targetIdxInZone = targetZone === "left" ? targetSlot : targetSlot - root._leftCount
-                        ShellSettings.setBarWidgetZone(_row.key, targetZone, targetIdxInZone)
+                }
+
+                Text {
+                    id: _glyph
+                    anchors.left: _handle.right
+                    anchors.leftMargin: 6
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 18
+                    horizontalAlignment: Text.AlignHCenter
+                    text: _row.meta.glyph
+                    color: _row._checked ? Theme.withAlpha(Theme.accent, 0.9) : Theme.withAlpha(Theme.subtext, 0.85)
+                    font.family: Settings.font
+                    font.pixelSize: Settings.fontSize + 1
+                    renderType: Text.NativeRendering
+                }
+
+                Text {
+                    anchors.left: _glyph.right
+                    anchors.leftMargin: 8
+                    anchors.right: _chevron.left
+                    anchors.rightMargin: 8
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: _row.meta.label
+                    textFormat: Text.PlainText
+                    elide: Text.ElideRight
+                    color: _row._checked ? Theme.text : Theme.withAlpha(Theme.text, 0.85)
+                    font.family: Settings.font
+                    font.pixelSize: Settings.fontSize
+                    renderType: Text.NativeRendering
+                }
+
+                Item {
+                    id: _chevron
+                    width: 22
+                    height: parent.height
+                    anchors.right: _row._hasToggle ? _toggle.left : parent.right
+                    anchors.rightMargin: _row._hasToggle ? 4 : 12
+
+                    Text {
+                        anchors.centerIn: parent
+                        visible: _row._hasOptions
+                        text: "󰅀"
+                        rotation: _row._expanded ? 0 : -90
+                        color: Theme.withAlpha(Theme.subtext, _chevHover.hovered || _row._expanded ? 0.85 : 0.5)
+                        font.family: Settings.font
+                        font.pixelSize: Settings.fontSize - 1
+                        renderType: Text.NativeRendering
+                        Behavior on rotation { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    }
+                    HoverHandler { id: _chevHover; enabled: _row._hasOptions; cursorShape: Qt.PointingHandCursor }
+                    TapHandler {
+                        enabled: _row._hasOptions
+                        onTapped: root._expandedKey = _row._expanded ? "" : _row.key
+                    }
+                }
+
+                ToggleSwitch {
+                    id: _toggle
+                    visible: _row._hasToggle
+                    anchors.right: parent.right
+                    anchors.rightMargin: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    checked: _row._checked
+
+                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                    TapHandler {
+                        onTapped: {
+                            _toggle.armFlipAnimation()
+                            ShellSettings[_row.meta.setting] = !ShellSettings[_row.meta.setting]
+                        }
                     }
                 }
             }
 
-            Text {
-                id: _glyph
-                anchors.left: _handle.right
-                anchors.leftMargin: 6
-                anchors.verticalCenter: parent.verticalCenter
-                width: 18
-                horizontalAlignment: Text.AlignHCenter
-                text: _row.meta.glyph
-                color: _row._checked ? Theme.withAlpha(Theme.accent, 0.9) : Theme.withAlpha(Theme.subtext, 0.85)
-                font.family: Settings.font
-                font.pixelSize: Settings.fontSize + 1
-                renderType: Text.NativeRendering
-            }
+            Item {
+                id: _optWrap
+                y: root._rowH
+                width: parent.width
+                clip: true
+                height: _row._expanded ? root._expandedExtra : 0
+                opacity: _row._expanded ? 1 : 0
+                visible: height > 0.5
+                Behavior on height  { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+                Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
 
-            Text {
-                anchors.left: _glyph.right
-                anchors.leftMargin: 8
-                anchors.right: _toggle.left
-                anchors.rightMargin: 8
-                anchors.verticalCenter: parent.verticalCenter
-                text: _row.meta.label
-                textFormat: Text.PlainText
-                elide: Text.ElideRight
-                color: _row._checked ? Theme.text : Theme.withAlpha(Theme.text, 0.85)
-                font.family: Settings.font
-                font.pixelSize: Settings.fontSize
-                renderType: Text.NativeRendering
-            }
+                Rectangle {
+                    x: 26; y: 2
+                    width: 1
+                    height: parent.height - 6
+                    color: Theme.withAlpha(Theme.accent, 0.25)
+                }
 
-            // Show/hide toggle — absent for workspaces (no hide capability).
-            ToggleSwitch {
-                id: _toggle
-                visible: _row._hasToggle
-                anchors.right: parent.right
-                anchors.rightMargin: 12
-                anchors.verticalCenter: parent.verticalCenter
-                checked: _row._checked
+                Loader {
+                    width: parent.width
+                    active: _row._hasOptions
+                    sourceComponent: Column {
+                        width: _optWrap.width
+                        Repeater {
+                            model: root._optionsFor(_row.key)
+                            delegate: Item {
+                                id: _opt
+                                required property var modelData
+                                readonly property bool _on: ShellSettings[modelData.setting]
+                                readonly property bool _canToggle: _row._expanded && modelData.available
+                                width: _optWrap.width
+                                height: root._optRowH
 
-                HoverHandler { cursorShape: Qt.PointingHandCursor }
-                TapHandler {
-                    onTapped: {
-                        _toggle.armFlipAnimation()
-                        ShellSettings[_row.meta.setting] = !ShellSettings[_row.meta.setting]
+                                activeFocusOnTab: _canToggle
+                                Accessible.role: Accessible.CheckBox
+                                Accessible.name: _opt.modelData.label
+                                Accessible.checked: _opt._on
+                                function _activate(): void {
+                                    if (!_opt.modelData.available) return
+                                    _optToggle.armFlipAnimation()
+                                    ShellSettings[_opt.modelData.setting] = !ShellSettings[_opt.modelData.setting]
+                                }
+                                Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) _opt._activate(); event.accepted = true }
+                                Keys.onReturnPressed: event => { if (!event.isAutoRepeat) _opt._activate(); event.accepted = true }
+                                Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) _opt._activate(); event.accepted = true }
+
+                                HoverHandler { id: _optHover; cursorShape: _opt._canToggle ? Qt.PointingHandCursor : Qt.ArrowCursor }
+                                TapHandler { enabled: _opt.modelData.available; onTapped: _opt._activate() }
+
+                                // collapsing hides this subtree; hand keyboard focus back to the row instead of orphaning it
+                                Connections {
+                                    target: _row
+                                    function on_expandedChanged() {
+                                        if (!_row._expanded && _opt.activeFocus) _keyFocus.forceActiveFocus()
+                                    }
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 40
+                                    anchors.rightMargin: 8
+                                    anchors.topMargin: 2
+                                    anchors.bottomMargin: 2
+                                    radius: 8
+                                    antialiasing: true
+                                    visible: (_optHover.hovered || _opt.activeFocus) && _opt.modelData.available
+                                    color: Theme.withAlpha(Theme.text, _opt.activeFocus ? 0.08 : 0.05)
+                                    border.width: 1
+                                    border.color: Theme.withAlpha(Theme.accent, _opt.activeFocus ? 0.45 : 0)
+                                    Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+                                }
+
+                                Text {
+                                    id: _optGlyph
+                                    anchors.left: parent.left
+                                    anchors.leftMargin: _opt.modelData.nested ? 58 : 44
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: 18
+                                    horizontalAlignment: Text.AlignHCenter
+                                    text: _opt.modelData.glyph
+                                    color: Theme.withAlpha(Theme.subtext, _opt.modelData.available ? 0.85 : 0.4)
+                                    font.family: Settings.font
+                                    font.pixelSize: Settings.fontSize - 1
+                                    renderType: Text.NativeRendering
+                                }
+
+                                Text {
+                                    id: _optLabel
+                                    anchors.left: _optGlyph.right
+                                    anchors.leftMargin: 8
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: _opt.modelData.label
+                                    textFormat: Text.PlainText
+                                    color: _opt.modelData.available ? Theme.withAlpha(Theme.text, 0.9) : Theme.withAlpha(Theme.text, 0.45)
+                                    font.family: Settings.font
+                                    font.pixelSize: Settings.fontSize - 1
+                                    renderType: Text.NativeRendering
+                                }
+
+                                Text {
+                                    anchors.left: _optLabel.right
+                                    anchors.leftMargin: 8
+                                    anchors.right: _optToggle.left
+                                    anchors.rightMargin: 8
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    visible: !_opt.modelData.available && _opt.modelData.note.length > 0
+                                    text: _opt.modelData.note
+                                    textFormat: Text.PlainText
+                                    elide: Text.ElideRight
+                                    horizontalAlignment: Text.AlignRight
+                                    color: Theme.withAlpha(Theme.subtext, 0.55)
+                                    font.family: Settings.font
+                                    font.pixelSize: Settings.fontSize - 4
+                                    renderType: Text.NativeRendering
+                                }
+
+                                ToggleSwitch {
+                                    id: _optToggle
+                                    anchors.right: parent.right
+                                    anchors.rightMargin: 12
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    enabled: _opt.modelData.available
+                                    opacity: _opt.modelData.available ? 1 : 0.45
+                                    checked: _opt._on
+                                }
+                            }
+                        }
                     }
                 }
             }
 
-            // Keyboard fallback: focus the row, Ctrl+Up/Down reorders within
-            // its current zone (mirrors the drag handle for a11y/no-mouse use).
             FocusScope {
                 id: _keyFocus
-                anchors.fill: parent
+                height: root._rowH
+                width: parent.width
                 activeFocusOnTab: true
                 function flipVisibility(event: var): void {
                     if (!event.isAutoRepeat && _row._hasToggle)
@@ -261,6 +449,41 @@ Item {
                 Keys.onRightPressed:  event => _keyFocus.moveToZone("right", event)
                 Keys.onUpPressed:   event => { if (event.modifiers & Qt.ControlModifier) { ShellSettings.moveBarWidget(_row.key, -1); event.accepted = true } }
                 Keys.onDownPressed: event => { if (event.modifiers & Qt.ControlModifier) { ShellSettings.moveBarWidget(_row.key, +1); event.accepted = true } }
+                Keys.onPressed: event => {
+                    if (_row._hasOptions && event.key === Qt.Key_O) {
+                        root._expandedKey = _row._expanded ? "" : _row.key
+                        event.accepted = true
+                    }
+                }
+            }
+        }
+    }
+
+    Repeater {
+        model: 2
+        delegate: Rectangle {
+            required property int index
+            readonly property bool _isLeft: index === 0
+            readonly property bool dragging: root._draggingKey.length > 0
+            visible: _isLeft ? root._leftEmpty : root._rightEmpty
+            x: 10; width: root.width - 20
+            y: (_isLeft ? 12 + root._headerH : root._yForSlot(root._leftCount)) + 3
+            height: root._rowH - 6
+            radius: 10
+            antialiasing: true
+            color: Theme.withAlpha(Theme.accent, dragging ? 0.08 : 0.035)
+            border.width: 1
+            border.color: Theme.withAlpha(Theme.accent, dragging ? 0.4 : 0.18)
+            Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+            Behavior on color { ColorAnimation { duration: Motion.fast } }
+            Behavior on y { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+            Text {
+                anchors.centerIn: parent
+                text: "drag a widget here"
+                color: Theme.withAlpha(Theme.subtext, 0.6)
+                font.family: Settings.font
+                font.pixelSize: Settings.fontSize - 3
+                renderType: Text.NativeRendering
             }
         }
     }
