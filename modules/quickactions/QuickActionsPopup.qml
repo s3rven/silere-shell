@@ -226,6 +226,22 @@ PanelWindow {
                 stateText: PowerProfiles.label.length > 0 ? PowerProfiles.label : "…"
                 onTriggered: PowerProfiles.cycle()
             }
+            QuickActionRow {
+                // airplane = every controllable radio off; toggling flips them together
+                readonly property bool _wifiCtl: Network.toolAvailable && Network.hasWifiDevice
+                readonly property bool _btCtl:   Bluetooth.available
+                readonly property bool _anyOn:   (_wifiCtl && Network.wifiEnabled) || (_btCtl && Bluetooth.enabled)
+                visible: _wifiCtl || _btCtl
+                glyph: "󰀝"
+                label: "Airplane Mode"
+                active: !_anyOn
+                stateText: _anyOn ? "Off" : "On"
+                onTriggered: {
+                    const wantOn = _anyOn ? false : true
+                    if (_wifiCtl && Network.wifiEnabled !== wantOn) Network.toggleWifi()
+                    if (_btCtl && Bluetooth.enabled !== wantOn) Bluetooth.toggle()
+                }
+            }
         }
     }
 }
