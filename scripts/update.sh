@@ -159,7 +159,8 @@ if [ "${1:-}" = "--apply" ]; then
     if [ "$stash_conflict" -eq 1 ]; then
         _notify -u critical "Silere update applied with conflicts" "Your local changes conflicted and were kept in the stash — run 'git stash list' to find it, 'git stash pop' to retry"
     fi
-    count="$(git rev-list --count "${local_rev}..${remote_rev}")"
+    new_rev="$(git rev-parse HEAD)"
+    count="$(git rev-list --count "${local_rev}..${new_rev}")"
     plural="change"; [ "$count" -ne 1 ] && plural="changes"
     # systemd unit only exists on dev installs; exec-once users restart by hand
     if systemctl --user is-active --quiet silere-shell.service 2>/dev/null; then
@@ -180,7 +181,7 @@ remote_rev="$(git rev-parse origin/main)"
 _exit_if_not_behind "$local_rev" "$remote_rev" 1
 
 count="$(git rev-list --count "${local_rev}..${remote_rev}")"
-summary="$(git log --oneline --no-decorate "${local_rev}..${remote_rev}" | head -5)"
+summary="$(git log -5 --oneline --no-decorate "${local_rev}..${remote_rev}")"
 
 mkdir -p "$CACHE_DIR"
 {

@@ -109,14 +109,24 @@ Singleton {
         _proc.exec(["bash", "-c", root._cmd()])
     }
 
+    function _resetDisabledState(): void {
+        _initDelay.stop()
+        _retry.stop()
+        _reconnect.stop()
+        if (_proc.running) _proc.running = false
+        root.count = 0
+        root.ready = true
+        root.lastFailed = false
+        root.lastError = ""
+    }
+
     Process {
         id: _proc
         stdout: StdioCollector { id: _out }
         onExited: {
             root.lastCheckMs = Date.now()
             if (!ShellSettings.updatesWidget) {
-                root.count = 0
-                root.ready = true
+                root._resetDisabledState()
                 return
             }
             const t = (_out.text || "").trim()
@@ -179,15 +189,7 @@ Singleton {
         target: ShellSettings
         function onUpdatesWidgetChanged() {
             if (ShellSettings.updatesWidget) root.refresh()   // immediate feedback on enable
-            else {
-                _initDelay.stop()
-                _retry.stop()
-                _reconnect.stop()
-                if (_proc.running) _proc.running = false
-                root.count = 0                                // hide the widget at once when off
-                root.lastFailed = false
-                root.lastError = ""
-            }
+            else root._resetDisabledState()                    // hide the widget at once when off
         }
     }
 }

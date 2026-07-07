@@ -106,19 +106,21 @@ Singleton {
     // never silently vanish from the bar.
     readonly property var _zoneKeys: {
         const all = root._allBarWidgetKeys
+        const valid = {}
+        for (let i = 0; i < all.length; i++) valid[all[i]] = true
         const parse = s => (s || "").split(",").map(x => x.trim()).filter(x => x.length > 0)
         const seen = {}
         const left = [], right = []
         const leftRaw = parse(root.barWidgetOrderLeft)
         for (let i = 0; i < leftRaw.length; i++) {
             const k = leftRaw[i]
-            if (seen[k] || all.indexOf(k) < 0) continue
+            if (seen[k] || valid[k] !== true) continue
             seen[k] = true; left.push(k)
         }
         const rightRaw = parse(root.barWidgetOrderRight)
         for (let i = 0; i < rightRaw.length; i++) {
             const k = rightRaw[i]
-            if (seen[k] || all.indexOf(k) < 0) continue
+            if (seen[k] || valid[k] !== true) continue
             seen[k] = true; right.push(k)
         }
         for (let i = 0; i < all.length; i++) {
@@ -126,22 +128,26 @@ Singleton {
             if (seen[k]) continue
             if (k === "workspaces") left.push(k); else right.push(k)
         }
-        return { left: left, right: right }
+        const loc = {}
+        for (let i = 0; i < left.length; i++) loc[left[i]] = { zone: "left", index: i }
+        for (let i = 0; i < right.length; i++) loc[right[i]] = { zone: "right", index: i }
+        return { left: left, right: right, loc: loc }
     }
     readonly property var barWidgetOrderLeftKeys:  root._zoneKeys.left
     readonly property var barWidgetOrderRightKeys: root._zoneKeys.right
+    readonly property var _missingBarWidgetLocation: ({ zone: "", index: -1 })
+    readonly property var _barWidgetLocations: root._zoneKeys.loc
 
-    // Single scan for both zone and in-zone position.
+    // Shared lookup for both zone and in-zone position.
     function barWidgetLocate(key: string): var {
-        const li = root.barWidgetOrderLeftKeys.indexOf(key)
-        if (li >= 0) return { zone: "left", index: li }
-        return { zone: "right", index: root.barWidgetOrderRightKeys.indexOf(key) }
+        return root._barWidgetLocations[key] || root._missingBarWidgetLocation
     }
 
     // Adjacent swap within whichever zone currently holds `key` — keyboard
     // (Ctrl+Up/Down) and the drag handle's live reflow both funnel through this.
     function moveBarWidget(key: string, delta: int): void {
         const loc = root.barWidgetLocate(key)
+        if (loc.index < 0) return
         const arr = (loc.zone === "left" ? root.barWidgetOrderLeftKeys : root.barWidgetOrderRightKeys).slice()
         const j = loc.index + delta
         if (j < 0 || j >= arr.length) return
@@ -154,10 +160,13 @@ Singleton {
     // its current zone first. Used by the drag handle crossing zones and the
     // per-row zone toggle.
     function setBarWidgetZone(key: string, zone: string, atIndex: int): void {
+        if (root._allBarWidgetKeys.indexOf(key) < 0 || (zone !== "left" && zone !== "right"))
+            return
         const left  = root.barWidgetOrderLeftKeys.filter(k => k !== key)
         const right = root.barWidgetOrderRightKeys.filter(k => k !== key)
         const target = (zone === "left") ? left : right
-        const clamped = Math.max(0, Math.min(target.length, atIndex))
+        const rawIndex = Number(atIndex)
+        const clamped = isNaN(rawIndex) ? target.length : Math.max(0, Math.min(target.length, Math.round(rawIndex)))
         target.splice(clamped, 0, key)
         root.barWidgetOrderLeft  = left.join(",")
         root.barWidgetOrderRight = right.join(",")
