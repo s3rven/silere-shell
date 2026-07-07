@@ -55,6 +55,9 @@ Singleton {
     property bool   notifFullscreenSilence: false  // archive popups while a window is fullscreen
     property string notifPosition:       "top-right"  // "top-right" | "top-left" | "top-center"
     property int    notifMaxVisible:     5            // 0 = unlimited
+    property bool   dndSchedule:         false        // auto do-not-disturb during quiet hours
+    property int    dndFrom:             22           // quiet-hours start hour (0-23)
+    property int    dndTo:               8            // quiet-hours end hour (0-23)
     property string mediaWidgetFormat:   "title"  // "title" | "artist-title"
     property int    tempHotThreshold:    90
     property int    batteryLowThreshold: 20
@@ -256,6 +259,9 @@ Singleton {
         { k: "notifFullscreenSilence", t: "bool" },
         { k: "notifPosition",       t: "enum", vals: ["top-right", "top-left", "top-center"] },
         { k: "notifMaxVisible",     t: "int",  min: 0, max: 20 },
+        { k: "dndSchedule",         t: "bool" },
+        { k: "dndFrom",             t: "int",  min: 0, max: 23 },
+        { k: "dndTo",               t: "int",  min: 0, max: 23 },
         { k: "mediaWidgetFormat",   t: "enum", vals: ["title", "artist-title"] },
         { k: "tempHotThreshold",    t: "int",  min: 50,   max: 105 },
         { k: "batteryLowThreshold", t: "int",  min: 5,    max: 50 },

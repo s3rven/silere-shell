@@ -618,7 +618,7 @@ Item {
         // while Do-Not-Disturb is on (otherwise the popups are suppressed and the
         // anchor is the only cue). No pulse, no border — the menu carries detail.
         Rectangle {
-            readonly property bool _show: Notifications.dnd && Notifications.missedCount > 0
+            readonly property bool _show: Notifications.effectiveDnd && Notifications.missedCount > 0
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top:       parent.top
             anchors.topMargin: -1

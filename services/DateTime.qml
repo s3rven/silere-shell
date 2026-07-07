@@ -22,6 +22,7 @@ Singleton {
     property string cachedMinute:   ""  // "mm" — split from the hour so only the changed field rolls
     property string cachedAmPm:     ""  // "AM" / "PM" in 12h mode, "" in 24h
     property string cachedSeconds:  ""  // ":ss"
+    readonly property int hour24: clock.date.getHours()  // 24h int for the quiet-hours check
 
     Component.onCompleted: _update()
 

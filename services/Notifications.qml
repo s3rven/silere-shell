@@ -130,6 +130,21 @@ Singleton {
         }
     }
     function toggleDnd(): void { dnd = !dnd }
+
+    // Auto do-not-disturb across the user's quiet-hours window. Re-evaluates
+    // each time the hour rolls (bound int read, no timer of its own).
+    readonly property bool _quietActive: {
+        if (!ShellSettings.dndSchedule) return false
+        const from = ShellSettings.dndFrom, to = ShellSettings.dndTo
+        if (from === to) return false
+        const h = DateTime.hour24
+        return from < to ? (h >= from && h < to) : (h >= from || h < to)
+    }
+    // What actually silences popups: the manual toggle OR a scheduled quiet hour.
+    readonly property bool effectiveDnd: dnd || _quietActive
+    // Clear the missed badge once nothing's silencing anymore (mirrors the
+    // manual-off clear, but also covers the quiet window ending).
+    onEffectiveDndChanged: { if (!effectiveDnd && missedCount !== 0) missedCount = 0 }
     function markSeen(id: int): void {
         root._ensurePersistentState()
         const key = String(id)
@@ -309,7 +324,7 @@ Singleton {
 
         onNotification: (n) => {
             root._ensurePersistentState()
-            if (root.dnd && n.urgency !== NotificationUrgency.Critical) {
+            if (root.effectiveDnd && n.urgency !== NotificationUrgency.Critical) {
                 root.missedCount++
                 n.tracked = false
                 return

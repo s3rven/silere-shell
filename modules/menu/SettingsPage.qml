@@ -1209,6 +1209,32 @@ PageShell {
                     }
                 }
 
+                SectionLabel { label: "QUIET HOURS" }
+                SettingsCard {
+                    ToggleRow {
+                        glyph: "󰂛"; label: "Auto do not disturb"
+                        checked: ShellSettings.dndSchedule
+                        onToggled: ShellSettings.dndSchedule = !ShellSettings.dndSchedule
+                    }
+                    CollapsibleSection {
+                        expanded: ShellSettings.dndSchedule
+                        SliderRow {
+                            glyph: "󰃰"; label: "From"
+                            displayValue: (ShellSettings.dndFrom < 10 ? "0" : "") + ShellSettings.dndFrom + ":00"
+                            value: ShellSettings.dndFrom
+                            min: 0; max: 23; step: 1
+                            onChanged: (v) => ShellSettings.dndFrom = v
+                        }
+                        SliderRow {
+                            glyph: "󰃰"; label: "To"
+                            displayValue: (ShellSettings.dndTo < 10 ? "0" : "") + ShellSettings.dndTo + ":00"
+                            value: ShellSettings.dndTo
+                            min: 0; max: 23; step: 1
+                            onChanged: (v) => ShellSettings.dndTo = v
+                        }
+                    }
+                }
+
                 SectionLabel { label: "DISPLAY" }
                 SettingsCard {
                     ChoiceChipRow {
