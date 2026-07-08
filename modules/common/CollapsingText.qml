@@ -1,9 +1,7 @@
 import QtQuick
 import "../../config"
 
-// A text segment that collapses its width to 0 (clipped) and fades out when
-// not expanded, animating both. Used by the clock for the optional day-name,
-// seconds and AM/PM segments.
+// text segment that collapses width to 0 (clipped) + fades when not expanded; clock day-name/seconds/AM-PM.
 Item {
     id: root
 

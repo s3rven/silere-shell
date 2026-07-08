@@ -4,10 +4,8 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// One-shot startup diagnostic: if another notification daemon (mako/dunst/swaync,
-// …) owns org.freedesktop.Notifications, silere's own server is queued and never
-// sees a notification. We surface the culprit so "notifications don't work" isn't
-// a silent mystery. OsdBarState watches `conflict` to flash a warning.
+// one-shot startup diagnostic: if another daemon (mako/dunst/swaync) owns org.freedesktop.Notifications,
+// silere's server is queued and sees nothing. surfaces the culprit; OsdBarState watches `conflict` to flash a warning
 Singleton {
     id: root
 
@@ -28,8 +26,7 @@ Singleton {
         function onReadyChanged() { root._check() }
     }
 
-    // Settle delay: let our server and any autostarted daemon finish racing for
-    // the name before we ask who actually won it.
+    // settle delay: let our server and any autostarted daemon finish racing before we ask who won
     Timer {
         id: _delay
         interval: 5000

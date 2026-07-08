@@ -54,8 +54,7 @@ Singleton {
             return 0
         }
 
-        // Only consume from accumulator what we actually emit; clamped overflow
-        // stays for the next event instead of being silently dropped
+        // consume only what we emit; clamped overflow stays for the next event, not dropped
         const emitted = Math.max(-maxSteps, Math.min(maxSteps, notches))
         _accums[key]    = cur - emitted * threshold
         _lastSteps[key] = now
@@ -89,9 +88,7 @@ Singleton {
             property string key: ""
             interval: root.resetMs; repeat: false
             onTriggered: {
-                // Reap every per-key entry, not just the timer — _processDelta
-                // reads `_accums[key] || 0`, so a deleted key is equivalent to 0
-                // and the maps don't accrue dead entries per control touched.
+                // reap every per-key entry, not just the timer — a deleted key reads as 0 in _processDelta, so the maps don't accrue dead entries
                 delete root._accums[key]
                 delete root._lastSteps[key]
                 delete root._timers[key]

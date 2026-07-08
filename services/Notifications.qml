@@ -65,8 +65,7 @@ Singleton {
         }
     }
 
-    // Pure read — the write lives in the arrival path. Stamping here loops:
-    // createdAt's binding reads _times, then would write it.
+    // pure read; stamping here loops (createdAt binding reads _times then writes it), so the write lives in the arrival path
     function timeFor(id: int): real {
         const times = _persist.times
         if (times && typeof times === "object") {
@@ -131,8 +130,7 @@ Singleton {
     }
     function toggleDnd(): void { dnd = !dnd }
 
-    // Auto do-not-disturb across the user's quiet-hours window. Re-evaluates
-    // each time the hour rolls (bound int read, no timer of its own).
+    // auto DND across the quiet-hours window; re-evaluates as the hour rolls (bound int, no timer)
     readonly property bool _quietActive: {
         if (!ShellSettings.dndSchedule) return false
         const from = ShellSettings.dndFrom, to = ShellSettings.dndTo
@@ -142,8 +140,7 @@ Singleton {
     }
     // What actually silences popups: the manual toggle OR a scheduled quiet hour.
     readonly property bool effectiveDnd: dnd || _quietActive
-    // Clear the missed badge once nothing's silencing anymore (mirrors the
-    // manual-off clear, but also covers the quiet window ending).
+    // clear the missed badge once nothing's silencing (covers the quiet window ending too)
     onEffectiveDndChanged: { if (!effectiveDnd && missedCount !== 0) missedCount = 0 }
     function markSeen(id: int): void {
         root._ensurePersistentState()

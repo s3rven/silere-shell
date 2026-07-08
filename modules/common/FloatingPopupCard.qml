@@ -4,11 +4,8 @@ import QtQuick
 import "../../config"
 import "../../services"
 
-// Shared placement + open/close choreography for detached popups that hug the
-// bar edge (calendar, tray menu). Trigger-proportional x: the anchor keeps the
-// same relative position inside the popup as it has across the screen, so a
-// centre click centres the popup and an edge click hugs that side instead of
-// saturating near screen edges on a custom-width bar.
+// shared placement + open/close choreography for bar-edge popups (calendar, tray).
+// trigger-proportional x: anchor keeps its relative screen position, so a centre click centres and an edge click hugs that side (no edge saturation on a custom-width bar).
 Rectangle {
     id: root
 

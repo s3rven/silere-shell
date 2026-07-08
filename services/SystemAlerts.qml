@@ -6,13 +6,10 @@ import Quickshell
 Singleton {
     id: root
 
-    // Public so the shell root can force-instantiate this singleton: Quickshell
-    // lazy-loads singletons, and nothing else touches SystemAlerts, so without an
-    // external member read its watchers never arm and no alert ever fires.
+    // public so the shell root can force-instantiate: Quickshell lazy-loads singletons and nothing else reads SystemAlerts, so its watchers never arm otherwise
     readonly property bool armed: SystemTools.hasNotifySend
 
-    // Sent-flags prevent re-firing while the condition is still true.
-    // Reset when the condition clears so the next onset fires again.
+    // sent-flags prevent re-firing while the condition holds; reset when it clears so the next onset fires
     property bool _battLowSent:  false
     property bool _battCritSent: false
     property bool _cpuCritSent:  false
@@ -30,8 +27,7 @@ Singleton {
         ])
     }
 
-    // Latch only when a notification is actually sent, so enabling the toggle
-    // mid-condition still alerts (the toggle Connections below re-check).
+    // latch only when a notification actually sends, so enabling the toggle mid-condition still alerts
     function _checkBattLow(): void {
         if (Battery.low && ShellSettings.osdBatteryWarn && !_battLowSent) {
             _battLowSent = true

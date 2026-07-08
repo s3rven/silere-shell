@@ -8,12 +8,10 @@ Item {
     property bool expanded: true
     default property alias data: _content.data
 
-    // Lets an enclosing SettingsCard recurse through this group when deriving row
-    // dividers and corner-rounding, so nested rows behave like flat ones.
+    // lets an enclosing SettingsCard recurse through this group when deriving dividers/rounding, so nested rows behave like flat ones
     readonly property bool isRadiusGroup: true
     readonly property Item radiusColumn: _content
-    // Inherit the divider-transparency of whatever opens the group, so a section
-    // that's just a hint doesn't draw a line above its own intro text.
+    // inherit the divider-transparency of whatever opens the group, so a hint-only section draws no line above its intro text
     readonly property bool suppressDividerAbove: {
         const ch = _content.children
         for (let i = 0; i < ch.length; i++) {
@@ -67,8 +65,6 @@ Item {
         }
     }
 
-    // Internal seams between this group's own rows (the card only divides its
-    // direct children, so a multi-row group would otherwise have none). Clipped
-    // away with the group when collapsed.
+    // internal seams between this group's rows (the card only divides its direct children); clipped away with the group when collapsed
     RowDividers { column: _content }
 }

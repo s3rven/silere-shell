@@ -2,10 +2,8 @@ import QtQuick
 import "../../config"
 import "../../services"
 
-// The pill-shaped switch visual shared by ToggleRow and any other control
-// that needs a checked/unchecked toggle. Call armFlipAnimation() right
-// before flipping `checked` on a real user tap — the knob only slides+
-// stretches on deliberate flips, not on section-driven re-checks.
+// pill switch shared by ToggleRow and other checked/unchecked controls. call armFlipAnimation() right before
+// flipping `checked` on a real tap — the knob only slides+stretches on deliberate flips, not section re-checks.
 Item {
     id: root
 

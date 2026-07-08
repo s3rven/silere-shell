@@ -1,9 +1,7 @@
 import QtQuick
 import "../../config"
 
-// Top + bottom overflow cues for a scrollable list: each edge fade ramps in as
-// the list scrolls away from it. Place over the list's visible area (anchors.fill
-// or explicit geometry) and point `list` at the ListView/Flickable to track.
+// top/bottom overflow cues — each edge fade ramps in as the list scrolls away. place over the list, point `list` at the ListView/Flickable to track.
 Item {
     id: root
     required property Flickable list

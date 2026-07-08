@@ -39,8 +39,7 @@ Canvas {
     property var   _cy:     []
 
     function _fadeEdges(ctx) {
-        // Edge fade mask — applied after each style so the visualizer blends
-        // into the media label instead of ending on hard vertical sides.
+        // edge fade mask so the visualizer blends into the media label instead of hard vertical sides
         var fadeW = Math.min(width * 0.18, 22)
         if (!_edge || Math.round(_edgeW) !== Math.round(width)) {
             var m = ctx.createLinearGradient(0, 0, width, 0)
@@ -138,15 +137,11 @@ Canvas {
             _fillB = ac.b
         }
 
-        // Build the wave path once. Smoothing: bar centres are quadratic control
-        // points; the curve passes through midpoints between adjacent centres →
-        // C1-smooth, no kinks. Path stays 1px inside each edge.
-        //
-        // Single-pass: stroke the open wave first (crest sits near y=0 where
-        // fill alpha≈0, so the fill painted on top doesn't cover the line),
-        // then extend the live path with bottom-closing segments and fill.
-        // ctx.stroke() leaves the path intact so lineTo continues from the
-        // last point — no second traversal needed.
+        // build the wave path once. bar centres are quadratic control points, curve
+        // passes through midpoints between centres → C1-smooth, no kinks, 1px inside each edge.
+        // single-pass: stroke the open wave first (crest near y=0 where fill alpha≈0, so
+        // the fill on top doesn't cover it), then extend the same path down and fill —
+        // ctx.stroke() leaves the path intact so lineTo continues from the last point.
         ctx.beginPath()
         ctx.moveTo(1, cy[0])
         for (var i = 0; i < n - 1; i++) {

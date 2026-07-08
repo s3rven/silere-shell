@@ -29,8 +29,7 @@ PanelWindow {
     WlrLayershell.namespace: "silere-menu"
     WlrLayershell.keyboardFocus: MenuState.open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
-    // Unmap the full-screen surface while the menu is closed so it isn't holding a
-    // screen-sized GPU buffer at rest, stays mapped through the close animation.
+    // unmap the full-screen surface while closed so it isn't holding a screen-sized GPU buffer; stays mapped through the close animation
     visible: MenuState.open || panel.opacity > 0.001
 
     anchors {
@@ -131,17 +130,14 @@ PanelWindow {
     Rectangle {
         id: panel
 
-        // Home/Notifications read best compact; Settings needs room for the tree-nav
-        // plus the 4-chip option rows.
+        // Home/Notifications read best compact; Settings needs room for the tree-nav + 4-chip rows
         readonly property int _compactW:  398
-        // Expanded settings width is the collapsed icon rail plus category nav
-        // and a content column wide enough for dense settings rows.
+        // icon rail + category nav + a content column wide enough for dense settings rows
         readonly property int _settingsW: 566
         readonly property int _targetPanelW: activeTab === 1 ? _settingsW : _compactW
         readonly property int panelW: Math.max(320, Math.min(_targetPanelW,
             win.width > 0 ? win.width - panelMinX * 2 : _targetPanelW))
-        // Rail expands when Settings is active: the icon strip stays fixed and the
-        // category nav rides on beside it, so they read as one growing surface.
+        // rail expands for Settings: icon strip stays fixed, category nav rides on beside it as one growing surface
         readonly property int railCollapsedW: 44
         readonly property int navW: 168
         readonly property int railExpandedW: railCollapsedW + navW
@@ -149,8 +145,7 @@ PanelWindow {
         readonly property int contentW: panelW - railW
         readonly property int contentPad: activeTab === 1 ? 18 : 12
         readonly property int innerW: contentW - contentPad * 2
-        // Shared height floor so every tab opens at the same size; taller
-        // content grows above it and the panel animates the change.
+        // shared height floor so every tab opens at the same size; taller content grows above it
         readonly property int idealMinH: 360
         // min height so rail icons never overlap the power slot
         readonly property int minRailFitH: 252
@@ -165,15 +160,13 @@ PanelWindow {
 
         readonly property bool _barBottom: ShellSettings.barPosition === "bottom"
 
-        // Visible bar edge in window coords (mirrors Bar.qml's surfaceInset),
-        // plus a detach gap so the panel floats clear of the bar.
+        // visible bar edge in window coords (mirrors Bar.qml's surfaceInset), plus a detach gap so the panel floats clear
         readonly property int _barInset: ShellSettings.barFloating ? 4 : 0
         readonly property int _edgeY: _barInset + ShellSettings.barHeight + 8
         readonly property real panelMinX: radius + 4
         readonly property real panelMaxX: Math.max(panelMinX, win.width - panelW - panelMinX)
 
-        // Detached popup: starts just behind the bar-side edge, then settles into
-        // place via scale/offset — height is fixed up front, not animated.
+        // detached popup: starts just behind the bar-side edge, then settles in via scale/offset — height is fixed up front, not animated
         property real menuScale: Motion.popScaleFrom
         property real edgeOffset: _closedOffset
         readonly property real _closedOffset: _barBottom ? 8 : -8
@@ -242,9 +235,7 @@ PanelWindow {
                     panel._place()
                     _placementSettle.restart()
                     contentFlick.contentY = 0
-                    // Deterministic Tab start, no ring: the panel paints nothing
-                    // on focus, and this clears any stale child focus from the
-                    // previous open.
+                    // deterministic Tab start: panel paints no focus ring, and this clears stale child focus from the previous open
                     panel.forceActiveFocus()
                 } else {
                     _placementSettle.stop()
@@ -255,10 +246,8 @@ PanelWindow {
             }
         }
 
-        // The window unmaps while closed and its width reads garbage (100/0/
-        // stale) until the compositor configures it — the open-time _place()
-        // computes against that and pins the panel far left. x is stateful, so
-        // it can't self-heal: re-place when the real width lands.
+        // closed window's width reads garbage until the compositor configures it; open-time _place()
+        // then pins far left and stateful x can't self-heal — re-place when the real width lands.
         Connections {
             target: win
             function onWidthChanged() {
@@ -298,8 +287,7 @@ PanelWindow {
             NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
         }
 
-        // Same material as the bar so the shell reads as one family, but a
-        // free-standing rounded panel rather than a fused extension of it.
+        // same material as the bar so the shell reads as one family, but a free-standing rounded panel
         color: Theme.popup
         border.width: 0
 
@@ -311,8 +299,7 @@ PanelWindow {
         }
 
         state: MenuState.open ? "visible" : "hidden"
-        // Layer only while the scale animates so NativeRendering text doesn't
-        // shimmer; a hidden menu holds no FBO.
+        // layer only while the scale animates so NativeRendering text doesn't shimmer; hidden menu holds no FBO
         layer.enabled: !ShellSettings.reduceMotion && opacity > 0.001 && menuScale < 0.999
 
         states: [
@@ -383,9 +370,7 @@ PanelWindow {
             }
         }
 
-        // Free the page tree once the menu's been closed a while. Reopening
-        // rebuilds it from cached bytecode, so quick reopens stay instant while
-        // a genuinely idle menu stops holding ~50-100 MB.
+        // free the page tree after the menu's been closed a while; reopen rebuilds from cached bytecode (quick reopens stay instant, idle drops ~50-100 MB)
         Timer {
             id: _idleUnload
             interval: 45000
@@ -419,9 +404,7 @@ PanelWindow {
                 NumberAnimation { duration: panel.heightAnimDuration; easing.type: Easing.OutCubic }
             }
 
-            // Background + divider live in a clipped sub-layer so the rounded
-            // background (drawn wider than the rail) can't bleed past the rail's
-            // right edge into the content pane. The icons/pills stay unclipped.
+            // background + divider live in a clipped sub-layer so the over-wide rounded background can't bleed past the rail edge; icons/pills stay unclipped
             Item {
                 anchors.fill: parent
                 clip: true
@@ -458,9 +441,7 @@ PanelWindow {
                     }
                 }
 
-                // Settings categories. Living in the clipped surface means the
-                // growing rail reveals them left-to-right and they can't paint
-                // past the rail edge mid-animation.
+                // settings categories in the clipped surface: the growing rail reveals them left-to-right, can't paint past the rail edge mid-animation
                 Item {
                     x: panel.railCollapsedW
                     width: panel.navW
@@ -482,9 +463,7 @@ PanelWindow {
                 }
             }
 
-            // Top group: nav icons. Rail order is visual only; tab index stays
-            // bound to the page (0 Home / 1 Settings / 2 Notifications) so loaders and
-            // jump-to-tab keep working regardless of where an item sits here.
+            // nav icons. rail order is visual only; tab index stays page-bound (0 Home / 1 Settings / 2 Notifications) so loaders and jump-to-tab keep working
             Column {
                 id: _railNav
                 width: panel.railCollapsedW
@@ -508,9 +487,7 @@ PanelWindow {
                     active: panel.activeTab === 2
                     onTapped: panel.switchTab(2)
 
-                    // Count badge rides the icon's top-right corner. Anchored to the
-                    // item centre (where the icon sits) so it stays glued to the glyph
-                    // regardless of rail width; a rail-coloured ring lifts it off the icon.
+                    // count badge on the icon's top-right, anchored to item centre so it stays glued regardless of rail width; rail-coloured ring lifts it off
                     Rectangle {
                         readonly property bool _show: Notifications.hasHistory && !_railRecent.active
                         anchors.horizontalCenter: parent.horizontalCenter
@@ -600,16 +577,13 @@ PanelWindow {
                 color: Theme.menuPane
             }
 
-            // Slide in step with the expanding rail so the rail's right edge and
-            // the content's left edge stay flush.
+            // slide in step with the expanding rail so the rail and content edges stay flush
             Behavior on x {
                 enabled: panel.state === "visible" && !ShellSettings.reduceMotion
                 NumberAnimation { duration: panel.heightAnimDuration; easing.type: Easing.OutCubic }
             }
 
-            // snapped to 4 so a bottom-bar panel's y stays on the divider grid.
-            // The rail-borne settings nav can be taller than the detail pane, so it
-            // sets the floor too (the old single-page layout did this implicitly).
+            // snapped to 4 so a bottom-bar panel's y stays on the divider grid; rail nav can be taller than the detail pane so it sets the floor too
             readonly property int targetH: {
                 const contentH = tabContent.y + tabContent.height + 12
                 const navH = panel.activeTab === 1 ? _settingsNav.implicitHeight + 16 : 0
@@ -638,8 +612,7 @@ PanelWindow {
                 boundsMovement: Flickable.StopAtBounds
                 flickDeceleration: 1800
                 maximumFlickVelocity: 2200
-                // Notifications owns the only scroll surface on its tab; the
-                // other pages continue to use this outer content scroller.
+                // Notifications owns the only scroll surface on its tab; other pages use this outer scroller
                 interactive: !panel.powerOpen && panel.activeTab !== 2 && contentHeight > height + 1
 
                 Item {
@@ -670,9 +643,7 @@ PanelWindow {
                     Loader {
                         id: settingsLoader
                         width: parent.width
-                        // Build Settings only once the tab is actually used. It
-                        // is the largest menu subtree, so preloading it on every
-                        // ordinary Home open costs memory and startup work.
+                        // build Settings only when the tab's first used — it's the largest subtree, preloading on every Home open costs memory + startup
                         active: panel._loadedDeferred && (panel._settingsLoaded || panel.activeTab === 1)
                         asynchronous: true
                         sourceComponent: Component {
@@ -687,8 +658,7 @@ PanelWindow {
                     Loader {
                         id: recentLoader
                         width: parent.width
-                        // Build the archive only after it is first opened. It then
-                        // stays cached until the menu's normal idle unload.
+                        // build the archive only after first open; then cached until the menu's idle unload
                         active: panel._loadedDeferred && (panel._recentLoaded || panel.activeTab === 2)
                         asynchronous: true
                         sourceComponent: Component {
@@ -704,9 +674,7 @@ PanelWindow {
                 }
             }
 
-            // Overflow cue for the shared Home/Settings scroller — without it,
-            // content taller than the clamped panel (media + sun arc) is clipped
-            // with no hint there's more. Notifications owns its own fade.
+            // overflow cue for the shared Home/Settings scroller; without it, over-tall content (media + sun arc) clips with no hint. Notifications owns its own fade
             ListEdgeFade {
                 anchors.fill: contentFlick
                 list: contentFlick
@@ -745,8 +713,7 @@ PanelWindow {
                 visible: opacity > 0.001
                 z: 5
 
-                // Focus held on the strip on open (no ring on mouse-open); an
-                // arrow enters the first tile, then KeyNavigation walks the row.
+                // focus held on the strip on open (no ring on mouse-open); an arrow enters the first tile, then KeyNavigation walks the row
                 function _focusFirstTile(): void {
                     if (_powLock.enabled)      _powLock.forceActiveFocus()
                     else if (_powSusp.enabled) _powSusp.forceActiveFocus()

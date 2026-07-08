@@ -11,17 +11,14 @@ Pill {
     property real _pulseOpacity: 1.0
     readonly property real _baseOpacity: !show ? 0.0 : canRead ? 1.0 : 0.45
 
-    // Pulse to alert on a dropped connection, but don't pulse *forever*, an
-    // extended outage would drive the render loop for no new info. After a bit it
-    // settles to a static (still-disconnected) icon; the next drop re-arms it.
+    // pulse to alert on a dropped connection, but not forever — an extended outage would drive the render loop for nothing. settles to a static icon; the next drop re-arms it
     readonly property bool _disconnected: ShellSettings.barShowNetwork && canRead && Network.available && !Network.connected && !ShellSettings.reduceMotion
     property bool _pulseSettled: false
     readonly property bool _isPulsing: _disconnected && !_pulseSettled
 
     opacity:        _baseOpacity * _pulseOpacity
     visible:        show || opacity > 0
-    // On a VPN, optionally append the underlying link's icon ("VPN / wifi") so you
-    // can tell at a glance what you're tunnelling over (Settings → Bar → Widgets).
+    // on a VPN, optionally append the underlying link's icon so you can tell what you're tunnelling over
     glyph:          (Network.hasVpn && ShellSettings.netVpnShowLink)
                         ? Network.icon + " · " + Network.underlyingIcon
                         : Network.icon
@@ -56,8 +53,7 @@ Pill {
 
     text: {
         if (!expanded) {
-            // Optionally keep just the live up/down speed pinned beside the icon;
-            // hovering still expands to the full link / signal / VPN detail below.
+            // optionally keep just the live up/down speed beside the icon; hover still expands to full detail
             if (ShellSettings.networkSpeedInline && Network.trafficActive)
                 return Network.trafficLabel
             return ""

@@ -5,8 +5,7 @@ Item {
     id: root
 
     property string text: ""
-    // tells SettingsCard not to draw a divider above this item (it's a
-    // sub-note for the row above, not a new section)
+    // tells SettingsCard not to draw a divider above this — it's a sub-note for the row above, not a new section
     readonly property bool suppressDividerAbove: true
     readonly property int _hPad: Math.max(10, Settings.hPad - 2)
     readonly property int _topPad: 4

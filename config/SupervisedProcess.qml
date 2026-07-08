@@ -52,7 +52,6 @@ Process {
         onTriggered: proc._cooldown = false
     }
 
-    // superviseWhen = false triggers onSuperviseWhenChanged which cancels the
-    // cooldown timer before the process exit can rearm it on a dead object.
+    // superviseWhen=false fires onSuperviseWhenChanged to cancel the cooldown before exit can rearm it on a dead object
     Component.onDestruction: superviseWhen = false
 }

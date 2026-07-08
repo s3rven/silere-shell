@@ -48,8 +48,7 @@ PageShell {
         width: parent.width
         spacing: 0
 
-        // Masthead — the date anchors the panel as a confident header, with the
-        // weekday carrying the weight and the full date sitting quieter beneath.
+        // masthead: weekday bold, full date quieter beneath
         Item {
             id: _header
             width: parent.width
@@ -138,9 +137,7 @@ PageShell {
                     16 + _controlsRow.height + _seekBlock + 12 + _mediaCol.implicitHeight + 26) / 4)
                 radius: 12
                 color: Theme.menuCard
-                // No stroke: a full-bleed art card is shaped by its fill + scrims.
-                // A 1px border doubles on fractional displays and the lit play button
-                // already signals playback, so the accent ring isn't needed.
+                // no stroke: a 1px border doubles on fractional displays, and the lit play button already signals playback
                 border.width: 0
                 opacity: Media.shown ? 1.0 : 0.0
                 visible: opacity > 0.01
@@ -156,8 +153,7 @@ PageShell {
                     NumberAnimation { duration: Motion.medium; easing.type: Easing.OutBack; easing.overshoot: 0.4 }
                 }
 
-                // When the card re-appears, make sure the text wasn't stranded at
-                // opacity 0 by a crossfade interrupted mid-flight while hidden.
+                // on reappear, text may be stranded at opacity 0 by a crossfade interrupted while hidden
                 Connections {
                     target: Media
                     function onShownChanged() {
@@ -187,16 +183,13 @@ PageShell {
                         }
                         const idle = _useA ? _artB : _artA
                         _pendingLayer = idle
-                        // re-assigning an identical source is a no-op in Qt; clear
-                        // first so an error retry actually reloads
+                        // re-assigning an identical source is a no-op in Qt; clear first so an error retry reloads
                         if (String(idle.source) === url) idle.source = ""
                         idle.source = url
                     }
 
-                    // A failed fetch (network not up yet right after login/restart)
-                    // must not strand the card artless until the next track: retry
-                    // a few times, then leave _curUrl cleared so any later apply
-                    // (reopen, track change) tries again.
+                    // a failed fetch (network not up right after login) shouldn't strand the card
+                    // artless till next track: retry a few times, then clear _curUrl so a later apply retries
                     property int _retries: 0
                     Timer {
                         id: _artRetry
@@ -230,8 +223,7 @@ PageShell {
 
                     // a genuinely new URL gets a fresh retry budget
                     Connections { target: Media; function onStableArtUrlChanged() { _art._retries = 0; _art._apply() } }
-                    // catch up on whatever changed while closed; also clear the retry budget
-                    // so a previously failed art URL gets another chance on each open
+                    // catch up on changes while closed; reset retry budget so a failed art url retries on each open
                     Connections { target: MenuState; function onOpenChanged() { if (MenuState.open) { _art._retries = 0; _art._apply() } } }
                     Component.onCompleted: _apply()
 
@@ -267,7 +259,6 @@ PageShell {
                     NumberAnimation { id: _artOut;     property: "opacity"; duration: Motion.ms(300);     easing.type: Easing.OutCubic }
                 }
 
-                // Placeholder shown when there's no cover art.
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.top: parent.top
@@ -281,9 +272,7 @@ PageShell {
                     visible: Media.shown && opacity > 0.01
                 }
 
-                // Top scrim — fades the art into the card colour at the rounded top
-                // edge so the clip's corner stair-stepping doesn't read as a jagged
-                // border. Also lifts the source label's contrast.
+                // top scrim: fades art into the card colour so the clipped corner's stair-stepping doesn't read as a jagged edge; also lifts label contrast
                 Rectangle {
                     anchors.left: parent.left
                     anchors.right: parent.right
@@ -298,8 +287,7 @@ PageShell {
                     }
                 }
 
-                // Bottom scrim, cinematic grounding for the text/controls: holds
-                // transparent up top, then ramps hard to solid in the lower third.
+                // bottom scrim: transparent up top, solid in the lower third for text/control contrast
                 Rectangle {
                     anchors.left: parent.left
                     anchors.right: parent.right
@@ -352,9 +340,7 @@ PageShell {
                     }
                 }
 
-                // Art zone (above the text block) jumps to the player's window,
-                // same as the bar widget's middle-click. Ends at _mediaCol.top so
-                // it can't shadow the seek bar or transport controls.
+                // art zone jumps to the player's window (like the bar widget's middle-click); ends at _mediaCol.top so it can't shadow seek/transport
                 MouseArea {
                     anchors.top: parent.top
                     anchors.left: parent.left
@@ -380,8 +366,7 @@ PageShell {
                     property real _slide: 0
                     transform: Translate { y: _mediaCol._slide }
 
-                    // Held copies so a track change cross-dissolves instead of
-                    // snapping mid-fade.
+                    // held copies so a track change cross-dissolves instead of snapping
                     property string _shownIdentity: ""
                     property string _shownTitle:    ""
                     property string _shownArtist:   ""
@@ -393,8 +378,7 @@ PageShell {
 
                     readonly property string trackKey: Media.title + " • " + Media.artist
                     onTrackKeyChanged: {
-                        // Snap on reduce-motion and on first population (held copies
-                        // start empty); only crossfade between two genuine tracks.
+                        // snap on reduce-motion and first population (held copies start empty); only crossfade between two real tracks
                         if (ShellSettings.reduceMotion || (_shownTitle === "" && _shownArtist === "")) {
                             _shownIdentity = Media.identity
                             _shownTitle    = Media.title
@@ -587,8 +571,7 @@ PageShell {
                         Text {
                             id: _playGlyph
                             anchors.centerIn: parent
-                            // Held glyph so play⇄pause swaps with the stamp instead
-                            // of a hard cut.
+                            // held glyph so play⇄pause swaps with the stamp instead of a hard cut
                             property string shown: ""
                             readonly property string target: Media.playing ? "󰏤" : "󰐊"
                             property bool _ready: false
@@ -623,8 +606,7 @@ PageShell {
             }
         }
 
-        // High-frequency controls up top. Volume carries a built-in output-device
-        // dropdown (chevron) that expands inline beneath it.
+        // high-frequency controls up top; volume carries an inline output-device dropdown
         SettingsCard {
             id: _primaryControls
             visible: Audio.ready || Brightness.maxBrightness > 0
@@ -645,7 +627,6 @@ PageShell {
                 onMoved: (v) => Brightness.setPercent(Math.round(v * 100))
             }
         }
-        // ── Connectivity ────────────────────────────────────────────────────
         SectionLabel {
             label: "Connectivity"
             visible: _wifiRow.visible || _btRow.visible
@@ -726,7 +707,6 @@ PageShell {
             }
         }
 
-        // ── Controls ────────────────────────────────────────────────────────
         SectionLabel { label: "Controls" }
         SettingsCard {
             ControlRow {
@@ -802,16 +782,13 @@ PageShell {
             }
         }
 
-        // ── System ──────────────────────────────────────────────────────────
         SectionLabel { label: "System" }
         VitalsStrip {
             active: root.active
             width: parent.width
         }
 
-        // Sun-path arc — dashboard footer. Sits last so enabling night-light
-        // follow-sun never shoves the stat tiles off-screen; costs nothing when
-        // off. Its own 12px top gap separates it from the grid above.
+        // sun-path arc footer: sits last so follow-sun can't shove the stat tiles off-screen; costs nothing when off
         Item {
             id: _sunSection
             width: parent.width

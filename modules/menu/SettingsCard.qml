@@ -3,11 +3,9 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import "../../config"
 
-// Rounded card with auto-separators and auto corner-rounding. Rows never set
-// their own divider or radius: the card derives both from layout, so a row can't
-// guess wrong about its position (e.g. a middle row rounding its hover fill, or a
-// hidden neighbour leaving a stray line). Recurses into CollapsibleSections so
-// nested rows are treated exactly like flat ones.
+// rounded card with auto-separators + auto corner-rounding. rows never set their own divider or radius — the card
+// derives both from layout so a row can't guess wrong (a middle row rounding its hover fill, a hidden neighbour
+// leaving a stray line). recurses into CollapsibleSections so nested rows act like flat ones.
 Rectangle {
     id: root
 
@@ -77,12 +75,9 @@ Rectangle {
         }
     }
 
-    // Re-derive when the row set could have changed. Height moves on the obvious
-    // edits (a collapsible opening, a row hiding). But a Column keeps counting its
-    // hidden children, so a card in an unshown settings section sits at full height
-    // the whole time — navigating to it flips the card visible without ever
-    // changing implicitHeight, so visibleChanged is what catches that. callLater
-    // coalesces both to one run per frame; no polling, no per-frame allocation.
+    // re-derive when the row set could change. height moves on the obvious edits (collapsible opening, row hiding),
+    // but a Column keeps counting hidden children — a card in an unshown section stays full-height, so navigating
+    // to it flips visible without changing implicitHeight; visibleChanged catches that. callLater coalesces to one run per frame.
     onImplicitHeightChanged: Qt.callLater(root._applyRadii)
     onVisibleChanged:        Qt.callLater(root._applyRadii)
     Component.onCompleted:   root._applyRadii()

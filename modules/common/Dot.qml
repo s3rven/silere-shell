@@ -2,15 +2,13 @@ import QtQuick
 import "../../config"
 import "../../services"
 
-// Bar separator drawn as a shape (not a font glyph) so it's crisp regardless of font:
-// dot, ring, tick, slash, or gradient hairline. Collapses to zero width when hidden.
+// bar separator drawn as a shape (not a font glyph) so it's crisp regardless of font: dot/ring/tick/slash/hairline; zero width when hidden.
 Item {
     id: root
     property bool show: true
 
     readonly property string _style: ShellSettings.dotStyle
-    // "none" draws no mark and reserves no slot, so the Row collapses to a single
-    // uniform gap between widgets — clean spacing, no group dividers at all.
+    // "none" draws no mark and reserves no slot — Row collapses to a uniform gap, no dividers
     readonly property bool   _none:  _style === "none"
     readonly property color  _base:  ShellSettings.neutralTheme ? Theme.subtext : Theme.mix(Theme.subtext, Theme.accent, 0.10)
     readonly property color  _col:   Theme.withAlpha(_base, ShellSettings.dotOpacity)

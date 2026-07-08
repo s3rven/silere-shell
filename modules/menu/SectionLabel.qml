@@ -1,12 +1,9 @@
 import QtQuick
 import "../../config"
 
-// Sub-group heading inside a settings page: an accent tick + uppercase mono
-// label + a hairline rule that runs to the right edge, so groups of cards read
-// as labelled sections rather than floating apart. Carries its own breathing
-// room (a gap above, a small gap to the card below) so callers don't sprinkle
-// spacer Items — set `first: true` for the first label in a section, which sits
-// just under the page header and so wants almost no gap above.
+// sub-group heading: accent tick + uppercase mono label + a hairline rule to the right edge. carries its own
+// spacing (gap above, small gap to the card below) so callers skip spacer Items; `first: true` sits just under
+// the page header with almost no gap above.
 Item {
     id: root
 
@@ -17,8 +14,7 @@ Item {
     readonly property int _botGap: 6
 
     width: parent ? parent.width : 0
-    // 4px grid so the cards below stay on whole physical px under fractional
-    // scaling; the rounding slack falls into the (invisible) gap above.
+    // 4px grid so cards below stay on whole physical px under fractional scaling; rounding slack falls into the gap above
     implicitHeight: 4 * Math.ceil((_topGap + _text.implicitHeight + _botGap) / 4)
     height: implicitHeight
 

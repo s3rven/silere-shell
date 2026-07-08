@@ -4,10 +4,8 @@ import QtQuick
 import Quickshell
 import Quickshell.Bluetooth as Bt
 
-// Thin wrapper over the native BlueZ DBus module, event-driven, no polling.
-// The default adapter is null when bluetoothd isn't running or there's no
-// radio, which is exactly when the tile should read as unavailable.
-// Namespaced import (Bt) so the bare name never clashes with this singleton.
+// thin event-driven wrapper over BlueZ DBus; adapter is null with no bluetoothd/radio (reads unavailable)
+// namespaced import (Bt) so the bare name never clashes with this singleton
 Singleton {
     id: root
 

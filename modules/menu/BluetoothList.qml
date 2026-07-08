@@ -6,8 +6,7 @@ import "../../config"
 import "../../services"
 import "../common"
 
-// Inline Bluetooth device picker. Discovery runs only while `open`, so it costs
-// nothing when collapsed. Device actions go straight to the native objects.
+// inline Bluetooth picker. discovery runs only while `open` (nothing when collapsed); device actions go straight to the native objects
 Item {
     id: root
 
@@ -19,8 +18,7 @@ Item {
     property string _armedAddr: ""
     Timer { id: _disarmTimer; interval: 3000; onTriggered: root._armedAddr = "" }
 
-    // Discovery never "finishes" like a wifi scan; call it after a quiet spell
-    // (scanning keeps running, a late device still appears).
+    // discovery never "finishes" like a wifi scan; call it after a quiet spell (scanning keeps running, a late device still appears)
     property bool _searchLapsed: false
     Timer {
         interval: 10000
@@ -72,8 +70,7 @@ Item {
             visible: root.open && (!Bluetooth.available || !Bluetooth.enabled || Bluetooth.devices.length === 0)
             width: parent.width
             horizontalAlignment: Text.AlignHCenter
-            // Match reality instead of implying a scan that can't run when the
-            // adapter is off or absent.
+            // match reality instead of implying a scan that can't run with the adapter off or absent
             text: !Bluetooth.available ? "Bluetooth unavailable"
                 : !Bluetooth.enabled   ? "Bluetooth is off"
                 : root._searchLapsed   ? "No devices found"

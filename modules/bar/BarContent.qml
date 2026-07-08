@@ -13,9 +13,7 @@ Item {
     required property ShellScreen screen
 
     readonly property int gap: Metrics.titleGap
-    // Free span between the widget groups. The title prefers the bar's true
-    // center but slides off-center as a group closes in, instead of clamping
-    // its width to symmetric clearance and vanishing while space remains.
+    // free span between the groups; the title prefers true center but slides off-center as a group closes in, rather than clamping to symmetric clearance and vanishing while space remains
     readonly property real titleFreeLeft:  leftZone.implicitWidth + gap
     readonly property real titleFreeRight: width - rightZone.implicitWidth - gap
     readonly property real titleAvailableWidth: Math.max(0, titleFreeRight - titleFreeLeft)
@@ -28,19 +26,10 @@ Item {
         return Math.max(76, Math.min(base, Math.round(width * 0.065)))
     }
 
-    // One Component per widget kind, chosen per-slot by whichever zone array
-    // currently holds that slot's key. Both zones share this one map.
-    //
-    // Widgets whose own implicitHeight formula reads `parent.height` (the
-    // Pill-based ones, plus Tray/Media) get an explicit `height: root.height`
-    // here instead of leaning on a Loader with a forced height: Loader's
-    // "resize the loaded item to fit" behavior (triggered by giving the
-    // Loader itself an explicit height) stretches the OUTER item, but a
-    // widget whose internal layout positions content by a small fixed
-    // reference size (Workspaces' diamond, sized off `btnH`, not an anchor)
-    // stays pinned to the top of that stretched box instead of recentring.
-    // Binding height straight to `root.height` gets every Pill-based widget
-    // the same end result without forcing Workspaces/Clock's own height too.
+    // one Component per widget kind, chosen per-slot by whichever zone array holds the key; both zones share this map.
+    // Pill/Tray/Media widgets bind height straight to root.height instead of a forced-height Loader: a Loader's
+    // resize-to-fit stretches the outer item, and a widget sized off a fixed reference (Workspaces' diamond off
+    // btnH, not an anchor) then stays pinned to the top instead of recentring.
     Component { id: _cWorkspaces;  Workspaces       { anchors.verticalCenter: parent.verticalCenter; screen: root.screen } }
     Component { id: _cShellUpdate; ShellUpdateWidget { anchors.verticalCenter: parent.verticalCenter; height: root.height } }
     Component { id: _cTray;        TrayWidget       { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen } }
@@ -58,7 +47,6 @@ Item {
         media: _cMedia, clock: _cClock
     })
 
-    // ── Left ────────────────────────────────────────────────────────────────
     BarZone {
         id: leftZone
         anchors.left:           parent.left
@@ -68,10 +56,7 @@ Item {
         widgetComponents: root._widgetComponents
     }
 
-    // ── Center ──────────────────────────────────────────────────────────────
-    // Bar OSD (β) takes over one bar center while it's showing. Loading it
-    // only on the overlay bar avoids duplicate text/layout/animation work on
-    // every monitor, including while the feature is disabled.
+    // bar OSD (β) takes one bar center while showing; loaded only on the overlay bar to avoid duplicate layout/anim work on every monitor
     readonly property bool _isOverlayBar: root.screen && root.screen.name === Monitors.overlayBarName
     readonly property bool _osdBarShowing: ShellSettings.osdEnabled && ShellSettings.osdBarIntegrated
         && root._isOverlayBar && OsdBarState.showing
@@ -135,7 +120,6 @@ Item {
         sourceComponent: Component { OsdBarWidget {} }
     }
 
-    // ── Right ────────────────────────────────────────────────────────────────
     BarZone {
         id: rightZone
         anchors.right:          parent.right

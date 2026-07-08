@@ -26,9 +26,8 @@ ShellRoot {
         function onReloadCompleted() { Quickshell.inhibitReloadPopup() }
     }
 
-    // Quickshell lazy-loads singletons, reading a member instantiates them; a
-    // bare type reference would not. These are startup diagnostics/alerts whose
-    // watchers must arm even before the user opens a related panel.
+    // Quickshell lazy-loads singletons — reading a member instantiates them, a bare type reference won't.
+    // these are startup diagnostics/alerts whose watchers must arm before the user opens a panel.
     Component.onCompleted: {
         void SystemAlerts.armed
         void NotifWatch.armed
@@ -46,8 +45,7 @@ ShellRoot {
     Process {
         id: pickerWatcher
         running: root.pickerWatcherReady && SystemTools.ready && SystemTools.hasInotifywait
-        // The shell resolves XDG_STATE_HOME, then execs inotifywait so reloads
-        // kill the watcher directly instead of orphaning a pipeline.
+        // shell resolves XDG_STATE_HOME then execs inotifywait so reloads kill the watcher directly, not orphan a pipeline
         command: ["bash", "-c",
             "state=\"${XDG_STATE_HOME:-$HOME/.local/state}\"; " +
             "mkdir -p \"$state\"; " +
@@ -76,11 +74,8 @@ ShellRoot {
             id: _barScope
             required property ShellScreen modelData
 
-            // Recreate the bar window when it changes edges: remapping a live
-            // layer-shell surface's anchors leaves stale geometry on the old
-            // edge, so the surface must be torn down and mapped fresh. First
-            // map waits for settings so a saved bottom bar starts at the
-            // bottom instead of flashing top-then-recreating.
+            // recreate the bar window on edge change: remapping a live layer-shell surface's anchors leaves stale geometry, so tear down + map fresh.
+            // first map waits for settings so a saved bottom bar starts at the bottom instead of flashing top-then-recreating.
             LazyLoader {
                 id: _barLoader
                 active: false
@@ -98,11 +93,8 @@ ShellRoot {
         }
     }
 
-    // Popup surfaces are relatively large object trees, even while their
-    // PanelWindow is unmapped. Build them only when they have content to show,
-    // and tear down unloadDelay after close so the exit animation finishes on
-    // a live surface. Notification popups skip the delay: their model removes
-    // the final entry only after the delegate exit animation has completed.
+    // popup surfaces are large object trees even while unmapped — build only when they have content, tear down unloadDelay after close so the exit anim finishes on a live surface.
+    // notification popups skip the delay: their model drops the final entry only after the delegate exit anim completes.
     component PopupLoader: Scope {
         id: _pl
         required property bool wantOpen
@@ -115,8 +107,7 @@ ShellRoot {
         LazyLoader {
             id: _plLoader
             active: false
-            // wantOpen can already be true when the shell (re)loads; the
-            // binding won't fire a change for the initial value.
+            // wantOpen can already be true on (re)load; the binding won't fire a change for the initial value
             Component.onCompleted: if (_pl.wantOpen) active = true
             component: _pl.surface
         }

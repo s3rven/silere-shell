@@ -5,8 +5,7 @@ import "../../../services"
 Item {
     id: root
 
-    // Hands off to the floating pill while the overview or a fullscreen
-    // window conceals the bar.
+    // hands off to the floating pill while overview or a fullscreen window conceals the bar
     readonly property bool _shouldShow: ShellSettings.osdEnabled
         && ShellSettings.osdBarIntegrated && OsdBarState.showing && !OsdBarState.barConcealed
     readonly property int  _barH: ShellSettings.barHeight
@@ -35,12 +34,10 @@ Item {
     Connections {
         target: OsdBarState
         function onShowingChanged() { root._sync() }
-        // Mode flips (overview/fullscreen conceal) aren't audio-race prone,
-        // so a plain resync covers them too.
+        // mode flips (overview/fullscreen conceal) aren't audio-race prone, so a plain resync covers them
         function onBarConcealedChanged() { root._sync() }
         function onBumped() { if (root.state === "visible" && !_bumpAnim.running) _bumpAnim.restart() }
-        // queued icon swap → stamp while visible (matches the pill); during a
-        // rapid burst just snap, a queued stamp-on-stamp reads as thrashing
+        // queued icon swap → stamp while visible; during a rapid burst just snap (stamp-on-stamp reads as thrashing)
         function onNextIconChanged() {
             if (OsdBarState.nextIcon === OsdBarState.icon) return
             if (root.state !== "visible" || ShellSettings.reduceMotion || OsdBarState.rapid) {
@@ -88,8 +85,7 @@ Item {
         text: "Muted"   // widest value text in hasBar context
     }
 
-    // Alert (non-bar) labels vary in width; measure the live one and, during a
-    // rapid burst, latch to the widest seen so the centered Row can't shift.
+    // alert labels vary in width; measure the live one and latch to the widest during a burst so the Row can't shift
     TextMetrics {
         id: _alertLabel
         font.family:    Settings.font

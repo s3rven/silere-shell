@@ -17,14 +17,11 @@ Item {
     property int    maxTextWidth: 150
     property int    horizontalPadding: Metrics.pillPad
     property bool   animateGlyph: true
-    // Opt-in cross-fade when `text` changes. Off by default since widgets
-    // like Volume/Brightness update text on every scroll tick and don't
-    // want fade-through on rapid changes.
+    // opt-in cross-fade on text change; off by default — Volume/Brightness update every scroll tick and shouldn't fade-through
     property bool   animateText: false
     property bool   animateGlyphColor: true
     property int    glyphPixelSize: Settings.fontSize + 2
-    // Floor the text box to this string's width so value readouts (volume,
-    // brightness) keep a constant size instead of resizing on every change.
+    // floor the text box to this string's width so value readouts (volume/brightness) don't resize on every change
     property string reserveText: ""
     readonly property real _reserveW: reserveText.length > 0 ? Math.ceil(_reserveMetrics.advanceWidth) : 0
     property bool   contentScanEnabled: false
@@ -32,15 +29,13 @@ Item {
     property real   contentScanProgress: 0.0
     property real   contentScanWidth: 10.0
 
-    // Delayed hover flag for hover-reveal detail text (battery/network use it):
-    // true only after the pointer rests on the pill for hoverRevealDelay ms.
+    // delayed hover flag for reveal detail text (battery/network) — true only after the pointer rests hoverRevealDelay ms
     property int    hoverRevealDelay: 80
     property bool   hoverActive: false
     readonly property bool hovered: _pillHover.hovered
     readonly property bool expanded: hoverActive || activeFocus
 
-    // Opt-in press feedback: a clickable widget binds this to its own
-    // handler's pressed state and the glyph dips, then springs back.
+    // opt-in press feedback: bind to a handler's pressed state, the glyph dips then springs back
     property bool   pressed: false
     property bool   _keyboardPressed: false
     readonly property bool visualPressed: pressed || _keyboardPressed
@@ -50,11 +45,8 @@ Item {
     readonly property int  pillH:   24
     readonly property bool hasText: text.length > 0
 
-    // Holds the maximum width seen recently so the pill doesn't jitter while
-    // scrolling. Resets automatically after `shrinkDelay` ms, or immediately
-    // when text clears (e.g. network widget hiding its SSID).
-    // Set shrinkDelay: 0 on pills that only change on hover (not rapid scroll)
-    // so they snap back immediately instead of leaving a gap.
+    // holds recent max width so the pill doesn't jitter while scrolling; resets after `shrinkDelay` ms or immediately when text clears (e.g. network hiding SSID).
+    // set shrinkDelay: 0 on hover-only pills so they snap back instead of leaving a gap.
     property int  shrinkDelay: 600
     property real _minW: 0
     // Whole px: fractional text widths put the pill (and every widget after it
@@ -126,8 +118,7 @@ Item {
         enabled: root._ready && !ShellSettings.reduceMotion
         NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
     }
-    // Use the bar row's full height as the input target while keeping the
-    // visible capsule compact. This matters when users choose a tall bar.
+    // bar row's full height as the input target, visible capsule stays compact — matters on a tall bar
     implicitHeight: Math.max(pillH, parent ? parent.height : 0)
     clip: true
     activeFocusOnTab: interactive
@@ -271,8 +262,7 @@ Item {
 
     Loader {
         id: _contentScan
-        // Glyph-only status pills (initial update checks) still need a visible
-        // activity sweep even though their detail text has not arrived yet.
+        // glyph-only status pills (initial update checks) still need a visible sweep before detail text arrives
         active: root.contentScanEnabled && !ShellSettings.reduceMotion
         width: Math.max(1, root.contentScanWidth)
         height: row.height
@@ -311,9 +301,7 @@ Item {
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width
-                        // Must match the real text's alignment (it centers when a
-                        // reserveText floor is set) or the swept copy lands offset
-                        // and looks like doubled/garbled characters.
+                        // must match the real text's alignment (centers when a reserveText floor is set) or the swept copy lands offset and looks doubled/garbled
                         horizontalAlignment: root.reserveText.length > 0 ? Text.AlignHCenter : Text.AlignLeft
                         elide: Text.ElideRight
                         text: root.animateText ? _textEl._shown : root.text
@@ -330,8 +318,7 @@ Item {
 
     HoverHandler {
         id: _pillHover
-        // Horizontal padding makes hover, click, wheel and focus use the same
-        // non-overlapping target instead of extending hover into neighbours.
+        // horizontal padding gives hover/click/wheel/focus one non-overlapping target, not extending hover into neighbours
         margin: 0
         onHoveredChanged: {
             if (hovered) _hoverRevealTimer.restart()

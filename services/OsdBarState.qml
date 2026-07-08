@@ -4,8 +4,7 @@ import QtQuick
 import Quickshell
 import "../config"
 
-// Owns all OSD trigger logic + state. Display layers (OsdWindow pill, the
-// bar OSD widget) read this and run their own entrance/icon animations.
+// owns all OSD trigger logic + state; display layers (pill, bar OSD widget) read it and run their own animations
 Singleton {
     id: root
 
@@ -19,9 +18,7 @@ Singleton {
     property color  fillColor: Theme.accent
     readonly property bool hasBar: _hasBarKind(kind)
     readonly property real clamped: Math.max(0, Math.min(1, value))
-    // The bar-integrated OSD has no visible surface while the overview or a
-    // fullscreen window covers the bar; display layers hand off to the
-    // floating pill so volume/brightness feedback never silently vanishes.
+    // bar OSD is hidden under the overview/fullscreen, so display layers hand off to the floating pill (feedback never vanishes)
     readonly property bool barConcealed: OverviewState.active || Notifications.fullscreenActive
     property alias entries: _entries
     readonly property int activeCount: _entries.count
@@ -34,9 +31,7 @@ Singleton {
     // volume bar warms toward the warning hue near max — a "loud" cue
     readonly property color barColor: _barColor(kind, value, muted, fillColor)
 
-    // A fast scroll burst pushes updates faster than an eased Behavior can
-    // settle, so it perpetually chases and looks stuck — display layers
-    // should snap instead of animate while this is true.
+    // fast scroll bursts outrun the eased Behavior and look stuck — display layers should snap, not animate, while true
     property real _lastUpdateAt: 0
     property bool rapid: false
     Timer { id: _rapidTimer; interval: 180; repeat: false; onTriggered: root.rapid = false }
@@ -64,9 +59,7 @@ Singleton {
     property var _expiresAt: ({})
     property var _removeAt: ({})
     property var _closingSig: ({})
-    // Kind-keyed deadline: once a kind closes, ignore re-shows of that same kind
-    // until this passes, so a PipeWire echo (remapped %, different sig) can't
-    // bounce the OSD back open. A real later user change clears past it.
+    // kind-keyed deadline: after a kind closes, ignore re-shows until it passes so a PipeWire echo can't bounce the OSD open; a real later change clears it
     property var _commitClose: ({})
     readonly property int _removeDelay: Motion.ms(170) + 70
     readonly property int _commitCloseWindow: Motion.ms(220) + 80
@@ -114,11 +107,9 @@ Singleton {
             return
         }
 
-        // A fresh show (nothing visible, or the primary switched kind, or icon
-        // not yet set) jumps icon straight to its value — the entrance handles
-        // the reveal. An icon change on an already-visible same-kind entry sets
-        // nextIcon FIRST so onNextIconChanged sees nextIcon !== icon and stamps;
-        // the stamp's ScriptAction commits icon = nextIcon at its midpoint.
+        // fresh show (nothing visible, primary switched kind, or icon unset) jumps icon
+        // straight to value — the entrance reveals it. An icon change on a visible same-kind
+        // entry sets nextIcon first so onNextIconChanged stamps; ScriptAction commits icon at its midpoint.
         const fresh = !showing || kind !== best.kind || icon === ""
         kind = best.kind
         nextIcon = best.icon
@@ -152,9 +143,7 @@ Singleton {
         if (idx >= 0) {
             const old = _entries.get(idx)
             if (old.closing && _closingSig[kind] === sig) return false
-            // One model update instead of one update per changed role. During
-            // volume/brightness bursts this avoids repeatedly re-evaluating
-            // every binding in the floating delegate.
+            // one model update, not one per role — avoids re-evaluating every delegate binding during bursts
             _entries.set(idx, data)
         } else {
             _entries.append(data)
@@ -192,13 +181,10 @@ Singleton {
     function _applyValues(kind: string, icon: string, value: real, label: string, muted: bool, color: color): void {
         const idx = _entryIndex(kind)
         const live = idx >= 0 && !_entries.get(idx).closing
-        // Within the commit-close window with no live entry of this kind, the
-        // event is a trailing echo of the value we just dismissed — drop it.
+        // in the commit-close window with no live entry, the event is a trailing echo of what we just dismissed — drop it
         if (!live && (_commitClose[kind] || 0) > Date.now()) return
         if (!_upsertEntry(kind, icon, value, label, muted, color)) return
-        // A single deliberate step gets tactile feedback. A scroll burst is
-        // already visible in the level change and must not keep a transform
-        // animation alive on slower GPUs.
+        // a single deliberate step gets a bump; a scroll burst is already visible and mustn't keep a transform alive on slow GPUs
         if (live && !root.rapid && !ShellSettings.reduceMotion) {
             root.bumped()
             root.entryBumped(kind)
@@ -208,8 +194,7 @@ Singleton {
     function show(kind: string, icon: string, value: real, label: string, muted: bool): void {
         if (!_armed) return
         if (!ShellSettings.osdEnabled) return
-        // the menu's quick sliders already show these levels live; a
-        // simultaneous OSD is double feedback
+        // menu's quick sliders already show these live — a simultaneous OSD is double feedback
         if (MenuState.open) return
         if (ShellSettings.osdKindFilter === "volume"     && kind !== "volume")     return
         if (ShellSettings.osdKindFilter === "brightness" && kind !== "brightness") return
@@ -255,9 +240,7 @@ Singleton {
                     delete _closingSig[e.kind]; _closingSig = _closingSig
                     _entries.remove(i)
                 }
-                // _commitClose intentionally outlives removal: the echo can
-                // land after the entry is gone, so the guard must persist
-                // until its own window expires.
+                // _commitClose outlives removal — the echo can land after the entry's gone, so the guard must persist
             } else if ((_expiresAt[e.kind] || 0) <= now) {
                 _closeEntry(i)
             }
@@ -297,10 +280,8 @@ Singleton {
 
     Connections {
         target: Audio
-        // A mute toggle changes BOTH muted and uiVolume (uiVolume = muted ? 0 :
-        // vol) in one frame. Defer through Qt.callLater, which dedups identical
-        // callbacks within a tick, so the two signals collapse into one show()
-        // instead of firing it twice (the second one stamped a spurious bump).
+        // a mute toggle changes both muted and uiVolume in one frame; Qt.callLater dedups
+        // identical callbacks within a tick so the two collapse into one show(), not two (second stamped a spurious bump)
         function onUiVolumeChanged() {
             Qt.callLater(root._updateVolume)
         }
@@ -367,8 +348,7 @@ Singleton {
         }
     }
 
-    // One-time at startup: another notification daemon holds the bus, so silere's
-    // notifications are dead. Flash it once (NotifWatch also logs the culprit).
+    // one-time at startup: another daemon holds the bus so silere's notifs are dead; flash once (NotifWatch logs the culprit)
     Connections {
         target: NotifWatch
         function onConflictChanged() {

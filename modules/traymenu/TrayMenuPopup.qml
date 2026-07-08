@@ -432,8 +432,7 @@ PanelWindow {
         height: Math.min(_col.implicitHeight, _maxContentH) + pad * 2
         radius: Math.min(win._cardRadius, height / 2)
 
-        // The card holds focus on open (paints nothing) so a mouse-open shows
-        // no row highlight; Down/Tab hands focus to the first usable row.
+        // card holds focus on open (paints nothing) so a mouse-open shows no highlight; Down/Tab enters the first usable row
         function _focusFirstRow(): void {
             const sibs = _col.children
             for (let k = 0; k < sibs.length; k++) {

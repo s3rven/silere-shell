@@ -4,10 +4,8 @@ import QtQuick
 import Quickshell
 import Quickshell.Hyprland
 
-// Tracks the scrolloverview plugin's workspace overview. The event is emitted
-// by the local plugin patch (socket2: scrolloverview>>1 on open, >>0 once the
-// close animation finishes), so the bar can get out of the way while the
-// workspaces are zoomed out.
+// tracks the scrolloverview plugin's overview. the local plugin patch emits socket2
+// scrolloverview>>1 on open, >>0 when the close animation finishes, so the bar can get out of the way
 Singleton {
     id: root
 
@@ -23,7 +21,6 @@ Singleton {
         }
     }
 
-    // Settle delay collapses rapid open/close flapping (scripted toggles,
-    // cancelled swipes) into one state change so the bar never stutters.
+    // settle delay collapses rapid open/close flapping into one state change so the bar never stutters
     Timer { id: _settle; interval: 80; onTriggered: root.active = root._raw }
 }

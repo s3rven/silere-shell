@@ -3,9 +3,8 @@ pragma Singleton
 import QtQuick
 import Quickshell
 
-// Bundled fallback palette. Copied to MatugenTheme.qml on first install so the
-// shell themes correctly before matugen has generated colors. matugen overwrites
-// MatugenTheme.qml (which is gitignored), leaving this default untouched.
+// bundled fallback palette, copied to MatugenTheme.qml on first install so the shell themes before matugen runs.
+// matugen overwrites MatugenTheme.qml (gitignored), leaving this default untouched.
 Singleton {
     readonly property color background: "#131318"
     readonly property color surface:    "#201f25"

@@ -35,30 +35,21 @@ PanelWindow {
     // scaling.
     readonly property int surfaceInset: ShellSettings.barFloating ? 4 : 0
 
-    // Extra window space on the desktop-facing side so the floating shadow can
-    // bleed past the surface instead of clipping at the window edge. Input is
-    // masked to the surface, so the pad never catches the pointer.
+    // extra window space so the floating shadow bleeds past the surface instead of clipping; input is masked to the surface so the pad never catches the pointer
     readonly property bool shadowOn: ShellSettings.barFloating && ShellSettings.barShadow
     // Always reserved when floating so toggling the shadow never resizes the window.
     // 24 (a 4px-grid multiple) leaves room for the ambient layer (blur 21 + offset 2 = 23px spread).
     readonly property int  shadowPad: ShellSettings.barFloating ? 24 : 0
 
-    // Hidden states share one exit/enter animation and also release the
-    // reserved zone: during the overview the tiled windows expand into the
-    // bar strip, so workspace cards show full-bleed content instead of a
-    // phantom gap where the bar was. The reflow rides the normal windowsMove
-    // animation and reverses when the bar returns.
+    // hidden states release the reserved zone so overview windows fill the bar strip instead of leaving a phantom gap; reflow rides the windowsMove anim
     readonly property bool concealed: bar.pickerActive || OverviewState.active
 
-    // Shared by the edge line and the wrap border so both react to the
-    // strength slider identically.
+    // shared by the edge line and wrap border so both track the strength slider
     readonly property real lineAlpha: Math.min(0.9, (ShellSettings.neutralTheme ? 0.22 : 0.28) * ShellSettings.barLineStrength)
 
     screen:        bar.targetScreen
     color:         "transparent"
-    // Animated strip height (bar + insets), kept separate from the shadow pad
-    // so the reserved zone follows height changes smoothly but doesn't bounce
-    // when the shadow toggles.
+    // strip height (bar + insets), kept separate from the shadow pad so the reserved zone doesn't bounce when the shadow toggles
     readonly property int _targetCoreHeight: ShellSettings.barHeight + bar.surfaceInset * 2
     property real coreHeight: bar._targetCoreHeight
     Behavior on coreHeight {
@@ -68,9 +59,7 @@ PanelWindow {
     exclusiveZone: bar.concealed ? 0 : bar._targetCoreHeight
     implicitHeight: bar.coreHeight + bar.shadowPad
 
-    // Input follows the visible surface: the concealed bar (overview, picker)
-    // must not eat clicks in its strip, and a floating bar's side gaps and
-    // shadow pad shouldn't catch the pointer either.
+    // input follows the visible surface, so the concealed bar and a floating bar's side gaps/shadow pad don't catch the pointer
     mask: Region { item: bar.concealed ? null : surface }
 
     anchors {
@@ -102,8 +91,7 @@ PanelWindow {
 
         readonly property real radius: Math.min(bar.cornerRadius, width / 2)
 
-        // Drop shadow grounding the floating surface, shared with the popups;
-        // the bar spreads both layers wider than a card.
+        // drop shadow grounding the floating surface, shared with popups; the bar spreads both layers wider than a card
         Loader {
             anchors.fill: parent
             active: bar.shadowOn
@@ -184,8 +172,7 @@ PanelWindow {
             id: contents
             anchors.fill: parent
             opacity: 0
-            // Faded out (wallpaper picker) must also stop rendering: opacity 0 alone
-            // keeps the visualizer canvas + marquee painting into an invisible bar.
+            // opacity 0 alone keeps the visualizer canvas + marquee painting into an invisible bar, so stop rendering when hidden
             visible: opacity > 0.001
 
             readonly property real _hideY: bar.atBottom ? 14 : -14

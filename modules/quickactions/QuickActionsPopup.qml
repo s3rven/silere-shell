@@ -8,10 +8,8 @@ import "../../config"
 import "../../services"
 import "../common"
 
-// Quick actions under the workspace diamond (right-click): a few one-tap
-// toggles that don't warrant opening the full menu. Rows stay open after a
-// flip so the state change reads; Escape or an outside tap closes. Render-only
-// while open, holds nothing at rest.
+// quick actions under the workspace diamond (right-click): one-tap toggles that don't warrant the full menu.
+// rows stay open after a flip so the state reads; Escape/outside tap closes. render-only while open.
 PanelWindow {
     id: win
 

@@ -4,9 +4,7 @@ import QtQuick
 import "../../config"
 import "../../services"
 
-// Volume slider with the output-device dropdown built in: the chevron on the
-// row expands the device list inline, directly beneath the slider, within the
-// card. Option styling mirrors SelectRow.
+// volume slider with an inline output-device dropdown: the chevron expands the device list beneath the slider, in the card. option styling mirrors SelectRow
 Item {
     id: root
 

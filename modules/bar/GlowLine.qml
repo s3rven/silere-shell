@@ -2,9 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 
-// One horizontal underline strip: transparent ends, mid stops fanning out from a
-// moving centre peak. Shared by every glow line so the gradient lives in one place;
-// callers set their own geometry, opacity and clamp bounds.
+// shared underline strip: transparent ends, mid stops fanning from a moving centre peak; callers set geometry, opacity and clamps
 Rectangle {
     id: root
 

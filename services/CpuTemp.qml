@@ -35,13 +35,11 @@ Singleton {
         target:         root
         targetProperty: "alertPulse"
         duration:       root.pulseDuration
-        // alertPulse is only consumed by the menu gauges (the bar underline glows off
-        // hot/critical, not the pulse), so don't run the 60fps loop while menu's closed.
+        // alertPulse only feeds menu gauges (bar underline glows off hot/critical, not the pulse); skip the 60fps loop while menu's closed
         running:        root.hot && !ShellSettings.reduceMotion && root.needed && !Idle.isIdle
     }
 
-    // Called once per sensor read, not from onTempChanged: identical consecutive
-    // readings (steady sensor pinned at threshold) must still advance the counters.
+    // called per read, not onTempChanged — identical consecutive readings must still advance the counters
     function _sample(t: real): void {
         temp = t
         const hotEnter      = ShellSettings.tempHotThreshold
@@ -67,8 +65,7 @@ Singleton {
     function _normalizedTemp(raw: real): real {
         if (isNaN(raw) || raw <= 0) return 0
         const t = raw >= 1000 ? raw / 1000 : raw
-        // Ignore impossible values so a bogus fallback sensor does not trigger
-        // hot/critical state or paint the stat tile as an alert.
+        // ignore impossible values so a bogus fallback sensor can't trigger alerts
         return (t >= 5 && t <= 125) ? t : 0
     }
 

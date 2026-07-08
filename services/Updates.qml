@@ -4,16 +4,14 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Pending-package counter. Off unless ShellSettings.updatesWidget is on, since the
-// check does background package-DB work. Distro-agnostic: the first available
-// manager wins; pacman pulls in AUR updates too when paru/yay is present.
+// pending-package counter; off unless ShellSettings.updatesWidget is on (the check does background DB work).
+// distro-agnostic: first available manager wins; pacman pulls AUR too when paru/yay is present
 Singleton {
     id: root
 
     property int  count: 0
     property bool ready: false
-    // Last check errored (network down, mirror hung). The count is held and a
-    // faster retry is armed instead of waiting out the full poll.
+    // last check errored (network down, mirror hung); the count is held and a faster retry armed
     property bool lastFailed: false
     property string lastError: ""
     property real lastCheckMs: 0
@@ -65,10 +63,8 @@ Singleton {
     function _cmd(): string {
         switch (root.manager) {
         case "pacman": {
-            // checkupdates self-syncs to a private db (no root, no touch to the
-            // system db); rc 2 just means "no updates". Any real failure prints
-            // ERR so a network blip holds the last count instead of zeroing the
-            // badge; timeout caps a hung mirror sync.
+            // checkupdates self-syncs to a private db (no root, no system-db touch); rc 2 = no updates.
+            // a real failure prints ERR so a network blip holds the last count instead of zeroing the badge; timeout caps a hung sync
             const aur = SystemTools.hasParu ? root._limit(60, "paru -Qua") + " 2>/dev/null | grep -c ."
                       : SystemTools.hasYay  ? root._limit(60, "yay -Qua") + " 2>/dev/null | grep -c ."
                       : "echo 0"
@@ -78,8 +74,7 @@ Singleton {
                    "aur=$(" + aur + "); " +
                    "echo $((repo + aur))"
         }
-        // AUR helper without checkupdates: -Qu counts repo + AUR against the
-        // last-synced db. No fresh sync, but far better than "unsupported".
+        // AUR helper without checkupdates: -Qu counts repo + AUR against the last-synced db (no fresh sync, but better than "unsupported")
         case "aur": {
             const tool = SystemTools.hasParu ? "paru" : "yay"
             return "out=$(" + root._limit(90, tool + " -Qu") + " 2>&1); rc=$?; " +
@@ -103,8 +98,7 @@ Singleton {
     }
 
     function refresh(): void {
-        // Read the setting directly: on a manual toggle the `enabled` alias may
-        // not have re-evaluated yet.
+        // read the setting directly — on a manual toggle the `enabled` alias may not have re-evaluated yet
         if (!ShellSettings.updatesWidget || !supported || _proc.running) return
         _proc.exec(["bash", "-c", root._cmd()])
     }
@@ -144,9 +138,7 @@ Singleton {
         }
     }
 
-    // 15 min: responsive without hammering mirrors (checkupdates does a conditional
-    // db sync each run) or the AUR RPC. Click the widget to force a check sooner.
-    // Paused while offline; the reconnect hook below catches up.
+    // 15 min: responsive without hammering mirrors (conditional db sync each run) or the AUR RPC; paused offline, reconnect hook catches up
     Timer {
         id: _poll
         interval: 900000
@@ -158,8 +150,7 @@ Singleton {
     // failed check → retry in 3 min instead of waiting out the full poll
     Timer { id: _retry; interval: 180000; onTriggered: if (root._online) root.refresh() }
 
-    // Idle pauses the poll, and waking restarts its full interval — after a
-    // long screen-off the count could be hours stale. Catch up once on wake.
+    // idle pauses the poll and waking restarts its full interval, so catch up once on wake (count could be hours stale)
     Connections {
         target: Idle
         function onIsIdleChanged() {
@@ -168,8 +159,7 @@ Singleton {
         }
     }
 
-    // Back online after a failed check: refresh once the link settles, so the
-    // badge recovers in seconds rather than at the next poll.
+    // back online after a failed check: refresh once the link settles so the badge recovers in seconds, not next poll
     Timer { id: _reconnect; interval: 5000; onTriggered: root.refresh() }
     Connections {
         target: Network
@@ -179,8 +169,7 @@ Singleton {
         }
     }
 
-    // Startup with the setting already on: defer the first check so it isn't
-    // competing with login I/O. A manual toggle (below) checks right away instead.
+    // startup with the setting on: defer the first check so it doesn't compete with login I/O (a manual toggle checks right away)
     Timer { id: _initDelay; interval: 8000; onTriggered: root.refresh() }
 
     onSupportedChanged:    if (root.enabled) _initDelay.restart()

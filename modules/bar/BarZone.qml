@@ -5,10 +5,7 @@ import "../../config"
 import "../../services"
 import "../common"
 
-// One side of the bar (left or right). The parent anchors it to its edge and
-// gives it a height; it owns the ordered widget slots plus their group
-// dividers. Left/right differ only by which order-keys array they read, so both
-// sides are one instance of this.
+// one side of the bar; owns the ordered widget slots + group dividers. left/right differ only by which order-keys array they read
 Row {
     id: zone
 
@@ -32,9 +29,7 @@ Row {
         return setting.length === 0 || ShellSettings[setting] !== false
     }
 
-    // Order-agnostic divider map: reads each live slot through the Repeater
-    // instead of fixed ids, so it holds under any user order. _repRev is bumped
-    // as delegates populate (itemAt() can return null before that finishes).
+    // order-agnostic divider map: reads live slots through the Repeater (not fixed ids) so it holds under any order. _repRev bumps as delegates populate — itemAt() can return null before that
     property int _repRev: 0
     function _computeSeps(rep): var {
         zone._repRev
@@ -64,10 +59,7 @@ Row {
     }
     readonly property var _seps: _computeSeps(_rep)
 
-    // Fixed integer model sized to the full canonical key count: slots beyond
-    // this zone's real membership resolve to an empty key and render nothing.
-    // Never torn down on reorder — only the slot whose resolved key changed
-    // reloads its Loader.
+    // fixed model sized to the full canonical key count: extra slots resolve to an empty key and render nothing. never torn down on reorder — only the slot whose key changed reloads its Loader
     Repeater {
         id: _rep
         model: ShellSettings._allBarWidgetKeys.length

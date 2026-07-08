@@ -2,17 +2,14 @@ import QtQuick
 import "../../config"
 import "../../services"
 
-// Text whose value change rolls vertically: the old string drifts up and fades
-// while the new one rises into place, both at once, so it reads as one
-// continuous motion. For slow tickers (clock minute, date) — not per-second.
+// Value change rolls vertically (old drifts up/fades, new rises). For slow tickers (clock minute, date), not per-second.
 Item {
     id: root
 
     property string text: ""
     property color  color: Theme.text
 
-    // Clip only mid-roll: at rest the text fits its box, so the bar carries no
-    // permanent clip pass.
+    // clip only mid-roll — at rest text fits its box, so no permanent clip pass on the bar
     clip: _roll.running
     anchors.verticalCenter: parent ? parent.verticalCenter : undefined
     // Whole px so neighbours in a Row don't land on fractional pixels.

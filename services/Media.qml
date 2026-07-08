@@ -145,8 +145,7 @@ Singleton {
         const wasRunning = _cavaProc.running
         _visualizerClients++
         _visualizerDemand += lowPower ? 1 : 2
-        // skip the restart when this call is what starts cava fresh — it already
-        // spawns with up-to-date bars/fps, restarting it too just flashes to zero
+        // skip restart when this call starts cava fresh — it already has current bars/fps, restarting just flashes to zero
         if (wasRunning) Qt.callLater(root._restartCava)
     }
     function unregisterVisualizer(lowPower): void {

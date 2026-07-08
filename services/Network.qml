@@ -313,8 +313,7 @@ Singleton {
         }
     }
 
-    // Wi-Fi radio state, refreshed on every nmcli event so external toggles
-    // (rfkill, settings app, airplane mode) keep the tile in sync.
+    // wi-fi radio state, refreshed on every nmcli event so external toggles (rfkill, airplane mode) stay in sync
     Process {
         id: _radioCheck
         command: ["nmcli", "-t", "radio", "wifi"]
@@ -396,16 +395,14 @@ Singleton {
             })
             const out = []
             for (let i = 0; i < order.length; i++) out.push(bySsid[order[i]])
-            // identical scan → keep the old array; a reassign rebuilds every
-            // delegate (and would wipe an in-progress password entry)
+            // identical scan → keep the old array; a reassign rebuilds every delegate and wipes in-progress password entry
             if (!root._sameWifiNetworks(out, root.wifiNetworks))
                 root.wifiNetworks = out
             if (root._pendingWifiRescan) root._beginWifiScan()
         }
     }
 
-    // Shared connect / disconnect runner. WifiList's rescan timer handles
-    // re-scanning while the picker is open, so no scanWifi() needed here.
+    // shared connect/disconnect runner; WifiList's rescan timer handles re-scanning while the picker's open
     Process {
         id: _wifiActProc
         onExited: (code) => {
@@ -416,8 +413,7 @@ Singleton {
         }
     }
 
-    // Persistent stats loop, one long-running bash process instead of forking
-    // cat every second. Restarts automatically on interface change.
+    // persistent stats loop, one long-running bash instead of forking cat each second; restarts on interface change
     onDeviceNameChanged: {
         // Briefly drop the declarative run condition so the process restarts
         // with the new interface argument. Assigning `_statsProc.running`

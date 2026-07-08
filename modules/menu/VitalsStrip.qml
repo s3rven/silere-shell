@@ -171,8 +171,7 @@ Rectangle {
         }
     }
 
-    // Faint divider cross: fixed to the cell grid so it still lines up when the
-    // battery cell is absent.
+    // faint divider cross: fixed to the cell grid so it lines up even when the battery cell is absent
     Rectangle {
         x: root.width / 2
         y: root._pad + 10

@@ -4,14 +4,12 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// power-profiles-daemon frontend. No monitor process: the profile is read once
-// per menu open and writes are optimistic, so idle cost is zero.
+// power-profiles-daemon frontend; no monitor process — read once per menu open, writes optimistic, zero idle cost
 Singleton {
     id: root
 
     readonly property bool available: SystemTools.hasPowerProfilesCtl
-    // syncing spans the retry backoff too, so a transient failure keeps reading
-    // "Checking…" instead of flashing "Unavailable" between attempts.
+    // syncing spans the retry backoff so a transient failure reads "Checking…" not "Unavailable" between attempts
     readonly property bool syncing: _get.running || _getRetry.running
     property string profile: ""   // "" until the first successful read
 
@@ -21,14 +19,10 @@ Singleton {
     readonly property string glyph: profile === "performance" ? "󰓅"
                                   : profile === "power-saver" ? "󰾆" : "󰾅"
 
-    // Bumped on every cycle() so a get() issued before it can tell, on exit,
-    // that it's answering a question a newer write has already overtaken —
-    // _set.running alone misses this when the set finishes first.
+    // bumped on every cycle() so a get() can tell on exit that a newer write overtook it — _set.running alone misses this if the set finished first
     property int _writeGen: 0
 
-    // Bounded read retry: a failed/empty get while the menu is open self-heals
-    // instead of sticking on "Unavailable". Only runs while a consumer is open,
-    // so idle cost stays zero.
+    // bounded read retry: a failed/empty get self-heals instead of sticking on "Unavailable"; only while a consumer's open, zero idle cost
     property int _getRetries: 0
     readonly property int _getRetryMax: 4
     Timer { id: _getRetry; interval: 600; onTriggered: root.refresh() }
@@ -40,8 +34,7 @@ Singleton {
     }
 
     function cycle(): void {
-        // _set.running guard: exec while a set is in flight drops the write
-        // but the optimistic profile would still flip — UI and daemon diverge.
+        // _set.running guard: exec while a set's in flight drops the write but still flips the optimistic profile — UI and daemon diverge
         if (!available || profile === "" || _set.running) return
         const order = ["balanced", "performance", "power-saver"]
         const next = order[(order.indexOf(profile) + 1) % order.length]
@@ -67,17 +60,13 @@ Singleton {
         property int _gen: 0
         stdout: StdioCollector { id: _getOut }
         onExited: (code) => {
-            // A set in flight, or one that already landed after this read started,
-            // means this read predates (or no longer matches) the new profile;
-            // applying it would clobber the optimistic value. The set's own
-            // onExited re-syncs on failure, so dropping the stale read is safe.
+            // a set in flight or freshly landed means this read predates the new profile and would clobber the optimistic value; the set re-syncs on failure, so dropping it is safe
             if (_set.running || _gen !== root._writeGen) return
             if (code === 0) {
                 const p = (_getOut.text || "").trim()
                 if (p.length > 0) { root.profile = p; root._getRetries = 0; return }
             }
-            // Failed or empty read: retry while the menu's open and we still have
-            // no profile, so a transient daemon hiccup doesn't stick on "Unavailable".
+            // failed/empty read: retry while the menu's open and still no profile, so a hiccup doesn't stick on "Unavailable"
             if (root.profile === "" && root.available && MenuState.open && root._getRetries < root._getRetryMax) {
                 root._getRetries++
                 _getRetry.restart()

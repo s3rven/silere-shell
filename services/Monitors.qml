@@ -38,9 +38,7 @@ Singleton {
         return ("," + off + ",").indexOf("," + screen.name + ",") < 0
     }
 
-    // Integrated overlays should only render on one bar. Prefer the same
-    // screen as floating overlays, but fall back to a live bar when that
-    // screen has explicitly had its bar disabled.
+    // integrated overlays render on one bar; prefer the floating-overlay screen, fall back to a live bar if its bar is disabled
     readonly property ShellScreen overlayBarScreen: {
         const preferred = overlayScreen
         if (barEnabled(preferred)) return preferred

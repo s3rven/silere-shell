@@ -7,8 +7,7 @@ Item {
 
     property string glyph:        ""
     property string label:        ""
-    // Optional muted subtitle under the label: one plain-language line on what
-    // the toggle actually does. Empty keeps the row compact (single-line, 44px).
+    // optional muted subtitle under the label; empty keeps the row compact (single-line, 44px)
     property string description:  ""
     property bool   checked:      false
     property real   topRadius:    0
@@ -20,8 +19,7 @@ Item {
     readonly property color _badgeColor: badge === "beta" ? Theme.warning
                                        : badge === "cava" ? Theme.accent
                                        : Theme.subtext
-    // Matches the enclosing card's border width, keeps the hover fill inside
-    // the stroke and aligned with the card's INNER rounded edge.
+    // matches the card's border width so the hover fill stays inside the stroke, aligned to the card's inner rounded edge
     property real   cardInset:    1
 
     signal toggled()
@@ -36,15 +34,12 @@ Item {
 
     function _activate(): void {
         if (!_canToggle) return
-        // Animate the knob only on a real user flip; section switches re-run
-        // layout and would otherwise slide every checked knob.
+        // animate the knob only on a real user flip; section switches re-run layout and would otherwise slide every checked knob
         _toggle.armFlipAnimation()
         root.toggled()
     }
 
-    // 4px multiple: keeps card dividers on whole physical px under
-    // fractional scaling. A description grows the row to fit its (wrapping)
-    // subtitle, still snapped to the grid.
+    // 4px multiple keeps card dividers on whole physical px under fractional scaling; a description grows the row to fit its wrapping subtitle, still snapped
     readonly property int _descPadV: 11
     width:          parent ? parent.width : 0
     height:         _hasDesc ? 4 * Math.ceil((_descPadV * 2 + _textCol.implicitHeight) / 4) : 44
@@ -94,9 +89,7 @@ Item {
         Behavior on color { ColorAnimation { duration: Motion.fast } }
     }
 
-    // Label (with optional badge) stacked over the optional description; the
-    // whole block sits centred against the row so single- and two-line rows
-    // both read balanced next to the glyph and toggle.
+    // label (+ optional badge) over the optional description, centred so single- and two-line rows both balance next to the glyph and toggle
     Column {
         id: _textCol
         anchors.left:           _glyph.right
@@ -115,8 +108,7 @@ Item {
                 id: _label
                 anchors.left:           parent.left
                 anchors.verticalCenter: parent.verticalCenter
-                // Cap the width so the tag that follows always stays on the row:
-                // a long label elides rather than shoving the badge off the edge.
+                // cap the width so a long label elides rather than shoving the following badge off the row
                 width: Math.min(implicitWidth, parent.width - (_badge.visible ? _badge.width + 7 : 0))
                 text:           root.label
                 textFormat:     Text.PlainText
@@ -132,8 +124,7 @@ Item {
 
             Rectangle {
                 id: _badge
-                // Sits flush after the label so the tag reads as part of it,
-                // not a stray chip drifting against the toggle.
+                // sits flush after the label so the tag reads as part of it, not a stray chip by the toggle
                 anchors.left:           _label.right
                 anchors.leftMargin:     7
                 anchors.verticalCenter: _label.verticalCenter

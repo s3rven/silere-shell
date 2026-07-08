@@ -4,8 +4,7 @@ import QtQuick
 import QtQuick.Effects
 import "../../services"
 
-// Two-layer drop shadow for floating cards/pills/popups, same elevation cue
-// used by the bar, OSD, notifications, and tray menu.
+// two-layer drop shadow for floating cards/pills/popups — shared elevation cue (bar/OSD/notifications/tray).
 Item {
     id: root
 

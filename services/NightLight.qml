@@ -13,8 +13,7 @@ Singleton {
     readonly property bool toolAvailable: SystemTools.hasHyprsunset
     readonly property int  temperature: ShellSettings.nightLightTemp
 
-    // Location from the system timezone's zoneinfo coords (offline, no GPS); falls
-    // back to a default latitude + tz offset if the lookup fails.
+    // location from the system timezone's zoneinfo coords (offline, no GPS); falls back to default lat + tz offset
     property bool _geoResolved: false
     property real _autoLat: 0
     property real _autoLon: 0
@@ -177,8 +176,7 @@ Singleton {
         } else if (!_killProc.running) {
             _pendingEnable = false
         }
-        // If _killProc is already running, _pendingEnable is set; its
-        // onExited handler will call _startSunset() with the new temperature.
+        // if _killProc is running, _pendingEnable is set; its onExited calls _startSunset() with the new temp
     }
 
     function toggle(): void {
@@ -186,8 +184,7 @@ Singleton {
         if (enabled) {
             _pendingEnable = false
             if (_killProc.running) { enabled = false; return }
-            // Kill only the process we spawned; fall back to pkill only if we
-            // didn't start it (i.e. it was already running when the shell launched).
+            // kill only the process we spawned; pkill fallback only if it was already running at launch
             if (_sunsetProc.running || _stopping) {
                 _stopping = true
                 if (_sunsetProc.running) _sunsetProc.running = false
@@ -199,9 +196,7 @@ Singleton {
             enabled = false
         } else {
             if (_sunsetProc.running || _stopping) { _pendingEnable = true; return }
-            // Don't spawn while a fallback pkill is still in flight, it matches
-            // hyprsunset by name and would take the new instance down with it.
-            // Queue the enable instead so the click isn't silently dropped.
+            // don't spawn while a fallback pkill is in flight — it matches hyprsunset by name and would kill the new instance; queue instead
             if (_killProc.running) { _pendingEnable = true; return }
             if (ShellSettings.nightLightAuto) ShellSettings.nightLightTemp = root.suggestedTemp
             _startSunset()
@@ -210,9 +205,7 @@ Singleton {
 
     Component.onCompleted: _init()
 
-    // Geo probe (timedatectl + zoneinfo lookup) only matters for auto-tracking
-    // and menu recommendations. Defer the one-shot until one of those surfaces
-    // needs it instead of spawning during every shell startup.
+    // defer the one-shot geo probe until auto-tracking or the menu needs it, not on every startup
     property bool _geoStarted: false
     readonly property bool _geoWanted: toolAvailable && (ShellSettings.nightLightAuto || MenuState.open)
     function _startGeo(): void {

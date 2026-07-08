@@ -46,8 +46,7 @@ PanelWindow {
             : (ShellSettings.barFloating ? 4 : 0) + ShellSettings.barHeight + 6
         bottom: win._barBottom
             ? (ShellSettings.barFloating ? 4 : 0) + ShellSettings.barHeight + 6 : 0
-        // _shadowPad backed out here, then re-added by outerCol's inset, so the
-        // visible card edge still lands at _edgeMargin from the screen edge.
+        // _shadowPad backed out here, re-added by outerCol's inset, so the visible card edge still lands _edgeMargin from the screen edge
         right: win._pos === "top-right" ? Math.max(0, win._edgeMargin - win._shadowPad) : 0
         left:  win._left              ? Math.max(0, win._edgeMargin - win._shadowPad) : 0
     }
@@ -240,8 +239,7 @@ PanelWindow {
                 anchors.left:             win._left   ? parent?.left : undefined
                 anchors.horizontalCenter: win._center ? parent?.horizontalCenter : undefined
 
-                // Cap the stack. Hidden overflow cards pause their timeout, so
-                // they do not expire before ever becoming visible.
+                // cap the stack — hidden overflow cards pause their timeout so they don't expire before ever showing
                 visible: ShellSettings.notifMaxVisible <= 0 || index < ShellSettings.notifMaxVisible
 
                 onDismissRequested: (id, notification, expired) => {

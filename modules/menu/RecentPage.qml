@@ -56,8 +56,7 @@ PageShell {
         return Qt.formatDateTime(d, "MMM d, yyyy")
     }
 
-    // Destructive + irreversible → arm-to-confirm like reset-all: first press
-    // arms, a second within 3s commits.
+    // destructive + irreversible → arm-to-confirm: first press arms, a second within 3s commits
     function requestClearAll(): void {
         if (_clearing || Notifications.historyCount === 0) return
         if (_clearArmed) { _clearArmed = false; _clearArmTimer.stop(); clearAll() }
@@ -323,8 +322,7 @@ PageShell {
                         }
                     }
 
-                    // Day divider — mirrors the Now page's SectionLabel so both
-                    // tabs read as one app: accent tick, accent-leaning label, rule.
+                    // day divider mirrors the Now page's SectionLabel (accent tick, accent-leaning label, rule) so both tabs read as one app
                     Item {
                         visible: _entry._showSection
                         anchors.left:  parent.left

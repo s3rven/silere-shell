@@ -3,10 +3,9 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import "../../config"
 
-// Auto 1px separators above each visible, non-collapsed child of `column`. One
-// rule shared by SettingsCard and CollapsibleSection, so rows nested in a
-// collapsible get the same seams as flat ones. Place as an overlay sibling of
-// `column` (positions are taken relative to it, including its live y).
+// auto 1px separators above each visible, non-collapsed child of `column`. shared by SettingsCard +
+// CollapsibleSection so nested rows get the same seams as flat ones; place as an overlay sibling of `column`
+// (positions are relative to it, incl. its live y).
 Repeater {
     id: root
 
@@ -16,8 +15,7 @@ Repeater {
     // Each end eases out over this many px instead of stopping at a hard 1px wall.
     property real  fadePx:    26
 
-    // 12 matches every row's content inset (glyphs sit at leftMargin 12) so a
-    // divider starts under the glyph column, never wider than the card allows.
+    // 12 matches the row content inset (glyphs at leftMargin 12) so a divider starts under the glyph column, never wider than the card
     readonly property real _inset: Math.min(inset, Math.max(0, (column ? column.width : 0) / 2))
 
     readonly property var _sepVisible: {
@@ -27,9 +25,7 @@ Repeater {
         for (let i = 0; i < children.length; i++) {
             result.push(hasAbove)
             const c = children[i]
-            // A divider-transparent element (a HintText, or a collapsible that opens
-            // with one) neither takes a line above nor induces one below, so an
-            // annotation never gets fenced off from the control it explains.
+            // a divider-transparent element (HintText, or a collapsible opening with one) takes no line above and induces none below, so an annotation isn't fenced off from its control
             if (c && c.visible && c.height > 0.5 && !(c.suppressDividerAbove ?? false)) hasAbove = true
         }
         return result
@@ -62,8 +58,7 @@ Repeater {
             GradientStop { position: 1 - _line._fade; color: root.lineColor }
             GradientStop { position: 1.0;             color: Theme.withAlpha(root.lineColor, 0) }
         }
-        // Fade with the row's reveal: a collapsible growing from 0 grows its divider
-        // in over the first ~20px instead of popping, and a faded row takes it along.
+        // fade with the row's reveal: a collapsible growing from 0 grows its divider in over ~20px instead of popping, and a faded row takes it along
         opacity: row
             ? Math.min(1, Math.max(0, (row.height - 4) / 20)) * Math.min(1, row.opacity * 2)
             : 0

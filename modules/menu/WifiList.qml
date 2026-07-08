@@ -5,9 +5,8 @@ import "../../config"
 import "../../services"
 import "../common"
 
-// Inline Wi-Fi picker. Rescans only while `open`. Tapping an open or already
-// saved network connects straight away; a new secured network reveals an inline
-// password field. Connect/scan logic lives in the Network service.
+// inline Wi-Fi picker. rescans only while `open`. tapping an open or saved network connects immediately; a new
+// secured network reveals an inline password field. connect/scan logic lives in the Network service.
 Item {
     id: root
 

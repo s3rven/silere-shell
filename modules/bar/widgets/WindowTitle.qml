@@ -11,11 +11,8 @@ Item {
 
     required property ShellScreen screen
 
-    // Width the bar can actually give us (BarContent sets this = titleAvailableWidth).
-    // Caps the inner text so a crowded bar elides from the right instead of cropping
-    // the centered text on both ends. Deliberately separate from the animated box
-    // width, so the text size snaps to the new title rather than revealing as the box
-    // resizes on every change. -1 = unset (no cap beyond the 25% screen ceiling).
+    // width the bar can give us (= titleAvailableWidth); caps inner text so a crowded bar elides from the right
+    // instead of cropping both ends. separate from the animated box width so text snaps to the new title. -1 = unset
     property real availableWidth: -1
 
     readonly property var    monitor:     Hyprland.monitorFor(root.screen)
@@ -47,8 +44,7 @@ Item {
         leaf = leaf.replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim()
         if (!leaf) return ""
 
-        // App ids/classes are often lower-case slugs. Keep mixed-case names as
-        // provided, but make plain ids read like labels in the bar.
+        // app ids/classes are often lower-case slugs; keep mixed-case names as-is, title-case plain ids so they read as labels
         if (leaf === leaf.toLowerCase() || leaf === leaf.toUpperCase()) {
             return leaf.split(" ").map(function(part) {
                 return part.length <= 2
@@ -85,8 +81,7 @@ Item {
         return title.length > 0 && title === app
     }
 
-    // HTML-escape dynamic text before embedding it in the StyledText markup
-    // below, window titles routinely contain &, <, >.
+    // HTML-escape dynamic text before StyledText markup; titles routinely contain &, <, >
     function _esc(s: string): string {
         return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     }
@@ -99,10 +94,8 @@ Item {
         return "#" + _h2(a * 255) + _h2(c.r * 255) + _h2(c.g * 255) + _h2(c.b * 255)
     }
 
-    // "app · title" as one styled line: dimmed app, separator at the user's
-    // dot opacity, full-strength title. Collapses to whichever single part is
-    // present when the title is empty or just echoes the app; overflow is
-    // elided by the Text below.
+    // "app · title" as one styled line: dimmed app, separator at the user's dot opacity, full title;
+    // collapses to whichever single part exists when the title is empty or echoes the app.
     readonly property string _formatted: {
         const appCol   = _hex(Theme.subtext, 1.0)
         const titleCol = _hex(Theme.text, 1.0)
@@ -195,10 +188,8 @@ Item {
             NumberAnimation {            target: root; property: "_y";     to: 0;     duration: Motion.ms(170); easing.type: Easing.OutQuart }
             NumberAnimation {            target: root; property: "_scale"; to: 1.0;   duration: Motion.ms(160); easing.type: Easing.OutCubic }
         }
-        // Title-only changes that land mid-swap are dropped by the guard in
-        // onCurrentTitleChanged (apps often set the real title a beat after
-        // mapping); sync silently like the live-retitle path so the bar never
-        // sits on a stale title after a fast switch.
+        // title-only changes mid-swap are dropped by the guard in onCurrentTitleChanged (apps often set the real
+        // title a beat after mapping); resync silently so the bar never sits on a stale title after a fast switch.
         ScriptAction {
             script: if (!_debounce.running && root._shownTitle !== root.currentTitle)
                 root._shownTitle = root.currentTitle
@@ -232,10 +223,8 @@ Item {
             font.pixelSize: Settings.fontSize
             renderType:     Text.NativeRendering
             elide:          Text.ElideRight
-            // Cap at 25% of the screen, and at the width the bar actually gave us, so a
-            // crowded bar elides from the right instead of cropping the centered text on
-            // both ends. Uses availableWidth (which doesn't animate during a title swap)
-            // rather than the animated box width, so the text snaps to the new title.
+            // cap at 25% of screen and at the width the bar gave us, so a crowded bar elides from the right not
+            // both ends. uses availableWidth (doesn't animate during a swap) so the text snaps to the new title.
             width:          Math.ceil(Math.min(implicitWidth,
                                      root.availableWidth >= 0 ? root.availableWidth : implicitWidth,
                                      Math.round(root.screen.width * 0.25)))

@@ -48,8 +48,7 @@ Singleton {
         Quickshell.execDetached(cmd)
     }
 
-    // Live, cached Hyprland clients, no subprocess. lastIpcObject carries
-    // pid, class, initialClass, title, workspace and address.
+    // live cached Hyprland clients, no subprocess; lastIpcObject carries pid/class/initialClass/title/workspace/address
     function _clients() {
         const tops = Hyprland.toplevels ? (Hyprland.toplevels.values ?? []) : []
         const out = []
@@ -185,8 +184,7 @@ Singleton {
         let p = root._toPid(pid)
         const seen = ({})
 
-        // Each level is a blocking /proc read; a notifier sits a few forks below
-        // its window (term → shell → notify-send), so 6 is ample without a deep scan.
+        // each level is a blocking /proc read; a notifier sits a few forks below its window, so 6 is ample
         for (let depth = 0; p > 1 && depth < 6 && !seen[p]; depth++) {
             seen[p] = true
 
@@ -219,8 +217,7 @@ Singleton {
         const cls  = root._compact(c.class)
         const init = root._compact(c.initialClass)
 
-        // Symmetric containment: "Telegram Desktop" ↔ org.telegram.desktop.
-        // Length guard keeps short classes from matching everything.
+        // symmetric containment ("Telegram Desktop" ↔ org.telegram.desktop); length guard stops short classes matching everything
         return cls === app || init === app
             || (cls.length  > 2 && (app.endsWith(cls)  || cls.endsWith(app)))
             || (init.length > 2 && (app.endsWith(init) || init.endsWith(app)))
@@ -300,8 +297,7 @@ Singleton {
         const pidHint = root._senderPid(notification)
         const deHint  = root._norm(notification.desktopEntry || hints["desktop-entry"] || "")
 
-        // 1. Sender PID ancestry, catches notify-send/shell children inside a
-        // terminal by walking up to the Hyprland client process.
+        // 1. sender PID ancestry — catches notify-send/shell children by walking up to the Hyprland client
         const pidMatch = root._clientFromPidChain(clients, pidHint)
         if (pidMatch && pidMatch.workspace) return pidMatch
 
@@ -335,8 +331,7 @@ Singleton {
         return (c && c.workspace) ? (c.workspace.id ?? -1) : -1
     }
 
-    // Jump to the window playing media. Matches player name → browser family →
-    // song title in the window title.
+    // jump to the media window; matches player name → browser family → song title
     function focusMediaPlayer(playerName: string, songTitle: string): void {
         const clients = root._clients()
         if (clients.length === 0) return
@@ -365,13 +360,10 @@ Singleton {
             focusWorkspaceWindow(best.workspace.id, best.address)
     }
 
-    // Jump to the window behind a tray item, switching to its workspace. A tray
-    // click should land you on the app, but many SNIs (Spotify) expose no
-    // Activate method, so we resolve the window ourselves: match id / title /
-    // tooltip against window classes, then the desktop-entry database (display
-    // name → StartupWMClass) the way notifications do. Returns false when the
-    // app has no live window (minimised-to-tray, background daemon) so the
-    // caller can fall back to the item's own activation or menu.
+    // resolve the window behind a tray item and switch to its workspace. many SNIs
+    // (Spotify) expose no Activate method, so match id/title/tooltip against window
+    // classes, then the desktop-entry db (display name → StartupWMClass) like notifs.
+    // returns false when the app has no live window, so the caller can fall back.
     function focusTrayItem(id: string, title: string, tooltip: string): bool {
         const clients = root._clients()
         if (clients.length === 0) return false

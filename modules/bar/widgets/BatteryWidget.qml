@@ -6,8 +6,7 @@ import "../../common"
 Pill {
     id: batteryPill
 
-    // Opt-in: drop the indicator while charging or full, since it's not telling
-    // you anything useful then. show also drives the separator dot.
+    // opt-in: drop the indicator while charging/full (uninformative then); show also drives the separator dot
     readonly property bool autoHidden: ShellSettings.batteryAutoHide && (Battery.charging || Battery.full)
     readonly property bool show: ShellSettings.barShowBattery && Battery.available && !autoHidden
     property real _baseOpacity: show ? 1.0 : 0.0
@@ -38,8 +37,7 @@ Pill {
                 return Battery.label + " · " + Battery.statusLabel
             return Battery.label
         }
-        // Battery is status, not a control — always show it, even when
-        // valuesOnHover hides the adjustable levels (volume/brightness).
+        // battery is status not a control — always shown, even when valuesOnHover hides the adjustable levels
         return Battery.label
     }
 }

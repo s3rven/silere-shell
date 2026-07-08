@@ -3,9 +3,8 @@ import "../../../config"
 import "../../../services"
 import "../../common"
 
-// Base for the update-style status pills: pops in while `show`, runs the
-// content-scan sweep while `busy`, and locks clicks out until the work ends.
-// Consumers bind show/busy, set glyph/text/accessible, and handle onActivated.
+// base for the update-style status pills: pops in on `show`, content-scan sweep on `busy`, clicks locked until work ends.
+// consumers bind show/busy, set glyph/text/accessible, handle onActivated.
 Pill {
     id: root
 

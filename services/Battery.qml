@@ -11,8 +11,7 @@ Singleton {
 
     readonly property bool upowerReady: UPower.displayDevice && UPower.displayDevice.ready
     readonly property bool available: upowerReady && UPower.displayDevice.isPresent
-    // UPower reports 0-1 on some setups, 0-100 on others; once we see a value
-    // above 1 we know it's the 0-100 kind and keep treating it that way.
+    // UPower reports 0-1 or 0-100 depending on setup; a value >1 latches the 0-100 scale
     readonly property real _raw: upowerReady ? UPower.displayDevice.percentage : 0
     property bool _scale100: false
     property real _pctOverride: -1
@@ -30,8 +29,7 @@ Singleton {
         : (_scale100 ? _raw : (_raw * 100))
     readonly property bool onBattery: available ? UPower.onBattery : false
     readonly property int  _critPct: Math.max(5, Math.round(ShellSettings.batteryLowThreshold / 2))
-    // pct == 0 is UPower's uninitialised reading just after displayDevice goes ready;
-    // treating it as valid fires a bogus "Critical 0%" alert at startup.
+    // pct==0 is UPower's uninitialised reading at startup; would fire a bogus critical alert
     readonly property bool _validReading: available && pct > 0
     readonly property bool low: _validReading && pct < ShellSettings.batteryLowThreshold && onBattery
     readonly property bool critical: _validReading && pct < _critPct && onBattery
@@ -76,8 +74,7 @@ Singleton {
 
     readonly property string label: _validReading ? `${Math.round(pct)}%` : ""
 
-    // Retries a few times in case the probe fails transiently (missing CLI on
-    // first boot, slow D-Bus); doesn't latch forever on one failed attempt.
+    // retry a few times for transient probe failures (missing CLI on boot, slow D-Bus), not forever
     Timer {
         interval: 1500
         repeat: true
@@ -125,8 +122,7 @@ Singleton {
     readonly property real   changeRate: upowerReady ? Math.abs(UPower.displayDevice.changeRate) : 0
     readonly property string rateLabel:  (available && changeRate > 0.1) ? changeRate.toFixed(1) + "W" : ""
 
-    // Shared low-battery pulse. The bar underline and battery pill both bind to
-    // this value, so critical battery warnings stay phase-locked.
+    // shared low-battery pulse so bar underline and pill stay phase-locked
     PulseLoop {
         target:         root
         targetProperty: "alertPulse"

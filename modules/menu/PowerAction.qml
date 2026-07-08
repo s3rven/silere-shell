@@ -14,8 +14,7 @@ Item {
 
     readonly property color _box:       Theme.menuControl
     readonly property color _boxHot:    Theme.mix(Theme.menuControl, Theme.text, 0.035)
-    // armed = one press from firing; error-tinted so the wait-to-confirm state
-    // is unmistakable without a second chrome element
+    // armed = one press from firing; error-tinted so the wait-to-confirm state is unmistakable
     readonly property color _boxArmed:  Theme.mix(Theme.menuControl, Theme.error, 0.12)
     readonly property color _line:      Theme.menuControlLine
     readonly property color _lineHot:   Theme.menuControlLineHot

@@ -20,8 +20,7 @@ Singleton {
         root.flashed()
     }
 
-    // Dedup: some tools fire close_write then moved_to for the same filename
-    // within a single save; suppress a second flash within 1.5 s.
+    // dedup: some tools fire close_write then moved_to for one save; suppress a second flash within 1.5s
     property string _lastFile: ""
     property real   _lastTime: 0
 
@@ -36,8 +35,7 @@ Singleton {
     }
 
     SupervisedProcess {
-        // The IPC flash remains available unconditionally; the filesystem
-        // watcher is only useful when screenshot glow can display its events.
+        // IPC flash stays available always; the fs watcher only matters when screenshot glow can display it
         superviseWhen: SystemTools.ready && SystemTools.hasInotifywait
             && ShellSettings.underlineGlow && ShellSettings.underlineScreenshotGlow
         restartDelay: 60000

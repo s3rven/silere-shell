@@ -4,10 +4,8 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Self-update state for the shell itself (distinct from Updates.qml, which counts
-// distro packages). The daily timer's update.sh runs check-only and drops a flag
-// file when origin/main is ahead; this watches that flag via inotify (no polling)
-// so a pending update surfaces in the bar instead of a surprise mid-session restart.
+// self-update state for the shell (distinct from Updates.qml = distro packages). the daily
+// update.sh check-only drops a flag when origin/main is ahead; watched via inotify so it surfaces in the bar
 Singleton {
     id: root
 
@@ -66,8 +64,7 @@ Singleton {
         _timerSet.exec(["bash", root._script, enabled ? "--timer-enable" : "--timer-disable"])
     }
 
-    // If --apply restarts the shell before Process reports back, clear the
-    // applying state ourselves rather than leave the bar stuck on "updating…"
+    // if --apply restarts the shell before Process reports back, clear applying so the bar isn't stuck
     Timer {
         id: _applyTimeout
         interval: 30000
@@ -161,8 +158,7 @@ Singleton {
         }
     }
 
-    // Version + timer status only surface in Settings; probe once on first
-    // menu open instead of spawning bash during every shell startup.
+    // version + timer status only surface in Settings; probe once on first menu open, not every startup
     property bool _probed: false
     function _probe(): void {
         if (_probed) return
