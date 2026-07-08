@@ -18,8 +18,7 @@ PageShell {
         return s.length < 2 ? "0" + s : s
     }
 
-    // Lags behind MenuState.settingsSection during the swap animation; the
-    // detail pane renders whichever section this points at.
+    // lags behind MenuState.settingsSection during the swap; detail pane renders whichever section this points at
     property string _shownSection: MenuState.settingsSection
 
     // section id → { glyph, label, group }, for the detail-pane page header.
@@ -194,8 +193,7 @@ PageShell {
                 readonly property var _meta: root._sectionMeta[root._shownSection]
                                             ?? ({ glyph: "", label: "", group: "" })
 
-                // Compact section title: no badge or rule here, the card below
-                // already supplies the structure.
+                // compact section title: no badge or rule, the card below supplies the structure
                 Item {
                     id: _hdrIconSlot
                     anchors.left:           parent.left
@@ -382,7 +380,6 @@ PageShell {
                                         onHoverChanged: (n, h) => _accentPicker._hoverName =
                                             h ? n : (_accentPicker._hoverName === n ? "" : _accentPicker._hoverName)
 
-                                        // Centre dot — only on the selected swatch.
                                         Rectangle {
                                             anchors.centerIn: parent
                                             width: 8; height: 8; radius: 4
@@ -468,16 +465,96 @@ PageShell {
                             currentValue: ShellSettings.baseTone
                             model: [
                                 { value: "charcoal", label: "Charcoal", color: "#17191d" },
-                                { value: "black",    label: "Black",    color: "#030303" }
+                                { value: "black",    label: "Black",    color: "#030303" },
+                                { value: "custom",   label: "Custom"   }
                             ]
+                            // swatch previews the picked hue at a legible tone — the applied base itself is too dark to tell apart
+                            liveSwatches: ({ custom: _baseHueRow.previewTone })
                             onChosen: (v) => ShellSettings.baseTone = v
+                        }
+
+                        Item {
+                            id: _baseHueRow
+                            width: parent.width
+                            visible: ShellSettings.baseTone === "custom"
+                            height: visible ? 44 : 0
+
+                            property real topRadius: 0
+                            property real bottomRadius: 0
+                            property real cardInset: 1
+
+                            readonly property color _cur: ShellSettings.customBase
+                            readonly property real  _curHue: _cur.hslHue < 0 ? 0 : _cur.hslHue
+                            readonly property color previewTone: _stripForHue(_curHue)
+                            // applied base stays near-black; the strip previews hues brighter so they're tellable apart
+                            function _baseForHue(h) {
+                                const c = Qt.hsla(h, 0.22, 0.048, 1.0)
+                                return "#" + root._hex2(c.r) + root._hex2(c.g) + root._hex2(c.b)
+                            }
+                            function _stripForHue(h) { return Qt.hsla(h, 0.30, 0.30, 1.0) }
+
+                            Item {
+                                id: _baseStrip
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.left:  parent.left;  anchors.leftMargin:  12
+                                anchors.right: parent.right; anchors.rightMargin: 12
+                                height: 14
+
+                                activeFocusOnTab: true
+                                Accessible.role: Accessible.Slider
+                                Accessible.name: "Base hue"
+                                Accessible.description: ShellSettings.customBase
+                                function _nudgeHue(dir: int, mult: int): void {
+                                    const h = (_baseHueRow._curHue + dir * 0.02 * mult + 1) % 1
+                                    ShellSettings.customBase = _baseHueRow._baseForHue(h)
+                                }
+                                Keys.onLeftPressed:  e => { _baseStrip._nudgeHue(-1, (e.modifiers & Qt.ShiftModifier) ? 5 : 1); e.accepted = true }
+                                Keys.onRightPressed: e => { _baseStrip._nudgeHue(1,  (e.modifiers & Qt.ShiftModifier) ? 5 : 1); e.accepted = true }
+
+                                Rectangle {
+                                    anchors.fill: parent; radius: height / 2; antialiasing: true
+                                    border.width: 1
+                                    border.color: _baseStrip.activeFocus ? Theme.withAlpha(Theme.accent, 0.55) : Theme.menuControlLineHot
+                                    gradient: Gradient {
+                                        orientation: Gradient.Horizontal
+                                        GradientStop { position: 0.000; color: _baseHueRow._stripForHue(0.000) }
+                                        GradientStop { position: 0.167; color: _baseHueRow._stripForHue(0.167) }
+                                        GradientStop { position: 0.333; color: _baseHueRow._stripForHue(0.333) }
+                                        GradientStop { position: 0.500; color: _baseHueRow._stripForHue(0.500) }
+                                        GradientStop { position: 0.667; color: _baseHueRow._stripForHue(0.667) }
+                                        GradientStop { position: 0.833; color: _baseHueRow._stripForHue(0.833) }
+                                        GradientStop { position: 1.000; color: _baseHueRow._stripForHue(1.000) }
+                                    }
+                                }
+                                Rectangle {
+                                    id: _baseThumb
+                                    width: 16; height: 16; radius: 8; antialiasing: true
+                                    y: (parent.height - height) / 2
+                                    x: Math.round(_baseHueRow._curHue * (_baseStrip.width - width))
+                                    color: _baseHueRow._cur
+                                    border.width: 2; border.color: Theme.text
+                                    scale: _baseMa.pressed ? 1.18 : (_baseMa.containsMouse || _baseStrip.activeFocus ? 1.08 : 1.0); transformOrigin: Item.Center
+                                    Behavior on x     { enabled: !_baseMa.pressed && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+                                    Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
+                                }
+                                MouseArea {
+                                    id: _baseMa
+                                    anchors.fill: parent; anchors.topMargin: -8; anchors.bottomMargin: -8
+                                    cursorShape: Qt.PointingHandCursor; preventStealing: true; hoverEnabled: true
+                                    function _set(mx) {
+                                        const t = _baseThumb.width
+                                        const h = Math.max(0, Math.min(1, (mx - t / 2) / Math.max(1, width - t)))
+                                        ShellSettings.customBase = _baseHueRow._baseForHue(h)
+                                    }
+                                    onPressed:         (m) => _set(m.x)
+                                    onPositionChanged: (m) => { if (pressed) _set(m.x) }
+                                }
+                            }
                         }
                     }
                 }
 
-                // Neutral off -> the shell themes from matugen. Show the live
-                // palette as proof it's working; if matugen isn't installed
-                // these are the bundled fallback tones, called out as such.
+                // neutral off: shell themes from matugen; show the live palette as proof (bundled fallback tones if matugen's absent, called out as such)
                 CollapsibleSection {
                     expanded: _secTheme._showMatuContent
 
@@ -489,58 +566,59 @@ PageShell {
                             Column {
                                 width: parent.width
 
-                                SectionLabel { label: "PALETTE" }
+                                SectionLabel { label: "ACCENT" }
                                 SettingsCard {
                                     Item {
-                                        id: _matuShowcase
+                                        id: _matuAccentRow
                                         width: parent.width
-                                        // Trailing 14 balances the top padding the readout/swatches sit under.
-                                        implicitHeight: _matuCol.y + _matuCol.implicitHeight + 16
-                                        height: implicitHeight
+                                        height: 105
 
-                                        function _hex(c) { return ("#" + root._hex2(c.r) + root._hex2(c.g) + root._hex2(c.b)).toUpperCase() }
-
-                                        readonly property var _swatches: [
-                                            { c: MatugenTheme.accent,     n: "Accent"  },
-                                            { c: MatugenTheme.background, n: "Base"    },
-                                            { c: MatugenTheme.surface,    n: "Surface" },
-                                            { c: MatugenTheme.text,       n: "Text"    },
-                                            { c: MatugenTheme.error,      n: "Error"   },
-                                            { c: MatugenTheme.warning,    n: "Warning" },
-                                            { c: MatugenTheme.success,    n: "Success" }
+                                        readonly property var _roles: [
+                                            { key: "primary",   c: MatugenTheme.accent,  n: "Primary"   },
+                                            { key: "secondary", c: MatugenTheme.success, n: "Secondary" },
+                                            { key: "tertiary",  c: MatugenTheme.warning, n: "Tertiary"  }
                                         ]
+                                        property string _hoverName: ""
+                                        function _hex(c) { return ("#" + root._hex2(c.r) + root._hex2(c.g) + root._hex2(c.b)).toUpperCase() }
+                                        function _labelFor(name) {
+                                            for (let i = 0; i < _roles.length; i++)
+                                                if (_roles[i].n === name) return _roles[i].n + "  ·  " + _hex(_roles[i].c)
+                                            return name
+                                        }
+                                        readonly property string _activeName: {
+                                            for (let i = 0; i < _roles.length; i++)
+                                                if (_roles[i].key === ShellSettings.matugenAccentRole) return _labelFor(_roles[i].n)
+                                            return ""
+                                        }
+                                        readonly property string _title: _hoverName.length > 0 ? _labelFor(_hoverName) : _activeName
 
-                                        property string _hoverLabel: ""
-                                        readonly property string _source:  SystemTools.hasMatugen ? "Matugen" : "Fallback"
-                                        // Top-right readout: a hovered swatch's name/hex, else the source.
-                                        readonly property string _readout: _hoverLabel.length > 0 ? _hoverLabel : _source
                                         property real topRadius: 0
                                         property real bottomRadius: 0
                                         property real cardInset: 1
 
                                         Row {
-                                            anchors.left: parent.left
-                                            anchors.leftMargin: 12
-                                            anchors.right: parent.right
-                                            anchors.rightMargin: 12
-                                            anchors.top: parent.top
-                                            anchors.topMargin: 13
+                                            anchors.top:   parent.top;  anchors.topMargin:  13
+                                            anchors.left:  parent.left; anchors.leftMargin: 12
+                                            anchors.right: parent.right; anchors.rightMargin: 12
                                             height: 34
                                             spacing: 10
 
                                             Rectangle {
                                                 width: 34; height: 34; radius: 10
                                                 antialiasing: true
-                                                color: Theme.mix(Theme.menuControl, MatugenTheme.accent, 0.32)
+                                                color: Theme.mix(Theme.menuControl, Theme.accent, 0.32)
                                                 border.width: 1
-                                                border.color: Theme.withAlpha(MatugenTheme.accent, 0.56)
+                                                border.color: Theme.withAlpha(Theme.accent, 0.56)
+                                                Behavior on color        { ColorAnimation { duration: Motion.fast } }
+                                                Behavior on border.color { ColorAnimation { duration: Motion.fast } }
                                                 Text {
                                                     anchors.centerIn: parent
                                                     text: "󰔎"
-                                                    color: MatugenTheme.accent
+                                                    color: Theme.accent
                                                     font.family: Settings.font
                                                     font.pixelSize: Settings.fontSize + 2
                                                     renderType: Text.NativeRendering
+                                                    Behavior on color { ColorAnimation { duration: Motion.fast } }
                                                 }
                                             }
 
@@ -551,7 +629,7 @@ PageShell {
 
                                                 Text {
                                                     width: parent.width
-                                                    text: _matuShowcase._readout
+                                                    text: _matuAccentRow._title
                                                     color: Theme.text
                                                     font.family: Settings.font
                                                     font.pixelSize: Settings.fontSize
@@ -572,47 +650,33 @@ PageShell {
                                             }
                                         }
 
-                                        Column {
-                                            id: _matuCol
-                                            anchors.left:  parent.left;  anchors.leftMargin:  12
-                                            anchors.right: parent.right; anchors.rightMargin: 12
-                                            anchors.top:   parent.top; anchors.topMargin: 62
+                                        Row {
+                                            anchors.top:  parent.top;  anchors.topMargin:  59
+                                            anchors.left: parent.left; anchors.leftMargin: 12
+                                            height: 32
                                             spacing: 10
 
-                                            Row {
-                                                width: parent.width
-                                                height: 30
-                                                spacing: Math.max(4, (width - 7 * 28) / 6)
+                                            Repeater {
+                                                model: _matuAccentRow._roles
+                                                delegate: AccentSwatch {
+                                                    id: _mrSw
+                                                    required property var modelData
+                                                    chipColor: modelData.c
+                                                    name:      modelData.n
+                                                    active:    ShellSettings.matugenAccentRole === modelData.key
+                                                    onPicked:  ShellSettings.matugenAccentRole = modelData.key
+                                                    onHoverChanged: (n, h) => _matuAccentRow._hoverName =
+                                                        h ? n : (_matuAccentRow._hoverName === n ? "" : _matuAccentRow._hoverName)
 
-                                                Repeater {
-                                                    model: _matuShowcase._swatches
-                                                    delegate: Rectangle {
-                                                        id: _msw
-                                                        required property var modelData
-                                                        required property int index
-                                                        readonly property bool _isAccent: index === 0
-                                                        readonly property string _label: modelData.n + "  ·  " + _matuShowcase._hex(modelData.c)
-                                                        width: 28; height: 30; radius: 8
+                                                    Rectangle {
+                                                        anchors.centerIn: parent
+                                                        width: 8; height: 8; radius: 4
                                                         antialiasing: true
-                                                        color: modelData.c
-                                                        // Accent keeps a brighter rim so the headline colour
-                                                        // reads first; any swatch brightens on hover.
-                                                        border.width: 1
-                                                        border.color: _mswHover.hovered
-                                                            ? Theme.withAlpha(Theme.text, 0.7)
-                                                            : (_isAccent ? Theme.withAlpha(Theme.text, 0.5)
-                                                                         : Theme.menuControlLineHot)
-                                                        Behavior on border.color { ColorAnimation { duration: Motion.fast } }
-                                                        scale: _mswHover.hovered ? 1.08 : 1.0
-                                                        transformOrigin: Item.Center
-                                                        Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
-                                                        HoverHandler {
-                                                            id: _mswHover
-                                                            cursorShape: Qt.PointingHandCursor
-                                                            onHoveredChanged: _matuShowcase._hoverLabel =
-                                                                hovered ? _msw._label
-                                                                        : (_matuShowcase._hoverLabel === _msw._label ? "" : _matuShowcase._hoverLabel)
-                                                        }
+                                                        color: Qt.rgba(0, 0, 0, 0.55)
+                                                        opacity: _mrSw.active ? 1 : 0
+                                                        scale:   _mrSw.active ? 1 : 0.3
+                                                        Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                                                        Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(125); easing.type: Easing.OutCubic } }
                                                     }
                                                 }
                                             }
@@ -994,6 +1058,15 @@ PageShell {
 
                 SectionLabel { label: "CONTENT" }
                 SettingsCard {
+                    ChoiceChipRow {
+                        glyph: "◆"; label: "Active marker"
+                        currentValue: ShellSettings.wsActiveMarker
+                        model: [
+                            { value: "gem", label: "Gem" },
+                            { value: "dot", label: "Dot" }
+                        ]
+                        onChosen: (v) => ShellSettings.wsActiveMarker = v
+                    }
                     ToggleRow {
                         glyph: "󰎠"; label: "Numbers"
                         checked: ShellSettings.wsShowNumbers
@@ -1154,38 +1227,6 @@ PageShell {
                     }
                 }
                 Item { width: 1; height: 16 }
-
-                SettingsCard {
-                    ToggleRow {
-                        glyph: "󰂃"; label: "Hide battery when charging or full"
-                        checked: ShellSettings.batteryAutoHide
-                        onToggled: ShellSettings.batteryAutoHide = !ShellSettings.batteryAutoHide
-                        available: ShellSettings.barShowBattery && Battery.available
-                        dependsNote: !Battery.available ? "No battery" : "Battery hidden"
-                    }
-                    ToggleRow {
-                        glyph: "󰓅"; label: "Network speed"
-                        checked: ShellSettings.networkTrafficStats
-                        onToggled: ShellSettings.networkTrafficStats = !ShellSettings.networkTrafficStats
-                        available: ShellSettings.barShowNetwork && Network.toolAvailable
-                        dependsNote: !Network.toolAvailable ? "NetworkManager missing" : "Network hidden"
-                    }
-                    CollapsibleSection {
-                        expanded: ShellSettings.networkTrafficStats
-                        ToggleRow {
-                            glyph: "󰐃"; label: "Always show speed"
-                            checked: ShellSettings.networkSpeedInline
-                            onToggled: ShellSettings.networkSpeedInline = !ShellSettings.networkSpeedInline
-                        }
-                    }
-                    ToggleRow {
-                        glyph: "󰦝"; label: "Show connection under VPN"
-                        checked: ShellSettings.netVpnShowLink
-                        onToggled: ShellSettings.netVpnShowLink = !ShellSettings.netVpnShowLink
-                        available: ShellSettings.barShowNetwork && Network.toolAvailable
-                        dependsNote: !Network.toolAvailable ? "NetworkManager missing" : "Network hidden"
-                    }
-                }
             }
 
             // ── NOTIFICATIONS · Popups ──────────────────────────────────

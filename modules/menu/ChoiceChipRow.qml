@@ -12,22 +12,21 @@ Item {
     property var    model: []
     property var    currentValue
     property color  accentColor: Theme.accent
+    // value → color overrides for swatches that track live state; keeps the model array static so delegates don't rebuild per change
+    property var    liveSwatches: ({})
     // Card-edge rounding for the hover fill — set on the first/last row of a card
     // so the fill rounds only where the card itself does (see RowHoverBg).
     property real   topRadius:    0
     property real   bottomRadius: 0
     property real   cardInset:    1
-    // auto-stack when the inline form wouldn't fit; positioned via x/y (not flipped
-    // anchors) so the layout switch is glitch-free. Gauged off the control's
-    // *natural* inline width, not its live width — segment widths depend on
-    // _stacked, so reading the live width here would close a binding loop.
+    // auto-stack when the inline form won't fit; positioned via x/y not flipped anchors so the switch is glitch-free.
+    // gauged off the *natural* inline width, not live width — segment widths depend on _stacked, so live width would close a binding loop
     readonly property bool _stacked: width > 0 && _segContainer._maxNatW > 0
         && _labelRow.implicitWidth + _segContainer._naturalW + 40 > width
 
     signal chosen(var value)
 
-    // 4px multiples: keep card dividers on whole physical px under
-    // fractional scaling.
+    // 4px multiples: keep card dividers on whole physical px under fractional scaling
     width:  parent ? parent.width : 0
     height: _stacked ? 76 : 44
     opacity: enabled ? 1.0 : 0.45
@@ -40,9 +39,7 @@ Item {
         return -1
     }
 
-    // One tab stop for the whole row: entering lands on the active chip,
-    // ←/→ move between chips, Space/Enter pick. (Item, not FocusScope, so
-    // this only fires when the row itself receives focus via Tab.)
+    // one tab stop for the row: entering lands on the active chip, ←/→ move, Space/Enter pick (Item not FocusScope, so it only fires when the row gets Tab focus)
     activeFocusOnTab: enabled
     onActiveFocusChanged: {
         if (activeFocus && _segRepeater.count > 0) {
@@ -116,9 +113,8 @@ Item {
         Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
         Behavior on border.color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
 
-        // Bumped when delegates are (re)created. itemAt() returns null while the
-        // Repeater is still populating; without this the binding caches that null
-        // and the indicator stays hidden until the first click forces a re-eval.
+        // bumped when delegates are (re)created: itemAt() returns null while the Repeater populates;
+        // without this the binding caches that null and the indicator stays hidden until the first click re-evals
         property int _rev: 0
         readonly property Item _activeSeg: {
             _segContainer._rev
@@ -132,11 +128,8 @@ Item {
             _segContainer._recalcNat()
         })
 
-        // Equal-width segments: every segment takes the widest segment's natural
-        // width, so a control reads as one tidy switch instead of ragged chips
-        // (3s vs 10s, Off vs Center). Recomputed imperatively rather than as a
-        // binding over itemAt() so a segment whose text settles late can't strand
-        // a stale max.
+        // equal-width segments: each takes the widest segment's natural width so the control reads as one tidy switch, not ragged chips.
+        // recomputed imperatively (not a binding over itemAt()) so a late-settling segment can't strand a stale max
         property real _maxNatW: 0
         function _recalcNat() {
             let m = 0
@@ -148,8 +141,7 @@ Item {
         }
         // Natural inline width of the whole control (drives the stack decision).
         readonly property real _naturalW: _maxNatW * root.model.length + 6
-        // Stacked: segments divide the full row width evenly (12px gutter each side,
-        // 6px for the segRow inset), floored so they stay on the pixel grid.
+        // stacked: segments divide the full row width evenly (12px gutters, 6px segRow inset), floored to the pixel grid
         readonly property real _fullCellW: Math.max(1, Math.floor((root.width - 30) / Math.max(1, root.model.length)))
         readonly property real _cellW: root._stacked ? _fullCellW : _maxNatW
 
@@ -199,12 +191,14 @@ Item {
                         ? String(modelData.glyph) : ""
                     readonly property string segBadge: (modelData.badge !== undefined && modelData.badge !== null)
                         ? String(modelData.badge) : ""
-                    readonly property bool segHasSwatch: modelData.color !== undefined && modelData.color !== null
-                        && String(modelData.color).length > 0
-                    readonly property color segSwatchColor: segHasSwatch ? modelData.color : "transparent"
+                    readonly property bool segHasSwatch: root.liveSwatches[modelData.value] !== undefined
+                        || (modelData.color !== undefined && modelData.color !== null && String(modelData.color).length > 0)
+                    readonly property color segSwatchColor: {
+                        const live = root.liveSwatches[modelData.value]
+                        return live !== undefined ? live : (segHasSwatch ? modelData.color : "transparent")
+                    }
 
-                    // Natural (content) width; the container maxes these to size
-                    // every segment equally. Never shrink below it so text can't clip.
+                    // natural content width; the container maxes these to size every segment equally — never shrink below it or text clips
                     readonly property real natW: Math.ceil(_content.implicitWidth) + 24
                     onNatWChanged: _segContainer._recalcNat()
 

@@ -18,7 +18,9 @@ Singleton {
     property bool   neutralTheme:        true
     property bool   neutralAccentAuto:   false
     property string neutralAccent:       "#bb9af7"   // soft violet; sits in a hue gap from the Tokyo Night status colors
+    property string matugenAccentRole:   "primary"   // which material role drives the accent in wallpaper mode
     property string baseTone:            "charcoal"
+    property string customBase:          "#0a0b10"
     property bool   networkTrafficStats: false
     property bool   networkSpeedInline:  false   // pin the live up/down speed next to the icon, not just on hover
     property bool   netVpnShowLink:      false   // show "VPN / wifi|eth" so the underlying link stays visible
@@ -100,10 +102,7 @@ Singleton {
     property string barWidgetOrderLeft:  "workspaces"
     property string barWidgetOrderRight: "shellUpdate,tray,updates,network,volume,brightness,battery,media,clock"
 
-    // Self-healing, mutually exclusive: unknown/duplicate tokens dropped; any
-    // canonical key missing from BOTH lists (corrupted data, or a key added
-    // in a later version) falls back to its default zone — a widget can
-    // never silently vanish from the bar.
+    // self-healing: unknown/duplicate tokens dropped, and any key missing from both lists falls back to its default zone so a widget can't vanish
     readonly property var _zoneKeys: {
         const all = root._allBarWidgetKeys
         const valid = {}
@@ -143,8 +142,7 @@ Singleton {
         return root._barWidgetLocations[key] || root._missingBarWidgetLocation
     }
 
-    // Adjacent swap within whichever zone currently holds `key` — keyboard
-    // (Ctrl+Up/Down) and the drag handle's live reflow both funnel through this.
+    // adjacent swap within the zone holding `key` — keyboard and the drag handle both funnel through this
     function moveBarWidget(key: string, delta: int): void {
         const loc = root.barWidgetLocate(key)
         if (loc.index < 0) return
@@ -156,9 +154,7 @@ Singleton {
         else                     root.barWidgetOrderRight = arr.join(",")
     }
 
-    // Moves `key` into `zone` ("left"|"right") at `atIndex`, removing it from
-    // its current zone first. Used by the drag handle crossing zones and the
-    // per-row zone toggle.
+    // move `key` into `zone` at `atIndex`, removing it from its current zone first
     function setBarWidgetZone(key: string, zone: string, atIndex: int): void {
         if (root._allBarWidgetKeys.indexOf(key) < 0 || (zone !== "left" && zone !== "right"))
             return
@@ -181,10 +177,8 @@ Singleton {
         }
     }
 
-    // glyph/label/group/setting shared by the consolidated widgets settings
-    // list; group feeds BarContent's compact-mode divider fusing; setting is
-    // the ShellSettings bool property that row's toggle reads/writes (empty
-    // for workspaces — it has no hide toggle, only placement).
+    // glyph/label/group/setting for the widgets settings list; group feeds BarContent's
+    // compact-mode divider fusing; setting is the bool prop the row toggles (empty for workspaces = placement only)
     readonly property var barWidgetMeta: ({
         workspaces:  { glyph: "󰊗", label: "Workspaces",      group: "workspaces", setting: "" },
         shellUpdate: { glyph: "󰑐", label: "Shell update",    group: "shell",  setting: "barShowShellUpdate" },
@@ -209,19 +203,18 @@ Singleton {
     property bool   wsNotifPulse:        false
     property real   wsMarkerOpacity:     1.0
     property real   wsIconOpacity:       0.85
+    property string wsActiveMarker:      "gem"  // "gem" | "dot"
 
     property bool _loaded: false
     property bool _configDirReady: false
     property bool _savePendingForDir: false
-    // Placement-dependent windows wait for this before mapping, so a saved
-    // non-default barPosition doesn't flash at the wrong edge first.
+    // placement-dependent windows wait for this so a saved barPosition doesn't flash at the wrong edge first
     readonly property bool ready: _loaded
     readonly property int _settingsVersion: 1
     property var _defaults: ({})
     property string _lastSavedJson: ""
 
-    // Drives load/save/change-tracking. t: bool|int|real|enum|re;
-    // int/real use min/max, enum uses vals, re uses a pattern.
+    // drives load/save/change-tracking. t: bool|int|real|enum|re — int/real use min/max, enum vals, re a pattern
     readonly property var _schema: [
         { k: "mediaProgress",       t: "bool" },
         { k: "mediaWidgetHelper",   t: "bool" },
@@ -233,7 +226,9 @@ Singleton {
         { k: "neutralTheme",        t: "bool" },
         { k: "neutralAccentAuto",   t: "bool" },
         { k: "neutralAccent",       t: "re",   re: /^#[0-9a-fA-F]{6}$/ },
-        { k: "baseTone",            t: "enum", vals: ["charcoal", "black"] },
+        { k: "matugenAccentRole",   t: "enum", vals: ["primary", "secondary", "tertiary"] },
+        { k: "baseTone",            t: "enum", vals: ["charcoal", "black", "custom"] },
+        { k: "customBase",          t: "re",   re: /^#[0-9a-fA-F]{6}$/ },
         { k: "networkTrafficStats", t: "bool" },
         { k: "networkSpeedInline",  t: "bool" },
         { k: "netVpnShowLink",      t: "bool" },
@@ -317,7 +312,8 @@ Singleton {
         { k: "wsShowAppIcons",      t: "bool" },
         { k: "wsNotifPulse",        t: "bool" },
         { k: "wsMarkerOpacity",     t: "real", min: 0.2, max: 1.0 },
-        { k: "wsIconOpacity",       t: "real", min: 0.3, max: 1.0 }
+        { k: "wsIconOpacity",       t: "real", min: 0.3, max: 1.0 },
+        { k: "wsActiveMarker",      t: "enum", vals: ["gem", "dot"] }
     ]
 
     function _coerce(s, v): void {
@@ -343,8 +339,7 @@ Singleton {
     }
 
     function _migrate(j): var {
-        // v0 wrote every key and had no version marker. Unknown/deprecated keys
-        // are intentionally dropped on the next save by _save().
+        // v0 wrote every key with no version marker; unknown/deprecated keys drop on the next _save()
         delete j.midnightNeutral
         delete j.warmNeutral
         delete j.screenshotGlowTint
@@ -367,8 +362,7 @@ Singleton {
 
     Component.onCompleted: {
         _defaults = _captureDefaults()
-        // Restart the debounced save on any setting change, one connection per
-        // property, derived from the schema, so a new setting can't be forgotten.
+        // restart the debounced save on any change, one connection per schema property, so a new setting can't be forgotten
         for (let i = 0; i < _schema.length; i++)
             root[_schema[i].k + "Changed"].connect(root._onSettingChanged)
         root._ensureConfigDir()
@@ -401,8 +395,7 @@ Singleton {
         }
     }
 
-    // Native file IO (no bash spawns): atomic writes, and watchChanges means an
-    // external edit to settings.json hot-applies into the running shell.
+    // native file IO (no bash): atomic writes; watchChanges hot-applies external edits to settings.json
     FileView {
         id: _file
         path: root._configDir + "/settings.json"
