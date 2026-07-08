@@ -18,6 +18,10 @@ Item {
     readonly property int _iconSz: 16
     readonly property int gap:        3
 
+    // gem keeps the full layered look; dot renders one lean circle + functional cues
+    readonly property bool _gemMarker: ShellSettings.wsActiveMarker === "gem"
+    readonly property bool _dotMarker: ShellSettings.wsActiveMarker === "dot"
+
     readonly property int effectiveWsCount: Math.max(1, minVisible)
     property int _lastNormalActiveId: 1
     property bool _initialized: false
@@ -29,19 +33,16 @@ Item {
 
     readonly property HyprlandMonitor monitor:    Hyprland.monitorFor(root.screen)
     readonly property bool monitorReady: monitor !== null && monitor.activeWorkspace !== null
-    // No user hide toggle — it's the bar's only workspace-switch affordance,
-    // not a status pill. Present purely so BarContent's generic per-slot
-    // system (which reads `.show` uniformly for every zone-assignable
-    // widget) can treat it like any other entry.
+    // no hide toggle — it's the bar's only workspace-switch affordance, not a status pill;
+    // `show` exists only so BarContent's generic per-slot system can treat it like any other widget.
     readonly property bool show: true
     visible: show
     readonly property int  rawActiveId:  monitor?.activeWorkspace?.id ?? _lastNormalActiveId
     readonly property int  activeId:     rawActiveId > 0 ? rawActiveId : _lastNormalActiveId
 
-    // Whether a special/scratchpad workspace (super+S) is shown on this monitor.
-    // monitor.activeWorkspace stays on the *normal* ws when a special is open (and
-    // Quickshell exposes no special field), so we track Hyprland's activespecial
-    // event below instead. Starts false; correct after the first toggle.
+    // special/scratchpad (super+S) shown on this monitor. monitor.activeWorkspace stays on the normal ws when a
+    // special is open and Quickshell exposes no special field, so we track the activespecial event below.
+    // starts false, correct after the first toggle.
     property bool inSpecial: false
 
     readonly property int groupStart: Math.floor((activeId - 1) / effectiveWsCount) * effectiveWsCount + 1
@@ -71,8 +72,7 @@ Item {
         return ws !== null && ws.urgent
     }
 
-    // Paging hides urgent workspaces on other pages entirely; surface the first
-    // one as a tap-to-jump tick beside the row instead of losing the signal.
+    // paging hides urgent workspaces on other pages; surface the first as a tap-to-jump tick beside the row instead of losing the signal
     readonly property int urgentOffPage: {
         const vals = Hyprland.workspaces.values ?? []
         for (let i = 0; i < vals.length; i++) {
@@ -83,18 +83,16 @@ Item {
         return 0
     }
 
-    // Per-workspace app icons (only when wsShowAppIcons is on). Window class →
-    // desktop-entry icon, memoised so each class resolves once. Recomputes only
-    // when Hyprland's toplevel list changes, no polling.
+    // per-workspace app icons (wsShowAppIcons only): window class → desktop-entry icon, memoised so each class
+    // resolves once. recomputes only when Hyprland's toplevel list changes, no polling.
     property var _iconCache: ({})
     function _iconForClass(cls: string): string {
         const raw = String(cls || "").trim()
         const key = raw.toLowerCase()
         if (!key) return ""
         if (root._iconCache[key] !== undefined) return root._iconCache[key]
-        // Try the desktop-entry icon first (zen → zen-browser), then the bare
-        // class (kitty → kitty). A few apps expose reverse-DNS app IDs, so also
-        // try the final segment (org.wezfurlong.wezterm → wezterm).
+        // try the desktop-entry icon first (zen → zen-browser), then the bare class (kitty),
+        // then the final segment for reverse-DNS ids (org.wezfurlong.wezterm → wezterm).
         const de = DesktopEntries.heuristicLookup(raw)
         const tail = key.indexOf(".") >= 0 ? key.split(".").pop() : ""
         const candidates = [de && de.icon, key, tail].filter(Boolean)
@@ -104,11 +102,9 @@ Item {
         root._iconCache[key] = src
         return src
     }
-    // Window list changes (valuesChanged) don't fire on workspace *moves*, so
-    // bump a tick on the relevant Hyprland events and refresh the toplevels.
-    // Compositor events arrive in bursts (one window open fires several); while a
-    // settle window is in flight, fold further events into one trailing refresh
-    // instead of issuing an IPC refresh per event.
+    // valuesChanged doesn't fire on workspace *moves*, so bump a tick on the relevant events and refresh toplevels.
+    // events arrive in bursts — while a settle is in flight, fold further ones into a single trailing refresh
+    // instead of an IPC refresh each.
     property int _wsAppsTick: 0
     property bool _wsAppsRepeat: false
     function _refreshWorkspaceApps(): void {
@@ -117,8 +113,7 @@ Item {
         Hyprland.refreshToplevels()
         _wsAppsInvalidate.restart()
     }
-    // Delay the recompute so refreshToplevels() has time to settle, bumping
-    // _wsAppsTick immediately would recompute _wsApps against stale workspace data.
+    // delay the recompute so refreshToplevels() settles; bumping _wsAppsTick now would recompute against stale data
     Timer {
         id: _wsAppsInvalidate
         interval: 80
@@ -137,9 +132,8 @@ Item {
         target: Hyprland
         function onRawEvent(event) {
             const n = event.name
-            // Special/scratchpad open/close for this monitor. Data is
-            // "[id,]wsname,monitor", a non-empty wsname before the monitor means a
-            // special is shown there; empty means it closed.
+            // special/scratchpad open/close for this monitor. data is "[id,]wsname,monitor" — non-empty
+            // wsname before the monitor means a special is shown, empty means it closed.
             if (n === "activespecial" || n === "activespecialv2") {
                 const parts = String(event.data ?? "").split(",")
                 if (parts.length < 2 || !root.monitor) return
@@ -157,6 +151,9 @@ Item {
         target: ShellSettings
         function onWsShowAppIconsChanged() {
             if (ShellSettings.wsShowAppIcons) _initialAppsRefresh.restart()
+            // settings flip, not a workspace hop: suppress the gem's move-pulse/glint/trail while the row re-lays out
+            root._paging = true
+            _pagingReset.restart()
         }
         function onWorkspaceShiftChanged() {
             if (!ShellSettings.workspaceShift) {
@@ -179,9 +176,8 @@ Item {
         }
     }
 
-    // wsId → [{ icon, count }] for visible apps. Reads each toplevel's *live*
-    // workspace (reactive), not the stale lastIpcObject, and dedupes repeats
-    // of the same app into one icon with a count. Up to 3 distinct apps.
+    // wsId → [{icon,count}] for visible apps. reads each toplevel's *live* workspace, not the stale lastIpcObject,
+    // and dedupes repeats of an app into one icon+count. up to 3 distinct apps.
     readonly property var _wsApps: {
         root._wsAppsTick
         const map = {}
@@ -212,8 +208,7 @@ Item {
         return map
     }
 
-    // Per-button width: an inactive workspace with app icons grows to fit them;
-    // the diamond/trail track this.
+    // per-button width: an inactive workspace with app icons grows to fit them; diamond/trail track this
     function _btnW(wsId: int): int {
         if (ShellSettings.wsShowAppIcons && wsId !== activeId) {
             const apps = root.appsFor(wsId)
@@ -258,14 +253,12 @@ Item {
         }
     }
 
-    // While a page flips, the new page's buttons shouldn't each pop in, the
-    // group fade (onGroupStartChanged) carries it; _paging gates the enter anim.
+    // while a page flips the new buttons shouldn't each pop in — the group fade carries it; _paging gates the enter anim
     property bool _paging: false
     Timer { id: _pagingReset; interval: Motion.fast + Motion.width; onTriggered: root._paging = false }
 
-    // Directional page flip: the new group slides in from the side being moved
-    // toward (next page from the right, previous from the left), not just a
-    // fade-in-place, so the flip reads as travel.
+    // directional page flip: the new group slides in from the side being moved toward
+    // (next from the right, previous from the left) so it reads as travel, not a fade-in-place.
     property int  _prevGroupStart: 1
     property int  _pageDir:        1
     property real _pageShift:      0
@@ -317,8 +310,7 @@ Item {
         if (item) item.forceActiveFocus()
     }
 
-    // The active diamond is the Silere Anchor: a tap opens the menu beneath the
-    // gem. Map the gem centre to screen coords so the panel lines up under it.
+    // the active diamond is the Silere Anchor: tap opens the menu beneath the gem. map the gem centre to screen coords so the panel lines up under it
     function openAnchorMenu(): void {
         const pt = root.mapToItem(null, diamond.x + diamond.width / 2, 0)
         MenuState.toggleAt(pt.x, root.screen)
@@ -381,9 +373,8 @@ Item {
 
     Rectangle {
         id: trailCore
-        // Scales with the same ratio as `trail` (height/4 at rest, height/8 at
-        // full strength) so the bright core stays proportional to the band it
-        // sits inside instead of reading thicker on short hops than long ones.
+        // scales with the same ratio as `trail` (height/4 at rest, height/8 at full) so the bright core
+        // stays proportional to its band instead of reading thicker on short hops.
         height: 1.5 + trail._strength * 1.5
         radius: height / 2
         antialiasing: true
@@ -404,8 +395,8 @@ Item {
     // render cleanly when the bar is zoomed or screen-scaled.
     Item {
         id: diamond
-        width:  12
-        height: 12
+        width:  root._dotMarker ? 8 : 12
+        height: width
         y: (root.btnH - height) / 2
         opacity: root.monitorReady && root.activeIndex >= 0 ? 0.92 : 0
         visible: opacity > 0.01
@@ -438,9 +429,7 @@ Item {
         scale: _hoverScale * _tapScale * _moveScale * _specialScale
         transformOrigin: Item.Center
 
-        // ── Silere anchor ─────────────────────────────────────────────────────
-        // Ambient aura: only really wakes up for hover/menu/special/move, so the
-        // active workspace keeps a premium "gem" feel without turning into a blob.
+        // ambient aura: only wakes for hover/menu/special/move, so the active ws keeps a gem feel without turning into a blob
         Rectangle {
             anchors.centerIn: parent
             width:  parent.width + 14
@@ -451,15 +440,13 @@ Item {
             color: Theme.withAlpha(diamond.tint, 0.34)
             opacity: 0.06 + diamond._energy * 0.16
             scale: 0.70 + diamond._energy * 0.22
-            visible: opacity > 0.01
-            // Disable during the breath loop: _energy changes every frame then, so
-            // Behaviors would restart 60×/s for no gain — the breath is already smooth.
+            visible: root._gemMarker && opacity > 0.01
+            // disabled during the breath loop: _energy changes every frame then, so Behaviors would restart 60×/s for nothing
             Behavior on opacity { enabled: !_breathAnim.running; NumberAnimation { duration: Motion.ms(130); easing.type: Easing.OutCubic } }
             Behavior on scale   { enabled: !ShellSettings.reduceMotion && !_breathAnim.running; NumberAnimation { duration: Motion.ms(170); easing.type: Easing.OutCubic } }
         }
 
-        // One-shot shockwave the instant the menu opens: a tint halo radiates out
-        // and dissolves, so the open reads as an emanation rather than a state swap.
+        // one-shot shockwave when the menu opens: a tint halo radiates out and dissolves so the open reads as an emanation, not a state swap
         Rectangle {
             id: _menuRipple
             anchors.centerIn: parent
@@ -472,7 +459,7 @@ Item {
             opacity: 0
             scale: 1.0
             transformOrigin: Item.Center
-            visible: opacity > 0.01
+            visible: root._gemMarker && opacity > 0.01
         }
 
         // Special/scratchpad (super+S): a translucent accent diamond frames the
@@ -489,7 +476,7 @@ Item {
             opacity: root.inSpecial ? 0.62 : 0.0
             scale:   root.inSpecial ? 1.0 : 0.76
             transformOrigin: Item.Center
-            visible: opacity > 0.01
+            visible: root._gemMarker && opacity > 0.01
             Behavior on opacity { NumberAnimation { duration: Motion.ms(root.inSpecial ? 180 : 130); easing.type: Easing.OutCubic } }
             Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(root.inSpecial ? 210 : 130); easing.type: Easing.OutQuart } }
         }
@@ -497,8 +484,8 @@ Item {
             anchors.centerIn: parent
             width:  parent.width + 8
             height: width
-            radius: 3
-            rotation: 45
+            radius: root._dotMarker ? width / 2 : 3
+            rotation: root._dotMarker ? 0 : 45
             antialiasing: true
             color: Theme.withAlpha(diamond.tint, 0.34)
             opacity: root.inSpecial ? 0.96 : 0.0
@@ -521,7 +508,7 @@ Item {
             color: Theme.withAlpha(diamond.tint, MenuState.open ? 0.50 : 0.30)
             opacity: 0.55 + diamond._energy * 0.22
             scale: 1.0 + diamond._energy * 0.035
-            visible: opacity > 0.01
+            visible: root._gemMarker && opacity > 0.01
             Behavior on color   { ColorAnimation { duration: Motion.ms(150) } }
             Behavior on opacity { enabled: !_breathAnim.running; NumberAnimation { duration: Motion.ms(130); easing.type: Easing.OutCubic } }
             Behavior on scale   { enabled: !ShellSettings.reduceMotion && !_breathAnim.running; NumberAnimation { duration: Motion.ms(150); easing.type: Easing.OutCubic } }
@@ -538,24 +525,25 @@ Item {
             antialiasing: true
             color: Qt.rgba(0, 0, 0, 0.32)
             opacity: 0.14
+            visible: root._gemMarker
         }
 
-        // Body — the gem. Solid tint under a gentle gloss; the tint stays separate
-        // so the urgent→accent swap still colour-animates.
+        // body — the gem: solid tint under a gentle gloss; tint kept separate so the urgent→accent swap still colour-animates.
+        // per-style shape: gem = rotated diamond, dot = circle
         Rectangle {
             anchors.fill: parent
-            radius: 2
-            rotation: 45
+            radius: root._dotMarker ? width / 2 : 2
+            rotation: root._dotMarker ? 0 : 45
             antialiasing: true
             color: diamond.tint
             Behavior on color { ColorAnimation { duration: Motion.ms(150) } }
 
-            // Soft crown→pavilion sheen for a little depth. One smooth gradient —
-            // no seam, no hairline — kept subtle so the gem reads as solid accent.
+            // soft crown→pavilion sheen for depth: one smooth gradient (no seam/hairline), kept subtle so the gem reads solid
             Rectangle {
                 anchors.fill: parent
                 radius: parent.radius
                 antialiasing: true
+                visible: root._gemMarker
                 gradient: Gradient {
                     GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.20) }
                     GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.20) }
@@ -568,6 +556,7 @@ Item {
                 height: parent.height - 5
                 radius: 1
                 antialiasing: true
+                visible: root._gemMarker
                 color: Qt.rgba(1, 1, 1, 0.10)
             }
             Rectangle {
@@ -578,12 +567,13 @@ Item {
                 height: 2
                 radius: 1
                 antialiasing: true
+                visible: root._gemMarker
                 color: Qt.rgba(1, 1, 1, 0.26)
             }
             Item {
                 anchors.fill: parent
                 clip: true
-                visible: _glintAnim.running
+                visible: _glintAnim.running && root._gemMarker
                 Rectangle {
                     width: 2
                     height: parent.height + 8
@@ -601,22 +591,20 @@ Item {
             }
         }
 
-        // Menu-open: the whole gem charges instead of punching a dark socket — its
-        // luminance lifts uniformly (centred by construction, nothing to misalign)
-        // and breathes for as long as the menu stays open.
+        // menu-open: the whole marker charges rather than punching a dark socket — luminance lifts uniformly
+        // (centred by construction) and breathes while the menu stays open; tracks both styles' shapes.
         Rectangle {
             anchors.fill: parent
-            radius: 2
-            rotation: 45
+            radius: root._dotMarker ? width / 2 : 2
+            rotation: root._dotMarker ? 0 : 45
             antialiasing: true
             color: Qt.rgba(1, 1, 1, 1)
             opacity: diamond._menuOn * (0.16 + diamond._menuPulse * 0.18)
             visible: opacity > 0.01
         }
 
-        // Attention badge: a static dot on the crown when notifications were missed
-        // while Do-Not-Disturb is on (otherwise the popups are suppressed and the
-        // anchor is the only cue). No pulse, no border — the menu carries detail.
+        // attention badge: static dot on the crown when notifs were missed under Do-Not-Disturb (popups suppressed,
+        // so the anchor is the only cue). no pulse/border — the menu carries detail.
         Rectangle {
             readonly property bool _show: Notifications.effectiveDnd && Notifications.missedCount > 0
             anchors.horizontalCenter: parent.horizontalCenter
@@ -635,15 +623,13 @@ Item {
             Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(150); easing.type: Easing.OutCubic } }
         }
 
-        // A quick settle-pop when entering a special workspace, so the frame's
-        // entrance lands with a beat instead of just appearing.
+        // quick settle-pop entering a special workspace, so the frame's entrance lands with a beat
         SequentialAnimation {
             id: _specialPulse
             NumberAnimation { target: diamond; property: "_specialScale"; to: 1.055; duration: Motion.ms(90);  easing.type: Easing.OutCubic }
             NumberAnimation { target: diamond; property: "_specialScale"; to: 1.0;   duration: Motion.ms(185); easing.type: Easing.OutQuart }
         }
-        // 1 = sweep left→right, -1 = right→left. Captured at glint start so the
-        // gem's shimmer flows with its travel, like the motion trail does.
+        // 1 = sweep left→right, -1 = right→left; captured at glint start so the shimmer flows with the gem's travel
         property int _glintDir: 1
         SequentialAnimation {
             id: _glintAnim
@@ -729,11 +715,9 @@ Item {
                 readonly property bool occupied: root.occupied(wsId)
                 readonly property bool urgent:  root.urgent(wsId)
                 readonly property bool hovered: _hover.hovered
-                // gated separately from `hovered` so hover-driven scale/color/tint
-                // pumps respect the barHoverHighlight setting (default off)
+                // gated separately from `hovered` so hover scale/color/tint respect the barHoverHighlight setting (default off)
                 readonly property bool _hoverFx: hovered && ShellSettings.barHoverHighlight
-                // App icons shown on inactive occupied workspaces (the active one
-                // keeps its diamond). Empty/active fall back to the number/dot.
+                // app icons on inactive occupied workspaces (active keeps its diamond); empty/active fall back to number/dot
                 readonly property bool _showIcons: ShellSettings.wsShowAppIcons && !active && apps.length > 0
 
                 width:   root._btnW(wsId)
@@ -741,8 +725,9 @@ Item {
                 opacity: 1
                 scale:   1.0
 
+                // not gated on wsShowAppIcons: disabling it must glide the collapse too, not snap while the gem animates
                 Behavior on width {
-                    enabled: ShellSettings.wsShowAppIcons && !ShellSettings.reduceMotion
+                    enabled: !ShellSettings.reduceMotion
                     NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
                 }
 
@@ -760,8 +745,7 @@ Item {
                     NumberAnimation { target: ws; property: "scale"; to: 1.0; duration: Motion.ms(130); easing.type: Easing.OutCubic }
                 }
 
-                // Ack for middle-click "move window here" — the move itself is
-                // invisible (the window lands on a background workspace).
+                // ack for middle-click "move window here" — the move itself is invisible (window lands on a background ws)
                 SequentialAnimation {
                     id: _dropPulse
                     NumberAnimation { target: ws; property: "scale"; to: 1.12; duration: Motion.ms(70);  easing.type: Easing.OutQuad  }
@@ -837,9 +821,8 @@ Item {
                             if (!ShellSettings.reduceMotion) _dropPulse.restart()
                             return
                         }
-                        // Right-click is the anchor's own gesture: only the active
-                        // diamond claims it (quick actions beneath the gem);
-                        // on inactive workspaces it's inert, never a switch.
+                        // right-click is the anchor's own gesture: only the active diamond claims it (quick actions
+                        // beneath the gem); inert on inactive workspaces, never a switch.
                         if (button === Qt.RightButton) {
                             if (ws.active) {
                                 _tapPulse.restart()
@@ -870,8 +853,7 @@ Item {
                 property real _pulseOpacity: 1.0
                 property real _shakeX:       0
                 property real _dotFade: 1.0
-                // Dot mode tells you nothing about which workspace you're
-                // about to jump to; hover swaps the dot for its number.
+                // dot mode tells you nothing about which ws you'd jump to; hover swaps the dot for its number
                 readonly property bool _hoverReveal: ShellSettings.valuesOnHover && hovered
                     && !active && !ShellSettings.wsShowNumbers && !_showIcons
                 property real _revealAmt: _hoverReveal ? 1 : 0
@@ -879,8 +861,7 @@ Item {
                 property real _dotAlpha: urgent ? 0.95 : occupied ? 0.65 : 0.28
                 Behavior on _dotAlpha { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
 
-                // Notification-source pulse: a soft accent (or error) wash behind
-                // the workspace when a notification arrives from a window on it.
+                // notification-source pulse: a soft accent/error wash behind the ws when a notif arrives from a window on it
                 property real _notifPulse: 0
                 property bool _notifPulseCritical: false
                 Rectangle {
@@ -930,9 +911,8 @@ Item {
                             ws._notifPulse = 0
                         }
                     }
-                    // resync the shared diamond if the setting flips while this
-                    // workspace is the active + hovered one (onHoveredChanged/
-                    // onActiveChanged won't fire on their own for this)
+                    // resync the shared diamond if the setting flips while this ws is active + hovered
+                    // (onHoveredChanged/onActiveChanged won't fire on their own here)
                     function onBarHoverHighlightChanged() {
                         if (ws.active) diamond._hoverScale = ws._hoverFx ? 1.10 : 1.0
                     }
@@ -1018,8 +998,7 @@ Item {
                     opacity: (ws._showIcons ? 1 : 0) * ws._pulseOpacity
                     Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
                     Repeater {
-                        // _wsApps may stay cached while icons are off. Avoid
-                        // retaining image/effect delegates for invisible rows.
+                        // _wsApps may stay cached while icons are off; avoid retaining image/effect delegates for invisible rows
                         model: ws._showIcons ? ws.apps : []
                         delegate: Item {
                             id: appIcon
@@ -1033,8 +1012,7 @@ Item {
                                 NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
                             }
 
-                            // At 100% icon opacity there's nothing to dim or tint, so
-                            // skip the per-icon colorization layer and draw directly.
+                            // at 100% icon opacity there's nothing to dim/tint, so skip the colorization layer and draw directly
                             readonly property bool _fxNeeded: ShellSettings.wsIconOpacity < 0.995
 
                             Image {
@@ -1050,8 +1028,7 @@ Item {
                                 asynchronous: true
                                 visible: !parent._fxNeeded
                             }
-                            // Dim washes the icon toward the accent; hover restores
-                            // the true icon.
+                            // dim washes the icon toward accent; hover restores the true icon
                             MultiEffect {
                                 anchors.fill: _iconSrc
                                 source: _iconSrc
@@ -1062,8 +1039,7 @@ Item {
                                 Behavior on opacity      { NumberAnimation { duration: Motion.fast } }
                                 Behavior on colorization { NumberAnimation { duration: Motion.fast } }
                             }
-                            // Dot row when the same app has several windows here.
-                            // Filled dots for exact count up to 3; an outline dot signals 4+.
+                            // dot row when an app has several windows here: filled dots for exact count up to 3, an outline dot signals 4+
                             Row {
                                 visible: appIcon.modelData.count > 1
                                 anchors.right:        parent.right
