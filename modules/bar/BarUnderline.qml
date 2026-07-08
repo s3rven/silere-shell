@@ -15,17 +15,13 @@ Item {
     readonly property bool atBottom: ShellSettings.barPosition === "bottom"
     // no separate wrap mode for glow, both styles adapt to floating geometry
     readonly property bool wrapFloating: ShellSettings.barFloating
-    // Corner curve of the floating bar: wrap borders take it as their radius,
-    // flat-line glow elements inset by it (mirrors Bar.qml's _barLine inset)
-    // instead of jutting straight past the curve.
+    // floating corner curve: wrap borders use it as radius, flat-line glow insets by it (mirrors Bar.qml's _barLine) so it doesn't jut past the curve
     readonly property real wrapRadius: ShellSettings.barFloating && ShellSettings.barCornerStyle === "round"
         ? Math.min(ShellSettings.barRadius, _ul.height / 2, _ul.width / 2)
         : 0
     transform: Scale { origin.y: _ul.height / 2; yScale: _ul.atBottom ? -1 : 1 }
 
-    // Non-visual host for all glow state, sources, animations and previews; the
-    // strips below read its properties. (It used to also draw the flat edge line,
-    // now broken out as _edgeLine.)
+    // non-visual host for all glow state/sources/animations/previews; the strips below read its properties
     Item {
         id: _lineEffect
         anchors.fill: parent
@@ -64,8 +60,7 @@ Item {
         }
         readonly property real _scaledGlow:  (_primaryGlow + _stackBonus) * ShellSettings.activeGlowStrength
         readonly property real _eventGlow:   Math.max(_scaledGlow, _batteryGlow, _tempGlow)
-        // Soft boost while the cava visualizer is running — the waveform baseline
-        // sits on the underline, so the glow makes them read as one element.
+        // soft boost while cava runs — the waveform baseline sits on the underline, so glow makes them read as one
         property real _mediaGlow: (_glowEnabled && ShellSettings.mediaProgress && Media.shown && Media.cavaReady) ? 0.18 : 0
         Behavior on _mediaGlow {
             enabled: !ShellSettings.reduceMotion
@@ -101,8 +96,7 @@ Item {
         property real _sweepSpread: 0.28
         property real _bloomBoost:  0.0
         property real _screenshotSweepCenter: 0.50
-        // Lean toward the alerting widget's live zone — the bar order is
-        // user-configurable, so a hardcoded side would sweep the wrong way.
+        // lean toward the alerting widget's zone — bar order is user-configurable, so a hardcoded side would sweep the wrong way
         function _widgetSweep(key: string): real {
             return ShellSettings.barWidgetLocate(key).zone === "left" ? 0.32 : 0.68
         }
@@ -397,8 +391,7 @@ Item {
         }
     }
 
-    // Faint base track so glow mode still visibly enables an underline when no
-    // event is active. Event glow draws over it below.
+    // faint base track so glow mode still shows an underline with no event active; event glow draws over it
     GlowLine {
         anchors.left:        parent.left
         anchors.right:       parent.right
@@ -499,15 +492,16 @@ Item {
         hiClamp: 0.92
     }
 
-    // six 1px gradient strips approximate a vertical halo without MultiEffect/offscreen targets
+    // six 1px gradient strips approximate a vertical halo without MultiEffect/offscreen targets;
+    // spread widens per row so the bloom fans out instead of rising as a hard-edged column
     Repeater {
         model: [
-            { y: 1, c: 0.34, b: 0.38 },
-            { y: 2, c: 0.24, b: 0.28 },
-            { y: 3, c: 0.16, b: 0.20 },
-            { y: 4, c: 0.10, b: 0.14 },
-            { y: 5, c: 0.06, b: 0.09 },
-            { y: 6, c: 0.03, b: 0.05 }
+            { y: 1, c: 0.34, b: 0.38, s: 1.00 },
+            { y: 2, c: 0.24, b: 0.28, s: 1.16 },
+            { y: 3, c: 0.16, b: 0.20, s: 1.34 },
+            { y: 4, c: 0.10, b: 0.14, s: 1.54 },
+            { y: 5, c: 0.06, b: 0.09, s: 1.76 },
+            { y: 6, c: 0.03, b: 0.05, s: 2.00 }
         ]
         GlowLine {
             required property var modelData
@@ -524,7 +518,7 @@ Item {
             peak:   _lineEffect._stopColor
             edge:   _lineEffect._stopColorMid
             center: _lineEffect._sweepCenter
-            spread: _lineEffect._sweepSpread
+            spread: Math.min(0.46, _lineEffect._sweepSpread * modelData.s)
         }
     }
 
