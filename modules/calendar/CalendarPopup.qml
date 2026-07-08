@@ -8,10 +8,8 @@ import "../../config"
 import "../../services"
 import "../common"
 
-// Month calendar that pops beneath the bar clock. Render-only, it exists while
-// open and holds nothing at rest. Click the clock to toggle; Escape or a click
-// outside the card closes it; ←/→ step months. Mirrors MenuWindow's full-screen
-// mask so an outside tap dismisses cleanly without an exclusive zone.
+// month calendar beneath the bar clock. render-only — exists while open, nothing at rest. click clock toggles, Escape/outside closes, ←/→ step months.
+// mirrors MenuWindow's full-screen mask so an outside tap dismisses without an exclusive zone.
 PanelWindow {
     id: win
 
@@ -31,8 +29,7 @@ PanelWindow {
     WlrLayershell.namespace: "silere-calendar"
     WlrLayershell.keyboardFocus: CalendarState.open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
-    // Unmap the full-screen surface while closed so it isn't holding a screen-sized
-    // GPU buffer at rest, stay mapped through the close animation, then drop it.
+    // unmap the full-screen surface while closed so it isn't holding a screen-sized GPU buffer at rest; stay mapped through the close anim, then drop
     visible: CalendarState.open || card.opacity > 0.001
 
     anchors { top: true; left: true; right: true; bottom: true }
@@ -107,18 +104,15 @@ PanelWindow {
         readonly property int  weekCol:  22   // ISO week-number axis, left of the grid
         readonly property int  panelW:   weekCol + cell * 7 + pad * 2
 
-        // Two month cursors: `disp*` leads (drives the header, updates instantly on
-        // nav) while `shown*` trails, the grid renders `shown*` and only catches up
-        // at the mid-point of the slide, so the swap reads as one motion.
+        // two month cursors: `disp*` leads (header, instant on nav), `shown*` trails.
+        // grid renders `shown*`, catches up at the slide mid-point so the swap reads as one motion.
         property int dispYear:  2000
         property int dispMonth: 0
         property int shownYear:  2000
         property int shownMonth: 0
         property int navDir:     0      // -1 prev, +1 next — drives the slide direction
 
-        // "Today" captured on each open. The card persists between opens, so a
-        // readonly `new Date()` binding would freeze at first build and the wrong
-        // day would stay highlighted forever, capture it fresh instead.
+        // "today" captured fresh on each open — the card persists, so a readonly `new Date()` binding would freeze at first build and highlight the wrong day forever
         property int    _todayY:      -1
         property int    _todayM:      -1
         property int    _todayD:      -1
@@ -190,8 +184,7 @@ PanelWindow {
                 }
             }
         }
-        // Keep "today" current if the popup is held open across midnight, without
-        // yanking the user back from a month they've navigated to.
+        // keep "today" current if held open across midnight, without yanking the user back from a navigated month
         Connections {
             target: DateTime
             function onCachedDateCoreChanged() {
@@ -204,9 +197,8 @@ PanelWindow {
         }
         Component.onCompleted: card._snapToday()
 
-        // Month swap: old grid slides out + fades, the shown cursor catches up at 0
-        // opacity, the new grid slides in from the other side + fades. Next moves the
-        // page left (content advances), prev moves it right.
+        // month swap: old grid slides out + fades, shown cursor catches up at 0 opacity, new grid slides in from the other side + fades.
+        // next moves the page left (content advances), prev moves it right.
         SequentialAnimation {
             id: _gridSwap
             ParallelAnimation {
@@ -420,8 +412,38 @@ PanelWindow {
                     NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
                 }
 
-                // ISO week axis — a fixed reference the month slides beneath. Fades
-                // with the grid swap so the numbers change while they're invisible.
+                // keyboard marks: one tab stop, arrows walk the month, Space toggles
+                property int kbdIndex: -1
+                readonly property int _kbdDay: kbdIndex - card._lead + 1
+                activeFocusOnTab: true
+                Accessible.role: Accessible.List
+                Accessible.name: activeFocus && kbdIndex >= 0
+                    ? Qt.formatDate(new Date(card.shownYear, card.shownMonth, _kbdDay), "d MMMM yyyy")
+                    : "Calendar days"
+                onActiveFocusChanged: if (activeFocus) kbdIndex = card._todayCell >= 0 ? card._todayCell : card._lead
+                function _move(d: int): void {
+                    kbdIndex = Math.max(card._lead, Math.min(card._lead + card._daysThis - 1, kbdIndex + d))
+                }
+                // month nav while focused: re-clamp so the ring can't sit on a spillover cell
+                Connections {
+                    target: card
+                    function onShownMonthChanged() { if (_gridWrap.kbdIndex >= 0) _gridWrap._move(0) }
+                    function onShownYearChanged()  { if (_gridWrap.kbdIndex >= 0) _gridWrap._move(0) }
+                }
+                function _toggle(event: var): void {
+                    if (!event.isAutoRepeat && kbdIndex >= card._lead && _kbdDay <= card._daysThis)
+                        CalendarState.toggleMark(card.shownYear, card.shownMonth, _kbdDay)
+                    event.accepted = true
+                }
+                Keys.onLeftPressed:   e => { _gridWrap._move(-1); e.accepted = true }
+                Keys.onRightPressed:  e => { _gridWrap._move(1);  e.accepted = true }
+                Keys.onUpPressed:     e => { _gridWrap._move(-7); e.accepted = true }
+                Keys.onDownPressed:   e => { _gridWrap._move(7);  e.accepted = true }
+                Keys.onSpacePressed:  e => _gridWrap._toggle(e)
+                Keys.onReturnPressed: e => _gridWrap._toggle(e)
+                Keys.onEnterPressed:  e => _gridWrap._toggle(e)
+
+                // ISO week axis — fixed reference the month slides beneath; fades with the grid swap so numbers change while invisible
                 Column {
                     id: _weekAxis
                     x: 0
@@ -472,6 +494,8 @@ PanelWindow {
 
                             readonly property bool cur:   index >= card._lead && index < card._lead + card._daysThis
                             readonly property bool today: index === card._todayCell
+                            readonly property bool marked: cur
+                                && CalendarState.marks[CalendarState.markKey(card.shownYear, card.shownMonth, dayNum)] === true
                             readonly property int  dayNum:
                                   index < card._lead                  ? card._daysPrev - card._lead + 1 + index
                                 : index < card._lead + card._daysThis ? index - card._lead + 1
@@ -487,7 +511,11 @@ PanelWindow {
                                      : (_dayH.hovered && _dayCell.cur ? Theme.withAlpha(Theme.subtext, 0.10) : "transparent")
                                 Behavior on color { ColorAnimation { duration: Motion.fast } }
 
-                                HoverHandler { id: _dayH; enabled: _dayCell.cur }   // display-only → no pointer cursor
+                                HoverHandler { id: _dayH; enabled: _dayCell.cur; cursorShape: Qt.PointingHandCursor }
+                                TapHandler {
+                                    enabled: _dayCell.cur
+                                    onTapped: CalendarState.toggleMark(card.shownYear, card.shownMonth, _dayCell.dayNum)
+                                }
 
                                 Text {
                                     anchors.centerIn: parent
@@ -499,6 +527,28 @@ PanelWindow {
                                     font.pixelSize: Settings.fontSize
                                     font.weight: _dayCell.today ? Font.DemiBold : Font.Normal
                                     renderType: Text.NativeRendering
+                                }
+
+                                Rectangle {
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    anchors.bottom: parent.bottom; anchors.bottomMargin: 3
+                                    width: 4; height: 4; radius: 2
+                                    antialiasing: true
+                                    color: _dayCell.today ? Theme.surface : Theme.accent
+                                    opacity: _dayCell.marked ? 1 : 0
+                                    scale:   _dayCell.marked ? 1 : 0.3
+                                    Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                                    Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(125); easing.type: Easing.OutCubic } }
+                                }
+
+                                Rectangle {
+                                    anchors.centerIn: parent
+                                    width: 30; height: 30; radius: 15
+                                    antialiasing: true
+                                    color: "transparent"
+                                    border.width: 2
+                                    border.color: Theme.withAlpha(Theme.accent, 0.6)
+                                    visible: _gridWrap.activeFocus && _dayCell.index === _gridWrap.kbdIndex
                                 }
                             }
                         }
