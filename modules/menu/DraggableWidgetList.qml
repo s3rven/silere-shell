@@ -34,6 +34,14 @@ Item {
 
     property string _draggingKey: ""
     property real   _dragY: 0
+    property string _focusedKey: ""
+    readonly property string _dragZone: _draggingKey.length > 0 ? _zoneForY(_dragY) : ""
+    // the dragged key's committed slot — reorders are live, so this is where it lands on release
+    readonly property int _dragSlot: {
+        if (_draggingKey.length === 0) return -1
+        const loc = ShellSettings.barWidgetLocate(_draggingKey)
+        return loc.zone === "left" ? loc.index : _leftCount + loc.index
+    }
 
     function _hasOptions(key: string): bool { return key === "battery" || key === "network" }
 
@@ -67,6 +75,10 @@ Item {
             y += root._expandedExtra
         return y
     }
+    function _zoneForY(y: real): string {
+        const leftBottom = 12 + root._headerH + root._leftCount * root._rowH + root._leftPad
+        return y < leftBottom - root._rowH / 2 ? "left" : "right"
+    }
     function _slotForY(y: real): int {
         const leftBottom = 12 + root._headerH + root._leftCount * root._rowH + root._leftPad
         const boundary = leftBottom - root._rowH / 2
@@ -90,26 +102,42 @@ Item {
         y: 20
         anchors.left: parent.left; anchors.leftMargin: 14
         text: "LEFT"
-        color: Theme.withAlpha(Theme.subtext, 0.5)
+        color: root._dragZone === "left" ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.5)
         font.family: Settings.font
         font.pixelSize: Settings.fontSize - 4
         font.weight: Font.DemiBold
         font.capitalization: Font.AllUppercase
         font.letterSpacing: 0.5
         renderType: Text.NativeRendering
+        Behavior on color { ColorAnimation { duration: Motion.fast } }
     }
 
     Text {
         y: root._yForSlot(root._leftCount) - root._headerH + 8
         anchors.left: parent.left; anchors.leftMargin: 14
         text: "RIGHT"
-        color: Theme.withAlpha(Theme.subtext, 0.5)
+        color: root._dragZone === "right" ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.5)
         font.family: Settings.font
         font.pixelSize: Settings.fontSize - 4
         font.weight: Font.DemiBold
         font.capitalization: Font.AllUppercase
         font.letterSpacing: 0.5
         renderType: Text.NativeRendering
+        Behavior on color { ColorAnimation { duration: Motion.fast } }
+        Behavior on y { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+    }
+
+    // landing-slot marker: reorders commit live, so the vacated gap under the lifted row is the drop spot
+    Rectangle {
+        visible: root._dragSlot >= 0
+        x: 2; width: root.width - 4
+        y: root._yForSlot(root._dragSlot) + 2
+        height: root._rowH - 4
+        radius: 8
+        antialiasing: true
+        color: Theme.withAlpha(Theme.accent, 0.05)
+        border.width: 1
+        border.color: Theme.withAlpha(Theme.accent, 0.30)
         Behavior on y { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
     }
 
@@ -140,9 +168,6 @@ Item {
             scale: _dragging ? 1.02 : 1.0
             Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
 
-            Accessible.role: Accessible.ListItem
-            Accessible.name: _row.meta.label
-
             Item {
                 id: _header
                 width: parent.width
@@ -153,9 +178,43 @@ Item {
                     cardInset:    2
                     topRadius:    10
                     bottomRadius: 10
-                    active:       _row._dragging || _handleHover.hovered || _keyFocus.activeFocus
+                    active:       _row._dragging || _rowHover.hovered || _keyFocus.activeFocus
                     fillColor:    _row._dragging ? Theme.accent : Theme.text
                     fillOpacity:  _row._dragging ? 0.10 : (_keyFocus.activeFocus ? 0.08 : 0.05)
+                }
+
+                HoverHandler { id: _rowHover; cursorShape: Qt.OpenHandCursor }
+                DragHandler {
+                    id: _dragH
+                    target: null
+                    // captured once: translation is cumulative from press, so re-deriving the base each swap would snowball the row
+                    property real _startY: 0
+                    onActiveChanged: {
+                        if (active) {
+                            root._expandedKey = ""
+                            _dragH._startY = root._yForSlot(_row._combinedSlot)
+                            root._draggingKey = _row.key
+                            root._dragY = _dragH._startY
+                        } else {
+                            root._draggingKey = ""
+                        }
+                    }
+                    onTranslationChanged: {
+                        if (!active) return
+                        const minY = 12 + root._headerH
+                        const maxY = root._rightEmpty
+                            ? root._yForSlot(root._leftCount)
+                            : root._yForSlot(root._allKeys.length - 1)
+                        root._dragY = Math.max(minY, Math.min(maxY, _dragH._startY + translation.y))
+                        const targetSlot = root._slotForY(root._dragY)
+                        // derive the zone from the drop position, not the combined slot — an empty left zone has no slot index to encode "left"
+                        const targetZone = root._zoneForY(root._dragY)
+                        const targetIdxInZone = targetZone === "left"
+                            ? (root._leftEmpty ? 0 : targetSlot)
+                            : targetSlot - root._leftCount
+                        if (targetZone === _row.zone && targetIdxInZone === _row._zoneIdx) return
+                        ShellSettings.setBarWidgetZone(_row.key, targetZone, targetIdxInZone)
+                    }
                 }
                 Rectangle {
                     anchors.fill: parent
@@ -178,46 +237,13 @@ Item {
                     Text {
                         anchors.centerIn: parent
                         text: "⣿"
-                        color: _row._dragging ? Theme.accent : Theme.withAlpha(Theme.subtext, _handleHover.hovered ? 0.75 : 0.45)
+                        color: _row._dragging ? Theme.accent : Theme.withAlpha(Theme.subtext, _rowHover.hovered ? 0.75 : 0.45)
                         font.pixelSize: Settings.fontSize
                         renderType: Text.NativeRendering
                         Behavior on color { ColorAnimation { duration: Motion.fast } }
                     }
 
                     HoverHandler { id: _handleHover; cursorShape: Qt.OpenHandCursor }
-                    DragHandler {
-                        id: _dragH
-                        target: null
-                        // captured once: translation is cumulative from press, so re-deriving the base each swap would snowball the row
-                        property real _startY: 0
-                        onActiveChanged: {
-                            if (active) {
-                                root._expandedKey = ""
-                                _dragH._startY = root._yForSlot(_row._combinedSlot)
-                                root._draggingKey = _row.key
-                                root._dragY = _dragH._startY
-                            } else {
-                                root._draggingKey = ""
-                            }
-                        }
-                        onTranslationChanged: {
-                            if (!active) return
-                            const minY = 12 + root._headerH
-                            const maxY = root._rightEmpty
-                                ? root._yForSlot(root._leftCount)
-                                : root._yForSlot(root._allKeys.length - 1)
-                            root._dragY = Math.max(minY, Math.min(maxY, _dragH._startY + translation.y))
-                            const targetSlot = root._slotForY(root._dragY)
-                            // derive the zone from the drop position, not the combined slot — an empty left zone has no slot index to encode "left"
-                            const leftBottom = 12 + root._headerH + root._leftCount * root._rowH + root._leftPad
-                            const targetZone = root._dragY < leftBottom - root._rowH / 2 ? "left" : "right"
-                            const targetIdxInZone = targetZone === "left"
-                                ? (root._leftEmpty ? 0 : targetSlot)
-                                : targetSlot - root._leftCount
-                            if (targetZone === _row.zone && targetIdxInZone === _row._zoneIdx) return
-                            ShellSettings.setBarWidgetZone(_row.key, targetZone, targetIdxInZone)
-                        }
-                    }
                 }
 
                 Text {
@@ -243,7 +269,9 @@ Item {
                     text: _row.meta.label
                     textFormat: Text.PlainText
                     elide: Text.ElideRight
-                    color: _row._checked ? Theme.text : Theme.withAlpha(Theme.text, 0.85)
+                    // hidden widgets read clearly dimmer — scanning for what's off is this list's main job
+                    color: _row._checked ? Theme.text : Theme.withAlpha(Theme.text, 0.55)
+                    Behavior on color { ColorAnimation { duration: Motion.fast } }
                     font.family: Settings.font
                     font.pixelSize: Settings.fontSize
                     renderType: Text.NativeRendering
@@ -345,7 +373,7 @@ Item {
                                 // collapsing hides this subtree; hand keyboard focus back to the row instead of orphaning it
                                 Connections {
                                     target: _row
-                                    function on_expandedChanged() {
+                                    function on_ExpandedChanged() {
                                         if (!_row._expanded && _opt.activeFocus) _keyFocus.forceActiveFocus()
                                     }
                                 }
@@ -429,6 +457,14 @@ Item {
                 height: root._rowH
                 width: parent.width
                 activeFocusOnTab: true
+                Accessible.role: _row._hasToggle ? Accessible.CheckBox : Accessible.ListItem
+                Accessible.name: _row.meta.label
+                Accessible.checked: _row._checked
+                Accessible.description: (_row.zone === "left" ? "Left" : "Right") + " side of bar. Left and Right arrows swap sides, Ctrl+Up and Down reorder."
+                onActiveFocusChanged: {
+                    if (activeFocus) root._focusedKey = _row.key
+                    else if (root._focusedKey === _row.key) root._focusedKey = ""
+                }
                 function flipVisibility(event: var): void {
                     if (!event.isAutoRepeat && _row._hasToggle)
                         ShellSettings[_row.meta.setting] = !ShellSettings[_row.meta.setting]
@@ -502,6 +538,22 @@ Item {
             anchors.top: parent.top
             height: 1
             color: Theme.menuDivider
+        }
+
+        Text {
+            anchors.left: parent.left; anchors.leftMargin: 14
+            anchors.right: _resetBtn.left; anchors.rightMargin: 10
+            anchors.verticalCenter: parent.verticalCenter
+            // keyboard bindings surface only while a row holds focus
+            text: root._focusedKey.length > 0
+                ? "← → swap sides · ctrl+↑ ↓ reorder"
+                : "drag rows to reorder or swap sides"
+            textFormat: Text.PlainText
+            elide: Text.ElideRight
+            color: Theme.withAlpha(Theme.subtext, 0.52)
+            font.family: Settings.font
+            font.pixelSize: Settings.fontSize - 3
+            renderType: Text.NativeRendering
         }
 
         SettingsActionButton {
