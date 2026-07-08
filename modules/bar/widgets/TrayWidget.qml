@@ -7,11 +7,8 @@ import "../../../config"
 import "../../../services"
 import "../../common"
 
-// StatusNotifier tray. Invisible while no app exposes an item, so it costs
-// nothing at rest. Left-click jumps to the app's window (switching workspace),
-// falling back to the item's own activation or menu when it has no live window;
-// right-click opens the menu, middle-click secondary-activates, scroll passes
-// through to the item.
+// StatusNotifier tray; invisible with no items so it costs nothing at rest. left-click jumps to the app window
+// (falls back to activate/menu when no live window), right-click menu, middle secondary-activate, scroll passes through.
 Item {
     id: root
 
@@ -19,7 +16,8 @@ Item {
     readonly property bool show: ShellSettings.trayWidget && _items.count > 0
     readonly property int iconSize: Math.max(14, Math.min(18, Math.round(ShellSettings.barHeight * 0.44)))
 
-    implicitWidth:  show ? _row.implicitWidth : 0
+    // pillPad insets match the pills' edge margin so gaps read even across the bar
+    implicitWidth:  show ? _row.implicitWidth + Metrics.pillPad * 2 : 0
     implicitHeight: parent ? parent.height : 24
     visible: show
 
@@ -44,14 +42,14 @@ Item {
 
     Row {
         id: _row
+        x: Metrics.pillPad
         anchors.verticalCenter: parent.verticalCenter
         // tracks the Spacing setting (one notch tighter: icons read as a cluster)
         spacing: Math.max(5, ShellSettings.barSpacing - 4)
 
         Repeater {
             id: _items
-            // Do not decode icons or create attention animations while the
-            // tray feature is disabled.
+            // don't decode icons or run attention anims while the tray feature is disabled
             model: ShellSettings.trayWidget ? SystemTray.items : null
 
             delegate: Item {
@@ -64,8 +62,7 @@ Item {
                 readonly property bool needsAttention: modelData.status === Status.NeedsAttention
                 // Drives the attention halo; stays at full for the reduceMotion path.
                 property real attnPulse: 1.0
-                // SNI tooltip title as a quiet inline reveal: only after the
-                // pointer rests a beat, or on keyboard focus.
+                // SNI tooltip title as a quiet inline reveal: only after the pointer rests, or on keyboard focus
                 property bool _dwelled: false
 
                 width: root.iconSize + (_hoverLabel.width > 0 ? _hoverLabel.width + 5 : 0)
@@ -109,13 +106,22 @@ Item {
                     duration: Motion.ms(900)
                 }
 
+                // letter fallback only for genuinely slow/missing icons — showing it instantly flashes a
+                // grey badge on every tray enable while the async decode catches up
+                property bool _fallbackDue: false
+                Timer {
+                    interval: 300
+                    running: !_icon.ready
+                    onTriggered: _tile._fallbackDue = true
+                }
+
                 Rectangle {
                     width: root.iconSize
                     height: root.iconSize
                     anchors.verticalCenter: parent.verticalCenter
                     radius: Math.min(width, height) / 2
                     color: Theme.withAlpha(Theme.subtext, 0.12)
-                    visible: !_icon.ready
+                    visible: !_icon.ready && _tile._fallbackDue
 
                     Text {
                         anchors.centerIn: parent
@@ -143,17 +149,18 @@ Item {
                     height: root.iconSize
                     anchors.verticalCenter: parent.verticalCenter
                     source: _tile.modelData.icon
-                    // generous request: SNI providers pick their largest pixmap,
-                    // and downscaling beats upscaling a 22px app icon
+                    // generous request: SNI providers pick their largest pixmap, downscaling beats upscaling a 22px icon
                     implicitSize: root.iconSize
                     backer.sourceSize.width:  64
                     backer.sourceSize.height: 64
                     mipmap: true
                     asynchronous: true
-                    visible: ready
+                    visible: opacity > 0.01
+                    opacity: ready ? 1.0 : 0.0
                     transformOrigin: Item.Center
                     scale: _ma.pressed ? 0.86 : 1.0
-                    Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+                    Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
+                    Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
                 }
 
                 HoverHandler {
@@ -168,8 +175,7 @@ Item {
                     id: _ma
                     anchors.fill: parent
                     enabled: root.show
-                    // MouseArea overrides the cursor beneath it, so the pointer
-                    // shape must live here, not on the HoverHandler
+                    // MouseArea overrides the cursor beneath it, so the pointer shape must live here not on the HoverHandler
                     cursorShape: Qt.PointingHandCursor
                     acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
                     onClicked: (mouse) => {
@@ -178,11 +184,8 @@ Item {
                             root._openMenu(it, _tile)
                         else if (mouse.button === Qt.MiddleButton)
                             it.secondaryActivate()
-                        // Left-click: prefer landing on the actual window. Only if
-                        // the app has no live window (minimised-to-tray / daemon)
-                        // do we fall through to its own activation. Menu is a
-                        // right-click concern; onlyMenu means the item explicitly
-                        // has no activate path (system indicators, etc.).
+                        // prefer landing on the actual window; only fall through to the item's own
+                        // activation when it has no live window (minimised-to-tray / daemon). onlyMenu = no activate path
                         else root._activateItem(it, _tile)
                     }
                     onWheel: (wheel) => {
@@ -197,8 +200,7 @@ Item {
                 Accessible.name: label
                 Accessible.description: modelData.tooltipDescription
                 activeFocusOnTab: root.show
-                // Shift+activate or the Menu key opens the context menu, the
-                // keyboard mirror of right-click.
+                // shift+activate or the Menu key opens the context menu (keyboard mirror of right-click)
                 function _keyActivate(event): void {
                     if (event.isAutoRepeat) { event.accepted = true; return }
                     if (event.modifiers & Qt.ShiftModifier) root._openMenu(_tile.modelData, _tile)

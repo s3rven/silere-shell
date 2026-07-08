@@ -6,14 +6,20 @@ import "../../common"
 Row {
     id: root
     spacing: 0
+    // match the pills' edge inset so gaps read even across the bar
+    leftPadding: Metrics.pillPad
+    rightPadding: Metrics.pillPad
 
     property var screen: null   // ShellScreen this bar sits on, for menu placement
+
+    // time hugs the bar edge on either side: date leads in the right zone, trails in the left
+    readonly property bool mirrored: ShellSettings.barWidgetOrderLeftKeys.indexOf("clock") !== -1
+    layoutDirection: mirrored ? Qt.RightToLeft : Qt.LeftToRight
 
     readonly property bool show: ShellSettings.barShowClock
     visible: show
 
-    // Match the Pill widgets' hover language: lean toward the accent so the
-    // clock acknowledges the pointer (it's clickable — calendar / menu / cycle).
+    // match the Pill hover language: lean toward accent so the clock acknowledges the pointer (it's clickable)
     readonly property bool  _hov:    (_hover.hovered && ShellSettings.barHoverHighlight) || activeFocus
     readonly property color _cSub:   _hov ? Theme.mix(Theme.subtext, Theme.accent, 0.30) : Theme.subtext
     readonly property color _cText:  _hov ? Theme.mix(Theme.text,    Theme.accent, 0.30) : Theme.text
@@ -25,7 +31,7 @@ Row {
     activeFocusOnTab: true
     Accessible.role: Accessible.Button
     Accessible.name: "Clock"
-    Accessible.description: "Activate to open calendar."
+    Accessible.description: "Activate to open calendar. Middle-click cycles seconds and date."
     Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) root._openCalendar(); event.accepted = true }
     Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._openCalendar(); event.accepted = true }
     Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) root._openCalendar(); event.accepted = true }
@@ -53,6 +59,8 @@ Row {
         Row {
             id: _dateRow
             anchors.verticalCenter: parent.verticalCenter
+            // keeps the date-time gap on the time's side of the clip when mirrored
+            x: root.mirrored ? parent.width - width : 0
             spacing: 0
 
             CollapsingText {
@@ -93,8 +101,7 @@ Row {
         }
     }
 
-    // Left-click opens the calendar; middle-click cycles date/seconds visibility.
-    // (Date/seconds also live in Settings → Clock.)
+    // left-click opens the calendar; middle-click cycles date/seconds visibility
     TapHandler {
         id: _calTap
         acceptedButtons: Qt.LeftButton

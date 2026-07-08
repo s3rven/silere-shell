@@ -8,7 +8,8 @@ Item {
     id: root
 
     // no forced canvas expansion; width follows the enabled content
-    implicitWidth:  root.show ? _content.implicitWidth : 0
+    // pillPad insets match the pills' edge margin so gaps read even across the bar
+    implicitWidth:  root.show ? _content.implicitWidth + Metrics.pillPad * 2 : 0
     // Full bar height so the visualizer baseline sits on the bottom line.
     implicitHeight: parent ? parent.height : ShellSettings.barHeight
     clip: true
@@ -52,8 +53,7 @@ Item {
         NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
     }
 
-    // Optional helper: subtle activity line, upgraded to seek progress when
-    // MPRIS exposes track length.
+    // optional helper: subtle activity line, upgraded to seek progress when MPRIS exposes track length
     Item {
         anchors.bottom: parent.bottom
         anchors.left:   parent.left
@@ -107,6 +107,7 @@ Item {
 
     Row {
         id: _content
+        x: Metrics.pillPad
         anchors.verticalCenter: parent.verticalCenter
         spacing: root._helperEnabled ? 5 : 0
         height: Math.max(_playIcon.implicitHeight, textClip.height)

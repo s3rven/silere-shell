@@ -11,7 +11,15 @@ Singleton {
     property real anchorX: 0
     property bool barBottom: false
     property var  triggerScreen: null
-    property var  menuHandle: null
+    // QtObject (not var) so the reference auto-nulls when the SNI item dies with the menu open
+    property QtObject menuHandle: null
+
+    onMenuHandleChanged: if (open && menuHandle === null) close()
+
+    Connections {
+        target: ShellSettings
+        function onTrayWidgetChanged() { if (!ShellSettings.trayWidget) root.close() }
+    }
 
     function openAt(x: real, screen, handle, bottom: bool): void {
         anchorX = x
