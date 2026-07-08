@@ -52,7 +52,6 @@ Item {
     readonly property string _activeLabel: _activeIndex >= 0 ? model[_activeIndex].label : ""
 
     width:  parent ? parent.width : 0
-    // Header row height + expanded options height
     height: 44 + _options.height
     implicitHeight: height
     opacity: enabled ? 1.0 : 0.45
@@ -142,11 +141,12 @@ Item {
             text:    "󰅀"
             rotation: root._open ? 180 : 0
             transformOrigin: Item.Center
-            color:   Theme.withAlpha(Theme.subtext, 0.55)
+            color:   Theme.withAlpha(Theme.subtext, root._open ? 0.8 : 0.55)
             font.family:    Settings.font
             font.pixelSize: Settings.fontSize
             renderType:     Text.NativeRendering
-            Behavior on rotation { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+            Behavior on rotation { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutBack; easing.overshoot: 1.6 } }
+            Behavior on color    { ColorAnimation { duration: Motion.fast } }
         }
     }
 
@@ -172,8 +172,14 @@ Item {
         Column {
             id: _optCol
             width: parent.width
-            y:       root._open ? 0 : -8
+            y:       root._open ? 0 : -10
             opacity: root._open ? 1.0 : 0.0
+
+            // header/options seam rides the slide so it never floats alone mid-animation
+            Rectangle {
+                width: parent.width; height: 1
+                color: Theme.menuDivider
+            }
 
             Behavior on y {
                 enabled: !ShellSettings.reduceMotion

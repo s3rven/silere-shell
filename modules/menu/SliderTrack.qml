@@ -107,19 +107,20 @@ Item {
 
         Rectangle {
             anchors.centerIn: parent
-            width: !root.hoverGrow ? 12
-                 : _ma.pressed ? 14
-                 : (_ma.containsMouse || root.focused) ? 13 : 12
-            height: width
-            radius: width / 2
+            width: 14; height: 14; radius: 7
             antialiasing: true
+            // grow via scale, not width: a re-layouted odd width lands the centre on a half-pixel and the dot visibly shifts under fractional scaling
+            scale: !root.hoverGrow ? 12 / 14
+                 : _ma.pressed ? 1.0
+                 : (_ma.containsMouse || root.focused) ? 13 / 14 : 12 / 14
+            transformOrigin: Item.Center
             color: (root.hoverGrow && _ma.pressed) || root.focused
                 ? Theme.accent
                 : Theme.mix(Theme.text, Theme.accent,
                             root.hoverGrow && _ma.containsMouse ? 0.30 : 0.12)
             border.width: root.focused ? 1 : 0
             border.color: Theme.withAlpha(Theme.accent, 0.55)
-            Behavior on width { enabled: root.animate && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+            Behavior on scale { enabled: root.animate && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
             Behavior on color { enabled: root.animate && !ShellSettings.reduceMotion; ColorAnimation  { duration: Motion.fast } }
         }
     }
