@@ -63,6 +63,27 @@ Item {
     }
     readonly property bool hasIcon: iconSource.length > 0
 
+    // file-path images (screenshots, transfers) get a wide preview; theme icons and image-data avatars stay in the icon slot
+    readonly property string contentImageSource: {
+        const img = String(notification.image || "")
+        if (img.startsWith("/") || img.startsWith("file://")) return img
+        const ai = String(notification.appIcon || "")
+        if ((ai.startsWith("/") || ai.startsWith("file://"))
+            && /\.(png|jpe?g|webp|bmp)$/i.test(ai)
+            && !/\/(icons|pixmaps)\//i.test(ai)) return ai
+        return ""
+    }
+    readonly property bool hasContentImage: contentImageSource.length > 0
+    readonly property string contentImagePath: contentImageSource.replace(/^file:\/\//, "")
+    // decoded size decides: small or square files are app icons/avatars shipped as paths, not screenshots
+    readonly property bool showContentImage: hasContentImage
+        && _previewImg.status === Image.Ready
+        && _previewImg.implicitWidth >= 200
+        && _previewImg.implicitWidth !== _previewImg.implicitHeight
+    readonly property bool _previewSettled: !hasContentImage
+        || _previewImg.status === Image.Ready || _previewImg.status === Image.Error
+    readonly property bool showIconSlot: hasIcon && _previewSettled && !showContentImage
+
     readonly property string summaryText: Notifications.plainText(notification.summary)
     readonly property string bodyText:    Notifications.plainText(notification.body)
     readonly property string appNameText: notification.appName || ""
@@ -260,16 +281,14 @@ Item {
         Behavior on opacity { enabled: card.visible && cardRect._behaviorEnabled && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(140) } }
         Behavior on height  { enabled: card.visible && cardRect._behaviorEnabled && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
 
-        // Fill only, the border lives in a separate overlay (_cardBorder) so the
-        // layer/clip used for the shimmer can't clip the antialiased border edges.
-        // Popup base: same opaque chrome tone as the menu/calendar (and the bar's
-        // hue) so a standalone card reads as one family, not a lighter floating row.
+        // fill only — border lives in _cardBorder overlay so the shimmer's layer/clip can't cut its antialiased edges.
+        // popup base: same opaque chrome tone as menu/calendar (and the bar's hue) so a standalone card reads as one family, not a lighter floating row.
         color: Theme.rowFill(_cardHover.hovered, card.isCritical)
 
         Behavior on color { ColorAnimation { duration: Motion.fast } }
 
         ClippingRectangle {
-            visible: card.hasIcon
+            visible: card.showIconSlot
             width: 24; height: 24
             radius: 6
             color: "transparent"
@@ -295,7 +314,7 @@ Item {
                 left:        parent.left
                 right:       parent.right
                 topMargin:   13
-                leftMargin:  card.hasIcon ? 46 : 16
+                leftMargin:  card.showIconSlot ? 46 : 16
                 rightMargin: 16
             }
             spacing: 5
@@ -371,6 +390,34 @@ Item {
                             NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
                         }
                     }
+                }
+            }
+
+            ClippingRectangle {
+                id: _previewClip
+                visible: card.showContentImage
+                width:  parent.width
+                height: Math.round(Math.min(150, parent.width * 0.5))
+                radius: 8
+                color:  "transparent"
+                antialiasing: true
+
+                Image {
+                    id: _previewImg
+                    anchors.fill: parent
+                    source: card.hasContentImage ? card.contentImageSource : ""
+                    sourceSize.width: 640
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
+                }
+
+                Rectangle {
+                    anchors.fill: parent
+                    radius: _previewClip.radius
+                    color: "transparent"
+                    antialiasing: true
+                    border.width: 1
+                    border.color: Theme.menuControlLine
                 }
             }
 
@@ -519,6 +566,8 @@ Item {
                 // default action first (app-side open/reply), then raise the window
                 if (mouse.button !== Qt.MiddleButton && card._defaultAction)
                     card._defaultAction.invoke()
+                else if (mouse.button !== Qt.MiddleButton && card.showContentImage)
+                    Quickshell.execDetached(["xdg-open", card.contentImagePath])
                 HyprActions.focusNotificationSource(card.notification)
                 if (mouse.button !== Qt.MiddleButton)
                     card.dismiss()
