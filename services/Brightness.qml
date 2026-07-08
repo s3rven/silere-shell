@@ -21,9 +21,9 @@ Singleton {
     readonly property int    stepPct: 5
     readonly property string label:   `${percent}%`
     readonly property string icon: {
-        if (pct <= 0)        return "󰃞"
-        if (pct < 0.33)      return "󰃟"
-        if (pct < 0.66)      return "󰃝"
+        if (pct <= 0)        return "󰃝"
+        if (pct < 0.33)      return "󰃞"
+        if (pct < 0.66)      return "󰃟"
         return "󰃠"
     }
 
@@ -81,8 +81,7 @@ Singleton {
             }
             for (let i = 0; i < prefs.length && !chosen; i++)
                 chosen = (devices.find(d => d.cls === "backlight" && d.name.startsWith(prefs[i])) || {}).name || ""
-            // Never fall back to an arbitrary LED device (keyboard/backlight
-            // LEDs are also reported by brightnessctl and are not displays).
+            // never fall back to an arbitrary LED — brightnessctl also lists keyboard LEDs, not displays
             if (!chosen) chosen = (devices.find(d => d.cls === "backlight") || {}).name || ""
             if (!chosen) {
                 root.ready = false

@@ -33,15 +33,13 @@ Singleton {
 
     readonly property string icon:
         !ready                   ? "󰖁" :
-        muted || uiVolume === 0  ? "󰖁" :
+        muted || uiVolume === 0  ? "󰝟" :
         uiVolume < 0.33          ? "󰕿" :
         uiVolume < 0.66          ? "󰖀" : "󰕾"
     readonly property string label: ready ? `${Math.round(uiVolume * 100)}%` : "--%"
     readonly property string sinkName: sink ? (sink.description || "") : ""
 
-    // ── Output devices ──────────────────────────────────────────────────────
-    // A handful of stable device nodes (not per-app streams), so enumerating and
-    // tracking them costs effectively nothing at idle.
+    // stable device nodes only (not per-app streams), cheap to enumerate at idle
     readonly property var sinks: {
         const out = []
         const all = Pipewire.nodes.values
@@ -109,8 +107,7 @@ Singleton {
         }
     }
 
-    // Throttle writes to Pipewire, without this, fast touchpad scrolls
-    // flood the daemon and writes get dropped silently.
+    // throttle writes; fast scrolls otherwise flood pipewire and drop silently
     Timer {
         id: writeThrottle
         interval: 16     // ~60Hz, matches display refresh
