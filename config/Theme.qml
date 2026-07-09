@@ -6,6 +6,7 @@ import "../services"
 
 Singleton {
     readonly property bool _n: ShellSettings.neutralTheme
+    readonly property bool _hc: ShellSettings.highContrast
 
     // neutral base tones (only the dark base changes); text/accent/status shared across tones and matugen. selectable in Appearance.
     // surfaces step clearly above the base (sidebar→card→surface, no clustering) with a whisper of cool in blue — graphite not dead grey, without a visible tint.
@@ -27,42 +28,57 @@ Singleton {
                                        : ShellSettings.matugenAccentRole === "tertiary"  ? MatugenTheme.warning
                                        : MatugenTheme.accent
 
+    readonly property color _surfaceBase: _n ? _pal.surface   : MatugenTheme.surface
+    readonly property color _textBase:    _n ? "#f2f4f8"      : MatugenTheme.text
+    readonly property color _subtextBase: _n ? _pal.subtext   : MatugenTheme.subtext
+
     readonly property color background: _n ? _pal.background : MatugenTheme.background
-    readonly property color surface:    _n ? _pal.surface   : MatugenTheme.surface
-    readonly property color text:       _n ? "#f2f4f8" : MatugenTheme.text
-    readonly property color subtext:    _n ? _pal.subtext   : MatugenTheme.subtext
+    readonly property color text:       _hc ? "#ffffff" : _textBase
+    readonly property color subtext:    _hc ? mix(_subtextBase, text, 0.32) : _subtextBase
+    readonly property color surface:    _hc ? mix(_surfaceBase, text, 0.035) : _surfaceBase
     readonly property color accent:     _n ? (ShellSettings.neutralAccentAuto ? MatugenTheme.accent : ShellSettings.neutralAccent) : _matuAccent
     readonly property color error:      _n ? "#f7768e" : MatugenTheme.error
     readonly property color warning:    _n ? "#e0af68" : MatugenTheme.warning
     readonly property color success:    _n ? "#9ece6a" : MatugenTheme.success
 
-    // neutral mode keeps chrome neutral — accent only for active/focus/selected/status, not tinting every pane
-    readonly property color outline: _n ? withAlpha(subtext, 0.14)
-                                        : withAlpha(mix(subtext, accent, 0.22), 0.17)
+    // outlineStrength scales every line tone in one place; alphas below stay the tuned baselines
+    readonly property real _lineK: ShellSettings.outlineStrength
+    function lineAlpha(a: real): real { return Math.min(1, a * _lineK) }
 
-    readonly property color panel: withAlpha(background, ShellSettings.barOpacity)
+    // neutral mode keeps chrome neutral — accent only for active/focus/selected/status, not tinting every pane
+    readonly property color outline: _hc ? withAlpha(text, lineAlpha(0.36))
+                                        : _n ? withAlpha(subtext, lineAlpha(0.14))
+                                             : withAlpha(mix(subtext, accent, 0.22), lineAlpha(0.17))
+
+    readonly property color panel: withAlpha(background,
+        _hc ? Math.max(0.90, ShellSettings.barOpacity) : ShellSettings.barOpacity)
     readonly property color popup: background
 
     // tonal elevation: dark-mode depth reads lighter-on-darker, so menu surfaces step UP from base (~6/8% toward text). cards/panels = L1, interactive tiles a hair higher.
-    readonly property color menuPane:        _n ? mix(background, text, 0.030)
-                                                : mix(background, surface, 0.18)
-    readonly property color menuCard:        _n ? mix(background, text, 0.060)
-                                                : mix(background, text, 0.07)
-    readonly property color menuCardBorder:  _n ? withAlpha(subtext, 0.105)
-                                                : withAlpha(mix(subtext, accent, 0.22), 0.17)
-    readonly property color menuDivider:     _n ? withAlpha(subtext, 0.075)
-                                                : withAlpha(subtext, 0.085)
+    readonly property color menuPane:        _n ? mix(background, text, _hc ? 0.050 : 0.030)
+                                                : mix(background, _hc ? text : surface, _hc ? 0.055 : 0.18)
+    readonly property color menuCard:        _n ? mix(background, text, _hc ? 0.090 : 0.060)
+                                                : mix(background, text, _hc ? 0.100 : 0.07)
+    readonly property color menuCardBorder:  _hc ? withAlpha(text, lineAlpha(0.22))
+                                                : _n ? withAlpha(subtext, lineAlpha(0.105))
+                                                     : withAlpha(mix(subtext, accent, 0.22), lineAlpha(0.17))
+    readonly property color menuDivider:     _hc ? withAlpha(text, lineAlpha(0.16))
+                                                : _n ? withAlpha(subtext, lineAlpha(0.075))
+                                                     : withAlpha(subtext, lineAlpha(0.085))
     readonly property color menuHover:       accent
-    readonly property color menuControl:     _n ? mix(background, text, 0.090)
-                                                : mix(background, text, 0.09)
-    readonly property color menuControlLine: _n ? withAlpha(subtext, 0.115)
-                                                : withAlpha(subtext, 0.135)
-    readonly property color menuControlLineHot: _n ? withAlpha(subtext, 0.18)
-                                                   : withAlpha(mix(subtext, accent, 0.18), 0.20)
-    readonly property color menuTrack:       _n ? withAlpha(subtext, 0.14)
-                                                : withAlpha(subtext, 0.16)
-    readonly property color menuTextMuted:   mix(subtext, text, _n ? 0.30 : 0.24)
-    readonly property color menuTextFaint:   mix(subtext, text, _n ? 0.15 : 0.10)
+    readonly property color menuControl:     _n ? mix(background, text, _hc ? 0.125 : 0.090)
+                                                : mix(background, text, _hc ? 0.130 : 0.09)
+    readonly property color menuControlLine: _hc ? withAlpha(text, lineAlpha(0.24))
+                                                : _n ? withAlpha(subtext, lineAlpha(0.115))
+                                                     : withAlpha(subtext, lineAlpha(0.135))
+    readonly property color menuControlLineHot: _hc ? withAlpha(accent, lineAlpha(0.45))
+                                                   : _n ? withAlpha(subtext, lineAlpha(0.18))
+                                                        : withAlpha(mix(subtext, accent, 0.18), lineAlpha(0.20))
+    readonly property color menuTrack:       _hc ? withAlpha(text, 0.22)
+                                                : _n ? withAlpha(subtext, 0.14)
+                                                     : withAlpha(subtext, 0.16)
+    readonly property color menuTextMuted:   mix(subtext, text, _hc ? 0.45 : (_n ? 0.30 : 0.24))
+    readonly property color menuTextFaint:   mix(subtext, text, _hc ? 0.25 : (_n ? 0.15 : 0.10))
 
     readonly property int radiusPanel:   14
     readonly property int radiusCard:    12
