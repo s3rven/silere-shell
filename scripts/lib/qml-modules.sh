@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Shared by install.sh, check.sh, and CI: one module list, one import-root
 # lookup, instead of three diverging copies. Quickshell packages may split
 # service plugins even when the `qs` binary exists, so check actual QML
