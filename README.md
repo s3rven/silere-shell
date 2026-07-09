@@ -63,9 +63,11 @@ Every widget checks for its tool at runtime. If a tool is missing, its widget hi
 
 ## Resource use
 
-Idle costs about 0.5% CPU and ~100 MB PSS (~170 MB RSS). RSS looks bigger because it counts libraries shared with every other Qt app on your system; PSS is the number to trust.
+Idle costs 0–0.5% CPU and ~100 MB PSS (~170 MB RSS). RSS looks bigger because it counts libraries shared with every other Qt app on your system; PSS is the number to trust.
 
-Memory doesn't creep up over a session. Notification images and album art are decoded at capped sizes and dropped from the cache once they leave the screen, and the launcher tunes the allocator so freed pages go back to the OS. Heavy use peaks near 260 MB RSS and falls back within seconds of going idle.
+Memory doesn't creep up over a session. Notification images and album art are decoded at capped sizes and dropped from the cache once they leave the screen, images don't keep a CPU-side copy once they're on the GPU, and the launcher tunes the allocator so freed pages return to the OS immediately. A notification burst costs a few MB and falls back within seconds; heavy use peaks near 260 MB RSS.
+
+The menu is built the same way: pages load on first use, the settings pane builds one section at a time, and it all unloads again after the menu sits closed for a while.
 
 The one real cost is the cava visualizer: 15 to 20% of a core while music plays, zero when it stops.
 
