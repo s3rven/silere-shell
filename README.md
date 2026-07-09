@@ -2,14 +2,16 @@
   <img src="assets/banner.svg" alt="silere shell - quiet by default." width="720"/>
 </p>
 
-> *silere*, from Latin: to be silent.
-
-Silere is a Quickshell shell for Hyprland: bar, control menu, notifications, matugen/manual theming, night light, and optional cava visualizer.
+<p align="center"><em>silere</em>, from Latin: to be silent.</p>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-3b3b3b?style=flat-square&labelColor=1c1c1c" alt="license: MIT"/></a>
   <a href="https://quickshell.outfoxxed.me/"><img src="https://img.shields.io/badge/quickshell-hyprland-5a4b6e?style=flat-square&labelColor=1c1c1c" alt="built on quickshell for hyprland"/></a>
 </p>
+
+Silere is a shell for Hyprland, built on Quickshell: a bar, a control menu, notifications, and colors pulled from your wallpaper or set by hand. The quiet part is the point. Widgets only exist when their tools do, anything with a background cost is off until you turn it on, and an idle session rounds to zero CPU.
+
+It is also modular without being heavy: every bar widget can be reordered, moved between sides, or switched off, and appearance is tunable down to separators, outlines, and the active-workspace marker — all plain settings, no plugin layer, no daemon behind any of it.
 
 <p align="center">
   <img src="assets/showcase.png" alt="silere shell showcase" width="900"/>
@@ -17,7 +19,7 @@ Silere is a Quickshell shell for Hyprland: bar, control menu, notifications, mat
 
 ## Install
 
-Requires `git`, Hyprland, and a current Quickshell build with the Hyprland, Wayland layer-shell, Widgets, Io, Bluetooth, Mpris, Notifications, PipeWire, SystemTray, and UPower modules.
+You need `git`, Hyprland, and a current Quickshell build with the Hyprland, Wayland layer-shell, Widgets, Io, Bluetooth, Mpris, Notifications, PipeWire, SystemTray, and UPower modules.
 
 ```bash
 git clone https://github.com/s3rven/silere-shell
@@ -25,11 +27,11 @@ cd silere-shell
 bash scripts/install.sh
 ```
 
-The installer copies Silere to `$XDG_CONFIG_HOME/silere-shell`, backs up existing files, and adds a marked Hyprland autostart block. Restart Hyprland, then verify with `bash scripts/check.sh`. Remove everything again with `bash scripts/uninstall.sh`.
+The installer copies Silere to `$XDG_CONFIG_HOME/silere-shell`, backs up anything it would overwrite, and adds a marked autostart block to your Hyprland config. Restart Hyprland, then run `bash scripts/check.sh` to confirm everything is wired up. `bash scripts/uninstall.sh` removes it all again.
 
 ## Optional tools
 
-Each widget detects its tool at runtime; missing tools hide or trim the widget, nothing breaks.
+Every widget checks for its tool at runtime. If a tool is missing, its widget hides and the rest of the shell keeps working.
 
 | tool | enables |
 |---|---|
@@ -61,7 +63,11 @@ Each widget detects its tool at runtime; missing tools hide or trim the widget, 
 
 ## Resource use
 
-Idle sits around 0.8% CPU and ~100 MB PSS (RSS reads higher because it counts shared Qt/graphics mappings in full). The cava visualizer is the main optional cost and runs only while media is playing. Measure your own session with `bash scripts/bench.sh 10`.
+Idle costs about 0.5% CPU and ~100 MB PSS (~170 MB RSS). RSS looks bigger because it counts libraries shared with every other Qt app on your system; PSS is the number to trust.
+
+Memory doesn't creep up over a session. Notification images and album art are decoded at capped sizes and dropped from the cache once they leave the screen, and the launcher tunes the allocator so freed pages go back to the OS. Heavy use peaks near 260 MB RSS and falls back within seconds of going idle.
+
+The one real cost is the cava visualizer: 15 to 20% of a core while music plays, zero when it stops.
 
 ## Troubleshooting
 
@@ -70,7 +76,7 @@ bash scripts/check.sh   # tool/service checks + smoke launch
 qs -p shell.qml         # run in the foreground to see errors
 ```
 
-Optional warnings from `check.sh` are usually fine; a smoke-launch `FAIL` means startup broke. If notifications never appear, another daemon likely owns `org.freedesktop.Notifications`.
+Optional warnings from `check.sh` are usually fine; a smoke-launch `FAIL` means startup broke. If notifications never appear, another daemon likely owns `org.freedesktop.Notifications`. If icons or text render in the wrong font, install a Nerd Font (e.g. `ttf-jetbrains-mono-nerd`) and run `fc-cache -f`. The `font` checks in `check.sh` catch this case.
 
 ## License
 
