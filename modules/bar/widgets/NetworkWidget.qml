@@ -5,6 +5,8 @@ import "../../common"
 
 Pill {
     id: root
+    property bool barActive: true
+
     readonly property bool canRead: Network.toolAvailable
     readonly property bool show: ShellSettings.barShowNetwork
         && (canRead ? Network.available : true)
@@ -75,7 +77,7 @@ Pill {
     }
 
     PulseLoop {
-        running: root._isPulsing && !Idle.isIdle
+        running: root.barActive && root._isPulsing && !Idle.isIdle
         target: root; targetProperty: "_pulseOpacity"
         peak: 0.5; floor: 1.0; restValue: 1.0
         duration: Motion.ms(800)

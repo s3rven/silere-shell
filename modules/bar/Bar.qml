@@ -83,6 +83,25 @@ PanelWindow {
         anchors.horizontalCenter: parent.horizontalCenter
         width: bar.surfaceWidth
         height: bar.coreHeight - bar.surfaceInset * 2
+        scale: _switchScale
+        transformOrigin: bar.atBottom ? Item.Bottom : Item.Top
+        transform: Translate { y: surface._switchLift }
+
+        property real _switchLift: 0
+        property real _switchScale: 1
+        readonly property bool _switchEffectsOn: !ShellSettings.reduceMotion && !bar.concealed
+
+        function _runFloatingSwitchAnimation(): void {
+            _floatSwitchAnim.stop()
+            _switchLift = 0
+            _switchScale = 1
+            if (!_switchEffectsOn) return
+
+            const edgeDir = bar.atBottom ? -1 : 1
+            _switchScale = 0.982
+            _switchLift = edgeDir * (ShellSettings.barFloating ? 6 : -4)
+            _floatSwitchAnim.restart()
+        }
 
         Behavior on width {
             enabled: !ShellSettings.reduceMotion
@@ -90,6 +109,32 @@ PanelWindow {
         }
 
         readonly property real radius: Math.min(bar.cornerRadius, width / 2)
+
+        Connections {
+            target: ShellSettings
+            function onBarFloatingChanged() {
+                surface._runFloatingSwitchAnimation()
+            }
+            function onReduceMotionChanged() {
+                if (ShellSettings.reduceMotion) {
+                    _floatSwitchAnim.stop()
+                    surface._switchLift = 0
+                    surface._switchScale = 1
+                }
+            }
+        }
+
+        ParallelAnimation {
+            id: _floatSwitchAnim
+            NumberAnimation {
+                target: surface; property: "_switchLift"
+                to: 0; duration: Motion.ms(230); easing.type: Easing.OutQuart
+            }
+            NumberAnimation {
+                target: surface; property: "_switchScale"
+                to: 1; duration: Motion.ms(230); easing.type: Easing.OutCubic
+            }
+        }
 
         // drop shadow grounding the floating surface, shared with popups; the bar spreads both layers wider than a card
         Loader {
@@ -229,12 +274,13 @@ PanelWindow {
 
             Loader {
                 anchors.fill: parent
-                active: ShellSettings.underlineGlow
+                active: ShellSettings.underlineGlow && contents.opacity > 0.001 && !bar.concealed
                 sourceComponent: Component { BarUnderline {} }
             }
 
             BarContent {
                 screen: bar.targetScreen
+                barActive: contents.opacity > 0.001 && !bar.concealed
                 anchors.fill:        parent
                 anchors.leftMargin:  Settings.hPad
                 anchors.rightMargin: Settings.hPad

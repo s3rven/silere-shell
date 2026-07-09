@@ -6,6 +6,7 @@ import "../../services"
 Item {
     id: root
     property bool show: true
+    property bool compact: ShellSettings.barCompact
 
     readonly property string _style: ShellSettings.dotStyle
     // "none" draws no mark and reserves no slot — Row collapses to a uniform gap, no dividers
@@ -13,7 +14,7 @@ Item {
     readonly property color  _base:  ShellSettings.neutralTheme ? Theme.subtext : Theme.mix(Theme.subtext, Theme.accent, 0.10)
     readonly property color  _col:   Theme.withAlpha(_base, ShellSettings.dotOpacity)
     readonly property bool   _slash: _style === "slash"
-    readonly property int    _slotW: Metrics.dotSlot(_slash)
+    readonly property int    _slotW: Metrics.dotSlotFor(_slash, compact)
 
     // Font-derived reference height so marks scale with the bar's text.
     TextMetrics { id: _tm; font.family: Settings.font; font.pixelSize: Settings.fontSize; text: "M" }
@@ -35,7 +36,7 @@ Item {
         Rectangle {
             visible: root._style === "·" || root._style === "•" || root._style === "◦"
             anchors.centerIn: parent
-            readonly property real d: ShellSettings.barCompact
+            readonly property real d: root.compact
                 ? (root._style === "◦" ? 4 : 3)
                 : (root._style === "•" ? 5 : (root._style === "◦" ? 6 : 3))
             width: d; height: d; radius: d / 2
@@ -48,7 +49,7 @@ Item {
         Rectangle {
             visible: root._style === "|"
             anchors.centerIn: parent
-            width: 1; height: Math.round(_tm.height * (ShellSettings.barCompact ? 0.50 : 0.62))
+            width: 1; height: Math.round(_tm.height * (root.compact ? 0.50 : 0.62))
             antialiasing: true
             color: root._col
         }
@@ -57,7 +58,7 @@ Item {
             visible: root._slash
             anchors.centerIn: parent
             width: 1
-            height: Math.round(_tm.height * (ShellSettings.barCompact ? 0.58 : 0.72))
+            height: Math.round(_tm.height * (root.compact ? 0.58 : 0.72))
             radius: 0.5
             antialiasing: true
             rotation: 18
@@ -68,7 +69,7 @@ Item {
         Rectangle {
             visible: root._style === "line"
             anchors.centerIn: parent
-            width: 1; height: Math.round(_tm.height * (ShellSettings.barCompact ? 0.54 : 0.66))
+            width: 1; height: Math.round(_tm.height * (root.compact ? 0.54 : 0.66))
             antialiasing: true
             gradient: Gradient {
                 orientation: Gradient.Vertical

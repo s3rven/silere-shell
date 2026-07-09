@@ -14,9 +14,10 @@ Row {
     // Shared key→Component map, owned by BarContent so the delegates keep its
     // screen/textBudget closures.
     required property var widgetComponents
+    property bool compact: ShellSettings.barCompact
 
-    readonly property int dotGap: Metrics.widgetGap
-    readonly property bool _compact: ShellSettings.barCompact
+    readonly property int dotGap: Metrics.widgetGapFor(compact)
+    readonly property bool _compact: compact
 
     spacing: dotGap
     Behavior on spacing { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
@@ -83,7 +84,10 @@ Row {
                 anchors.verticalCenter: parent.verticalCenter
                 sourceComponent: _slot.widgetEnabled ? zone.widgetComponents[_slot.key] : null
             }
-            Dot { show: zone._seps[_slot.key] === true }
+            Dot {
+                compact: zone.compact
+                show: zone._seps[_slot.key] === true
+            }
         }
     }
 }

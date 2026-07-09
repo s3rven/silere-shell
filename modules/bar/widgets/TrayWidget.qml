@@ -13,11 +13,14 @@ Item {
     id: root
 
     property var screen: null   // ShellScreen this bar sits on, for menu placement
+    property bool compact: ShellSettings.barCompact
+    property bool barActive: true
     readonly property bool show: ShellSettings.trayWidget && _items.count > 0
     readonly property int iconSize: Math.max(14, Math.min(18, Math.round(ShellSettings.barHeight * 0.44)))
+    readonly property int _pillPad: Metrics.pillPadFor(compact)
 
     // pillPad insets match the pills' edge margin so gaps read even across the bar
-    implicitWidth:  show ? _row.implicitWidth + Metrics.pillPad * 2 : 0
+    implicitWidth:  show ? _row.implicitWidth + _pillPad * 2 : 0
     implicitHeight: parent ? parent.height : 24
     visible: show
 
@@ -42,7 +45,7 @@ Item {
 
     Row {
         id: _row
-        x: Metrics.pillPad
+        x: root._pillPad
         anchors.verticalCenter: parent.verticalCenter
         // tracks the Spacing setting (one notch tighter: icons read as a cluster)
         spacing: Math.max(5, ShellSettings.barSpacing - 4)
@@ -100,7 +103,7 @@ Item {
                 }
 
                 PulseLoop {
-                    running: _tile.needsAttention && !ShellSettings.reduceMotion && !Idle.isIdle
+                    running: root.barActive && _tile.needsAttention && !ShellSettings.reduceMotion && !Idle.isIdle
                     target: _tile; targetProperty: "attnPulse"
                     peak: 0.4; floor: 1.0; restValue: 1.0
                     duration: Motion.ms(900)

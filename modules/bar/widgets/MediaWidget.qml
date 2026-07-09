@@ -7,9 +7,9 @@ import "../../../services"
 Item {
     id: root
 
-    // no forced canvas expansion; width follows the enabled content
+    property bool compact: ShellSettings.barCompact
     // pillPad insets match the pills' edge margin so gaps read even across the bar
-    implicitWidth:  root.show ? _content.implicitWidth + Metrics.pillPad * 2 : 0
+    implicitWidth:  root.show ? _content.implicitWidth + root._pillPad * 2 : 0
     // Full bar height so the visualizer baseline sits on the bottom line.
     implicitHeight: parent ? parent.height : ShellSettings.barHeight
     clip: true
@@ -19,13 +19,16 @@ Item {
 
     // Visualizer paints only on the active monitor.
     property var screen: null
+    property bool barActive: true
     readonly property bool _onActiveBar: !root.screen || Monitors.activeName === root.screen.name
     readonly property bool _visualizerActive: ShellSettings.mediaProgress
-        && root.show && Media.playing && Media.cavaReady && root._onActiveBar
+        && ShellSettings.mediaVisualizerPosition === "media"
+        && root.barActive && root.show && Media.playing && Media.cavaReady && root._onActiveBar
     readonly property bool _vizVisible: _vizLoader.item ? _vizLoader.item.visible : false
     readonly property bool _helperEnabled: ShellSettings.mediaWidgetHelper
     readonly property string _playGlyph: Media.playing ? "󰏤" : "󰐊"
     property real textBudget: -1
+    readonly property int _pillPad: Metrics.pillPadFor(compact)
 
     readonly property real _scrollSpeed:     38    // px/sec
     readonly property int  _scrollHoldStart: 900   // short: title start already visible on entry
@@ -39,13 +42,17 @@ Item {
         textClip.opacity = 1.0
     }
     function _startMarquee(): void {
-        if (show && _onActiveBar && textClip.needsScroll && !_trackTransition.running)
+        if (barActive && show && _onActiveBar && textClip.needsScroll && !_trackTransition.running)
             _scroll.start()
     }
 
     onShowChanged: {
         if (!show) _resetMarquee()
         else       Qt.callLater(_startMarquee)
+    }
+    onBarActiveChanged: {
+        if (barActive) Qt.callLater(_startMarquee)
+        else           _scroll.stop()
     }
 
     Behavior on implicitWidth {
@@ -107,7 +114,7 @@ Item {
 
     Row {
         id: _content
-        x: Metrics.pillPad
+        x: root._pillPad
         anchors.verticalCenter: parent.verticalCenter
         spacing: root._helperEnabled ? 5 : 0
         height: Math.max(_playIcon.implicitHeight, textClip.height)
@@ -127,7 +134,7 @@ Item {
                     ? Theme.withAlpha(Theme.accent, 0.92)
                     : Theme.withAlpha(Theme.subtext, 0.72)
                 font.family: Settings.font
-                font.pixelSize: Settings.fontSize + 1
+                font.pixelSize: Settings.iconSize + 1
                 renderType: Text.NativeRendering
                 scale: Media.playing ? 1.0 : 0.92
                 Behavior on color { ColorAnimation { duration: Motion.fast } }
@@ -139,7 +146,7 @@ Item {
             id: textClip
             anchors.verticalCenter: parent.verticalCenter
             readonly property int  maxW: Math.round(Math.max(52, Math.min(
-                ShellSettings.barCompact ? 120 : 160,
+                root.compact ? 120 : 160,
                 root.textBudget > 0 ? root.textBudget : 9999
             )))
             // Reduce-motion keeps the title elided and still, so it never scrolls.
@@ -189,7 +196,7 @@ Item {
 
                 // breathing: slow sway while paused; Behavior restores 0.72 when it stops
                 SequentialAnimation on opacity {
-                    running: !Media.playing && root.show && !ShellSettings.reduceMotion && !Idle.isIdle
+                    running: root.barActive && !Media.playing && root.show && !ShellSettings.reduceMotion && !Idle.isIdle
                         && (!root.screen || Monitors.activeName === root.screen.name)
                     loops: Animation.Infinite
                     NumberAnimation { to: 0.60; duration: Motion.ms(1400); easing.type: Easing.InOutSine }
