@@ -19,7 +19,7 @@ Pill {
     Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutQuart } }
 
     // +1 keeps the status glyphs (pacman ghost, update arrow) optically in step
-    glyphPixelSize: Settings.fontSize + 1
+    glyphPixelSize: Settings.iconSize + 1
     glyphColor:     Theme.accent
     textColor:      Theme.text
     interactive:    show && !busy

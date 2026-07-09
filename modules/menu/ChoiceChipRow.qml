@@ -28,7 +28,7 @@ Item {
 
     // 4px multiples: keep card dividers on whole physical px under fractional scaling
     width:  parent ? parent.width : 0
-    height: _stacked ? 76 : 44
+    height: _stacked ? 80 : 44
     opacity: enabled ? 1.0 : 0.45
     Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium } }
 
@@ -48,14 +48,13 @@ Item {
         }
     }
 
-    // Hover fill, matching the toggle/slider rows.
     HoverHandler { id: _rowHover; enabled: root.enabled }
     RowHoverBg {
         anchors.fill: parent
         topRadius:    root.topRadius
         bottomRadius: root.bottomRadius
         cardInset:    root.cardInset
-        active:       _rowHover.hovered && root.enabled
+        active:       (_rowHover.hovered || root.activeFocus) && root.enabled
         fillOpacity:  0.08
     }
 
@@ -79,7 +78,7 @@ Item {
             text:           root.glyph
             color:          Theme.withAlpha(Theme.subtext, 0.85)
             font.family:    Settings.font
-            font.pixelSize: Settings.fontSize + 2
+            font.pixelSize: Settings.iconSize + 2
             renderType:     Text.NativeRendering
         }
         Text {
@@ -100,15 +99,18 @@ Item {
 
     Rectangle {
         id: _segContainer
-        x: root._stacked ? 14 : (root.width - 12 - width)
-        y: root._stacked ? (_labelRow.y + _labelRow.height + 9) : (root.height - height) / 2
-        height:       30
-        width:        root._stacked ? Math.max(1, root.width - 26) : _segRow.implicitWidth + 6
-        radius:       9
+        // right-hugged in both modes — stacking moves the control down a line, it never inflates it
+        x: root.width - 12 - width
+        y: root._stacked ? (_labelRow.y + _labelRow.height + 11) : (root.height - height) / 2
+        height:       32
+        width:        Math.min(Math.max(1, root.width - 26), _segRow.implicitWidth + 8)
+        radius:       Theme.radiusControl
         antialiasing: true
-        color:        Theme.mix(Theme.menuControl, Theme.text, _rowHover.hovered ? 0.035 : 0.015)
+        color:        Theme.mix(Theme.menuControl, Theme.text,
+            root.activeFocus ? 0.055 : (_rowHover.hovered ? 0.035 : 0.012))
         border.width: 1
-        border.color: _rowHover.hovered ? Theme.menuControlLineHot : Theme.menuControlLine
+        border.color: root.activeFocus ? Theme.withAlpha(root.accentColor, 0.42)
+                    : _rowHover.hovered ? Theme.menuControlLineHot : Theme.menuControlLine
 
         Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
         Behavior on border.color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
@@ -140,27 +142,28 @@ Item {
             _maxNatW = m
         }
         // Natural inline width of the whole control (drives the stack decision).
-        readonly property real _naturalW: _maxNatW * root.model.length + 6
-        // stacked: segments divide the full row width evenly (12px gutters, 6px segRow inset), floored to the pixel grid
-        readonly property real _fullCellW: Math.max(1, Math.floor((root.width - 30) / Math.max(1, root.model.length)))
-        readonly property real _cellW: root._stacked ? _fullCellW : _maxNatW
+        readonly property real _naturalW: _maxNatW * root.model.length + 8
+        // space-starved cap only: stacked cells stay natural-width unless even that overflows the row
+        readonly property real _fullCellW: Math.max(1, Math.floor((root.width - 34) / Math.max(1, root.model.length)))
+        readonly property real _cellW: root._stacked ? Math.min(_fullCellW, _maxNatW) : _maxNatW
 
         Rectangle {
             id: _indicator
-            x:      _segContainer._activeSeg ? _segContainer._activeSeg.x + _segRow.x : 2
+            x:      _segContainer._activeSeg ? _segContainer._activeSeg.x + _segRow.x + 1 : 3
             y:      3
             width:  _segContainer._activeSeg ? _segContainer._activeSeg.width : 0
             height: parent.height - 6
-            radius:       7
+            // concentric with the track: outer radius minus the 3px inset
+            radius:       Theme.radiusControl - 3
             antialiasing: true
             opacity:      _segContainer._activeSeg ? 1.0 : 0.0
             visible:      opacity > 0.001
 
-            color:        Theme.mix(Theme.menuControl, root.accentColor, ShellSettings.neutralTheme ? 0.28 : 0.42)
+            color:        Theme.mix(Theme.menuControl, root.accentColor, ShellSettings.neutralTheme ? 0.26 : 0.38)
             border.width: 1
             border.color: ShellSettings.neutralTheme
-                ? Theme.withAlpha(root.accentColor, 0.50)
-                : Theme.mix(Theme.menuCard, root.accentColor, 0.72)
+                ? Theme.withAlpha(root.accentColor, 0.56)
+                : Theme.mix(Theme.menuCard, root.accentColor, 0.66)
 
             Behavior on x        { enabled: _segContainer._animReady && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.width; easing.type: Easing.OutQuart } }
             Behavior on width    { enabled: _segContainer._animReady && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.width; easing.type: Easing.OutQuart } }
@@ -171,7 +174,7 @@ Item {
 
         Row {
             id: _segRow
-            x: 3
+            x: 4
             anchors.verticalCenter: parent.verticalCenter
             spacing: 0
 
@@ -199,11 +202,11 @@ Item {
                     }
 
                     // natural content width; the container maxes these to size every segment equally — never shrink below it or text clips
-                    readonly property real natW: Math.ceil(_content.implicitWidth) + 24
+                    readonly property real natW: Math.ceil(_content.implicitWidth) + 18
                     onNatWChanged: _segContainer._recalcNat()
 
                     width:  root._stacked ? _segContainer._cellW : Math.max(natW, _segContainer._cellW)
-                    height: 28
+                    height: 30
                     clip: true
 
                     Accessible.role: Accessible.RadioButton
@@ -234,15 +237,31 @@ Item {
                         onTapped: root.chosen(_seg.modelData.value)
                     }
 
+                    // hover/focus preview: a faded ghost of the selection thumb, as if it had moved here
                     Rectangle {
                         anchors.fill: parent
-                        anchors.margins: 3
-                        radius: 6
+                        anchors.margins: 2
+                        radius: Theme.radiusControl - 3
                         antialiasing: true
-                        color: Theme.withAlpha(root.accentColor, 0.09)
-                        border.width: _seg.activeFocus ? 1 : 0
+                        color: Theme.mix(Theme.menuControl, root.accentColor, ShellSettings.neutralTheme ? 0.26 : 0.38)
+                        border.width: 1
+                        border.color: ShellSettings.neutralTheme
+                            ? Theme.withAlpha(root.accentColor, 0.56)
+                            : Theme.mix(Theme.menuCard, root.accentColor, 0.66)
+                        opacity: _seg.active ? 0.0 : (_seg.activeFocus ? 0.55 : (_hover.hovered ? 0.35 : 0.0))
+                        Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+                    }
+
+                    // keyboard focus on the already-active segment: ring the real thumb
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: 2
+                        radius: Theme.radiusControl - 3
+                        antialiasing: true
+                        color: "transparent"
+                        border.width: 1
                         border.color: Theme.withAlpha(root.accentColor, 0.72)
-                        opacity: !_seg.active && (_hover.hovered || _seg.activeFocus) ? 1.0 : 0.0
+                        opacity: (_seg.active && _seg.activeFocus) ? 1.0 : 0.0
                         Behavior on opacity { NumberAnimation { duration: Motion.fast } }
                     }
 
@@ -260,8 +279,8 @@ Item {
                             visible:        _seg.segGlyph.length > 0
                             text:           _seg.segGlyph
                             color:          _seg.active
-                                ? Theme.text
-                                : (_hover.hovered ? Theme.withAlpha(Theme.text, 0.86) : Theme.withAlpha(Theme.subtext, 0.66))
+                                ? Theme.mix(Theme.text, root.accentColor, ShellSettings.highContrast ? 0.0 : 0.10)
+                                : (_hover.hovered ? Theme.withAlpha(Theme.text, 0.88) : Theme.withAlpha(Theme.subtext, 0.68))
                             font.family:    Settings.font
                             font.pixelSize: Math.max(9, Settings.fontSize - 1)
                             font.weight:    Font.Medium
@@ -287,16 +306,18 @@ Item {
                             visible:        _seg.modelData.label.length > 0
                             text:           _seg.modelData.label
                             textFormat:     Text.PlainText
+                            // cap against the static space budget, not _seg.width — natW feeds cell width,
+                            // so a live-width cap loops layout (width → natW → cellW → width) and polishes every frame
                             width: root._stacked
-                                ? Math.min(implicitWidth, Math.max(18, _seg.width - 18
+                                ? Math.min(implicitWidth, Math.max(18, _segContainer._fullCellW - 18
                                     - (_seg.segGlyph.length > 0 ? 18 : 0)
                                     - (_seg.segHasSwatch ? 16 : 0)
                                     - (_seg.segBadge.length > 0 ? 28 : 0)))
                                 : implicitWidth
                             elide:          Text.ElideRight
                             color:          _seg.active
-                                ? Theme.text
-                                : (_hover.hovered ? Theme.withAlpha(Theme.text, 0.86) : Theme.withAlpha(Theme.subtext, 0.66))
+                                ? Theme.mix(Theme.text, root.accentColor, ShellSettings.highContrast ? 0.0 : 0.10)
+                                : (_hover.hovered ? Theme.withAlpha(Theme.text, 0.88) : Theme.withAlpha(Theme.subtext, 0.68))
                             font.family:    Settings.font
                             font.pixelSize: Math.max(9, Settings.fontSize - 1)
                             font.weight:    _seg.active ? Font.DemiBold : Font.Medium

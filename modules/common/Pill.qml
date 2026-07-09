@@ -15,12 +15,13 @@ Item {
     property string accessibleName: ""
     property string accessibleDescription: ""
     property int    maxTextWidth: 150
-    property int    horizontalPadding: Metrics.pillPad
+    property bool   compact: ShellSettings.barCompact
+    property int    horizontalPadding: Metrics.pillPadFor(compact)
     property bool   animateGlyph: true
     // opt-in cross-fade on text change; off by default — Volume/Brightness update every scroll tick and shouldn't fade-through
     property bool   animateText: false
     property bool   animateGlyphColor: true
-    property int    glyphPixelSize: Settings.fontSize + 2
+    property int    glyphPixelSize: Settings.iconSize + 2
     // floor the text box to this string's width so value readouts (volume/brightness) don't resize on every change
     property string reserveText: ""
     readonly property real _reserveW: reserveText.length > 0 ? Math.ceil(_reserveMetrics.advanceWidth) : 0
@@ -178,12 +179,12 @@ Item {
         id: row
         x: Math.round((parent.width - width) / 2)
         y: Math.round((parent.height - height) / 2)
-        spacing: Metrics.pillGap
+        spacing: Metrics.pillGapFor(root.compact)
 
         Item {
             id: _glyphBox
             anchors.verticalCenter: parent.verticalCenter
-            implicitWidth:  Math.ceil(_glyphText.implicitWidth)
+            implicitWidth:  root._shownGlyph.length > 0 ? Metrics.iconCellFor(root.glyphPixelSize) : 0
             implicitHeight: _glyphText.implicitHeight
             scale: root.visualPressed ? 0.84 : 1.0
             transformOrigin: Item.Center

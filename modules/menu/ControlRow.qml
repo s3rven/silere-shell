@@ -141,7 +141,7 @@ Item {
             color:          root.active ? Theme.withAlpha(root.accentColor, 0.95)
                                         : Theme.withAlpha(Theme.subtext, 0.85)
             font.family:    Settings.font
-            font.pixelSize: Settings.fontSize + 2
+            font.pixelSize: Settings.iconSize + 2
             renderType:     Text.NativeRendering
             Behavior on color { ColorAnimation { duration: Motion.fast } }
         }

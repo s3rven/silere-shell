@@ -91,14 +91,14 @@ Item {
         text:           root.glyph
         color:          Theme.withAlpha(Theme.subtext, 0.85)
         font.family:    Settings.font
-        font.pixelSize: Settings.fontSize + 2
+        font.pixelSize: Settings.iconSize + 2
         renderType:     Text.NativeRendering
     }
     Item {
         id: _header
         anchors.top:    parent.top
         anchors.left:   _glyph.right; anchors.leftMargin: root.glyph.length > 0 ? 10 : 0
-        anchors.right:  _chevronSlot.left; anchors.rightMargin: 8
+        anchors.right:  _chevronSlot.left; anchors.rightMargin: 10
         height: 44
         Text {
             anchors.left:           parent.left
@@ -118,30 +118,48 @@ Item {
         id: _chevronSlot
         anchors.right:          parent.right; anchors.rightMargin: 12
         anchors.verticalCenter: _header.verticalCenter
-        width:  Math.min(_valText.implicitWidth + 18, Math.max(72, root.width * 0.38))
-        height: 22
+        width:  Math.min(_valText.implicitWidth + 34, Math.max(78, root.width * 0.40))
+        height: 26
+
+        Rectangle {
+            anchors.fill: parent
+            radius: Theme.radiusControl - 2
+            antialiasing: true
+            color: Theme.mix(Theme.menuControl, root._open ? Theme.accent : Theme.text,
+                root._open ? (ShellSettings.neutralTheme ? 0.16 : 0.24) : 0.018)
+            border.width: 1
+            border.color: root._open
+                ? Theme.withAlpha(Theme.accent, ShellSettings.highContrast ? 0.64 : 0.46)
+                : (_hov.hovered || root.activeFocus ? Theme.withAlpha(Theme.accent, 0.34) : Theme.menuControlLine)
+            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+            Behavior on border.color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+        }
 
         Text {
             id: _valText
             anchors.left:           parent.left
+            anchors.leftMargin:     9
             anchors.right:          parent.right
-            anchors.rightMargin:    18
+            anchors.rightMargin:    21
             anchors.verticalCenter: parent.verticalCenter
             text:           root._activeLabel
             textFormat:     Text.PlainText
             elide:          Text.ElideRight
-            color:          Theme.withAlpha(Theme.subtext, 0.70)
+            color:          root._open ? Theme.text : Theme.withAlpha(Theme.subtext, 0.76)
             font.family:    Settings.font
             font.pixelSize: Settings.fontSize - 1
+            font.weight:    root._open ? Font.DemiBold : Font.Medium
             renderType:     Text.NativeRendering
+            Behavior on color { ColorAnimation { duration: Motion.fast } }
         }
         Text {
             anchors.right:          parent.right
+            anchors.rightMargin:    7
             anchors.verticalCenter: parent.verticalCenter
             text:    "󰅀"
             rotation: root._open ? 180 : 0
             transformOrigin: Item.Center
-            color:   Theme.withAlpha(Theme.subtext, root._open ? 0.8 : 0.55)
+            color:   root._open ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.58)
             font.family:    Settings.font
             font.pixelSize: Settings.fontSize
             renderType:     Text.NativeRendering
@@ -180,6 +198,7 @@ Item {
                 width: parent.width; height: 1
                 color: Theme.menuDivider
             }
+            Item { width: parent.width; height: 4 }
 
             Behavior on y {
                 enabled: !ShellSettings.reduceMotion
@@ -206,7 +225,7 @@ Item {
                     readonly property bool active: root.currentValue === modelData.value
 
                     width:  parent.width
-                    height: 36
+                    height: 38
 
                     function choose(event: var): void {
                         if (!event.isAutoRepeat) {
@@ -221,7 +240,8 @@ Item {
                     TapHandler {
                         onTapped: {
                             root.chosen(_opt.modelData.value)
-                            root._open = false
+                            root._setOpen(false)
+                            root.forceActiveFocus()
                         }
                     }
                     activeFocusOnTab: root.enabled && root._open
@@ -244,45 +264,62 @@ Item {
                         }
                     }
 
-                    RowHoverBg {
+                    Rectangle {
                         anchors.fill: parent
-                        // Only the last option rounds at the card bottom
-                        bottomRadius: _opt.index === root.model.length - 1 ? root.bottomRadius : 0
-                        cardInset:    root.cardInset
-                        active:       _optHov.hovered || _opt.activeFocus
-                        fillOpacity:  _opt.activeFocus ? 0.13 : 0.08
+                        anchors.leftMargin: 8
+                        anchors.rightMargin: 8
+                        anchors.topMargin: 3
+                        anchors.bottomMargin: 3
+                        radius: Theme.radiusControl - 2
+                        antialiasing: true
+                        // selection keeps its fill, keyboard focus keeps its ring; pointer hover is just the text brightening
+                        color: _opt.active
+                            ? Theme.mix(Theme.menuControl, Theme.accent, ShellSettings.neutralTheme ? 0.16 : 0.24)
+                            : "transparent"
+                        border.width: _opt.activeFocus ? 1 : 0
+                        border.color: Theme.withAlpha(Theme.accent, 0.58)
+                        opacity: _opt.active || _opt.activeFocus ? 1.0 : 0.0
+                        Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
+                        Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
                     }
 
                     // Indent to align with the header label
                     Text {
                         anchors.left:           parent.left
                         anchors.leftMargin:     (root.glyph.length > 0 ? 42 : 24)
+                        anchors.right:          _check.left
+                        anchors.rightMargin:    8
                         anchors.verticalCenter: parent.verticalCenter
                         text:       _opt.modelData.label
                         textFormat: Text.PlainText
+                        elide:      Text.ElideRight
                         color:      _opt.active
-                            ? Theme.accent
-                            : Theme.withAlpha(Theme.text, (_optHov.hovered || _opt.activeFocus) ? 0.90 : 0.70)
+                            ? Theme.text
+                            : Theme.withAlpha(Theme.text, (_optHov.hovered || _opt.activeFocus) ? 0.92 : 0.72)
                         font.family:    Settings.font
                         font.pixelSize: Settings.fontSize
                         font.weight:    _opt.active ? Font.DemiBold : Font.Normal
                         renderType:     Text.NativeRendering
                         Behavior on color { ColorAnimation { duration: Motion.fast } }
                     }
-                    // Left accent bar on active item
-                    Rectangle {
-                        anchors.left:           parent.left; anchors.leftMargin: root.cardInset + 1
+                    Text {
+                        id: _check
+                        anchors.right:          parent.right
+                        anchors.rightMargin:    17
                         anchors.verticalCenter: parent.verticalCenter
-                        width:   3
-                        height:  _opt.active ? 16 : 0
-                        radius:  2
-                        color:   Theme.accent
+                        width: 18
+                        horizontalAlignment: Text.AlignHCenter
+                        text: "󰄬"
+                        color: Theme.accent
+                        font.family: Settings.font
+                        font.pixelSize: Settings.fontSize
+                        renderType: Text.NativeRendering
                         opacity: _opt.active ? 0.90 : 0.0
-                        Behavior on height  { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
                         Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
                     }
                 }
             }
+            Item { width: parent.width; height: 4 }
         }
     }
 }

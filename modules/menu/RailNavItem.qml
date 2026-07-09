@@ -29,7 +29,7 @@ Item {
     TextMetrics {
         id: _ink
         font.family: Settings.font
-        font.pixelSize: Settings.fontSize + 2
+        font.pixelSize: Settings.iconSize + 2
         text: root.glyph
     }
 
@@ -61,7 +61,7 @@ Item {
             : Theme.withAlpha(Theme.mix(Theme.subtext, root.accentColor, _hover.hovered || root.activeFocus ? 0.24 : 0),
                                _hover.hovered || root.activeFocus ? 0.78 : 0.50)
         font.family: Settings.font
-        font.pixelSize: Settings.fontSize + 2
+        font.pixelSize: Settings.iconSize + 2
         renderType: Text.NativeRendering
         scale: _tap.pressed ? 0.92 : (root.active ? 1.015 : 1.0)
         transformOrigin: Item.Center

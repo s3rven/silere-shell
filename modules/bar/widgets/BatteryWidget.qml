@@ -12,7 +12,7 @@ Pill {
     property real _baseOpacity: show ? 1.0 : 0.0
 
     glyph:          Battery.icon
-    glyphPixelSize: Settings.fontSize + 3   // horizontal battery glyph reads optically short
+    glyphPixelSize: Settings.iconSize + 3   // horizontal battery glyph reads optically short
     glyphColor:     Battery.iconColor
     textColor:      Battery.iconColor
     accessibleName: !show ? "Battery unavailable"

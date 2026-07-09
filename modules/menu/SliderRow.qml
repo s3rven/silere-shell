@@ -55,8 +55,9 @@ Item {
         anchors.right:      _valueText.left
         anchors.rightMargin: 10
         anchors.top:        parent.top
-        anchors.topMargin:  9
-        height: Math.max(_glyph.implicitHeight, _label.implicitHeight)
+        anchors.topMargin:  8
+        // fixed head height so the track's position can't drift with the font's line height
+        height: 20
         clip: true
 
         Text {
@@ -69,7 +70,7 @@ Item {
             text:           root.glyph
             color:          root.glyphColor
             font.family:    Settings.font
-            font.pixelSize: Settings.fontSize + 2
+            font.pixelSize: Settings.iconSize + 2
             renderType:     Text.NativeRendering
         }
         Text {
@@ -102,14 +103,15 @@ Item {
     }
 
     // ── Bottom line: full-width track ─────────────────────────────────────
+    // bottom-anchored (not chained under the head) so the thumb keeps clear of the card edge at every font
     SliderTrack {
         id: _track
-        anchors.left:        parent.left
-        anchors.right:       parent.right
-        anchors.leftMargin:  14
-        anchors.rightMargin: 12
-        anchors.top:         _head.bottom
-        anchors.topMargin:   8
+        anchors.left:         parent.left
+        anchors.right:        parent.right
+        anchors.leftMargin:   14
+        anchors.rightMargin:  12
+        anchors.bottom:       parent.bottom
+        anchors.bottomMargin: 4
         height: 20
         hitPad: 8
 

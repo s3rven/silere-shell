@@ -362,7 +362,6 @@ Item {
                 font.pixelSize:   Settings.fontSize - 1
                 renderType:       Text.NativeRendering
                 wrapMode:         Text.WordWrap
-                // hover reveals the full body instead of leaving it truncated
                 maximumLineCount: _cardHover.hovered ? 12 : 3
                 elide:            Text.ElideRight
             }
@@ -406,9 +405,13 @@ Item {
                     id: _previewImg
                     anchors.fill: parent
                     source: card.hasContentImage ? card.contentImageSource : ""
+                    // height bound too: width alone lets a tall portrait decode at full height
                     sourceSize.width: 640
+                    sourceSize.height: 640
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
+                    // one-shot content, keep it out of the pixmap cache
+                    cache: false
                 }
 
                 Rectangle {

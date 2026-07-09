@@ -116,13 +116,13 @@ Item {
         Text {
             id: _iconText
             anchors.verticalCenter: parent.verticalCenter
-            width:               Settings.fontSize + 6   // fixed so the stamp's scale-to-0 doesn't collapse the Row
+            width:               Settings.iconSize + 6   // fixed so the stamp's scale-to-0 doesn't collapse the Row
             horizontalAlignment: Text.AlignHCenter
             transformOrigin:     Item.Center
             text:           OsdBarState.icon
             color:          OsdBarState.hasBar ? Theme.text : OsdBarState.fillColor
             font.family:    Settings.font
-            font.pixelSize: Settings.fontSize + 2
+            font.pixelSize: Settings.iconSize + 2
             renderType:     Text.NativeRendering
             Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.medium } }
         }

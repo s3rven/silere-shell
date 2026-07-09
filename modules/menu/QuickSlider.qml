@@ -77,7 +77,7 @@ Item {
             text: root.glyph
             color: Theme.withAlpha(Theme.subtext, 0.85)
             font.family: Settings.font
-            font.pixelSize: Settings.fontSize + 2
+            font.pixelSize: Settings.iconSize + 2
             renderType: Text.NativeRendering
         }
 

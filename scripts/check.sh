@@ -132,6 +132,14 @@ fi
 if command -v fc-list >/dev/null 2>&1; then
   if fc-list : family 2>/dev/null | grep -qi "JetBrainsMono Nerd"; then
     ok "font" "JetBrainsMono Nerd Font"
+    if command -v fc-match >/dev/null 2>&1; then
+      resolved="$(fc-match -f '%{family}' "JetBrainsMono Nerd Font" 2>/dev/null || true)"
+      if printf '%s' "$resolved" | grep -qi "JetBrainsMono Nerd Font"; then
+        ok "font match" "resolves to $resolved"
+      else
+        warn "font match" "fontconfig serves '$resolved' instead — icons will render wrong; run fc-cache -f (see README troubleshooting)"
+      fi
+    fi
   else
     warn "font" "JetBrainsMono Nerd Font not found"
   fi

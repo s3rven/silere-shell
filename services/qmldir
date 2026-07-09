@@ -16,6 +16,7 @@ singleton Screenshot    1.0 Screenshot.qml
 # shell
 singleton CalendarState 1.0 CalendarState.qml
 singleton DateTime      1.0 DateTime.qml
+singleton FontScan      1.0 FontScan.qml
 singleton Idle          1.0 Idle.qml
 singleton Media         1.0 Media.qml
 singleton MenuState     1.0 MenuState.qml

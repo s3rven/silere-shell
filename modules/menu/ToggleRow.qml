@@ -84,7 +84,7 @@ Item {
             ? Theme.withAlpha(Theme.accent, 0.9)
             : Theme.withAlpha(Theme.subtext, 0.85)
         font.family:    Settings.font
-        font.pixelSize: Settings.fontSize + 2
+        font.pixelSize: Settings.iconSize + 2
         renderType:     Text.NativeRendering
         Behavior on color { ColorAnimation { duration: Motion.fast } }
     }

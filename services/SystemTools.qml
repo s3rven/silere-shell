@@ -32,13 +32,14 @@ Singleton {
     readonly property bool hasXbps:          _tools["xbps-install"] ?? false
     readonly property bool hasPowerProfilesCtl: _tools.powerprofilesctl ?? false
     readonly property bool hasMatugen:       _tools.matugen ?? false
+    readonly property bool hasFcList:        _tools["fc-list"] ?? false
 
     function refresh(): void {
         if (_checkProc.running) return
         ready = false
         _checkProc.exec(["bash", "-c",
             "for t in brightnessctl inotifywait nmcli cava hyprsunset hyprlock systemctl hyprctl pgrep pkill notify-send " +
-            "busctl checkupdates paru yay timeout apt dnf zypper xbps-install powerprofilesctl matugen; do " +
+            "busctl checkupdates paru yay timeout apt dnf zypper xbps-install powerprofilesctl matugen fc-list; do " +
             "  command -v \"$t\" >/dev/null 2>&1 && echo \"$t\"; " +
             "done"])
     }
