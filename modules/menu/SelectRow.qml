@@ -9,6 +9,8 @@ Item {
 
     property string glyph:       ""
     property string label:       ""
+    property string badge:       ""
+    property string badgeKind:   badge
     property var    model:       []
     property var    currentValue
     property real   topRadius:    0
@@ -50,6 +52,11 @@ Item {
         return -1
     }
     readonly property string _activeLabel: _activeIndex >= 0 ? model[_activeIndex].label : ""
+    readonly property string _activeFont: {
+        if (_activeIndex < 0) return Settings.font
+        const f = model[_activeIndex].fontFamily
+        return (f !== undefined && f !== null && String(f).length > 0) ? String(f) : Settings.font
+    }
 
     width:  parent ? parent.width : 0
     height: 44 + _options.height
@@ -69,8 +76,8 @@ Item {
     Keys.onDownPressed: event => { root._setOpen(true); event.accepted = true }
     Keys.onUpPressed: event => { root._setOpen(true); event.accepted = true }
 
-    HoverHandler { id: _hov; cursorShape: Qt.PointingHandCursor }
-    TapHandler   { onTapped: root._toggleOpen() }
+    HoverHandler { id: _hov; enabled: root.enabled; cursorShape: root.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor }
+    TapHandler   { enabled: root.enabled; onTapped: root._toggleOpen() }
 
     RowHoverBg {
         width:  parent.width
@@ -78,7 +85,7 @@ Item {
         topRadius:    root.topRadius
         bottomRadius: root._open ? 0 : root.bottomRadius
         cardInset:    root.cardInset
-        active:       _hov.hovered || root.activeFocus
+        active:       (_hov.hovered || root.activeFocus) && root.enabled
         fillOpacity:  root.activeFocus ? 0.13 : 0.08
     }
 
@@ -101,16 +108,25 @@ Item {
         anchors.right:  _chevronSlot.left; anchors.rightMargin: 10
         height: 44
         Text {
+            id: _label
             anchors.left:           parent.left
             anchors.verticalCenter: parent.verticalCenter
             text:       root.label
             textFormat: Text.PlainText
             elide:      Text.ElideRight
-            width:      Math.min(implicitWidth, parent.width)
+            width:      Math.min(implicitWidth, Math.max(18, parent.width - (_badge.visible ? _badge.width + 7 : 0)))
             color:      Theme.withAlpha(Theme.text, 0.85)
             font.family:    Settings.font
             font.pixelSize: Settings.fontSize
             renderType:     Text.NativeRendering
+        }
+        SettingsBadge {
+            id: _badge
+            anchors.left: _label.right
+            anchors.leftMargin: 7
+            anchors.verticalCenter: _label.verticalCenter
+            text: root.badge
+            kind: root.badgeKind
         }
     }
     // Right slot: current value label + chevron
@@ -146,7 +162,7 @@ Item {
             textFormat:     Text.PlainText
             elide:          Text.ElideRight
             color:          root._open ? Theme.text : Theme.withAlpha(Theme.subtext, 0.76)
-            font.family:    Settings.font
+            font.family:    root._activeFont
             font.pixelSize: Settings.fontSize - 1
             font.weight:    root._open ? Font.DemiBold : Font.Medium
             renderType:     Text.NativeRendering
@@ -223,6 +239,10 @@ Item {
                     required property var modelData
                     required property int index
                     readonly property bool active: root.currentValue === modelData.value
+                    readonly property string optionFont:
+                        (modelData.fontFamily !== undefined && modelData.fontFamily !== null
+                            && String(modelData.fontFamily).length > 0)
+                        ? String(modelData.fontFamily) : Settings.font
 
                     width:  parent.width
                     height: 38
@@ -296,7 +316,7 @@ Item {
                         color:      _opt.active
                             ? Theme.text
                             : Theme.withAlpha(Theme.text, (_optHov.hovered || _opt.activeFocus) ? 0.92 : 0.72)
-                        font.family:    Settings.font
+                        font.family:    _opt.optionFont
                         font.pixelSize: Settings.fontSize
                         font.weight:    _opt.active ? Font.DemiBold : Font.Normal
                         renderType:     Text.NativeRendering

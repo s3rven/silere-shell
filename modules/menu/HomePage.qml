@@ -19,6 +19,10 @@ PageShell {
     property string _picker: ""   // "" | "wifi" | "bt" | "nightlight" — open inline list
     readonly property int _sectionGap: 12
     readonly property int _itemGap: 8
+    readonly property bool _wifiAvailable: Network.toolAvailable && Network.hasWifiDevice
+    readonly property bool _btAvailable: Bluetooth.available
+    readonly property bool _wifiPickerOpen: _picker === "wifi"
+    readonly property bool _btPickerOpen: _picker === "bt"
 
     function _togglePicker(which: string): void { _picker = (_picker === which ? "" : which) }
 
@@ -313,6 +317,7 @@ PageShell {
                     height: Math.max(56, parent.height * 0.42)
                     active: root.active && MenuState.open && Media.shown && Media.playing
                         && Media.cavaReady && ShellSettings.mediaMenuVisualizer
+                        && !ShellSettings.reduceMotion && !Idle.isIdle
                     opacity: _art.shownAlpha > 0.01 ? 0.16 : 0.26
                     visible: opacity > 0.01
                     sourceComponent: Component {
@@ -613,15 +618,14 @@ PageShell {
         }
         SectionLabel {
             label: "Connectivity"
-            visible: _wifiRow.visible || _btRow.visible
+            visible: root._wifiAvailable || root._btAvailable
         }
         SettingsCard {
-            visible: _wifiRow.visible || _btRow.visible
+            visible: root._wifiAvailable
 
             ControlRow {
                 id: _wifiRow
                 readonly property bool _ethActive: Network.connected && Network.deviceType === "ethernet"
-                visible: Network.toolAvailable && Network.hasWifiDevice
                 active: Network.wifiEnabled
                 glyph: Network.wifiEnabled ? "󰤨" : "󰤭"
                 title: "Wi-Fi"
@@ -631,14 +635,44 @@ PageShell {
                       : "Off"
                 showSwitch: true
                 expandable: Network.wifiEnabled
-                expanded: root._picker === "wifi"
+                expanded: root._wifiPickerOpen
                 onActivated: Network.toggleWifi()
                 onExpandToggled: root._togglePicker("wifi")
             }
+        }
+
+        Item {
+            width: 1
+            height: root._wifiPickerOpen ? root._itemGap : 0
+            Behavior on height { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+        }
+        CollapsibleSection {
+            width: parent.width
+            expanded: root._wifiPickerOpen
+            Loader {
+                width: parent.width
+                active: root._wifiPickerOpen || parent.height > 0.5
+                height: item ? item.implicitHeight : 0
+                sourceComponent: Component {
+                    WifiList {
+                        width: parent.width
+                        open: root._wifiPickerOpen
+                    }
+                }
+            }
+        }
+
+        Item {
+            width: 1
+            height: (root._wifiAvailable && root._btAvailable) ? root._itemGap : 0
+            Behavior on height { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+        }
+
+        SettingsCard {
+            visible: root._btAvailable
 
             ControlRow {
                 id: _btRow
-                visible: Bluetooth.available
                 active: Bluetooth.enabled
                 glyph: Bluetooth.enabled ? "󰂯" : "󰂲"
                 title: "Bluetooth"
@@ -649,7 +683,7 @@ PageShell {
                     : ""
                 showSwitch: true
                 expandable: Bluetooth.enabled
-                expanded: root._picker === "bt"
+                expanded: root._btPickerOpen
                 onActivated: Bluetooth.toggle()
                 onExpandToggled: root._togglePicker("bt")
             }
@@ -657,35 +691,21 @@ PageShell {
 
         Item {
             width: 1
-            height: (root._picker === "wifi" || root._picker === "bt") ? root._itemGap : 0
+            height: root._btPickerOpen ? root._itemGap : 0
             Behavior on height { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
         }
+
         CollapsibleSection {
             width: parent.width
-            expanded: root._picker === "wifi"
+            expanded: root._btPickerOpen
             Loader {
                 width: parent.width
-                active: root._picker === "wifi"
-                height: item ? item.implicitHeight : 0
-                sourceComponent: Component {
-                    WifiList {
-                        width: parent.width
-                        open: true
-                    }
-                }
-            }
-        }
-        CollapsibleSection {
-            width: parent.width
-            expanded: root._picker === "bt"
-            Loader {
-                width: parent.width
-                active: root._picker === "bt"
+                active: root._btPickerOpen || parent.height > 0.5
                 height: item ? item.implicitHeight : 0
                 sourceComponent: Component {
                     BluetoothList {
                         width: parent.width
-                        open: true
+                        open: root._btPickerOpen
                     }
                 }
             }

@@ -9,6 +9,8 @@ Item {
 
     property string glyph: ""
     property string label: ""
+    property string badge: ""
+    property string badgeKind: badge
     property var    model: []
     property var    currentValue
     property color  accentColor: Theme.accent
@@ -64,6 +66,7 @@ Item {
         y: root._stacked ? 10 : (root.height - height) / 2
         width: root._stacked ? root.width - 26 : Math.max(0, _segContainer.x - x - 10)
         implicitWidth: (root.glyph.length > 0 ? 28 : 0) + _label.implicitWidth
+            + (_rowBadge.visible ? _rowBadge.width + 7 : 0)
         implicitHeight: Math.max(_glyph.implicitHeight, _label.implicitHeight)
         height: Math.max(_glyph.implicitHeight, _label.implicitHeight)
         clip: true
@@ -85,8 +88,9 @@ Item {
             id: _label
             anchors.left:           _glyph.right
             anchors.leftMargin:     root.glyph.length > 0 ? 10 : 0
-            anchors.right:          parent.right
             anchors.verticalCenter: parent.verticalCenter
+            width: Math.min(implicitWidth, Math.max(18, parent.width - anchors.leftMargin - _glyph.width
+                - (_rowBadge.visible ? _rowBadge.width + 7 : 0)))
             text:           root.label
             textFormat:     Text.PlainText
             elide:          Text.ElideRight
@@ -94,6 +98,14 @@ Item {
             font.family:    Settings.font
             font.pixelSize: Settings.fontSize
             renderType:     Text.NativeRendering
+        }
+        SettingsBadge {
+            id: _rowBadge
+            anchors.left: _label.right
+            anchors.leftMargin: 7
+            anchors.verticalCenter: _label.verticalCenter
+            text: root.badge
+            kind: root.badgeKind
         }
     }
 
@@ -194,6 +206,8 @@ Item {
                         ? String(modelData.glyph) : ""
                     readonly property string segBadge: (modelData.badge !== undefined && modelData.badge !== null)
                         ? String(modelData.badge) : ""
+                    readonly property string segBadgeKind: (modelData.badgeKind !== undefined && modelData.badgeKind !== null)
+                        ? String(modelData.badgeKind) : _seg.segBadge
                     readonly property bool segHasSwatch: root.liveSwatches[modelData.value] !== undefined
                         || (modelData.color !== undefined && modelData.color !== null && String(modelData.color).length > 0)
                     readonly property color segSwatchColor: {
@@ -312,7 +326,7 @@ Item {
                                 ? Math.min(implicitWidth, Math.max(18, _segContainer._fullCellW - 18
                                     - (_seg.segGlyph.length > 0 ? 18 : 0)
                                     - (_seg.segHasSwatch ? 16 : 0)
-                                    - (_seg.segBadge.length > 0 ? 28 : 0)))
+                                    - (_segBadge.visible ? _segBadge.width + 4 : 0)))
                                 : implicitWidth
                             elide:          Text.ElideRight
                             color:          _seg.active
@@ -324,28 +338,11 @@ Item {
                             renderType:     Text.NativeRendering
                             Behavior on color { ColorAnimation { duration: Motion.fast } }
                         }
-                        Rectangle {
+                        SettingsBadge {
+                            id: _segBadge
                             anchors.verticalCenter: parent.verticalCenter
-                            visible: _seg.segBadge.length > 0
-                            width: visible ? _segBadgeText.implicitWidth + 8 : 0
-                            height: visible ? _segBadgeText.implicitHeight + 2 : 0
-                            radius: 3
-                            antialiasing: true
-                            color: Theme.withAlpha(Theme.warning, 0.08)
-                            border.width: 1
-                            border.color: Theme.withAlpha(Theme.warning, 0.32)
-
-                            Text {
-                                id: _segBadgeText
-                                anchors.centerIn: parent
-                                text: _seg.segBadge
-                                color: Theme.withAlpha(Theme.warning, 0.85)
-                                font.family: Settings.font
-                                font.pixelSize: Settings.fontSize - 5
-                                font.weight: Font.DemiBold
-                                font.capitalization: Font.AllUppercase
-                                renderType: Text.NativeRendering
-                            }
+                            text: _seg.segBadge
+                            kind: _seg.segBadgeKind
                         }
                     }
                 }

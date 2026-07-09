@@ -15,10 +15,7 @@ Item {
     property bool   available:    true
     property string dependsNote:  ""
     property string badge:        ""   // small tag after the label, e.g. "beta" or "cava"
-    // tag colour by kind: warning for experimental, accent for capability tags
-    readonly property color _badgeColor: badge === "beta" ? Theme.warning
-                                       : badge === "cava" ? Theme.accent
-                                       : Theme.subtext
+    property string badgeKind:    badge
     // matches the card's border width so the hover fill stays inside the stroke, aligned to the card's inner rounded edge
     property real   cardInset:    1
 
@@ -122,32 +119,14 @@ Item {
                 Behavior on color { ColorAnimation { duration: Motion.fast } }
             }
 
-            Rectangle {
+            SettingsBadge {
                 id: _badge
                 // sits flush after the label so the tag reads as part of it, not a stray chip by the toggle
                 anchors.left:           _label.right
                 anchors.leftMargin:     7
                 anchors.verticalCenter: _label.verticalCenter
-                visible: root.badge.length > 0
-                width:  _badgeText.implicitWidth + 9
-                height: _badgeText.implicitHeight + 3
-                radius: 3
-                antialiasing: true
-                color: Theme.withAlpha(root._badgeColor, 0.10)
-                border.width: 1
-                border.color: Theme.withAlpha(root._badgeColor, 0.30)
-                Text {
-                    id: _badgeText
-                    anchors.centerIn: parent
-                    text:           root.badge
-                    color:          Theme.withAlpha(root._badgeColor, 0.9)
-                    font.family:    Settings.font
-                    font.pixelSize: Settings.fontSize - 4
-                    font.weight:    Font.DemiBold
-                    font.capitalization: Font.AllUppercase
-                    font.letterSpacing:  0.4
-                    renderType:     Text.NativeRendering
-                }
+                text: root.badge
+                kind: root.badgeKind
             }
         }
 

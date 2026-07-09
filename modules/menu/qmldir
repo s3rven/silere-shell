@@ -25,6 +25,8 @@ VolumeRow       1.0 VolumeRow.qml
 HintText        1.0 HintText.qml
 RowHoverBg      1.0 RowHoverBg.qml
 RowDividers     1.0 RowDividers.qml
+HueStrip        1.0 HueStrip.qml
+SettingsBadge   1.0 SettingsBadge.qml
 MediaButton     1.0 MediaButton.qml
 RailNavItem     1.0 RailNavItem.qml
 WifiList        1.0 WifiList.qml
