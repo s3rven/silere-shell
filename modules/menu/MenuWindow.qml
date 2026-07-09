@@ -88,29 +88,6 @@ PanelWindow {
         onTriggered: win._ignoreOutsideTap = false
     }
 
-    function commandAvailable(command): bool {
-        if (!command || command.length === 0) return false
-        const tool = String(command[0])
-        if (tool === "hyprlock")  return SystemTools.hasHyprlock
-        if (tool === "systemctl") return SystemTools.hasSystemctl
-        return true
-    }
-
-    function _shq(s): string {
-        return "'" + String(s).replace(/'/g, "'\\''") + "'"
-    }
-
-    // execDetached can't report failures; wrap so a non-zero exit (auth/inhibitor) notifies.
-    function runPower(command, failTitle): void {
-        if (!command || command.length === 0) return
-        if (!SystemTools.hasNotifySend) { Quickshell.execDetached(command); return }
-        const note = "notify-send --urgency=critical --app-name=silere-shell " +
-            _shq(failTitle) + " " + _shq("It may require authorization or be blocked by a running task.")
-        const argv = ["bash", "-c", '"$@" || ' + note, "bash"]
-        for (let i = 0; i < command.length; i++) argv.push(String(command[i]))
-        Quickshell.execDetached(argv)
-    }
-
     Item { id: _fillArea; anchors.fill: parent }
     mask: Region { item: MenuState.open ? _fillArea : null }
 
@@ -132,18 +109,18 @@ PanelWindow {
 
         // Home/Notifications read best compact; Settings needs room for the tree-nav + 4-chip rows
         readonly property int _compactW:  398
-        // icon rail + category nav + a content column wide enough for dense settings rows
         readonly property int _settingsW: 566
-        readonly property int _targetPanelW: activeTab === 1 ? _settingsW : _compactW
+        readonly property bool _railExpanded: activeTab === 1 || powerOpen
+        readonly property int _targetPanelW: _railExpanded ? _settingsW : _compactW
         readonly property int panelW: Math.max(320, Math.min(_targetPanelW,
             win.width > 0 ? win.width - panelMinX * 2 : _targetPanelW))
         // rail expands for Settings: icon strip stays fixed, category nav rides on beside it as one growing surface
         readonly property int railCollapsedW: 44
         readonly property int navW: 168
         readonly property int railExpandedW: railCollapsedW + navW
-        readonly property int railW: activeTab === 1 ? railExpandedW : railCollapsedW
+        readonly property int railW: _railExpanded ? railExpandedW : railCollapsedW
         readonly property int contentW: panelW - railW
-        readonly property int contentPad: activeTab === 1 ? 18 : 12
+        readonly property int contentPad: _railExpanded ? 18 : 12
         readonly property int innerW: contentW - contentPad * 2
         // shared height floor so every tab opens at the same size; taller content grows above it
         readonly property int idealMinH: 360
@@ -221,7 +198,6 @@ PanelWindow {
         onPanelWChanged: if (MenuState.open) _reclamp()
         Component.onCompleted: _place()
 
-        // Pages (e.g. the DND tile's missed-count badge) can ask to jump tabs.
         Connections {
             target: MenuState
             function onTabRequested(index) {
@@ -426,14 +402,13 @@ PanelWindow {
                     color: Theme.menuDivider
                 }
 
-                // Divider between the icon strip and the categories — only while expanded.
                 Rectangle {
                     x: panel.railCollapsedW
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
                     width: 1
                     color: Theme.menuDivider
-                    opacity: panel.activeTab === 1 ? 1 : 0
+                    opacity: panel._railExpanded ? 1 : 0
                     visible: opacity > 0.001
                     Behavior on opacity {
                         enabled: !ShellSettings.reduceMotion
@@ -447,7 +422,7 @@ PanelWindow {
                     width: panel.navW
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
-                    opacity: panel.activeTab === 1 ? 1 : 0
+                    opacity: panel.activeTab === 1 && !panel.powerOpen ? 1 : 0
                     visible: opacity > 0.001
                     enabled: panel.activeTab === 1 && !panel.powerOpen
                     Behavior on opacity {
@@ -461,6 +436,39 @@ PanelWindow {
                         powerOpen: panel.powerOpen
                     }
                 }
+
+                // Same expanded rail surface as Settings, clipped from the bottom so it reveals upward from the power slot.
+                Item {
+                    x: panel.railCollapsedW
+                    width: panel.navW
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: 10
+                    height: panel.powerOpen ? _powerRail.implicitHeight : 0
+                    clip: true
+                    opacity: panel.powerOpen ? 1 : 0
+                    visible: height > 0.5 || opacity > 0.001
+                    enabled: panel.powerOpen
+
+                    Behavior on height {
+                        enabled: !ShellSettings.reduceMotion
+                        NumberAnimation { duration: Motion.ms(170); easing.type: Easing.OutCubic }
+                    }
+                    Behavior on opacity {
+                        enabled: !ShellSettings.reduceMotion
+                        NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
+                    }
+
+                    PowerRailContent {
+                        id: _powerRail
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.leftMargin: 9
+                        anchors.rightMargin: 9
+                        anchors.bottom: parent.bottom
+                        active: panel.powerOpen
+                    }
+                }
+
             }
 
             // nav icons. rail order is visual only; tab index stays page-bound (0 Home / 1 Settings / 2 Notifications) so loaders and jump-to-tab keep working
@@ -535,6 +543,7 @@ PanelWindow {
                 anchors.left: parent.left
                 width: panel.railCollapsedW
                 height: 1 + 10 + 34
+                z: 9
 
                 Rectangle {
                     id: _railDivider
@@ -592,15 +601,8 @@ PanelWindow {
             height: panel.height
 
             TapHandler {
-                id: _powerDismiss
                 enabled: panel.powerOpen
-                onTapped: {
-                    const p = _powerDismiss.point.position
-                    if (p.x < powerStrip.x || p.x > powerStrip.x + powerStrip.width ||
-                        p.y < powerStrip.y || p.y > powerStrip.y + powerStrip.height) {
-                        panel.powerOpen = false
-                    }
-                }
+                onTapped: panel.powerOpen = false
             }
 
             Flickable {
@@ -680,152 +682,6 @@ PanelWindow {
                 list: contentFlick
                 visible: panel.activeTab !== 2 && contentFlick.contentHeight > contentFlick.height + 1
                 z: 4
-            }
-
-            // Dims the content so the power options read as a focused layer.
-            Rectangle {
-                anchors.fill: parent
-                color: Theme.background
-                opacity: panel.powerOpen ? 0.4 : 0.0
-                visible: opacity > 0.001
-                z: 4
-                Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-            }
-
-            // ── Power menu ──────────────────────────────────────────────
-            Item {
-                id: powerStrip
-                readonly property int _pad:  8
-                readonly property int _gap:  8
-                readonly property int _tileH: 56
-                readonly property int _tileW: _tileH
-                readonly property int _rowW: _tileW * 4 + _gap * 3
-                // recessed a step below menuPane; theme-derived so matugen/black tones follow
-                readonly property color _surface: Theme.mix(Theme.background, Theme.text, 0.010)
-                readonly property color _surfaceLine: Theme.menuCardBorder
-                width: _rowW + _pad * 2
-                x: Math.round((parent.width - width) / 2)
-                height: _pad * 2 + _tileH
-                y: panel.powerOpen
-                    ? contentPane.height - height - 12
-                    : contentPane.height - height - 4
-                opacity: panel.powerOpen ? 1.0 : 0.0
-                visible: opacity > 0.001
-                z: 5
-
-                // focus held on the strip on open (no ring on mouse-open); an arrow enters the first tile, then KeyNavigation walks the row
-                function _focusFirstTile(): void {
-                    if (_powLock.enabled)      _powLock.forceActiveFocus()
-                    else if (_powSusp.enabled) _powSusp.forceActiveFocus()
-                    else if (_powReb.enabled)  _powReb.forceActiveFocus()
-                    else if (_powOff.enabled)  _powOff.forceActiveFocus()
-                }
-                Keys.onDownPressed:  e => { powerStrip._focusFirstTile(); e.accepted = true }
-                Keys.onUpPressed:    e => { powerStrip._focusFirstTile(); e.accepted = true }
-                Keys.onRightPressed: e => { powerStrip._focusFirstTile(); e.accepted = true }
-                Keys.onLeftPressed:  e => { powerStrip._focusFirstTile(); e.accepted = true }
-
-                Behavior on y       { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-                Behavior on opacity { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-
-                Rectangle {
-                    anchors.fill: parent
-                    radius: 16
-                    antialiasing: true
-                    color: powerStrip._surface
-                    border.width: 1
-                    border.color: powerStrip._surfaceLine
-
-                    Rectangle {
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.top: parent.top
-                        anchors.margins: 1
-                        height: Math.round(parent.height * 0.45)
-                        radius: parent.radius - 1
-                        antialiasing: true
-                        gradient: Gradient {
-                            GradientStop { position: 0.0; color: Theme.withAlpha(Theme.text, 0.028) }
-                            GradientStop { position: 1.0; color: "transparent" }
-                        }
-                    }
-
-                    Row {
-                        id: _powerRow
-                        x: Math.round((parent.width - powerStrip._rowW) / 2)
-                        y: powerStrip._pad
-                        width: powerStrip._rowW
-                        height: powerStrip._tileH
-                        spacing: powerStrip._gap
-
-                        PowerAction {
-                            id: _powLock
-                            width: powerStrip._tileW
-                            height: powerStrip._tileH
-                            label: "Lock"
-                            enabled: win.commandAvailable(Settings.lockCommand)
-                            glyph: "󰍁"
-                            glyphOffsetY: 1
-                            KeyNavigation.right: _powSusp
-                            onTriggered: { MenuState.close(); Quickshell.execDetached(Settings.lockCommand) }
-                        }
-
-                        PowerAction {
-                            id: _powSusp
-                            width: powerStrip._tileW
-                            height: powerStrip._tileH
-                            label: "Sleep"
-                            enabled: win.commandAvailable(Settings.suspendCommand)
-                            glyph: "󰒲"
-                            glyphOffsetX: -1
-                            glyphOffsetY: 1
-                            KeyNavigation.left: _powLock
-                            KeyNavigation.right: _powReb
-                            onTriggered: { MenuState.close(); win.runPower(Settings.suspendCommand, "Suspend failed") }
-                        }
-
-                        PowerAction {
-                            id: _powReb
-                            width: powerStrip._tileW
-                            height: powerStrip._tileH
-                            label: "Reboot"
-                            enabled: win.commandAvailable(Settings.rebootCommand)
-                            glyph: "󰑐"
-                            glyphOffsetY: 1
-                            confirm: true
-                            KeyNavigation.left: _powSusp
-                            KeyNavigation.right: _powOff
-                            onArmedChanged: if (armed) _powOff.disarm()
-                            onTriggered: { MenuState.close(); win.runPower(Settings.rebootCommand, "Reboot failed") }
-                        }
-
-                        PowerAction {
-                            id: _powOff
-                            width: powerStrip._tileW
-                            height: powerStrip._tileH
-                            label: "Power off"
-                            enabled: win.commandAvailable(Settings.poweroffCommand)
-                            glyph: "󰐥"
-                            glyphOffsetY: 1
-                            confirm: true
-                            KeyNavigation.left: _powReb
-                            onArmedChanged: if (armed) _powReb.disarm()
-                            onTriggered: { MenuState.close(); win.runPower(Settings.poweroffCommand, "Shut down failed") }
-                        }
-                    }
-
-                    Connections {
-                        target: panel
-                        function onPowerOpenChanged() {
-                            if (panel.powerOpen) {
-                                Qt.callLater(function() { powerStrip.forceActiveFocus() })
-                            } else {
-                                _powReb.disarm()
-                                _powOff.disarm()
-                            }
-                        }
-                    }
-                }
             }
         }
 

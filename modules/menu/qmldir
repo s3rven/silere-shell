@@ -3,6 +3,8 @@ HomePage     1.0 HomePage.qml
 RecentPage   1.0 RecentPage.qml
 SettingsPage 1.0 SettingsPage.qml
 SettingsNav  1.0 SettingsNav.qml
+PowerRailContent 1.0 PowerRailContent.qml
+PowerRailRow     1.0 PowerRailRow.qml
 ChoiceChipRow   1.0 ChoiceChipRow.qml
 AccentSwatch    1.0 AccentSwatch.qml
 CollapsibleSection 1.0 CollapsibleSection.qml
