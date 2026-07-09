@@ -18,9 +18,8 @@ Item {
     readonly property int _iconSz: 16
     readonly property int gap:        3
 
-    // gem keeps the full layered look; dot renders one lean circle + functional cues
-    readonly property bool _gemMarker: ShellSettings.wsActiveMarker === "gem"
-    readonly property bool _dotMarker: ShellSettings.wsActiveMarker === "dot"
+    readonly property bool _gemMarker:  ShellSettings.wsActiveMarker === "gem"
+    readonly property bool _dotMarker:  ShellSettings.wsActiveMarker === "dot"
 
     readonly property int effectiveWsCount: Math.max(1, minVisible)
     property int _lastNormalActiveId: 1
@@ -33,8 +32,7 @@ Item {
 
     readonly property HyprlandMonitor monitor:    Hyprland.monitorFor(root.screen)
     readonly property bool monitorReady: monitor !== null && monitor.activeWorkspace !== null
-    // no hide toggle — it's the bar's only workspace-switch affordance, not a status pill;
-    // `show` exists only so BarContent's generic per-slot system can treat it like any other widget.
+    // no hide toggle; `show` exists only so BarContent's per-slot system can treat this like any widget
     readonly property bool show: true
     visible: show
     readonly property int  rawActiveId:  monitor?.activeWorkspace?.id ?? _lastNormalActiveId
@@ -83,8 +81,7 @@ Item {
         return 0
     }
 
-    // per-workspace app icons (wsShowAppIcons only): window class → desktop-entry icon, memoised so each class
-    // resolves once. recomputes only when Hyprland's toplevel list changes, no polling.
+    // class → icon memo; recomputes only on toplevel-list changes, no polling
     property var _iconCache: ({})
     function _iconForClass(cls: string): string {
         const raw = String(cls || "").trim()
@@ -177,7 +174,6 @@ Item {
     }
 
     // wsId → [{icon,count}] for visible apps. reads each toplevel's *live* workspace, not the stale lastIpcObject,
-    // and dedupes repeats of an app into one icon+count. up to 3 distinct apps.
     readonly property var _wsApps: {
         root._wsAppsTick
         const map = {}
@@ -208,7 +204,6 @@ Item {
         return map
     }
 
-    // per-button width: an inactive workspace with app icons grows to fit them; diamond/trail track this
     function _btnW(wsId: int): int {
         if (ShellSettings.wsShowAppIcons && wsId !== activeId) {
             const apps = root.appsFor(wsId)
@@ -217,7 +212,6 @@ Item {
         }
         return btnW
     }
-    // Sum the widths of the buttons before the active one, then centre in it.
     function _diamondX(diamondW: real): real {
         let acc = 0
         const ids = visibleIds
@@ -258,7 +252,6 @@ Item {
     Timer { id: _pagingReset; interval: Motion.fast + Motion.width; onTriggered: root._paging = false }
 
     // directional page flip: the new group slides in from the side being moved toward
-    // (next from the right, previous from the left) so it reads as travel, not a fade-in-place.
     property int  _prevGroupStart: 1
     property int  _pageDir:        1
     property real _pageShift:      0
@@ -373,8 +366,6 @@ Item {
 
     Rectangle {
         id: trailCore
-        // scales with the same ratio as `trail` (height/4 at rest, height/8 at full) so the bright core
-        // stays proportional to its band instead of reading thicker on short hops.
         height: 1.5 + trail._strength * 1.5
         radius: height / 2
         antialiasing: true
@@ -412,7 +403,6 @@ Item {
         property real _specialScale: 1.0
         property real _glint:        -1.15
         property real _trailX:       targetX
-        // Menu-open reveal (0→1, animated) and a sustained breath while it stays open.
         property real _menuOn:    MenuState.open ? 1 : 0
         property real _menuPulse: 0
         Behavior on _menuOn { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(220); easing.type: Easing.OutCubic } }
@@ -420,8 +410,11 @@ Item {
         readonly property color tint: {
             return root.urgent(root.activeId) ? Theme.warning : Theme.accent
         }
+        // animated proxy so _energy stays continuous — every other input already eases, this one would step
+        property real _specialOn: root.inSpecial ? 0.65 : 0
+        Behavior on _specialOn { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
         readonly property real _energy: Math.max(diamond._menuOn * (0.70 + diamond._menuPulse * 0.30),
-                                                  root.inSpecial ? 0.65 : 0,
+                                                  _specialOn,
                                                   (_hoverScale - 1.0) * 4.2,
                                                   (_tapScale   - 1.0) * 2.2,
                                                   (_moveScale  - 1.0) * 3.0)
@@ -429,7 +422,8 @@ Item {
         scale: _hoverScale * _tapScale * _moveScale * _specialScale
         transformOrigin: Item.Center
 
-        // ambient aura: only wakes for hover/menu/special/move, so the active ws keeps a gem feel without turning into a blob
+        // ambient aura: wakes for hover/menu/special/move only, so it renders nothing at idle.
+        // no Behaviors here — _energy's inputs all ease upstream, downstream ones would just restart every frame
         Rectangle {
             anchors.centerIn: parent
             width:  parent.width + 14
@@ -438,33 +432,27 @@ Item {
             rotation: 45
             antialiasing: true
             color: Theme.withAlpha(diamond.tint, 0.34)
-            opacity: 0.06 + diamond._energy * 0.16
+            opacity: diamond._energy * 0.22
             scale: 0.70 + diamond._energy * 0.22
             visible: root._gemMarker && opacity > 0.01
-            // disabled during the breath loop: _energy changes every frame then, so Behaviors would restart 60×/s for nothing
-            Behavior on opacity { enabled: !_breathAnim.running; NumberAnimation { duration: Motion.ms(130); easing.type: Easing.OutCubic } }
-            Behavior on scale   { enabled: !ShellSettings.reduceMotion && !_breathAnim.running; NumberAnimation { duration: Motion.ms(170); easing.type: Easing.OutCubic } }
         }
 
-        // one-shot shockwave when the menu opens: a tint halo radiates out and dissolves so the open reads as an emanation, not a state swap
         Rectangle {
             id: _menuRipple
             anchors.centerIn: parent
             width:  parent.width + 6
             height: width
-            radius: 4
-            rotation: 45
+            radius: root._gemMarker ? 4 : width / 2
+            rotation: root._gemMarker ? 45 : 0
             antialiasing: true
             color: Theme.withAlpha(diamond.tint, 0.5)
             opacity: 0
             scale: 1.0
             transformOrigin: Item.Center
-            visible: root._gemMarker && opacity > 0.01
+            visible: opacity > 0.01
         }
 
-        // Special/scratchpad (super+S): a translucent accent diamond frames the
-        // gem to say "special". Filled layers, not strokes: they stay centred and
-        // crisp on fractional displays where 1px rotated borders look uneven.
+        // special-workspace frame; filled layers not strokes — 1px rotated borders look uneven on fractional displays
         Rectangle {
             anchors.centerIn: parent
             width:  parent.width + 16
@@ -484,8 +472,8 @@ Item {
             anchors.centerIn: parent
             width:  parent.width + 8
             height: width
-            radius: root._dotMarker ? width / 2 : 3
-            rotation: root._dotMarker ? 0 : 45
+            radius: root._gemMarker ? 3 : width / 2
+            rotation: root._gemMarker ? 45 : 0
             antialiasing: true
             color: Theme.withAlpha(diamond.tint, 0.34)
             opacity: root.inSpecial ? 0.96 : 0.0
@@ -496,22 +484,19 @@ Item {
             Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(root.inSpecial ? 190 : 120); easing.type: Easing.OutQuart } }
         }
 
-        // Outer rim, filled behind the body rather than stroked. It gives the gem
-        // a crisp edge on fractional displays and doubles as a subtle menu anchor.
+        // filled rim, not a stroke (crisp on fractional displays); dot/ring reuse it as an energy-only halo
         Rectangle {
             anchors.centerIn: parent
             width:  parent.width + 4
             height: width
-            radius: 3
-            rotation: 45
+            radius: root._gemMarker ? 3 : width / 2
+            rotation: root._gemMarker ? 45 : 0
             antialiasing: true
             color: Theme.withAlpha(diamond.tint, MenuState.open ? 0.50 : 0.30)
-            opacity: 0.55 + diamond._energy * 0.22
-            scale: 1.0 + diamond._energy * 0.035
-            visible: root._gemMarker && opacity > 0.01
+            opacity: root._gemMarker ? 0.55 + diamond._energy * 0.22 : diamond._energy * 0.60
+            scale: 1.0 + diamond._energy * (root._gemMarker ? 0.035 : 0.10)
+            visible: opacity > 0.01
             Behavior on color   { ColorAnimation { duration: Motion.ms(150) } }
-            Behavior on opacity { enabled: !_breathAnim.running; NumberAnimation { duration: Motion.ms(130); easing.type: Easing.OutCubic } }
-            Behavior on scale   { enabled: !ShellSettings.reduceMotion && !_breathAnim.running; NumberAnimation { duration: Motion.ms(150); easing.type: Easing.OutCubic } }
         }
 
         Rectangle {
@@ -528,17 +513,15 @@ Item {
             visible: root._gemMarker
         }
 
-        // body — the gem: solid tint under a gentle gloss; tint kept separate so the urgent→accent swap still colour-animates.
-        // per-style shape: gem = rotated diamond, dot = circle
+        // tint kept separate so the urgent→accent swap still colour-animates
         Rectangle {
             anchors.fill: parent
-            radius: root._dotMarker ? width / 2 : 2
-            rotation: root._dotMarker ? 0 : 45
+            radius: root._gemMarker ? 2 : width / 2
+            rotation: root._gemMarker ? 45 : 0
             antialiasing: true
             color: diamond.tint
             Behavior on color { ColorAnimation { duration: Motion.ms(150) } }
 
-            // soft crown→pavilion sheen for depth: one smooth gradient (no seam/hairline), kept subtle so the gem reads solid
             Rectangle {
                 anchors.fill: parent
                 radius: parent.radius
@@ -550,26 +533,6 @@ Item {
                 }
             }
 
-            Rectangle {
-                anchors.centerIn: parent
-                width:  parent.width - 5
-                height: parent.height - 5
-                radius: 1
-                antialiasing: true
-                visible: root._gemMarker
-                color: Qt.rgba(1, 1, 1, 0.10)
-            }
-            Rectangle {
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.top: parent.top
-                anchors.topMargin: 2
-                width: parent.width - 5
-                height: 2
-                radius: 1
-                antialiasing: true
-                visible: root._gemMarker
-                color: Qt.rgba(1, 1, 1, 0.26)
-            }
             Item {
                 anchors.fill: parent
                 clip: true
@@ -592,19 +555,17 @@ Item {
         }
 
         // menu-open: the whole marker charges rather than punching a dark socket — luminance lifts uniformly
-        // (centred by construction) and breathes while the menu stays open; tracks both styles' shapes.
         Rectangle {
             anchors.fill: parent
-            radius: root._dotMarker ? width / 2 : 2
-            rotation: root._dotMarker ? 0 : 45
+            radius: root._gemMarker ? 2 : width / 2
+            rotation: root._gemMarker ? 45 : 0
             antialiasing: true
             color: Qt.rgba(1, 1, 1, 1)
             opacity: diamond._menuOn * (0.16 + diamond._menuPulse * 0.18)
             visible: opacity > 0.01
         }
 
-        // attention badge: static dot on the crown when notifs were missed under Do-Not-Disturb (popups suppressed,
-        // so the anchor is the only cue). no pulse/border — the menu carries detail.
+        // missed-notification badge under DND — popups are suppressed then, so the anchor is the only cue
         Rectangle {
             readonly property bool _show: Notifications.effectiveDnd && Notifications.missedCount > 0
             anchors.horizontalCenter: parent.horizontalCenter
@@ -623,7 +584,6 @@ Item {
             Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(150); easing.type: Easing.OutCubic } }
         }
 
-        // quick settle-pop entering a special workspace, so the frame's entrance lands with a beat
         SequentialAnimation {
             id: _specialPulse
             NumberAnimation { target: diamond; property: "_specialScale"; to: 1.055; duration: Motion.ms(90);  easing.type: Easing.OutCubic }
@@ -646,11 +606,10 @@ Item {
             function onInSpecialChanged() {
                 if (!root.inSpecial) return
                 _specialPulse.restart()
-                _glintAnim.restart()
+                if (root._gemMarker) _glintAnim.restart()
             }
         }
 
-        // Fixed duration with no bounce: the trail gives movement, the gem lands crisp.
         Behavior on x           { enabled: ShellSettings.workspaceShift && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(190); easing.type: Easing.OutQuart } }
         Behavior on opacity     { NumberAnimation { duration: Motion.ms(150) } }
         Behavior on _hoverScale { NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
@@ -662,7 +621,7 @@ Item {
             if (Math.abs(targetX - x) < 2) return
             if (!ShellSettings.workspaceShift || ShellSettings.reduceMotion) return
             _moveAnim.restart()
-            _glintAnim.restart()
+            if (root._gemMarker) _glintAnim.restart()
         }
 
         SequentialAnimation {
@@ -717,7 +676,6 @@ Item {
                 readonly property bool hovered: _hover.hovered
                 // gated separately from `hovered` so hover scale/color/tint respect the barHoverHighlight setting (default off)
                 readonly property bool _hoverFx: hovered && ShellSettings.barHoverHighlight
-                // app icons on inactive occupied workspaces (active keeps its diamond); empty/active fall back to number/dot
                 readonly property bool _showIcons: ShellSettings.wsShowAppIcons && !active && apps.length > 0
 
                 width:   root._btnW(wsId)
@@ -764,7 +722,7 @@ Item {
                     if (!root.monitorReady) return
                     if (ws.active) {
                         _tapPulse.restart()
-                        if (!ShellSettings.reduceMotion) _glintAnim.restart()
+                        if (!ShellSettings.reduceMotion && root._gemMarker) _glintAnim.restart()
                         root.openAnchorMenu()
                     } else {
                         root.activate(ws.wsId)
@@ -821,19 +779,18 @@ Item {
                             if (!ShellSettings.reduceMotion) _dropPulse.restart()
                             return
                         }
-                        // right-click is the anchor's own gesture: only the active diamond claims it (quick actions
-                        // beneath the gem); inert on inactive workspaces, never a switch.
+                        // right-click belongs to the anchor: quick actions on the active marker, never a switch
                         if (button === Qt.RightButton) {
                             if (ws.active) {
                                 _tapPulse.restart()
-                                if (!ShellSettings.reduceMotion) _glintAnim.restart()
+                                if (!ShellSettings.reduceMotion && root._gemMarker) _glintAnim.restart()
                                 root.openQuickActions()
                             }
                             return
                         }
                         if (ws.active) {
                             _tapPulse.restart()
-                            if (!ShellSettings.reduceMotion) _glintAnim.restart()
+                            if (!ShellSettings.reduceMotion && root._gemMarker) _glintAnim.restart()
                             root.openAnchorMenu()
                         } else {
                             root.activate(ws.wsId)
@@ -861,7 +818,6 @@ Item {
                 property real _dotAlpha: urgent ? 0.95 : occupied ? 0.65 : 0.28
                 Behavior on _dotAlpha { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
 
-                // notification-source pulse: a soft accent/error wash behind the ws when a notif arrives from a window on it
                 property real _notifPulse: 0
                 property bool _notifPulseCritical: false
                 Rectangle {
@@ -941,7 +897,6 @@ Item {
                     NumberAnimation { target: ws; property: "_shakeX"; to: -2.5; duration: Motion.ms(55); easing.type: Easing.OutQuad  }
                     NumberAnimation { target: ws; property: "_shakeX"; to:  2.5; duration: Motion.ms(55); easing.type: Easing.OutQuad  }
                     NumberAnimation { target: ws; property: "_shakeX"; to:  0;   duration: Motion.ms(55); easing.type: Easing.OutCubic }
-                    // Slow opacity pulse, affects both number text and dot
                     NumberAnimation { target: ws; property: "_pulseOpacity"; to: 0.3; duration: Motion.ms(550); easing.type: Easing.InOutSine }
                     NumberAnimation { target: ws; property: "_pulseOpacity"; to: 1.0; duration: Motion.ms(550); easing.type: Easing.InOutSine }
                 }
@@ -954,7 +909,6 @@ Item {
                         ? Math.max(ShellSettings.wsShowNumbers ? 1 : 0, ws._revealAmt)
                           * (ws.active ? 0 : 1) * ws._pulseOpacity * ShellSettings.wsMarkerOpacity
                         : 0
-                    // hover lift matches the dot (1.2) and app-icon (1.08) modes
                     scale:   ws.active ? 0.6 : (ws._hoverFx ? 1.12 : 1)
                     color:   ws.urgent
                         ? Theme.warning
@@ -988,12 +942,10 @@ Item {
                     Behavior on scale { NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
                 }
 
-                // App icons for inactive occupied workspaces (wsShowAppIcons).
                 Row {
                     anchors.centerIn: parent
                     transform: Translate { x: ws._shakeX }
                     spacing: 4
-                    // Fade rather than snap when icons appear/disappear on switch.
                     visible: opacity > 0.01
                     opacity: (ws._showIcons ? 1 : 0) * ws._pulseOpacity
                     Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
@@ -1019,16 +971,13 @@ Item {
                                 id: _iconSrc
                                 anchors.fill: parent
                                 source: appIcon.modelData.icon
-                                // decode at 3× logical: DPR=2 × 1.25× compositor = 2.5×
-                                // effective; 3× ensures no upscale blur on fractional
-                                // displays without wasting memory on normal DPR-2 ones
+                                // 3× logical decode: covers DPR-2 × 1.25 fractional scaling without upscale blur
                                 sourceSize.width:  root._iconSz * 3
                                 sourceSize.height: root._iconSz * 3
                                 fillMode: Image.PreserveAspectFit
                                 asynchronous: true
                                 visible: !parent._fxNeeded
                             }
-                            // dim washes the icon toward accent; hover restores the true icon
                             MultiEffect {
                                 anchors.fill: _iconSrc
                                 source: _iconSrc

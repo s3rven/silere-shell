@@ -7,10 +7,11 @@ Row {
     id: root
     spacing: 0
     // match the pills' edge inset so gaps read even across the bar
-    leftPadding: Metrics.pillPad
-    rightPadding: Metrics.pillPad
+    leftPadding: Metrics.pillPadFor(compact)
+    rightPadding: Metrics.pillPadFor(compact)
 
     property var screen: null   // ShellScreen this bar sits on, for menu placement
+    property bool compact: ShellSettings.barCompact
 
     // time hugs the bar edge on either side: date leads in the right zone, trails in the left
     readonly property bool mirrored: ShellSettings.barWidgetOrderLeftKeys.indexOf("clock") !== -1
@@ -25,6 +26,9 @@ Row {
     readonly property color _cText:  _hov ? Theme.mix(Theme.text,    Theme.accent, 0.30) : Theme.text
     readonly property color _cFaint: _hov ? Theme.mix(Theme.withAlpha(Theme.text, 0.65), Theme.accent, 0.30)
                                           : Theme.withAlpha(Theme.text, 0.65)
+    // seconds tick in accent so the live part of the clock reads apart from the stable digits
+    readonly property color _cSec:   _hov ? Theme.mix(Theme.accent, Theme.text, 0.22)
+                                          : Theme.withAlpha(Theme.accent, 0.82)
 
     HoverHandler { id: _hover; cursorShape: Qt.PointingHandCursor }
 
@@ -48,7 +52,7 @@ Row {
         id: _dateSectionClip
         anchors.verticalCenter: parent.verticalCenter
         height:  _dateRow.implicitHeight
-        width:   ShellSettings.clockShowDate ? _dateRow.implicitWidth + (ShellSettings.barCompact ? 4 : 8) : 0
+        width:   ShellSettings.clockShowDate ? _dateRow.implicitWidth + Metrics.clockDateGapFor(root.compact) : 0
         opacity: ShellSettings.clockShowDate ? 1.0 : 0.0
         visible: ShellSettings.clockShowDate || opacity > 0.001
         clip:    true
@@ -66,7 +70,7 @@ Row {
             CollapsingText {
                 text:     DateTime.cachedDayName
                 color:    root._cSub
-                expanded: !ShellSettings.compactDate && !ShellSettings.barCompact
+                expanded: !ShellSettings.compactDate && !root.compact
             }
             RollingText {
                 text:  DateTime.cachedDateCore
@@ -90,7 +94,7 @@ Row {
         }
         CollapsingText {
             text:     DateTime.cachedSeconds
-            color:    root._cFaint
+            color:    root._cSec
             expanded: ShellSettings.showSeconds
             reserveText: ":00"   // constant box; ticking digits can't shift the bar
         }
