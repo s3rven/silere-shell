@@ -5,16 +5,19 @@ import "../../config"
 import "../../services"
 
 // Dashboard sun-path: bell arc with the sun's current position + sunrise/sunset.
+// `flat` drops the card chrome for use inside another card (night light dropdown).
 Rectangle {
     id: root
+
+    property bool flat: false
 
     width:  parent ? parent.width : 0
     implicitHeight: 132
     height: implicitHeight
-    radius: 12
-    antialiasing: true
-    color: Theme.mix(Theme.surface, Theme.subtext, 0.06)
-    border.width: 1
+    radius: flat ? 0 : 12
+    antialiasing: !flat
+    color: flat ? "transparent" : Theme.mix(Theme.surface, Theme.subtext, 0.06)
+    border.width: flat ? 0 : 1
     border.color: Theme.menuCardBorder
 
     readonly property bool _isDay: NightLight.isDaytime
@@ -104,7 +107,8 @@ Rectangle {
         readonly property color moonArcColor: Theme.withAlpha(Theme.subtext, 0.50)
         readonly property color moonDisc:     Theme.withAlpha(Theme.text, 0.88)
         readonly property color moonGlow:     Theme.withAlpha(Theme.subtext, 0.20)
-        readonly property color cardColor:    root.color
+        // crescent carve must match whatever is actually behind the moon disc
+        readonly property color cardColor:    root.flat ? Theme.menuCard : root.color
         readonly property bool  isDay:        NightLight.isDaytime
         readonly property real  nightProg:    NightLight.nightProgress
         onNightProgChanged: if (!isDay && root.shown && MenuState.open) requestPaint()

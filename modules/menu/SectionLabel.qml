@@ -9,6 +9,7 @@ Item {
 
     property string label: ""
     property bool   first: false
+    property bool   showRule: true
 
     readonly property int _topGap: first ? 2 : Theme.gapSection
     readonly property int _botGap: 6
@@ -47,6 +48,7 @@ Item {
     }
 
     Rectangle {
+        visible:              root.showRule
         anchors.left:           _text.right
         anchors.leftMargin:     10
         anchors.right:          parent.right

@@ -13,7 +13,11 @@ Singleton {
     property string mediaVisualizerPreset: "balanced" // "eco" | "balanced" | "smooth"
     property string mediaVisualizerStyle:  "wave"     // "wave" | "bars" | "pulse"
     property real   mediaVisualizerIntensity: 1.0
+    property string mediaVisualizerPosition: "media"  // "media" | "center"
+    property real   mediaVisualizerCenterWidth: 0.68  // fraction of the free center span
+    property real   mediaVisualizerCenterOffset: 0.0  // -1 left, 0 centered, 1 right inside the free center span
     property bool   mediaVisualizerPauseFullscreen: true
+    property bool   mediaMenuVisualizer: true     // pulse layer on the menu's media card (needs mediaProgress)
     property bool   workspaceShift:      true
     property bool   neutralTheme:        true
     property bool   neutralAccentAuto:   false
@@ -51,7 +55,10 @@ Singleton {
     property bool   osdBarIntegrated: false  // β: show OSD inline in the bar center instead of a floating pill
     property bool   osdMatchBar:      true   // floating OSD pill adopts the bar's height + corner radius
     property bool   reduceMotion:        false
+    property bool   highContrast:        false
+    property real   outlineStrength:     1.0     // scales border/divider contrast across shell surfaces
     property real   uiScale:             1.0     // shell font scale, 0.8–1.15
+    property string fontFamily:          ""      // "" = JetBrainsMono Nerd Font; picker offers installed Nerd families
 
     property bool   notifPopupEnabled:   true
     property bool   notifFullscreenSilence: false  // archive popups while a window is fullscreen
@@ -83,6 +90,7 @@ Singleton {
     property real   dotOpacity:          0.35
     property string dotStyle:            "·"       // "·" | "•" | "◦" | "|" | "slash" | "line" | "none"
     property int    barSpacing:          11        // gap between bar widgets / separators
+    property bool   barAutoCompact:      true      // automatically tighten separators when the bar gets crowded
     property bool   barCompact:          false     // β: fewer separators, tighter gaps
     property bool   barHoverHighlight:   false     // soft capsule behind a bar widget while pointed at
     property int    barHeight:           36
@@ -221,7 +229,11 @@ Singleton {
         { k: "mediaVisualizerPreset", t: "enum", vals: ["eco", "balanced", "smooth"] },
         { k: "mediaVisualizerStyle",  t: "enum", vals: ["wave", "bars", "pulse"] },
         { k: "mediaVisualizerIntensity", t: "real", min: 0.55, max: 1.65 },
+        { k: "mediaVisualizerPosition", t: "enum", vals: ["media", "center"] },
+        { k: "mediaVisualizerCenterWidth", t: "real", min: 0.25, max: 1.0 },
+        { k: "mediaVisualizerCenterOffset", t: "real", min: -1.0, max: 1.0 },
         { k: "mediaVisualizerPauseFullscreen", t: "bool" },
+        { k: "mediaMenuVisualizer", t: "bool" },
         { k: "workspaceShift",      t: "bool" },
         { k: "neutralTheme",        t: "bool" },
         { k: "neutralAccentAuto",   t: "bool" },
@@ -258,7 +270,10 @@ Singleton {
         { k: "osdBarIntegrated",    t: "bool" },
         { k: "osdMatchBar",         t: "bool" },
         { k: "reduceMotion",        t: "bool" },
+        { k: "highContrast",        t: "bool" },
+        { k: "outlineStrength",     t: "real", min: 0.5, max: 1.6 },
         { k: "uiScale",             t: "real", min: 0.8, max: 1.15 },
+        { k: "fontFamily",          t: "re",   re: /^[A-Za-z0-9 ._-]*$/ },
         { k: "notifPopupEnabled",   t: "bool" },
         { k: "notifFullscreenSilence", t: "bool" },
         { k: "notifPosition",       t: "enum", vals: ["top-right", "top-left", "top-center"] },
@@ -287,6 +302,7 @@ Singleton {
         { k: "dotOpacity",          t: "real", min: 0.05, max: 1.0 },
         { k: "dotStyle",            t: "enum", vals: ["·", "•", "◦", "|", "slash", "line", "none"] },
         { k: "barSpacing",          t: "int",  min: 4, max: 24 },
+        { k: "barAutoCompact",      t: "bool" },
         { k: "barCompact",          t: "bool" },
         { k: "barHoverHighlight",   t: "bool" },
         { k: "barHeight",           t: "int",  min: 24,   max: 60 },

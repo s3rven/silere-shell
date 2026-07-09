@@ -11,6 +11,7 @@ Rectangle {
 
     default property alias rows: col.data
     property color rowDivider: Theme.menuDivider
+    property bool showBorder: true
 
     width:  parent ? parent.width : 0
     implicitHeight: col.implicitHeight
@@ -19,7 +20,7 @@ Rectangle {
     antialiasing: true
     clip: true
     color: Theme.menuCard
-    border.width: 1
+    border.width: showBorder ? 1 : 0
     border.color: Theme.menuCardBorder
 
     Column {

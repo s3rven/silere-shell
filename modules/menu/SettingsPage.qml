@@ -113,22 +113,6 @@ PageShell {
         }
     }
 
-    readonly property string _underlineBrightness: {
-        const v = ShellSettings.underlineGlow
-            ? ShellSettings.glowStrength : ShellSettings.barLineStrength
-        return v < 0.9 ? "soft" : v > 1.2 ? "bright" : "normal"
-    }
-
-    function _setUnderlineBrightness(level) {
-        const n = level === "soft" ? 0.7 : level === "bright" ? 1.4 : 1.0
-        if (ShellSettings.underlineGlow) {
-            ShellSettings.glowStrength = n
-            ShellSettings.activeGlowStrength = level === "soft" ? 0.65 : level === "bright" ? 1.0 : 0.85
-        } else {
-            ShellSettings.barLineStrength = n
-        }
-    }
-
     // ── Detail pane ────────────────────────────────────────────────────────
     Item {
         id: _detail
@@ -139,7 +123,6 @@ PageShell {
 
         readonly property real _bodyH:
                 root._shownSection === "theme"      ? _secTheme.implicitHeight
-              : root._shownSection === "motion"     ? _secMotion.implicitHeight
               : root._shownSection === "nightlight" ? _secNightLight.implicitHeight
               : root._shownSection === "surface"    ? _secSurface.implicitHeight
               : root._shownSection === "separators" ? _secSeparators.implicitHeight
@@ -155,7 +138,8 @@ PageShell {
               :                                       _secSystem.implicitHeight
 
         property real _slide: 0
-        transform: Translate { y: _detail._slide }
+        // whole pixels only: native-rendered text shimmers on fractional translates
+        transform: Translate { y: Math.round(_detail._slide) }
 
         Connections {
             target: MenuState
@@ -283,8 +267,9 @@ PageShell {
                 CollapsibleSection {
                     expanded: _secTheme._showNeutralContent
 
-                    SectionLabel { label: "ACCENT" }
+                    SectionLabel { label: "ACCENT"; showRule: false }
                     SettingsCard {
+                        showBorder: false
 
                         Item {
                             id: _accentPicker
@@ -416,9 +401,10 @@ PageShell {
                                 Keys.onRightPressed: e => { _hueStrip._nudgeHue(1,  (e.modifiers & Qt.ShiftModifier) ? 5 : 1); e.accepted = true }
 
                                 Rectangle {
+                                    // no resting border: 1px on the rounded strip doubles into flat seams under fractional scaling
                                     anchors.fill: parent; radius: height / 2; antialiasing: true
-                                    border.width: 1
-                                    border.color: _hueStrip.activeFocus ? Theme.withAlpha(Theme.accent, 0.55) : Theme.menuControlLineHot
+                                    border.width: _hueStrip.activeFocus ? 1 : 0
+                                    border.color: Theme.withAlpha(Theme.accent, 0.55)
                                     gradient: Gradient {
                                         orientation: Gradient.Horizontal
                                         GradientStop { position: 0.000; color: _accentPicker._accentForHue(0.000) }
@@ -458,8 +444,9 @@ PageShell {
                         }
                     }
 
-                    SectionLabel { label: "BASE" }
+                    SectionLabel { label: "BASE"; showRule: false }
                     SettingsCard {
+                        showBorder: false
                         ChoiceChipRow {
                             glyph: "◐"; label: "Base tone"
                             currentValue: ShellSettings.baseTone
@@ -513,8 +500,8 @@ PageShell {
 
                                 Rectangle {
                                     anchors.fill: parent; radius: height / 2; antialiasing: true
-                                    border.width: 1
-                                    border.color: _baseStrip.activeFocus ? Theme.withAlpha(Theme.accent, 0.55) : Theme.menuControlLineHot
+                                    border.width: _baseStrip.activeFocus ? 1 : 0
+                                    border.color: Theme.withAlpha(Theme.accent, 0.55)
                                     gradient: Gradient {
                                         orientation: Gradient.Horizontal
                                         GradientStop { position: 0.000; color: _baseHueRow._stripForHue(0.000) }
@@ -566,8 +553,9 @@ PageShell {
                             Column {
                                 width: parent.width
 
-                                SectionLabel { label: "ACCENT" }
+                                SectionLabel { label: "ACCENT"; showRule: false }
                                 SettingsCard {
+                                    showBorder: false
                                     Item {
                                         id: _matuAccentRow
                                         width: parent.width
@@ -616,7 +604,7 @@ PageShell {
                                                     text: "󰔎"
                                                     color: Theme.accent
                                                     font.family: Settings.font
-                                                    font.pixelSize: Settings.fontSize + 2
+                                                    font.pixelSize: Settings.iconSize + 2
                                                     renderType: Text.NativeRendering
                                                     Behavior on color { ColorAnimation { duration: Motion.fast } }
                                                 }
@@ -687,23 +675,17 @@ PageShell {
                         }
                     }
                 }
-            }
 
-            // ── APPEARANCE · Motion ─────────────────────────────────────
-            Column {
-                id: _secMotion
-                width: parent.width
-                spacing: 0
-                visible: root._shownSection === "motion"
-
+                SectionLabel { label: "OUTLINES" }
                 SettingsCard {
-                    ToggleRow {
-                        glyph: "󱖳"; label: "Reduce motion"
-                        checked: ShellSettings.reduceMotion
-                        onToggled: ShellSettings.reduceMotion = !ShellSettings.reduceMotion
+                    SliderRow {
+                        glyph: "▢"; label: "Outline strength"
+                        value: ShellSettings.outlineStrength
+                        min: 0.5; max: 1.6; step: 0.05
+                        displayValue: Math.round(ShellSettings.outlineStrength * 100) + "%"
+                        onChanged: (v) => ShellSettings.outlineStrength = v
                     }
                 }
-
             }
 
             // ── APPEARANCE · Night Light ────────────────────────────────
@@ -776,7 +758,7 @@ PageShell {
                 SettingsCard {
                     ToggleRow {
                         glyph: "󰖲"; label: "Floating bar"
-                        description: "Detached surface with reserved input only over the visible bar"
+                        description: "Detaches the bar from the screen edge"
                         checked: ShellSettings.barFloating
                         onToggled: ShellSettings.barFloating = !ShellSettings.barFloating
                     }
@@ -840,6 +822,12 @@ PageShell {
                         description: "Tighter widget groups with separators only between groups"
                         checked: ShellSettings.barCompact
                         onToggled: ShellSettings.barCompact = !ShellSettings.barCompact
+                    }
+                    ToggleRow {
+                        glyph: "󰁌"; label: "Auto tighten"
+                        description: "Temporarily tightens separators when widgets crowd the title"
+                        checked: ShellSettings.barAutoCompact
+                        onToggled: ShellSettings.barAutoCompact = !ShellSettings.barAutoCompact
                     }
                     SelectRow {
                         glyph: "󰻂"; label: "Separator"
@@ -909,16 +897,22 @@ PageShell {
                             ]
                             onChosen: (v) => root._setUnderlineStyle(v)
                         }
-                        ChoiceChipRow {
+                        SliderRow {
                             glyph: "󰃠"
                             label: ShellSettings.underlineGlow ? "Glow strength" : "Line strength"
-                            currentValue: root._underlineBrightness
-                            model: [
-                                { value: "soft",   label: "Low" },
-                                { value: "normal", label: "Med" },
-                                { value: "bright", label: "High" }
-                            ]
-                            onChosen: (v) => root._setUnderlineBrightness(v)
+                            value: ShellSettings.underlineGlow ? ShellSettings.glowStrength : ShellSettings.barLineStrength
+                            min: 0.5; max: 2.0; step: 0.05
+                            displayValue: Math.round((ShellSettings.underlineGlow
+                                ? ShellSettings.glowStrength : ShellSettings.barLineStrength) * 100) + "%"
+                            onChanged: (v) => {
+                                if (ShellSettings.underlineGlow) {
+                                    ShellSettings.glowStrength = v
+                                    // idle-breath ceiling follows the main strength so low settings stay calm
+                                    ShellSettings.activeGlowStrength = Math.min(1, 0.45 + 0.4 * v)
+                                } else {
+                                    ShellSettings.barLineStrength = v
+                                }
+                            }
                         }
                         CollapsibleSection {
                             expanded: ShellSettings.underlineGlow
@@ -1144,6 +1138,35 @@ PageShell {
                     CollapsibleSection {
                         expanded: ShellSettings.mediaProgress && SystemTools.hasCava
                         ChoiceChipRow {
+                            glyph: "󰝚"; label: "Position"
+                            currentValue: ShellSettings.mediaVisualizerPosition
+                            model: [
+                                { value: "media",  label: "Media" },
+                                { value: "center", label: "Center" }
+                            ]
+                            onChosen: (v) => ShellSettings.mediaVisualizerPosition = v
+                        }
+                        CollapsibleSection {
+                            expanded: ShellSettings.mediaVisualizerPosition === "center"
+                            SliderRow {
+                                glyph: "󰁌"; label: "Center width"
+                                value: ShellSettings.mediaVisualizerCenterWidth
+                                min: 0.25; max: 1.0; step: 0.02
+                                displayValue: Math.round(ShellSettings.mediaVisualizerCenterWidth * 100) + "%"
+                                onChanged: (v) => ShellSettings.mediaVisualizerCenterWidth = v
+                            }
+                            SliderRow {
+                                glyph: "󰹑"; label: "Center offset"
+                                value: ShellSettings.mediaVisualizerCenterOffset
+                                min: -1.0; max: 1.0; step: 0.05
+                                displayValue: Math.abs(ShellSettings.mediaVisualizerCenterOffset) < 0.01
+                                    ? "Center"
+                                    : (ShellSettings.mediaVisualizerCenterOffset < 0 ? "Left " : "Right ")
+                                        + Math.abs(Math.round(ShellSettings.mediaVisualizerCenterOffset * 100)) + "%"
+                                onChanged: (v) => ShellSettings.mediaVisualizerCenterOffset = v
+                            }
+                        }
+                        ChoiceChipRow {
                             glyph: "󰓅"; label: "Preset"
                             currentValue: ShellSettings.mediaVisualizerPreset
                             model: [
@@ -1175,6 +1198,12 @@ PageShell {
                             description: "Stops cava while a fullscreen window is active"
                             checked: ShellSettings.mediaVisualizerPauseFullscreen
                             onToggled: ShellSettings.mediaVisualizerPauseFullscreen = !ShellSettings.mediaVisualizerPauseFullscreen
+                        }
+                        ToggleRow {
+                            glyph: "󰝚"; label: "Menu player pulse"
+                            description: "Faint pulse layer on the menu's media card"
+                            checked: ShellSettings.mediaMenuVisualizer
+                            onToggled: ShellSettings.mediaMenuVisualizer = !ShellSettings.mediaMenuVisualizer
                         }
                     }
                 }
@@ -1332,7 +1361,7 @@ PageShell {
                     // Mode: floating pill vs bar-inline. Drives which sub-options apply.
                     ToggleRow {
                         glyph: "󰀱"; label: "Show in bar"; badge: "beta"
-                        description: "Uses the overlay monitor's bar center instead of the floating OSD pill"
+                        description: "Shows volume and brightness in the bar center instead of a pill"
                         enabled: ShellSettings.osdEnabled
                         checked: ShellSettings.osdBarIntegrated
                         onToggled: ShellSettings.osdBarIntegrated = !ShellSettings.osdBarIntegrated
@@ -1477,7 +1506,26 @@ PageShell {
                 spacing: 0
                 visible: root._shownSection === "system"
 
+                SectionLabel { label: "ACCESSIBILITY"; first: true }
                 SettingsCard {
+                    SelectRow {
+                        glyph: "󰛖"; label: "Font"
+                        currentValue: ShellSettings.fontFamily
+                        model: {
+                            const m = [{ value: "", label: "JetBrainsMono (default)" }]
+                            const fams = FontScan.families
+                            for (let i = 0; i < fams.length; i++) {
+                                const f = fams[i]
+                                if (f === "JetBrainsMono Nerd Font") continue
+                                m.push({ value: f, label: f.replace(/ Nerd Font( Mono)?$/, "") })
+                            }
+                            const cur = ShellSettings.fontFamily
+                            if (cur.length > 0 && m.findIndex(e => e.value === cur) < 0)
+                                m.push({ value: cur, label: cur.replace(/ Nerd Font( Mono)?$/, "") + " (not installed)" })
+                            return m
+                        }
+                        onChosen: (v) => ShellSettings.fontFamily = v
+                    }
                     SelectRow {
                         glyph: "󰍉"; label: "UI scale"
                         currentValue: ShellSettings.uiScale
@@ -1489,6 +1537,18 @@ PageShell {
                             { value: 1.15, label: "115%" }
                         ]
                         onChosen: (v) => ShellSettings.uiScale = v
+                    }
+                    ToggleRow {
+                        glyph: "󰹑"; label: "High contrast"
+                        description: "Raises text, border, and control contrast across shell surfaces"
+                        checked: ShellSettings.highContrast
+                        onToggled: ShellSettings.highContrast = !ShellSettings.highContrast
+                    }
+                    ToggleRow {
+                        glyph: "󱖳"; label: "Reduce motion"
+                        description: "Disables shell animations"
+                        checked: ShellSettings.reduceMotion
+                        onToggled: ShellSettings.reduceMotion = !ShellSettings.reduceMotion
                     }
                 }
 
@@ -1577,7 +1637,7 @@ PageShell {
                                 horizontalAlignment: Text.AlignHCenter
                                 text: "󰦛"
                                 color: _resetRow.armed ? Theme.error : Theme.withAlpha(Theme.subtext, 0.85)
-                                font.family: Settings.font; font.pixelSize: Settings.fontSize + 2
+                                font.family: Settings.font; font.pixelSize: Settings.iconSize + 2
                                 renderType: Text.NativeRendering
                                 Behavior on color { ColorAnimation { duration: Motion.fast } }
                             }

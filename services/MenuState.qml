@@ -16,7 +16,6 @@ Singleton {
     readonly property var settingsTree: [
         { glyph: "󰉦", label: "Appearance", children: [
             { glyph: "󰉦", label: "Theme",       section: "theme"      },
-            { glyph: "󱖲", label: "Motion",      section: "motion"     },
             { glyph: "󰖙", label: "Night Light", section: "nightlight" }
         ]},
         { glyph: "󰕮", label: "Bar", children: [

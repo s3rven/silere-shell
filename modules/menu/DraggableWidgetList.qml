@@ -43,13 +43,27 @@ Item {
         return loc.zone === "left" ? loc.index : _leftCount + loc.index
     }
 
-    function _hasOptions(key: string): bool { return key === "battery" || key === "network" }
+    function _hasOptions(key: string): bool {
+        return key === "battery" || key === "network" || key === "clock" || key === "media"
+    }
 
     function _optionsFor(key: string): var {
         if (key === "battery") return [
             { glyph: "󰂃", label: "Hide when charging or full", setting: "batteryAutoHide",
               available: ShellSettings.barShowBattery && Battery.available,
               note: !Battery.available ? "No battery" : "Battery hidden", nested: false }
+        ]
+        if (key === "clock") {
+            const a = ShellSettings.barShowClock
+            return [
+                { glyph: "󱑂", label: "Seconds", setting: "showSeconds",   available: a, note: "Clock hidden", nested: false },
+                { glyph: "󰃭", label: "Date",    setting: "clockShowDate", available: a, note: "Clock hidden", nested: false },
+                { glyph: "󰔟", label: "12-hour", setting: "clock12h",      available: a, note: "Clock hidden", nested: false }
+            ]
+        }
+        if (key === "media") return [
+            { glyph: "󰐊", label: "Playback helper", setting: "mediaWidgetHelper",
+              available: ShellSettings.barShowMedia, note: "Media hidden", nested: false }
         ]
         if (key === "network") {
             const a = ShellSettings.barShowNetwork && Network.toolAvailable
@@ -129,7 +143,8 @@ Item {
 
     // landing-slot marker: reorders commit live, so the vacated gap under the lifted row is the drop spot
     Rectangle {
-        visible: root._dragSlot >= 0
+        opacity: root._dragSlot >= 0 ? 1 : 0
+        visible: opacity > 0.01
         x: 2; width: root.width - 4
         y: root._yForSlot(root._dragSlot) + 2
         height: root._rowH - 4
@@ -138,6 +153,7 @@ Item {
         color: Theme.withAlpha(Theme.accent, 0.05)
         border.width: 1
         border.color: Theme.withAlpha(Theme.accent, 0.30)
+        Behavior on opacity { NumberAnimation { duration: Motion.fast } }
         Behavior on y { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
     }
 
@@ -162,7 +178,14 @@ Item {
             x: 0
             width:  root.width
             height: root._rowH + (_expanded ? root._expandedExtra : 0)
-            z: _dragging ? 20 : 1
+            // stay above siblings while animating home, or the released row dives under them mid-settle
+            property bool _settling: false
+            on_DraggingChanged: {
+                if (_dragging) { _settling = false; _settleReset.stop() }
+                else           { _settling = true;  _settleReset.restart() }
+            }
+            Timer { id: _settleReset; interval: Motion.fast + 60; onTriggered: _row._settling = false }
+            z: _dragging ? 20 : (_settling ? 15 : 1)
             y: _dragging ? root._dragY : root._yForSlot(_combinedSlot)
             Behavior on y { enabled: !_row._dragging && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
             scale: _dragging ? 1.02 : 1.0
@@ -222,9 +245,11 @@ Item {
                     radius: 8
                     antialiasing: true
                     color: "transparent"
-                    visible: _row._dragging
+                    opacity: _row._dragging ? 1 : 0
+                    visible: opacity > 0.01
                     border.width: 1
                     border.color: Theme.withAlpha(Theme.accent, 0.35)
+                    Behavior on opacity { NumberAnimation { duration: Motion.fast } }
                 }
 
                 Item {

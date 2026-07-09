@@ -187,7 +187,8 @@ Item {
                                 required property var modelData
                                 readonly property bool   active: MenuState.settingsSection === modelData.section
                                 readonly property string glyph:  modelData.glyph ?? ""
-                                property real _shift: active ? 0.5 : (_leafHover.hovered ? 0.5 : 0.0)
+                                // whole pixels only: a fractional shift blurs native-rendered text
+                                property real _shift: (active || _leafHover.hovered) ? 1 : 0
 
                                 readonly property color _fg: active
                                     ? Theme.text
@@ -236,7 +237,7 @@ Item {
                                     font.family:    Settings.font
                                     font.pixelSize: Settings.fontSize
                                     renderType:     Text.NativeRendering
-                                    transform: Translate { x: _leaf._shift }
+                                    transform: Translate { x: Math.round(_leaf._shift) }
                                     Behavior on color { ColorAnimation { duration: Motion.fast } }
                                 }
 
@@ -253,7 +254,7 @@ Item {
                                     font.pixelSize: Settings.fontSize
                                     font.weight:    _leaf.active ? Font.DemiBold : Font.Normal
                                     renderType:     Text.NativeRendering
-                                    transform: Translate { x: _leaf._shift }
+                                    transform: Translate { x: Math.round(_leaf._shift) }
                                     Behavior on color { ColorAnimation { duration: Motion.fast } }
                                 }
                             }
