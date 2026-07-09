@@ -12,19 +12,35 @@ set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT" || exit 1
 status=0
-fail() { printf 'FAIL: %s\n' "$*"; status=1; }
+seen_section=0
+section() {
+  [ "$seen_section" -eq 0 ] || printf '\n'
+  seen_section=1
+  printf '== %s ==\n' "$1"
+}
+ok() {
+  if [ "$#" -gt 1 ] && [ -n "$2" ]; then printf 'ok   %-15s %s\n' "$1" "$2"
+  else printf 'ok   %s\n' "$1"
+  fi
+}
+skip() {
+  if [ "$#" -gt 1 ] && [ -n "$2" ]; then printf 'skip %-15s %s\n' "$1" "$2"
+  else printf 'skip %s\n' "$1"
+  fi
+}
+fail() { printf 'fail %s\n' "$*" >&2; status=1; }
+script_files=(scripts/*.sh scripts/lib/*.sh)
 
-echo "== merge conflict markers =="
+section "merge conflict markers"
 # grep, not git grep: in CI the container may have no git at checkout time, so
 # the tree is checked out without a .git. This lint is meant to run on a plain tree.
 if grep -rn -I -E '^(<<<<<<< |=======$|>>>>>>> )' --exclude-dir=.git . ; then
   fail "conflict markers found"
 else
-  echo "ok"
+  ok "markers" "none"
 fi
 
-echo
-echo "== required service modules =="
+section "required service modules"
 check_service_module() {
   local service="$1" module="$2"
   if [ ! -f "services/$service.qml" ]; then
@@ -34,7 +50,7 @@ check_service_module() {
   elif ! awk -v name="$service" '$1 == "singleton" && $2 == name && $NF == name ".qml" { found=1 } END { exit !found }' services/qmldir; then
     fail "services/qmldir must package singleton $service"
   else
-    printf 'ok   %-12s %s\n' "$service" "$module"
+    ok "$service" "$module"
   fi
 }
 check_service_module Audio Quickshell.Services.Pipewire
@@ -43,23 +59,20 @@ check_service_module Media Quickshell.Services.Mpris
 check_service_module Notifications Quickshell.Services.Notifications
 check_service_module Bluetooth Quickshell.Bluetooth
 
-echo
-echo "== shell script syntax =="
-for f in scripts/*.sh; do
-  if err=$(bash -n "$f" 2>&1); then printf 'ok   %s\n' "$f"; else fail "syntax error in $f"; printf '%s\n' "$err"; fi
+section "shell script syntax"
+for f in "${script_files[@]}"; do
+  if err=$(bash -n "$f" 2>&1); then ok "$f"; else fail "syntax error in $f"; printf '%s\n' "$err"; fi
 done
 
-echo
-echo "== shellcheck =="
+section "shellcheck"
 if command -v shellcheck >/dev/null 2>&1; then
   # error severity only — real bugs gate the build, style nits don't
-  if shellcheck --severity=error scripts/*.sh; then echo "ok"; else fail "shellcheck reported errors"; fi
+  if shellcheck --severity=error "${script_files[@]}"; then ok "shellcheck"; else fail "shellcheck reported errors"; fi
 else
-  echo "skipped (shellcheck not installed)"
+  skip "shellcheck" "not installed"
 fi
 
-echo
-echo "== qmldir integrity =="
+section "qmldir integrity"
 missing=""
 while IFS= read -r qd; do
   dir="$(dirname "$qd")"
@@ -76,11 +89,10 @@ if [ -n "$missing" ]; then
   fail "qmldir references missing files:"
   for m in $missing; do printf '  %s\n' "$m"; done
 else
-  echo "ok"
+  ok "qmldir" "all referenced files exist"
 fi
 
-echo
-echo "== settings schema coverage =="
+section "settings schema coverage"
 settings="services/ShellSettings.qml"
 if [ -f "$settings" ]; then
     # public (non-underscore) mutable properties — these must all be in _schema
@@ -99,22 +111,24 @@ if [ -f "$settings" ]; then
         echo "$extra" | while read -r m; do printf '  %s\n' "$m"; done
     fi
     if [ -z "$missing" ] && [ -z "$extra" ]; then
-        echo "ok"
+        ok "settings" "properties match _schema"
     else
         :
     fi
 else
-    echo "skipped (ShellSettings.qml not found)"
+    skip "settings" "ShellSettings.qml not found"
 fi
 
-echo
-echo "== portability regressions =="
+section "portability regressions"
 if bash scripts/test-portability.sh; then
-  echo "ok"
+  ok "portability"
 else
   fail "portability regression tests failed"
 fi
 
-echo
-[ "$status" -eq 0 ] && echo "lint passed" || echo "lint failed"
+if [ "$status" -eq 0 ]; then
+  printf '\nlint passed\n'
+else
+  printf '\nlint failed\n'
+fi
 exit "$status"

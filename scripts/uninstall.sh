@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # ── colors ──────────────────────────────────────────────────────────────────────
 if [ -t 1 ]; then
     R='\033[0m' BOLD='\033[1m'
@@ -17,7 +19,6 @@ _info() { printf "  ${CYAN}::${R}  %s\n" "$*"; }
 _section() { printf "\n${BOLD}==> %s${R}\n" "$1"; }
 
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 _ask() {
     local reply

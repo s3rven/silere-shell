@@ -4,29 +4,45 @@ set -eu
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT" || exit 1
 
+trap 'printf "\ninterrupted\n" >&2; exit 130' INT TERM
+
 status=0
 warnings=0
+seen_section=0
 
-ok() { printf "ok   %-15s %s\n" "$1" "$2"; }
-warn() { printf "WARN %-15s %s\n" "$1" "$2"; warnings=$((warnings + 1)); }
-fail() { printf "FAIL %-15s %s\n" "$1" "$2" >&2; status=1; }
+section() {
+  [ "$seen_section" -eq 0 ] || printf '\n'
+  seen_section=1
+  printf '== %s ==\n' "$1"
+}
+ok() { printf 'ok   %-15s %s\n' "$1" "$2"; }
+warn() { printf 'warn %-15s %s\n' "$1" "$2"; warnings=$((warnings + 1)); }
+fail() { printf 'fail %-15s %s\n' "$1" "$2" >&2; status=1; }
 
-echo "== git diff --check =="
-if ! git diff --check; then
+section "git diff --check"
+if git diff --check; then
+  ok "worktree" "no whitespace errors"
+else
   status=1
 fi
-if ! git diff --cached --check; then
+if git diff --cached --check; then
+  ok "index" "no staged whitespace errors"
+else
   status=1
 fi
 
-echo
-echo "== structural lint =="
-if ! bash scripts/ci-lint.sh; then
+section "structural lint"
+lint_log="$(mktemp "${TMPDIR:-/tmp}/silere-ci-lint.XXXXXX.log")"
+if bash scripts/ci-lint.sh >"$lint_log" 2>&1; then
+  ok "ci-lint" "structural checks passed"
+else
   status=1
+  fail "ci-lint" "structural checks failed"
+  cat "$lint_log"
 fi
+rm -f "$lint_log"
 
-echo
-echo "== dependencies =="
+section "dependencies"
 require_tool() {
   local tool="$1" desc="$2"
   if command -v "$tool" >/dev/null 2>&1; then
@@ -242,14 +258,13 @@ if command -v cava >/dev/null 2>&1; then
   ok "visualizer" "cava available; starts while media visualizer is visible"
 fi
 
-echo
-echo "== headless QML probe =="
+section "headless QML probe"
+ok "qml" "checking files; this can take a few seconds"
 if ! bash scripts/test-qml-headless.sh; then
   status=1
 fi
 
-echo
-echo "== quickshell smoke =="
+section "quickshell smoke"
 if command -v qs >/dev/null 2>&1; then
   if [ -z "${WAYLAND_DISPLAY:-}" ]; then
     warn "startup" "no Wayland display; runtime smoke test skipped"
@@ -268,7 +283,7 @@ if command -v qs >/dev/null 2>&1; then
       if [ -n "$smoke_log" ]; then rm -f "$smoke_log"; fi
       return 0
     }
-    trap _smoke_cleanup INT TERM EXIT
+    trap _smoke_cleanup EXIT
 
     if [ ! -f config/MatugenTheme.qml ] && [ -f config/MatugenTheme.default.qml ]; then
       cp config/MatugenTheme.default.qml config/MatugenTheme.qml
@@ -295,10 +310,9 @@ else
   fail "startup" "Quickshell missing; runtime smoke test could not run"
 fi
 
-echo
 if [ "$status" -eq 0 ]; then
-  printf 'checks passed (%d warning(s))\n' "$warnings"
+  printf '\nchecks passed (%d warning(s))\n' "$warnings"
 else
-  printf 'checks failed (%d warning(s))\n' "$warnings"
+  printf '\nchecks failed (%d warning(s))\n' "$warnings"
 fi
 exit "$status"

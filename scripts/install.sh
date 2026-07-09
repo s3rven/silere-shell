@@ -4,6 +4,7 @@ set -euo pipefail
 REPO_URL="https://github.com/s3rven/silere-shell.git"
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 DEFAULT_DIR="$CONFIG_HOME/silere-shell"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # ── colors ──────────────────────────────────────────────────────────────────────
 if [ -t 1 ]; then
@@ -61,7 +62,7 @@ _toml_basic_string() {
     printf '"%s"' "$s"
 }
 
-source "$(dirname -- "${BASH_SOURCE[0]}")/lib/qml-modules.sh"
+source "$SCRIPT_DIR/lib/qml-modules.sh"
 
 # Resolve the Hyprland process that owns this shell session. Prefer an ancestor
 # (Quickshell and terminals are normally descendants of their compositor), then

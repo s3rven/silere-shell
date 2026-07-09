@@ -4,6 +4,11 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+on_interrupt() {
+    exit 130
+}
+trap on_interrupt INT TERM
+
 # qmlcachegen AOT-compiles each file to bytecode, which requires fully
 # resolving every import and type — a thorough type-check with no Wayland
 # display needed. It's part of qt6-declarative, a quickshell dependency, but
@@ -59,7 +64,7 @@ find_qml_import_root() {
 
 QMLCACHEGEN="$(find_qmlcachegen || true)"
 if [ -z "$QMLCACHEGEN" ]; then
-    echo "SKIP: qmlcachegen not found (part of qt6-declarative); headless QML type-check unavailable"
+    echo "SKIP: qmlcachegen not found; headless QML type-check unavailable"
     exit 0
 fi
 QML_IMPORT_ROOT="$(find_qml_import_root || true)"
@@ -74,7 +79,7 @@ cleanup() {
     if $seeded_theme; then rm -f "$ROOT/config/MatugenTheme.qml"; fi
     rm -rf "$tmp"
 }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
 
 if [ ! -f "$ROOT/config/MatugenTheme.qml" ]; then
     if [ ! -f "$ROOT/config/MatugenTheme.default.qml" ]; then
@@ -87,14 +92,21 @@ fi
 
 had_failure=0
 count=0
+printf 'checking QML bytecode'
 while IFS= read -r f; do
     count=$((count + 1))
+    if [ $((count % 20)) -eq 0 ]; then printf '.'; fi
     out="$tmp/$count.qmlc"
-    if ! err="$("$QMLCACHEGEN" --only-bytecode -I "$ROOT" -I "$QML_IMPORT_ROOT" -o "$out" "$f" 2>&1)"; then
-        printf 'FAIL: %s\n%s\n' "${f#"$ROOT"/}" "$err" >&2
+    if err="$("$QMLCACHEGEN" --only-bytecode -I "$ROOT" -I "$QML_IMPORT_ROOT" -o "$out" "$f" 2>&1)"; then
+        :
+    else
+        rc=$?
+        [ "$rc" -eq 130 ] && exit 130
+        printf '\nFAIL: %s\n%s\n' "${f#"$ROOT"/}" "$err" >&2
         had_failure=1
     fi
 done < <(find "$ROOT" -name "*.qml" -not -path "*/.git/*")
+printf '\n'
 
 # qmlcachegen --only-bytecode emits bytecode without erroring on a type left
 # unresolved by a missing import (RectangularShadow with no `import
@@ -105,12 +117,21 @@ QMLLINT="$(find_qmllint || true)"
 if [ -z "$QMLLINT" ]; then
     echo "note: qmllint not found; missing-import check skipped"
 else
+    printf 'checking QML imports'
+    lint_count=0
     while IFS= read -r f; do
-        if ! err="$("$QMLLINT" --import error -I "$ROOT" -I "$QML_IMPORT_ROOT" "$f" 2>&1)"; then
-            printf 'FAIL: %s\n%s\n' "${f#"$ROOT"/}" "$err" >&2
+        lint_count=$((lint_count + 1))
+        if [ $((lint_count % 20)) -eq 0 ]; then printf '.'; fi
+        if err="$("$QMLLINT" --import error -I "$ROOT" -I "$QML_IMPORT_ROOT" "$f" 2>&1)"; then
+            :
+        else
+            rc=$?
+            [ "$rc" -eq 130 ] && exit 130
+            printf '\nFAIL: %s\n%s\n' "${f#"$ROOT"/}" "$err" >&2
             had_failure=1
         fi
     done < <(find "$ROOT" -name "*.qml" -not -path "*/.git/*")
+    printf '\n'
 fi
 
 if [ "$had_failure" -ne 0 ]; then

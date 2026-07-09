@@ -162,6 +162,12 @@ if [ -r "/proc/$pid/environ" ]; then
     fi
 fi
 
-printf 'qs %s | rss %d avg / %d peak MB | pss %s MB | uss %s MB | tree %d avg / %d peak RSS, %s PSS MB | hwm %s MB | cpu %s%% main / %s%% tree over %ss | threads %s + %s helpers | visualizer %s | allocator %s\n' \
-    "$pid" "$rss_avg" "$rss_peak" "$pss" "$uss" "$tree_avg" "$tree_peak" "$tree_pss" \
-    "$vmpeak" "$cpu" "$tree_cpu" "$secs" "$threads" "$helpers" "$visualizer" "$allocator"
+printf '== silere bench ==\n'
+printf 'qs pid:     %s (%ss sample)\n' "$pid" "$secs"
+printf 'main rss:   %d MB avg / %d MB peak\n' "$rss_avg" "$rss_peak"
+printf 'main mem:   PSS %s MB, USS %s MB, HWM %s MB\n' "$pss" "$uss" "$vmpeak"
+printf 'tree rss:   %d MB avg / %d MB peak, PSS %s MB\n' "$tree_avg" "$tree_peak" "$tree_pss"
+printf 'cpu:        %s%% main / %s%% tree\n' "$cpu" "$tree_cpu"
+printf 'processes:  %s threads + %s helpers\n' "$threads" "$helpers"
+printf 'visualizer: %s\n' "$visualizer"
+printf 'allocator:  %s\n' "$allocator"
