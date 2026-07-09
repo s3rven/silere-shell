@@ -199,6 +199,7 @@ Singleton {
         if (ShellSettings.osdKindFilter === "volume"     && kind !== "volume")     return
         if (ShellSettings.osdKindFilter === "brightness" && kind !== "brightness") return
 
+        if (ShellSettings.osdBarIntegrated) Notifications.refreshFullscreenState()
         root.fillColor = Theme.accent
         _applyValues(kind, icon, value, label, muted, Theme.accent)
     }
@@ -257,6 +258,7 @@ Singleton {
 
     property string _lastSinkName: ""
     property bool   _showDeviceName: false
+    property bool   _volumeUpdateQueued: false
 
     Timer {
         id: _deviceNameTimer
@@ -272,22 +274,26 @@ Singleton {
     }
 
     function _updateVolume(): void {
+        _volumeUpdateQueued = false
         const effectiveMuted = Audio.muted || Audio.uiVolume <= 0
         const lbl = effectiveMuted ? "Muted"
             : (root._showDeviceName && Audio.sinkName ? `${Audio.sinkName} · ${Audio.label}` : Audio.label)
         root.show("volume", Audio.icon, Audio.uiVolume, lbl, effectiveMuted)
     }
+    function _queueVolumeUpdate(): void {
+        if (_volumeUpdateQueued) return
+        _volumeUpdateQueued = true
+        Qt.callLater(root._updateVolume)
+    }
 
     Connections {
         target: Audio
-        // a mute toggle changes both muted and uiVolume in one frame; Qt.callLater dedups
-        // identical callbacks within a tick so the two collapse into one show(), not two (second stamped a spurious bump)
-        function onUiVolumeChanged() {
-            Qt.callLater(root._updateVolume)
-        }
-        function onMutedChanged() {
-            Qt.callLater(root._updateVolume)
-        }
+        // A mute/volume step can touch several Audio properties in one frame.
+        // Coalesce them so fullscreen handoff gets one current OSD entry.
+        function onUiVolumeChanged() { root._queueVolumeUpdate() }
+        function onTargetVolumeChanged() { root._queueVolumeUpdate() }
+        function onPendingApplyChanged() { if (Audio.pendingApply) root._queueVolumeUpdate() }
+        function onMutedChanged() { root._queueVolumeUpdate() }
         function onSinkNameChanged() {
             const name = Audio.sinkName
             if (!name || name === root._lastSinkName) return

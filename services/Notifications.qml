@@ -128,6 +128,9 @@ Singleton {
             _fullscreenActive = false
         }
     }
+    function refreshFullscreenState(): void {
+        if (_fullscreenWatchWanted) _fsRefresh.restart()
+    }
     function toggleDnd(): void { dnd = !dnd }
 
     // auto DND across the quiet-hours window; re-evaluates as the hour rolls (bound int, no timer)

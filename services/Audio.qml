@@ -65,18 +65,29 @@ Singleton {
         return node.description || node.nickname || node.name || "Output"
     }
 
+    function _clampVolume(v: real): real {
+        return Math.max(0, Math.min(1.0, v))
+    }
+
+    function _enforceVolumeLimit(): void {
+        if (!ready) return
+        const clamped = _clampVolume(audio.volume)
+        if (Math.abs(audio.volume - clamped) >= 0.005) _writeVolume(clamped)
+    }
+
     function _syncAudio(): void {
         if (!_componentReady) return
         writeThrottle.stop()
         pendingSafety.stop()
         muteSafety.stop()
         pendingApply = false
-        targetVolume = ready ? audio.volume : 0
+        targetVolume = ready ? _clampVolume(audio.volume) : 0
         _pendingMuted = ready ? audio.muted : false
         _desiredMuted = _pendingMuted
         _muteWritePending = false
         _volRetries = 0
         _muteRetries = 0
+        if (ready) Qt.callLater(root._enforceVolumeLimit)
     }
     onAudioChanged: _syncAudio()
     Component.onCompleted: {
@@ -88,10 +99,16 @@ Singleton {
         target: root.audio
         enabled: root.ready
         function onVolumesChanged() {
+            const actual = root.audio.volume
+            const clamped = root._clampVolume(actual)
+            if (Math.abs(actual - clamped) >= 0.005) {
+                root._writeVolume(clamped)
+                return
+            }
             if (root.pendingApply && Math.abs(root.audio.volume - root.targetVolume) < 0.005)
                 root.pendingApply = false
             else if (!root.pendingApply)
-                root.targetVolume = root.audio.volume
+                root.targetVolume = clamped
         }
         function onMutedChanged() {
             if (root._muteWritePending) {
@@ -158,7 +175,7 @@ Singleton {
 
     function bumpBy(delta: real): void {
         if (!ready) return
-        let v = pendingApply ? targetVolume : audio.volume
+        let v = pendingApply ? targetVolume : _clampVolume(audio.volume)
         _writeVolume(v + delta)
     }
 
@@ -169,7 +186,7 @@ Singleton {
     }
 
     function _writeVolume(v: real): void {
-        v = Math.max(0, Math.min(1.0, v))
+        v = _clampVolume(v)
         if (v === targetVolume && pendingApply) return
         targetVolume = v
         pendingApply = true
