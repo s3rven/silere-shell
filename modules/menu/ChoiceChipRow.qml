@@ -14,8 +14,6 @@ Item {
     property var    model: []
     property var    currentValue
     property color  accentColor: Theme.accent
-    // value → color overrides for swatches that track live state; keeps the model array static so delegates don't rebuild per change
-    property var    liveSwatches: ({})
     // Card-edge rounding for the hover fill — set on the first/last row of a card
     // so the fill rounds only where the card itself does (see RowHoverBg).
     property real   topRadius:    0
@@ -208,12 +206,9 @@ Item {
                         ? String(modelData.badge) : ""
                     readonly property string segBadgeKind: (modelData.badgeKind !== undefined && modelData.badgeKind !== null)
                         ? String(modelData.badgeKind) : _seg.segBadge
-                    readonly property bool segHasSwatch: root.liveSwatches[modelData.value] !== undefined
-                        || (modelData.color !== undefined && modelData.color !== null && String(modelData.color).length > 0)
-                    readonly property color segSwatchColor: {
-                        const live = root.liveSwatches[modelData.value]
-                        return live !== undefined ? live : (segHasSwatch ? modelData.color : "transparent")
-                    }
+                    readonly property bool segHasSwatch: modelData.color !== undefined
+                        && modelData.color !== null && String(modelData.color).length > 0
+                    readonly property color segSwatchColor: segHasSwatch ? modelData.color : "transparent"
 
                     // natural content width; the container maxes these to size every segment equally — never shrink below it or text clips
                     readonly property real natW: Math.ceil(_content.implicitWidth) + 18

@@ -8,7 +8,6 @@ PowerRailRow     1.0 PowerRailRow.qml
 ChoiceChipRow   1.0 ChoiceChipRow.qml
 AccentSwatch    1.0 AccentSwatch.qml
 CollapsibleSection 1.0 CollapsibleSection.qml
-PowerAction     1.0 PowerAction.qml
 ControlRow      1.0 ControlRow.qml
 VitalsStrip     1.0 VitalsStrip.qml
 SectionLabel    1.0 SectionLabel.qml
