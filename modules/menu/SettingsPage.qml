@@ -17,9 +17,45 @@ PageShell {
         const s = Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16)
         return s.length < 2 ? "0" + s : s
     }
-
     // lags behind MenuState.settingsSection during the swap; detail pane renders whichever section this points at
     property string _shownSection: MenuState.settingsSection
+
+    readonly property var _sectionComponents: ({
+        theme: _secTheme, nightlight: _secNightLight, surface: _secSurface,
+        separators: _secSeparators, underline: _secUnderline, clock: _secClock,
+        workspaces: _secWorkspaces, media: _secMedia, indicators: _secIndicators,
+        popups: _secPopups, osd: _secOsd, warnings: _secWarnings,
+        updates: _secUpdates, system: _secSystem
+    })
+
+    // theme-section reveal state; lives here (not in the section component) so it survives section switches
+    property bool _themeShowNeutral: false
+    property bool _themeShowMatu:    false
+    Component.onCompleted: {
+        root._themeShowNeutral = ShellSettings.neutralTheme
+        root._themeShowMatu    = !ShellSettings.neutralTheme
+    }
+    Connections {
+        target: ShellSettings
+        function onNeutralThemeChanged() {
+            if (ShellSettings.reduceMotion) {
+                root._themeShowNeutral = ShellSettings.neutralTheme
+                root._themeShowMatu    = !ShellSettings.neutralTheme
+                return
+            }
+            if (ShellSettings.neutralTheme) {
+                _themeOpenMatuTimer.stop()
+                root._themeShowMatu    = false
+                _themeOpenNeutralTimer.restart()
+            } else {
+                _themeOpenNeutralTimer.stop()
+                root._themeShowNeutral = false
+                _themeOpenMatuTimer.restart()
+            }
+        }
+    }
+    Timer { id: _themeOpenNeutralTimer; interval: Motion.fast + 20; onTriggered: root._themeShowNeutral = true }
+    Timer { id: _themeOpenMatuTimer;    interval: Motion.fast + 20; onTriggered: root._themeShowMatu    = true }
 
     // section id → { glyph, label, group }, for the detail-pane page header.
     readonly property var _sectionMeta: {
@@ -121,22 +157,6 @@ PageShell {
 
         readonly property int _bodyGap: 8
 
-        readonly property real _bodyH:
-                root._shownSection === "theme"      ? _secTheme.implicitHeight
-              : root._shownSection === "nightlight" ? _secNightLight.implicitHeight
-              : root._shownSection === "surface"    ? _secSurface.implicitHeight
-              : root._shownSection === "separators" ? _secSeparators.implicitHeight
-              : root._shownSection === "underline"  ? _secUnderline.implicitHeight
-              : root._shownSection === "clock"      ? _secClock.implicitHeight
-              : root._shownSection === "workspaces" ? _secWorkspaces.implicitHeight
-              : root._shownSection === "media"      ? _secMedia.implicitHeight
-              : root._shownSection === "indicators" ? _secIndicators.implicitHeight
-              : root._shownSection === "popups"     ? _secPopups.implicitHeight
-              : root._shownSection === "osd"        ? _secOsd.implicitHeight
-              : root._shownSection === "warnings"   ? _secWarnings.implicitHeight
-              : root._shownSection === "updates"    ? _secUpdates.implicitHeight
-              :                                       _secSystem.implicitHeight
-
         property real _slide: 0
         // whole pixels only: native-rendered text shimmers on fractional translates
         transform: Translate { y: Math.round(_detail._slide) }
@@ -209,79 +229,44 @@ PageShell {
                 }
             }
 
-            Item {
+            // one loader for all sections: only the visible one exists, swapped while the pane sits at opacity 0
+            Loader {
                 id: _detailBody
                 y:      _detailHeader.height + _detail._bodyGap
                 width:  parent.width
-                height: _detail._bodyH
+                sourceComponent: root._sectionComponents[root._shownSection] ?? _secSystem
 
-            // ── APPEARANCE · Theme ──────────────────────────────────────
-            Column {
-                id: _secTheme
-                width: parent.width
-                spacing: 0
-                visible: root._shownSection === "theme"
+                // ── APPEARANCE · Theme ──────────────────────────────────────
+                Component {
+                    id: _secTheme
+                    Column {
+                    width: _detailBody.width
+                    spacing: 0
 
-                property bool _showNeutralContent: false
-                property bool _showMatuContent:    false
-                Component.onCompleted: {
-                    _secTheme._showNeutralContent = ShellSettings.neutralTheme
-                    _secTheme._showMatuContent    = !ShellSettings.neutralTheme
-                }
-                Connections {
-                    target: ShellSettings
-                    function onNeutralThemeChanged() {
-                        if (ShellSettings.reduceMotion) {
-                            _secTheme._showNeutralContent = ShellSettings.neutralTheme
-                            _secTheme._showMatuContent    = !ShellSettings.neutralTheme
-                            return
-                        }
-                        if (ShellSettings.neutralTheme) {
-                            _themeOpenMatuTimer.stop()
-                            _secTheme._showMatuContent    = false
-                            _themeOpenNeutralTimer.interval = Motion.fast + 20
-                            _themeOpenNeutralTimer.restart()
-                        } else {
-                            _themeOpenNeutralTimer.stop()
-                            _secTheme._showNeutralContent = false
-                            _themeOpenMatuTimer.interval = Motion.fast + 20
-                            _themeOpenMatuTimer.restart()
-                        }
-                    }
-                }
-                Timer { id: _themeOpenNeutralTimer; interval: Motion.fast + 20; onTriggered: _secTheme._showNeutralContent = true }
-                Timer { id: _themeOpenMatuTimer;    interval: Motion.fast + 20; onTriggered: _secTheme._showMatuContent    = true }
-
-                SettingsCard {
-                    ChoiceChipRow {
-                        glyph: "󰉦"; label: "Source"
-                        currentValue: ShellSettings.neutralTheme ? "neutral" : "wallpaper"
-                        model: [
-                            { value: "neutral",   label: "Neutral"   },
-                            { value: "wallpaper", label: "Wallpaper" }
-                        ]
-                        onChosen: (v) => ShellSettings.neutralTheme = (v === "neutral")
-                    }
-                }
-
-                CollapsibleSection {
-                    expanded: _secTheme._showNeutralContent
-
-                    SectionLabel { label: "ACCENT"; showRule: false }
                     SettingsCard {
-                        showBorder: false
+                        ChoiceChipRow {
+                            glyph: "󰉦"; label: "Source"
+                            currentValue: ShellSettings.neutralTheme ? "neutral" : "wallpaper"
+                            model: [
+                                { value: "neutral",   label: "Neutral"   },
+                                { value: "wallpaper", label: "Wallpaper" }
+                            ]
+                            onChosen: (v) => ShellSettings.neutralTheme = (v === "neutral")
+                        }
+
+                    CollapsibleSection {
+                        expanded: root._themeShowNeutral
 
                         Item {
                             id: _accentPicker
                             width: parent.width
-                            height: 110
+                            height: 96
 
                             readonly property real _accentL: 0.70
                             function _accentForHS(h, s) {
                                 const c = Qt.hsla(h, s, _accentL, 1.0)
                                 return "#" + root._hex2(c.r) + root._hex2(c.g) + root._hex2(c.b)
                             }
-                            function _accentForHue(h) { return _accentForHS(h, 0.72) }
                             readonly property color _curColor: ShellSettings.neutralAccentAuto ? MatugenTheme.accent : ShellSettings.neutralAccent
                             readonly property real  _curHue:   _curColor.hslHue < 0 ? 0 : _curColor.hslHue
                             readonly property real  _curSat:   isNaN(_curColor.hslSaturation) ? 0.72 : _curColor.hslSaturation
@@ -297,15 +282,11 @@ PageShell {
                             ]
 
                             property string _hoverName: ""
-                            // exact applied accent (matugen's when auto), for a precise readout
-                            readonly property string _curHex: ShellSettings.neutralAccentAuto
-                                ? ("#" + root._hex2(MatugenTheme.accent.r) + root._hex2(MatugenTheme.accent.g) + root._hex2(MatugenTheme.accent.b)).toUpperCase()
-                                : ShellSettings.neutralAccent.toUpperCase()
                             readonly property string _activeName: {
-                                if (ShellSettings.neutralAccentAuto) return "Auto  ·  " + _curHex
+                                if (ShellSettings.neutralAccentAuto) return "Auto"
                                 for (let i = 0; i < _accents.length; i++)
-                                    if (_accents[i].color === ShellSettings.neutralAccent) return _accents[i].name + "  ·  " + _curHex
-                                return _curHex
+                                    if (_accents[i].color === ShellSettings.neutralAccent) return _accents[i].name
+                                return "Custom"
                             }
                             readonly property string _shownName: _hoverName.length > 0 ? _hoverName : _activeName
 
@@ -314,10 +295,23 @@ PageShell {
                             property real cardInset: 1
 
                             Text {
-                                anchors.top:            parent.top; anchors.topMargin: 13
+                                id: _accentTitle
+                                anchors.top:            parent.top; anchors.topMargin: 11
                                 anchors.left:           parent.left; anchors.leftMargin: 12
+                                anchors.right:          _accentReadout.left; anchors.rightMargin: 10
+                                text:           "Accent"
+                                color:          Theme.withAlpha(Theme.text, 0.85)
+                                font.family:    Settings.font
+                                font.pixelSize: Settings.fontSize
+                                renderType:     Text.NativeRendering
+                                elide:          Text.ElideRight
+                            }
+                            Text {
+                                id: _accentReadout
+                                anchors.top:            _accentTitle.top
                                 anchors.right:          parent.right; anchors.rightMargin: 12
-                                horizontalAlignment: Text.AlignRight
+                                width:                  Math.min(176, Math.max(96, parent.width - 110))
+                                horizontalAlignment:    Text.AlignRight
                                 text:           _accentPicker._shownName
                                 color:          Theme.withAlpha(Theme.subtext, 0.7)
                                 font.family:    Settings.font
@@ -329,7 +323,7 @@ PageShell {
                             Row {
                                 id: _swatchRow
                                 anchors.top:        parent.top
-                                anchors.topMargin:  36
+                                anchors.topMargin:  32
                                 anchors.left:       parent.left;  anchors.leftMargin:  12
                                 anchors.right:      parent.right; anchors.rightMargin: 12
                                 height: 32
@@ -379,305 +373,128 @@ PageShell {
                                 }
                             }
 
-                            Item {
+                            HueStrip {
                                 id: _hueStrip
-                                anchors.top:       _swatchRow.bottom; anchors.topMargin: 14
+                                anchors.top:       _swatchRow.bottom; anchors.topMargin: 8
                                 anchors.left:      parent.left;  anchors.leftMargin:  12
                                 anchors.right:     parent.right; anchors.rightMargin: 12
-                                height: 14
-                                opacity: ShellSettings.neutralAccentAuto ? 0.4 : 1.0
-                                Behavior on opacity { NumberAnimation { duration: Motion.fast } }
-
-                                activeFocusOnTab: true
-                                Accessible.role: Accessible.Slider
-                                Accessible.name: "Accent hue"
-                                Accessible.description: _accentPicker._shownName
-                                function _nudgeHue(dir: int, mult: int): void {
-                                    const h = (_accentPicker._curHue + dir * 0.02 * mult + 1) % 1
+                                height: 12
+                                hue: _accentPicker._curHue
+                                saturation: 0.72
+                                lightness: _accentPicker._accentL
+                                thumbColor: _accentPicker._curColor
+                                dimmed: ShellSettings.neutralAccentAuto
+                                accessibleName: "Accent hue"
+                                accessibleDescription: _accentPicker._shownName
+                                onPicked: hue => {
                                     ShellSettings.neutralAccentAuto = false
-                                    ShellSettings.neutralAccent = _accentPicker._accentForHS(h, _accentPicker._curSat)
-                                }
-                                Keys.onLeftPressed:  e => { _hueStrip._nudgeHue(-1, (e.modifiers & Qt.ShiftModifier) ? 5 : 1); e.accepted = true }
-                                Keys.onRightPressed: e => { _hueStrip._nudgeHue(1,  (e.modifiers & Qt.ShiftModifier) ? 5 : 1); e.accepted = true }
-
-                                Rectangle {
-                                    // no resting border: 1px on the rounded strip doubles into flat seams under fractional scaling
-                                    anchors.fill: parent; radius: height / 2; antialiasing: true
-                                    border.width: _hueStrip.activeFocus ? 1 : 0
-                                    border.color: Theme.withAlpha(Theme.accent, 0.55)
-                                    gradient: Gradient {
-                                        orientation: Gradient.Horizontal
-                                        GradientStop { position: 0.000; color: _accentPicker._accentForHue(0.000) }
-                                        GradientStop { position: 0.167; color: _accentPicker._accentForHue(0.167) }
-                                        GradientStop { position: 0.333; color: _accentPicker._accentForHue(0.333) }
-                                        GradientStop { position: 0.500; color: _accentPicker._accentForHue(0.500) }
-                                        GradientStop { position: 0.667; color: _accentPicker._accentForHue(0.667) }
-                                        GradientStop { position: 0.833; color: _accentPicker._accentForHue(0.833) }
-                                        GradientStop { position: 1.000; color: _accentPicker._accentForHue(1.000) }
-                                    }
-                                }
-                                Rectangle {
-                                    id: _hueThumb
-                                    width: 16; height: 16; radius: 8; antialiasing: true
-                                    y: (parent.height - height) / 2
-                                    x: Math.round(_accentPicker._curHue * (_hueStrip.width - width))
-                                    color: _accentPicker._curColor
-                                    border.width: 2; border.color: Theme.text
-                                    scale: _hueMa.pressed ? 1.18 : (_hueMa.containsMouse || _hueStrip.activeFocus ? 1.08 : 1.0); transformOrigin: Item.Center
-                                    Behavior on x     { enabled: !_hueMa.pressed && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-                                    Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
-                                }
-                                MouseArea {
-                                    id: _hueMa
-                                    anchors.fill: parent; anchors.topMargin: -8; anchors.bottomMargin: -8
-                                    cursorShape: Qt.PointingHandCursor; preventStealing: true; hoverEnabled: true
-                                    function _set(mx) {
-                                        const t = _hueThumb.width
-                                        const h = Math.max(0, Math.min(1, (mx - t / 2) / Math.max(1, width - t)))
-                                        ShellSettings.neutralAccentAuto = false
-                                        ShellSettings.neutralAccent = _accentPicker._accentForHS(h, _accentPicker._curSat)
-                                    }
-                                    onPressed:         (m) => _set(m.x)
-                                    onPositionChanged: (m) => { if (pressed) _set(m.x) }
+                                    ShellSettings.neutralAccent = _accentPicker._accentForHS(hue, _accentPicker._curSat)
                                 }
                             }
                         }
-                    }
 
-                    SectionLabel { label: "BASE"; showRule: false }
-                    SettingsCard {
-                        showBorder: false
                         ChoiceChipRow {
-                            glyph: "◐"; label: "Base tone"
+                            glyph: "󰏘"; label: "Base tone"
                             currentValue: ShellSettings.baseTone
                             model: [
                                 { value: "charcoal", label: "Charcoal", color: "#17191d" },
-                                { value: "black",    label: "Black",    color: "#030303" },
-                                { value: "custom",   label: "Custom"   }
+                                { value: "black",    label: "Black",    color: "#030303" }
                             ]
-                            // swatch previews the picked hue at a legible tone — the applied base itself is too dark to tell apart
-                            liveSwatches: ({ custom: _baseHueRow.previewTone })
                             onChosen: (v) => ShellSettings.baseTone = v
                         }
+                    }
+
+                    // neutral off: shell themes from matugen; show the live palette as proof (bundled fallback tones if matugen's absent, called out as such)
+                    CollapsibleSection {
+                        expanded: root._themeShowMatu
 
                         Item {
-                            id: _baseHueRow
+                            id: _matuAccentRow
                             width: parent.width
-                            visible: ShellSettings.baseTone === "custom"
-                            height: visible ? 44 : 0
+                            height: 44
 
+                            readonly property var _roles: [
+                                { key: "primary",   c: MatugenTheme.accent,  n: "Primary"   },
+                                { key: "secondary", c: MatugenTheme.success, n: "Secondary" },
+                                { key: "tertiary",  c: MatugenTheme.warning, n: "Tertiary"  }
+                            ]
                             property real topRadius: 0
                             property real bottomRadius: 0
                             property real cardInset: 1
 
-                            readonly property color _cur: ShellSettings.customBase
-                            readonly property real  _curHue: _cur.hslHue < 0 ? 0 : _cur.hslHue
-                            readonly property color previewTone: _stripForHue(_curHue)
-                            // applied base stays near-black; the strip previews hues brighter so they're tellable apart
-                            function _baseForHue(h) {
-                                const c = Qt.hsla(h, 0.22, 0.048, 1.0)
-                                return "#" + root._hex2(c.r) + root._hex2(c.g) + root._hex2(c.b)
+                            HoverHandler { id: _matuHover; enabled: _matuAccentRow.enabled }
+                            RowHoverBg {
+                                anchors.fill: parent
+                                topRadius: _matuAccentRow.topRadius
+                                bottomRadius: _matuAccentRow.bottomRadius
+                                cardInset: _matuAccentRow.cardInset
+                                active: _matuHover.hovered && _matuAccentRow.enabled
+                                fillOpacity: 0.08
                             }
-                            function _stripForHue(h) { return Qt.hsla(h, 0.30, 0.30, 1.0) }
 
-                            Item {
-                                id: _baseStrip
+                            Text {
+                                id: _matuGlyph
+                                anchors.left: parent.left
+                                anchors.leftMargin: 14
                                 anchors.verticalCenter: parent.verticalCenter
-                                anchors.left:  parent.left;  anchors.leftMargin:  12
-                                anchors.right: parent.right; anchors.rightMargin: 12
-                                height: 14
-
-                                activeFocusOnTab: true
-                                Accessible.role: Accessible.Slider
-                                Accessible.name: "Base hue"
-                                Accessible.description: ShellSettings.customBase
-                                function _nudgeHue(dir: int, mult: int): void {
-                                    const h = (_baseHueRow._curHue + dir * 0.02 * mult + 1) % 1
-                                    ShellSettings.customBase = _baseHueRow._baseForHue(h)
-                                }
-                                Keys.onLeftPressed:  e => { _baseStrip._nudgeHue(-1, (e.modifiers & Qt.ShiftModifier) ? 5 : 1); e.accepted = true }
-                                Keys.onRightPressed: e => { _baseStrip._nudgeHue(1,  (e.modifiers & Qt.ShiftModifier) ? 5 : 1); e.accepted = true }
-
-                                Rectangle {
-                                    anchors.fill: parent; radius: height / 2; antialiasing: true
-                                    border.width: _baseStrip.activeFocus ? 1 : 0
-                                    border.color: Theme.withAlpha(Theme.accent, 0.55)
-                                    gradient: Gradient {
-                                        orientation: Gradient.Horizontal
-                                        GradientStop { position: 0.000; color: _baseHueRow._stripForHue(0.000) }
-                                        GradientStop { position: 0.167; color: _baseHueRow._stripForHue(0.167) }
-                                        GradientStop { position: 0.333; color: _baseHueRow._stripForHue(0.333) }
-                                        GradientStop { position: 0.500; color: _baseHueRow._stripForHue(0.500) }
-                                        GradientStop { position: 0.667; color: _baseHueRow._stripForHue(0.667) }
-                                        GradientStop { position: 0.833; color: _baseHueRow._stripForHue(0.833) }
-                                        GradientStop { position: 1.000; color: _baseHueRow._stripForHue(1.000) }
-                                    }
-                                }
-                                Rectangle {
-                                    id: _baseThumb
-                                    width: 16; height: 16; radius: 8; antialiasing: true
-                                    y: (parent.height - height) / 2
-                                    x: Math.round(_baseHueRow._curHue * (_baseStrip.width - width))
-                                    color: _baseHueRow._cur
-                                    border.width: 2; border.color: Theme.text
-                                    scale: _baseMa.pressed ? 1.18 : (_baseMa.containsMouse || _baseStrip.activeFocus ? 1.08 : 1.0); transformOrigin: Item.Center
-                                    Behavior on x     { enabled: !_baseMa.pressed && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-                                    Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
-                                }
-                                MouseArea {
-                                    id: _baseMa
-                                    anchors.fill: parent; anchors.topMargin: -8; anchors.bottomMargin: -8
-                                    cursorShape: Qt.PointingHandCursor; preventStealing: true; hoverEnabled: true
-                                    function _set(mx) {
-                                        const t = _baseThumb.width
-                                        const h = Math.max(0, Math.min(1, (mx - t / 2) / Math.max(1, width - t)))
-                                        ShellSettings.customBase = _baseHueRow._baseForHue(h)
-                                    }
-                                    onPressed:         (m) => _set(m.x)
-                                    onPositionChanged: (m) => { if (pressed) _set(m.x) }
-                                }
+                                width: 18
+                                horizontalAlignment: Text.AlignHCenter
+                                text: "󰔎"
+                                color: Theme.withAlpha(Theme.subtext, 0.85)
+                                font.family: Settings.font
+                                font.pixelSize: Settings.iconSize + 2
+                                renderType: Text.NativeRendering
                             }
-                        }
-                    }
-                }
 
-                // neutral off: shell themes from matugen; show the live palette as proof (bundled fallback tones if matugen's absent, called out as such)
-                CollapsibleSection {
-                    expanded: _secTheme._showMatuContent
+                            Text {
+                                anchors.left: _matuGlyph.right
+                                anchors.leftMargin: 10
+                                anchors.right: _matuSwatches.left
+                                anchors.rightMargin: 10
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "Accent role"
+                                textFormat: Text.PlainText
+                                elide: Text.ElideRight
+                                color: Theme.withAlpha(Theme.text, 0.85)
+                                font.family: Settings.font
+                                font.pixelSize: Settings.fontSize
+                                renderType: Text.NativeRendering
+                            }
 
-                    Loader {
-                        width: parent.width
-                        active: _secTheme._showMatuContent || parent.height > 0.5
-                        height: item ? item.implicitHeight : 0
-                        sourceComponent: Component {
-                            Column {
-                                width: parent.width
+                            Row {
+                                id: _matuSwatches
+                                anchors.right: parent.right
+                                anchors.rightMargin: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                                height: 32
+                                spacing: 8
 
-                                SectionLabel { label: "ACCENT"; showRule: false }
-                                SettingsCard {
-                                    showBorder: false
-                                    Item {
-                                        id: _matuAccentRow
-                                        width: parent.width
-                                        height: 105
+                                Repeater {
+                                    model: _matuAccentRow._roles
+                                    delegate: AccentSwatch {
+                                        id: _mrSw
+                                        required property var modelData
+                                        chipColor: modelData.c
+                                        name: modelData.n
+                                        active: ShellSettings.matugenAccentRole === modelData.key
+                                        onPicked: ShellSettings.matugenAccentRole = modelData.key
 
-                                        readonly property var _roles: [
-                                            { key: "primary",   c: MatugenTheme.accent,  n: "Primary"   },
-                                            { key: "secondary", c: MatugenTheme.success, n: "Secondary" },
-                                            { key: "tertiary",  c: MatugenTheme.warning, n: "Tertiary"  }
-                                        ]
-                                        property string _hoverName: ""
-                                        function _hex(c) { return ("#" + root._hex2(c.r) + root._hex2(c.g) + root._hex2(c.b)).toUpperCase() }
-                                        function _labelFor(name) {
-                                            for (let i = 0; i < _roles.length; i++)
-                                                if (_roles[i].n === name) return _roles[i].n + "  ·  " + _hex(_roles[i].c)
-                                            return name
-                                        }
-                                        readonly property string _activeName: {
-                                            for (let i = 0; i < _roles.length; i++)
-                                                if (_roles[i].key === ShellSettings.matugenAccentRole) return _labelFor(_roles[i].n)
-                                            return ""
-                                        }
-                                        readonly property string _title: _hoverName.length > 0 ? _labelFor(_hoverName) : _activeName
-
-                                        property real topRadius: 0
-                                        property real bottomRadius: 0
-                                        property real cardInset: 1
-
-                                        Row {
-                                            anchors.top:   parent.top;  anchors.topMargin:  13
-                                            anchors.left:  parent.left; anchors.leftMargin: 12
-                                            anchors.right: parent.right; anchors.rightMargin: 12
-                                            height: 34
-                                            spacing: 10
-
-                                            Rectangle {
-                                                width: 34; height: 34; radius: 10
-                                                antialiasing: true
-                                                color: Theme.mix(Theme.menuControl, Theme.accent, 0.32)
-                                                border.width: 1
-                                                border.color: Theme.withAlpha(Theme.accent, 0.56)
-                                                Behavior on color        { ColorAnimation { duration: Motion.fast } }
-                                                Behavior on border.color { ColorAnimation { duration: Motion.fast } }
-                                                Text {
-                                                    anchors.centerIn: parent
-                                                    text: "󰔎"
-                                                    color: Theme.accent
-                                                    font.family: Settings.font
-                                                    font.pixelSize: Settings.iconSize + 2
-                                                    renderType: Text.NativeRendering
-                                                    Behavior on color { ColorAnimation { duration: Motion.fast } }
-                                                }
-                                            }
-
-                                            Column {
-                                                width: parent.width - 44
-                                                anchors.verticalCenter: parent.verticalCenter
-                                                spacing: 2
-
-                                                Text {
-                                                    width: parent.width
-                                                    text: _matuAccentRow._title
-                                                    color: Theme.text
-                                                    font.family: Settings.font
-                                                    font.pixelSize: Settings.fontSize
-                                                    font.weight: Font.DemiBold
-                                                    renderType: Text.NativeRendering
-                                                    elide: Text.ElideRight
-                                                }
-
-                                                Text {
-                                                    width: parent.width
-                                                    text: SystemTools.hasMatugen ? "Generated from wallpaper" : "Using bundled fallback colors"
-                                                    color: Theme.withAlpha(Theme.subtext, 0.62)
-                                                    font.family: Settings.font
-                                                    font.pixelSize: Settings.fontSize - 2
-                                                    renderType: Text.NativeRendering
-                                                    elide: Text.ElideRight
-                                                }
-                                            }
-                                        }
-
-                                        Row {
-                                            anchors.top:  parent.top;  anchors.topMargin:  59
-                                            anchors.left: parent.left; anchors.leftMargin: 12
-                                            height: 32
-                                            spacing: 10
-
-                                            Repeater {
-                                                model: _matuAccentRow._roles
-                                                delegate: AccentSwatch {
-                                                    id: _mrSw
-                                                    required property var modelData
-                                                    chipColor: modelData.c
-                                                    name:      modelData.n
-                                                    active:    ShellSettings.matugenAccentRole === modelData.key
-                                                    onPicked:  ShellSettings.matugenAccentRole = modelData.key
-                                                    onHoverChanged: (n, h) => _matuAccentRow._hoverName =
-                                                        h ? n : (_matuAccentRow._hoverName === n ? "" : _matuAccentRow._hoverName)
-
-                                                    Rectangle {
-                                                        anchors.centerIn: parent
-                                                        width: 8; height: 8; radius: 4
-                                                        antialiasing: true
-                                                        color: Qt.rgba(0, 0, 0, 0.55)
-                                                        opacity: _mrSw.active ? 1 : 0
-                                                        scale:   _mrSw.active ? 1 : 0.3
-                                                        Behavior on opacity { NumberAnimation { duration: Motion.fast } }
-                                                        Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(125); easing.type: Easing.OutCubic } }
-                                                    }
-                                                }
-                                            }
+                                        Rectangle {
+                                            anchors.centerIn: parent
+                                            width: 8; height: 8; radius: 4
+                                            antialiasing: true
+                                            color: Qt.rgba(0, 0, 0, 0.55)
+                                            opacity: _mrSw.active ? 1 : 0
+                                            scale: _mrSw.active ? 1 : 0.3
+                                            Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                                            Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(125); easing.type: Easing.OutCubic } }
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                }
 
-                SectionLabel { label: "OUTLINES" }
-                SettingsCard {
                     SliderRow {
                         glyph: "▢"; label: "Outline strength"
                         value: ShellSettings.outlineStrength
@@ -686,14 +503,15 @@ PageShell {
                         onChanged: (v) => ShellSettings.outlineStrength = v
                     }
                 }
+                }
             }
 
             // ── APPEARANCE · Night Light ────────────────────────────────
-            Column {
+            Component {
                 id: _secNightLight
-                width: parent.width
+                Column {
+                width: _detailBody.width
                 spacing: 0
-                visible: root._shownSection === "nightlight"
 
                 SettingsCard {
                     visible: NightLight.toolAvailable
@@ -716,14 +534,15 @@ PageShell {
                     visible: !NightLight.toolAvailable
                     text: "hyprsunset is not installed."
                 }
+                }
             }
 
             // ── BAR · Surface ──────────────────────────────────────────
-            Column {
+            Component {
                 id: _secSurface
-                width: parent.width
+                Column {
+                width: _detailBody.width
                 spacing: 0
-                visible: root._shownSection === "surface"
 
                 SettingsCard {
                     ChoiceChipRow {
@@ -754,11 +573,10 @@ PageShell {
                     }
                 }
 
-                SectionLabel { label: "FLOATING" }
+                Item { width: 1; height: Theme.gapSection }
                 SettingsCard {
                     ToggleRow {
                         glyph: "󰖲"; label: "Floating bar"
-                        description: "Detaches the bar from the screen edge"
                         checked: ShellSettings.barFloating
                         onToggled: ShellSettings.barFloating = !ShellSettings.barFloating
                     }
@@ -807,25 +625,26 @@ PageShell {
                         }
                     }
                 }
+                }
             }
 
             // ── BAR · Separators ───────────────────────────────────────
-            Column {
+            Component {
                 id: _secSeparators
-                width: parent.width
+                Column {
+                width: _detailBody.width
                 spacing: 0
-                visible: root._shownSection === "separators"
 
                 SettingsCard {
                     ToggleRow {
                         glyph: "󰡍"; label: "Compact spacing"
-                        description: "Tighter widget groups with separators only between groups"
+                        description: "Separators between groups only"
                         checked: ShellSettings.barCompact
                         onToggled: ShellSettings.barCompact = !ShellSettings.barCompact
                     }
                     ToggleRow {
                         glyph: "󰁌"; label: "Auto tighten"
-                        description: "Temporarily tightens separators when widgets crowd the title"
+                        description: "Tightens spacing when widgets crowd the bar"
                         checked: ShellSettings.barAutoCompact
                         onToggled: ShellSettings.barAutoCompact = !ShellSettings.barAutoCompact
                     }
@@ -853,32 +672,31 @@ PageShell {
                         ]
                         onChosen: (v) => ShellSettings.barSpacing = v
                     }
-                }
-
-                // No marks are drawn under "None", so the opacity control is moot.
-                SectionLabel { label: "APPEARANCE"; visible: ShellSettings.dotStyle !== "none" }
-                SettingsCard {
-                    visible: ShellSettings.dotStyle !== "none"
-                    SliderRow {
-                        glyph: ShellSettings.dotStyle === "line" ? "│"
-                             : ShellSettings.dotStyle === "slash" ? "/"
-                             : ShellSettings.dotStyle
-                        glyphColor: Theme.withAlpha(Theme.text, Math.max(0.35, ShellSettings.dotOpacity))
-                        label: "Separator opacity"
-                        value: ShellSettings.dotOpacity
-                        min: 0.10; max: 1.0; step: 0.05
-                        displayValue: Math.round(ShellSettings.dotOpacity * 100) + "%"
-                        onChanged: (v) => ShellSettings.dotOpacity = v
+                    // no marks are drawn under "None", so the opacity control is moot
+                    CollapsibleSection {
+                        expanded: ShellSettings.dotStyle !== "none"
+                        SliderRow {
+                            glyph: ShellSettings.dotStyle === "line" ? "│"
+                                 : ShellSettings.dotStyle === "slash" ? "/"
+                                 : ShellSettings.dotStyle
+                            glyphColor: Theme.withAlpha(Theme.text, Math.max(0.35, ShellSettings.dotOpacity))
+                            label: "Separator opacity"
+                            value: ShellSettings.dotOpacity
+                            min: 0.10; max: 1.0; step: 0.05
+                            displayValue: Math.round(ShellSettings.dotOpacity * 100) + "%"
+                            onChanged: (v) => ShellSettings.dotOpacity = v
+                        }
                     }
+                }
                 }
             }
 
             // ── BAR · Underline ─────────────────────────────────────────
-            Column {
+            Component {
                 id: _secUnderline
-                width: parent.width
+                Column {
+                width: _detailBody.width
                 spacing: 0
-                visible: root._shownSection === "underline"
 
                 SettingsCard {
                     ToggleRow {
@@ -976,14 +794,15 @@ PageShell {
                         }
                     }
                 }
+                }
             }
 
             // ── WIDGETS · Clock ─────────────────────────────────────────
-            Column {
+            Component {
                 id: _secClock
-                width: parent.width
+                Column {
+                width: _detailBody.width
                 spacing: 0
-                visible: root._shownSection === "clock"
 
                 SettingsCard {
                     ChoiceChipRow {
@@ -1015,14 +834,15 @@ PageShell {
                         onToggled: ShellSettings.showSeconds = !ShellSettings.showSeconds
                     }
                 }
+                }
             }
 
             // ── WIDGETS · Workspaces ────────────────────────────────────
-            Column {
+            Component {
                 id: _secWorkspaces
-                width: parent.width
+                Column {
+                width: _detailBody.width
                 spacing: 0
-                visible: root._shownSection === "workspaces"
 
                 SectionLabel { label: "LAYOUT" }
                 SettingsCard {
@@ -1087,7 +907,7 @@ PageShell {
                     }
                     ToggleRow {
                         glyph: "󰀻"; label: "App icons"; badge: "beta"
-                        description: "Shows up to three app icons on inactive occupied workspaces"
+                        description: "App icons on occupied workspaces"
                         checked: ShellSettings.wsShowAppIcons
                         onToggled: ShellSettings.wsShowAppIcons = !ShellSettings.wsShowAppIcons
                     }
@@ -1102,14 +922,15 @@ PageShell {
                         }
                     }
                 }
+                }
             }
 
             // ── WIDGETS · Media ─────────────────────────────────────────
-            Column {
+            Component {
                 id: _secMedia
-                width: parent.width
+                Column {
+                width: _detailBody.width
                 spacing: 0
-                visible: root._shownSection === "media"
 
                 SettingsCard {
                     ToggleRow {
@@ -1119,17 +940,16 @@ PageShell {
                     }
                     ToggleRow {
                         glyph: "󰐊"; label: "Playback helper"
-                        description: "Adds a play state glyph and track progress to the bar media widget"
+                        description: "Play state and progress in the bar"
                         checked: ShellSettings.mediaWidgetHelper
                         onToggled: ShellSettings.mediaWidgetHelper = !ShellSettings.mediaWidgetHelper
                     }
                 }
 
-                SectionLabel { label: "VISUALIZER" }
+                Item { width: 1; height: Theme.gapSection }
                 SettingsCard {
-                    ToggleRow {
-                        glyph: "󰱐"; label: "Audio visualizer"; badge: "cava"
-                        description: "Starts cava only while media is playing and the visualizer is visible"
+                        ToggleRow {
+                            glyph: "󰱐"; label: "Audio visualizer"
                         checked: ShellSettings.mediaProgress
                         onToggled: ShellSettings.mediaProgress = !ShellSettings.mediaProgress
                         available: !SystemTools.ready || SystemTools.hasCava
@@ -1171,7 +991,7 @@ PageShell {
                             currentValue: ShellSettings.mediaVisualizerPreset
                             model: [
                                 { value: "eco",      label: "Eco" },
-                                { value: "balanced", label: "Bal" },
+                                { value: "balanced", label: "Balanced" },
                                 { value: "smooth",   label: "Smooth" }
                             ]
                             onChosen: (v) => ShellSettings.mediaVisualizerPreset = v
@@ -1195,26 +1015,25 @@ PageShell {
                         }
                         ToggleRow {
                             glyph: "󰊓"; label: "Pause in fullscreen"
-                            description: "Stops cava while a fullscreen window is active"
                             checked: ShellSettings.mediaVisualizerPauseFullscreen
                             onToggled: ShellSettings.mediaVisualizerPauseFullscreen = !ShellSettings.mediaVisualizerPauseFullscreen
                         }
                         ToggleRow {
-                            glyph: "󰝚"; label: "Menu player pulse"
-                            description: "Faint pulse layer on the menu's media card"
+                            glyph: "󰝚"; label: "Menu CAVA overlay"
                             checked: ShellSettings.mediaMenuVisualizer
                             onToggled: ShellSettings.mediaMenuVisualizer = !ShellSettings.mediaMenuVisualizer
                         }
                     }
                 }
+                }
             }
 
             // ── WIDGETS · Indicators ────────────────────────────────────
-            Column {
+            Component {
                 id: _secIndicators
-                width: parent.width
+                Column {
+                width: _detailBody.width
                 spacing: 0
-                visible: root._shownSection === "indicators"
 
                 SettingsCard {
                     ToggleRow {
@@ -1247,23 +1066,17 @@ PageShell {
                 }
 
                 SectionLabel { label: "WIDGETS" }
-                Loader {
-                    width: parent.width
-                    active: root._shownSection === "indicators"
-                    height: item ? item.implicitHeight : 0
-                    sourceComponent: Component {
-                        DraggableWidgetList { width: parent.width }
-                    }
-                }
+                DraggableWidgetList { width: parent.width }
                 Item { width: 1; height: 16 }
+                }
             }
 
             // ── NOTIFICATIONS · Popups ──────────────────────────────────
-            Column {
+            Component {
                 id: _secPopups
-                width: parent.width
+                Column {
+                width: _detailBody.width
                 spacing: 0
-                visible: root._shownSection === "popups"
 
                 SettingsCard {
                     ToggleRow {
@@ -1276,32 +1089,6 @@ PageShell {
                         enabled: ShellSettings.notifPopupEnabled
                         checked: ShellSettings.notifFullscreenSilence
                         onToggled: ShellSettings.notifFullscreenSilence = !ShellSettings.notifFullscreenSilence
-                    }
-                }
-
-                SectionLabel { label: "QUIET HOURS" }
-                SettingsCard {
-                    ToggleRow {
-                        glyph: "󰂛"; label: "Auto do not disturb"
-                        checked: ShellSettings.dndSchedule
-                        onToggled: ShellSettings.dndSchedule = !ShellSettings.dndSchedule
-                    }
-                    CollapsibleSection {
-                        expanded: ShellSettings.dndSchedule
-                        SliderRow {
-                            glyph: "󰃰"; label: "From"
-                            displayValue: (ShellSettings.dndFrom < 10 ? "0" : "") + ShellSettings.dndFrom + ":00"
-                            value: ShellSettings.dndFrom
-                            min: 0; max: 23; step: 1
-                            onChanged: (v) => ShellSettings.dndFrom = v
-                        }
-                        SliderRow {
-                            glyph: "󰃰"; label: "To"
-                            displayValue: (ShellSettings.dndTo < 10 ? "0" : "") + ShellSettings.dndTo + ":00"
-                            value: ShellSettings.dndTo
-                            min: 0; max: 23; step: 1
-                            onChanged: (v) => ShellSettings.dndTo = v
-                        }
                     }
                 }
 
@@ -1343,14 +1130,40 @@ PageShell {
                     }
                 }
 
+                SectionLabel { label: "QUIET HOURS" }
+                SettingsCard {
+                    ToggleRow {
+                        glyph: "󰂛"; label: "Auto do not disturb"
+                        checked: ShellSettings.dndSchedule
+                        onToggled: ShellSettings.dndSchedule = !ShellSettings.dndSchedule
+                    }
+                    CollapsibleSection {
+                        expanded: ShellSettings.dndSchedule
+                        SliderRow {
+                            glyph: "󰃰"; label: "From"
+                            displayValue: (ShellSettings.dndFrom < 10 ? "0" : "") + ShellSettings.dndFrom + ":00"
+                            value: ShellSettings.dndFrom
+                            min: 0; max: 23; step: 1
+                            onChanged: (v) => ShellSettings.dndFrom = v
+                        }
+                        SliderRow {
+                            glyph: "󰃰"; label: "To"
+                            displayValue: (ShellSettings.dndTo < 10 ? "0" : "") + ShellSettings.dndTo + ":00"
+                            value: ShellSettings.dndTo
+                            min: 0; max: 23; step: 1
+                            onChanged: (v) => ShellSettings.dndTo = v
+                        }
+                    }
+                }
+                }
             }
 
             // ── NOTIFICATIONS · OSD ─────────────────────────────────────
-            Column {
+            Component {
                 id: _secOsd
-                width: parent.width
+                Column {
+                width: _detailBody.width
                 spacing: 0
-                visible: root._shownSection === "osd"
 
                 SettingsCard {
                     ToggleRow {
@@ -1361,7 +1174,7 @@ PageShell {
                     // Mode: floating pill vs bar-inline. Drives which sub-options apply.
                     ToggleRow {
                         glyph: "󰀱"; label: "Show in bar"; badge: "beta"
-                        description: "Shows volume and brightness in the bar center instead of a pill"
+                        description: "Volume and brightness in the bar center"
                         enabled: ShellSettings.osdEnabled
                         checked: ShellSettings.osdBarIntegrated
                         onToggled: ShellSettings.osdBarIntegrated = !ShellSettings.osdBarIntegrated
@@ -1371,7 +1184,6 @@ PageShell {
                         enabled: ShellSettings.osdEnabled && !ShellSettings.osdBarIntegrated
                         checked: ShellSettings.osdMatchBar
                         onToggled: ShellSettings.osdMatchBar = !ShellSettings.osdMatchBar
-                        description: "Pill takes the bar's height and corner radius"
                         dependsNote: ShellSettings.osdEnabled ? "Pill only" : ""
                     }
                     ChoiceChipRow {
@@ -1397,29 +1209,27 @@ PageShell {
                         ]
                         onChosen: (v) => ShellSettings.osdKindFilter = v
                     }
-                }
-
-                SectionLabel { label: "VOLUME" }
-                SettingsCard {
                     ToggleRow {
                         glyph: "󰓎"; label: "Volume emphasis"
-                        description: "Warm tint and a soft shimmer as volume nears maximum"
+                        description: "Warm tint as volume nears max"
                         enabled: ShellSettings.osdEnabled
                         checked: ShellSettings.osdVolumeTint
                         onToggled: ShellSettings.osdVolumeTint = !ShellSettings.osdVolumeTint
                     }
                 }
+                }
             }
 
             // ── NOTIFICATIONS · Warnings ────────────────────────────────
-            Column {
+            Component {
                 id: _secWarnings
-                width: parent.width
+                Column {
+                width: _detailBody.width
                 spacing: 0
-                visible: root._shownSection === "warnings"
 
-                SectionLabel { label: "BATTERY"; first: true }
+                SectionLabel { label: "BATTERY"; first: true; visible: Battery.available }
                 SettingsCard {
+                    visible: Battery.available
                     ChoiceChipRow {
                         glyph: "󱟢"; label: "Low battery alert"
                         currentValue: root._battAlertMode
@@ -1440,15 +1250,14 @@ PageShell {
                     }
                     ToggleRow {
                         glyph: "󰂄"; label: "Fully-charged alert"
-                        enabled: ShellSettings.osdEnabled && Battery.available
-                        available: Battery.available
+                        enabled: ShellSettings.osdEnabled
                         checked: ShellSettings.osdChargedNotify
                         onToggled: ShellSettings.osdChargedNotify = !ShellSettings.osdChargedNotify
-                        dependsNote: !Battery.available ? "No battery" : "OSD off"
+                        dependsNote: "OSD off"
                     }
                 }
 
-                SectionLabel { label: "CPU TEMPERATURE" }
+                SectionLabel { label: "CPU TEMPERATURE"; first: !Battery.available }
                 SettingsCard {
                     ChoiceChipRow {
                         glyph: "󰔏"; label: "High temp alert"
@@ -1497,14 +1306,15 @@ PageShell {
                         }
                     }
                 }
+                }
             }
 
             // ── SYSTEM ──────────────────────────────────────────────────
-            Column {
+            Component {
                 id: _secSystem
-                width: parent.width
+                Column {
+                width: _detailBody.width
                 spacing: 0
-                visible: root._shownSection === "system"
 
                 SectionLabel { label: "ACCESSIBILITY"; first: true }
                 SettingsCard {
@@ -1512,12 +1322,12 @@ PageShell {
                         glyph: "󰛖"; label: "Font"
                         currentValue: ShellSettings.fontFamily
                         model: {
-                            const m = [{ value: "", label: "JetBrainsMono (default)" }]
+                            const m = [{ value: "", label: "JetBrainsMono (default)", fontFamily: "JetBrainsMono Nerd Font" }]
                             const fams = FontScan.families
                             for (let i = 0; i < fams.length; i++) {
                                 const f = fams[i]
                                 if (f === "JetBrainsMono Nerd Font") continue
-                                m.push({ value: f, label: f.replace(/ Nerd Font( Mono)?$/, "") })
+                                m.push({ value: f, label: f.replace(/ Nerd Font( Mono)?$/, ""), fontFamily: f })
                             }
                             const cur = ShellSettings.fontFamily
                             if (cur.length > 0 && m.findIndex(e => e.value === cur) < 0)
@@ -1540,13 +1350,11 @@ PageShell {
                     }
                     ToggleRow {
                         glyph: "󰹑"; label: "High contrast"
-                        description: "Raises text, border, and control contrast across shell surfaces"
                         checked: ShellSettings.highContrast
                         onToggled: ShellSettings.highContrast = !ShellSettings.highContrast
                     }
                     ToggleRow {
                         glyph: "󱖳"; label: "Reduce motion"
-                        description: "Disables shell animations"
                         checked: ShellSettings.reduceMotion
                         onToggled: ShellSettings.reduceMotion = !ShellSettings.reduceMotion
                     }
@@ -1554,7 +1362,7 @@ PageShell {
 
                 Loader {
                     width: parent.width
-                    active: root._shownSection === "system" && Quickshell.screens.length > 1
+                    active: Quickshell.screens.length > 1
                     height: item ? item.implicitHeight : 0
                     sourceComponent: Component {
                         Column {
@@ -1660,22 +1468,14 @@ PageShell {
                         }
                     }
                 }
+                }
             }
 
             // ── SYSTEM · Updates ────────────────────────────────────────
-            Column {
+            Component {
                 id: _secUpdates
-                width: parent.width
-                spacing: 0
-                visible: root._shownSection === "updates"
-
-                Loader {
-                    width: parent.width
-                    active: root._shownSection === "updates"
-                    height: item ? item.implicitHeight : 0
-                    sourceComponent: Component {
-                        Column {
-                            width: parent.width
+                Column {
+                            width: _detailBody.width
 
                             SettingsCard {
                                 UpdateStatusCard {
@@ -1736,29 +1536,23 @@ PageShell {
                                 }
                                 ToggleRow {
                                     glyph: "󰚰"; label: "Track package updates"
-                                    description: "Counts pending packages and shows a badge in the bar"
+                                    description: "Pending-update badge in the bar"
                                     checked: ShellSettings.updatesWidget
                                     onToggled: ShellSettings.updatesWidget = !ShellSettings.updatesWidget
                                     available: !SystemTools.ready || Updates.supported
                                     dependsNote: "No package manager"
                                 }
-                            }
-
-                            SectionLabel { label: "AUTOMATIC CHECKS" }
-                            SettingsCard {
                                 ToggleRow {
-                                    glyph: "󰥔"; label: "Daily Silere update check"
+                                    glyph: "󰥔"; label: "Daily update check"
                                     checked: ShellUpdate.timerEnabled
                                     enabled: !ShellUpdate.timerBusy
                                     available: ShellUpdate.timerSupported
                                     dependsNote: ShellUpdate.timerBusy ? "Working" : (!SystemTools.ready ? "Checking" : "No systemd")
                                     onToggled: ShellUpdate.setTimerEnabled(!ShellUpdate.timerEnabled)
                                 }
-                                HintText { text: "Checks only update the badge — nothing installs without your confirmation." }
+                                HintText { text: "Checks never install anything on their own." }
                             }
                         }
-                    }
-                }
             }
             }   // _detailBody
     }

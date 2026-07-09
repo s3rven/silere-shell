@@ -24,7 +24,6 @@ Singleton {
     property string neutralAccent:       "#bb9af7"   // soft violet; sits in a hue gap from the Tokyo Night status colors
     property string matugenAccentRole:   "primary"   // which material role drives the accent in wallpaper mode
     property string baseTone:            "charcoal"
-    property string customBase:          "#0a0b10"
     property bool   networkTrafficStats: false
     property bool   networkSpeedInline:  false   // pin the live up/down speed next to the icon, not just on hover
     property bool   netVpnShowLink:      false   // show "VPN / wifi|eth" so the underlying link stays visible
@@ -239,8 +238,7 @@ Singleton {
         { k: "neutralAccentAuto",   t: "bool" },
         { k: "neutralAccent",       t: "re",   re: /^#[0-9a-fA-F]{6}$/ },
         { k: "matugenAccentRole",   t: "enum", vals: ["primary", "secondary", "tertiary"] },
-        { k: "baseTone",            t: "enum", vals: ["charcoal", "black", "custom"] },
-        { k: "customBase",          t: "re",   re: /^#[0-9a-fA-F]{6}$/ },
+        { k: "baseTone",            t: "enum", vals: ["charcoal", "black"] },
         { k: "networkTrafficStats", t: "bool" },
         { k: "networkSpeedInline",  t: "bool" },
         { k: "netVpnShowLink",      t: "bool" },

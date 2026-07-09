@@ -14,14 +14,7 @@ Singleton {
         charcoal: { background: "#090a0c", surface: "#17191d", subtext: "#a0a3aa" },
         black:    { background: "#030303", surface: "#101114", subtext: "#9699a0" }
     })
-    // custom tone derives surface/subtext from the picked base so elevation steps stay intact
-    readonly property var _pal: {
-        if (ShellSettings.baseTone === "custom") {
-            const cb = Qt.color(ShellSettings.customBase)
-            return { background: cb, surface: mix(cb, "#f2f4f8", 0.060), subtext: mix("#a0a3aa", cb, 0.10) }
-        }
-        return _tones[ShellSettings.baseTone] ?? _tones.charcoal
-    }
+    readonly property var _pal: _tones[ShellSettings.baseTone] ?? _tones.charcoal
 
     // wallpaper mode can accent from any material role (secondary/tertiary land in success/warning)
     readonly property color _matuAccent: ShellSettings.matugenAccentRole === "secondary" ? MatugenTheme.success
