@@ -34,9 +34,11 @@ Item {
 
     Rectangle {
         anchors.centerIn: parent
-        width: 36; height: 36; radius: 18
+        width: 34; height: 34; radius: Theme.radiusControl
         antialiasing: true
         color: Theme.withAlpha(Theme.text, _tap.pressed ? 0.15 : 0.08)
+        border.width: root.activeFocus ? 1 : 0
+        border.color: Theme.withAlpha(Theme.accent, 0.6)
         opacity: (_hover.hovered || _tap.pressed || root.activeFocus) ? 1.0 : 0.0
         Behavior on opacity { NumberAnimation { duration: Motion.fast } }
         Behavior on color   { ColorAnimation  { duration: Motion.fast } }

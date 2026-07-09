@@ -30,6 +30,11 @@ Singleton {
         && (player.playbackState !== MprisPlaybackState.Stopped || title.length > 0)
     readonly property bool playing: player ? player.isPlaying : false
 
+    // capability props live here so every consumer shares one tracked binding to the current player
+    readonly property bool canTogglePlaying: player ? player.canTogglePlaying : false
+    readonly property bool canGoNext:        player ? player.canGoNext : false
+    readonly property bool canGoPrevious:    player ? player.canGoPrevious : false
+
     property bool shown: false
 
     function _syncShown(): void {
@@ -303,17 +308,17 @@ Singleton {
     }
 
     function togglePlay(): void {
-        if (!player || !player.canTogglePlaying) return
+        if (!canTogglePlaying) return
         player.togglePlaying()
     }
 
     function next(): void {
-        if (!player || !player.canGoNext) return
+        if (!canGoNext) return
         player.next()
     }
 
     function previous(): void {
-        if (!player || !player.canGoPrevious) return
+        if (!canGoPrevious) return
         player.previous()
     }
 }

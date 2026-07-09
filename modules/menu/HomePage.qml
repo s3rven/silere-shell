@@ -48,66 +48,54 @@ PageShell {
         width: parent.width
         spacing: 0
 
-        // masthead: weekday bold, full date quieter beneath
         Item {
             id: _header
             width: parent.width
             height: 40
 
-            Column {
+            Text {
+                id: _dayLine
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
+                text: DateTime.cachedWeekday
+                color: Theme.text
+                font.family: Settings.font
+                font.pixelSize: Settings.fontSize + 5
+                font.weight: Font.DemiBold
+                renderType: Text.NativeRendering
+                elide: Text.ElideRight
+            }
+
+            Text {
+                id: _metaLine
                 anchors.left: parent.left
                 anchors.right: _uptimeRow.visible ? _uptimeRow.left : parent.right
                 anchors.rightMargin: 12
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 1
-
-                Text {
-                    width: parent.width
-                    text: DateTime.cachedWeekday
-                    color: Theme.text
-                    font.family: Settings.font
-                    font.pixelSize: Settings.fontSize + 5
-                    font.weight: Font.DemiBold
-                    renderType: Text.NativeRendering
-                    elide: Text.ElideRight
-                }
-                Text {
-                    width: parent.width
-                    text: DateTime.cachedWeek.length > 0
-                        ? DateTime.cachedMonthDay + "   ·   Week " + DateTime.cachedWeek
-                        : DateTime.cachedMonthDay
-                    color: Theme.withAlpha(Theme.subtext, 0.78)
-                    font.family: Settings.font
-                    font.pixelSize: Settings.fontSize - 1
-                    font.weight: Font.Medium
-                    renderType: Text.NativeRendering
-                    elide: Text.ElideRight
-                }
+                anchors.top: _dayLine.bottom
+                anchors.topMargin: 2
+                text: DateTime.cachedWeek.length > 0
+                    ? DateTime.cachedMonthDay + " · Week " + DateTime.cachedWeek
+                    : DateTime.cachedMonthDay
+                color: Theme.withAlpha(Theme.subtext, 0.78)
+                font.family: Settings.font
+                font.pixelSize: Settings.fontSize - 1
+                font.weight: Font.Medium
+                renderType: Text.NativeRendering
+                elide: Text.ElideRight
             }
 
-            Row {
+            Text {
                 id: _uptimeRow
                 anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 6
+                anchors.verticalCenter: _metaLine.verticalCenter
                 visible: SysInfo.uptimeSecs > 0
-
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "󰅐"
-                    color: Theme.withAlpha(Theme.subtext, 0.50)
-                    font.family: Settings.font
-                    font.pixelSize: Settings.fontSize - 1
-                    renderType: Text.NativeRendering
-                }
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: SysInfo.uptimeLabel
-                    color: Theme.withAlpha(Theme.subtext, 0.62)
-                    font.family: Settings.font
-                    font.pixelSize: Settings.fontSize - 1
-                    renderType: Text.NativeRendering
-                }
+                text: "up " + SysInfo.uptimeLabel
+                color: Theme.withAlpha(Theme.subtext, 0.62)
+                font.family: Settings.font
+                font.pixelSize: Settings.fontSize - 1
+                font.weight: Font.Medium
+                renderType: Text.NativeRendering
             }
         }
 
@@ -232,7 +220,8 @@ PageShell {
                         anchors.fill: parent
                         fillMode: Image.PreserveAspectCrop
                         asynchronous: true
-                        cache: true
+                        // uncached: caching keeps every past track's 512² decode for the whole session
+                        cache: false
                         sourceSize.width:  512
                         sourceSize.height: 512
                         opacity: 0
@@ -245,7 +234,7 @@ PageShell {
                         anchors.fill: parent
                         fillMode: Image.PreserveAspectCrop
                         asynchronous: true
-                        cache: true
+                        cache: false
                         sourceSize.width:  512
                         sourceSize.height: 512
                         opacity: 0
@@ -287,7 +276,6 @@ PageShell {
                     }
                 }
 
-                // bottom scrim: transparent up top, solid in the lower third for text/control contrast
                 Rectangle {
                     anchors.left: parent.left
                     anchors.right: parent.right
@@ -304,7 +292,6 @@ PageShell {
                     }
                 }
 
-                // Narrow left feather, asymmetric lift without flattening the art.
                 Rectangle {
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
@@ -324,7 +311,8 @@ PageShell {
                     anchors.right: parent.right
                     anchors.bottom: parent.bottom
                     height: Math.max(56, parent.height * 0.42)
-                    active: root.active && MenuState.open && Media.shown && Media.playing && Media.cavaReady
+                    active: root.active && MenuState.open && Media.shown && Media.playing
+                        && Media.cavaReady && ShellSettings.mediaMenuVisualizer
                     opacity: _art.shownAlpha > 0.01 ? 0.16 : 0.26
                     visible: opacity > 0.01
                     sourceComponent: Component {
@@ -524,18 +512,18 @@ PageShell {
                     MediaButton {
                         glyph: "󰒮"
                         accessibleName: "Previous track"
-                        available: Media.player ? Media.player.canGoPrevious : false
+                        available: Media.canGoPrevious
                         onTriggered: Media.previous()
                     }
 
                     Item {
                         id: _playBtn
-                        readonly property bool _on: Media.player && Media.player.canTogglePlaying
-                        width: 48; height: 48
+                        readonly property bool _on: Media.canTogglePlaying
+                        width: 56; height: 40
                         anchors.verticalCenter: parent.verticalCenter
                         opacity: _playBtn._on ? 1.0 : 0.25
                         // Press feedback on the container so it composes with the glyph stamp.
-                        scale: _playT.pressed ? 0.82 : 1.0
+                        scale: _playT.pressed ? 0.94 : 1.0
                         transformOrigin: Item.Center
                         Behavior on opacity { NumberAnimation { duration: Motion.fast } }
                         Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
@@ -551,22 +539,18 @@ PageShell {
                         TapHandler   { id: _playT; enabled: _playBtn._on; onTapped: Media.togglePlay() }
 
                         Rectangle {
-                            anchors.centerIn: parent
-                            width: 48; height: 48; radius: 24
+                            anchors.fill: parent
+                            radius: Theme.radiusControl
                             antialiasing: true
-                            color: "transparent"
+                            color: Media.playing || _playH.hovered || _playT.pressed
+                                ? Theme.mix(Theme.menuControl, Theme.accent, _playT.pressed ? 0.38 : _playH.hovered ? 0.30 : 0.24)
+                                : Theme.menuControl
                             border.width: 1
-                            border.color: Theme.withAlpha(Theme.accent, (Media.playing || _playH.hovered || _playBtn.activeFocus) ? 0.0 : 0.22)
+                            border.color: _playBtn.activeFocus ? Theme.withAlpha(Theme.accent, 0.82)
+                                : Media.playing || _playH.hovered ? Theme.withAlpha(Theme.accent, 0.52)
+                                : Theme.menuControlLine
+                            Behavior on color        { ColorAnimation { duration: Motion.fast } }
                             Behavior on border.color { ColorAnimation { duration: Motion.fast } }
-                        }
-                        Rectangle {
-                            anchors.centerIn: parent
-                            width: 48; height: 48; radius: 24
-                            antialiasing: true
-                            color: Theme.withAlpha(Theme.accent, _playT.pressed ? 0.28 : (_playH.hovered ? 0.22 : 0.16))
-                            opacity: (Media.playing || _playH.hovered || _playT.pressed || _playBtn.activeFocus) ? 1.0 : 0.0
-                            Behavior on opacity { NumberAnimation { duration: Motion.fast } }
-                            Behavior on color   { ColorAnimation  { duration: Motion.fast } }
                         }
                         Text {
                             id: _playGlyph
@@ -577,7 +561,7 @@ PageShell {
                             property bool _ready: false
                             text: shown
                             color: (_playH.hovered || Media.playing) ? Theme.accent : Theme.withAlpha(Theme.accent, 0.9)
-                            font.family: Settings.font; font.pixelSize: Settings.fontSize + 16
+                            font.family: Settings.font; font.pixelSize: Settings.fontSize + 10
                             renderType: Text.NativeRendering
                             transformOrigin: Item.Center
                             Behavior on color { ColorAnimation { duration: Motion.fast } }
@@ -599,7 +583,7 @@ PageShell {
                     MediaButton {
                         glyph: "󰒭"
                         accessibleName: "Next track"
-                        available: Media.player ? Media.player.canGoNext : false
+                        available: Media.canGoNext
                         onTriggered: Media.next()
                     }
                 }
@@ -724,9 +708,14 @@ PageShell {
                 onExpandToggled: root._togglePicker("nightlight")
             }
 
-            // Night-light temperature opens inline, right under its own row.
             CollapsibleSection {
                 expanded: root._picker === "nightlight"
+                ToggleRow {
+                    glyph: "󰖙"
+                    label: "Follow sun position"
+                    checked: ShellSettings.nightLightAuto
+                    onToggled: ShellSettings.nightLightAuto = !ShellSettings.nightLightAuto
+                }
                 SliderRow {
                     glyph: "󰔄"
                     label: ShellSettings.nightLightAuto ? "Temperature  ·  auto" : "Temperature"
@@ -736,6 +725,11 @@ PageShell {
                     min: 1000; max: 6500; step: 100
                     glyphColor: Theme.withAlpha(Theme.warning, ShellSettings.nightLightAuto ? 0.45 : 0.85)
                     onChanged: (v) => { if (!ShellSettings.nightLightAuto) ShellSettings.nightLightTemp = v }
+                }
+                SunArc {
+                    flat: true
+                    // no canvas/buffer unless the dropdown is actually open on screen
+                    shown: root._picker === "nightlight" && MenuState.open
                 }
             }
 
@@ -786,29 +780,6 @@ PageShell {
         VitalsStrip {
             active: root.active
             width: parent.width
-        }
-
-        // sun-path arc footer: sits last so follow-sun can't shove the stat tiles off-screen; costs nothing when off
-        Item {
-            id: _sunSection
-            width: parent.width
-            // only while auto-following the sun; a fixed manual temp wouldn't track it
-            readonly property bool _show: NightLight.toolAvailable && NightLight.enabled && ShellSettings.nightLightAuto
-            // snap to 4px so the footer height stays on whole physical px under fractional scaling
-            height: _show ? 4 * Math.ceil((_sunCard.implicitHeight + 12) / 4) : 0
-            clip: true
-            Behavior on height {
-                enabled: !ShellSettings.reduceMotion
-                NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
-            }
-            SunArc {
-                id: _sunCard
-                width: parent.width
-                y: 12                       // gap sits above the card → separates from the grid
-                shown: _sunSection._show && MenuState.open   // no canvas/buffer while the menu's closed
-                opacity: _sunSection._show ? 1 : 0
-                Behavior on opacity { NumberAnimation { duration: Motion.normal } }
-            }
         }
 
         Item { width: 1; height: root._itemGap }

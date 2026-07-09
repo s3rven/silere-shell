@@ -14,23 +14,34 @@ Rectangle {
     height: implicitHeight
     radius: Theme.radiusCard
     antialiasing: true
-    clip: true
     color: Theme.menuCard
     border.width: 1
     border.color: Theme.menuCardBorder
 
+    // KPI column: value stacked over its label, gauge underneath — no dead space between label and value
     component Vital: Item {
         id: tile
 
         property string glyph: ""
         property string label: ""
         property string value: ""
+        // secondary reading (CPU temp) rendered smaller and muted beside the value
+        property string sub: ""
         property real   progress: 0
-        property color  tint: Theme.accent
+        // 0 ok, 1 warning, 2 critical
+        property int    status: 0
         property real   pulse: 0
         property bool   live: true
+        property bool   divider: true
+        // sides facing a divider get extra air; card-edge sides stay on the page rows' 14px inset
+        readonly property int padL: divider ? 18 : 14
+        property int          padR: 18
 
-        height: 46
+        readonly property color tint: status === 2 ? Theme.error
+                                    : status === 1 ? Theme.warning
+                                    : Theme.menuTextMuted
+
+        height: 70
 
         readonly property real _p: Math.max(0, Math.min(1, progress))
         property real _disp: _p
@@ -39,73 +50,100 @@ Rectangle {
             NumberAnimation { duration: Motion.ms(450); easing.type: Easing.OutCubic }
         }
 
-        // Alert wash only appears for actual warning states; normal readings stay neutral.
+        Rectangle {
+            visible: tile.divider
+            x: 0
+            anchors.verticalCenter: parent.verticalCenter
+            width: 1
+            height: Math.round(parent.height * 0.52)
+            color: Theme.withAlpha(Theme.subtext, 0.10)
+        }
+
+        // Alert wash only appears for actual warning states; borderless — the tinted bar and value carry the state.
         Rectangle {
             anchors.fill: parent
             anchors.margins: 3
             radius: 8
             antialiasing: true
             visible: tile.pulse > 0.001
-            color: Theme.withAlpha(tile.tint, tile.pulse * 0.05)
-            border.width: 1
-            border.color: Theme.withAlpha(tile.tint, tile.pulse * 0.26)
+            color: Theme.withAlpha(tile.tint, tile.pulse * 0.08)
         }
 
-        Text {
-            id: _ic
-            x: 12
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.verticalCenterOffset: -5
-            text: tile.glyph
-            color: tile.pulse > 0.001
-                ? Theme.mix(Theme.menuTextMuted, tile.tint, 0.36 + tile.pulse * 0.38)
-                : Theme.withAlpha(Theme.menuTextMuted, 0.78)
-            font.family: Settings.font
-            font.pixelSize: Settings.fontSize + 1
-            renderType: Text.NativeRendering
+        Row {
+            id: _labelRow
+            anchors.left: parent.left
+            anchors.leftMargin: tile.padL
+            y: 11
+            spacing: 4
+
+            Text {
+                id: _gl
+                text: tile.glyph
+                color: tile.pulse > 0.001
+                    ? Theme.mix(Theme.menuTextMuted, tile.tint, 0.36 + tile.pulse * 0.38)
+                    : Theme.withAlpha(Theme.menuTextMuted, 0.66)
+                font.family: Settings.font
+                font.pixelSize: Settings.fontSize - 3
+                renderType: Text.NativeRendering
+            }
+            Text {
+                anchors.baseline: _gl.baseline
+                text: tile.label
+                color: Theme.withAlpha(Theme.menuTextMuted, 0.62)
+                font.family: Settings.font
+                font.pixelSize: Settings.fontSize - 3
+                font.letterSpacing: 0.4
+                font.weight: Font.DemiBold
+                font.capitalization: Font.AllUppercase
+                font.hintingPreference: Font.PreferFullHinting
+                renderType: Text.NativeRendering
+            }
         }
 
-        Text {
-            id: _val
-            anchors.right: parent.right
-            anchors.rightMargin: 12
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.verticalCenterOffset: -5
-            text: tile.value
-            color: tile.pulse > 0.001
-                ? Theme.mix(Theme.text, tile.tint, tile.pulse * 0.5)
-                : Theme.withAlpha(Theme.text, 0.88)
-            font.family: Settings.font
-            font.pixelSize: Settings.fontSize + 1
-            font.weight: Font.DemiBold
-            font.hintingPreference: Font.PreferFullHinting
-            renderType: Text.NativeRendering
+        Row {
+            id: _valueRow
+            anchors.left: parent.left
+            anchors.leftMargin: tile.padL
+            anchors.top: _labelRow.bottom
+            anchors.topMargin: 3
+            spacing: 4
+
+            Text {
+                id: _val
+                text: tile.value
+                color: tile.pulse > 0.001
+                    ? Theme.mix(Theme.text, tile.tint, tile.pulse * 0.5)
+                    : tile.status > 0
+                        ? Theme.mix(Theme.text, tile.tint, 0.45)
+                        : Theme.withAlpha(Theme.text, 0.92)
+                font.family: Settings.font
+                font.pixelSize: Settings.fontSize + 4
+                font.weight: Font.DemiBold
+                font.hintingPreference: Font.PreferFullHinting
+                renderType: Text.NativeRendering
+            }
+            Text {
+                visible: tile.sub !== ""
+                anchors.baseline: _val.baseline
+                text: tile.sub
+                color: tile.pulse > 0.001
+                    ? Theme.mix(Theme.menuTextMuted, tile.tint, tile.pulse * 0.6)
+                    : Theme.withAlpha(Theme.menuTextMuted, 0.85)
+                font.family: Settings.font
+                font.pixelSize: Settings.fontSize - 1
+                font.hintingPreference: Font.PreferFullHinting
+                renderType: Text.NativeRendering
+            }
         }
 
-        Text {
-            anchors.left: _ic.right
-            anchors.leftMargin: 7
-            anchors.right: _val.left
-            anchors.rightMargin: 7
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.verticalCenterOffset: -5
-            text: tile.label
-            color: Theme.withAlpha(Theme.menuTextMuted, 0.82)
-            font.family: Settings.font
-            font.pixelSize: Math.max(11, Settings.fontSize)
-            font.weight: Font.Medium
-            font.hintingPreference: Font.PreferFullHinting
-            renderType: Text.NativeRendering
-            elide: Text.ElideRight
-        }
-
-        // Baseline gauge: neutral by default, status-coloured only for warning cells.
+        // Baseline gauge: slider-language accent fill at rest, status-coloured for warning cells.
         Rectangle {
-            anchors.left: parent.left;     anchors.leftMargin: 12
-            anchors.right: parent.right;   anchors.rightMargin: 12
-            anchors.bottom: parent.bottom; anchors.bottomMargin: 8
-            height: 3
-            radius: 1.5
+            anchors.left: parent.left;   anchors.leftMargin: tile.padL
+            anchors.right: parent.right; anchors.rightMargin: tile.padR
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 10
+            height: 4
+            radius: 2
             antialiasing: true
             color: Theme.menuTrack
 
@@ -114,27 +152,30 @@ Rectangle {
                 height: parent.height
                 radius: parent.radius
                 antialiasing: true
-                color: tile.tint
+                color: tile.status > 0 ? tile.tint : Theme.withAlpha(Theme.accent, 0.70)
+                Behavior on color { ColorAnimation { duration: Motion.color } }
             }
         }
     }
 
-    Grid {
+    // no horizontal inset: each column carries the page rows' own 14px text inset
+    Row {
         id: _grid
-        x: root._pad
         y: root._pad
-        width: parent.width - 2 * root._pad
-        columns: 2
-        readonly property real cellW: width / 2
+        width: parent.width
+        readonly property int  cells: Battery.available ? 4 : 3
+        readonly property real cellW: width / cells
 
         Vital {
             width: _grid.cellW
             live: root.active
+            divider: false
             glyph: "󰔏"
             label: "CPU"
-            value: Math.round(SysInfo.cpuPct * 100) + "%" + (CpuTemp.available ? "  " + Math.round(CpuTemp.temp) + "°" : "")
+            value: Math.round(SysInfo.cpuPct * 100) + "%"
+            sub: CpuTemp.available ? Math.round(CpuTemp.temp) + "°" : ""
             progress: SysInfo.cpuPct
-            tint: CpuTemp.critical ? Theme.error : (CpuTemp.hot ? Theme.warning : Theme.menuTextMuted)
+            status: CpuTemp.critical ? 2 : (CpuTemp.hot ? 1 : 0)
             pulse: CpuTemp.alertPulse
         }
 
@@ -145,45 +186,30 @@ Rectangle {
             label: "Mem"
             value: SysInfo.memTotalKb > 0 ? Math.round(SysInfo.memPct * 100) + "%" : "—"
             progress: SysInfo.memPct
-            tint: Theme.menuTextMuted
         }
 
         Vital {
             width: _grid.cellW
             live: root.active
+            padR: Battery.available ? 18 : 14
             glyph: "󰋊"
             label: "Disk"
             value: SysInfo.diskPct > 0 ? Math.round(SysInfo.diskPct * 100) + "%" : "—"
             progress: SysInfo.diskPct
-            tint: SysInfo.diskPct > 0.9 ? Theme.error : (SysInfo.diskPct > 0.75 ? Theme.warning : Theme.menuTextMuted)
+            status: SysInfo.diskPct > 0.9 ? 2 : (SysInfo.diskPct > 0.75 ? 1 : 0)
         }
 
         Vital {
             width: _grid.cellW
             live: root.active
             visible: Battery.available
+            padR: 14
             glyph: Battery.icon
             label: "Batt"
             value: Battery.available ? Battery.label : "—"
             progress: Battery.available ? Math.min(Battery.pct / 100, 1.0) : 0
-            tint: Battery.critical ? Theme.error : (Battery.low ? Theme.warning : Theme.menuTextMuted)
+            status: Battery.critical ? 2 : (Battery.low ? 1 : 0)
             pulse: Battery.alertPulse
         }
-    }
-
-    // faint divider cross: fixed to the cell grid so it lines up even when the battery cell is absent
-    Rectangle {
-        x: root.width / 2
-        y: root._pad + 10
-        width: 1
-        height: root.height - 2 * (root._pad + 10)
-        color: Theme.withAlpha(Theme.subtext, 0.10)
-    }
-    Rectangle {
-        x: root._pad + 12
-        y: root._pad + 46
-        width: root.width - 2 * (root._pad + 12)
-        height: 1
-        color: Theme.withAlpha(Theme.subtext, 0.10)
     }
 }
