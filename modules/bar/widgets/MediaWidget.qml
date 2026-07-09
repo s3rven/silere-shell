@@ -23,6 +23,7 @@ Item {
     readonly property bool _onActiveBar: !root.screen || Monitors.activeName === root.screen.name
     readonly property bool _visualizerActive: ShellSettings.mediaProgress
         && ShellSettings.mediaVisualizerPosition === "media"
+        && !ShellSettings.reduceMotion && !Idle.isIdle
         && root.barActive && root.show && Media.playing && Media.cavaReady && root._onActiveBar
     readonly property bool _vizVisible: _vizLoader.item ? _vizLoader.item.visible : false
     readonly property bool _helperEnabled: ShellSettings.mediaWidgetHelper
@@ -42,7 +43,8 @@ Item {
         textClip.opacity = 1.0
     }
     function _startMarquee(): void {
-        if (barActive && show && _onActiveBar && textClip.needsScroll && !_trackTransition.running)
+        if (barActive && show && Media.playing && !Idle.isIdle && _onActiveBar
+            && textClip.needsScroll && !_trackTransition.running)
             _scroll.start()
     }
 
@@ -213,6 +215,14 @@ Item {
                     }
                     _scroll.stop()
                     _trackTransition.restart()
+                }
+                function onPlayingChanged() {
+                    if (Media.playing) {
+                        root._startMarquee()
+                    } else {
+                        _scroll.stop()
+                        trackText.x = 0
+                    }
                 }
             }
 

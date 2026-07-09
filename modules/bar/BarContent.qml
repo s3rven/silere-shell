@@ -110,6 +110,7 @@ Item {
         && root._isOverlayBar && OsdBarState.showing
     readonly property bool _centerVizMode: ShellSettings.mediaVisualizerPosition === "center"
     readonly property bool _centerVizWanted: _centerVizMode && ShellSettings.mediaProgress
+        && !ShellSettings.reduceMotion && !Idle.isIdle
         && root.barActive && root._onActiveBar && Media.shown && Media.playing && Media.cavaReady
     readonly property bool _centerVizHasRoom: titleAvailableWidth >= 48
     readonly property bool _centerVizShowing: _centerVizWanted && _centerVizHasRoom && !root._osdBarShowing

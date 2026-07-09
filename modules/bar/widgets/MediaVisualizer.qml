@@ -11,17 +11,27 @@ Canvas {
     property string styleOverride: ""
     readonly property bool _onActiveBar: barName.length === 0 || Monitors.activeName === barName
     readonly property string _style: styleOverride.length > 0 ? styleOverride : ShellSettings.mediaVisualizerStyle
+    property bool _registered: false
+    property bool _registeredLowPower: false
 
     visible: (ShellSettings.mediaProgress || styleOverride.length > 0)
+        && !ShellSettings.reduceMotion && !Idle.isIdle
         && Media.shown && Media.playing && Media.cavaReady && _onActiveBar
+        && width > 0 && height > 0
     renderTarget:   Canvas.Image
     renderStrategy: lowPower ? Canvas.Immediate : Canvas.Threaded
 
     property var waveData: Media.barHeights
-    onWaveDataChanged:  if (visible) requestPaint()
-    onWidthChanged:     if (visible) requestPaint()
-    onHeightChanged:    if (visible) requestPaint()
-    onVisibleChanged:   if (visible) requestPaint()
+    readonly property bool _paintable: visible && width > 0 && height > 0
+    onWaveDataChanged:  if (_paintable) requestPaint()
+    onWidthChanged:     if (_paintable) requestPaint()
+    onHeightChanged:    if (_paintable) requestPaint()
+    onVisibleChanged:   if (_paintable) requestPaint()
+    on_PaintableChanged: {
+        _syncRegistration()
+        if (_paintable) requestPaint()
+    }
+    onLowPowerChanged: _syncRegistration()
 
     Connections {
         target: ShellSettings
@@ -55,8 +65,28 @@ Canvas {
         ctx.globalCompositeOperation = "source-over"
     }
 
-    Component.onCompleted: Media.registerVisualizer(lowPower)
-    Component.onDestruction: Media.unregisterVisualizer(lowPower)
+    function _setRegistered(want: bool): void {
+        if (want) {
+            if (_registered && _registeredLowPower !== lowPower) {
+                Media.unregisterVisualizer(_registeredLowPower)
+                _registered = false
+            }
+            if (!_registered) {
+                Media.registerVisualizer(lowPower)
+                _registeredLowPower = lowPower
+                _registered = true
+            }
+        } else if (_registered) {
+            Media.unregisterVisualizer(_registeredLowPower)
+            _registered = false
+        }
+    }
+    function _syncRegistration(): void {
+        _setRegistered(_paintable)
+    }
+
+    Component.onCompleted: _syncRegistration()
+    Component.onDestruction: _setRegistered(false)
 
     onPaint: {
         var ctx = getContext("2d")

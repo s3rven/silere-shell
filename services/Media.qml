@@ -145,19 +145,27 @@ Singleton {
     property int _visualizerClients: 0
     property int _visualizerDemand: 0
     readonly property bool _visualizerLowPowerOnly: _visualizerClients > 0 && _visualizerDemand <= _visualizerClients
+    readonly property string _cavaProfileKey: _cavaBars + ":" + _cavaFps + ":" + _cavaSensitivity + ":" + _cavaNoiseReduction
 
+    function _restartCavaIfProfileChanged(oldProfile: string): void {
+        Qt.callLater(function() {
+            if (_cavaProc.running && oldProfile !== _cavaProfileKey) root._restartCava()
+        })
+    }
     function registerVisualizer(lowPower): void {
         const wasRunning = _cavaProc.running
+        const oldProfile = _cavaProfileKey
         _visualizerClients++
         _visualizerDemand += lowPower ? 1 : 2
-        // skip restart when this call starts cava fresh — it already has current bars/fps, restarting just flashes to zero
-        if (wasRunning) Qt.callLater(root._restartCava)
+        // Only restart when the output shape changes; adding another same-profile canvas should not flash CAVA to zero.
+        if (wasRunning) _restartCavaIfProfileChanged(oldProfile)
     }
     function unregisterVisualizer(lowPower): void {
         const wasRunning = _cavaProc.running
+        const oldProfile = _cavaProfileKey
         _visualizerClients = Math.max(0, _visualizerClients - 1)
         _visualizerDemand = Math.max(0, _visualizerDemand - (lowPower ? 1 : 2))
-        if (wasRunning) Qt.callLater(root._restartCava)
+        if (wasRunning) _restartCavaIfProfileChanged(oldProfile)
     }
 
     readonly property int _cavaBars: {
