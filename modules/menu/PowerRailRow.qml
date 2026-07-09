@@ -75,10 +75,39 @@ Rectangle {
     onInteractiveChanged: if (!root.interactive) root.disarm()
     onConfirmChanged: if (!root.confirm) root.disarm()
 
+    onArmedChanged: {
+        _fuseAnim.stop()
+        if (!root.armed) return
+        if (ShellSettings.reduceMotion) _fuse.width = _fuse._fullW
+        else _fuseAnim.restart()
+    }
+
     Timer {
         id: _armTimer
         interval: root.confirmTimeout
         onTriggered: root.disarm()
+    }
+
+    // fuse: depletes over the confirm window so the arm timeout is visible, not a surprise
+    Rectangle {
+        id: _fuse
+        anchors.left: parent.left
+        anchors.leftMargin: 13
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 3
+        height: 2
+        radius: 1
+        antialiasing: true
+        visible: root.armed
+        width: 0
+        color: Theme.withAlpha(Theme.error, 0.55)
+        readonly property real _fullW: Math.max(0, root.width - 26)
+    }
+    NumberAnimation {
+        id: _fuseAnim
+        target: _fuse; property: "width"
+        from: _fuse._fullW; to: 0
+        duration: root.confirmTimeout
     }
 
     HoverHandler {
@@ -95,6 +124,11 @@ Rectangle {
     Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root.activate(); event.accepted = true }
     Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root.activate(); event.accepted = true }
     Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root.activate(); event.accepted = true }
+    // armed rows eat the first Escape as a disarm; unarmed rows let it fall through to close the rail
+    Keys.onEscapePressed: event => {
+        if (root.armed) { root.disarm(); event.accepted = true }
+        else event.accepted = false
+    }
 
     Behavior on color {
         enabled: !ShellSettings.reduceMotion
