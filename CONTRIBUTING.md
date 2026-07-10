@@ -1,24 +1,24 @@
 # Contributing
 
-Suggestions, fixes, and new features are welcome. Open an issue for user-facing behavior or send a focused pull request when the change is ready.
+Thanks for taking an interest in Silere. Ideas, bug reports, fixes, big features, tiny typo catches, all of it is welcome, and you don't need to be a QML expert to help out. Open an issue to talk about user-facing behavior, or send a pull request once a change feels ready. Not sure about something? Open the issue anyway and we'll figure it out together.
 
 ## Bug reports
 
 No scripts to run. A useful report includes:
 
 - distribution, Quickshell version/source, and compositor (Hyprland or niri) version;
-- exact reproduction steps and expected behavior;
+- exact reproduction steps and what you expected instead;
 - relevant foreground `qs -p shell.qml` output;
-- whether the problem also happens on the current `main` branch.
+- whether it also happens on the current `main` branch.
 
-Remove usernames, window titles, network names, and other private data from logs and screenshots.
+Please strip usernames, window titles, network names, and anything else private from logs and screenshots.
 
 ## Changes
 
-Keep work scoped to one behavior. Follow the existing QML component and service patterns, keep optional integrations dormant when unused, and preserve a useful disabled or missing-tool state. Do not commit `config/MatugenTheme.qml`, `settings.json`, or other generated and personal files.
+Keep each change scoped to one behavior. Follow the existing QML component and service patterns, keep optional integrations dormant when unused, and leave a useful disabled or missing-tool state. Don't commit `config/MatugenTheme.qml`, `settings.json`, or other generated and personal files.
 
-CI runs the lint and headless type-check on every pull request, so you do not need to run anything yourself — just push and let it validate. (The `scripts/` helpers are there if you want to check locally, but they are optional.)
+CI runs the lint and headless type-check on every pull request, so you don't need to run anything yourself. Just push and let it validate. (The `scripts/` helpers are there if you like to check locally, but they're optional.)
 
-For visual changes, test keyboard focus, reduced motion, narrow bar/menu layouts, and missing dependencies. Include a before/after screenshot or short recording when the difference is not obvious from the code.
+For visual changes, test keyboard focus, reduced motion, narrow bar and menu layouts, and missing dependencies. A before/after screenshot or short clip helps when the difference isn't obvious from the code.
 
-Code does not need to be perfect before discussion. The reproduction, user impact, and tradeoffs need to be clear enough to evaluate.
+Your code doesn't need to be perfect before we talk. As long as the reproduction, the user impact, and the tradeoffs are clear enough to look at, that's plenty to start from.

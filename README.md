@@ -5,14 +5,12 @@
 <p align="center"><em>silere</em>, from Latin: to be silent.</p>
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-3b3b3b?style=flat-square&labelColor=1c1c1c" alt="license: MIT"/></a>
-  <a href="https://quickshell.outfoxxed.me/"><img src="https://img.shields.io/badge/quickshell-shell-5a4b6e?style=flat-square&labelColor=1c1c1c" alt="built on quickshell"/></a>
-  <img src="https://img.shields.io/badge/compositor-hyprland%20%C2%B7%20niri-5a4b6e?style=flat-square&labelColor=1c1c1c" alt="supports hyprland and niri"/>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-5a4b6e?style=flat-square&labelColor=1c1c1c" alt="license: MIT"/></a>
+  <a href="https://quickshell.outfoxxed.me/"><img src="https://img.shields.io/badge/built%20on-Quickshell-5a4b6e?style=flat-square&labelColor=1c1c1c" alt="built on Quickshell"/></a>
+  <img src="https://img.shields.io/badge/runs%20on-Hyprland%20%C2%B7%20niri-5a4b6e?style=flat-square&labelColor=1c1c1c" alt="runs on Hyprland and niri"/>
 </p>
 
-Silere is a shell for Hyprland and niri, built on Quickshell: a bar, a control menu, notifications, and colors pulled from your wallpaper or set by hand. The quiet part is the point. Widgets only exist when their tools do, anything with a background cost is off until you turn it on, and an idle session rounds to zero CPU.
-
-It is also modular without being heavy: every bar widget can be reordered, moved between sides, or switched off, and appearance is tunable down to separators, outlines, and the active-workspace marker — all plain settings, no plugin layer, no daemon behind any of it.
+Silere is a quiet shell for Hyprland and niri, built on Quickshell: a bar, a control menu, notifications, and colors pulled from your wallpaper or picked by hand. The quiet part is the point. Widgets only exist when their tools do, anything with a background cost stays off until you turn it on, and an idle session rounds to zero CPU. Every widget reorders, moves side to side, or switches off, and the look tunes down to separators and outlines. All plain settings, no plugin layer, no daemon.
 
 <p align="center">
   <img src="assets/showcase.png" alt="silere shell showcase" width="900"/>
@@ -20,7 +18,7 @@ It is also modular without being heavy: every bar widget can be reordered, moved
 
 ## Install
 
-You need `git`, Hyprland or niri, and a current Quickshell build with the Hyprland, Wayland layer-shell, Widgets, Io, Bluetooth, Mpris, Notifications, PipeWire, SystemTray, and UPower modules. Silere picks the compositor automatically at startup.
+You need `git`, Hyprland or niri, and a current Quickshell build with these modules: Hyprland, Wayland layer-shell, Widgets, Io, Bluetooth, Mpris, Notifications, PipeWire, SystemTray, UPower.
 
 ```bash
 git clone https://github.com/s3rven/silere-shell
@@ -28,13 +26,7 @@ cd silere-shell
 bash scripts/install.sh
 ```
 
-The installer copies Silere to `$XDG_CONFIG_HOME/silere-shell`, backs up anything it would overwrite, and adds a marked autostart block to your Hyprland config. Restart Hyprland and it starts on its own. `bash scripts/uninstall.sh` removes it all again.
-
-On niri the installer skips autostart — add the spawn to your `config.kdl` yourself:
-
-```kdl
-spawn-at-startup "sh" "-c" "qs -p ~/.config/silere-shell/shell.qml"
-```
+The installer copies Silere to `$XDG_CONFIG_HOME/silere-shell`, backs up anything it touches, and adds an autostart entry for whichever compositor you're on. Restart it and Silere comes up on its own. To remove everything: `bash scripts/uninstall.sh`.
 
 ## Optional tools
 
@@ -70,29 +62,23 @@ Every widget checks for its tool at runtime. If a tool is missing, its widget hi
 
 ## Resource use
 
-Idle costs 0–0.5% CPU and ~100 MB PSS (~170 MB RSS). RSS looks bigger because it counts libraries shared with every other Qt app on your system; PSS is the number to trust.
+Idle sits at 0 to 0.5% CPU and about 100 MB PSS. RSS reads higher because it counts libraries shared with every other Qt app, so PSS is the honest number. Memory doesn't creep over a session: album art and notification images drop from cache once they leave the screen, and the launcher tunes the allocator so freed pages go straight back to the OS. Heavy use peaks near 260 MB RSS and settles within seconds.
 
-Memory doesn't creep up over a session. Notification images and album art are decoded at capped sizes and dropped from the cache once they leave the screen, images don't keep a CPU-side copy once they're on the GPU, and the launcher tunes the allocator so freed pages return to the OS immediately. A notification burst costs a few MB and falls back within seconds; heavy use peaks near 260 MB RSS.
-
-The menu is built the same way: pages load on first use, the settings pane builds one section at a time, and it all unloads again after the menu sits closed for a while.
-
-The one real cost is the cava visualizer: 15 to 20% of a core while music plays, zero when it stops.
+The one real cost is the cava visualizer: 15 to 20% of a core while music plays, and nothing once it stops.
 
 ## Troubleshooting
 
-If something looks off, run the shell in the foreground to see its errors:
+If something looks off, run the shell in the foreground to read its errors:
 
 ```bash
 qs -p shell.qml
 ```
 
-If notifications never appear, another daemon likely owns `org.freedesktop.Notifications`. If icons or text render in the wrong font, install a Nerd Font (e.g. `ttf-jetbrains-mono-nerd`) and run `fc-cache -f`.
-
-On hybrid laptops with several entries under `/sys/class/backlight`, Silere prefers a raw panel backlight automatically. If brightness changes the wrong display, select the correct device under Settings > System.
+If notifications never appear, another daemon probably owns `org.freedesktop.Notifications`. If icons or text render in the wrong font, install a Nerd Font (like `ttf-jetbrains-mono-nerd`) and run `fc-cache -f`. On hybrid laptops with several `/sys/class/backlight` entries, pick the right display under Settings > System.
 
 ## Contributing
 
-Suggestions, fixes, and new features are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+Ideas, fixes, and new features are all welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
 
 ## License
 

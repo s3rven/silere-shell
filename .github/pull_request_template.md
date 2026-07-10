@@ -8,9 +8,9 @@ Explain what changes for users, including disabled, missing-dependency, and erro
 
 ## Verification
 
-CI runs the lint and headless type-check automatically — no need to run any scripts yourself.
+CI runs the lint and headless type-check for you, so there's nothing to run by hand.
 
-- [ ] Tested the affected interaction in a running Hyprland or niri session, or explained why that was not possible
+- [ ] Tried the change in a running Hyprland or niri session, or said why that wasn't possible
 - [ ] Kept unrelated formatting, generated theme files, and personal settings out of the change
 
 ## Visual changes
