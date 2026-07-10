@@ -155,8 +155,8 @@ else
     _skip "no silere-shell entry found"
 fi
 
-# ── Hyprland autostart ───────────────────────────────────────────────────────────
-_section "Hyprland autostart"
+# ── autostart ────────────────────────────────────────────────────────────────────
+_section "autostart"
 
 AUTOSTART_FILES=(
     "$CONFIG_HOME/hypr/custom/execs.lua"
@@ -164,6 +164,7 @@ AUTOSTART_FILES=(
     "$CONFIG_HOME/hypr/execs.lua"
     "$CONFIG_HOME/hypr/hyprland.lua"
     "$CONFIG_HOME/hypr/hyprland.conf"
+    "${SILERE_NIRI_CONFIG:-$CONFIG_HOME/niri/config.kdl}"
 )
 # Include custom layouts under the Hyprland config tree. The same session-aware
 # resolver as the installer also covers external --config paths and their Lua
@@ -196,6 +197,8 @@ for f in "${AUTOSTART_FILES[@]}"; do
         if _ask "Remove autostart block from $(basename "$f")?"; then
             if [[ "$f" == *.lua ]]; then
                 _remove_block "$f" '-- silere-shell begin' '-- silere-shell end' && _ok "removed from $f"
+            elif [[ "$f" == *.kdl ]]; then
+                _remove_block "$f" '// silere-shell begin' '// silere-shell end' && _ok "removed from $f"
             else
                 _remove_block "$f" '# silere-shell begin' '# silere-shell end' && _ok "removed from $f"
             fi

@@ -497,7 +497,7 @@ EOF
 fi
 
 # ── Hyprland autostart ───────────────────────────────────────────────────────────
-_section "Hyprland autostart"
+_section "autostart"
 HYPR_CONF="$CONFIG_HOME/hypr/hyprland.conf"
 HYPR_LUA="$CONFIG_HOME/hypr/hyprland.lua"
 
@@ -552,6 +552,30 @@ LAUNCH_CMD_LUA="$(_lua_string "$LAUNCH_CMD")"
 
 _already_present() { grep -qF 'silere-shell begin' "$1" 2>/dev/null; }
 
+NIRI_CONFIG="${SILERE_NIRI_CONFIG:-$CONFIG_HOME/niri/config.kdl}"
+_autostart_done=false
+
+# niri session wins; fall back to a niri config only when no Hyprland session is live
+if [ -n "${NIRI_SOCKET:-}" ] || [ "${XDG_CURRENT_DESKTOP:-}" = "niri" ] \
+    || { [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && [ -f "$NIRI_CONFIG" ]; }; then
+    NIRI_SPAWN="spawn-at-startup \"sh\" \"-c\" $(_lua_string "$LAUNCH_CMD")"
+    if [ ! -f "$NIRI_CONFIG" ]; then
+        _warn "no niri config at $NIRI_CONFIG"
+        _warn "add manually: $NIRI_SPAWN"
+    elif _already_present "$NIRI_CONFIG"; then
+        _ok "already present in $NIRI_CONFIG"
+    elif _ask "Add spawn-at-startup to $NIRI_CONFIG?"; then
+        _reject_unsafe_path "$NIRI_CONFIG"
+        _backup "$NIRI_CONFIG"
+        printf '\n// silere-shell begin\n%s\n// silere-shell end\n' "$NIRI_SPAWN" >> "$NIRI_CONFIG"
+        _ok "added to $NIRI_CONFIG"; did_autostart=true
+    else
+        _skip "skipped — add manually: $NIRI_SPAWN"
+    fi
+    _autostart_done=true
+fi
+
+if ! $_autostart_done; then
 HYPR_DIR="$(dirname -- "${HYPR_CONFIG:-$CONFIG_HOME/hypr/hyprland.conf}")"
 
 if [ "$HYPR_CONFIG" = "$HYPR_LUA" ] && [ -f "$HYPR_CONF" ]; then
@@ -616,6 +640,7 @@ else
     _warn "no Hyprland config found"
     _warn "add manually: exec-once = $LAUNCH_CMD"
 fi
+fi
 
 # ── update-check timer ──────────────────────────────────────────────────────────────
 _section "update-check timer"
@@ -642,10 +667,10 @@ $did_toml      && printf "    ${GREEN}ok${R}      matugen toml\n"     || printf 
 $did_autostart && printf "    ${GREEN}ok${R}      autostart\n"        || printf "    ${DIM}skip${R}    autostart\n"
 $did_update    && printf "    ${GREEN}ok${R}      auto-update timer\n" || printf "    ${DIM}skip${R}    auto-update timer\n"
 if $has_qs && $qs_modules_ok; then
-    printf "\n  restart Hyprland to launch silere\n"
+    printf "\n  restart your compositor to launch silere\n"
 elif $has_qs; then
-    printf "\n  ${YELLOW}install a complete current Quickshell build${R}, then restart Hyprland\n"
+    printf "\n  ${YELLOW}install a complete current Quickshell build${R}, then restart your compositor\n"
 else
-    printf "\n  ${YELLOW}install Quickshell${R}, then restart Hyprland to launch silere\n"
+    printf "\n  ${YELLOW}install Quickshell${R}, then restart your compositor to launch silere\n"
 fi
 printf "  to uninstall: ${DIM}%s/scripts/uninstall.sh${R}\n\n" "$ROOT"
