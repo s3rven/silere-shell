@@ -280,11 +280,11 @@ PanelWindow {
         states: [
             State {
                 name: "hidden"
-                PropertyChanges { target: panel; menuScale: Motion.popScaleFrom; edgeOffset: panel._closedOffset; opacity: 0 }
+                PropertyChanges { panel.menuScale: Motion.popScaleFrom; panel.edgeOffset: panel._closedOffset; panel.opacity: 0 }
             },
             State {
                 name: "visible"
-                PropertyChanges { target: panel; menuScale: 1.0; edgeOffset: 0; opacity: 1 }
+                PropertyChanges { panel.menuScale: 1.0; panel.edgeOffset: 0; panel.opacity: 1 }
             }
         ]
 
@@ -333,27 +333,13 @@ PanelWindow {
             if (state === "hidden") {
                 powerOpen = false
                 _placementSettled = false
-                _idleUnload.restart()
             } else {
-                _idleUnload.stop()
                 if (activeTab === 1) _settingsLoaded = true
                 if (activeTab === 2) _recentLoaded = true
                 if (!_loaded) {
                     _loaded = true
                     Qt.callLater(function() { _loadedDeferred = true })
                 }
-            }
-        }
-
-        // free the page tree after the menu's been closed a while; reopen rebuilds from cached bytecode (quick reopens stay instant, idle drops ~50-100 MB)
-        Timer {
-            id: _idleUnload
-            interval: 45000
-            onTriggered: if (panel.state === "hidden") {
-                panel._loadedDeferred = false
-                panel._loaded = false
-                panel._settingsLoaded = false
-                panel._recentLoaded = false
             }
         }
 
