@@ -71,11 +71,13 @@ Singleton {
 
     function focusWorkspace(wsId, output): void {
         if (wsId === undefined || wsId === null || wsId < 0) return
+        const mon = output || ""
         if (root.isNiri) {
+            // focus-workspace takes a per-output index, so target the monitor first
+            if (mon.length > 0 && mon !== root._niriFocusedMon) root._niriAction(["focus-monitor", mon])
             root._niriAction(["focus-workspace", String(wsId)])
             return
         }
-        const mon = output || ""
         if (mon.length > 0) focusMonitor(mon)
         HyprActions._dispatch("workspace", wsId)
     }
@@ -107,8 +109,6 @@ Singleton {
     function refreshToplevels(): void {
         if (root.isHyprland) Hyprland.refreshToplevels()
     }
-
-    // ===================== Hyprland backend =====================
 
     property int _hyprTick: 0
 
@@ -219,8 +219,6 @@ Singleton {
         }
     }
 
-    // ===================== niri backend =====================
-
     property var _niriWsRaw: []
     property var _niriWinRaw: []
     property bool _niriOverview: false
@@ -261,7 +259,9 @@ Singleton {
                 wsRef: w.workspace_id, wsId: home ? home.idx : -1,
                 output: home ? (home.output ?? "") : "",
                 focused: !!w.is_focused,
-                focusRank: w.focus_timestamp ? -Number(w.focus_timestamp.secs ?? 0) : 9999,
+                focusRank: w.focus_timestamp
+                    ? -(Number(w.focus_timestamp.secs ?? 0) + Number(w.focus_timestamp.nanos ?? 0) / 1e9)
+                    : 9999,
                 fullscreen: !!w.is_fullscreen
             })
         }
@@ -362,6 +362,16 @@ Singleton {
             const wins = root._niriWinRaw.slice()
             for (let i = 0; i < wins.length; i++)
                 if (wins[i]) wins[i] = Object.assign({}, wins[i], { is_focused: wins[i].id === id })
+            root._niriWinRaw = wins
+            return
+        }
+        // keeps focusRank fresh so the notif/tray/media source tiebreak tracks live recency
+        if (ev.WindowFocusTimestampChanged) {
+            const d = ev.WindowFocusTimestampChanged
+            const wins = root._niriWinRaw.slice()
+            for (let i = 0; i < wins.length; i++)
+                if (wins[i] && wins[i].id === d.id)
+                    wins[i] = Object.assign({}, wins[i], { focus_timestamp: d.focus_timestamp })
             root._niriWinRaw = wins
             return
         }
