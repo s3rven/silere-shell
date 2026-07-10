@@ -112,13 +112,6 @@ Singleton {
 
     property int _hyprTick: 0
 
-    function _hyprMonitorByName(name) {
-        const mons = Hyprland.monitors ? (Hyprland.monitors.values ?? []) : []
-        for (let i = 0; i < mons.length; i++)
-            if (mons[i] && mons[i].name === name) return mons[i]
-        return null
-    }
-
     readonly property string _hyprFocusedMon: {
         root._hyprTick
         return Hyprland.focusedMonitor ? (Hyprland.focusedMonitor.name ?? "") : ""
