@@ -28,7 +28,7 @@ cd silere-shell
 bash scripts/install.sh
 ```
 
-The installer copies Silere to `$XDG_CONFIG_HOME/silere-shell`, backs up anything it would overwrite, and adds a marked autostart block to your Hyprland config. Restart Hyprland, then run `bash scripts/check.sh` to confirm everything is wired up. `bash scripts/uninstall.sh` removes it all again.
+The installer copies Silere to `$XDG_CONFIG_HOME/silere-shell`, backs up anything it would overwrite, and adds a marked autostart block to your Hyprland config. Restart Hyprland and it starts on its own. `bash scripts/uninstall.sh` removes it all again.
 
 On niri the installer skips autostart — add the spawn to your `config.kdl` yourself:
 
@@ -80,12 +80,13 @@ The one real cost is the cava visualizer: 15 to 20% of a core while music plays,
 
 ## Troubleshooting
 
+If something looks off, run the shell in the foreground to see its errors:
+
 ```bash
-bash scripts/check.sh   # tool/service checks + smoke launch
-qs -p shell.qml         # run in the foreground to see errors
+qs -p shell.qml
 ```
 
-Optional warnings from `check.sh` are usually fine; a smoke-launch `FAIL` means startup broke. If notifications never appear, another daemon likely owns `org.freedesktop.Notifications`. If icons or text render in the wrong font, install a Nerd Font (e.g. `ttf-jetbrains-mono-nerd`) and run `fc-cache -f`. The `font` checks in `check.sh` catch this case.
+If notifications never appear, another daemon likely owns `org.freedesktop.Notifications`. If icons or text render in the wrong font, install a Nerd Font (e.g. `ttf-jetbrains-mono-nerd`) and run `fc-cache -f`.
 
 On hybrid laptops with several entries under `/sys/class/backlight`, Silere prefers a raw panel backlight automatically. If brightness changes the wrong display, select the correct device under Settings > System.
 

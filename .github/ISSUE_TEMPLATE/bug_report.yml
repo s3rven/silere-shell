@@ -53,11 +53,14 @@ body:
       required: true
 
   - type: textarea
-    id: diagnostics
+    id: environment
     attributes:
-      label: Diagnostic output
-      description: Run `bash scripts/check.sh` from the Silere directory and paste the relevant output.
-      render: shell
+      label: Environment
+      description: Your compositor and version (Hyprland or niri), Quickshell version, and distro. No scripts to run.
+      placeholder: |
+        Compositor: niri 26.04
+        Quickshell: 0.3.0
+        Distro: CachyOS
     validations:
       required: true
 

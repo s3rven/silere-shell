@@ -8,9 +8,9 @@ Explain what changes for users, including disabled, missing-dependency, and erro
 
 ## Verification
 
-- [ ] `bash scripts/ci-lint.sh`
-- [ ] `bash scripts/test-qml-headless.sh`
-- [ ] Tested the affected interaction in a running Hyprland session, or explained why that was not possible
+CI runs the lint and headless type-check automatically — no need to run any scripts yourself.
+
+- [ ] Tested the affected interaction in a running Hyprland or niri session, or explained why that was not possible
 - [ ] Kept unrelated formatting, generated theme files, and personal settings out of the change
 
 ## Visual changes

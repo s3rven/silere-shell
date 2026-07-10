@@ -4,11 +4,11 @@ Suggestions, fixes, and new features are welcome. Open an issue for user-facing 
 
 ## Bug reports
 
-Run `bash scripts/check.sh` from the Silere directory first. A useful report includes:
+No scripts to run. A useful report includes:
 
-- distribution, Quickshell version/source, and Hyprland version;
+- distribution, Quickshell version/source, and compositor (Hyprland or niri) version;
 - exact reproduction steps and expected behavior;
-- relevant `check.sh` or foreground `qs -p shell.qml` output;
+- relevant foreground `qs -p shell.qml` output;
 - whether the problem also happens on the current `main` branch.
 
 Remove usernames, window titles, network names, and other private data from logs and screenshots.
@@ -17,15 +17,7 @@ Remove usernames, window titles, network names, and other private data from logs
 
 Keep work scoped to one behavior. Follow the existing QML component and service patterns, keep optional integrations dormant when unused, and preserve a useful disabled or missing-tool state. Do not commit `config/MatugenTheme.qml`, `settings.json`, or other generated and personal files.
 
-Before opening a pull request, run:
-
-```bash
-bash scripts/ci-lint.sh
-bash scripts/test-qml-headless.sh
-bash scripts/check.sh
-```
-
-The first two match the important CI checks. The full check also inspects services and the current desktop environment, so clearly note any expected environment warnings.
+CI runs the lint and headless type-check on every pull request, so you do not need to run anything yourself — just push and let it validate. (The `scripts/` helpers are there if you want to check locally, but they are optional.)
 
 For visual changes, test keyboard focus, reduced motion, narrow bar/menu layouts, and missing dependencies. Include a before/after screenshot or short recording when the difference is not obvious from the code.
 
