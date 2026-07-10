@@ -16,8 +16,6 @@ Silere is a quiet shell for Hyprland and niri, built on Quickshell: a bar, a con
   <img src="assets/showcase.png" alt="silere shell showcase" width="900"/>
 </p>
 
----
-
 ## Install
 
 You need `git`, Hyprland or niri, and a current Quickshell build with these modules: Hyprland, Wayland layer-shell, Widgets, Io, Bluetooth, Mpris, Notifications, PipeWire, SystemTray, UPower.
@@ -29,8 +27,6 @@ bash scripts/install.sh
 ```
 
 The installer copies Silere to `$XDG_CONFIG_HOME/silere-shell`, backs up anything it touches, and adds an autostart entry for whichever compositor you're on. Restart it and Silere comes up on its own. To remove everything: `bash scripts/uninstall.sh`.
-
----
 
 ## Optional tools
 
@@ -49,8 +45,6 @@ Every widget checks for its tool at runtime. If a tool is missing, its widget hi
 | `inotifywait` | screenshot feedback |
 | `checkupdates` / `apt` / `dnf` / `zypper` / `xbps-install` | package update badge |
 
----
-
 ## Controls
 
 | area | action |
@@ -66,15 +60,11 @@ Every widget checks for its tool at runtime. If a tool is missing, its widget hi
 | history | click an entry to expand its full text; hover for per-item dismiss |
 | updates | shell updates install only after confirmation; background checks only update the badge |
 
----
-
 ## Resource use
 
 Idle sits at 0 to 0.5% CPU and about 100 MB PSS. RSS reads higher because it counts libraries shared with every other Qt app, so PSS is the honest number. Memory doesn't creep over a session: album art and notification images drop from cache once they leave the screen, and the launcher tunes the allocator so freed pages go straight back to the OS. Heavy use peaks near 260 MB RSS and settles within seconds.
 
 The one real cost is the cava visualizer: 15 to 20% of a core while music plays, and nothing once it stops.
-
----
 
 ## Troubleshooting
 
@@ -86,13 +76,9 @@ qs -p shell.qml
 
 If notifications never appear, another daemon probably owns `org.freedesktop.Notifications`. If icons or text render in the wrong font, install a Nerd Font (like `ttf-jetbrains-mono-nerd`) and run `fc-cache -f`. On hybrid laptops with several `/sys/class/backlight` entries, pick the right display under Settings > System.
 
----
-
 ## Contributing
 
 Ideas, fixes, and new features are all welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
-
----
 
 ## License
 
