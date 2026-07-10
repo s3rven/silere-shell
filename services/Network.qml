@@ -29,7 +29,8 @@ Singleton {
     property bool   wifiScanFailed:  false
     readonly property bool wifiScanning: _savedProc.running || _wifiScanProc.running
     property bool   _refreshPending: false
-    property bool   _statsSuspended: false
+    property int    _queryFailures: 0
+    property bool   _statsRefreshing: false
     property int signalStrength:    0
     property real downBps:          0
     property real upBps:            0
@@ -194,6 +195,8 @@ Singleton {
     function _init(): void {
         if (!SystemTools.ready) return
         if (!toolAvailable) {
+            _queryRetry.stop()
+            _queryFailures = 0
             available = false
             connected = false
             deviceName = ""
@@ -217,17 +220,29 @@ Singleton {
 
     Process {
         id: _proc
+        environment: ({ "LC_ALL": "C" })
         command: ["nmcli", "-t", "-f", "TYPE,DEVICE,STATE,CONNECTION", "device"]
         stdout: StdioCollector { id: _procOut }
         onExited: (code) => {
             if (code !== 0) {
+                root._queryFailures++
+                if (root._queryFailures < 3) _queryRetry.restart()
+                else root.monitoring = false
                 root.connected = false
                 root.available = false
+                root.isWifi = false
+                root.connectionName = ""
                 root.deviceName = ""
                 root.deviceType = ""
                 root.hasWifiDevice = false
+                root.hasVpn = false
+                root.vpnName = ""
+                root.signalStrength = 0
                 root._resetTraffic()
             } else {
+                _queryRetry.stop()
+                root._queryFailures = 0
+                root.monitoring = true
                 let best = null
                 let vpn = false
                 let vpnConn = ""
@@ -297,6 +312,7 @@ Singleton {
 
     Process {
         id: _signalProc
+        environment: ({ "LC_ALL": "C" })
         command: ["nmcli", "-t", "-f", "IN-USE,SIGNAL", "dev", "wifi", "list", "--rescan", "no"]
         stdout: StdioCollector { id: _signalOut }
         onExited: (code) => {
@@ -316,6 +332,7 @@ Singleton {
     // wi-fi radio state, refreshed on every nmcli event so external toggles (rfkill, airplane mode) stay in sync
     Process {
         id: _radioCheck
+        environment: ({ "LC_ALL": "C" })
         command: ["nmcli", "-t", "radio", "wifi"]
         stdout: StdioCollector { id: _radioOut }
         onExited: (code) => { if (code === 0) root.wifiEnabled = (_radioOut.text || "").trim() === "enabled" }
@@ -324,11 +341,16 @@ Singleton {
     onWifiEnabledChanged: if (!wifiEnabled) clearWifiScan()
 
     // Fire-and-forget radio setter; re-reads radio state and device list once done.
-    Process { id: _radioSet; onExited: { if (!_radioCheck.running) _radioCheck.running = true; root.refresh() } }
+    Process {
+        id: _radioSet
+        environment: ({ "LC_ALL": "C" })
+        onExited: { if (!_radioCheck.running) _radioCheck.running = true; root.refresh() }
+    }
 
     // Saved wifi connection names → known-network flag. Chains into the scan.
     Process {
         id: _savedProc
+        environment: ({ "LC_ALL": "C" })
         command: ["nmcli", "-t", "-f", "NAME,TYPE", "connection", "show"]
         stdout: StdioCollector { id: _savedOut }
         onExited: {
@@ -352,6 +374,7 @@ Singleton {
     // Visible access points, deduped by SSID (strongest signal wins).
     Process {
         id: _wifiScanProc
+        environment: ({ "LC_ALL": "C" })
         command: ["nmcli", "-t", "-f", "ACTIVE,SSID,SIGNAL,SECURITY", "device", "wifi", "list", "--rescan", root._wifiScanRescan ? "yes" : "no"]
         stdout: StdioCollector { id: _wifiScanOut }
         onExited: (code) => {
@@ -405,6 +428,7 @@ Singleton {
     // shared connect/disconnect runner; WifiList's rescan timer handles re-scanning while the picker's open
     Process {
         id: _wifiActProc
+        environment: ({ "LC_ALL": "C" })
         onExited: (code) => {
             if (code !== 0 && root.wifiConnecting.length > 0)
                 root.wifiError = root.wifiConnecting
@@ -413,69 +437,83 @@ Singleton {
         }
     }
 
-    // persistent stats loop, one long-running bash instead of forking cat each second; restarts on interface change
+    function _sampleTraffic(): void {
+        if (!statsWanted || !statsDeviceReady || Idle.isIdle || _statsRefreshing) return
+        _statsRefreshing = true
+        try {
+            _netDevFile.reload()
+            if (!_netDevFile.waitForJob()) {
+                _resetTraffic()
+                return
+            }
+
+            const lines = (_netDevFile.text() || "").split(/\r?\n/)
+            let rx = -1
+            let tx = -1
+            for (let i = 0; i < lines.length; i++) {
+                const sep = lines[i].indexOf(":")
+                if (sep < 0 || lines[i].slice(0, sep).trim() !== root.deviceName) continue
+                const fields = lines[i].slice(sep + 1).trim().split(/\s+/)
+                if (fields.length >= 9) {
+                    rx = Number(fields[0])
+                    tx = Number(fields[8])
+                }
+                break
+            }
+            if (!isFinite(rx) || !isFinite(tx) || rx < 0 || tx < 0) {
+                _resetTraffic()
+                return
+            }
+
+            const now = Date.now()
+            const dt = (now - root._lastStatsMs) / 1000
+            if (root._lastRxBytes >= 0 && root._lastTxBytes >= 0 && root._lastStatsMs > 0 && dt >= 0.2) {
+                root.downBps = rx >= root._lastRxBytes ? (rx - root._lastRxBytes) / dt : 0
+                root.upBps = tx >= root._lastTxBytes ? (tx - root._lastTxBytes) / dt : 0
+            }
+            root._lastRxBytes = rx
+            root._lastTxBytes = tx
+            root._lastStatsMs = now
+        } finally {
+            _statsRefreshing = false
+        }
+    }
+
     onDeviceNameChanged: {
-        // Briefly drop the declarative run condition so the process restarts
-        // with the new interface argument. Assigning `_statsProc.running`
-        // directly would destroy its binding and permanently stop sampling.
-        root._statsSuspended = true
-        _statsRestart.restart()
+        root._resetTraffic()
+        if (_statsPoll.running) _statsPoll.restart()
+    }
+
+    FileView {
+        id: _netDevFile
+        path: root.statsWanted ? "/proc/net/dev" : ""
+        blockLoading: true
+        blockAllReads: true
+        printErrors: false
     }
 
     Timer {
-        id: _statsRestart
-        interval: 50
-        onTriggered: root._statsSuspended = false
-    }
-
-    Process {
-        id: _statsProc
+        id: _statsPoll
+        interval: 2000
+        repeat: true
+        triggeredOnStart: true
         running: root.statsWanted && root.statsDeviceReady
-            && !Idle.isIdle && !root._statsSuspended
-        // /proc/net/dev field layout: iface: rx_bytes ... tx_bytes.
-        // fd 3 pipe + read -t = fork-free sleep (same trick as CpuTemp).
-        command: ["bash", "-c",
-            "dev=$1; exec 3<> <(:); while true; do " +
-            "found=0; while read -r iface rx _ _ _ _ _ _ _ tx _; do " +
-            "  [ \"$iface\" = \"$dev:\" ] && { echo \"$rx $tx\"; found=1; break; }; " +
-            "done < /proc/net/dev; [ \"$found\" = 1 ] || echo -; read -r -t 2 -u 3; done",
-            "net-stats", root.deviceName
-        ]
-        stdout: SplitParser {
-            onRead: (line) => {
-                if (line.trim().length === 0) { root._resetTraffic(); return }
-                if (line.trim() === "-") { root._resetTraffic(); return }
-                const parts = line.trim().split(/\s+/)
-                if (parts.length < 2) { root._resetTraffic(); return }
-                const rx = Number(parts[0])
-                const tx = Number(parts[1])
-                if (isNaN(rx) || isNaN(tx)) { root._resetTraffic(); return }
-
-                const now = Date.now()
-                const dt  = (now - root._lastStatsMs) / 1000
-                // Gate on a sane positive interval: a backward clock step (NTP/resume)
-                // would otherwise divide a normal ~2s sample by ~0 and flash a huge
-                // spike. Skip that one tick and keep the last rate instead.
-                if (root._lastRxBytes >= 0 && root._lastTxBytes >= 0 && root._lastStatsMs > 0 && dt >= 0.2) {
-                    root.downBps = rx >= root._lastRxBytes ? (rx - root._lastRxBytes) / dt : 0
-                    root.upBps   = tx >= root._lastTxBytes ? (tx - root._lastTxBytes) / dt : 0
-                }
-                root._lastRxBytes = rx
-                root._lastTxBytes = tx
-                root._lastStatsMs = now
-            }
-        }
-        onRunningChanged: root._resetTraffic()
-        Component.onDestruction: running = false
+            && !Idle.isIdle
+        onTriggered: root._sampleTraffic()
+        onRunningChanged: if (!running) root._resetTraffic()
     }
 
     SupervisedProcess {
         id: monitorProc
+        environment: ({ "LC_ALL": "C" })
         command: ["nmcli", "monitor"]
         superviseWhen: root.toolAvailable && root.monitoring
         restartDelay: 3000
+        maxRestartDelay: 60000
+        cleanExitOnly: true
         stdout: SplitParser { onRead: monitorDebounce.restart() }
         onRunningChanged: { if (running) root.refresh() }
+        onGaveUpChanged: if (gaveUp) root.monitoring = false
     }
 
     Timer {
@@ -486,5 +524,16 @@ Singleton {
             root.refresh()
         }
     }
-    Timer { id: _fallbackPoll; interval: 300000; running: root.toolAvailable && root.monitoring && !Idle.isIdle; repeat: true; onTriggered: root.refresh() }
+    Timer {
+        id: _queryRetry
+        interval: Math.min(30000, 3000 * Math.pow(2, Math.max(0, root._queryFailures - 1)))
+        onTriggered: root.refresh()
+    }
+    Timer {
+        id: _fallbackPoll
+        interval: root.monitoring || root._queryFailures >= 3 ? 300000 : 30000
+        running: root.toolAvailable && !Idle.isIdle
+        repeat: true
+        onTriggered: root.refresh()
+    }
 }
