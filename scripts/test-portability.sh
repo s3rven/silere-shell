@@ -216,6 +216,11 @@ test_uninstall_targets_and_backups
 test_qml_module_lookup
 test_hypr_discovery
 test_atomic_units
-test_repair_workflow
+# repair.sh builds a git fixture; skip where git is absent (e.g. minimal CI runners)
+if command -v git >/dev/null 2>&1; then
+    test_repair_workflow
+else
+    printf 'SKIP: repair workflow (git unavailable)\n'
+fi
 
 printf 'portability regression tests passed\n'
