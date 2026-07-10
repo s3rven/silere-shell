@@ -2,9 +2,7 @@ import QtQuick
 import "../../config"
 import "../../services"
 
-// Shared page chrome for the menu tabs: fade+scale enter/exit driven by
-// `active`, GPU layer held only while entering. Pages become this, tune the
-// timings, and hook pageShown()/pageHidden() for their own resets.
+// base for menu tab pages; override pageShown()/pageHidden() for per-page resets
 Item {
     id: root
 

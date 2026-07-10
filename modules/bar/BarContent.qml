@@ -80,10 +80,8 @@ Item {
         function onShowSecondsChanged() { root._queueAutoCompact() }
     }
 
-    // one Component per widget kind, chosen per-slot by whichever zone array holds the key; both zones share this map.
-    // Pill/Tray/Media widgets bind height straight to root.height instead of a forced-height Loader: a Loader's
-    // resize-to-fit stretches the outer item, and a widget sized off a fixed reference (Workspaces' diamond off
-    // btnH, not an anchor) then stays pinned to the top instead of recentring.
+    // one Component per widget kind, chosen per-slot by whichever zone array holds the key.
+    // widgets bind height to root.height, not a forced-height Loader — Loader resize-to-fit mis-centres the diamond
     Component { id: _cWorkspaces;  Workspaces       { anchors.verticalCenter: parent.verticalCenter; screen: root.screen } }
     Component { id: _cShellUpdate; ShellUpdateWidget { anchors.verticalCenter: parent.verticalCenter; height: root.height; compact: root.effectiveCompact } }
     Component { id: _cTray;        TrayWidget       { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }

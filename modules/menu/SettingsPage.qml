@@ -149,7 +149,6 @@ PageShell {
         }
     }
 
-    // ── Detail pane ────────────────────────────────────────────────────────
     Item {
         id: _detail
         width:  root.width
@@ -236,7 +235,6 @@ PageShell {
                 width:  parent.width
                 sourceComponent: root._sectionComponents[root._shownSection] ?? _secSystem
 
-                // ── APPEARANCE · Theme ──────────────────────────────────────
                 Component {
                     id: _secTheme
                     Column {
@@ -506,7 +504,6 @@ PageShell {
                 }
             }
 
-            // ── APPEARANCE · Night Light ────────────────────────────────
             Component {
                 id: _secNightLight
                 Column {
@@ -537,7 +534,6 @@ PageShell {
                 }
             }
 
-            // ── BAR · Surface ──────────────────────────────────────────
             Component {
                 id: _secSurface
                 Column {
@@ -628,7 +624,6 @@ PageShell {
                 }
             }
 
-            // ── BAR · Separators ───────────────────────────────────────
             Component {
                 id: _secSeparators
                 Column {
@@ -691,7 +686,6 @@ PageShell {
                 }
             }
 
-            // ── BAR · Underline ─────────────────────────────────────────
             Component {
                 id: _secUnderline
                 Column {
@@ -797,7 +791,6 @@ PageShell {
                 }
             }
 
-            // ── WIDGETS · Clock ─────────────────────────────────────────
             Component {
                 id: _secClock
                 Column {
@@ -837,7 +830,6 @@ PageShell {
                 }
             }
 
-            // ── WIDGETS · Workspaces ────────────────────────────────────
             Component {
                 id: _secWorkspaces
                 Column {
@@ -925,7 +917,6 @@ PageShell {
                 }
             }
 
-            // ── WIDGETS · Media ─────────────────────────────────────────
             Component {
                 id: _secMedia
                 Column {
@@ -1028,7 +1019,6 @@ PageShell {
                 }
             }
 
-            // ── WIDGETS · Indicators ────────────────────────────────────
             Component {
                 id: _secIndicators
                 Column {
@@ -1076,7 +1066,6 @@ PageShell {
                 }
             }
 
-            // ── NOTIFICATIONS · Popups ──────────────────────────────────
             Component {
                 id: _secPopups
                 Column {
@@ -1163,7 +1152,6 @@ PageShell {
                 }
             }
 
-            // ── NOTIFICATIONS · OSD ─────────────────────────────────────
             Component {
                 id: _secOsd
                 Column {
@@ -1225,7 +1213,6 @@ PageShell {
                 }
             }
 
-            // ── NOTIFICATIONS · Warnings ────────────────────────────────
             Component {
                 id: _secWarnings
                 Column {
@@ -1314,7 +1301,6 @@ PageShell {
                 }
             }
 
-            // ── SYSTEM ──────────────────────────────────────────────────
             Component {
                 id: _secSystem
                 Column {
@@ -1489,7 +1475,6 @@ PageShell {
                 }
             }
 
-            // ── SYSTEM · Updates ────────────────────────────────────────
             Component {
                 id: _secUpdates
                 Column {

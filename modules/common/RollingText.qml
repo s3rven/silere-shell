@@ -2,7 +2,7 @@ import QtQuick
 import "../../config"
 import "../../services"
 
-// Value change rolls vertically (old drifts up/fades, new rises). For slow tickers (clock minute, date), not per-second.
+// for slow tickers (clock minute, date), not per-second
 Item {
     id: root
 

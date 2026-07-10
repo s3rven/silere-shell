@@ -1,9 +1,7 @@
 import QtQuick
 import "../../config"
 
-// sub-group heading: accent tick + uppercase mono label + a hairline rule to the right edge. carries its own
-// spacing (gap above, small gap to the card below) so callers skip spacer Items; `first: true` sits just under
-// the page header with almost no gap above.
+// carries its own spacing so callers skip spacer Items; first:true tightens the gap under the page header
 Item {
     id: root
 

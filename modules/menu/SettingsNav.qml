@@ -69,7 +69,6 @@ Item {
             width: root.width
             height: _navCol.implicitHeight + root._navTop + 10
 
-            // ── Sliding selection ───────────────────────────────────────
             // _selReady defers the Behavior one frame so it's correct on open
             property bool _selReady: false
             Component.onCompleted: Qt.callLater(function() { _content._selReady = true })

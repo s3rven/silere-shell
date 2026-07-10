@@ -47,7 +47,6 @@ Item {
         fillOpacity:  root.activeFocus ? 0.13 : 0.08
     }
 
-    // ── Top line: glyph + label (left), value (right) ─────────────────────
     Item {
         id: _head
         anchors.left:       parent.left
@@ -102,7 +101,6 @@ Item {
         renderType:     Text.NativeRendering
     }
 
-    // ── Bottom line: full-width track ─────────────────────────────────────
     // bottom-anchored (not chained under the head) so the thumb keeps clear of the card edge at every font
     SliderTrack {
         id: _track

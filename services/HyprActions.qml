@@ -257,10 +257,7 @@ Singleton {
         return best
     }
 
-    // Resolve a notification to its source window (client), or null.
-    // Precision order: sender PID chain → desktop-entry hint → appName →
-    // appName resolved through the desktop-entry database. Ambiguity within a
-    // match falls back to the most recently focused window of that app.
+    // resolve notif → source window: PID chain → desktop-entry → appName; ties fall back to most-recently-focused of that app
     function _matchNotificationClient(notification) {
         if (!notification) return null
 
@@ -333,10 +330,7 @@ Singleton {
         if (best) Compositor.focusToplevel(best)
     }
 
-    // resolve the window behind a tray item and switch to its workspace. many SNIs
-    // (Spotify) expose no Activate method, so match id/title/tooltip against window
-    // classes, then the desktop-entry db (display name → StartupWMClass) like notifs.
-    // returns false when the app has no live window, so the caller can fall back.
+    // many SNIs (Spotify) expose no Activate, so match id/title/tooltip → class → desktop-entry db; false when no live window
     function focusTrayItem(id: string, title: string, tooltip: string): bool {
         const clients = root._clients()
         if (clients.length === 0) return false

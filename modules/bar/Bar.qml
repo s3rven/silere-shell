@@ -21,10 +21,8 @@ PanelWindow {
         : 0
     // underline wraps automatically whenever the bar floats, no separate setting
     readonly property bool wrapUnderline: ShellSettings.barFloating
-    // Floating-width side gap snaps to a multiple of 8 so the segment's x
-    // lands on the 4px grid: at effective scale 2.5× (DPR=2 × 1.25×
-    // compositor) that maps to an integer output pixel, avoiding the
-    // subpixel-bleed line at the bar's left edge on fractional displays.
+    // side gap snaps to a multiple of 8 so the segment x lands on the 4px grid and maps to
+    // an integer output pixel at 2.5× effective scale — else a subpixel-bleed line at the left edge
     readonly property real surfaceWidth: {
         if (!ShellSettings.barFloating) return width
         const rawGap = width * (1.0 - ShellSettings.barWidth)
@@ -71,11 +69,8 @@ PanelWindow {
 
     Item {
         id: surface
-        // Pinned to the screen-facing edge with an explicit height, so the
-        // shadow pad only adds empty window space on the desktop side and never
-        // touches the surface geometry. Anchoring to both edges instead let a
-        // shadowPad toggle change implicitHeight and a margin in separate
-        // frames, visibly jolting the surface.
+        // pin to the screen edge with explicit height; anchoring both edges let a shadowPad
+        // toggle change implicitHeight and a margin in separate frames, jolting the surface
         anchors.top:    bar.atBottom ? undefined : parent.top
         anchors.bottom: bar.atBottom ? parent.bottom : undefined
         anchors.topMargin:    bar.surfaceInset

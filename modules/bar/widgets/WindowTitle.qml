@@ -192,10 +192,7 @@ Item {
         }
     }
 
-    // No Behavior here: the text content snaps, so the box must snap with it
-    // in the same frame. Animating the box after the text changed left the new
-    // title clipped at both ends (no ellipsis) while the box caught up; in the
-    // animated swap path the snap happens while the text is faded out anyway.
+    // no Behavior: the box must snap with the text or the new title clips at both ends with no ellipsis
     implicitWidth:  Math.ceil(content.width)
     implicitHeight: parent ? parent.height : ShellSettings.barHeight
 

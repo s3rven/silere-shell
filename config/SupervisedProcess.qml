@@ -1,8 +1,7 @@
 import QtQuick
 import Quickshell.Io
 
-// Process that relaunches itself after it exits, while superviseWhen holds.
-// Owns onExited; for teardown use onRunningChanged. command/stdout as usual.
+// relaunches after it exits while superviseWhen holds; owns onExited (teardown via onRunningChanged)
 //   giveUpCodes  , exit codes that stop retries (e.g. [3] = no sensor)
 //   cleanExitOnly, only retry after a clean exit (0/2/130/143), else give up
 Process {

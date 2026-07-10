@@ -175,15 +175,8 @@ PanelWindow {
             return Math.max(panelMinX, Math.min(px, panelMaxX))
         }
 
-        // x is stateful, not a live clamp binding: it re-clamps only when the
-        // constraints are actually violated, so the panel holds still while
-        // settings resize the screen-side margins underneath it.
-        //
-        // Trigger-proportional placement: the trigger keeps the same relative
-        // position inside the panel as it has across the screen (centre click
-        // → centred panel, edge click → panel hugs that side). A plain
-        // centre-then-clamp saturates near the edges, pinning every open from
-        // the workspaces diamond on a custom-width bar to one spot.
+        // stateful x re-clamps only on real violation (holds still under margin resize);
+        // trigger-proportional so edge clicks don't all pin to one spot like centre-then-clamp does
         function _place(): void {
             const t = Math.max(0, Math.min(win.width, MenuState.anchorX))
             x = Math.round(_clampedPanelX(t - panelW * t / Math.max(1, win.width)))
@@ -350,7 +343,6 @@ PanelWindow {
             onTriggered: panel._placementSettled = true
         }
 
-        // ── Left rail ──────────────────────────────────────────────────────────
         Item {
             id: rail
             x: 0; y: 0
@@ -553,7 +545,6 @@ PanelWindow {
             }
         }
 
-        // ── Content pane (right of rail) ───────────────────────────────────────
         Item {
             id: contentPane
             x: panel.railW

@@ -64,7 +64,6 @@ Item {
     opacity: enabled ? 1.0 : 0.45
     Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium } }
 
-    // ── Header row ──────────────────────────────────────────────────────
     activeFocusOnTab: root.enabled
     Accessible.role: Accessible.ComboBox
     Accessible.name: root.label
@@ -185,7 +184,6 @@ Item {
         }
     }
 
-    // ── Option list (expands below header) ──────────────────────────────
     Item {
         id: _options
         anchors.top:  parent.top; anchors.topMargin: 44

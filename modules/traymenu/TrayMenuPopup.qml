@@ -8,7 +8,6 @@ import "../../config"
 import "../../services"
 import "../common"
 
-// Tray context menu rendered in QML so it speaks Theme instead of the native platform menu.
 PanelWindow {
     id: win
 

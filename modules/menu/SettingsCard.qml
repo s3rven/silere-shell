@@ -31,7 +31,6 @@ Rectangle {
 
     RowDividers { column: col; lineColor: root.rowDivider }
 
-    // ── Auto corner-rounding ────────────────────────────────────────────────
     function _edgeEl(container, first) {
         const ch = container.children
         const end  = first ? ch.length : -1

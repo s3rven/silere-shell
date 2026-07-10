@@ -7,8 +7,7 @@ import "../../config"
 import "../../services"
 import "../common"
 
-// month calendar beneath the bar clock. render-only — exists while open, nothing at rest. click clock toggles, Escape/outside closes, ←/→ step months.
-// mirrors MenuWindow's full-screen mask so an outside tap dismisses without an exclusive zone.
+// mirrors MenuWindow's full-screen mask so an outside tap dismisses without an exclusive zone
 PanelWindow {
     id: win
 

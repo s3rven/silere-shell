@@ -2,9 +2,7 @@ import QtQuick
 import "../../config"
 import "../../services"
 
-// one chip in the Theme accent picker: a tappable colour disc with press ripple + selection ring. the auto chip
-// and seven presets share it — only chip colour, selected state, and inner mark differ. the mark is the default
-// content slot (2×2 grid for auto, centre dot for presets), parented into the 22px disc.
+// the inner mark is the default content slot, parented into the 22px disc
 Item {
     id: root
 
