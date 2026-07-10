@@ -111,8 +111,9 @@ printf '\n'
 # qmlcachegen --only-bytecode emits bytecode without erroring on a type left
 # unresolved by a missing import (RectangularShadow with no `import
 # QtQuick.Effects` still compiles). qmllint with the import category promoted to
-# an error catches exactly that, and is otherwise silent on the tree. Optional
-# like qmlcachegen: a missing qmllint downgrades to a note, not a failure.
+# an error catches exactly that. Unused imports are errors too, keeping optional
+# QML modules out of files that do not use them. A missing qmllint still
+# downgrades to a note rather than failing environments without the tool.
 QMLLINT="$(find_qmllint || true)"
 if [ -z "$QMLLINT" ]; then
     echo "note: qmllint not found; missing-import check skipped"
@@ -122,7 +123,7 @@ else
     while IFS= read -r f; do
         lint_count=$((lint_count + 1))
         if [ $((lint_count % 20)) -eq 0 ]; then printf '.'; fi
-        if err="$("$QMLLINT" --import error -I "$ROOT" -I "$QML_IMPORT_ROOT" "$f" 2>&1)"; then
+        if err="$("$QMLLINT" --import error --unused-imports error -I "$ROOT" -I "$QML_IMPORT_ROOT" "$f" 2>&1)"; then
             :
         else
             rc=$?

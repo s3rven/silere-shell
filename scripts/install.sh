@@ -406,10 +406,21 @@ _reject_unsafe_path "$INSTALL_DIR"
 
 if [ -d "$INSTALL_DIR/.git" ]; then
     _ok "already cloned at $INSTALL_DIR"
+    install_has_changes=false
+    if [ -n "$(git -C "$INSTALL_DIR" status --porcelain --untracked-files=normal)" ]; then
+        install_has_changes=true
+        _warn "local Silere edits detected; the installer will not remove them"
+        [ -x "$INSTALL_DIR/scripts/repair.sh" ] \
+            && _warn "preview a safe restore with: bash $INSTALL_DIR/scripts/repair.sh"
+    fi
     if _ask "Pull latest changes?"; then
         spin_start "pulling..."
         if ! GIT_TERMINAL_PROMPT=0 git -C "$INSTALL_DIR" pull --ff-only --quiet; then
-            spin_stop; _die "git pull failed — local changes conflict, pull manually"
+            spin_stop
+            if $install_has_changes; then
+                _die "git pull could not preserve the local edits — repair or stash them, then retry"
+            fi
+            _die "git pull failed — check the connection or update manually"
         fi
         spin_stop; _ok "up to date"
     else

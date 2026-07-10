@@ -173,10 +173,49 @@ test_atomic_units() (
     fi
 )
 
+test_repair_workflow() (
+    local repo="$TMP/repair" preview
+    mkdir -p "$repo/scripts"
+    cp "$ROOT/scripts/repair.sh" "$repo/scripts/repair.sh"
+    cp "$ROOT/.gitignore" "$repo/.gitignore"
+    printf 'shipped\n' > "$repo/tracked.qml"
+
+    git -C "$repo" init -q
+    git -C "$repo" config user.name "Silere test"
+    git -C "$repo" config user.email "test@example.invalid"
+    git -C "$repo" add scripts/repair.sh .gitignore tracked.qml
+    git -C "$repo" commit -qm "fixture"
+
+    printf 'customized\n' > "$repo/tracked.qml"
+    printf 'new widget\n' > "$repo/custom.qml"
+    printf '{"barHeight":40}\n' > "$repo/settings.json"
+
+    preview="$(bash "$repo/scripts/repair.sh")"
+    printf '%s\n' "$preview" | grep -qF 'Nothing was changed' \
+        || fail "repair preview did not state that it was side-effect free"
+    assert_eq "customized" "$(<"$repo/tracked.qml")" "repair preview tracked file"
+    [ -f "$repo/custom.qml" ] || fail "repair preview removed an untracked file"
+
+    bash "$repo/scripts/repair.sh" --apply --yes >/dev/null
+    assert_eq "shipped" "$(<"$repo/tracked.qml")" "repair apply tracked file"
+    [ ! -e "$repo/custom.qml" ] || fail "repair apply left an untracked source file"
+    assert_eq '{"barHeight":40}' "$(<"$repo/settings.json")" "repair apply personal settings"
+    [ -z "$(git -C "$repo" status --short --untracked-files=normal)" ] \
+        || fail "repair apply did not produce a clean checkout"
+    git -C "$repo" stash list | grep -qF 'silere-repair ' \
+        || fail "repair apply did not create a named stash"
+
+    bash "$repo/scripts/repair.sh" --undo --yes >/dev/null
+    assert_eq "customized" "$(<"$repo/tracked.qml")" "repair undo tracked file"
+    assert_eq "new widget" "$(<"$repo/custom.qml")" "repair undo untracked file"
+    assert_eq '{"barHeight":40}' "$(<"$repo/settings.json")" "repair undo personal settings"
+)
+
 test_marker_removal
 test_uninstall_targets_and_backups
 test_qml_module_lookup
 test_hypr_discovery
 test_atomic_units
+test_repair_workflow
 
 printf 'portability regression tests passed\n'
