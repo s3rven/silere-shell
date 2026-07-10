@@ -1,0 +1,78 @@
+name: Bug report
+description: Report broken behavior, a regression, or a compatibility problem
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Include enough environment detail to reproduce the problem. Remove usernames, window titles, network names, and other private information from logs.
+
+  - type: input
+    id: distro
+    attributes:
+      label: Distribution
+      description: Distribution name and version, including whether it is Arch-based.
+      placeholder: CachyOS, Fedora 42, Ubuntu 26.04...
+    validations:
+      required: true
+
+  - type: input
+    id: quickshell
+    attributes:
+      label: Quickshell version
+      description: Output from `qs --version` and how Quickshell was installed.
+      placeholder: 0.2.1 from distro package
+    validations:
+      required: true
+
+  - type: input
+    id: hyprland
+    attributes:
+      label: Hyprland version
+      description: Output from `hyprctl version`.
+    validations:
+      required: true
+
+  - type: textarea
+    id: behavior
+    attributes:
+      label: What happened?
+      description: Describe the visible behavior and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open...
+        2. Enable...
+        3. Observe...
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostic output
+      description: Run `bash scripts/check.sh` from the Silere directory and paste the relevant output.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Runtime errors
+      description: Relevant output from `qs -p shell.qml`, a user-service log, or a screenshot. Remove private information first.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I tested with the current `main` branch or confirmed this is still present there.
+          required: true
+        - label: I removed private information from logs and screenshots.
+          required: true

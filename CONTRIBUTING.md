@@ -1,7 +1,32 @@
 # Contributing
 
-Suggestions, fixes, and new features are all welcome. Open an issue or send a pull request — everything gets read and evaluated personally.
+Suggestions, fixes, and new features are welcome. Open an issue for user-facing behavior or send a focused pull request when the change is ready.
 
-There are no bad ideas here. Silere leans lightweight, but propose whatever you like, heavy or not. Don't worry about getting the code or the style perfect either; just send it and we'll figure the rest out together.
+## Bug reports
 
-Thanks for helping out.
+Run `bash scripts/check.sh` from the Silere directory first. A useful report includes:
+
+- distribution, Quickshell version/source, and Hyprland version;
+- exact reproduction steps and expected behavior;
+- relevant `check.sh` or foreground `qs -p shell.qml` output;
+- whether the problem also happens on the current `main` branch.
+
+Remove usernames, window titles, network names, and other private data from logs and screenshots.
+
+## Changes
+
+Keep work scoped to one behavior. Follow the existing QML component and service patterns, keep optional integrations dormant when unused, and preserve a useful disabled or missing-tool state. Do not commit `config/MatugenTheme.qml`, `settings.json`, or other generated and personal files.
+
+Before opening a pull request, run:
+
+```bash
+bash scripts/ci-lint.sh
+bash scripts/test-qml-headless.sh
+bash scripts/check.sh
+```
+
+The first two match the important CI checks. The full check also inspects services and the current desktop environment, so clearly note any expected environment warnings.
+
+For visual changes, test keyboard focus, reduced motion, narrow bar/menu layouts, and missing dependencies. Include a before/after screenshot or short recording when the difference is not obvious from the code.
+
+Code does not need to be perfect before discussion. The reproduction, user impact, and tradeoffs need to be clear enough to evaluate.

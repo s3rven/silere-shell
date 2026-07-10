@@ -1,0 +1,55 @@
+name: Feature request
+description: Propose a user-facing improvement or new integration
+title: "[Feature]: "
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Bar and workspaces
+        - Control menu and settings
+        - Notifications and OSD
+        - Media and visualizer
+        - Installation and updates
+        - Theming
+        - Accessibility
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: Describe the workflow or limitation this would improve, not only the control you want added.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Explain how the feature should behave, including important disabled, missing-tool, or error states.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Mention existing settings, tools, or workarounds that are close but insufficient.
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add mockups, screenshots, links, or compatibility details when useful.
+
+  - type: checkboxes
+    id: fit
+    attributes:
+      label: Project fit
+      options:
+        - label: This can stay inactive or cost-free when the feature is not in use.
+          required: true
