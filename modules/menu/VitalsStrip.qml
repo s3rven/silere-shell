@@ -59,16 +59,6 @@ Rectangle {
             color: Theme.withAlpha(Theme.subtext, 0.10)
         }
 
-        // Alert wash only appears for actual warning states; borderless — the tinted bar and value carry the state.
-        Rectangle {
-            anchors.fill: parent
-            anchors.margins: 3
-            radius: 8
-            antialiasing: true
-            visible: tile.pulse > 0.001
-            color: Theme.withAlpha(tile.tint, tile.pulse * 0.08)
-        }
-
         Row {
             id: _labelRow
             anchors.left: parent.left
