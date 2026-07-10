@@ -3,7 +3,6 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Effects
 import Quickshell
-import Quickshell.Hyprland
 import "../../../config"
 import "../../../services"
 
@@ -30,30 +29,28 @@ Item {
 
     Behavior on implicitWidth { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic } }
 
-    readonly property HyprlandMonitor monitor:    Hyprland.monitorFor(root.screen)
-    readonly property bool monitorReady: monitor !== null && monitor.activeWorkspace !== null
+    readonly property string monitorName: Compositor.monitorName(root.screen)
+    readonly property bool monitorReady: monitorName.length > 0 && Compositor.activeWorkspaceId(monitorName) > 0
     // no hide toggle; `show` exists only so BarContent's per-slot system can treat this like any widget
     readonly property bool show: true
     visible: show
-    readonly property int  rawActiveId:  monitor?.activeWorkspace?.id ?? _lastNormalActiveId
+    readonly property int  rawActiveId:  Compositor.activeWorkspaceId(root.monitorName)
     readonly property int  activeId:     rawActiveId > 0 ? rawActiveId : _lastNormalActiveId
 
-    // special/scratchpad (super+S) shown on this monitor. monitor.activeWorkspace stays on the normal ws when a
-    // special is open and Quickshell exposes no special field, so we track the activespecial event below.
-    // starts false, correct after the first toggle.
-    property bool inSpecial: false
+    // special/scratchpad shown on this monitor (Hyprland only; niri has no special workspaces)
+    readonly property bool inSpecial: Compositor.hasSpecialWorkspaces && Compositor.specialOutput === root.monitorName
 
     readonly property int groupStart: Math.floor((activeId - 1) / effectiveWsCount) * effectiveWsCount + 1
     readonly property int groupEnd:   groupStart + effectiveWsCount - 1
     readonly property color _trailCoreClear: Qt.rgba(1, 1, 1, 0)
 
-    // id → workspace lookup, rebuilt on change for O(1) delegate access
+    // wsId → workspace lookup for this monitor, rebuilt on change for O(1) delegate access
     readonly property var _wsMap: {
         const m = {}
-        const vals = Hyprland.workspaces.values ?? []
+        const vals = Compositor.workspaces
         for (let i = 0; i < vals.length; i++) {
             const ws = vals[i]
-            if (ws) m[ws.id] = ws
+            if (ws && ws.output === root.monitorName) m[ws.wsId] = ws
         }
         return m
     }
@@ -63,7 +60,7 @@ Item {
     function appsFor(id) { return root._wsApps[id] ?? [] }
     function occupied(id: int): bool {
         const ws = root.wsObjFor(id)
-        return ws !== null || root.appsFor(id).length > 0
+        return (ws !== null && ws.occupied) || root.appsFor(id).length > 0
     }
     function urgent(id: int): bool {
         const ws = root.wsObjFor(id)
@@ -72,11 +69,12 @@ Item {
 
     // paging hides urgent workspaces on other pages; surface the first as a tap-to-jump tick beside the row instead of losing the signal
     readonly property int urgentOffPage: {
-        const vals = Hyprland.workspaces.values ?? []
+        const vals = Compositor.workspaces
         for (let i = 0; i < vals.length; i++) {
             const ws = vals[i]
-            if (ws && ws.urgent && ws.id > 0 && (ws.id < groupStart || ws.id > groupEnd))
-                return ws.id
+            if (ws && ws.output === root.monitorName && ws.urgent && ws.wsId > 0
+                && (ws.wsId < groupStart || ws.wsId > groupEnd))
+                return ws.wsId
         }
         return 0
     }
@@ -107,7 +105,7 @@ Item {
     function _refreshWorkspaceApps(): void {
         if (!ShellSettings.wsShowAppIcons) return
         if (_wsAppsInvalidate.running) { _wsAppsRepeat = true; return }
-        Hyprland.refreshToplevels()
+        Compositor.refreshToplevels()
         _wsAppsInvalidate.restart()
     }
     // delay the recompute so refreshToplevels() settles; bumping _wsAppsTick now would recompute against stale data
@@ -124,25 +122,6 @@ Item {
         id: _initialAppsRefresh
         interval: 250
         onTriggered: root._refreshWorkspaceApps()
-    }
-    Connections {
-        target: Hyprland
-        function onRawEvent(event) {
-            const n = event.name
-            // special/scratchpad open/close for this monitor. data is "[id,]wsname,monitor" — non-empty
-            // wsname before the monitor means a special is shown, empty means it closed.
-            if (n === "activespecial" || n === "activespecialv2") {
-                const parts = String(event.data ?? "").split(",")
-                if (parts.length < 2 || !root.monitor) return
-                if (parts[parts.length - 1] !== root.monitor.name) return
-                root.inSpecial = String(parts[parts.length - 2]).length > 0
-                return
-            }
-            // Window list changes don't fire on workspace *moves*, so refresh on these.
-            if (ShellSettings.wsShowAppIcons &&
-                (n === "openwindow" || n === "closewindow" || n === "movewindowv2"))
-                root._refreshWorkspaceApps()
-        }
     }
     Connections {
         target: ShellSettings
@@ -181,15 +160,13 @@ Item {
         const seen = {}
         const start = root.groupStart
         const end = root.groupEnd
-        const tops = Hyprland.toplevels ? (Hyprland.toplevels.values ?? []) : []
+        const tops = Compositor.toplevels
         for (let i = 0; i < tops.length; i++) {
             const t = tops[i]
-            if (!t) continue
-            const o   = t.lastIpcObject
-            const wid = t.workspace?.id ?? o?.workspace?.id ?? 0
+            if (!t || t.output !== root.monitorName) continue
+            const wid = t.wsId ?? 0
             if (wid < start || wid > end) continue
-            const rawCls = String((t.wayland && t.wayland.appId)
-                                  || (o && (o.class || o.initialClass)) || "")
+            const rawCls = String(t.appId || "")
             const cls = rawCls.toLowerCase()
             if (!cls) continue
             if (!map[wid]) map[wid] = []
@@ -293,7 +270,7 @@ Item {
 
     function activate(id: int): void {
         if (!monitorReady || id < 1 || id === activeId) return
-        HyprActions.focusWorkspace(id, monitor?.name ?? "")
+        Compositor.focusWorkspace(id, root.monitorName)
     }
 
     function _focusWsIndex(index: int): void {
@@ -774,8 +751,8 @@ Item {
                     onTapped: (eventPoint, button) => {
                         if (button === Qt.MiddleButton) {
                             // No focused window means nothing moves — don't fake an ack.
-                            if (!Hyprland.activeToplevel) return
-                            HyprActions.moveActiveToWorkspace(ws.wsId)
+                            if (!Compositor.activeToplevel) return
+                            Compositor.moveActiveToWorkspace(ws.wsId)
                             if (!ShellSettings.reduceMotion) _dropPulse.restart()
                             return
                         }

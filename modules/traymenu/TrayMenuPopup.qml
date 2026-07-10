@@ -6,7 +6,6 @@ import Quickshell
 import Quickshell.DBusMenu
 import Quickshell.Widgets
 import Quickshell.Wayland._WlrLayerShell
-import Quickshell.Hyprland
 import "../../config"
 import "../../services"
 import "../common"
@@ -17,7 +16,7 @@ PanelWindow {
 
     required property ShellScreen targetScreen
 
-    readonly property HyprlandMonitor _monitor: Hyprland.monitorFor(win.screen)
+    readonly property string _output: Compositor.monitorName(win.screen)
     readonly property int menuWidth: 220
     readonly property real _cardRadius: Theme.radiusPanel
     property bool _ignoreOutsideTap: false
@@ -76,8 +75,10 @@ PanelWindow {
     }
 
     Connections {
-        target: win._monitor
-        function onActiveWorkspaceChanged() { if (TrayMenuState.open) TrayMenuState.close() }
+        target: Compositor
+        function onWorkspaceActivated(output) {
+            if (output === win._output && TrayMenuState.open) TrayMenuState.close()
+        }
     }
 
     screen:        targetScreen

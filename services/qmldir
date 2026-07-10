@@ -7,7 +7,8 @@ singleton CpuTemp       1.0 CpuTemp.qml
 singleton Network       1.0 Network.qml
 singleton SysInfo       1.0 SysInfo.qml
 
-# hyprland
+# compositor
+singleton Compositor    1.0 Compositor.qml
 singleton HyprActions   1.0 HyprActions.qml
 singleton NightLight    1.0 NightLight.qml
 singleton OverviewState 1.0 OverviewState.qml

@@ -3,7 +3,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
-import Quickshell.Hyprland
 import Quickshell.Services.Notifications
 
 Singleton {
@@ -94,43 +93,14 @@ Singleton {
 
     onDndChanged: { if (!dnd && missedCount !== 0) missedCount = 0 }
 
-    property bool _fullscreenActive: false
     readonly property bool _fullscreenWatchWanted: ShellSettings.notifFullscreenSilence
         || (ShellSettings.mediaVisualizerPauseFullscreen && ShellSettings.mediaProgress)
         || (ShellSettings.osdEnabled && ShellSettings.osdBarIntegrated)
+    readonly property bool _fullscreenActive: _fullscreenWatchWanted && Compositor.activeFullscreen
     readonly property bool fullscreenActive: _fullscreenActive
     readonly property bool fullscreenSilenced: ShellSettings.notifFullscreenSilence && _fullscreenActive
 
-    Connections {
-        target: Hyprland
-        enabled: root._fullscreenWatchWanted
-        function onRawEvent(event) {
-            const n = event.name
-            if (n === "fullscreen" || n === "activewindow" || n === "workspace"
-                || n === "focusedmon" || n === "closewindow")
-                _fsRefresh.restart()
-        }
-    }
-    Timer {
-        id: _fsRefresh
-        interval: 100
-        onTriggered: {
-            Hyprland.refreshToplevels()
-            const o = Hyprland.activeToplevel ? Hyprland.activeToplevel.lastIpcObject : null
-            root._fullscreenActive = !!(o && o.fullscreen)
-        }
-    }
-    on_FullscreenWatchWantedChanged: {
-        if (_fullscreenWatchWanted) {
-            _fsRefresh.restart()
-        } else {
-            _fsRefresh.stop()
-            _fullscreenActive = false
-        }
-    }
-    function refreshFullscreenState(): void {
-        if (_fullscreenWatchWanted) _fsRefresh.restart()
-    }
+    function refreshFullscreenState(): void { Compositor.refreshToplevels() }
     function toggleDnd(): void { dnd = !dnd }
 
     // auto DND across the quiet-hours window; re-evaluates as the hour rolls (bound int, no timer)
@@ -309,7 +279,7 @@ Singleton {
         }
         if (seenChanged) root._seen = nextSeen
         if (timesChanged) root._times = nextTimes
-        if (root._fullscreenWatchWanted) _fsRefresh.restart()
+        if (root._fullscreenWatchWanted) Compositor.refreshToplevels()
     }
 
     NotificationServer {

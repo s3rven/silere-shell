@@ -2,7 +2,6 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
-import Quickshell.Hyprland
 
 Singleton {
     id: root
@@ -18,12 +17,10 @@ Singleton {
                 if (screens[i].name === pin) return screens[i]
         }
 
-        const focused = Hyprland.focusedMonitor
-        if (focused) {
-            for (let i = 0; i < screens.length; i++) {
-                const mon = Hyprland.monitorFor(screens[i])
-                if (mon && mon.name === focused.name) return screens[i]
-            }
+        const focused = Compositor.focusedMonitor
+        if (focused && focused.length > 0) {
+            for (let i = 0; i < screens.length; i++)
+                if (screens[i].name === focused) return screens[i]
         }
         return screens[0]
     }

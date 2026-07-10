@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
-import Quickshell.Hyprland
 import "../../../config"
 import "../../../services"
 
@@ -15,8 +14,8 @@ Item {
     // instead of cropping both ends. separate from the animated box width so text snaps to the new title. -1 = unset
     property real availableWidth: -1
 
-    readonly property var    monitor:     Hyprland.monitorFor(root.screen)
-    readonly property int    monitorWsId: monitor?.activeWorkspace?.id ?? 0
+    readonly property string monitorName: Compositor.monitorName(root.screen)
+    readonly property int    monitorWsId: Compositor.activeWorkspaceId(root.monitorName)
     property int             _lastWsId:      1
     property bool            _wsJustChanged: false
 
@@ -27,14 +26,11 @@ Item {
         }
     }
 
-    readonly property var    toplevel:     Hyprland.activeToplevel
+    readonly property var    toplevel:     Compositor.activeToplevel
     readonly property bool   hasClient:    toplevel !== null && toplevel !== undefined
-                                           && (toplevel.workspace?.id ?? 0) === monitorWsId
-    readonly property string currentTitle: toplevel?.title             ?? ""
-    readonly property string currentApp:   (toplevel?.wayland?.appId
-                                            || toplevel?.lastIpcObject?.class
-                                            || toplevel?.lastIpcObject?.initialClass
-                                            || "")
+                                           && toplevel.output === monitorName
+    readonly property string currentTitle: toplevel?.title ?? ""
+    readonly property string currentApp:   toplevel?.appId ?? ""
 
     function _clean(s: string): string {
         const raw = String(s || "").trim()

@@ -3,7 +3,6 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Wayland._WlrLayerShell
-import Quickshell.Hyprland
 import "../../config"
 import "../../services"
 import "../common"
@@ -15,12 +14,14 @@ PanelWindow {
 
     required property ShellScreen targetScreen
 
-    readonly property HyprlandMonitor _monitor: Hyprland.monitorFor(win.screen)
+    readonly property string _output: Compositor.monitorName(win.screen)
     property bool _ignoreOutsideTap: false
 
     Connections {
-        target: win._monitor
-        function onActiveWorkspaceChanged() { if (CalendarState.open) CalendarState.close() }
+        target: Compositor
+        function onWorkspaceActivated(output) {
+            if (output === win._output && CalendarState.open) CalendarState.close()
+        }
     }
 
     screen:        targetScreen

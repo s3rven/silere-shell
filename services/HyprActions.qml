@@ -3,9 +3,11 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
-import Quickshell.Hyprland
 import "../config"
 
+// window-matching + focus heuristics (notifications, tray, media) over the
+// backend-neutral Compositor. dispatch to Hyprland lives here too so the
+// Lua-config quirk stays in one place; Compositor calls _dispatch for Hyprland.
 Singleton {
     id: root
 
@@ -17,7 +19,7 @@ Singleton {
         id: _luaCheck
         command: ["bash", Quickshell.shellDir + "/scripts/install.sh", "--hypr-config-kind"]
         onExited: (code) => { root._luaDetected = (code === 0) }
-        Component.onCompleted: running = true
+        Component.onCompleted: running = Compositor.isHyprland
     }
 
     FileView {
@@ -40,28 +42,41 @@ Singleton {
         return /^-?\d+$/.test(text) ? text : _quote(text)
     }
 
+    // Hyprland dispatch; Compositor routes here for the Hyprland backend.
     function _dispatch(dispatcher, args): void {
         if (!SystemTools.ready || !SystemTools.hasHyprctl) return
+        if (root._useLua && (dispatcher === "focusmonitor" || dispatcher === "workspace"
+            || dispatcher === "movetoworkspacesilent" || dispatcher === "focuswindow")) {
+            root._dispatchLua(dispatcher, args)
+            return
+        }
         const cmd = ["hyprctl", "dispatch", dispatcher]
         if (args !== undefined && args !== null && String(args).length > 0)
             cmd.push(String(args))
         Quickshell.execDetached(cmd)
     }
 
-    // live cached Hyprland clients, no subprocess; lastIpcObject carries pid/class/initialClass/title/workspace/address
-    function _clients() {
-        const tops = Hyprland.toplevels ? (Hyprland.toplevels.values ?? []) : []
-        const out = []
-        for (let i = 0; i < tops.length; i++) {
-            const t = tops[i]
-            const c = t ? t.lastIpcObject : null
-            if (c && c.address) out.push(c)
-        }
-        return out
+    function _dispatchLua(dispatcher, args): void {
+        let call = ""
+        if (dispatcher === "focusmonitor")
+            call = "hl.dsp.focus({ monitor = " + _quote(args) + " })"
+        else if (dispatcher === "workspace")
+            call = "hl.dsp.focus({ workspace = " + _value(args) + " })"
+        else if (dispatcher === "movetoworkspacesilent")
+            call = "hl.dsp.window.move({ workspace = " + _value(args) + ", follow = false })"
+        else if (dispatcher === "focuswindow")
+            call = "hl.dsp.focus({ window = " + _quote(args) + " })"
+        else return
+        Quickshell.execDetached(["hyprctl", "dispatch", call])
     }
 
-    function _hereWorkspaceId() {
-        return Hyprland.focusedWorkspace ? (Hyprland.focusedWorkspace.id ?? -1) : -1
+    // live neutral toplevels; each carries appId/cls/initialClass/title/pid/ref/wsId/wsRef
+    function _clients() {
+        return Compositor.toplevels || []
+    }
+
+    function _hereWorkspaceRef() {
+        return Compositor.focusedWorkspaceRef
     }
 
     function _toPid(value): int {
@@ -84,18 +99,18 @@ Singleton {
     }
 
     function _chooseMatchingSource(clients, matches) {
-        const hereId = root._hereWorkspaceId()
+        const hereRef = root._hereWorkspaceRef()
         let bestAny = null
         let bestElsewhere = null
 
         for (let i = 0; i < clients.length; i++) {
             const c = clients[i]
-            if (!c || !c.address || !c.workspace || !matches(c)) continue
+            if (!c || !c.ref || c.wsId < 0 || !matches(c)) continue
 
-            const rank = c.focusHistoryID ?? 9999
-            if (!bestAny || rank < (bestAny.focusHistoryID ?? 9999))
+            const rank = c.focusRank ?? 9999
+            if (!bestAny || rank < (bestAny.focusRank ?? 9999))
                 bestAny = c
-            if (c.workspace.id !== hereId && (!bestElsewhere || rank < (bestElsewhere.focusHistoryID ?? 9999)))
+            if (c.wsRef !== hereRef && (!bestElsewhere || rank < (bestElsewhere.focusRank ?? 9999)))
                 bestElsewhere = c
         }
 
@@ -202,7 +217,7 @@ Singleton {
         const h = root._norm(hint)
         if (h.length === 0) return false
 
-        const cls  = root._norm(c.class)
+        const cls  = root._norm(c.cls)
         const init = root._norm(c.initialClass)
         const hc   = root._compact(h)
 
@@ -214,7 +229,7 @@ Singleton {
         const app = root._compact(appName)
         if (app.length === 0) return false
 
-        const cls  = root._compact(c.class)
+        const cls  = root._compact(c.cls)
         const init = root._compact(c.initialClass)
 
         // symmetric containment ("Telegram Desktop" ↔ org.telegram.desktop); length guard stops short classes matching everything
@@ -242,47 +257,6 @@ Singleton {
         return best
     }
 
-    function focusMonitor(name: string): void {
-        if (!name || name.length === 0) return
-        if (_useLua)
-            _dispatch("hl.dsp.focus({ monitor = " + _quote(name) + " })")
-        else
-            _dispatch("focusmonitor", name)
-    }
-
-    function focusWorkspace(workspaceId, monitorName): void {
-        if (workspaceId === undefined || workspaceId === null || workspaceId < 0) return
-        const targetMonitor = monitorName || ""
-        if (targetMonitor.length > 0) focusMonitor(targetMonitor)
-        if (_useLua)
-            _dispatch("hl.dsp.focus({ workspace = " + _value(workspaceId) + " })")
-        else
-            _dispatch("workspace", workspaceId)
-    }
-
-    // Send the focused window to a workspace without following it (silent).
-    function moveActiveToWorkspace(workspaceId): void {
-        if (workspaceId === undefined || workspaceId === null || workspaceId < 1) return
-        if (_useLua)
-            _dispatch("hl.dsp.window.move({ workspace = " + _value(workspaceId) + ", follow = false })")
-        else
-            _dispatch("movetoworkspacesilent", workspaceId)
-    }
-
-    function focusWindow(address: string): void {
-        if (!address || address.length === 0) return
-        const target = address.startsWith("address:") ? address : "address:" + address
-        if (_useLua)
-            _dispatch("hl.dsp.focus({ window = " + _quote(target) + " })")
-        else
-            _dispatch("focuswindow", target)
-    }
-
-    function focusWorkspaceWindow(workspaceId, address): void {
-        focusWorkspace(workspaceId, "")
-        focusWindow(address)
-    }
-
     // Resolve a notification to its source window (client), or null.
     // Precision order: sender PID chain → desktop-entry hint → appName →
     // appName resolved through the desktop-entry database. Ambiguity within a
@@ -297,14 +271,14 @@ Singleton {
         const pidHint = root._senderPid(notification)
         const deHint  = root._norm(notification.desktopEntry || hints["desktop-entry"] || "")
 
-        // 1. sender PID ancestry — catches notify-send/shell children by walking up to the Hyprland client
+        // 1. sender PID ancestry — catches notify-send/shell children by walking up to the client
         const pidMatch = root._clientFromPidChain(clients, pidHint)
-        if (pidMatch && pidMatch.workspace) return pidMatch
+        if (pidMatch && pidMatch.wsId >= 0) return pidMatch
 
         // 2. desktop-entry hint → window class.
         if (deHint.length > 0) {
             const bestDesktop = root._chooseMatchingSource(clients, c => root._classMatches(c, deHint))
-            if (bestDesktop && bestDesktop.workspace) return bestDesktop
+            if (bestDesktop && bestDesktop.wsId >= 0) return bestDesktop
         }
 
         // 3. appName, directly against window classes.
@@ -317,18 +291,18 @@ Singleton {
         if (!bestApp)
             bestApp = root._resolveByDesktopEntry(clients, appName)
 
-        return (bestApp && bestApp.workspace) ? bestApp : null
+        return (bestApp && bestApp.wsId >= 0) ? bestApp : null
     }
 
     function focusNotificationSource(notification): void {
         const c = root._matchNotificationClient(notification)
-        if (c && c.workspace) focusWorkspaceWindow(c.workspace.id, c.address)
+        if (c) Compositor.focusToplevel(c)
     }
 
-    // Workspace id of the notification's source window, or -1 if not found.
+    // Workspace id (as shown in the bar) of the notification's source window, or -1.
     function notificationSourceWorkspace(notification): int {
         const c = root._matchNotificationClient(notification)
-        return (c && c.workspace) ? (c.workspace.id ?? -1) : -1
+        return c ? (c.wsId ?? -1) : -1
     }
 
     // jump to the media window; matches player name → browser family → song title
@@ -341,7 +315,7 @@ Singleton {
 
         let best = name.length > 0
             ? root._chooseMatchingSource(clients, c =>
-                norm(c.class).includes(name) ||
+                norm(c.cls).includes(name) ||
                 norm(c.initialClass).includes(name) ||
                 norm(c.title).includes(name))
             : null
@@ -349,15 +323,14 @@ Singleton {
         if (!best && root._browserClasses.some(b => name.includes(b)))
             best = root._chooseMatchingSource(clients, c =>
                 root._browserClasses.some(b =>
-                    norm(c.class).includes(b) || norm(c.initialClass).includes(b)))
+                    norm(c.cls).includes(b) || norm(c.initialClass).includes(b)))
 
         if (!best && songTitle && songTitle.length > 4) {
             const t = songTitle.toLowerCase()
             best = root._chooseMatchingSource(clients, c => norm(c.title).includes(t))
         }
 
-        if (best && best.workspace)
-            focusWorkspaceWindow(best.workspace.id, best.address)
+        if (best) Compositor.focusToplevel(best)
     }
 
     // resolve the window behind a tray item and switch to its workspace. many SNIs
@@ -380,8 +353,8 @@ Singleton {
         for (let i = 0; i < hints.length && !best; i++)
             best = root._resolveByDesktopEntry(clients, hints[i])
 
-        if (best && best.workspace) {
-            focusWorkspaceWindow(best.workspace.id, best.address)
+        if (best) {
+            Compositor.focusToplevel(best)
             return true
         }
         return false

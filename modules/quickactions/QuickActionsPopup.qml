@@ -3,7 +3,6 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Wayland._WlrLayerShell
-import Quickshell.Hyprland
 import "../../config"
 import "../../services"
 import "../common"
@@ -15,7 +14,7 @@ PanelWindow {
 
     required property ShellScreen targetScreen
 
-    readonly property HyprlandMonitor _monitor: Hyprland.monitorFor(win.screen)
+    readonly property string _output: Compositor.monitorName(win.screen)
 
     screen:        targetScreen
     color:         "transparent"
@@ -30,8 +29,10 @@ PanelWindow {
     Shortcut { sequence: "Escape"; context: Qt.ApplicationShortcut; enabled: QuickActionsState.open; onActivated: QuickActionsState.close() }
 
     Connections {
-        target: win._monitor
-        function onActiveWorkspaceChanged() { if (QuickActionsState.open) QuickActionsState.close() }
+        target: Compositor
+        function onWorkspaceActivated(output) {
+            if (output === win._output && QuickActionsState.open) QuickActionsState.close()
+        }
     }
     Connections {
         target: ShellSettings
