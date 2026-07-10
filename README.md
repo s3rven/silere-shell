@@ -6,10 +6,11 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-3b3b3b?style=flat-square&labelColor=1c1c1c" alt="license: MIT"/></a>
-  <a href="https://quickshell.outfoxxed.me/"><img src="https://img.shields.io/badge/quickshell-hyprland-5a4b6e?style=flat-square&labelColor=1c1c1c" alt="built on quickshell for hyprland"/></a>
+  <a href="https://quickshell.outfoxxed.me/"><img src="https://img.shields.io/badge/quickshell-shell-5a4b6e?style=flat-square&labelColor=1c1c1c" alt="built on quickshell"/></a>
+  <img src="https://img.shields.io/badge/compositor-hyprland%20%C2%B7%20niri-5a4b6e?style=flat-square&labelColor=1c1c1c" alt="supports hyprland and niri"/>
 </p>
 
-Silere is a shell for Hyprland, built on Quickshell: a bar, a control menu, notifications, and colors pulled from your wallpaper or set by hand. The quiet part is the point. Widgets only exist when their tools do, anything with a background cost is off until you turn it on, and an idle session rounds to zero CPU.
+Silere is a shell for Hyprland and niri, built on Quickshell: a bar, a control menu, notifications, and colors pulled from your wallpaper or set by hand. The quiet part is the point. Widgets only exist when their tools do, anything with a background cost is off until you turn it on, and an idle session rounds to zero CPU.
 
 It is also modular without being heavy: every bar widget can be reordered, moved between sides, or switched off, and appearance is tunable down to separators, outlines, and the active-workspace marker — all plain settings, no plugin layer, no daemon behind any of it.
 
@@ -19,7 +20,7 @@ It is also modular without being heavy: every bar widget can be reordered, moved
 
 ## Install
 
-You need `git`, Hyprland, and a current Quickshell build with the Hyprland, Wayland layer-shell, Widgets, Io, Bluetooth, Mpris, Notifications, PipeWire, SystemTray, and UPower modules.
+You need `git`, Hyprland or niri, and a current Quickshell build with the Hyprland, Wayland layer-shell, Widgets, Io, Bluetooth, Mpris, Notifications, PipeWire, SystemTray, and UPower modules. Silere picks the compositor automatically at startup.
 
 ```bash
 git clone https://github.com/s3rven/silere-shell
@@ -28,6 +29,12 @@ bash scripts/install.sh
 ```
 
 The installer copies Silere to `$XDG_CONFIG_HOME/silere-shell`, backs up anything it would overwrite, and adds a marked autostart block to your Hyprland config. Restart Hyprland, then run `bash scripts/check.sh` to confirm everything is wired up. `bash scripts/uninstall.sh` removes it all again.
+
+On niri the installer skips autostart — add the spawn to your `config.kdl` yourself:
+
+```kdl
+spawn-at-startup "sh" "-c" "qs -p ~/.config/silere-shell/shell.qml"
+```
 
 ## Optional tools
 
