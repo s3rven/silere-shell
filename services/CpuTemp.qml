@@ -85,32 +85,30 @@ Singleton {
             "  for name in /sys/class/hwmon/hwmon*/name; do " +
             "    [ -r \"$name\" ] || continue; " +
             "    n=$(cat \"$name\" 2>/dev/null); " +
-            "    case \"$n\" in k10temp|coretemp|zenpower|cpu_thermal|cpu-thermal|soc_thermal|acpitz) " +
-            "      dir=${name%/name}; " +
-            "      for f in \"$dir\"/temp*_input; do " +
-            "        [ -r \"$f\" ] || continue; " +
-            "        lf=\"${f%_input}_label\"; lbl=\"\"; " +
-            "        [ -r \"$lf\" ] && lbl=$(cat \"$lf\" 2>/dev/null); " +
-            "        score=1; " +
-            "        case \"$n:$lbl\" in " +
-            "          k10temp:*Tdie*|zenpower:*Tdie*) score=100 ;; " +
-            "          k10temp:*Tctl*|zenpower:*Tctl*) score=90 ;; " +
-            "          coretemp:*Package*|coretemp:*Physical*) score=100 ;; " +
-            "          k10temp:*Package*|zenpower:*Package*) score=85 ;; " +
-            "          k10temp:*Tccd0*|zenpower:*Tccd0*) score=75 ;; " +
-            "          coretemp:*Core*) score=60 ;; " +
-            "          cpu_thermal:*|cpu-thermal:*|soc_thermal:*) score=55 ;; " +
-            "          acpitz:*) score=15 ;; " +
-            "        esac; " +
-            "        if [ \"$score\" -gt \"$best_score\" ]; then best_score=\"$score\"; best=\"$f\"; fi; " +
-            "      done; " +
-            "    esac; " +
+            "    dir=${name%/name}; " +
+            "    for f in \"$dir\"/temp*_input; do " +
+            "      [ -r \"$f\" ] || continue; " +
+            "      lf=\"${f%_input}_label\"; lbl=\"\"; " +
+            "      [ -r \"$lf\" ] && lbl=$(cat \"$lf\" 2>/dev/null); " +
+            "      score=0; key=\"${n,,}:${lbl,,}\"; " +
+            "      case \"$key\" in " +
+            "        k10temp:*tdie*|zenpower:*tdie*|coretemp:*package*|coretemp:*physical*) score=100 ;; " +
+            "        k10temp:*tctl*|zenpower:*tctl*) score=90 ;; " +
+            "        k10temp:*package*|zenpower:*package*) score=85 ;; " +
+            "        k10temp:*tccd0*|zenpower:*tccd0*) score=75 ;; " +
+            "        coretemp:*core*) score=60 ;; " +
+            "        cpu_thermal:*|cpu-thermal:*|soc_thermal:*|bcm2835_thermal:*) score=55 ;; " +
+            "        *:*cpu*|*:*package*|*:*physical*|*:*tctl*|*:*tdie*) score=50 ;; " +
+            "        acpitz:*) score=15 ;; " +
+            "      esac; " +
+            "      if [ \"$score\" -gt \"$best_score\" ]; then best_score=\"$score\"; best=\"$f\"; fi; " +
+            "    done; " +
             "  done; " +
             "  for tf in /sys/class/thermal/thermal_zone*/temp; do " +
             "    [ -r \"$tf\" ] || continue; " +
             "    type=\"\"; [ -r \"${tf%/temp}/type\" ] && type=$(cat \"${tf%/temp}/type\" 2>/dev/null); " +
-            "    case \"$type\" in " +
-            "      x86_pkg_temp|cpu_thermal|cpu-thermal|soc_thermal) score=50 ;; " +
+            "    case \"${type,,}\" in " +
+            "      x86_pkg_temp|cpu_thermal|cpu-thermal|soc_thermal|bcm2835_thermal) score=50 ;; " +
             "      acpitz) score=10 ;; " +
             "      *) score=0 ;; " +
             "    esac; " +

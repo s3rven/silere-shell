@@ -93,6 +93,7 @@ Item {
         const tool = String(command[0])
         if (tool === "hyprlock")  return SystemTools.hasHyprlock
         if (tool === "systemctl") return SystemTools.hasSystemctl
+        if (tool === "loginctl")  return SystemTools.hasLoginctl
         return true
     }
 

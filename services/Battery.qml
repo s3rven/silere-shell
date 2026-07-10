@@ -89,6 +89,7 @@ Singleton {
     Process {
         id: _percentProbe
         running: false
+        environment: ({ "LC_ALL": "C" })
         command: ["bash", "-c",
             "command -v upower >/dev/null 2>&1 || exit 0; " +
             "upower -i /org/freedesktop/UPower/devices/DisplayDevice 2>/dev/null " +

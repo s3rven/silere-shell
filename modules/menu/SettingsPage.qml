@@ -1316,7 +1316,18 @@ PageShell {
                 width: _detailBody.width
                 spacing: 0
 
-                SectionLabel { label: "ACCESSIBILITY"; first: true }
+                SectionLabel { label: "HARDWARE"; first: true; visible: Brightness.devices.length > 1 }
+                SettingsCard {
+                    visible: Brightness.devices.length > 1
+                    SelectRow {
+                        glyph: "󰃟"; label: "Brightness display"
+                        currentValue: Brightness.deviceChoice
+                        model: Brightness.deviceChoices
+                        onChosen: (v) => ShellSettings.brightnessDevice = v
+                    }
+                }
+
+                SectionLabel { label: "ACCESSIBILITY"; first: Brightness.devices.length <= 1 }
                 SettingsCard {
                     SelectRow {
                         glyph: "󰛖"; label: "Font"

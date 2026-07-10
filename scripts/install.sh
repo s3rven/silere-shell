@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export LC_ALL=C
 
 REPO_URL="https://github.com/s3rven/silere-shell.git"
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
@@ -332,7 +333,7 @@ else
     printf "    ${DIM}–       %-13s %s${R}\n" "pipewire" "volume + sound popup"
 fi
 _optdep brightnessctl "brightness control + popup"
-_optdep inotifywait   "instant brightness, screenshot flash"
+_optdep inotifywait   "screenshot flash, wallpaper-picker feedback"
 _optdep nmcli         "Wi-Fi name, signal, VPN"
 _optdep cava          "audio visualizer"
 _optdep_any updates   "update count" checkupdates apt dnf zypper xbps-install
@@ -344,7 +345,7 @@ _optdep pgrep         "optional night light external state check"
 _optdep pkill         "optional night light external stop fallback"
 _optdep powerprofilesctl "power profile selector"
 _optdep hyprlock      "lock screen"
-_optdep systemctl     "suspend / reboot / shutdown"
+_optdep_any "power actions" "suspend / reboot / shutdown" systemctl loginctl
 _optdep notify-send   "low-battery + hot-CPU alerts"
 _optdep timeout       "bounded update checks"
 

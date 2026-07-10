@@ -80,6 +80,8 @@ qs -p shell.qml         # run in the foreground to see errors
 
 Optional warnings from `check.sh` are usually fine; a smoke-launch `FAIL` means startup broke. If notifications never appear, another daemon likely owns `org.freedesktop.Notifications`. If icons or text render in the wrong font, install a Nerd Font (e.g. `ttf-jetbrains-mono-nerd`) and run `fc-cache -f`. The `font` checks in `check.sh` catch this case.
 
+On hybrid laptops with several entries under `/sys/class/backlight`, Silere prefers a raw panel backlight automatically. If brightness changes the wrong display, select the correct device under Settings > System.
+
 ## License
 
 MIT (c) s3rven

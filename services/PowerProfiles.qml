@@ -58,6 +58,7 @@ Singleton {
     Process {
         id: _get
         property int _gen: 0
+        environment: ({ "LC_ALL": "C" })
         stdout: StdioCollector { id: _getOut }
         onExited: (code) => {
             // a set in flight or freshly landed means this read predates the new profile and would clobber the optimistic value; the set re-syncs on failure, so dropping it is safe

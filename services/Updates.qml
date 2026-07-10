@@ -15,6 +15,7 @@ Singleton {
     property bool lastFailed: false
     property string lastError: ""
     property real lastCheckMs: 0
+    property bool _timedOut: false
 
     readonly property bool enabled: ShellSettings.updatesWidget
     // assume online when there's no nmcli to ask
@@ -22,6 +23,16 @@ Singleton {
 
     readonly property string manager: {
         if (!SystemTools.ready) return ""
+        switch (SystemTools.packageFamily) {
+        case "pacman":
+            if (SystemTools.hasCheckupdates) return "pacman"
+            if (SystemTools.hasParu || SystemTools.hasYay) return "aur"
+            return ""
+        case "apt":    return SystemTools.hasApt ? "apt" : ""
+        case "dnf":    return SystemTools.hasDnf ? "dnf" : ""
+        case "zypper": return SystemTools.hasZypper ? "zypper" : ""
+        case "xbps":   return SystemTools.hasXbps ? "xbps" : ""
+        }
         if (SystemTools.hasCheckupdates) return "pacman"
         if (SystemTools.hasParu || SystemTools.hasYay) return "aur"
         if (SystemTools.hasApt)          return "apt"
@@ -81,7 +92,7 @@ Singleton {
                    "if [ \"$rc\" -ne 0 ] && [ -n \"$out\" ]; then echo \"ERR " + tool + " check failed (exit $rc)\"; exit 0; fi; " +
                    "printf '%s\\n' \"$out\" | grep -c ."
         }
-        case "apt":    return "out=$(apt list --upgradable 2>&1); rc=$?; " +
+        case "apt":    return "out=$(" + root._limit(120, "apt list --upgradable") + " 2>&1); rc=$?; " +
                               "if [ \"$rc\" -ne 0 ]; then echo \"ERR apt check failed (exit $rc)\"; exit 0; fi; " +
                               "printf '%s\\n' \"$out\" | grep -c /"
         case "dnf":    return "out=$(" + root._limit(120, "dnf -q check-update") + " 2>&1); rc=$?; " +
@@ -100,6 +111,7 @@ Singleton {
     function refresh(): void {
         // read the setting directly — on a manual toggle the `enabled` alias may not have re-evaluated yet
         if (!ShellSettings.updatesWidget || !supported || _proc.running) return
+        root._timedOut = false
         _proc.exec(["bash", "-c", root._cmd()])
     }
 
@@ -116,8 +128,10 @@ Singleton {
 
     Process {
         id: _proc
+        environment: ({ "LC_ALL": "C" })
         stdout: StdioCollector { id: _out }
         onExited: {
+            if (root._timedOut) return
             root.lastCheckMs = Date.now()
             if (!ShellSettings.updatesWidget) {
                 root._resetDisabledState()
@@ -135,6 +149,20 @@ Singleton {
                 _retry.restart()
             }
             root.ready = true
+        }
+    }
+
+    Timer {
+        interval: 180000
+        running: _proc.running
+        onTriggered: {
+            root._timedOut = true
+            root.lastCheckMs = Date.now()
+            root.lastFailed = true
+            root.lastError = "Package check timed out"
+            root.ready = true
+            _retry.restart()
+            _proc.running = false
         }
     }
 

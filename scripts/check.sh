@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -eu
+export LC_ALL=C
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT" || exit 1
@@ -92,7 +93,7 @@ optional_tool pipewire "volume service"
 optional_tool wireplumber "PipeWire session manager"
 optional_tool upower "battery widget + warnings"
 optional_tool brightnessctl "brightness control + popup"
-optional_tool inotifywait "instant brightness/screenshot updates"
+optional_tool inotifywait "screenshot and wallpaper-picker feedback"
 optional_tool nmcli "Wi-Fi, VPN, network speed"
 optional_tool cava "audio visualizer"
 optional_tool matugen "wallpaper-matched colors"
@@ -103,12 +104,24 @@ optional_tool pgrep "night light external state check"
 optional_tool pkill "night light external stop fallback"
 optional_tool powerprofilesctl "power profile selector"
 optional_tool hyprlock "lock screen"
-optional_tool systemctl "power menu actions"
+optional_any_tool "power actions" "power menu actions" systemctl loginctl
 optional_tool notify-send "system alert notifications"
 optional_tool busctl "notification daemon conflict check"
 optional_tool timeout "bounded update checks and smoke launch"
 optional_tool fc-list "font detection"
 optional_tool fc-cache "font install refresh"
+
+_backlights=()
+for _backlight in /sys/class/backlight/*; do
+  [ -d "$_backlight" ] && _backlights+=("${_backlight##*/}")
+done
+if [ "${#_backlights[@]}" -gt 1 ]; then
+  ok "backlights" "${_backlights[*]} (choose the display in Settings > System)"
+elif [ "${#_backlights[@]}" -eq 1 ]; then
+  ok "backlight" "${_backlights[0]}"
+elif command -v brightnessctl >/dev/null 2>&1; then
+  warn "backlight" "no display backlight detected"
+fi
 _cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
 _wayland_socket() {
   [ -n "${WAYLAND_DISPLAY:-}" ] || return 1

@@ -64,6 +64,24 @@ for f in "${script_files[@]}"; do
   if err=$(bash -n "$f" 2>&1); then ok "$f"; else fail "syntax error in $f"; printf '%s\n' "$err"; fi
 done
 
+section "locale-stable parsers"
+for f in scripts/check.sh scripts/install.sh scripts/update.sh scripts/uninstall.sh; do
+  if grep -q '^export LC_ALL=C$' "$f"; then ok "$f"; else fail "$f must set LC_ALL=C"; fi
+done
+check_qml_locale_count() {
+  local file="$1" expected="$2" actual
+  actual="$(grep -c 'environment: ({ "LC_ALL": "C" })' "$file" || true)"
+  if [ "$actual" -ge "$expected" ]; then
+    ok "$file" "$actual parser process(es)"
+  else
+    fail "$file has $actual locale-stable parser process(es), expected at least $expected"
+  fi
+}
+check_qml_locale_count services/Battery.qml 1
+check_qml_locale_count services/Network.qml 8
+check_qml_locale_count services/PowerProfiles.qml 1
+check_qml_locale_count services/Updates.qml 1
+
 section "shellcheck"
 if command -v shellcheck >/dev/null 2>&1; then
   # error severity only — real bugs gate the build, style nits don't

@@ -27,6 +27,7 @@ Singleton {
     property bool   networkTrafficStats: false
     property bool   networkSpeedInline:  false   // pin the live up/down speed next to the icon, not just on hover
     property bool   netVpnShowLink:      false   // show "VPN / wifi|eth" so the underlying link stays visible
+    property string brightnessDevice:    ""      // empty = choose the best available backlight
     property bool   showSeconds:         false
     property bool   compactDate:         false
     property bool   clock12h:            false
@@ -242,6 +243,7 @@ Singleton {
         { k: "networkTrafficStats", t: "bool" },
         { k: "networkSpeedInline",  t: "bool" },
         { k: "netVpnShowLink",      t: "bool" },
+        { k: "brightnessDevice",    t: "re",   re: /^[A-Za-z0-9_.:+@-]*$/ },
         { k: "showSeconds",         t: "bool" },
         { k: "compactDate",         t: "bool" },
         { k: "clock12h",            t: "bool" },
