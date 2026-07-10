@@ -82,6 +82,10 @@ Optional warnings from `check.sh` are usually fine; a smoke-launch `FAIL` means 
 
 On hybrid laptops with several entries under `/sys/class/backlight`, Silere prefers a raw panel backlight automatically. If brightness changes the wrong display, select the correct device under Settings > System.
 
+## Contributing
+
+Suggestions, fixes, and new features are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## License
 
 MIT (c) s3rven
