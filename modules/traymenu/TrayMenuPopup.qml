@@ -1,9 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Effects
 import Quickshell
-import Quickshell.DBusMenu
 import Quickshell.Widgets
 import Quickshell.Wayland._WlrLayerShell
 import "../../config"

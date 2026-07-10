@@ -50,8 +50,8 @@ Item {
     Connections { target: ShellSettings; function onOsdBarIntegratedChanged() { root._sync() } }
 
     states: [
-        State { name: "hidden";  PropertyChanges { target: root; _op: 0;   _y: root._slide } },
-        State { name: "visible"; PropertyChanges { target: root; _op: 1.0; _y: 0           } }
+        State { name: "hidden";  PropertyChanges { root._op: 0; root._y: root._slide } },
+        State { name: "visible"; PropertyChanges { root._op: 1.0; root._y: 0 } }
     ]
     transitions: [
         Transition {

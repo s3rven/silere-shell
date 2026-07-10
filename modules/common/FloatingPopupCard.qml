@@ -90,8 +90,8 @@ Rectangle {
     Component.onCompleted: place()
 
     states: [
-        State { name: "hidden";  PropertyChanges { target: root; scaleAmt: Motion.popScaleFrom; edgeOffset: root._closedOffset; opacity: 0 } },
-        State { name: "visible"; PropertyChanges { target: root; scaleAmt: 1.0;  edgeOffset: 0; opacity: 1 } }
+        State { name: "hidden";  PropertyChanges { root.scaleAmt: Motion.popScaleFrom; root.edgeOffset: root._closedOffset; root.opacity: 0 } },
+        State { name: "visible"; PropertyChanges { root.scaleAmt: 1.0; root.edgeOffset: 0; root.opacity: 1 } }
     ]
     transitions: [
         Transition {

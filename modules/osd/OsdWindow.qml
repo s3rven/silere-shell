@@ -1,7 +1,6 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Effects
 import Quickshell
 import Quickshell.Wayland._WlrLayerShell
 import "../../config"
@@ -49,13 +48,13 @@ PanelWindow {
                 name: "top"
                 when: !osd._bottom
                 AnchorChanges { target: stack; anchors.top: parent.top; anchors.bottom: undefined }
-                PropertyChanges { target: stack; anchors.topMargin: 6; anchors.bottomMargin: 0 }
+                PropertyChanges { stack.anchors.topMargin: 6; stack.anchors.bottomMargin: 0 }
             },
             State {
                 name: "bottom"
                 when: osd._bottom
                 AnchorChanges { target: stack; anchors.top: undefined; anchors.bottom: parent.bottom }
-                PropertyChanges { target: stack; anchors.topMargin: 0; anchors.bottomMargin: 6 }
+                PropertyChanges { stack.anchors.topMargin: 0; stack.anchors.bottomMargin: 6 }
             }
         ]
 
@@ -116,12 +115,12 @@ PanelWindow {
                     State {
                         name: "hidden"
                         when: !card._ready || card.closing
-                        PropertyChanges { target: card; height: 0; _op: 0; _slide: card._hiddenSlide }
+                        PropertyChanges { card.height: 0; card._op: 0; card._slide: card._hiddenSlide }
                     },
                     State {
                         name: "visible"
                         when: card._ready && !card.closing
-                        PropertyChanges { target: card; height: card.pillH; _op: 1.0; _slide: 0 }
+                        PropertyChanges { card.height: card.pillH; card._op: 1.0; card._slide: 0 }
                     }
                 ]
 
@@ -306,4 +305,3 @@ PanelWindow {
         }
     }
 }
-
