@@ -206,7 +206,8 @@ Singleton {
             root._syncReady()
             root._queueReprobe()
         }
-        onFileChanged: reload()
+        // gate like refresh(): a stale readback landing mid-debounce would clobber the optimistic value and drop queued scroll steps
+        onFileChanged: if (!_applyDebounce.running) reload()
     }
 
     FileView {
