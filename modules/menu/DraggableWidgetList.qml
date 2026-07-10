@@ -202,6 +202,7 @@ Item {
                     topRadius:    10
                     bottomRadius: 10
                     active:       _row._dragging || _rowHover.hovered || _keyFocus.activeFocus
+                    focusActive:  _keyFocus.activeFocus
                     fillColor:    _row._dragging ? Theme.accent : Theme.text
                     fillOpacity:  _row._dragging ? 0.10 : (_keyFocus.activeFocus ? 0.08 : 0.05)
                 }

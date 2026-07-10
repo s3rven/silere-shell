@@ -29,6 +29,9 @@ Item {
     property color  contentScanColor: Theme.text
     property real   contentScanProgress: 0.0
     property real   contentScanWidth: 10.0
+    property real   levelValue: -1.0
+    property bool   levelVisible: false
+    property color  levelColor: Theme.accent
 
     // delayed hover flag for reveal detail text (battery/network) — true only after the pointer rests hoverRevealDelay ms
     property int    hoverRevealDelay: 80
@@ -167,6 +170,44 @@ Item {
         Behavior on color {
             enabled: !ShellSettings.reduceMotion
             ColorAnimation { duration: Motion.fast }
+        }
+    }
+
+    Item {
+        id: _levelTrack
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: Math.round((parent.height + root.pillH) / 2) - 3
+        width: Math.max(10, parent.width - root.horizontalPadding * 2 - 2)
+        height: 2
+        opacity: root.levelVisible && root.levelValue >= 0 ? 1 : 0
+        visible: opacity > 0.001
+
+        Behavior on opacity {
+            enabled: !ShellSettings.reduceMotion
+            NumberAnimation { duration: Motion.fast }
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            radius: 1
+            color: Theme.withAlpha(Theme.subtext, 0.16)
+        }
+
+        Rectangle {
+            width: Math.round(parent.width * Math.max(0, Math.min(1, root.levelValue)))
+            height: parent.height
+            radius: 1
+            color: root.levelColor
+            opacity: 0.78
+
+            Behavior on width {
+                enabled: !ShellSettings.reduceMotion
+                NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
+            }
+            Behavior on color {
+                enabled: !ShellSettings.reduceMotion
+                ColorAnimation { duration: Motion.color }
+            }
         }
     }
 

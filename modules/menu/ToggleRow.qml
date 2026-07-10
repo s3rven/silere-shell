@@ -66,6 +66,7 @@ Item {
         bottomRadius: root.bottomRadius
         cardInset:    root.cardInset
         active:       (_hover.hovered || root.activeFocus) && root._canToggle
+        focusActive:  root.activeFocus && root._canToggle
         fillOpacity:  root.activeFocus ? 0.13 : 0.08
     }
 

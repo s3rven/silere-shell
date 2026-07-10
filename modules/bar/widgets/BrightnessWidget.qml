@@ -17,6 +17,9 @@ Pill {
     text:        (ShellSettings.valuesOnHover && !expanded) ? ""
                  : (canControl ? Brightness.label : "—")
     textColor:   Theme.subtext
+    levelValue: canControl ? Brightness.pct : -1
+    levelVisible: canControl && ShellSettings.valuesOnHover && !expanded
+    levelColor: Theme.accent
     accessibleName: canControl ? `Brightness ${Brightness.percent} percent` : "Brightness unavailable"
     accessibleDescription: "Scroll to adjust brightness."
 

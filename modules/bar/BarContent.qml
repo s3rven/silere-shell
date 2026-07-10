@@ -23,6 +23,15 @@ Item {
     readonly property real titleAvailableWidth: Math.max(0, titleFreeRight - titleFreeLeft)
     readonly property bool titleHasRoom: titleAvailableWidth >= titleMinWidth
 
+    // anchor tracks the zones only, never the title's own width, so text swaps can't drag it
+    property real titleAnchor: ShellSettings.windowTitleCenterGap
+        ? (titleFreeLeft + titleFreeRight) / 2
+        : width / 2
+    Behavior on titleAnchor {
+        enabled: !ShellSettings.reduceMotion
+        NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
+    }
+
     readonly property bool _compact: effectiveCompact
     readonly property int mediaTextBudget: {
         const base = _compact ? 120 : 160
@@ -126,7 +135,7 @@ Item {
         id: _wTitle
         anchors.verticalCenter: parent.verticalCenter
         x: Math.round(Math.max(root.titleFreeLeft,
-                               Math.min((root.width - width) / 2,
+                               Math.min(root.titleAnchor - width / 2,
                                         root.titleFreeRight - width)))
         width: item && root.titleHasRoom ? Math.min(item.implicitWidth, root.titleAvailableWidth) : 0
         height: parent.height
@@ -140,10 +149,8 @@ Item {
         transformOrigin: Item.Center
         visible: opacity > 0.001
 
-        // No Behavior on x: group widths already animate per-frame (pill
-        // reveals), so x follows smoothly by itself; an extra Behavior lags
-        // those and made the title drift sideways during title swaps (the
-        // width change recomputes x while the new text fades in).
+        // no Behavior on x: titleAnchor already eases, and animating x too would lag the
+        // half-width term and drift the title sideways as new text fades in
 
         readonly property bool _want: ShellSettings.showWindowTitle && root.titleHasRoom
             && !root._osdBarShowing && !root._centerVizShowing

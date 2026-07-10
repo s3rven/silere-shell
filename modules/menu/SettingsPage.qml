@@ -1048,6 +1048,11 @@ PageShell {
                             checked: ShellSettings.showWindowTitleApp
                             onToggled: ShellSettings.showWindowTitleApp = !ShellSettings.showWindowTitleApp
                         }
+                        ToggleRow {
+                            glyph: "󰉞"; label: "Center between widgets"
+                            checked: ShellSettings.windowTitleCenterGap
+                            onToggled: ShellSettings.windowTitleCenterGap = !ShellSettings.windowTitleCenterGap
+                        }
                     }
                 }
 
@@ -1443,6 +1448,8 @@ PageShell {
                             topRadius:    _resetRow.topRadius
                             bottomRadius: _resetRow.bottomRadius
                             active: _resetHover.hovered || _resetRow.armed || _resetRow.activeFocus
+                            focusActive: _resetRow.activeFocus
+                            focusColor: _resetRow.armed ? Theme.error : Theme.accent
                             fillColor: _resetRow.armed ? Theme.error : Theme.subtext
                             fillOpacity: _resetRow.armed ? 0.10 : _resetRow.activeFocus ? 0.13 : 0.08
                         }
@@ -1506,9 +1513,7 @@ PageShell {
                                             ? Theme.accent : Theme.success
                                     busy: ShellUpdate.checking || ShellUpdate.applying
 
-                                    primaryLabel: ShellUpdate.applying ? "Installing…"
-                                        : ShellUpdate.checking ? "Checking…"
-                                        : ShellUpdate.pending ? "Install" : "Check"
+                                    primaryLabel: ShellUpdate.pending || ShellUpdate.applying ? "Install" : "Check"
                                     primaryGlyph: ShellUpdate.pending ? "󰅢" : "󰓦"
                                     primaryEnabled: !ShellUpdate.checking && !ShellUpdate.applying
                                     primaryEmphasis: ShellUpdate.pending

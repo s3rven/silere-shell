@@ -26,20 +26,52 @@ Item {
     transformOrigin: Item.Center
 
     property bool _entering: false
+    property bool _announcedActive: false
     layer.enabled: _entering && !ShellSettings.reduceMotion
 
-    Component.onCompleted: opacity = root.active ? 1.0 : 0.0
+    function _announceShown(): void {
+        if (!root.active || root._announcedActive) return
+        root._announcedActive = true
+        root.pageShown()
+    }
+
+    function _announceHidden(): void {
+        if (!root._announcedActive) return
+        root._announcedActive = false
+        root.pageHidden()
+    }
+
+    function _settleVisuals(): void {
+        _enter.stop()
+        _exit.stop()
+        root._entering = false
+        root.opacity = root.active ? 1.0 : 0.0
+        root.scale = 1.0
+    }
+
+    Component.onCompleted: {
+        root.opacity = root.active ? 1.0 : 0.0
+        root.scale = root.active ? 1.0 : root.scaleFrom
+        Qt.callLater(root._announceShown)
+    }
 
     onActiveChanged: {
         if (root.active) {
             _exit.stop()
             if (root.opacity < 0.001) root.scale = root.scaleFrom
             _enter.restart()
-            root.pageShown()
+            root._announceShown()
         } else {
             _enter.stop()
             _exit.restart()
-            root.pageHidden()
+            root._announceHidden()
+        }
+    }
+
+    Connections {
+        target: ShellSettings
+        function onReduceMotionChanged() {
+            if (ShellSettings.reduceMotion) root._settleVisuals()
         }
     }
 

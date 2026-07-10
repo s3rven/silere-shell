@@ -149,6 +149,7 @@ Item {
                         bottomRadius: _opt.index === Audio.sinkModel.length - 1 ? root.bottomRadius : 0
                         cardInset:    root.cardInset
                         active:       _optHov.hovered || _opt.activeFocus
+                        focusActive:  _opt.activeFocus
                         fillOpacity:  _opt.activeFocus ? 0.13 : 0.08
                     }
 

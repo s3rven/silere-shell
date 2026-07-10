@@ -86,6 +86,7 @@ Item {
         bottomRadius: root._open ? 0 : root.bottomRadius
         cardInset:    root.cardInset
         active:       (_hov.hovered || root.activeFocus) && root.enabled
+        focusActive:  root.activeFocus && root.enabled
         fillOpacity:  root.activeFocus ? 0.13 : 0.08
     }
 

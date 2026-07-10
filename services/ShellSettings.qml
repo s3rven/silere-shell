@@ -33,6 +33,7 @@ Singleton {
     property bool   clock12h:            false
     property bool   showWindowTitle:     false
     property bool   showWindowTitleApp:  false
+    property bool   windowTitleCenterGap: true   // centre in the free span between the zones instead of on the bar
     property bool   updatesWidget:       false
     property bool   trayWidget:          false
     property bool   valuesOnHover:       false
@@ -249,6 +250,7 @@ Singleton {
         { k: "clock12h",            t: "bool" },
         { k: "showWindowTitle",     t: "bool" },
         { k: "showWindowTitleApp",  t: "bool" },
+        { k: "windowTitleCenterGap", t: "bool" },
         { k: "updatesWidget",       t: "bool" },
         { k: "trayWidget",          t: "bool" },
         { k: "valuesOnHover",       t: "bool" },

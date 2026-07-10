@@ -1,7 +1,7 @@
 import QtQuick
 import "../../config"
 
-// Hover/press fill for a row inside a rounded SettingsCard. Per-corner radii
+// Hover/focus fill for a row inside a rounded SettingsCard. Per-corner radii
 // match whichever card edges this row is flush against (set by SettingsCard._applyRadii).
 Item {
     id: root
@@ -10,8 +10,10 @@ Item {
     property real  bottomRadius: 0
     property real  cardInset:    1
     property bool  active:       false
+    property bool  focusActive:  false
     property real  fillOpacity:  0.07
     property color fillColor:    Theme.menuHover
+    property color focusColor:   Theme.accent
 
     Rectangle {
         readonly property real _topR: Math.max(0, root.topRadius    - root.cardInset)
@@ -32,5 +34,22 @@ Item {
         color:   root.fillColor
         opacity: root.active ? root.fillOpacity : 0
         Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+    }
+
+    Rectangle {
+        anchors.left: parent.left
+        anchors.leftMargin: root.cardInset + 2
+        anchors.verticalCenter: parent.verticalCenter
+        width: 2
+        height: Math.max(12, Math.min(22, parent.height - 16))
+        radius: 1
+        color: root.focusColor
+        opacity: root.focusActive ? 0.88 : 0
+        scale: root.focusActive ? 1 : 0.55
+        transformOrigin: Item.Center
+        visible: opacity > 0.001
+
+        Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+        Behavior on scale { NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
     }
 }

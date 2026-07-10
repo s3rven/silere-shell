@@ -6,6 +6,7 @@ Item {
 
     property string label: ""
     property string glyph: ""
+    property string accessibleName: label
     property bool emphasis: false
     property bool confirm: false
     property bool armed: false
@@ -38,7 +39,7 @@ Item {
 
     activeFocusOnTab: root.enabled
     Accessible.role: Accessible.Button
-    Accessible.name: root.label
+    Accessible.name: root.accessibleName
     Accessible.description: root.armed ? "Activate again to confirm" : ""
     Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root.activate(); event.accepted = true }
     Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root.activate(); event.accepted = true }

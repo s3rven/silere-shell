@@ -24,6 +24,9 @@ Pill {
     text: !Audio.ready ? ""
         : (ShellSettings.valuesOnHover && !expanded) ? ""
         : (Math.round(Audio.effectiveVolume * 100) + "%")
+    levelValue: Audio.ready ? Audio.uiVolume : -1
+    levelVisible: Audio.ready && ShellSettings.valuesOnHover && !expanded
+    levelColor: Audio.muted ? Theme.subtext : Theme.accent
 
     Accessible.role: Accessible.Slider
 

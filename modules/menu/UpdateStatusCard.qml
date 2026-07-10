@@ -21,6 +21,7 @@ Rectangle {
     property color primaryColor: Theme.accent
     property string secondaryLabel: ""
     property string secondaryGlyph: "󰑐"
+    property string secondaryAccessibleName: "Refresh"
     property bool secondaryEnabled: true
     property bool secondaryShown: false
 
@@ -48,7 +49,7 @@ Rectangle {
         Item {
             id: _main
             width: parent.width
-            height: 52
+            height: 56
 
             Text {
                 id: _g
@@ -105,14 +106,19 @@ Rectangle {
                     renderType: Text.NativeRendering
                 }
 
-                Row {
+                Item {
                     width: parent.width
-                    spacing: 0
+                    height: Math.max(_status.implicitHeight, _sub.implicitHeight)
 
                     Text {
                         id: _status
+                        anchors.left: parent.left
+                        anchors.right: _sub.visible ? _sub.left : parent.right
+                        anchors.rightMargin: _sub.visible ? 9 : 0
+                        anchors.verticalCenter: parent.verticalCenter
                         text: root.status
                         textFormat: Text.PlainText
+                        elide: Text.ElideRight
                         color: Theme.withAlpha(root.statusColor, 0.9)
                         font.family: Settings.font
                         font.pixelSize: Settings.fontSize - 2
@@ -122,8 +128,11 @@ Rectangle {
                     Text {
                         id: _sub
                         visible: root.meta.length > 0
-                        width: Math.min(implicitWidth, Math.max(0, parent.width - _status.width))
-                        text: "  ·  " + root.meta
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Math.min(implicitWidth, parent.width * 0.46)
+                        horizontalAlignment: Text.AlignRight
+                        text: "·  " + root.meta
                         textFormat: Text.PlainText
                         elide: Text.ElideRight
                         color: Theme.withAlpha(Theme.subtext, 0.5)
@@ -147,12 +156,13 @@ Rectangle {
                     height: 28
                     label: root.secondaryLabel
                     glyph: root.secondaryGlyph
+                    accessibleName: root.secondaryAccessibleName
                     enabled: root.secondaryEnabled
                     onTriggered: root.secondaryTriggered()
                 }
 
                 SettingsActionButton {
-                    width: contentWidth
+                    width: Math.max(contentWidth, 116)
                     height: 28
                     label: root.primaryLabel
                     glyph: root.primaryGlyph
@@ -167,9 +177,15 @@ Rectangle {
         // Pending summary or error, as an indented sub-note under the row.
         Item {
             id: _detailWrap
-            visible: root.detail.length > 0
+            visible: height > 0.5
             width: parent.width
-            height: visible ? 4 * Math.ceil((_detailText.implicitHeight + 3 + 9) / 4) : 0
+            height: root.detail.length > 0 ? 4 * Math.ceil((_detailText.implicitHeight + 3 + 9) / 4) : 0
+            clip: true
+
+            Behavior on height {
+                enabled: !ShellSettings.reduceMotion
+                NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
+            }
 
             Text {
                 id: _detailText
@@ -179,6 +195,7 @@ Rectangle {
                 text: root.detail
                 textFormat: Text.PlainText
                 wrapMode: Text.WordWrap
+                opacity: root.detail.length > 0 ? 1 : 0
                 color: root.detailError
                     ? Theme.withAlpha(Theme.warning, 0.85)
                     : Theme.withAlpha(Theme.subtext, 0.58)
@@ -186,6 +203,7 @@ Rectangle {
                 font.pixelSize: Settings.fontSize - 2
                 lineHeight: 1.15
                 renderType: Text.NativeRendering
+                Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
             }
         }
     }
