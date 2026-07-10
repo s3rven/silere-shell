@@ -88,7 +88,13 @@ check_file() {
 }
 
 require_tool qs "Quickshell runtime"
-require_tool hyprctl "Hyprland runtime and dispatch client"
+if [ -n "${NIRI_SOCKET:-}" ]; then
+  require_tool niri "niri runtime and IPC client"
+elif [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+  require_tool hyprctl "Hyprland runtime and dispatch client"
+else
+  optional_any_tool compositor "niri or Hyprland client" niri hyprctl
+fi
 optional_tool pipewire "volume service"
 optional_tool wireplumber "PipeWire session manager"
 optional_tool upower "battery widget + warnings"
@@ -230,7 +236,13 @@ if command -v nmcli >/dev/null 2>&1; then
   fi
 fi
 
-if command -v hyprctl >/dev/null 2>&1; then
+if [ -n "${NIRI_SOCKET:-}" ] && command -v niri >/dev/null 2>&1; then
+  if niri msg version >/dev/null 2>&1; then
+    ok "niri" "niri msg can query compositor"
+  else
+    warn "niri" "NIRI_SOCKET set but niri msg query failed"
+  fi
+elif command -v hyprctl >/dev/null 2>&1; then
   hyprctl_out="$(hyprctl monitors 2>&1)" && hyprctl_ok=true || hyprctl_ok=false
   wayland_sock="$(_wayland_socket || true)"
   if $hyprctl_ok; then
