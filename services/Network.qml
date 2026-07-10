@@ -19,6 +19,12 @@ Singleton {
     property string deviceType:     ""
     property bool monitoring:        false
     readonly property bool toolAvailable: SystemTools.hasNmcli
+    readonly property bool _wanted: !Idle.isIdle && (
+        ShellSettings.barShowNetwork
+        || ShellSettings.updatesWidget
+        || (ShellSettings.underlineGlow && ShellSettings.underlineNetGlow)
+        || MenuState.open
+        || QuickActionsState.open)
     property bool wifiEnabled:      true   // radio (rfkill) state, drives the quick toggle
     property var    wifiNetworks:   []     // picker list: [{ssid, signal, secured, active, known}]
     property string wifiConnecting: ""     // ssid mid-connect, "" when idle
@@ -71,7 +77,7 @@ Singleton {
     }
 
     function refresh(): void {
-        if (!toolAvailable) return
+        if (!toolAvailable || !root._wanted) return
         if (_proc.running) {
             _refreshPending = true
             return
@@ -208,9 +214,28 @@ Singleton {
             monitoring = false
             return
         }
+        if (!root._wanted) {
+            root._suspend()
+            return
+        }
         monitoring = true
         if (!_radioCheck.running) _radioCheck.running = true
         refresh()
+    }
+
+    function _suspend(): void {
+        _queryRetry.stop()
+        monitorDebounce.stop()
+        _signalDebounce.stop()
+        monitoring = false
+        clearWifiScan()
+        _resetTraffic()
+    }
+
+    on_WantedChanged: {
+        if (!SystemTools.ready) return
+        if (root._wanted) root._init()
+        else root._suspend()
     }
 
     Connections {
@@ -242,7 +267,7 @@ Singleton {
             } else {
                 _queryRetry.stop()
                 root._queryFailures = 0
-                root.monitoring = true
+                root.monitoring = root._wanted
                 let best = null
                 let vpn = false
                 let vpnConn = ""
@@ -344,7 +369,10 @@ Singleton {
     Process {
         id: _radioSet
         environment: ({ "LC_ALL": "C" })
-        onExited: { if (!_radioCheck.running) _radioCheck.running = true; root.refresh() }
+        onExited: {
+            if (root._wanted && !_radioCheck.running) _radioCheck.running = true
+            root.refresh()
+        }
     }
 
     // Saved wifi connection names → known-network flag. Chains into the scan.
@@ -507,7 +535,7 @@ Singleton {
         id: monitorProc
         environment: ({ "LC_ALL": "C" })
         command: ["nmcli", "monitor"]
-        superviseWhen: root.toolAvailable && root.monitoring
+        superviseWhen: root.toolAvailable && root._wanted && root.monitoring
         restartDelay: 3000
         maxRestartDelay: 60000
         cleanExitOnly: true
@@ -532,7 +560,7 @@ Singleton {
     Timer {
         id: _fallbackPoll
         interval: root.monitoring || root._queryFailures >= 3 ? 300000 : 30000
-        running: root.toolAvailable && !Idle.isIdle
+        running: root.toolAvailable && root._wanted
         repeat: true
         onTriggered: root.refresh()
     }

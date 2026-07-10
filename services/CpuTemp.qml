@@ -14,6 +14,9 @@ Singleton {
     readonly property bool needed: MenuState.open && MenuState.activeTab === 0
     readonly property bool _persistentNeed: ShellSettings.osdTempWarn
         || (ShellSettings.underlineGlow && ShellSettings.underlineTempGlow)
+    readonly property bool _wanted: _started && (_persistentNeed || needed) && !Idle.isIdle
+    property string _sensorPath: ""
+    property bool _reading: false
 
     property int _hotCount:      0
     property int _criticalCount: 0
@@ -69,16 +72,32 @@ Singleton {
         return (t >= 5 && t <= 125) ? t : 0
     }
 
-    Component.onCompleted: {
-        root._started = true
-        _warmup.restart()
+    function _resetState(): void {
+        root.temp = 0
+        root._hotCount = 0
+        root._criticalCount = 0
+        root.hot = false
+        root.critical = false
     }
 
-    SupervisedProcess {
-        id: _proc
-        superviseWhen: root._started && (root._persistentNeed || root.needed) && !Idle.isIdle
-        restartDelay:  2000
-        giveUpCodes:   [3]            // exit 3 = no usable temperature sensor
+    on_WantedChanged: {
+        if (!root._wanted) {
+            _warmup.stop()
+            if (_detectProc.running) _detectProc.running = false
+            root._resetState()
+            return
+        }
+        root._warmedUp = false
+        _warmup.restart()
+        if (root._sensorPath.length === 0 && !_detectProc.running)
+            _detectProc.running = true
+    }
+
+    Component.onCompleted: root._started = true
+
+    Process {
+        id: _detectProc
+        environment: ({ "LC_ALL": "C" })
         command: ["bash", "-c",
             "detect_sensor() { " +
             "  local best=\"\" best_score=0 name n dir f lf lbl score type tf; " +
@@ -114,32 +133,48 @@ Singleton {
             "    esac; " +
             "    if [ \"$score\" -gt \"$best_score\" ]; then best_score=\"$score\"; best=\"$tf\"; fi; " +
             "  done; " +
-            "  echo \"$best\"; " +
+            "  [ -n \"$best\" ] || return 3; printf '%s\\n' \"$best\"; " +
             "}; " +
-            "p=$(detect_sensor); [ -z \"$p\" ] && exit 3; " +
-            // fd 3 holds both ends of a pipe, so read -t sleeps the full
-            // timeout without forking an external `sleep` every tick
-            "exec 3<> <(:); " +
-            "while true; do " +
-            "  if [ -r \"$p\" ]; then read t < \"$p\" && echo \"$t\"; " +
-            "  else p=$(detect_sensor); [ -z \"$p\" ] && exit 3; fi; " +
-            "  read -r -t 5 -u 3; " +
-            "done"]
-        stdout: SplitParser {
-            onRead: line => {
-                const t = root._normalizedTemp(parseFloat(line.trim()))
-                if (t > 0) root._sample(t)
-            }
+            "detect_sensor"]
+        stdout: StdioCollector { id: _detectOut }
+        onExited: (code) => {
+            if (!root._wanted) return
+            const path = code === 0 ? (_detectOut.text || "").trim() : ""
+            root._sensorPath = path.startsWith("/sys/") ? path : ""
         }
-        onRunningChanged: {
-            if (!running) {
-                root.temp = 0; root._hotCount = 0; root._criticalCount = 0
-                root.hot = false; root.critical = false
-            } else {
-                // Sensor (re)started, re-arm the warmup so a relaunch spike can't alert.
-                root._warmedUp = false
-                _warmup.restart()
+        Component.onDestruction: running = false
+    }
+
+    FileView {
+        id: _sensorFile
+        path: root._sensorPath
+        blockLoading: true
+        blockAllReads: true
+        printErrors: false
+    }
+
+    function _readSensor(): void {
+        if (!root._wanted || root._sensorPath.length === 0 || root._reading) return
+        root._reading = true
+        try {
+            _sensorFile.reload()
+            if (!_sensorFile.waitForJob()) {
+                root._sensorPath = ""
+                if (!_detectProc.running) _detectProc.running = true
+                return
             }
+            const t = root._normalizedTemp(parseFloat((_sensorFile.text() || "").trim()))
+            if (t > 0) root._sample(t)
+        } finally {
+            root._reading = false
         }
+    }
+
+    Timer {
+        interval: 5000
+        repeat: true
+        triggeredOnStart: true
+        running: root._wanted && root._sensorPath.length > 0
+        onTriggered: root._readSensor()
     }
 }

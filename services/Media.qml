@@ -147,25 +147,14 @@ Singleton {
     readonly property bool _visualizerLowPowerOnly: _visualizerClients > 0 && _visualizerDemand <= _visualizerClients
     readonly property string _cavaProfileKey: _cavaBars + ":" + _cavaFps + ":" + _cavaSensitivity + ":" + _cavaNoiseReduction
 
-    function _restartCavaIfProfileChanged(oldProfile: string): void {
-        Qt.callLater(function() {
-            if (_cavaProc.running && oldProfile !== _cavaProfileKey) root._restartCava()
-        })
-    }
     function registerVisualizer(lowPower): void {
-        const wasRunning = _cavaProc.running
-        const oldProfile = _cavaProfileKey
         _visualizerClients++
         _visualizerDemand += lowPower ? 1 : 2
-        // Only restart when the output shape changes; adding another same-profile canvas should not flash CAVA to zero.
-        if (wasRunning) _restartCavaIfProfileChanged(oldProfile)
+        if (!root._cavaConfigReady) _cavaConfigSync.restart()
     }
     function unregisterVisualizer(lowPower): void {
-        const wasRunning = _cavaProc.running
-        const oldProfile = _cavaProfileKey
         _visualizerClients = Math.max(0, _visualizerClients - 1)
         _visualizerDemand = Math.max(0, _visualizerDemand - (lowPower ? 1 : 2))
-        if (wasRunning) _restartCavaIfProfileChanged(oldProfile)
     }
 
     readonly property int _cavaBars: {
@@ -238,33 +227,34 @@ Singleton {
         "channels = mono\n" +
         "\n[smoothing]\n" +
         "noise_reduction = " + _cavaNoiseReduction + "\n"
-    readonly property string _cavaCommandScript: {
-        const cfg = _cavaConfigText.replace(/'/g, "'\\''")
-        return "base=\"${XDG_RUNTIME_DIR:-/tmp}\"; uid=\"${UID:-$(id -u 2>/dev/null || echo user)}\"; " +
-               "dir=\"$base/silere-shell-$uid\"; umask 077; mkdir -p \"$dir\" || exit 1; " +
-               "tmp=$(mktemp \"$dir/cava.XXXXXX.conf\") || exit 1; " +
-               "printf '%s' '" + cfg + "' > \"$tmp\" || { rm -f \"$tmp\"; exit 1; }; " +
-               "cava -p \"$tmp\"; code=$?; rm -f \"$tmp\"; exit $code"
+    readonly property string _cavaConfigPath: {
+        const runtime = String(Quickshell.env("XDG_RUNTIME_DIR") || "").trim()
+        return (runtime.length > 0 ? runtime : "/tmp")
+            + "/silere-shell-cava-" + Quickshell.processId + ".conf"
     }
-    property bool _cavaRestarting: false
+    property bool _cavaConfigReady: false
 
-    function _restartCava(): void {
-        if (!_cavaProc.running) return
-        _cavaRestarting = true
-        _cavaRestart.start()
+    function _writeCavaConfig(): void {
+        root._cavaConfigReady = false
+        _cavaConfig.setText(root._cavaConfigText)
     }
 
-    Connections {
-        target: ShellSettings
-        function onMediaVisualizerPresetChanged()    { root._restartCava() }
-        function onMediaVisualizerStyleChanged()     { root._restartCava() }
-        function onMediaVisualizerIntensityChanged() { root._restartCava() }
-        function onBarCompactChanged()               { root._restartCava() }
-    }
+    on_CavaProfileKeyChanged: if (root._visualizerClients > 0) _cavaConfigSync.restart()
+
     Timer {
-        id: _cavaRestart
-        interval: 80
-        onTriggered: root._cavaRestarting = false
+        id: _cavaConfigSync
+        interval: 0
+        onTriggered: root._writeCavaConfig()
+    }
+
+    FileView {
+        id: _cavaConfig
+        path: root._cavaConfigPath
+        atomicWrites: true
+        blockWrites: true
+        printErrors: false
+        onSaved: root._cavaConfigReady = true
+        onSaveFailed: root._cavaConfigReady = false
     }
 
     // debounce on the stop side so brief alt-tabs don't restart cava
@@ -290,8 +280,9 @@ Singleton {
 
     Process {
         id: _cavaProc
-        command: ["bash", "-c", root._cavaCommandScript]
-        running: root.cavaReady && root._visualizerClients > 0 && root.available && root.playing && !Idle.isIdle && !root._fsBlocked && !root._cavaRestarting
+        command: ["cava", "-p", root._cavaConfigPath]
+        running: root._cavaConfigReady && root.cavaReady && root._visualizerClients > 0
+            && root.available && root.playing && !Idle.isIdle && !root._fsBlocked
         stdout: SplitParser {
             onRead: line => {
                 const parts = line.split(";")
