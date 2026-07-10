@@ -58,15 +58,14 @@ Singleton {
     readonly property string trafficLabel: "󰁅 " + formatRate(downBps) + " 󰁝 " + formatRate(upBps)
 
 
+    function signalGlyph(s: int): string {
+        return s > 75 ? "󰤨" : s > 50 ? "󰤥" : s > 25 ? "󰤢" : "󰤟"
+    }
+
     // The underlying link's icon, ignoring any VPN overlay ("VPN / wifi").
     readonly property string underlyingIcon: {
         if (!connected) return "󰤭"
-        if (isWifi) {
-            if (signalStrength > 75) return "󰤨"
-            if (signalStrength > 50) return "󰤥"
-            if (signalStrength > 25) return "󰤢"
-            return "󰤟"
-        }
+        if (isWifi) return signalGlyph(signalStrength)
         return "󰈀"
     }
 

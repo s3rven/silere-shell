@@ -58,13 +58,6 @@ Item {
         function onToolAvailableChanged() { root._syncScanState() }
     }
 
-    function _sigGlyph(s) {
-        if (s > 75) return "󰤨"
-        if (s > 50) return "󰤥"
-        if (s > 25) return "󰤢"
-        return "󰤟"
-    }
-
     Column {
         id: _col
         width: parent.width
@@ -182,7 +175,7 @@ Item {
                         id: _sig
                         anchors.left: parent.left; anchors.leftMargin: 12
                         anchors.verticalCenter: parent.verticalCenter
-                        text: root._sigGlyph(_entry.modelData.signal)
+                        text: Network.signalGlyph(_entry.modelData.signal)
                         color: _entry.modelData.active ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.8)
                         font.family: Settings.font; font.pixelSize: Settings.fontSize + 1
                         renderType: Text.NativeRendering
