@@ -47,18 +47,19 @@ Every widget checks for its tool at runtime. If a tool is missing, its widget hi
 
 ## Controls
 
-| area | action |
+| area | actions |
 |---|---|
-| workspaces | left-click switches; click the active marker to open the menu, right-click it for quick actions; middle-click moves the focused window; scroll switches when enabled |
-| menu | Escape closes pickers and confirmations first, then the menu; click outside to close |
-| clock | left-click opens the calendar; middle-click cycles seconds/date |
-| calendar | scroll, arrows, or Left/Right changes month; the header jumps back to today |
-| media | left-click play/pause; middle-click focuses the player; scroll skips tracks |
-| volume | scroll adjusts; left-click mutes |
-| brightness | scroll adjusts; arrow keys when focused |
-| tray | left-click focuses/activates; middle-click secondary activate; right-click opens the menu; resting the pointer reveals the app name |
-| history | click an entry to expand its full text; hover for per-item dismiss |
-| updates | shell updates install only after confirmation; background checks only update the badge |
+| workspaces | click switches. On the active diamond, click opens the menu and right-click opens quick actions. Middle-click sends the focused window to that workspace. |
+| clock | click opens the calendar. Middle-click cycles seconds and date. |
+| calendar | scroll or arrow keys change the month. Click the header to jump back to today. |
+| media | click plays or pauses. Scroll changes track. Middle-click jumps to the player. |
+| volume | scroll changes volume. Click mutes. |
+| brightness | scroll changes brightness. |
+| tray | click jumps to the app. Right-click opens its menu. |
+| menu | Escape steps back, then closes. Click anywhere outside to close. |
+| history | click an entry to read it in full. |
+
+Shell and package updates never install on their own; checks only update the badge, installing always takes a click.
 
 ## Resource use
 
