@@ -128,8 +128,8 @@ PageShell {
                     16 + _controlsRow.height + _seekBlock + 12 + _mediaCol.implicitHeight + 26) / 4)
                 radius: 12
                 color: Theme.menuCard
-                // no stroke: a 1px border doubles on fractional displays, and the lit play button already signals playback
-                border.width: 0
+                border.width: 1
+                border.color: Theme.menuCardBorder
                 opacity: Media.shown ? 1.0 : 0.0
                 visible: opacity > 0.01
                 scale: Media.shown ? 1.0 : 0.97
@@ -251,17 +251,31 @@ PageShell {
                     NumberAnimation { id: _artOut;     property: "opacity"; duration: Motion.ms(300);     easing.type: Easing.OutCubic }
                 }
 
-                Text {
+                // no-art placeholder: accent note inside a faint gem, echoing the workspace diamond
+                Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.top: parent.top
-                    anchors.topMargin: 26
-                    text: "󰝚"
-                    color: Theme.withAlpha(Theme.subtext, 0.22)
-                    font.family: Settings.font
-                    font.pixelSize: 56
-                    renderType: Text.NativeRendering
+                    anchors.topMargin: 30
+                    width: 60; height: 60
                     opacity: Math.max(0, 1 - _art.shownAlpha / _art.maxAlpha)
                     visible: Media.shown && opacity > 0.01
+
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: 46; height: 46
+                        radius: 11
+                        rotation: 45
+                        antialiasing: true
+                        color: Theme.withAlpha(Theme.accent, 0.10)
+                    }
+                    Text {
+                        anchors.centerIn: parent
+                        text: "󰝚"
+                        color: Theme.withAlpha(Theme.accent, 0.34)
+                        font.family: Settings.font
+                        font.pixelSize: 34
+                        renderType: Text.NativeRendering
+                    }
                 }
 
                 // top scrim: fades art into the card colour so the clipped corner's stair-stepping doesn't read as a jagged edge; also lifts label contrast
@@ -522,12 +536,11 @@ PageShell {
                             anchors.fill: parent
                             radius: Theme.radiusControl
                             antialiasing: true
-                            color: Media.playing || _playH.hovered || _playT.pressed
-                                ? Theme.mix(Theme.menuControl, Theme.accent, _playT.pressed ? 0.38 : _playH.hovered ? 0.30 : 0.24)
+                            color: _playT.pressed ? Theme.mix(Theme.menuControl, Theme.accent, 0.18)
+                                : _playH.hovered ? Theme.mix(Theme.menuControl, Theme.accent, 0.10)
                                 : Theme.menuControl
                             border.width: 1
-                            border.color: _playBtn.activeFocus ? Theme.withAlpha(Theme.accent, 0.82)
-                                : Media.playing || _playH.hovered ? Theme.withAlpha(Theme.accent, 0.52)
+                            border.color: _playBtn.activeFocus ? Theme.withAlpha(Theme.accent, 0.7)
                                 : Theme.menuControlLine
                             Behavior on color        { ColorAnimation { duration: Motion.fast } }
                             Behavior on border.color { ColorAnimation { duration: Motion.fast } }
@@ -540,7 +553,7 @@ PageShell {
                             readonly property string target: Media.playing ? "󰏤" : "󰐊"
                             property bool _ready: false
                             text: shown
-                            color: (_playH.hovered || Media.playing) ? Theme.accent : Theme.withAlpha(Theme.accent, 0.9)
+                            color: _playH.hovered ? Theme.text : Theme.withAlpha(Theme.text, 0.8)
                             font.family: Settings.font; font.pixelSize: Settings.fontSize + 10
                             renderType: Text.NativeRendering
                             transformOrigin: Item.Center
@@ -570,6 +583,10 @@ PageShell {
             }
         }
 
+        SectionLabel {
+            label: "Audio & Display"
+            visible: Audio.ready || Brightness.maxBrightness > 0
+        }
         // high-frequency controls up top; volume carries an inline output-device dropdown
         SettingsCard {
             id: _primaryControls

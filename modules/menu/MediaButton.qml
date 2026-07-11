@@ -36,7 +36,7 @@ Item {
         anchors.centerIn: parent
         width: 34; height: 34; radius: Theme.radiusControl
         antialiasing: true
-        color: Theme.withAlpha(Theme.text, _tap.pressed ? 0.15 : 0.08)
+        color: Theme.withAlpha(Theme.text, _tap.pressed ? 0.10 : 0.06)
         border.width: root.activeFocus ? 1 : 0
         border.color: Theme.withAlpha(Theme.accent, 0.6)
         opacity: (_hover.hovered || _tap.pressed || root.activeFocus) ? 1.0 : 0.0
@@ -46,7 +46,7 @@ Item {
     Text {
         anchors.centerIn: parent
         text: root.glyph
-        color: _hover.hovered ? Theme.text : Theme.withAlpha(Theme.text, 0.5)
+        color: _hover.hovered ? Theme.withAlpha(Theme.text, 0.85) : Theme.withAlpha(Theme.text, 0.45)
         font.family: Settings.font; font.pixelSize: Settings.fontSize + 8
         renderType: Text.NativeRendering
         Behavior on color { ColorAnimation { duration: Motion.fast } }
