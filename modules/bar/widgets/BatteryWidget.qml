@@ -20,6 +20,10 @@ Pill {
     animateGlyph:   false
     shrinkDelay:    0
     reserveText:    "100%"
+    levelValue:     Battery.pct > 0 ? Battery.pct / 100 : -1
+    levelVisible:   Battery.pct > 0 && ShellSettings.valuesOnHover
+                    && ShellSettings.hoverLevelBar && !expanded
+    levelColor:     Battery.iconColor
     // status pill: Tab-reachable so AT can read it, Enter/Space stay no-ops
     activeFocusOnTab: show
     Accessible.focusable: true
@@ -30,14 +34,16 @@ Pill {
     Behavior on _baseOpacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
 
     text: {
-        if (expanded) {
-            if (Battery.timeLabel.length > 0)
-                return Battery.label + " · " + Battery.timeLabel
-            if (Battery.statusLabel.length > 0)
-                return Battery.label + " · " + Battery.statusLabel
+        if (ShellSettings.valuesOnHover && !expanded)
+            return ""
+        if (!expanded)
             return Battery.label
-        }
-        // battery is status not a control — always shown, even when valuesOnHover hides the adjustable levels
+
+        const detail = Battery.timeLabel.length > 0 ? Battery.timeLabel : Battery.statusLabel
+        if (Battery.label.length === 0)
+            return detail
+        if (detail.length > 0)
+            return Battery.label + " · " + detail
         return Battery.label
     }
 }

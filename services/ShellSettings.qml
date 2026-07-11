@@ -36,6 +36,7 @@ Singleton {
     property bool   updatesWidget:       false
     property bool   trayWidget:          false
     property bool   valuesOnHover:       false
+    property bool   hoverLevelBar:       false   // replace hidden battery/volume/brightness values with a compact level bar
     property bool   batteryAutoHide:     false
     property bool   barShowBattery:      true
     property bool   barShowNetwork:      true
@@ -251,6 +252,7 @@ Singleton {
         { k: "updatesWidget",       t: "bool" },
         { k: "trayWidget",          t: "bool" },
         { k: "valuesOnHover",       t: "bool" },
+        { k: "hoverLevelBar",       t: "bool" },
         { k: "batteryAutoHide",     t: "bool" },
         { k: "barShowBattery",      t: "bool" },
         { k: "barShowNetwork",      t: "bool" },

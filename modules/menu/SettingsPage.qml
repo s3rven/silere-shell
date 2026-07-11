@@ -1047,9 +1047,19 @@ PageShell {
                         onToggled: ShellSettings.barHoverHighlight = !ShellSettings.barHoverHighlight
                     }
                     ToggleRow {
-                        glyph: "󰈈"; label: "Show values on hover"
+                        glyph: "󰈈"; label: "Reveal values on hover"
+                        description: "Battery, volume, brightness, and workspace numbers"
                         checked: ShellSettings.valuesOnHover
                         onToggled: ShellSettings.valuesOnHover = !ShellSettings.valuesOnHover
+                    }
+                    CollapsibleSection {
+                        expanded: ShellSettings.valuesOnHover
+                        ToggleRow {
+                            glyph: "󰦣"; label: "Compact level bars"
+                            checked: ShellSettings.hoverLevelBar
+                            description: "Show battery, volume, and brightness levels before hover"
+                            onToggled: ShellSettings.hoverLevelBar = !ShellSettings.hoverLevelBar
+                        }
                     }
                 }
 
