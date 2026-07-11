@@ -75,6 +75,10 @@ Singleton {
     readonly property int radiusPanel:   14
     readonly property int radiusCard:    12
     readonly property int radiusControl: 10
+    // floating panels follow the bar's corner (flat bar → sharp, custom radius → match); attached bar keeps the default
+    readonly property int surfaceRadius: ShellSettings.barFloating
+        ? (ShellSettings.barCornerStyle === "flat" ? 0 : ShellSettings.barRadius)
+        : radiusPanel
 
     readonly property int gapSection: 12
 

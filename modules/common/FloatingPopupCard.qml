@@ -56,7 +56,7 @@ Rectangle {
     }
 
     y: Math.round((barBottom ? (win.height - _edgeY - height) : _edgeY) + edgeOffset)
-    radius: Theme.radiusPanel
+    radius: Theme.surfaceRadius
     antialiasing: true
     color: Theme.popup
     border.width: 1

@@ -230,7 +230,7 @@ PanelWindow {
 
         width:  panelW
         height: targetPanelH
-        radius: Theme.radiusPanel
+        radius: Theme.surfaceRadius
         clip: false
         antialiasing: true
 
