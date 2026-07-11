@@ -1009,11 +1009,6 @@ PageShell {
                             checked: ShellSettings.mediaVisualizerPauseFullscreen
                             onToggled: ShellSettings.mediaVisualizerPauseFullscreen = !ShellSettings.mediaVisualizerPauseFullscreen
                         }
-                        ToggleRow {
-                            glyph: "󰝚"; label: "Menu CAVA overlay"
-                            checked: ShellSettings.mediaMenuVisualizer
-                            onToggled: ShellSettings.mediaMenuVisualizer = !ShellSettings.mediaMenuVisualizer
-                        }
                     }
                 }
                 }

@@ -3,7 +3,6 @@ import Quickshell
 import Quickshell.Widgets
 import "../../config"
 import "../../services"
-import "../bar/widgets"
 
 PageShell {
     id: root
@@ -306,30 +305,6 @@ PageShell {
                         orientation: Gradient.Horizontal
                         GradientStop { position: 0.0; color: Theme.withAlpha(_mediaCard.color, 0.42) }
                         GradientStop { position: 1.0; color: "transparent" }
-                    }
-                }
-
-                Loader {
-                    id: _menuVizLoader
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.bottom: parent.bottom
-                    height: Math.max(56, parent.height * 0.42)
-                    active: root.active && MenuState.open && Media.shown && Media.playing
-                        && Media.cavaReady && ShellSettings.mediaMenuVisualizer
-                        && !ShellSettings.reduceMotion && !Idle.isIdle
-                    opacity: _art.shownAlpha > 0.01 ? 0.16 : 0.26
-                    visible: opacity > 0.01
-                    sourceComponent: Component {
-                        MediaVisualizer {
-                            barName: ""
-                            lowPower: true
-                            styleOverride: "pulse"
-                        }
-                    }
-                    Behavior on opacity {
-                        enabled: !ShellSettings.reduceMotion
-                        NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
                     }
                 }
 

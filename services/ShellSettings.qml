@@ -17,7 +17,6 @@ Singleton {
     property real   mediaVisualizerCenterWidth: 0.68  // fraction of the free center span
     property real   mediaVisualizerCenterOffset: 0.0  // -1 left, 0 centered, 1 right inside the free center span
     property bool   mediaVisualizerPauseFullscreen: true
-    property bool   mediaMenuVisualizer: true     // pulse layer on the menu's media card (needs mediaProgress)
     property bool   workspaceShift:      true
     property bool   neutralTheme:        true
     property bool   neutralAccentAuto:   false
@@ -234,7 +233,6 @@ Singleton {
         { k: "mediaVisualizerCenterWidth", t: "real", min: 0.25, max: 1.0 },
         { k: "mediaVisualizerCenterOffset", t: "real", min: -1.0, max: 1.0 },
         { k: "mediaVisualizerPauseFullscreen", t: "bool" },
-        { k: "mediaMenuVisualizer", t: "bool" },
         { k: "workspaceShift",      t: "bool" },
         { k: "neutralTheme",        t: "bool" },
         { k: "neutralAccentAuto",   t: "bool" },
