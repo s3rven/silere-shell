@@ -10,8 +10,9 @@ Singleton {
 
     // neutral base tones; surfaces step above a cool graphite base without reading blue.
     readonly property var _tones: ({
+        black:    { background: "#030405", surface: "#111216", subtext: "#9296a1" },
         charcoal: { background: "#0b0c10", surface: "#191b21", subtext: "#9a9eaa" },
-        black:    { background: "#030405", surface: "#111216", subtext: "#9296a1" }
+        graphite: { background: "#111319", surface: "#20232b", subtext: "#a3a7b2" }
     })
     readonly property var _pal: _tones[ShellSettings.baseTone] ?? _tones.charcoal
 
