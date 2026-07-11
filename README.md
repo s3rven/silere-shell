@@ -18,7 +18,7 @@ Silere is a quiet shell for Hyprland and niri, built on Quickshell: a bar, a con
 
 ## Install
 
-You need `git`, Hyprland or niri, and a current Quickshell build with these modules: Hyprland, Wayland layer-shell, Widgets, Io, Bluetooth, Mpris, Notifications, PipeWire, SystemTray, UPower.
+You need `git`, Hyprland or niri, and a current Quickshell build.
 
 ```bash
 git clone https://github.com/s3rven/silere-shell
