@@ -1167,50 +1167,49 @@ PageShell {
                         checked: ShellSettings.osdEnabled
                         onToggled: ShellSettings.osdEnabled = !ShellSettings.osdEnabled
                     }
-                    // Mode: floating pill vs bar-inline. Drives which sub-options apply.
-                    ToggleRow {
-                        glyph: "󰀱"; label: "Show in bar"; badge: "beta"
-                        description: "Volume and brightness in the bar center"
-                        enabled: ShellSettings.osdEnabled
-                        checked: ShellSettings.osdBarIntegrated
-                        onToggled: ShellSettings.osdBarIntegrated = !ShellSettings.osdBarIntegrated
-                    }
-                    ToggleRow {
-                        glyph: "󰖲"; label: "Match bar shape"
-                        enabled: ShellSettings.osdEnabled && !ShellSettings.osdBarIntegrated
-                        checked: ShellSettings.osdMatchBar
-                        onToggled: ShellSettings.osdMatchBar = !ShellSettings.osdMatchBar
-                        dependsNote: ShellSettings.osdEnabled ? "Pill only" : ""
-                    }
-                    ChoiceChipRow {
-                        glyph: "󰔛"; label: "Dismiss after"
-                        enabled: ShellSettings.osdEnabled
-                        currentValue: ShellSettings.osdTimeout
-                        model: [
-                            { value: 1000, label: "1s" },
-                            { value: 2000, label: "2s" },
-                            { value: 3000, label: "3s" },
-                            { value: 5000, label: "5s" }
-                        ]
-                        onChosen: (v) => ShellSettings.osdTimeout = v
-                    }
-                    ChoiceChipRow {
-                        glyph: "󰒓"; label: "Show for"
-                        enabled: ShellSettings.osdEnabled
-                        currentValue: ShellSettings.osdKindFilter
-                        model: [
-                            { value: "both",       glyph: "󰓎", label: "Both" },
-                            { value: "volume",     glyph: "󰕾", label: "Vol"  },
-                            { value: "brightness", glyph: "󰃟", label: "Brt"  }
-                        ]
-                        onChosen: (v) => ShellSettings.osdKindFilter = v
-                    }
-                    ToggleRow {
-                        glyph: "󰓎"; label: "Volume emphasis"
-                        description: "Warm tint as volume nears max"
-                        enabled: ShellSettings.osdEnabled
-                        checked: ShellSettings.osdVolumeTint
-                        onToggled: ShellSettings.osdVolumeTint = !ShellSettings.osdVolumeTint
+                    CollapsibleSection {
+                        expanded: ShellSettings.osdEnabled
+                        // Mode: floating pill vs bar-inline. Drives which sub-options apply.
+                        ToggleRow {
+                            glyph: "󰀱"; label: "Show in bar"; badge: "beta"
+                            description: "Volume and brightness in the bar center"
+                            checked: ShellSettings.osdBarIntegrated
+                            onToggled: ShellSettings.osdBarIntegrated = !ShellSettings.osdBarIntegrated
+                        }
+                        ToggleRow {
+                            glyph: "󰖲"; label: "Match bar shape"
+                            enabled: !ShellSettings.osdBarIntegrated
+                            checked: ShellSettings.osdMatchBar
+                            onToggled: ShellSettings.osdMatchBar = !ShellSettings.osdMatchBar
+                            dependsNote: ShellSettings.osdBarIntegrated ? "Pill only" : ""
+                        }
+                        ChoiceChipRow {
+                            glyph: "󰔛"; label: "Dismiss after"
+                            currentValue: ShellSettings.osdTimeout
+                            model: [
+                                { value: 1000, label: "1s" },
+                                { value: 2000, label: "2s" },
+                                { value: 3000, label: "3s" },
+                                { value: 5000, label: "5s" }
+                            ]
+                            onChosen: (v) => ShellSettings.osdTimeout = v
+                        }
+                        ChoiceChipRow {
+                            glyph: "󰒓"; label: "Show for"
+                            currentValue: ShellSettings.osdKindFilter
+                            model: [
+                                { value: "both",       glyph: "󰓎", label: "Both" },
+                                { value: "volume",     glyph: "󰕾", label: "Vol"  },
+                                { value: "brightness", glyph: "󰃟", label: "Brt"  }
+                            ]
+                            onChosen: (v) => ShellSettings.osdKindFilter = v
+                        }
+                        ToggleRow {
+                            glyph: "󰓎"; label: "Volume emphasis"
+                            description: "Warm tint as volume nears max"
+                            checked: ShellSettings.osdVolumeTint
+                            onToggled: ShellSettings.osdVolumeTint = !ShellSettings.osdVolumeTint
+                        }
                     }
                 }
                 }
