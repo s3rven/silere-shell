@@ -39,29 +39,22 @@ Row {
 
     // order-agnostic divider map: reads live slots through the Repeater (not fixed ids) so it holds under any order. _repRev bumps as delegates populate — itemAt() can return null before that
     property int _repRev: 0
+    // single reverse pass: a widget takes a divider when anything visible follows it,
+    // except in compact mode where later same-group widgets suppress it (group dividers)
     function _computeSeps(rep): var {
         zone._repRev
         const compact = zone._compact
-        const n = rep.count
-        const s = []
-        for (let i = 0; i < n; i++) {
-            const it = rep.itemAt(i)
-            const k = it ? it.key : ""
-            s.push({ key: k, v: it ? it.show : false, g: k ? ShellSettings.barWidgetMeta[k].group : "" })
-        }
         const out = {}
-        for (let i = 0; i < s.length; i++) {
-            const cur = s[i]
-            if (!cur.key) continue
-            if (!cur.v) { out[cur.key] = false; continue }
-            let after = false, sameGroupAfter = false
-            for (let j = i + 1; j < s.length; j++) {
-                if (!s[j].v) continue
-                after = true
-                if (!compact) break
-                if (s[j].g === cur.g) { sameGroupAfter = true; break }
-            }
-            out[cur.key] = after && (compact ? !sameGroupAfter : true)
+        const groupsAfter = {}
+        let anyAfter = false
+        for (let i = rep.count - 1; i >= 0; i--) {
+            const it = rep.itemAt(i)
+            if (!it || !it.key) continue
+            if (!it.show) { out[it.key] = false; continue }
+            const g = ShellSettings.barWidgetMeta[it.key].group
+            out[it.key] = anyAfter && (!compact || groupsAfter[g] !== true)
+            anyAfter = true
+            groupsAfter[g] = true
         }
         return out
     }
