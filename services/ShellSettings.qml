@@ -21,7 +21,7 @@ Singleton {
     property bool   workspaceShift:      true
     property bool   neutralTheme:        true
     property bool   neutralAccentAuto:   false
-    property string neutralAccent:       "#bb9af7"   // soft violet; sits in a hue gap from the Tokyo Night status colors
+    property string neutralAccent:       "#b8bdd8"
     property string matugenAccentRole:   "primary"   // which material role drives the accent in wallpaper mode
     property string baseTone:            "charcoal"
     property bool   networkTrafficStats: false

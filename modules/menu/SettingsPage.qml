@@ -270,13 +270,13 @@ PageShell {
                             readonly property real  _curSat:   isNaN(_curColor.hslSaturation) ? 0.72 : _curColor.hslSaturation
 
                             readonly property var _accents: [
-                                { color: "#c0c8f0", name: "Lavender" },
-                                { color: "#7aa2f7", name: "Blue"     },
-                                { color: "#bb9af7", name: "Purple"   },
-                                { color: "#73c7b5", name: "Teal"     },
-                                { color: "#9ece6a", name: "Green"    },
-                                { color: "#f7768e", name: "Rose"     },
-                                { color: "#e0af68", name: "Amber"    }
+                                { color: "#b8bdd8", name: "Mist"   },
+                                { color: "#82aee5", name: "Blue"   },
+                                { color: "#b79bd7", name: "Violet" },
+                                { color: "#78bfb5", name: "Teal"   },
+                                { color: "#94bd8b", name: "Green"  },
+                                { color: "#dd92a2", name: "Rose"   },
+                                { color: "#d4ad77", name: "Amber"  }
                             ]
 
                             property string _hoverName: ""
@@ -395,8 +395,8 @@ PageShell {
                             glyph: "󰏘"; label: "Base tone"
                             currentValue: ShellSettings.baseTone
                             model: [
-                                { value: "charcoal", label: "Charcoal", color: "#17191d" },
-                                { value: "black",    label: "Black",    color: "#030303" }
+                                { value: "charcoal", label: "Charcoal", color: "#191b21" },
+                                { value: "black",    label: "Black",    color: "#111216" }
                             ]
                             onChosen: (v) => ShellSettings.baseTone = v
                         }

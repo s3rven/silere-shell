@@ -5,9 +5,9 @@
 <p align="center"><em>silere</em>, from Latin: to be silent.</p>
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-5a4b6e?style=flat-square&labelColor=1c1c1c" alt="license: MIT"/></a>
-  <a href="https://quickshell.outfoxxed.me/"><img src="https://img.shields.io/badge/built%20on-Quickshell-5a4b6e?style=flat-square&labelColor=1c1c1c" alt="built on Quickshell"/></a>
-  <img src="https://img.shields.io/badge/runs%20on-Hyprland%20%C2%B7%20niri-5a4b6e?style=flat-square&labelColor=1c1c1c" alt="runs on Hyprland and niri"/>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-747a98?style=flat-square&labelColor=17181d" alt="license: MIT"/></a>
+  <a href="https://quickshell.outfoxxed.me/"><img src="https://img.shields.io/badge/built%20on-Quickshell-747a98?style=flat-square&labelColor=17181d" alt="built on Quickshell"/></a>
+  <img src="https://img.shields.io/badge/runs%20on-Hyprland%20%C2%B7%20niri-747a98?style=flat-square&labelColor=17181d" alt="runs on Hyprland and niri"/>
 </p>
 
 Silere is a quiet shell for Hyprland and niri, built on Quickshell: a bar, a control menu, notifications, and colors pulled from your wallpaper or picked by hand. The quiet part is the point. Widgets only exist when their tools do, anything with a background cost stays off until you turn it on, and an idle session rounds to zero CPU. Every widget reorders, moves side to side, or switches off, and the look tunes down to separators and outlines. All plain settings, no plugin layer, no daemon.

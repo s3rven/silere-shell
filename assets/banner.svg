@@ -6,13 +6,13 @@
       <stop offset="100%" stop-color="#8a8a9c"/>
     </linearGradient>
     <linearGradient id="g-shell" x1="0" y1="56" x2="0" y2="122" gradientUnits="userSpaceOnUse">
-      <stop offset="0%"   stop-color="#b8b8c8"/>
-      <stop offset="100%" stop-color="#62626e"/>
+      <stop offset="0%"   stop-color="#b8bdd8"/>
+      <stop offset="100%" stop-color="#666b83"/>
     </linearGradient>
     <linearGradient id="g-div" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%"   stop-color="#9090a0" stop-opacity="0"/>
-      <stop offset="50%"  stop-color="#9090a0" stop-opacity="0.28"/>
-      <stop offset="100%" stop-color="#9090a0" stop-opacity="0"/>
+      <stop offset="0%"   stop-color="#9297af" stop-opacity="0"/>
+      <stop offset="50%"  stop-color="#9297af" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#9297af" stop-opacity="0"/>
     </linearGradient>
     <filter id="f-bloom" x="-25%" y="-80%" width="150%" height="260%" color-interpolation-filters="sRGB">
       <feGaussianBlur in="SourceGraphic" stdDeviation="14"/>
@@ -35,7 +35,7 @@
     font-size="78"
     font-weight="700"
     text-anchor="middle"
-    fill="#c8c8e0"
+    fill="#b8bdd8"
     opacity="0.09"
     filter="url(#f-bloom)"
   >silere shell</text>

@@ -8,11 +8,10 @@ Singleton {
     readonly property bool _n: ShellSettings.neutralTheme
     readonly property bool _hc: ShellSettings.highContrast
 
-    // neutral base tones (only the dark base changes); text/accent/status shared across tones and matugen. selectable in Appearance.
-    // surfaces step clearly above the base (sidebar→card→surface, no clustering) with a whisper of cool in blue — graphite not dead grey, without a visible tint.
+    // neutral base tones; surfaces step above a cool graphite base without reading blue.
     readonly property var _tones: ({
-        charcoal: { background: "#090a0c", surface: "#17191d", subtext: "#a0a3aa" },
-        black:    { background: "#030303", surface: "#101114", subtext: "#9699a0" }
+        charcoal: { background: "#0b0c10", surface: "#191b21", subtext: "#9a9eaa" },
+        black:    { background: "#030405", surface: "#111216", subtext: "#9296a1" }
     })
     readonly property var _pal: _tones[ShellSettings.baseTone] ?? _tones.charcoal
 
@@ -22,7 +21,7 @@ Singleton {
                                        : MatugenTheme.accent
 
     readonly property color _surfaceBase: _n ? _pal.surface   : MatugenTheme.surface
-    readonly property color _textBase:    _n ? "#f2f4f8"      : MatugenTheme.text
+    readonly property color _textBase:    _n ? "#e9eaf0"      : MatugenTheme.text
     readonly property color _subtextBase: _n ? _pal.subtext   : MatugenTheme.subtext
 
     readonly property color background: _n ? _pal.background : MatugenTheme.background
@@ -30,9 +29,9 @@ Singleton {
     readonly property color subtext:    _hc ? mix(_subtextBase, text, 0.32) : _subtextBase
     readonly property color surface:    _hc ? mix(_surfaceBase, text, 0.035) : _surfaceBase
     readonly property color accent:     _n ? (ShellSettings.neutralAccentAuto ? MatugenTheme.accent : ShellSettings.neutralAccent) : _matuAccent
-    readonly property color error:      _n ? "#f7768e" : MatugenTheme.error
-    readonly property color warning:    _n ? "#e0af68" : MatugenTheme.warning
-    readonly property color success:    _n ? "#9ece6a" : MatugenTheme.success
+    readonly property color error:      _n ? "#dd92a2" : MatugenTheme.error
+    readonly property color warning:    _n ? "#d4ad77" : MatugenTheme.warning
+    readonly property color success:    _n ? "#94bd8b" : MatugenTheme.success
 
     // outlineStrength scales every line tone in one place; alphas below stay the tuned baselines
     readonly property real _lineK: ShellSettings.outlineStrength
