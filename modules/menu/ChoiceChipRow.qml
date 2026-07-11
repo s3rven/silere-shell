@@ -21,9 +21,14 @@ Item {
     property real   cardInset:    1
     signal chosen(var value)
 
+    // settings never ellipsize: when the label can't fit beside the chips, the row grows a
+    // line and the chips drop below it. inputs are text metrics + fixed widths, so no layout loop
+    readonly property bool _stacked: width > 0
+        && _labelRow.neededW > _segContainer.x - 14 - 10
+
     // 4px multiples: keep card dividers on whole physical px under fractional scaling
     width:  parent ? parent.width : 0
-    height: 44
+    height: _stacked ? 76 : 44
     opacity: enabled ? 1.0 : 0.45
     Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium } }
 
@@ -45,12 +50,16 @@ Item {
 
     Item {
         id: _labelRow
-        z: 3
         x: 14
-        y: (root.height - height) / 2
-        width: Math.max(0, _segContainer.x - x - 10)
+        y: root._stacked ? 12 : (root.height - height) / 2
+        width: root._stacked
+            ? root.width - 26
+            : Math.max(0, _segContainer.x - x - 10)
         implicitHeight: Math.max(_glyph.implicitHeight, _label.implicitHeight)
         height: Math.max(_glyph.implicitHeight, _label.implicitHeight)
+        readonly property real neededW: (root.glyph.length > 0 ? 28 : 0)
+            + Math.ceil(_label.implicitWidth)
+            + (_rowBadge.visible ? _rowBadge.width + 7 : 0)
 
         Text {
             id: _glyph
@@ -80,7 +89,6 @@ Item {
             font.pixelSize: Settings.fontSize
             renderType:     Text.NativeRendering
         }
-        HoverHandler { id: _labelHover; enabled: root.enabled }
         SettingsBadge {
             id: _rowBadge
             anchors.left: _label.right
@@ -89,40 +97,12 @@ Item {
             text: root.badge
             kind: root.badgeKind
         }
-
-        Rectangle {
-            x: _label.x - 6
-            anchors.verticalCenter: parent.verticalCenter
-            width: Math.min(_label.implicitWidth + 12,
-                root.width - _labelRow.x - _label.x - 12)
-            height: 28
-            radius: 7
-            visible: _label.truncated && _labelHover.hovered
-            color: Theme.menuControl
-            border.width: 1
-            border.color: Theme.menuControlLine
-
-            Text {
-                anchors.fill: parent
-                anchors.leftMargin: 6
-                anchors.rightMargin: 6
-                text: root.label
-                textFormat: Text.PlainText
-                verticalAlignment: Text.AlignVCenter
-                color: Theme.text
-                font.family: Settings.font
-                font.pixelSize: Settings.fontSize
-                fontSizeMode: Text.HorizontalFit
-                minimumPixelSize: Math.max(8, Settings.fontSize - 3)
-                renderType: Text.NativeRendering
-            }
-        }
     }
 
     Rectangle {
         id: _segContainer
         x: root.width - 12 - width
-        y: (root.height - height) / 2
+        y: root._stacked ? root.height - 12 - height : (root.height - height) / 2
         width: Math.min(172, Math.max(1, root.width - 26))
         height: 28
         radius:       Theme.radiusControl
