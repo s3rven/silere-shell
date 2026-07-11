@@ -458,7 +458,9 @@ Item {
                             onClicked: {
                                 if (!card.enabled) return
                                 _actBtn.modelData.invoke()
-                                card.dismiss()
+                                // `resident` asks the server to keep the
+                                // notification after an action is invoked.
+                                if (!card.notification.resident) card.dismiss()
                             }
                         }
                     }
@@ -552,7 +554,8 @@ Item {
                         && card.contentImageTarget.length > 0)
                     Quickshell.execDetached(["xdg-open", card.contentImageTarget])
                 HyprActions.focusNotificationSource(card.notification)
-                if (mouse.button !== Qt.MiddleButton)
+                if (mouse.button !== Qt.MiddleButton
+                        && (!card._defaultAction || !card.notification.resident))
                     card.dismiss()
             }
         }

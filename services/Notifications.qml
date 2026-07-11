@@ -91,8 +91,6 @@ Singleton {
 
     signal sourcePulse(int wsId, bool critical)
 
-    onDndChanged: { if (!dnd && missedCount !== 0) missedCount = 0 }
-
     readonly property bool _fullscreenWatchWanted: ShellSettings.notifFullscreenSilence
         || (ShellSettings.mediaVisualizerPauseFullscreen && ShellSettings.mediaProgress)
         || (ShellSettings.osdEnabled && ShellSettings.osdBarIntegrated)
@@ -113,8 +111,10 @@ Singleton {
     }
     // What actually silences popups: the manual toggle OR a scheduled quiet hour.
     readonly property bool effectiveDnd: dnd || _quietActive
-    // clear the missed badge once nothing's silencing (covers the quiet window ending too)
-    onEffectiveDndChanged: { if (!effectiveDnd && missedCount !== 0) missedCount = 0 }
+    readonly property bool _silencingActive: effectiveDnd || fullscreenSilenced
+    // Clear only after every silencing reason ends. Turning manual DND off
+    // during quiet hours, or while fullscreen, must not erase the count early.
+    on_SilencingActiveChanged: { if (!_silencingActive && missedCount !== 0) missedCount = 0 }
     function markSeen(id: int): void {
         root._ensurePersistentState()
         const key = String(id)
@@ -135,16 +135,40 @@ Singleton {
         history = []
     }
 
+    function _notificationHistoryEntry(notification, id: int, time: real): var {
+        // The spec marks transient notifications as ineligible for any
+        // persistence surface, including Silere's in-memory history.
+        if (!notification || notification.transient) return null
+        return {
+            id:      id,
+            appName: notification.appName || "",
+            appIcon: notification.appIcon || "",
+            desktopEntry: notification.desktopEntry || "",
+            summary: root.plainText(notification.summary),
+            body:    root.plainText(notification.body),
+            urgency: notification.urgency,
+            time:    time
+        }
+    }
+
     function _historyEntry(e): var {
         if (!e || !e.notification) return null
-        return {
-            id:      e.id,
-            appName: e.notification.appName || "",
-            summary: root.plainText(e.notification.summary),
-            body:    root.plainText(e.notification.body),
-            urgency: e.notification.urgency,
-            time:    root._times[e.id] ?? e.time
+        return root._notificationHistoryEntry(e.notification, e.id, root._times[e.id] ?? e.time)
+    }
+
+    // Insert newest-first, but replace an existing replaces_id snapshot rather
+    // than filling history with every progress/message update.
+    function _archiveNotification(notification, id: int, time: real): bool {
+        const entry = root._notificationHistoryEntry(notification, id, time)
+        if (!entry) return false
+        const next = []
+        let replaced = false
+        for (let i = 0; i < history.length; i++) {
+            if (history[i]?.id === id) replaced = true
+            else next.push(history[i])
         }
+        history = [entry, ...next].slice(0, _maxHistory)
+        return !replaced
     }
 
     function _markClosing(id: int, notification): void {
@@ -317,19 +341,16 @@ Singleton {
         onNotification: (n) => {
             root._ensurePersistentState()
             if (root.effectiveDnd && n.urgency !== NotificationUrgency.Critical) {
-                root.missedCount++
+                // DND suppresses the interruption, not the user's ability to
+                // review it later. Replacements update one history entry.
+                if (root._archiveNotification(n, n.id, Date.now()) || n.transient)
+                    root.missedCount++
                 n.tracked = false
                 return
             }
             if (root.fullscreenSilenced && n.urgency !== NotificationUrgency.Critical) {
-                root.history = [{
-                    appName: n.appName || "",
-                    summary: root.plainText(n.summary),
-                    body:    root.plainText(n.body),
-                    urgency: n.urgency,
-                    time:    Date.now()
-                }, ...root.history].slice(0, root._maxHistory)
-                root.missedCount++
+                if (root._archiveNotification(n, n.id, Date.now()) || n.transient)
+                    root.missedCount++
                 n.tracked = false
                 return
             }
