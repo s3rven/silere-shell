@@ -12,8 +12,14 @@ Item {
     readonly property int _headerH: 28
     readonly property int _footerH: 40
     readonly property var _allKeys: ShellSettings._allBarWidgetKeys
-    readonly property int _leftCount:  ShellSettings.barWidgetOrderLeftKeys.length
-    readonly property int _rightCount: ShellSettings.barWidgetOrderRightKeys.length
+    property var _previewLeft: []
+    property var _previewRight: []
+    readonly property var _leftKeys: _draggingKey.length > 0
+        ? _previewLeft : ShellSettings.barWidgetOrderLeftKeys
+    readonly property var _rightKeys: _draggingKey.length > 0
+        ? _previewRight : ShellSettings.barWidgetOrderRightKeys
+    readonly property int _leftCount:  _leftKeys.length
+    readonly property int _rightCount: _rightKeys.length
     readonly property bool _leftEmpty:  _leftCount === 0
     readonly property bool _rightEmpty: _rightCount === 0
     readonly property int  _leftPad:  _leftEmpty  ? _rowH : 0
@@ -22,7 +28,7 @@ Item {
     property string _expandedKey: ""
     readonly property int _expandedSlot: {
         if (!_expandedKey) return -1
-        const loc = ShellSettings.barWidgetLocate(_expandedKey)
+        const loc = root._locate(_expandedKey)
         return loc.zone === "left" ? loc.index : _leftCount + loc.index
     }
     readonly property int _expandedExtra: _expandedKey ? _optionsHeightFor(_expandedKey) : 0
@@ -36,11 +42,44 @@ Item {
     property real   _dragY: 0
     property string _focusedKey: ""
     readonly property string _dragZone: _draggingKey.length > 0 ? _zoneForY(_dragY) : ""
-    // the dragged key's committed slot — reorders are live, so this is where it lands on release
+    // the dragged key's preview slot
     readonly property int _dragSlot: {
         if (_draggingKey.length === 0) return -1
-        const loc = ShellSettings.barWidgetLocate(_draggingKey)
+        const loc = root._locate(_draggingKey)
         return loc.zone === "left" ? loc.index : _leftCount + loc.index
+    }
+
+    function _locate(key: string): var {
+        const li = root._leftKeys.indexOf(key)
+        if (li >= 0) return { zone: "left", index: li }
+        const ri = root._rightKeys.indexOf(key)
+        return ri >= 0 ? { zone: "right", index: ri } : { zone: "", index: -1 }
+    }
+
+    function _beginDrag(key: string): void {
+        root._previewLeft = ShellSettings.barWidgetOrderLeftKeys.slice()
+        root._previewRight = ShellSettings.barWidgetOrderRightKeys.slice()
+        root._draggingKey = key
+    }
+
+    function _previewMove(key: string, zone: string, atIndex: int): void {
+        const left = root._previewLeft.filter(k => k !== key)
+        const right = root._previewRight.filter(k => k !== key)
+        const target = zone === "left" ? left : right
+        const clamped = Math.max(0, Math.min(target.length, Math.round(atIndex)))
+        target.splice(clamped, 0, key)
+        root._previewLeft = left
+        root._previewRight = right
+    }
+
+    function _finishDrag(key: string): void {
+        if (root._draggingKey !== key) return
+        const loc = root._locate(key)
+        if (loc.index >= 0)
+            ShellSettings.setBarWidgetZone(key, loc.zone, loc.index)
+        root._draggingKey = ""
+        root._previewLeft = []
+        root._previewRight = []
     }
 
     function _hasOptions(key: string): bool {
@@ -141,20 +180,21 @@ Item {
         Behavior on y { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
     }
 
-    // landing-slot marker: reorders commit live, so the vacated gap under the lifted row is the drop spot
+    // landing-slot marker
     Rectangle {
-        opacity: root._dragSlot >= 0 ? 1 : 0
-        visible: opacity > 0.01
+        visible: root._dragSlot >= 0
         x: 2; width: root.width - 4
-        y: root._yForSlot(root._dragSlot) + 2
+        y: visible ? root._yForSlot(root._dragSlot) + 2 : 0
         height: root._rowH - 4
         radius: 8
         antialiasing: true
         color: Theme.withAlpha(Theme.accent, 0.05)
         border.width: 1
         border.color: Theme.withAlpha(Theme.accent, 0.30)
-        Behavior on opacity { NumberAnimation { duration: Motion.fast } }
-        Behavior on y { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+        Behavior on y {
+            enabled: visible && !ShellSettings.reduceMotion
+            NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
+        }
     }
 
     Repeater {
@@ -165,7 +205,7 @@ Item {
             required property string modelData
             readonly property string key:  modelData
             readonly property var    meta: ShellSettings.barWidgetMeta[key]
-            readonly property var    _loc: ShellSettings.barWidgetLocate(key)
+            readonly property var    _loc: root._locate(key)
             readonly property string zone: _loc.zone
             readonly property int _zoneIdx: _loc.index
             readonly property int _combinedSlot: zone === "left" ? _zoneIdx : root._leftCount + _zoneIdx
@@ -178,18 +218,12 @@ Item {
             x: 0
             width:  root.width
             height: root._rowH + (_expanded ? root._expandedExtra : 0)
-            // stay above siblings while animating home, or the released row dives under them mid-settle
-            property bool _settling: false
-            on_DraggingChanged: {
-                if (_dragging) { _settling = false; _settleReset.stop() }
-                else           { _settling = true;  _settleReset.restart() }
-            }
-            Timer { id: _settleReset; interval: Motion.fast + 60; onTriggered: _row._settling = false }
-            z: _dragging ? 20 : (_settling ? 15 : 1)
+            z: _dragging ? 20 : 1
             y: _dragging ? root._dragY : root._yForSlot(_combinedSlot)
-            Behavior on y { enabled: !_row._dragging && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-            scale: _dragging ? 1.02 : 1.0
-            Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
+            Behavior on y {
+                enabled: root._draggingKey.length > 0 && !_row._dragging && !ShellSettings.reduceMotion
+                NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
+            }
 
             Item {
                 id: _header
@@ -217,10 +251,10 @@ Item {
                         if (active) {
                             root._expandedKey = ""
                             _dragH._startY = root._yForSlot(_row._combinedSlot)
-                            root._draggingKey = _row.key
+                            root._beginDrag(_row.key)
                             root._dragY = _dragH._startY
                         } else {
-                            root._draggingKey = ""
+                            root._finishDrag(_row.key)
                         }
                     }
                     onTranslationChanged: {
@@ -237,7 +271,7 @@ Item {
                             ? (root._leftEmpty ? 0 : targetSlot)
                             : targetSlot - root._leftCount
                         if (targetZone === _row.zone && targetIdxInZone === _row._zoneIdx) return
-                        ShellSettings.setBarWidgetZone(_row.key, targetZone, targetIdxInZone)
+                        root._previewMove(_row.key, targetZone, targetIdxInZone)
                     }
                 }
                 Rectangle {
@@ -246,11 +280,9 @@ Item {
                     radius: 8
                     antialiasing: true
                     color: "transparent"
-                    opacity: _row._dragging ? 1 : 0
-                    visible: opacity > 0.01
+                    visible: _row._dragging
                     border.width: 1
                     border.color: Theme.withAlpha(Theme.accent, 0.35)
-                    Behavior on opacity { NumberAnimation { duration: Motion.fast } }
                 }
 
                 Item {
