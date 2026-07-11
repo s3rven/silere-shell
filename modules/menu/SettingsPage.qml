@@ -269,24 +269,28 @@ PageShell {
                             readonly property real  _curHue:   _curColor.hslHue < 0 ? 0 : _curColor.hslHue
                             readonly property real  _curSat:   isNaN(_curColor.hslSaturation) ? 0.72 : _curColor.hslSaturation
 
-                            readonly property var _accents: [
-                                { color: "#b8bdd8", name: "Mist"   },
-                                { color: "#82aee5", name: "Blue"   },
-                                { color: "#b79bd7", name: "Violet" },
-                                { color: "#78bfb5", name: "Teal"   },
-                                { color: "#94bd8b", name: "Green"  },
-                                { color: "#dd92a2", name: "Rose"   },
-                                { color: "#d4ad77", name: "Amber"  }
+                            // auto leads the presets so one repeater drives both the row and the sliding ring
+                            readonly property var _options: [
+                                { auto: true,  color: "",        name: "Auto"   },
+                                { auto: false, color: "#b8bdd8", name: "Mist"   },
+                                { auto: false, color: "#82aee5", name: "Blue"   },
+                                { auto: false, color: "#b79bd7", name: "Violet" },
+                                { auto: false, color: "#78bfb5", name: "Teal"   },
+                                { auto: false, color: "#94bd8b", name: "Green"  },
+                                { auto: false, color: "#dd92a2", name: "Rose"   },
+                                { auto: false, color: "#d4ad77", name: "Amber"  }
                             ]
-
-                            property string _hoverName: ""
-                            readonly property string _activeName: {
-                                if (ShellSettings.neutralAccentAuto) return "Auto"
-                                for (let i = 0; i < _accents.length; i++)
-                                    if (_accents[i].color === ShellSettings.neutralAccent) return _accents[i].name
-                                return "Custom"
+                            readonly property int _activeIndex: {
+                                if (ShellSettings.neutralAccentAuto) return 0
+                                for (let i = 1; i < _options.length; i++)
+                                    if (_options[i].color === ShellSettings.neutralAccent) return i
+                                return -1
                             }
-                            readonly property string _shownName: _hoverName.length > 0 ? _hoverName : _activeName
+
+                            readonly property var _swColors: _options.map(o => o.auto ? MatugenTheme.accent : o.color)
+                            readonly property string _activeName: _activeIndex >= 0 ? _options[_activeIndex].name : "Custom"
+                            readonly property string _shownName: _swatchRow.hoveredIndex >= 0 ? _options[_swatchRow.hoveredIndex].name : _activeName
+                            readonly property color  _shownColor: _swatchRow.hoveredIndex >= 0 ? _swColors[_swatchRow.hoveredIndex] : _curColor
 
                             property real topRadius: 0
                             property real bottomRadius: 0
@@ -311,62 +315,33 @@ PageShell {
                                 width:                  Math.min(176, Math.max(96, parent.width - 110))
                                 horizontalAlignment:    Text.AlignRight
                                 text:           _accentPicker._shownName
-                                color:          Theme.withAlpha(Theme.subtext, 0.7)
+                                color:          ShellSettings.highContrast
+                                    ? Theme.withAlpha(Theme.subtext, 0.7)
+                                    : Theme.mix(Theme.subtext, _accentPicker._shownColor, 0.62)
+                                Behavior on color { ColorAnimation { duration: Motion.fast } }
                                 font.family:    Settings.font
                                 font.pixelSize: Settings.fontSize - 2
                                 renderType:     Text.NativeRendering
                                 elide:          Text.ElideRight
                             }
 
-                            Row {
+                            SwatchRow {
                                 id: _swatchRow
                                 anchors.top:        parent.top
                                 anchors.topMargin:  32
                                 anchors.left:       parent.left;  anchors.leftMargin:  12
                                 anchors.right:      parent.right; anchors.rightMargin: 12
                                 height: 32
-                                spacing: Math.max(4, (width - 8 * 26) / 7)
-
-                                AccentSwatch {
-                                    chipColor: MatugenTheme.accent
-                                    name:      "Auto"
-                                    active:    ShellSettings.neutralAccentAuto
-                                    onPicked:  ShellSettings.neutralAccentAuto = true
-                                    onHoverChanged: (n, h) => _accentPicker._hoverName =
-                                        h ? n : (_accentPicker._hoverName === n ? "" : _accentPicker._hoverName)
-
-                                    Grid {
-                                        anchors.centerIn: parent
-                                        columns: 2; spacing: 2
-                                        Repeater {
-                                            model: 4
-                                            Rectangle { width: 4; height: 4; radius: 2; color: Qt.rgba(0,0,0,0.35) }
-                                        }
-                                    }
-                                }
-
-                                Repeater {
-                                    model: _accentPicker._accents
-                                    delegate: AccentSwatch {
-                                        id: _sw
-                                        required property var modelData
-                                        chipColor: modelData.color
-                                        name:      modelData.name
-                                        active:    !ShellSettings.neutralAccentAuto && ShellSettings.neutralAccent === modelData.color
-                                        onPicked:  { ShellSettings.neutralAccentAuto = false; ShellSettings.neutralAccent = modelData.color }
-                                        onHoverChanged: (n, h) => _accentPicker._hoverName =
-                                            h ? n : (_accentPicker._hoverName === n ? "" : _accentPicker._hoverName)
-
-                                        Rectangle {
-                                            anchors.centerIn: parent
-                                            width: 8; height: 8; radius: 4
-                                            antialiasing: true
-                                            color: Qt.rgba(0, 0, 0, 0.55)
-                                            opacity: _sw.active ? 1 : 0
-                                            scale:   _sw.active ? 1 : 0.3
-                                            Behavior on opacity { NumberAnimation { duration: Motion.fast } }
-                                            Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(125); easing.type: Easing.OutCubic } }
-                                        }
+                                spread: true
+                                options: _accentPicker._options
+                                colors:  _accentPicker._swColors
+                                activeIndex: _accentPicker._activeIndex
+                                onPicked: (i) => {
+                                    if (_accentPicker._options[i].auto) {
+                                        ShellSettings.neutralAccentAuto = true
+                                    } else {
+                                        ShellSettings.neutralAccentAuto = false
+                                        ShellSettings.neutralAccent = _accentPicker._options[i].color
                                     }
                                 }
                             }
@@ -391,14 +366,17 @@ PageShell {
                             }
                         }
 
-                        ChoiceChipRow {
+                        SwatchPickerRow {
                             glyph: "󰏘"; label: "Base tone"
-                            currentValue: ShellSettings.baseTone
-                            model: [
-                                { value: "charcoal", label: "Charcoal", color: "#191b21" },
-                                { value: "black",    label: "Black",    color: "#111216" }
+                            options: [
+                                { value: "black",    name: "Black"    },
+                                { value: "charcoal", name: "Charcoal" },
+                                { value: "graphite", name: "Graphite" }
                             ]
-                            onChosen: (v) => ShellSettings.baseTone = v
+                            colors: ["#111216", "#191b21", "#20232b"]
+                            activeIndex: options.findIndex(o => o.value === ShellSettings.baseTone)
+                            ringColor: Theme.accent
+                            onPicked: (i) => ShellSettings.baseTone = options[i].value
                         }
                     }
 
@@ -406,90 +384,17 @@ PageShell {
                     CollapsibleSection {
                         expanded: root._themeShowMatu
 
-                        Item {
-                            id: _matuAccentRow
-                            width: parent.width
-                            height: 44
-
-                            readonly property var _roles: [
-                                { key: "primary",   c: MatugenTheme.accent,  n: "Primary"   },
-                                { key: "secondary", c: MatugenTheme.success, n: "Secondary" },
-                                { key: "tertiary",  c: MatugenTheme.warning, n: "Tertiary"  }
+                        SwatchPickerRow {
+                            glyph: "󰔎"; label: "Accent role"
+                            options: [
+                                { value: "primary",   name: "Primary"   },
+                                { value: "secondary", name: "Secondary" },
+                                { value: "tertiary",  name: "Tertiary"  }
                             ]
-                            property real topRadius: 0
-                            property real bottomRadius: 0
-                            property real cardInset: 1
-
-                            HoverHandler { id: _matuHover; enabled: _matuAccentRow.enabled }
-                            RowHoverBg {
-                                anchors.fill: parent
-                                topRadius: _matuAccentRow.topRadius
-                                bottomRadius: _matuAccentRow.bottomRadius
-                                cardInset: _matuAccentRow.cardInset
-                                active: _matuHover.hovered && _matuAccentRow.enabled
-                                fillOpacity: 0.08
-                            }
-
-                            Text {
-                                id: _matuGlyph
-                                anchors.left: parent.left
-                                anchors.leftMargin: 14
-                                anchors.verticalCenter: parent.verticalCenter
-                                width: 18
-                                horizontalAlignment: Text.AlignHCenter
-                                text: "󰔎"
-                                color: Theme.withAlpha(Theme.subtext, 0.85)
-                                font.family: Settings.font
-                                font.pixelSize: Settings.iconSize + 2
-                                renderType: Text.NativeRendering
-                            }
-
-                            Text {
-                                anchors.left: _matuGlyph.right
-                                anchors.leftMargin: 10
-                                anchors.right: _matuSwatches.left
-                                anchors.rightMargin: 10
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: "Accent role"
-                                textFormat: Text.PlainText
-                                elide: Text.ElideRight
-                                color: Theme.withAlpha(Theme.text, 0.85)
-                                font.family: Settings.font
-                                font.pixelSize: Settings.fontSize
-                                renderType: Text.NativeRendering
-                            }
-
-                            Row {
-                                id: _matuSwatches
-                                anchors.right: parent.right
-                                anchors.rightMargin: 12
-                                anchors.verticalCenter: parent.verticalCenter
-                                height: 32
-                                spacing: 8
-
-                                Repeater {
-                                    model: _matuAccentRow._roles
-                                    delegate: AccentSwatch {
-                                        id: _mrSw
-                                        required property var modelData
-                                        chipColor: modelData.c
-                                        name: modelData.n
-                                        active: ShellSettings.matugenAccentRole === modelData.key
-                                        onPicked: ShellSettings.matugenAccentRole = modelData.key
-
-                                        Rectangle {
-                                            anchors.centerIn: parent
-                                            width: 8; height: 8; radius: 4
-                                            antialiasing: true
-                                            color: Qt.rgba(0, 0, 0, 0.55)
-                                            opacity: _mrSw.active ? 1 : 0
-                                            scale: _mrSw.active ? 1 : 0.3
-                                            Behavior on opacity { NumberAnimation { duration: Motion.fast } }
-                                            Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(125); easing.type: Easing.OutCubic } }
-                                        }
-                                    }
-                                }
-                            }
+                            colors: [MatugenTheme.accent, MatugenTheme.success, MatugenTheme.warning]
+                            activeIndex: options.findIndex(o => o.value === ShellSettings.matugenAccentRole)
+                            tintedReadout: true
+                            onPicked: (i) => ShellSettings.matugenAccentRole = options[i].value
                         }
                     }
 

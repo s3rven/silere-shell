@@ -7,6 +7,8 @@ PowerRailContent 1.0 PowerRailContent.qml
 PowerRailRow     1.0 PowerRailRow.qml
 ChoiceChipRow   1.0 ChoiceChipRow.qml
 AccentSwatch    1.0 AccentSwatch.qml
+SwatchRow       1.0 SwatchRow.qml
+SwatchPickerRow 1.0 SwatchPickerRow.qml
 CollapsibleSection 1.0 CollapsibleSection.qml
 ControlRow      1.0 ControlRow.qml
 VitalsStrip     1.0 VitalsStrip.qml

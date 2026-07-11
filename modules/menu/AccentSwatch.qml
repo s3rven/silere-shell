@@ -7,6 +7,8 @@ Item {
     id: root
 
     property color  chipColor: Theme.accent
+    // dark chips (base tones) need a ring that isn't the chip colour itself
+    property color  ringColor: chipColor
     property bool   active:    false
     property string name:      ""
     default property alias content: _chip.data
@@ -44,7 +46,7 @@ Item {
         id: _rip
         anchors.centerIn: parent
         width: 30; height: 30; radius: 15
-        color: "transparent"; border.width: 2; border.color: root.chipColor
+        color: "transparent"; border.width: 2; border.color: root.ringColor
         opacity: 0; transformOrigin: Item.Center; antialiasing: true
         ParallelAnimation {
             id: _ripAnim
@@ -54,9 +56,9 @@ Item {
     }
     Rectangle {
         anchors.centerIn: parent; width: 30; height: 30; radius: 15
-        color: "transparent"; border.width: 2; border.color: root.chipColor
-        opacity: root.active ? 0.85 : ((_h.hovered || root.activeFocus) ? 0.4 : 0.0)
-        scale:   root.active ? 1.0 : ((_h.hovered || root.activeFocus) ? 0.92 : 0.5)
+        color: "transparent"; border.width: 2; border.color: root.ringColor
+        opacity: (_h.hovered || root.activeFocus) ? 0.4 : 0.0
+        scale:   (_h.hovered || root.activeFocus) ? 0.92 : 0.5
         transformOrigin: Item.Center; antialiasing: true
         Behavior on opacity { NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
         Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutQuart } }

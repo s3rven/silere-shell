@@ -202,9 +202,6 @@ Item {
                         ? String(modelData.badge) : ""
                     readonly property string segBadgeKind: (modelData.badgeKind !== undefined && modelData.badgeKind !== null)
                         ? String(modelData.badgeKind) : _seg.segBadge
-                    readonly property bool segHasSwatch: modelData.color !== undefined
-                        && modelData.color !== null && String(modelData.color).length > 0
-                    readonly property color segSwatchColor: segHasSwatch ? modelData.color : "transparent"
 
                     width:  _segContainer._cellW
                     height: 26
@@ -272,19 +269,6 @@ Item {
                             font.weight:    Font.Medium
                             renderType:     Text.NativeRendering
                         }
-                        Rectangle {
-                            anchors.verticalCenter: parent.verticalCenter
-                            visible:        _seg.segHasSwatch
-                            width:          visible ? 12 : 0
-                            height:         visible ? 12 : 0
-                            radius:         4
-                            antialiasing:   true
-                            color:          _seg.segSwatchColor
-                            border.width:   1
-                            border.color:   _seg.active
-                                ? Theme.withAlpha(Theme.text, 0.42)
-                                : (_hover.hovered ? Theme.withAlpha(Theme.text, 0.30) : Theme.withAlpha(Theme.subtext, 0.22))
-                        }
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             visible:        _seg.modelData.label.length > 0
@@ -292,7 +276,6 @@ Item {
                             textFormat:     Text.PlainText
                             width: Math.min(implicitWidth, Math.max(14, _segContainer._cellW - 8
                                 - (_seg.segGlyph.length > 0 ? 18 : 0)
-                                - (_seg.segHasSwatch ? 16 : 0)
                                 - (_segBadge.visible ? _segBadge.width + 4 : 0)))
                             height: 18
                             verticalAlignment: Text.AlignVCenter
