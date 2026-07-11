@@ -234,12 +234,19 @@ Singleton {
     }
     property bool _cavaConfigReady: false
 
+    // blockWrites makes setText synchronous; set ready first so onSaveFailed can veto it.
+    // don't wait for onSaved — it never fires on hot-reload (processId is stable → same
+    // path + identical content → no write → no save signal → cava stuck off)
     function _writeCavaConfig(): void {
-        root._cavaConfigReady = false
+        root._cavaConfigReady = true
         _cavaConfig.setText(root._cavaConfigText)
     }
 
-    on_CavaProfileKeyChanged: if (root._visualizerClients > 0) _cavaConfigSync.restart()
+    // profile change bounces cava (ready false now, rewritten next tick) so it re-reads the new bars/fps
+    on_CavaProfileKeyChanged: if (root._visualizerClients > 0) {
+        root._cavaConfigReady = false
+        _cavaConfigSync.restart()
+    }
 
     Timer {
         id: _cavaConfigSync
@@ -253,7 +260,6 @@ Singleton {
         atomicWrites: true
         blockWrites: true
         printErrors: false
-        onSaved: root._cavaConfigReady = true
         onSaveFailed: root._cavaConfigReady = false
     }
 
