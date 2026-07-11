@@ -32,6 +32,12 @@ Singleton {
     property var    _savedWifi:     ({})   // ssid -> true for saved wifi connections
     property bool   _wifiScanRescan: false
     property bool   _pendingWifiRescan: false
+    // Invalidates in-flight saved-network/AP queries when the picker closes.
+    // Without this, a slow nmcli scan can repopulate a list the caller just
+    // cleared and keep doing background work after the UI no longer needs it.
+    property int    _wifiScanGeneration: 0
+    property int    _savedRunGeneration: -1
+    property int    _scanRunGeneration: -1
     property bool   wifiScanFailed:  false
     readonly property bool wifiScanning: _savedProc.running || _wifiScanProc.running
     property bool   _refreshPending: false
@@ -104,14 +110,20 @@ Singleton {
         wifiScanFailed = false
         _wifiScanRescan = _pendingWifiRescan
         _pendingWifiRescan = false
+        _savedRunGeneration = _wifiScanGeneration
         _savedProc.running = true
     }
 
     function clearWifiScan(): void {
+        _wifiScanGeneration++
         wifiError = ""
         wifiScanFailed = false
         _wifiScanRescan = false
         _pendingWifiRescan = false
+        // Stopping either process still emits exited; generation checks below
+        // prevent those stale callbacks from chaining or publishing results.
+        if (_savedProc.running) _savedProc.running = false
+        if (_wifiScanProc.running) _wifiScanProc.running = false
         if (wifiNetworks.length > 0) wifiNetworks = []
     }
 
@@ -381,6 +393,12 @@ Singleton {
         command: ["nmcli", "-t", "-f", "NAME,TYPE", "connection", "show"]
         stdout: StdioCollector { id: _savedOut }
         onExited: {
+            if (root._savedRunGeneration !== root._wifiScanGeneration) {
+                // The picker may have reopened before the cancelled process
+                // reported exit. Resume the newly requested generation.
+                if (root._pendingWifiRescan) Qt.callLater(root._beginWifiScan)
+                return
+            }
             const set = {}
             const lines = (_savedOut.text || "").trim().split("\n")
             for (let i = 0; i < lines.length; i++) {
@@ -391,6 +409,7 @@ Singleton {
             if (root.toolAvailable && root.wifiEnabled && !_wifiScanProc.running) {
                 root._wifiScanRescan = root._wifiScanRescan || root._pendingWifiRescan
                 root._pendingWifiRescan = false
+                root._scanRunGeneration = root._wifiScanGeneration
                 _wifiScanProc.running = true
             } else {
                 root.clearWifiScan()
@@ -405,6 +424,10 @@ Singleton {
         command: ["nmcli", "-t", "-f", "ACTIVE,SSID,SIGNAL,SECURITY", "device", "wifi", "list", "--rescan", root._wifiScanRescan ? "yes" : "no"]
         stdout: StdioCollector { id: _wifiScanOut }
         onExited: (code) => {
+            if (root._scanRunGeneration !== root._wifiScanGeneration) {
+                if (root._pendingWifiRescan) Qt.callLater(root._beginWifiScan)
+                return
+            }
             root._wifiScanRescan = false
             if (code !== 0 || !root.toolAvailable || !root.wifiEnabled) {
                 if (root.toolAvailable && root.wifiEnabled) {
