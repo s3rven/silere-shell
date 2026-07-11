@@ -34,7 +34,9 @@ Row {
 
     activeFocusOnTab: true
     Accessible.role: Accessible.Button
-    Accessible.name: "Clock"
+    Accessible.name: "Clock, " + DateTime.cachedHour + ":" + DateTime.cachedMinute
+        + DateTime.cachedSeconds + (DateTime.cachedAmPm ? " " + DateTime.cachedAmPm : "")
+        + (ShellSettings.clockShowDate ? ", " + DateTime.cachedLongDate : "")
     Accessible.description: "Activate to open calendar. Middle-click cycles seconds and date."
     Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) root._openCalendar(); event.accepted = true }
     Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._openCalendar(); event.accepted = true }
