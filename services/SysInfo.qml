@@ -64,20 +64,10 @@ Singleton {
 
     function _deactivate(): void {
         _startDelay.stop()
-        _poll.stop()
-        _slowPoll.stop()
         _active = false
         _lastCpuTotal = 0
         _lastCpuIdle = 0
         if (_slowProc.running) _slowProc.running = false
-    }
-
-    Connections {
-        target: MenuState
-        function onOpenChanged() {
-            if (root._wanted) _startDelay.restart()
-            else root._deactivate()
-        }
     }
 
     // Created lazily on first open, after open already flipped true, catch that missed edge.
