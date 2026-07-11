@@ -1,5 +1,6 @@
 import QtQuick
 import "../../config"
+import "../../services"
 
 // Hover/focus fill for a row inside a rounded SettingsCard. Per-corner radii
 // match whichever card edges this row is flush against (set by SettingsCard._applyRadii).
@@ -33,7 +34,10 @@ Item {
 
         color:   root.fillColor
         opacity: root.active ? root.fillOpacity : 0
-        Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+        Behavior on opacity {
+            enabled: !ShellSettings.reduceMotion
+            NumberAnimation { duration: Motion.fast }
+        }
     }
 
     Rectangle {
@@ -49,7 +53,13 @@ Item {
         transformOrigin: Item.Center
         visible: opacity > 0.001
 
-        Behavior on opacity { NumberAnimation { duration: Motion.fast } }
-        Behavior on scale { NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+        Behavior on opacity {
+            enabled: !ShellSettings.reduceMotion
+            NumberAnimation { duration: Motion.fast }
+        }
+        Behavior on scale {
+            enabled: !ShellSettings.reduceMotion
+            NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
+        }
     }
 }

@@ -227,7 +227,10 @@ Item {
                     height: _entry._sel ? 44 : 0
                     clip: true
                     visible: height > 0.5
-                    Behavior on height { NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+                    Behavior on height {
+                        enabled: !ShellSettings.reduceMotion
+                        NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
+                    }
 
                     Rectangle {
                         width: parent.width
