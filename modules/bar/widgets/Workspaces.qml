@@ -97,36 +97,12 @@ Item {
         root._iconCache[key] = src
         return src
     }
-    // valuesChanged doesn't fire on workspace *moves*, so bump a tick on the relevant events and refresh toplevels.
-    // events arrive in bursts — while a settle is in flight, fold further ones into a single trailing refresh
-    // instead of an IPC refresh each.
+    // Desktop-entry changes need an explicit cache tick. Compositor owns the
+    // single coalesced toplevel refresh, so every monitor reads the same update.
     property int _wsAppsTick: 0
-    property bool _wsAppsRepeat: false
-    function _refreshWorkspaceApps(): void {
-        if (!ShellSettings.wsShowAppIcons) return
-        if (_wsAppsInvalidate.running) { _wsAppsRepeat = true; return }
-        Compositor.refreshToplevels()
-        _wsAppsInvalidate.restart()
-    }
-    // delay the recompute so refreshToplevels() settles; bumping _wsAppsTick now would recompute against stale data
-    Timer {
-        id: _wsAppsInvalidate
-        interval: 80
-        repeat: false
-        onTriggered: {
-            root._wsAppsTick++
-            if (root._wsAppsRepeat) { root._wsAppsRepeat = false; root._refreshWorkspaceApps() }
-        }
-    }
-    Timer {
-        id: _initialAppsRefresh
-        interval: 250
-        onTriggered: root._refreshWorkspaceApps()
-    }
     Connections {
         target: ShellSettings
         function onWsShowAppIconsChanged() {
-            if (ShellSettings.wsShowAppIcons) _initialAppsRefresh.restart()
             // settings flip, not a workspace hop: suppress the gem's move-pulse/glint/trail while the row re-lays out
             root._paging = true
             _pagingReset.restart()
@@ -210,7 +186,6 @@ Item {
         _lastNormalActiveId = activeId
         _prevGroupStart = groupStart
         _initialized = monitorReady
-        if (ShellSettings.wsShowAppIcons) _initialAppsRefresh.restart()
     }
 
     onRawActiveIdChanged: {

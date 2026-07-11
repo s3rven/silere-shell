@@ -899,7 +899,7 @@ PageShell {
                     }
                     ToggleRow {
                         glyph: "󰀻"; label: "App icons"; badge: "beta"
-                        description: "App icons on occupied workspaces"
+                        description: "Show up to three running apps on occupied workspaces"
                         checked: ShellSettings.wsShowAppIcons
                         onToggled: ShellSettings.wsShowAppIcons = !ShellSettings.wsShowAppIcons
                     }

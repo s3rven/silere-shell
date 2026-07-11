@@ -111,11 +111,41 @@ Singleton {
         else if (addr.length > 0) HyprActions._dispatch("focuswindow", addr)
     }
 
+    property int _hyprTick: 0
+    property bool _hyprRefreshAgain: false
+
+    // Hyprland events arrive in bursts and several consumers may ask for the
+    // same refresh (workspace icons, fullscreen state, notification focus).
+    // One coordinator avoids a refresh process per bar/consumer, then bumps a
+    // trailing tick after lastIpcObject has had time to settle.
     function refreshToplevels(): void {
-        if (root.isHyprland) Hyprland.refreshToplevels()
+        if (!root.isHyprland) return
+        if (_hyprRefreshSettle.running) {
+            root._hyprRefreshAgain = true
+            return
+        }
+        Hyprland.refreshToplevels()
+        _hyprRefreshSettle.restart()
     }
 
-    property int _hyprTick: 0
+    Timer {
+        id: _hyprRefreshSettle
+        interval: 80
+        onTriggered: {
+            root._hyprTick++
+            if (!root._hyprRefreshAgain) return
+            root._hyprRefreshAgain = false
+            Hyprland.refreshToplevels()
+            restart()
+        }
+    }
+
+    Connections {
+        target: ShellSettings
+        function onWsShowAppIconsChanged(): void {
+            if (ShellSettings.wsShowAppIcons) root.refreshToplevels()
+        }
+    }
 
     readonly property string _hyprFocusedMon: {
         root._hyprTick
@@ -205,7 +235,7 @@ Singleton {
             const n = event.name
             if (n === "openwindow" || n === "closewindow" || n === "movewindow" || n === "movewindowv2"
                 || n === "fullscreen" || n === "activewindow" || n === "activewindowv2")
-                Hyprland.refreshToplevels()
+                root.refreshToplevels()
             if (n === "activespecial" || n === "activespecialv2")
                 root._updateSpecial(event.data)
             if (n === "scrolloverview")
