@@ -16,12 +16,12 @@ Singleton {
     readonly property var settingsTree: [
         { glyph: "󰉦", label: "Appearance", children: [
             { glyph: "󰉦", label: "Theme",       section: "theme"      },
-            { glyph: "󰖙", label: "Night Light", section: "nightlight" }
+            { glyph: "󰖙", label: "Night light", section: "nightlight" }
         ]},
         { glyph: "󰕮", label: "Bar", children: [
-            { glyph: "󰍹", label: "Surface",    section: "surface"    },
-            { glyph: "󰻂", label: "Separators", section: "separators" },
-            { glyph: "󰍴", label: "Underline",  section: "underline"  }
+            { glyph: "󰍹", label: "Layout",    section: "surface"    },
+            { glyph: "󰻂", label: "Spacing",   section: "separators" },
+            { glyph: "󰍴", label: "Underline", section: "underline"  }
         ]},
         { glyph: "󰀻", label: "Widgets", children: [
             { glyph: "󰅐", label: "Clock",      section: "clock"      },
@@ -30,9 +30,9 @@ Singleton {
             { glyph: "󰈈", label: "Indicators", section: "indicators" }
         ]},
         { glyph: "󰂚", label: "Notifications", children: [
-            { glyph: "󰂚", label: "Popups",   section: "popups"   },
-            { glyph: "󱀅", label: "OSD",      section: "osd"      },
-            { glyph: "󰀦", label: "Warnings", section: "warnings" }
+            { glyph: "󰂚", label: "Popups", section: "popups"   },
+            { glyph: "󱀅", label: "OSD",    section: "osd"      },
+            { glyph: "󰀦", label: "Alerts", section: "warnings" }
         ]},
         { glyph: "󰒓", label: "System", children: [
             { glyph: "󰢻", label: "General", section: "system"  },
