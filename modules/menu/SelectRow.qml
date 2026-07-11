@@ -16,6 +16,7 @@ Item {
     property real   topRadius:    0
     property real   bottomRadius: 0
     property real   cardInset:    1
+    readonly property int _optionsCapH: 224  // six rows plus list padding
 
     signal chosen(var value)
 
@@ -25,7 +26,16 @@ Item {
         if (!_open || _optRepeater.count <= 0) return
         const i = Math.max(0, Math.min(_optRepeater.count - 1, index))
         const item = _optRepeater.itemAt(i)
-        if (item) item.forceActiveFocus()
+        if (item) {
+            item.forceActiveFocus()
+            const viewportH = Math.min(_optCol.implicitHeight, root._optionsCapH)
+            if (item.y < _options.contentY + 4)
+                _options.contentY = Math.max(0, item.y - 4)
+            else if (item.y + item.height > _options.contentY + viewportH - 4)
+                _options.contentY = Math.min(
+                    Math.max(0, _options.contentHeight - viewportH),
+                    item.y + item.height - viewportH + 4)
+        }
     }
 
     function _focusActiveOption(): void {
@@ -184,13 +194,21 @@ Item {
         }
     }
 
-    Item {
+    Flickable {
         id: _options
         anchors.top:  parent.top; anchors.topMargin: 44
         anchors.left: parent.left
         anchors.right: parent.right
 
-        height:  root._open ? _optCol.implicitHeight : 0
+        height: root._open
+            ? Math.min(_optCol.implicitHeight, root._optionsCapH)
+            : 0
+        contentWidth: width
+        contentHeight: _optCol.implicitHeight
+        boundsMovement: Flickable.StopAtBounds
+        flickDeceleration: 1800
+        maximumFlickVelocity: 1800
+        interactive: contentHeight > height + 1
         clip:    true
         visible: height > 0.5
 
@@ -214,7 +232,7 @@ Item {
                 width: parent.width - 24; height: 1
                 color: Theme.menuDivider
             }
-            Item { width: parent.width; height: 4 }
+            Item { width: parent.width; height: 3 }
 
             Behavior on y {
                 enabled: !ShellSettings.reduceMotion
@@ -245,7 +263,7 @@ Item {
                         ? String(modelData.fontFamily) : Settings.font
 
                     width:  parent.width
-                    height: 38
+                    height: 36
 
                     function choose(event: var): void {
                         if (!event.isAutoRepeat) {
@@ -341,5 +359,19 @@ Item {
             }
             Item { width: parent.width; height: 4 }
         }
+    }
+
+    Rectangle {
+        id: _scrollThumb
+        anchors.right: parent.right
+        anchors.rightMargin: 3
+        y: 48 + (_options.height - 8 - height)
+            * (_options.contentY / Math.max(1, _options.contentHeight - _options.height))
+        width: 2
+        height: Math.max(18, (_options.height - 8) * _options.height
+            / Math.max(1, _options.contentHeight))
+        radius: 1
+        color: Theme.withAlpha(Theme.subtext, 0.34)
+        visible: root._open && _options.contentHeight > _options.height + 1
     }
 }
