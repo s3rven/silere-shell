@@ -14,11 +14,11 @@ Item {
     // Full tree height, so the panel can size to fit it (MenuWindow's height floor).
     implicitHeight: _content.height
 
-    readonly property int _navTop:     10
-    readonly property int _navGapY:    10   // between groups
+    readonly property int _navTop:     8
+    readonly property int _navGapY:    8    // between groups
     readonly property int _navRowH:    30
     readonly property int _navRowGap:  2    // within a group
-    readonly property int _navHdrH:    22
+    readonly property int _navHdrH:    20
     readonly property int _navStdHdrH: 12   // standalone leaf's divider slot
 
     // synchronous tree walk avoids mapToItem race on first frame
@@ -90,12 +90,6 @@ Item {
                     radius: 8
                     antialiasing: true
                     color: Theme.menuControl
-                }
-                Rectangle {
-                    anchors.fill: parent
-                    radius: 8
-                    antialiasing: true
-                    color: "transparent"
                     border.width: 1
                     border.color: Theme.menuControlLine
                 }

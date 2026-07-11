@@ -66,10 +66,10 @@ PageShell {
             if (it.children) {
                 for (let j = 0; j < it.children.length; j++) {
                     const c = it.children[j]
-                    m[c.section] = { glyph: c.glyph, label: c.label, group: it.label }
+                    m[c.section] = { glyph: c.glyph, label: c.label }
                 }
             } else {
-                m[it.section] = { glyph: it.glyph, label: it.label, group: "" }
+                m[it.section] = { glyph: it.glyph, label: it.label }
             }
         }
         return m
@@ -194,7 +194,7 @@ PageShell {
                 width: parent.width
                 height: 32
                 readonly property var _meta: root._sectionMeta[root._shownSection]
-                                            ?? ({ glyph: "", label: "", group: "" })
+                                            ?? ({ glyph: "", label: "" })
 
                 // compact section title: no badge or rule, the card below supplies the structure
                 Item {

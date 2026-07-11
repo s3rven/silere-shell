@@ -115,7 +115,7 @@ PanelWindow {
             win.width > 0 ? win.width - panelMinX * 2 : _targetPanelW))
         // rail expands for Settings: icon strip stays fixed, category nav rides on beside it as one growing surface
         readonly property int railCollapsedW: 44
-        readonly property int navW: 168
+        readonly property int navW: 160
         readonly property int railExpandedW: railCollapsedW + navW
         readonly property int railW: _railExpanded ? railExpandedW : railCollapsedW
         readonly property int contentW: panelW - railW
