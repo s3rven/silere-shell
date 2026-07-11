@@ -216,6 +216,7 @@ Singleton {
     property bool _loaded: false
     property bool _configDirReady: false
     property bool _savePendingForDir: false
+    property int _saveFailureCount: 0
     // placement-dependent windows wait for this so a saved barPosition doesn't flash at the wrong edge first
     readonly property bool ready: _loaded
     readonly property int _settingsVersion: 1
@@ -402,9 +403,11 @@ Singleton {
         id: _mkdirProc
         command: ["mkdir", "-p", root._configDir]
         onExited: (code) => {
-            root._configDirReady = true
-            if (code !== 0)
+            root._configDirReady = code === 0
+            if (code !== 0) {
                 console.warn("silere-shell: failed to create settings directory:", root._configDir)
+                return
+            }
             if (root._savePendingForDir) {
                 root._savePendingForDir = false
                 root._save()
@@ -423,6 +426,19 @@ Singleton {
         onLoaded:      root._applyText(_file.text())
         onLoadFailed:  root._loaded = true   // first run: defaults
         onFileChanged: reload()
+        onSaved: {
+            root._saveFailureCount = 0
+            _saveRetry.stop()
+        }
+        onSaveFailed: (error) => {
+            // _save() records the candidate before writing so watcher echoes
+            // can be ignored. Clear it on failure or the same settings would
+            // be mistaken for an already-persisted value forever.
+            root._lastSavedJson = ""
+            root._saveFailureCount++
+            console.warn("silere-shell: failed to save settings.json:", error)
+            if (root._saveFailureCount <= 3) _saveRetry.restart()
+        }
     }
 
     function _applyText(t: string): void {
@@ -445,6 +461,12 @@ Singleton {
         onTriggered: root._save()
     }
 
+    Timer {
+        id: _saveRetry
+        interval: Math.min(8000, 1000 * Math.pow(2, Math.max(0, root._saveFailureCount - 1)))
+        onTriggered: root._save()
+    }
+
     function _save(force): void {
         if (!force && !_configDirReady) {
             _savePendingForDir = true
@@ -460,6 +482,9 @@ Singleton {
         const j = JSON.stringify(out)
         if (j === _lastSavedJson) return
         _lastSavedJson = j
-        _file.setText(j + "\n")
+        // Alternate harmless trailing whitespace after a failed write. FileView
+        // coalesces identical setText() calls, so an exact retry may otherwise
+        // never reach the filesystem even though the previous save failed.
+        _file.setText(j + (root._saveFailureCount % 2 === 0 ? "\n" : "\n\n"))
     }
 }
