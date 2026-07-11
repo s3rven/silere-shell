@@ -208,9 +208,10 @@ Item {
             y:       root._open ? 0 : -10
             opacity: root._open ? 1.0 : 0.0
 
-            // header/options seam rides the slide so it never floats alone mid-animation
+            // header/options seam rides the slide so it never floats alone mid-animation; inset matches RowDividers
             Rectangle {
-                width: parent.width; height: 1
+                x: 12
+                width: parent.width - 24; height: 1
                 color: Theme.menuDivider
             }
             Item { width: parent.width; height: 4 }

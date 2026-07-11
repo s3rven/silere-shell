@@ -588,11 +588,12 @@ Item {
         width: parent.width
         height: root._footerH
 
+        // inset matches RowDividers
         Rectangle {
             anchors.left: parent.left
-            anchors.leftMargin: 1
+            anchors.leftMargin: 12
             anchors.right: parent.right
-            anchors.rightMargin: 1
+            anchors.rightMargin: 12
             anchors.top: parent.top
             height: 1
             color: Theme.menuDivider

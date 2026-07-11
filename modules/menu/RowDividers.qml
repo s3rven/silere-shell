@@ -34,12 +34,14 @@ Repeater {
 
         visible: row !== null && row.visible && hasRowAbove
               && !(row.suppressDividerAbove ?? false) && opacity > 0.01
-        x: 0
+        // inset to the row's content edge so the seam reads as a division between rows,
+        // not a cut through the card border; 12 keeps the x offset on the 4px grid
+        x: 12
         // Row heights and panel offsets sit on the 4px grid (see fractional-scaling
         // notes), so row.y lands on whole physical px and every divider renders the
         // same thickness. `column.y` folds in a collapsible's animating offset.
         y: (root.column ? root.column.y : 0) + (row ? Math.round(row.y) : 0)
-        width:  root.column ? root.column.width : 0
+        width:  root.column ? Math.max(0, root.column.width - 24) : 0
         height: 1
         // Hairline: skip antialiasing (smears a 1px line at 1.25x). A faint colour
         // keeps even a 2px-rounded physical line reading as a fine seam.
