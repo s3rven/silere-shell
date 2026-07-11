@@ -27,8 +27,15 @@ Row {
         const meta = ShellSettings.barWidgetMeta[key]
         if (!meta) return false
         const setting = meta.setting || ""
-        return setting.length === 0 || ShellSettings[setting] !== false
+        if (setting.length > 0 && ShellSettings[setting] === false) return false
+        // Avoid constructing hardware-only widget trees on machines where the
+        // capability does not exist. Their services remain live so hotplug or
+        // delayed discovery can add the widget later.
+        if (key === "battery" && !Battery.available) return false
+        if (key === "brightness" && (!Brightness.toolAvailable || Brightness.maxBrightness <= 0)) return false
+        return true
     }
+    readonly property var activeKeys: orderKeys.filter(key => zone._widgetEnabled(key))
 
     // order-agnostic divider map: reads live slots through the Repeater (not fixed ids) so it holds under any order. _repRev bumps as delegates populate — itemAt() can return null before that
     property int _repRev: 0
@@ -60,18 +67,19 @@ Row {
     }
     readonly property var _seps: _computeSeps(_rep)
 
-    // fixed model sized to the full canonical key count: extra slots resolve to an empty key and render nothing. never torn down on reorder — only the slot whose key changed reloads its Loader
     Repeater {
         id: _rep
-        model: ShellSettings._allBarWidgetKeys.length
+        model: zone.activeKeys.length
         onItemAdded: zone._repRev++
+        onItemRemoved: zone._repRev++
 
         delegate: Row {
             id: _slot
             required property int index
-            readonly property string key: zone.orderKeys[index] || ""
+            readonly property string key: zone.activeKeys[index] || ""
             readonly property bool widgetEnabled: zone._widgetEnabled(key)
-            readonly property bool show: _loader.item ? _loader.item.show : false
+            readonly property bool show: widgetEnabled && _loader.loadedKey === key
+                && (_loader.item ? _loader.item.show : false)
             height: parent.height
             spacing: zone.dotGap
             // Read the plain `show`, never `.visible` — Item.visible cascades
@@ -82,7 +90,12 @@ Row {
             Loader {
                 id: _loader
                 anchors.verticalCenter: parent.verticalCenter
-                sourceComponent: _slot.widgetEnabled ? zone.widgetComponents[_slot.key] : null
+                property string loadedKey: ""
+                active: _slot.widgetEnabled && _slot.key.length > 0
+                sourceComponent: _slot.key.length > 0 ? zone.widgetComponents[_slot.key] : null
+                onSourceComponentChanged: loadedKey = ""
+                onActiveChanged: if (!active) loadedKey = ""
+                onLoaded: loadedKey = _slot.key
             }
             Dot {
                 compact: zone.compact
