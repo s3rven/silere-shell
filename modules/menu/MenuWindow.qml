@@ -72,7 +72,6 @@ PanelWindow {
         function onBarPositionChanged() {
             if (!MenuState.open) {
                 panel.edgeOffset = panel._closedOffset
-                panel._place()
                 return
             }
             win._ignoreOutsideTap = true
@@ -92,7 +91,7 @@ PanelWindow {
 
     TapHandler {
         id: _dismiss
-        enabled: MenuState.open && panel.menuScale > 0.95
+        enabled: MenuState.open && panel.scaleAmt > 0.95
         onTapped: {
             if (win._ignoreOutsideTap) return
             const p = _dismiss.point.position
@@ -103,8 +102,27 @@ PanelWindow {
         }
     }
 
-    Rectangle {
+    // shadow matches the other bar-edge popups; outside the card so the scale transform doesn't distort it
+    Loader {
+        active: MenuState.open && ShellSettings.barFloating && ShellSettings.barShadow
+        anchors.fill: panel
+        opacity: panel.opacity
+        z: -1
+        sourceComponent: FloatingShadow {
+            radius: panel.radius
+            atBottom: panel.barBottom
+        }
+    }
+
+    FloatingPopupCard {
         id: panel
+
+        win: win
+        open: MenuState.open
+        anchorX: MenuState.anchorX
+        barBottom: ShellSettings.barPosition === "bottom"
+        targetWidth: panelW
+        border.width: 0
 
         // Home/Notifications read best compact; Settings needs room for the tree-nav + 4-chip rows
         readonly property int _compactW:  398
@@ -112,7 +130,7 @@ PanelWindow {
         readonly property bool _railExpanded: activeTab === 1 || powerOpen
         readonly property int _targetPanelW: _railExpanded ? _settingsW : _compactW
         readonly property int panelW: Math.max(320, Math.min(_targetPanelW,
-            win.width > 0 ? win.width - panelMinX * 2 : _targetPanelW))
+            win.width > 0 ? win.width - _minX * 2 : _targetPanelW))
         // rail expands for Settings: icon strip stays fixed, category nav rides on beside it as one growing surface
         readonly property int railCollapsedW: 44
         readonly property int navW: 160
@@ -127,33 +145,18 @@ PanelWindow {
         readonly property int minRailFitH: 252
         readonly property int heightAnimDuration: Motion.medium
         readonly property int _availablePanelH: win.height > 0
-            ? Math.max(minRailFitH, win.height - _edgeY - panelMinX)
+            ? Math.max(minRailFitH, win.height - _edgeY - _minX)
             : contentPane.targetH
         readonly property int targetPanelH: Math.min(contentPane.targetH, _availablePanelH)
 
         property int activeTab: 0
         onActiveTabChanged: MenuState.activeTab = activeTab
 
-        readonly property bool _barBottom: ShellSettings.barPosition === "bottom"
-
-        // visible bar edge in window coords (mirrors Bar.qml's surfaceInset), plus a detach gap so the panel floats clear
-        readonly property int _barInset: ShellSettings.barFloating ? 4 : 0
-        readonly property int _edgeY: _barInset + ShellSettings.barHeight + 8
-        readonly property real panelMinX: radius + 4
-        readonly property real panelMaxX: Math.max(panelMinX, win.width - panelW - panelMinX)
-
-        // detached popup: starts just behind the bar-side edge, then settles in via scale/offset — height is fixed up front, not animated
-        property real menuScale: Motion.popScaleFrom
-        property real edgeOffset: _closedOffset
-        readonly property real _closedOffset: _barBottom ? 8 : -8
-        readonly property real _originX: Math.max(0, Math.min(panelW, MenuState.anchorX - x))
-
         property bool powerOpen: false
         property bool _loaded:         false
         property bool _loadedDeferred: false
         property bool _settingsLoaded: false
         property bool _recentLoaded:   false
-        property bool _placementSettled: false
 
         function switchTab(idx: int): void {
             if (powerOpen) powerOpen = false
@@ -171,68 +174,26 @@ PanelWindow {
             switchTab(_tabOrder[(i + dir + _tabOrder.length) % _tabOrder.length])
         }
 
-        function _clampedPanelX(px: real): real {
-            return Math.max(panelMinX, Math.min(px, panelMaxX))
-        }
-
-        // stateful x re-clamps only on real violation (holds still under margin resize);
-        // trigger-proportional so edge clicks don't all pin to one spot like centre-then-clamp does
-        function _place(): void {
-            const t = Math.max(0, Math.min(win.width, MenuState.anchorX))
-            x = Math.round(_clampedPanelX(t - panelW * t / Math.max(1, win.width)))
-        }
-        function _reclamp(): void {
-            const nx = Math.round(_clampedPanelX(x))
-            if (Math.abs(nx - x) > 0.5) x = nx
-        }
-        onPanelMinXChanged: _reclamp()
-        onPanelMaxXChanged: _reclamp()
-        onPanelWChanged: if (MenuState.open) _reclamp()
-        Component.onCompleted: _place()
-
         Connections {
             target: MenuState
             function onTabRequested(index) {
                 if (index !== 0) panel._loadedDeferred = true
                 panel.switchTab(index)
             }
-            function onAnchorXChanged() { panel._place() }
             function onOpenChanged() {
                 if (MenuState.open) {
-                    panel._placementSettled = false
-                    panel._place()
-                    _placementSettle.restart()
                     contentFlick.contentY = 0
                     // deterministic Tab start: panel paints no focus ring, and this clears stale child focus from the previous open
                     panel.forceActiveFocus()
                 } else {
-                    _placementSettle.stop()
-                    panel._placementSettled = false
                     _outsideTapGuard.stop()
                     win._ignoreOutsideTap = false
                 }
             }
         }
 
-        // closed window's width reads garbage until the compositor configures it; open-time _place()
-        // then pins far left and stateful x can't self-heal — re-place when the real width lands.
-        Connections {
-            target: win
-            function onWidthChanged() {
-                if (!MenuState.open) return
-                const t = Math.max(0, Math.min(win.width, MenuState.anchorX))
-                const nx = Math.round(panel._clampedPanelX(t - panel.panelW * t / Math.max(1, win.width)))
-                if (Math.abs(nx - panel.x) > 0.5) panel._place()
-            }
-        }
-
-        y: Math.round((_barBottom ? (win.height - _edgeY - height) : _edgeY) + edgeOffset)
-
         width:  panelW
         height: targetPanelH
-        radius: Theme.surfaceRadius
-        clip: false
-        antialiasing: true
 
         Behavior on height {
             enabled: panel.state === "visible" && !ShellSettings.reduceMotion
@@ -245,87 +206,9 @@ PanelWindow {
             NumberAnimation { duration: panel.heightAnimDuration; easing.type: Easing.OutCubic }
         }
 
-        Behavior on x {
-            enabled: !ShellSettings.reduceMotion && panel.state === "visible" && panel._placementSettled
-            NumberAnimation { duration: panel.heightAnimDuration; easing.type: Easing.OutCubic }
-        }
-
-        Behavior on edgeOffset {
-            enabled: panel.state === "visible" && !ShellSettings.reduceMotion
-            NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
-        }
-
-        // same material as the bar so the shell reads as one family, but a free-standing rounded panel
-        color: Theme.popup
-        border.width: 0
-
-        transform: Scale {
-            origin.x: panel._originX
-            origin.y: panel._barBottom ? panel.height : 0
-            xScale:   panel.menuScale
-            yScale:   panel.menuScale
-        }
-
-        state: MenuState.open ? "visible" : "hidden"
-        // layer only while the scale animates so NativeRendering text doesn't shimmer; hidden menu holds no FBO
-        layer.enabled: !ShellSettings.reduceMotion && opacity > 0.001 && menuScale < 0.999
-
-        states: [
-            State {
-                name: "hidden"
-                PropertyChanges { panel.menuScale: Motion.popScaleFrom; panel.edgeOffset: panel._closedOffset; panel.opacity: 0 }
-            },
-            State {
-                name: "visible"
-                PropertyChanges { panel.menuScale: 1.0; panel.edgeOffset: 0; panel.opacity: 1 }
-            }
-        ]
-
-        transitions: [
-            Transition {
-                from: "*"; to: "visible"
-                ParallelAnimation {
-                    NumberAnimation {
-                        target: panel; property: "menuScale"
-                        to: 1.0; duration: Motion.popIn
-                        easing.type: Easing.OutCubic
-                    }
-                    NumberAnimation {
-                        target: panel; property: "edgeOffset"
-                        to: 0; duration: Motion.popIn
-                        easing.type: Easing.OutQuart
-                    }
-                    NumberAnimation {
-                        target: panel; property: "opacity"
-                        to: 1.0; duration: Motion.popInFade; easing.type: Easing.OutCubic
-                    }
-                }
-            },
-            Transition {
-                from: "visible"; to: "hidden"
-                ParallelAnimation {
-                    NumberAnimation {
-                        target: panel; property: "menuScale"
-                        to: Motion.popScaleFrom; duration: Motion.popOut
-                        easing.type: Easing.InCubic
-                    }
-                    NumberAnimation {
-                        target: panel; property: "edgeOffset"
-                        to: panel._closedOffset; duration: Motion.popOut
-                        easing.type: Easing.InCubic
-                    }
-                    NumberAnimation {
-                        target: panel; property: "opacity"
-                        to: 0.0; duration: Motion.popOutFade; easing.type: Easing.InCubic
-                    }
-                }
-            }
-        ]
-
         onStateChanged: {
             if (state === "hidden") {
                 powerOpen = false
-                _placementSettled = false
             } else {
                 if (activeTab === 1) _settingsLoaded = true
                 if (activeTab === 2) _recentLoaded = true
@@ -334,13 +217,6 @@ PanelWindow {
                     Qt.callLater(function() { _loadedDeferred = true })
                 }
             }
-        }
-
-        Timer {
-            id: _placementSettle
-            interval: Motion.popSettle
-            repeat: false
-            onTriggered: panel._placementSettled = true
         }
 
         Item {

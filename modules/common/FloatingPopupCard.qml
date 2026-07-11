@@ -13,14 +13,17 @@ Rectangle {
     required property bool open
     required property real anchorX
     required property bool barBottom
+    // width the card is headed for; placement clamps against it, not the live width,
+    // so a card that animates its width doesn't fight the x Behavior frame by frame
+    property real targetWidth: width
 
     property bool _placementSettled: false
-    readonly property real _originX: Math.max(0, Math.min(width, anchorX - x))
+    readonly property real _originX: Math.max(0, Math.min(targetWidth, anchorX - x))
 
     readonly property int  _barInset: ShellSettings.barFloating ? 4 : 0
     readonly property int  _edgeY: _barInset + ShellSettings.barHeight + 8
     readonly property real _minX: radius + 4
-    readonly property real _maxX: Math.max(_minX, win.width - width - _minX)
+    readonly property real _maxX: Math.max(_minX, win.width - targetWidth - _minX)
 
     property real scaleAmt: Motion.popScaleFrom
     property real edgeOffset: _closedOffset
@@ -31,7 +34,7 @@ Rectangle {
     }
     function _targetX(): real {
         const t = Math.max(0, Math.min(win.width, anchorX))
-        return Math.round(_clampedX(t - width * t / Math.max(1, win.width)))
+        return Math.round(_clampedX(t - targetWidth * t / Math.max(1, win.width)))
     }
     function place(): void {
         x = _targetX()
@@ -43,6 +46,7 @@ Rectangle {
 
     on_MinXChanged: reclamp()
     on_MaxXChanged: reclamp()
+    onTargetWidthChanged: if (open) reclamp()
     onAnchorXChanged: place()
     onOpenChanged: {
         if (open) {
