@@ -6,9 +6,18 @@ import Quickshell
 Singleton {
     id: root
 
+    // Stop even the minute wake-up when the clock is hidden and neither quiet
+    // hours nor an open shell surface consumes calendar data.
+    readonly property bool _clockNeeded: ShellSettings.barShowClock
+        || ShellSettings.dndSchedule || MenuState.open || CalendarState.open
+
     SystemClock {
         id: clock
-        precision: ShellSettings.showSeconds ? SystemClock.Seconds : SystemClock.Minutes
+        enabled: root._clockNeeded
+        // Once the idle timeout lands the display is normally off. Keep quiet
+        // hours accurate without waking and repainting the bar every second.
+        precision: ShellSettings.barShowClock && ShellSettings.showSeconds && !Idle.isIdle
+            ? SystemClock.Seconds : SystemClock.Minutes
     }
 
     property string _lastDay:       ""
@@ -37,12 +46,19 @@ Singleton {
     Connections {
         target: clock
         function onDateChanged() { root._update() }
+        function onEnabledChanged() { if (clock.enabled) root._update() }
     }
 
     Connections {
         target: ShellSettings
         function onClock12hChanged() { root._update() }
         function onShowSecondsChanged() { root._update() }
+        function onBarShowClockChanged() { root._update() }
+    }
+
+    Connections {
+        target: Idle
+        function onIsIdleChanged() { root._update() }
     }
 
     function _update(): void {
@@ -64,8 +80,12 @@ Singleton {
             cachedHour = Qt.formatDateTime(clock.date, "HH")
             cachedAmPm = ""
         }
-        cachedSeconds = ShellSettings.showSeconds
-            ? Qt.formatDateTime(clock.date, ":ss")
-            : ""
+        if (!ShellSettings.barShowClock || !ShellSettings.showSeconds) {
+            cachedSeconds = ""
+        } else if (!Idle.isIdle || cachedSeconds.length === 0) {
+            // Freeze the last visible value while idle instead of collapsing the
+            // seconds slot; input resumes the live second tick immediately.
+            cachedSeconds = Qt.formatDateTime(clock.date, ":ss")
+        }
     }
 }
