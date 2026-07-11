@@ -7,6 +7,7 @@
 #   - qmldir entries pointing at files that don't exist
 #   - required Quickshell service imports and local module packaging
 #   - ShellSettings properties and schema drifting apart
+#   - settings navigation entries and detail components drifting apart
 #   - installer/updater portability regressions
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -135,6 +136,32 @@ if [ -f "$settings" ]; then
     fi
 else
     skip "settings" "ShellSettings.qml not found"
+fi
+
+section "settings navigation coverage"
+settings_nav="services/MenuState.qml"
+settings_page="modules/menu/SettingsPage.qml"
+if [ -f "$settings_nav" ] && [ -f "$settings_page" ]; then
+    nav_sections=$(grep -oE 'section: "[^"]+"' "$settings_nav" \
+                   | sed -E 's/.*"([^"]+)"/\1/' | sort -u)
+    mapped_sections=$(sed -n '/readonly property var _sectionComponents: ({/,/^[[:space:]]*})/p' "$settings_page" \
+                      | grep -oE '[a-zA-Z][a-zA-Z0-9]*:' | tr -d ':' \
+                      | grep -v '^sectionComponents$' | sort -u)
+    missing=$(comm -23 <(printf '%s\n' "$nav_sections") <(printf '%s\n' "$mapped_sections"))
+    extra=$(comm -13 <(printf '%s\n' "$nav_sections") <(printf '%s\n' "$mapped_sections"))
+    if [ -n "$missing" ]; then
+        fail "settings navigation entries without detail components:"
+        while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$missing"
+    fi
+    if [ -n "$extra" ]; then
+        fail "settings detail components missing from navigation:"
+        while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$extra"
+    fi
+    if [ -z "$missing" ] && [ -z "$extra" ]; then
+        ok "navigation" "entries match detail components"
+    fi
+else
+    skip "navigation" "settings navigation files not found"
 fi
 
 section "portability regressions"
