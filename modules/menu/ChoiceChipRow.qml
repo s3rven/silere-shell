@@ -19,16 +19,11 @@ Item {
     property real   topRadius:    0
     property real   bottomRadius: 0
     property real   cardInset:    1
-    // auto-stack when the inline form won't fit; positioned via x/y not flipped anchors so the switch is glitch-free.
-    // gauged off the *natural* inline width, not live width — segment widths depend on _stacked, so live width would close a binding loop
-    readonly property bool _stacked: width > 0 && _segContainer._maxNatW > 0
-        && _labelRow.implicitWidth + _segContainer._naturalW + 40 > width
-
     signal chosen(var value)
 
     // 4px multiples: keep card dividers on whole physical px under fractional scaling
     width:  parent ? parent.width : 0
-    height: _stacked ? 80 : 44
+    height: 44
     opacity: enabled ? 1.0 : 0.45
     Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium } }
 
@@ -48,26 +43,14 @@ Item {
         }
     }
 
-    HoverHandler { id: _rowHover; enabled: root.enabled }
-    RowHoverBg {
-        anchors.fill: parent
-        topRadius:    root.topRadius
-        bottomRadius: root.bottomRadius
-        cardInset:    root.cardInset
-        active:       (_rowHover.hovered || root.activeFocus) && root.enabled
-        fillOpacity:  0.08
-    }
-
     Item {
         id: _labelRow
+        z: 3
         x: 14
-        y: root._stacked ? 10 : (root.height - height) / 2
-        width: root._stacked ? root.width - 26 : Math.max(0, _segContainer.x - x - 10)
-        implicitWidth: (root.glyph.length > 0 ? 28 : 0) + _label.implicitWidth
-            + (_rowBadge.visible ? _rowBadge.width + 7 : 0)
+        y: (root.height - height) / 2
+        width: Math.max(0, _segContainer.x - x - 10)
         implicitHeight: Math.max(_glyph.implicitHeight, _label.implicitHeight)
         height: Math.max(_glyph.implicitHeight, _label.implicitHeight)
-        clip: true
 
         Text {
             id: _glyph
@@ -97,6 +80,7 @@ Item {
             font.pixelSize: Settings.fontSize
             renderType:     Text.NativeRendering
         }
+        HoverHandler { id: _labelHover; enabled: root.enabled }
         SettingsBadge {
             id: _rowBadge
             anchors.left: _label.right
@@ -105,25 +89,47 @@ Item {
             text: root.badge
             kind: root.badgeKind
         }
+
+        Rectangle {
+            x: _label.x - 6
+            anchors.verticalCenter: parent.verticalCenter
+            width: Math.min(_label.implicitWidth + 12,
+                root.width - _labelRow.x - _label.x - 12)
+            height: 28
+            radius: 7
+            visible: _label.truncated && _labelHover.hovered
+            color: Theme.menuControl
+            border.width: 1
+            border.color: Theme.menuControlLine
+
+            Text {
+                anchors.fill: parent
+                anchors.leftMargin: 6
+                anchors.rightMargin: 6
+                text: root.label
+                textFormat: Text.PlainText
+                verticalAlignment: Text.AlignVCenter
+                color: Theme.text
+                font.family: Settings.font
+                font.pixelSize: Settings.fontSize
+                fontSizeMode: Text.HorizontalFit
+                minimumPixelSize: Math.max(8, Settings.fontSize - 3)
+                renderType: Text.NativeRendering
+            }
+        }
     }
 
     Rectangle {
         id: _segContainer
-        // right-hugged in both modes — stacking moves the control down a line, it never inflates it
         x: root.width - 12 - width
-        y: root._stacked ? (_labelRow.y + _labelRow.height + 11) : (root.height - height) / 2
-        height:       32
-        width:        Math.min(Math.max(1, root.width - 26), _segRow.implicitWidth + 8)
+        y: (root.height - height) / 2
+        width: Math.min(172, Math.max(1, root.width - 26))
+        height: 28
         radius:       Theme.radiusControl
         antialiasing: true
-        color:        Theme.mix(Theme.menuControl, Theme.text,
-            root.activeFocus ? 0.055 : (_rowHover.hovered ? 0.035 : 0.012))
+        color: Theme.mix(Theme.menuControl, Theme.text, 0.012)
         border.width: 1
-        border.color: root.activeFocus ? Theme.withAlpha(root.accentColor, 0.42)
-                    : _rowHover.hovered ? Theme.menuControlLineHot : Theme.menuControlLine
-
-        Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
-        Behavior on border.color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+        border.color: Theme.menuControlLine
 
         // bumped when delegates are (re)created: itemAt() returns null while the Repeater populates;
         // without this the binding caches that null and the indicator stays hidden until the first click re-evals
@@ -133,53 +139,63 @@ Item {
             if (root._activeIndex < 0 || _segRepeater.count <= root._activeIndex) return null
             return _segRepeater.itemAt(root._activeIndex)
         }
+        property int _hoverIndex: -1
+        readonly property Item _hoverSeg: {
+            _segContainer._rev
+            if (_hoverIndex < 0 || _segRepeater.count <= _hoverIndex) return null
+            return _segRepeater.itemAt(_hoverIndex)
+        }
 
         property bool _animReady: false
         Component.onCompleted: Qt.callLater(function() {
             _segContainer._animReady = true
-            _segContainer._recalcNat()
         })
 
-        // equal-width segments: each takes the widest segment's natural width so the control reads as one tidy switch, not ragged chips.
-        // recomputed imperatively (not a binding over itemAt()) so a late-settling segment can't strand a stale max
-        property real _maxNatW: 0
-        function _recalcNat() {
-            let m = 0
-            for (let i = 0; i < _segRepeater.count; i++) {
-                const it = _segRepeater.itemAt(i)
-                if (it) m = Math.max(m, it.natW)
+        readonly property real _cellW: Math.max(1,
+            Math.floor((_segContainer.width - 8) / Math.max(1, root.model.length)))
+
+        Rectangle {
+            readonly property bool shown: _segContainer._hoverSeg
+                && _segContainer._hoverIndex !== root._activeIndex
+            x: _segContainer._hoverSeg
+                ? _segContainer._hoverSeg.x + _segRow.x
+                    + (_segContainer._hoverSeg.width - width) / 2
+                : 4
+            y: parent.height - 4
+            width: _segContainer._hoverSeg
+                ? Math.min(22, Math.max(10, _segContainer._hoverSeg.width - 14))
+                : 0
+            height: 2
+            radius: 1
+            antialiasing: true
+            color: Theme.withAlpha(root.accentColor, 0.34)
+            opacity: shown ? 1 : 0
+            visible: opacity > 0.001
+            Behavior on x {
+                enabled: _segContainer._animReady && !ShellSettings.reduceMotion
+                NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
             }
-            _maxNatW = m
+            Behavior on opacity { NumberAnimation { duration: Motion.fast } }
         }
-        // Natural inline width of the whole control (drives the stack decision).
-        readonly property real _naturalW: _maxNatW * root.model.length + 8
-        // space-starved cap only: stacked cells stay natural-width unless even that overflows the row
-        readonly property real _fullCellW: Math.max(1, Math.floor((root.width - 34) / Math.max(1, root.model.length)))
-        readonly property real _cellW: root._stacked ? Math.min(_fullCellW, _maxNatW) : _maxNatW
 
         Rectangle {
             id: _indicator
-            x:      _segContainer._activeSeg ? _segContainer._activeSeg.x + _segRow.x + 1 : 3
-            y:      3
-            width:  _segContainer._activeSeg ? _segContainer._activeSeg.width : 0
-            height: parent.height - 6
-            // concentric with the track: outer radius minus the 3px inset
-            radius:       Theme.radiusControl - 3
+            x: _segContainer._activeSeg
+                ? _segContainer._activeSeg.x + _segRow.x
+                    + (_segContainer._activeSeg.width - width) / 2
+                : 4
+            y: parent.height - 4
+            width: _segContainer._activeSeg
+                ? Math.min(22, Math.max(10, _segContainer._activeSeg.width - 14))
+                : 0
+            height: 2
+            radius: 1
             antialiasing: true
             opacity:      _segContainer._activeSeg ? 1.0 : 0.0
             visible:      opacity > 0.001
-
-            color:        Theme.mix(Theme.menuControl, root.accentColor, ShellSettings.neutralTheme ? 0.26 : 0.38)
-            border.width: 1
-            border.color: ShellSettings.neutralTheme
-                ? Theme.withAlpha(root.accentColor, 0.56)
-                : Theme.mix(Theme.menuCard, root.accentColor, 0.66)
+            color: Theme.withAlpha(root.accentColor, 0.82)
 
             Behavior on x        { enabled: _segContainer._animReady && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.width; easing.type: Easing.OutQuart } }
-            Behavior on width    { enabled: _segContainer._animReady && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.width; easing.type: Easing.OutQuart } }
-            Behavior on opacity  { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
-            Behavior on color        { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
-            Behavior on border.color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
         }
 
         Row {
@@ -191,8 +207,8 @@ Item {
             Repeater {
                 id: _segRepeater
                 model: root.model
-                onItemAdded:   { _segContainer._rev++; _segContainer._recalcNat() }
-                onItemRemoved: { _segContainer._rev++; _segContainer._recalcNat() }
+                onItemAdded:   _segContainer._rev++
+                onItemRemoved: _segContainer._rev++
 
                 delegate: Item {
                     id: _seg
@@ -210,12 +226,8 @@ Item {
                         && modelData.color !== null && String(modelData.color).length > 0
                     readonly property color segSwatchColor: segHasSwatch ? modelData.color : "transparent"
 
-                    // natural content width; the container maxes these to size every segment equally — never shrink below it or text clips
-                    readonly property real natW: Math.ceil(_content.implicitWidth) + 18
-                    onNatWChanged: _segContainer._recalcNat()
-
-                    width:  root._stacked ? _segContainer._cellW : Math.max(natW, _segContainer._cellW)
-                    height: 30
+                    width:  _segContainer._cellW
+                    height: 26
                     clip: true
 
                     Accessible.role: Accessible.RadioButton
@@ -239,29 +251,18 @@ Item {
                         id: _hover
                         enabled: root.enabled
                         cursorShape: root.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        onHoveredChanged: {
+                            if (hovered) _segContainer._hoverIndex = _seg.index
+                            else if (_segContainer._hoverIndex === _seg.index)
+                                _segContainer._hoverIndex = -1
+                        }
                     }
                     TapHandler {
-                        id: _tap
                         enabled: root.enabled
                         onTapped: root.chosen(_seg.modelData.value)
                     }
 
-                    // hover/focus preview: a faded ghost of the selection thumb, as if it had moved here
-                    Rectangle {
-                        anchors.fill: parent
-                        anchors.margins: 2
-                        radius: Theme.radiusControl - 3
-                        antialiasing: true
-                        color: Theme.mix(Theme.menuControl, root.accentColor, ShellSettings.neutralTheme ? 0.26 : 0.38)
-                        border.width: 1
-                        border.color: ShellSettings.neutralTheme
-                            ? Theme.withAlpha(root.accentColor, 0.56)
-                            : Theme.mix(Theme.menuCard, root.accentColor, 0.66)
-                        opacity: _seg.active ? 0.0 : (_seg.activeFocus ? 0.55 : (_hover.hovered ? 0.35 : 0.0))
-                        Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
-                    }
-
-                    // keyboard focus on the already-active segment: ring the real thumb
+                    // Keyboard focus stays explicit without adding pointer-hover fills.
                     Rectangle {
                         anchors.fill: parent
                         anchors.margins: 2
@@ -269,14 +270,10 @@ Item {
                         antialiasing: true
                         color: "transparent"
                         border.width: 1
-                        border.color: Theme.withAlpha(root.accentColor, 0.72)
-                        opacity: (_seg.active && _seg.activeFocus) ? 1.0 : 0.0
+                        border.color: Theme.withAlpha(root.accentColor, 0.58)
+                        opacity: _seg.activeFocus ? 1.0 : 0.0
                         Behavior on opacity { NumberAnimation { duration: Motion.fast } }
                     }
-
-                    scale: _tap.pressed ? 0.97 : 1.0
-                    transformOrigin: Item.Center
-                    Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
                     Row {
                         id: _content
@@ -294,7 +291,6 @@ Item {
                             font.pixelSize: Math.max(9, Settings.fontSize - 1)
                             font.weight:    Font.Medium
                             renderType:     Text.NativeRendering
-                            Behavior on color { ColorAnimation { duration: Motion.fast } }
                         }
                         Rectangle {
                             anchors.verticalCenter: parent.verticalCenter
@@ -308,30 +304,28 @@ Item {
                             border.color:   _seg.active
                                 ? Theme.withAlpha(Theme.text, 0.42)
                                 : (_hover.hovered ? Theme.withAlpha(Theme.text, 0.30) : Theme.withAlpha(Theme.subtext, 0.22))
-                            Behavior on border.color { ColorAnimation { duration: Motion.fast } }
                         }
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             visible:        _seg.modelData.label.length > 0
                             text:           _seg.modelData.label
                             textFormat:     Text.PlainText
-                            // cap against the static space budget, not _seg.width — natW feeds cell width,
-                            // so a live-width cap loops layout (width → natW → cellW → width) and polishes every frame
-                            width: root._stacked
-                                ? Math.min(implicitWidth, Math.max(18, _segContainer._fullCellW - 18
-                                    - (_seg.segGlyph.length > 0 ? 18 : 0)
-                                    - (_seg.segHasSwatch ? 16 : 0)
-                                    - (_segBadge.visible ? _segBadge.width + 4 : 0)))
-                                : implicitWidth
+                            width: Math.min(implicitWidth, Math.max(14, _segContainer._cellW - 8
+                                - (_seg.segGlyph.length > 0 ? 18 : 0)
+                                - (_seg.segHasSwatch ? 16 : 0)
+                                - (_segBadge.visible ? _segBadge.width + 4 : 0)))
+                            height: 18
+                            verticalAlignment: Text.AlignVCenter
                             elide:          Text.ElideRight
                             color:          _seg.active
                                 ? Theme.mix(Theme.text, root.accentColor, ShellSettings.highContrast ? 0.0 : 0.10)
                                 : (_hover.hovered ? Theme.withAlpha(Theme.text, 0.88) : Theme.withAlpha(Theme.subtext, 0.68))
                             font.family:    Settings.font
                             font.pixelSize: Math.max(9, Settings.fontSize - 1)
+                            fontSizeMode: Text.HorizontalFit
+                            minimumPixelSize: Math.max(8, Settings.fontSize - 3)
                             font.weight:    _seg.active ? Font.DemiBold : Font.Medium
                             renderType:     Text.NativeRendering
-                            Behavior on color { ColorAnimation { duration: Motion.fast } }
                         }
                         SettingsBadge {
                             id: _segBadge
