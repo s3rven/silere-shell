@@ -24,17 +24,15 @@ Item {
     readonly property bool _rightEmpty: _rightCount === 0
     readonly property int  _leftPad:  _leftEmpty  ? _rowH : 0
     readonly property int  _rightPad: _rightEmpty ? _rowH : 0
+    readonly property int  _listTop: 12 + _headerH
+    readonly property real _leftBottom: _listTop + _leftCount * _rowH + _leftPad
 
     property string _expandedKey: ""
-    readonly property int _expandedSlot: {
-        if (!_expandedKey) return -1
-        const loc = root._locate(_expandedKey)
-        return loc.zone === "left" ? loc.index : _leftCount + loc.index
-    }
+    readonly property int _expandedSlot: _combinedSlotOf(_expandedKey)
     readonly property int _expandedExtra: _expandedKey ? _optionsHeightFor(_expandedKey) : 0
 
     width:  parent ? parent.width : 0
-    height: 12 + _headerH + _leftCount * _rowH + _leftPad + _headerH + _rightCount * _rowH + _rightPad + _footerH + _expandedExtra
+    height: _leftBottom + _headerH + _rightCount * _rowH + _rightPad + _footerH + _expandedExtra
     implicitHeight: height
     Behavior on height { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
@@ -43,17 +41,20 @@ Item {
     property string _focusedKey: ""
     readonly property string _dragZone: _draggingKey.length > 0 ? _zoneForY(_dragY) : ""
     // the dragged key's preview slot
-    readonly property int _dragSlot: {
-        if (_draggingKey.length === 0) return -1
-        const loc = root._locate(_draggingKey)
-        return loc.zone === "left" ? loc.index : _leftCount + loc.index
-    }
+    readonly property int _dragSlot: _combinedSlotOf(_draggingKey)
 
     function _locate(key: string): var {
         const li = root._leftKeys.indexOf(key)
         if (li >= 0) return { zone: "left", index: li }
         const ri = root._rightKeys.indexOf(key)
         return ri >= 0 ? { zone: "right", index: ri } : { zone: "", index: -1 }
+    }
+
+    function _combinedSlotOf(key: string): int {
+        if (!key) return -1
+        const loc = root._locate(key)
+        if (loc.index < 0) return -1
+        return loc.zone === "left" ? loc.index : root._leftCount + loc.index
     }
 
     function _beginDrag(key: string): void {
@@ -86,59 +87,63 @@ Item {
         return key === "battery" || key === "network" || key === "clock" || key === "media"
     }
 
+    // static per key — a live read here becomes a model dependency that rebuilds every delegate on change
     function _optionsFor(key: string): var {
         if (key === "battery") return [
-            { glyph: "󰂃", label: "Hide when charging or full", setting: "batteryAutoHide",
-              available: ShellSettings.barShowBattery && Battery.available,
-              note: !Battery.available ? "No battery" : "Battery hidden", nested: false }
+            { glyph: "󰂃", label: "Hide when charging or full", setting: "batteryAutoHide" }
         ]
-        if (key === "clock") {
-            const a = ShellSettings.barShowClock
-            return [
-                { glyph: "󱑂", label: "Seconds", setting: "showSeconds",   available: a, note: "Clock hidden", nested: false },
-                { glyph: "󰃭", label: "Date",    setting: "clockShowDate", available: a, note: "Clock hidden", nested: false },
-                { glyph: "󰔟", label: "12-hour", setting: "clock12h",      available: a, note: "Clock hidden", nested: false }
-            ]
-        }
+        if (key === "clock") return [
+            { glyph: "󱑂", label: "Seconds", setting: "showSeconds" },
+            { glyph: "󰃭", label: "Date",    setting: "clockShowDate" },
+            { glyph: "󰔟", label: "12-hour", setting: "clock12h" }
+        ]
         if (key === "media") return [
-            { glyph: "󰐊", label: "Playback helper", setting: "mediaWidgetHelper",
-              available: ShellSettings.barShowMedia, note: "Media hidden", nested: false }
+            { glyph: "󰐊", label: "Playback helper", setting: "mediaWidgetHelper" }
         ]
-        if (key === "network") {
-            const a = ShellSettings.barShowNetwork && Network.toolAvailable
-            const note = !Network.toolAvailable ? "NetworkManager missing" : "Network hidden"
-            const rows = [ { glyph: "󰓅", label: "Network speed", setting: "networkTrafficStats", available: a, note: note, nested: false } ]
-            if (ShellSettings.networkTrafficStats)
-                rows.push({ glyph: "󰐃", label: "Always show speed", setting: "networkSpeedInline", available: a, note: note, nested: true })
-            rows.push({ glyph: "󰦝", label: "Show connection under VPN", setting: "netVpnShowLink", available: a, note: note, nested: false })
-            return rows
-        }
+        if (key === "network") return [
+            { glyph: "󰓅", label: "Network speed", setting: "networkTrafficStats" },
+            { glyph: "󰐃", label: "Always show speed", setting: "networkSpeedInline", nested: true, showWhen: "networkTrafficStats" },
+            { glyph: "󰦝", label: "Show connection under VPN", setting: "netVpnShowLink" }
+        ]
         return []
     }
+    function _optionsAvailable(key: string): bool {
+        if (key === "battery") return ShellSettings.barShowBattery && Battery.available
+        if (key === "clock")   return ShellSettings.barShowClock
+        if (key === "media")   return ShellSettings.barShowMedia
+        if (key === "network") return ShellSettings.barShowNetwork && Network.toolAvailable
+        return false
+    }
+    function _optionsNote(key: string): string {
+        if (key === "battery") return Battery.available ? "Battery hidden" : "No battery"
+        if (key === "clock")   return "Clock hidden"
+        if (key === "media")   return "Media hidden"
+        if (key === "network") return Network.toolAvailable ? "Network hidden" : "NetworkManager missing"
+        return ""
+    }
     function _optionsHeightFor(key: string): int {
-        const n = _optionsFor(key).length
+        const rows = _optionsFor(key)
+        let n = 0
+        for (const r of rows)
+            if (!r.showWhen || ShellSettings[r.showWhen]) n++
         return n > 0 ? n * root._optRowH + 8 : 0
     }
 
     function _yForSlot(slot: real): real {
         let y = slot < root._leftCount
-            ? 12 + root._headerH + slot * root._rowH
-            : 12 + root._headerH + root._leftCount * root._rowH + root._leftPad + root._headerH + (slot - root._leftCount) * root._rowH
+            ? root._listTop + slot * root._rowH
+            : root._leftBottom + root._headerH + (slot - root._leftCount) * root._rowH
         if (root._expandedSlot >= 0 && slot > root._expandedSlot)
             y += root._expandedExtra
         return y
     }
     function _zoneForY(y: real): string {
-        const leftBottom = 12 + root._headerH + root._leftCount * root._rowH + root._leftPad
-        return y < leftBottom - root._rowH / 2 ? "left" : "right"
+        return y < root._leftBottom - root._rowH / 2 ? "left" : "right"
     }
     function _slotForY(y: real): int {
-        const leftBottom = 12 + root._headerH + root._leftCount * root._rowH + root._leftPad
-        const boundary = leftBottom - root._rowH / 2
-        if (y < boundary)
-            return root._leftEmpty ? 0 : Math.max(0, Math.round((y - 12 - root._headerH) / root._rowH))
-        const rightRaw = y - root._yForSlot(root._leftCount)
-        const rightSlot = Math.round(rightRaw / root._rowH)
+        if (y < root._leftBottom - root._rowH / 2)
+            return root._leftEmpty ? 0 : Math.max(0, Math.round((y - root._listTop) / root._rowH))
+        const rightSlot = Math.round((y - root._yForSlot(root._leftCount)) / root._rowH)
         return root._leftCount + Math.max(0, Math.min(root._rightCount, rightSlot))
     }
 
@@ -180,11 +185,11 @@ Item {
         Behavior on y { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
     }
 
-    // landing-slot marker
+    // landing-slot marker; parks on _dragY while hidden so appearing can't animate in from the top
     Rectangle {
         visible: root._dragSlot >= 0
         x: 2; width: root.width - 4
-        y: visible ? root._yForSlot(root._dragSlot) + 2 : 0
+        y: visible ? root._yForSlot(root._dragSlot) + 2 : root._dragY + 2
         height: root._rowH - 4
         radius: 8
         antialiasing: true
@@ -192,9 +197,24 @@ Item {
         border.width: 1
         border.color: Theme.withAlpha(Theme.accent, 0.30)
         Behavior on y {
-            enabled: visible && !ShellSettings.reduceMotion
+            // unqualified `visible` in a Behavior resolves to the document root, never this rectangle
+            enabled: root._draggingKey.length > 0 && !ShellSettings.reduceMotion
             NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
         }
+    }
+
+    // outline riding on the dragged row
+    Rectangle {
+        visible: root._draggingKey.length > 0
+        x: 2; width: root.width - 4
+        y: root._dragY + 2
+        height: root._rowH - 4
+        z: 30
+        radius: 8
+        antialiasing: true
+        color: "transparent"
+        border.width: 1
+        border.color: Theme.withAlpha(Theme.accent, 0.35)
     }
 
     Repeater {
@@ -214,6 +234,8 @@ Item {
             readonly property bool _checked: _hasToggle ? ShellSettings[meta.setting] : true
             readonly property bool _hasOptions: root._hasOptions(key)
             readonly property bool _expanded: root._expandedKey === key
+            property bool _optionsLoaded: false
+            on_ExpandedChanged: if (_expanded) _optionsLoaded = true
 
             x: 0
             width:  root.width
@@ -241,7 +263,7 @@ Item {
                     fillOpacity:  _row._dragging ? 0.10 : (_keyFocus.activeFocus ? 0.08 : 0.05)
                 }
 
-                HoverHandler { id: _rowHover; cursorShape: Qt.OpenHandCursor }
+                HoverHandler { id: _rowHover; cursorShape: _dragH.active ? Qt.ClosedHandCursor : Qt.OpenHandCursor }
                 DragHandler {
                     id: _dragH
                     target: null
@@ -251,15 +273,16 @@ Item {
                         if (active) {
                             root._expandedKey = ""
                             _dragH._startY = root._yForSlot(_row._combinedSlot)
-                            root._beginDrag(_row.key)
+                            // dragY must be current before visibility flips or the marker/outline show at the stale spot
                             root._dragY = _dragH._startY
+                            root._beginDrag(_row.key)
                         } else {
                             root._finishDrag(_row.key)
                         }
                     }
                     onTranslationChanged: {
                         if (!active) return
-                        const minY = 12 + root._headerH
+                        const minY = root._listTop
                         const maxY = root._rightEmpty
                             ? root._yForSlot(root._leftCount)
                             : root._yForSlot(root._allKeys.length - 1)
@@ -274,17 +297,6 @@ Item {
                         root._previewMove(_row.key, targetZone, targetIdxInZone)
                     }
                 }
-                Rectangle {
-                    anchors.fill: parent
-                    anchors.margins: 2
-                    radius: 8
-                    antialiasing: true
-                    color: "transparent"
-                    visible: _row._dragging
-                    border.width: 1
-                    border.color: Theme.withAlpha(Theme.accent, 0.35)
-                }
-
                 Item {
                     id: _handle
                     anchors.left: parent.left
@@ -300,8 +312,6 @@ Item {
                         renderType: Text.NativeRendering
                         Behavior on color { ColorAnimation { duration: Motion.fast } }
                     }
-
-                    HoverHandler { id: _handleHover; cursorShape: Qt.OpenHandCursor }
                 }
 
                 Text {
@@ -399,7 +409,7 @@ Item {
 
                 Loader {
                     width: parent.width
-                    active: _row._hasOptions
+                    active: _row._hasOptions && _row._optionsLoaded
                     sourceComponent: Column {
                         width: _optWrap.width
                         Repeater {
@@ -408,7 +418,10 @@ Item {
                                 id: _opt
                                 required property var modelData
                                 readonly property bool _on: ShellSettings[modelData.setting]
-                                readonly property bool _canToggle: _row._expanded && modelData.available
+                                readonly property bool _avail: root._optionsAvailable(_row.key)
+                                readonly property bool _shown: !modelData.showWhen || ShellSettings[modelData.showWhen]
+                                readonly property bool _canToggle: _row._expanded && _shown && _avail
+                                visible: _shown
                                 width: _optWrap.width
                                 height: root._optRowH
 
@@ -417,7 +430,7 @@ Item {
                                 Accessible.name: _opt.modelData.label
                                 Accessible.checked: _opt._on
                                 function _activate(): void {
-                                    if (!_opt.modelData.available) return
+                                    if (!_opt._avail) return
                                     _optToggle.armFlipAnimation()
                                     ShellSettings[_opt.modelData.setting] = !ShellSettings[_opt.modelData.setting]
                                 }
@@ -426,7 +439,7 @@ Item {
                                 Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) _opt._activate(); event.accepted = true }
 
                                 HoverHandler { id: _optHover; cursorShape: _opt._canToggle ? Qt.PointingHandCursor : Qt.ArrowCursor }
-                                TapHandler { enabled: _opt.modelData.available; onTapped: _opt._activate() }
+                                TapHandler { enabled: _opt._avail; onTapped: _opt._activate() }
 
                                 // collapsing hides this subtree; hand keyboard focus back to the row instead of orphaning it
                                 Connections {
@@ -444,7 +457,7 @@ Item {
                                     anchors.bottomMargin: 2
                                     radius: 8
                                     antialiasing: true
-                                    visible: (_optHover.hovered || _opt.activeFocus) && _opt.modelData.available
+                                    visible: (_optHover.hovered || _opt.activeFocus) && _opt._avail
                                     color: Theme.withAlpha(Theme.text, _opt.activeFocus ? 0.08 : 0.05)
                                     border.width: 1
                                     border.color: Theme.withAlpha(Theme.accent, _opt.activeFocus ? 0.45 : 0)
@@ -459,7 +472,7 @@ Item {
                                     width: 18
                                     horizontalAlignment: Text.AlignHCenter
                                     text: _opt.modelData.glyph
-                                    color: Theme.withAlpha(Theme.subtext, _opt.modelData.available ? 0.85 : 0.4)
+                                    color: Theme.withAlpha(Theme.subtext, _opt._avail ? 0.85 : 0.4)
                                     font.family: Settings.font
                                     font.pixelSize: Settings.fontSize - 1
                                     renderType: Text.NativeRendering
@@ -472,7 +485,7 @@ Item {
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: _opt.modelData.label
                                     textFormat: Text.PlainText
-                                    color: _opt.modelData.available ? Theme.withAlpha(Theme.text, 0.9) : Theme.withAlpha(Theme.text, 0.45)
+                                    color: Theme.withAlpha(Theme.text, _opt._avail ? 0.9 : 0.45)
                                     font.family: Settings.font
                                     font.pixelSize: Settings.fontSize - 1
                                     renderType: Text.NativeRendering
@@ -484,8 +497,8 @@ Item {
                                     anchors.right: _optToggle.left
                                     anchors.rightMargin: 8
                                     anchors.verticalCenter: parent.verticalCenter
-                                    visible: !_opt.modelData.available && _opt.modelData.note.length > 0
-                                    text: _opt.modelData.note
+                                    visible: !_opt._avail && text.length > 0
+                                    text: root._optionsNote(_row.key)
                                     textFormat: Text.PlainText
                                     elide: Text.ElideRight
                                     horizontalAlignment: Text.AlignRight
@@ -500,8 +513,8 @@ Item {
                                     anchors.right: parent.right
                                     anchors.rightMargin: 12
                                     anchors.verticalCenter: parent.verticalCenter
-                                    enabled: _opt.modelData.available
-                                    opacity: _opt.modelData.available ? 1 : 0.45
+                                    enabled: _opt._avail
+                                    opacity: _opt._avail ? 1 : 0.45
                                     checked: _opt._on
                                 }
                             }
@@ -561,7 +574,7 @@ Item {
             readonly property bool dragging: root._draggingKey.length > 0
             visible: _isLeft ? root._leftEmpty : root._rightEmpty
             x: 10; width: root.width - 20
-            y: (_isLeft ? 12 + root._headerH : root._yForSlot(root._leftCount)) + 3
+            y: (_isLeft ? root._listTop : root._yForSlot(root._leftCount)) + 3
             height: root._rowH - 6
             radius: 10
             antialiasing: true
