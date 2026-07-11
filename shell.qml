@@ -17,6 +17,11 @@ ShellRoot {
 
     readonly property ShellScreen activeOverlayScreen: Monitors.overlayScreen
 
+    function armSystemAlertsIfNeeded(): void {
+        if (ShellSettings.osdBatteryWarn || ShellSettings.osdTempWarn)
+            void SystemAlerts.armed
+    }
+
     Connections {
         target: Quickshell
         function onReloadCompleted() { Quickshell.inhibitReloadPopup() }
@@ -25,9 +30,15 @@ ShellRoot {
     // Quickshell lazy-loads singletons — reading a member instantiates them, a bare type reference won't.
     // these are startup diagnostics/alerts whose watchers must arm before the user opens a panel.
     Component.onCompleted: {
-        void SystemAlerts.armed
         void NotifWatch.armed
         void Screenshot.armed
+        root.armSystemAlertsIfNeeded()
+    }
+
+    Connections {
+        target: ShellSettings
+        function onOsdBatteryWarnChanged() { root.armSystemAlertsIfNeeded() }
+        function onOsdTempWarnChanged() { root.armSystemAlertsIfNeeded() }
     }
 
     Variants {
