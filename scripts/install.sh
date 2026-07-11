@@ -333,7 +333,7 @@ else
     printf "    ${DIM}–       %-13s %s${R}\n" "pipewire" "volume + sound popup"
 fi
 _optdep brightnessctl "brightness control + popup"
-_optdep inotifywait   "screenshot flash, wallpaper-picker feedback"
+_optdep inotifywait   "screenshot flash"
 _optdep nmcli         "Wi-Fi name, signal, VPN"
 _optdep cava          "audio visualizer"
 _optdep_any updates   "update count" checkupdates apt dnf zypper xbps-install

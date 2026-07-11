@@ -11,7 +11,6 @@ PanelWindow {
     id: bar
 
     required property ShellScreen targetScreen
-    required property bool pickerActive
 
     WlrLayershell.namespace: "silere-bar"
 
@@ -40,7 +39,7 @@ PanelWindow {
     readonly property int  shadowPad: ShellSettings.barFloating ? 24 : 0
 
     // hidden states release the reserved zone so overview windows fill the bar strip instead of leaving a phantom gap; reflow rides the windowsMove anim
-    readonly property bool concealed: bar.pickerActive || OverviewState.active
+    readonly property bool concealed: OverviewState.active
 
     // shared by the edge line and wrap border so both track the strength slider
     readonly property real lineAlpha: Math.min(0.9, (ShellSettings.neutralTheme ? 0.22 : 0.28) * ShellSettings.barLineStrength)
