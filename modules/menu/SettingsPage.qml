@@ -719,8 +719,6 @@ PageShell {
                             onChanged: (v) => {
                                 if (ShellSettings.underlineGlow) {
                                     ShellSettings.glowStrength = v
-                                    // idle-breath ceiling follows the main strength so low settings stay calm
-                                    ShellSettings.activeGlowStrength = Math.min(1, 0.45 + 0.4 * v)
                                 } else {
                                     ShellSettings.barLineStrength = v
                                 }

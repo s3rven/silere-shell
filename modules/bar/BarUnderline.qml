@@ -58,7 +58,10 @@ Item {
             enabled: !ShellSettings.reduceMotion
             NumberAnimation { duration: Motion.slow; easing.type: Easing.OutCubic }
         }
-        readonly property real _scaledGlow:  (_primaryGlow + _stackBonus) * ShellSettings.activeGlowStrength
+        // Event intensity follows the visible glow control. Keeping this derived avoids a hidden persisted
+        // value becoming stale when settings are loaded or edited outside the UI.
+        readonly property real _activeGlowStrength: Math.min(1, 0.45 + 0.4 * ShellSettings.glowStrength)
+        readonly property real _scaledGlow:  (_primaryGlow + _stackBonus) * _activeGlowStrength
         readonly property real _eventGlow:   Math.max(_scaledGlow, _batteryGlow, _tempGlow)
         // soft boost while cava runs — the waveform baseline sits on the underline, so glow makes them read as one
         property real _mediaGlow: (_glowEnabled && ShellSettings.mediaProgress && Media.shown && Media.cavaReady) ? 0.18 : 0

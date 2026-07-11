@@ -84,7 +84,6 @@ Singleton {
     property bool   underlineTempGlow:       false
     property bool   underlineScreenshotGlow: false
     property real   glowStrength:            1.0
-    property real   activeGlowStrength:      1.0
     property bool   screenshotGlowSweep:     true
 
     property real   dotOpacity:          0.35
@@ -297,7 +296,6 @@ Singleton {
         { k: "underlineTempGlow",   t: "bool" },
         { k: "underlineScreenshotGlow", t: "bool" },
         { k: "glowStrength",        t: "real", min: 0.5, max: 2.0 },
-        { k: "activeGlowStrength",  t: "real", min: 0.1, max: 1.0 },
         { k: "screenshotGlowSweep", t: "bool" },
         { k: "dotOpacity",          t: "real", min: 0.05, max: 1.0 },
         { k: "dotStyle",            t: "enum", vals: ["·", "•", "◦", "|", "slash", "line", "none"] },
@@ -359,6 +357,7 @@ Singleton {
         delete j.midnightNeutral
         delete j.warmNeutral
         delete j.screenshotGlowTint
+        delete j.activeGlowStrength
         return j
     }
 
