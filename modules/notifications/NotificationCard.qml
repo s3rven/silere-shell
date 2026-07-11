@@ -44,44 +44,24 @@ Item {
         return out
     }
 
-    readonly property string iconSource: {
-        const img = notification.image || ""
-        if (img.length > 0) return img
-        const ai = String(notification.appIcon || "")
-        if (ai.length > 0) {
-            if (ai.startsWith("/") || ai.startsWith("file://")) return ai
-            const p = Quickshell.iconPath(ai, true)
-            if (p.length > 0) return p
-        }
-        const de = DesktopEntries.heuristicLookup(card.appNameText)
-        if (de && de.icon) {
-            const p2 = Quickshell.iconPath(de.icon, true)
-            if (p2.length > 0) return p2
-        }
-        return ""
-    }
-    readonly property bool hasIcon: iconSource.length > 0
+    readonly property string appIconSource: Notifications.appIconSource(
+        notification.appIcon, notification.desktopEntry, card.appNameText)
+    readonly property string notificationImageSource: Notifications.fileUrl(notification.image)
+    readonly property bool hasAppIcon: appIconSource.length > 0
+    readonly property bool hasNotificationImage: notificationImageSource.length > 0
 
-    // file-path images (screenshots, transfers) get a wide preview; theme icons and image-data avatars stay in the icon slot
-    readonly property string contentImageSource: {
-        const img = String(notification.image || "")
-        if (img.startsWith("/") || img.startsWith("file://")) return img
-        const ai = String(notification.appIcon || "")
-        if ((ai.startsWith("/") || ai.startsWith("file://"))
-            && /\.(png|jpe?g|webp|bmp)$/i.test(ai)
-            && !/\/(icons|pixmaps)\//i.test(ai)) return ai
-        return ""
-    }
+    readonly property string contentImageSource: notificationImageSource
     readonly property bool hasContentImage: contentImageSource.length > 0
-    readonly property string contentImagePath: contentImageSource.replace(/^file:\/\//, "")
-    // decoded size decides: small or square files are app icons/avatars shipped as paths, not screenshots
+    readonly property string contentImageTarget: contentImageSource.startsWith("/")
+        || contentImageSource.startsWith("file:") ? contentImageSource : ""
     readonly property bool showContentImage: hasContentImage
         && _previewImg.status === Image.Ready
         && _previewImg.implicitWidth >= 200
         && _previewImg.implicitWidth !== _previewImg.implicitHeight
     readonly property bool _previewSettled: !hasContentImage
         || _previewImg.status === Image.Ready || _previewImg.status === Image.Error
-    readonly property bool showIconSlot: hasIcon && _previewSettled && !showContentImage
+    readonly property bool showIconSlot: _previewSettled && (hasAppIcon
+        || (hasNotificationImage && _previewImg.status === Image.Ready && !showContentImage))
 
     readonly property string summaryText: Notifications.plainText(notification.summary)
     readonly property string bodyText:    Notifications.plainText(notification.body)
@@ -295,12 +275,12 @@ Item {
             anchors.left:       parent.left
             anchors.topMargin:  13
             anchors.leftMargin: 14
-            Image {
+            // The notification image wins when present; one texture item covers both cases.
+            IconImage {
                 anchors.fill: parent
-                source: card.iconSource
-                sourceSize.width:  48
-                sourceSize.height: 48
-                fillMode: Image.PreserveAspectCrop
+                source: card.hasNotificationImage && !card.showContentImage
+                    && _previewImg.status === Image.Ready
+                    ? card.notificationImageSource : card.appIconSource
                 asynchronous: true
             }
         }
@@ -568,8 +548,9 @@ Item {
                 // default action first (app-side open/reply), then raise the window
                 if (mouse.button !== Qt.MiddleButton && card._defaultAction)
                     card._defaultAction.invoke()
-                else if (mouse.button !== Qt.MiddleButton && card.showContentImage)
-                    Quickshell.execDetached(["xdg-open", card.contentImagePath])
+                else if (mouse.button !== Qt.MiddleButton && card.showContentImage
+                        && card.contentImageTarget.length > 0)
+                    Quickshell.execDetached(["xdg-open", card.contentImageTarget])
                 HyprActions.focusNotificationSource(card.notification)
                 if (mouse.button !== Qt.MiddleButton)
                     card.dismiss()

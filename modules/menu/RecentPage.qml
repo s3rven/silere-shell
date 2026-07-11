@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell.Widgets
 import "../../config"
 import "../../services"
 import "../common"
@@ -272,6 +273,8 @@ PageShell {
                     required property int index
 
                     readonly property bool _critical: Number(modelData.urgency) === 2
+                    readonly property string _appIconSource: Notifications.appIconSource(
+                        modelData.appIcon, modelData.desktopEntry, modelData.appName)
                     readonly property bool _showSection: index === 0
                         || root.dayKey(modelData.time) !== root.dayKey(Notifications.history[index - 1]?.time)
                     readonly property int _sectionHeight: _showSection ? 26 : 0
@@ -429,10 +432,22 @@ PageShell {
                                 width: parent.width
                                 spacing: 7
 
+                                IconImage {
+                                    id: _appIcon
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    visible: _entry._appIconSource.length > 0
+                                    width: visible ? 16 : 0
+                                    height: 16
+                                    source: _entry._appIconSource
+                                    asynchronous: true
+                                }
+
                                 Text {
                                     id: _appName
                                     anchors.verticalCenter: parent.verticalCenter
-                                    width: Math.max(0, parent.width - _entryTime.implicitWidth - parent.spacing - 24)
+                                    width: Math.max(0, parent.width - _entryTime.implicitWidth
+                                        - parent.spacing - 24
+                                        - (_appIcon.visible ? _appIcon.width + parent.spacing : 0))
                                     text: _entry.modelData.appName || "Notification"
                                     textFormat: Text.PlainText
                                     color: _entry._critical ? Theme.error : Theme.withAlpha(Theme.subtext, 0.70)

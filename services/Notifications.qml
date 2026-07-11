@@ -195,6 +195,28 @@ Singleton {
             .replace(/&amp;/g, "&")
     }
 
+    // bare absolute paths resolve against the qml context (qrc:/...) and fail to load
+    function fileUrl(raw): string {
+        const value = String(raw || "").trim()
+        return value.startsWith("/") ? "file://" + encodeURI(value) : value
+    }
+
+    function resolveIconSource(raw): string {
+        const value = String(raw || "").trim()
+        if (value.length === 0) return ""
+        if (value.startsWith("/")) return root.fileUrl(value)
+        if (/^[a-z][a-z0-9+.-]*:/i.test(value)) return value
+        return Quickshell.iconPath(value, true)
+    }
+
+    function appIconSource(appIcon, desktopEntry, appName): string {
+        const direct = root.resolveIconSource(appIcon)
+        if (direct.length > 0) return direct
+        const identity = String(desktopEntry || appName || "")
+        const entry = DesktopEntries.heuristicLookup(identity)
+        return entry && entry.icon ? root.resolveIconSource(entry.icon) : ""
+    }
+
     function removeFromHistory(entry): void {
         const idx = (typeof entry === "number")
             ? entry
