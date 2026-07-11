@@ -17,7 +17,7 @@ Singleton {
     property real   mediaVisualizerCenterWidth: 0.68  // fraction of the free center span
     property real   mediaVisualizerCenterOffset: 0.0  // -1 left, 0 centered, 1 right inside the free center span
     property bool   mediaVisualizerPauseFullscreen: true
-    property bool   workspaceShift:      true
+    property bool   workspaceShift:      false
     property bool   neutralTheme:        true
     property bool   neutralAccentAuto:   false
     property string neutralAccent:       "#b8bdd8"
@@ -35,9 +35,9 @@ Singleton {
     property bool   windowTitleCenterGap: true   // centre in the free span between the zones instead of on the bar
     property bool   updatesWidget:       false
     property bool   trayWidget:          false
-    property bool   valuesOnHover:       false
+    property bool   valuesOnHover:       true
     property bool   hoverLevelBar:       false   // replace hidden battery/volume/brightness values with a compact level bar
-    property bool   batteryAutoHide:     false
+    property bool   batteryAutoHide:     true
     property bool   barShowBattery:      true
     property bool   barShowNetwork:      true
     property bool   barShowClock:        true
@@ -62,9 +62,9 @@ Singleton {
     property string fontFamily:          ""      // "" = JetBrainsMono Nerd Font; picker offers installed Nerd families
 
     property bool   notifPopupEnabled:   true
-    property bool   notifFullscreenSilence: false  // archive popups while a window is fullscreen
+    property bool   notifFullscreenSilence: true   // archive popups while a window is fullscreen
     property string notifPosition:       "top-right"  // "top-right" | "top-left" | "top-center"
-    property int    notifMaxVisible:     5            // 0 = unlimited
+    property int    notifMaxVisible:     3            // 0 = unlimited
     property bool   dndSchedule:         false        // auto do-not-disturb during quiet hours
     property int    dndFrom:             22           // quiet-hours start hour (0-23)
     property int    dndTo:               8            // quiet-hours end hour (0-23)
@@ -85,9 +85,9 @@ Singleton {
     property bool   underlineTempGlow:       false
     property bool   underlineScreenshotGlow: false
     property real   glowStrength:            1.0
-    property bool   screenshotGlowSweep:     true
+    property bool   screenshotGlowSweep:     false
 
-    property real   dotOpacity:          0.35
+    property real   dotOpacity:          0.28
     property string dotStyle:            "·"       // "·" | "•" | "◦" | "|" | "slash" | "line" | "none"
     property int    barSpacing:          11        // gap between bar widgets / separators
     property bool   barAutoCompact:      true      // automatically tighten separators when the bar gets crowded
@@ -101,7 +101,7 @@ Singleton {
     property bool   barShadow:           false    // drop shadow under the floating surface
     property real   barShadowStrength:   1.0      // scales the floating shadow's depth, 0.3-2.0
     property string barPosition:         "top"     // "top" | "bottom"
-    property real   barOpacity:          0.82
+    property real   barOpacity:          0.88
     property string barDisabledMonitors: ""        // comma-joined connector names whose bar is hidden
     property string overlayMonitor:      ""        // "" = follow focus; else a monitor connector name for notifs/OSD
 
@@ -206,7 +206,7 @@ Singleton {
     property int    wsMinVisible:        5
     property bool   wsShowNumbers:       false
     property bool   wsRomanNumerals:     false
-    property bool   wsScrollSwitch:      true
+    property bool   wsScrollSwitch:      false
     property bool   wsShowAppIcons:      false
     property bool   wsNotifPulse:        false
     property real   wsMarkerOpacity:     1.0
