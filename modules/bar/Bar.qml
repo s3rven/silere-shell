@@ -152,58 +152,60 @@ PanelWindow {
             opacity: contents.opacity
         }
 
-        Rectangle {
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.leftMargin: surface.radius
-            anchors.rightMargin: surface.radius
-            y: bar.atBottom ? parent.height - 1 : 0
-            height: 1
-            antialiasing: false
-            visible: ShellSettings.barFloating && (bar.shadowOn || ShellSettings.barBorderVisible) && opacity > 0.001
+        // floating strip edges: screen-side light + desktop-side shade grounding the slab
+        Loader {
+            anchors.fill: parent
+            active: bar.wrapUnderline && (bar.shadowOn || ShellSettings.barBorderVisible)
             opacity: contents.opacity
-            color: Theme.withAlpha(Theme.text, ShellSettings.neutralTheme ? 0.045 : 0.065)
-        }
-
-        Rectangle {
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.leftMargin: surface.radius
-            anchors.rightMargin: surface.radius
-            y: bar.atBottom ? 0 : parent.height - 1
-            height: 1
-            antialiasing: false
-            visible: ShellSettings.barFloating && (bar.shadowOn || ShellSettings.barBorderVisible) && opacity > 0.001
-            opacity: contents.opacity
-            color: Qt.rgba(0, 0, 0, bar.shadowOn
-                ? Math.min(0.16, 0.07 + 0.035 * ShellSettings.barShadowStrength)
-                : Math.min(0.11, 0.045 * ShellSettings.barLineStrength))
+            visible: active && opacity > 0.001
+            sourceComponent: Item {
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.leftMargin: surface.radius
+                    anchors.rightMargin: surface.radius
+                    y: bar.atBottom ? parent.height - 1 : 0
+                    height: 1
+                    antialiasing: false
+                    color: Theme.withAlpha(Theme.text, ShellSettings.neutralTheme ? 0.045 : 0.065)
+                }
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.leftMargin: surface.radius
+                    anchors.rightMargin: surface.radius
+                    y: bar.atBottom ? 0 : parent.height - 1
+                    height: 1
+                    antialiasing: false
+                    color: Qt.rgba(0, 0, 0, bar.shadowOn
+                        ? Math.min(0.16, 0.07 + 0.035 * ShellSettings.barShadowStrength)
+                        : Math.min(0.11, 0.045 * ShellSettings.barLineStrength))
+                }
+            }
         }
 
         // The edge line sits on the side facing the desktop (bottom for a top bar).
         // Positioned via y, not flipped anchors: conditional anchor bindings don't
         // reliably clear the stale edge when the bar moves.
-        Rectangle {
-            id: _barLine
-            anchors.left:   parent.left
-            anchors.right:  parent.right
-            anchors.leftMargin:  _lineInset
-            anchors.rightMargin: _lineInset
-            y: bar.atBottom ? 0 : parent.height - 1
-            height: 1
-            antialiasing: false
+        Loader {
+            anchors.fill: parent
+            active: !bar.wrapUnderline && ShellSettings.barBorderVisible
             opacity: contents.opacity
-            visible: !bar.wrapUnderline && ShellSettings.barBorderVisible && opacity > 0.001
+            visible: active && opacity > 0.001
+            sourceComponent: Rectangle {
+                anchors.left:  parent.left
+                anchors.right: parent.right
+                y: bar.atBottom ? 0 : parent.height - 1
+                height: 1
+                antialiasing: false
 
-            readonly property real _lineInset: surface.radius
-            readonly property real _a: bar.lineAlpha
-
-            gradient: Gradient {
-                orientation: Gradient.Horizontal
-                GradientStop { position: 0.0;  color: "transparent" }
-                GradientStop { position: 0.25; color: Theme.withAlpha(Theme.subtext, _barLine._a) }
-                GradientStop { position: 0.75; color: Theme.withAlpha(Theme.subtext, _barLine._a) }
-                GradientStop { position: 1.0;  color: "transparent" }
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0.0;  color: "transparent" }
+                    GradientStop { position: 0.25; color: Theme.withAlpha(Theme.subtext, bar.lineAlpha) }
+                    GradientStop { position: 0.75; color: Theme.withAlpha(Theme.subtext, bar.lineAlpha) }
+                    GradientStop { position: 1.0;  color: "transparent" }
+                }
             }
         }
 
@@ -281,16 +283,19 @@ PanelWindow {
             }
         }
 
-        Rectangle {
+        Loader {
             anchors.fill: parent
-            radius: surface.radius
-            antialiasing: surface.radius > 0
-            color: "transparent"
-            border.width: bar.wrapUnderline && ShellSettings.barBorderVisible ? 1 : 0
-            border.color: Theme.withAlpha(Theme.mix(Theme.subtext, Theme.accent, 0.30),
-                Math.min(0.42, 0.20 * ShellSettings.barLineStrength))
+            active: bar.wrapUnderline && ShellSettings.barBorderVisible
             opacity: contents.opacity
-            visible: border.width > 0 && opacity > 0.001
+            visible: active && opacity > 0.001
+            sourceComponent: Rectangle {
+                radius: surface.radius
+                antialiasing: surface.radius > 0
+                color: "transparent"
+                border.width: 1
+                border.color: Theme.withAlpha(Theme.mix(Theme.subtext, Theme.accent, 0.30),
+                    Math.min(0.42, 0.20 * ShellSettings.barLineStrength))
+            }
         }
     }
 }
