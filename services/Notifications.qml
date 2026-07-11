@@ -9,11 +9,12 @@ Singleton {
     id: root
 
     property var list: []
-    property alias history:     _persist.history
+    property var history: []
     property alias dnd:         _persist.dnd
     property alias missedCount: _persist.missedCount
-    property alias _seen:       _persist.seen
-    property alias _times:      _persist.times
+    property var _seen:  ({})
+    property var _times: ({})
+    property bool _persistentReady: false
     readonly property int _maxHistory: 20
     readonly property int activeCount: Array.isArray(list) ? list.length : 0
     readonly property int historyCount: Array.isArray(history) ? history.length : 0
@@ -24,10 +25,29 @@ Singleton {
 
     function _ensurePersistentState(): void {
         // var properties can be undefined for one frame during hot-reload
-        if (!Array.isArray(_persist.history)) _persist.history = []
-        if (!_persist.seen || typeof _persist.seen !== "object") _persist.seen = ({})
-        if (!_persist.times || typeof _persist.times !== "object") _persist.times = ({})
+        if (!Array.isArray(root.history)) root.history = []
+        if (!root._seen || typeof root._seen !== "object") root._seen = ({})
+        if (!root._times || typeof root._times !== "object") root._times = ({})
     }
+
+    function _parsePersistentJson(raw: string, fallback): var {
+        try { return JSON.parse(raw || "") }
+        catch (e) { return fallback }
+    }
+
+    function _restorePersistentState(): void {
+        const savedHistory = root._parsePersistentJson(_persist.historyJson, [])
+        const savedSeen = root._parsePersistentJson(_persist.seenJson, ({}))
+        const savedTimes = root._parsePersistentJson(_persist.timesJson, ({}))
+        root.history = Array.isArray(savedHistory) ? savedHistory : []
+        root._seen = savedSeen && typeof savedSeen === "object" && !Array.isArray(savedSeen) ? savedSeen : ({})
+        root._times = savedTimes && typeof savedTimes === "object" && !Array.isArray(savedTimes) ? savedTimes : ({})
+        root._persistentReady = true
+    }
+
+    onHistoryChanged: if (_persistentReady) _persist.historyJson = JSON.stringify(history)
+    on_SeenChanged:   if (_persistentReady) _persist.seenJson = JSON.stringify(_seen)
+    on_TimesChanged:  if (_persistentReady) _persist.timesJson = JSON.stringify(_times)
 
     function _cloneMap(map): var {
         const out = {}
@@ -66,7 +86,7 @@ Singleton {
 
     // pure read; stamping here loops (createdAt binding reads _times then writes it), so the write lives in the arrival path
     function timeFor(id: int): real {
-        const times = _persist.times
+        const times = root._times
         if (times && typeof times === "object") {
             const v = times[String(id)]
             if (v !== undefined) return v
@@ -81,12 +101,13 @@ Singleton {
     PersistentProperties {
         id: _persist
         reloadableId: "silereNotifications"
-        property var  history: []
         property bool dnd: false
         property int  missedCount: 0
-        // seen prevents shimmer replay on delegate rebuilds; times pins arrival stamps
-        property var  seen:  ({})
-        property var  times: ({})
+        // PersistentProperties survives a QML engine replacement. Keep JS
+        // arrays/maps serialized so values never cross into the new engine.
+        property string historyJson: "[]"
+        property string seenJson:  "{}"  // prevents shimmer replay on delegate rebuilds
+        property string timesJson: "{}"  // pins arrival timestamps
     }
 
     signal sourcePulse(int wsId, bool critical)
@@ -290,6 +311,7 @@ Singleton {
     }
 
     Component.onCompleted: {
+        root._restorePersistentState()
         root._ensurePersistentState()
         const vals = notifServer.trackedNotifications.values ?? []
         const rebuilt = []
