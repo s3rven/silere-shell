@@ -75,25 +75,19 @@ PageShell {
         return m
     }
 
-    readonly property string _battAlertMode: {
-        const o = ShellSettings.osdBatteryWarn
-        const g = ShellSettings.underlineBattGlow && ShellSettings.underlineGlow
+    function _alertMode(osdEnabled, glowEnabled): string {
+        const o = osdEnabled === true
+        const g = glowEnabled === true && ShellSettings.underlineGlow
         return o && g ? "both" : o ? "osd" : g ? "glow" : "off"
     }
-    function _setBattAlert(v) {
-        ShellSettings.osdBatteryWarn = (v === "osd" || v === "both")
-        ShellSettings.underlineBattGlow = (v === "glow" || v === "both")
+    function _setAlertMode(v, osdKey, glowKey): void {
+        ShellSettings[osdKey] = (v === "osd" || v === "both")
+        ShellSettings[glowKey] = (v === "glow" || v === "both")
     }
-
-    readonly property string _tempAlertMode: {
-        const o = ShellSettings.osdTempWarn
-        const g = ShellSettings.underlineTempGlow && ShellSettings.underlineGlow
-        return o && g ? "both" : o ? "osd" : g ? "glow" : "off"
-    }
-    function _setTempAlert(v) {
-        ShellSettings.osdTempWarn = (v === "osd" || v === "both")
-        ShellSettings.underlineTempGlow = (v === "glow" || v === "both")
-    }
+    readonly property string _battAlertMode: root._alertMode(
+        ShellSettings.osdBatteryWarn, ShellSettings.underlineBattGlow)
+    readonly property string _tempAlertMode: root._alertMode(
+        ShellSettings.osdTempWarn, ShellSettings.underlineTempGlow)
 
     readonly property var _alertChipModel: ShellSettings.underlineGlow
         ? [
@@ -936,7 +930,7 @@ PageShell {
                         glyph: "󱟢"; label: "Low battery alert"
                         currentValue: root._battAlertMode
                         model: root._alertChipModel
-                        onChosen: (v) => root._setBattAlert(v)
+                        onChosen: (v) => root._setAlertMode(v, "osdBatteryWarn", "underlineBattGlow")
                     }
                     CollapsibleSection {
                         expanded: root._battAlertMode !== "off"
@@ -965,7 +959,7 @@ PageShell {
                         glyph: "󰔏"; label: "High temp alert"
                         currentValue: root._tempAlertMode
                         model: root._alertChipModel
-                        onChosen: (v) => root._setTempAlert(v)
+                        onChosen: (v) => root._setAlertMode(v, "osdTempWarn", "underlineTempGlow")
                     }
                     CollapsibleSection {
                         expanded: root._tempAlertMode !== "off"
