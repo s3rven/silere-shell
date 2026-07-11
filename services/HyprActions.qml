@@ -57,17 +57,40 @@ Singleton {
     }
 
     function _dispatchLua(dispatcher, args): void {
-        let call = ""
-        if (dispatcher === "focusmonitor")
-            call = "hl.dsp.focus({ monitor = " + _quote(args) + " })"
-        else if (dispatcher === "workspace")
-            call = "hl.dsp.focus({ workspace = " + _value(args) + " })"
-        else if (dispatcher === "movetoworkspacesilent")
-            call = "hl.dsp.window.move({ workspace = " + _value(args) + ", follow = false })"
-        else if (dispatcher === "focuswindow")
-            call = "hl.dsp.focus({ window = " + _quote(args) + " })"
-        else return
+        const call = root._luaCall(dispatcher, args)
+        if (call.length === 0) return
         Quickshell.execDetached(["hyprctl", "dispatch", call])
+    }
+
+    function _luaCall(dispatcher, args): string {
+        if (dispatcher === "focusmonitor")
+            return "hl.dsp.focus({ monitor = " + _quote(args) + " })"
+        if (dispatcher === "workspace")
+            return "hl.dsp.focus({ workspace = " + _value(args) + " })"
+        if (dispatcher === "movetoworkspacesilent")
+            return "hl.dsp.window.move({ workspace = " + _value(args) + ", follow = false })"
+        if (dispatcher === "focuswindow")
+            return "hl.dsp.focus({ window = " + _quote(args) + " })"
+        return ""
+    }
+
+    // two detached hyprctl processes can land out of order; chain both in one sh.
+    // not --batch: its parser mangles the quoted/braced lua-framework calls
+    function _dispatchPair(d1, a1, d2, a2): void {
+        if (!SystemTools.ready || !SystemTools.hasHyprctl) return
+        Quickshell.execDetached(["sh", "-c",
+            "hyprctl dispatch \"$1\" >/dev/null && hyprctl dispatch \"$2\"",
+            "sh", root._dispatchText(d1, a1), root._dispatchText(d2, a2)])
+    }
+
+    // hyprctl joins trailing args with spaces, so the single-arg form is equivalent
+    function _dispatchText(dispatcher, args): string {
+        if (root._useLua) {
+            const call = root._luaCall(dispatcher, args)
+            if (call.length > 0) return call
+        }
+        return (args !== undefined && args !== null && String(args).length > 0)
+            ? dispatcher + " " + String(args) : dispatcher
     }
 
     // live neutral toplevels; each carries appId/cls/initialClass/title/pid/ref/wsId/wsRef

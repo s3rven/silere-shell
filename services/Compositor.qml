@@ -73,13 +73,18 @@ Singleton {
         if (wsId === undefined || wsId === null || wsId < 0) return
         const mon = output || ""
         if (root.isNiri) {
-            // focus-workspace takes a per-output index, so target the monitor first
-            if (mon.length > 0 && mon !== root._niriFocusedMon) root._niriAction(["focus-monitor", mon])
-            root._niriAction(["focus-workspace", String(wsId)])
+            // focus-workspace takes a per-output index, so the monitor switch must land
+            // first — chain both in one process, detached pairs can run out of order
+            if (mon.length > 0 && mon !== root._niriFocusedMon)
+                Quickshell.execDetached(["sh", "-c",
+                    "niri msg action focus-monitor \"$1\" && niri msg action focus-workspace \"$2\"",
+                    "sh", mon, String(wsId)])
+            else
+                root._niriAction(["focus-workspace", String(wsId)])
             return
         }
-        if (mon.length > 0) focusMonitor(mon)
-        HyprActions._dispatch("workspace", wsId)
+        if (mon.length > 0) HyprActions._dispatchPair("focusmonitor", mon, "workspace", wsId)
+        else HyprActions._dispatch("workspace", wsId)
     }
 
     function moveActiveToWorkspace(wsId): void {
@@ -98,12 +103,12 @@ Singleton {
             if (c.ref) root._niriAction(["focus-window", "--id", String(c.ref)])
             return
         }
-        if (c.wsRef !== undefined && c.wsRef !== null && c.wsRef >= 0)
-            HyprActions._dispatch("workspace", c.wsRef)
-        if (c.ref) {
-            const addr = String(c.ref).startsWith("address:") ? String(c.ref) : "address:" + c.ref
-            HyprActions._dispatch("focuswindow", addr)
-        }
+        const hasWs = c.wsRef !== undefined && c.wsRef !== null && c.wsRef >= 0
+        const addr = c.ref
+            ? (String(c.ref).startsWith("address:") ? String(c.ref) : "address:" + c.ref) : ""
+        if (hasWs && addr.length > 0) HyprActions._dispatchPair("workspace", c.wsRef, "focuswindow", addr)
+        else if (hasWs) HyprActions._dispatch("workspace", c.wsRef)
+        else if (addr.length > 0) HyprActions._dispatch("focuswindow", addr)
     }
 
     function refreshToplevels(): void {
