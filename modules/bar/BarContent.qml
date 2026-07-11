@@ -72,12 +72,7 @@ Item {
         target: ShellSettings
         function onBarAutoCompactChanged() { root._queueAutoCompact() }
         function onBarCompactChanged() { root._queueAutoCompact() }
-        function onBarSpacingChanged() { root._queueAutoCompact() }
         function onShowWindowTitleChanged() { root._queueAutoCompact() }
-        function onValuesOnHoverChanged() { root._queueAutoCompact() }
-        function onNetworkSpeedInlineChanged() { root._queueAutoCompact() }
-        function onClockShowDateChanged() { root._queueAutoCompact() }
-        function onShowSecondsChanged() { root._queueAutoCompact() }
     }
 
     // one Component per widget kind, chosen per-slot by whichever zone array holds the key.
