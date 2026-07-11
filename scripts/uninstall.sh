@@ -158,13 +158,14 @@ fi
 # ── autostart ────────────────────────────────────────────────────────────────────
 _section "autostart"
 
+ACTIVE_NIRI_CONFIG="$(bash "$SCRIPT_DIR/install.sh" --niri-config-path 2>/dev/null || true)"
 AUTOSTART_FILES=(
     "$CONFIG_HOME/hypr/custom/execs.lua"
     "$CONFIG_HOME/hypr/hyprland/execs.lua"
     "$CONFIG_HOME/hypr/execs.lua"
     "$CONFIG_HOME/hypr/hyprland.lua"
     "$CONFIG_HOME/hypr/hyprland.conf"
-    "${SILERE_NIRI_CONFIG:-$CONFIG_HOME/niri/config.kdl}"
+    "$ACTIVE_NIRI_CONFIG"
 )
 # Include custom layouts under the Hyprland config tree. The same session-aware
 # resolver as the installer also covers external --config paths and their Lua

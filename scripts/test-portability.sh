@@ -154,6 +154,52 @@ test_hypr_discovery() {
         "no Hyprland process falls back to XDG_CONFIG_HOME hyprland.lua"
 }
 
+test_niri_config_discovery() {
+    local empty="$TMP/proc-no-niri" session="$TMP/niri-session"
+    mkdir -p "$empty" "$session/configs"
+    printf 'layout {}\n' > "$session/configs/config.kdl"
+
+    local actual
+    actual="$(
+        SILERE_PROC_ROOT="$empty" SILERE_PARENT_PID=999 \
+        HOME="$TMP/home" XDG_CONFIG_HOME="$TMP/home/config" \
+        NIRI_CONFIG="$TMP/niri/custom.kdl" \
+        bash "$ROOT/scripts/install.sh" --niri-config-path
+    )"
+    assert_eq "$TMP/niri/custom.kdl" "$actual" "NIRI_CONFIG path"
+
+    local proc="$TMP/proc-niri"
+    mkdir -p "$proc"
+    make_proc "$proc" 700 niri 1 "$session" niri --config configs/config.kdl
+    make_proc "$proc" 710 bash 700 "$session" bash
+    actual="$(
+        SILERE_PROC_ROOT="$proc" SILERE_PARENT_PID=710 \
+        HOME="$TMP/home" XDG_CONFIG_HOME="$TMP/home/config" \
+        NIRI_CONFIG="$TMP/niri/ignored.kdl" \
+        bash "$ROOT/scripts/install.sh" --niri-config-path
+    )"
+    assert_eq "$session/configs/config.kdl" "$actual" "running niri --config beats NIRI_CONFIG"
+
+    actual="$(
+        SILERE_PROC_ROOT="$proc" SILERE_PARENT_PID=710 \
+        HOME="$TMP/home" XDG_CONFIG_HOME="$TMP/home/config" \
+        NIRI_CONFIG="$TMP/niri/ignored.kdl" SILERE_NIRI_CONFIG="$TMP/niri/override.kdl" \
+        bash "$ROOT/scripts/install.sh" --niri-config-path
+    )"
+    assert_eq "$TMP/niri/override.kdl" "$actual" "Silere niri config override"
+
+    local plain="$TMP/proc-niri-plain"
+    mkdir -p "$plain"
+    make_proc "$plain" 720 niri 1 "$session" niri --session
+    actual="$(
+        SILERE_PROC_ROOT="$plain" SILERE_PARENT_PID=999 \
+        HOME="$TMP/home" XDG_CONFIG_HOME="$TMP/home/config" \
+        NIRI_CONFIG="$TMP/niri/custom.kdl" \
+        bash "$ROOT/scripts/install.sh" --niri-config-path
+    )"
+    assert_eq "$TMP/niri/custom.kdl" "$actual" "flagless niri falls back to NIRI_CONFIG"
+}
+
 test_atomic_units() (
     SILERE_SCRIPT_LIB_ONLY=1 source "$ROOT/scripts/update.sh"
     SYSTEMD_USER_DIR="$TMP/units"
@@ -215,6 +261,7 @@ test_marker_removal
 test_uninstall_targets_and_backups
 test_qml_module_lookup
 test_hypr_discovery
+test_niri_config_discovery
 test_atomic_units
 # repair.sh builds a git fixture; skip where git is absent (e.g. minimal CI runners)
 if command -v git >/dev/null 2>&1; then

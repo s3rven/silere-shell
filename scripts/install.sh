@@ -65,15 +65,15 @@ _toml_basic_string() {
 
 source "$SCRIPT_DIR/lib/qml-modules.sh"
 
-# Resolve the Hyprland process that owns this shell session. Prefer an ancestor
+# Resolve the compositor process that owns this shell session. Prefer an ancestor
 # (Quickshell and terminals are normally descendants of their compositor), then
 # accept a same-user process only when it is the sole candidate. Never guess
 # between multiple sessions.
-_HYPR_PROC_ROOT="${SILERE_PROC_ROOT:-/proc}"
+_PROC_ROOT="${SILERE_PROC_ROOT:-/proc}"
 
 _proc_ppid() {
     local pid="$1" stat rest
-    stat="$(cat "$_HYPR_PROC_ROOT/$pid/stat" 2>/dev/null)" || return 1
+    stat="$(cat "$_PROC_ROOT/$pid/stat" 2>/dev/null)" || return 1
     rest="${stat##*) }"
     [ "$rest" != "$stat" ] || return 1
     rest="${rest#* }"
@@ -81,16 +81,16 @@ _proc_ppid() {
 }
 
 _same_user_process() {
-    [ "$(stat -c '%u' "$_HYPR_PROC_ROOT/$1" 2>/dev/null)" = "$(id -u)" ]
+    [ "$(stat -c '%u' "$_PROC_ROOT/$1" 2>/dev/null)" = "$(id -u)" ]
 }
 
-_find_hyprland_pid() {
-    local pid="${SILERE_PARENT_PID:-$PPID}" parent comm candidate="" count=0
+_find_compositor_pid() {
+    local want="$1" pid="${SILERE_PARENT_PID:-$PPID}" parent comm candidate="" count=0
 
     while [[ "$pid" =~ ^[0-9]+$ ]] && [ "$pid" -gt 1 ]; do
         if _same_user_process "$pid"; then
-            comm="$(cat "$_HYPR_PROC_ROOT/$pid/comm" 2>/dev/null || true)"
-            if [ "$comm" = "Hyprland" ]; then
+            comm="$(cat "$_PROC_ROOT/$pid/comm" 2>/dev/null || true)"
+            if [ "$comm" = "$want" ]; then
                 printf '%s\n' "$pid"
                 return 0
             fi
@@ -100,9 +100,9 @@ _find_hyprland_pid() {
         pid="$parent"
     done
 
-    for comm in "$_HYPR_PROC_ROOT"/[0-9]*/comm; do
+    for comm in "$_PROC_ROOT"/[0-9]*/comm; do
         [ -r "$comm" ] || continue
-        [ "$(cat "$comm" 2>/dev/null)" = "Hyprland" ] || continue
+        [ "$(cat "$comm" 2>/dev/null)" = "$want" ] || continue
         pid="${comm%/comm}"
         pid="${pid##*/}"
         _same_user_process "$pid" || continue
@@ -113,7 +113,7 @@ _find_hyprland_pid() {
     printf '%s\n' "$candidate"
 }
 
-_normalize_hypr_path() {
+_normalize_config_path() {
     local path="$1" base="$2"
     path="${path/#\~/$HOME}"
     case "$path" in
@@ -123,10 +123,10 @@ _normalize_hypr_path() {
     readlink -m -- "$path" 2>/dev/null || printf '%s\n' "$path"
 }
 
-_hypr_config_for_pid() {
+_compositor_config_for_pid() {
     local pid="$1" cwd raw="" i
     local -a args=()
-    mapfile -d '' -t args 2>/dev/null < "$_HYPR_PROC_ROOT/$pid/cmdline" || return 1
+    mapfile -d '' -t args 2>/dev/null < "$_PROC_ROOT/$pid/cmdline" || return 1
     for ((i = 0; i < ${#args[@]}; i++)); do
         if [ "${args[i]}" = "--config" ] || [ "${args[i]}" = "-c" ]; then
             ((i + 1 < ${#args[@]})) || return 1
@@ -135,19 +135,19 @@ _hypr_config_for_pid() {
         fi
     done
     [ -n "$raw" ] || return 1
-    cwd="$(readlink -f -- "$_HYPR_PROC_ROOT/$pid/cwd" 2>/dev/null)" || return 1
-    _normalize_hypr_path "$raw" "$cwd"
+    cwd="$(readlink -f -- "$_PROC_ROOT/$pid/cwd" 2>/dev/null)" || return 1
+    _normalize_config_path "$raw" "$cwd"
 }
 
 _hypr_config_path() {
     local config pid
     if [ -n "${SILERE_HYPR_CONFIG:-}" ]; then
-        _normalize_hypr_path "$SILERE_HYPR_CONFIG" "$PWD"
+        _normalize_config_path "$SILERE_HYPR_CONFIG" "$PWD"
         return
     fi
-    pid="$(_find_hyprland_pid 2>/dev/null || true)"
+    pid="$(_find_compositor_pid Hyprland 2>/dev/null || true)"
     if [ -n "$pid" ]; then
-        config="$(_hypr_config_for_pid "$pid" 2>/dev/null || true)"
+        config="$(_compositor_config_for_pid "$pid" 2>/dev/null || true)"
         if [ -n "$config" ]; then
             printf '%s\n' "$config"
             return
@@ -160,6 +160,24 @@ _hypr_config_path() {
     fi
 }
 
+_niri_config_path() {
+    local config pid
+    if [ -n "${SILERE_NIRI_CONFIG:-}" ]; then
+        _normalize_config_path "$SILERE_NIRI_CONFIG" "$PWD"
+        return
+    fi
+    # a running niri's --config beats NIRI_CONFIG, matching niri's own precedence
+    pid="$(_find_compositor_pid niri 2>/dev/null || true)"
+    if [ -n "$pid" ]; then
+        config="$(_compositor_config_for_pid "$pid" 2>/dev/null || true)"
+        if [ -n "$config" ]; then
+            printf '%s\n' "$config"
+            return
+        fi
+    fi
+    _normalize_config_path "${NIRI_CONFIG:-$CONFIG_HOME/niri/config.kdl}" "$PWD"
+}
+
 # Side-effect-free helpers used by the runtime detector and focused tests.
 case "${1:-}" in
     --hypr-config-path)
@@ -170,6 +188,10 @@ case "${1:-}" in
         _hypr_kind="$(_hypr_config_path)"
         [[ "$_hypr_kind" == *.lua ]] && exit 0
         exit 1
+        ;;
+    --niri-config-path)
+        _niri_config_path
+        exit 0
         ;;
 esac
 if [ "${SILERE_SCRIPT_LIB_ONLY:-0}" = "1" ]; then
@@ -552,12 +574,15 @@ LAUNCH_CMD_LUA="$(_lua_string "$LAUNCH_CMD")"
 
 _already_present() { grep -qF 'silere-shell begin' "$1" 2>/dev/null; }
 
-NIRI_CONFIG="${SILERE_NIRI_CONFIG:-$CONFIG_HOME/niri/config.kdl}"
+# niri documents NIRI_CONFIG as its own config override; SILERE_NIRI_CONFIG wins over it
+NIRI_CONFIG_OVERRIDE="${SILERE_NIRI_CONFIG:-${NIRI_CONFIG:-}}"
+NIRI_CONFIG="$(_niri_config_path)"
 _autostart_done=false
 
 # niri session wins; fall back to a niri config only when no Hyprland session is live
 if [ -n "${NIRI_SOCKET:-}" ] || [ "${XDG_CURRENT_DESKTOP:-}" = "niri" ] \
-    || { [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && [ -f "$NIRI_CONFIG" ]; }; then
+    || [ -n "$NIRI_CONFIG_OVERRIDE" ] \
+    || { [ -z "$HYPR_CONFIG" ] && [ -f "$NIRI_CONFIG" ]; }; then
     NIRI_SPAWN="spawn-at-startup \"sh\" \"-c\" $(_lua_string "$LAUNCH_CMD")"
     if [ ! -f "$NIRI_CONFIG" ]; then
         _warn "no niri config at $NIRI_CONFIG"
