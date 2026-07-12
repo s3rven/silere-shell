@@ -35,7 +35,7 @@ PanelWindow {
     // extra window space so the floating shadow bleeds past the surface instead of clipping; input is masked to the surface so the pad never catches the pointer
     readonly property bool shadowOn: ShellSettings.barFloating && ShellSettings.barShadow
     // Always reserved when floating so toggling the shadow never resizes the window.
-    // 24 (a 4px-grid multiple) leaves room for the ambient layer (blur 21 + offset 2 = 23px spread).
+    // 24 (a 4px-grid multiple) leaves room for the bar shadow (blur 18 + offset 4 = 22px spread).
     readonly property int  shadowPad: ShellSettings.barFloating ? 24 : 0
 
     // hidden states release the reserved zone so overview windows fill the bar strip instead of leaving a phantom gap; reflow rides the windowsMove anim
@@ -130,7 +130,7 @@ PanelWindow {
             }
         }
 
-        // drop shadow grounding the floating surface, shared with popups; the bar spreads both layers wider than a card
+        // drop shadow grounding the floating surface, shared with popups; the bar uses a wider spread than a card
         Loader {
             anchors.fill: parent
             active: bar.shadowOn
@@ -138,9 +138,8 @@ PanelWindow {
             sourceComponent: FloatingShadow {
                 radius: surface.radius
                 atBottom: bar.atBottom
-                ambientBlur: 21
-                contactBlur: 8
-                contactOffset: 6
+                blur: 18
+                offset: 4
             }
         }
 

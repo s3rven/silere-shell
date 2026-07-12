@@ -4,32 +4,27 @@ import QtQuick
 import QtQuick.Effects
 import "../../services"
 
-// two-layer drop shadow for floating cards/pills/popups — shared elevation cue (bar/OSD/notifications/tray).
+// Shared single-pass elevation cue for floating cards, pills, popups, and the bar.
+// One broad, slightly displaced shadow reads as both ambient and contact depth
+// without paying for two full-screen blur nodes per surface.
 Item {
     id: root
 
     required property real radius
     required property bool atBottom
 
-    // Larger surfaces (the bar) spread the layers a bit wider.
-    property real ambientBlur:   14
-    property real contactBlur:   7
-    property real contactOffset: 5
+    // Larger surfaces (the bar) can spread the shadow a little wider.
+    property real blur:   12
+    property real offset: 4
 
     readonly property real _strength: ShellSettings.barShadowStrength
+    readonly property real _alpha: Math.min(0.38, 0.24 * _strength)
 
     RectangularShadow {
         anchors.fill: parent
         radius: root.radius
-        blur:   root.ambientBlur
-        offset: Qt.vector2d(0, root.atBottom ? -2 : 2)
-        color:  Qt.rgba(0, 0, 0, Math.min(0.28, 0.13 * root._strength))
-    }
-    RectangularShadow {
-        anchors.fill: parent
-        radius: root.radius
-        blur:   root.contactBlur
-        offset: Qt.vector2d(0, root.atBottom ? -root.contactOffset : root.contactOffset)
-        color:  Qt.rgba(0, 0, 0, Math.min(0.44, 0.26 * root._strength))
+        blur:   root.blur
+        offset: Qt.vector2d(0, root.atBottom ? -root.offset : root.offset)
+        color:  Qt.rgba(0, 0, 0, root._alpha)
     }
 }
