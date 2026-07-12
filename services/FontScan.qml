@@ -8,8 +8,9 @@ import Quickshell.Io
 Singleton {
     id: root
 
-    // non-Propo Nerd families only: the bar renders Nerd glyphs from the same face as labels,
-    // so anything else breaks the icons. Mono twins are hidden when the regular variant exists.
+    // non-Propo Nerd families only: the bar renders Nerd glyphs from the same face as
+    // labels, so proportional faces misalign the icons. Mono twins hide behind the
+    // regular variant when both exist.
     property list<string> families: []
     property bool _scanned: false
 
@@ -30,24 +31,34 @@ Singleton {
 
     Process {
         id: _proc
-        command: ["fc-list", "--format", "%{family[0]}\n"]
+        // %{family} is intentionally used instead of %{family[0]}. Fontconfig can
+        // expose aliases and style-specific family names in one comma-separated
+        // value; reading only slot zero makes installed fonts disappear from the picker.
+        command: ["fc-list", "--format", "%{family}\n"]
         stdout: StdioCollector { id: _out }
         onExited: (code) => {
             if (code !== 0) { root._scanned = false; return }
-            const seen = {}
+            const variants = {}
             const lines = (_out.text || "").split("\n")
             for (let i = 0; i < lines.length; i++) {
-                const f = lines[i].trim()
-                if (!/ Nerd Font( Mono)?$/.test(f)) continue
-                if (f === "Symbols Nerd Font" || f === "Symbols Nerd Font Mono") continue   // icon-only, no text glyphs
-                seen[f] = true
+                const aliases = lines[i].split(",")
+                for (let j = 0; j < aliases.length; j++) {
+                    const f = aliases[j].trim()
+                    const match = /^(.*) Nerd Font(?: (Mono))?$/.exec(f)
+                    if (!match || match[1] === "Symbols") continue // icon-only, no text glyphs
+                    const base = match[1]
+                    const variant = match[2] || "Regular"
+                    if (!variants[base]) variants[base] = {}
+                    variants[base][variant] = f
+                }
             }
             const out = []
-            for (const f in seen) {
-                if (f.endsWith(" Nerd Font Mono") && seen[f.slice(0, -5)]) continue
-                out.push(f)
+            for (const base in variants) {
+                const family = variants[base]
+                if (family.Regular) out.push(family.Regular)
+                else if (family.Mono) out.push(family.Mono)
             }
-            out.sort()
+            out.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }))
             root.families = out
         }
     }
