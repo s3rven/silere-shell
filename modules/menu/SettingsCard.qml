@@ -77,8 +77,11 @@ Rectangle {
 
     // re-derive when the row set could change. height moves on the obvious edits (collapsible opening, row hiding),
     // but a Column keeps counting hidden children — a card in an unshown section stays full-height, so navigating
-    // to it flips visible without changing implicitHeight; visibleChanged catches that. callLater coalesces to one run per frame.
-    onImplicitHeightChanged: Qt.callLater(root._applyRadii)
-    onVisibleChanged:        Qt.callLater(root._applyRadii)
+    // to it flips visible without changing implicitHeight; visibleChanged catches that.
+    // zero-interval timer, not Qt.callLater: it coalesces the same way but dies with the card, where a
+    // deferred callLater on a card torn down by a section swap fires in a dead context and warns
+    Timer { id: _radiiDefer; interval: 0; onTriggered: root._applyRadii() }
+    onImplicitHeightChanged: _radiiDefer.restart()
+    onVisibleChanged:        _radiiDefer.restart()
     Component.onCompleted:   root._applyRadii()
 }
