@@ -460,12 +460,30 @@ Singleton {
         }
     }
 
+    // deterministic name keeps repeated loads of a not-yet-resaved old file idempotent
+    function _backupBeforeMigrate(raw: string, onDiskVersion: int): void {
+        _backupFile.path = _configDir + "/settings.v" + onDiskVersion + ".bak.json"
+        _backupFile.setText(raw)
+    }
+
+    FileView {
+        id: _backupFile
+        atomicWrites: true
+        blockWrites:  true
+        printErrors:  false
+        onSaveFailed: (error) => console.warn("silere-shell: failed to back up settings before migration:", error)
+    }
+
     function _applyText(t: string): void {
         const raw = (t || "").trim()
         // our own atomic write echoes back through the watcher; skip it
         if (raw === _lastSavedJson) { _loaded = true; return }
         try {
-            const j = _migrate(JSON.parse(raw || "{}"))
+            const parsed = JSON.parse(raw || "{}")
+            const onDiskVersion = typeof parsed.__version === "number" ? parsed.__version : 0
+            if (onDiskVersion < _settingsVersion && Object.keys(parsed).length > 0)
+                _backupBeforeMigrate(raw, onDiskVersion)
+            const j = _migrate(parsed)
             for (let i = 0; i < _schema.length; i++) {
                 const s = _schema[i]
                 if (j[s.k] !== undefined) _coerce(s, j[s.k])
