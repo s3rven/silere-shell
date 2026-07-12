@@ -76,10 +76,16 @@ Item {
 
     Rectangle {
         anchors.verticalCenter: parent.verticalCenter
-        width: parent.width; height: 4
+        width: parent.width
+        // even heights only: the track centers in the row, so an odd height puts both edges on half physical px
+        height: root.interactive && (_ma.containsMouse || _ma.pressed) ? 6 : 4
         radius: height / 2; antialiasing: true
         color: root.trackColor
         clip: true
+        Behavior on height {
+            enabled: root.animate && !ShellSettings.reduceMotion
+            NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
+        }
 
         Rectangle {
             width: parent.width * root._ratio
