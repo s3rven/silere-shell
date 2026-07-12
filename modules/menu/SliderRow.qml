@@ -88,11 +88,21 @@ Item {
         }
     }
 
+    // reserve the widest common value so "9%"→"100%" can't shift the label edge mid-drag
+    TextMetrics {
+        id: _vm
+        font.family: Settings.font
+        font.pixelSize: Math.max(9, Settings.fontSize - 1)
+        font.weight: Font.DemiBold
+        text: "100%"
+    }
     Text {
         id: _valueText
         anchors.right:          parent.right
         anchors.rightMargin:    12
         anchors.verticalCenter: _head.verticalCenter
+        width: Math.max(Math.ceil(_vm.advanceWidth), Math.ceil(implicitWidth))
+        horizontalAlignment: Text.AlignRight
         text:           root.displayValue
         color:          Theme.withAlpha(Theme.text, 0.58)
         font.family:    Settings.font
