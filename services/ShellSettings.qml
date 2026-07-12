@@ -364,7 +364,26 @@ Singleton {
         return j
     }
 
-    function _onSettingChanged(): void { if (_loaded) _writeTimer.restart() }
+    function _onSettingChanged(): void {
+        if (!_loaded) return
+        _recomputeModified()
+        _writeTimer.restart()
+    }
+
+    property var modifiedKeys: []
+    function _recomputeModified(): void {
+        const out = []
+        for (let i = 0; i < _schema.length; i++) {
+            const k = _schema[i].k
+            if (!_sameValue(root[k], _defaults[k])) out.push(k)
+        }
+        // value-only edits keep the same key set; skip the reassign so the settings list doesn't rebuild
+        if (out.join(",") !== modifiedKeys.join(",")) modifiedKeys = out
+    }
+
+    function resetKey(k: string): void {
+        if (_defaults[k] !== undefined) root[k] = _defaults[k]
+    }
 
     function resetToDefaults(): void {
         for (let i = 0; i < _schema.length; i++)
@@ -453,6 +472,7 @@ Singleton {
             }
         } catch(e) { console.warn("silere-shell: failed to parse settings.json, using defaults:", String(e)) }
         _loaded = true
+        _recomputeModified()
     }
 
     Timer {

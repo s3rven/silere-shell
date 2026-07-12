@@ -17,6 +17,13 @@ PageShell {
         const s = Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16)
         return s.length < 2 ? "0" + s : s
     }
+
+    function _fmtSettingValue(v): string {
+        if (typeof v === "boolean") return v ? "on" : "off"
+        if (typeof v === "number")  return String(Math.round(v * 100) / 100)
+        const s = String(v)
+        return s.length > 0 ? s : "none"
+    }
     // lags behind MenuState.settingsSection during the swap; detail pane renders whichever section this points at
     property string _shownSection: MenuState.settingsSection
 
@@ -1106,6 +1113,148 @@ PageShell {
 
                 Item { width: 1; height: Theme.gapSection }
                 SettingsCard {
+                    Item {
+                        id: _modHeader
+                        property bool open: false
+                        property real topRadius:    0
+                        property real bottomRadius: 0
+                        visible: ShellSettings.modifiedKeys.length > 0
+                        width: parent ? parent.width : 0
+                        height: 44
+
+                        activeFocusOnTab: true
+                        Accessible.role: Accessible.Button
+                        Accessible.name: "Changed from defaults, " + ShellSettings.modifiedKeys.length + " settings"
+                        Accessible.description: open ? "Collapse" : "Expand"
+                        Keys.onSpacePressed:  e => { if (!e.isAutoRepeat) _modHeader.open = !_modHeader.open; e.accepted = true }
+                        Keys.onReturnPressed: e => { if (!e.isAutoRepeat) _modHeader.open = !_modHeader.open; e.accepted = true }
+                        Keys.onEnterPressed:  e => { if (!e.isAutoRepeat) _modHeader.open = !_modHeader.open; e.accepted = true }
+
+                        HoverHandler { id: _modHeadHover; cursorShape: Qt.PointingHandCursor }
+                        TapHandler { onTapped: _modHeader.open = !_modHeader.open }
+                        RowHoverBg {
+                            anchors.fill: parent
+                            topRadius:    _modHeader.topRadius
+                            bottomRadius: _modHeader.bottomRadius
+                            active:       _modHeadHover.hovered || _modHeader.activeFocus
+                            focusActive:  _modHeader.activeFocus
+                            fillOpacity:  _modHeader.activeFocus ? 0.13 : 0.08
+                        }
+
+                        Text {
+                            anchors.left: parent.left; anchors.leftMargin: 14
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 18
+                            horizontalAlignment: Text.AlignHCenter
+                            text: "󰏫"
+                            color: Theme.withAlpha(Theme.subtext, 0.85)
+                            font.family: Settings.font; font.pixelSize: Settings.iconSize + 2
+                            renderType: Text.NativeRendering
+                        }
+                        Text {
+                            anchors.left: parent.left; anchors.leftMargin: 42
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "Changed from defaults"
+                            color: Theme.withAlpha(Theme.text, 0.85)
+                            font.family: Settings.font; font.pixelSize: Settings.fontSize
+                            renderType: Text.NativeRendering
+                        }
+                        Row {
+                            anchors.right: parent.right; anchors.rightMargin: 12
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 8
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: String(ShellSettings.modifiedKeys.length)
+                                color: Theme.withAlpha(Theme.subtext, 0.55)
+                                font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
+                                renderType: Text.NativeRendering
+                            }
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "󰅀"
+                                rotation: _modHeader.open ? 180 : 0
+                                transformOrigin: Item.Center
+                                color: _modHeader.open ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.58)
+                                font.family: Settings.font; font.pixelSize: Settings.fontSize
+                                renderType: Text.NativeRendering
+                                Behavior on rotation { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutBack; easing.overshoot: 1.6 } }
+                            }
+                        }
+                    }
+
+                    CollapsibleSection {
+                    expanded: _modHeader.open && ShellSettings.modifiedKeys.length > 0
+                    Repeater {
+                        model: ShellSettings.modifiedKeys
+                        delegate: Item {
+                            id: _modRow
+                            required property string modelData
+                            property real topRadius:    0
+                            property real bottomRadius: 0
+                            width: parent ? parent.width : 0
+                            height: 44
+
+                            readonly property string pretty: modelData.replace(/([A-Z])/g, " $1").toLowerCase()
+
+                            function _reset(): void { ShellSettings.resetKey(_modRow.modelData) }
+
+                            activeFocusOnTab: true
+                            Accessible.role: Accessible.Button
+                            Accessible.name: "Reset " + pretty + " to default"
+                            Keys.onSpacePressed:  e => { if (!e.isAutoRepeat) _modRow._reset(); e.accepted = true }
+                            Keys.onReturnPressed: e => { if (!e.isAutoRepeat) _modRow._reset(); e.accepted = true }
+                            Keys.onEnterPressed:  e => { if (!e.isAutoRepeat) _modRow._reset(); e.accepted = true }
+
+                            HoverHandler { id: _modHover; cursorShape: Qt.PointingHandCursor }
+                            TapHandler { onTapped: _modRow._reset() }
+                            RowHoverBg {
+                                anchors.fill: parent
+                                topRadius:    _modRow.topRadius
+                                bottomRadius: _modRow.bottomRadius
+                                active:       _modHover.hovered || _modRow.activeFocus
+                                focusActive:  _modRow.activeFocus
+                                fillOpacity:  _modRow.activeFocus ? 0.13 : 0.08
+                            }
+
+                            Text {
+                                id: _modLabel
+                                anchors.left: parent.left; anchors.leftMargin: 14
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: Math.min(implicitWidth, parent.width - _modValue.width - _modResetGlyph.width - 46)
+                                text: _modRow.pretty
+                                elide: Text.ElideRight
+                                color: Theme.withAlpha(Theme.text, 0.85)
+                                font.family: Settings.font; font.pixelSize: Settings.fontSize
+                                renderType: Text.NativeRendering
+                            }
+                            Text {
+                                id: _modValue
+                                anchors.left: _modLabel.right; anchors.leftMargin: 8
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: Math.min(implicitWidth, 130)
+                                text: root._fmtSettingValue(ShellSettings[_modRow.modelData])
+                                elide: Text.ElideRight
+                                color: Theme.withAlpha(Theme.subtext, 0.5)
+                                font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
+                                renderType: Text.NativeRendering
+                            }
+                            Text {
+                                id: _modResetGlyph
+                                anchors.right: parent.right; anchors.rightMargin: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "󰦛"
+                                color: (_modHover.hovered || _modRow.activeFocus)
+                                    ? Theme.withAlpha(Theme.accent, 0.9)
+                                    : Theme.withAlpha(Theme.subtext, 0.5)
+                                font.family: Settings.font; font.pixelSize: Settings.iconSize
+                                renderType: Text.NativeRendering
+                                Behavior on color { ColorAnimation { duration: Motion.fast } }
+                            }
+                        }
+                    }
+                    }
+
                     Item {
                         id: _resetRow
                         width: parent.width; height: 44
