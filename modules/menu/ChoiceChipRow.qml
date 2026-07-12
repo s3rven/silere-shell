@@ -134,6 +134,12 @@ Item {
         readonly property real _cellW: Math.max(1,
             Math.floor((_segContainer.width - 8) / Math.max(1, root.model.length)))
 
+        // underline hugs the chip's painted content, not the cell, so short and long labels read evenly
+        function _markW(seg): real {
+            if (!seg) return 0
+            return Math.max(10, Math.min(seg.contentW + 2, seg.width - 10))
+        }
+
         Rectangle {
             readonly property bool shown: _segContainer._hoverSeg
                 && _segContainer._hoverIndex !== root._activeIndex
@@ -142,9 +148,7 @@ Item {
                     + (_segContainer._hoverSeg.width - width) / 2
                 : 4
             y: parent.height - 4
-            width: _segContainer._hoverSeg
-                ? Math.min(22, Math.max(10, _segContainer._hoverSeg.width - 14))
-                : 0
+            width: _segContainer._markW(_segContainer._hoverSeg)
             height: 2
             radius: 1
             antialiasing: true
@@ -165,9 +169,7 @@ Item {
                     + (_segContainer._activeSeg.width - width) / 2
                 : 4
             y: parent.height - 4
-            width: _segContainer._activeSeg
-                ? Math.min(22, Math.max(10, _segContainer._activeSeg.width - 14))
-                : 0
+            width: _segContainer._markW(_segContainer._activeSeg)
             height: 2
             radius: 1
             antialiasing: true
@@ -175,7 +177,9 @@ Item {
             visible:      opacity > 0.001
             color: Theme.withAlpha(root.accentColor, 0.82)
 
+            // width stretches on the same clock as x so the mark flows between different-width labels instead of snapping
             Behavior on x        { enabled: _segContainer._animReady && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.width; easing.type: Easing.OutQuart } }
+            Behavior on width    { enabled: _segContainer._animReady && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.width; easing.type: Easing.OutQuart } }
         }
 
         Row {
@@ -196,6 +200,7 @@ Item {
                     required property int index
 
                     readonly property bool   active:   index === root._activeIndex
+                    readonly property real   contentW: _content.width
                     readonly property string segGlyph: (modelData.glyph !== undefined && modelData.glyph !== null)
                         ? String(modelData.glyph) : ""
                     readonly property string segBadge: (modelData.badge !== undefined && modelData.badge !== null)
