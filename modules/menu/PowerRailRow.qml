@@ -46,7 +46,7 @@ Rectangle {
     color: root.armed
         ? Theme.withAlpha(Theme.error, 0.105)
         : root._hot ? Theme.withAlpha(Theme.text, 0.045) : "transparent"
-    border.width: root.armed || root.activeFocus ? 1 : 0
+    border.width: root.activeFocus && !root.armed ? 1 : 0
     border.color: root.armed ? Theme.withAlpha(Theme.error, 0.54)
         : root.dangerous ? Theme.withAlpha(Theme.error, 0.34)
         : Theme.menuControlLineHot
@@ -76,10 +76,9 @@ Rectangle {
     onConfirmChanged: if (!root.confirm) root.disarm()
 
     onArmedChanged: {
-        _fuseAnim.stop()
-        if (!root.armed) return
-        if (ShellSettings.reduceMotion) _fuse.width = _fuse._fullW
-        else _fuseAnim.restart()
+        _confirmAnim.stop()
+        _confirmProgress = root.armed ? 1.0 : 0.0
+        if (root.armed && !ShellSettings.reduceMotion) _confirmAnim.restart()
     }
 
     Timer {
@@ -88,26 +87,87 @@ Rectangle {
         onTriggered: root.disarm()
     }
 
-    // fuse: depletes over the confirm window so the arm timeout is visible, not a surprise
-    Rectangle {
-        id: _fuse
-        anchors.left: parent.left
-        anchors.leftMargin: 13
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: 3
-        height: 2
-        radius: 1
-        antialiasing: true
-        visible: root.armed
-        width: 0
-        color: Theme.withAlpha(Theme.error, 0.55)
-        readonly property real _fullW: Math.max(0, root.width - 26)
-    }
+    // Confirmation uses the notification-style perimeter countdown instead of a
+    // detached fuse line, keeping the warning attached to the whole action.
+    property real _confirmProgress: 0.0
+
     NumberAnimation {
-        id: _fuseAnim
-        target: _fuse; property: "width"
-        from: _fuse._fullW; to: 0
+        id: _confirmAnim
+        target: root; property: "_confirmProgress"
+        from: 1.0; to: 0.0
         duration: root.confirmTimeout
+    }
+
+    Canvas {
+        id: _confirmOutline
+        anchors.fill: parent
+        visible: root.armed
+        antialiasing: true
+        renderTarget: Canvas.Image
+        renderStrategy: Canvas.Threaded
+        property real progress: root._confirmProgress
+
+        function outline(ctx, inset, radius) {
+            const x = inset
+            const y = inset
+            const w = width - inset * 2
+            const h = height - inset * 2
+            const r = Math.max(0.5, Math.min(radius, Math.min(w, h) / 2))
+            ctx.beginPath()
+            ctx.moveTo(x + r, y)
+            ctx.lineTo(x + w - r, y)
+            ctx.arc(x + w - r, y + r, r, -Math.PI / 2, 0)
+            ctx.lineTo(x + w, y + h - r)
+            ctx.arc(x + w - r, y + h - r, r, 0, Math.PI / 2)
+            ctx.lineTo(x + r, y + h)
+            ctx.arc(x + r, y + h - r, r, Math.PI / 2, Math.PI)
+            ctx.lineTo(x, y + r)
+            ctx.arc(x + r, y + r, r, Math.PI, 3 * Math.PI / 2)
+        }
+
+        onPaint: {
+            const ctx = getContext("2d")
+            ctx.clearRect(0, 0, width, height)
+            if (width <= 0 || height <= 0) return
+
+            const inset = 1.0
+            const radius = Math.max(0.5, root.radius - inset)
+            const w = width - inset * 2
+            const h = height - inset * 2
+            const sx = Math.max(0, w - 2 * radius)
+            const sy = Math.max(0, h - 2 * radius)
+            const arc = Math.PI / 2 * radius
+
+            outline(ctx, inset, radius)
+            ctx.lineWidth = 1
+            ctx.strokeStyle = Theme.menuControlLine
+            ctx.stroke()
+
+            let remaining = Math.max(0, Math.min(1, progress)) * (2 * sx + 2 * sy + 4 * arc)
+            if (remaining <= 0) return
+
+            ctx.beginPath()
+            ctx.moveTo(inset + radius, inset)
+            let segment = Math.min(remaining, sx)
+            ctx.lineTo(inset + radius + segment, inset)
+            remaining -= segment
+            if (remaining > 0) { segment = Math.min(remaining, arc); ctx.arc(inset + w - radius, inset + radius, radius, -Math.PI / 2, -Math.PI / 2 + segment / radius); remaining -= segment }
+            if (remaining > 0) { segment = Math.min(remaining, sy); ctx.lineTo(inset + w, inset + radius + segment); remaining -= segment }
+            if (remaining > 0) { segment = Math.min(remaining, arc); ctx.arc(inset + w - radius, inset + h - radius, radius, 0, segment / radius); remaining -= segment }
+            if (remaining > 0) { segment = Math.min(remaining, sx); ctx.lineTo(inset + w - radius - segment, inset + h); remaining -= segment }
+            if (remaining > 0) { segment = Math.min(remaining, arc); ctx.arc(inset + radius, inset + h - radius, radius, Math.PI / 2, Math.PI / 2 + segment / radius); remaining -= segment }
+            if (remaining > 0) { segment = Math.min(remaining, sy); ctx.lineTo(inset, inset + h - radius - segment); remaining -= segment }
+            if (remaining > 0) { segment = Math.min(remaining, arc); ctx.arc(inset + radius, inset + radius, radius, Math.PI, Math.PI + segment / radius) }
+            ctx.lineWidth = 1.5
+            ctx.lineCap = "round"
+            ctx.strokeStyle = Theme.withAlpha(Theme.error, 0.72)
+            ctx.stroke()
+        }
+
+        onVisibleChanged: requestPaint()
+        onWidthChanged: if (visible) requestPaint()
+        onHeightChanged: if (visible) requestPaint()
+        onProgressChanged: if (visible) requestPaint()
     }
 
     HoverHandler {
