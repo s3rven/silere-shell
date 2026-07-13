@@ -258,7 +258,8 @@ PanelWindow {
                                     SequentialAnimation on _shimmerPhase {
                                         running: osd._active && !card.closing && card.kind === "volume"
                                             && ShellSettings.osdVolumeTint && !ShellSettings.reduceMotion
-                                        paused: card.muted
+                                        // setPaused() warns unless the animation is running
+                                        paused: running && card.muted
                                         loops: Animation.Infinite
                                         NumberAnimation { from: 0; to: 1; duration: Motion.ms(900); easing.type: Easing.Linear }
                                         PauseAnimation  { duration: Motion.ms(800) }

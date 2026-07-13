@@ -35,6 +35,19 @@ Pill {
     Keys.onDownPressed:  event => { if (canControl) { Brightness.bumpBy(-Brightness.stepPct); event.accepted = true } else event.accepted = false }
     Keys.onRightPressed: event => { if (canControl) { Brightness.bumpBy(Brightness.stepPct);  event.accepted = true } else event.accepted = false }
     Keys.onUpPressed:    event => { if (canControl) { Brightness.bumpBy(Brightness.stepPct);  event.accepted = true } else event.accepted = false }
+    Keys.onPressed: event => {
+        if (!root.canControl) return
+        if (event.key === Qt.Key_PageDown || event.key === Qt.Key_PageUp) {
+            Brightness.bumpBy((event.key === Qt.Key_PageUp ? 1 : -1) * Brightness.stepPct * 5)
+            event.accepted = true
+        } else if (event.key === Qt.Key_Home) {
+            Brightness.setPercent(1)
+            event.accepted = true
+        } else if (event.key === Qt.Key_End) {
+            Brightness.setPercent(100)
+            event.accepted = true
+        }
+    }
 
     WheelHandler {
         enabled: root.canControl
