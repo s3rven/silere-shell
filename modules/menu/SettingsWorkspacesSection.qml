@@ -6,7 +6,7 @@ Column {
     width: parent ? parent.width : 0
     spacing: 0
 
-    SectionLabel { label: "LAYOUT" }
+    SectionLabel { label: "LAYOUT"; first: true }
     SettingsCard {
         SliderRow {
             glyph: "󰕰"; label: "Visible"
