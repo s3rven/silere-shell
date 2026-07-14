@@ -19,6 +19,12 @@ Singleton {
     readonly property int iconSize: Math.round(12 * ShellSettings.uiScale)
 
     FontMetrics { id: _fm; font.family: root.font; font.pixelSize: 100 }
+
+    // ink height of "M" at the live bar size — the reference bar marks scale against. Shared so every
+    // separator doesn't shape its own glyph; whole px keeps 1px marks off fractional rows.
+    readonly property int capHeight: Math.ceil(_capM.height)
+    TextMetrics { id: _capM; font.family: root.font; font.pixelSize: root.fontSize; text: "M" }
+
     readonly property int hPad: 14
 
     // force Lua dispatch API (hl.dsp.focus); auto-detected from the Hyprland config, set true only if detection misses your setup

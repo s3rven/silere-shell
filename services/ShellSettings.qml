@@ -89,6 +89,13 @@ Singleton {
 
     property real   dotOpacity:          0.28
     property string dotStyle:            "·"       // "·" | "•" | "◦" | "|" | "slash" | "line" | "none"
+    // text stand-in for the styles Dot draws as shapes, for places that can only print a character.
+    // "none" still yields "·": inline text needs a delimiter even when the bar drops its marks.
+    // │ (U+2502) is a thinner stroke than ASCII | in most fonts.
+    readonly property string dotTextGlyph: dotStyle === "|" || dotStyle === "line" ? "│"
+                                         : dotStyle === "slash" ? "/"
+                                         : dotStyle === "none"  ? "·"
+                                         : dotStyle
     property int    barSpacing:          11        // gap between bar widgets / separators
     property bool   barAutoCompact:      true      // automatically tighten separators when the bar gets crowded
     property bool   barCompact:          false     // β: fewer separators, tighter gaps

@@ -96,16 +96,9 @@ Item {
         const appCol   = _hex(Theme.subtext, 1.0)
         const titleCol = _hex(Theme.text, 1.0)
         if (_shownShowApp && _shownApp.length > 0 && _shownTitle.length > 0 && !_titleMatchesApp) {
-            const dotCol = _hex(Theme.subtext, ShellSettings.dotOpacity)
-            // Drawn separator styles in Dot.qml need a text equivalent here.
-            // │ (U+2502) renders as a thinner stroke than ASCII | in most fonts.
-            const sep = (ShellSettings.dotStyle === "line" || ShellSettings.dotStyle === "|") ? "│"
-                      : ShellSettings.dotStyle === "slash" ? "/"
-                      // app·title still needs a delimiter even when the bar drops its dividers
-                      : ShellSettings.dotStyle === "none" ? "·"
-                      : ShellSettings.dotStyle
+            const dotCol = _hex(Theme.barSeparator, Theme.barSeparator.a)
             return '<font color="' + appCol   + '">' + _esc(_shownApp) + '</font> '
-                 + '<font color="' + dotCol   + '">' + _esc(sep) + '</font> '
+                 + '<font color="' + dotCol   + '">' + _esc(ShellSettings.dotTextGlyph) + '</font> '
                  + '<font color="' + titleCol + '">' + _esc(_shownTitle) + '</font>'
         }
         if (_shownTitle.length > 0)

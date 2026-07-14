@@ -577,9 +577,7 @@ PageShell {
                     CollapsibleSection {
                         expanded: ShellSettings.dotStyle !== "none"
                         SliderRow {
-                            glyph: ShellSettings.dotStyle === "line" ? "│"
-                                 : ShellSettings.dotStyle === "slash" ? "/"
-                                 : ShellSettings.dotStyle
+                            glyph: ShellSettings.dotTextGlyph
                             glyphColor: Theme.withAlpha(Theme.text, Math.max(0.35, ShellSettings.dotOpacity))
                             label: "Separator opacity"
                             value: ShellSettings.dotOpacity

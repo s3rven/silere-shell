@@ -11,18 +11,15 @@ Item {
     readonly property string _style: ShellSettings.dotStyle
     // "none" draws no mark and reserves no slot — Row collapses to a uniform gap, no dividers
     readonly property bool   _none:  _style === "none"
-    readonly property color  _base:  ShellSettings.neutralTheme ? Theme.subtext : Theme.mix(Theme.subtext, Theme.accent, 0.10)
-    readonly property color  _col:   Theme.withAlpha(_base, ShellSettings.dotOpacity)
+    readonly property color  _col:   Theme.barSeparator
     readonly property bool   _slash: _style === "slash"
     readonly property int    _slotW: Metrics.dotSlotFor(_slash, compact)
 
-    // Font-derived reference height so marks scale with the bar's text.
-    TextMetrics { id: _tm; font.family: Settings.font; font.pixelSize: Settings.fontSize; text: "M" }
-
     anchors.verticalCenter: parent.verticalCenter
     implicitWidth:  (show && !_none) ? _slotW : 0
-    implicitHeight: _tm.height
-    clip: true
+    implicitHeight: Settings.capHeight
+    // only while the slot animates: a settled mark can't overflow, and a clip node breaks scene batching
+    clip: width < _slotW - 0.5
     visible: !_none && (show || _mark.opacity > 0)
 
     Behavior on implicitWidth { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
@@ -46,31 +43,24 @@ Item {
             border.color: root._col
         }
 
+        // axis-aligned 1px strokes: antialiasing only smears them (same rule as the menu's RowDividers),
+        // and whole-px placement keeps them off a sub-pixel column
         Rectangle {
             visible: root._style === "|"
-            anchors.centerIn: parent
-            width: 1; height: Math.round(_tm.height * (root.compact ? 0.50 : 0.62))
-            antialiasing: true
+            x: Math.round((parent.width - width) / 2)
+            y: Math.round((parent.height - height) / 2)
+            width: 1; height: Math.round(Settings.capHeight * (root.compact ? 0.50 : 0.62))
+            antialiasing: false
             color: root._col
         }
 
-        Rectangle {
-            visible: root._slash
-            anchors.centerIn: parent
-            width: 1
-            height: Math.round(_tm.height * (root.compact ? 0.58 : 0.72))
-            radius: 0.5
-            antialiasing: true
-            rotation: 18
-            color: root._col
-        }
-
-        // hairline: solid middle, fades only at the tips (a single centre stop looks like a spindle)
+        // solid middle, fades only at the tips (a single centre stop looks like a spindle)
         Rectangle {
             visible: root._style === "line"
-            anchors.centerIn: parent
-            width: 1; height: Math.round(_tm.height * (root.compact ? 0.54 : 0.66))
-            antialiasing: true
+            x: Math.round((parent.width - width) / 2)
+            y: Math.round((parent.height - height) / 2)
+            width: 1; height: Math.round(Settings.capHeight * (root.compact ? 0.54 : 0.66))
+            antialiasing: false
             gradient: Gradient {
                 orientation: Gradient.Vertical
                 GradientStop { position: 0.0;  color: "transparent" }
@@ -78,6 +68,18 @@ Item {
                 GradientStop { position: 0.70; color: root._col }
                 GradientStop { position: 1.0;  color: "transparent" }
             }
+        }
+
+        // rotated, so it keeps antialiasing — a hard-edged diagonal stairsteps
+        Rectangle {
+            visible: root._slash
+            anchors.centerIn: parent
+            width: 1
+            height: Math.round(Settings.capHeight * (root.compact ? 0.58 : 0.72))
+            radius: 0.5
+            antialiasing: true
+            rotation: 18
+            color: root._col
         }
     }
 }
