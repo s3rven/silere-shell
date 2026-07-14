@@ -728,15 +728,17 @@ PageShell {
                     checked: ShellSettings.nightLightAuto
                     onToggled: ShellSettings.nightLightAuto = !ShellSettings.nightLightAuto
                 }
-                SliderRow {
-                    glyph: "󰔄"
-                    label: ShellSettings.nightLightAuto ? "Temperature  ·  auto" : "Temperature"
-                    enabled: !ShellSettings.nightLightAuto
-                    displayValue: ShellSettings.nightLightTemp + "K"
-                    value: ShellSettings.nightLightTemp
-                    min: 1000; max: 6500; step: 100
-                    glyphColor: Theme.withAlpha(Theme.warning, ShellSettings.nightLightAuto ? 0.45 : 0.85)
-                    onChanged: (v) => { if (!ShellSettings.nightLightAuto) ShellSettings.nightLightTemp = v }
+                CollapsibleSection {
+                    expanded: !ShellSettings.nightLightAuto
+                    SliderRow {
+                        glyph: "󰔄"
+                        label: "Temperature"
+                        displayValue: ShellSettings.nightLightTemp + "K"
+                        value: ShellSettings.nightLightTemp
+                        min: 1000; max: 6500; step: 100
+                        glyphColor: Theme.withAlpha(Theme.warning, 0.85)
+                        onChanged: (v) => ShellSettings.nightLightTemp = v
+                    }
                 }
                 SunArc {
                     flat: true

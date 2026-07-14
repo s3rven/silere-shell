@@ -423,14 +423,19 @@ PageShell {
                         checked: ShellSettings.nightLightAuto
                         onToggled: ShellSettings.nightLightAuto = !ShellSettings.nightLightAuto
                     }
-                    SliderRow {
-                        glyph: "󰖚"; label: "Color temperature"
-                        enabled: !ShellSettings.nightLightAuto
-                        value: ShellSettings.nightLightTemp
-                        min: 1000; max: 6500; step: 100
-                        displayValue: ShellSettings.nightLightTemp + "K"
-                                    + (ShellSettings.nightLightAuto ? "  ·  auto " + NightLight.locationLabel : "")
-                        onChanged: (v) => { if (!ShellSettings.nightLightAuto) ShellSettings.nightLightTemp = v }
+                    CollapsibleSection {
+                        expanded: !ShellSettings.nightLightAuto
+                        SliderRow {
+                            glyph: "󰖚"; label: "Color temperature"
+                            value: ShellSettings.nightLightTemp
+                            min: 1000; max: 6500; step: 100
+                            displayValue: ShellSettings.nightLightTemp + "K"
+                            onChanged: (v) => ShellSettings.nightLightTemp = v
+                        }
+                    }
+                    CollapsibleSection {
+                        expanded: ShellSettings.nightLightAuto
+                        HintText { text: "Temperature tracks sunset and sunrise at " + NightLight.locationLabel + "." }
                     }
                 }
                 HintText {
@@ -883,12 +888,13 @@ PageShell {
                             checked: ShellSettings.osdBarIntegrated
                             onToggled: ShellSettings.osdBarIntegrated = !ShellSettings.osdBarIntegrated
                         }
-                        ToggleRow {
-                            glyph: "󰖲"; label: "Match bar shape"
-                            enabled: !ShellSettings.osdBarIntegrated
-                            checked: ShellSettings.osdMatchBar
-                            onToggled: ShellSettings.osdMatchBar = !ShellSettings.osdMatchBar
-                            dependsNote: ShellSettings.osdBarIntegrated ? "Pill only" : ""
+                        CollapsibleSection {
+                            expanded: !ShellSettings.osdBarIntegrated
+                            ToggleRow {
+                                glyph: "󰖲"; label: "Match bar shape"
+                                checked: ShellSettings.osdMatchBar
+                                onToggled: ShellSettings.osdMatchBar = !ShellSettings.osdMatchBar
+                            }
                         }
                         ChoiceChipRow {
                             glyph: "󰔛"; label: "Dismiss after"

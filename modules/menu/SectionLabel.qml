@@ -1,13 +1,18 @@
 import QtQuick
 import "../../config"
 
-// carries its own spacing so callers skip spacer Items; first:true tightens the gap under the page header
+// carries its own spacing so callers skip spacer Items
 Item {
     id: root
 
     property string label: ""
+    // set on the topmost heading of a page: tightens the gap under the page header. not derived from layout —
+    // a heading nested in a Loader/collapsible still has nothing before it in its own column while sitting mid-page
     property bool   first: false
     property bool   showRule: true
+    // a heading is not a row: it neither takes a seam nor induces one, so a group that collapses a
+    // label together with its card draws no stray line across the gap
+    readonly property bool suppressDividerAbove: true
 
     readonly property int _topGap: first ? 2 : Theme.gapSection
     readonly property int _botGap: 6

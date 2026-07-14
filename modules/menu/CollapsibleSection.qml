@@ -2,6 +2,8 @@ import QtQuick
 import "../../config"
 import "../../services"
 
+// a sub-control gated by a switch that is in view collapses — always. dim it instead (enabled:false, plus a
+// dependsNote/HintText naming the cause) only when the switch is NOT reachable: missing tool, another section, busy.
 Item {
     id: root
 
