@@ -265,18 +265,21 @@ PageShell {
             flickDeceleration: 1800
             maximumFlickVelocity: 2200
             cacheBuffer: 120
-            model: Notifications.history
+            model: Notifications.historyModel
 
             delegate: Item {
                     id: _entry
-                    required property var modelData
+                    // a ListModel delegate is handed its roles, not a modelData object; alias it so the rest
+                    // of the entry reads the same either way
+                    required property var model
+                    readonly property var modelData: model
                     required property int index
 
                     readonly property bool _critical: Number(modelData.urgency) === 2
                     readonly property string _appIconSource: Notifications.appIconSource(
                         modelData.appIcon, modelData.desktopEntry, modelData.appName)
                     readonly property bool _showSection: index === 0
-                        || root.dayKey(modelData.time) !== root.dayKey(Notifications.history[index - 1]?.time)
+                        || root.dayKey(modelData.time) !== root.dayKey(Notifications.historyModel.get(index - 1)?.time)
                     readonly property int _sectionHeight: _showSection ? 26 : 0
                     readonly property int _cardHeight: Math.max(70, _entryContent.implicitHeight + 20)
                     readonly property int _fullHeight: _sectionHeight + _cardHeight
@@ -306,11 +309,14 @@ PageShell {
 
                     function removeSelf(): void {
                         if (_removing || root._clearing) return
+                        // snapshot the identity as plain values: a ListModel row object belongs to its delegate
+                        // and can shift under us if a notification lands during the exit animation
+                        const key = { time: _entry.modelData.time, summary: _entry.modelData.summary }
                         if (ShellSettings.reduceMotion) {
-                            Notifications.removeFromHistory(modelData)
+                            Notifications.removeFromHistory(key)
                             return
                         }
-                        _pendingRemove = modelData
+                        _pendingRemove = key
                         _removing = true
                         _removeTimer.restart()
                     }

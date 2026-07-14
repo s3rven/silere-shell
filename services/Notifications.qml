@@ -9,7 +9,6 @@ Singleton {
     id: root
 
     property var list: []
-    property var history: []
     property alias dnd:         _persist.dnd
     property alias missedCount: _persist.missedCount
     property var _seen:  ({})
@@ -17,15 +16,60 @@ Singleton {
     property bool _persistentReady: false
     readonly property int _maxHistory: 20
     readonly property int activeCount: Array.isArray(list) ? list.length : 0
-    readonly property int historyCount: Array.isArray(history) ? history.length : 0
-    readonly property bool hasHistory: historyCount > 0
+
+    // a ListModel, not a var array: reassigning an array resets the whole view — every RecentPage delegate
+    // is rebuilt, the scroll snaps to top and an expanded card collapses, on every incoming notification.
+    // insert/remove touch only the affected row (same reason popups use the live ObjectModel below).
+    ListModel { id: _history }
+    readonly property alias historyModel: _history
+    readonly property int historyCount: _history.count
+    readonly property bool hasHistory: _history.count > 0
+
+    // roles are fixed by the first insert, so every entry — including one revived from saved JSON — must
+    // carry the full shape with the same types
+    function _normalizeEntry(e): var {
+        if (!e || typeof e !== "object") return null
+        return {
+            id:           Number(e.id ?? -1),
+            appName:      String(e.appName ?? ""),
+            appIcon:      String(e.appIcon ?? ""),
+            desktopEntry: String(e.desktopEntry ?? ""),
+            summary:      String(e.summary ?? ""),
+            body:         String(e.body ?? ""),
+            urgency:      Number(e.urgency ?? 1),
+            time:         Number(e.time ?? 0)
+        }
+    }
+
+    function _trimHistory(): void {
+        while (_history.count > root._maxHistory) _history.remove(_history.count - 1)
+    }
+
+    function _prependHistory(entry): void {
+        const e = root._normalizeEntry(entry)
+        if (!e) return
+        _history.insert(0, e)
+        root._trimHistory()
+    }
+
+    function _saveHistory(): void {
+        if (!root._persistentReady) return
+        const out = []
+        for (let i = 0; i < _history.count; i++) {
+            const h = _history.get(i)
+            out.push({
+                id: h.id, appName: h.appName, appIcon: h.appIcon, desktopEntry: h.desktopEntry,
+                summary: h.summary, body: h.body, urgency: h.urgency, time: h.time
+            })
+        }
+        _persist.historyJson = JSON.stringify(out)
+    }
 
     // popups use the live ObjectModel so new cards don't cause a full Repeater rebuild
     readonly property var popupModel: notifServer.trackedNotifications
 
     function _ensurePersistentState(): void {
         // var properties can be undefined for one frame during hot-reload
-        if (!Array.isArray(root.history)) root.history = []
         if (!root._seen || typeof root._seen !== "object") root._seen = ({})
         if (!root._times || typeof root._times !== "object") root._times = ({})
     }
@@ -39,13 +83,19 @@ Singleton {
         const savedHistory = root._parsePersistentJson(_persist.historyJson, [])
         const savedSeen = root._parsePersistentJson(_persist.seenJson, ({}))
         const savedTimes = root._parsePersistentJson(_persist.timesJson, ({}))
-        root.history = Array.isArray(savedHistory) ? savedHistory : []
+        _history.clear()
+        if (Array.isArray(savedHistory)) {
+            for (let i = 0; i < savedHistory.length && i < root._maxHistory; i++) {
+                const e = root._normalizeEntry(savedHistory[i])
+                if (e) _history.append(e)
+            }
+        }
         root._seen = savedSeen && typeof savedSeen === "object" && !Array.isArray(savedSeen) ? savedSeen : ({})
         root._times = savedTimes && typeof savedTimes === "object" && !Array.isArray(savedTimes) ? savedTimes : ({})
+        // last: the writes above must not echo back out to disk while restoring
         root._persistentReady = true
     }
 
-    onHistoryChanged: if (_persistentReady) _persist.historyJson = JSON.stringify(history)
     on_SeenChanged:   if (_persistentReady) _persist.seenJson = JSON.stringify(_seen)
     on_TimesChanged:  if (_persistentReady) _persist.timesJson = JSON.stringify(_times)
 
@@ -148,12 +198,13 @@ Singleton {
 
     function clearHistory(): void {
         root._ensurePersistentState()
-        if (history.length === 0) return
-        for (let i = 0; i < history.length; i++) {
-            const id = history[i]?.id
+        if (_history.count === 0) return
+        for (let i = 0; i < _history.count; i++) {
+            const id = _history.get(i).id
             if (id !== undefined) root._forgetState(id)
         }
-        history = []
+        _history.clear()
+        root._saveHistory()
     }
 
     function _notificationHistoryEntry(notification, id: int, time: real): var {
@@ -182,13 +233,12 @@ Singleton {
     function _archiveNotification(notification, id: int, time: real): bool {
         const entry = root._notificationHistoryEntry(notification, id, time)
         if (!entry) return false
-        const next = []
         let replaced = false
-        for (let i = 0; i < history.length; i++) {
-            if (history[i]?.id === id) replaced = true
-            else next.push(history[i])
+        for (let i = _history.count - 1; i >= 0; i--) {
+            if (_history.get(i).id === id) { _history.remove(i); replaced = true }
         }
-        history = [entry, ...next].slice(0, _maxHistory)
+        root._prependHistory(entry)
+        root._saveHistory()
         return !replaced
     }
 
@@ -263,13 +313,19 @@ Singleton {
     }
 
     function removeFromHistory(entry): void {
-        const idx = (typeof entry === "number")
-            ? entry
-            : history.findIndex(h => h.time === entry.time && h.summary === entry.summary)
-        if (idx < 0 || idx >= history.length) return
-        const next = [...history]
-        const id = next.splice(idx, 1)[0]?.id
-        history = next
+        let idx = -1
+        if (typeof entry === "number") {
+            idx = entry
+        } else if (entry) {
+            for (let i = 0; i < _history.count; i++) {
+                const h = _history.get(i)
+                if (h.time === entry.time && h.summary === entry.summary) { idx = i; break }
+            }
+        }
+        if (idx < 0 || idx >= _history.count) return
+        const id = _history.get(idx).id
+        _history.remove(idx)
+        root._saveHistory()
         if (id !== undefined) root._forgetState(id)
     }
 
@@ -281,7 +337,7 @@ Singleton {
         // expire = timed out, dismiss = user closed
         if (expired === true) n.notification.expire()
         else                  n.notification.dismiss()
-        if (entry) history = [entry, ...history].slice(0, _maxHistory)
+        if (entry) { root._prependHistory(entry); root._saveHistory() }
         root._forget(notifId)
     }
 
@@ -306,8 +362,9 @@ Singleton {
         _times = {}
         list = []
         if (lastCritical) lastCritical = false
-        if (entries.length > 0)
-            history = [...entries, ...history].slice(0, _maxHistory)
+        // reverse order: each insert lands at 0, so the last one inserted ends up on top
+        for (let i = entries.length - 1; i >= 0; i--) root._prependHistory(entries[i])
+        if (entries.length > 0) root._saveHistory()
     }
 
     Component.onCompleted: {
