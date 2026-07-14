@@ -9,12 +9,15 @@ Canvas {
     property string barName: ""   // "" (single monitor / unknown) always paints
     property bool lowPower: false
     property string styleOverride: ""
+    // Parent surfaces use this when they stay loaded for an exit animation but
+    // are fully covered (for example, the center visualizer behind the bar OSD).
+    property bool presentationActive: true
     readonly property bool _onActiveBar: barName.length === 0 || Monitors.activeName === barName
     readonly property string _style: styleOverride.length > 0 ? styleOverride : ShellSettings.mediaVisualizerStyle
     property bool _registered: false
     property bool _registeredLowPower: false
 
-    visible: (ShellSettings.mediaProgress || styleOverride.length > 0)
+    visible: presentationActive && (ShellSettings.mediaProgress || styleOverride.length > 0)
         && !ShellSettings.reduceMotion && !Idle.isIdle
         && Media.shown && Media.playing && Media.cavaReady && _onActiveBar
         && width > 0 && height > 0
@@ -47,6 +50,29 @@ Canvas {
     property real  _fillB:  -1
     property real  _edgeW:  -1
     property var   _cy:     []
+    property var   _pulseFills: []
+    property real  _pulseH: -1
+    property real  _pulseR: -1
+    property real  _pulseG: -1
+    property real  _pulseB: -1
+
+    function _pulseFill(ctx, glowH, ac) {
+        if (_pulseH !== height || _pulseR !== ac.r || _pulseG !== ac.g || _pulseB !== ac.b) {
+            _pulseFills = []
+            _pulseH = height
+            _pulseR = ac.r
+            _pulseG = ac.g
+            _pulseB = ac.b
+        }
+        var bucket = Math.max(1, Math.min(Math.ceil(height), Math.round(glowH)))
+        var cached = _pulseFills[bucket]
+        if (cached) return cached
+        cached = ctx.createLinearGradient(0, height - bucket, 0, height)
+        cached.addColorStop(0.0, Qt.rgba(ac.r, ac.g, ac.b, 0.0))
+        cached.addColorStop(1.0, Qt.rgba(ac.r, ac.g, ac.b, 1.0))
+        _pulseFills[bucket] = cached
+        return cached
+    }
 
     function _fadeEdges(ctx) {
         // edge fade mask so the visualizer blends into the media label instead of hard vertical sides
@@ -146,11 +172,11 @@ Canvas {
             ctx.stroke()
 
             var glowH = Math.max(3, avg * height)
-            var pg = ctx.createLinearGradient(0, height - glowH, 0, height)
-            pg.addColorStop(0.0, Qt.rgba(ac.r, ac.g, ac.b, 0.0))
-            pg.addColorStop(1.0, Qt.rgba(ac.r, ac.g, ac.b, 0.18 + avg * 0.20))
-            ctx.fillStyle = pg
-            ctx.fillRect(0, height - glowH, width, glowH)
+            var glowBucket = Math.max(1, Math.min(Math.ceil(height), Math.round(glowH)))
+            ctx.fillStyle = _pulseFill(ctx, glowBucket, ac)
+            ctx.globalAlpha = 0.18 + avg * 0.20
+            ctx.fillRect(0, height - glowBucket, width, glowBucket)
+            ctx.globalAlpha = 1.0
             _fadeEdges(ctx)
             return
         }

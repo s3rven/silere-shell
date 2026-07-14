@@ -111,7 +111,14 @@ Item {
         id: _vizLoader
         anchors.fill: parent
         active: root._visualizerActive
-        sourceComponent: Component { MediaVisualizer { barName: root.screen ? root.screen.name : "" } }
+        sourceComponent: Component {
+            MediaVisualizer {
+                barName: root.screen ? root.screen.name : ""
+                // A crowded/compact media pill has fewer useful pixels. Match
+                // CAVA's smaller profile instead of computing bins it cannot show.
+                lowPower: root.compact
+            }
+        }
     }
 
     Row {

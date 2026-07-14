@@ -20,8 +20,7 @@ Singleton {
 
     FontMetrics { id: _fm; font.family: root.font; font.pixelSize: 100 }
 
-    // ink height of "M" at the live bar size — the reference bar marks scale against. Shared so every
-    // separator doesn't shape its own glyph; whole px keeps 1px marks off fractional rows.
+    // ink height of "M" at the bar size; shared so every separator doesn't shape its own glyph
     readonly property int capHeight: Math.ceil(_capM.height)
     TextMetrics { id: _capM; font.family: root.font; font.pixelSize: root.fontSize; text: "M" }
 

@@ -31,6 +31,7 @@ PageShell {
         theme: _secTheme, nightlight: _secNightLight, surface: _secSurface,
         separators: _secSeparators, underline: _secUnderline, clock: _secClock,
         workspaces: _secWorkspaces, media: _secMedia, indicators: _secIndicators,
+        widgets: _secWidgets,
         popups: _secPopups, osd: _secOsd, warnings: _secWarnings,
         updates: _secUpdates, system: _secSystem
     })
@@ -730,8 +731,9 @@ PageShell {
 
                 Item { width: 1; height: Theme.gapSection }
                 SettingsCard {
-                        ToggleRow {
-                            glyph: "󰱐"; label: "Audio visualizer"
+                    ToggleRow {
+                        glyph: "󰱐"; label: "Audio visualizer"
+                        description: "Runs only while audio is playing"
                         checked: ShellSettings.mediaProgress
                         onToggled: ShellSettings.mediaProgress = !ShellSettings.mediaProgress
                         available: !SystemTools.ready || SystemTools.hasCava
@@ -795,6 +797,22 @@ PageShell {
                             displayValue: Math.round(ShellSettings.mediaVisualizerIntensity * 100) + "%"
                             onChanged: (v) => ShellSettings.mediaVisualizerIntensity = v
                         }
+                        ChoiceChipRow {
+                            glyph: "󰓅"; label: "Spectrum"
+                            currentValue: ShellSettings.mediaVisualizerSpectrum
+                            model: [
+                                { value: "bass",     label: "Bass" },
+                                { value: "balanced", label: "Full" },
+                                { value: "wide",     label: "Wide" }
+                            ]
+                            onChosen: (v) => ShellSettings.mediaVisualizerSpectrum = v
+                        }
+                        ToggleRow {
+                            glyph: "󰁨"; label: "Auto sensitivity"
+                            description: "Adapts to quiet and loud sources"
+                            checked: ShellSettings.mediaVisualizerAutoSensitivity
+                            onToggled: ShellSettings.mediaVisualizerAutoSensitivity = !ShellSettings.mediaVisualizerAutoSensitivity
+                        }
                         ToggleRow {
                             glyph: "󰊓"; label: "Pause in fullscreen"
                             checked: ShellSettings.mediaVisualizerPauseFullscreen
@@ -856,7 +874,15 @@ PageShell {
                     }
                 }
 
-                SectionLabel { label: "WIDGETS" }
+                }
+            }
+
+            Component {
+                id: _secWidgets
+                Column {
+                width: _detailBody.width
+                spacing: 0
+
                 DraggableWidgetList { width: parent.width }
                 Item { width: 1; height: 16 }
                 }

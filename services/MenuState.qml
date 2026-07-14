@@ -24,6 +24,7 @@ Singleton {
             { glyph: "󰍴", label: "Underline", section: "underline"  }
         ]},
         { glyph: "󰀻", label: "Widgets", children: [
+            { glyph: "󰀻", label: "Arrange",    section: "widgets"    },
             { glyph: "󰅐", label: "Clock",      section: "clock"      },
             { glyph: "󰕰", label: "Workspaces", section: "workspaces" },
             { glyph: "󰝚", label: "Media",      section: "media"      },

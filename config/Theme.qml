@@ -43,8 +43,7 @@ Singleton {
                                         : _n ? withAlpha(subtext, lineAlpha(0.14))
                                              : withAlpha(mix(subtext, accent, 0.22), lineAlpha(0.17))
 
-    // one separator ink for both renderers: the bar's drawn marks (Dot) and the window title's inline
-    // "app · title" delimiter. dotOpacity is the sole control — outlineStrength stays out of it.
+    // shared by Dot's marks and the window title's inline delimiter; dotOpacity is its only control
     readonly property color barSeparator: withAlpha(_n ? subtext : mix(subtext, accent, 0.10),
                                                     ShellSettings.dotOpacity)
 

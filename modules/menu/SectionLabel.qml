@@ -6,12 +6,10 @@ Item {
     id: root
 
     property string label: ""
-    // set on the topmost heading of a page: tightens the gap under the page header. not derived from layout —
-    // a heading nested in a Loader/collapsible still has nothing before it in its own column while sitting mid-page
+    // a page's topmost heading; not derived — one nested in a Loader still has nothing above it in its own column
     property bool   first: false
     property bool   showRule: true
-    // a heading is not a row: it neither takes a seam nor induces one, so a group that collapses a
-    // label together with its card draws no stray line across the gap
+    // a heading takes no seam and induces none, so collapsing it with its card draws no stray line
     readonly property bool suppressDividerAbove: true
 
     readonly property int _topGap: first ? 2 : Theme.gapSection

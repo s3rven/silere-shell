@@ -33,7 +33,6 @@ Singleton {
     readonly property bool hasZypper:        _tools.zypper ?? false
     readonly property bool hasXbps:          _tools["xbps-install"] ?? false
     readonly property bool hasPowerProfilesCtl: _tools.powerprofilesctl ?? false
-    readonly property bool hasMatugen:       _tools.matugen ?? false
     readonly property bool hasFcList:        _tools["fc-list"] ?? false
 
     function refresh(): void {
@@ -52,7 +51,7 @@ Singleton {
             "  done; " +
             "fi; [ -n \"$family\" ] && echo \"@family=$family\"; " +
             "for t in brightnessctl inotifywait nmcli cava hyprsunset hyprlock systemctl loginctl hyprctl pgrep pkill notify-send " +
-            "busctl checkupdates paru yay timeout apt dnf zypper xbps-install powerprofilesctl matugen fc-list; do " +
+            "busctl checkupdates paru yay timeout apt dnf zypper xbps-install powerprofilesctl fc-list; do " +
             "  command -v \"$t\" >/dev/null 2>&1 && echo \"$t\"; " +
             "done"])
     }

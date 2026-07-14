@@ -43,8 +43,7 @@ Item {
             border.color: root._col
         }
 
-        // axis-aligned 1px strokes: antialiasing only smears them (same rule as the menu's RowDividers),
-        // and whole-px placement keeps them off a sub-pixel column
+        // axis-aligned 1px: antialiasing smears it (as in RowDividers), whole-px x/y keeps it off a sub-pixel column
         Rectangle {
             visible: root._style === "|"
             x: Math.round((parent.width - width) / 2)

@@ -14,7 +14,8 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - uses: actions/checkout@v4
+      # pinned to an immutable SHA: a moved v4 tag would otherwise run unreviewed code
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Install validation dependencies
         run: pacman -Syu --noconfirm shellcheck quickshell

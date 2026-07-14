@@ -346,7 +346,7 @@ Item {
 
         readonly property real targetX: root.activeIndex >= 0
             ? root._diamondX(width)
-            : x
+            : 0
         x: targetX
 
         property real _hoverScale:   1.0
@@ -621,7 +621,6 @@ Item {
                 required property int index
                 readonly property int  wsId:    modelData
                 readonly property bool active:  root.monitorReady && root.activeId === wsId
-                readonly property var  wsObj:   root.wsObjFor(wsId)
                 readonly property var  apps:    root.appsFor(wsId)
                 readonly property bool occupied: root.occupied(wsId)
                 readonly property bool urgent:  root.urgent(wsId)

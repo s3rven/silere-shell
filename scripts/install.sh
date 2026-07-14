@@ -378,16 +378,30 @@ _font_installed() {
     command -v fc-list >/dev/null 2>&1 && fc-list : family 2>/dev/null | grep -qi "JetBrainsMono Nerd"
 }
 
+# pinned release, not "latest": the hash below is only meaningful against a fixed artifact
+FONT_VERSION="v3.4.0"
+FONT_SHA256="ef552a3e638f25125c6ad4c51176a6adcdce295ab1d2ffacf0db060caf8c1582"
+FONT_URL="https://github.com/ryanoasis/nerd-fonts/releases/download/$FONT_VERSION/JetBrainsMono.tar.xz"
+
 _font_download_tools_ready() {
     local -a missing=()
     command -v curl >/dev/null 2>&1 || missing+=("curl")
     command -v tar  >/dev/null 2>&1 || missing+=("tar")
+    command -v sha256sum >/dev/null 2>&1 || command -v shasum >/dev/null 2>&1 || missing+=("sha256sum")
     if [ "${#missing[@]}" -eq 0 ]; then
         return 0
     fi
     _warn "font auto-install needs: ${missing[*]}"
     _warn "install those tools or install JetBrainsMono Nerd Font manually"
     return 1
+}
+
+_font_sha256() {
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum -- "$1" | awk '{print $1}'
+    else
+        shasum -a 256 -- "$1" | awk '{print $1}'
+    fi
 }
 
 did_font=false
@@ -401,17 +415,29 @@ else
         mkdir -p "$FONT_DIR"
         font_tmp="$(mktemp "${TMPDIR:-/tmp}/silere-font.XXXXXX.tar.xz")"
         spin_start "downloading..."
-        if curl -fsSL -o "$font_tmp" "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.tar.xz" \
-            && tar -xJ -f "$font_tmp" -C "$FONT_DIR" --wildcards "*.ttf" 2>/dev/null; then
+        if ! curl -fsSL --proto '=https' --tlsv1.2 -o "$font_tmp" "$FONT_URL"; then
+            spin_stop
+            rm -f "$font_tmp"
+            _warn "download failed — install JetBrainsMono Nerd Font manually"
+        elif [ "$(_font_sha256 "$font_tmp")" != "$FONT_SHA256" ]; then
+            spin_stop
+            rm -f "$font_tmp"
+            # fail closed: a hash mismatch means the artifact is not the reviewed one
+            _warn "checksum mismatch on the font download — refusing to install it"
+            _warn "expected $FONT_SHA256"
+            _warn "install JetBrainsMono Nerd Font manually, or report this if it persists"
+        elif tar -xJ -f "$font_tmp" -C "$FONT_DIR" \
+                --no-same-owner --no-same-permissions --no-overwrite-dir \
+                --wildcards --no-anchored '*.ttf' 2>/dev/null; then
             spin_stop
             rm -f "$font_tmp"
             fc-cache -f "$FONT_DIR" 2>/dev/null || true
-            _ok "installed to $FONT_DIR"
+            _ok "installed $FONT_VERSION to $FONT_DIR"
             did_font=true
         else
             spin_stop
             rm -f "$font_tmp"
-            _warn "download failed — install JetBrainsMono Nerd Font manually"
+            _warn "extract failed — install JetBrainsMono Nerd Font manually"
         fi
     else
         _skip "skipped — install a Nerd Font manually before launching silere"

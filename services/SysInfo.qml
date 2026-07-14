@@ -16,22 +16,8 @@ Singleton {
     property real _lastCpuTotal: 0
     property real _lastCpuIdle: 0
 
-    readonly property real memUsedGb:  (memTotalKb - memAvailKb) / (1024 * 1024)
-    readonly property real memTotalGb: memTotalKb / (1024 * 1024)
     readonly property real memPct:     memTotalKb > 0 ? (memTotalKb - memAvailKb) / memTotalKb : 0
     readonly property real diskPct:    diskTotalKb > 0 ? diskUsedKb / diskTotalKb : 0
-
-    readonly property string memLabel: {
-        if (memTotalKb <= 0) return "—"
-        return memUsedGb.toFixed(1) + " / " + Math.round(memTotalGb) + "G"
-    }
-
-    readonly property string diskLabel: {
-        if (diskTotalKb <= 0) return "—"
-        const used  = (diskUsedKb  / 1048576).toFixed(0)
-        const total = (diskTotalKb / 1048576).toFixed(0)
-        return used + " / " + total + " GB"
-    }
 
     readonly property string uptimeLabel: {
         if (uptimeSecs <= 0) return "—"

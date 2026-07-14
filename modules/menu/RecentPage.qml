@@ -269,8 +269,7 @@ PageShell {
 
             delegate: Item {
                     id: _entry
-                    // a ListModel delegate is handed its roles, not a modelData object; alias it so the rest
-                    // of the entry reads the same either way
+                    // a ListModel delegate gets roles, not modelData; alias so the rest of the entry reads the same
                     required property var model
                     readonly property var modelData: model
                     required property int index
@@ -309,8 +308,7 @@ PageShell {
 
                     function removeSelf(): void {
                         if (_removing || root._clearing) return
-                        // snapshot the identity as plain values: a ListModel row object belongs to its delegate
-                        // and can shift under us if a notification lands during the exit animation
+                        // plain values: a ListModel row belongs to its delegate and shifts if a notif lands mid-animation
                         const key = { time: _entry.modelData.time, summary: _entry.modelData.summary }
                         if (ShellSettings.reduceMotion) {
                             Notifications.removeFromHistory(key)

@@ -40,8 +40,10 @@ Singleton {
         return -1
     }
 
-    property var devices: []
-    function _rebuildDevices(): void {
+    // Keep the picker ordered as live object properties change. Building this
+    // declaratively tracks connected/paired/name on each device; the old
+    // on_DevicesChanged hook only noticed array membership changes.
+    readonly property var devices: {
         const list = _devices.slice()
         list.sort((a, b) => {
             if (!a || !b) return 0
@@ -51,21 +53,31 @@ Singleton {
             const bn = (b.deviceName || b.name || "").toLowerCase()
             return an < bn ? -1 : (an > bn ? 1 : 0)
         })
-        devices = list
+        return list
     }
-    on_DevicesChanged: _rebuildDevices()
-    Component.onCompleted: _rebuildDevices()
 
     function toggle(): void {
         if (adapter) adapter.enabled = !adapter.enabled
     }
 
+    property bool _scanRequested: false
     function setScan(on: bool): void {
-        if (!adapter) return
-        // discovering is a D-Bus proxy: re-asserting the current value fires a
-        // redundant Start/StopDiscovery that bluez rejects. Only write on change.
-        const want = on && adapter.enabled
-        if (adapter.discovering !== want) adapter.discovering = want
+        const want = !!(on && adapter && adapter.enabled)
+        // onOpenChanged and Component.onCompleted can request the same state in
+        // one construction pass. Coalesce them before touching the D-Bus proxy;
+        // BlueZ otherwise reports "Operation already in progress".
+        _scanRequested = want
+        if (!_scanSync.running) _scanSync.restart()
+    }
+
+    Timer {
+        id: _scanSync
+        interval: 0
+        onTriggered: {
+            if (!root.adapter) return
+            const want = root._scanRequested && root.adapter.enabled
+            if (root.adapter.discovering !== want) root.adapter.discovering = want
+        }
     }
 
     // Dispatch by address through the raw _devices array so we always call

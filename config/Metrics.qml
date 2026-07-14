@@ -5,8 +5,7 @@ import Quickshell
 import "../services"
 
 // bar spacing tokens — replaces scattered barCompact ? a : b in BarContent/Pill/Dot.
-// every token takes `compact` as an argument: callers must pass BarContent.effectiveCompact, which folds in
-// auto-tighten. a token reading ShellSettings.barCompact itself would silently ignore it and skew the gaps.
+// pass BarContent.effectiveCompact: a token reading ShellSettings.barCompact would skip auto-tighten
 Singleton {
     // gap between widgets; Spacing = Tight/Normal/Loose (8/11/15); compact reduces it
     function widgetGapFor(compact: bool): int {

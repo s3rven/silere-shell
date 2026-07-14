@@ -119,9 +119,6 @@ Singleton {
         return "discharging"
     }
 
-    // Power flow in/out of the battery (W). Shown in the menu gauge while charging.
-    readonly property real   changeRate: upowerReady ? Math.abs(UPower.displayDevice.changeRate) : 0
-    readonly property string rateLabel:  (available && changeRate > 0.1) ? changeRate.toFixed(1) + "W" : ""
 
     // shared low-battery pulse so bar underline and pill stay phase-locked
     PulseLoop {

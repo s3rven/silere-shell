@@ -133,10 +133,11 @@ Singleton {
         onExited: root._parseCoord(_geoOut.text)
     }
 
-    // per-minute tick while auto is tracking the sun; single fresh tick on menu open
+    // Per-minute tracking only matters while the effect is active. Menu open
+    // still takes one fresh tick for its recommendation/location UI.
     Timer {
         interval: 60000; repeat: true
-        running: root.toolAvailable && ShellSettings.nightLightAuto && !Idle.isIdle
+        running: root.toolAvailable && ShellSettings.nightLightAuto && root.enabled && !Idle.isIdle
         onTriggered: root._solarTick++
     }
     Connections {
@@ -146,7 +147,9 @@ Singleton {
     // catch up a sunset/sunrise that passed while idle
     Connections {
         target: Idle
-        function onIsIdleChanged() { if (!Idle.isIdle && ShellSettings.nightLightAuto) root._solarTick++ }
+        function onIsIdleChanged() {
+            if (!Idle.isIdle && ShellSettings.nightLightAuto && root.enabled) root._solarTick++
+        }
     }
 
     onSuggestedTempChanged: {
@@ -155,7 +158,10 @@ Singleton {
     Connections {
         target: ShellSettings
         function onNightLightAutoChanged() {
-            if (ShellSettings.nightLightAuto && root.enabled) ShellSettings.nightLightTemp = root.suggestedTemp
+            if (ShellSettings.nightLightAuto && root.enabled) {
+                root._solarTick++
+                ShellSettings.nightLightTemp = root.suggestedTemp
+            }
         }
     }
 
@@ -198,7 +204,12 @@ Singleton {
             if (_sunsetProc.running || _stopping) { _pendingEnable = true; return }
             // don't spawn while a fallback pkill is in flight — it matches hyprsunset by name and would kill the new instance; queue instead
             if (_killProc.running) { _pendingEnable = true; return }
-            if (ShellSettings.nightLightAuto) ShellSettings.nightLightTemp = root.suggestedTemp
+            if (ShellSettings.nightLightAuto) {
+                // Quick Actions can enable Night Light while the main menu is
+                // closed and the minute timer is asleep. Refresh before use.
+                root._solarTick++
+                ShellSettings.nightLightTemp = root.suggestedTemp
+            }
             _startSunset()
         }
     }

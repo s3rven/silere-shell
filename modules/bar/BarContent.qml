@@ -183,7 +183,10 @@ Item {
         height: parent.height
         active: root._centerVizWanted && root._centerVizHasRoom
         sourceComponent: Component {
-            MediaVisualizer { barName: root.screen ? root.screen.name : "" }
+            MediaVisualizer {
+                barName: root.screen ? root.screen.name : ""
+                presentationActive: root._centerVizShowing
+            }
         }
         visible: opacity > 0.001
         opacity: root._centerVizShowing ? 1.0 : 0.0

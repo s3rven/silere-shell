@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Mpris
+import "../config"
 
 Singleton {
     id: root
@@ -145,7 +146,15 @@ Singleton {
     property int _visualizerClients: 0
     property int _visualizerDemand: 0
     readonly property bool _visualizerLowPowerOnly: _visualizerClients > 0 && _visualizerDemand <= _visualizerClients
-    readonly property string _cavaProfileKey: _cavaBars + ":" + _cavaFps + ":" + _cavaSensitivity + ":" + _cavaNoiseReduction
+    readonly property string _cavaProfileKey: [
+        _cavaBars,
+        _cavaFps,
+        _cavaSensitivity,
+        _cavaNoiseReduction,
+        _cavaLowerCutoff,
+        _cavaHigherCutoff,
+        ShellSettings.mediaVisualizerAutoSensitivity ? 1 : 0
+    ].join(":")
 
     function registerVisualizer(lowPower): void {
         _visualizerClients++
@@ -158,23 +167,22 @@ Singleton {
     }
 
     readonly property int _cavaBars: {
-        const compact = ShellSettings.barCompact
         if (_visualizerLowPowerOnly)
             return ShellSettings.mediaVisualizerPreset === "smooth" ? 10
                  : ShellSettings.mediaVisualizerPreset === "eco"    ? 6
                  :                                                     8
         if (ShellSettings.mediaVisualizerStyle === "pulse")
-            return ShellSettings.mediaVisualizerPreset === "smooth" ? (compact ? 12 : 14)
-                 : ShellSettings.mediaVisualizerPreset === "eco"    ? (compact ? 6 : 8)
-                 :                                                     (compact ? 8 : 10)
+            return ShellSettings.mediaVisualizerPreset === "smooth" ? 14
+                 : ShellSettings.mediaVisualizerPreset === "eco"    ? 8
+                 :                                                     10
         if (ShellSettings.mediaVisualizerStyle === "bars")
-            return ShellSettings.mediaVisualizerPreset === "smooth" ? (compact ? 14 : 18)
-                 : ShellSettings.mediaVisualizerPreset === "eco"    ? (compact ? 8 : 10)
-                 :                                                     (compact ? 11 : 14)
+            return ShellSettings.mediaVisualizerPreset === "smooth" ? 18
+                 : ShellSettings.mediaVisualizerPreset === "eco"    ? 10
+                 :                                                     14
         switch (ShellSettings.mediaVisualizerPreset) {
-        case "eco":    return compact ? 8 : 10
-        case "smooth": return compact ? 18 : 22
-        default:       return compact ? 12 : 16
+        case "eco":    return 10
+        case "smooth": return 22
+        default:       return 16
         }
     }
     readonly property int _cavaFps: {
@@ -199,11 +207,20 @@ Singleton {
     }
     readonly property real _cavaNoiseReduction: {
         switch (ShellSettings.mediaVisualizerPreset) {
-        case "eco":    return 0.72
-        case "smooth": return 0.46
-        default:       return 0.58
+        // CAVA expects this on a 0-100 scale, not a normalized 0-1 scale.
+        case "eco":    return 72
+        case "smooth": return 46
+        default:       return 58
         }
     }
+    readonly property int _cavaLowerCutoff:
+        ShellSettings.mediaVisualizerSpectrum === "bass" ? 35
+        : ShellSettings.mediaVisualizerSpectrum === "wide" ? 30
+        : 45
+    readonly property int _cavaHigherCutoff:
+        ShellSettings.mediaVisualizerSpectrum === "bass" ? 6500
+        : ShellSettings.mediaVisualizerSpectrum === "wide" ? 16000
+        : 10000
     readonly property var _zeroBars: {
         const out = []
         for (let i = 0; i < _cavaBars; i++) out.push(0)
@@ -212,11 +229,17 @@ Singleton {
     readonly property string _cavaConfigText:
         "[general]\n" +
         "bars = " + _cavaBars + "\n" +
-        "sleep_timer = 0\n" +
+        // A stale MPRIS player can remain "playing" without producing audio.
+        // Let CAVA suspend its FFT after two quiet seconds and wake itself later.
+        "sleep_timer = 2\n" +
         "framerate = " + _cavaFps + "\n" +
+        "autosens = " + (ShellSettings.mediaVisualizerAutoSensitivity ? 1 : 0) + "\n" +
         "sensitivity = " + _cavaSensitivity + "\n" +
+        "lower_cutoff_freq = " + _cavaLowerCutoff + "\n" +
+        "higher_cutoff_freq = " + _cavaHigherCutoff + "\n" +
         "\n[input]\n" +
         "method = pipewire\n" +
+        "source = auto\n" +
         "\n[output]\n" +
         "method = raw\n" +
         "raw_target = /dev/stdout\n" +
@@ -227,10 +250,12 @@ Singleton {
         "channels = mono\n" +
         "\n[smoothing]\n" +
         "noise_reduction = " + _cavaNoiseReduction + "\n"
+    // never /tmp: world-writable + guessable path invites a symlink swap. XDG_RUNTIME_DIR always exists here (wayland socket lives in it)
     readonly property string _cavaConfigPath: {
         const runtime = String(Quickshell.env("XDG_RUNTIME_DIR") || "").trim()
-        return (runtime.length > 0 ? runtime : "/tmp")
-            + "/silere-shell-cava-" + Quickshell.processId + ".conf"
+        return runtime.length > 0
+            ? runtime + "/silere-shell-cava-" + Quickshell.processId + ".conf"
+            : ""
     }
     property bool _cavaConfigReady: false
 
@@ -238,6 +263,7 @@ Singleton {
     // don't wait for onSaved — it never fires on hot-reload (processId is stable → same
     // path + identical content → no write → no save signal → cava stuck off)
     function _writeCavaConfig(): void {
+        if (root._cavaConfigPath.length === 0) return
         root._cavaConfigReady = true
         _cavaConfig.setText(root._cavaConfigText)
     }
@@ -284,11 +310,14 @@ Singleton {
         }
     }
 
-    Process {
+    SupervisedProcess {
         id: _cavaProc
         command: ["cava", "-p", root._cavaConfigPath]
-        running: root._cavaConfigReady && root.cavaReady && root._visualizerClients > 0
+        superviseWhen: root._cavaConfigReady && root.cavaReady && root._visualizerClients > 0
             && root.available && root.playing && !Idle.isIdle && !root._fsBlocked
+        restartDelay: 1000
+        maxRestartDelay: 30000
+        stableAfter: 20000
         stdout: SplitParser {
             onRead: line => {
                 const parts = line.split(";")
@@ -309,7 +338,6 @@ Singleton {
             }
         }
         onRunningChanged: if (!running) root.barHeights = root._zeroBars
-        Component.onDestruction: running = false
     }
 
     function togglePlay(): void {

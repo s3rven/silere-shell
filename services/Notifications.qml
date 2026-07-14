@@ -17,16 +17,13 @@ Singleton {
     readonly property int _maxHistory: 20
     readonly property int activeCount: Array.isArray(list) ? list.length : 0
 
-    // a ListModel, not a var array: reassigning an array resets the whole view — every RecentPage delegate
-    // is rebuilt, the scroll snaps to top and an expanded card collapses, on every incoming notification.
-    // insert/remove touch only the affected row (same reason popups use the live ObjectModel below).
+    // reassigning a var array resets the view — every delegate rebuilt, scroll to top, expanded card collapsed
     ListModel { id: _history }
     readonly property alias historyModel: _history
     readonly property int historyCount: _history.count
     readonly property bool hasHistory: _history.count > 0
 
-    // roles are fixed by the first insert, so every entry — including one revived from saved JSON — must
-    // carry the full shape with the same types
+    // roles are fixed by the first insert, so every entry (incl. one revived from JSON) needs the full shape
     function _normalizeEntry(e): var {
         if (!e || typeof e !== "object") return null
         return {
