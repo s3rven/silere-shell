@@ -302,9 +302,6 @@ Item {
             function onGlowStrengthChanged() {
                 if (_lineEffect._canPreview()) _previewTimer.restart()
             }
-            function onActiveGlowStrengthChanged() {
-                if (_lineEffect._canPreview()) _previewTimer.restart()
-            }
             function onUnderlineScreenshotGlowChanged() {
                 if (ShellSettings.underlineScreenshotGlow && _lineEffect._canPreview()) _screenshotPreviewTimer.restart()
             }
