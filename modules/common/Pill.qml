@@ -124,7 +124,10 @@ Item {
     }
     // bar row's full height as the input target, visible capsule stays compact — matters on a tall bar
     implicitHeight: Math.max(pillH, parent ? parent.height : 0)
-    clip: true
+    // clip only when something actually overflows: the row while the pill eases open into wider text
+    // (shrinking can't spill — width lags above the content), and the scan sweep, which starts off-pill.
+    // a standing clip node would break scene batching on every bar repaint.
+    clip: _contentScan.active || row.width > width
     activeFocusOnTab: interactive
 
     Accessible.role: interactive ? Accessible.Button : Accessible.StaticText
