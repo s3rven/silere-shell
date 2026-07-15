@@ -14,8 +14,6 @@ Item {
     property real   bottomRadius: 0
     property bool   available:    true
     property string dependsNote:  ""
-    property string badge:        ""   // small tag after the label, e.g. "beta" or "cava"
-    property string badgeKind:    badge
     // matches the card's border width so the hover fill stays inside the stroke, aligned to the card's inner rounded edge
     property real   cardInset:    1
 
@@ -87,7 +85,8 @@ Item {
         Behavior on color { ColorAnimation { duration: Motion.fast } }
     }
 
-    // label (+ optional badge) over the optional description, centred so single- and two-line rows both balance next to the glyph and toggle
+    // Label over the optional description, centred so single- and two-line rows
+    // both balance next to the glyph and toggle.
     Column {
         id: _textCol
         anchors.left:           _glyph.right
@@ -97,38 +96,19 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         spacing: 2
 
-        Item {
-            width:  parent.width
-            height: _label.implicitHeight
-            clip: true
-
-            Text {
-                id: _label
-                anchors.left:           parent.left
-                anchors.verticalCenter: parent.verticalCenter
-                // cap the width so a long label elides rather than shoving the following badge off the row
-                width: Math.min(implicitWidth, parent.width - (_badge.visible ? _badge.width + 7 : 0))
-                text:           root.label
-                textFormat:     Text.PlainText
-                elide:          Text.ElideRight
-                color:          root.checked
-                    ? Theme.text
-                    : Theme.withAlpha(Theme.text, 0.85)
-                font.family:    Settings.font
-                font.pixelSize: Settings.fontSize
-                renderType:     Text.NativeRendering
-                Behavior on color { ColorAnimation { duration: Motion.fast } }
-            }
-
-            SettingsBadge {
-                id: _badge
-                // sits flush after the label so the tag reads as part of it, not a stray chip by the toggle
-                anchors.left:           _label.right
-                anchors.leftMargin:     7
-                anchors.verticalCenter: _label.verticalCenter
-                text: root.badge
-                kind: root.badgeKind
-            }
+        Text {
+            id: _label
+            width: parent.width
+            text:           root.label
+            textFormat:     Text.PlainText
+            elide:          Text.ElideRight
+            color:          root.checked
+                ? Theme.text
+                : Theme.withAlpha(Theme.text, 0.85)
+            font.family:    Settings.font
+            font.pixelSize: Settings.fontSize
+            renderType:     Text.NativeRendering
+            Behavior on color { ColorAnimation { duration: Motion.fast } }
         }
 
         Text {

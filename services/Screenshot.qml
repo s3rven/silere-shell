@@ -9,7 +9,6 @@ Singleton {
     id: root
 
     signal flashed()
-    readonly property bool armed: SystemTools.ready
 
     property real _lastFlashTime: 0
 

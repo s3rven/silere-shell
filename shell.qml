@@ -31,7 +31,6 @@ ShellRoot {
     // these are startup diagnostics/alerts whose watchers must arm before the user opens a panel.
     Component.onCompleted: {
         void NotifWatch.armed
-        void Screenshot.armed
         root.armSystemAlertsIfNeeded()
     }
 

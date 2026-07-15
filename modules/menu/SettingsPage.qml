@@ -909,7 +909,7 @@ PageShell {
                         expanded: ShellSettings.osdEnabled
                         // Mode: floating pill vs bar-inline. Drives which sub-options apply.
                         ToggleRow {
-                            glyph: "󰀱"; label: "Show in bar"; badge: "beta"
+                            glyph: "󰀱"; label: "Show in bar"
                             description: "Volume and brightness in the bar center"
                             checked: ShellSettings.osdBarIntegrated
                             onToggled: ShellSettings.osdBarIntegrated = !ShellSettings.osdBarIntegrated

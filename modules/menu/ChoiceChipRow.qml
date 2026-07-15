@@ -9,8 +9,6 @@ Item {
 
     property string glyph: ""
     property string label: ""
-    property string badge: ""
-    property string badgeKind: badge
     property var    model: []
     property var    currentValue
     property color  accentColor: Theme.accent
@@ -59,7 +57,6 @@ Item {
         height: Math.max(_glyph.implicitHeight, _label.implicitHeight)
         readonly property real neededW: (root.glyph.length > 0 ? 28 : 0)
             + Math.ceil(_label.implicitWidth)
-            + (_rowBadge.visible ? _rowBadge.width + 7 : 0)
 
         Text {
             id: _glyph
@@ -79,8 +76,7 @@ Item {
             anchors.left:           _glyph.right
             anchors.leftMargin:     root.glyph.length > 0 ? 10 : 0
             anchors.verticalCenter: parent.verticalCenter
-            width: Math.min(implicitWidth, Math.max(18, parent.width - anchors.leftMargin - _glyph.width
-                - (_rowBadge.visible ? _rowBadge.width + 7 : 0)))
+            width: Math.min(implicitWidth, Math.max(18, parent.width - anchors.leftMargin - _glyph.width))
             text:           root.label
             textFormat:     Text.PlainText
             elide:          Text.ElideRight
@@ -88,14 +84,6 @@ Item {
             font.family:    Settings.font
             font.pixelSize: Settings.fontSize
             renderType:     Text.NativeRendering
-        }
-        SettingsBadge {
-            id: _rowBadge
-            anchors.left: _label.right
-            anchors.leftMargin: 7
-            anchors.verticalCenter: _label.verticalCenter
-            text: root.badge
-            kind: root.badgeKind
         }
     }
 
@@ -203,10 +191,6 @@ Item {
                     readonly property real   contentW: _content.width
                     readonly property string segGlyph: (modelData.glyph !== undefined && modelData.glyph !== null)
                         ? String(modelData.glyph) : ""
-                    readonly property string segBadge: (modelData.badge !== undefined && modelData.badge !== null)
-                        ? String(modelData.badge) : ""
-                    readonly property string segBadgeKind: (modelData.badgeKind !== undefined && modelData.badgeKind !== null)
-                        ? String(modelData.badgeKind) : _seg.segBadge
 
                     width:  _segContainer._cellW
                     height: 26
@@ -280,8 +264,7 @@ Item {
                             text:           _seg.modelData.label
                             textFormat:     Text.PlainText
                             width: Math.min(implicitWidth, Math.max(14, _segContainer._cellW - 8
-                                - (_seg.segGlyph.length > 0 ? 18 : 0)
-                                - (_segBadge.visible ? _segBadge.width + 4 : 0)))
+                                - (_seg.segGlyph.length > 0 ? 18 : 0)))
                             height: 18
                             verticalAlignment: Text.AlignVCenter
                             elide:          Text.ElideRight
@@ -294,12 +277,6 @@ Item {
                             minimumPixelSize: Math.max(8, Settings.fontSize - 3)
                             font.weight:    _seg.active ? Font.DemiBold : Font.Medium
                             renderType:     Text.NativeRendering
-                        }
-                        SettingsBadge {
-                            id: _segBadge
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: _seg.segBadge
-                            kind: _seg.segBadgeKind
                         }
                     }
                 }

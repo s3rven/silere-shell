@@ -55,7 +55,7 @@ Singleton {
     property bool   osdTempWarn:    false
     property bool   osdVolumeTint:  false    // volume emphasis: warm tint + slow shimmer as volume nears max
     property bool   osdChargedNotify: false  // one-shot OSD peek when the battery reaches full
-    property bool   osdBarIntegrated: false  // β: show OSD inline in the bar center instead of a floating pill
+    property bool   osdBarIntegrated: false  // show OSD inline in the bar center instead of a floating pill
     property bool   osdMatchBar:      true   // floating OSD pill adopts the bar's height + corner radius
     property bool   reduceMotion:        false
     property bool   highContrast:        false
@@ -98,7 +98,7 @@ Singleton {
                                          : dotStyle
     property int    barSpacing:          11        // gap between bar widgets / separators
     property bool   barAutoCompact:      true      // automatically tighten separators when the bar gets crowded
-    property bool   barCompact:          false     // β: fewer separators, tighter gaps
+    property bool   barCompact:          false     // fewer separators, tighter gaps
     property bool   barHoverHighlight:   false     // soft capsule behind a bar widget while pointed at
     property int    barHeight:           36
     property bool   barFloating:         false     // detached rounded surface, matches the menu/calendar/notif panels

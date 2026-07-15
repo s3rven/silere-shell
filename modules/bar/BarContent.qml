@@ -105,7 +105,7 @@ Item {
         onImplicitWidthChanged: root._queueAutoCompact()
     }
 
-    // bar OSD (β) takes one bar center while showing; loaded only on the overlay bar to avoid duplicate layout/anim work on every monitor
+    // Bar OSD takes one bar center while showing; loaded only on the overlay bar to avoid duplicate layout/animation work on every monitor.
     readonly property bool _isOverlayBar: root.screen && root.screen.name === Monitors.overlayBarName
     readonly property bool _onActiveBar: !root.screen || Monitors.activeName === root.screen.name
     readonly property bool _osdBarShowing: ShellSettings.osdEnabled && ShellSettings.osdBarIntegrated

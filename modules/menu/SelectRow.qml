@@ -9,8 +9,6 @@ Item {
 
     property string glyph:       ""
     property string label:       ""
-    property string badge:       ""
-    property string badgeKind:   badge
     property var    model:       []
     property var    currentValue
     property real   topRadius:    0
@@ -124,19 +122,11 @@ Item {
             text:       root.label
             textFormat: Text.PlainText
             elide:      Text.ElideRight
-            width:      Math.min(implicitWidth, Math.max(18, parent.width - (_badge.visible ? _badge.width + 7 : 0)))
+            width:      parent.width
             color:      Theme.withAlpha(Theme.text, 0.85)
             font.family:    Settings.font
             font.pixelSize: Settings.fontSize
             renderType:     Text.NativeRendering
-        }
-        SettingsBadge {
-            id: _badge
-            anchors.left: _label.right
-            anchors.leftMargin: 7
-            anchors.verticalCenter: _label.verticalCenter
-            text: root.badge
-            kind: root.badgeKind
         }
     }
     // Right slot: current value label + chevron

@@ -68,7 +68,7 @@ Column {
             onChanged: (v) => ShellSettings.wsMarkerOpacity = v
         }
         ToggleRow {
-            glyph: "󰀻"; label: "App icons"; badge: "beta"
+            glyph: "󰀻"; label: "App icons"
             description: "Show up to three running apps on occupied workspaces"
             checked: ShellSettings.wsShowAppIcons
             onToggled: ShellSettings.wsShowAppIcons = !ShellSettings.wsShowAppIcons
