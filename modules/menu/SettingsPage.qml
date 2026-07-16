@@ -820,6 +820,39 @@ PageShell {
                     }
                 }
 
+                SectionLabel { label: "STATUS WIDGETS" }
+                SettingsCard {
+                    ToggleRow {
+                        glyph: "󰂃"; label: "Hide charged battery"
+                        checked: ShellSettings.batteryAutoHide
+                        available: Battery.available
+                        dependsNote: "No battery"
+                        onToggled: ShellSettings.batteryAutoHide = !ShellSettings.batteryAutoHide
+                    }
+                    ToggleRow {
+                        glyph: "󰓅"; label: "Network speed"
+                        checked: ShellSettings.networkTrafficStats
+                        available: Network.toolAvailable
+                        dependsNote: "NetworkManager missing"
+                        onToggled: ShellSettings.networkTrafficStats = !ShellSettings.networkTrafficStats
+                    }
+                    CollapsibleSection {
+                        expanded: ShellSettings.networkTrafficStats
+                        ToggleRow {
+                            glyph: "󰐃"; label: "Always show speed"
+                            checked: ShellSettings.networkSpeedInline
+                            onToggled: ShellSettings.networkSpeedInline = !ShellSettings.networkSpeedInline
+                        }
+                    }
+                    ToggleRow {
+                        glyph: "󰦝"; label: "Connection under VPN"
+                        checked: ShellSettings.netVpnShowLink
+                        available: Network.toolAvailable
+                        dependsNote: "NetworkManager missing"
+                        onToggled: ShellSettings.netVpnShowLink = !ShellSettings.netVpnShowLink
+                    }
+                }
+
                 }
             }
 
@@ -830,7 +863,6 @@ PageShell {
                 spacing: 0
 
                 DraggableWidgetList { width: parent.width }
-                Item { width: 1; height: 16 }
                 }
             }
 
