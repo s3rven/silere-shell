@@ -160,7 +160,7 @@ Singleton {
     signal sourcePulse(int wsId, bool critical)
 
     readonly property bool _fullscreenWatchWanted: ShellSettings.notifFullscreenSilence
-        || (ShellSettings.mediaVisualizerPauseFullscreen && ShellSettings.mediaProgress)
+        || ShellSettings.mediaProgress
         || (ShellSettings.osdEnabled && ShellSettings.osdBarIntegrated)
     readonly property bool _fullscreenActive: _fullscreenWatchWanted && Compositor.activeFullscreen
     readonly property bool fullscreenActive: _fullscreenActive

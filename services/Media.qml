@@ -150,10 +150,7 @@ Singleton {
         _cavaBars,
         _cavaFps,
         _cavaSensitivity,
-        _cavaNoiseReduction,
-        _cavaLowerCutoff,
-        _cavaHigherCutoff,
-        ShellSettings.mediaVisualizerAutoSensitivity ? 1 : 0
+        _cavaNoiseReduction
     ].join(":")
 
     function registerVisualizer(lowPower): void {
@@ -199,12 +196,10 @@ Singleton {
         default:       return Math.max(28, 38 - shapeTrim)
         }
     }
-    readonly property real _cavaSensitivity: {
-        const base = ShellSettings.mediaVisualizerPreset === "eco" ? 120
-                   : ShellSettings.mediaVisualizerPreset === "smooth" ? 165
-                   : 145
-        return Math.round(base * ShellSettings.mediaVisualizerIntensity)
-    }
+    readonly property real _cavaSensitivity:
+        ShellSettings.mediaVisualizerPreset === "eco" ? 120
+        : ShellSettings.mediaVisualizerPreset === "smooth" ? 165
+        : 145
     readonly property real _cavaNoiseReduction: {
         switch (ShellSettings.mediaVisualizerPreset) {
         // CAVA expects this on a 0-100 scale, not a normalized 0-1 scale.
@@ -213,14 +208,6 @@ Singleton {
         default:       return 58
         }
     }
-    readonly property int _cavaLowerCutoff:
-        ShellSettings.mediaVisualizerSpectrum === "bass" ? 35
-        : ShellSettings.mediaVisualizerSpectrum === "wide" ? 30
-        : 45
-    readonly property int _cavaHigherCutoff:
-        ShellSettings.mediaVisualizerSpectrum === "bass" ? 6500
-        : ShellSettings.mediaVisualizerSpectrum === "wide" ? 16000
-        : 10000
     readonly property var _zeroBars: {
         const out = []
         for (let i = 0; i < _cavaBars; i++) out.push(0)
@@ -233,10 +220,10 @@ Singleton {
         // Let CAVA suspend its FFT after two quiet seconds and wake itself later.
         "sleep_timer = 2\n" +
         "framerate = " + _cavaFps + "\n" +
-        "autosens = " + (ShellSettings.mediaVisualizerAutoSensitivity ? 1 : 0) + "\n" +
+        "autosens = 1\n" +
         "sensitivity = " + _cavaSensitivity + "\n" +
-        "lower_cutoff_freq = " + _cavaLowerCutoff + "\n" +
-        "higher_cutoff_freq = " + _cavaHigherCutoff + "\n" +
+        "lower_cutoff_freq = 45\n" +
+        "higher_cutoff_freq = 10000\n" +
         "\n[input]\n" +
         "method = pipewire\n" +
         "source = auto\n" +
@@ -291,7 +278,7 @@ Singleton {
 
     // debounce on the stop side so brief alt-tabs don't restart cava
     property bool _fsBlocked: false
-    readonly property bool _fullscreenPauseWanted: ShellSettings.mediaVisualizerPauseFullscreen && ShellSettings.mediaProgress
+    readonly property bool _fullscreenPauseWanted: ShellSettings.mediaProgress
     Connections {
         target: Notifications
         enabled: root._fullscreenPauseWanted

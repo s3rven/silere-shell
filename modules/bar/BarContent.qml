@@ -118,11 +118,10 @@ Item {
     readonly property bool _centerVizShowing: _centerVizWanted && _centerVizHasRoom && !root._osdBarShowing
     readonly property int _centerVizWidth: Math.round(Math.max(48, Math.min(
         titleAvailableWidth,
-        titleAvailableWidth * ShellSettings.mediaVisualizerCenterWidth
+        titleAvailableWidth * 0.68
     )))
     readonly property real _centerVizTravel: Math.max(0, titleAvailableWidth - _centerVizWidth)
-    readonly property int _centerVizX: Math.round(titleFreeLeft
-        + _centerVizTravel * ((ShellSettings.mediaVisualizerCenterOffset + 1) / 2))
+    readonly property int _centerVizX: Math.round(titleFreeLeft + _centerVizTravel / 2)
 
     Loader {
         id: _wTitle

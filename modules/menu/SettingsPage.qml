@@ -750,25 +750,15 @@ PageShell {
                             ]
                             onChosen: (v) => ShellSettings.mediaVisualizerPosition = v
                         }
-                        CollapsibleSection {
-                            expanded: ShellSettings.mediaVisualizerPosition === "center"
-                            SliderRow {
-                                glyph: "󰁌"; label: "Center width"
-                                value: ShellSettings.mediaVisualizerCenterWidth
-                                min: 0.25; max: 1.0; step: 0.02
-                                displayValue: Math.round(ShellSettings.mediaVisualizerCenterWidth * 100) + "%"
-                                onChanged: (v) => ShellSettings.mediaVisualizerCenterWidth = v
-                            }
-                            SliderRow {
-                                glyph: "󰹑"; label: "Center offset"
-                                value: ShellSettings.mediaVisualizerCenterOffset
-                                min: -1.0; max: 1.0; step: 0.05
-                                displayValue: Math.abs(ShellSettings.mediaVisualizerCenterOffset) < 0.01
-                                    ? "Center"
-                                    : (ShellSettings.mediaVisualizerCenterOffset < 0 ? "Left " : "Right ")
-                                        + Math.abs(Math.round(ShellSettings.mediaVisualizerCenterOffset * 100)) + "%"
-                                onChanged: (v) => ShellSettings.mediaVisualizerCenterOffset = v
-                            }
+                        ChoiceChipRow {
+                            glyph: "󰝚"; label: "Shape"
+                            currentValue: ShellSettings.mediaVisualizerStyle
+                            model: [
+                                { value: "wave",  label: "Wave" },
+                                { value: "bars",  label: "Bars" },
+                                { value: "pulse", label: "Pulse" }
+                            ]
+                            onChosen: (v) => ShellSettings.mediaVisualizerStyle = v
                         }
                         ChoiceChipRow {
                             glyph: "󰓅"; label: "Preset"
@@ -780,44 +770,7 @@ PageShell {
                             ]
                             onChosen: (v) => ShellSettings.mediaVisualizerPreset = v
                         }
-                        ChoiceChipRow {
-                            glyph: "󰝚"; label: "Shape"
-                            currentValue: ShellSettings.mediaVisualizerStyle
-                            model: [
-                                { value: "wave",  label: "Wave" },
-                                { value: "bars",  label: "Bars" },
-                                { value: "pulse", label: "Pulse" }
-                            ]
-                            onChosen: (v) => ShellSettings.mediaVisualizerStyle = v
-                        }
-                        SliderRow {
-                            glyph: "󰓃"; label: "Intensity"
-                            value: ShellSettings.mediaVisualizerIntensity
-                            min: 0.55; max: 1.65; step: 0.05
-                            displayValue: Math.round(ShellSettings.mediaVisualizerIntensity * 100) + "%"
-                            onChanged: (v) => ShellSettings.mediaVisualizerIntensity = v
-                        }
-                        ChoiceChipRow {
-                            glyph: "󰓅"; label: "Spectrum"
-                            currentValue: ShellSettings.mediaVisualizerSpectrum
-                            model: [
-                                { value: "bass",     label: "Bass" },
-                                { value: "balanced", label: "Full" },
-                                { value: "wide",     label: "Wide" }
-                            ]
-                            onChosen: (v) => ShellSettings.mediaVisualizerSpectrum = v
-                        }
-                        ToggleRow {
-                            glyph: "󰁨"; label: "Auto sensitivity"
-                            description: "Adapts to quiet and loud sources"
-                            checked: ShellSettings.mediaVisualizerAutoSensitivity
-                            onToggled: ShellSettings.mediaVisualizerAutoSensitivity = !ShellSettings.mediaVisualizerAutoSensitivity
-                        }
-                        ToggleRow {
-                            glyph: "󰊓"; label: "Pause in fullscreen"
-                            checked: ShellSettings.mediaVisualizerPauseFullscreen
-                            onToggled: ShellSettings.mediaVisualizerPauseFullscreen = !ShellSettings.mediaVisualizerPauseFullscreen
-                        }
+                        HintText { text: "Preset sets bar count and framerate — Eco costs the least CPU." }
                     }
                 }
                 }

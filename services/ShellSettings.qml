@@ -12,13 +12,7 @@ Singleton {
     property bool   mediaWidgetHelper:   false
     property string mediaVisualizerPreset: "balanced" // "eco" | "balanced" | "smooth"
     property string mediaVisualizerStyle:  "wave"     // "wave" | "bars" | "pulse"
-    property real   mediaVisualizerIntensity: 1.0
-    property string mediaVisualizerSpectrum: "balanced" // "bass" | "balanced" | "wide"
-    property bool   mediaVisualizerAutoSensitivity: true
     property string mediaVisualizerPosition: "media"  // "media" | "center"
-    property real   mediaVisualizerCenterWidth: 0.68  // fraction of the free center span
-    property real   mediaVisualizerCenterOffset: 0.0  // -1 left, 0 centered, 1 right inside the free center span
-    property bool   mediaVisualizerPauseFullscreen: true
     property bool   workspaceShift:      false
     property bool   neutralTheme:        true
     property bool   neutralAccentAuto:   false
@@ -236,13 +230,7 @@ Singleton {
         { k: "mediaWidgetHelper",   t: "bool" },
         { k: "mediaVisualizerPreset", t: "enum", vals: ["eco", "balanced", "smooth"] },
         { k: "mediaVisualizerStyle",  t: "enum", vals: ["wave", "bars", "pulse"] },
-        { k: "mediaVisualizerIntensity", t: "real", min: 0.55, max: 1.65 },
-        { k: "mediaVisualizerSpectrum", t: "enum", vals: ["bass", "balanced", "wide"] },
-        { k: "mediaVisualizerAutoSensitivity", t: "bool" },
         { k: "mediaVisualizerPosition", t: "enum", vals: ["media", "center"] },
-        { k: "mediaVisualizerCenterWidth", t: "real", min: 0.25, max: 1.0 },
-        { k: "mediaVisualizerCenterOffset", t: "real", min: -1.0, max: 1.0 },
-        { k: "mediaVisualizerPauseFullscreen", t: "bool" },
         { k: "workspaceShift",      t: "bool" },
         { k: "neutralTheme",        t: "bool" },
         { k: "neutralAccentAuto",   t: "bool" },
