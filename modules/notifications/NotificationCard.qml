@@ -14,6 +14,7 @@ Item {
     required property var notification
     required property int notifId
     required property var createdAt
+    property var timeoutStartedAt: createdAt
     property bool timeoutPaused: false
 
     signal dismissRequested(int notifId, var notification, bool expired)
@@ -164,8 +165,9 @@ Item {
             const t = card.notification.expireTimeout
             return (t > 0 && t < 30000) ? t : ShellSettings.notifDefaultTimeout
         }
-        // anchor to arrival time from model, not delegate creation, survives list rebuilds
-        interval: Math.max(400, fullInterval - (Date.now() - card._createdAt) + card._hoverPausedMs)
+        // Usually anchored to arrival; deferred overflow cards receive the time
+        // they first become visible so they still get a complete readable turn.
+        interval: Math.max(400, fullInterval - (Date.now() - card.timeoutStartedAt) + card._hoverPausedMs)
         running:  shouldRun && !_cardHover.hovered && !card.timeoutPaused
         onTriggered: card.dismiss(true)
     }
@@ -174,7 +176,7 @@ Item {
     property real _countdownPulse:  1.0
     readonly property bool _showCountdown: card.visible && card.enabled
         && _autoClose.shouldRun && !card.timeoutPaused && !ShellSettings.reduceMotion
-    readonly property real _trueRemaining: Math.max(0, _autoClose.fullInterval - (Date.now() - card._createdAt) + card._hoverPausedMs)
+    readonly property real _trueRemaining: Math.max(0, _autoClose.fullInterval - (Date.now() - card.timeoutStartedAt) + card._hoverPausedMs)
 
     NumberAnimation {
         id: _countdownAnim
@@ -228,7 +230,7 @@ Item {
 
     Rectangle {
         id: cardRect
-        width:  parent.implicitWidth
+        width:  card.width
         height: Math.round(contentCol.implicitHeight) + 26
         radius: card._cardRadius
         clip:   true

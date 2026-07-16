@@ -14,9 +14,10 @@ PanelWindow {
     color:          "transparent"
     exclusiveZone:  -1
 
-    readonly property int _cardW: 320
     // Reserve so a floating card's drop shadow isn't clipped at the window edge.
     readonly property int _shadowPad: (ShellSettings.barFloating && ShellSettings.barShadow) ? 16 : 0
+    readonly property int _cardW: Math.max(180, Math.min(320,
+        targetScreen ? targetScreen.width - 24 - _shadowPad : 320))
     readonly property real _barSideGap: ShellSettings.barFloating && targetScreen
         ? 4 * Math.round(targetScreen.width * (1.0 - ShellSettings.barWidth) / 8)
         : 0
@@ -199,18 +200,23 @@ PanelWindow {
                     onTapped: {
                         var items = []
                         var pending = []
-                        for (var i = 0; i < stack.count; i++) {
-                            var it = stack.itemAt(i)
-                            if (it) {
-                                items.push(it)
-                                pending.push({ id: it.notifId, notification: it.notification, expired: false })
-                            }
+                        const live = Notifications.list || []
+                        for (var n = 0; n < live.length; n++) {
+                            const entry = live[n]
+                            if (entry && entry.notification)
+                                pending.push({ id: entry.id, notification: entry.notification, expired: false })
                         }
-                        if (items.length === 0) { Notifications.dismissAll(); return }
+                        for (var i = 0; i < stack.count; i++) {
+                            const slot = stack.itemAt(i)
+                            if (slot && slot.cardItem) items.push(slot.cardItem)
+                        }
                         win._pendingDismissItems = pending
                         win._pendingDismissAll = pending.length
+                        if (pending.length === 0) return
+                        if (items.length === 0) { win._dismissPendingSnapshot(); return }
                         if (ShellSettings.reduceMotion) {
                             for (var j = 0; j < items.length; j++) items[j].dismiss()
+                            if (win._pendingDismissAll > 0) _cascadeSafety.restart()
                             return
                         }
                         win._cascadeItems = items
@@ -225,29 +231,49 @@ PanelWindow {
             id: stack
             model: Notifications.popupModel
 
-            NotificationCard {
+            Item {
+                id: _slot
                 required property var modelData
                 required property int index
 
-                notification: modelData
-                notifId:      modelData.id
-                createdAt:    Notifications.timeFor(modelData.id)
-                slideDir:     win._slideDir
-                timeoutPaused: !visible
+                readonly property bool shouldLoad: ShellSettings.notifMaxVisible <= 0
+                    || index < ShellSettings.notifMaxVisible
+                readonly property var cardItem: _cardLoader.item
+                property real timeoutStartedAt: 0
+
+                width: win._cardW
+                height: cardItem ? cardItem.implicitHeight : 0
+                visible: shouldLoad
 
                 anchors.right:            (win._left || win._center) ? undefined : parent?.right
                 anchors.left:             win._left   ? parent?.left : undefined
                 anchors.horizontalCenter: win._center ? parent?.horizontalCenter : undefined
 
-                // cap the stack — hidden overflow cards pause their timeout so they don't expire before ever showing
-                visible: ShellSettings.notifMaxVisible <= 0 || index < ShellSettings.notifMaxVisible
+                Component.onCompleted: {
+                    if (shouldLoad) timeoutStartedAt = Notifications.timeFor(modelData.id)
+                }
+                onShouldLoadChanged: {
+                    if (shouldLoad) timeoutStartedAt = Date.now()
+                    else timeoutStartedAt = 0
+                }
 
-                onDismissRequested: (id, notification, expired) => {
-                    if (win._pendingDismissAll > 0) {
-                        Notifications.dismissObject(id, notification, expired)
-                        win._forgetPendingDismiss(id, notification)
-                    } else {
-                        Notifications.dismissObject(id, notification, expired)
+                Loader {
+                    id: _cardLoader
+                    anchors.fill: parent
+                    active: _slot.shouldLoad && _slot.timeoutStartedAt > 0
+
+                    sourceComponent: NotificationCard {
+                        notification: _slot.modelData
+                        notifId: _slot.modelData.id
+                        createdAt: Notifications.timeFor(_slot.modelData.id)
+                        timeoutStartedAt: _slot.timeoutStartedAt
+                        slideDir: win._slideDir
+
+                        onDismissRequested: (id, notification, expired) => {
+                            Notifications.dismissObject(id, notification, expired)
+                            if (win._pendingDismissAll > 0)
+                                win._forgetPendingDismiss(id, notification)
+                        }
                     }
                 }
             }
