@@ -16,6 +16,11 @@ Item {
     property bool _autoCompact: false
     readonly property bool effectiveCompact: ShellSettings.barCompact || _autoCompact
     readonly property int gap: Metrics.titleGapFor(effectiveCompact)
+    // The floating surface treats its configured width as a preference. This
+    // is the smallest width that keeps both side zones inside the window when
+    // users place many (or every) widgets on one side.
+    readonly property real minimumSurfaceWidth:
+        leftZone.implicitWidth + rightZone.implicitWidth + gap + Settings.hPad * 2
     readonly property int titleMinWidth: effectiveCompact ? 72 : 96
     // free span between the groups; the title prefers true center but slides off-center as a group closes in, rather than clamping to symmetric clearance and vanishing while space remains
     readonly property real titleFreeLeft:  leftZone.implicitWidth + gap

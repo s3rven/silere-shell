@@ -22,10 +22,28 @@ PanelWindow {
     readonly property bool wrapUnderline: ShellSettings.barFloating
     // side gap snaps to a multiple of 8 so the segment x lands on the 4px grid and maps to
     // an integer output pixel at 2.5× effective scale — else a subpixel-bleed line at the left edge
-    readonly property real surfaceWidth: {
+    readonly property real configuredSurfaceWidth: {
         if (!ShellSettings.barFloating) return width
         const rawGap = width * (1.0 - ShellSettings.barWidth)
         return width - 8 * Math.round(rawGap / 8)
+    }
+    property real _contentFloorWidth: 0
+    // A narrow floating bar must not crop a crowded one-sided widget zone. Grow
+    // by shrinking the side gap in 8px steps — snapping the width instead puts
+    // the centered x off the 4px grid when the output width isn't a multiple of 8.
+    readonly property real surfaceWidth: {
+        if (_contentFloorWidth <= configuredSurfaceWidth) return configuredSurfaceWidth
+        const gap8 = 8 * Math.floor(Math.max(0, width - _contentFloorWidth) / 8)
+        return Math.max(configuredSurfaceWidth, width - gap8)
+    }
+
+    // Publish the child layout's requirement out of band. Some widget widths
+    // respond to available bar width, so a direct parent↔child binding here
+    // would form a binding loop.
+    Timer {
+        id: _surfaceFitSync
+        interval: 1
+        onTriggered: bar._contentFloorWidth = _barContent.minimumSurfaceWidth
     }
     // Constant 4 keeps the bar edge (and everything stacked below it) on the
     // 4px grid, so hairlines land on whole physical px under fractional
@@ -274,11 +292,14 @@ PanelWindow {
             }
 
             BarContent {
+                id: _barContent
                 screen: bar.targetScreen
                 barActive: contents.opacity > 0.001 && !bar.concealed
                 anchors.fill:        parent
                 anchors.leftMargin:  Settings.hPad
                 anchors.rightMargin: Settings.hPad
+                onMinimumSurfaceWidthChanged: _surfaceFitSync.restart()
+                Component.onCompleted: _surfaceFitSync.restart()
             }
         }
 
