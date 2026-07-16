@@ -83,6 +83,46 @@ check_qml_locale_count services/Network.qml 8
 check_qml_locale_count services/PowerProfiles.qml 1
 check_qml_locale_count services/Updates.qml 1
 
+section "credential handling"
+if grep -qF 'cmd.push("password")' services/Network.qml; then
+  fail "Wi-Fi credentials must not be passed in process argv"
+elif ! grep -qF 'stdinEnabled: true' services/Network.qml \
+    || ! grep -qF '"--ask"' services/Network.qml; then
+  fail "Wi-Fi credentials must be sent to nmcli over stdin"
+else
+  ok "Wi-Fi" "credentials stay out of argv"
+fi
+
+section "public Quickshell imports"
+if grep -R -n -F 'import Quickshell.Wayland._' --include='*.qml' .; then
+  fail "QML files must not import private Quickshell Wayland modules"
+else
+  ok "Wayland" "public module only"
+fi
+
+section "installer environment defaults"
+if grep -qF '${MALLOC_CONF-' scripts/install.sh \
+    && grep -qF '${QSG_TRANSIENT_IMAGES-' scripts/install.sh; then
+  ok "launcher" "inherited overrides are preserved"
+else
+  fail "installer launcher must preserve MALLOC_CONF and QSG_TRANSIENT_IMAGES overrides"
+fi
+
+section "responsive layout contracts"
+if grep -qF '_availablePanelW' modules/menu/MenuWindow.qml \
+    && grep -qF '_availablePanelH' modules/menu/MenuWindow.qml \
+    && grep -qF 'targetScreen.width - 24' modules/notifications/NotificationPopups.qml; then
+  ok "popups" "bounded to the target output"
+else
+  fail "menu and notification popups must stay bounded to the target output"
+fi
+if grep -qF 'SettingsSystemSection {}' modules/menu/SettingsPage.qml \
+    && grep -qF 'SettingsSystemSection.qml' modules/menu/qmldir; then
+  ok "settings" "large system subtree remains isolated"
+else
+  fail "system settings must remain split from the main settings page"
+fi
+
 section "shellcheck"
 if command -v shellcheck >/dev/null 2>&1; then
   # error severity only — real bugs gate the build, style nits don't
