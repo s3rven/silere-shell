@@ -3,7 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Widgets
-import Quickshell.Wayland._WlrLayerShell
+import Quickshell.Wayland
 import "../../config"
 import "../../services"
 import "../common"
