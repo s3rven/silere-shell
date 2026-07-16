@@ -214,9 +214,56 @@ test_atomic_units() (
         && fail "service placeholder was not replaced"
     grep -qF "scripts/update.sh" "$SYSTEMD_USER_DIR/$SERVICE_UNIT" \
         || fail "service ExecStart was not generated"
+    grep -qF 'TimeoutStartSec=5min' "$SYSTEMD_USER_DIR/$SERVICE_UNIT" \
+        || fail "generated update service has no bounded start timeout"
     if find "$SYSTEMD_USER_DIR" -maxdepth 1 -name '.silere-update.*.??????' -print -quit | grep -q .; then
         fail "temporary unit file was left behind"
     fi
+)
+
+test_update_refuses_dirty_apply() (
+    local remote="$TMP/update-remote.git"
+    local seed="$TMP/update-seed"
+    local client="$TMP/update-client"
+    local test_home="$TMP/update-home"
+    local old_head
+
+    git init --bare -q "$remote"
+    git --git-dir="$remote" symbolic-ref HEAD refs/heads/main
+    git init -q "$seed"
+    git -C "$seed" config user.name "Silere test"
+    git -C "$seed" config user.email "test@example.invalid"
+    mkdir -p "$seed/scripts"
+    cp "$ROOT/scripts/update.sh" "$seed/scripts/update.sh"
+    printf 'upstream v1\n' > "$seed/tracked.qml"
+    git -C "$seed" add scripts/update.sh tracked.qml
+    git -C "$seed" commit -qm "initial"
+    git -C "$seed" branch -M main
+    git -C "$seed" remote add origin "$remote"
+    git -C "$seed" push -q -u origin main
+
+    git clone -q "$remote" "$client"
+    git -C "$client" config user.name "Silere test"
+    git -C "$client" config user.email "test@example.invalid"
+    printf 'upstream v2\n' > "$seed/tracked.qml"
+    git -C "$seed" commit -qam "upstream update"
+    git -C "$seed" push -q
+
+    mkdir -p "$test_home"
+    HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" \
+        bash "$client/scripts/update.sh" >/dev/null
+    printf 'local customization\n' >> "$client/tracked.qml"
+    old_head="$(git -C "$client" rev-parse HEAD)"
+
+    if HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" \
+        bash "$client/scripts/update.sh" --apply >/dev/null 2>&1; then
+        fail "dirty update apply unexpectedly succeeded"
+    fi
+    assert_eq "$old_head" "$(git -C "$client" rev-parse HEAD)" "dirty update apply HEAD"
+    grep -qF 'local customization' "$client/tracked.qml" \
+        || fail "dirty update apply changed the local edit"
+    [ -z "$(git -C "$client" stash list)" ] \
+        || fail "dirty update apply created a stash"
 )
 
 test_repair_workflow() (
@@ -265,6 +312,7 @@ test_niri_config_discovery
 test_atomic_units
 # repair.sh builds a git fixture; skip where git is absent (e.g. minimal CI runners)
 if command -v git >/dev/null 2>&1; then
+    test_update_refuses_dirty_apply
     test_repair_workflow
 else
     printf 'SKIP: repair workflow (git unavailable)\n'

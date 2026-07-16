@@ -19,6 +19,8 @@ Singleton {
     property bool   timerSupported: false
     property bool   timerEnabled: false
     property bool   timerBusy: false
+    property bool   _checkTimedOut: false
+    property bool   _applyTimedOut: false
 
     readonly property bool pending: count > 0
     readonly property bool checking: _checkProc.running
@@ -42,6 +44,8 @@ Singleton {
     function check(): void {
         if (checking || applying) return
         lastCheckError = ""
+        _checkTimedOut = false
+        _checkTimeout.restart()
         _checkProc.exec(["bash", root._script])
     }
 
@@ -49,6 +53,7 @@ Singleton {
         if (applying || _applyProc.running || !pending) return
         applying = true
         lastApplyError = ""
+        _applyTimedOut = false
         _applyTimeout.restart()
         _applyProc.exec(["bash", root._script, "--apply"])
     }
@@ -64,11 +69,28 @@ Singleton {
         _timerSet.exec(["bash", root._script, enabled ? "--timer-enable" : "--timer-disable"])
     }
 
-    // if --apply restarts the shell before Process reports back, clear applying so the bar isn't stuck
+    Timer {
+        id: _checkTimeout
+        interval: 120000
+        onTriggered: {
+            if (!_checkProc.running) return
+            root._checkTimedOut = true
+            root.lastCheckMs = Date.now()
+            root.lastCheckError = "Update check timed out"
+            _checkProc.running = false
+        }
+    }
+
     Timer {
         id: _applyTimeout
-        interval: 30000
-        onTriggered: root.applying = false
+        interval: 180000
+        onTriggered: {
+            if (!_applyProc.running) return
+            root._applyTimedOut = true
+            root.applying = false
+            root.lastApplyError = "Update install timed out"
+            _applyProc.running = false
+        }
     }
 
     Process {
@@ -106,6 +128,12 @@ Singleton {
         stdout: StdioCollector { id: _checkOut }
         stderr: StdioCollector { id: _checkErr }
         onExited: (code) => {
+            _checkTimeout.stop()
+            if (root._checkTimedOut) {
+                root._checkTimedOut = false
+                _flag.reload()
+                return
+            }
             root.lastCheckMs = Date.now()
             if (code === 0) {
                 root.lastCheckError = ""
@@ -124,6 +152,10 @@ Singleton {
         onExited: (code) => {
             _applyTimeout.stop()
             root.applying = false
+            if (root._applyTimedOut) {
+                root._applyTimedOut = false
+                return
+            }
             if (code === 0) {
                 root.lastApplyError = ""
                 _flag.reload()

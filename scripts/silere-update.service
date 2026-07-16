@@ -4,5 +4,6 @@ After=network-online.target
 
 [Service]
 Type=oneshot
+TimeoutStartSec=5min
 ExecStartPre=-/usr/bin/dbus-update-activation-environment --systemd DBUS_SESSION_BUS_ADDRESS DISPLAY WAYLAND_DISPLAY
 ExecStart=__ROOT__/scripts/update.sh

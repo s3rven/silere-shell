@@ -138,28 +138,13 @@ if [ "${1:-}" = "--apply" ]; then
     local_rev="$(git rev-parse HEAD)"
     remote_rev="$(git rev-parse origin/main 2>/dev/null || echo "$local_rev")"
     _exit_if_not_behind "$local_rev" "$remote_rev" 0
-    stashed=0
     if _has_local_changes; then
-        if ! git -C "$ROOT" stash push --include-untracked -m "silere-update pre-apply" >/dev/null; then
-            _fail "failed to stash local changes before applying update"
-        fi
-        stashed=1
+        _fail "local changes detected — commit or stash them before applying the update"
     fi
     if ! GIT_TERMINAL_PROMPT=0 git -C "$ROOT" pull --ff-only --quiet origin main; then
-        if [ "$stashed" -eq 1 ] && ! git -C "$ROOT" stash pop >/dev/null 2>&1; then
-            _fail "fast-forward pull failed — local changes are stashed, run 'git stash list'/'git stash pop' to recover them"
-        fi
         _fail "fast-forward pull failed — local branch diverged"
     fi
-    # update succeeded; pop may conflict but the restart should still proceed
-    stash_conflict=0
-    if [ "$stashed" -eq 1 ] && ! git -C "$ROOT" stash pop >/dev/null 2>&1; then
-        stash_conflict=1
-    fi
     rm -f "$FLAG"
-    if [ "$stash_conflict" -eq 1 ]; then
-        _notify -u critical "Silere update applied with conflicts" "Your local changes conflicted and were kept in the stash — run 'git stash list' to find it, 'git stash pop' to retry"
-    fi
     new_rev="$(git rev-parse HEAD)"
     count="$(git rev-list --count "${local_rev}..${new_rev}")"
     plural="change"; [ "$count" -ne 1 ] && plural="changes"
