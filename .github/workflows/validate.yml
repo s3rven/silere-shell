@@ -3,6 +3,9 @@ name: Validate
 on:
   push:
   pull_request:
+  schedule:
+    # Weekly rolling-Arch probe catches upstream Quickshell compatibility drift.
+    - cron: "17 6 * * 1"
 
 permissions:
   contents: read
