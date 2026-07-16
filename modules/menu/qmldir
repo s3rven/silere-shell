@@ -6,6 +6,7 @@ SettingsClockSection 1.0 SettingsClockSection.qml
 SettingsWorkspacesSection 1.0 SettingsWorkspacesSection.qml
 SettingsPopupsSection 1.0 SettingsPopupsSection.qml
 SettingsUpdatesSection 1.0 SettingsUpdatesSection.qml
+SettingsSystemSection 1.0 SettingsSystemSection.qml
 SettingsNav  1.0 SettingsNav.qml
 PowerRailContent 1.0 PowerRailContent.qml
 PowerRailRow     1.0 PowerRailRow.qml
