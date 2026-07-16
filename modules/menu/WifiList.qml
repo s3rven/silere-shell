@@ -120,6 +120,14 @@ Item {
                     _row.forceActiveFocus()
                 }
 
+                function _submitPassword(): void {
+                    const secret = _pw.text
+                    _pw.text = ""
+                    if (secret.length > 0) Network.connectWifi(modelData.ssid, secret)
+                }
+
+                on_SelChanged: if (!_sel) _pw.text = ""
+
                 Rectangle {
                     id: _row
                     width: parent.width
@@ -263,7 +271,7 @@ Item {
                             font.family: Settings.font; font.pixelSize: Settings.fontSize
                             renderType: Text.NativeRendering
                             clip: true
-                            onAccepted: if (text.length > 0) Network.connectWifi(_entry.modelData.ssid, text)
+                            onAccepted: _entry._submitPassword()
                             Accessible.role: Accessible.EditableText
                             Accessible.name: "Password for " + _entry.modelData.ssid
                             Keys.onEscapePressed: event => { root._selected = ""; event.accepted = true }
@@ -296,7 +304,7 @@ Item {
                             Accessible.role: Accessible.Button
                             Accessible.name: "Connect to " + _entry.modelData.ssid
                             function _activate(): void {
-                                if (_join.enabled) Network.connectWifi(_entry.modelData.ssid, _pw.text)
+                                if (_join.enabled) _entry._submitPassword()
                             }
                             Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) _join._activate(); event.accepted = true }
                             Keys.onReturnPressed: event => { if (!event.isAutoRepeat) _join._activate(); event.accepted = true }

@@ -29,6 +29,7 @@ Singleton {
     property var    wifiNetworks:   []     // picker list: [{ssid, signal, secured, active, known}]
     property string wifiConnecting: ""     // ssid mid-connect, "" when idle
     property string wifiError:      ""     // ssid that last failed to connect, cleared on retry
+    property string _pendingWifiPassword: ""
     property var    _savedWifi:     ({})   // ssid -> true for saved wifi connections
     property bool   _wifiScanRescan: false
     property bool   _pendingWifiRescan: false
@@ -150,7 +151,10 @@ Singleton {
         root.wifiError = ""
         root.wifiConnecting = ssid
         const cmd = ["nmcli", "-w", "20", "device", "wifi", "connect", ssid]
-        if (password && password.length > 0) { cmd.push("password"); cmd.push(password) }
+        root._pendingWifiPassword = password || ""
+        // Keep credentials out of argv (/proc/*/cmdline). nmcli reads them from
+        // the process pipe when --ask is used.
+        if (root._pendingWifiPassword.length > 0) cmd.splice(1, 0, "--ask")
         _wifiActProc.exec(cmd)
     }
 
@@ -479,7 +483,14 @@ Singleton {
     Process {
         id: _wifiActProc
         environment: ({ "LC_ALL": "C" })
+        stdinEnabled: true
+        onStarted: {
+            if (root._pendingWifiPassword.length === 0) return
+            write(root._pendingWifiPassword + "\n")
+            root._pendingWifiPassword = ""
+        }
         onExited: (code) => {
+            root._pendingWifiPassword = ""
             if (code !== 0 && root.wifiConnecting.length > 0)
                 root.wifiError = root.wifiConnecting
             root.wifiConnecting = ""
