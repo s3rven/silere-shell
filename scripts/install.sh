@@ -566,14 +566,14 @@ fi
 # so memory freed after a spike (menu close, wifi scan, notification burst) is
 # retained rather than returned to the OS — RSS only ever climbs. Fewer arenas
 # plus a background decay thread hand it back. ~50 MB reclaimed per spike here;
-# drop the env to revert. Override by exporting MALLOC_CONF before launch.
+# Override (or explicitly clear) this by exporting MALLOC_CONF before launch.
 MALLOC_TUNE="narenas:2,background_thread:true,dirty_decay_ms:1000,muzzy_decay_ms:0"
 
 # Qt Quick keeps a CPU-side copy of every image it uploads to the GPU (album art,
 # notification images, app icons). Transient mode frees the copy after upload;
 # worst case is a re-decode if the texture is ever lost, which never happens on
 # a long-lived desktop session.
-QSG_TUNE="QSG_TRANSIENT_IMAGES=1 "
+QSG_TUNE="1"
 
 # On hybrid GPUs that render on the iGPU, libglvnd still loads the nvidia EGL
 # vendor into every GL process (~33 MB unused). Pin to mesa to skip it — but only
@@ -592,10 +592,11 @@ fi
 # sleep 1: at Hyprland start the Wayland socket may not be ready yet; without the
 # delay Qt's platform plugin aborts with SIGABRT in createEventDispatcher. Braces
 # group delay+launch so || short-circuits correctly in exec_unless_running.
-MALLOC_TUNE_SHELL="$(_shell_quote "$MALLOC_TUNE")"
+MALLOC_ENV_ARG='MALLOC_CONF="${MALLOC_CONF-'"$MALLOC_TUNE"'}" '
+QSG_ENV_ARG='QSG_TRANSIENT_IMAGES="${QSG_TRANSIENT_IMAGES-'"$QSG_TUNE"'}" '
 EGL_ENV_ARG=""
-[ -n "$EGL_PIN" ] && EGL_ENV_ARG="__EGL_VENDOR_LIBRARY_FILENAMES=$(_shell_quote "$_mesa_egl") "
-LAUNCH_CMD="{ sleep 1; env MALLOC_CONF=$MALLOC_TUNE_SHELL ${QSG_TUNE}${EGL_ENV_ARG}qs -p \"\$(printf '%b' $ROOT_PRINTF_BYTES)/shell.qml\"; }"
+[ -n "$EGL_PIN" ] && EGL_ENV_ARG='__EGL_VENDOR_LIBRARY_FILENAMES="${__EGL_VENDOR_LIBRARY_FILENAMES-'"$_mesa_egl"'}" '
+LAUNCH_CMD="{ sleep 1; env ${MALLOC_ENV_ARG}${QSG_ENV_ARG}${EGL_ENV_ARG}qs -p \"\$(printf '%b' $ROOT_PRINTF_BYTES)/shell.qml\"; }"
 LAUNCH_CMD_LUA="$(_lua_string "$LAUNCH_CMD")"
 
 _already_present() { grep -qF 'silere-shell begin' "$1" 2>/dev/null; }
