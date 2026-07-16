@@ -62,14 +62,17 @@ Row {
 
     Repeater {
         id: _rep
-        model: zone.activeKeys.length
+        // Bind delegates to their keys, not only to the array length. Reusing
+        // numeric slots across a same-length reorder can leave a Loader paired
+        // with the component that previously occupied that index.
+        model: zone.activeKeys
         onItemAdded: zone._repRev++
         onItemRemoved: zone._repRev++
 
         delegate: Row {
             id: _slot
-            required property int index
-            readonly property string key: zone.activeKeys[index] || ""
+            required property string modelData
+            readonly property string key: modelData
             readonly property bool widgetEnabled: zone._widgetEnabled(key)
             readonly property bool show: widgetEnabled && _loader.loadedKey === key
                 && (_loader.item ? _loader.item.show : false)
