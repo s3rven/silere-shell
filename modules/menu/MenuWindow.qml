@@ -129,25 +129,35 @@ PanelWindow {
         readonly property int _settingsW: 566
         readonly property bool _railExpanded: activeTab === 1 || powerOpen
         readonly property int _targetPanelW: _railExpanded ? _settingsW : _compactW
-        readonly property int panelW: Math.max(320, Math.min(_targetPanelW,
-            win.width > 0 ? win.width - _minX * 2 : _targetPanelW))
+        readonly property int _availablePanelW: win.width > 0
+            ? Math.max(1, Math.floor(win.width - _minX * 2))
+            : _targetPanelW
+        // Never force the popup beyond the output. Controls below already
+        // reflow; letting the surface shrink keeps both edges reachable.
+        readonly property int panelW: Math.max(1, Math.min(_targetPanelW, _availablePanelW))
         // rail expands for Settings: icon strip stays fixed, category nav rides on beside it as one growing surface
         readonly property int railCollapsedW: 44
-        readonly property int navW: 160
+        readonly property int _navMinW: powerOpen ? 112 : 96
+        // Preserve a useful detail pane on narrow outputs. The category labels
+        // elide cleanly, while settings controls need at least twice this space.
+        readonly property int navW: Math.min(
+            Math.max(0, panelW - railCollapsedW - 96),
+            Math.max(_navMinW, Math.min(160, panelW - railCollapsedW - 224)))
         readonly property int railExpandedW: railCollapsedW + navW
         readonly property int railW: _railExpanded ? railExpandedW : railCollapsedW
         readonly property int contentW: panelW - railW
-        readonly property int contentPad: _railExpanded ? 18 : 12
-        readonly property int innerW: contentW - contentPad * 2
+        readonly property int contentPad: _railExpanded && panelW >= 460 ? 18 : 12
+        readonly property int innerW: Math.max(1, contentW - contentPad * 2)
         // shared height floor so every tab opens at the same size; taller content grows above it
         readonly property int idealMinH: 360
         // min height so rail icons never overlap the power slot
         readonly property int minRailFitH: 252
         readonly property int heightAnimDuration: Motion.medium
         readonly property int _availablePanelH: win.height > 0
-            ? Math.max(minRailFitH, win.height - _edgeY - _minX)
+            ? Math.max(1, Math.floor(win.height - _edgeY - _minX))
             : contentPane.targetH
-        readonly property int targetPanelH: Math.min(contentPane.targetH, _availablePanelH)
+        readonly property int targetPanelH: Math.max(1,
+            Math.min(contentPane.targetH, _availablePanelH))
 
         property int activeTab: 0
         onActiveTabChanged: MenuState.activeTab = activeTab
@@ -444,7 +454,7 @@ PanelWindow {
                 NumberAnimation { duration: panel.heightAnimDuration; easing.type: Easing.OutCubic }
             }
 
-            // snapped to 4 so a bottom-bar panel's y stays on the divider grid; rail nav can be taller than the detail pane so it sets the floor too
+            // snapped to 4 so a bottom-bar panel's y stays on the divider grid; the nav must stay fully visible, so it floors the panel too
             readonly property int targetH: {
                 const contentH = tabContent.y + tabContent.height + 12
                 const navH = panel.activeTab === 1 ? _settingsNav.implicitHeight + 16 : 0

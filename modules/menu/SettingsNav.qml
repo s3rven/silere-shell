@@ -40,6 +40,25 @@ Item {
         return _navTop
     }
 
+    // panel now sizes to detail content, so the nav can be taller than the pane; keep the selected row in view
+    function _scrollToSelection(): void {
+        if (!_navScroll.interactive) { _navScroll.contentY = 0; return }
+        const rowY = _sectionRowY(MenuState.settingsSection)
+        const margin = 8
+        const viewH = _navScroll.height
+        const maxY = Math.max(0, _navScroll.contentHeight - viewH)
+        let target = _navScroll.contentY
+        if (rowY - margin < target) target = rowY - margin
+        else if (rowY + _navRowH + margin > target + viewH) target = rowY + _navRowH + margin - viewH
+        _navScroll.contentY = Math.max(0, Math.min(maxY, target))
+    }
+
+    onActiveChanged: if (active) Qt.callLater(_scrollToSelection)
+    Connections {
+        target: MenuState
+        function onSettingsSectionChanged() { root._scrollToSelection() }
+    }
+
     Shortcut {
         sequences: ["Ctrl+Down"]
         context: Qt.ApplicationShortcut
@@ -63,6 +82,14 @@ Item {
         flickDeceleration: 1800
         maximumFlickVelocity: 2200
         interactive: contentHeight > height + 1
+
+        onHeightChanged: root._scrollToSelection()
+
+        // only animates programmatic scroll-to-selection, never the user's own drag/flick
+        Behavior on contentY {
+            enabled: !ShellSettings.reduceMotion && !_navScroll.moving
+            NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic }
+        }
 
         Item {
             id: _content
