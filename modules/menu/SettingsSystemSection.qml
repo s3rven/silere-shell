@@ -81,17 +81,17 @@ Column {
                 width: parent.width
                 SectionLabel { label: "MONITORS" }
                 SettingsCard {
-                SelectRow {
-                    glyph: "󰍹"; label: "Popups & OSD on"
-                    currentValue: ShellSettings.overlayMonitor
-                    model: {
-                        const t = [{ value: "", label: "Focus" }]
-                        const s = Quickshell.screens || []
-                        for (let i = 0; i < s.length; i++) {
-                            const name = s[i].name
-                            t.push({ value: name, label: name })
-                        }
-                        return t
+                    SelectRow {
+                        glyph: "󰍹"; label: "Popups & OSD on"
+                        currentValue: ShellSettings.overlayMonitor
+                        model: {
+                            const t = [{ value: "", label: "Focus" }]
+                            const s = Quickshell.screens || []
+                            for (let i = 0; i < s.length; i++) {
+                                const name = s[i].name
+                                t.push({ value: name, label: name })
+                            }
+                            return t
                         }
                         onChosen: (v) => ShellSettings.overlayMonitor = v
                     }
