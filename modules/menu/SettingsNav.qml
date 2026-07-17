@@ -11,8 +11,9 @@ Item {
     property bool powerOpen: false
     readonly property bool active: MenuState.open && MenuState.activeTab === 1 && !powerOpen
 
-    // Full tree height, so the panel can size to fit it (MenuWindow's height floor).
-    implicitHeight: _content.height
+    // Final (post-animation) tree height, so the panel floor moves once per
+    // section change instead of chasing the collapse animation frame by frame.
+    implicitHeight: _navContentHeight()
 
     readonly property int _navTop:     8
     readonly property int _navGapY:    8    // between groups
@@ -20,6 +21,33 @@ Item {
     readonly property int _navRowGap:  2    // within a group
     readonly property int _navHdrH:    20
     readonly property int _navStdHdrH: 12   // standalone leaf's divider slot
+
+    // accordion: only the group holding the active section shows its rows, so
+    // the nav stays short and the panel can hug the detail content
+    function _groupExpanded(it): bool {
+        if (!it.children) return true
+        for (let i = 0; i < it.children.length; i++) {
+            if (it.children[i].section === MenuState.settingsSection) return true
+        }
+        return false
+    }
+
+    function _groupHeight(it): real {
+        const isGroup = !!it.children
+        const hdr = isGroup ? _navHdrH : _navStdHdrH
+        const leaves = isGroup ? it.children : [it]
+        return hdr + (root._groupExpanded(it) ? leaves.length * (_navRowH + _navRowGap) : 0)
+    }
+
+    function _navContentHeight(): real {
+        const tree = MenuState.settingsTree
+        let h = _navTop
+        for (let i = 0; i < tree.length; i++) {
+            if (i > 0) h += _navGapY
+            h += root._groupHeight(tree[i])
+        }
+        return h + 10
+    }
 
     // synchronous tree walk avoids mapToItem race on first frame
     function _sectionRowY(section: string): real {
@@ -35,18 +63,20 @@ Item {
                 if (leaves[j].section === section)
                     return y + hdr + j * _navRowH + (j + 1) * _navRowGap
             }
-            y += hdr + leaves.length * (_navRowH + _navRowGap)
+            y += root._groupHeight(it)
         }
         return _navTop
     }
 
-    // panel now sizes to detail content, so the nav can be taller than the pane; keep the selected row in view
+    // clamp against the final tree height, not the animating contentHeight —
+    // a mid-collapse clamp can leave the view resting out of bounds
     function _scrollToSelection(): void {
-        if (!_navScroll.interactive) { _navScroll.contentY = 0; return }
+        const contentH = root._navContentHeight()
+        const viewH = _navScroll.height
+        if (contentH <= viewH + 1) { _navScroll.contentY = 0; return }
         const rowY = _sectionRowY(MenuState.settingsSection)
         const margin = 8
-        const viewH = _navScroll.height
-        const maxY = Math.max(0, _navScroll.contentHeight - viewH)
+        const maxY = Math.max(0, contentH - viewH)
         let target = _navScroll.contentY
         if (rowY - margin < target) target = rowY - margin
         else if (rowY + _navRowH + margin > target + viewH) target = rowY + _navRowH + margin - viewH
@@ -83,7 +113,8 @@ Item {
         maximumFlickVelocity: 2200
         interactive: contentHeight > height + 1
 
-        onHeightChanged: root._scrollToSelection()
+        // callLater coalesces the per-frame calls while the panel height animates
+        onHeightChanged: Qt.callLater(root._scrollToSelection)
 
         // only animates programmatic scroll-to-selection, never the user's own drag/flick
         Behavior on contentY {
@@ -145,11 +176,11 @@ Item {
                 Repeater {
                     model: MenuState.settingsTree
 
-                    delegate: Column {
+                    delegate: Item {
                         id: _grp
                         required property var modelData
                         width: parent.width
-                        spacing: root._navRowGap
+                        height: _grpHdr.height + _leafBox.height
 
                         readonly property bool isGroup: !!modelData.children
                         readonly property var  _leaves: isGroup ? modelData.children : [modelData]
@@ -159,10 +190,31 @@ Item {
                             }
                             return false
                         }
+                        readonly property bool expanded: !isGroup || groupActive
 
                         Item {
+                            id: _grpHdr
                             width: parent.width
                             height: _grp.isGroup ? root._navHdrH : root._navStdHdrH
+
+                            // a collapsed header is a button that jumps to the group's first section
+                            function _open(): void {
+                                if (_grp.isGroup && !_grp.groupActive)
+                                    MenuState.setSettingsSection(_grp._leaves[0].section)
+                            }
+                            activeFocusOnTab: root.active && _grp.isGroup && !_grp.groupActive
+                            Accessible.role: _grp.isGroup ? Accessible.Button : Accessible.NoRole
+                            Accessible.name: _grp.isGroup ? _grp.modelData.label + " settings group" : ""
+                            Accessible.description: _grp.expanded ? "Expanded" : "Expand"
+                            Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) _grpHdr._open(); event.accepted = true }
+                            Keys.onReturnPressed: event => { if (!event.isAutoRepeat) _grpHdr._open(); event.accepted = true }
+                            Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) _grpHdr._open(); event.accepted = true }
+                            HoverHandler {
+                                id: _hdrHover
+                                enabled: _grp.isGroup && !_grp.groupActive
+                                cursorShape: Qt.PointingHandCursor
+                            }
+                            TapHandler { onTapped: _grpHdr._open() }
 
                             Text {
                                 id: _hdrLabel
@@ -174,7 +226,8 @@ Item {
                                 text:           _grp.modelData.label
                                 color:          _grp.groupActive
                                     ? Theme.withAlpha(Theme.menuTextMuted, 0.90)
-                                    : Theme.withAlpha(Theme.menuTextMuted, 0.58)
+                                    : Theme.withAlpha(Theme.menuTextMuted,
+                                          _hdrHover.hovered || _grpHdr.activeFocus ? 0.86 : 0.58)
                                 font.family:    Settings.font
                                 font.pixelSize: Settings.fontSize - 3
                                 font.letterSpacing:  0.5
@@ -187,8 +240,8 @@ Item {
                                 visible:              _grp.isGroup
                                 anchors.left:         _hdrLabel.right
                                 anchors.leftMargin:   8
-                                anchors.right:        parent.right
-                                anchors.rightMargin:  8
+                                anchors.right:        _hdrChevron.left
+                                anchors.rightMargin:  6
                                 anchors.verticalCenter: _hdrLabel.verticalCenter
                                 height: 1
                                 radius: 0.5
@@ -197,85 +250,126 @@ Item {
                                     : Theme.withAlpha(Theme.subtext, 0.10)
                                 Behavior on color { ColorAnimation { duration: Motion.fast } }
                             }
+                            Text {
+                                id: _hdrChevron
+                                visible: _grp.isGroup
+                                anchors.right:        parent.right
+                                anchors.rightMargin:  8
+                                anchors.verticalCenter: _hdrLabel.verticalCenter
+                                text: "󰅂"
+                                rotation: _grp.expanded ? 90 : 0
+                                transformOrigin: Item.Center
+                                color: Theme.withAlpha(Theme.subtext,
+                                    _hdrHover.hovered || _grpHdr.activeFocus ? 0.72 : 0.38)
+                                font.family:    Settings.font
+                                font.pixelSize: Settings.fontSize - 2
+                                renderType:     Text.NativeRendering
+                                Behavior on rotation {
+                                    enabled: !ShellSettings.reduceMotion
+                                    NumberAnimation { duration: Motion.ms(155); easing.type: Easing.OutCubic }
+                                }
+                                Behavior on color { ColorAnimation { duration: Motion.fast } }
+                            }
                         }
 
-                        Repeater {
-                            model: _grp._leaves
+                        Item {
+                            id: _leafBox
+                            anchors.top: _grpHdr.bottom
+                            width: parent.width
+                            height: _grp.expanded ? _leafCol.height : 0
+                            visible: height > 0
+                            // a standing clip node breaks batching; only clip mid-animation
+                            clip: height < _leafCol.height
+                            Behavior on height {
+                                enabled: !ShellSettings.reduceMotion
+                                NumberAnimation { duration: Motion.ms(155); easing.type: Easing.OutCubic }
+                            }
 
-                            delegate: Rectangle {
-                                id: _leaf
-                                required property var modelData
-                                readonly property bool   active: MenuState.settingsSection === modelData.section
-                                readonly property string glyph:  modelData.glyph ?? ""
-                                // whole pixels only: a fractional shift blurs native-rendered text
-                                property real _shift: (active || _leafHover.hovered) ? 1 : 0
-
-                                readonly property color _fg: active
-                                    ? Theme.text
-                                    : Theme.withAlpha(Theme.mix(Theme.subtext, Theme.text, 0.12), _leafHover.hovered || _leaf.activeFocus ? 0.92 : 0.76)
-                                readonly property color _glyphFg: active
-                                    ? Theme.mix(Theme.accent, Theme.text, 0.10)
-                                    : Theme.withAlpha(Theme.subtext, _leafHover.hovered || _leaf.activeFocus ? 0.76 : 0.56)
-
+                            Column {
+                                id: _leafCol
                                 width: parent.width
-                                height: root._navRowH
-                                radius: 8
-                                antialiasing: true
-                                color: ((_leafHover.hovered || _leaf.activeFocus) && !active)
-                                    ? Theme.withAlpha(Theme.text, 0.045) : "transparent"
-                                Behavior on color { ColorAnimation { duration: Motion.fast } }
-                                Behavior on _shift {
-                                    enabled: !ShellSettings.reduceMotion
-                                    NumberAnimation { duration: Motion.ms(105); easing.type: Easing.OutCubic }
-                                }
+                                topPadding: root._navRowGap
+                                spacing: root._navRowGap
 
-                                activeFocusOnTab: root.active
-                                Accessible.role: Accessible.Button
-                                Accessible.name: _leaf.modelData.label
-                                Keys.onSpacePressed: event => { if (!event.isAutoRepeat) MenuState.setSettingsSection(_leaf.modelData.section); event.accepted = true }
-                                Keys.onReturnPressed: event => { if (!event.isAutoRepeat) MenuState.setSettingsSection(_leaf.modelData.section); event.accepted = true }
-                                Keys.onEnterPressed: event => { if (!event.isAutoRepeat) MenuState.setSettingsSection(_leaf.modelData.section); event.accepted = true }
+                                Repeater {
+                                    model: _grp._leaves
 
-                                HoverHandler { id: _leafHover; cursorShape: Qt.PointingHandCursor }
-                                TapHandler   { id: _leafTap; onTapped: MenuState.setSettingsSection(_leaf.modelData.section) }
-                                scale: _leafTap.pressed ? 0.985 : 1.0
-                                transformOrigin: Item.Left
-                                Behavior on scale {
-                                    enabled: !ShellSettings.reduceMotion
-                                    NumberAnimation { duration: Motion.ms(95); easing.type: Easing.OutCubic }
-                                }
+                                    delegate: Rectangle {
+                                        id: _leaf
+                                        required property var modelData
+                                        readonly property bool   active: MenuState.settingsSection === modelData.section
+                                        readonly property string glyph:  modelData.glyph ?? ""
+                                        // whole pixels only: a fractional shift blurs native-rendered text
+                                        property real _shift: (active || _leafHover.hovered) ? 1 : 0
 
-                                Text {
-                                    id: _leafGlyph
-                                    anchors.left:           parent.left
-                                    anchors.leftMargin:     13
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    width: 19
-                                    horizontalAlignment: Text.AlignHCenter
-                                    text:  _leaf.glyph
-                                    color: _leaf._glyphFg
-                                    font.family:    Settings.font
-                                    font.pixelSize: Settings.fontSize
-                                    renderType:     Text.NativeRendering
-                                    transform: Translate { x: Math.round(_leaf._shift) }
-                                    Behavior on color { ColorAnimation { duration: Motion.fast } }
-                                }
+                                        readonly property color _fg: active
+                                            ? Theme.text
+                                            : Theme.withAlpha(Theme.mix(Theme.subtext, Theme.text, 0.12), _leafHover.hovered || _leaf.activeFocus ? 0.92 : 0.76)
+                                        readonly property color _glyphFg: active
+                                            ? Theme.mix(Theme.accent, Theme.text, 0.10)
+                                            : Theme.withAlpha(Theme.subtext, _leafHover.hovered || _leaf.activeFocus ? 0.76 : 0.56)
 
-                                Text {
-                                    anchors.left:           _leafGlyph.right
-                                    anchors.leftMargin:     9
-                                    anchors.right:          parent.right
-                                    anchors.rightMargin:    9
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text: _leaf.modelData.label
-                                    elide: Text.ElideRight
-                                    color: _leaf._fg
-                                    font.family:    Settings.font
-                                    font.pixelSize: Settings.fontSize
-                                    font.weight:    _leaf.active ? Font.DemiBold : Font.Normal
-                                    renderType:     Text.NativeRendering
-                                    transform: Translate { x: Math.round(_leaf._shift) }
-                                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                                        width: parent.width
+                                        height: root._navRowH
+                                        radius: 8
+                                        antialiasing: true
+                                        color: ((_leafHover.hovered || _leaf.activeFocus) && !active)
+                                            ? Theme.withAlpha(Theme.text, 0.045) : "transparent"
+                                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                                        Behavior on _shift {
+                                            enabled: !ShellSettings.reduceMotion
+                                            NumberAnimation { duration: Motion.ms(105); easing.type: Easing.OutCubic }
+                                        }
+
+                                        activeFocusOnTab: root.active && _grp.expanded
+                                        Accessible.role: Accessible.Button
+                                        Accessible.name: _leaf.modelData.label
+                                        Keys.onSpacePressed: event => { if (!event.isAutoRepeat) MenuState.setSettingsSection(_leaf.modelData.section); event.accepted = true }
+                                        Keys.onReturnPressed: event => { if (!event.isAutoRepeat) MenuState.setSettingsSection(_leaf.modelData.section); event.accepted = true }
+                                        Keys.onEnterPressed: event => { if (!event.isAutoRepeat) MenuState.setSettingsSection(_leaf.modelData.section); event.accepted = true }
+
+                                        HoverHandler { id: _leafHover; cursorShape: Qt.PointingHandCursor }
+                                        TapHandler   { id: _leafTap; onTapped: MenuState.setSettingsSection(_leaf.modelData.section) }
+                                        scale: _leafTap.pressed ? 0.985 : 1.0
+                                        transformOrigin: Item.Left
+                                        Behavior on scale {
+                                            enabled: !ShellSettings.reduceMotion
+                                            NumberAnimation { duration: Motion.ms(95); easing.type: Easing.OutCubic }
+                                        }
+
+                                        Text {
+                                            id: _leafGlyph
+                                            anchors.left:           parent.left
+                                            anchors.leftMargin:     13
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            width: 19
+                                            horizontalAlignment: Text.AlignHCenter
+                                            text:  _leaf.glyph
+                                            color: _leaf._glyphFg
+                                            font.family:    Settings.font
+                                            font.pixelSize: Settings.fontSize
+                                            renderType:     Text.NativeRendering
+                                            transform: Translate { x: Math.round(_leaf._shift) }
+                                            Behavior on color { ColorAnimation { duration: Motion.fast } }
+                                        }
+
+                                        Text {
+                                            anchors.left:           _leafGlyph.right
+                                            anchors.leftMargin:     9
+                                            anchors.right:          parent.right
+                                            anchors.rightMargin:    9
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            text: _leaf.modelData.label
+                                            elide: Text.ElideRight
+                                            color: _leaf._fg
+                                            font.family:    Settings.font
+                                            font.pixelSize: Settings.fontSize
+                                            font.weight:    _leaf.active ? Font.DemiBold : Font.Normal
+                                            renderType:     Text.NativeRendering
+                                            transform: Translate { x: Math.round(_leaf._shift) }
+                                            Behavior on color { ColorAnimation { duration: Motion.fast } }
+                                        }
+                                    }
                                 }
                             }
                         }

@@ -200,6 +200,15 @@ PanelWindow {
                     win._ignoreOutsideTap = false
                 }
             }
+            function onSettingsSectionChanged() { _sectionScrollReset.restart() }
+        }
+
+        // a new section starts at its top; the delay lands the jump inside the
+        // detail swap's opacity-0 gap so it is never seen
+        Timer {
+            id: _sectionScrollReset
+            interval: ShellSettings.reduceMotion ? 0 : Motion.ms(60)
+            onTriggered: contentFlick.contentY = 0
         }
 
         width:  panelW
