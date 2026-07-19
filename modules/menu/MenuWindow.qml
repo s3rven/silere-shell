@@ -44,7 +44,7 @@ PanelWindow {
         enabled:  MenuState.open
         onActivated: {
             if (panel.powerOpen) {
-                panel.powerOpen = false
+                panel.closePowerAndRestoreFocus()
             } else if (panel.activeTab === 0 && homeLoader.item && homeLoader.item.dismissInline()) {
                 // open wifi/bt picker folded away; menu stays
             } else {
@@ -123,12 +123,16 @@ PanelWindow {
         barBottom: ShellSettings.barPosition === "bottom"
         targetWidth: panelW
         border.width: 0
+        // panes lay out at destination width before the chrome morph; clip the overhang
+        clip: true
 
-        // Home/Notifications read best compact; Settings needs room for the tree-nav + 4-chip rows
+        // Home/Notifications read best compact; Settings needs room for the nav + detail column
         readonly property int _compactW:  398
-        readonly property int _settingsW: 566
+        readonly property int _powerW:    566
+        readonly property int _settingsW: 620
         readonly property bool _railExpanded: activeTab === 1 || powerOpen
-        readonly property int _targetPanelW: _railExpanded ? _settingsW : _compactW
+        readonly property int _targetPanelW: activeTab === 1 ? _settingsW
+            : powerOpen ? _powerW : _compactW
         readonly property int _availablePanelW: win.width > 0
             ? Math.max(1, Math.floor(win.width - _minX * 2))
             : _targetPanelW
@@ -138,29 +142,31 @@ PanelWindow {
         // rail expands for Settings: icon strip stays fixed, category nav rides on beside it as one growing surface
         readonly property int railCollapsedW: 44
         readonly property int _navMinW: powerOpen ? 112 : 96
+        readonly property int _navMaxW: activeTab === 1 ? 168 : 160
         // Preserve a useful detail pane on narrow outputs. The category labels
         // elide cleanly, while settings controls need at least twice this space.
         readonly property int navW: Math.min(
             Math.max(0, panelW - railCollapsedW - 96),
-            Math.max(_navMinW, Math.min(160, panelW - railCollapsedW - 224)))
+            Math.max(_navMinW, Math.min(_navMaxW, panelW - railCollapsedW - 224)))
         readonly property int railExpandedW: railCollapsedW + navW
         readonly property int railW: _railExpanded ? railExpandedW : railCollapsedW
         readonly property int contentW: panelW - railW
-        readonly property int contentPad: _railExpanded && panelW >= 460 ? 18 : 12
+        readonly property int contentPad: activeTab === 1 && panelW >= 520 ? 20
+            : _railExpanded && panelW >= 460 ? 18 : 12
         readonly property int innerW: Math.max(1, contentW - contentPad * 2)
         // shared height floor so every tab opens at the same size; taller content grows above it
         readonly property int idealMinH: 360
         // min height so rail icons never overlap the power slot
         readonly property int minRailFitH: 252
-        readonly property int heightAnimDuration: Motion.medium
+        readonly property int geometryAnimDuration: Motion.medium
         readonly property int _availablePanelH: win.height > 0
             ? Math.max(1, Math.floor(win.height - _edgeY - _minX))
             : contentPane.targetH
         readonly property int targetPanelH: Math.max(1,
             Math.min(contentPane.targetH, _availablePanelH))
 
-        property int activeTab: 0
-        onActiveTabChanged: MenuState.activeTab = activeTab
+        readonly property int activeTab: MenuState.activeTab
+        readonly property var _focusWindow: panel.Window.window
 
         property bool powerOpen: false
         property bool _loaded:         false
@@ -168,13 +174,52 @@ PanelWindow {
         property bool _settingsLoaded: false
         property bool _recentLoaded:   false
 
+        function _ownsItem(item, ancestor): bool {
+            let current = item
+            while (current) {
+                if (current === ancestor) return true
+                current = current.parent
+            }
+            return false
+        }
+
         function switchTab(idx: int): void {
+            const tab = Math.max(0, Math.min(2, idx))
+            const focusedItem = _focusWindow ? _focusWindow.activeFocusItem : null
+            const focusNeedsReset = focusedItem && (
+                _ownsItem(focusedItem, tabContent)
+                || _ownsItem(focusedItem, _settingsNav)
+                || _ownsItem(focusedItem, _powerRail))
             if (powerOpen) powerOpen = false
-            if (idx === 1) _settingsLoaded = true
-            if (idx === 2) _recentLoaded = true
-            if (idx === activeTab) return
-            activeTab = idx
+            if (tab === 1) _settingsLoaded = true
+            if (tab === 2) _recentLoaded = true
+            if (tab !== MenuState.activeTab) MenuState.activeTab = tab
             contentFlick.contentY = 0
+            // panel is a ring-free Tab origin; otherwise focus strands in the disabled page
+            if (focusNeedsReset) panel.forceActiveFocus()
+        }
+
+        function closePowerAndRestoreFocus(): void {
+            if (!powerOpen) return
+            powerOpen = false
+            _powerFocusRestore.restart()
+        }
+
+        function _revealFocusedControl(): void {
+            if (powerOpen || activeTab === 2 || !MenuState.open) return
+            const item = _focusWindow ? _focusWindow.activeFocusItem : null
+            if (!item || !_ownsItem(item, tabContent)) return
+
+            const p = item.mapToItem(contentFlick.contentItem, 0, 0)
+            const margin = 12
+            const top = p.y
+            const bottom = top + Math.max(1, Number(item.height) || 1)
+            const maxY = Math.max(0, contentFlick.contentHeight - contentFlick.height)
+            let target = contentFlick.contentY
+            if (top - margin < target) target = top - margin
+            else if (bottom + margin > target + contentFlick.height)
+                target = bottom + margin - contentFlick.height
+            contentFlick.contentY = Math.max(0, Math.min(maxY, target))
         }
 
         // Cycle the rail in its visual order (Now, Recent, Settings) for Ctrl+Tab.
@@ -189,6 +234,11 @@ PanelWindow {
             function onTabRequested(index) {
                 if (index !== 0) panel._loadedDeferred = true
                 panel.switchTab(index)
+            }
+            function onActiveTabChanged() {
+                if (MenuState.activeTab === 1) panel._settingsLoaded = true
+                if (MenuState.activeTab === 2) panel._recentLoaded = true
+                contentFlick.contentY = 0
             }
             function onOpenChanged() {
                 if (MenuState.open) {
@@ -211,18 +261,41 @@ PanelWindow {
             onTriggered: contentFlick.contentY = 0
         }
 
+        Timer {
+            id: _focusReveal
+            interval: 0
+            onTriggered: panel._revealFocusedControl()
+        }
+
+        Timer {
+            id: _powerFocusRestore
+            interval: 0
+            onTriggered: if (MenuState.open && !panel.powerOpen) _railPower.forceActiveFocus()
+        }
+
+        Connections {
+            target: panel._focusWindow
+            function onActiveFocusItemChanged() {
+                if (MenuState.open) _focusReveal.restart()
+            }
+        }
+
         width:  panelW
         height: targetPanelH
 
         Behavior on height {
             enabled: panel.state === "visible" && !ShellSettings.reduceMotion
-            NumberAnimation { duration: panel.heightAnimDuration; easing.type: Easing.OutCubic }
+            // smoothed, not OutCubic: content animates too, and a moving target restarts the easing every frame
+            SmoothedAnimation {
+                velocity: 1800
+                maximumEasingTime: Motion.ms(90)
+            }
         }
 
-        // Width and x share the height duration; mismatched clocks read as jitter.
+        // width, placement, rail and content offset share one clock; mismatched clocks read as jitter
         Behavior on width {
             enabled: panel.state === "visible" && !ShellSettings.reduceMotion
-            NumberAnimation { duration: panel.heightAnimDuration; easing.type: Easing.OutCubic }
+            NumberAnimation { duration: panel.geometryAnimDuration; easing.type: Easing.OutCubic }
         }
 
         onStateChanged: {
@@ -249,7 +322,7 @@ PanelWindow {
             // Expand/collapse in step with the panel's width clock.
             Behavior on width {
                 enabled: panel.state === "visible" && !ShellSettings.reduceMotion
-                NumberAnimation { duration: panel.heightAnimDuration; easing.type: Easing.OutCubic }
+                NumberAnimation { duration: panel.geometryAnimDuration; easing.type: Easing.OutCubic }
             }
 
             // background + divider live in a clipped sub-layer so the over-wide rounded background can't bleed past the rail edge; icons/pills stay unclipped
@@ -352,10 +425,13 @@ PanelWindow {
                 spacing: 6
 
                 RailNavItem {
+                    id: _railHome
                     railW: panel.railCollapsedW
                     glyph: "󰋜"
                     label: "Home"
                     active: panel.activeTab === 0
+                    KeyNavigation.up: _railPower
+                    KeyNavigation.down: _railRecent
                     onTapped: panel.switchTab(0)
                 }
 
@@ -365,6 +441,8 @@ PanelWindow {
                     glyph: "󰋚"
                     label: "Notifications"
                     active: panel.activeTab === 2
+                    KeyNavigation.up: _railHome
+                    KeyNavigation.down: _railSettings
                     onTapped: panel.switchTab(2)
 
                     // count badge on the icon's top-right, anchored to item centre so it stays glued regardless of rail width; rail-coloured ring lifts it off
@@ -400,10 +478,13 @@ PanelWindow {
                 }
 
                 RailNavItem {
+                    id: _railSettings
                     railW: panel.railCollapsedW
                     glyph: "󰒓"
                     label: "Settings"
                     active: panel.activeTab === 1
+                    KeyNavigation.up: _railRecent
+                    KeyNavigation.down: _railPower
                     onTapped: panel.switchTab(1)
                 }
             }
@@ -427,6 +508,7 @@ PanelWindow {
                 }
 
                 RailNavItem {
+                    id: _railPower
                     anchors.top: _railDivider.bottom
                     anchors.topMargin: 10
                     anchors.horizontalCenter: parent.horizontalCenter
@@ -435,7 +517,12 @@ PanelWindow {
                     label: "Power"
                     accentColor: Theme.error
                     active: panel.powerOpen
-                    onTapped: panel.powerOpen = !panel.powerOpen
+                    KeyNavigation.up: _railSettings
+                    KeyNavigation.down: _railHome
+                    onTapped: {
+                        if (panel.powerOpen) panel.closePowerAndRestoreFocus()
+                        else panel.powerOpen = true
+                    }
                 }
             }
         }
@@ -460,7 +547,7 @@ PanelWindow {
             // slide in step with the expanding rail so the rail and content edges stay flush
             Behavior on x {
                 enabled: panel.state === "visible" && !ShellSettings.reduceMotion
-                NumberAnimation { duration: panel.heightAnimDuration; easing.type: Easing.OutCubic }
+                NumberAnimation { duration: panel.geometryAnimDuration; easing.type: Easing.OutCubic }
             }
 
             // snapped to 4 so a bottom-bar panel's y stays on the divider grid; the nav must stay fully visible, so it floors the panel too
@@ -473,7 +560,7 @@ PanelWindow {
 
             TapHandler {
                 enabled: panel.powerOpen
-                onTapped: panel.powerOpen = false
+                onTapped: panel.closePowerAndRestoreFocus()
             }
 
             Flickable {
@@ -488,15 +575,103 @@ PanelWindow {
                 // Notifications owns the only scroll surface on its tab; other pages use this outer scroller
                 interactive: !panel.powerOpen && panel.activeTab !== 2 && contentHeight > height + 1
 
+                function clampToContent(): void {
+                    const maxY = Math.max(0, contentHeight - height)
+                    if (contentY > maxY) contentY = maxY
+                    else if (contentY < 0) contentY = 0
+                }
+
+                // content can shrink while the viewport grows; both bounds move
+                onContentHeightChanged: clampToContent()
+                onHeightChanged: clampToContent()
+
                 Item {
                     id: tabContent
                     x: panel.contentPad
                     y: 12   // 4px multiple, keeps card dividers on the grid
                     width: panel.innerW
-                    height: panel.activeTab === 0 ? (homeLoader.item?.implicitHeight     ?? 0)
-                          : panel.activeTab === 1 ? (settingsLoader.item?.implicitHeight ?? 0)
-                          :                          (recentLoader.item?.implicitHeight  ?? 0)
+                    readonly property bool _pagePending:
+                        panel.activeTab === 1 ? settingsLoader.status !== Loader.Ready
+                      : panel.activeTab === 2 ? recentLoader.status !== Loader.Ready
+                      : false
+                    readonly property bool _pageError:
+                        panel.activeTab === 1 ? settingsLoader.status === Loader.Error
+                      : panel.activeTab === 2 ? recentLoader.status === Loader.Error
+                      : false
+                    height: panel.activeTab === 0 ? (homeLoader.item?.implicitHeight ?? 0)
+                          : panel.activeTab === 1 ? (settingsLoader.item?.implicitHeight
+                                ?? _pagePlaceholder.implicitHeight)
+                          : (recentLoader.item?.implicitHeight ?? _pagePlaceholder.implicitHeight)
                     clip: false
+
+                    Item {
+                        id: _pagePlaceholder
+                        width: parent.width
+                        height: implicitHeight
+                        implicitHeight: Math.max(220, panel.idealMinH - tabContent.y - 16)
+                        visible: tabContent._pagePending
+                        enabled: false
+                        z: 5
+
+                        Column {
+                            anchors.centerIn: parent
+                            spacing: 8
+
+                            Rectangle {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                width: 40
+                                height: 40
+                                radius: 20
+                                antialiasing: true
+                                color: tabContent._pageError
+                                    ? Theme.withAlpha(Theme.error, 0.10)
+                                    : Theme.withAlpha(Theme.accent, 0.08)
+                                border.width: 1
+                                border.color: tabContent._pageError
+                                    ? Theme.withAlpha(Theme.error, 0.34)
+                                    : Theme.withAlpha(Theme.accent, 0.20)
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: tabContent._pageError ? "󰅙" : "󰔟"
+                                    color: tabContent._pageError
+                                        ? Theme.withAlpha(Theme.error, 0.82)
+                                        : Theme.withAlpha(Theme.accent, 0.76)
+                                    font.family: Settings.font
+                                    font.pixelSize: Settings.iconSize + 5
+                                    renderType: Text.NativeRendering
+                                }
+                            }
+
+                            Text {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                width: Math.max(1, _pagePlaceholder.width - 24)
+                                horizontalAlignment: Text.AlignHCenter
+                                text: tabContent._pageError
+                                    ? "Couldn’t load this page"
+                                    : panel.activeTab === 1 ? "Loading settings…" : "Loading notifications…"
+                                color: Theme.withAlpha(Theme.text, 0.76)
+                                font.family: Settings.font
+                                font.pixelSize: Settings.fontSize
+                                font.weight: Font.Medium
+                                renderType: Text.NativeRendering
+                            }
+
+                            Text {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                width: Math.max(1, _pagePlaceholder.width - 24)
+                                horizontalAlignment: Text.AlignHCenter
+                                visible: tabContent._pageError
+                                text: "The menu is still usable; check the shell log for details"
+                                wrapMode: Text.WordWrap
+                                maximumLineCount: 2
+                                color: Theme.withAlpha(Theme.subtext, 0.54)
+                                font.family: Settings.font
+                                font.pixelSize: Math.max(8, Settings.fontSize - 2)
+                                renderType: Text.NativeRendering
+                            }
+                        }
+                    }
 
                     Loader {
                         id: homeLoader

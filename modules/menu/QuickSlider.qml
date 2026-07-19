@@ -120,7 +120,14 @@ Item {
         Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) root.expandToggled(); event.accepted = true }
         Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root.expandToggled(); event.accepted = true }
         Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) root.expandToggled(); event.accepted = true }
-        Keys.onEscapePressed: event => { if (root.expanded) root.expandToggled(); event.accepted = true }
+        Keys.onEscapePressed: event => {
+            if (root.expanded) {
+                root.expandToggled()
+                event.accepted = true
+            } else {
+                event.accepted = false
+            }
+        }
 
         HoverHandler { id: _chevHover; cursorShape: Qt.PointingHandCursor }
         TapHandler   { onTapped: root.expandToggled() }

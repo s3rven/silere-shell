@@ -79,7 +79,15 @@ Item {
     Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root._toggleOpen(); event.accepted = true }
     Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._toggleOpen(); event.accepted = true }
     Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root._toggleOpen(); event.accepted = true }
-    Keys.onEscapePressed: event => { root._setOpen(false); event.accepted = true }
+    Keys.onEscapePressed: event => {
+        if (root._open) {
+            root._setOpen(false)
+            event.accepted = true
+        } else {
+            // fall through to MenuWindow's close shortcut
+            event.accepted = false
+        }
+    }
     Keys.onDownPressed: event => { root._setOpen(true); event.accepted = true }
     Keys.onUpPressed: event => { root._setOpen(true); event.accepted = true }
 

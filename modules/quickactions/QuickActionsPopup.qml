@@ -87,45 +87,99 @@ PanelWindow {
         property string label: ""
         property string stateText: ""
         property bool   active: false
+        property bool   checkable: true
         readonly property bool isMenuRow: true
         readonly property bool on: true
+        property bool _keyboardPressed: false
+        readonly property bool _pressed: _rowTap.pressed || _keyboardPressed
 
         signal triggered()
 
-        function _moveFocus(dir: int): void {
+        function _menuRows(): var {
             const sibs = _row.parent ? _row.parent.children : []
-            let i = -1
-            for (let k = 0; k < sibs.length; k++) if (sibs[k] === _row) { i = k; break }
-            if (i < 0) return
-            for (let k = i + dir; k >= 0 && k < sibs.length; k += dir) {
+            const rows = []
+            for (let k = 0; k < sibs.length; k++) {
                 const c = sibs[k]
-                if (c && c.isMenuRow === true && c.visible) { c.forceActiveFocus(); return }
+                if (c && c.isMenuRow === true && c.visible) rows.push(c)
             }
+            return rows
+        }
+        function _moveFocus(dir: int): void {
+            const rows = _menuRows()
+            const i = rows.indexOf(_row)
+            if (i >= 0 && rows.length > 0)
+                rows[(i + dir + rows.length) % rows.length].forceActiveFocus()
+        }
+        function _focusEdge(last: bool): void {
+            const rows = _menuRows()
+            if (rows.length > 0) rows[last ? rows.length - 1 : 0].forceActiveFocus()
+        }
+        function _activate(): void {
+            if (_row.visible) _row.triggered()
         }
 
         width: parent ? parent.width : 0
-        height: 32
+        height: 38
 
         activeFocusOnTab: visible
-        Accessible.role: Accessible.Button
+        Accessible.role: _row.checkable ? Accessible.CheckBox : Accessible.Button
         Accessible.name: _row.label
         Accessible.description: _row.stateText
+        Accessible.checked: _row.checkable && _row.active
+        Accessible.focusable: _row.visible
+        Accessible.onPressAction: _row._activate()
+        onActiveFocusChanged: if (!activeFocus) _keyboardPressed = false
         Keys.onUpPressed:     e => { _row._moveFocus(-1); e.accepted = true }
         Keys.onDownPressed:   e => { _row._moveFocus(1);  e.accepted = true }
-        Keys.onSpacePressed:  e => { if (!e.isAutoRepeat) _row.triggered(); e.accepted = true }
-        Keys.onReturnPressed: e => { if (!e.isAutoRepeat) _row.triggered(); e.accepted = true }
-        Keys.onEnterPressed:  e => { if (!e.isAutoRepeat) _row.triggered(); e.accepted = true }
+        Keys.onPressed: e => {
+            if (e.key === Qt.Key_Home) {
+                _row._focusEdge(false)
+                e.accepted = true
+                return
+            }
+            if (e.key === Qt.Key_End) {
+                _row._focusEdge(true)
+                e.accepted = true
+                return
+            }
+            if (e.isAutoRepeat || (e.key !== Qt.Key_Space
+                    && e.key !== Qt.Key_Return && e.key !== Qt.Key_Enter)) return
+            _row._keyboardPressed = true
+            e.accepted = true
+        }
+        Keys.onReleased: e => {
+            if (!_row._keyboardPressed || (e.key !== Qt.Key_Space
+                    && e.key !== Qt.Key_Return && e.key !== Qt.Key_Enter)) return
+            _row._keyboardPressed = false
+            e.accepted = true
+            _row._activate()
+        }
 
         HoverHandler { id: _rowHover; cursorShape: Qt.PointingHandCursor }
-        TapHandler   { onTapped: _row.triggered() }
+        TapHandler   { id: _rowTap; onTapped: _row._activate() }
 
         Rectangle {
             anchors.fill: parent
             radius: Theme.radiusControl
             antialiasing: true
-            color: (_rowHover.hovered || _row.activeFocus)
-                ? Theme.withAlpha(Theme.menuHover, 0.12) : "transparent"
+            color: _row._pressed
+                ? Theme.withAlpha(Theme.accent, 0.14)
+                : (_rowHover.hovered || _row.activeFocus)
+                    ? Theme.withAlpha(Theme.menuHover, 0.12) : "transparent"
             Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+        }
+
+        Rectangle {
+            anchors.left: parent.left
+            anchors.leftMargin: 3
+            anchors.verticalCenter: parent.verticalCenter
+            width: 2; height: 14; radius: 1
+            antialiasing: true
+            color: Theme.accent
+            opacity: _row.active ? 0.82 : 0.0
+            scale: _row.active ? 1.0 : 0.5
+            Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
+            Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
         }
 
         Text {
@@ -158,18 +212,32 @@ PanelWindow {
             elide: Text.ElideRight
         }
 
-        Text {
+        Rectangle {
             id: _state
             anchors.right: parent.right
             anchors.rightMargin: 10
             anchors.verticalCenter: parent.verticalCenter
-            text: _row.stateText
-            color: _row.active ? Theme.mix(Theme.accent, Theme.text, 0.18) : Theme.withAlpha(Theme.subtext, 0.62)
-            font.family: Settings.font
-            font.pixelSize: Settings.fontSize - 2
-            font.weight: Font.Medium
-            renderType: Text.NativeRendering
-            Behavior on color { ColorAnimation { duration: Motion.fast } }
+            width: Math.max(30, _stateLabel.implicitWidth + 12)
+            height: 20
+            radius: 7
+            antialiasing: true
+            color: _row.active
+                ? Theme.withAlpha(Theme.accent, 0.13) : "transparent"
+            border.width: _row.active ? 1 : 0
+            border.color: Theme.withAlpha(Theme.accent, 0.22)
+            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+
+            Text {
+                id: _stateLabel
+                anchors.centerIn: parent
+                text: _row.stateText
+                color: _row.active ? Theme.mix(Theme.accent, Theme.text, 0.18) : Theme.withAlpha(Theme.subtext, 0.62)
+                font.family: Settings.font
+                font.pixelSize: Settings.fontSize - 2
+                font.weight: Font.Medium
+                renderType: Text.NativeRendering
+                Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+            }
         }
     }
 
@@ -181,7 +249,8 @@ PanelWindow {
         barBottom: QuickActionsState.barBottom
 
         readonly property int pad: 6
-        width: 216 + pad * 2
+        readonly property int contentW: 236
+        width: contentW + pad * 2
         height: _rows.implicitHeight + pad * 2
 
         // The card holds focus on open (paints nothing); Down/Tab enters rows.
@@ -199,7 +268,7 @@ PanelWindow {
         Column {
             id: _rows
             x: card.pad; y: card.pad
-            width: 216
+            width: card.contentW
             spacing: 1
 
             QuickActionRow {
@@ -219,6 +288,7 @@ PanelWindow {
             }
             QuickActionRow {
                 visible: PowerProfiles.available
+                checkable: false
                 glyph: PowerProfiles.glyph.length > 0 ? PowerProfiles.glyph : "󰾅"
                 label: "Power Mode"
                 active: PowerProfiles.profile === "performance"

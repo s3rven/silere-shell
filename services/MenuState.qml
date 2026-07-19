@@ -80,12 +80,30 @@ Singleton {
     // lets pages request a tab switch (0 Home, 1 Settings, 2 Recent) without a panel reference
     signal tabRequested(int index)
 
+    function _validTab(index: int): int {
+        return Math.max(0, Math.min(2, index))
+    }
+
     function toggleAt(x: real, screen): void {
+        if (open) {
+            close()
+            return
+        }
         anchorX = x
         triggerScreen = screen ?? null
-        open = !open
-        if (!open) triggerScreen = null
+        // reset here, not in close(): closing must not flash Home mid-fade
+        activeTab = 0
+        open = true
     }
-    function close():               void { triggerScreen = null; if (open) open = false }
-    function showTab(index: int):   void { if (!open) open = true; tabRequested(index) }
+    function close(): void {
+        triggerScreen = null
+        if (open) open = false
+    }
+    function showTab(index: int): void {
+        const tab = _validTab(index)
+        // set before opening: the lazy surface can't catch a pre-creation signal
+        activeTab = tab
+        if (!open) open = true
+        tabRequested(tab)
+    }
 }

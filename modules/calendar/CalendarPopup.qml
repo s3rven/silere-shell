@@ -169,11 +169,6 @@ PanelWindow {
             if (!event.isAutoRepeat) card._goToday()
             event.accepted = true
         }
-        function _activateStep(delta: int, event): void {
-            if (!event.isAutoRepeat) card._step(delta)
-            event.accepted = true
-        }
-
         Connections {
             target: CalendarState
             function onOpenChanged() {
@@ -306,28 +301,14 @@ PanelWindow {
                 width: parent.width
                 height: 30
 
-                Rectangle {
+                IconButton {
                     id: _prevButton
-                    width: 26; height: 26; radius: 13
+                    buttonSize: 26
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
-                    activeFocusOnTab: true
-                    antialiasing: true
-                    color: (_prevH.hovered || activeFocus) ? Theme.withAlpha(Theme.subtext, 0.12) : "transparent"
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
-                    Accessible.role: Accessible.Button
-                    Accessible.name: "Previous month"
-                    Keys.onSpacePressed:  event => card._activateStep(-1, event)
-                    Keys.onReturnPressed: event => card._activateStep(-1, event)
-                    Keys.onEnterPressed:  event => card._activateStep(-1, event)
-                    HoverHandler { id: _prevH; cursorShape: Qt.PointingHandCursor }
-                    TapHandler   { onTapped: card._step(-1) }
-                    Text {
-                        anchors.centerIn: parent; text: "󰅁"
-                        color: Theme.withAlpha(Theme.subtext, (_prevH.hovered || _prevButton.activeFocus) ? 0.95 : 0.7)
-                        font.family: Settings.font; font.pixelSize: Settings.fontSize + 2
-                        renderType: Text.NativeRendering
-                    }
+                    glyph: "󰅁"
+                    accessibleName: "Previous month"
+                    onTriggered: card._step(-1)
                 }
 
                 Item {
@@ -353,28 +334,14 @@ PanelWindow {
                     }
                 }
 
-                Rectangle {
+                IconButton {
                     id: _nextButton
-                    width: 26; height: 26; radius: 13
+                    buttonSize: 26
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
-                    activeFocusOnTab: true
-                    antialiasing: true
-                    color: (_nextH.hovered || activeFocus) ? Theme.withAlpha(Theme.subtext, 0.12) : "transparent"
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
-                    Accessible.role: Accessible.Button
-                    Accessible.name: "Next month"
-                    Keys.onSpacePressed:  event => card._activateStep(1, event)
-                    Keys.onReturnPressed: event => card._activateStep(1, event)
-                    Keys.onEnterPressed:  event => card._activateStep(1, event)
-                    HoverHandler { id: _nextH; cursorShape: Qt.PointingHandCursor }
-                    TapHandler   { onTapped: card._step(1) }
-                    Text {
-                        anchors.centerIn: parent; text: "󰅂"
-                        color: Theme.withAlpha(Theme.subtext, (_nextH.hovered || _nextButton.activeFocus) ? 0.95 : 0.7)
-                        font.family: Settings.font; font.pixelSize: Settings.fontSize + 2
-                        renderType: Text.NativeRendering
-                    }
+                    glyph: "󰅂"
+                    accessibleName: "Next month"
+                    onTriggered: card._step(1)
                 }
             }
 

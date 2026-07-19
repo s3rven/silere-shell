@@ -83,6 +83,25 @@ Item {
         _navScroll.contentY = Math.max(0, Math.min(maxY, target))
     }
 
+    function _focusSelection(): void {
+        for (let i = 0; i < _groupRepeater.count; i++) {
+            const group = _groupRepeater.itemAt(i)
+            if (group && group.focusSection(MenuState.settingsSection)) return
+        }
+    }
+
+    function _stepSelection(delta: int): void {
+        const before = MenuState.settingsSection
+        MenuState.stepSettingsSection(delta)
+        if (before !== MenuState.settingsSection) _selectionFocus.restart()
+    }
+
+    Timer {
+        id: _selectionFocus
+        interval: 0
+        onTriggered: root._focusSelection()
+    }
+
     onActiveChanged: if (active) Qt.callLater(_scrollToSelection)
     Connections {
         target: MenuState
@@ -93,13 +112,13 @@ Item {
         sequences: ["Ctrl+Down"]
         context: Qt.ApplicationShortcut
         enabled: root.active
-        onActivated: MenuState.stepSettingsSection(1)
+        onActivated: root._stepSelection(1)
     }
     Shortcut {
         sequences: ["Ctrl+Up"]
         context: Qt.ApplicationShortcut
         enabled: root.active
-        onActivated: MenuState.stepSettingsSection(-1)
+        onActivated: root._stepSelection(-1)
     }
 
     Flickable {
@@ -174,6 +193,7 @@ Item {
                 spacing: root._navGapY
 
                 Repeater {
+                    id: _groupRepeater
                     model: MenuState.settingsTree
 
                     delegate: Item {
@@ -191,6 +211,17 @@ Item {
                             return false
                         }
                         readonly property bool expanded: !isGroup || groupActive
+
+                        function focusSection(section: string): bool {
+                            for (let i = 0; i < _leafRepeater.count; i++) {
+                                const leaf = _leafRepeater.itemAt(i)
+                                if (leaf && leaf.modelData.section === section) {
+                                    leaf.forceActiveFocus()
+                                    return true
+                                }
+                            }
+                            return false
+                        }
 
                         Item {
                             id: _grpHdr
@@ -292,6 +323,7 @@ Item {
                                 spacing: root._navRowGap
 
                                 Repeater {
+                                    id: _leafRepeater
                                     model: _grp._leaves
 
                                     delegate: Rectangle {
@@ -327,6 +359,8 @@ Item {
                                         Keys.onSpacePressed: event => { if (!event.isAutoRepeat) MenuState.setSettingsSection(_leaf.modelData.section); event.accepted = true }
                                         Keys.onReturnPressed: event => { if (!event.isAutoRepeat) MenuState.setSettingsSection(_leaf.modelData.section); event.accepted = true }
                                         Keys.onEnterPressed: event => { if (!event.isAutoRepeat) MenuState.setSettingsSection(_leaf.modelData.section); event.accepted = true }
+                                        Keys.onUpPressed: event => { root._stepSelection(-1); event.accepted = true }
+                                        Keys.onDownPressed: event => { root._stepSelection(1); event.accepted = true }
 
                                         HoverHandler { id: _leafHover; cursorShape: Qt.PointingHandCursor }
                                         TapHandler   { id: _leafTap; onTapped: MenuState.setSettingsSection(_leaf.modelData.section) }

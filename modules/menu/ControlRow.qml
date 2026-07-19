@@ -297,8 +297,12 @@ Item {
             Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._toggleExpanded(); event.accepted = true }
             Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) root._toggleExpanded(); event.accepted = true }
             Keys.onEscapePressed: event => {
-                if (root.expanded) root._toggleExpanded()
-                event.accepted = true
+                if (root.expanded) {
+                    root._toggleExpanded()
+                    event.accepted = true
+                } else {
+                    event.accepted = false
+                }
             }
 
             Text {

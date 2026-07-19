@@ -5,3 +5,4 @@ RollingText 1.0 RollingText.qml
 ListEdgeFade 1.0 ListEdgeFade.qml
 FloatingShadow 1.0 FloatingShadow.qml
 FloatingPopupCard 1.0 FloatingPopupCard.qml
+IconButton 1.0 IconButton.qml
