@@ -18,6 +18,7 @@ Singleton {
     property string deviceName:     ""
     property string deviceType:     ""
     property bool monitoring:        false
+    property bool _monitorSettling:  false
     readonly property bool toolAvailable: SystemTools.hasNmcli
     readonly property bool _wanted: !Idle.isIdle && (
         ShellSettings.barShowNetwork
@@ -572,9 +573,27 @@ Singleton {
         restartDelay: 3000
         maxRestartDelay: 60000
         cleanExitOnly: true
-        stdout: SplitParser { onRead: monitorDebounce.restart() }
-        onRunningChanged: { if (running) root.refresh() }
+        // nmcli monitor echoes current state on start; _init() already has it
+        stdout: SplitParser {
+            onRead: if (!root._monitorSettling) monitorDebounce.restart()
+        }
+        onRunningChanged: {
+            if (running) {
+                root._monitorSettling = true
+                _monitorSettle.restart()
+                if (root.available && !_proc.running) root.refresh()
+            } else {
+                _monitorSettle.stop()
+                root._monitorSettling = false
+            }
+        }
         onGaveUpChanged: if (gaveUp) root.monitoring = false
+    }
+
+    Timer {
+        id: _monitorSettle
+        interval: 250
+        onTriggered: root._monitorSettling = false
     }
 
     Timer {
