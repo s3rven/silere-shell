@@ -29,11 +29,13 @@ Item {
     readonly property bool _helperEnabled: ShellSettings.mediaWidgetHelper
     readonly property string _playGlyph: Media.playing ? "󰏤" : "󰐊"
     property real textBudget: -1
+    property bool _pauseBreathSettled: false
     readonly property int _pillPad: Metrics.pillPadFor(compact)
 
     readonly property real _scrollSpeed:     38    // px/sec
     readonly property int  _scrollHoldStart: 900   // short: title start already visible on entry
     readonly property int  _scrollHoldEnd:   2200  // long: user reads the end
+    readonly property int  _scrollHoldLoop:  6000  // quiet gap before another pass; pauses do not repaint
 
     function _resetMarquee(): void {
         _scroll.stop()
@@ -50,7 +52,10 @@ Item {
 
     onShowChanged: {
         if (!show) _resetMarquee()
-        else       Qt.callLater(_startMarquee)
+        else {
+            if (!Media.playing) _pauseBreathSettled = false
+            Qt.callLater(_startMarquee)
+        }
     }
     onBarActiveChanged: {
         if (barActive) Qt.callLater(_startMarquee)
@@ -205,7 +210,9 @@ Item {
 
                 // breathing: slow sway while paused; Behavior restores 0.72 when it stops
                 SequentialAnimation on opacity {
-                    running: root.barActive && !Media.playing && root.show && !ShellSettings.reduceMotion && !Idle.isIdle
+                    running: root.barActive && !Media.playing && root.show
+                        && !root._pauseBreathSettled
+                        && !ShellSettings.reduceMotion && !Idle.isIdle
                         && (!root.screen || Monitors.activeName === root.screen.name)
                     loops: Animation.Infinite
                     NumberAnimation { to: 0.60; duration: Motion.ms(1400); easing.type: Easing.InOutSine }
@@ -216,6 +223,7 @@ Item {
             Connections {
                 target: Media
                 function onLabelChanged() {
+                    root._pauseBreathSettled = false
                     if (!root.show || ShellSettings.reduceMotion) {
                         root._resetMarquee()
                         return
@@ -227,6 +235,7 @@ Item {
                     if (Media.playing) {
                         root._startMarquee()
                     } else {
+                        root._pauseBreathSettled = false
                         _scroll.stop()
                         trackText.x = 0
                     }
@@ -274,6 +283,7 @@ Item {
                     to: 0
                     duration: textClip._returnMs; easing.type: Easing.InOutSine
                 }
+                PauseAnimation { duration: root._scrollHoldLoop }
             }
 
             SequentialAnimation {
@@ -294,6 +304,13 @@ Item {
             }
 
         }
+    }
+
+    Timer {
+        interval: 15000
+        running: root.barActive && root.show && !Media.playing
+            && !root._pauseBreathSettled && !Idle.isIdle
+        onTriggered: root._pauseBreathSettled = true
     }
 
     // root hit target so the visualizer zone is also clickable

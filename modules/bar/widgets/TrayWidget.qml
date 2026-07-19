@@ -65,8 +65,11 @@ Item {
                 readonly property bool needsAttention: modelData.status === Status.NeedsAttention
                 // Drives the attention halo; stays at full for the reduceMotion path.
                 property real attnPulse: 1.0
+                property bool _attentionSettled: false
                 // SNI tooltip title as a quiet inline reveal: only after the pointer rests, or on keyboard focus
                 property bool _dwelled: false
+
+                onNeedsAttentionChanged: _attentionSettled = false
 
                 width: root.iconSize + (_hoverLabel.width > 0 ? _hoverLabel.width + 5 : 0)
                 height: root.iconSize
@@ -103,10 +106,19 @@ Item {
                 }
 
                 PulseLoop {
-                    running: root.barActive && _tile.needsAttention && !ShellSettings.reduceMotion && !Idle.isIdle
+                    running: root.barActive && _tile.needsAttention && !_tile._attentionSettled
+                        && !ShellSettings.reduceMotion && !Idle.isIdle
                     target: _tile; targetProperty: "attnPulse"
                     peak: 0.4; floor: 1.0; restValue: 1.0
                     duration: Motion.ms(900)
+                }
+
+                // NeedsAttention can be held forever; stop pulsing, keep the static halo
+                Timer {
+                    interval: 15000
+                    running: root.barActive && _tile.needsAttention
+                        && !_tile._attentionSettled && !Idle.isIdle
+                    onTriggered: _tile._attentionSettled = true
                 }
 
                 // letter fallback only for genuinely slow/missing icons — showing it instantly flashes a

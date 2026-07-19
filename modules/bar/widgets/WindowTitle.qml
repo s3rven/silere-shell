@@ -118,16 +118,24 @@ Item {
         Qt.callLater(function() { if (monitorWsId > 0) _lastWsId = monitorWsId })
     }
 
-    onHasClientChanged:  if (_ready) _debounce.restart()
-    onCurrentAppChanged: if (_ready) _debounce.restart()
+    onHasClientChanged:  if (_ready && !Idle.isIdle) _debounce.restart()
+    onCurrentAppChanged: if (_ready && !Idle.isIdle) _debounce.restart()
     Connections {
         target: ShellSettings
         function onShowWindowTitleAppChanged() { if (root._ready) _debounce.restart() }
     }
 
     onCurrentTitleChanged: {
-        if (!_ready || _debounce.running || _seq.running) return
+        if (!_ready || Idle.isIdle || _debounce.running || _seq.running) return
         root._shownTitle = currentTitle
+    }
+
+    Connections {
+        target: Idle
+        function onIsIdleChanged() {
+            // resync after any titles missed while the bar was hidden
+            if (!Idle.isIdle && root._ready) _debounce.restart()
+        }
     }
 
     Timer {

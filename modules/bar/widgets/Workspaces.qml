@@ -625,6 +625,7 @@ Item {
                 readonly property bool occupied: root.occupied(wsId)
                 readonly property bool urgent:  root.urgent(wsId)
                 readonly property bool hovered: _hover.hovered
+                property bool _urgentPulseSettled: false
                 // gated separately from `hovered` so hover scale/color/tint respect the barHoverHighlight setting (default off)
                 readonly property bool _hoverFx: hovered && ShellSettings.barHoverHighlight
                 readonly property bool _showIcons: ShellSettings.wsShowAppIcons && !active && apps.length > 0
@@ -633,6 +634,8 @@ Item {
                 height:  root.btnH
                 opacity: 1
                 scale:   1.0
+
+                onUrgentChanged: _urgentPulseSettled = false
 
                 // not gated on wsShowAppIcons: disabling it must glide the collapse too, not snap while the gem animates
                 Behavior on width {
@@ -751,6 +754,7 @@ Item {
 
                 onHoveredChanged: { if (active) diamond._hoverScale = _hoverFx ? 1.10 : 1.0 }
                 onActiveChanged: {
+                    if (!active && urgent) _urgentPulseSettled = false
                     diamond._hoverScale = (active && _hoverFx) ? 1.10 : 1.0
                     if (ShellSettings.reduceMotion) { _dotFade = active ? 0 : 1; return }
                     _dotFadeOut.stop(); _dotFadeIn.stop()
@@ -841,7 +845,8 @@ Item {
                 }
 
                 SequentialAnimation {
-                    running: ws.urgent && !ws.active && !ShellSettings.reduceMotion && !Idle.isIdle
+                    running: ws.urgent && !ws.active && !ws._urgentPulseSettled
+                        && !ShellSettings.reduceMotion && !Idle.isIdle
                     loops:   Animation.Infinite
                     onRunningChanged: if (!running) { ws._pulseOpacity = 1.0; ws._shakeX = 0 }
                     NumberAnimation { target: ws; property: "_shakeX"; to:  2.5; duration: Motion.ms(55); easing.type: Easing.OutQuad  }
@@ -850,6 +855,12 @@ Item {
                     NumberAnimation { target: ws; property: "_shakeX"; to:  0;   duration: Motion.ms(55); easing.type: Easing.OutCubic }
                     NumberAnimation { target: ws; property: "_pulseOpacity"; to: 0.3; duration: Motion.ms(550); easing.type: Easing.InOutSine }
                     NumberAnimation { target: ws; property: "_pulseOpacity"; to: 1.0; duration: Motion.ms(550); easing.type: Easing.InOutSine }
+                }
+
+                Timer {
+                    interval: 15000
+                    running: ws.urgent && !ws.active && !ws._urgentPulseSettled && !Idle.isIdle
+                    onTriggered: ws._urgentPulseSettled = true
                 }
 
                 Text {
@@ -979,7 +990,10 @@ Item {
         // Hold the last id while fading out so the jump target doesn't blank mid-tap.
         property int targetWs: 0
         readonly property int _live: root.urgentOffPage
-        on_LiveChanged: if (_live > 0) targetWs = _live
+        on_LiveChanged: if (_live > 0) {
+            if (targetWs !== _live) _pulseSettled = false
+            targetWs = _live
+        }
         Component.onCompleted: if (_live > 0) targetWs = _live
 
         x: wsRow.implicitWidth + 2
@@ -1003,12 +1017,20 @@ Item {
         TapHandler   { enabled: _urgentTick.shown; onTapped: _urgentTick._jump() }
 
         property real _pulse: 1.0
+        property bool _pulseSettled: false
+        onShownChanged: if (shown) _pulseSettled = false
         SequentialAnimation {
-            running: _urgentTick.shown && !ShellSettings.reduceMotion && !Idle.isIdle
+            running: _urgentTick.shown && !_urgentTick._pulseSettled
+                && !ShellSettings.reduceMotion && !Idle.isIdle
             loops:   Animation.Infinite
             onRunningChanged: if (!running) _urgentTick._pulse = 1.0
             NumberAnimation { target: _urgentTick; property: "_pulse"; to: 0.35; duration: Motion.ms(550); easing.type: Easing.InOutSine }
             NumberAnimation { target: _urgentTick; property: "_pulse"; to: 1.0;  duration: Motion.ms(550); easing.type: Easing.InOutSine }
+        }
+        Timer {
+            interval: 15000
+            running: _urgentTick.shown && !_urgentTick._pulseSettled && !Idle.isIdle
+            onTriggered: _urgentTick._pulseSettled = true
         }
 
         Rectangle {
