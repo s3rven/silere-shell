@@ -113,6 +113,7 @@ Singleton {
 
     property int _hyprTick: 0
     property bool _hyprRefreshAgain: false
+    property string _hyprActiveAddr: ""
 
     // Hyprland events arrive in bursts and several consumers may ask for the
     // same refresh (workspace icons, fullscreen state, notification focus).
@@ -137,6 +138,21 @@ Singleton {
             root._hyprRefreshAgain = false
             Hyprland.refreshToplevels()
             restart()
+        }
+    }
+
+    // hyprland fires windowtitle and windowtitlev2 per title frame; coalesce the pair
+    Timer {
+        id: _hyprTitleSync
+        interval: 180
+        onTriggered: root._hyprTick++
+    }
+
+    Connections {
+        target: Idle
+        function onIsIdleChanged() {
+            if (Idle.isIdle) _hyprTitleSync.stop()
+            else root._hyprTick++
         }
     }
 
@@ -194,7 +210,8 @@ Singleton {
             const wsId = c.workspace ? (c.workspace.id ?? -1) : -1
             out.push({
                 appId: (t.wayland && t.wayland.appId) || c.class || c.initialClass || "",
-                title: c.title ?? (t.title ?? ""),
+                // t.title tracks live; lastIpcObject.title only moves on refreshToplevels()
+                title: t.title || c.title || "",
                 cls: c.class ?? "", initialClass: c.initialClass ?? "",
                 pid: c.pid ?? -1, ref: c.address,
                 wsRef: wsId, wsId: wsId, output: wsOut[wsId] ?? "",
@@ -233,8 +250,24 @@ Singleton {
         enabled: root.isHyprland
         function onRawEvent(event) {
             const n = event.name
+            if (n === "windowtitle" || n === "windowtitlev2" || n === "activewindow") {
+                if (!Idle.isIdle && !_hyprTitleSync.running) _hyprTitleSync.start()
+                return
+            }
+            // activewindow refires per title frame; only v2's address distinguishes a real focus change
+            if (n === "activewindowv2") {
+                const addr = String(event.data ?? "")
+                if (addr === root._hyprActiveAddr) {
+                    if (!Idle.isIdle && !_hyprTitleSync.running) _hyprTitleSync.start()
+                    return
+                }
+                root._hyprActiveAddr = addr
+                root.refreshToplevels()
+                root._hyprTick++
+                return
+            }
             if (n === "openwindow" || n === "closewindow" || n === "movewindow" || n === "movewindowv2"
-                || n === "fullscreen" || n === "activewindow" || n === "activewindowv2")
+                || n === "fullscreen")
                 root.refreshToplevels()
             if (n === "activespecial" || n === "activespecialv2")
                 root._updateSpecial(event.data)
