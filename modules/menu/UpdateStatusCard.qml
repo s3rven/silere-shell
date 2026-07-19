@@ -13,6 +13,8 @@ Rectangle {
     property bool   detailError: false
     property color statusColor: Theme.subtext
     property bool busy: false
+    // busy can outlive the card being visible; lets callers park the spinner
+    property bool animationActive: true
 
     property string primaryLabel: ""
     property string primaryGlyph: "󰓦"
@@ -73,7 +75,7 @@ Rectangle {
                 }
                 NumberAnimation {
                     target: _rot; property: "angle"
-                    running: root.busy && !ShellSettings.reduceMotion
+                    running: root.busy && root.animationActive && !ShellSettings.reduceMotion
                     loops: Animation.Infinite
                     from: 0; to: 360
                     duration: Motion.ms(1100)
@@ -81,6 +83,7 @@ Rectangle {
                 Connections {
                     target: root
                     function onBusyChanged() { if (!root.busy) _rot.angle = 0 }
+                    function onAnimationActiveChanged() { if (!root.animationActive) _rot.angle = 0 }
                 }
             }
 

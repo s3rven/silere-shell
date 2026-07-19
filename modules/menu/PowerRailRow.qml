@@ -76,9 +76,8 @@ Rectangle {
     onConfirmChanged: if (!root.confirm) root.disarm()
 
     onArmedChanged: {
-        _confirmAnim.stop()
+        _confirmStartedMs = root.armed ? Date.now() : 0
         _confirmProgress = root.armed ? 1.0 : 0.0
-        if (root.armed && !ShellSettings.reduceMotion) _confirmAnim.restart()
     }
 
     Timer {
@@ -90,12 +89,18 @@ Rectangle {
     // Confirmation uses the notification-style perimeter countdown instead of a
     // detached fuse line, keeping the warning attached to the whole action.
     property real _confirmProgress: 0.0
+    property real _confirmStartedMs: 0
 
-    NumberAnimation {
-        id: _confirmAnim
-        target: root; property: "_confirmProgress"
-        from: 1.0; to: 0.0
-        duration: root.confirmTimeout
+    // 30Hz, not a NumberAnimation: each tick is a threaded Canvas texture upload
+    Timer {
+        interval: 33
+        repeat: true
+        triggeredOnStart: true
+        running: root.armed && !ShellSettings.reduceMotion
+        onTriggered: {
+            const elapsed = Date.now() - root._confirmStartedMs
+            root._confirmProgress = Math.max(0, 1 - elapsed / Math.max(1, root.confirmTimeout))
+        }
     }
 
     Canvas {

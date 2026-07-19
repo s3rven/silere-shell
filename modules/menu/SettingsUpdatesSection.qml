@@ -3,12 +3,17 @@ import "../../config"
 import "../../services"
 
 Column {
+    id: root
+
+    property bool animationActive: true
+
     width: parent ? parent.width : 0
     spacing: 0
 
     SettingsCard {
         UpdateStatusCard {
             flat: true
+            animationActive: root.animationActive
             glyph: ShellUpdate.checking || ShellUpdate.applying ? "󰓦"
                 : ShellUpdate.lastCheckError.length > 0 || ShellUpdate.lastApplyError.length > 0 ? "󰀦"
                 : ShellUpdate.pending ? "󰚰" : "󰄬"
@@ -41,6 +46,7 @@ Column {
 
         UpdateStatusCard {
             flat: true
+            animationActive: root.animationActive
             glyph: Updates.isChecking ? "󰓦" : Updates.lastFailed ? "󰀦" : Updates.icon
             title: "System packages"
             status: Updates.statusText
