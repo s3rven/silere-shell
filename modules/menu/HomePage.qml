@@ -8,8 +8,8 @@ PageShell {
     id: root
 
     implicitHeight: _col.implicitHeight
-    scaleFrom: 0.96
-    enterFade: 160; enterScale: 210; exitFade: 110
+    slideFrom: 8
+    enterFade: 160; enterMove: 210; exitFade: 110
     onPageHidden: {
         _picker = ""
         _volumeRow.open = false

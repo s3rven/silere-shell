@@ -5,6 +5,7 @@ Column {
     width: parent ? parent.width : 0
     spacing: 0
 
+    SectionLabel { label: "GENERAL"; first: true }
     SettingsCard {
         ToggleRow {
             glyph: "󰂚"; label: "Popup notifications"

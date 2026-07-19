@@ -110,7 +110,7 @@ Column {
         }
     }
 
-    Item { width: 1; height: Theme.gapSection }
+    SectionLabel { label: "CHANGES & RESET" }
     SettingsCard {
         Item {
             id: _modHeader

@@ -46,7 +46,8 @@ Rectangle {
 
     on_MinXChanged: reclamp()
     on_MaxXChanged: reclamp()
-    onTargetWidthChanged: if (open) reclamp()
+    // place() not reclamp(): clamping the old x makes a widening card grow from its left edge
+    onTargetWidthChanged: if (open) place()
     onAnchorXChanged: place()
     onOpenChanged: {
         if (open) {

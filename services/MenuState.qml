@@ -15,29 +15,44 @@ Singleton {
 
     readonly property var settingsTree: [
         { glyph: "󰉦", label: "Appearance", children: [
-            { glyph: "󰉦", label: "Theme",       section: "theme"      },
-            { glyph: "󰖙", label: "Night light", section: "nightlight" }
+            { glyph: "󰉦", label: "Theme",       section: "theme",
+              description: "Palette, accent, contrast, and outlines" },
+            { glyph: "󰖙", label: "Night light", section: "nightlight",
+              description: "Warmer display color and automatic timing" }
         ]},
         { glyph: "󰕮", label: "Bar", children: [
-            { glyph: "󰍹", label: "Layout",    section: "surface"    },
-            { glyph: "󰻂", label: "Spacing",   section: "separators" },
-            { glyph: "󰍴", label: "Underline", section: "underline"  }
+            { glyph: "󰍹", label: "Layout",    section: "surface",
+              description: "Position, size, shape, and surface behavior" },
+            { glyph: "󰻂", label: "Spacing",   section: "separators",
+              description: "Widget gaps, compacting, and separators" },
+            { glyph: "󰍴", label: "Underline", section: "underline",
+              description: "Static line or reactive event glow" }
         ]},
         { glyph: "󰀻", label: "Widgets", children: [
-            { glyph: "󰀻", label: "Arrange",    section: "widgets"    },
-            { glyph: "󰅐", label: "Clock",      section: "clock"      },
-            { glyph: "󰕰", label: "Workspaces", section: "workspaces" },
-            { glyph: "󰝚", label: "Media",      section: "media"      },
-            { glyph: "󰈈", label: "Indicators", section: "indicators" }
+            { glyph: "󰀻", label: "Arrange",    section: "widgets",
+              description: "Order and visibility of bar widgets" },
+            { glyph: "󰅐", label: "Clock",      section: "clock",
+              description: "Date, time format, and seconds" },
+            { glyph: "󰕰", label: "Workspaces", section: "workspaces",
+              description: "Workspace layout, labels, and window counts" },
+            { glyph: "󰝚", label: "Media",      section: "media",
+              description: "Track text and audio visualization" },
+            { glyph: "󰈈", label: "Indicators", section: "indicators",
+              description: "Titles, status widgets, and hover behavior" }
         ]},
         { glyph: "󰂚", label: "Notifications", children: [
-            { glyph: "󰂚", label: "Popups", section: "popups"   },
-            { glyph: "󱀅", label: "OSD",    section: "osd"      },
-            { glyph: "󰀦", label: "Alerts", section: "warnings" }
+            { glyph: "󰂚", label: "Popups", section: "popups",
+              description: "Placement, timing, and quiet hours" },
+            { glyph: "󱀅", label: "OSD",    section: "osd",
+              description: "Volume and brightness feedback" },
+            { glyph: "󰀦", label: "Alerts", section: "warnings",
+              description: "Battery and temperature warning thresholds" }
         ]},
         { glyph: "󰒓", label: "System", children: [
-            { glyph: "󰢻", label: "General", section: "system"  },
-            { glyph: "󰚰", label: "Updates", section: "updates" }
+            { glyph: "󰢻", label: "General", section: "system",
+              description: "Hardware, accessibility, and configuration" },
+            { glyph: "󰚰", label: "Updates", section: "updates",
+              description: "Shell releases and system packages" }
         ]}
     ]
 
@@ -50,6 +65,7 @@ Singleton {
         }
         return out
     }
+    readonly property int settingsSectionCount: _flatSections.length
 
     function setSettingsSection(s: string): void {
         if (s !== settingsSection) settingsSection = s
