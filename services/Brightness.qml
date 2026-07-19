@@ -152,8 +152,9 @@ Singleton {
         command: ["bash", "-c",
             "for d in /sys/class/backlight/*; do " +
             "  [ -d \"$d\" ] || continue; " +
-            "  n=${d##*/}; t=$(cat \"$d/type\" 2>/dev/null || true); " +
-            "  m=$(cat \"$d/max_brightness\" 2>/dev/null || true); " +
+            "  n=${d##*/}; t=; m=; " +
+            "  IFS= read -r t < \"$d/type\" 2>/dev/null || t=; " +
+            "  IFS= read -r m < \"$d/max_brightness\" 2>/dev/null || m=; " +
             "  case $m in ''|*[!0-9]*) continue;; esac; " +
             "  [ \"$m\" -gt 0 ] && printf '%s\\t%s\\t%s\\n' \"$n\" \"$t\" \"$m\"; " +
             "done"]
