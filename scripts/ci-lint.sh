@@ -6,6 +6,7 @@
 #   - broken shell scripts
 #   - qmldir entries pointing at files that don't exist
 #   - required Quickshell service imports and local module packaging
+#   - non-portable Keys attached handlers rejected by the live QML engine
 #   - ShellSettings properties and schema drifting apart
 #   - settings navigation entries and detail components drifting apart
 #   - installer/updater portability regressions
@@ -98,6 +99,22 @@ if grep -R -n -F 'import Quickshell.Wayland._' --include='*.qml' .; then
   fail "QML files must not import private Quickshell Wayland modules"
 else
   ok "Wayland" "public module only"
+fi
+
+section "portable QML key handlers"
+# qmlcachegen accepts arbitrary Keys.onFooPressed names, but the live engine
+# rejects handlers that are not signals on QtQuick.Keys. Keep this allowlist
+# explicit so a typo cannot make the entire shell fail at startup again.
+key_handlers="$(grep -RhoE 'Keys\.on[A-Za-z0-9_]+' --include='*.qml' shell.qml modules config services \
+    | sed 's/^Keys\.//' | sort -u)"
+unsupported_key_handlers="$(printf '%s\n' "$key_handlers" \
+    | grep -vE '^(onPressed|onReleased|onUpPressed|onDownPressed|onLeftPressed|onRightPressed|onSpacePressed|onReturnPressed|onEnterPressed|onEscapePressed|onMenuPressed)$' \
+    || true)"
+if [ -n "$unsupported_key_handlers" ]; then
+  fail "unsupported Keys attached handlers:"
+  while IFS= read -r handler; do printf '  Keys.%s\n' "$handler"; done <<< "$unsupported_key_handlers"
+else
+  ok "Keys" "attached handlers are runtime-portable"
 fi
 
 section "installer environment defaults"
