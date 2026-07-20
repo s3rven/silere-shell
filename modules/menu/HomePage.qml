@@ -141,7 +141,7 @@ PageShell {
                 }
                 Behavior on scale {
                     enabled: !ShellSettings.reduceMotion
-                    NumberAnimation { duration: Motion.medium; easing.type: Easing.OutBack; easing.overshoot: 0.4 }
+                    NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
                 }
 
                 // on reappear, text may be stranded at opacity 0 by a crossfade interrupted while hidden
@@ -385,7 +385,7 @@ PageShell {
                         }
                         ParallelAnimation {
                             NumberAnimation { target: _mediaCol; property: "opacity"; to: 1.0; duration: Motion.ms(200); easing.type: Easing.OutCubic }
-                            NumberAnimation { target: _mediaCol; property: "_slide";  to: 0;   duration: Motion.ms(280); easing.type: Easing.OutBack; easing.overshoot: 0.5 }
+                            NumberAnimation { target: _mediaCol; property: "_slide";  to: 0;   duration: Motion.ms(260); easing.type: Easing.OutCubic }
                         }
                     }
 
