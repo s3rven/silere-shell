@@ -53,14 +53,29 @@ Item {
         Qt.callLater(root._announceShown)
     }
 
+    // false while the menu is closed and for the first cycle after it opens, so the
+    // landing page rides the panel's scale-in instead of stacking a second enter on
+    // top of it. only a tab switch (menu already settled open) plays the page enter.
+    property bool _menuSettled: false
+    Connections {
+        target: MenuState
+        function onOpenChanged() {
+            root._menuSettled = false
+            if (MenuState.open) Qt.callLater(() => root._menuSettled = true)
+        }
+    }
+
     onActiveChanged: {
         if (root.active) {
             _exit.stop()
+            if (!root._menuSettled) { _settleVisuals(); root._announceShown(); return }
             if (root.opacity < 0.001) root._slide = root.slideFrom
             _enter.restart()
             root._announceShown()
         } else {
             _enter.stop()
+            // menu closing: snap and let the panel carry it, don't double the motion
+            if (!MenuState.open) { _settleVisuals(); root._announceHidden(); return }
             _exit.restart()
             root._announceHidden()
         }
