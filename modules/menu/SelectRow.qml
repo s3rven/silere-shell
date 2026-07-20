@@ -249,7 +249,10 @@ Item {
 
             Repeater {
                 id: _optRepeater
-                model: root.model
+                // The font picker can contain dozens of entries. Keep closed
+                // dropdown delegates out of the scene, including while a
+                // close animation is no longer visible.
+                model: root._open || _options.height > 0.5 ? root.model : []
                 delegate: Item {
                     id: _opt
                     required property var modelData

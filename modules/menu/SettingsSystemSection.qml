@@ -10,6 +10,24 @@ Column {
     width: parent ? parent.width : 0
     spacing: 0
 
+    property int _restoreModifiedIndex: -1
+
+    Timer {
+        id: _restoreModifiedFocus
+        interval: 0
+        onTriggered: {
+            if (root._restoreModifiedIndex < 0) return
+            if (_modRepeater.count > 0) {
+                const i = Math.min(root._restoreModifiedIndex, _modRepeater.count - 1)
+                const row = _modRepeater.itemAt(i)
+                if (row) row.forceActiveFocus()
+            } else {
+                _resetRow.forceActiveFocus()
+            }
+            root._restoreModifiedIndex = -1
+        }
+    }
+
     function _fmtSettingValue(v): string {
         if (typeof v === "boolean") return v ? "on" : "off"
         if (typeof v === "number") return String(Math.round(v * 100) / 100)
@@ -187,11 +205,17 @@ Column {
         }
 
         CollapsibleSection {
+        id: _modifiedList
         expanded: _modHeader.open && ShellSettings.modifiedKeys.length > 0
         Repeater {
-            model: ShellSettings.modifiedKeys
+            id: _modRepeater
+            // A closed reset list can otherwise instantiate nearly the whole
+            // settings schema. Retain it only through the collapse animation.
+            model: _modHeader.open || _modifiedList.height > 0.5
+                ? ShellSettings.modifiedKeys : []
             delegate: Item {
                 id: _modRow
+                required property int index
                 required property string modelData
                 property real topRadius:    0
                 property real bottomRadius: 0
@@ -200,7 +224,13 @@ Column {
 
                 readonly property string pretty: modelData.replace(/([A-Z])/g, " $1").toLowerCase()
 
-                function _reset(): void { ShellSettings.resetKey(_modRow.modelData) }
+                function _reset(): void {
+                    if (_modRow.activeFocus) {
+                        root._restoreModifiedIndex = _modRow.index
+                        _restoreModifiedFocus.restart()
+                    }
+                    ShellSettings.resetKey(_modRow.modelData)
+                }
 
                 activeFocusOnTab: true
                 Accessible.role: Accessible.Button
@@ -266,16 +296,31 @@ Column {
             property real topRadius:    0
             property real bottomRadius: 0
 
+            function _disarm(): void {
+                armed = false
+                _resetArmTimer.stop()
+            }
             function _activate(): void {
-                if (armed) { armed = false; ShellSettings.resetToDefaults() }
-                else armed = true
+                if (armed) {
+                    _disarm()
+                    ShellSettings.resetToDefaults()
+                } else {
+                    armed = true
+                    _resetArmTimer.restart()
+                }
+            }
+
+            Timer {
+                id: _resetArmTimer
+                interval: 3000
+                onTriggered: _resetRow.armed = false
             }
 
             activeFocusOnTab: true
             Accessible.role: Accessible.Button
             Accessible.name: "Reset all settings"
             Accessible.description: armed ? "Activate again to confirm" : ""
-            onActiveFocusChanged: if (!activeFocus) armed = false
+            onActiveFocusChanged: if (!activeFocus) _disarm()
             Keys.onSpacePressed:  e => { if (!e.isAutoRepeat) _resetRow._activate(); e.accepted = true }
             Keys.onReturnPressed: e => { if (!e.isAutoRepeat) _resetRow._activate(); e.accepted = true }
             Keys.onEnterPressed:  e => { if (!e.isAutoRepeat) _resetRow._activate(); e.accepted = true }
@@ -283,7 +328,7 @@ Column {
             HoverHandler {
                 id: _resetHover
                 cursorShape: Qt.PointingHandCursor
-                onHoveredChanged: if (!hovered) _resetRow.armed = false
+                onHoveredChanged: if (!hovered) _resetRow._disarm()
             }
             TapHandler { onTapped: _resetRow._activate() }
             RowHoverBg {
