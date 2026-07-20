@@ -397,20 +397,24 @@ Singleton {
         environment: ({ "LC_ALL": "C" })
         command: ["nmcli", "-t", "-f", "NAME,TYPE", "connection", "show"]
         stdout: StdioCollector { id: _savedOut }
-        onExited: {
+        onExited: (code) => {
             if (root._savedRunGeneration !== root._wifiScanGeneration) {
                 // The picker may have reopened before the cancelled process
                 // reported exit. Resume the newly requested generation.
                 if (root._pendingWifiRescan) Qt.callLater(root._beginWifiScan)
                 return
             }
-            const set = {}
-            const lines = (_savedOut.text || "").trim().split("\n")
-            for (let i = 0; i < lines.length; i++) {
-                const p = root._splitNmcliLine(lines[i])
-                if (p.length >= 2 && p[1].indexOf("wireless") >= 0) set[p[0]] = true
+            // a failed query must keep the previous map, not blank every
+            // network's known flag and re-prompt for stored credentials
+            if (code === 0) {
+                const set = {}
+                const lines = (_savedOut.text || "").trim().split("\n")
+                for (let i = 0; i < lines.length; i++) {
+                    const p = root._splitNmcliLine(lines[i])
+                    if (p.length >= 2 && p[1].indexOf("wireless") >= 0) set[p[0]] = true
+                }
+                root._savedWifi = set
             }
-            root._savedWifi = set
             if (root.toolAvailable && root.wifiEnabled && !_wifiScanProc.running) {
                 root._wifiScanRescan = root._wifiScanRescan || root._pendingWifiRescan
                 root._pendingWifiRescan = false
