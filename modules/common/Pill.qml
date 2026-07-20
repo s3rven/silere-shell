@@ -150,6 +150,7 @@ Item {
 
     // fill on hover, ring on focus; never on press — a press-driven version flashed on every click
     Rectangle {
+        id: _hoverCap
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
         width: parent.width
@@ -162,8 +163,10 @@ Item {
                       : Theme.withAlpha(Theme.mix(Theme.text, Theme.accent, 0.30), 0.07)
         opacity: ((_pillHover.hovered && ShellSettings.barHoverHighlight) || _focus) ? 1.0 : 0.0
         visible: opacity > 0.001
-        border.width: _focus ? 1 : 0
-        border.color: Theme.withAlpha(Theme.accent, 0.72)
+        OutlineBorder {
+            radius: height / 2
+            outlineColor: _hoverCap._focus ? Theme.withAlpha(Theme.accent, 0.72) : "transparent"
+        }
         Behavior on opacity {
             enabled: !ShellSettings.reduceMotion
             NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }

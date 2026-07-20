@@ -75,8 +75,11 @@ Item {
                 : _hover.hovered
                     ? Theme.withAlpha(Theme.subtext, 0.12)
                     : "transparent"
-        border.width: root.activeFocus ? 1 : 0
-        border.color: Theme.withAlpha(root.accentColor, 0.68)
+
+        OutlineBorder {
+            radius: width / 2
+            outlineColor: root.activeFocus ? Theme.withAlpha(root.accentColor, 0.68) : "transparent"
+        }
 
         Behavior on color {
             enabled: !ShellSettings.reduceMotion

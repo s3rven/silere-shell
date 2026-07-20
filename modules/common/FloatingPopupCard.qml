@@ -64,8 +64,11 @@ Rectangle {
     radius: Theme.surfaceRadius
     antialiasing: true
     color: Theme.popup
-    border.width: 1
-    border.color: Theme.outline
+
+    OutlineBorder {
+        radius: root.radius
+        outlineColor: Theme.outline
+    }
 
     transform: Scale { origin.x: root._originX; origin.y: root.barBottom ? root.height : 0; xScale: root.scaleAmt; yScale: root.scaleAmt }
     state: open ? "visible" : "hidden"

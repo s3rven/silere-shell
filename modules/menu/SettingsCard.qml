@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import "../../config"
+import "../common"
 
 // rounded card with auto-separators + auto corner-rounding. rows never set their own divider or radius — the card
 // derives both from layout so a row can't guess wrong (a middle row rounding its hover fill, a hidden neighbour
@@ -20,8 +21,11 @@ Rectangle {
     antialiasing: true
     clip: true
     color: Theme.menuCard
-    border.width: showBorder ? 1 : 0
-    border.color: Theme.menuCardBorder
+
+    OutlineBorder {
+        radius: root.radius
+        outlineColor: root.showBorder ? Theme.menuCardBorder : "transparent"
+    }
 
     Column {
         id: col
