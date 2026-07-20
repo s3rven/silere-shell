@@ -2,15 +2,15 @@ import QtQuick
 import "../../config"
 import "../../services"
 
-// base for menu tab pages; override pageShown()/pageHidden() for per-page resets
 Item {
     id: root
 
     required property bool active
     required property bool powerOpen
 
-    property real slideFrom:  7
-    property real slideOut:  -3
+    // kept for page overrides; slide dropped, only the fade durations still apply
+    property real slideFrom:  0
+    property real slideOut:   0
     property int  enterFade: 140
     property int  enterMove: 180
     property int  exitFade:  100
@@ -24,9 +24,6 @@ Item {
     visible: opacity > 0.001
 
     property bool _announcedActive: false
-    property real _slide: 0
-    // whole-pixel translate, not scale: scaling re-textures native text and wobbles glyphs
-    transform: Translate { y: Math.round(root._slide) }
 
     function _announceShown(): void {
         if (!root.active || root._announcedActive) return
@@ -40,42 +37,31 @@ Item {
         root.pageHidden()
     }
 
-    function _settleVisuals(): void {
-        _enter.stop()
-        _exit.stop()
-        root.opacity = root.active ? 1.0 : 0.0
-        root._slide = 0
+    // opening snaps the page in under the panel's animation; a tab switch crossfades
+    property bool _menuOpenSettled: false
+    Connections {
+        target: MenuState
+        function onOpenChanged() {
+            if (!MenuState.open) root._menuOpenSettled = false
+            else Qt.callLater(() => root._menuOpenSettled = true)
+        }
     }
 
     Component.onCompleted: {
         root.opacity = root.active ? 1.0 : 0.0
-        root._slide = root.active ? 0 : root.slideFrom
+        if (MenuState.open) Qt.callLater(() => root._menuOpenSettled = true)
         Qt.callLater(root._announceShown)
-    }
-
-    // false while the menu is closed and for the first cycle after it opens, so the
-    // landing page rides the panel's scale-in instead of stacking a second enter on
-    // top of it. only a tab switch (menu already settled open) plays the page enter.
-    property bool _menuSettled: false
-    Connections {
-        target: MenuState
-        function onOpenChanged() {
-            root._menuSettled = false
-            if (MenuState.open) Qt.callLater(() => root._menuSettled = true)
-        }
     }
 
     onActiveChanged: {
         if (root.active) {
             _exit.stop()
-            if (!root._menuSettled) { _settleVisuals(); root._announceShown(); return }
-            if (root.opacity < 0.001) root._slide = root.slideFrom
+            if (!root._menuOpenSettled) { root.opacity = 1.0; root._announceShown(); return }
             _enter.restart()
             root._announceShown()
         } else {
             _enter.stop()
-            // menu closing: snap and let the panel carry it, don't double the motion
-            if (!MenuState.open) { _settleVisuals(); root._announceHidden(); return }
+            if (!MenuState.open) { root.opacity = 0.0; root._announceHidden(); return }
             _exit.restart()
             root._announceHidden()
         }
@@ -84,19 +70,12 @@ Item {
     Connections {
         target: ShellSettings
         function onReduceMotionChanged() {
-            if (ShellSettings.reduceMotion) root._settleVisuals()
+            if (!ShellSettings.reduceMotion) return
+            _enter.stop(); _exit.stop()
+            root.opacity = root.active ? 1.0 : 0.0
         }
     }
 
-    ParallelAnimation {
-        id: _enter
-        NumberAnimation { target: root; property: "opacity"; to: 1.0; duration: Motion.ms(root.enterFade);  easing.type: Easing.OutCubic }
-        NumberAnimation { target: root; property: "_slide";  to: 0.0; duration: Motion.ms(root.enterMove); easing.type: root.moveEasing }
-    }
-
-    ParallelAnimation {
-        id: _exit
-        NumberAnimation { target: root; property: "opacity"; to: 0; duration: Motion.ms(root.exitFade); easing.type: Easing.InCubic }
-        NumberAnimation { target: root; property: "_slide"; to: root.slideOut; duration: Motion.ms(root.exitFade); easing.type: Easing.InCubic }
-    }
+    NumberAnimation { id: _enter; target: root; property: "opacity"; to: 1.0; duration: Motion.ms(root.enterFade); easing.type: Easing.OutCubic }
+    NumberAnimation { id: _exit;  target: root; property: "opacity"; to: 0.0; duration: Motion.ms(root.exitFade); easing.type: Easing.InCubic }
 }
