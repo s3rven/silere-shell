@@ -12,6 +12,7 @@ Item {
     property alias activeIndex: _sr.activeIndex
     property alias ringColor: _sr.ringColor
     property bool tintedReadout: false
+    readonly property bool _stacked: width > 0 && width < 240
 
     signal picked(int index)
 
@@ -20,7 +21,7 @@ Item {
     property real cardInset: 1
 
     width: parent ? parent.width : 0
-    height: 44
+    height: _stacked ? 76 : 44
     opacity: enabled ? 1.0 : 0.45
     Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium } }
 
@@ -28,21 +29,12 @@ Item {
     readonly property string _shownName: _shownIdx >= 0 && _shownIdx < _sr.options.length
         ? (_sr.options[_shownIdx].name ?? "") : ""
 
-    HoverHandler { id: _hover; enabled: root.enabled }
-    RowHoverBg {
-        anchors.fill: parent
-        topRadius: root.topRadius
-        bottomRadius: root.bottomRadius
-        cardInset: root.cardInset
-        active: _hover.hovered && root.enabled
-        fillOpacity: 0.08
-    }
-
     Text {
         id: _glyph
         anchors.left: parent.left
         anchors.leftMargin: 14
         anchors.verticalCenter: parent.verticalCenter
+        anchors.verticalCenterOffset: root._stacked ? -16 : 0
         visible: root.glyph.length > 0
         width: visible ? 18 : 0
         horizontalAlignment: Text.AlignHCenter
@@ -57,19 +49,26 @@ Item {
         anchors.left: _glyph.right
         anchors.leftMargin: root.glyph.length > 0 ? 10 : 0
         anchors.verticalCenter: parent.verticalCenter
+        anchors.verticalCenterOffset: root._stacked ? -16 : 0
+        width: Math.min(implicitWidth, Math.max(18, root.width - x
+            - (root._stacked ? 12 : _sr.width + 24)))
         text:           root.label
         textFormat:     Text.PlainText
+        elide:          Text.ElideRight
         color:          Theme.withAlpha(Theme.text, 0.85)
         font.family:    Settings.font
         font.pixelSize: Settings.fontSize
         renderType:     Text.NativeRendering
     }
     Text {
+        id: _readout
+        visible: !root._stacked
         anchors.left: _label.right
         anchors.leftMargin: 10
         anchors.right: _sr.left
         anchors.rightMargin: 12
         anchors.verticalCenter: parent.verticalCenter
+        anchors.verticalCenterOffset: root._stacked ? 16 : 0
         horizontalAlignment: Text.AlignRight
         text:           root._shownName
         textFormat:     Text.PlainText
@@ -88,6 +87,7 @@ Item {
         anchors.right: parent.right
         anchors.rightMargin: 12
         anchors.verticalCenter: parent.verticalCenter
+        anchors.verticalCenterOffset: root._stacked ? 16 : 0
         width: implicitWidth
         onPicked: (i) => root.picked(i)
     }

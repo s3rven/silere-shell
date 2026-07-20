@@ -22,10 +22,16 @@ Item {
     readonly property bool _hasDesc: root.description.length > 0
     readonly property bool _canToggle: root.enabled && (root.available || root.checked)
     readonly property bool _showDependsNote: root.dependsNote.length > 0
-                                            && (!root.enabled || (!root.available && !root.checked))
-    readonly property real _rightSlotW: _showDependsNote
-        ? Math.min(_noteText.implicitWidth, Math.max(54, root.width * 0.34))
-        : 34
+                                            && (!root.enabled || !root.available)
+    readonly property real _noteW: _showDependsNote
+        ? Math.min(_noteText.implicitWidth, Math.max(46, root.width * 0.26)) : 0
+    readonly property real _rightSlotW: 34 + (_showDependsNote ? _noteW + 8 : 0)
+    readonly property string _accessibleDescription: {
+        const parts = []
+        if (root.description.length > 0) parts.push(root.description)
+        if (root._showDependsNote) parts.push(root.dependsNote)
+        return parts.join(". ")
+    }
 
     function _activate(): void {
         if (!_canToggle) return
@@ -40,13 +46,15 @@ Item {
     height:         _hasDesc ? 4 * Math.ceil((_descPadV * 2 + _textCol.implicitHeight) / 4) : 44
     implicitHeight: height
 
-    opacity: _canToggle ? 1.0 : 0.45
+    // A checked setting whose dependency disappeared must stay switchable-off,
+    // while still reading as degraded rather than fully available.
+    opacity: root.enabled && root.available ? 1.0 : (_canToggle ? 0.72 : 0.45)
     Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium } }
 
     activeFocusOnTab: _canToggle
     Accessible.role: Accessible.CheckBox
     Accessible.name: root.label
-    Accessible.description: root.description.length > 0 ? root.description : root.dependsNote
+    Accessible.description: root._accessibleDescription
     Accessible.checked: root.checked
     Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
     Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
@@ -138,17 +146,20 @@ Item {
 
         ToggleSwitch {
             id: _toggle
-            anchors.fill: parent
-            visible: !root._showDependsNote
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            width: 34
+            height: 18
             checked: root.checked
         }
 
         Text {
             id: _noteText
             visible: root._showDependsNote
-            anchors.right: parent.right
+            anchors.right: _toggle.left
+            anchors.rightMargin: 8
             anchors.verticalCenter: parent.verticalCenter
-            width: parent.width
+            width: root._noteW
             horizontalAlignment: Text.AlignRight
             text: root.dependsNote
             elide: Text.ElideRight
