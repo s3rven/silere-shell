@@ -214,7 +214,9 @@ Singleton {
         }
     }
 
-    Component.onCompleted: _init()
+    // _startGeo's triggers are all edge-driven and the menu is what instantiates
+    // this singleton, so the opening edge is already spent by first load
+    Component.onCompleted: { _init(); _startGeo() }
 
     // defer the one-shot geo probe until auto-tracking or the menu needs it, not on every startup
     property bool _geoStarted: false
