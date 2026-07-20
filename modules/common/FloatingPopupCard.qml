@@ -27,7 +27,8 @@ Rectangle {
 
     property real scaleAmt: Motion.popScaleFrom
     property real edgeOffset: _closedOffset
-    readonly property real _closedOffset: barBottom ? 8 : -8
+    // a quiet settle, not a swipe: most of the open reads as the subtle scale + fade
+    readonly property real _closedOffset: barBottom ? 4 : -4
 
     function _clampedX(px: real): real {
         return Math.max(_minX, Math.min(px, _maxX))
