@@ -7,3 +7,4 @@ FloatingShadow 1.0 FloatingShadow.qml
 FloatingPopupCard 1.0 FloatingPopupCard.qml
 IconButton 1.0 IconButton.qml
 OutlineBorder 1.0 OutlineBorder.qml
+FadingRim 1.0 FadingRim.qml

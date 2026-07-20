@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import "../../config"
 import "../../services"
+import "../common"
 
 Item {
     id: _ul
@@ -432,14 +433,10 @@ Item {
         hiClamp: 0.99
     }
 
-    Rectangle {
+    FadingRim {
         id: _floatingBaseRim
-        anchors.fill: parent
         radius: _ul.wrapRadius
-        antialiasing: true
-        color: "transparent"
-        border.width: 1
-        border.color: Theme.mix(Theme.subtext, _lineEffect._effectColor, 0.18)
+        rimColor: Theme.mix(Theme.subtext, _lineEffect._effectColor, 0.18)
         visible: _ul.wrapFloating && _lineEffect._glowEnabled && opacity > 0.001
         opacity: Math.min(0.20, 0.12 * ShellSettings.glowStrength)
     }
@@ -462,14 +459,10 @@ Item {
     }
 
     // event layer over the faint floating base
-    Rectangle {
+    FadingRim {
         id: _floatingRim
-        anchors.fill: parent
         radius: _ul.wrapRadius
-        antialiasing: true
-        color: "transparent"
-        border.width: 1
-        border.color: _lineEffect._effectColor
+        rimColor: _lineEffect._effectColor
         visible: _ul.wrapFloating && _lineEffect._glowEnabled && opacity > 0.001
         opacity: Math.min(0.42,
             (_lineEffect._combined * 0.34 + _lineEffect._bloomBoost * 0.16)
