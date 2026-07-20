@@ -1,10 +1,7 @@
 import QtQuick
 import QtQuick.Shapes
 
-// uniform rounded-rect stroke. Rectangle.border over-weights the rounded
-// corners — the arc collects more AA coverage than the straight edges, and the
-// 1.25x downscale magnifies it. A CurveRenderer stroke is analytic and the same
-// width the whole way round, so corners match the sides.
+// uniform rounded-rect stroke; Rectangle.border over-weights rounded corners
 Shape {
     id: root
 

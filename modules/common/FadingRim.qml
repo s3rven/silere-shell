@@ -1,10 +1,7 @@
 import QtQuick
 import QtQuick.Shapes
 
-// rounded outline whose ink fades from the bottom (desktop-facing) edge up to
-// nothing at the top, so a floating bar's glow rim hugs the screen edge instead
-// of closing a hard line across the top. even-odd band between two rounded rects,
-// filled with a vertical gradient — no mask or offscreen target.
+// rounded outline that fades from the bottom edge up to nothing at the top
 Shape {
     id: root
 

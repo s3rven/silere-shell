@@ -27,8 +27,7 @@ Rectangle {
 
     property real scaleAmt: Motion.popScaleFrom
     property real edgeOffset: _closedOffset
-    // no slide: the scale grows from the trigger point (origin below), so the open
-    // reads as a quiet materialise in place rather than an edge swipe
+    // no slide; the scale already grows from the trigger point
     readonly property real _closedOffset: 0
 
     function _clampedX(px: real): real {
