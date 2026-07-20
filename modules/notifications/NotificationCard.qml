@@ -15,7 +15,6 @@ Item {
     required property int notifId
     required property var createdAt
     property var timeoutStartedAt: createdAt
-    property bool timeoutPaused: false
 
     signal dismissRequested(int notifId, var notification, bool expired)
 
@@ -144,16 +143,6 @@ Item {
     // accumulated hover time, added back so timeout doesn't count time spent hovering
     property real _hoverPausedMs: 0
     property real _hoverStartMs:  0
-    property real _hiddenStartMs: 0
-
-    onTimeoutPausedChanged: {
-        if (timeoutPaused) {
-            if (_hiddenStartMs <= 0) _hiddenStartMs = Date.now()
-        } else if (_hiddenStartMs > 0) {
-            _hoverPausedMs += Date.now() - _hiddenStartMs
-            _hiddenStartMs = 0
-        }
-    }
 
     Timer {
         id: _autoClose
@@ -168,14 +157,14 @@ Item {
         // Usually anchored to arrival; deferred overflow cards receive the time
         // they first become visible so they still get a complete readable turn.
         interval: Math.max(400, fullInterval - (Date.now() - card.timeoutStartedAt) + card._hoverPausedMs)
-        running:  shouldRun && !_cardHover.hovered && !card.timeoutPaused
+        running:  shouldRun && !_cardHover.hovered
         onTriggered: card.dismiss(true)
     }
 
     property real _timeoutProgress: 1.0
     property real _countdownPulse:  1.0
     readonly property bool _showCountdown: card.visible && card.enabled
-        && _autoClose.shouldRun && !card.timeoutPaused && !ShellSettings.reduceMotion
+        && _autoClose.shouldRun && !ShellSettings.reduceMotion
     readonly property real _trueRemaining: Math.max(0, _autoClose.fullInterval - (Date.now() - card.timeoutStartedAt) + card._hoverPausedMs)
 
     NumberAnimation {
@@ -191,13 +180,13 @@ Item {
     Binding {
         target: _countdownAnim
         property: "paused"
-        value: _cardHover.hovered || card.timeoutPaused
+        value: _cardHover.hovered
         when: _countdownAnim.running
         restoreMode: Binding.RestoreNone
     }
 
     SequentialAnimation {
-        running: card._showCountdown && card._timeoutProgress < 0.18 && !_cardHover.hovered && !card.timeoutPaused
+        running: card._showCountdown && card._timeoutProgress < 0.18 && !_cardHover.hovered
         loops:   Animation.Infinite
         onRunningChanged: if (!running) card._countdownPulse = 1.0
         NumberAnimation { target: card; property: "_countdownPulse"; to: 0.5; duration: Motion.ms(420); easing.type: Easing.InOutSine }

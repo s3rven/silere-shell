@@ -250,11 +250,18 @@ PanelWindow {
                 anchors.horizontalCenter: win._center ? parent?.horizontalCenter : undefined
 
                 Component.onCompleted: {
-                    if (shouldLoad) timeoutStartedAt = Notifications.timeFor(modelData.id)
+                    if (shouldLoad) timeoutStartedAt = Notifications.updateTimeFor(modelData.id)
                 }
                 onShouldLoadChanged: {
                     if (shouldLoad) timeoutStartedAt = Date.now()
                     else timeoutStartedAt = 0
+                }
+
+                Connections {
+                    target: Notifications
+                    function onContentUpdated(notifId: int): void {
+                        if (notifId === modelData.id && shouldLoad) timeoutStartedAt = Date.now()
+                    }
                 }
 
                 Loader {

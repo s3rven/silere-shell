@@ -13,6 +13,8 @@ Singleton {
     property alias missedCount: _persist.missedCount
     property var _seen:  ({})
     property var _times: ({})
+    // last content-update stamp; drives the popup dwell, not persisted
+    property var _updateTimes: ({})
     property bool _persistentReady: false
     readonly property int _maxHistory: 20
     readonly property int activeCount: Array.isArray(list) ? list.length : 0
@@ -129,6 +131,17 @@ Singleton {
             delete nextTimes[key]
             root._times = nextTimes
         }
+        if (key in root._updateTimes) {
+            const nextUpdates = root._cloneMap(root._updateTimes)
+            delete nextUpdates[key]
+            root._updateTimes = nextUpdates
+        }
+    }
+
+    // when the dwell should start counting: the latest content update, else arrival
+    function updateTimeFor(id: int): real {
+        const v = root._updateTimes[String(id)]
+        return v !== undefined ? v : root.timeFor(id)
     }
 
     // pure read; stamping here loops (createdAt binding reads _times then writes it), so the write lives in the arrival path
@@ -158,6 +171,8 @@ Singleton {
     }
 
     signal sourcePulse(int wsId, bool critical)
+    // a replacement restarts the dwell; _times keeps the original arrival for the caption
+    signal contentUpdated(int notifId)
 
     readonly property bool _fullscreenWatchWanted: ShellSettings.notifFullscreenSilence
         || ShellSettings.mediaProgress
@@ -343,27 +358,6 @@ Singleton {
         root._forget(id)
     }
 
-    function dismissAll(): void {
-        if (list.length === 0) return
-        const entries = []
-        for (let i = 0; i < list.length; i++) {
-            const e = list[i]
-            const entry = root._historyEntry(e)
-            if (entry) entries.unshift(entry)
-            if (e && e.notification) {
-                root._markClosing(e.id, e.notification)
-                e.notification.dismiss()
-            }
-        }
-        _seen = {}
-        _times = {}
-        list = []
-        if (lastCritical) lastCritical = false
-        // reverse order: each insert lands at 0, so the last one inserted ends up on top
-        for (let i = entries.length - 1; i >= 0; i--) root._prependHistory(entries[i])
-        if (entries.length > 0) root._saveHistory()
-    }
-
     Component.onCompleted: {
         root._restorePersistentState()
         root._ensurePersistentState()
@@ -430,9 +424,22 @@ Singleton {
                 n.tracked = false
                 return
             }
+            // No popup surface exists at all with popups off, so nothing would ever
+            // expire these or write them to history — archive here instead of
+            // tracking them forever. Urgency earns no exemption: there is no card
+            // for a critical to appear on either.
+            if (!ShellSettings.notifPopupEnabled) {
+                root._archiveNotification(n, n.id, Date.now())
+                n.tracked = false
+                return
+            }
             // Stamp arrival time once per id; a content update keeps the original.
             const arrivalTime = root._ensureTime(n.id)
             root.lastCritical = n.urgency === NotificationUrgency.Critical
+
+            const updates = root._cloneMap(root._updateTimes)
+            updates[String(n.id)] = Date.now()
+            root._updateTimes = updates
 
             const existing = root.list.findIndex(e => e.id === n.id)
             let isNewObject = true
@@ -452,6 +459,8 @@ Singleton {
             // connect once per object — stacked handlers fire _onClosed twice
             if (isNewObject) n.closed.connect(() => root._onClosed(n.id, n))
             n.tracked = true
+            // a reused object builds no new delegate, so nothing would restart its dwell
+            if (existing >= 0 && !isNewObject) root.contentUpdated(n.id)
 
             if (ShellSettings.wsNotifPulse) {
                 const srcWs = HyprActions.notificationSourceWorkspace(n)
