@@ -14,9 +14,9 @@ Singleton {
     readonly property int instant: _rm ? 0 : Math.round(80  / _s)
     readonly property int fast:    _rm ? 0 : Math.round(120 / _s)
     readonly property int normal:  _rm ? 0 : Math.round(150 / _s)
-    readonly property int medium:  _rm ? 0 : Math.round(200 / _s)
-    readonly property int slow:    _rm ? 0 : Math.round(300 / _s)
-    readonly property int width:   _rm ? 0 : Math.round(180 / _s)
+    readonly property int medium:  _rm ? 0 : Math.round(170 / _s)
+    readonly property int slow:    _rm ? 0 : Math.round(240 / _s)
+    readonly property int width:   _rm ? 0 : Math.round(160 / _s)
     readonly property int color:   _rm ? 0 : Math.round(150 / _s)
 
     // shared open/close tokens for all bar-anchored popups (menu, calendar, tray)
