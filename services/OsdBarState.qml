@@ -181,8 +181,10 @@ Singleton {
     function _applyValues(kind: string, icon: string, value: real, label: string, muted: bool, color: color): void {
         const idx = _entryIndex(kind)
         const live = idx >= 0 && !_entries.get(idx).closing
-        // in the commit-close window with no live entry, the event is a trailing echo of what we just dismissed — drop it
-        if (!live && (_commitClose[kind] || 0) > Date.now()) return
+        // an echo repeats the value we just dismissed; matching on the signature and
+        // not just the window lets a genuinely new value re-open during the close
+        if (!live && _closingSig[kind] === _sig(kind, value, muted)
+            && (_commitClose[kind] || 0) > Date.now()) return
         if (!_upsertEntry(kind, icon, value, label, muted, color)) return
         // a single deliberate step gets a bump; a scroll burst is already visible and mustn't keep a transform alive on slow GPUs
         if (live && !root.rapid && !ShellSettings.reduceMotion) {
@@ -238,10 +240,9 @@ Singleton {
                 if ((_removeAt[e.kind] || 0) <= now) {
                     delete _expiresAt[e.kind];  _expiresAt = _expiresAt
                     delete _removeAt[e.kind];   _removeAt = _removeAt
-                    delete _closingSig[e.kind]; _closingSig = _closingSig
                     _entries.remove(i)
                 }
-                // _commitClose outlives removal — the echo can land after the entry's gone, so the guard must persist
+                // _commitClose and _closingSig outlive removal — the echo can land after the entry's gone, so the guard must persist
             } else if ((_expiresAt[e.kind] || 0) <= now) {
                 _closeEntry(i)
             }
