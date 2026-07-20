@@ -10,115 +10,200 @@ Item {
 
     property bool powerOpen: false
     readonly property bool active: MenuState.open && MenuState.activeTab === 1 && !powerOpen
+    readonly property bool compact: width < 132
 
-    // Final (post-animation) tree height, so the panel floor moves once per
-    // section change instead of chasing the collapse animation frame by frame.
+    signal currentPageRetapped()
+
+    // The open category is separate from the selected page: users can inspect
+    // another category without the detail pane jumping to its first entry.
+    property int _expandedGroup: _groupIndexForSection(MenuState.settingsSection)
+
+    // Final tree height, so the popup floor does not follow every frame of a
+    // disclosure animation.
     implicitHeight: _navContentHeight()
 
-    readonly property int _navTop:     8
-    readonly property int _navGapY:    8    // between groups
-    readonly property int _navRowH:    30
-    readonly property int _navRowGap:  2    // within a group
-    readonly property int _navHdrH:    20
-    readonly property int _navStdHdrH: 12   // standalone leaf's divider slot
+    readonly property int _navTop:       8
+    readonly property int _navBottom:    8
+    readonly property int _groupH:      30
+    readonly property int _groupGap:     3
+    readonly property int _childrenPad:  4
+    readonly property int _navRowH:     30
+    readonly property int _navRowGap:    2
 
-    // accordion: only the group holding the active section shows its rows, so
-    // the nav stays short and the panel can hug the detail content
-    function _groupExpanded(it): bool {
-        if (!it.children) return true
-        for (let i = 0; i < it.children.length; i++) {
-            if (it.children[i].section === MenuState.settingsSection) return true
+    function _leaves(it): var {
+        return it.children ? it.children : [it]
+    }
+
+    function _groupIndexForSection(section: string): int {
+        const tree = MenuState.settingsTree
+        for (let i = 0; i < tree.length; i++) {
+            const leaves = root._leaves(tree[i])
+            for (let j = 0; j < leaves.length; j++) {
+                if (leaves[j].section === section) return i
+            }
+        }
+        return -1
+    }
+
+    function _leafIndexForSection(groupIndex: int, section: string): int {
+        const tree = MenuState.settingsTree
+        if (groupIndex < 0 || groupIndex >= tree.length) return -1
+        const leaves = root._leaves(tree[groupIndex])
+        for (let i = 0; i < leaves.length; i++) {
+            if (leaves[i].section === section) return i
+        }
+        return -1
+    }
+
+    function _groupContainsSection(it, section: string): bool {
+        const leaves = root._leaves(it)
+        for (let i = 0; i < leaves.length; i++) {
+            if (leaves[i].section === section) return true
         }
         return false
     }
 
-    function _groupHeight(it): real {
-        const isGroup = !!it.children
-        const hdr = isGroup ? _navHdrH : _navStdHdrH
-        const leaves = isGroup ? it.children : [it]
-        return hdr + (root._groupExpanded(it) ? leaves.length * (_navRowH + _navRowGap) : 0)
+    function _groupFinalHeight(index: int, it): real {
+        if (index !== root._expandedGroup) return root._groupH
+        const leaves = root._leaves(it)
+        return root._groupH + root._childrenPad * 2
+            + leaves.length * root._navRowH
+            + Math.max(0, leaves.length - 1) * root._navRowGap
+    }
+
+    function _groupY(index: int): real {
+        const tree = MenuState.settingsTree
+        let y = root._navTop
+        for (let i = 0; i < index; i++)
+            y += root._groupFinalHeight(i, tree[i]) + root._groupGap
+        return y
     }
 
     function _navContentHeight(): real {
         const tree = MenuState.settingsTree
-        let h = _navTop
+        let h = root._navTop
         for (let i = 0; i < tree.length; i++) {
-            if (i > 0) h += _navGapY
-            h += root._groupHeight(tree[i])
+            if (i > 0) h += root._groupGap
+            h += root._groupFinalHeight(i, tree[i])
         }
-        return h + 10
+        return h + root._navBottom
     }
 
-    // synchronous tree walk avoids mapToItem race on first frame
     function _sectionRowY(section: string): real {
-        const tree = MenuState.settingsTree
-        let y = _navTop
-        for (let i = 0; i < tree.length; i++) {
-            const it = tree[i]
-            if (i > 0) y += _navGapY
-            const isGroup = !!it.children
-            const hdr = isGroup ? _navHdrH : _navStdHdrH
-            const leaves = isGroup ? it.children : [it]
-            for (let j = 0; j < leaves.length; j++) {
-                if (leaves[j].section === section)
-                    return y + hdr + j * _navRowH + (j + 1) * _navRowGap
-            }
-            y += root._groupHeight(it)
-        }
-        return _navTop
+        const groupIndex = root._groupIndexForSection(section)
+        const leafIndex = root._leafIndexForSection(groupIndex, section)
+        if (groupIndex < 0 || leafIndex < 0) return root._navTop
+        return root._groupY(groupIndex) + root._groupH + root._childrenPad
+            + leafIndex * (root._navRowH + root._navRowGap)
     }
 
-    // clamp against the final tree height, not the animating contentHeight —
-    // a mid-collapse clamp can leave the view resting out of bounds
-    function _scrollToSelection(): void {
+    function _revealRange(top: real, bottom: real): void {
         const contentH = root._navContentHeight()
         const viewH = _navScroll.height
-        if (contentH <= viewH + 1) { _navScroll.contentY = 0; return }
-        const rowY = _sectionRowY(MenuState.settingsSection)
-        const margin = 8
+        if (contentH <= viewH + 1) {
+            _navScroll.contentY = 0
+            return
+        }
+
+        const margin = 7
         const maxY = Math.max(0, contentH - viewH)
         let target = _navScroll.contentY
-        if (rowY - margin < target) target = rowY - margin
-        else if (rowY + _navRowH + margin > target + viewH) target = rowY + _navRowH + margin - viewH
+        // If the disclosed category is taller than the viewport, keep its
+        // header visible instead of bottom-aligning it out of view.
+        if (bottom - top > viewH - margin * 2) target = top - margin
+        else if (top - margin < target) target = top - margin
+        else if (bottom + margin > target + viewH)
+            target = bottom + margin - viewH
         _navScroll.contentY = Math.max(0, Math.min(maxY, target))
     }
 
-    function _focusSelection(): void {
-        for (let i = 0; i < _groupRepeater.count; i++) {
-            const group = _groupRepeater.itemAt(i)
-            if (group && group.focusSection(MenuState.settingsSection)) return
-        }
+    function _scrollToSelection(): void {
+        const y = root._sectionRowY(MenuState.settingsSection)
+        root._revealRange(y, y + root._navRowH)
     }
 
-    function _stepSelection(delta: int): void {
-        const before = MenuState.settingsSection
-        MenuState.stepSettingsSection(delta)
-        if (before !== MenuState.settingsSection) _selectionFocus.restart()
+    function _scrollToExpandedGroup(): void {
+        if (root._expandedGroup < 0) return
+        const tree = MenuState.settingsTree
+        const y = root._groupY(root._expandedGroup)
+        root._revealRange(y, y + root._groupFinalHeight(root._expandedGroup,
+                                                        tree[root._expandedGroup]))
+    }
+
+    function _toggleGroup(index: int): void {
+        const oldGroup = root._expandedGroup >= 0
+            ? _groupRepeater.itemAt(root._expandedGroup) : null
+        const restoreFocus = oldGroup && oldGroup.hasFocusedItem()
+        root._expandedGroup = root._expandedGroup === index ? -1 : index
+        _disclosureSettle.restart()
+        if (restoreFocus) Qt.callLater(function() { root._focusGroupHeader(index) })
+    }
+
+    function _activateSection(section: string): void {
+        if (MenuState.settingsSection === section) {
+            root.currentPageRetapped()
+            return
+        }
+        MenuState.setSettingsSection(section)
+    }
+
+    function _focusGroupHeader(index: int): void {
+        if (index < 0 || index >= _groupRepeater.count) return
+        const group = _groupRepeater.itemAt(index)
+        if (group) group.focusHeader()
+    }
+
+    function _moveFromHeader(groupIndex: int, delta: int): void {
+        const group = _groupRepeater.itemAt(groupIndex)
+        if (delta > 0 && group && group.expanded && group.focusLeaf(0)) return
+
+        const next = groupIndex + (delta < 0 ? -1 : 1)
+        if (next < 0 || next >= _groupRepeater.count) return
+        const nextGroup = _groupRepeater.itemAt(next)
+        if (!nextGroup) return
+        if (delta < 0 && nextGroup.expanded && nextGroup.focusLastLeaf()) return
+        nextGroup.focusHeader()
+    }
+
+    function _moveFromLeaf(groupIndex: int, leafIndex: int, delta: int): void {
+        const group = _groupRepeater.itemAt(groupIndex)
+        if (!group) return
+        const nextLeaf = leafIndex + delta
+        if (nextLeaf >= 0 && nextLeaf < group.leaves.length) {
+            group.focusLeaf(nextLeaf)
+            return
+        }
+        if (delta < 0) group.focusHeader()
+        else root._focusGroupHeader(groupIndex + 1)
     }
 
     Timer {
-        id: _selectionFocus
-        interval: 0
-        onTriggered: root._focusSelection()
+        id: _disclosureSettle
+        interval: ShellSettings.reduceMotion ? 0 : Motion.ms(155)
+        onTriggered: root._scrollToExpandedGroup()
     }
 
-    onActiveChanged: if (active) Qt.callLater(_scrollToSelection)
+    Timer {
+        id: _resizeSettle
+        interval: ShellSettings.reduceMotion ? 0 : 50
+        onTriggered: root._scrollToSelection()
+    }
+
+    Component.onCompleted: Qt.callLater(root._scrollToSelection)
+    onActiveChanged: {
+        if (!active) return
+        const selectedGroup = root._groupIndexForSection(MenuState.settingsSection)
+        if (selectedGroup >= 0) root._expandedGroup = selectedGroup
+        Qt.callLater(root._scrollToSelection)
+    }
+
     Connections {
         target: MenuState
-        function onSettingsSectionChanged() { root._scrollToSelection() }
-    }
-
-    Shortcut {
-        sequences: ["Ctrl+Down"]
-        context: Qt.ApplicationShortcut
-        enabled: root.active
-        onActivated: root._stepSelection(1)
-    }
-    Shortcut {
-        sequences: ["Ctrl+Up"]
-        context: Qt.ApplicationShortcut
-        enabled: root.active
-        onActivated: root._stepSelection(-1)
+        function onSettingsSectionChanged() {
+            const selectedGroup = root._groupIndexForSection(MenuState.settingsSection)
+            if (selectedGroup >= 0) root._expandedGroup = selectedGroup
+            Qt.callLater(root._scrollToSelection)
+        }
     }
 
     Flickable {
@@ -132,65 +217,24 @@ Item {
         maximumFlickVelocity: 2200
         interactive: contentHeight > height + 1
 
-        // callLater coalesces the per-frame calls while the panel height animates
-        onHeightChanged: Qt.callLater(root._scrollToSelection)
+        onHeightChanged: _resizeSettle.restart()
 
-        // only animates programmatic scroll-to-selection, never the user's own drag/flick
         Behavior on contentY {
             enabled: !ShellSettings.reduceMotion && !_navScroll.moving
-            NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic }
+            NumberAnimation { duration: Motion.ms(155); easing.type: Easing.OutCubic }
         }
 
         Item {
             id: _content
             width: root.width
-            height: _navCol.implicitHeight + root._navTop + 10
-
-            // _selReady defers the Behavior one frame so it's correct on open
-            property bool _selReady: false
-            Component.onCompleted: Qt.callLater(function() { _content._selReady = true })
-
-            Item {
-                id: _selHighlight
-                x: 6
-                width: _content.width - 12
-                y: root._sectionRowY(MenuState.settingsSection)
-                height: root._navRowH
-
-                Behavior on y {
-                    enabled: _content._selReady && !ShellSettings.reduceMotion
-                    NumberAnimation { duration: Motion.ms(155); easing.type: Easing.OutCubic }
-                }
-
-                Rectangle {
-                    anchors.fill: parent
-                    radius: 8
-                    antialiasing: true
-                    color: Theme.menuControl
-                    border.width: 1
-                    border.color: Theme.menuControlLine
-                }
-                Rectangle {
-                    anchors.left: parent.left
-                    anchors.leftMargin: 5
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 3
-                    height: 14
-                    radius: 1.5
-                    antialiasing: true
-                    color: Theme.accent
-                }
-            }
+            height: root._navContentHeight()
 
             Column {
-                id: _navCol
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.leftMargin: 9
-                anchors.rightMargin: 9
-                anchors.top: parent.top
-                anchors.topMargin: root._navTop
-                spacing: root._navGapY
+                id: _groupColumn
+                x: 7
+                y: root._navTop
+                width: parent.width - 14
+                spacing: root._groupGap
 
                 Repeater {
                     id: _groupRepeater
@@ -198,210 +242,369 @@ Item {
 
                     delegate: Item {
                         id: _grp
+
+                        required property int index
                         required property var modelData
-                        width: parent.width
-                        height: _grpHdr.height + _leafBox.height
 
-                        readonly property bool isGroup: !!modelData.children
-                        readonly property var  _leaves: isGroup ? modelData.children : [modelData]
-                        readonly property bool groupActive: {
-                            for (let i = 0; i < _leaves.length; i++) {
-                                if (_leaves[i].section === MenuState.settingsSection) return true
-                            }
-                            return false
+                        readonly property var leaves: root._leaves(modelData)
+                        readonly property bool expanded: root._expandedGroup === index
+                        readonly property bool groupActive: root._groupContainsSection(
+                            modelData, MenuState.settingsSection)
+
+                        width: _groupColumn.width
+                        height: _grpHeader.height + _leafBox.height
+
+                        function focusHeader(): void {
+                            _grpHeader.forceActiveFocus()
                         }
-                        readonly property bool expanded: !isGroup || groupActive
 
-                        function focusSection(section: string): bool {
+                        function focusLeaf(index: int): bool {
+                            if (!_grp.expanded || index < 0 || index >= _leafRepeater.count)
+                                return false
+                            const leaf = _leafRepeater.itemAt(index)
+                            if (!leaf) return false
+                            leaf.forceActiveFocus()
+                            return true
+                        }
+
+                        function focusLastLeaf(): bool {
+                            return _grp.focusLeaf(_leafRepeater.count - 1)
+                        }
+
+                        function hasFocusedItem(): bool {
+                            if (_grpHeader.activeFocus) return true
                             for (let i = 0; i < _leafRepeater.count; i++) {
                                 const leaf = _leafRepeater.itemAt(i)
-                                if (leaf && leaf.modelData.section === section) {
-                                    leaf.forceActiveFocus()
-                                    return true
-                                }
+                                if (leaf && leaf.activeFocus) return true
                             }
                             return false
                         }
 
-                        Item {
-                            id: _grpHdr
+                        Rectangle {
+                            id: _grpHeader
                             width: parent.width
-                            height: _grp.isGroup ? root._navHdrH : root._navStdHdrH
+                            height: root._groupH
+                            radius: 7
+                            antialiasing: true
+                            color: activeFocus
+                                ? Theme.withAlpha(Theme.accent, 0.065)
+                                : _headerHover.hovered
+                                    ? Theme.withAlpha(Theme.text, 0.035)
+                                    : _grp.expanded
+                                        ? Theme.withAlpha(Theme.text, 0.022)
+                                        : "transparent"
+                            border.width: activeFocus ? 1 : 0
+                            border.color: Theme.withAlpha(Theme.accent, 0.30)
+                            scale: _headerTap.pressed ? 0.985 : 1.0
+                            transformOrigin: Item.Left
 
-                            // a collapsed header is a button that jumps to the group's first section
-                            function _open(): void {
-                                if (_grp.isGroup && !_grp.groupActive)
-                                    MenuState.setSettingsSection(_grp._leaves[0].section)
+                            activeFocusOnTab: root.active
+                            Accessible.role: Accessible.Button
+                            Accessible.name: _grp.modelData.label + " settings category"
+                            Accessible.description: _grp.expanded
+                                ? "Expanded, activate to collapse"
+                                : (_grp.groupActive
+                                    ? "Collapsed, contains the current page"
+                                    : "Collapsed, activate to expand")
+
+                            Keys.onSpacePressed: event => {
+                                if (!event.isAutoRepeat) root._toggleGroup(_grp.index)
+                                event.accepted = true
                             }
-                            activeFocusOnTab: root.active && _grp.isGroup && !_grp.groupActive
-                            Accessible.role: _grp.isGroup ? Accessible.Button : Accessible.NoRole
-                            Accessible.name: _grp.isGroup ? _grp.modelData.label + " settings group" : ""
-                            Accessible.description: _grp.expanded ? "Expanded" : "Expand"
-                            Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) _grpHdr._open(); event.accepted = true }
-                            Keys.onReturnPressed: event => { if (!event.isAutoRepeat) _grpHdr._open(); event.accepted = true }
-                            Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) _grpHdr._open(); event.accepted = true }
+                            Keys.onReturnPressed: event => {
+                                if (!event.isAutoRepeat) root._toggleGroup(_grp.index)
+                                event.accepted = true
+                            }
+                            Keys.onEnterPressed: event => {
+                                if (!event.isAutoRepeat) root._toggleGroup(_grp.index)
+                                event.accepted = true
+                            }
+                            Keys.onLeftPressed: event => {
+                                if (_grp.expanded) root._toggleGroup(_grp.index)
+                                event.accepted = true
+                            }
+                            Keys.onRightPressed: event => {
+                                if (!_grp.expanded) root._toggleGroup(_grp.index)
+                                event.accepted = true
+                            }
+                            Keys.onUpPressed: event => {
+                                root._moveFromHeader(_grp.index, -1)
+                                event.accepted = true
+                            }
+                            Keys.onDownPressed: event => {
+                                root._moveFromHeader(_grp.index, 1)
+                                event.accepted = true
+                            }
+
                             HoverHandler {
-                                id: _hdrHover
-                                enabled: _grp.isGroup && !_grp.groupActive
+                                id: _headerHover
                                 cursorShape: Qt.PointingHandCursor
                             }
-                            TapHandler { onTapped: _grpHdr._open() }
+                            TapHandler {
+                                id: _headerTap
+                                onTapped: root._toggleGroup(_grp.index)
+                            }
+
+                            Behavior on color {
+                                enabled: !ShellSettings.reduceMotion
+                                ColorAnimation { duration: Motion.fast }
+                            }
+                            Behavior on scale {
+                                enabled: !ShellSettings.reduceMotion
+                                NumberAnimation { duration: Motion.ms(90); easing.type: Easing.OutCubic }
+                            }
+
+                            Rectangle {
+                                visible: _grp.groupActive && !_grp.expanded
+                                anchors.left: parent.left
+                                anchors.leftMargin: 2
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 2
+                                height: 13
+                                radius: 1
+                                antialiasing: true
+                                color: Theme.accent
+                            }
 
                             Text {
-                                id: _hdrLabel
-                                visible:                _grp.isGroup
-                                anchors.left:           parent.left
-                                anchors.leftMargin:     9
-                                anchors.bottom:         parent.bottom
-                                anchors.bottomMargin:   4
-                                text:           _grp.modelData.label
-                                color:          _grp.groupActive
-                                    ? Theme.withAlpha(Theme.menuTextMuted, 0.90)
+                                id: _groupGlyph
+                                visible: !root.compact
+                                anchors.left: parent.left
+                                anchors.leftMargin: 8
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 18
+                                horizontalAlignment: Text.AlignHCenter
+                                text: _grp.modelData.glyph ?? ""
+                                color: _grp.groupActive || _grp.expanded
+                                    ? Theme.mix(Theme.accent, Theme.text, 0.08)
                                     : Theme.withAlpha(Theme.menuTextMuted,
-                                          _hdrHover.hovered || _grpHdr.activeFocus ? 0.86 : 0.58)
-                                font.family:    Settings.font
-                                font.pixelSize: Settings.fontSize - 3
-                                font.letterSpacing:  0.5
-                                font.weight:    Font.DemiBold
-                                font.capitalization: Font.AllUppercase
-                                renderType:     Text.NativeRendering
-                                Behavior on color { ColorAnimation { duration: Motion.fast } }
+                                        _headerHover.hovered || _grpHeader.activeFocus ? 0.84 : 0.60)
+                                font.family: Settings.font
+                                font.pixelSize: Settings.fontSize
+                                renderType: Text.NativeRendering
                             }
-                            Rectangle {
-                                visible:              _grp.isGroup
-                                anchors.left:         _hdrLabel.right
-                                anchors.leftMargin:   8
-                                anchors.right:        _hdrChevron.left
-                                anchors.rightMargin:  6
-                                anchors.verticalCenter: _hdrLabel.verticalCenter
-                                height: 1
-                                radius: 0.5
-                                color: _grp.groupActive
-                                    ? Theme.menuDivider
-                                    : Theme.withAlpha(Theme.subtext, 0.10)
-                                Behavior on color { ColorAnimation { duration: Motion.fast } }
-                            }
+
                             Text {
-                                id: _hdrChevron
-                                visible: _grp.isGroup
-                                anchors.right:        parent.right
-                                anchors.rightMargin:  8
-                                anchors.verticalCenter: _hdrLabel.verticalCenter
+                                anchors.left: _groupGlyph.visible ? _groupGlyph.right : parent.left
+                                anchors.leftMargin: _groupGlyph.visible ? 8 : 10
+                                anchors.right: _groupChevron.left
+                                anchors.rightMargin: 6
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: _grp.modelData.label
+                                color: _grp.groupActive || _grp.expanded
+                                    ? Theme.text
+                                    : Theme.withAlpha(Theme.menuTextMuted,
+                                        _headerHover.hovered || _grpHeader.activeFocus ? 0.94 : 0.76)
+                                font.family: Settings.font
+                                font.pixelSize: Settings.fontSize - 1
+                                font.weight: _grp.groupActive || _grp.expanded
+                                    ? Font.DemiBold : Font.Normal
+                                renderType: Text.NativeRendering
+                                elide: Text.ElideRight
+                            }
+
+                            Text {
+                                id: _groupChevron
+                                anchors.right: parent.right
+                                anchors.rightMargin: 8
+                                anchors.verticalCenter: parent.verticalCenter
                                 text: "󰅂"
                                 rotation: _grp.expanded ? 90 : 0
                                 transformOrigin: Item.Center
-                                color: Theme.withAlpha(Theme.subtext,
-                                    _hdrHover.hovered || _grpHdr.activeFocus ? 0.72 : 0.38)
-                                font.family:    Settings.font
+                                color: Theme.withAlpha(_grp.expanded ? Theme.accent : Theme.subtext,
+                                    _headerHover.hovered || _grpHeader.activeFocus ? 0.78 : 0.44)
+                                font.family: Settings.font
                                 font.pixelSize: Settings.fontSize - 2
-                                renderType:     Text.NativeRendering
+                                renderType: Text.NativeRendering
+
                                 Behavior on rotation {
                                     enabled: !ShellSettings.reduceMotion
-                                    NumberAnimation { duration: Motion.ms(155); easing.type: Easing.OutCubic }
+                                    NumberAnimation { duration: Motion.ms(145); easing.type: Easing.OutCubic }
                                 }
-                                Behavior on color { ColorAnimation { duration: Motion.fast } }
+                                Behavior on color {
+                                    enabled: !ShellSettings.reduceMotion
+                                    ColorAnimation { duration: Motion.fast }
+                                }
                             }
                         }
 
                         Item {
                             id: _leafBox
-                            anchors.top: _grpHdr.bottom
+                            anchors.top: _grpHeader.bottom
                             width: parent.width
-                            height: _grp.expanded ? _leafCol.height : 0
+                            height: _grp.expanded
+                                ? _leafColumn.implicitHeight + root._childrenPad * 2
+                                : 0
                             visible: height > 0
-                            // a standing clip node breaks batching; only clip mid-animation
-                            clip: height < _leafCol.height
+                            clip: height < _leafColumn.implicitHeight + root._childrenPad * 2
+
                             Behavior on height {
                                 enabled: !ShellSettings.reduceMotion
-                                NumberAnimation { duration: Motion.ms(155); easing.type: Easing.OutCubic }
+                                NumberAnimation { duration: Motion.ms(150); easing.type: Easing.OutCubic }
+                            }
+
+                            Rectangle {
+                                // Keep the tree guide beside the child rows;
+                                // the old position ran through their glyphs.
+                                x: 5
+                                y: 1
+                                width: 1
+                                height: Math.max(0, parent.height - 2)
+                                color: Theme.withAlpha(Theme.subtext, 0.10)
                             }
 
                             Column {
-                                id: _leafCol
-                                width: parent.width
-                                topPadding: root._navRowGap
+                                id: _leafColumn
+                                x: 6
+                                y: root._childrenPad
+                                width: parent.width - 6
                                 spacing: root._navRowGap
 
                                 Repeater {
                                     id: _leafRepeater
-                                    model: _grp._leaves
+                                    model: _grp.leaves
 
                                     delegate: Rectangle {
                                         id: _leaf
+
+                                        required property int index
                                         required property var modelData
-                                        readonly property bool   active: MenuState.settingsSection === modelData.section
-                                        readonly property string glyph:  modelData.glyph ?? ""
-                                        // whole pixels only: a fractional shift blurs native-rendered text
-                                        property real _shift: (active || _leafHover.hovered) ? 1 : 0
+                                        readonly property bool active: MenuState.settingsSection === modelData.section
+                                        readonly property string glyph: modelData.glyph ?? ""
+                                        property real _shift: active || _leafHover.hovered ? 1 : 0
 
-                                        readonly property color _fg: active
-                                            ? Theme.text
-                                            : Theme.withAlpha(Theme.mix(Theme.subtext, Theme.text, 0.12), _leafHover.hovered || _leaf.activeFocus ? 0.92 : 0.76)
-                                        readonly property color _glyphFg: active
-                                            ? Theme.mix(Theme.accent, Theme.text, 0.10)
-                                            : Theme.withAlpha(Theme.subtext, _leafHover.hovered || _leaf.activeFocus ? 0.76 : 0.56)
-
-                                        width: parent.width
+                                        width: _leafColumn.width
                                         height: root._navRowH
                                         radius: 8
                                         antialiasing: true
-                                        color: ((_leafHover.hovered || _leaf.activeFocus) && !active)
-                                            ? Theme.withAlpha(Theme.text, 0.045) : "transparent"
-                                        Behavior on color { ColorAnimation { duration: Motion.fast } }
-                                        Behavior on _shift {
-                                            enabled: !ShellSettings.reduceMotion
-                                            NumberAnimation { duration: Motion.ms(105); easing.type: Easing.OutCubic }
-                                        }
+                                        color: active
+                                            ? Theme.menuControl
+                                            : _leafHover.hovered || activeFocus
+                                                ? Theme.withAlpha(Theme.text, 0.042)
+                                                : "transparent"
+                                        border.width: active || activeFocus ? 1 : 0
+                                        border.color: active
+                                            ? Theme.menuControlLine
+                                            : Theme.withAlpha(Theme.accent, 0.28)
+                                        scale: _leafTap.pressed ? 0.985 : 1.0
+                                        transformOrigin: Item.Left
 
                                         activeFocusOnTab: root.active && _grp.expanded
                                         Accessible.role: Accessible.Button
                                         Accessible.name: _leaf.modelData.label
-                                        Keys.onSpacePressed: event => { if (!event.isAutoRepeat) MenuState.setSettingsSection(_leaf.modelData.section); event.accepted = true }
-                                        Keys.onReturnPressed: event => { if (!event.isAutoRepeat) MenuState.setSettingsSection(_leaf.modelData.section); event.accepted = true }
-                                        Keys.onEnterPressed: event => { if (!event.isAutoRepeat) MenuState.setSettingsSection(_leaf.modelData.section); event.accepted = true }
-                                        Keys.onUpPressed: event => { root._stepSelection(-1); event.accepted = true }
-                                        Keys.onDownPressed: event => { root._stepSelection(1); event.accepted = true }
+                                        Accessible.description: _leaf.modelData.description ?? ""
+                                        Accessible.selectable: true
+                                        Accessible.selected: active
 
-                                        HoverHandler { id: _leafHover; cursorShape: Qt.PointingHandCursor }
-                                        TapHandler   { id: _leafTap; onTapped: MenuState.setSettingsSection(_leaf.modelData.section) }
-                                        scale: _leafTap.pressed ? 0.985 : 1.0
-                                        transformOrigin: Item.Left
+                                        Keys.onSpacePressed: event => {
+                                            if (!event.isAutoRepeat)
+                                                root._activateSection(_leaf.modelData.section)
+                                            event.accepted = true
+                                        }
+                                        Keys.onReturnPressed: event => {
+                                            if (!event.isAutoRepeat)
+                                                root._activateSection(_leaf.modelData.section)
+                                            event.accepted = true
+                                        }
+                                        Keys.onEnterPressed: event => {
+                                            if (!event.isAutoRepeat)
+                                                root._activateSection(_leaf.modelData.section)
+                                            event.accepted = true
+                                        }
+                                        Keys.onLeftPressed: event => {
+                                            root._toggleGroup(_grp.index)
+                                            _grpHeader.forceActiveFocus()
+                                            event.accepted = true
+                                        }
+                                        Keys.onUpPressed: event => {
+                                            root._moveFromLeaf(_grp.index, _leaf.index, -1)
+                                            event.accepted = true
+                                        }
+                                        Keys.onDownPressed: event => {
+                                            root._moveFromLeaf(_grp.index, _leaf.index, 1)
+                                            event.accepted = true
+                                        }
+
+                                        HoverHandler {
+                                            id: _leafHover
+                                            cursorShape: Qt.PointingHandCursor
+                                        }
+                                        TapHandler {
+                                            id: _leafTap
+                                            onTapped: root._activateSection(_leaf.modelData.section)
+                                        }
+
+                                        Behavior on color {
+                                            enabled: !ShellSettings.reduceMotion
+                                            ColorAnimation { duration: Motion.fast }
+                                        }
                                         Behavior on scale {
                                             enabled: !ShellSettings.reduceMotion
-                                            NumberAnimation { duration: Motion.ms(95); easing.type: Easing.OutCubic }
+                                            NumberAnimation { duration: Motion.ms(90); easing.type: Easing.OutCubic }
+                                        }
+                                        Behavior on _shift {
+                                            enabled: !ShellSettings.reduceMotion
+                                            NumberAnimation { duration: Motion.ms(100); easing.type: Easing.OutCubic }
+                                        }
+
+                                        Rectangle {
+                                            visible: _leaf.active
+                                            anchors.left: parent.left
+                                            anchors.leftMargin: 5
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            width: 3
+                                            height: 14
+                                            radius: 1.5
+                                            antialiasing: true
+                                            color: Theme.accent
                                         }
 
                                         Text {
                                             id: _leafGlyph
-                                            anchors.left:           parent.left
-                                            anchors.leftMargin:     13
+                                            visible: !root.compact
+                                            anchors.left: parent.left
+                                            anchors.leftMargin: 11
                                             anchors.verticalCenter: parent.verticalCenter
-                                            width: 19
+                                            width: 18
                                             horizontalAlignment: Text.AlignHCenter
-                                            text:  _leaf.glyph
-                                            color: _leaf._glyphFg
-                                            font.family:    Settings.font
+                                            text: _leaf.glyph
+                                            color: _leaf.active
+                                                ? Theme.mix(Theme.accent, Theme.text, 0.10)
+                                                : Theme.withAlpha(Theme.subtext,
+                                                    _leafHover.hovered || _leaf.activeFocus ? 0.78 : 0.55)
+                                            font.family: Settings.font
                                             font.pixelSize: Settings.fontSize
-                                            renderType:     Text.NativeRendering
+                                            renderType: Text.NativeRendering
                                             transform: Translate { x: Math.round(_leaf._shift) }
-                                            Behavior on color { ColorAnimation { duration: Motion.fast } }
+
+                                            Behavior on color {
+                                                enabled: !ShellSettings.reduceMotion
+                                                ColorAnimation { duration: Motion.fast }
+                                            }
                                         }
 
                                         Text {
-                                            anchors.left:           _leafGlyph.right
-                                            anchors.leftMargin:     9
-                                            anchors.right:          parent.right
-                                            anchors.rightMargin:    9
+                                            anchors.left: _leafGlyph.visible ? _leafGlyph.right : parent.left
+                                            anchors.leftMargin: _leafGlyph.visible ? 8 : 12
+                                            anchors.right: parent.right
+                                            anchors.rightMargin: 8
                                             anchors.verticalCenter: parent.verticalCenter
                                             text: _leaf.modelData.label
                                             elide: Text.ElideRight
-                                            color: _leaf._fg
-                                            font.family:    Settings.font
+                                            color: _leaf.active
+                                                ? Theme.text
+                                                : Theme.withAlpha(Theme.mix(Theme.subtext, Theme.text, 0.12),
+                                                    _leafHover.hovered || _leaf.activeFocus ? 0.92 : 0.76)
+                                            font.family: Settings.font
                                             font.pixelSize: Settings.fontSize
-                                            font.weight:    _leaf.active ? Font.DemiBold : Font.Normal
-                                            renderType:     Text.NativeRendering
+                                            font.weight: _leaf.active ? Font.DemiBold : Font.Normal
+                                            renderType: Text.NativeRendering
                                             transform: Translate { x: Math.round(_leaf._shift) }
-                                            Behavior on color { ColorAnimation { duration: Motion.fast } }
+
+                                            Behavior on color {
+                                                enabled: !ShellSettings.reduceMotion
+                                                ColorAnimation { duration: Motion.fast }
+                                            }
                                         }
                                     }
                                 }

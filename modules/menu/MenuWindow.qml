@@ -129,7 +129,7 @@ PanelWindow {
         // Home/Notifications read best compact; Settings needs room for the nav + detail column
         readonly property int _compactW:  398
         readonly property int _powerW:    566
-        readonly property int _settingsW: 620
+        readonly property int _settingsW: 630
         readonly property bool _railExpanded: activeTab === 1 || powerOpen
         readonly property int _targetPanelW: activeTab === 1 ? _settingsW
             : powerOpen ? _powerW : _compactW
@@ -141,17 +141,25 @@ PanelWindow {
         readonly property int panelW: Math.max(1, Math.min(_targetPanelW, _availablePanelW))
         // rail expands for Settings: icon strip stays fixed, category nav rides on beside it as one growing surface
         readonly property int railCollapsedW: 44
-        readonly property int _navMinW: powerOpen ? 112 : 96
-        readonly property int _navMaxW: activeTab === 1 ? 168 : 160
+        readonly property int _navMinW: powerOpen ? 112 : 118
+        readonly property int _navMaxW: activeTab === 1 ? 176 : 160
         // Preserve a useful detail pane on narrow outputs. The category labels
         // elide cleanly, while settings controls need at least twice this space.
-        readonly property int navW: Math.min(
-            Math.max(0, panelW - railCollapsedW - 96),
-            Math.max(_navMinW, Math.min(_navMaxW, panelW - railCollapsedW - 224)))
+        readonly property int navW: {
+            const available = panelW - railCollapsedW
+            const desired = Math.max(_navMinW, Math.round(panelW * 0.28))
+            // Prefer a readable nav, but never let it consume the last 96px of
+            // the detail pane on exceptionally narrow outputs.
+            const detailSafe = Math.max(_navMinW, available - 224)
+            const sidebarFit = Math.max(0, available - 96)
+            return Math.max(0, Math.min(_navMaxW, desired, detailSafe, sidebarFit))
+        }
         readonly property int railExpandedW: railCollapsedW + navW
         readonly property int railW: _railExpanded ? railExpandedW : railCollapsedW
         readonly property int contentW: panelW - railW
-        readonly property int contentPad: activeTab === 1 && panelW >= 520 ? 20
+        readonly property int contentPad: activeTab === 1
+            ? Math.max(12, Math.min(20,
+                Math.round(12 + (panelW - 398) * 8 / 232)))
             : _railExpanded && panelW >= 460 ? 18 : 12
         readonly property int innerW: Math.max(1, contentW - contentPad * 2)
         // shared height floor so every tab opens at the same size; taller content grows above it
@@ -379,6 +387,7 @@ PanelWindow {
                         id: _settingsNav
                         anchors.fill: parent
                         powerOpen: panel.powerOpen
+                        onCurrentPageRetapped: contentFlick.contentY = 0
                     }
                 }
 
@@ -726,8 +735,38 @@ PanelWindow {
             ListEdgeFade {
                 anchors.fill: contentFlick
                 list: contentFlick
+                fadeColor: Theme.menuPane
                 visible: panel.activeTab !== 2 && contentFlick.contentHeight > contentFlick.height + 1
                 z: 4
+            }
+
+            // Quiet position cue for long Home/Settings pages. The edge fade
+            // says more content exists; this shows where the user is in it.
+            Rectangle {
+                id: _contentScrollThumb
+                readonly property real _trackH: Math.max(1, contentPane.height - 16)
+                readonly property real _overflow: Math.max(1,
+                    contentFlick.contentHeight - contentFlick.height)
+
+                anchors.right: parent.right
+                anchors.rightMargin: 3
+                y: 8 + Math.max(0, _trackH - height)
+                    * (contentFlick.contentY / _overflow)
+                width: 2
+                height: Math.min(_trackH, Math.max(22, _trackH * Math.min(1,
+                    contentFlick.height / Math.max(1, contentFlick.contentHeight))))
+                radius: 1
+                antialiasing: true
+                color: Theme.accent
+                opacity: visible ? (contentFlick.moving ? 0.62 : 0.26) : 0
+                visible: !panel.powerOpen && panel.activeTab !== 2
+                    && contentFlick.contentHeight > contentFlick.height + 1
+                z: 5
+
+                Behavior on opacity {
+                    enabled: !ShellSettings.reduceMotion
+                    NumberAnimation { duration: Motion.fast }
+                }
             }
         }
 
