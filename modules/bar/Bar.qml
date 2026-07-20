@@ -295,6 +295,9 @@ PanelWindow {
                 id: _barContent
                 screen: bar.targetScreen
                 barActive: contents.opacity > 0.001 && !bar.concealed
+                // the configured span, not the grown one: surfaceWidth is derived
+                // from the zone widths, so measuring crowding against it is circular
+                fitWidth: bar.configuredSurfaceWidth - Settings.hPad * 2
                 anchors.fill:        parent
                 anchors.leftMargin:  Settings.hPad
                 anchors.rightMargin: Settings.hPad

@@ -231,6 +231,8 @@ Item {
 
         readonly property bool _glowEnabled: ShellSettings.underlineGlow
 
+        // seeded, not bound: an overview toggle recreates this item, and starting
+        // from 0 makes the next dismissal read as an arrival and flash
         property int  _prevNotifCount: 0
         property bool _skipNextNotif: false
 
@@ -265,10 +267,13 @@ Item {
 
         // previews settings changes through the real animation path while the menu is open
         property bool _settingsReady: false
-        Component.onCompleted: Qt.callLater(() => {
-            _settingsReady = true
-            if (_canPreview()) _previewTimer.restart()
-        })
+        Component.onCompleted: {
+            _prevNotifCount = Notifications.activeCount
+            Qt.callLater(() => {
+                _settingsReady = true
+                if (_canPreview()) _previewTimer.restart()
+            })
+        }
         function _canPreview(): bool {
             return _settingsReady && MenuState.open && ShellSettings.underlineGlow
                 && !ShellSettings.reduceMotion

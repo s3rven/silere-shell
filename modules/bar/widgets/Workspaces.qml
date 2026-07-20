@@ -9,6 +9,8 @@ import "../../../services"
 Item {
     id: root
 
+    property bool barActive: true
+
     required property ShellScreen screen
 
     readonly property int minVisible: ShellSettings.wsMinVisible
@@ -846,7 +848,7 @@ Item {
 
                 SequentialAnimation {
                     running: ws.urgent && !ws.active && !ws._urgentPulseSettled
-                        && !ShellSettings.reduceMotion && !Idle.isIdle
+                        && root.barActive && !ShellSettings.reduceMotion && !Idle.isIdle
                     loops:   Animation.Infinite
                     onRunningChanged: if (!running) { ws._pulseOpacity = 1.0; ws._shakeX = 0 }
                     NumberAnimation { target: ws; property: "_shakeX"; to:  2.5; duration: Motion.ms(55); easing.type: Easing.OutQuad  }
@@ -1021,7 +1023,7 @@ Item {
         onShownChanged: if (shown) _pulseSettled = false
         SequentialAnimation {
             running: _urgentTick.shown && !_urgentTick._pulseSettled
-                && !ShellSettings.reduceMotion && !Idle.isIdle
+                && root.barActive && !ShellSettings.reduceMotion && !Idle.isIdle
             loops:   Animation.Infinite
             onRunningChanged: if (!running) _urgentTick._pulse = 1.0
             NumberAnimation { target: _urgentTick; property: "_pulse"; to: 0.35; duration: Motion.ms(550); easing.type: Easing.InOutSine }

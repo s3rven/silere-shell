@@ -10,6 +10,7 @@ Pill {
 
     property bool show: false
     property bool busy: false
+    property bool barActive: true
 
     visible: opacity > 0.01
     opacity: show ? 1.0 : 0.0
@@ -26,12 +27,12 @@ Pill {
     animateGlyph:   false
     shrinkDelay:    0
 
-    contentScanEnabled: busy && !ShellSettings.reduceMotion
+    contentScanEnabled: busy && root.barActive && !ShellSettings.reduceMotion
     contentScanColor:   Theme.withAlpha(Theme.accent, 0.35)
     contentScanWidth:   20
 
     SequentialAnimation {
-        running: root.busy && !ShellSettings.reduceMotion && !Idle.isIdle
+        running: root.busy && root.barActive && !ShellSettings.reduceMotion && !Idle.isIdle
         loops:   Animation.Infinite
         onRunningChanged: if (!running) root.contentScanProgress = 0
         NumberAnimation { target: root; property: "contentScanProgress"; from: 0; to: 1; duration: Motion.ms(900); easing.type: Easing.InOutSine }

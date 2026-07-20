@@ -12,6 +12,8 @@ Item {
 
     required property ShellScreen screen
     property bool barActive: true
+    // width the bar was configured for; `width` may have grown past it to fit the zones
+    property real fitWidth: 0
 
     property bool _autoCompact: false
     readonly property bool effectiveCompact: ShellSettings.barCompact || _autoCompact
@@ -56,8 +58,9 @@ Item {
 
         const sideW = leftZone.implicitWidth + rightZone.implicitWidth
         const reserve = ShellSettings.showWindowTitle ? 116 : 52
-        const turnOn = width - reserve
-        const turnOff = width - reserve - 72
+        const span = fitWidth > 0 ? Math.min(fitWidth, width) : width
+        const turnOn = span - reserve
+        const turnOff = span - reserve - 72
 
         if (!_autoCompact && sideW > turnOn)
             _autoCompact = true
@@ -66,6 +69,7 @@ Item {
     }
 
     onWidthChanged: _queueAutoCompact()
+    onFitWidthChanged: _queueAutoCompact()
 
     Timer {
         id: _compactSync
@@ -82,10 +86,10 @@ Item {
 
     // one Component per widget kind, chosen per-slot by whichever zone array holds the key.
     // widgets bind height to root.height, not a forced-height Loader — Loader resize-to-fit mis-centres the diamond
-    Component { id: _cWorkspaces;  Workspaces       { anchors.verticalCenter: parent.verticalCenter; screen: root.screen } }
-    Component { id: _cShellUpdate; ShellUpdateWidget { anchors.verticalCenter: parent.verticalCenter; height: root.height; compact: root.effectiveCompact } }
+    Component { id: _cWorkspaces;  Workspaces       { anchors.verticalCenter: parent.verticalCenter; screen: root.screen; barActive: root.barActive } }
+    Component { id: _cShellUpdate; ShellUpdateWidget { anchors.verticalCenter: parent.verticalCenter; height: root.height; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cTray;        TrayWidget       { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
-    Component { id: _cUpdates;     UpdatesWidget    { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact } }
+    Component { id: _cUpdates;     UpdatesWidget    { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cNetwork;     NetworkWidget    { anchors.verticalCenter: parent.verticalCenter; height: root.height; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cVolume;      Volume           { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact } }
     Component { id: _cBrightness;  BrightnessWidget { anchors.verticalCenter: parent.verticalCenter; height: root.height; compact: root.effectiveCompact } }
@@ -113,8 +117,10 @@ Item {
     // Bar OSD takes one bar center while showing; loaded only on the overlay bar to avoid duplicate layout/animation work on every monitor.
     readonly property bool _isOverlayBar: root.screen && root.screen.name === Monitors.overlayBarName
     readonly property bool _onActiveBar: !root.screen || Monitors.activeName === root.screen.name
+    // barConcealed must match OsdBarWidget's own gate, or the title and centre
+    // visualiser retract to make room for an in-bar OSD that never appears
     readonly property bool _osdBarShowing: ShellSettings.osdEnabled && ShellSettings.osdBarIntegrated
-        && root._isOverlayBar && OsdBarState.showing
+        && root._isOverlayBar && OsdBarState.showing && !OsdBarState.barConcealed
     readonly property bool _centerVizMode: ShellSettings.mediaVisualizerPosition === "center"
     readonly property bool _centerVizWanted: _centerVizMode && ShellSettings.mediaProgress
         && !ShellSettings.reduceMotion && !Idle.isIdle
