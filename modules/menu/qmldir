@@ -7,6 +7,13 @@ SettingsWorkspacesSection 1.0 SettingsWorkspacesSection.qml
 SettingsPopupsSection 1.0 SettingsPopupsSection.qml
 SettingsUpdatesSection 1.0 SettingsUpdatesSection.qml
 SettingsSystemSection 1.0 SettingsSystemSection.qml
+SettingsNightLightSection 1.0 SettingsNightLightSection.qml
+SettingsSurfaceSection 1.0 SettingsSurfaceSection.qml
+SettingsSeparatorsSection 1.0 SettingsSeparatorsSection.qml
+SettingsMediaSection 1.0 SettingsMediaSection.qml
+SettingsIndicatorsSection 1.0 SettingsIndicatorsSection.qml
+SettingsOsdSection 1.0 SettingsOsdSection.qml
+InlinePicker 1.0 InlinePicker.qml
 SettingsNav  1.0 SettingsNav.qml
 PowerRailContent 1.0 PowerRailContent.qml
 PowerRailRow     1.0 PowerRailRow.qml

@@ -200,7 +200,7 @@ PageShell {
         Item {
             id: _detailHeader
             width: parent.width
-            height: 64
+            height: 58
             readonly property var _meta: root._sectionMeta[root._shownSection]
                 ?? ({ glyph: "", label: "", group: "Settings", description: "", index: 0 })
 
@@ -208,8 +208,7 @@ PageShell {
                 id: _hdrPath
                 anchors.left: parent.left
                 anchors.leftMargin: 2
-                anchors.right: _hdrPosition.left
-                anchors.rightMargin: 8
+                anchors.right: parent.right
                 anchors.top: parent.top
                 anchors.topMargin: 1
                 text: _detailHeader._meta.group
@@ -222,48 +221,27 @@ PageShell {
                 renderType: Text.NativeRendering
                 elide: Text.ElideRight
             }
-            Text {
-                id: _hdrPosition
-                anchors.right: parent.right
-                anchors.top: _hdrPath.top
-                text: (_detailHeader._meta.index + 1) + " / " + MenuState.settingsSectionCount
-                color: Theme.withAlpha(Theme.subtext, 0.46)
-                font.family: Settings.font
-                font.pixelSize: Math.max(8, Settings.fontSize - 3)
-                renderType: Text.NativeRendering
-            }
-
             Item {
                 id: _hdrIconSlot
                 anchors.left: parent.left
                 anchors.top: _hdrPath.bottom
-                anchors.topMargin: 8
-                width: 25
-                height: 36
+                anchors.topMargin: 6
+                width: 22
+                height: 34
 
-                Rectangle {
-                    anchors.centerIn: parent
-                    width: 25
-                    height: 25
-                    radius: 7
-                    antialiasing: true
-                    color: Theme.withAlpha(Theme.accent, 0.075)
-                    border.width: 1
-                    border.color: Theme.withAlpha(Theme.accent, 0.14)
-                }
                 Text {
                     anchors.centerIn: parent
                     text: _detailHeader._meta.glyph
-                    color: Theme.withAlpha(Theme.accent, 0.88)
+                    color: Theme.withAlpha(Theme.accent, 0.82)
                     font.family: Settings.font
-                    font.pixelSize: Settings.fontSize + 1
+                    font.pixelSize: Settings.fontSize + 2
                     renderType: Text.NativeRendering
                 }
             }
             Text {
                 id: _hdrTitle
                 anchors.left: _hdrIconSlot.right
-                anchors.leftMargin: 9
+                anchors.leftMargin: 7
                 anchors.right: parent.right
                 anchors.top: _hdrIconSlot.top
                 anchors.topMargin: -1
@@ -373,7 +351,7 @@ PageShell {
                             id: _accentReadout
                             anchors.top:            _accentTitle.top
                             anchors.right:          parent.right; anchors.rightMargin: 12
-                            width:                  Math.min(176, Math.max(96, parent.width - 110))
+                            width:                  Math.min(176, Math.max(56, parent.width * 0.42))
                             horizontalAlignment:    Text.AlignRight
                             text:           _accentPicker._shownName
                             color:          ShellSettings.highContrast
@@ -386,30 +364,53 @@ PageShell {
                             elide:          Text.ElideRight
                         }
 
-                        SwatchRow {
-                            id: _swatchRow
+                        Flickable {
+                            id: _swatchViewport
                             anchors.top:        parent.top
                             anchors.topMargin:  32
                             anchors.left:       parent.left;  anchors.leftMargin:  12
                             anchors.right:      parent.right; anchors.rightMargin: 12
                             height: 32
-                            spread: true
-                            options: _accentPicker._options
-                            colors:  _accentPicker._swColors
-                            activeIndex: _accentPicker._activeIndex
-                            onPicked: (i) => {
-                                if (_accentPicker._options[i].auto) {
-                                    ShellSettings.neutralAccentAuto = true
-                                } else {
-                                    ShellSettings.neutralAccentAuto = false
-                                    ShellSettings.neutralAccent = _accentPicker._options[i].color
+                            contentWidth: _swatchRow.width
+                            contentHeight: height
+                            flickableDirection: Flickable.HorizontalFlick
+                            boundsMovement: Flickable.StopAtBounds
+                            interactive: contentWidth > width + 1
+                            clip: true
+
+                            function revealIndex(index: int): void {
+                                if (!interactive || index < 0) return
+                                const left = index * 32
+                                const right = left + 26
+                                if (left < contentX) contentX = left
+                                else if (right > contentX + width) contentX = right - width
+                            }
+
+                            SwatchRow {
+                                id: _swatchRow
+                                width: Math.max(_swatchViewport.width, implicitWidth)
+                                height: parent.height
+                                spread: true
+                                options: _accentPicker._options
+                                colors:  _accentPicker._swColors
+                                activeIndex: _accentPicker._activeIndex
+                                onActiveIndexChanged: Qt.callLater(function() {
+                                    _swatchViewport.revealIndex(_swatchRow.activeIndex)
+                                })
+                                onPicked: (i) => {
+                                    if (_accentPicker._options[i].auto) {
+                                        ShellSettings.neutralAccentAuto = true
+                                    } else {
+                                        ShellSettings.neutralAccentAuto = false
+                                        ShellSettings.neutralAccent = _accentPicker._options[i].color
+                                    }
                                 }
                             }
                         }
 
                         HueStrip {
                             id: _hueStrip
-                            anchors.top:       _swatchRow.bottom; anchors.topMargin: 8
+                            anchors.top:       _swatchViewport.bottom; anchors.topMargin: 8
                             anchors.left:      parent.left;  anchors.leftMargin:  12
                             anchors.right:     parent.right; anchors.rightMargin: 12
                             height: 12
@@ -472,188 +473,17 @@ PageShell {
 
         Component {
             id: _secNightLight
-            Column {
-            width: _detailBody.width
-            spacing: 0
-
-            SettingsCard {
-                visible: NightLight.toolAvailable
-                ToggleRow {
-                    glyph: "󰖙"; label: "Follow sun position"
-                    checked: ShellSettings.nightLightAuto
-                    onToggled: ShellSettings.nightLightAuto = !ShellSettings.nightLightAuto
-                }
-                CollapsibleSection {
-                    expanded: !ShellSettings.nightLightAuto
-                    SliderRow {
-                        glyph: "󰖚"; label: "Color temperature"
-                        value: ShellSettings.nightLightTemp
-                        min: 1000; max: 6500; step: 100
-                        displayValue: ShellSettings.nightLightTemp + "K"
-                        onChanged: (v) => ShellSettings.nightLightTemp = v
-                    }
-                }
-                CollapsibleSection {
-                    expanded: ShellSettings.nightLightAuto
-                    HintText { text: "Temperature tracks sunset and sunrise at " + NightLight.locationLabel + "." }
-                }
-            }
-            HintText {
-                visible: !NightLight.toolAvailable
-                text: "hyprsunset is not installed."
-            }
-            }
+            SettingsNightLightSection {}
         }
 
         Component {
             id: _secSurface
-            Column {
-            width: _detailBody.width
-            spacing: 0
-
-            SectionLabel { label: "BAR"; first: true }
-            SettingsCard {
-                ChoiceChipRow {
-                    glyph: "󰍹"; label: "Position"
-                    currentValue: ShellSettings.barPosition
-                    model: [
-                        { value: "top",    label: "Top"    },
-                        { value: "bottom", label: "Bottom" }
-                    ]
-                    onChosen: (v) => ShellSettings.barPosition = v
-                }
-                ChoiceChipRow {
-                    glyph: "󰲏"; label: "Height"
-                    currentValue: ShellSettings.barHeight
-                    model: [
-                        { value: 28, label: "Compact" },
-                        { value: 36, label: "Normal"  },
-                        { value: 44, label: "Tall"    }
-                    ]
-                    onChosen: (v) => ShellSettings.barHeight = v
-                }
-                SliderRow {
-                    glyph: "󰗌"; label: "Opacity"
-                    value: ShellSettings.barOpacity
-                    min: 0.4; max: 1.0; step: 0.02
-                    displayValue: Math.round(ShellSettings.barOpacity * 100) + "%"
-                    onChanged: (v) => ShellSettings.barOpacity = v
-                }
-            }
-
-            SectionLabel { label: "FLOATING" }
-            SettingsCard {
-                ToggleRow {
-                    glyph: "󰖲"; label: "Floating bar"
-                    checked: ShellSettings.barFloating
-                    onToggled: ShellSettings.barFloating = !ShellSettings.barFloating
-                }
-                CollapsibleSection {
-                    expanded: ShellSettings.barFloating
-                    SliderRow {
-                        glyph: "󰁌"; label: "Width"
-                        value: ShellSettings.barWidth
-                        min: 0.5; max: 1.0; step: 0.02
-                        displayValue: Math.round(ShellSettings.barWidth * 100) + "%"
-                        onChanged: (v) => ShellSettings.barWidth = v
-                    }
-                    ChoiceChipRow {
-                        glyph: "󰀁"; label: "Shape"
-                        currentValue: ShellSettings.barCornerStyle
-                        model: [
-                            { value: "flat",  label: "Flat"  },
-                            { value: "round", label: "Round" }
-                        ]
-                        onChosen: (v) => ShellSettings.barCornerStyle = v
-                    }
-                    CollapsibleSection {
-                        expanded: ShellSettings.barCornerStyle === "round"
-                        SliderRow {
-                            glyph: "󱓻"; label: "Roundness"
-                            value: ShellSettings.barRadius
-                            min: 2; max: 28; step: 1
-                            displayValue: ShellSettings.barRadius + "px"
-                            onChanged: (v) => ShellSettings.barRadius = Math.round(v)
-                        }
-                    }
-                    ToggleRow {
-                        glyph: "󰘷"; label: "Shell shadows"
-                        checked: ShellSettings.barShadow
-                        onToggled: ShellSettings.barShadow = !ShellSettings.barShadow
-                    }
-                    CollapsibleSection {
-                        expanded: ShellSettings.barShadow
-                        SliderRow {
-                            glyph: "󰔏"; label: "Shadow depth"
-                            value: ShellSettings.barShadowStrength
-                            min: 0.3; max: 2.0; step: 0.1
-                            displayValue: Math.round(ShellSettings.barShadowStrength * 100) + "%"
-                            onChanged: (v) => ShellSettings.barShadowStrength = v
-                        }
-                    }
-                }
-            }
-            }
+            SettingsSurfaceSection {}
         }
 
         Component {
             id: _secSeparators
-            Column {
-            width: _detailBody.width
-            spacing: 0
-
-            SettingsCard {
-                ToggleRow {
-                    glyph: "󰡍"; label: "Compact spacing"
-                    description: "Separators between groups only"
-                    checked: ShellSettings.barCompact
-                    onToggled: ShellSettings.barCompact = !ShellSettings.barCompact
-                }
-                ToggleRow {
-                    glyph: "󰁌"; label: "Auto tighten"
-                    description: "Tightens spacing when widgets crowd the bar"
-                    checked: ShellSettings.barAutoCompact
-                    onToggled: ShellSettings.barAutoCompact = !ShellSettings.barAutoCompact
-                }
-                SelectRow {
-                    glyph: "󰻂"; label: "Separator"
-                    currentValue: ShellSettings.dotStyle
-                    model: [
-                        { value: "·",     label: "Dot ·"     },
-                        { value: "•",     label: "Bullet •"  },
-                        { value: "◦",     label: "Ring ◦"    },
-                        { value: "|",     label: "Pipe |"    },
-                        { value: "slash", label: "Slash /"   },
-                        { value: "line",  label: "Line │"    },
-                        { value: "none",  label: "None"      }
-                    ]
-                    onChosen: (v) => ShellSettings.dotStyle = v
-                }
-                ChoiceChipRow {
-                    glyph: "󰤼"; label: "Spacing"
-                    currentValue: ShellSettings.barSpacing
-                    model: [
-                        { value: 8,  label: "Tight"  },
-                        { value: 11, label: "Normal" },
-                        { value: 15, label: "Loose"  }
-                    ]
-                    onChosen: (v) => ShellSettings.barSpacing = v
-                }
-                // no marks are drawn under "None", so the opacity control is moot
-                CollapsibleSection {
-                    expanded: ShellSettings.dotStyle !== "none"
-                    SliderRow {
-                        glyph: ShellSettings.dotTextGlyph
-                        glyphColor: Theme.withAlpha(Theme.text, Math.max(0.35, ShellSettings.dotOpacity))
-                        label: "Separator opacity"
-                        value: ShellSettings.dotOpacity
-                        min: 0.10; max: 1.0; step: 0.05
-                        displayValue: Math.round(ShellSettings.dotOpacity * 100) + "%"
-                        onChanged: (v) => ShellSettings.dotOpacity = v
-                    }
-                }
-            }
-            }
+            SettingsSeparatorsSection {}
         }
 
         Component {
@@ -706,10 +536,11 @@ PageShell {
             }
 
             CollapsibleSection {
+                id: _glowSection
                 expanded: ShellSettings.underlineGlow
                 Loader {
                     width: parent.width
-                    active: ShellSettings.underlineGlow || parent.height > 0.5
+                    active: ShellSettings.underlineGlow || _glowSection.height > 0.5
                     height: item ? item.implicitHeight : 0
                     sourceComponent: Component {
                         Column {
@@ -771,158 +602,12 @@ PageShell {
 
         Component {
             id: _secMedia
-            Column {
-            width: _detailBody.width
-            spacing: 0
-
-            SectionLabel { label: "NOW PLAYING"; first: true }
-            SettingsCard {
-                ToggleRow {
-                    glyph: "󰎇"; label: "Show artist + title"
-                    checked: ShellSettings.mediaWidgetFormat === "artist-title"
-                    onToggled: ShellSettings.mediaWidgetFormat = (ShellSettings.mediaWidgetFormat === "artist-title" ? "title" : "artist-title")
-                }
-                ToggleRow {
-                    glyph: "󰐊"; label: "Playback helper"
-                    description: "Play state and progress in the bar"
-                    checked: ShellSettings.mediaWidgetHelper
-                    onToggled: ShellSettings.mediaWidgetHelper = !ShellSettings.mediaWidgetHelper
-                }
-            }
-
-            SectionLabel { label: "VISUALIZER" }
-            SettingsCard {
-                ToggleRow {
-                    glyph: "󰱐"; label: "Audio visualizer"
-                    description: "Runs only while audio is playing"
-                    checked: ShellSettings.mediaProgress
-                    onToggled: ShellSettings.mediaProgress = !ShellSettings.mediaProgress
-                    available: !SystemTools.ready || SystemTools.hasCava
-                    dependsNote: SystemTools.ready ? "cava missing" : "Checking"
-                }
-                CollapsibleSection {
-                    expanded: ShellSettings.mediaProgress && SystemTools.hasCava
-                    ChoiceChipRow {
-                        glyph: "󰝚"; label: "Position"
-                        currentValue: ShellSettings.mediaVisualizerPosition
-                        model: [
-                            { value: "media",  label: "Media" },
-                            { value: "center", label: "Center" }
-                        ]
-                        onChosen: (v) => ShellSettings.mediaVisualizerPosition = v
-                    }
-                    ChoiceChipRow {
-                        glyph: "󰝚"; label: "Shape"
-                        currentValue: ShellSettings.mediaVisualizerStyle
-                        model: [
-                            { value: "wave",  label: "Wave" },
-                            { value: "bars",  label: "Bars" },
-                            { value: "pulse", label: "Pulse" }
-                        ]
-                        onChosen: (v) => ShellSettings.mediaVisualizerStyle = v
-                    }
-                    ChoiceChipRow {
-                        glyph: "󰓅"; label: "Preset"
-                        currentValue: ShellSettings.mediaVisualizerPreset
-                        model: [
-                            { value: "eco",      label: "Eco" },
-                            { value: "balanced", label: "Balanced" },
-                            { value: "smooth",   label: "Smooth" }
-                        ]
-                        onChosen: (v) => ShellSettings.mediaVisualizerPreset = v
-                    }
-                    HintText { text: "Preset sets bar count and framerate — Eco costs the least CPU." }
-                }
-            }
-            }
+            SettingsMediaSection {}
         }
 
         Component {
             id: _secIndicators
-            Column {
-            width: _detailBody.width
-            spacing: 0
-
-            SectionLabel { label: "CONTENT"; first: true }
-            SettingsCard {
-                ToggleRow {
-                    glyph: "󰦩"; label: "Window title"
-                    checked: ShellSettings.showWindowTitle
-                    onToggled: ShellSettings.showWindowTitle = !ShellSettings.showWindowTitle
-                }
-                CollapsibleSection {
-                    expanded: ShellSettings.showWindowTitle
-                    ToggleRow {
-                        glyph: "󰀻"; label: "App name"
-                        checked: ShellSettings.showWindowTitleApp
-                        onToggled: ShellSettings.showWindowTitleApp = !ShellSettings.showWindowTitleApp
-                    }
-                    ToggleRow {
-                        glyph: "󰉞"; label: "Center between widgets"
-                        checked: ShellSettings.windowTitleCenterGap
-                        onToggled: ShellSettings.windowTitleCenterGap = !ShellSettings.windowTitleCenterGap
-                    }
-                }
-            }
-
-            SectionLabel { label: "INTERACTION" }
-            SettingsCard {
-                ToggleRow {
-                    glyph: "󰍽"; label: "Hover highlight"
-                    checked: ShellSettings.barHoverHighlight
-                    onToggled: ShellSettings.barHoverHighlight = !ShellSettings.barHoverHighlight
-                }
-                ToggleRow {
-                    glyph: "󰈈"; label: "Reveal values on hover"
-                    description: "Battery, volume, brightness, and workspace numbers"
-                    checked: ShellSettings.valuesOnHover
-                    onToggled: ShellSettings.valuesOnHover = !ShellSettings.valuesOnHover
-                }
-                CollapsibleSection {
-                    expanded: ShellSettings.valuesOnHover
-                    ToggleRow {
-                        glyph: "󰦣"; label: "Compact level bars"
-                        checked: ShellSettings.hoverLevelBar
-                        description: "Show battery, volume, and brightness levels before hover"
-                        onToggled: ShellSettings.hoverLevelBar = !ShellSettings.hoverLevelBar
-                    }
-                }
-            }
-
-            SectionLabel { label: "STATUS WIDGETS" }
-            SettingsCard {
-                ToggleRow {
-                    glyph: "󰂃"; label: "Hide charged battery"
-                    checked: ShellSettings.batteryAutoHide
-                    available: Battery.available
-                    dependsNote: "No battery"
-                    onToggled: ShellSettings.batteryAutoHide = !ShellSettings.batteryAutoHide
-                }
-                ToggleRow {
-                    glyph: "󰓅"; label: "Network speed"
-                    checked: ShellSettings.networkTrafficStats
-                    available: Network.toolAvailable
-                    dependsNote: "NetworkManager missing"
-                    onToggled: ShellSettings.networkTrafficStats = !ShellSettings.networkTrafficStats
-                }
-                CollapsibleSection {
-                    expanded: ShellSettings.networkTrafficStats
-                    ToggleRow {
-                        glyph: "󰐃"; label: "Always show speed"
-                        checked: ShellSettings.networkSpeedInline
-                        onToggled: ShellSettings.networkSpeedInline = !ShellSettings.networkSpeedInline
-                    }
-                }
-                ToggleRow {
-                    glyph: "󰦝"; label: "Connection under VPN"
-                    checked: ShellSettings.netVpnShowLink
-                    available: Network.toolAvailable
-                    dependsNote: "NetworkManager missing"
-                    onToggled: ShellSettings.netVpnShowLink = !ShellSettings.netVpnShowLink
-                }
-            }
-
-            }
+            SettingsIndicatorsSection {}
         }
 
         Component {
@@ -942,63 +627,7 @@ PageShell {
 
         Component {
             id: _secOsd
-            Column {
-            width: _detailBody.width
-            spacing: 0
-
-            SettingsCard {
-                ToggleRow {
-                    glyph: "󱀅"; label: "Show OSD"
-                    checked: ShellSettings.osdEnabled
-                    onToggled: ShellSettings.osdEnabled = !ShellSettings.osdEnabled
-                }
-                CollapsibleSection {
-                    expanded: ShellSettings.osdEnabled
-                    // Mode: floating pill vs bar-inline. Drives which sub-options apply.
-                    ToggleRow {
-                        glyph: "󰀱"; label: "Show in bar"
-                        description: "Volume and brightness in the bar center"
-                        checked: ShellSettings.osdBarIntegrated
-                        onToggled: ShellSettings.osdBarIntegrated = !ShellSettings.osdBarIntegrated
-                    }
-                    CollapsibleSection {
-                        expanded: !ShellSettings.osdBarIntegrated
-                        ToggleRow {
-                            glyph: "󰖲"; label: "Match bar shape"
-                            checked: ShellSettings.osdMatchBar
-                            onToggled: ShellSettings.osdMatchBar = !ShellSettings.osdMatchBar
-                        }
-                    }
-                    ChoiceChipRow {
-                        glyph: "󰔛"; label: "Dismiss after"
-                        currentValue: ShellSettings.osdTimeout
-                        model: [
-                            { value: 1000, label: "1s" },
-                            { value: 2000, label: "2s" },
-                            { value: 3000, label: "3s" },
-                            { value: 5000, label: "5s" }
-                        ]
-                        onChosen: (v) => ShellSettings.osdTimeout = v
-                    }
-                    ChoiceChipRow {
-                        glyph: "󰒓"; label: "Show for"
-                        currentValue: ShellSettings.osdKindFilter
-                        model: [
-                            { value: "both",       glyph: "󰓎", label: "Both" },
-                            { value: "volume",     glyph: "󰕾", label: "Vol"  },
-                            { value: "brightness", glyph: "󰃟", label: "Brt"  }
-                        ]
-                        onChosen: (v) => ShellSettings.osdKindFilter = v
-                    }
-                    ToggleRow {
-                        glyph: "󰓎"; label: "Volume emphasis"
-                        description: "Warm tint as volume nears max"
-                        checked: ShellSettings.osdVolumeTint
-                        onToggled: ShellSettings.osdVolumeTint = !ShellSettings.osdVolumeTint
-                    }
-                }
-            }
-            }
+            SettingsOsdSection {}
         }
 
         Component {
@@ -1060,10 +689,11 @@ PageShell {
             }
 
             CollapsibleSection {
+                id: _alertsSection
                 expanded: ShellSettings.osdBatteryWarn || ShellSettings.osdTempWarn
                 Loader {
                     width: parent.width
-                    active: ShellSettings.osdBatteryWarn || ShellSettings.osdTempWarn || parent.height > 0.5
+                    active: ShellSettings.osdBatteryWarn || ShellSettings.osdTempWarn || _alertsSection.height > 0.5
                     height: item ? item.implicitHeight : 0
                     sourceComponent: Component {
                         Column {

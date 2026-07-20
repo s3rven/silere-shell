@@ -633,23 +633,13 @@ PageShell {
             }
         }
 
-        Item {
-            width: 1
-            height: root._wifiPickerOpen ? root._itemGap : 0
-            Behavior on height { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
-        }
-        CollapsibleSection {
-            width: parent.width
-            expanded: root._wifiPickerOpen
-            Loader {
-                width: parent.width
-                active: root._wifiPickerOpen || parent.height > 0.5
-                height: item ? item.implicitHeight : 0
-                sourceComponent: Component {
-                    WifiList {
-                        width: parent.width
-                        open: root._wifiPickerOpen
-                    }
+        InlinePicker {
+            open: root._wifiPickerOpen
+            gap: root._itemGap
+            content: Component {
+                WifiList {
+                    width: parent.width
+                    open: root._wifiPickerOpen
                 }
             }
         }
@@ -681,24 +671,13 @@ PageShell {
             }
         }
 
-        Item {
-            width: 1
-            height: root._btPickerOpen ? root._itemGap : 0
-            Behavior on height { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
-        }
-
-        CollapsibleSection {
-            width: parent.width
-            expanded: root._btPickerOpen
-            Loader {
-                width: parent.width
-                active: root._btPickerOpen || parent.height > 0.5
-                height: item ? item.implicitHeight : 0
-                sourceComponent: Component {
-                    BluetoothList {
-                        width: parent.width
-                        open: root._btPickerOpen
-                    }
+        InlinePicker {
+            open: root._btPickerOpen
+            gap: root._itemGap
+            content: Component {
+                BluetoothList {
+                    width: parent.width
+                    open: root._btPickerOpen
                 }
             }
         }
