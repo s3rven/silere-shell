@@ -11,6 +11,8 @@ Item {
     property color  ringColor: chipColor
     property bool   active:    false
     property string name:      ""
+    // announced ahead of the colour name so a swatch says what it is choosing
+    property string groupLabel: ""
     default property alias content: _chip.data
 
     signal picked()
@@ -23,7 +25,7 @@ Item {
 
     activeFocusOnTab: true
     Accessible.role: Accessible.RadioButton
-    Accessible.name: root.name
+    Accessible.name: root.groupLabel.length > 0 ? root.groupLabel + ": " + root.name : root.name
     Accessible.checked: root.active
     Accessible.onPressAction: root._activate()
     Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }

@@ -19,8 +19,11 @@ Item {
     // Optional explicit colour for the selected swatch outline.
     property color ringColor: "transparent"
     property int hoveredIndex: -1
+    property string groupLabel: ""
 
     signal picked(int index)
+    // a scrolling viewport must follow keyboard focus or the ring lands off-screen
+    signal focusMoved(int index)
 
     implicitHeight: 32
     implicitWidth: edgePadding * 2 + options.length * 26
@@ -66,11 +69,23 @@ Item {
                 chipColor: root.colorAt(index)
                 ringColor: root.ringColor.a > 0 ? root.ringColor : chipColor
                 name:      modelData.name ?? ""
+                groupLabel: root.groupLabel
                 active:    index === root.activeIndex
                 onPicked:  root.picked(index)
                 onHoverChanged: (n, h) => {
                     if (h) root.hoveredIndex = index
                     else if (root.hoveredIndex === index) root.hoveredIndex = -1
+                }
+                onActiveFocusChanged: if (activeFocus) root.focusMoved(index)
+                Keys.onLeftPressed: event => {
+                    const it = _rep.itemAt(_sw.index - 1)
+                    if (it) it.forceActiveFocus()
+                    event.accepted = true
+                }
+                Keys.onRightPressed: event => {
+                    const it = _rep.itemAt(_sw.index + 1)
+                    if (it) it.forceActiveFocus()
+                    event.accepted = true
                 }
 
                 Grid {

@@ -89,6 +89,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         anchors.verticalCenterOffset: root._stacked ? 16 : 0
         width: implicitWidth
+        groupLabel: root.label
         onPicked: (i) => root.picked(i)
     }
 }
