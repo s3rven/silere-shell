@@ -13,6 +13,8 @@ SettingsSeparatorsSection 1.0 SettingsSeparatorsSection.qml
 SettingsMediaSection 1.0 SettingsMediaSection.qml
 SettingsIndicatorsSection 1.0 SettingsIndicatorsSection.qml
 SettingsOsdSection 1.0 SettingsOsdSection.qml
+SettingsWarningsSection 1.0 SettingsWarningsSection.qml
+SettingsThemeSection 1.0 SettingsThemeSection.qml
 InlinePicker 1.0 InlinePicker.qml
 SettingsNav  1.0 SettingsNav.qml
 PowerRailContent 1.0 PowerRailContent.qml
