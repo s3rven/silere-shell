@@ -268,6 +268,19 @@ if command -v matugen >/dev/null 2>&1; then
   _tmpl="$_cfg_home/matugen/templates/silere-shell/Theme.qml"
   if [ -f "$_tmpl" ]; then
     ok "matugen tmpl" "$_tmpl"
+    # an installed template predating a new palette role regenerates a Theme.qml missing it,
+    # which surfaces as silently wrong colours rather than a load error
+    _missing=""
+    for _role in $(grep -rhoE 'MatugenTheme\.[a-zA-Z_][a-zA-Z0-9_]*' --include='*.qml' . \
+      | sed 's/^MatugenTheme\.//' | grep -vx qml | sort -u); do
+      grep -qE "property[[:space:]]+[a-zA-Z]+[[:space:]]+$_role\b" "$_tmpl" \
+        || _missing="$_missing $_role"
+    done
+    if [ -n "$_missing" ]; then
+      warn "matugen roles" "template lacks:$_missing — reinstall or: cp assets/matugen-theme.qml $_tmpl"
+    else
+      ok "matugen roles" "template provides every palette role the shell reads"
+    fi
   else
     warn "matugen tmpl" "template missing — run installer or: cp assets/matugen-theme.qml $_tmpl"
   fi
