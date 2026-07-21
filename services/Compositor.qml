@@ -114,6 +114,7 @@ Singleton {
     property int _hyprTick: 0
     property bool _hyprRefreshAgain: false
     property string _hyprActiveAddr: ""
+    readonly property bool _liveTitlesWanted: ShellSettings.showWindowTitle
 
     // Hyprland events arrive in bursts and several consumers may ask for the
     // same refresh (workspace icons, fullscreen state, notification focus).
@@ -160,6 +161,14 @@ Singleton {
         target: ShellSettings
         function onWsShowAppIconsChanged(): void {
             if (ShellSettings.wsShowAppIcons) root.refreshToplevels()
+        }
+        function onShowWindowTitleChanged(): void {
+            if (ShellSettings.showWindowTitle) {
+                root.refreshToplevels()
+                root._hyprTick++
+            } else {
+                _hyprTitleSync.stop()
+            }
         }
     }
 
@@ -251,14 +260,16 @@ Singleton {
         function onRawEvent(event) {
             const n = event.name
             if (n === "windowtitle" || n === "windowtitlev2" || n === "activewindow") {
-                if (!Idle.isIdle && !_hyprTitleSync.running) _hyprTitleSync.start()
+                if (root._liveTitlesWanted && !Idle.isIdle && !_hyprTitleSync.running)
+                    _hyprTitleSync.start()
                 return
             }
             // activewindow refires per title frame; only v2's address distinguishes a real focus change
             if (n === "activewindowv2") {
                 const addr = String(event.data ?? "")
                 if (addr === root._hyprActiveAddr) {
-                    if (!Idle.isIdle && !_hyprTitleSync.running) _hyprTitleSync.start()
+                    if (root._liveTitlesWanted && !Idle.isIdle && !_hyprTitleSync.running)
+                        _hyprTitleSync.start()
                     return
                 }
                 root._hyprActiveAddr = addr
@@ -303,6 +314,7 @@ Singleton {
 
     // niri window.workspace_id is a global id; join to the workspace list for display idx + output
     readonly property var _niriToplevels: {
+        root._liveTitlesWanted
         const wins = root._niriWinRaw
         const ws = root._niriWsRaw
         const byId = {}
@@ -344,6 +356,20 @@ Singleton {
 
     function _niriAction(args): void {
         Quickshell.execDetached(["niri", "msg", "action"].concat(args))
+    }
+
+    function _niriWindowChanged(previous, next): bool {
+        if (!previous || !next) return true
+        const oldStamp = previous.focus_timestamp || {}
+        const newStamp = next.focus_timestamp || {}
+        return previous.app_id !== next.app_id
+            || previous.pid !== next.pid
+            || previous.workspace_id !== next.workspace_id
+            || previous.is_focused !== next.is_focused
+            || previous.is_fullscreen !== next.is_fullscreen
+            || oldStamp.secs !== newStamp.secs
+            || oldStamp.nanos !== newStamp.nanos
+            || (root._liveTitlesWanted && previous.title !== next.title)
     }
 
     function _onNiriLine(line): void {
@@ -403,13 +429,21 @@ Singleton {
         if (ev.WindowOpenedOrChanged) {
             const w = ev.WindowOpenedOrChanged.window
             if (!w) return
-            const wins = root._niriWinRaw.slice()
-            let found = false
+            const current = root._niriWinRaw
+            let foundAt = -1
+            for (let i = 0; i < current.length; i++)
+                if (current[i] && current[i].id === w.id) { foundAt = i; break }
+            if (foundAt >= 0 && !root._niriWindowChanged(current[foundAt], w)) {
+                current[foundAt].title = w.title
+                return
+            }
+
+            const wins = current.slice()
             for (let i = 0; i < wins.length; i++) {
-                if (wins[i] && wins[i].id === w.id) { wins[i] = w; found = true }
+                if (wins[i] && wins[i].id === w.id) wins[i] = w
                 else if (wins[i] && w.is_focused) wins[i] = Object.assign({}, wins[i], { is_focused: false })
             }
-            if (!found) wins.push(w)
+            if (foundAt < 0) wins.push(w)
             root._niriWinRaw = wins
             return
         }

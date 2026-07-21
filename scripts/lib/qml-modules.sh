@@ -7,6 +7,7 @@
 SILERE_REQUIRED_QML_MODULES=(
     Quickshell.Bluetooth
     Quickshell.Hyprland
+    Quickshell.Networking
     Quickshell.Services.Mpris
     Quickshell.Services.Notifications
     Quickshell.Services.Pipewire

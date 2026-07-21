@@ -19,6 +19,7 @@ Item {
     signal dismissRequested(int notifId, var notification, bool expired)
 
     property bool _expired: false
+    property bool _leaving: false
 
     Accessible.role: Accessible.AlertMessage
     Accessible.name: appNameText
@@ -75,6 +76,7 @@ Item {
     function dismiss(expired): void {
         if (!card.enabled) return
         card._expired = expired === true
+        card._leaving = true
         card._collapseBasis = cardRect.height
         _autoClose.stop()
         _arrivalShimmer.stop()
@@ -268,7 +270,9 @@ Item {
             }
         }
 
-        Behavior on x       { enabled: card.visible && cardRect._behaviorEnabled && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(200); easing.type: Easing.OutQuart } }
+        // one Behavior drives both arrival and dismissal, so the curve has to follow the
+        // direction — every other swap in the shell decelerates in and accelerates out
+        Behavior on x       { enabled: card.visible && cardRect._behaviorEnabled && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(200); easing.type: card._leaving ? Easing.InCubic : Easing.OutQuart } }
         Behavior on opacity { enabled: card.visible && cardRect._behaviorEnabled && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(140) } }
         Behavior on height  { enabled: card.visible && cardRect._behaviorEnabled && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
 
@@ -618,86 +622,15 @@ Item {
         Behavior on border.color { ColorAnimation { duration: Motion.medium } }
     }
 
-    Canvas {
-        id: _countdownArc
+    PerimeterProgress {
         anchors.fill: cardRect
         visible: card._showCountdown
         opacity: cardRect.opacity * card._countdownPulse
-        antialiasing: true
-        renderTarget:   Canvas.Image
-        renderStrategy: Canvas.Threaded
-
-        readonly property color arcColor: card.isCritical ? Theme.error
-                                        : (card._timeoutProgress < 0.30 ? Theme.warning : Theme.accent)
-        readonly property color trackColor: Theme.menuControlLine
-        property real progress: card._timeoutProgress
-
-        onPaint: {
-            const ctx = getContext("2d")
-            ctx.clearRect(0, 0, width, height)
-            if (width <= 0 || height <= 0) return
-            const inset = 2.5
-            const r = Math.max(0.5, cardRect.radius - inset)
-            const x = inset, y = inset
-            const w = width - inset * 2, h = height - inset * 2
-            const sx = Math.max(0, w - 2 * r), sy = Math.max(0, h - 2 * r)
-            const ar = Math.PI / 2 * r
-
-            function outline() {
-                ctx.beginPath()
-                ctx.moveTo(x + r, y)
-                ctx.lineTo(x + w - r, y)
-                ctx.arc(x + w - r, y + r,     r, -Math.PI / 2, 0)
-                ctx.lineTo(x + w, y + h - r)
-                ctx.arc(x + w - r, y + h - r, r, 0, Math.PI / 2)
-                ctx.lineTo(x + r, y + h)
-                ctx.arc(x + r, y + h - r,     r, Math.PI / 2, Math.PI)
-                ctx.lineTo(x, y + r)
-                ctx.arc(x + r, y + r,         r, Math.PI, 3 * Math.PI / 2)
-            }
-
-            outline()
-            ctx.lineWidth   = 1
-            ctx.strokeStyle = _countdownArc.trackColor
-            ctx.stroke()
-
-            const p = _countdownArc.progress
-            if (p <= 0.002) return
-            let t = p * (2 * sx + 2 * sy + 4 * ar)
-            let l
-            ctx.beginPath()
-            ctx.moveTo(x + r, y)
-            l = Math.min(t, sx); ctx.lineTo(x + r + l, y); t -= l
-            if (t > 0) { l = Math.min(t, ar); ctx.arc(x + w - r, y + r,     r, -Math.PI / 2, -Math.PI / 2 + l / r); t -= l }
-            if (t > 0) { l = Math.min(t, sy); ctx.lineTo(x + w, y + r + l); t -= l }
-            if (t > 0) { l = Math.min(t, ar); ctx.arc(x + w - r, y + h - r, r, 0, l / r); t -= l }
-            if (t > 0) { l = Math.min(t, sx); ctx.lineTo(x + w - r - l, y + h); t -= l }
-            if (t > 0) { l = Math.min(t, ar); ctx.arc(x + r, y + h - r,     r, Math.PI / 2, Math.PI / 2 + l / r); t -= l }
-            if (t > 0) { l = Math.min(t, sy); ctx.lineTo(x, y + h - r - l); t -= l }
-            if (t > 0) { l = Math.min(t, ar); ctx.arc(x + r, y + r,         r, Math.PI, Math.PI + l / r); t -= l }
-            ctx.lineWidth   = 1.5
-            ctx.lineCap     = "round"
-            ctx.strokeStyle = _countdownArc.arcColor
-            ctx.stroke()
-        }
-
-        onVisibleChanged:  { _painted = progress; _lastPaintMs = 0; requestPaint() }
-        onWidthChanged:    if (visible) requestPaint()
-        onHeightChanged:   if (visible) requestPaint()
-        onArcColorChanged: if (visible) requestPaint()
-        onTrackColorChanged: if (visible) requestPaint()
-        // repaint per ~1px of perimeter travel, skip sub-pixel moves
-        property real _painted: -1
-        // cap to ~33fps — the arc ticks every vsync frame otherwise, each a threaded-canvas upload
-        property real _lastPaintMs: 0
-        onProgressChanged: {
-            if (!visible) return
-            const now = Date.now()
-            if (now - _lastPaintMs < 30) return
-            if (Math.abs(progress - _painted) * 2 * (width + height) < 1.0) return
-            _painted = progress
-            _lastPaintMs = now
-            requestPaint()
-        }
+        inset:        2.5
+        cornerRadius: cardRect.radius
+        progress:     card._timeoutProgress
+        trackColor:   Theme.menuControlLine
+        arcColor:     card.isCritical ? Theme.error
+                    : (card._timeoutProgress < 0.30 ? Theme.warning : Theme.accent)
     }
 }

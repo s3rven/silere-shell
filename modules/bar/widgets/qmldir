@@ -1,4 +1,7 @@
 Workspaces    1.0 Workspaces.qml
+WorkspaceAppIcons 1.0 WorkspaceAppIcons.qml
+WorkspaceNotifPulse 1.0 WorkspaceNotifPulse.qml
+WorkspaceUrgentFx 1.0 WorkspaceUrgentFx.qml
 WindowTitle   1.0 WindowTitle.qml
 Clock         1.0 Clock.qml
 Volume        1.0 Volume.qml

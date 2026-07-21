@@ -91,7 +91,7 @@ ShellRoot {
     }
 
     PopupLoader {
-        wantOpen: OsdBarState.activeCount > 0
+        wantOpen: ShellSettings.osdEnabled && OsdBarState.activeCount > 0
         unloadDelay: 50
         surface: Component { OsdWindow { targetScreen: root.activeOverlayScreen } }
     }

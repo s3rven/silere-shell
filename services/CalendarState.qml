@@ -20,6 +20,18 @@ Singleton {
     }
     function close(): void { if (open) open = false; triggerScreen = null }
 
+    // keybind/script entry point; null triggerScreen resolves to the focused output
+    IpcHandler {
+        target: "calendar"
+
+        function toggle(): void {
+            if (root.open) { root.close(); return }
+            root.triggerScreen = null
+            root.open = true
+        }
+        function close(): void { root.close() }
+    }
+
     // day marks: "y-m-d" → true, reassigned wholesale so cell bindings refresh; file-backed to survive restarts
     property var marks: ({})
     property bool _savePendingForDir: false

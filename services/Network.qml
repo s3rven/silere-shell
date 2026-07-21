@@ -1,76 +1,88 @@
 pragma Singleton
+pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
 import Quickshell.Io
-import "../config"
+import Quickshell.Networking
 
 Singleton {
     id: root
 
-    property bool available:        false
-    property bool connected:        false
-    property bool isWifi:           false
-    property bool hasWifiDevice:    false   // any NM-managed wifi radio exists at all
-    property bool hasVpn:           false
-    property string connectionName: ""
-    property string vpnName:        ""
-    property string deviceName:     ""
-    property string deviceType:     ""
-    property bool monitoring:        false
-    property bool _monitorSettling:  false
-    readonly property bool toolAvailable: SystemTools.hasNmcli
+    readonly property bool toolAvailable: Networking.backend !== NetworkBackendType.None
+    readonly property var _devices: Networking.devices.values || []
     readonly property bool _wanted: !Idle.isIdle && (
         ShellSettings.barShowNetwork
         || ShellSettings.updatesWidget
         || (ShellSettings.underlineGlow && ShellSettings.underlineNetGlow)
         || MenuState.open
         || QuickActionsState.open)
-    property bool wifiEnabled:      true   // radio (rfkill) state, drives the quick toggle
-    property var    wifiNetworks:   []     // picker list: [{ssid, signal, secured, active, known}]
-    property string wifiConnecting: ""     // ssid mid-connect, "" when idle
-    property string wifiError:      ""     // ssid that last failed to connect, cleared on retry
-    property string _pendingWifiPassword: ""
-    property var    _savedWifi:     ({})   // ssid -> true for saved wifi connections
-    property bool   _wifiScanRescan: false
-    property bool   _pendingWifiRescan: false
-    // Invalidates in-flight saved-network/AP queries when the picker closes.
-    // Without this, a slow nmcli scan can repopulate a list the caller just
-    // cleared and keep doing background work after the UI no longer needs it.
-    property int    _wifiScanGeneration: 0
-    property int    _savedRunGeneration: -1
-    property int    _scanRunGeneration: -1
-    property bool   wifiScanFailed:  false
-    readonly property bool wifiScanning: _savedProc.running || _wifiScanProc.running
-    property bool   _refreshPending: false
-    property int    _queryFailures: 0
-    property bool   _statsRefreshing: false
-    property int signalStrength:    0
-    property real downBps:          0
-    property real upBps:            0
-    property real _lastRxBytes:     -1
-    property real _lastTxBytes:     -1
-    property real _lastStatsMs:     0
+    readonly property bool monitoring: toolAvailable && _wanted
 
-    readonly property bool statsDeviceReady: connected
-        && deviceName.length > 0
-        && deviceName.indexOf("/") < 0
-        && deviceName.indexOf("..") < 0
-    readonly property bool statsWanted: ShellSettings.barShowNetwork && ShellSettings.networkTrafficStats
-    readonly property bool trafficActive: statsWanted
-        && connected
-        && deviceName.length > 0
-        && (downBps >= 1024 || upBps >= 1024)
-    // Nerd-font arrows, not ↓/↑: the typographic arrows render in the base
-    // mono face and read as a different font next to the bar's icon glyphs.
-    readonly property string trafficLabel: "󰁅 " + formatRate(downBps) + " 󰁝 " + formatRate(upBps)
+    readonly property var _linkState: {
+        const devices = root._devices
+        let best = null
+        let hasWifi = false
 
+        for (let i = 0; i < devices.length; i++) {
+            const device = devices[i]
+            if (!device) continue
+
+            const wifi = device.type === DeviceType.Wifi
+            const wired = device.type === DeviceType.Wired
+            if (wifi) hasWifi = true
+            if (!wifi && !wired) continue
+
+            let network = null
+            if (wifi) {
+                const networks = device.networks ? (device.networks.values || []) : []
+                for (let j = 0; j < networks.length; j++) {
+                    if (networks[j] && networks[j].connected) {
+                        network = networks[j]
+                        break
+                    }
+                }
+            } else {
+                network = device.network
+            }
+
+            const connected = device.connected || (network && network.connected)
+            if (!connected) continue
+            const priority = wifi ? 2 : 1
+            if (!best || priority > best.priority)
+                best = { device: device, network: network, wifi: wifi, priority: priority }
+        }
+
+        return { best: best, hasWifi: hasWifi }
+    }
+
+    readonly property bool available: toolAvailable && _devices.length > 0
+    readonly property bool connected: _linkState.best !== null
+    readonly property bool isWifi: connected && _linkState.best.wifi
+    readonly property bool hasWifiDevice: _linkState.hasWifi
+    readonly property string connectionName: {
+        const best = _linkState.best
+        return best && best.network ? (best.network.name || "") : ""
+    }
+    readonly property string deviceName: {
+        const best = _linkState.best
+        return best && best.device ? (best.device.name || "") : ""
+    }
+    readonly property string deviceType: connected ? (isWifi ? "wifi" : "ethernet") : ""
+    readonly property bool wifiEnabled: Networking.wifiEnabled
+    readonly property int signalStrength: {
+        const best = _linkState.best
+        if (!best || !best.wifi || !best.network) return 0
+        return Math.round(Math.max(0, Math.min(1, best.network.signalStrength || 0)) * 100)
+    }
+
+    property bool hasVpn: false
+    property string vpnName: ""
 
     function signalGlyph(s: int): string {
         return s > 75 ? "󰤨" : s > 50 ? "󰤥" : s > 25 ? "󰤢" : "󰤟"
     }
 
-    // The underlying link's icon, ignoring any VPN overlay ("VPN / wifi").
     readonly property string underlyingIcon: {
         if (!connected) return "󰤭"
         if (isWifi) return signalGlyph(signalStrength)
@@ -79,89 +91,183 @@ Singleton {
 
     readonly property string icon: {
         if (!connected) return "󰤭"
-        if (hasVpn)     return "󰦝"
+        if (hasVpn) return "󰦝"
         return underlyingIcon
     }
 
-    function refresh(): void {
-        if (!toolAvailable || !root._wanted) return
-        if (_proc.running) {
-            _refreshPending = true
-            return
-        }
-        _refreshPending = false
-        _proc.running = true
+    function toggleWifi(): void {
+        if (!toolAvailable || !hasWifiDevice) return
+        Networking.wifiEnabled = !Networking.wifiEnabled
     }
 
-    function toggleWifi(): void {
-        if (!toolAvailable || _radioSet.running) return
-        _radioSet.exec(["nmcli", "radio", "wifi", root.wifiEnabled ? "off" : "on"])
+    property bool _scannerWanted: false
+    property string wifiConnecting: ""
+    property string wifiError: ""
+    property var _pendingNetwork: null
+    readonly property bool wifiScanning: _scanWarmup.running
+    readonly property bool wifiScanFailed: false
+
+    function _setScannerEnabled(enabled: bool): void {
+        const devices = root._devices
+        for (let i = 0; i < devices.length; i++) {
+            const device = devices[i]
+            if (device && device.type === DeviceType.Wifi)
+                device.scannerEnabled = enabled
+        }
     }
 
     function scanWifi(forceRescan: bool): void {
-        if (!toolAvailable || !wifiEnabled) {
+        if (!toolAvailable || !wifiEnabled || !hasWifiDevice) {
             clearWifiScan()
             return
         }
-        if (forceRescan) _pendingWifiRescan = true
-        _beginWifiScan()
-    }
 
-    function _beginWifiScan(): void {
-        if (!toolAvailable || !wifiEnabled || _savedProc.running || _wifiScanProc.running) return
-        wifiScanFailed = false
-        _wifiScanRescan = _pendingWifiRescan
-        _pendingWifiRescan = false
-        _savedRunGeneration = _wifiScanGeneration
-        _savedProc.running = true
+        _scannerWanted = true
+        if (forceRescan) {
+            _setScannerEnabled(false)
+            Qt.callLater(() => {
+                if (root._scannerWanted) root._setScannerEnabled(true)
+            })
+        } else {
+            _setScannerEnabled(true)
+        }
+        _scanWarmup.restart()
     }
 
     function clearWifiScan(): void {
-        _wifiScanGeneration++
+        _scannerWanted = false
+        _scanWarmup.stop()
+        _setScannerEnabled(false)
         wifiError = ""
-        wifiScanFailed = false
-        _wifiScanRescan = false
-        _pendingWifiRescan = false
-        // Stopping either process still emits exited; generation checks below
-        // prevent those stale callbacks from chaining or publishing results.
-        if (_savedProc.running) _savedProc.running = false
-        if (_wifiScanProc.running) _wifiScanProc.running = false
-        if (wifiNetworks.length > 0) wifiNetworks = []
     }
 
     function clearWifiError(): void {
         if (wifiError.length > 0) wifiError = ""
     }
 
-    function _sameWifiNetworks(a, b): bool {
-        if (!a || !b || a.length !== b.length) return false
-        for (let i = 0; i < a.length; i++) {
-            const A = a[i]
-            const B = b[i]
-            if (!A || !B) return false
-            if (A.ssid !== B.ssid || A.signal !== B.signal || A.secured !== B.secured
-                    || A.active !== B.active || A.known !== B.known)
-                return false
+    function _wifiList(): var {
+        if (!_scannerWanted) return []
+        const bySsid = {}
+        const order = []
+        const devices = root._devices
+
+        for (let i = 0; i < devices.length; i++) {
+            const device = devices[i]
+            if (!device || device.type !== DeviceType.Wifi || !device.networks) continue
+            const networks = device.networks.values || []
+            for (let j = 0; j < networks.length; j++) {
+                const network = networks[j]
+                const ssid = network ? String(network.name || "") : ""
+                if (!network || ssid.length === 0) continue
+                const signal = Math.round(Math.max(0, Math.min(1, network.signalStrength || 0)) * 100)
+                const existing = bySsid[ssid]
+                if (existing) {
+                    if (signal > existing.signal) {
+                        existing.signal = signal
+                        existing.ref = network
+                    }
+                    if (network.connected) existing.active = true
+                    if (network.known) existing.known = true
+                    continue
+                }
+                bySsid[ssid] = {
+                    ssid: ssid,
+                    signal: signal,
+                    secured: network.security !== WifiSecurityType.Open,
+                    active: network.connected,
+                    known: network.known,
+                    ref: network
+                }
+                order.push(ssid)
+            }
         }
-        return true
+
+        order.sort((a, b) => {
+            const A = bySsid[a]
+            const B = bySsid[b]
+            if (A.active !== B.active) return A.active ? -1 : 1
+            return B.signal - A.signal
+        })
+        return order.map(ssid => bySsid[ssid])
     }
 
-    // Empty password → relies on saved creds (known) or open network.
+    readonly property var wifiNetworks: _wifiList()
+
+    function _findWifiNetwork(ssid: string): var {
+        const devices = root._devices
+        let best = null
+        for (let i = 0; i < devices.length; i++) {
+            const device = devices[i]
+            if (!device || device.type !== DeviceType.Wifi || !device.networks) continue
+            const networks = device.networks.values || []
+            for (let j = 0; j < networks.length; j++) {
+                const network = networks[j]
+                if (!network || network.name !== ssid) continue
+                if (!best || network.signalStrength > best.signalStrength) best = network
+            }
+        }
+        return best
+    }
+
+    function _finishWifi(success: bool): void {
+        _connectTimeout.stop()
+        if (!success && wifiConnecting.length > 0) wifiError = wifiConnecting
+        else if (success) wifiError = ""
+        wifiConnecting = ""
+        _pendingNetwork = null
+    }
+
     function connectWifi(ssid: string, password: string): void {
-        if (!toolAvailable || ssid.length === 0 || _wifiActProc.running) return
-        root.wifiError = ""
-        root.wifiConnecting = ssid
-        const cmd = ["nmcli", "-w", "20", "device", "wifi", "connect", ssid]
-        root._pendingWifiPassword = password || ""
-        // Keep credentials out of argv (/proc/*/cmdline). nmcli reads them from
-        // the process pipe when --ask is used.
-        if (root._pendingWifiPassword.length > 0) cmd.splice(1, 0, "--ask")
-        _wifiActProc.exec(cmd)
+        if (!toolAvailable || ssid.length === 0) return
+        const network = _findWifiNetwork(ssid)
+        if (!network) {
+            wifiError = ssid
+            return
+        }
+
+        wifiError = ""
+        wifiConnecting = ssid
+        _pendingNetwork = network
+        _connectTimeout.restart()
+        if (password && password.length > 0) network.connectWithPsk(password)
+        else network.connect()
     }
 
     function disconnectWifi(): void {
-        if (!toolAvailable || deviceName.length === 0 || _wifiActProc.running) return
-        _wifiActProc.exec(["nmcli", "device", "disconnect", deviceName])
+        const best = _linkState.best
+        if (!best) return
+        if (best.network) best.network.disconnect()
+        else if (best.device) best.device.disconnect()
+    }
+
+    Connections {
+        target: root._pendingNetwork
+        ignoreUnknownSignals: true
+        function onConnectedChanged() {
+            if (root._pendingNetwork && root._pendingNetwork.connected)
+                root._finishWifi(true)
+        }
+        function onConnectionFailed() { root._finishWifi(false) }
+    }
+
+    Connections {
+        target: Networking
+        function onWifiEnabledChanged() {
+            if (!Networking.wifiEnabled) root.clearWifiScan()
+        }
+    }
+
+    onHasWifiDeviceChanged: if (_scannerWanted) Qt.callLater(() => root._setScannerEnabled(true))
+
+    Timer {
+        id: _scanWarmup
+        interval: 900
+    }
+
+    Timer {
+        id: _connectTimeout
+        interval: 20000
+        onTriggered: root._finishWifi(false)
     }
 
     function _splitNmcliLine(line: string): var {
@@ -180,16 +286,103 @@ Singleton {
         return fields
     }
 
-    function _isVpn(type: string): bool {
-        return type === "tun" || type === "wireguard" || type === "vpn"
+    function _queueVpnRefresh(): void {
+        if (!SystemTools.hasNmcli || !_wanted || _vpnProc.running) return
+        _vpnRefresh.restart()
     }
 
-    function _devicePriority(type: string): int {
-        if (!type) return -1                  // blank/malformed type — never treat as the active link
-        if (type === "wifi") return 4
-        if (type === "ethernet") return 3
-        if (_isVpn(type) || type === "loopback" || type === "lo") return -1
-        return 1                              // other real device (mobile, tether…) — low but usable
+    readonly property string _linkSignature: {
+        const devices = root._devices
+        const parts = [String(Networking.wifiEnabled)]
+        for (let i = 0; i < devices.length; i++) {
+            const device = devices[i]
+            if (!device) continue
+            parts.push(`${device.type}:${device.name}:${device.connected}:${device.state}`)
+            if (device.type !== DeviceType.Wifi || !device.networks) continue
+            const networks = device.networks.values || []
+            for (let j = 0; j < networks.length; j++) {
+                const network = networks[j]
+                if (network && (network.connected || network.stateChanging))
+                    parts.push(`${network.name}:${network.connected}:${network.state}`)
+            }
+        }
+        return parts.join("|")
+    }
+
+    on_LinkSignatureChanged: _queueVpnRefresh()
+    on_WantedChanged: {
+        if (_wanted) _queueVpnRefresh()
+        else {
+            _vpnRefresh.stop()
+            root.clearWifiScan()
+            root._resetTraffic()
+        }
+    }
+
+    Connections {
+        target: SystemTools
+        function onReadyChanged() { root._queueVpnRefresh() }
+    }
+
+    Timer {
+        id: _vpnRefresh
+        interval: 180
+        onTriggered: _vpnProc.running = true
+    }
+
+    Process {
+        id: _vpnProc
+        environment: ({ "LC_ALL": "C" })
+        command: ["nmcli", "-t", "-f", "TYPE,NAME", "connection", "show", "--active"]
+        onRunningChanged: if (running) {
+            root.hasVpn = false
+            root.vpnName = ""
+        }
+        stdout: SplitParser {
+            onRead: line => {
+                if (root.hasVpn) return
+                const fields = root._splitNmcliLine(line)
+                if (fields.length >= 2
+                        && (fields[0] === "vpn" || fields[0] === "wireguard" || fields[0] === "tun")) {
+                    root.hasVpn = true
+                    root.vpnName = fields.slice(1).join(":")
+                }
+            }
+        }
+    }
+
+    Timer {
+        interval: 300000
+        repeat: true
+        running: root._wanted && SystemTools.hasNmcli
+        onTriggered: root._queueVpnRefresh()
+    }
+
+    property real downBps: 0
+    property real upBps: 0
+    property real _lastRxBytes: -1
+    property real _lastTxBytes: -1
+    property real _lastStatsMs: 0
+    property bool _statsRefreshing: false
+
+    readonly property bool statsDeviceReady: connected
+        && deviceName.length > 0
+        && deviceName.indexOf("/") < 0
+        && deviceName.indexOf("..") < 0
+    readonly property bool statsWanted: ShellSettings.barShowNetwork && ShellSettings.networkTrafficStats
+    readonly property bool trafficActive: statsWanted && connected
+        && (downBps >= 1024 || upBps >= 1024)
+    readonly property string trafficLabel: "󰁅 " + formatRate(downBps) + " 󰁝 " + formatRate(upBps)
+
+    function formatRate(bps: real): string {
+        const value = Math.max(0, bps)
+        if (value >= 1073741824)
+            return (value / 1073741824).toFixed(value >= 10737418240 ? 0 : 1) + " GB/s"
+        if (value >= 1048576)
+            return (value / 1048576).toFixed(value >= 10485760 ? 0 : 1) + " MB/s"
+        if (value >= 1024)
+            return (value / 1024).toFixed(value >= 10240 ? 0 : 1) + " KB/s"
+        return Math.round(value) + " B/s"
     }
 
     function _resetTraffic(): void {
@@ -198,309 +391,6 @@ Singleton {
         _lastRxBytes = -1
         _lastTxBytes = -1
         _lastStatsMs = 0
-    }
-
-    function formatRate(bps: real): string {
-        const v = Math.max(0, bps)
-        if (v >= 1073741824)
-            return (v / 1073741824).toFixed(v >= 10737418240 ? 0 : 1) + " GB/s"
-        if (v >= 1048576)
-            return (v / 1048576).toFixed(v >= 10485760 ? 0 : 1) + " MB/s"
-        if (v >= 1024)
-            return (v / 1024).toFixed(v >= 10240 ? 0 : 1) + " KB/s"
-        return Math.round(v) + " B/s"
-    }
-
-
-    Component.onCompleted: _init()
-
-    function _init(): void {
-        if (!SystemTools.ready) return
-        if (!toolAvailable) {
-            _queryRetry.stop()
-            _queryFailures = 0
-            available = false
-            connected = false
-            deviceName = ""
-            deviceType = ""
-            hasWifiDevice = false
-            wifiEnabled = false
-            clearWifiScan()
-            _resetTraffic()
-            monitoring = false
-            return
-        }
-        if (!root._wanted) {
-            root._suspend()
-            return
-        }
-        monitoring = true
-        if (!_radioCheck.running) _radioCheck.running = true
-        refresh()
-    }
-
-    function _suspend(): void {
-        _queryRetry.stop()
-        monitorDebounce.stop()
-        _signalDebounce.stop()
-        monitoring = false
-        clearWifiScan()
-        _resetTraffic()
-    }
-
-    on_WantedChanged: {
-        if (!SystemTools.ready) return
-        if (root._wanted) root._init()
-        else root._suspend()
-    }
-
-    Connections {
-        target: SystemTools
-        function onReadyChanged() { root._init() }
-    }
-
-    Process {
-        id: _proc
-        environment: ({ "LC_ALL": "C" })
-        command: ["nmcli", "-t", "-f", "TYPE,DEVICE,STATE,CONNECTION", "device"]
-        stdout: StdioCollector { id: _procOut }
-        onExited: (code) => {
-            if (code !== 0) {
-                root._queryFailures++
-                if (root._queryFailures < 3) _queryRetry.restart()
-                else root.monitoring = false
-                root.connected = false
-                root.available = false
-                root.isWifi = false
-                root.connectionName = ""
-                root.deviceName = ""
-                root.deviceType = ""
-                root.hasWifiDevice = false
-                root.hasVpn = false
-                root.vpnName = ""
-                root.signalStrength = 0
-                root._resetTraffic()
-            } else {
-                _queryRetry.stop()
-                root._queryFailures = 0
-                root.monitoring = root._wanted
-                let best = null
-                let vpn = false
-                let vpnConn = ""
-                let anyWifi = false
-                const lines = (_procOut.text || "").trim().split("\n")
-                for (let i = 0; i < lines.length; i++) {
-                    const parts = root._splitNmcliLine(lines[i])
-                    if (parts.length < 4) continue
-                    const type = parts[0]
-                    const device = parts[1]
-                    const state = parts[2]
-                    const conn = parts.slice(3).join(":")
-                    if (type === "wifi" && !state.startsWith("unmanaged")) anyWifi = true
-                    if (!state.startsWith("connected")) continue
-                    if (root._isVpn(type)) { vpn = true; vpnConn = conn }
-                    else {
-                        const priority = root._devicePriority(type)
-                        if (priority >= 0 && (!best || priority > best.priority))
-                            best = { type: type, device: device, conn: conn, priority: priority }
-                    }
-                }
-                root.hasWifiDevice = anyWifi
-                const found = best !== null
-                if (found) {
-                    if (root.deviceName !== best.device) root._resetTraffic()
-                    root.isWifi = (best.type === "wifi")
-                    root.connectionName = best.conn
-                    root.deviceName = best.device
-                    root.deviceType = best.type
-                }
-                root.connected = found
-                root.hasVpn = vpn
-                root.vpnName = vpnConn
-                root.available = true
-                if (!found) {
-                    root.isWifi = false
-                    root.connectionName = ""
-                    root.deviceName = ""
-                    root.deviceType = ""
-                    root.signalStrength = 0
-                    root._resetTraffic()
-                }
-                if (root.isWifi && ShellSettings.barShowNetwork) _signalDebounce.restart()
-                else root.signalStrength = 0
-            }
-            if (root._refreshPending) Qt.callLater(root.refresh)
-        }
-    }
-
-    // Coalesces rapid nmcli events into a single signal scan
-    Timer {
-        id: _signalDebounce
-        interval: 500
-        onTriggered: {
-            if (!root.toolAvailable || !root.isWifi || !ShellSettings.barShowNetwork || _signalProc.running) return
-            _signalProc.running = true
-        }
-    }
-
-    Connections {
-        target: ShellSettings
-        function onBarShowNetworkChanged() {
-            if (ShellSettings.barShowNetwork && root.isWifi) _signalDebounce.restart()
-            else root.signalStrength = 0
-        }
-    }
-
-    Process {
-        id: _signalProc
-        environment: ({ "LC_ALL": "C" })
-        command: ["nmcli", "-t", "-f", "IN-USE,SIGNAL", "dev", "wifi", "list", "--rescan", "no"]
-        stdout: StdioCollector { id: _signalOut }
-        onExited: (code) => {
-            if (code !== 0) return
-            const lines = (_signalOut.text || "").trim().split("\n")
-            for (let i = 0; i < lines.length; i++) {
-                const parts = root._splitNmcliLine(lines[i])
-                if (parts.length >= 2 && parts[0] === "*") {
-                    root.signalStrength = parseInt(parts[1]) || 0
-                    return
-                }
-            }
-            root.signalStrength = 0
-        }
-    }
-
-    // wi-fi radio state, refreshed on every nmcli event so external toggles (rfkill, airplane mode) stay in sync
-    Process {
-        id: _radioCheck
-        environment: ({ "LC_ALL": "C" })
-        command: ["nmcli", "-t", "radio", "wifi"]
-        stdout: StdioCollector { id: _radioOut }
-        onExited: (code) => { if (code === 0) root.wifiEnabled = (_radioOut.text || "").trim() === "enabled" }
-    }
-
-    onWifiEnabledChanged: if (!wifiEnabled) clearWifiScan()
-
-    // Fire-and-forget radio setter; re-reads radio state and device list once done.
-    Process {
-        id: _radioSet
-        environment: ({ "LC_ALL": "C" })
-        onExited: {
-            if (root._wanted && !_radioCheck.running) _radioCheck.running = true
-            root.refresh()
-        }
-    }
-
-    // Saved wifi connection names → known-network flag. Chains into the scan.
-    Process {
-        id: _savedProc
-        environment: ({ "LC_ALL": "C" })
-        command: ["nmcli", "-t", "-f", "NAME,TYPE", "connection", "show"]
-        stdout: StdioCollector { id: _savedOut }
-        onExited: (code) => {
-            if (root._savedRunGeneration !== root._wifiScanGeneration) {
-                // The picker may have reopened before the cancelled process
-                // reported exit. Resume the newly requested generation.
-                if (root._pendingWifiRescan) Qt.callLater(root._beginWifiScan)
-                return
-            }
-            // a failed query must keep the previous map, not blank every
-            // network's known flag and re-prompt for stored credentials
-            if (code === 0) {
-                const set = {}
-                const lines = (_savedOut.text || "").trim().split("\n")
-                for (let i = 0; i < lines.length; i++) {
-                    const p = root._splitNmcliLine(lines[i])
-                    if (p.length >= 2 && p[1].indexOf("wireless") >= 0) set[p[0]] = true
-                }
-                root._savedWifi = set
-            }
-            if (root.toolAvailable && root.wifiEnabled && !_wifiScanProc.running) {
-                root._wifiScanRescan = root._wifiScanRescan || root._pendingWifiRescan
-                root._pendingWifiRescan = false
-                root._scanRunGeneration = root._wifiScanGeneration
-                _wifiScanProc.running = true
-            } else {
-                root.clearWifiScan()
-            }
-        }
-    }
-
-    // Visible access points, deduped by SSID (strongest signal wins).
-    Process {
-        id: _wifiScanProc
-        environment: ({ "LC_ALL": "C" })
-        command: ["nmcli", "-t", "-f", "ACTIVE,SSID,SIGNAL,SECURITY", "device", "wifi", "list", "--rescan", root._wifiScanRescan ? "yes" : "no"]
-        stdout: StdioCollector { id: _wifiScanOut }
-        onExited: (code) => {
-            if (root._scanRunGeneration !== root._wifiScanGeneration) {
-                if (root._pendingWifiRescan) Qt.callLater(root._beginWifiScan)
-                return
-            }
-            root._wifiScanRescan = false
-            if (code !== 0 || !root.toolAvailable || !root.wifiEnabled) {
-                if (root.toolAvailable && root.wifiEnabled) {
-                    root.wifiScanFailed = true
-                    if (root.wifiNetworks.length > 0) root.wifiNetworks = []
-                } else {
-                    root.clearWifiScan()
-                }
-                return
-            }
-            root.wifiScanFailed = false
-            const bySsid = {}
-            const order = []
-            const lines = (_wifiScanOut.text || "").trim().split("\n")
-            for (let i = 0; i < lines.length; i++) {
-                if (lines[i].length === 0) continue
-                const p = root._splitNmcliLine(lines[i])
-                if (p.length < 4) continue
-                const ssid = p[1]
-                if (ssid.length === 0) continue        // hidden network
-                const sig = parseInt(p[2]) || 0
-                const sec = p[3].length > 0
-                const act = p[0] === "yes"
-                const ex = bySsid[ssid]
-                if (ex) {
-                    if (sig > ex.signal) ex.signal = sig
-                    if (act) ex.active = true
-                } else {
-                    bySsid[ssid] = { ssid: ssid, signal: sig, secured: sec, active: act,
-                                     known: root._savedWifi[ssid] === true }
-                    order.push(ssid)
-                }
-            }
-            order.sort((a, b) => {
-                const A = bySsid[a], B = bySsid[b]
-                if (A.active !== B.active) return A.active ? -1 : 1
-                return B.signal - A.signal
-            })
-            const out = []
-            for (let i = 0; i < order.length; i++) out.push(bySsid[order[i]])
-            // identical scan → keep the old array; a reassign rebuilds every delegate and wipes in-progress password entry
-            if (!root._sameWifiNetworks(out, root.wifiNetworks))
-                root.wifiNetworks = out
-            if (root._pendingWifiRescan) root._beginWifiScan()
-        }
-    }
-
-    // shared connect/disconnect runner; WifiList's rescan timer handles re-scanning while the picker's open
-    Process {
-        id: _wifiActProc
-        environment: ({ "LC_ALL": "C" })
-        stdinEnabled: true
-        onStarted: {
-            if (root._pendingWifiPassword.length === 0) return
-            write(root._pendingWifiPassword + "\n")
-            root._pendingWifiPassword = ""
-        }
-        onExited: (code) => {
-            root._pendingWifiPassword = ""
-            if (code !== 0 && root.wifiConnecting.length > 0)
-                root.wifiError = root.wifiConnecting
-            root.wifiConnecting = ""
-            root.refresh()
-        }
     }
 
     function _sampleTraffic(): void {
@@ -563,61 +453,8 @@ Singleton {
         interval: 2000
         repeat: true
         triggeredOnStart: true
-        running: root.statsWanted && root.statsDeviceReady
-            && !Idle.isIdle
+        running: root.statsWanted && root.statsDeviceReady && !Idle.isIdle
         onTriggered: root._sampleTraffic()
         onRunningChanged: if (!running) root._resetTraffic()
-    }
-
-    SupervisedProcess {
-        id: monitorProc
-        environment: ({ "LC_ALL": "C" })
-        command: ["nmcli", "monitor"]
-        superviseWhen: root.toolAvailable && root._wanted && root.monitoring
-        restartDelay: 3000
-        maxRestartDelay: 60000
-        cleanExitOnly: true
-        // nmcli monitor echoes current state on start; _init() already has it
-        stdout: SplitParser {
-            onRead: if (!root._monitorSettling) monitorDebounce.restart()
-        }
-        onRunningChanged: {
-            if (running) {
-                root._monitorSettling = true
-                _monitorSettle.restart()
-                if (root.available && !_proc.running) root.refresh()
-            } else {
-                _monitorSettle.stop()
-                root._monitorSettling = false
-            }
-        }
-        onGaveUpChanged: if (gaveUp) root.monitoring = false
-    }
-
-    Timer {
-        id: _monitorSettle
-        interval: 250
-        onTriggered: root._monitorSettling = false
-    }
-
-    Timer {
-        id: monitorDebounce
-        interval: 80
-        onTriggered: {
-            if (!_radioCheck.running) _radioCheck.running = true
-            root.refresh()
-        }
-    }
-    Timer {
-        id: _queryRetry
-        interval: Math.min(30000, 3000 * Math.pow(2, Math.max(0, root._queryFailures - 1)))
-        onTriggered: root.refresh()
-    }
-    Timer {
-        id: _fallbackPoll
-        interval: root.monitoring || root._queryFailures >= 3 ? 300000 : 30000
-        running: root.toolAvailable && root._wanted
-        repeat: true
-        onTriggered: root.refresh()
     }
 }

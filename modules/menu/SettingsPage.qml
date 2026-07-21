@@ -53,47 +53,9 @@ PageShell {
         return m
     }
 
-    readonly property string _underlineScreenshotStyle:
-        !ShellSettings.underlineScreenshotGlow ? "off"
-        : ShellSettings.screenshotGlowSweep ? "sweep"
-        : "flash"
-
-    function _setUnderlineScreenshotStyle(style) {
-        ShellSettings.underlineScreenshotGlow = style !== "off"
-        ShellSettings.screenshotGlowSweep = style === "sweep"
-    }
-
-    readonly property bool _underlineEnabled:
-        ShellSettings.barBorderVisible || ShellSettings.underlineGlow
+    // outlives the section component, which is destroyed whenever the user navigates away
     property string _lastUnderlineStyle:
         ShellSettings.underlineGlow ? "glow" : "static"
-    readonly property string _underlineStyle:
-        ShellSettings.underlineGlow ? "glow" : "static"
-
-    function _setUnderlineEnabled(enabled) {
-        if (!enabled) {
-            root._lastUnderlineStyle = root._underlineStyle
-            ShellSettings.barBorderVisible = false
-            ShellSettings.underlineGlow = false
-            return
-        }
-        root._setUnderlineStyle(root._lastUnderlineStyle)
-    }
-
-    function _setUnderlineStyle(style) {
-        root._lastUnderlineStyle = style
-        ShellSettings.barBorderVisible = style === "static"
-        ShellSettings.underlineGlow = style === "glow"
-        if (style === "glow" && !ShellSettings.underlineIdleGlow
-                && !ShellSettings.underlineNotifGlow
-                && !ShellSettings.underlineBattGlow
-                && !ShellSettings.underlineNetGlow
-                && !ShellSettings.underlineTempGlow
-                && !ShellSettings.underlineScreenshotGlow) {
-            ShellSettings.underlineNotifGlow = true
-            ShellSettings.underlineNetGlow = true
-        }
-    }
 
     Item {
         id: _detail
@@ -226,105 +188,9 @@ PageShell {
 
         Component {
             id: _secUnderline
-            Column {
-            width: _detailBody.width
-            spacing: 0
-
-            SettingsCard {
-                ToggleRow {
-                    glyph: "󰍴"; label: "Underline"
-                    checked: root._underlineEnabled
-                    onToggled: root._setUnderlineEnabled(!root._underlineEnabled)
-                }
-                CollapsibleSection {
-                    expanded: root._underlineEnabled
-                    ChoiceChipRow {
-                        glyph: "󰒓"; label: "Mode"
-                        currentValue: root._underlineStyle
-                        model: [
-                            { value: "static", label: "Line" },
-                            { value: "glow",   label: "Reactive" }
-                        ]
-                        onChosen: (v) => root._setUnderlineStyle(v)
-                    }
-                    SliderRow {
-                        glyph: "󰃠"
-                        label: ShellSettings.underlineGlow ? "Glow strength" : "Line strength"
-                        value: ShellSettings.underlineGlow ? ShellSettings.glowStrength : ShellSettings.barLineStrength
-                        min: 0.5; max: 2.0; step: 0.05
-                        displayValue: Math.round((ShellSettings.underlineGlow
-                            ? ShellSettings.glowStrength : ShellSettings.barLineStrength) * 100) + "%"
-                        onChanged: (v) => {
-                            if (ShellSettings.underlineGlow) {
-                                ShellSettings.glowStrength = v
-                            } else {
-                                ShellSettings.barLineStrength = v
-                            }
-                        }
-                    }
-                    CollapsibleSection {
-                        expanded: ShellSettings.underlineGlow
-                        ToggleRow {
-                            glyph: "󰊠"; label: "Ambient glow"
-                            checked: ShellSettings.underlineIdleGlow
-                            onToggled: ShellSettings.underlineIdleGlow = !ShellSettings.underlineIdleGlow
-                        }
-                    }
-                }
-            }
-
-            CollapsibleSection {
-                id: _glowSection
-                expanded: ShellSettings.underlineGlow
-                Loader {
-                    width: parent.width
-                    active: ShellSettings.underlineGlow || _glowSection.height > 0.5
-                    height: item ? item.implicitHeight : 0
-                    sourceComponent: Component {
-                        Column {
-                            width: parent.width
-                            SectionLabel { label: "EVENTS" }
-                            SettingsCard {
-                                ToggleRow {
-                                    glyph: "󰂚"; label: "Notifications"
-                                    checked: ShellSettings.underlineNotifGlow
-                                    onToggled: ShellSettings.underlineNotifGlow = !ShellSettings.underlineNotifGlow
-                                }
-                                ToggleRow {
-                                    glyph: "󰤭"; label: "Network disconnect"
-                                    checked: ShellSettings.underlineNetGlow
-                                    onToggled: ShellSettings.underlineNetGlow = !ShellSettings.underlineNetGlow
-                                }
-                                ToggleRow {
-                                    glyph: "󱃍"; label: "Battery low"
-                                    checked: ShellSettings.underlineBattGlow
-                                    onToggled: ShellSettings.underlineBattGlow = !ShellSettings.underlineBattGlow
-                                }
-                                ToggleRow {
-                                    glyph: "󰔏"; label: "Temperature"
-                                    checked: ShellSettings.underlineTempGlow
-                                    onToggled: ShellSettings.underlineTempGlow = !ShellSettings.underlineTempGlow
-                                }
-                                ChoiceChipRow {
-                                    glyph: "󰄀"; label: "Screenshots"
-                                    enabled: SystemTools.hasInotifywait
-                                    currentValue: root._underlineScreenshotStyle
-                                    model: [
-                                        { value: "off",   label: "Off" },
-                                        { value: "flash", label: "Flash" },
-                                        { value: "sweep", label: "Sweep" }
-                                    ]
-                                    onChosen: (v) => root._setUnderlineScreenshotStyle(v)
-                                }
-                                HintText {
-                                    visible: !SystemTools.hasInotifywait
-                                    text: "Screenshot feedback needs inotify-tools."
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            SettingsUnderlineSection {
+                lastStyle: root._lastUnderlineStyle
+                onStyleRemembered: (style) => root._lastUnderlineStyle = style
             }
         }
 

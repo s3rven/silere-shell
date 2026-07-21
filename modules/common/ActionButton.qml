@@ -12,17 +12,22 @@ Item {
     property bool armed: false
     property int confirmTimeout: 3000
     property color accentColor: Theme.accent
+    property real radius: Theme.radiusControl
 
     signal triggered()
 
-    readonly property real contentWidth: _row.implicitWidth + 22
+    // ceil: a fractional width lands the outline stroke off-pixel under fractional scaling
+    readonly property real contentWidth: Math.ceil(_row.implicitWidth) + 22
     readonly property bool _emphasis: root.emphasis || root.armed
     readonly property color _accent: root.armed ? Theme.error : root.accentColor
 
     height: 34
     opacity: root.enabled ? 1.0 : 0.42
 
-    function disarm(): void { root.armed = false }
+    function disarm(): void {
+        _armTimer.stop()
+        root.armed = false
+    }
     function activate(): void {
         if (!root.enabled) return
         if (!root.confirm || root.armed) {
@@ -45,6 +50,10 @@ Item {
     Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root.activate(); event.accepted = true }
     Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root.activate(); event.accepted = true }
     Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root.activate(); event.accepted = true }
+    Keys.onEscapePressed: event => {
+        if (root.armed) { root.disarm(); event.accepted = true }
+        else event.accepted = false
+    }
 
     HoverHandler {
         id: _hover
@@ -57,20 +66,25 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        radius: 8
+        radius: root.radius
         antialiasing: true
         color: root._emphasis
             ? Theme.mix(Theme.menuControl, root._accent, _hover.hovered || root.armed ? 0.34 : 0.26)
             : (_hover.hovered ? Theme.withAlpha(Theme.subtext, 0.16) : Theme.menuControl)
-        border.width: root.activeFocus ? 2 : 1
-        border.color: root.activeFocus
-            ? Theme.withAlpha(root._accent, 0.82)
-            : root._emphasis
-                ? Theme.withAlpha(root._accent, 0.48)
-                : _hover.hovered ? Theme.menuControlLineHot : Theme.menuControlLine
 
         Behavior on color { ColorAnimation { duration: Motion.fast } }
-        Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+
+        OutlineBorder {
+            radius: root.radius
+            outlineWidth: root.activeFocus ? 2 : 1
+            outlineColor: root.activeFocus
+                ? Theme.withAlpha(root._accent, 0.82)
+                : root._emphasis
+                    ? Theme.withAlpha(root._accent, 0.48)
+                    : _hover.hovered ? Theme.menuControlLineHot : Theme.menuControlLine
+
+            Behavior on outlineColor { ColorAnimation { duration: Motion.fast } }
+        }
 
         Row {
             id: _row

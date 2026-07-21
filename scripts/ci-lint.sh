@@ -60,6 +60,7 @@ check_service_module Battery Quickshell.Services.UPower
 check_service_module Media Quickshell.Services.Mpris
 check_service_module Notifications Quickshell.Services.Notifications
 check_service_module Bluetooth Quickshell.Bluetooth
+check_service_module Network Quickshell.Networking
 
 section "shell script syntax"
 for f in "${script_files[@]}"; do
@@ -80,13 +81,15 @@ check_qml_locale_count() {
   fi
 }
 check_qml_locale_count services/Battery.qml 1
-check_qml_locale_count services/Network.qml 8
+check_qml_locale_count services/Network.qml 1
 check_qml_locale_count services/PowerProfiles.qml 1
 check_qml_locale_count services/Updates.qml 1
 
 section "credential handling"
 if grep -qF 'cmd.push("password")' services/Network.qml; then
   fail "Wi-Fi credentials must not be passed in process argv"
+elif grep -qF 'connectWithPsk(password)' services/Network.qml; then
+  ok "Wi-Fi" "credentials use the native networking API"
 elif ! grep -qF 'stdinEnabled: true' services/Network.qml \
     || ! grep -qF '"--ask"' services/Network.qml; then
   fail "Wi-Fi credentials must be sent to nmcli over stdin"

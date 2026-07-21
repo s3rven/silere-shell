@@ -25,7 +25,12 @@ PanelWindow {
     readonly property real _edgeMargin: ShellSettings.barFloating ? Math.max(0, _barSideGap) : 10
 
     implicitWidth:  _cardW + 24 + _shadowPad
-    implicitHeight: Math.max(1, outerCol.implicitHeight + 12 + _shadowPad)
+    // every implicitHeight change reconfigures the layer surface, and card arrival/
+    // dismiss animates height for ~160ms — quantizing to a coarse step means the
+    // surface only reconfigures on a boundary crossing, not once per frame. Ceil
+    // never clips, and input is masked to outerCol so the slack costs nothing.
+    readonly property int _contentH: Math.max(1, outerCol.implicitHeight + 12 + _shadowPad)
+    implicitHeight: Math.max(64, Math.ceil(win._contentH / 64) * 64)
 
     visible: ShellSettings.notifPopupEnabled && Notifications.activeCount > 0
 
@@ -180,8 +185,7 @@ PanelWindow {
                 NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
             }
 
-            Rectangle {
-                id: _pillRect
+            ActionButton {
                 anchors.right:            (win._left || win._center) ? undefined : parent?.right
                 anchors.left:             win._left   ? parent?.left : undefined
                 anchors.horizontalCenter: win._center ? parent?.horizontalCenter : undefined
@@ -191,64 +195,13 @@ PanelWindow {
                 Behavior on y       { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
                 Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
 
-                height: 24
-                width:  _pillRow.implicitWidth + 22
-                radius: height / 2          // full pill, not a slightly-rounded box
-                antialiasing: true
-                // press darkens rather than scales — scaling blurs NativeRendering text
-                color: _dismissPress.pressed
-                    ? Theme.withAlpha(Theme.error, 0.22)
-                    : _pillHover.hovered
-                        ? Theme.withAlpha(Theme.error, 0.12)
-                        : Theme.menuControl
-                OutlineBorder {
-                    radius: _pillRect.radius
-                    outlineColor: _dismissPress.pressed
-                        ? Theme.withAlpha(Theme.error, 0.60)
-                        : _pillHover.hovered
-                            ? Theme.withAlpha(Theme.error,   0.38)
-                            : Theme.menuControlLine
-                    Behavior on outlineColor { ColorAnimation { duration: Motion.fast } }
-                }
-
-                Behavior on color { ColorAnimation { duration: Motion.fast } }
-
-                Accessible.role: Accessible.Button
-                Accessible.name: "Dismiss all notifications"
-                Accessible.onPressAction: win.dismissAll()
-
-                Row {
-                    id: _pillRow
-                    anchors.centerIn: parent
-                    spacing: 5
-
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text:           "󰆴"
-                        color:          _pillHover.hovered ? Theme.withAlpha(Theme.error, 0.85) : Theme.withAlpha(Theme.menuTextMuted, 0.62)
-                        font.family:    Settings.font
-                        font.pixelSize: Settings.fontSize
-                        renderType:     Text.NativeRendering
-                        Behavior on color { ColorAnimation { duration: Motion.fast } }
-                    }
-
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text:           "Dismiss all"
-                        color:          _pillHover.hovered ? Theme.withAlpha(Theme.error, 0.85) : Theme.withAlpha(Theme.menuTextMuted, 0.84)
-                        font.family:    Settings.font
-                        font.pixelSize: Settings.fontSize - 1
-                        renderType:     Text.NativeRendering
-                        Behavior on color { ColorAnimation { duration: Motion.fast } }
-                    }
-                }
-
-                HoverHandler { id: _pillHover }
-                TapHandler {
-                    id: _dismissPress
-                    cursorShape: Qt.PointingHandCursor
-                    onTapped: win.dismissAll()
-                }
+                width:  contentWidth
+                height: 26
+                glyph:  "󰆴"
+                label:  "Dismiss all"
+                accentColor: Theme.error
+                accessibleName: "Dismiss all notifications"
+                onTriggered: win.dismissAll()
             }
         }
 

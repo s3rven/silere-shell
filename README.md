@@ -36,7 +36,7 @@ Every widget checks for its tool at runtime. If a tool is missing, its widget hi
 |---|---|
 | `pipewire` + `wireplumber` | volume, output picker |
 | `upower` | battery |
-| `nmcli` | network, Wi-Fi list |
+| `nmcli` | VPN name fallback (network and Wi-Fi use Quickshell directly) |
 | `brightnessctl` | brightness |
 | `hyprsunset` | night light |
 | `matugen` | wallpaper theming |
@@ -60,6 +60,20 @@ Every widget checks for its tool at runtime. If a tool is missing, its widget hi
 | history | click an entry to read it in full. |
 
 Shell and package updates never install on their own; checks only update the badge, installing always takes a click.
+
+## Keybinds and scripts
+
+Silere exposes its main surfaces through Quickshell IPC, so compositor keybinds and scripts can open them without simulating a click. These examples use the installer's default path; when running from a checkout, point `-p` at that checkout's `shell.qml` instead.
+
+```bash
+qs ipc -p "${XDG_CONFIG_HOME:-$HOME/.config}/silere-shell/shell.qml" call menu toggle
+qs ipc -p "${XDG_CONFIG_HOME:-$HOME/.config}/silere-shell/shell.qml" call menu tab 2
+qs ipc -p "${XDG_CONFIG_HOME:-$HOME/.config}/silere-shell/shell.qml" call menu settings updates
+qs ipc -p "${XDG_CONFIG_HOME:-$HOME/.config}/silere-shell/shell.qml" call calendar toggle
+qs ipc -p "${XDG_CONFIG_HOME:-$HOME/.config}/silere-shell/shell.qml" call screenshot flash
+```
+
+Menu tabs are `0` (Home), `1` (Settings), and `2` (Recent). Settings sections are `theme`, `nightlight`, `surface`, `separators`, `underline`, `widgets`, `clock`, `workspaces`, `media`, `indicators`, `popups`, `osd`, `warnings`, `system`, and `updates`. `screenshot flash` lets a screenshot tool trigger the underline effect directly without the optional filesystem watcher.
 
 ## Resource use
 

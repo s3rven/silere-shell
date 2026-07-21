@@ -44,6 +44,9 @@ Singleton {
 
     // skip the first brightness event, initial device scan can fire before we're ready
     property bool _seenInitialBrightness: false
+    readonly property bool _batteryWatcherWanted: ShellSettings.osdEnabled
+        && (ShellSettings.osdBatteryWarn || ShellSettings.osdChargedNotify)
+    readonly property bool _tempWatcherWanted: ShellSettings.osdEnabled && ShellSettings.osdTempWarn
 
     property bool _armed: false
     Timer {
@@ -322,7 +325,7 @@ Singleton {
     }
 
     Connections {
-        target: Battery
+        target: root._batteryWatcherWanted ? Battery : null
         function onLowChanged() {
             if (!Battery.low || !ShellSettings.osdBatteryWarn) return
             const label = "Low Battery · " + Math.round(Battery.pct) + "%"
@@ -342,7 +345,7 @@ Singleton {
     }
 
     Connections {
-        target: CpuTemp
+        target: root._tempWatcherWanted ? CpuTemp : null
         function onHotChanged() {
             if (!CpuTemp.hot || !ShellSettings.osdTempWarn) return
             root.showAlert("temp", "󰔏", Math.min(1.0, (CpuTemp.temp - 50) / 65),

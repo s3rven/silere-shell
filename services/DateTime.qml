@@ -21,6 +21,7 @@ Singleton {
     }
 
     property string _lastDay:       ""
+    property string _lastMinute:    ""
     property string cachedDayName:  ""  // "ddd " — trailing space is the separator
     property string cachedDateCore: ""  // "MMM dd"
     property string cachedLongDate: ""  // "dddd, MMMM d" — menu header
@@ -31,7 +32,7 @@ Singleton {
     property string cachedMinute:   ""  // "mm" — split from the hour so only the changed field rolls
     property string cachedAmPm:     ""  // "AM" / "PM" in 12h mode, "" in 24h
     property string cachedSeconds:  ""  // ":ss"
-    readonly property int hour24: clock.date.getHours()  // 24h int for the quiet-hours check
+    property int hour24: 0  // 24h int for the quiet-hours check
 
     Component.onCompleted: _update()
 
@@ -51,9 +52,9 @@ Singleton {
 
     Connections {
         target: ShellSettings
-        function onClock12hChanged() { root._update() }
+        function onClock12hChanged() { root._refreshMinute() }
         function onShowSecondsChanged() { root._update() }
-        function onBarShowClockChanged() { root._update() }
+        function onBarShowClockChanged() { root._refreshMinute() }
     }
 
     Connections {
@@ -61,31 +62,42 @@ Singleton {
         function onIsIdleChanged() { root._update() }
     }
 
+    function _refreshMinute(): void {
+        root._lastMinute = ""
+        root._update()
+    }
+
     function _update(): void {
-        const day = Qt.formatDateTime(clock.date, "yyyyMMdd")
-        if (day !== _lastDay) {
-            _lastDay        = day
-            cachedDayName   = Qt.formatDateTime(clock.date, "ddd ")
-            cachedDateCore  = Qt.formatDateTime(clock.date, "MMM dd")
-            cachedLongDate  = Qt.formatDateTime(clock.date, "dddd, MMMM d")
-            cachedWeekday   = Qt.formatDateTime(clock.date, "dddd")
-            cachedMonthDay  = Qt.formatDateTime(clock.date, "MMMM d")
-            cachedWeek      = String(isoWeek(clock.date))
-        }
-        cachedMinute = Qt.formatDateTime(clock.date, "mm")
-        if (ShellSettings.clock12h) {
-            cachedHour = Qt.formatDateTime(clock.date, "h")
-            cachedAmPm = Qt.formatDateTime(clock.date, "AP")
-        } else {
-            cachedHour = Qt.formatDateTime(clock.date, "HH")
-            cachedAmPm = ""
+        const current = clock.date
+        const minute = Qt.formatDateTime(current, "yyyyMMddHHmm")
+        if (minute !== _lastMinute) {
+            _lastMinute = minute
+            const day = minute.slice(0, 8)
+            if (day !== _lastDay) {
+                _lastDay        = day
+                cachedDayName   = Qt.formatDateTime(current, "ddd ")
+                cachedDateCore  = Qt.formatDateTime(current, "MMM dd")
+                cachedLongDate  = Qt.formatDateTime(current, "dddd, MMMM d")
+                cachedWeekday   = Qt.formatDateTime(current, "dddd")
+                cachedMonthDay  = Qt.formatDateTime(current, "MMMM d")
+                cachedWeek      = String(isoWeek(current))
+            }
+            cachedMinute = Qt.formatDateTime(current, "mm")
+            hour24 = current.getHours()
+            if (ShellSettings.clock12h) {
+                cachedHour = Qt.formatDateTime(current, "h")
+                cachedAmPm = Qt.formatDateTime(current, "AP")
+            } else {
+                cachedHour = Qt.formatDateTime(current, "HH")
+                cachedAmPm = ""
+            }
         }
         if (!ShellSettings.barShowClock || !ShellSettings.showSeconds) {
             cachedSeconds = ""
         } else if (!Idle.isIdle || cachedSeconds.length === 0) {
             // Freeze the last visible value while idle instead of collapsing the
             // seconds slot; input resumes the live second tick immediately.
-            cachedSeconds = Qt.formatDateTime(clock.date, ":ss")
+            cachedSeconds = ":" + String(current.getSeconds()).padStart(2, "0")
         }
     }
 }

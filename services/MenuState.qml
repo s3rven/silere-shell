@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 
 Singleton {
     id: root
@@ -105,5 +106,36 @@ Singleton {
         activeTab = tab
         if (!open) open = true
         tabRequested(tab)
+    }
+
+    // keybind/script entry point. No cursor, so the last anchor is kept and triggerScreen
+    // stays null — shell.qml resolves that to the focused output.
+    IpcHandler {
+        target: "menu"
+
+        function toggle(): void {
+            if (root.open) { root.close(); return }
+            root.triggerScreen = null
+            root.activeTab = 0
+            root.open = true
+        }
+        function close(): void { root.close() }
+        function tab(index: int): string {
+            if (index < 0 || index > 2)
+                return "unknown menu tab " + index + "; valid: 0 (home), 1 (settings), 2 (recent)"
+            root.triggerScreen = null
+            root.showTab(index)
+            return "ok"
+        }
+        // arbitrary strings arrive here, so validate at the boundary — setSettingsSection doesn't.
+        // keep `section: "` out of any literal below: ci-lint harvests nav entries by that pattern
+        function settings(name: string): string {
+            if (root._flatSections.indexOf(name) < 0)
+                return "unknown settings page '" + name + "'; valid: " + root._flatSections.join(", ")
+            root.triggerScreen = null
+            root.setSettingsSection(name)
+            root.showTab(1)
+            return "ok"
+        }
     }
 }

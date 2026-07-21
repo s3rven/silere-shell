@@ -15,6 +15,7 @@ SettingsIndicatorsSection 1.0 SettingsIndicatorsSection.qml
 SettingsOsdSection 1.0 SettingsOsdSection.qml
 SettingsWarningsSection 1.0 SettingsWarningsSection.qml
 SettingsThemeSection 1.0 SettingsThemeSection.qml
+SettingsUnderlineSection 1.0 SettingsUnderlineSection.qml
 InlinePicker 1.0 InlinePicker.qml
 SettingsNav  1.0 SettingsNav.qml
 PowerRailContent 1.0 PowerRailContent.qml
@@ -29,7 +30,6 @@ VitalsStrip     1.0 VitalsStrip.qml
 SectionLabel    1.0 SectionLabel.qml
 SelectRow       1.0 SelectRow.qml
 SettingsCard    1.0 SettingsCard.qml
-SettingsActionButton 1.0 SettingsActionButton.qml
 UpdateStatusCard 1.0 UpdateStatusCard.qml
 SunArc          1.0 SunArc.qml
 ToggleRow       1.0 ToggleRow.qml

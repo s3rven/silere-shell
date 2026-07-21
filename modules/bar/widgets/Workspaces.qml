@@ -1,7 +1,6 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Effects
 import Quickshell
 import "../../../config"
 import "../../../services"
@@ -122,8 +121,7 @@ Item {
     // (heuristicLookup → null) gets a stale empty cache entry. Drop the cache and
     // recompute once entries land (or a .desktop is installed mid-session).
     Connections {
-        target: DesktopEntries
-        enabled: ShellSettings.wsShowAppIcons
+        target: ShellSettings.wsShowAppIcons ? DesktopEntries : null
         function onApplicationsChanged() {
             root._iconCache = ({})
             root._wsAppsTick++
@@ -627,7 +625,6 @@ Item {
                 readonly property bool occupied: root.occupied(wsId)
                 readonly property bool urgent:  root.urgent(wsId)
                 readonly property bool hovered: _hover.hovered
-                property bool _urgentPulseSettled: false
                 // gated separately from `hovered` so hover scale/color/tint respect the barHoverHighlight setting (default off)
                 readonly property bool _hoverFx: hovered && ShellSettings.barHoverHighlight
                 readonly property bool _showIcons: ShellSettings.wsShowAppIcons && !active && apps.length > 0
@@ -636,8 +633,6 @@ Item {
                 height:  root.btnH
                 opacity: 1
                 scale:   1.0
-
-                onUrgentChanged: _urgentPulseSettled = false
 
                 // not gated on wsShowAppIcons: disabling it must glide the collapse too, not snap while the gem animates
                 Behavior on width {
@@ -756,7 +751,6 @@ Item {
 
                 onHoveredChanged: { if (active) diamond._hoverScale = _hoverFx ? 1.10 : 1.0 }
                 onActiveChanged: {
-                    if (!active && urgent) _urgentPulseSettled = false
                     diamond._hoverScale = (active && _hoverFx) ? 1.10 : 1.0
                     if (ShellSettings.reduceMotion) { _dotFade = active ? 0 : 1; return }
                     _dotFadeOut.stop(); _dotFadeIn.stop()
@@ -764,8 +758,8 @@ Item {
                     else        _dotFadeIn.restart()
                 }
 
-                property real _pulseOpacity: 1.0
-                property real _shakeX:       0
+                readonly property real _pulseOpacity: _urgentFx.item ? _urgentFx.item.pulseOpacity : 1.0
+                readonly property real _shakeX: _urgentFx.item ? _urgentFx.item.shakeX : 0
                 property real _dotFade: 1.0
                 // dot mode tells you nothing about which ws you'd jump to; hover swaps the dot for its number
                 readonly property bool _hoverReveal: ShellSettings.valuesOnHover && hovered
@@ -775,65 +769,21 @@ Item {
                 property real _dotAlpha: urgent ? 0.95 : occupied ? 0.65 : 0.28
                 Behavior on _dotAlpha { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
 
-                property real _notifPulse: 0
-                property bool _notifPulseCritical: false
-                Rectangle {
-                    anchors.centerIn: parent
-                    width: root.btnH; height: root.btnH
-                    radius: root.btnH / 2
-                    antialiasing: true
+                Loader {
+                    anchors.fill: parent
                     z: -1
-                    color: ws._notifPulseCritical ? Theme.error : Theme.accent
-                    opacity: ws._notifPulse * 0.10
-                    visible: ShellSettings.wsNotifPulse && opacity > 0.01
-                }
-                Rectangle {
-                    anchors.centerIn: parent
-                    width: 14; height: 14
-                    radius: 7
-                    antialiasing: true
-                    z: -1
-                    color: ws._notifPulseCritical ? Theme.error : Theme.accent
-                    opacity: ws._notifPulse * 0.22
-                    visible: ShellSettings.wsNotifPulse && opacity > 0.01
-                }
-                Rectangle {
-                    anchors.centerIn: parent
-                    width: 7; height: 7
-                    radius: 3.5
-                    antialiasing: true
-                    z: -1
-                    color: ws._notifPulseCritical ? Theme.error : Theme.accent
-                    opacity: ws._notifPulse * 0.50
-                    visible: ShellSettings.wsNotifPulse && opacity > 0.01
-                }
-                Connections {
-                    target: Notifications
-                    enabled: ShellSettings.wsNotifPulse && !ShellSettings.reduceMotion
-                    function onSourcePulse(wsId, critical) {
-                        if (wsId !== ws.wsId) return
-                        ws._notifPulseCritical = critical
-                        _notifPulseAnim.restart()
+                    active: ShellSettings.wsNotifPulse
+                    sourceComponent: Component {
+                        WorkspaceNotifPulse { workspaceId: ws.wsId }
                     }
                 }
                 Connections {
                     target: ShellSettings
-                    function onReduceMotionChanged() {
-                        if (ShellSettings.reduceMotion) {
-                            _notifPulseAnim.stop()
-                            ws._notifPulse = 0
-                        }
-                    }
                     // resync the shared diamond if the setting flips while this ws is active + hovered
                     // (onHoveredChanged/onActiveChanged won't fire on their own here)
                     function onBarHoverHighlightChanged() {
                         if (ws.active) diamond._hoverScale = ws._hoverFx ? 1.10 : 1.0
                     }
-                }
-                SequentialAnimation {
-                    id: _notifPulseAnim
-                    NumberAnimation { target: ws; property: "_notifPulse"; to: 1.0; duration: Motion.ms(150);  easing.type: Easing.OutQuad }
-                    NumberAnimation { target: ws; property: "_notifPulse"; to: 0.0; duration: Motion.ms(1100); easing.type: Easing.OutCubic }
                 }
                 NumberAnimation {
                     id: _dotFadeOut
@@ -846,23 +796,12 @@ Item {
                     NumberAnimation { target: ws; property: "_dotFade"; to: 1; duration: Motion.ms(220); easing.type: Easing.OutCubic }
                 }
 
-                SequentialAnimation {
-                    running: ws.urgent && !ws.active && !ws._urgentPulseSettled
-                        && root.barActive && !ShellSettings.reduceMotion && !Idle.isIdle
-                    loops:   Animation.Infinite
-                    onRunningChanged: if (!running) { ws._pulseOpacity = 1.0; ws._shakeX = 0 }
-                    NumberAnimation { target: ws; property: "_shakeX"; to:  2.5; duration: Motion.ms(55); easing.type: Easing.OutQuad  }
-                    NumberAnimation { target: ws; property: "_shakeX"; to: -2.5; duration: Motion.ms(55); easing.type: Easing.OutQuad  }
-                    NumberAnimation { target: ws; property: "_shakeX"; to:  2.5; duration: Motion.ms(55); easing.type: Easing.OutQuad  }
-                    NumberAnimation { target: ws; property: "_shakeX"; to:  0;   duration: Motion.ms(55); easing.type: Easing.OutCubic }
-                    NumberAnimation { target: ws; property: "_pulseOpacity"; to: 0.3; duration: Motion.ms(550); easing.type: Easing.InOutSine }
-                    NumberAnimation { target: ws; property: "_pulseOpacity"; to: 1.0; duration: Motion.ms(550); easing.type: Easing.InOutSine }
-                }
-
-                Timer {
-                    interval: 15000
-                    running: ws.urgent && !ws.active && !ws._urgentPulseSettled && !Idle.isIdle
-                    onTriggered: ws._urgentPulseSettled = true
+                Loader {
+                    id: _urgentFx
+                    active: ws.urgent && !ws.active
+                    sourceComponent: Component {
+                        WorkspaceUrgentFx { barActive: root.barActive }
+                    }
                 }
 
                 Text {
@@ -906,79 +845,16 @@ Item {
                     Behavior on scale { NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
                 }
 
-                Row {
+                Loader {
                     anchors.centerIn: parent
                     transform: Translate { x: ws._shakeX }
-                    spacing: 4
-                    visible: opacity > 0.01
-                    opacity: (ws._showIcons ? 1 : 0) * ws._pulseOpacity
-                    Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
-                    Repeater {
-                        // _wsApps may stay cached while icons are off; avoid retaining image/effect delegates for invisible rows
-                        model: ws._showIcons ? ws.apps : []
-                        delegate: Item {
-                            id: appIcon
-                            required property var modelData
-                            width:  root._iconSz
-                            height: root._iconSz
-                            scale:  ws._hoverFx ? 1.08 : 1.0
-
-                            Behavior on scale {
-                                enabled: !ShellSettings.reduceMotion
-                                NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
-                            }
-
-                            // at 100% icon opacity there's nothing to dim/tint, so skip the colorization layer and draw directly
-                            readonly property bool _fxNeeded: ShellSettings.wsIconOpacity < 0.995
-
-                            Image {
-                                id: _iconSrc
-                                anchors.fill: parent
-                                source: appIcon.modelData.icon
-                                // 3× logical decode: covers DPR-2 × 1.25 fractional scaling without upscale blur
-                                sourceSize.width:  root._iconSz * 3
-                                sourceSize.height: root._iconSz * 3
-                                fillMode: Image.PreserveAspectFit
-                                asynchronous: true
-                                visible: !parent._fxNeeded
-                            }
-                            MultiEffect {
-                                anchors.fill: _iconSrc
-                                source: _iconSrc
-                                visible: parent._fxNeeded
-                                opacity:      ws._hoverFx ? 1.0 : ShellSettings.wsIconOpacity
-                                colorization: ws._hoverFx ? 0.0 : 1.0 - ShellSettings.wsIconOpacity
-                                colorizationColor: Theme.accent
-                                Behavior on opacity      { NumberAnimation { duration: Motion.fast } }
-                                Behavior on colorization { NumberAnimation { duration: Motion.fast } }
-                            }
-                            // dot row when an app has several windows here: filled dots for exact count up to 3, an outline dot signals 4+
-                            Row {
-                                visible: appIcon.modelData.count > 1
-                                anchors.right:        parent.right
-                                anchors.bottom:       parent.bottom
-                                anchors.rightMargin:  -2
-                                anchors.bottomMargin: -2
-                                spacing: 1.5
-                                Repeater {
-                                    model: Math.min(appIcon.modelData.count, 3)
-                                    Rectangle {
-                                        width: 3.5; height: 3.5; radius: 1.75
-                                        antialiasing: true
-                                        color:        Theme.accent
-                                        border.width: 0.75
-                                        border.color: Theme.surface
-                                    }
-                                }
-                                Rectangle {
-                                    visible:      appIcon.modelData.count > 3
-                                    width: 3.5; height: 3.5; radius: 1.75
-                                    antialiasing: true
-                                    color:        "transparent"
-                                    border.width: 0.75
-                                    border.color: Theme.accent
-                                }
-                            }
+                    active: ws._showIcons
+                    sourceComponent: Component {
+                        WorkspaceAppIcons {
+                            apps: ws.apps
+                            iconSize: root._iconSz
+                            hoverFx: ws._hoverFx
+                            pulseOpacity: ws._pulseOpacity
                         }
                     }
                 }

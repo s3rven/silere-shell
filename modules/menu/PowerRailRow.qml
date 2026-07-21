@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import "../../config"
 import "../../services"
+import "../common"
 
 Rectangle {
     id: root
@@ -103,76 +104,15 @@ Rectangle {
         }
     }
 
-    Canvas {
-        id: _confirmOutline
+    PerimeterProgress {
         anchors.fill: parent
         visible: root.armed
-        antialiasing: true
-        renderTarget: Canvas.Image
-        renderStrategy: Canvas.Threaded
-        property real progress: root._confirmProgress
-
-        function outline(ctx, inset, radius) {
-            const x = inset
-            const y = inset
-            const w = width - inset * 2
-            const h = height - inset * 2
-            const r = Math.max(0.5, Math.min(radius, Math.min(w, h) / 2))
-            ctx.beginPath()
-            ctx.moveTo(x + r, y)
-            ctx.lineTo(x + w - r, y)
-            ctx.arc(x + w - r, y + r, r, -Math.PI / 2, 0)
-            ctx.lineTo(x + w, y + h - r)
-            ctx.arc(x + w - r, y + h - r, r, 0, Math.PI / 2)
-            ctx.lineTo(x + r, y + h)
-            ctx.arc(x + r, y + h - r, r, Math.PI / 2, Math.PI)
-            ctx.lineTo(x, y + r)
-            ctx.arc(x + r, y + r, r, Math.PI, 3 * Math.PI / 2)
-        }
-
-        onPaint: {
-            const ctx = getContext("2d")
-            ctx.clearRect(0, 0, width, height)
-            if (width <= 0 || height <= 0) return
-
-            const inset = 1.0
-            const radius = Math.max(0.5, root.radius - inset)
-            const w = width - inset * 2
-            const h = height - inset * 2
-            const sx = Math.max(0, w - 2 * radius)
-            const sy = Math.max(0, h - 2 * radius)
-            const arc = Math.PI / 2 * radius
-
-            outline(ctx, inset, radius)
-            ctx.lineWidth = 1
-            ctx.strokeStyle = Theme.menuControlLine
-            ctx.stroke()
-
-            let remaining = Math.max(0, Math.min(1, progress)) * (2 * sx + 2 * sy + 4 * arc)
-            if (remaining <= 0) return
-
-            ctx.beginPath()
-            ctx.moveTo(inset + radius, inset)
-            let segment = Math.min(remaining, sx)
-            ctx.lineTo(inset + radius + segment, inset)
-            remaining -= segment
-            if (remaining > 0) { segment = Math.min(remaining, arc); ctx.arc(inset + w - radius, inset + radius, radius, -Math.PI / 2, -Math.PI / 2 + segment / radius); remaining -= segment }
-            if (remaining > 0) { segment = Math.min(remaining, sy); ctx.lineTo(inset + w, inset + radius + segment); remaining -= segment }
-            if (remaining > 0) { segment = Math.min(remaining, arc); ctx.arc(inset + w - radius, inset + h - radius, radius, 0, segment / radius); remaining -= segment }
-            if (remaining > 0) { segment = Math.min(remaining, sx); ctx.lineTo(inset + w - radius - segment, inset + h); remaining -= segment }
-            if (remaining > 0) { segment = Math.min(remaining, arc); ctx.arc(inset + radius, inset + h - radius, radius, Math.PI / 2, Math.PI / 2 + segment / radius); remaining -= segment }
-            if (remaining > 0) { segment = Math.min(remaining, sy); ctx.lineTo(inset, inset + h - radius - segment); remaining -= segment }
-            if (remaining > 0) { segment = Math.min(remaining, arc); ctx.arc(inset + radius, inset + radius, radius, Math.PI, Math.PI + segment / radius) }
-            ctx.lineWidth = 1.5
-            ctx.lineCap = "round"
-            ctx.strokeStyle = Theme.withAlpha(Theme.error, 0.72)
-            ctx.stroke()
-        }
-
-        onVisibleChanged: requestPaint()
-        onWidthChanged: if (visible) requestPaint()
-        onHeightChanged: if (visible) requestPaint()
-        onProgressChanged: if (visible) requestPaint()
+        inset:        1.0
+        minPaintMs:   0
+        cornerRadius: root.radius
+        progress:     root._confirmProgress
+        trackColor:   Theme.menuControlLine
+        arcColor:     Theme.withAlpha(Theme.error, 0.72)
     }
 
     HoverHandler {

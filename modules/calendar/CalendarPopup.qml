@@ -215,14 +215,17 @@ PanelWindow {
         Accessible.role: Accessible.Pane
         Accessible.name: "Calendar"
 
-        Keys.onLeftPressed:  event => { card._step(-1); event.accepted = true }
-        Keys.onRightPressed: event => { card._step(1);  event.accepted = true }
+        // shift widens every month step to a year; _step already normalises the rollover
+        function _span(event): int { return (event.modifiers & Qt.ShiftModifier) ? 12 : 1 }
+
+        Keys.onLeftPressed:  event => { card._step(-card._span(event)); event.accepted = true }
+        Keys.onRightPressed: event => { card._step(card._span(event));  event.accepted = true }
         Keys.onPressed: event => {
             if (event.key === Qt.Key_PageUp) {
-                card._step(-1)
+                card._step(-card._span(event))
                 event.accepted = true
             } else if (event.key === Qt.Key_PageDown) {
-                card._step(1)
+                card._step(card._span(event))
                 event.accepted = true
             } else if (event.key === Qt.Key_Home) {
                 card._goToday()
@@ -457,6 +460,7 @@ PanelWindow {
 
                             readonly property bool cur:   index >= card._lead && index < card._lead + card._daysThis
                             readonly property bool today: index === card._todayCell
+                            readonly property bool weekend: index % 7 >= 5
                             readonly property bool marked: cur
                                 && CalendarState.marks[CalendarState.markKey(card.shownYear, card.shownMonth, dayNum)] === true
                             readonly property int  dayNum:
@@ -484,7 +488,7 @@ PanelWindow {
                                     anchors.centerIn: parent
                                     text: _dayCell.dayNum
                                     color: _dayCell.today ? Theme.surface
-                                         : _dayCell.cur   ? Theme.withAlpha(Theme.text, 0.9)
+                                         : _dayCell.cur   ? Theme.withAlpha(Theme.text, _dayCell.weekend ? 0.68 : 0.9)
                                          :                  Theme.withAlpha(Theme.subtext, 0.3)
                                     font.family: Settings.font
                                     font.pixelSize: Settings.fontSize

@@ -159,14 +159,10 @@ PageShell {
                 border.color: Theme.menuCardBorder
                 opacity: Media.shown ? 1.0 : 0.0
                 visible: opacity > 0.01
-                scale: Media.shown ? 1.0 : 0.97
-                transformOrigin: Item.Center
 
+                // fade only, matched to the section's height ease: a scale leg here ran as a
+                // third competing animation and resampled NativeRendering text off-pixel
                 Behavior on opacity {
-                    enabled: !ShellSettings.reduceMotion
-                    NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
-                }
-                Behavior on scale {
                     enabled: !ShellSettings.reduceMotion
                     NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
                 }

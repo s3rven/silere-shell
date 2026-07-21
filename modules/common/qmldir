@@ -8,3 +8,5 @@ FloatingPopupCard 1.0 FloatingPopupCard.qml
 IconButton 1.0 IconButton.qml
 OutlineBorder 1.0 OutlineBorder.qml
 FadingRim 1.0 FadingRim.qml
+PerimeterProgress 1.0 PerimeterProgress.qml
+ActionButton 1.0 ActionButton.qml

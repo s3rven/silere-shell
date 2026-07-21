@@ -1,6 +1,7 @@
 import QtQuick
 import "../../config"
 import "../../services"
+import "../common"
 
 Rectangle {
     id: root
@@ -153,7 +154,7 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 6
 
-                SettingsActionButton {
+                ActionButton {
                     visible: root.secondaryShown
                     width: contentWidth
                     height: 28
@@ -164,7 +165,7 @@ Rectangle {
                     onTriggered: root.secondaryTriggered()
                 }
 
-                SettingsActionButton {
+                ActionButton {
                     width: Math.max(contentWidth, 116)
                     height: 28
                     label: root.primaryLabel
