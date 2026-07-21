@@ -221,6 +221,33 @@ else
     skip "navigation" "settings navigation files not found"
 fi
 
+section "theme palette coverage"
+theme_tmpl="assets/matugen-theme.qml"
+theme_default="config/MatugenTheme.default.qml"
+if [ -f "$theme_tmpl" ] && [ -f "$theme_default" ]; then
+    # roles the shell actually reads; the MatugenTheme.qml/.default.qml filename
+    # mentions in comments collapse to a bare "qml", so drop it
+    used=$(grep -rhoE 'MatugenTheme\.[a-zA-Z_][a-zA-Z0-9_]*' --include='*.qml' . \
+           | sed 's/^MatugenTheme\.//' | grep -vx qml | sort -u)
+    declared_roles() {
+        grep -oE 'property +[a-zA-Z]+ +[a-zA-Z][a-zA-Z0-9]*' "$1" | awk '{print $NF}' | sort -u
+    }
+    theme_gap=0
+    for f in "$theme_tmpl" "$theme_default"; do
+        gap=$(comm -23 <(printf '%s\n' "$used") <(declared_roles "$f"))
+        if [ -n "$gap" ]; then
+            theme_gap=1
+            fail "$f is missing palette roles the shell reads:"
+            while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$gap"
+        fi
+    done
+    if [ "$theme_gap" -eq 0 ]; then
+        ok "theme" "matugen template and bundled default cover every role read"
+    fi
+else
+    skip "theme" "matugen template or bundled default not found"
+fi
+
 section "portability regressions"
 if bash scripts/test-portability.sh; then
   ok "portability"
