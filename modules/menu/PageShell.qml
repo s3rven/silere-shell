@@ -32,7 +32,7 @@ Item {
         root.pageHidden()
     }
 
-    // opening snaps the page in under the panel's animation; a tab switch crossfades
+    // Opening appears with the popup's fade; tab switches only crossfade.
     property bool _menuOpenSettled: false
     Connections {
         target: MenuState

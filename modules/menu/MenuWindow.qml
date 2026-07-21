@@ -118,7 +118,9 @@ PanelWindow {
         open: MenuState.open
         anchorX: MenuState.anchorX
         barBottom: ShellSettings.barPosition === "bottom"
-        targetWidth: panelW
+        // Place every tab inside the widest responsive envelope from the
+        // start. The card may resize, but its left rail stays under the mouse.
+        targetWidth: placementW
         // The main menu is large enough that scaling/placement motion reads as
         // a panel slide. A quick fade is clearer and avoids a temporary FBO.
         animateScale: false
@@ -127,19 +129,23 @@ PanelWindow {
         // Keep async page content inside the destination surface.
         clip: true
 
-        // Keep one outer frame across every destination. Resizing a bar-anchored
-        // popup also moves its origin, which made tab and section changes look
-        // like the whole menu was jumping around the screen.
-        readonly property int _preferredPanelW: 630
-        readonly property int _preferredPanelH: 520
+        // Home/Notifications read best compact; Settings needs room for the
+        // category nav and detail column.
+        readonly property int _compactW: 398
+        readonly property int _powerW: 566
+        readonly property int _settingsW: 630
         readonly property bool _railExpanded: activeTab === 1 || powerOpen
+        readonly property int _targetPanelW: activeTab === 1 ? _settingsW
+            : powerOpen ? _powerW : _compactW
         readonly property int _availablePanelW: win.width > 0
             ? Math.max(1, Math.floor(win.width - _minX * 2))
-            : _preferredPanelW
+            : _settingsW
         // Never force the popup beyond the output. Controls below already
         // reflow; letting the surface shrink keeps both edges reachable.
         readonly property int panelW: Math.max(1,
-            Math.min(_preferredPanelW, _availablePanelW))
+            Math.min(_targetPanelW, _availablePanelW))
+        readonly property int placementW: Math.max(1,
+            Math.min(_settingsW, _availablePanelW))
         // rail expands for Settings: icon strip stays fixed, category nav rides on beside it as one growing surface
         readonly property int railCollapsedW: 44
         readonly property int _navMinW: powerOpen ? 112 : 118
@@ -165,11 +171,13 @@ PanelWindow {
         readonly property int innerW: Math.max(1, contentW - contentPad * 2)
         // shared height floor so every tab opens at the same size; taller content grows above it
         readonly property int idealMinH: 360
+        // min height so rail icons never overlap the power slot
+        readonly property int minRailFitH: 252
         readonly property int _availablePanelH: win.height > 0
             ? Math.max(1, Math.floor(win.height - _edgeY - _minX))
-            : _preferredPanelH
+            : contentPane.targetH
         readonly property int targetPanelH: Math.max(1,
-            Math.min(_preferredPanelH, _availablePanelH))
+            Math.min(contentPane.targetH, _availablePanelH))
 
         readonly property int activeTab: MenuState.activeTab
         readonly property var _focusWindow: panel.Window.window
@@ -548,6 +556,16 @@ PanelWindow {
                 color: Theme.menuPane
             }
 
+            // Snap the destination to the divider grid. Content and the nav
+            // determine the compact height; the viewport handles overflow.
+            readonly property int targetH: {
+                const contentH = tabContent.y + tabContent.height + 12
+                const navH = panel.activeTab === 1
+                    ? _settingsNav.implicitHeight + 16 : 0
+                return 4 * Math.ceil(Math.max(panel.minRailFitH,
+                    panel.idealMinH, contentH, navH) / 4)
+            }
+
             height: panel.height
 
             TapHandler {
@@ -705,7 +723,9 @@ PanelWindow {
                             RecentPage {
                                 width: parent.width
                                 viewportHeight: Math.max(220,
-                                    panel.targetPanelH - tabContent.y - 12)
+                                    Math.min(panel.idealMinH,
+                                        panel._availablePanelH)
+                                        - tabContent.y - 16)
                                 active: panel.activeTab === 2 && MenuState.open
                                 powerOpen: panel.powerOpen
                             }
