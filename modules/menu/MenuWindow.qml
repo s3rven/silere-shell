@@ -202,8 +202,8 @@ PanelWindow {
             const focusedItem = _focusWindow ? _focusWindow.activeFocusItem : null
             const focusNeedsReset = focusedItem && (
                 _ownsItem(focusedItem, tabContent)
-                || _ownsItem(focusedItem, _settingsNav)
-                || _ownsItem(focusedItem, _powerRail))
+                || _ownsItem(focusedItem, _settingsNavLoader.item)
+                || _ownsItem(focusedItem, _powerRailLoader.item))
             if (powerOpen) powerOpen = false
             if (tab === 0) _homeLoaded = true
             if (tab === 1) _settingsLoaded = true
@@ -258,14 +258,12 @@ PanelWindow {
             }
             function onOpenChanged() {
                 if (MenuState.open) {
-                    _idleUnload.stop()
                     contentFlick.contentY = 0
                     // deterministic Tab start: panel paints no focus ring, and this clears stale child focus from the previous open
                     panel.forceActiveFocus()
                 } else {
                     _outsideTapGuard.stop()
                     win._ignoreOutsideTap = false
-                    _idleUnload.restart()
                 }
             }
             function onSettingsSectionChanged() { _sectionScrollReset.restart() }
@@ -289,20 +287,6 @@ PanelWindow {
             id: _powerFocusRestore
             interval: 0
             onTriggered: if (MenuState.open && !panel.powerOpen) _railPower.forceActiveFocus()
-        }
-
-        // Keep recently used pages warm for quick reopen, then release the
-        // large Settings/Notifications trees while the menu stays closed.
-        Timer {
-            id: _idleUnload
-            interval: 30000
-            onTriggered: {
-                if (MenuState.open) return
-                panel._homeLoaded = false
-                panel._loadedDeferred = false
-                panel._settingsLoaded = false
-                panel._recentLoaded = false
-            }
         }
 
         Connections {
@@ -386,21 +370,28 @@ PanelWindow {
                         NumberAnimation { duration: Motion.fast }
                     }
 
-                    SettingsNav {
-                        id: _settingsNav
+                    Loader {
+                        id: _settingsNavLoader
                         anchors.fill: parent
-                        powerOpen: panel.powerOpen
-                        onCurrentPageRetapped: contentFlick.contentY = 0
+                        active: panel._settingsLoaded || panel.activeTab === 1
+                        sourceComponent: Component {
+                            SettingsNav {
+                                powerOpen: panel.powerOpen
+                                onCurrentPageRetapped: contentFlick.contentY = 0
+                            }
+                        }
                     }
                 }
 
                 // Same expanded rail surface as Settings, clipped from the bottom so it reveals upward from the power slot.
                 Item {
+                    id: _powerRailSurface
                     x: panel.railCollapsedW
                     width: panel.navW
                     anchors.bottom: parent.bottom
                     anchors.bottomMargin: 10
-                    height: panel.powerOpen ? _powerRail.implicitHeight : 0
+                    height: panel.powerOpen
+                        ? (_powerRailLoader.item?.implicitHeight ?? 0) : 0
                     clip: true
                     opacity: panel.powerOpen ? 1 : 0
                     visible: height > 0.5 || opacity > 0.001
@@ -415,14 +406,18 @@ PanelWindow {
                         NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
                     }
 
-                    PowerRailContent {
-                        id: _powerRail
+                    Loader {
+                        id: _powerRailLoader
                         anchors.left: parent.left
                         anchors.right: parent.right
                         anchors.leftMargin: 9
                         anchors.rightMargin: 9
                         anchors.bottom: parent.bottom
-                        active: panel.powerOpen
+                        height: item ? item.implicitHeight : 0
+                        active: panel.powerOpen || _powerRailSurface.height > 0.5
+                        sourceComponent: Component {
+                            PowerRailContent { active: panel.powerOpen }
+                        }
                     }
                 }
 
@@ -561,7 +556,7 @@ PanelWindow {
             readonly property int targetH: {
                 const contentH = tabContent.y + tabContent.height + 12
                 const navH = panel.activeTab === 1
-                    ? _settingsNav.implicitHeight + 16 : 0
+                    ? (_settingsNavLoader.item?.implicitHeight ?? 0) + 16 : 0
                 return 4 * Math.ceil(Math.max(panel.minRailFitH,
                     panel.idealMinH, contentH, navH) / 4)
             }

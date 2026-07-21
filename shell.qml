@@ -71,7 +71,11 @@ ShellRoot {
         id: _pl
         required property bool wantOpen
         required property Component surface
-        property int unloadDelay: Math.max(80, Motion.ms(210) + 80)
+        // Keep the tree only through the longest card exit, then release it.
+        // The old ~290ms grace retained every popup for about twice as long as
+        // its visible close transition.
+        property int unloadDelay: Math.max(40,
+            Math.max(Motion.popOut, Motion.popOutFade) + 30)
         onWantOpenChanged: {
             if (wantOpen) { _plUnload.stop(); _plLoader.active = true }
             else _plUnload.restart()
@@ -99,7 +103,6 @@ ShellRoot {
 
     PopupLoader {
         wantOpen: MenuState.open
-        unloadDelay: Math.max(80, Motion.ms(220) + 80)
         surface: Component { MenuWindow { targetScreen: MenuState.triggerScreen ?? root.activeOverlayScreen } }
     }
 

@@ -107,9 +107,32 @@ PageShell {
         Item {
             id: _mediaSection
             width: parent.width
+            property bool _mediaLoaded: false
+
+            Component.onCompleted: _mediaLoaded = Media.shown
+            Connections {
+                target: Media
+                function onShownChanged() {
+                    if (Media.shown) {
+                        _mediaUnload.stop()
+                        _mediaSection._mediaLoaded = true
+                    } else if (ShellSettings.reduceMotion) {
+                        _mediaSection._mediaLoaded = false
+                    } else {
+                        _mediaUnload.restart()
+                    }
+                }
+            }
+            Timer {
+                id: _mediaUnload
+                interval: Motion.medium + Motion.ms(30)
+                onTriggered: if (!Media.shown) _mediaSection._mediaLoaded = false
+            }
+
             // Snap to 4 logical px so rows below land on whole physical pixels
             // under fractional scaling — unaligned offsets double their 1px borders.
-            height: Media.shown ? 4 * Math.ceil((_mediaCard.height + 10) / 4) : 0
+            height: Media.shown && _mediaLoader.item
+                ? 4 * Math.ceil((_mediaLoader.item.height + 10) / 4) : 0
             clip: true
 
             Behavior on height {
@@ -117,9 +140,14 @@ PageShell {
                 NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
             }
 
-            ClippingRectangle {
-                id: _mediaCard
+            Loader {
+                id: _mediaLoader
                 width: parent.width
+                active: _mediaSection._mediaLoaded
+                sourceComponent: Component {
+                    ClippingRectangle {
+                id: _mediaCard
+                width: parent ? parent.width : 0
                 readonly property int _seekBlock: Media.hasPosition ? 26 : 0
                 // Snap to a 4px multiple: an integer-but-odd height lands the bottom
                 // border on a half physical pixel under fractional scaling and doubles it.
@@ -577,6 +605,8 @@ PageShell {
                         accessibleName: "Next track"
                         available: Media.canGoNext
                         onTriggered: Media.next()
+                    }
+                }
                     }
                 }
             }
