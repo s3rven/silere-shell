@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import "../../config"
 import "../../services"
+import "../common"
 
 PanelWindow {
     id: win
@@ -55,6 +56,52 @@ PanelWindow {
 
     property int _pendingDismissAll: 0
     property var _pendingDismissItems: []
+    property bool _showAll: false
+
+    function revealAll(): void {
+        if (Notifications.activeCount > 0) win._showAll = true
+    }
+
+    function dismissAll(): void {
+        var items = []
+        var pending = []
+        const live = Notifications.list || []
+        for (var n = 0; n < live.length; n++) {
+            const entry = live[n]
+            if (entry && entry.notification)
+                pending.push({ id: entry.id, notification: entry.notification, expired: false })
+        }
+        for (var i = 0; i < stack.count; i++) {
+            const slot = stack.itemAt(i)
+            if (slot && slot.cardItem) items.push(slot.cardItem)
+        }
+        win._pendingDismissItems = pending
+        win._pendingDismissAll = pending.length
+        if (pending.length === 0) return
+        if (items.length === 0) { win._dismissPendingSnapshot(); return }
+        if (ShellSettings.reduceMotion) {
+            for (var j = 0; j < items.length; j++) items[j].dismiss()
+            if (win._pendingDismissAll > 0) _cascadeSafety.restart()
+            return
+        }
+        win._cascadeItems = items
+        win._cascadeIdx = 0
+        _cascadeTimer.restart()
+    }
+
+    Connections {
+        target: Notifications
+        function onActiveCountChanged(): void {
+            if (ShellSettings.notifMaxVisible > 0
+                    && Notifications.activeCount <= ShellSettings.notifMaxVisible)
+                win._showAll = false
+        }
+    }
+
+    Connections {
+        target: ShellSettings
+        function onNotifMaxVisibleChanged(): void { win._showAll = false }
+    }
 
     function _forgetPendingDismiss(id: int, notification): void {
         const next = []
@@ -154,18 +201,21 @@ PanelWindow {
                     : _pillHover.hovered
                         ? Theme.withAlpha(Theme.error, 0.12)
                         : Theme.menuControl
-                border.width: 1
-                border.color: _dismissPress.pressed
-                    ? Theme.withAlpha(Theme.error, 0.60)
-                    : _pillHover.hovered
-                        ? Theme.withAlpha(Theme.error,   0.38)
-                        : Theme.menuControlLine
+                OutlineBorder {
+                    radius: _pillRect.radius
+                    outlineColor: _dismissPress.pressed
+                        ? Theme.withAlpha(Theme.error, 0.60)
+                        : _pillHover.hovered
+                            ? Theme.withAlpha(Theme.error,   0.38)
+                            : Theme.menuControlLine
+                    Behavior on outlineColor { ColorAnimation { duration: Motion.fast } }
+                }
 
-                Behavior on color        { ColorAnimation { duration: Motion.fast } }
-                Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+                Behavior on color { ColorAnimation { duration: Motion.fast } }
 
                 Accessible.role: Accessible.Button
                 Accessible.name: "Dismiss all notifications"
+                Accessible.onPressAction: win.dismissAll()
 
                 Row {
                     id: _pillRow
@@ -197,32 +247,7 @@ PanelWindow {
                 TapHandler {
                     id: _dismissPress
                     cursorShape: Qt.PointingHandCursor
-                    onTapped: {
-                        var items = []
-                        var pending = []
-                        const live = Notifications.list || []
-                        for (var n = 0; n < live.length; n++) {
-                            const entry = live[n]
-                            if (entry && entry.notification)
-                                pending.push({ id: entry.id, notification: entry.notification, expired: false })
-                        }
-                        for (var i = 0; i < stack.count; i++) {
-                            const slot = stack.itemAt(i)
-                            if (slot && slot.cardItem) items.push(slot.cardItem)
-                        }
-                        win._pendingDismissItems = pending
-                        win._pendingDismissAll = pending.length
-                        if (pending.length === 0) return
-                        if (items.length === 0) { win._dismissPendingSnapshot(); return }
-                        if (ShellSettings.reduceMotion) {
-                            for (var j = 0; j < items.length; j++) items[j].dismiss()
-                            if (win._pendingDismissAll > 0) _cascadeSafety.restart()
-                            return
-                        }
-                        win._cascadeItems = items
-                        win._cascadeIdx   = 0
-                        _cascadeTimer.restart()
-                    }
+                    onTapped: win.dismissAll()
                 }
             }
         }
@@ -236,7 +261,8 @@ PanelWindow {
                 required property var modelData
                 required property int index
 
-                readonly property bool shouldLoad: ShellSettings.notifMaxVisible <= 0
+                readonly property bool shouldLoad: win._showAll
+                    || ShellSettings.notifMaxVisible <= 0
                     || index < ShellSettings.notifMaxVisible
                 readonly property var cardItem: _cardLoader.item
                 property real timeoutStartedAt: 0
@@ -288,10 +314,10 @@ PanelWindow {
 
         Item {
             id: _moreChip
-            readonly property int _extra: ShellSettings.notifMaxVisible > 0
+            readonly property int _extra: !win._showAll && ShellSettings.notifMaxVisible > 0
                 ? Math.max(0, Notifications.activeCount - ShellSettings.notifMaxVisible) : 0
             width:   parent.width
-            height:  _extra > 0 ? 22 : 0
+            height:  _extra > 0 ? 30 : 0
             visible: height > 0.5
             clip:    true
             Behavior on height { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
@@ -301,20 +327,52 @@ PanelWindow {
                 anchors.left:             win._left   ? parent?.left : undefined
                 anchors.horizontalCenter: win._center ? parent?.horizontalCenter : undefined
                 anchors.verticalCenter:   parent.verticalCenter
-                width:  _moreTxt.implicitWidth + 16
-                height: 18
-                radius: 9
+                width:  _moreRow.implicitWidth + 20
+                height: 24
+                radius: 12
                 antialiasing: true
-                color: Theme.menuControl
+                color: _moreTap.pressed
+                    ? Theme.withAlpha(Theme.accent, 0.20)
+                    : _moreHover.hovered ? Theme.withAlpha(Theme.accent, 0.11) : Theme.menuControl
                 border.width: 1
-                border.color: Theme.menuControlLine
-                Text {
-                    id: _moreTxt
+                border.color: _moreHover.hovered
+                    ? Theme.withAlpha(Theme.accent, 0.42) : Theme.menuControlLine
+                Accessible.role: Accessible.Button
+                Accessible.name: "Show " + _moreChip._extra + " more notifications"
+                Accessible.onPressAction: win.revealAll()
+
+                Behavior on color { ColorAnimation { duration: Motion.fast } }
+                Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+                HoverHandler { id: _moreHover; cursorShape: Qt.PointingHandCursor }
+                TapHandler { id: _moreTap; onTapped: win.revealAll() }
+
+                Row {
+                    id: _moreRow
                     anchors.centerIn: parent
-                    text: "· " + _moreChip._extra + " more"
-                    color: Theme.withAlpha(Theme.menuTextMuted, 0.86)
-                    font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
-                    renderType: Text.NativeRendering
+                    spacing: 5
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "󰂚"
+                        color: _moreHover.hovered ? Theme.accent
+                            : Theme.withAlpha(Theme.menuTextMuted, 0.76)
+                        font.family: Settings.font
+                        font.pixelSize: Settings.fontSize - 1
+                        renderType: Text.NativeRendering
+                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    }
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "Show " + _moreChip._extra + " more"
+                        color: _moreHover.hovered ? Theme.withAlpha(Theme.text, 0.90)
+                            : Theme.withAlpha(Theme.menuTextMuted, 0.86)
+                        font.family: Settings.font
+                        font.pixelSize: Settings.fontSize - 2
+                        font.weight: Font.Medium
+                        renderType: Text.NativeRendering
+                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    }
                 }
             }
         }

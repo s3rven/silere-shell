@@ -70,10 +70,7 @@ PanelWindow {
     Connections {
         target: ShellSettings
         function onBarPositionChanged() {
-            if (!MenuState.open) {
-                panel.edgeOffset = panel._closedOffset
-                return
-            }
+            if (!MenuState.open) return
             win._ignoreOutsideTap = true
             _outsideTapGuard.restart()
         }
@@ -122,23 +119,27 @@ PanelWindow {
         anchorX: MenuState.anchorX
         barBottom: ShellSettings.barPosition === "bottom"
         targetWidth: panelW
+        // The main menu is large enough that scaling/placement motion reads as
+        // a panel slide. A quick fade is clearer and avoids a temporary FBO.
+        animateScale: false
+        animatePlacement: false
         border.width: 0
-        // panes lay out at destination width before the chrome morph; clip the overhang
+        // Keep async page content inside the destination surface.
         clip: true
 
-        // Home/Notifications read best compact; Settings needs room for the nav + detail column
-        readonly property int _compactW:  398
-        readonly property int _powerW:    566
-        readonly property int _settingsW: 630
+        // Keep one outer frame across every destination. Resizing a bar-anchored
+        // popup also moves its origin, which made tab and section changes look
+        // like the whole menu was jumping around the screen.
+        readonly property int _preferredPanelW: 630
+        readonly property int _preferredPanelH: 520
         readonly property bool _railExpanded: activeTab === 1 || powerOpen
-        readonly property int _targetPanelW: activeTab === 1 ? _settingsW
-            : powerOpen ? _powerW : _compactW
         readonly property int _availablePanelW: win.width > 0
             ? Math.max(1, Math.floor(win.width - _minX * 2))
-            : _targetPanelW
+            : _preferredPanelW
         // Never force the popup beyond the output. Controls below already
         // reflow; letting the surface shrink keeps both edges reachable.
-        readonly property int panelW: Math.max(1, Math.min(_targetPanelW, _availablePanelW))
+        readonly property int panelW: Math.max(1,
+            Math.min(_preferredPanelW, _availablePanelW))
         // rail expands for Settings: icon strip stays fixed, category nav rides on beside it as one growing surface
         readonly property int railCollapsedW: 44
         readonly property int _navMinW: powerOpen ? 112 : 118
@@ -164,20 +165,17 @@ PanelWindow {
         readonly property int innerW: Math.max(1, contentW - contentPad * 2)
         // shared height floor so every tab opens at the same size; taller content grows above it
         readonly property int idealMinH: 360
-        // min height so rail icons never overlap the power slot
-        readonly property int minRailFitH: 252
-        readonly property int geometryAnimDuration: Motion.medium
         readonly property int _availablePanelH: win.height > 0
             ? Math.max(1, Math.floor(win.height - _edgeY - _minX))
-            : contentPane.targetH
+            : _preferredPanelH
         readonly property int targetPanelH: Math.max(1,
-            Math.min(contentPane.targetH, _availablePanelH))
+            Math.min(_preferredPanelH, _availablePanelH))
 
         readonly property int activeTab: MenuState.activeTab
         readonly property var _focusWindow: panel.Window.window
 
         property bool powerOpen: false
-        property bool _loaded:         false
+        property bool _homeLoaded:     false
         property bool _loadedDeferred: false
         property bool _settingsLoaded: false
         property bool _recentLoaded:   false
@@ -199,6 +197,7 @@ PanelWindow {
                 || _ownsItem(focusedItem, _settingsNav)
                 || _ownsItem(focusedItem, _powerRail))
             if (powerOpen) powerOpen = false
+            if (tab === 0) _homeLoaded = true
             if (tab === 1) _settingsLoaded = true
             if (tab === 2) _recentLoaded = true
             if (tab !== MenuState.activeTab) MenuState.activeTab = tab
@@ -244,18 +243,21 @@ PanelWindow {
                 panel.switchTab(index)
             }
             function onActiveTabChanged() {
+                if (MenuState.activeTab === 0) panel._homeLoaded = true
                 if (MenuState.activeTab === 1) panel._settingsLoaded = true
                 if (MenuState.activeTab === 2) panel._recentLoaded = true
                 contentFlick.contentY = 0
             }
             function onOpenChanged() {
                 if (MenuState.open) {
+                    _idleUnload.stop()
                     contentFlick.contentY = 0
                     // deterministic Tab start: panel paints no focus ring, and this clears stale child focus from the previous open
                     panel.forceActiveFocus()
                 } else {
                     _outsideTapGuard.stop()
                     win._ignoreOutsideTap = false
+                    _idleUnload.restart()
                 }
             }
             function onSettingsSectionChanged() { _sectionScrollReset.restart() }
@@ -281,6 +283,20 @@ PanelWindow {
             onTriggered: if (MenuState.open && !panel.powerOpen) _railPower.forceActiveFocus()
         }
 
+        // Keep recently used pages warm for quick reopen, then release the
+        // large Settings/Notifications trees while the menu stays closed.
+        Timer {
+            id: _idleUnload
+            interval: 30000
+            onTriggered: {
+                if (MenuState.open) return
+                panel._homeLoaded = false
+                panel._loadedDeferred = false
+                panel._settingsLoaded = false
+                panel._recentLoaded = false
+            }
+        }
+
         Connections {
             target: panel._focusWindow
             function onActiveFocusItemChanged() {
@@ -291,29 +307,14 @@ PanelWindow {
         width:  panelW
         height: targetPanelH
 
-        Behavior on height {
-            enabled: panel.state === "visible" && !ShellSettings.reduceMotion
-            // smoothed, not OutCubic: content animates too, and a moving target restarts the easing every frame
-            SmoothedAnimation {
-                velocity: 1800
-                maximumEasingTime: Motion.ms(90)
-            }
-        }
-
-        // width, placement, rail and content offset share one clock; mismatched clocks read as jitter
-        Behavior on width {
-            enabled: panel.state === "visible" && !ShellSettings.reduceMotion
-            NumberAnimation { duration: panel.geometryAnimDuration; easing.type: Easing.OutCubic }
-        }
-
         onStateChanged: {
             if (state === "hidden") {
                 powerOpen = false
             } else {
                 if (activeTab === 1) _settingsLoaded = true
                 if (activeTab === 2) _recentLoaded = true
-                if (!_loaded) {
-                    _loaded = true
+                if (activeTab === 0) _homeLoaded = true
+                if (!_loadedDeferred) {
                     Qt.callLater(function() { _loadedDeferred = true })
                 }
             }
@@ -326,12 +327,6 @@ PanelWindow {
             height: panel.height
             clip: false  // allow hover pills to overflow into content area
             z: 6         // render above the content pane so pills aren't hidden
-
-            // Expand/collapse in step with the panel's width clock.
-            Behavior on width {
-                enabled: panel.state === "visible" && !ShellSettings.reduceMotion
-                NumberAnimation { duration: panel.geometryAnimDuration; easing.type: Easing.OutCubic }
-            }
 
             // background + divider live in a clipped sub-layer so the over-wide rounded background can't bleed past the rail edge; icons/pills stay unclipped
             Item {
@@ -553,18 +548,6 @@ PanelWindow {
                 color: Theme.menuPane
             }
 
-            // slide in step with the expanding rail so the rail and content edges stay flush
-            Behavior on x {
-                enabled: panel.state === "visible" && !ShellSettings.reduceMotion
-                NumberAnimation { duration: panel.geometryAnimDuration; easing.type: Easing.OutCubic }
-            }
-
-            // snapped to 4 so a bottom-bar panel's y stays on the divider grid; the nav must stay fully visible, so it floors the panel too
-            readonly property int targetH: {
-                const contentH = tabContent.y + tabContent.height + 12
-                const navH = panel.activeTab === 1 ? _settingsNav.implicitHeight + 16 : 0
-                return 4 * Math.ceil(Math.max(panel.minRailFitH, panel.idealMinH, contentH, navH) / 4)
-            }
             height: panel.height
 
             TapHandler {
@@ -685,7 +668,7 @@ PanelWindow {
                     Loader {
                         id: homeLoader
                         width: parent.width
-                        active: panel._loaded
+                        active: panel._homeLoaded
                         // sync: the landing tab must be up with the open animation
                         asynchronous: false
                         sourceComponent: Component {
@@ -722,7 +705,7 @@ PanelWindow {
                             RecentPage {
                                 width: parent.width
                                 viewportHeight: Math.max(220,
-                                    Math.min(panel.idealMinH, panel._availablePanelH) - tabContent.y - 16)
+                                    panel.targetPanelH - tabContent.y - 12)
                                 active: panel.activeTab === 2 && MenuState.open
                                 powerOpen: panel.powerOpen
                             }

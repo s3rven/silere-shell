@@ -23,6 +23,7 @@ Item {
     Accessible.role: Accessible.AlertMessage
     Accessible.name: appNameText
     Accessible.description: hasBody ? summaryText + ": " + bodyText : summaryText
+    Accessible.onPressAction: card.activatePrimary()
 
     // "default" action maps to body click per spec, not a chip button
     readonly property var _defaultAction: {
@@ -87,6 +88,26 @@ Item {
         }
         _collapseAnim.restart()
         _exitTimer.start()
+    }
+
+    function activatePrimary(): void {
+        if (!card.enabled) return
+        if (card._defaultAction)
+            card._defaultAction.invoke()
+        else if (card.showContentImage && card.contentImageTarget.length > 0)
+            Quickshell.execDetached(["xdg-open", card.contentImageTarget])
+
+        HyprActions.focusNotificationSource(card.notification)
+        if (!card._defaultAction || !card.notification.resident)
+            card.dismiss()
+    }
+
+    function invokeAction(action): void {
+        if (!card.enabled || !action) return
+        action.invoke()
+        // `resident` asks the server to keep the notification after an
+        // action is invoked.
+        if (!card.notification.resident) card.dismiss()
     }
 
     NumberAnimation {
@@ -310,6 +331,9 @@ Item {
                     anchors.left:       _critIcon.visible ? _critIcon.right : parent.left
                     anchors.leftMargin: _critIcon.visible ? 6 : 0
                     anchors.right:      parent.right
+                    // Reserve the close affordance so long summaries never
+                    // disappear beneath it.
+                    anchors.rightMargin: 18
                     text:           card.summaryText
                     textFormat:     Text.PlainText
                     color:          card.isCritical ? Theme.error : Theme.text
@@ -410,7 +434,7 @@ Item {
                         readonly property int _n: Math.max(1, card.actionList.length)
 
                         width: (contentCol.width - 7 * (_n - 1)) / _n
-                        height: 28
+                        height: 30
                         radius: 8
                         antialiasing: true
                         color: _actMa.pressed       ? Theme.withAlpha(_tint, 0.24)
@@ -425,6 +449,7 @@ Item {
 
                         Accessible.role: Accessible.Button
                         Accessible.name: _actBtn.modelData.text
+                        Accessible.onPressAction: card.invokeAction(_actBtn.modelData)
 
                         Text {
                             anchors.centerIn: parent
@@ -446,13 +471,7 @@ Item {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                if (!card.enabled) return
-                                _actBtn.modelData.invoke()
-                                // `resident` asks the server to keep the
-                                // notification after an action is invoked.
-                                if (!card.notification.resident) card.dismiss()
-                            }
+                            onClicked: card.invokeAction(_actBtn.modelData)
                         }
                     }
                 }
@@ -538,16 +557,11 @@ Item {
             cursorShape: Qt.PointingHandCursor
             onClicked: (mouse) => {
                 if (mouse.button === Qt.RightButton) { card.dismiss(); return }
-                // default action first (app-side open/reply), then raise the window
-                if (mouse.button !== Qt.MiddleButton && card._defaultAction)
-                    card._defaultAction.invoke()
-                else if (mouse.button !== Qt.MiddleButton && card.showContentImage
-                        && card.contentImageTarget.length > 0)
-                    Quickshell.execDetached(["xdg-open", card.contentImageTarget])
-                HyprActions.focusNotificationSource(card.notification)
-                if (mouse.button !== Qt.MiddleButton
-                        && (!card._defaultAction || !card.notification.resident))
-                    card.dismiss()
+                // Middle-click is a non-destructive "take me to the source".
+                if (mouse.button === Qt.MiddleButton)
+                    HyprActions.focusNotificationSource(card.notification)
+                else
+                    card.activatePrimary()
             }
         }
 
@@ -556,13 +570,15 @@ Item {
             anchors.right:       parent.right
             anchors.topMargin:   7
             anchors.rightMargin: 7
-            width: 18; height: 18; radius: 9
+            width: 22; height: 22; radius: 11
             antialiasing: true
             color:        _closeHover.hovered ? Theme.withAlpha(Theme.error, 0.18) : Theme.menuControl
             border.width: 1
             border.color: _closeHover.hovered ? Theme.withAlpha(Theme.error, 0.32) : Theme.menuControlLine
-            opacity: _cardHover.hovered ? 1.0 : 0.0
-            scale:   _cardHover.hovered ? 1.0 : 0.6
+            // Keep a quiet close affordance discoverable for touch/tablet
+            // input, where a hover-only control can never be revealed.
+            opacity: _cardHover.hovered ? 1.0 : 0.48
+            scale:   _cardHover.hovered ? 1.0 : 0.90
             transformOrigin: Item.Center
             z: 2
             Behavior on opacity      { NumberAnimation { duration: Motion.fast } }
@@ -571,6 +587,7 @@ Item {
             Behavior on border.color { ColorAnimation  { duration: Motion.fast } }
             Accessible.role: Accessible.Button
             Accessible.name: "Dismiss notification"
+            Accessible.onPressAction: card.dismiss()
             HoverHandler { id: _closeHover; cursorShape: Qt.PointingHandCursor }
             TapHandler   { onTapped: card.dismiss() }
             Text {

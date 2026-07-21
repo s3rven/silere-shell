@@ -165,6 +165,7 @@ PageShell {
                 Accessible.role: Accessible.Button
                 Accessible.name: "Clear all notifications"
                 Accessible.description: root._clearArmed ? "Activate again to confirm" : ""
+                Accessible.onPressAction: root.requestClearAll()
                 Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root.requestClearAll(); event.accepted = true }
                 Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root.requestClearAll(); event.accepted = true }
                 Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root.requestClearAll(); event.accepted = true }
@@ -406,9 +407,11 @@ PageShell {
                         }
 
                         activeFocusOnTab: _body.truncated || _entry._expanded
-                        Accessible.role: Accessible.Button
+                        Accessible.role: activeFocusOnTab ? Accessible.Button : Accessible.StaticText
                         Accessible.name: String(_entry.modelData.summary || "Notification")
-                        Accessible.description: _entry._expanded ? "Activate to collapse" : "Activate to expand"
+                        Accessible.description: activeFocusOnTab
+                            ? (_entry._expanded ? "Activate to collapse" : "Activate to expand") : ""
+                        Accessible.onPressAction: _entry._toggleExpand()
                         Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) _entry._toggleExpand(); event.accepted = true }
                         Keys.onReturnPressed: event => { if (!event.isAutoRepeat) _entry._toggleExpand(); event.accepted = true }
                         Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) _entry._toggleExpand(); event.accepted = true }
@@ -450,7 +453,7 @@ PageShell {
                                     id: _appName
                                     anchors.verticalCenter: parent.verticalCenter
                                     width: Math.max(0, parent.width - _entryTime.implicitWidth
-                                        - parent.spacing - 24
+                                        - parent.spacing - 28
                                         - (_appIcon.visible ? _appIcon.width + parent.spacing : 0))
                                     text: _entry.modelData.appName || "Notification"
                                     textFormat: Text.PlainText
@@ -508,9 +511,9 @@ PageShell {
                             anchors.topMargin: 7
                             anchors.right: parent.right
                             anchors.rightMargin: 7
-                            width: 20
-                            height: 20
-                            radius: 10
+                            width: 24
+                            height: 24
+                            radius: 12
                             antialiasing: true
                             activeFocusOnTab: true
                             z: 2
@@ -522,11 +525,12 @@ PageShell {
                             border.color: activeFocus
                                 ? Theme.withAlpha(Theme.error, 0.88)
                                 : _removeHover.hovered ? Theme.withAlpha(Theme.error, 0.36) : Theme.menuControlLine
-                            opacity: _entryHover.hovered || activeFocus ? 1.0 : 0.46
-                            scale: _entryHover.hovered || activeFocus ? 1.0 : 0.88
+                            opacity: _entryHover.hovered || activeFocus ? 1.0 : 0.62
+                            scale: _entryHover.hovered || activeFocus ? 1.0 : 0.94
 
                             Accessible.role: Accessible.Button
                             Accessible.name: "Remove " + String(_entry.modelData.summary || "notification")
+                            Accessible.onPressAction: _entry.removeSelf()
                             Keys.onSpacePressed: event => { if (!event.isAutoRepeat) _entry.removeSelf(); event.accepted = true }
                             Keys.onReturnPressed: event => { if (!event.isAutoRepeat) _entry.removeSelf(); event.accepted = true }
                             Keys.onEnterPressed: event => { if (!event.isAutoRepeat) _entry.removeSelf(); event.accepted = true }
@@ -559,6 +563,33 @@ PageShell {
             fadeColor: Theme.menuPane
             thickness: 10
             maxOpacity: 0.42
+        }
+
+        Rectangle {
+            id: _historyScrollThumb
+            readonly property real _trackH: Math.max(1, _historyList.height - 8)
+            readonly property real _overflow: Math.max(1,
+                _historyList.contentHeight - _historyList.height)
+
+            anchors.right: _historyList.right
+            anchors.rightMargin: 2
+            y: _historyList.y + 4 + Math.max(0, _trackH - height)
+                * (_historyList.contentY / _overflow)
+            width: 2
+            height: Math.min(_trackH, Math.max(22, _trackH * Math.min(1,
+                _historyList.height / Math.max(1, _historyList.contentHeight))))
+            radius: 1
+            antialiasing: true
+            color: Theme.accent
+            opacity: visible ? (_historyList.moving ? 0.62 : 0.26) : 0
+            visible: Notifications.hasHistory
+                && _historyList.contentHeight > _historyList.height + 1
+            z: 3
+
+            Behavior on opacity {
+                enabled: !ShellSettings.reduceMotion
+                NumberAnimation { duration: Motion.fast }
+            }
         }
     }
 }

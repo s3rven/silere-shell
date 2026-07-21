@@ -8,13 +8,8 @@ Item {
     required property bool active
     required property bool powerOpen
 
-    // kept for page overrides; slide dropped, only the fade durations still apply
-    property real slideFrom:  0
-    property real slideOut:   0
     property int  enterFade: 140
-    property int  enterMove: 180
     property int  exitFade:  100
-    property int  moveEasing: Easing.OutCubic
 
     signal pageShown()
     signal pageHidden()

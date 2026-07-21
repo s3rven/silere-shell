@@ -199,7 +199,7 @@ Column {
                     color: _modHeader.open ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.58)
                     font.family: Settings.font; font.pixelSize: Settings.fontSize
                     renderType: Text.NativeRendering
-                    Behavior on rotation { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutBack; easing.overshoot: 1.6 } }
+                    Behavior on rotation { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
                 }
             }
         }

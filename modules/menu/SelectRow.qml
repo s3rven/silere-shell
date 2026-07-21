@@ -76,6 +76,7 @@ Item {
     Accessible.role: Accessible.ComboBox
     Accessible.name: root.label
     Accessible.description: root._activeLabel
+    Accessible.onPressAction: root._toggleOpen()
     Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root._toggleOpen(); event.accepted = true }
     Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._toggleOpen(); event.accepted = true }
     Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root._toggleOpen(); event.accepted = true }
@@ -187,7 +188,7 @@ Item {
             font.family:    Settings.font
             font.pixelSize: Settings.fontSize
             renderType:     Text.NativeRendering
-            Behavior on rotation { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutBack; easing.overshoot: 1.6 } }
+            Behavior on rotation { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
             Behavior on color    { ColorAnimation { duration: Motion.fast } }
         }
     }
@@ -213,18 +214,18 @@ Item {
         Behavior on height {
             enabled: !ShellSettings.reduceMotion
             NumberAnimation {
-                duration:    root._open ? Motion.medium : Motion.fast
-                easing.type: root._open ? Easing.OutQuart : Easing.InCubic
+                duration:    root._open ? Motion.normal : Motion.fast
+                easing.type: Easing.OutCubic
             }
         }
 
         Column {
             id: _optCol
             width: parent.width
-            y:       root._open ? 0 : -10
+            y: 0
             opacity: root._open ? 1.0 : 0.0
 
-            // header/options seam rides the slide so it never floats alone mid-animation; inset matches RowDividers
+            // Inset matches the card's row dividers.
             Rectangle {
                 x: 12
                 width: parent.width - 24; height: 1
@@ -232,18 +233,11 @@ Item {
             }
             Item { width: parent.width; height: 3 }
 
-            Behavior on y {
-                enabled: !ShellSettings.reduceMotion
-                NumberAnimation {
-                    duration:    root._open ? Motion.medium : Motion.fast
-                    easing.type: root._open ? Easing.OutQuart : Easing.InCubic
-                }
-            }
             Behavior on opacity {
                 enabled: !ShellSettings.reduceMotion
                 NumberAnimation {
-                    duration:    root._open ? Motion.medium : Motion.fast
-                    easing.type: root._open ? Easing.OutCubic : Easing.InCubic
+                    duration: Motion.fast
+                    easing.type: Easing.OutCubic
                 }
             }
 
@@ -287,6 +281,11 @@ Item {
                     Accessible.role: Accessible.RadioButton
                     Accessible.name: root.label + ": " + String(_opt.modelData.label ?? "")
                     Accessible.checked: _opt.active
+                    Accessible.onPressAction: {
+                        root.chosen(_opt.modelData.value)
+                        root._setOpen(false)
+                        root.forceActiveFocus()
+                    }
                     Keys.onSpacePressed:  event => _opt.choose(event)
                     Keys.onReturnPressed: event => _opt.choose(event)
                     Keys.onEnterPressed:  event => _opt.choose(event)
@@ -311,13 +310,15 @@ Item {
                         anchors.bottomMargin: 3
                         radius: Theme.radiusControl - 2
                         antialiasing: true
-                        // selection keeps its fill, keyboard focus keeps its ring; pointer hover is just the text brightening
+                        // Full-row feedback keeps long option lists easy to scan.
                         color: _opt.active
                             ? Theme.mix(Theme.menuControl, Theme.accent, ShellSettings.neutralTheme ? 0.16 : 0.24)
-                            : "transparent"
+                            : _optHov.hovered || _opt.activeFocus
+                                ? Theme.withAlpha(Theme.text, 0.035)
+                                : "transparent"
                         border.width: _opt.activeFocus ? 1 : 0
                         border.color: Theme.withAlpha(Theme.accent, 0.58)
-                        opacity: _opt.active || _opt.activeFocus ? 1.0 : 0.0
+                        opacity: _opt.active || _opt.activeFocus || _optHov.hovered ? 1.0 : 0.0
                         Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
                         Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
                     }

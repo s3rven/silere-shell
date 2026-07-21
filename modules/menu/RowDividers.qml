@@ -39,7 +39,7 @@ Repeater {
         x: 12
         // Row heights and panel offsets sit on the 4px grid (see fractional-scaling
         // notes), so row.y lands on whole physical px and every divider renders the
-        // same thickness. `column.y` folds in a collapsible's animating offset.
+        // same thickness. `column.y` also supports any intentionally offset group.
         y: (root.column ? root.column.y : 0) + (row ? Math.round(row.y) : 0)
         width:  root.column ? Math.max(0, root.column.width - 24) : 0
         height: 1

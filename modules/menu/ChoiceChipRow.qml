@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import "../../config"
 import "../../services"
+import "../common"
 
 Item {
     id: root
@@ -96,8 +97,11 @@ Item {
         radius:       Theme.radiusControl
         antialiasing: true
         color: Theme.mix(Theme.menuControl, Theme.text, 0.012)
-        border.width: 1
-        border.color: Theme.menuControlLine
+
+        OutlineBorder {
+            radius: _segContainer.radius
+            outlineColor: Theme.menuControlLine
+        }
 
         // bumped when delegates are (re)created: itemAt() returns null while the Repeater populates;
         // without this the binding caches that null and the indicator stays hidden until the first click re-evals
@@ -122,7 +126,8 @@ Item {
         readonly property real _cellW: Math.max(1,
             Math.floor((_segContainer.width - 8) / Math.max(1, root.model.length)))
 
-        // underline hugs the chip's painted content, not the cell, so short and long labels read evenly
+        // Underline hugs the chip's painted content, so short and long labels
+        // keep the compact selector style used throughout Settings.
         function _markW(seg): real {
             if (!seg) return 0
             return Math.max(10, Math.min(seg.contentW + 2, seg.width - 10))
@@ -165,7 +170,6 @@ Item {
             visible:      opacity > 0.001
             color: Theme.withAlpha(root.accentColor, 0.82)
 
-            // width stretches on the same clock as x so the mark flows between different-width labels instead of snapping
             Behavior on x        { enabled: _segContainer._animReady && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.width; easing.type: Easing.OutQuart } }
             Behavior on width    { enabled: _segContainer._animReady && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.width; easing.type: Easing.OutQuart } }
         }
@@ -199,6 +203,9 @@ Item {
                     Accessible.role: Accessible.RadioButton
                     Accessible.name: root.label + ": " + String(_seg.modelData.label ?? "")
                     Accessible.checked: _seg.active
+                    Accessible.onPressAction: {
+                        if (root.enabled) root.chosen(_seg.modelData.value)
+                    }
                     Keys.onSpacePressed: event => { if (!event.isAutoRepeat && root.enabled) root.chosen(_seg.modelData.value); event.accepted = true }
                     Keys.onReturnPressed: event => { if (!event.isAutoRepeat && root.enabled) root.chosen(_seg.modelData.value); event.accepted = true }
                     Keys.onEnterPressed: event => { if (!event.isAutoRepeat && root.enabled) root.chosen(_seg.modelData.value); event.accepted = true }
@@ -257,6 +264,7 @@ Item {
                             font.pixelSize: Math.max(9, Settings.fontSize - 1)
                             font.weight:    Font.Medium
                             renderType:     Text.NativeRendering
+                            Behavior on color { ColorAnimation { duration: Motion.fast } }
                         }
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
@@ -277,6 +285,7 @@ Item {
                             minimumPixelSize: Math.max(8, Settings.fontSize - 3)
                             font.weight:    _seg.active ? Font.DemiBold : Font.Medium
                             renderType:     Text.NativeRendering
+                            Behavior on color { ColorAnimation { duration: Motion.fast } }
                         }
                     }
                 }

@@ -8,9 +8,7 @@ PageShell {
     id: root
 
     implicitHeight: _detail.height
-    slideFrom: 6
-    enterFade: 145; enterMove: 165; exitFade: 110
-    moveEasing: Easing.OutQuart
+    enterFade: 145; exitFade: 110
 
     function _hex2(v) {
         const s = Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16)
@@ -28,35 +26,6 @@ PageShell {
         popups: _secPopups, osd: _secOsd, warnings: _secWarnings,
         updates: _secUpdates, system: _secSystem
     })
-
-    // theme-section reveal state; lives here (not in the section component) so it survives section switches
-    property bool _themeShowNeutral: false
-    property bool _themeShowMatu:    false
-    Component.onCompleted: {
-        root._themeShowNeutral = ShellSettings.neutralTheme
-        root._themeShowMatu    = !ShellSettings.neutralTheme
-    }
-    Connections {
-        target: ShellSettings
-        function onNeutralThemeChanged() {
-            if (ShellSettings.reduceMotion) {
-                root._themeShowNeutral = ShellSettings.neutralTheme
-                root._themeShowMatu    = !ShellSettings.neutralTheme
-                return
-            }
-            if (ShellSettings.neutralTheme) {
-                _themeOpenMatuTimer.stop()
-                root._themeShowMatu    = false
-                _themeOpenNeutralTimer.restart()
-            } else {
-                _themeOpenNeutralTimer.stop()
-                root._themeShowNeutral = false
-                _themeOpenMatuTimer.restart()
-            }
-        }
-    }
-    Timer { id: _themeOpenNeutralTimer; interval: Motion.fast + 20; onTriggered: root._themeShowNeutral = true }
-    Timer { id: _themeOpenMatuTimer;    interval: Motion.fast + 20; onTriggered: root._themeShowMatu    = true }
 
     // section id → { glyph, label, group, description, index }, for the detail-pane header
     readonly property var _sectionMeta: {
@@ -164,17 +133,12 @@ PageShell {
 
         readonly property int _bodyGap: 8
 
-        property real _slide: 0
-        // whole pixels only: native-rendered text shimmers on fractional translates
-        transform: Translate { y: Math.round(_detail._slide) }
-
         Connections {
             target: MenuState
             function onSettingsSectionChanged() {
                 if (ShellSettings.reduceMotion) {
                     root._shownSection = MenuState.settingsSection
                     _detail.opacity = 1
-                    _detail._slide = 0
                     return
                 }
                 if (!_detailSwap.running) _detailSwap.restart()
@@ -183,12 +147,9 @@ PageShell {
 
         SequentialAnimation {
             id: _detailSwap
-            NumberAnimation { target: _detail; property: "opacity"; to: 0.0; duration: Motion.ms(60); easing.type: Easing.InCubic }
-            ScriptAction    { script: { root._shownSection = MenuState.settingsSection; _detail._slide = 8 } }
-            ParallelAnimation {
-                NumberAnimation { target: _detail; property: "opacity"; to: 1.0; duration: Motion.ms(120); easing.type: Easing.OutCubic }
-                NumberAnimation { target: _detail; property: "_slide";  to: 0.0; duration: Motion.ms(120); easing.type: Easing.OutQuart }
-            }
+            NumberAnimation { target: _detail; property: "opacity"; to: 0.0; duration: Motion.ms(55); easing.type: Easing.InCubic }
+            ScriptAction    { script: root._shownSection = MenuState.settingsSection }
+            NumberAnimation { target: _detail; property: "opacity"; to: 1.0; duration: Motion.ms(105); easing.type: Easing.OutCubic }
             ScriptAction { script: if (root._shownSection !== MenuState.settingsSection) _detailSwapAgain.restart() }
         }
         Timer {
@@ -280,6 +241,7 @@ PageShell {
                 width: _detailBody.width
                 spacing: 0
 
+                SectionLabel { glyph: "󰉦"; label: "THEME MODE"; first: true }
                 SettingsCard {
                     ChoiceChipRow {
                         glyph: "󰉦"; label: "Source"
@@ -290,14 +252,17 @@ PageShell {
                         ]
                         onChosen: (v) => ShellSettings.neutralTheme = (v === "neutral")
                     }
+                }
 
+                SectionLabel { glyph: "󰏘"; label: "PALETTE" }
+                SettingsCard {
                 CollapsibleSection {
-                    expanded: root._themeShowNeutral
+                    expanded: ShellSettings.neutralTheme
 
                     Item {
                         id: _accentPicker
                         width: parent.width
-                        height: 96
+                        height: 104
 
                         readonly property real _accentL: 0.70
                         function _accentForHS(h, s) {
@@ -338,7 +303,7 @@ PageShell {
                         Text {
                             id: _accentTitle
                             anchors.top:            parent.top; anchors.topMargin: 11
-                            anchors.left:           parent.left; anchors.leftMargin: 12
+                            anchors.left:           parent.left; anchors.leftMargin: 16
                             anchors.right:          _accentReadout.left; anchors.rightMargin: 10
                             text:           "Accent"
                             color:          Theme.withAlpha(Theme.text, 0.85)
@@ -380,8 +345,8 @@ PageShell {
 
                             function revealIndex(index: int): void {
                                 if (!interactive || index < 0) return
-                                const left = index * 32
-                                const right = left + 26
+                                const left = _swatchRow.itemLeft(index) - _swatchRow.edgePadding
+                                const right = _swatchRow.itemRight(index) + _swatchRow.edgePadding
                                 if (left < contentX) contentX = left
                                 else if (right > contentX + width) contentX = right - width
                             }
@@ -410,17 +375,19 @@ PageShell {
 
                         HueStrip {
                             id: _hueStrip
-                            anchors.top:       _swatchViewport.bottom; anchors.topMargin: 8
+                            anchors.top:       _swatchViewport.bottom; anchors.topMargin: 6
                             anchors.left:      parent.left;  anchors.leftMargin:  12
                             anchors.right:     parent.right; anchors.rightMargin: 12
-                            height: 12
+                            height: 24
                             hue: _accentPicker._curHue
                             saturation: 0.72
                             lightness: _accentPicker._accentL
                             thumbColor: _accentPicker._curColor
                             dimmed: ShellSettings.neutralAccentAuto
                             accessibleName: "Accent hue"
-                            accessibleDescription: _accentPicker._shownName
+                            accessibleDescription: ShellSettings.neutralAccentAuto
+                                ? "Auto accent; adjust to switch to a custom color"
+                                : _accentPicker._shownName
                             onPicked: hue => {
                                 ShellSettings.neutralAccentAuto = false
                                 ShellSettings.neutralAccent = _accentPicker._accentForHS(hue, _accentPicker._curSat)
@@ -444,7 +411,7 @@ PageShell {
 
                 // neutral off: shell themes from matugen; show the live palette as proof (bundled fallback tones if matugen's absent, called out as such)
                 CollapsibleSection {
-                    expanded: root._themeShowMatu
+                    expanded: !ShellSettings.neutralTheme
 
                     SwatchPickerRow {
                         glyph: "󰔎"; label: "Accent role"
@@ -461,7 +428,7 @@ PageShell {
                 }
 
                 SliderRow {
-                    glyph: "▢"; label: "Outline strength"
+                    glyph: "󰃇"; label: "Outline strength"
                     value: ShellSettings.outlineStrength
                     min: 0.5; max: 1.6; step: 0.05
                     displayValue: Math.round(ShellSettings.outlineStrength * 100) + "%"

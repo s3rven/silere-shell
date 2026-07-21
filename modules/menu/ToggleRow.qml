@@ -56,6 +56,7 @@ Item {
     Accessible.name: root.label
     Accessible.description: root._accessibleDescription
     Accessible.checked: root.checked
+    Accessible.onPressAction: root._activate()
     Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
     Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
     Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }

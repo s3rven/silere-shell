@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import "../../config"
-import "../../services"
 
 // options stays static structure; live colours go in `colors` so palette
 // changes rebind chips instead of rebuilding delegates
@@ -14,33 +13,44 @@ Item {
     property int activeIndex: -1
     property bool spread: false
     property real packSpacing: 6
-    // transparent → ring follows the active chip's own colour
+    // Keep real edge padding so focus feedback is never sliced by a clipping
+    // Flickable and the first colour does not sit against the card edge.
+    property int edgePadding: 4
+    // Optional explicit colour for the selected swatch outline.
     property color ringColor: "transparent"
     property int hoveredIndex: -1
 
     signal picked(int index)
 
     implicitHeight: 32
-    implicitWidth: options.length * 26 + Math.max(0, options.length - 1) * packSpacing
+    implicitWidth: edgePadding * 2 + options.length * 26
+        + Math.max(0, options.length - 1) * packSpacing
 
     function colorAt(i: int): color {
         return (colors && i >= 0 && i < colors.length) ? colors[i] : Theme.accent
     }
 
+    function itemLeft(i: int): real {
+        root._rev
+        const item = i >= 0 && i < _rep.count ? _rep.itemAt(i) : null
+        return item ? _chipRow.x + item.x : 0
+    }
+
+    function itemRight(i: int): real {
+        root._rev
+        const item = i >= 0 && i < _rep.count ? _rep.itemAt(i) : null
+        return item ? _chipRow.x + item.x + item.width : 0
+    }
+
     // itemAt() is null while the repeater populates; the bump forces a re-eval
     property int _rev: 0
-    readonly property var _activeSw: {
-        _rev
-        if (activeIndex < 0 || _rep.count <= activeIndex) return null
-        return _rep.itemAt(activeIndex)
-    }
-    property bool _animReady: false
-    Component.onCompleted: Qt.callLater(function() { root._animReady = true })
-
     Row {
-        anchors.fill: parent
+        id: _chipRow
+        x: root.edgePadding
+        width: Math.max(0, parent.width - root.edgePadding * 2)
+        height: parent.height
         spacing: root.spread
-            ? Math.max(4, (root.width - root.options.length * 26) / Math.max(1, root.options.length - 1))
+            ? Math.max(4, (width - root.options.length * 26) / Math.max(1, root.options.length - 1))
             : root.packSpacing
 
         Repeater {
@@ -73,35 +83,20 @@ Item {
                     }
                 }
                 Rectangle {
-                    anchors.fill: parent
+                    anchors.centerIn: parent
+                    width: _sw.active ? 28 : 22
+                    height: width
                     radius: width / 2
                     antialiasing: true
                     color: "transparent"
-                    border.width: 1
-                    border.color: Theme.withAlpha(Theme.subtext, _sw.active ? 0.45 : 0.28)
+                    border.width: _sw.active ? 2 : 1
+                    border.color: _sw.active
+                        ? (root.ringColor.a > 0
+                            ? root.ringColor
+                            : Theme.mix(_sw.chipColor, Theme.text, 0.68))
+                        : Theme.withAlpha(Theme.subtext, 0.24)
                 }
             }
         }
-    }
-
-    // one ring glides between discs; freezes in place while it fades when nothing is active
-    Rectangle {
-        readonly property var _t: root._activeSw
-        property real _frozenX: 0
-        onXChanged: if (_t) _frozenX = x
-
-        width: 30; height: 30; radius: 15
-        antialiasing: true
-        color: "transparent"
-        border.width: 2
-        border.color: root.ringColor.a > 0 ? root.ringColor
-                    : _t ? _t.chipColor : root.colorAt(root.activeIndex)
-        x: _t ? _t.x + (_t.width - width) / 2 : _frozenX
-        y: (root.height - height) / 2
-        opacity: _t ? 0.85 : 0
-        visible: opacity > 0.001
-        Behavior on x            { enabled: root._animReady && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutBack; easing.overshoot: 1.05 } }
-        Behavior on opacity      { NumberAnimation { duration: Motion.medium } }
-        Behavior on border.color { ColorAnimation { duration: Motion.fast } }
     }
 }

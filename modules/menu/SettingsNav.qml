@@ -295,9 +295,6 @@ Item {
                                         : "transparent"
                             border.width: activeFocus ? 1 : 0
                             border.color: Theme.withAlpha(Theme.accent, 0.30)
-                            scale: _headerTap.pressed ? 0.985 : 1.0
-                            transformOrigin: Item.Left
-
                             activeFocusOnTab: root.active
                             Accessible.role: Accessible.Button
                             Accessible.name: _grp.modelData.label + " settings category"
@@ -306,6 +303,7 @@ Item {
                                 : (_grp.groupActive
                                     ? "Collapsed, contains the current page"
                                     : "Collapsed, activate to expand")
+                            Accessible.onPressAction: root._toggleGroup(_grp.index)
 
                             Keys.onSpacePressed: event => {
                                 if (!event.isAutoRepeat) root._toggleGroup(_grp.index)
@@ -341,7 +339,6 @@ Item {
                                 cursorShape: Qt.PointingHandCursor
                             }
                             TapHandler {
-                                id: _headerTap
                                 onTapped: root._toggleGroup(_grp.index)
                             }
 
@@ -349,11 +346,6 @@ Item {
                                 enabled: !ShellSettings.reduceMotion
                                 ColorAnimation { duration: Motion.fast }
                             }
-                            Behavior on scale {
-                                enabled: !ShellSettings.reduceMotion
-                                NumberAnimation { duration: Motion.ms(90); easing.type: Easing.OutCubic }
-                            }
-
                             Rectangle {
                                 visible: _grp.groupActive && !_grp.expanded
                                 anchors.left: parent.left
@@ -471,23 +463,21 @@ Item {
                                         required property var modelData
                                         readonly property bool active: MenuState.settingsSection === modelData.section
                                         readonly property string glyph: modelData.glyph ?? ""
-                                        property real _shift: active || _leafHover.hovered ? 1 : 0
-
                                         width: _leafColumn.width
                                         height: root._navRowH
                                         radius: 8
                                         antialiasing: true
                                         color: active
-                                            ? Theme.menuControl
+                                            ? Theme.withAlpha(Theme.accent,
+                                                ShellSettings.highContrast ? 0.16 : 0.085)
                                             : _leafHover.hovered || activeFocus
                                                 ? Theme.withAlpha(Theme.text, 0.042)
                                                 : "transparent"
                                         border.width: active || activeFocus ? 1 : 0
                                         border.color: active
-                                            ? Theme.menuControlLine
+                                            ? Theme.withAlpha(Theme.accent,
+                                                ShellSettings.highContrast ? 0.52 : 0.26)
                                             : Theme.withAlpha(Theme.accent, 0.28)
-                                        scale: _leafTap.pressed ? 0.985 : 1.0
-                                        transformOrigin: Item.Left
 
                                         activeFocusOnTab: root.active && _grp.expanded
                                         Accessible.role: Accessible.Button
@@ -495,6 +485,7 @@ Item {
                                         Accessible.description: _leaf.modelData.description ?? ""
                                         Accessible.selectable: true
                                         Accessible.selected: active
+                                        Accessible.onPressAction: root._activateSection(_leaf.modelData.section)
 
                                         Keys.onSpacePressed: event => {
                                             if (!event.isAutoRepeat)
@@ -530,7 +521,6 @@ Item {
                                             cursorShape: Qt.PointingHandCursor
                                         }
                                         TapHandler {
-                                            id: _leafTap
                                             onTapped: root._activateSection(_leaf.modelData.section)
                                         }
 
@@ -538,15 +528,6 @@ Item {
                                             enabled: !ShellSettings.reduceMotion
                                             ColorAnimation { duration: Motion.fast }
                                         }
-                                        Behavior on scale {
-                                            enabled: !ShellSettings.reduceMotion
-                                            NumberAnimation { duration: Motion.ms(90); easing.type: Easing.OutCubic }
-                                        }
-                                        Behavior on _shift {
-                                            enabled: !ShellSettings.reduceMotion
-                                            NumberAnimation { duration: Motion.ms(100); easing.type: Easing.OutCubic }
-                                        }
-
                                         Rectangle {
                                             visible: _leaf.active
                                             anchors.left: parent.left
@@ -575,8 +556,6 @@ Item {
                                             font.family: Settings.font
                                             font.pixelSize: Settings.fontSize
                                             renderType: Text.NativeRendering
-                                            transform: Translate { x: Math.round(_leaf._shift) }
-
                                             Behavior on color {
                                                 enabled: !ShellSettings.reduceMotion
                                                 ColorAnimation { duration: Motion.fast }
@@ -599,8 +578,6 @@ Item {
                                             font.pixelSize: Settings.fontSize
                                             font.weight: _leaf.active ? Font.DemiBold : Font.Normal
                                             renderType: Text.NativeRendering
-                                            transform: Translate { x: Math.round(_leaf._shift) }
-
                                             Behavior on color {
                                                 enabled: !ShellSettings.reduceMotion
                                                 ColorAnimation { duration: Motion.fast }

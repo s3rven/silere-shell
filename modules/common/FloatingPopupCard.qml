@@ -4,7 +4,7 @@ import QtQuick
 import "../../config"
 import "../../services"
 
-// shared placement + open/close choreography for bar-edge popups (calendar, tray).
+// Shared placement + open/close choreography for bar-edge popups.
 // trigger-proportional x: anchor keeps its relative screen position, so a centre click centres and an edge click hugs that side (no edge saturation on a custom-width bar).
 Rectangle {
     id: root
@@ -16,6 +16,8 @@ Rectangle {
     // width the card is headed for; placement clamps against it, not the live width,
     // so a card that animates its width doesn't fight the x Behavior frame by frame
     property real targetWidth: width
+    property bool animateScale: true
+    property bool animatePlacement: true
 
     property bool _placementSettled: false
     readonly property real _originX: Math.max(0, Math.min(targetWidth, anchorX - x))
@@ -25,10 +27,7 @@ Rectangle {
     readonly property real _minX: radius + 4
     readonly property real _maxX: Math.max(_minX, win.width - targetWidth - _minX)
 
-    property real scaleAmt: Motion.popScaleFrom
-    property real edgeOffset: _closedOffset
-    // no slide; the scale already grows from the trigger point
-    readonly property real _closedOffset: 0
+    property real scaleAmt: animateScale ? Motion.popScaleFrom : 1
 
     function _clampedX(px: real): real {
         return Math.max(_minX, Math.min(px, _maxX))
@@ -61,7 +60,7 @@ Rectangle {
         }
     }
 
-    y: Math.round((barBottom ? (win.height - _edgeY - height) : _edgeY) + edgeOffset)
+    y: Math.round(barBottom ? (win.height - _edgeY - height) : _edgeY)
     radius: Theme.surfaceRadius
     antialiasing: true
     color: Theme.popup
@@ -73,10 +72,12 @@ Rectangle {
 
     transform: Scale { origin.x: root._originX; origin.y: root.barBottom ? root.height : 0; xScale: root.scaleAmt; yScale: root.scaleAmt }
     state: open ? "visible" : "hidden"
-    layer.enabled: !ShellSettings.reduceMotion && opacity > 0.001 && scaleAmt < 0.999
+    layer.enabled: root.animateScale && !ShellSettings.reduceMotion
+        && opacity > 0.001 && scaleAmt < 0.999
 
     Behavior on x {
-        enabled: root.state === "visible" && !ShellSettings.reduceMotion && root._placementSettled
+        enabled: root.animatePlacement && root.state === "visible"
+            && !ShellSettings.reduceMotion && root._placementSettled
         NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
     }
 
@@ -99,23 +100,21 @@ Rectangle {
     Component.onCompleted: place()
 
     states: [
-        State { name: "hidden";  PropertyChanges { root.scaleAmt: Motion.popScaleFrom; root.edgeOffset: root._closedOffset; root.opacity: 0 } },
-        State { name: "visible"; PropertyChanges { root.scaleAmt: 1.0; root.edgeOffset: 0; root.opacity: 1 } }
+        State { name: "hidden";  PropertyChanges { root.scaleAmt: root.animateScale ? Motion.popScaleFrom : 1.0; root.opacity: 0 } },
+        State { name: "visible"; PropertyChanges { root.scaleAmt: 1.0; root.opacity: 1 } }
     ]
     transitions: [
         Transition {
             from: "*"; to: "visible"
             ParallelAnimation {
-                NumberAnimation { target: root; property: "scaleAmt";   to: 1.0; duration: Motion.popIn; easing.type: Easing.OutCubic }
-                NumberAnimation { target: root; property: "edgeOffset"; to: 0;   duration: Motion.popIn; easing.type: Easing.OutQuart }
+                NumberAnimation { target: root; property: "scaleAmt"; to: 1.0; duration: root.animateScale ? Motion.popIn : 0; easing.type: Easing.OutCubic }
                 NumberAnimation { target: root; property: "opacity";    to: 1.0; duration: Motion.popInFade; easing.type: Easing.OutCubic }
             }
         },
         Transition {
             from: "visible"; to: "hidden"
             ParallelAnimation {
-                NumberAnimation { target: root; property: "scaleAmt";   to: Motion.popScaleFrom; duration: Motion.popOut; easing.type: Easing.InCubic }
-                NumberAnimation { target: root; property: "edgeOffset"; to: root._closedOffset;  duration: Motion.popOut; easing.type: Easing.InCubic }
+                NumberAnimation { target: root; property: "scaleAmt"; to: root.animateScale ? Motion.popScaleFrom : 1.0; duration: root.animateScale ? Motion.popOut : 0; easing.type: Easing.InCubic }
                 NumberAnimation { target: root; property: "opacity";    to: 0.0; duration: Motion.popOutFade; easing.type: Easing.InCubic }
             }
         }

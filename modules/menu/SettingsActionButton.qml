@@ -41,6 +41,7 @@ Item {
     Accessible.role: Accessible.Button
     Accessible.name: root.accessibleName
     Accessible.description: root.armed ? "Activate again to confirm" : ""
+    Accessible.onPressAction: root.activate()
     Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root.activate(); event.accepted = true }
     Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root.activate(); event.accepted = true }
     Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root.activate(); event.accepted = true }

@@ -19,8 +19,9 @@ Row {
     readonly property int dotGap: Metrics.widgetGapFor(compact)
     readonly property bool _compact: compact
 
-    spacing: dotGap
-    Behavior on spacing { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+    property real _animatedGap: dotGap
+    spacing: Math.round(_animatedGap)
+    Behavior on _animatedGap { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
 
     function _widgetEnabled(key: string): bool {
         if (key.length === 0) return false
@@ -77,7 +78,7 @@ Row {
             readonly property bool show: widgetEnabled && _loader.loadedKey === key
                 && (_loader.item ? _loader.item.show : false)
             height: parent.height
-            spacing: zone.dotGap
+            spacing: zone.spacing
             // Read the plain `show`, never `.visible` — Item.visible cascades
             // from ancestors, so binding a row's visible to its descendant's is
             // a deadlock.
@@ -86,6 +87,10 @@ Row {
             Loader {
                 id: _loader
                 anchors.verticalCenter: parent.verticalCenter
+                // Native text often reports fractional implicit widths. Round
+                // the slot, otherwise every later 1px divider inherits a
+                // different subpixel phase and appears alternately thin/thick.
+                width: item ? Math.ceil(item.implicitWidth) : 0
                 property string loadedKey: ""
                 active: _slot.widgetEnabled && _slot.key.length > 0
                 sourceComponent: _slot.key.length > 0 ? zone.widgetComponents[_slot.key] : null

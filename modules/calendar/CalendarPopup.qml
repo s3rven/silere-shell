@@ -39,10 +39,7 @@ PanelWindow {
     Connections {
         target: ShellSettings
         function onBarPositionChanged() {
-            if (!CalendarState.open) {
-                card.edgeOffset = card._closedOffset
-                return
-            }
+            if (!CalendarState.open) return
             win._ignoreOutsideTap = true
             _outsideTapGuard.restart()
         }

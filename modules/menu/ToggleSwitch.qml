@@ -2,8 +2,8 @@ import QtQuick
 import "../../config"
 import "../../services"
 
-// pill switch shared by ToggleRow and other checked/unchecked controls. call armFlipAnimation() right before
-// flipping `checked` on a real tap — the knob only slides+stretches on deliberate flips, not section re-checks.
+// Pill switch shared by ToggleRow and other checked/unchecked controls. Call
+// armFlipAnimation() before a real tap so state rebinds do not replay the slide.
 Item {
     id: root
 
@@ -17,7 +17,7 @@ Item {
         if (!ShellSettings.reduceMotion) { root._animateX = true; _disarm.restart() }
     }
 
-    Timer { id: _disarm; interval: Motion.fast + Motion.medium + Motion.ms(80); onTriggered: root._animateX = false }
+    Timer { id: _disarm; interval: Motion.normal + Motion.ms(40); onTriggered: root._animateX = false }
 
     Rectangle {
         anchors.fill: parent
@@ -41,36 +41,8 @@ Item {
             x:     root.checked ? parent.width - width - 2 : 2
             color: root.checked ? root.accentColor : Theme.mix(Theme.subtext, root.accentColor, 0.16)
 
-            property real _stretch: 1.0
-            transform: Scale {
-                origin.x: _knob.width  / 2
-                origin.y: _knob.height / 2
-                xScale: _knob._stretch
-                yScale: 1.0
-            }
-
             Behavior on x     { enabled: root._animateX && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutQuart } }
             Behavior on color { ColorAnimation { duration: Motion.fast } }
-
-            Connections {
-                target: root
-                function onCheckedChanged() {
-                    if (ShellSettings.reduceMotion) { _knob._stretch = 1.0; return }
-                    if (!root._animateX) { _knob._stretch = 1.0; return }
-                    _knobStretch.restart()
-                }
-            }
-            Connections {
-                target: ShellSettings
-                function onReduceMotionChanged() {
-                    if (ShellSettings.reduceMotion) { _knobStretch.stop(); _knob._stretch = 1.0 }
-                }
-            }
-            SequentialAnimation {
-                id: _knobStretch
-                NumberAnimation { target: _knob; property: "_stretch"; to: 1.22; duration: Motion.fast;   easing.type: Easing.OutQuad }
-                NumberAnimation { target: _knob; property: "_stretch"; to: 1.0;  duration: Motion.medium; easing.type: Easing.OutCubic }
-            }
         }
     }
 }

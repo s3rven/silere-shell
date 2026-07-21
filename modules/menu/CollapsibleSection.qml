@@ -31,8 +31,8 @@ Item {
     Behavior on height {
         enabled: !ShellSettings.reduceMotion
         NumberAnimation {
-            duration:    root.expanded ? Motion.medium : Motion.fast
-            easing.type: root.expanded ? Easing.OutQuart : Easing.InCubic
+            duration:    root.expanded ? Motion.normal : Motion.fast
+            easing.type: Easing.OutCubic
         }
     }
 
@@ -40,28 +40,13 @@ Item {
         id: _content
         width: parent.width
 
-        property int _animCount: 0
-        readonly property bool _animating: _animCount > 0
-        y:       root.expanded ? 0 : -10
+        y: 0
         opacity: root.expanded ? 1.0 : 0.0
-        layer.enabled: _animating && !ShellSettings.reduceMotion
-
-        Behavior on y {
-            enabled: !ShellSettings.reduceMotion
-            NumberAnimation {
-                duration:    root.expanded ? Motion.medium : Motion.fast
-                easing.type: root.expanded ? Easing.OutQuart : Easing.InCubic
-                onStarted: _content._animCount++
-                onStopped: _content._animCount = Math.max(0, _content._animCount - 1)
-            }
-        }
         Behavior on opacity {
             enabled: !ShellSettings.reduceMotion
             NumberAnimation {
-                duration:    root.expanded ? Motion.medium : Motion.fast
-                easing.type: root.expanded ? Easing.OutCubic : Easing.InCubic
-                onStarted: _content._animCount++
-                onStopped: _content._animCount = Math.max(0, _content._animCount - 1)
+                duration: Motion.fast
+                easing.type: Easing.OutCubic
             }
         }
     }
