@@ -13,7 +13,7 @@ Column {
         return s.length < 2 ? "0" + s : s
     }
 
-    SectionLabel { glyph: "󰉦"; label: "THEME MODE"; first: true }
+    SectionLabel { label: "THEME MODE"; first: true }
     SettingsCard {
         ChoiceChipRow {
             glyph: "󰉦"; label: "Source"
@@ -26,7 +26,7 @@ Column {
         }
     }
 
-    SectionLabel { glyph: "󰏘"; label: "PALETTE" }
+    SectionLabel { label: "PALETTE" }
     SettingsCard {
         CollapsibleSection {
             expanded: ShellSettings.neutralTheme
