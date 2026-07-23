@@ -290,9 +290,7 @@ Item {
                                 ? Theme.withAlpha(Theme.accent, 0.065)
                                 : _headerHover.hovered
                                     ? Theme.withAlpha(Theme.text, 0.035)
-                                    : _grp.expanded
-                                        ? Theme.withAlpha(Theme.text, 0.022)
-                                        : "transparent"
+                                    : "transparent"
                             border.width: activeFocus ? 1 : 0
                             border.color: Theme.withAlpha(Theme.accent, 0.30)
                             activeFocusOnTab: root.active
@@ -367,10 +365,10 @@ Item {
                                 width: 18
                                 horizontalAlignment: Text.AlignHCenter
                                 text: _grp.modelData.glyph ?? ""
-                                color: _grp.groupActive || _grp.expanded
+                                color: _grp.groupActive && !_grp.expanded
                                     ? Theme.mix(Theme.accent, Theme.text, 0.08)
                                     : Theme.withAlpha(Theme.menuTextMuted,
-                                        _headerHover.hovered || _grpHeader.activeFocus ? 0.84 : 0.60)
+                                        _headerHover.hovered || _grpHeader.activeFocus || _grp.expanded ? 0.84 : 0.64)
                                 font.family: Settings.font
                                 font.pixelSize: Settings.fontSize
                                 renderType: Text.NativeRendering
@@ -383,10 +381,10 @@ Item {
                                 anchors.rightMargin: 6
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: _grp.modelData.label
-                                color: _grp.groupActive || _grp.expanded
+                                color: _grp.groupActive && !_grp.expanded
                                     ? Theme.text
                                     : Theme.withAlpha(Theme.menuTextMuted,
-                                        _headerHover.hovered || _grpHeader.activeFocus ? 0.94 : 0.76)
+                                        _headerHover.hovered || _grpHeader.activeFocus || _grp.expanded ? 0.94 : 0.80)
                                 font.family: Settings.font
                                 font.pixelSize: Settings.fontSize - 1
                                 font.weight: _grp.groupActive || _grp.expanded
@@ -403,8 +401,9 @@ Item {
                                 text: "󰅂"
                                 rotation: _grp.expanded ? 90 : 0
                                 transformOrigin: Item.Center
-                                color: Theme.withAlpha(_grp.expanded ? Theme.accent : Theme.subtext,
-                                    _headerHover.hovered || _grpHeader.activeFocus ? 0.78 : 0.44)
+                                color: Theme.withAlpha(Theme.subtext,
+                                    _headerHover.hovered || _grpHeader.activeFocus ? 0.78
+                                    : _grp.expanded ? 0.62 : 0.44)
                                 font.family: Settings.font
                                 font.pixelSize: Settings.fontSize - 2
                                 renderType: Text.NativeRendering
@@ -435,21 +434,11 @@ Item {
                                 NumberAnimation { duration: Motion.ms(150); easing.type: Easing.OutCubic }
                             }
 
-                            Rectangle {
-                                // Keep the tree guide beside the child rows;
-                                // the old position ran through their glyphs.
-                                x: 5
-                                y: 1
-                                width: 1
-                                height: Math.max(0, parent.height - 2)
-                                color: Theme.withAlpha(Theme.subtext, 0.10)
-                            }
-
                             Column {
                                 id: _leafColumn
-                                x: 6
+                                x: 10
                                 y: root._childrenPad
-                                width: parent.width - 6
+                                width: parent.width - 10
                                 spacing: root._navRowGap
 
                                 Repeater {
@@ -468,16 +457,13 @@ Item {
                                         radius: 8
                                         antialiasing: true
                                         color: active
-                                            ? Theme.withAlpha(Theme.accent,
-                                                ShellSettings.highContrast ? 0.16 : 0.085)
+                                            ? Theme.mix(Theme.menuControl, Theme.accent,
+                                                ShellSettings.highContrast ? 0.10 : 0.035)
                                             : _leafHover.hovered || activeFocus
                                                 ? Theme.withAlpha(Theme.text, 0.042)
                                                 : "transparent"
-                                        border.width: active || activeFocus ? 1 : 0
-                                        border.color: active
-                                            ? Theme.withAlpha(Theme.accent,
-                                                ShellSettings.highContrast ? 0.52 : 0.26)
-                                            : Theme.withAlpha(Theme.accent, 0.28)
+                                        border.width: activeFocus ? 1 : 0
+                                        border.color: Theme.withAlpha(Theme.accent, 0.34)
 
                                         activeFocusOnTab: root.active && _grp.expanded
                                         Accessible.role: Accessible.Button
@@ -528,17 +514,6 @@ Item {
                                             enabled: !ShellSettings.reduceMotion
                                             ColorAnimation { duration: Motion.fast }
                                         }
-                                        Rectangle {
-                                            visible: _leaf.active
-                                            anchors.left: parent.left
-                                            anchors.leftMargin: 5
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            width: 3
-                                            height: 14
-                                            radius: 1.5
-                                            antialiasing: true
-                                            color: Theme.accent
-                                        }
 
                                         Text {
                                             id: _leafGlyph
@@ -552,7 +527,7 @@ Item {
                                             color: _leaf.active
                                                 ? Theme.mix(Theme.accent, Theme.text, 0.10)
                                                 : Theme.withAlpha(Theme.subtext,
-                                                    _leafHover.hovered || _leaf.activeFocus ? 0.78 : 0.55)
+                                                    _leafHover.hovered || _leaf.activeFocus ? 0.72 : 0.46)
                                             font.family: Settings.font
                                             font.pixelSize: Settings.fontSize
                                             renderType: Text.NativeRendering
