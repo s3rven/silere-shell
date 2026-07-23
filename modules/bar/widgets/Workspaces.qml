@@ -412,7 +412,6 @@ Item {
         property real _glint:        -1.15
         property real _trailX:       targetX
         property real _menuOn:    MenuState.open ? 1 : 0
-        property real _menuPulse: 0
         Behavior on _menuOn { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(220); easing.type: Easing.OutCubic } }
 
         readonly property color tint: {
@@ -421,7 +420,7 @@ Item {
         // animated proxy so _energy stays continuous — every other input already eases, this one would step
         property real _specialOn: root.inSpecial ? 0.65 : 0
         Behavior on _specialOn { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
-        readonly property real _energy: Math.max(diamond._menuOn * (0.70 + diamond._menuPulse * 0.30),
+        readonly property real _energy: Math.max(diamond._menuOn * 0.82,
                                                   _specialOn,
                                                   (_hoverScale - 1.0) * 4.2,
                                                   (_tapScale   - 1.0) * 2.2,
@@ -569,7 +568,7 @@ Item {
             rotation: root._gemMarker ? 45 : 0
             antialiasing: true
             color: Qt.rgba(1, 1, 1, 1)
-            opacity: diamond._menuOn * (0.16 + diamond._menuPulse * 0.18)
+            opacity: diamond._menuOn * 0.22
             visible: opacity > 0.01
         }
 
@@ -648,13 +647,6 @@ Item {
             id: _menuRippleAnim
             NumberAnimation { target: _menuRipple; property: "scale";   from: 0.9;  to: 2.7; duration: Motion.ms(540); easing.type: Easing.OutCubic }
             NumberAnimation { target: _menuRipple; property: "opacity"; from: 0.55; to: 0;   duration: Motion.ms(540); easing.type: Easing.OutCubic }
-        }
-        PulseLoop {
-            id: _breathAnim
-            running: MenuState.open && !ShellSettings.reduceMotion && !Idle.isIdle
-            target: diamond; targetProperty: "_menuPulse"
-            peak: 1; floor: 0; restValue: 0
-            duration: Motion.ms(950)
         }
         Connections {
             target: MenuState
