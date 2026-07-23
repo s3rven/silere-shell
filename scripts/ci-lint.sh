@@ -62,6 +62,26 @@ check_service_module Notifications Quickshell.Services.Notifications
 check_service_module Bluetooth Quickshell.Bluetooth
 check_service_module Network Quickshell.Networking
 
+section "local singleton imports"
+missing_singleton_import=0
+singleton_consumer_count=0
+while IFS= read -r f; do
+  singleton_consumer_count=$((singleton_consumer_count + 1))
+  if ! grep -qE '^import[[:space:]]+"([^"]*/)?services"[[:space:]]*$' "$f"; then
+    fail "$f uses a local singleton without importing the services module"
+    missing_singleton_import=1
+  fi
+done < <(
+  while IFS= read -r singleton; do
+    grep -RIl --include='*.qml' -E "(^|[^A-Za-z0-9_])${singleton}\." shell.qml modules config || true
+  done < <(awk '$1 == "singleton" { print $2 }' services/qmldir) | sort -u
+)
+if [ "$missing_singleton_import" -eq 0 ]; then
+  ok "singletons" "$singleton_consumer_count consumers import services"
+else
+  status=1
+fi
+
 section "shell script syntax"
 for f in "${script_files[@]}"; do
   if err=$(bash -n "$f" 2>&1); then ok "$f"; else fail "syntax error in $f"; printf '%s\n' "$err"; fi
