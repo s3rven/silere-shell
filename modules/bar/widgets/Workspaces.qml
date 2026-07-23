@@ -41,9 +41,33 @@ Item {
     // special/scratchpad shown on this monitor (Hyprland only; niri has no special workspaces)
     readonly property bool inSpecial: Compositor.hasSpecialWorkspaces && Compositor.specialOutput === root.monitorName
 
-    readonly property int groupStart: Math.floor((activeId - 1) / effectiveWsCount) * effectiveWsCount + 1
-    readonly property int groupEnd:   groupStart + effectiveWsCount - 1
+    readonly property var _workspaceOwners: {
+        const owners = {}
+        if (Compositor.isNiri) return owners
+        const vals = Compositor.workspaces
+        for (let i = 0; i < vals.length; i++) {
+            const ws = vals[i]
+            if (ws && ws.wsId > 0) owners[ws.wsId] = ws.output
+        }
+        return owners
+    }
+    readonly property int _monitorAnchorId: {
+        let first = root.activeId > 0 ? root.activeId : 1
+        const vals = Compositor.workspaces
+        for (let i = 0; i < vals.length; i++) {
+            const ws = vals[i]
+            if (ws && ws.output === root.monitorName && ws.wsId > 0)
+                first = Math.min(first, ws.wsId)
+        }
+        return first
+    }
     readonly property color _trailCoreClear: Qt.rgba(1, 1, 1, 0)
+
+    function _knownOnOtherMonitor(id: int): bool {
+        if (root.monitorName.length === 0) return false
+        const owner = root._workspaceOwners[id]
+        return owner !== undefined && owner !== root.monitorName
+    }
 
     // wsId → workspace lookup for this monitor, rebuilt on change for O(1) delegate access
     readonly property var _wsMap: {
@@ -74,7 +98,7 @@ Item {
         for (let i = 0; i < vals.length; i++) {
             const ws = vals[i]
             if (ws && ws.output === root.monitorName && ws.urgent && ws.wsId > 0
-                && (ws.wsId < groupStart || ws.wsId > groupEnd))
+                && root.visibleIds.indexOf(ws.wsId) < 0)
                 return ws.wsId
         }
         return 0
@@ -108,6 +132,10 @@ Item {
             root._paging = true
             _pagingReset.restart()
         }
+        function onWsMinVisibleChanged() {
+            root._paging = true
+            _pagingReset.restart()
+        }
         function onWorkspaceShiftChanged() {
             if (!ShellSettings.workspaceShift) {
                 _groupFadeAnim.stop()
@@ -134,14 +162,14 @@ Item {
         const map = {}
         if (!ShellSettings.wsShowAppIcons) return map
         const seen = {}
-        const start = root.groupStart
-        const end = root.groupEnd
+        const shown = {}
+        for (let i = 0; i < root.visibleIds.length; i++) shown[root.visibleIds[i]] = true
         const tops = Compositor.toplevels
         for (let i = 0; i < tops.length; i++) {
             const t = tops[i]
             if (!t || t.output !== root.monitorName) continue
             const wid = t.wsId ?? 0
-            if (wid < start || wid > end) continue
+            if (shown[wid] !== true) continue
             const rawCls = String(t.appId || "")
             const cls = rawCls.toLowerCase()
             if (!cls) continue
@@ -173,18 +201,32 @@ Item {
         return acc + (_btnW(activeId) - diamondW) / 2
     }
 
-    // A page holds exactly effectiveWsCount workspaces (1-5, 6-10, …).
+    // Hyprland IDs are global. Skip IDs already owned by another output so a
+    // wide page cannot turn a monitor-local bar into a cross-monitor switcher.
     readonly property var visibleIds: {
         const ids = []
-        for (let id = groupStart; id <= groupEnd; id++) ids.push(id)
+        const anchor = Math.max(1, root._monitorAnchorId)
+        const active = Math.max(anchor, root.activeId)
+        let activeLogicalIndex = 0
+        for (let id = anchor; id < active; id++)
+            if (!root._knownOnOtherMonitor(id)) activeLogicalIndex++
+        const pageStart = Math.floor(activeLogicalIndex / root.effectiveWsCount)
+            * root.effectiveWsCount
+        let logicalIndex = 0
+        for (let id = anchor; ids.length < root.effectiveWsCount; id++) {
+            if (root._knownOnOtherMonitor(id)) continue
+            if (logicalIndex >= pageStart) ids.push(id)
+            logicalIndex++
+        }
         return ids
     }
 
     readonly property int activeIndex: visibleIds.indexOf(activeId)
+    readonly property int pageKey: visibleIds.length > 0 ? visibleIds[0] : _monitorAnchorId
 
     Component.onCompleted: {
         _lastNormalActiveId = activeId
-        _prevGroupStart = groupStart
+        _prevPageKey = pageKey
         _initialized = monitorReady
     }
 
@@ -204,14 +246,14 @@ Item {
     Timer { id: _pagingReset; interval: Motion.fast + Motion.width; onTriggered: root._paging = false }
 
     // directional page flip: the new group slides in from the side being moved toward
-    property int  _prevGroupStart: 1
+    property int  _prevPageKey: 1
     property int  _pageDir:        1
     property real _pageShift:      0
     transform: Translate { x: root._pageShift }
 
-    onGroupStartChanged: {
-        const dir = groupStart >= _prevGroupStart ? 1 : -1
-        _prevGroupStart = groupStart
+    onPageKeyChanged: {
+        const dir = pageKey >= _prevPageKey ? 1 : -1
+        _prevPageKey = pageKey
         if (!_initialized || !monitorReady) {
             root.opacity = 1
             return
@@ -244,8 +286,22 @@ Item {
     }
 
     function activate(id: int): void {
-        if (!monitorReady || id < 1 || id === activeId) return
+        if (!monitorReady || id < 1 || id === activeId || root._knownOnOtherMonitor(id)) return
         Compositor.focusWorkspace(id, root.monitorName)
+    }
+
+    function _scrollTarget(delta: int): int {
+        let target = root.activeId
+        const direction = delta > 0 ? -1 : 1
+        const steps = Math.abs(delta)
+        for (let step = 0; step < steps; step++) {
+            let candidate = target + direction
+            while (candidate > 0 && root._knownOnOtherMonitor(candidate))
+                candidate += direction
+            if (candidate < 1) break
+            target = candidate
+        }
+        return target
     }
 
     function _focusWsIndex(index: int): void {
@@ -272,7 +328,7 @@ Item {
         onWheel: (event) => {
             event.accepted = true
             const n = Scroll.processControlWheel(event, "workspaces")
-            if (n !== 0) root.activate(root.activeId - n)
+            if (n !== 0) root.activate(root._scrollTarget(n))
         }
     }
 
