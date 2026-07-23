@@ -116,6 +116,7 @@ Item {
         Accessible.role: Accessible.Button
         Accessible.name: root.accessibleName + " output device"
         Accessible.description: root.expanded ? "Open" : "Closed"
+        Accessible.onPressAction: root.expandToggled()
 
         Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) root.expandToggled(); event.accepted = true }
         Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root.expandToggled(); event.accepted = true }

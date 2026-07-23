@@ -168,6 +168,7 @@ Item {
 
             Accessible.role: Accessible.Button
             Accessible.name: "Reset bar widgets"
+            Accessible.onPressAction: ShellSettings.resetBarWidgets()
             Keys.onSpacePressed: event => {
                 if (!event.isAutoRepeat) ShellSettings.resetBarWidgets()
                 event.accepted = true
@@ -419,13 +420,17 @@ Item {
                 Accessible.checked: _row.checked
                 Accessible.description: (_row.zone === "left" ? "Left" : "Right")
                     + " side. Arrow keys navigate; Left and Right change sides; Control Up and Down reorder."
+                Accessible.onPressAction: activateToggle()
+
+                function activateToggle(): bool {
+                    if (!_row.hasToggle) return false
+                    _toggle.armFlipAnimation()
+                    ShellSettings[_row.meta.setting] = !ShellSettings[_row.meta.setting]
+                    return true
+                }
 
                 function toggle(event): void {
-                    if (!event.isAutoRepeat && _row.hasToggle) {
-                        _toggle.armFlipAnimation()
-                        ShellSettings[_row.meta.setting] = !ShellSettings[_row.meta.setting]
-                    }
-                    event.accepted = _row.hasToggle
+                    event.accepted = !event.isAutoRepeat && activateToggle()
                 }
 
                 function changeSide(zone: string, event): void {

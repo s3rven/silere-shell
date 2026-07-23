@@ -22,6 +22,7 @@ Item {
     activeFocusOnTab: root.available
     Accessible.role: Accessible.Button
     Accessible.name: root.accessibleName
+    Accessible.onPressAction: if (root.available) root.triggered()
     Keys.onSpacePressed: event => { if (!event.isAutoRepeat && root.available) root.triggered(); event.accepted = true }
     Keys.onReturnPressed: event => { if (!event.isAutoRepeat && root.available) root.triggered(); event.accepted = true }
     Keys.onEnterPressed: event => { if (!event.isAutoRepeat && root.available) root.triggered(); event.accepted = true }

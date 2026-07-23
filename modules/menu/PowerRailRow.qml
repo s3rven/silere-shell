@@ -56,6 +56,7 @@ Rectangle {
     Accessible.role: root.interactive ? Accessible.Button : Accessible.StaticText
     Accessible.name: root.armed ? root.label + ", press again to confirm" : root.label
     Accessible.description: root.value
+    Accessible.onPressAction: root.activate()
 
     function disarm(): void {
         root.armed = false

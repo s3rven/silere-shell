@@ -143,6 +143,7 @@ Column {
             Accessible.role: Accessible.Button
             Accessible.name: "Changed from defaults, " + ShellSettings.modifiedKeys.length + " settings"
             Accessible.description: open ? "Collapse" : "Expand"
+            Accessible.onPressAction: _modHeader.open = !_modHeader.open
             Keys.onSpacePressed:  e => { if (!e.isAutoRepeat) _modHeader.open = !_modHeader.open; e.accepted = true }
             Keys.onReturnPressed: e => { if (!e.isAutoRepeat) _modHeader.open = !_modHeader.open; e.accepted = true }
             Keys.onEnterPressed:  e => { if (!e.isAutoRepeat) _modHeader.open = !_modHeader.open; e.accepted = true }
@@ -235,6 +236,7 @@ Column {
                 activeFocusOnTab: true
                 Accessible.role: Accessible.Button
                 Accessible.name: "Reset " + pretty + " to default"
+                Accessible.onPressAction: _modRow._reset()
                 Keys.onSpacePressed:  e => { if (!e.isAutoRepeat) _modRow._reset(); e.accepted = true }
                 Keys.onReturnPressed: e => { if (!e.isAutoRepeat) _modRow._reset(); e.accepted = true }
                 Keys.onEnterPressed:  e => { if (!e.isAutoRepeat) _modRow._reset(); e.accepted = true }
@@ -320,6 +322,7 @@ Column {
             Accessible.role: Accessible.Button
             Accessible.name: "Reset all settings"
             Accessible.description: armed ? "Activate again to confirm" : ""
+            Accessible.onPressAction: _resetRow._activate()
             onActiveFocusChanged: if (!activeFocus) _disarm()
             Keys.onSpacePressed:  e => { if (!e.isAutoRepeat) _resetRow._activate(); e.accepted = true }
             Keys.onReturnPressed: e => { if (!e.isAutoRepeat) _resetRow._activate(); e.accepted = true }

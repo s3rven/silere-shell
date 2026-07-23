@@ -77,6 +77,7 @@ Item {
     Accessible.name: root.title
     Accessible.description: root._accessibleDetail
     Accessible.checked: root.active
+    Accessible.onPressAction: root._activate()
     Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
     Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
     Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
@@ -164,6 +165,7 @@ Item {
             Accessible.role: Accessible.Button
             Accessible.name: "Open missed notifications"
             Accessible.description: root.badgeCount + (root.badgeCount === 1 ? " missed notification" : " missed notifications")
+            Accessible.onPressAction: root._activateBadge()
 
             Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) root._activateBadge(); event.accepted = true }
             Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._activateBadge(); event.accepted = true }
@@ -292,6 +294,7 @@ Item {
             Accessible.role: Accessible.Button
             Accessible.name: root.title + " details"
             Accessible.description: root.expanded ? "Expanded" : "Collapsed"
+            Accessible.onPressAction: root._toggleExpanded()
 
             Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) root._toggleExpanded(); event.accepted = true }
             Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._toggleExpanded(); event.accepted = true }

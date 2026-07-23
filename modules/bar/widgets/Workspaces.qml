@@ -716,6 +716,7 @@ Item {
                     : occupied ? "Occupied workspace"
                     : "Empty workspace"
                 Accessible.focusable: root.monitorReady
+                Accessible.onPressAction: ws._activateFromKeyboard()
 
                 function _activateFromKeyboard(): void {
                     if (!root.monitorReady) return
@@ -933,6 +934,7 @@ Item {
         Accessible.role: Accessible.Button
         Accessible.name: "Urgent workspace " + targetWs
         Accessible.description: "Activate to jump to it."
+        Accessible.onPressAction: _urgentTick._jump()
 
         function _jump(): void { if (shown) root.activate(targetWs) }
         Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) _urgentTick._jump(); event.accepted = true }

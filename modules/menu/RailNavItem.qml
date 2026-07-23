@@ -18,6 +18,7 @@ Item {
     activeFocusOnTab: true
     Accessible.role: Accessible.Button
     Accessible.name: root.label
+    Accessible.onPressAction: root.tapped()
 
     HoverHandler { id: _hover; cursorShape: Qt.PointingHandCursor }
     TapHandler   { id: _tap; onTapped: root.tapped() }

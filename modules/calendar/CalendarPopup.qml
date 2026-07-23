@@ -255,6 +255,7 @@ PanelWindow {
 
                 Accessible.role: Accessible.Button
                 Accessible.name: "Jump to today"
+                Accessible.onPressAction: card._goToday()
                 Keys.onSpacePressed:  event => card._activateToday(event)
                 Keys.onReturnPressed: event => card._activateToday(event)
                 Keys.onEnterPressed:  event => card._activateToday(event)
@@ -318,6 +319,7 @@ PanelWindow {
                     activeFocusOnTab: true
                     Accessible.role: Accessible.Button
                     Accessible.name: "Jump to today"
+                    Accessible.onPressAction: card._goToday()
                     Keys.onSpacePressed:  event => card._activateToday(event)
                     Keys.onReturnPressed: event => card._activateToday(event)
                     Keys.onEnterPressed:  event => card._activateToday(event)

@@ -214,6 +214,7 @@ Item {
                 Accessible.role: Accessible.Button
                 Accessible.name: label
                 Accessible.description: modelData.tooltipDescription
+                Accessible.onPressAction: root._activateItem(_tile.modelData, _tile)
                 activeFocusOnTab: root.show
                 // shift+activate or the Menu key opens the context menu (keyboard mirror of right-click)
                 function _keyActivate(event): void {

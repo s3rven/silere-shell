@@ -322,6 +322,7 @@ Item {
     Accessible.description: (Media.hasPosition
         ? Media.formatTime(Media.positionNow) + " of " + Media.formatTime(Media.length) + ". "
         : "") + "Activate to toggle playback. Scroll to skip tracks."
+    Accessible.onPressAction: Media.togglePlay()
 
     Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) Media.togglePlay(); event.accepted = true }
     Keys.onReturnPressed: event => { if (!event.isAutoRepeat) Media.togglePlay(); event.accepted = true }

@@ -548,6 +548,7 @@ PageShell {
                         activeFocusOnTab: _playBtn._on
                         Accessible.role: Accessible.Button
                         Accessible.name: Media.playing ? "Pause" : "Play"
+                        Accessible.onPressAction: if (_playBtn._on) Media.togglePlay()
                         Keys.onSpacePressed:  event => { if (!event.isAutoRepeat && _playBtn._on) Media.togglePlay(); event.accepted = true }
                         Keys.onReturnPressed: event => { if (!event.isAutoRepeat && _playBtn._on) Media.togglePlay(); event.accepted = true }
                         Keys.onEnterPressed:  event => { if (!event.isAutoRepeat && _playBtn._on) Media.togglePlay(); event.accepted = true }

@@ -38,6 +38,7 @@ Row {
         + DateTime.cachedSeconds + (DateTime.cachedAmPm ? " " + DateTime.cachedAmPm : "")
         + (ShellSettings.clockShowDate ? ", " + DateTime.cachedLongDate : "")
     Accessible.description: "Activate to open calendar. Middle-click cycles seconds and date."
+    Accessible.onPressAction: root._openCalendar()
     Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) root._openCalendar(); event.accepted = true }
     Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._openCalendar(); event.accepted = true }
     Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) root._openCalendar(); event.accepted = true }

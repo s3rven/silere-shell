@@ -191,6 +191,7 @@ PanelWindow {
             activeFocusOnTab: _entry.on
             Accessible.role: Accessible.MenuItem
             Accessible.name: _entry.modelData?.text ?? ""
+            Accessible.onPressAction: _entry._activate()
             Keys.onUpPressed:     e => { _entry._moveFocus(-1); e.accepted = true }
             Keys.onDownPressed:   e => { _entry._moveFocus(1);  e.accepted = true }
             Keys.onSpacePressed:  e => { if (!e.isAutoRepeat) _entry._activate(); e.accepted = true }

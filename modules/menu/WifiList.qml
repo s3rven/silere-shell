@@ -303,6 +303,7 @@ Item {
 
                             Accessible.role: Accessible.Button
                             Accessible.name: "Connect to " + _entry.modelData.ssid
+                            Accessible.onPressAction: _join._activate()
                             function _activate(): void {
                                 if (_join.enabled) _entry._submitPassword()
                             }
