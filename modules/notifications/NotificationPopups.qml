@@ -175,7 +175,7 @@ PanelWindow {
             id: _dismissBar
             property bool shown: Notifications.activeCount > 1
             width:   parent.width
-            height:  shown ? 30 : 0
+            height:  shown ? 38 : 0
             clip:    true
             enabled: shown
             visible: height > 0.5
@@ -185,23 +185,63 @@ PanelWindow {
                 NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
             }
 
-            ActionButton {
+            Rectangle {
+                id: _dismissSurface
                 anchors.right:            (win._left || win._center) ? undefined : parent?.right
                 anchors.left:             win._left   ? parent?.left : undefined
                 anchors.horizontalCenter: win._center ? parent?.horizontalCenter : undefined
-                y:       _dismissBar.shown ? 4 : 14
+                y:       _dismissBar.shown ? 3 : 13
                 opacity: _dismissBar.shown ? 1.0 : 0.0
+                width: win._cardW
+                height: 32
+                radius: Theme.radiusControl
+                antialiasing: true
+                color: Theme.menuCard
+                border.width: 1
+                border.color: Theme.menuCardBorder
 
                 Behavior on y       { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
                 Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
 
-                width:  contentWidth
-                height: 26
-                glyph:  "󰆴"
-                label:  "Dismiss all"
-                accentColor: Theme.error
-                accessibleName: "Dismiss all notifications"
-                onTriggered: win.dismissAll()
+                Row {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 10
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 6
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "󰂚"
+                        color: Theme.withAlpha(Theme.accent, 0.68)
+                        font.family: Settings.font
+                        font.pixelSize: Settings.fontSize - 1
+                        renderType: Text.NativeRendering
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: Notifications.activeCount + " active"
+                        color: Theme.withAlpha(Theme.menuTextMuted, 0.72)
+                        font.family: Settings.font
+                        font.pixelSize: Settings.fontSize - 2
+                        font.weight: Font.Medium
+                        renderType: Text.NativeRendering
+                    }
+                }
+
+                ActionButton {
+                    anchors.right: parent.right
+                    anchors.rightMargin: 4
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Math.max(contentWidth, 104)
+                    height: 24
+                    radius: 7
+                    glyph: "󰆴"
+                    label: "Dismiss all"
+                    emphasis: true
+                    accentColor: Theme.error
+                    accessibleName: "Dismiss all notifications"
+                    onTriggered: win.dismissAll()
+                }
             }
         }
 
