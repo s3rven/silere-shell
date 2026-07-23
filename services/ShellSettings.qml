@@ -332,9 +332,20 @@ Singleton {
 
     function _coerce(s, v): void {
         switch (s.t) {
-        case "bool": root[s.k] = !!v; break
-        case "int":  { const n = parseInt(v);   if (!isNaN(n)) root[s.k] = Math.max(s.min, Math.min(s.max, n)); break }
-        case "real": { const n = parseFloat(v); if (!isNaN(n)) root[s.k] = Math.max(s.min, Math.min(s.max, n)); break }
+        case "bool":
+            if (typeof v === "boolean") root[s.k] = v
+            else if (v === "true" || v === "false") root[s.k] = v === "true"
+            break
+        case "int": {
+            const n = (typeof v === "number" || (typeof v === "string" && v.trim().length > 0)) ? Number(v) : NaN
+            if (isFinite(n)) root[s.k] = Math.max(s.min, Math.min(s.max, Math.round(n)))
+            break
+        }
+        case "real": {
+            const n = (typeof v === "number" || (typeof v === "string" && v.trim().length > 0)) ? Number(v) : NaN
+            if (isFinite(n)) root[s.k] = Math.max(s.min, Math.min(s.max, n))
+            break
+        }
         case "enum": if (s.vals.indexOf(v) >= 0) root[s.k] = v; break
         case "re":   if (typeof v === "string" && s.re.test(v)) root[s.k] = v; break
         }
@@ -477,15 +488,24 @@ Singleton {
         if (raw === _lastSavedJson) { _loaded = true; return }
         try {
             const parsed = JSON.parse(raw || "{}")
+            if (parsed === null || Array.isArray(parsed) || typeof parsed !== "object")
+                throw new Error("settings root must be an object")
             const onDiskVersion = typeof parsed.__version === "number" ? parsed.__version : 0
             if (onDiskVersion < _settingsVersion && Object.keys(parsed).length > 0)
                 _backupBeforeMigrate(raw, onDiskVersion)
             const j = _migrate(parsed)
+            if (_loaded) {
+                _loaded = false
+                for (let i = 0; i < _schema.length; i++) {
+                    const key = _schema[i].k
+                    root[key] = _defaults[key]
+                }
+            }
             for (let i = 0; i < _schema.length; i++) {
                 const s = _schema[i]
                 if (j[s.k] !== undefined) _coerce(s, j[s.k])
             }
-        } catch(e) { console.warn("silere-shell: failed to parse settings.json, using defaults:", String(e)) }
+        } catch(e) { console.warn("silere-shell: failed to parse settings.json, keeping current settings:", String(e)) }
         _loaded = true
         _recomputeModified()
     }
