@@ -19,12 +19,20 @@ Singleton {
     readonly property int width:   _rm ? 0 : Math.round(160 / _s)
     readonly property int color:   _rm ? 0 : Math.round(150 / _s)
 
-    // shared open/close tokens for all bar-anchored popups (menu, calendar, tray)
-    // pure fade: no scale (1.0) and no edge slide, so popups don't appear to move
-    readonly property real popScaleFrom: 1.0
-    readonly property int  popIn:      _rm ? 0 : Math.round(165 / _s)
-    readonly property int  popInFade:  _rm ? 0 : Math.round(150 / _s)
-    readonly property int  popOut:     _rm ? 0 : Math.round(115 / _s)
-    readonly property int  popOutFade: _rm ? 0 : Math.round(110 / _s)
-    readonly property int  popSettle:  _rm ? 40 : Math.max(40, Math.round(185 / _s))
+    readonly property real popScaleFrom: 0.975
+    readonly property real popEdgeOffset: 8
+    readonly property int  popIn:      _rm ? 0 : Math.round(210 / _s)
+    readonly property int  popInFade:  _rm ? 0 : Math.round(145 / _s)
+    readonly property int  popOut:     _rm ? 0 : Math.round(145 / _s)
+    readonly property int  popOutFade: _rm ? 0 : Math.round(120 / _s)
+    readonly property int  popSettle:  _rm ? 0 : Math.round(210 / _s)
+
+    readonly property int panelResize: _rm ? 0 : Math.round(240 / _s)
+    readonly property int panelHeight: _rm ? 0 : Math.round(210 / _s)
+    readonly property real panelVelocity: 1200 * _s
+    readonly property int pageIn:      _rm ? 0 : Math.round(180 / _s)
+    readonly property int pageOut:     _rm ? 0 : Math.round(110 / _s)
+    readonly property real pageOffset: 8
+
+    readonly property int barMorph: _rm ? 0 : Math.round(240 / _s)
 }
