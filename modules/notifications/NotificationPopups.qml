@@ -62,12 +62,17 @@ PanelWindow {
     property int _pendingDismissAll: 0
     property var _pendingDismissItems: []
     property bool _showAll: false
+    // a dismiss-all peels one card per tick, so activeCount ticks down under the bar. hold the bar
+    // and its count until the last card is gone, or it collapses mid-cascade and the stack jumps
+    readonly property bool _dismissing: win._pendingDismissAll > 0 || _cascadeTimer.running
+    property int _dismissCount: 0
 
     function revealAll(): void {
         if (Notifications.activeCount > 0) win._showAll = true
     }
 
     function dismissAll(): void {
+        if (win._dismissing) return
         var items = []
         var pending = []
         const live = Notifications.list || []
@@ -82,6 +87,7 @@ PanelWindow {
         }
         win._pendingDismissItems = pending
         win._pendingDismissAll = pending.length
+        win._dismissCount = pending.length
         if (pending.length === 0) return
         if (items.length === 0) { win._dismissPendingSnapshot(); return }
         if (ShellSettings.reduceMotion) {
@@ -173,7 +179,7 @@ PanelWindow {
 
         Item {
             id: _dismissBar
-            property bool shown: Notifications.activeCount > 1
+            property bool shown: Notifications.activeCount > 1 || win._dismissing
             width:   parent.width
             height:  shown ? 38 : 0
             clip:    true
@@ -219,7 +225,7 @@ PanelWindow {
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: Notifications.activeCount + " active"
+                        text: (win._dismissing ? win._dismissCount : Notifications.activeCount) + " active"
                         color: Theme.withAlpha(Theme.menuTextMuted, 0.72)
                         font.family: Settings.font
                         font.pixelSize: Settings.fontSize - 2
