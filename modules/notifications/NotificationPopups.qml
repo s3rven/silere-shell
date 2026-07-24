@@ -59,6 +59,7 @@ PanelWindow {
     property int _pendingDismissAll: 0
     property var _pendingDismissItems: []
     property bool _showAll: false
+    property int _batchExits: 0
     readonly property bool _dismissing: win._pendingDismissAll > 0 || _cascadeTimer.running
     property int _dismissCount: 0
 
@@ -78,11 +79,14 @@ PanelWindow {
         }
         for (var i = 0; i < stack.count; i++) {
             const slot = stack.itemAt(i)
-            if (slot && slot.cardItem) items.push(slot.cardItem)
+            if (!slot || !slot.cardItem) continue
+            slot.cardItem.collapseOnDismiss = false
+            items.push(slot.cardItem)
         }
         win._pendingDismissItems = pending
         win._pendingDismissAll = pending.length
         win._dismissCount = pending.length
+        win._batchExits = items.length
         if (pending.length === 0) return
         if (items.length === 0) { win._dismissPendingSnapshot(); return }
         if (ShellSettings.reduceMotion) {
@@ -109,21 +113,21 @@ PanelWindow {
         function onNotifMaxVisibleChanged(): void { win._showAll = false }
     }
 
-    function _forgetPendingDismiss(id: int, notification): void {
-        const next = []
-        for (let i = 0; i < win._pendingDismissItems.length; i++) {
-            const it = win._pendingDismissItems[i]
-            if (!(it.id === id && it.notification === notification)) next.push(it)
-        }
-        win._pendingDismissItems = next
-        win._pendingDismissAll = next.length
-        if (next.length === 0) _cascadeSafety.stop()
+    // a card removed the moment its own exit ends would snap the still-animating cards
+    // below it upward, so the whole batch is held and dropped once the last one lands
+    function _noteBatchExit(): void {
+        if (win._batchExits <= 0) return
+        win._batchExits--
+        if (win._batchExits > 0) return
+        _cascadeSafety.stop()
+        win._dismissPendingSnapshot()
     }
 
     function _dismissPendingSnapshot(): void {
         const items = win._pendingDismissItems
         win._pendingDismissItems = []
         win._pendingDismissAll = 0
+        win._batchExits = 0
         for (let i = 0; i < items.length; i++)
             Notifications.dismissObject(items[i].id, items[i].notification, items[i].expired)
     }
@@ -307,9 +311,11 @@ PanelWindow {
                             slideDir: win._slideDir
 
                             onDismissRequested: (id, notification, expired) => {
+                                if (win._batchExits > 0) {
+                                    win._noteBatchExit()
+                                    return
+                                }
                                 Notifications.dismissObject(id, notification, expired)
-                                if (win._pendingDismissAll > 0)
-                                    win._forgetPendingDismiss(id, notification)
                             }
                         }
                     }

@@ -20,6 +20,9 @@ Item {
 
     property bool _expired: false
     property bool _leaving: false
+    // dismiss-all clears this: every card is leaving, so collapsing heights only
+    // drags the lower cards upward through their own exit slide
+    property bool collapseOnDismiss: true
 
     Accessible.role: Accessible.AlertMessage
     Accessible.name: appNameText
@@ -87,7 +90,7 @@ Item {
             card.dismissRequested(card.notifId, card.notification, card._expired)
             return
         }
-        _collapseAnim.restart()
+        if (card.collapseOnDismiss) _collapseAnim.restart()
         _exitTimer.start()
     }
 
