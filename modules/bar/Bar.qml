@@ -15,11 +15,22 @@ PanelWindow {
     WlrLayershell.namespace: "silere-bar"
 
     readonly property bool atBottom: ShellSettings.barPosition === "bottom"
-    readonly property real cornerRadius: ShellSettings.barFloating && ShellSettings.barCornerStyle === "round"
+    property real floatingProgress: ShellSettings.barFloating ? 1.0 : 0.0
+    Behavior on floatingProgress {
+        enabled: !ShellSettings.reduceMotion
+        NumberAnimation { duration: Motion.barMorph; easing.type: Easing.OutCubic }
+    }
+    property real shadowProgress: ShellSettings.barShadow ? 1.0 : 0.0
+    Behavior on shadowProgress {
+        enabled: !ShellSettings.reduceMotion
+        NumberAnimation { duration: Motion.barMorph; easing.type: Easing.OutCubic }
+    }
+    readonly property real _cornerRadiusTarget: ShellSettings.barCornerStyle === "round"
         ? Math.min(ShellSettings.barRadius, ShellSettings.barHeight / 2)
         : 0
+    readonly property real cornerRadius: _cornerRadiusTarget * floatingProgress
     // underline wraps automatically whenever the bar floats, no separate setting
-    readonly property bool wrapUnderline: ShellSettings.barFloating
+    readonly property bool wrapUnderline: floatingProgress > 0.001
     // side gap snaps to a multiple of 8 so the segment x lands on the 4px grid and maps to
     // an integer output pixel at 2.5× effective scale — else a subpixel-bleed line at the left edge
     readonly property real configuredSurfaceWidth: {
@@ -49,12 +60,13 @@ PanelWindow {
     // 4px grid, so hairlines land on whole physical px under fractional
     // scaling.
     readonly property int surfaceInset: ShellSettings.barFloating ? 4 : 0
+    readonly property real visualSurfaceInset: 4 * floatingProgress
 
-    // extra window space so the floating shadow bleeds past the surface instead of clipping; input is masked to the surface so the pad never catches the pointer
-    readonly property bool shadowOn: ShellSettings.barFloating && ShellSettings.barShadow
-    // Always reserved when floating so toggling the shadow never resizes the window.
-    // 24 (a 4px-grid multiple) leaves room for the bar shadow (blur 18 + offset 4 = 22px spread).
-    readonly property int  shadowPad: ShellSettings.barFloating ? 24 : 0
+    readonly property bool shadowOn: shadowProgress > 0.001 && floatingProgress > 0.001
+    readonly property real effectPad: Math.max(
+        24 * shadowProgress,
+        ShellSettings.underlineGlow ? 8 : 0)
+    readonly property int insetPad: 8
 
     // hidden states release the reserved zone so overview windows fill the bar strip instead of leaving a phantom gap; reflow rides the windowsMove anim
     readonly property bool concealed: OverviewState.active
@@ -64,17 +76,16 @@ PanelWindow {
 
     screen:        bar.targetScreen
     color:         "transparent"
-    // strip height (bar + insets), kept separate from the shadow pad so the reserved zone doesn't bounce when the shadow toggles
     readonly property int _targetCoreHeight: ShellSettings.barHeight + bar.surfaceInset * 2
-    property real coreHeight: bar._targetCoreHeight
-    Behavior on coreHeight {
+    property real surfaceHeight: ShellSettings.barHeight
+    Behavior on surfaceHeight {
         enabled: !ShellSettings.reduceMotion
         NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
     }
     exclusiveZone: bar.concealed ? 0 : bar._targetCoreHeight
-    implicitHeight: bar.coreHeight + bar.shadowPad
+    implicitHeight: Math.ceil(bar.surfaceHeight
+        + (bar.insetPad + bar.effectPad) * bar.floatingProgress)
 
-    // input follows the visible surface, so the concealed bar and a floating bar's side gaps/shadow pad don't catch the pointer
     mask: Region { item: bar.concealed ? null : surface }
 
     anchors {
@@ -86,73 +97,26 @@ PanelWindow {
 
     Item {
         id: surface
-        // pin to the screen edge with explicit height; anchoring both edges let a shadowPad
-        // toggle change implicitHeight and a margin in separate frames, jolting the surface
         anchors.top:    bar.atBottom ? undefined : parent.top
         anchors.bottom: bar.atBottom ? parent.bottom : undefined
-        anchors.topMargin:    bar.surfaceInset
-        anchors.bottomMargin: bar.surfaceInset
+        anchors.topMargin:    bar.visualSurfaceInset
+        anchors.bottomMargin: bar.visualSurfaceInset
         anchors.horizontalCenter: parent.horizontalCenter
         width: bar.surfaceWidth
-        height: bar.coreHeight - bar.surfaceInset * 2
-        scale: _switchScale
-        transformOrigin: bar.atBottom ? Item.Bottom : Item.Top
-        transform: Translate { y: surface._switchLift }
-
-        property real _switchLift: 0
-        property real _switchScale: 1
-        readonly property bool _switchEffectsOn: !ShellSettings.reduceMotion && !bar.concealed
-
-        function _runFloatingSwitchAnimation(): void {
-            _floatSwitchAnim.stop()
-            _switchLift = 0
-            _switchScale = 1
-            if (!_switchEffectsOn) return
-
-            const edgeDir = bar.atBottom ? -1 : 1
-            _switchScale = 0.982
-            _switchLift = edgeDir * (ShellSettings.barFloating ? 6 : -4)
-            _floatSwitchAnim.restart()
-        }
+        height: bar.surfaceHeight
 
         Behavior on width {
             enabled: !ShellSettings.reduceMotion
-            NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
+            NumberAnimation { duration: Motion.barMorph; easing.type: Easing.OutCubic }
         }
 
         readonly property real radius: Math.min(bar.cornerRadius, width / 2)
-
-        Connections {
-            target: ShellSettings
-            function onBarFloatingChanged() {
-                surface._runFloatingSwitchAnimation()
-            }
-            function onReduceMotionChanged() {
-                if (ShellSettings.reduceMotion) {
-                    _floatSwitchAnim.stop()
-                    surface._switchLift = 0
-                    surface._switchScale = 1
-                }
-            }
-        }
-
-        ParallelAnimation {
-            id: _floatSwitchAnim
-            NumberAnimation {
-                target: surface; property: "_switchLift"
-                to: 0; duration: Motion.ms(230); easing.type: Easing.OutQuart
-            }
-            NumberAnimation {
-                target: surface; property: "_switchScale"
-                to: 1; duration: Motion.ms(230); easing.type: Easing.OutCubic
-            }
-        }
 
         // drop shadow grounding the floating surface, shared with popups; the bar uses a wider spread than a card
         Loader {
             anchors.fill: parent
             active: bar.shadowOn
-            opacity: contents.opacity
+            opacity: contents.opacity * bar.floatingProgress * bar.shadowProgress
             sourceComponent: FloatingShadow {
                 radius: surface.radius
                 atBottom: bar.atBottom
@@ -173,7 +137,7 @@ PanelWindow {
         Loader {
             anchors.fill: parent
             active: bar.wrapUnderline && (bar.shadowOn || ShellSettings.barBorderVisible)
-            opacity: contents.opacity
+            opacity: contents.opacity * bar.floatingProgress
             visible: active && opacity > 0.001
             sourceComponent: Item {
                 Rectangle {
@@ -206,8 +170,8 @@ PanelWindow {
         // reliably clear the stale edge when the bar moves.
         Loader {
             anchors.fill: parent
-            active: !bar.wrapUnderline && ShellSettings.barBorderVisible
-            opacity: contents.opacity
+            active: ShellSettings.barBorderVisible
+            opacity: contents.opacity * (1.0 - bar.floatingProgress)
             visible: active && opacity > 0.001
             sourceComponent: Rectangle {
                 anchors.left:  parent.left
@@ -288,7 +252,9 @@ PanelWindow {
             Loader {
                 anchors.fill: parent
                 active: ShellSettings.underlineGlow && contents.opacity > 0.001 && !bar.concealed
-                sourceComponent: Component { BarUnderline {} }
+                sourceComponent: Component {
+                    BarUnderline { floatingProgress: bar.floatingProgress }
+                }
             }
 
             BarContent {
@@ -309,7 +275,7 @@ PanelWindow {
         Loader {
             anchors.fill: parent
             active: bar.wrapUnderline && ShellSettings.barBorderVisible
-            opacity: contents.opacity
+            opacity: contents.opacity * bar.floatingProgress
             visible: active && opacity > 0.001
             sourceComponent: Rectangle {
                 radius: surface.radius

@@ -9,17 +9,16 @@ Item {
     id: _ul
     anchors.fill: parent
 
+    property real floatingProgress: ShellSettings.barFloating ? 1.0 : 0.0
+
     // Glow hugs the edge facing the desktop. Everything inside keeps its
     // bottom-anchored layout; a bottom bar mirrors the whole item vertically,
     // which flips positions and gradient directions together in one step
     // (conditional anchor flips left elements stuck on the stale edge).
     readonly property bool atBottom: ShellSettings.barPosition === "bottom"
-    // no separate wrap mode for glow, both styles adapt to floating geometry
-    readonly property bool wrapFloating: ShellSettings.barFloating
-    // floating corner curve: wrap borders use it as radius, flat-line glow insets by it (mirrors Bar.qml's _barLine) so it doesn't jut past the curve
-    readonly property real wrapRadius: ShellSettings.barFloating && ShellSettings.barCornerStyle === "round"
-        ? Math.min(ShellSettings.barRadius, _ul.height / 2, _ul.width / 2)
-        : 0
+    readonly property real wrapRadius: (ShellSettings.barCornerStyle === "round"
+        ? Math.min(ShellSettings.barRadius, _ul.height / 2, _ul.width / 2) : 0)
+        * _ul.floatingProgress
     transform: Scale { origin.y: _ul.height / 2; yScale: _ul.atBottom ? -1 : 1 }
 
     // non-visual host for all glow state/sources/animations/previews; the strips below read its properties
@@ -404,9 +403,10 @@ Item {
         anchors.leftMargin:  _ul.wrapRadius
         anchors.rightMargin: _ul.wrapRadius
         anchors.bottom:      parent.bottom
-        visible: !_ul.wrapFloating && _lineEffect._glowEnabled && opacity > 0.001
+        visible: _lineEffect._glowEnabled && opacity > 0.001
         height: 2
         opacity: Math.min(0.58, 0.34 * ShellSettings.glowStrength)
+            * (1.0 - _ul.floatingProgress)
         peak:    Theme.withAlpha(Theme.mix(Theme.subtext, _lineEffect._effectColor, 0.28), 0.72)
         edge:    Theme.withAlpha(Theme.mix(Theme.subtext, _lineEffect._effectColor, 0.18), 0.30)
         center:  0.50
@@ -422,9 +422,11 @@ Item {
         anchors.leftMargin:  _ul.wrapRadius
         anchors.rightMargin: _ul.wrapRadius
         anchors.bottom:      parent.bottom
-        visible: !_ul.wrapFloating && _lineEffect._glowEnabled && opacity > 0.001
+        visible: _lineEffect._glowEnabled && opacity > 0.001
         height: 2
-        opacity: Math.min(_lineEffect._ceiling, _lineEffect._combined * ShellSettings.glowStrength)
+        opacity: Math.min(_lineEffect._ceiling,
+            _lineEffect._combined * ShellSettings.glowStrength)
+            * (1.0 - _ul.floatingProgress)
         peak:    _lineEffect._stopColor
         edge:    _lineEffect._stopColorMid
         center:  _lineEffect._sweepCenter
@@ -437,8 +439,9 @@ Item {
         id: _floatingBaseRim
         radius: _ul.wrapRadius
         rimColor: Theme.mix(Theme.subtext, _lineEffect._effectColor, 0.18)
-        visible: _ul.wrapFloating && _lineEffect._glowEnabled && opacity > 0.001
+        visible: _lineEffect._glowEnabled && opacity > 0.001
         opacity: Math.min(0.20, 0.12 * ShellSettings.glowStrength)
+            * _ul.floatingProgress
     }
 
     GlowLine {
@@ -448,8 +451,9 @@ Item {
         anchors.leftMargin: _ul.wrapRadius
         anchors.rightMargin: _ul.wrapRadius
         anchors.bottom: parent.bottom
-        visible: _ul.wrapFloating && _lineEffect._glowEnabled && opacity > 0.001
+        visible: _lineEffect._glowEnabled && opacity > 0.001
         opacity: Math.min(0.42, 0.24 * ShellSettings.glowStrength)
+            * _ul.floatingProgress
         peak:    Theme.withAlpha(Theme.mix(Theme.subtext, _lineEffect._effectColor, 0.28), 0.64)
         edge:    Theme.withAlpha(Theme.mix(Theme.subtext, _lineEffect._effectColor, 0.18), 0.26)
         center:  0.50
@@ -463,10 +467,10 @@ Item {
         id: _floatingRim
         radius: _ul.wrapRadius
         rimColor: _lineEffect._effectColor
-        visible: _ul.wrapFloating && _lineEffect._glowEnabled && opacity > 0.001
+        visible: _lineEffect._glowEnabled && opacity > 0.001
         opacity: Math.min(0.42,
             (_lineEffect._combined * 0.34 + _lineEffect._bloomBoost * 0.16)
-            * ShellSettings.glowStrength)
+            * ShellSettings.glowStrength) * _ul.floatingProgress
     }
 
     // insets past the corner arcs and fades out at both ends, no mask/FBO needed
@@ -477,10 +481,10 @@ Item {
         anchors.leftMargin: _ul.wrapRadius
         anchors.rightMargin: _ul.wrapRadius
         anchors.bottom: parent.bottom
-        visible: _ul.wrapFloating && _lineEffect._glowEnabled && opacity > 0.001
+        visible: _lineEffect._glowEnabled && opacity > 0.001
         opacity: Math.min(0.72,
             (_lineEffect._combined * 0.58 + _lineEffect._bloomBoost * 0.28)
-            * ShellSettings.glowStrength)
+            * ShellSettings.glowStrength) * _ul.floatingProgress
         peak:    _lineEffect._stopColor
         edge:    _lineEffect._stopColorMid
         center:  _lineEffect._sweepCenter

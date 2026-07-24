@@ -80,10 +80,14 @@ Singleton {
     readonly property int radiusPanel:   14
     readonly property int radiusCard:    12
     readonly property int radiusControl: 10
-    // floating panels follow the bar's corner (flat bar → sharp, custom radius → match); attached bar keeps the default
-    readonly property int surfaceRadius: ShellSettings.barFloating
+    readonly property int _surfaceRadiusTarget: ShellSettings.barFloating
         ? (ShellSettings.barCornerStyle === "flat" ? 0 : ShellSettings.barRadius)
         : radiusPanel
+    property real surfaceRadius: _surfaceRadiusTarget
+    Behavior on surfaceRadius {
+        enabled: !ShellSettings.reduceMotion
+        NumberAnimation { duration: Motion.barMorph; easing.type: Easing.OutCubic }
+    }
 
     readonly property int gapSection: 12
 
