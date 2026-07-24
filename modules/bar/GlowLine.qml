@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 
-// shared underline strip: transparent ends, mid stops fanning from a moving centre peak; callers set geometry, opacity and clamps
 Rectangle {
     id: root
 

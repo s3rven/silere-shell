@@ -5,8 +5,6 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
 
-// backend-neutral compositor facade. picks niri (NIRI_SOCKET) or Hyprland and
-// republishes both into one shape: workspaces, toplevels, activeToplevel, actions.
 Singleton {
     id: root
 
@@ -14,18 +12,12 @@ Singleton {
     readonly property bool isNiri:     _niriSock.length > 0
     readonly property bool isHyprland: !isNiri
 
-    // only Hyprland has special/scratchpad workspaces; the gem hides its special visuals otherwise
     readonly property bool hasSpecialWorkspaces: isHyprland
 
-    // { wsId, name, output, active, urgent, occupied, ref }. wsId is the number shown/activated
-    // (Hyprland global id, niri per-output idx); ref is the backend handle used by actions.
     readonly property var workspaces:     isNiri ? _niriWorkspaces : _hyprWorkspaces
-    // { appId, title, cls, initialClass, pid, ref, wsRef, wsId, output, focused, focusRank }.
-    // focusRank: lower = more recently focused (Hyprland focusHistoryID; niri inverts its timestamp).
     readonly property var toplevels:      isNiri ? _niriToplevels : _hyprToplevels
     readonly property var activeToplevel: isNiri ? _niriActive : _hyprActive
     readonly property string focusedMonitor: isNiri ? _niriFocusedMon : _hyprFocusedMon
-    // global handle of the focused workspace (Hyprland id / niri id); -1 = none
     readonly property int focusedWorkspaceRef: {
         if (root.isNiri) {
             const ws = root._niriWsRaw
@@ -38,13 +30,10 @@ Singleton {
     }
     readonly property bool overviewActive:   isNiri ? _niriOverview : _hyprOverview
     readonly property bool activeFullscreen:  !!(activeToplevel && activeToplevel.fullscreen)
-    // Hyprland output currently showing a special workspace, "" = none
     readonly property string specialOutput:  isNiri ? "" : _hyprSpecial
     readonly property bool ready: isNiri ? _niriReady : (workspaces.length > 0)
 
-    // popups close when the active workspace on their monitor changes
     signal workspaceActivated(string output)
-    // Hyprland scrolloverview plugin raw toggle; niri drives overviewActive directly
     signal overviewRaw(bool open)
 
     function monitorName(screen): string {
@@ -60,8 +49,6 @@ Singleton {
             if (ws[i].output === output && ws[i].active) return ws[i].wsId
         return -1
     }
-
-    // ---- actions ----
 
     function focusMonitor(name: string): void {
         if (!name || name.length === 0) return
@@ -96,7 +83,6 @@ Singleton {
         HyprActions._dispatch("movetoworkspacesilent", wsId)
     }
 
-    // focus a specific toplevel (neutral object) and switch to its workspace
     function focusToplevel(c): void {
         if (!c) return
         if (root.isNiri) {
@@ -116,10 +102,6 @@ Singleton {
     property string _hyprActiveAddr: ""
     readonly property bool _liveTitlesWanted: ShellSettings.showWindowTitle
 
-    // Hyprland events arrive in bursts and several consumers may ask for the
-    // same refresh (workspace icons, fullscreen state, notification focus).
-    // One coordinator avoids a refresh process per bar/consumer, then bumps a
-    // trailing tick after lastIpcObject has had time to settle.
     function refreshToplevels(): void {
         if (!root.isHyprland) return
         if (_hyprRefreshSettle.running) {
@@ -247,7 +229,6 @@ Singleton {
     property string _hyprSpecial: ""
 
     function _updateSpecial(data): void {
-        // data is "[id,]wsname,monitor"; non-empty wsname before the monitor means a special is shown
         const parts = String(data ?? "").split(",")
         if (parts.length < 2) { root._hyprSpecial = ""; return }
         root._hyprSpecial = String(parts[parts.length - 2]).length > 0
@@ -312,7 +293,6 @@ Singleton {
         return out
     }
 
-    // niri window.workspace_id is a global id; join to the workspace list for display idx + output
     readonly property var _niriToplevels: {
         root._liveTitlesWanted
         const wins = root._niriWinRaw
@@ -460,7 +440,6 @@ Singleton {
             root._niriWinRaw = wins
             return
         }
-        // keeps focusRank fresh so the notif/tray/media source tiebreak tracks live recency
         if (ev.WindowFocusTimestampChanged) {
             const d = ev.WindowFocusTimestampChanged
             const wins = root._niriWinRaw.slice()

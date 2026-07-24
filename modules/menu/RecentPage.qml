@@ -25,7 +25,6 @@ PageShell {
         onTriggered: root._timeTick++
     }
 
-    // Auto-disarm the clear-all confirm if the second press doesn't come.
     Timer { id: _clearArmTimer; interval: 3000; onTriggered: root._clearArmed = false }
     onPageHidden: root._clearArmed = false
 
@@ -57,7 +56,6 @@ PageShell {
         return Qt.formatDateTime(d, "MMM d, yyyy")
     }
 
-    // destructive + irreversible → arm-to-confirm: first press arms, a second within 3s commits
     function requestClearAll(): void {
         if (_clearing || Notifications.historyCount === 0) return
         if (_clearArmed) { _clearArmed = false; _clearArmTimer.stop(); clearAll() }
@@ -287,7 +285,6 @@ PageShell {
                     property bool _expanded: false
                     property var _pendingRemove: null
 
-                    // expand only when the body is actually clipped; collapse always works
                     function _toggleExpand(): void {
                         if (_expanded) _expanded = false
                         else if (_body.truncated) _expanded = true
@@ -330,7 +327,6 @@ PageShell {
                         }
                     }
 
-                    // day divider mirrors the Now page's SectionLabel (accent tick, accent-leaning label, rule) so both tabs read as one app
                     Item {
                         visible: _entry._showSection
                         anchors.left:  parent.left
@@ -499,7 +495,6 @@ PageShell {
                                 font.pixelSize: Settings.fontSize - 1
                                 renderType: Text.NativeRendering
                                 wrapMode: Text.WordWrap
-                                // matches the live popup's hover expansion cap
                                 maximumLineCount: _entry._expanded ? 12 : 2
                                 elide: Text.ElideRight
                             }

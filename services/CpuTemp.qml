@@ -20,10 +20,8 @@ Singleton {
 
     property int _hotCount:      0
     property int _criticalCount: 0
-    // require N consecutive reads before alerting, ignores brief boost spikes
     readonly property int _enterSamples: 3
 
-    // separate enter/exit thresholds to avoid flicker near the boundary
     property bool hot:      false
     property bool critical: false
 
@@ -38,11 +36,9 @@ Singleton {
         target:         root
         targetProperty: "alertPulse"
         duration:       root.pulseDuration
-        // alertPulse only feeds menu gauges (bar underline glows off hot/critical, not the pulse); skip the 60fps loop while menu's closed
         running:        root.hot && !ShellSettings.reduceMotion && root.needed && !Idle.isIdle
     }
 
-    // called per read, not onTempChanged — identical consecutive readings must still advance the counters
     function _sample(t: real): void {
         temp = t
         const hotEnter      = ShellSettings.tempHotThreshold
@@ -68,7 +64,6 @@ Singleton {
     function _normalizedTemp(raw: real): real {
         if (isNaN(raw) || raw <= 0) return 0
         const t = raw >= 1000 ? raw / 1000 : raw
-        // ignore impossible values so a bogus fallback sensor can't trigger alerts
         return (t >= 5 && t <= 125) ? t : 0
     }
 

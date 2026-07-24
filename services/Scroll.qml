@@ -47,14 +47,12 @@ Singleton {
             return 0
         }
 
-        // Rate limit, preserve accumulator so the notch isn't lost
         if (minStepMs > 0 && last > 0 && now - last < minStepMs) {
             _accums[key] = cur
             _restartTimer(key)
             return 0
         }
 
-        // consume only what we emit; clamped overflow stays for the next event, not dropped
         const emitted = Math.max(-maxSteps, Math.min(maxSteps, notches))
         _accums[key]    = cur - emitted * threshold
         _lastSteps[key] = now

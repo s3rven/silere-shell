@@ -8,16 +8,13 @@ Item {
     id: root
 
     property bool compact: ShellSettings.barCompact
-    // pillPad insets match the pills' edge margin so gaps read even across the bar
     implicitWidth:  root.show ? _content.implicitWidth + root._pillPad * 2 : 0
-    // Full bar height so the visualizer baseline sits on the bottom line.
     implicitHeight: parent ? parent.height : ShellSettings.barHeight
     clip: true
     enabled: root.show
 
     readonly property bool show: ShellSettings.barShowMedia && Media.shown
 
-    // Visualizer paints only on the active monitor.
     property var screen: null
     property bool barActive: true
     readonly property bool _onActiveBar: !root.screen || Monitors.activeName === root.screen.name
@@ -32,10 +29,10 @@ Item {
     property bool _pauseBreathSettled: false
     readonly property int _pillPad: Metrics.pillPadFor(compact)
 
-    readonly property real _scrollSpeed:     38    // px/sec
-    readonly property int  _scrollHoldStart: 900   // short: title start already visible on entry
-    readonly property int  _scrollHoldEnd:   2200  // long: user reads the end
-    readonly property int  _scrollHoldLoop:  6000  // quiet gap before another pass; pauses do not repaint
+    readonly property real _scrollSpeed:     38
+    readonly property int  _scrollHoldStart: 900
+    readonly property int  _scrollHoldEnd:   2200
+    readonly property int  _scrollHoldLoop:  6000
 
     function _resetMarquee(): void {
         _scroll.stop()
@@ -67,7 +64,6 @@ Item {
         NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
     }
 
-    // optional helper: subtle activity line, upgraded to seek progress when MPRIS exposes track length
     Item {
         anchors.bottom: parent.bottom
         anchors.left:   parent.left
@@ -119,8 +115,6 @@ Item {
         sourceComponent: Component {
             MediaVisualizer {
                 barName: root.screen ? root.screen.name : ""
-                // A crowded/compact media pill has fewer useful pixels. Match
-                // CAVA's smaller profile instead of computing bins it cannot show.
                 lowPower: root.compact
             }
         }
@@ -163,12 +157,9 @@ Item {
                 root.compact ? 120 : 160,
                 root.textBudget > 0 ? root.textBudget : 9999
             )))
-            // Reduce-motion keeps the title elided and still, so it never scrolls.
             readonly property bool needsScroll: trackText.implicitWidth > maxW && !ShellSettings.reduceMotion
             readonly property real _overflow:   Math.max(0, trackText.implicitWidth - maxW)
-            // Duration of one slide, fixed speed with a floor so tiny overflows still glide.
             readonly property int  _slideMs:    Math.max(1800, Math.round(_overflow / root._scrollSpeed * 1000))
-            // Return trip: no need to read it, so faster. 65% of forward duration.
             readonly property int  _returnMs:   Math.max(1100, Math.round(_slideMs * 0.65))
             width:  Math.min(trackText.implicitWidth, maxW)
             height: trackText.implicitHeight
@@ -190,7 +181,6 @@ Item {
                 id: trackText
                 text:           textClip._shown
                 textFormat:     Text.PlainText
-                // paused: drift toward subtext as a colour cue, not just dim
                 readonly property color _base: Media.playing ? Theme.text
                                                               : Theme.mix(Theme.text, Theme.subtext, 0.55)
                 color:          (_rootHover.hovered && ShellSettings.barHoverHighlight) ? Theme.mix(_base, Theme.accent, 0.30) : _base
@@ -203,12 +193,10 @@ Item {
 
                 opacity: Media.playing ? 1.0 : 0.72
                 Behavior on opacity {
-                    // only animate paused→playing; breathing takes ownership on pause
                     enabled: Media.playing && !ShellSettings.reduceMotion
                     NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
                 }
 
-                // breathing: slow sway while paused; Behavior restores 0.72 when it stops
                 SequentialAnimation on opacity {
                     running: root.barActive && !Media.playing && root.show
                         && !root._pauseBreathSettled
@@ -250,7 +238,6 @@ Item {
                 }
             }
 
-            // Pause marquee while screen is idle — bar isn't visible then.
             Connections {
                 target: Idle
                 function onIsIdleChanged() {
@@ -259,7 +246,6 @@ Item {
                 }
             }
 
-            // Only the active monitor's bar scrolls the title (mirrors visualizer/breathing).
             Connections {
                 target: Monitors
                 function onActiveNameChanged() {
@@ -313,7 +299,6 @@ Item {
         onTriggered: root._pauseBreathSettled = true
     }
 
-    // root hit target so the visualizer zone is also clickable
     HoverHandler { id: _rootHover; cursorShape: Qt.PointingHandCursor }
 
     activeFocusOnTab: root.show

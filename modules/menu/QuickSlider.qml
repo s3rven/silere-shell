@@ -12,10 +12,8 @@ Item {
     property string wheelKey:  "quickslider"
     property string accessibleName: wheelKey
     property bool   glyphClickable: false
-    // Optional trailing chevron — toggles an owner-supplied dropdown.
     property bool   expandable: false
     property bool   expanded:   false
-    // Card-edge rounding for the hover fill — assigned by SettingsCard.
     property real   topRadius:    0
     property real   bottomRadius: 0
     property real   cardInset:    1
@@ -65,7 +63,6 @@ Item {
         fillOpacity:  root.activeFocus ? 0.13 : 0.08
     }
 
-    // matches ControlRow icon slot so all rows share one left edge
     Item {
         id: _g
         anchors.left:           parent.left

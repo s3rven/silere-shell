@@ -2,8 +2,6 @@ import QtQuick
 import "../../config"
 import "../../services"
 
-// Hover/focus fill for a row inside a rounded SettingsCard. Per-corner radii
-// match whichever card edges this row is flush against (set by SettingsCard._applyRadii).
 Item {
     id: root
 

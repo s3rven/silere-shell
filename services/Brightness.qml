@@ -51,7 +51,6 @@ Singleton {
         setPercent(pendingPercent + delta)
     }
 
-    // Floored at 1% so the menu slider can't black the screen.
     function setPercent(p: int): void {
         if (!toolAvailable || maxBrightness <= 0 || !_device) return
         const clamped = Math.max(1, Math.min(100, Math.round(p)))

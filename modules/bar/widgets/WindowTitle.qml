@@ -10,8 +10,6 @@ Item {
 
     required property ShellScreen screen
 
-    // width the bar can give us (= titleAvailableWidth); caps inner text so a crowded bar elides from the right
-    // instead of cropping both ends. separate from the animated box width so text snaps to the new title. -1 = unset
     property real availableWidth: -1
 
     readonly property string monitorName: Compositor.monitorName(root.screen)
@@ -40,7 +38,6 @@ Item {
         leaf = leaf.replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim()
         if (!leaf) return ""
 
-        // app ids/classes are often lower-case slugs; keep mixed-case names as-is, title-case plain ids so they read as labels
         if (leaf === leaf.toLowerCase() || leaf === leaf.toUpperCase()) {
             return leaf.split(" ").map(function(part) {
                 return part.length <= 2
@@ -90,8 +87,6 @@ Item {
         return "#" + _h2(a * 255) + _h2(c.r * 255) + _h2(c.g * 255) + _h2(c.b * 255)
     }
 
-    // "app · title" as one styled line: dimmed app, separator at the user's dot opacity, full title;
-    // collapses to whichever single part exists when the title is empty or echoes the app.
     readonly property string _formatted: {
         const appCol   = _hex(Theme.subtext, 1.0)
         const titleCol = _hex(Theme.text, 1.0)
@@ -133,7 +128,6 @@ Item {
     Connections {
         target: Idle
         function onIsIdleChanged() {
-            // resync after any titles missed while the bar was hidden
             if (!Idle.isIdle && root._ready) _debounce.restart()
         }
     }
@@ -185,8 +179,6 @@ Item {
             NumberAnimation {            target: root; property: "_y";     to: 0;     duration: Motion.ms(170); easing.type: Easing.OutQuart }
             NumberAnimation {            target: root; property: "_scale"; to: 1.0;   duration: Motion.ms(160); easing.type: Easing.OutCubic }
         }
-        // title-only changes mid-swap are dropped by the guard in onCurrentTitleChanged (apps often set the real
-        // title a beat after mapping); resync silently so the bar never sits on a stale title after a fast switch.
         ScriptAction {
             script: if (!_debounce.running && root._shownTitle !== root.currentTitle)
                 root._shownTitle = root.currentTitle
@@ -217,8 +209,6 @@ Item {
             font.pixelSize: Settings.fontSize
             renderType:     Text.NativeRendering
             elide:          Text.ElideRight
-            // cap at 25% of screen and at the width the bar gave us, so a crowded bar elides from the right not
-            // both ends. uses availableWidth (doesn't animate during a swap) so the text snaps to the new title.
             width:          Math.ceil(Math.min(implicitWidth,
                                      root.availableWidth >= 0 ? root.availableWidth : implicitWidth,
                                      Math.round(root.screen.width * 0.25)))

@@ -88,8 +88,6 @@ Rectangle {
         onTriggered: root.disarm()
     }
 
-    // Confirmation uses the notification-style perimeter countdown instead of a
-    // detached fuse line, keeping the warning attached to the whole action.
     property real _confirmProgress: 0.0
     property real _confirmStartedMs: 0
 
@@ -130,7 +128,6 @@ Rectangle {
     Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root.activate(); event.accepted = true }
     Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root.activate(); event.accepted = true }
     Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root.activate(); event.accepted = true }
-    // armed rows eat the first Escape as a disarm; unarmed rows let it fall through to close the rail
     Keys.onEscapePressed: event => {
         if (root.armed) { root.disarm(); event.accepted = true }
         else event.accepted = false

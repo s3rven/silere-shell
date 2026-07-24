@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Shapes
 
-// rounded outline that fades from the bottom edge up to nothing at the top
 Shape {
     id: root
 

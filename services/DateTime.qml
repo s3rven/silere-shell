@@ -6,37 +6,32 @@ import Quickshell
 Singleton {
     id: root
 
-    // Stop even the minute wake-up when the clock is hidden and neither quiet
-    // hours nor an open shell surface consumes calendar data.
     readonly property bool _clockNeeded: ShellSettings.barShowClock
         || ShellSettings.dndSchedule || MenuState.open || CalendarState.open
 
     SystemClock {
         id: clock
         enabled: root._clockNeeded
-        // Once the idle timeout lands the display is normally off. Keep quiet
-        // hours accurate without waking and repainting the bar every second.
         precision: ShellSettings.barShowClock && ShellSettings.showSeconds && !Idle.isIdle
             ? SystemClock.Seconds : SystemClock.Minutes
     }
 
     property string _lastDay:       ""
     property string _lastMinute:    ""
-    property string cachedDayName:  ""  // "ddd " — trailing space is the separator
-    property string cachedDateCore: ""  // "MMM dd"
-    property string cachedLongDate: ""  // "dddd, MMMM d" — menu header
-    property string cachedWeekday:  ""  // "dddd" — menu masthead, weighted line
-    property string cachedMonthDay: ""  // "MMMM d" — menu masthead, quiet line
-    property string cachedWeek:     ""  // ISO 8601 week number, e.g. "27"
-    property string cachedHour:     ""  // "HH" or "h"
-    property string cachedMinute:   ""  // "mm" — split from the hour so only the changed field rolls
-    property string cachedAmPm:     ""  // "AM" / "PM" in 12h mode, "" in 24h
-    property string cachedSeconds:  ""  // ":ss"
-    property int hour24: 0  // 24h int for the quiet-hours check
+    property string cachedDayName:  ""
+    property string cachedDateCore: ""
+    property string cachedLongDate: ""
+    property string cachedWeekday:  ""
+    property string cachedMonthDay: ""
+    property string cachedWeek:     ""
+    property string cachedHour:     ""
+    property string cachedMinute:   ""
+    property string cachedAmPm:     ""
+    property string cachedSeconds:  ""
+    property int hour24: 0
 
     Component.onCompleted: _update()
 
-    // ISO 8601 week number (Monday-start). Canonical — the calendar axis reads this too.
     function isoWeek(d): int {
         const t = new Date(d.getFullYear(), d.getMonth(), d.getDate())
         t.setDate(t.getDate() + 3 - (t.getDay() + 6) % 7)
@@ -95,8 +90,6 @@ Singleton {
         if (!ShellSettings.barShowClock || !ShellSettings.showSeconds) {
             cachedSeconds = ""
         } else if (!Idle.isIdle || cachedSeconds.length === 0) {
-            // Freeze the last visible value while idle instead of collapsing the
-            // seconds slot; input resumes the live second tick immediately.
             cachedSeconds = ":" + String(current.getSeconds()).padStart(2, "0")
         }
     }

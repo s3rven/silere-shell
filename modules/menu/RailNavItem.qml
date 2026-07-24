@@ -70,7 +70,6 @@ Item {
         Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(115); easing.type: Easing.OutCubic } }
     }
 
-    // hides faster than it reveals so it doesn't linger over content
     Rectangle {
         id: _pill
         readonly property bool _show: _hover.hovered && !root.active

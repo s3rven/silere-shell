@@ -4,7 +4,6 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// decoupled open/anchor state for the calendar popup (clock pokes, popup reads); anchorX = clock's screen-x
 Singleton {
     id: root
 
@@ -13,14 +12,13 @@ Singleton {
     property var  triggerScreen: null
 
     function toggleAt(x: real, screen): void {
-        if (open) { close(); return }   // also clears triggerScreen, like close()
+        if (open) { close(); return }
         anchorX = x
         if (screen) triggerScreen = screen
         open = true
     }
     function close(): void { if (open) open = false; triggerScreen = null }
 
-    // keybind/script entry point; null triggerScreen resolves to the focused output
     IpcHandler {
         target: "calendar"
 
@@ -32,7 +30,6 @@ Singleton {
         function close(): void { root.close() }
     }
 
-    // day marks: "y-m-d" → true, reassigned wholesale so cell bindings refresh; file-backed to survive restarts
     property var marks: ({})
     property bool _savePendingForDir: false
     property string _lastSavedJson: ""

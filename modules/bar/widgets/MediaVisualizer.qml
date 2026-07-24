@@ -6,11 +6,9 @@ Canvas {
     id: _viz
     anchors.fill: parent
 
-    property string barName: ""   // "" (single monitor / unknown) always paints
+    property string barName: ""
     property bool lowPower: false
     property string styleOverride: ""
-    // Parent surfaces use this when they stay loaded for an exit animation but
-    // are fully covered (for example, the center visualizer behind the bar OSD).
     property bool presentationActive: true
     readonly property bool _onActiveBar: barName.length === 0 || Monitors.activeName === barName
     readonly property string _style: styleOverride.length > 0 ? styleOverride : ShellSettings.mediaVisualizerStyle
@@ -41,7 +39,6 @@ Canvas {
         function onMediaVisualizerStyleChanged() { if (_viz.visible) _viz.requestPaint() }
     }
 
-    // Gradients cached, rebuilt only when their inputs change, so paint allocates nothing.
     property var   _fill:   null
     property var   _edge:   null
     property real  _fillH:  -1
@@ -75,7 +72,6 @@ Canvas {
     }
 
     function _fadeEdges(ctx) {
-        // edge fade mask so the visualizer blends into the media label instead of hard vertical sides
         var fadeW = Math.min(width * 0.18, 22)
         if (!_edge || Math.round(_edgeW) !== Math.round(width)) {
             var m = ctx.createLinearGradient(0, 0, width, 0)

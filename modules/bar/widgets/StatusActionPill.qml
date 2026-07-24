@@ -3,8 +3,6 @@ import "../../../config"
 import "../../../services"
 import "../../common"
 
-// base for the update-style status pills: pops in on `show`, content-scan sweep on `busy`, clicks locked until work ends.
-// consumers bind show/busy, set glyph/text/accessible, handle onActivated.
 Pill {
     id: root
 
@@ -19,7 +17,6 @@ Pill {
     Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
     Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutQuart } }
 
-    // +1 keeps the status glyphs (pacman ghost, update arrow) optically in step
     glyphPixelSize: Settings.iconSize + 1
     glyphColor:     Theme.accent
     textColor:      Theme.text

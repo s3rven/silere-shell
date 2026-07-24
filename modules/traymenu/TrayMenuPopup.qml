@@ -18,7 +18,6 @@ PanelWindow {
     readonly property real _cardRadius: Theme.radiusPanel
     property bool _ignoreOutsideTap: false
 
-    // holds the last handle through the close fade so rows don't collapse early
     property var _activeMenu: null
     property bool _rootOpenedSent: false
 
@@ -139,7 +138,6 @@ PanelWindow {
         }
     }
 
-    // recurses into itself for submenu flyouts, any nesting depth
     Component {
         id: _rowDelegate
 
@@ -154,7 +152,6 @@ PanelWindow {
             readonly property bool checkable: btnType !== 0
             readonly property bool checked:   (modelData?.checkState ?? Qt.Unchecked) === Qt.Checked
             readonly property string iconSrc: modelData?.icon ?? ""
-            // duck-type marker so focus movement can skip the Repeater and separators
             readonly property bool isMenuRow: !sep
 
             width: win.menuWidth
@@ -262,7 +259,6 @@ PanelWindow {
                 anchors.rightMargin: 10
                 opacity: _entry.on ? 1.0 : 0.4
 
-                // Check / radio marker, or icon, share the leading slot.
                 Item {
                     id: _mark
                     visible: _entry.checkable
@@ -327,7 +323,6 @@ PanelWindow {
                 }
             }
 
-            // flips to the left edge when it would run off-screen
             Rectangle {
                 id: _flyout
                 property bool opened: false
@@ -369,7 +364,6 @@ PanelWindow {
                     }
                 }
 
-                // apps populate submenu children lazily, only after the opened signal.
                 onOpenedChanged: {
                     if (!_entry.sub) return
                     if (opened) win._emitMenuSignal(_entry.modelData, "opened", "sendOpened")
@@ -426,7 +420,6 @@ PanelWindow {
         }
     }
 
-    // Floating drop shadow, same elevation cue as the bar/OSD/notification cards.
     Loader {
         active: (TrayMenuState.open || card.opacity > 0.001)
             && ShellSettings.barFloating && ShellSettings.barShadow
@@ -453,7 +446,6 @@ PanelWindow {
         height: Math.min(_col.implicitHeight, _maxContentH) + pad * 2
         radius: Math.min(win._cardRadius, height / 2)
 
-        // card holds focus on open (paints nothing) so a mouse-open shows no highlight; Down/Tab enters the first usable row
         function _focusFirstRow(): void {
             const sibs = _col.children
             for (let k = 0; k < sibs.length; k++) {

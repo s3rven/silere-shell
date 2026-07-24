@@ -4,8 +4,6 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// self-update state for the shell (distinct from Updates.qml = distro packages). the daily
-// update.sh check-only drops a flag when origin/main is ahead; watched via inotify so it surfaces in the bar
 Singleton {
     id: root
 
@@ -190,7 +188,6 @@ Singleton {
         }
     }
 
-    // version + timer status only surface in Settings; probe once on first menu open, not every startup
     property bool _probed: false
     function _probe(): void {
         if (_probed) return
@@ -202,7 +199,6 @@ Singleton {
         target: MenuState
         function onOpenChanged() { if (MenuState.open) root._probe() }
     }
-    // First read can race the tool scan; catch up once it lands.
     Connections {
         target: SystemTools
         function onReadyChanged() { if (root._probed) root.refreshTimer() }

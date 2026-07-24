@@ -15,7 +15,6 @@ PanelWindow {
     color:          "transparent"
     exclusiveZone:  -1
 
-    // Reserve so a floating card's drop shadow isn't clipped at the window edge.
     readonly property int _shadowPad: (ShellSettings.barFloating && ShellSettings.barShadow) ? 16 : 0
     readonly property int _cardW: Math.max(180, Math.min(320,
         targetScreen ? targetScreen.width - 24 - _shadowPad : 320))
@@ -48,12 +47,10 @@ PanelWindow {
     }
 
     margins {
-        // +4 mirrors Bar.qml's surfaceInset so popups clear a floating bar.
         top:    win._barBottom ? 6
             : (ShellSettings.barFloating ? 4 : 0) + ShellSettings.barHeight + 6
         bottom: win._barBottom
             ? (ShellSettings.barFloating ? 4 : 0) + ShellSettings.barHeight + 6 : 0
-        // _shadowPad backed out here, re-added by outerCol's inset, so the visible card edge still lands _edgeMargin from the screen edge
         right: win._pos === "top-right" ? Math.max(0, win._edgeMargin - win._shadowPad) : 0
         left:  win._left              ? Math.max(0, win._edgeMargin - win._shadowPad) : 0
     }
@@ -62,8 +59,6 @@ PanelWindow {
     property int _pendingDismissAll: 0
     property var _pendingDismissItems: []
     property bool _showAll: false
-    // a dismiss-all peels one card per tick, so activeCount ticks down under the bar. hold the bar
-    // and its count until the last card is gone, or it collapses mid-cascade and the stack jumps
     readonly property bool _dismissing: win._pendingDismissAll > 0 || _cascadeTimer.running
     property int _dismissCount: 0
 
@@ -154,7 +149,6 @@ PanelWindow {
         }
     }
 
-    // safety: clear stragglers if dismissRequested chain doesn't drain the counter
     Timer {
         id: _cascadeSafety
         interval: Math.max(400, Motion.ms(280) + 150)

@@ -3,9 +3,6 @@ pragma Singleton
 import QtQuick
 import Quickshell
 
-// backend-neutral overview state. niri emits it natively via Compositor's event
-// stream; on Hyprland the scrolloverview plugin patch sends socket2 scrolloverview>>1
-// on open, >>0 when the close animation finishes, so the bar can get out of the way.
 Singleton {
     id: root
 
@@ -23,6 +20,5 @@ Singleton {
         }
     }
 
-    // settle delay collapses rapid open/close flapping into one state change so the bar never stutters
     Timer { id: _settle; interval: 80; onTriggered: root._hyprActive = root._raw }
 }

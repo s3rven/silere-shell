@@ -7,14 +7,12 @@ Item {
 
     property string glyph:        ""
     property string label:        ""
-    // optional muted subtitle under the label; empty keeps the row compact (single-line, 44px)
     property string description:  ""
     property bool   checked:      false
     property real   topRadius:    0
     property real   bottomRadius: 0
     property bool   available:    true
     property string dependsNote:  ""
-    // matches the card's border width so the hover fill stays inside the stroke, aligned to the card's inner rounded edge
     property real   cardInset:    1
 
     signal toggled()
@@ -46,8 +44,6 @@ Item {
     height:         _hasDesc ? 4 * Math.ceil((_descPadV * 2 + _textCol.implicitHeight) / 4) : 44
     implicitHeight: height
 
-    // A checked setting whose dependency disappeared must stay switchable-off,
-    // while still reading as degraded rather than fully available.
     opacity: root.enabled && root.available ? 1.0 : (_canToggle ? 0.72 : 0.45)
     Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium } }
 
@@ -94,8 +90,6 @@ Item {
         Behavior on color { ColorAnimation { duration: Motion.fast } }
     }
 
-    // Label over the optional description, centred so single- and two-line rows
-    // both balance next to the glyph and toggle.
     Column {
         id: _textCol
         anchors.left:           _glyph.right

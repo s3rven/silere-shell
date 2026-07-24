@@ -1,7 +1,6 @@
 import QtQuick
 import "../../config"
 
-// text segment that collapses width to 0 (clipped) + fades when not expanded; clock day-name/seconds/AM-PM.
 Item {
     id: root
 

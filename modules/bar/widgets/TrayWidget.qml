@@ -7,19 +7,16 @@ import "../../../config"
 import "../../../services"
 import "../../common"
 
-// StatusNotifier tray; invisible with no items so it costs nothing at rest. left-click jumps to the app window
-// (falls back to activate/menu when no live window), right-click menu, middle secondary-activate, scroll passes through.
 Item {
     id: root
 
-    property var screen: null   // ShellScreen this bar sits on, for menu placement
+    property var screen: null
     property bool compact: ShellSettings.barCompact
     property bool barActive: true
     readonly property bool show: ShellSettings.trayWidget && _items.count > 0
     readonly property int iconSize: Math.max(14, Math.min(18, Math.round(ShellSettings.barHeight * 0.44)))
     readonly property int _pillPad: Metrics.pillPadFor(compact)
 
-    // pillPad insets match the pills' edge margin so gaps read even across the bar
     implicitWidth:  show ? _row.implicitWidth + _pillPad * 2 : 0
     implicitHeight: parent ? parent.height : 24
     visible: show
@@ -47,12 +44,10 @@ Item {
         id: _row
         x: root._pillPad
         anchors.verticalCenter: parent.verticalCenter
-        // tracks the Spacing setting (one notch tighter: icons read as a cluster)
         spacing: Math.max(5, ShellSettings.barSpacing - 4)
 
         Repeater {
             id: _items
-            // don't decode icons or run attention anims while the tray feature is disabled
             model: ShellSettings.trayWidget ? SystemTray.items : null
 
             delegate: Item {
@@ -63,10 +58,8 @@ Item {
                     : modelData.id
                 readonly property bool passive: modelData.status === Status.Passive
                 readonly property bool needsAttention: modelData.status === Status.NeedsAttention
-                // Drives the attention halo; stays at full for the reduceMotion path.
                 property real attnPulse: 1.0
                 property bool _attentionSettled: false
-                // SNI tooltip title as a quiet inline reveal: only after the pointer rests, or on keyboard focus
                 property bool _dwelled: false
 
                 onNeedsAttentionChanged: _attentionSettled = false
@@ -84,7 +77,6 @@ Item {
                     onTriggered: _tile._dwelled = true
                 }
 
-                // Unified backing pill: hover wash or attention halo (attention wins).
                 Rectangle {
                     x: -3
                     anchors.verticalCenter: parent.verticalCenter
@@ -113,7 +105,6 @@ Item {
                     duration: Motion.ms(900)
                 }
 
-                // NeedsAttention can be held forever; stop pulsing, keep the static halo
                 Timer {
                     interval: 15000
                     running: root.barActive && _tile.needsAttention
@@ -121,8 +112,6 @@ Item {
                     onTriggered: _tile._attentionSettled = true
                 }
 
-                // letter fallback only for genuinely slow/missing icons — showing it instantly flashes a
-                // grey badge on every tray enable while the async decode catches up
                 property bool _fallbackDue: false
                 Timer {
                     interval: 300
@@ -164,7 +153,6 @@ Item {
                     height: root.iconSize
                     anchors.verticalCenter: parent.verticalCenter
                     source: _tile.modelData.icon
-                    // generous request: SNI providers pick their largest pixmap, downscaling beats upscaling a 22px icon
                     implicitSize: root.iconSize
                     backer.sourceSize.width:  64
                     backer.sourceSize.height: 64
@@ -199,8 +187,6 @@ Item {
                             root._openMenu(it, _tile)
                         else if (mouse.button === Qt.MiddleButton)
                             it.secondaryActivate()
-                        // prefer landing on the actual window; only fall through to the item's own
-                        // activation when it has no live window (minimised-to-tray / daemon). onlyMenu = no activate path
                         else root._activateItem(it, _tile)
                     }
                     onWheel: (wheel) => {
@@ -216,7 +202,6 @@ Item {
                 Accessible.description: modelData.tooltipDescription
                 Accessible.onPressAction: root._activateItem(_tile.modelData, _tile)
                 activeFocusOnTab: root.show
-                // shift+activate or the Menu key opens the context menu (keyboard mirror of right-click)
                 function _keyActivate(event): void {
                     if (event.isAutoRepeat) { event.accepted = true; return }
                     if (event.modifiers & Qt.ShiftModifier) root._openMenu(_tile.modelData, _tile)

@@ -15,7 +15,6 @@ Column {
         CollapsibleSection {
             indent: 8
             expanded: ShellSettings.osdEnabled
-            // Mode: floating pill vs bar-inline. Drives which sub-options apply.
             ToggleRow {
                 glyph: "󰀱"; label: "Show in bar"
                 description: "Volume and brightness in the bar center"

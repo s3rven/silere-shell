@@ -45,7 +45,6 @@ Column {
                 readonly property real  _curHue:   _curColor.hslHue < 0 ? 0 : _curColor.hslHue
                 readonly property real  _curSat:   isNaN(_curColor.hslSaturation) ? 0.72 : _curColor.hslSaturation
 
-                // auto leads the presets so one repeater drives both the row and the sliding ring
                 readonly property var _options: [
                     { auto: true,  color: "",        name: "Auto"   },
                     { auto: false, color: "#b8bdd8", name: "Mist"   },
@@ -183,7 +182,6 @@ Column {
             }
         }
 
-        // neutral off: shell themes from matugen; show the live palette as proof (bundled fallback tones if matugen's absent, called out as such)
         CollapsibleSection {
             expanded: !ShellSettings.neutralTheme
 

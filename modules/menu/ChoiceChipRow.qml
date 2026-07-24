@@ -13,8 +13,6 @@ Item {
     property var    model: []
     property var    currentValue
     property color  accentColor: Theme.accent
-    // Card-edge rounding for the hover fill — set on the first/last row of a card
-    // so the fill rounds only where the card itself does (see RowHoverBg).
     property real   topRadius:    0
     property real   bottomRadius: 0
     property real   cardInset:    1
@@ -40,7 +38,6 @@ Item {
         return -1
     }
 
-    // one tab stop for the row: entering lands on the active chip, ←/→ move, Space/Enter pick (Item not FocusScope, so it only fires when the row gets Tab focus)
     activeFocusOnTab: enabled
     onActiveFocusChanged: {
         if (activeFocus && _segRepeater.count > 0) {
@@ -234,7 +231,6 @@ Item {
                         onTapped: root.chosen(_seg.modelData.value)
                     }
 
-                    // Keyboard focus stays explicit without adding pointer-hover fills.
                     Rectangle {
                         anchors.fill: parent
                         anchors.margins: 2

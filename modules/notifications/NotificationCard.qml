@@ -26,7 +26,6 @@ Item {
     Accessible.description: hasBody ? summaryText + ": " + bodyText : summaryText
     Accessible.onPressAction: card.activatePrimary()
 
-    // "default" action maps to body click per spec, not a chip button
     readonly property var _defaultAction: {
         const acts = notification.actions ?? []
         for (let i = 0; i < acts.length; i++)
@@ -107,8 +106,6 @@ Item {
     function invokeAction(action): void {
         if (!card.enabled || !action) return
         action.invoke()
-        // `resident` asks the server to keep the notification after an
-        // action is invoked.
         if (!card.notification.resident) card.dismiss()
     }
 
@@ -162,13 +159,11 @@ Item {
     property int slideDir: 1
     readonly property real _hiddenX: slideDir * (implicitWidth + 16)
 
-    // accumulated hover time, added back so timeout doesn't count time spent hovering
     property real _hoverPausedMs: 0
     property real _hoverStartMs:  0
 
     Timer {
         id: _autoClose
-        // critical stays resident unless sender sets explicit timeout
         readonly property bool shouldRun: card.isCritical
             ? card.notification.expireTimeout > 0
             : (card.notification.expireTimeout !== 0)
@@ -176,8 +171,6 @@ Item {
             const t = card.notification.expireTimeout
             return (t > 0 && t < 30000) ? t : ShellSettings.notifDefaultTimeout
         }
-        // Usually anchored to arrival; deferred overflow cards receive the time
-        // they first become visible so they still get a complete readable turn.
         interval: Math.max(400, fullInterval - (Date.now() - card.timeoutStartedAt) + card._hoverPausedMs)
         running:  shouldRun && !_cardHover.hovered
         onTriggered: card.dismiss(true)
@@ -227,7 +220,6 @@ Item {
         }
     }
 
-
     Loader {
         active: card.visible && ShellSettings.barFloating && ShellSettings.barShadow
         anchors.fill: cardRect
@@ -269,14 +261,10 @@ Item {
             }
         }
 
-        // one Behavior drives both arrival and dismissal, so the curve has to follow the
-        // direction — every other swap in the shell decelerates in and accelerates out
         Behavior on x       { enabled: card.visible && cardRect._behaviorEnabled && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(200); easing.type: card._leaving ? Easing.InCubic : Easing.OutQuart } }
         Behavior on opacity { enabled: card.visible && cardRect._behaviorEnabled && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(140) } }
         Behavior on height  { enabled: card.visible && cardRect._behaviorEnabled && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
 
-        // fill only — border lives in _cardBorder overlay so the shimmer's layer/clip can't cut its antialiased edges.
-        // popup base: same opaque chrome tone as menu/calendar (and the bar's hue) so a standalone card reads as one family, not a lighter floating row.
         color: Theme.rowFill(_cardHover.hovered, card.isCritical)
 
         Behavior on color { ColorAnimation { duration: Motion.fast } }
@@ -290,7 +278,6 @@ Item {
             anchors.left:       parent.left
             anchors.topMargin:  13
             anchors.leftMargin: 14
-            // The notification image wins when present; one texture item covers both cases.
             IconImage {
                 anchors.fill: parent
                 source: card.hasNotificationImage && !card.showContentImage
@@ -302,7 +289,7 @@ Item {
 
         Column {
             id: contentCol
-            z: 2   // above _bodyArea so the action chips get their clicks
+            z: 2
             anchors {
                 top:         parent.top
                 left:        parent.left
@@ -334,8 +321,6 @@ Item {
                     anchors.left:       _critIcon.visible ? _critIcon.right : parent.left
                     anchors.leftMargin: _critIcon.visible ? 6 : 0
                     anchors.right:      parent.right
-                    // Reserve the close affordance so long summaries never
-                    // disappear beneath it.
                     anchors.rightMargin: 18
                     text:           card.summaryText
                     textFormat:     Text.PlainText
@@ -560,7 +545,6 @@ Item {
             cursorShape: Qt.PointingHandCursor
             onClicked: (mouse) => {
                 if (mouse.button === Qt.RightButton) { card.dismiss(); return }
-                // Middle-click is a non-destructive "take me to the source".
                 if (mouse.button === Qt.MiddleButton)
                     HyprActions.focusNotificationSource(card.notification)
                 else
@@ -578,8 +562,6 @@ Item {
             color:        _closeHover.hovered ? Theme.withAlpha(Theme.error, 0.18) : Theme.menuControl
             border.width: 1
             border.color: _closeHover.hovered ? Theme.withAlpha(Theme.error, 0.32) : Theme.menuControlLine
-            // Keep a quiet close affordance discoverable for touch/tablet
-            // input, where a hover-only control can never be revealed.
             opacity: _cardHover.hovered ? 1.0 : 0.48
             scale:   _cardHover.hovered ? 1.0 : 0.90
             transformOrigin: Item.Center
@@ -605,7 +587,6 @@ Item {
         }
     }
 
-    // border outside clip/layer so shimmer doesn't cut antialiased edges
     Rectangle {
         id: _cardBorder
         anchors.fill: cardRect

@@ -70,15 +70,10 @@ ShellRoot {
         }
     }
 
-    // popup surfaces are large object trees even while unmapped — build only when they have content, tear down unloadDelay after close so the exit anim finishes on a live surface.
-    // notification popups skip the delay: their model drops the final entry only after the delegate exit anim completes.
     component PopupLoader: Scope {
         id: _pl
         required property bool wantOpen
         required property Component surface
-        // Keep the tree only through the longest card exit, then release it.
-        // The old ~290ms grace retained every popup for about twice as long as
-        // its visible close transition.
         property int unloadDelay: Math.max(40,
             Math.max(Motion.popOut, Motion.popOutFade) + 30)
         onWantOpenChanged: {
@@ -88,7 +83,6 @@ ShellRoot {
         LazyLoader {
             id: _plLoader
             active: false
-            // wantOpen can already be true on (re)load; the binding won't fire a change for the initial value
             Component.onCompleted: if (_pl.wantOpen) active = true
             component: _pl.surface
         }

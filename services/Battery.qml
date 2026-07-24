@@ -74,7 +74,6 @@ Singleton {
 
     readonly property string label: _validReading ? `${Math.round(pct)}%` : ""
 
-    // retry a few times for transient probe failures (missing CLI on boot, slow D-Bus), not forever
     Timer {
         interval: 1500
         repeat: true
@@ -119,8 +118,6 @@ Singleton {
         return "discharging"
     }
 
-
-    // shared low-battery pulse so bar underline and pill stay phase-locked
     PulseLoop {
         target:         root
         targetProperty: "alertPulse"

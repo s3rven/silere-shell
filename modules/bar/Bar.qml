@@ -29,7 +29,6 @@ PanelWindow {
         ? Math.min(ShellSettings.barRadius, ShellSettings.barHeight / 2)
         : 0
     readonly property real cornerRadius: _cornerRadiusTarget * floatingProgress
-    // underline wraps automatically whenever the bar floats, no separate setting
     readonly property bool wrapUnderline: floatingProgress > 0.001
     // side gap snaps to a multiple of 8 so the segment x lands on the 4px grid and maps to
     // an integer output pixel at 2.5× effective scale — else a subpixel-bleed line at the left edge
@@ -68,10 +67,8 @@ PanelWindow {
         ShellSettings.underlineGlow ? 8 : 0)
     readonly property int insetPad: 8
 
-    // hidden states release the reserved zone so overview windows fill the bar strip instead of leaving a phantom gap; reflow rides the windowsMove anim
     readonly property bool concealed: OverviewState.active
 
-    // shared by the edge line and wrap border so both track the strength slider
     readonly property real lineAlpha: Math.min(0.9, (ShellSettings.neutralTheme ? 0.22 : 0.28) * ShellSettings.barLineStrength)
 
     screen:        bar.targetScreen
@@ -112,7 +109,6 @@ PanelWindow {
 
         readonly property real radius: Math.min(bar.cornerRadius, width / 2)
 
-        // drop shadow grounding the floating surface, shared with popups; the bar uses a wider spread than a card
         Loader {
             anchors.fill: parent
             active: bar.shadowOn
@@ -133,7 +129,6 @@ PanelWindow {
             opacity: contents.opacity
         }
 
-        // floating strip edges: screen-side light + desktop-side shade grounding the slab
         Loader {
             anchors.fill: parent
             active: bar.wrapUnderline && (bar.shadowOn || ShellSettings.barBorderVisible)
@@ -194,14 +189,12 @@ PanelWindow {
             id: contents
             anchors.fill: parent
             opacity: 0
-            // opacity 0 alone keeps the visualizer canvas + marquee painting into an invisible bar, so stop rendering when hidden
             visible: opacity > 0.001
 
             readonly property real _hideY: bar.atBottom ? 14 : -14
             property real _slideY: _hideY
             transform: Translate { y: contents._slideY }
 
-            // Born concealed: stay parked hidden, onConcealedChanged reveals later.
             Component.onCompleted: Qt.callLater(function() {
                 if (!bar.concealed) _enterAnim.start()
             })

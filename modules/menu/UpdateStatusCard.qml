@@ -14,7 +14,6 @@ Rectangle {
     property bool   detailError: false
     property color statusColor: Theme.subtext
     property bool busy: false
-    // busy can outlive the card being visible; lets callers park the spinner
     property bool animationActive: true
 
     property string primaryLabel: ""
@@ -28,7 +27,6 @@ Rectangle {
     property bool secondaryEnabled: true
     property bool secondaryShown: false
 
-    // Drop the card chrome so this can sit as a row inside a shared SettingsCard.
     property bool flat: false
 
     signal primaryTriggered()
@@ -178,7 +176,6 @@ Rectangle {
             }
         }
 
-        // Pending summary or error, as an indented sub-note under the row.
         Item {
             id: _detailWrap
             visible: height > 0.5

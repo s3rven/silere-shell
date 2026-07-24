@@ -3,14 +3,12 @@ import QtQuick.Window
 import "../../config"
 import "../../services"
 
-// bar separator drawn as a shape (not a font glyph) so it's crisp regardless of font: dot/ring/tick/slash/hairline; zero width when hidden.
 Item {
     id: root
     property bool show: true
     property bool compact: ShellSettings.barCompact
 
     readonly property string _style: ShellSettings.dotStyle
-    // "none" draws no mark and reserves no slot — Row collapses to a uniform gap, no dividers
     readonly property bool   _none:  _style === "none"
     readonly property color  _col:   Theme.barSeparator
     readonly property bool   _slash: _style === "slash"
@@ -92,7 +90,6 @@ Item {
             color: root._col
         }
 
-        // solid middle, fades only at the tips (a single centre stop looks like a spindle)
         Rectangle {
             visible: root._style === "line"
             x: root._snapX((parent.width - width) / 2)

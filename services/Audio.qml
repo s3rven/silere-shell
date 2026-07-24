@@ -20,11 +20,9 @@ Singleton {
 
     readonly property real effectiveVolume: Math.max(0, Math.min(1.0,
         pendingApply ? targetVolume : (ready ? audio.volume : 0)))
-    // optimistic mute, flips immediately, confirmed async by Pipewire
     property bool _pendingMuted: false
     property bool _desiredMuted: false
     property bool _muteWritePending: false
-    // Bound the confirm-retry timers, a sink that never acks must not self-rearm forever.
     readonly property int _maxConfirmRetries: 6
     property int _volRetries: 0
     property int _muteRetries: 0
@@ -39,7 +37,6 @@ Singleton {
     readonly property string label: ready ? `${Math.round(uiVolume * 100)}%` : "--%"
     readonly property string sinkName: sink ? (sink.description || "") : ""
 
-    // stable device nodes only (not per-app streams), cheap to enumerate at idle
     readonly property var sinks: {
         const out = []
         const all = Pipewire.nodes.values
@@ -51,7 +48,6 @@ Singleton {
     }
     readonly property int sinkCount: sinks.length
 
-    // Shape for the SelectRow dropdown: [{ value: node, label }].
     readonly property var sinkModel: sinks.map(n => ({ value: n, label: root.sinkLabel(n) }))
 
     PwObjectTracker { objects: root.sinks }
@@ -132,10 +128,9 @@ Singleton {
         }
     }
 
-    // throttle writes; fast scrolls otherwise flood pipewire and drop silently
     Timer {
         id: writeThrottle
-        interval: 16     // ~60Hz, matches display refresh
+        interval: 16
         repeat: false
         onTriggered: {
             const a = root.audio
@@ -145,7 +140,6 @@ Singleton {
         }
     }
 
-    // retry if Pipewire doesn't confirm within 600ms
     Timer {
         id: pendingSafety
         interval: 600
@@ -173,7 +167,6 @@ Singleton {
                 root._pendingMuted = a.muted
                 root._muteWritePending = false
             } else if (root._muteRetries >= root._maxConfirmRetries) {
-                // sink won't confirm, accept its actual state instead of looping forever
                 root._pendingMuted = a.muted
                 root._muteWritePending = false
             } else {
@@ -205,7 +198,6 @@ Singleton {
         targetVolume = v
         pendingApply = true
 
-        // Leading-edge: write immediately if throttle window is open
         if (!writeThrottle.running) {
             a.volume = v
             writeThrottle.restart()

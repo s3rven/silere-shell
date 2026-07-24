@@ -4,8 +4,6 @@ import QtQuick
 import Quickshell
 import Quickshell.Bluetooth as Bt
 
-// thin event-driven wrapper over BlueZ DBus; adapter is null with no bluetoothd/radio (reads unavailable)
-// namespaced import (Bt) so the bare name never clashes with this singleton
 Singleton {
     id: root
 
@@ -30,7 +28,6 @@ Singleton {
         return ""
     }
 
-    // Battery % of the first connected device that reports one; -1 if none.
     readonly property int connectedBattery: {
         for (let i = 0; i < _devices.length; i++) {
             const d = _devices[i]
@@ -40,9 +37,6 @@ Singleton {
         return -1
     }
 
-    // Keep the picker ordered as live object properties change. Building this
-    // declaratively tracks connected/paired/name on each device; the old
-    // on_DevicesChanged hook only noticed array membership changes.
     readonly property var devices: {
         const list = _devices.slice()
         list.sort((a, b) => {

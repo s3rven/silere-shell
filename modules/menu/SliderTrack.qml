@@ -2,10 +2,6 @@ import QtQuick
 import "../../config"
 import "../../services"
 
-// Shared slider core: track + fill + thumb + press/drag/wheel/key behavior,
-// used by SliderRow, QuickSlider, and the media seek bar. The owning row keeps
-// focus and Accessible and forwards Keys.onPressed to handleKey(); `focused`
-// feeds back in for the knob ring.
 Item {
     id: root
 
@@ -13,10 +9,7 @@ Item {
     property real min:   0
     property real max:   1
     property real step:  0.05
-    // full accumulator key ("slider:Volume"); "" disables the wheel entirely
     property string wheelKey: ""
-    // preview while dragging, emit once on release (media seek); keyboard and
-    // click-to-jump still commit immediately
     property bool commitOnRelease: false
     property bool focused: false
     property bool interactive: true
@@ -93,7 +86,6 @@ Item {
             radius: parent.radius
             antialiasing: true
             color: Theme.accent
-            // Smooth scroll/keyboard steps; 1:1 under the pointer while dragging.
             Behavior on width {
                 enabled: root.animate && !_ma.pressed && !ShellSettings.reduceMotion
                 NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
@@ -146,8 +138,6 @@ Item {
         onPositionChanged: (mouse) => { if (pressed) root._setFromUser(root._posToVal(mouse.x)) }
         onReleased:        if (root.commitOnRelease) root.changed(root._shownValue)
         onCanceled:        root._shownValue = root.value
-        // Through the shared accumulator so touchpads step once per notch
-        // instead of once per micro-event (matches the bar widgets).
         onWheel: (wheel) => {
             if (root.wheelKey === "") { wheel.accepted = false; return }
             const n = Scroll.processControlWheel(wheel, root.wheelKey)

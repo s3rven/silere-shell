@@ -3,8 +3,6 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import "../../config"
 
-// options stays static structure; live colours go in `colors` so palette
-// changes rebind chips instead of rebuilding delegates
 Item {
     id: root
 
@@ -13,16 +11,12 @@ Item {
     property int activeIndex: -1
     property bool spread: false
     property real packSpacing: 6
-    // Keep real edge padding so focus feedback is never sliced by a clipping
-    // Flickable and the first colour does not sit against the card edge.
     property int edgePadding: 4
-    // Optional explicit colour for the selected swatch outline.
     property color ringColor: "transparent"
     property int hoveredIndex: -1
     property string groupLabel: ""
 
     signal picked(int index)
-    // a scrolling viewport must follow keyboard focus or the ring lands off-screen
     signal focusMoved(int index)
 
     implicitHeight: 32

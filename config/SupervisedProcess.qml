@@ -1,9 +1,6 @@
 import QtQuick
 import Quickshell.Io
 
-// relaunches after it exits while superviseWhen holds; owns onExited (teardown via onRunningChanged)
-//   giveUpCodes  , exit codes that stop retries (e.g. [3] = no sensor)
-//   cleanExitOnly, only retry after a clean exit (0/2/130/143), else give up
 Process {
     id: proc
 
@@ -34,7 +31,7 @@ Process {
 
     onExited: code => {
         _stableTimer.stop()
-        if (!superviseWhen) return   // stopped on purpose, not a crash
+        if (!superviseWhen) return
 
         if (giveUpCodes.indexOf(code) >= 0 || (cleanExitOnly && code !== 0 && code !== 2 && code !== 130 && code !== 143)) {
             proc._gaveUp = true

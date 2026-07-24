@@ -12,25 +12,19 @@ Item {
 
     required property ShellScreen screen
     property bool barActive: true
-    // width the bar was configured for; `width` may have grown past it to fit the zones
     property real fitWidth: 0
 
     property bool _autoCompact: false
     readonly property bool effectiveCompact: ShellSettings.barCompact || _autoCompact
     readonly property int gap: Metrics.titleGapFor(effectiveCompact)
-    // The floating surface treats its configured width as a preference. This
-    // is the smallest width that keeps both side zones inside the window when
-    // users place many (or every) widgets on one side.
     readonly property real minimumSurfaceWidth:
         leftZone.implicitWidth + rightZone.implicitWidth + gap + Settings.hPad * 2
     readonly property int titleMinWidth: effectiveCompact ? 72 : 96
-    // free span between the groups; the title prefers true center but slides off-center as a group closes in, rather than clamping to symmetric clearance and vanishing while space remains
     readonly property real titleFreeLeft:  leftZone.implicitWidth + gap
     readonly property real titleFreeRight: width - rightZone.implicitWidth - gap
     readonly property real titleAvailableWidth: Math.max(0, titleFreeRight - titleFreeLeft)
     readonly property bool titleHasRoom: titleAvailableWidth >= titleMinWidth
 
-    // anchor tracks the zones only, never the title's own width, so text swaps can't drag it
     property real titleAnchor: ShellSettings.windowTitleCenterGap
         ? (titleFreeLeft + titleFreeRight) / 2
         : width / 2
@@ -114,11 +108,8 @@ Item {
         onImplicitWidthChanged: root._queueAutoCompact()
     }
 
-    // Bar OSD takes one bar center while showing; loaded only on the overlay bar to avoid duplicate layout/animation work on every monitor.
     readonly property bool _isOverlayBar: root.screen && root.screen.name === Monitors.overlayBarName
     readonly property bool _onActiveBar: !root.screen || Monitors.activeName === root.screen.name
-    // barConcealed must match OsdBarWidget's own gate, or the title and centre
-    // visualiser retract to make room for an in-bar OSD that never appears
     readonly property bool _osdBarShowing: ShellSettings.osdEnabled && ShellSettings.osdBarIntegrated
         && root._isOverlayBar && OsdBarState.showing && !OsdBarState.barConcealed
     readonly property bool _centerVizMode: ShellSettings.mediaVisualizerPosition === "center"
@@ -167,7 +158,6 @@ Item {
             Transition {
                 to: "shown"
                 SequentialAnimation {
-                    // wait for OSD exit to finish before revealing
                     PauseAnimation  { duration: Motion.fast }
                     ParallelAnimation {
                         NumberAnimation { property: "opacity"; duration: Motion.normal; easing.type: Easing.OutCubic }

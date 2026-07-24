@@ -1,16 +1,13 @@
 import QtQuick
 import "../../config"
 
-// carries its own spacing so callers skip spacer Items
 Item {
     id: root
 
     property string label: ""
     property string glyph: ""
-    // a page's topmost heading; not derived — one nested in a Loader still has nothing above it in its own column
     property bool   first: false
     property bool   showRule: false
-    // a heading takes no seam and induces none, so collapsing it with its card draws no stray line
     readonly property bool suppressDividerAbove: true
 
     readonly property int _topGap: first ? 4 : Theme.gapSection

@@ -23,7 +23,6 @@ Column {
         }
     }
 
-    // the whole group is meaningless with popups off, heading included
     CollapsibleSection {
         expanded: ShellSettings.notifPopupEnabled
 

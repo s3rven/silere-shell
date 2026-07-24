@@ -4,8 +4,6 @@ import QtQuick
 import "../../config"
 import "../../services"
 
-// Shared placement + open/close choreography for bar-edge popups.
-// trigger-proportional x: anchor keeps its relative screen position, so a centre click centres and an edge click hugs that side (no edge saturation on a custom-width bar).
 Rectangle {
     id: root
 

@@ -14,7 +14,7 @@ PageShell {
         _volumeRow.open = false
     }
 
-    property string _picker: ""   // "" | "wifi" | "bt" | "nightlight" — open inline list
+    property string _picker: ""
     readonly property int _sectionGap: 12
     readonly property int _itemGap: 8
     readonly property bool _wifiAvailable: Network.toolAvailable && Network.hasWifiDevice
@@ -24,14 +24,12 @@ PageShell {
 
     function _togglePicker(which: string): void { _picker = (_picker === which ? "" : which) }
 
-    // Escape steps back: close an open inline picker before the menu itself.
     function dismissInline(): bool {
         if (_picker === "") return false
         _picker = ""
         return true
     }
 
-    // Fold a picker away if its radio/adapter is switched off underneath it.
     Connections {
         target: Network
         function onWifiEnabledChanged() { if (root._picker === "wifi" && !Network.wifiEnabled) root._picker = "" }
@@ -101,7 +99,6 @@ PageShell {
             }
         }
 
-        // spacers are 4px multiples so card dividers below stay on the grid
         Item { width: 1; height: root._sectionGap }
 
         Item {
@@ -175,7 +172,6 @@ PageShell {
                     }
                 }
 
-                // Two layers cross-dissolve; debounce lives in Media.stableArtUrl.
                 Item {
                     id: _art
                     anchors.fill: parent
@@ -202,8 +198,6 @@ PageShell {
                         idle.source = url
                     }
 
-                    // a failed fetch (network not up right after login) shouldn't strand the card
-                    // artless till next track: retry a few times, then clear _curUrl so a later apply retries
                     property int _retries: 0
                     Timer {
                         id: _artRetry
@@ -235,9 +229,7 @@ PageShell {
                         _artOut.target = outgoing; _artOut.to = 0; _artOut.restart()
                     }
 
-                    // a genuinely new URL gets a fresh retry budget
                     Connections { target: Media; function onStableArtUrlChanged() { _art._retries = 0; _art._apply() } }
-                    // catch up on changes while closed; reset retry budget so a failed art url retries on each open
                     Connections { target: MenuState; function onOpenChanged() { if (MenuState.open) { _art._retries = 0; _art._apply() } } }
                     Component.onCompleted: _apply()
 
@@ -274,7 +266,6 @@ PageShell {
                     NumberAnimation { id: _artOut;     property: "opacity"; duration: Motion.ms(300);     easing.type: Easing.OutCubic }
                 }
 
-                // no-art placeholder: accent note inside a faint gem, echoing the workspace diamond
                 Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.top: parent.top
@@ -301,7 +292,6 @@ PageShell {
                     }
                 }
 
-                // top scrim: fades art into the card colour so the clipped corner's stair-stepping doesn't read as a jagged edge; also lifts label contrast
                 Rectangle {
                     anchors.left: parent.left
                     anchors.right: parent.right
@@ -345,7 +335,6 @@ PageShell {
                     }
                 }
 
-                // art zone jumps to the player's window (like the bar widget's middle-click); ends at _mediaCol.top so it can't shadow seek/transport
                 MouseArea {
                     anchors.top: parent.top
                     anchors.left: parent.left
@@ -371,7 +360,6 @@ PageShell {
                     property real _slide: 0
                     transform: Translate { y: _mediaCol._slide }
 
-                    // held copies so a track change cross-dissolves instead of snapping
                     property string _shownIdentity: ""
                     property string _shownTitle:    ""
                     property string _shownArtist:   ""
@@ -383,7 +371,6 @@ PageShell {
 
                     readonly property string trackKey: Media.title + " • " + Media.artist
                     onTrackKeyChanged: {
-                        // snap on reduce-motion and first population (held copies start empty); only crossfade between two real tracks
                         if (ShellSettings.reduceMotion || (_shownTitle === "" && _shownArtist === "")) {
                             _shownIdentity = Media.identity
                             _shownTitle    = Media.title
@@ -477,7 +464,6 @@ PageShell {
 
                     Text {
                         id: _elapsedLabel
-                        // Fixed width matching the total label so the track doesn't shift as digits change.
                         width: _totalLabel.implicitWidth
                         horizontalAlignment: Text.AlignRight
                         anchors.left: parent.left
@@ -539,7 +525,6 @@ PageShell {
                         width: 56; height: 40
                         anchors.verticalCenter: parent.verticalCenter
                         opacity: _playBtn._on ? 1.0 : 0.25
-                        // Press feedback on the container so it composes with the glyph stamp.
                         scale: _playT.pressed ? 0.94 : 1.0
                         transformOrigin: Item.Center
                         Behavior on opacity { NumberAnimation { duration: Motion.fast } }
@@ -572,7 +557,6 @@ PageShell {
                         Text {
                             id: _playGlyph
                             anchors.centerIn: parent
-                            // held glyph so play⇄pause swaps with the stamp instead of a hard cut
                             property string shown: ""
                             readonly property string target: Media.playing ? "󰏤" : "󰐊"
                             property bool _ready: false
@@ -614,7 +598,6 @@ PageShell {
             showRule: true
             visible: Audio.ready || Brightness.maxBrightness > 0
         }
-        // high-frequency controls up top; volume carries an inline output-device dropdown
         SettingsCard {
             id: _primaryControls
             visible: Audio.ready || Brightness.maxBrightness > 0
@@ -749,7 +732,6 @@ PageShell {
                 }
                 SunArc {
                     flat: true
-                    // no canvas/buffer unless the dropdown is actually open on screen
                     shown: root._picker === "nightlight" && MenuState.open
                 }
             }

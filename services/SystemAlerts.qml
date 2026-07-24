@@ -9,7 +9,6 @@ Singleton {
     // public so the shell root can force-instantiate: Quickshell lazy-loads singletons and nothing else reads SystemAlerts, so its watchers never arm otherwise
     readonly property bool armed: SystemTools.hasNotifySend
 
-    // sent-flags prevent re-firing while the condition holds; reset when it clears so the next onset fires
     property bool _battLowSent:  false
     property bool _battCritSent: false
     property bool _cpuCritSent:  false
@@ -19,7 +18,6 @@ Singleton {
         Quickshell.execDetached([
             "notify-send",
             "--urgency=" + urgency,
-            // explicit timeout so even critical alerts auto-dismiss; configurable (0 = stay)
             "--expire-time=" + ShellSettings.sysAlertTimeout,
             "--app-name=silere-shell",
             summary,
@@ -27,7 +25,6 @@ Singleton {
         ])
     }
 
-    // latch only when a notification actually sends, so enabling the toggle mid-condition still alerts
     function _checkBattLow(): void {
         if (Battery.low && ShellSettings.osdBatteryWarn && !_battLowSent) {
             _battLowSent = true
@@ -74,7 +71,6 @@ Singleton {
     Connections {
         target: CpuTemp
 
-        // only critical notifies — "hot" is normal under load and already shown by OSD/glow
         function onCriticalChanged(): void {
             if (CpuTemp.critical) root._checkCpuCrit()
             else root._cpuCritSent = false

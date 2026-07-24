@@ -4,9 +4,6 @@ import QtQuick
 import "../../config"
 import "../common"
 
-// rounded card with auto-separators + auto corner-rounding. rows never set their own divider or radius — the card
-// derives both from layout so a row can't guess wrong (a middle row rounding its hover fill, a hidden neighbour
-// leaving a stray line). recurses into CollapsibleSections so nested rows act like flat ones.
 Rectangle {
     id: root
 
@@ -61,7 +58,6 @@ Rectangle {
         }
     }
 
-    // cache edges: implicitHeight fires every frame during expand, but edges rarely change
     property var _cachedFirst: null
     property var _cachedLast:  null
 

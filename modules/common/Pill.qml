@@ -18,11 +18,9 @@ Item {
     property bool   compact: ShellSettings.barCompact
     property int    horizontalPadding: Metrics.pillPadFor(compact)
     property bool   animateGlyph: true
-    // opt-in cross-fade on text change; off by default — Volume/Brightness update every scroll tick and shouldn't fade-through
     property bool   animateText: false
     property bool   animateGlyphColor: true
     property int    glyphPixelSize: Settings.iconSize + 2
-    // floor the text box to this string's width so value readouts (volume/brightness) don't resize on every change
     property string reserveText: ""
     readonly property real _reserveW: reserveText.length > 0 ? Math.ceil(_reserveMetrics.advanceWidth) : 0
     property bool   contentScanEnabled: false
@@ -33,13 +31,11 @@ Item {
     property bool   levelVisible: false
     property color  levelColor: Theme.accent
 
-    // delayed hover flag for reveal detail text (battery/network) — true only after the pointer rests hoverRevealDelay ms
     property int    hoverRevealDelay: 80
     property bool   hoverActive: false
     readonly property bool hovered: _pillHover.hovered
     readonly property bool expanded: hoverActive || activeFocus
 
-    // opt-in press feedback: bind to a handler's pressed state, the glyph dips then springs back
     property bool   pressed: false
     property bool   _keyboardPressed: false
     readonly property bool visualPressed: pressed || _keyboardPressed
@@ -49,8 +45,6 @@ Item {
     readonly property int  pillH:   24
     readonly property bool hasText: text.length > 0
 
-    // holds recent max width so the pill doesn't jitter while scrolling; resets after `shrinkDelay` ms or immediately when text clears (e.g. network hiding SSID).
-    // set shrinkDelay: 0 on hover-only pills so they snap back instead of leaving a gap.
     property int  shrinkDelay: 600
     property real _minW: 0
     // Whole px: fractional text widths put the pill (and every widget after it
@@ -122,7 +116,6 @@ Item {
         enabled: root._ready && !ShellSettings.reduceMotion
         NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
     }
-    // bar row's full height as the input target, visible capsule stays compact — matters on a tall bar
     implicitHeight: Math.max(pillH, parent ? parent.height : 0)
     // only while it eases open into wider text, or the scan sweeps in from off-pill; a standing clip node breaks batching
     clip: _contentScan.active || row.width > width
@@ -156,9 +149,7 @@ Item {
         width: parent.width
         height: root.pillH
         radius: height / 2
-        // keys off activeFocusOnTab so Tab-reachable non-button pills (e.g. brightness) still ring
         readonly property bool _focus: root.activeFocusOnTab && root.activeFocus
-        // hover capsule leans faintly accent to match the glyph/text hover tint
         color: _focus ? Theme.withAlpha(Theme.accent, 0.14)
                       : Theme.withAlpha(Theme.mix(Theme.text, Theme.accent, 0.30), 0.07)
         opacity: ((_pillHover.hovered && ShellSettings.barHoverHighlight) || _focus) ? 1.0 : 0.0
@@ -308,7 +299,6 @@ Item {
 
     Loader {
         id: _contentScan
-        // glyph-only status pills (initial update checks) still need a visible sweep before detail text arrives
         active: root.contentScanEnabled && !ShellSettings.reduceMotion
         width: Math.max(1, root.contentScanWidth)
         height: row.height
@@ -364,7 +354,6 @@ Item {
 
     HoverHandler {
         id: _pillHover
-        // horizontal padding gives hover/click/wheel/focus one non-overlapping target, not extending hover into neighbours
         margin: 0
         onHoveredChanged: {
             if (hovered) _hoverRevealTimer.restart()

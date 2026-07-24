@@ -5,7 +5,6 @@ import "../../../services"
 Item {
     id: root
 
-    // hands off to the floating pill while overview or a fullscreen window conceals the bar
     readonly property bool _shouldShow: ShellSettings.osdEnabled
         && ShellSettings.osdBarIntegrated && OsdBarState.showing && !OsdBarState.barConcealed
     readonly property int  _barH: ShellSettings.barHeight
@@ -34,10 +33,8 @@ Item {
     Connections {
         target: OsdBarState
         function onShowingChanged() { root._sync() }
-        // mode flips (overview/fullscreen conceal) aren't audio-race prone, so a plain resync covers them
         function onBarConcealedChanged() { root._sync() }
         function onBumped() { if (root.state === "visible" && !_bumpAnim.running) _bumpAnim.restart() }
-        // queued icon swap → stamp while visible; during a rapid burst just snap (stamp-on-stamp reads as thrashing)
         function onNextIconChanged() {
             if (OsdBarState.nextIcon === OsdBarState.icon) return
             if (root.state !== "visible" || ShellSettings.reduceMotion || OsdBarState.rapid) {
@@ -76,16 +73,14 @@ Item {
         NumberAnimation { target: root; property: "_bump"; to: 1.0;   duration: Motion.ms(125); easing.type: Easing.OutCubic }
     }
 
-    // Pins the value label width so the Row doesn't shift as the number changes.
     TextMetrics {
         id: _maxLabel
         font.family:    Settings.font
         font.pixelSize: Settings.fontSize
         font.weight:    Font.Medium
-        text: "Muted"   // widest value text in hasBar context
+        text: "Muted"
     }
 
-    // alert labels vary in width; measure the live one and latch to the widest during a burst so the Row can't shift
     TextMetrics {
         id: _alertLabel
         font.family:    Settings.font
@@ -173,7 +168,6 @@ Item {
                             : OsdBarState.muted ? "Muted"
                             : (Math.round(OsdBarState.clamped * 100) + "%")
             textFormat:     Text.PlainText
-            // Fixed width keeps the Row centered as digits/labels change.
             width:          OsdBarState.hasBar
                                 ? Math.ceil(_maxLabel.advanceWidth) + 2
                                 : Math.max(implicitWidth, root._alertWidth)

@@ -15,7 +15,7 @@ Item {
     property real   topRadius:    0
     property real   bottomRadius: 0
     property real   cardInset:    1
-    readonly property int _optionsCapH: 224  // six rows plus list padding
+    readonly property int _optionsCapH: 224
     readonly property bool _hasDesc: description.length > 0
     readonly property int _headerH: _hasDesc
         ? Math.max(56, 4 * Math.ceil((20 + _headerText.implicitHeight) / 4))
@@ -91,7 +91,6 @@ Item {
             root._setOpen(false)
             event.accepted = true
         } else {
-            // fall through to MenuWindow's close shortcut
             event.accepted = false
         }
     }
@@ -164,7 +163,6 @@ Item {
             }
         }
     }
-    // Right slot: current value label + chevron
     Item {
         id: _chevronSlot
         anchors.right:          parent.right; anchors.rightMargin: 12
@@ -251,7 +249,6 @@ Item {
             y: 0
             opacity: root._open ? 1.0 : 0.0
 
-            // Inset matches the card's row dividers.
             Rectangle {
                 x: 12
                 width: parent.width - 24; height: 1
@@ -336,7 +333,6 @@ Item {
                         anchors.bottomMargin: 3
                         radius: Theme.radiusControl - 2
                         antialiasing: true
-                        // Full-row feedback keeps long option lists easy to scan.
                         color: _opt.active
                             ? Theme.mix(Theme.menuControl, Theme.accent, ShellSettings.neutralTheme ? 0.16 : 0.24)
                             : _optHov.hovered || _opt.activeFocus
@@ -349,7 +345,6 @@ Item {
                         Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
                     }
 
-                    // Indent to align with the header label
                     Text {
                         anchors.left:           parent.left
                         anchors.leftMargin:     (root.glyph.length > 0 ? 42 : 24)

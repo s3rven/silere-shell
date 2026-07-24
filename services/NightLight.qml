@@ -13,25 +13,22 @@ Singleton {
     readonly property bool toolAvailable: SystemTools.hasHyprsunset
     readonly property int  temperature: ShellSettings.nightLightTemp
 
-    // location from the system timezone's zoneinfo coords (offline, no GPS); falls back to default lat + tz offset
     property bool _geoResolved: false
     property real _autoLat: 0
     property real _autoLon: 0
     readonly property real _useLat: _geoResolved ? _autoLat : 45.0
     readonly property real _useLon: _geoResolved ? _autoLon
-                                                 : -(new Date().getTimezoneOffset()) / 4  // tz minutes-west → degrees-east
+                                                 : -(new Date().getTimezoneOffset()) / 4
     readonly property string locationLabel:
         Math.abs(_useLat).toFixed(0) + "°" + (_useLat >= 0 ? "N" : "S")
 
     property int _solarTick: 0
-    // solar declination (radians); ticked so it tracks the date
     readonly property real _declRad: {
         root._solarTick
         const d = new Date()
         const n = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 86400000)
         return 23.44 * Math.sin(2 * Math.PI * (n - 81) / 365) * Math.PI / 180
     }
-    // Current solar elevation in degrees (shared by the temp curve + recommendation).
     readonly property real _elevation: {
         root._solarTick
         const d    = new Date()
@@ -48,11 +45,11 @@ Singleton {
         return Math.round((3000 + 3500 * (elev + 6) / 12) / 100) * 100
     }
 
-    readonly property real _solarNoon: {             // local clock hour the sun peaks
+    readonly property real _solarNoon: {
         root._solarTick
         return 12 - root._useLon / 15 - (new Date()).getTimezoneOffset() / 60
     }
-    readonly property real _halfDay: {               // hours noon→sunset; 0 = polar night
+    readonly property real _halfDay: {
         const c = Math.max(-1, Math.min(1, -Math.tan(root._useLat * Math.PI / 180) * Math.tan(root._declRad)))
         return Math.acos(c) * 180 / Math.PI / 15
     }
@@ -60,10 +57,8 @@ Singleton {
     readonly property real sunsetHour:  _solarNoon + _halfDay
     readonly property real _nowHour: { root._solarTick; const d = new Date(); return d.getHours() + d.getMinutes() / 60 }
     readonly property bool isDaytime: _halfDay > 0 && _nowHour >= sunriseHour && _nowHour <= sunsetHour
-    // 0 at sunrise → 1 at sunset; -1 when the sun never rises today.
     readonly property real dayProgress:
         _halfDay <= 0 ? -1 : Math.max(0, Math.min(1, (_nowHour - sunriseHour) / (sunsetHour - sunriseHour)))
-    // 0 at sunset → 0.5 at solar midnight → 1 at next sunrise; 0 for polar night.
     readonly property real nightProgress: {
         if (_halfDay <= 0) return 0
         const nightDur = 24 - (sunsetHour - sunriseHour)
@@ -96,16 +91,14 @@ Singleton {
         return "sunrise in " + _dur((24 - _nowHour + sunriseHour) * 60)
     }
 
-    // Recommend from sunset on; hint the turn-on time as the sun gets low. No midday nag.
     readonly property bool recommended: _elevation < 0
     readonly property string recommendLabel: {
-        if (_halfDay >= 12)  return ""                       // sun never sets today
+        if (_halfDay >= 12)  return ""
         if (recommended)     return "recommended"
         if (_elevation < 12) return "from " + sunsetLabel
         return ""
     }
 
-    // ISO 6709 "±DDMM±DDDMM" (seconds optional) → decimal degrees.
     function _parseCoord(s: string): void {
         const m = /^([+-]\d{2})(\d{2})(\d{2})?([+-]\d{3})(\d{2})(\d{2})?$/.exec((s || "").trim())
         if (!m) return
@@ -133,8 +126,6 @@ Singleton {
         onExited: root._parseCoord(_geoOut.text)
     }
 
-    // Per-minute tracking only matters while the effect is active. Menu open
-    // still takes one fresh tick for its recommendation/location UI.
     Timer {
         interval: 60000; repeat: true
         running: root.toolAvailable && ShellSettings.nightLightAuto && root.enabled && !Idle.isIdle
@@ -144,7 +135,6 @@ Singleton {
         target: MenuState
         function onOpenChanged() { if (MenuState.open) root._solarTick++ }
     }
-    // catch up a sunset/sunrise that passed while idle
     Connections {
         target: Idle
         function onIsIdleChanged() {
@@ -182,7 +172,6 @@ Singleton {
         } else if (!_killProc.running) {
             _pendingEnable = false
         }
-        // if _killProc is running, _pendingEnable is set; its onExited calls _startSunset() with the new temp
     }
 
     function toggle(): void {
@@ -190,7 +179,6 @@ Singleton {
         if (enabled) {
             _pendingEnable = false
             if (_killProc.running) { enabled = false; return }
-            // kill only the process we spawned; pkill fallback only if it was already running at launch
             if (_sunsetProc.running || _stopping) {
                 _stopping = true
                 if (_sunsetProc.running) _sunsetProc.running = false
@@ -205,8 +193,6 @@ Singleton {
             // don't spawn while a fallback pkill is in flight — it matches hyprsunset by name and would kill the new instance; queue instead
             if (_killProc.running) { _pendingEnable = true; return }
             if (ShellSettings.nightLightAuto) {
-                // Quick Actions can enable Night Light while the main menu is
-                // closed and the minute timer is asleep. Refresh before use.
                 root._solarTick++
                 ShellSettings.nightLightTemp = root.suggestedTemp
             }
@@ -218,7 +204,6 @@ Singleton {
     // this singleton, so the opening edge is already spent by first load
     Component.onCompleted: { _init(); _startGeo() }
 
-    // defer the one-shot geo probe until auto-tracking or the menu needs it, not on every startup
     property bool _geoStarted: false
     readonly property bool _geoWanted: toolAvailable && (ShellSettings.nightLightAuto || MenuState.open)
     function _startGeo(): void {

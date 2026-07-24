@@ -4,8 +4,6 @@ import QtQuick
 import "../../config"
 import "../../services"
 
-// Dashboard sun-path: bell arc with the sun's current position + sunrise/sunset.
-// `flat` drops the card chrome for use inside another card (night light dropdown).
 Rectangle {
     id: root
 
@@ -22,7 +20,6 @@ Rectangle {
 
     readonly property bool _isDay: NightLight.isDaytime
 
-    // Sun colour warms toward the horizon (golden hour), brightens toward noon.
     readonly property real _elev: {
         const t = Math.max(0, Math.min(1, animProg))
         return Math.pow((1 - Math.cos(2 * Math.PI * t)) / 2, 0.72)
@@ -31,7 +28,6 @@ Rectangle {
         ? Theme.mix(Theme.mix(Theme.warning, Theme.error, 0.35), Theme.warning, _elev * 2)
         : Theme.mix(Theme.warning, Theme.text, (_elev - 0.5) * 0.7)
 
-    // drives the canvas Loader: false tears the buffer down
     property bool shown: true
 
     property real animProg: 0
@@ -51,7 +47,7 @@ Rectangle {
     Component.onCompleted: Qt.callLater(root._playSweep)
     onShownChanged: {
         if (shown) Qt.callLater(root._playSweep)
-        else       _sweep.stop()   // don't repaint a hidden canvas for 860ms
+        else       _sweep.stop()
     }
     Connections {
         target: MenuState
@@ -59,7 +55,6 @@ Rectangle {
     }
     Connections {
         target: NightLight
-        // per-minute drift; skip while hidden/closed or mid-sweep
         function onDayProgressChanged() {
             if (root.shown && MenuState.open && !_sweep.running) root.animProg = Math.max(0, NightLight.dayProgress)
         }
@@ -98,7 +93,6 @@ Rectangle {
                 renderTarget:   Canvas.Image
                 renderStrategy: Canvas.Threaded
 
-                // colour bindings so a theme change repaints
                 readonly property color horizonColor: Theme.withAlpha(Theme.subtext, 0.22)
                 readonly property color arcColor:     Theme.withAlpha(Theme.subtext, 0.28)
                 readonly property color sunColor:     Theme.warning
@@ -113,13 +107,11 @@ Rectangle {
                 readonly property color moonArcColor: Theme.withAlpha(Theme.subtext, 0.50)
                 readonly property color moonDisc:     Theme.withAlpha(Theme.text, 0.88)
                 readonly property color moonGlow:     Theme.withAlpha(Theme.subtext, 0.20)
-                // crescent carve must match whatever is actually behind the moon disc
                 readonly property color cardColor:    root.flat ? Theme.menuCard : root.color
                 readonly property bool  isDay:        NightLight.isDaytime
                 readonly property real  nightProg:    NightLight.nightProgress
                 onNightProgChanged: if (!isDay && root.shown && MenuState.open) requestPaint()
 
-                // Gradient cache — rebuilt only when dimensions or colours change.
                 property var  _fg: null; property real _fgH: -1
                 property color _fgTop: "transparent"; property color _fgBot: "transparent"
                 property var  _sg: null; property real _sgW: -1
@@ -142,7 +134,6 @@ Rectangle {
                     if (w <= 0 || h <= 0) return
 
                     const padX  = 22
-                    // Horizon at 63%: 14px headroom above the arc peak clears the glow radius.
                     const baseY = Math.round(h * 0.63)
                     const amp   = baseY - 14
                     const N     = 40
@@ -155,7 +146,6 @@ Rectangle {
                     ctx.lineWidth = 1
                     ctx.beginPath(); ctx.moveTo(padX, baseY); ctx.lineTo(w - padX, baseY); ctx.stroke()
 
-                    // full sun arc (faint gray guide, always drawn)
                     ctx.strokeStyle = arcColor
                     ctx.lineWidth = 2
                     ctx.lineCap = "round"
@@ -164,7 +154,6 @@ Rectangle {
                     ctx.stroke()
 
                     if (!isDay) {
-                        // Moon rides the same arc as the sun, traveling right→left (sunset→sunrise).
                         const np    = Math.max(0, Math.min(1, nightProg))
                         const moonT = 1 - np
                         const M     = Math.max(2, Math.ceil(N * np))
@@ -203,7 +192,6 @@ Rectangle {
                     const p = Math.max(0, Math.min(1, root.animProg))
                     const M = Math.max(2, Math.ceil(N * p))
 
-                    // fill gradient — cached by canvas height + colour inputs
                     if (!_fg || _fgH !== h || _fgTop !== fillTop || _fgBot !== fillBot) {
                         _fg = ctx.createLinearGradient(0, baseY - amp, 0, baseY)
                         _fg.addColorStop(0, fillTop); _fg.addColorStop(1, fillBot)
@@ -216,7 +204,6 @@ Rectangle {
                     ctx.closePath()
                     ctx.fillStyle = _fg; ctx.fill()
 
-                    // stroke gradient — cached by canvas width + colour inputs
                     if (!_sg || _sgW !== w || _sgSun !== sunColor || _sgPeak !== strokePeak) {
                         _sg = ctx.createLinearGradient(xAt(0), 0, xAt(1), 0)
                         _sg.addColorStop(0.0, sunColor)

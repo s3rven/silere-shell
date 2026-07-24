@@ -2,8 +2,6 @@ import QtQuick
 import "../../config"
 import "../../services"
 
-// gap + collapsible body for a ControlRow's inline list; the list keeps its own surface
-// so it sits outside the row's card. Loader stays alive through the collapse animation.
 Column {
     id: root
 

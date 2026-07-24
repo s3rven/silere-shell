@@ -7,8 +7,8 @@ Item {
 
     property string glyph:       ""
     property string title:       ""
-    property string status:      ""    // muted subtitle under the title
-    property string valueText:   ""    // right-aligned value (cyclers, no switch)
+    property string status:      ""
+    property string valueText:   ""
     property color  accentColor: Theme.accent
     property bool   active:       false
     property bool   available:    true
@@ -17,7 +17,6 @@ Item {
     property bool   expanded:     false
     property int    badgeCount:   0
 
-    // Set by the enclosing SettingsCard's auto-rounding — do not assign.
     property real topRadius:    0
     property real bottomRadius: 0
     property real cardInset:    1
@@ -116,7 +115,6 @@ Item {
         fillOpacity:  root.activeFocus ? 0.13 : 0.08
     }
 
-    // grows from zero so the active state reads alongside the switch
     Rectangle {
         anchors.left:           parent.left
         anchors.leftMargin:     root.cardInset + 2
@@ -148,7 +146,6 @@ Item {
             Behavior on color { ColorAnimation { duration: Motion.fast } }
         }
 
-        // Missed-count badge (DND) rides the glyph corner; its tap routes to history.
         Rectangle {
             id: _badge
             visible: root.badgeCount > 0
@@ -255,7 +252,6 @@ Item {
 
         TextMetrics { id: _valMetrics; font.family: Settings.font; font.pixelSize: Settings.fontSize - 1; text: root.valueText }
 
-        // Shared switch visual, same knob as the settings ToggleRow.
         ToggleSwitch {
             id: _switch
             visible: root.showSwitch

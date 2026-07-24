@@ -7,11 +7,10 @@ import Quickshell.Io
 Singleton {
     id: root
     property bool open:    false
-    property real anchorX: 10    // screen X of the trigger point; set before calling toggle()
-    property var  triggerScreen: null  // ShellScreen the menu was opened from; null → focused
+    property real anchorX: 10
+    property var  triggerScreen: null
     property int  activeTab: 0
 
-    // settings detail-pane selection; lives here so SettingsNav drives it and SettingsPage reads it (separate items)
     property string settingsSection: "theme"
 
     readonly property var settingsTree: [
@@ -80,7 +79,6 @@ Singleton {
         if (next !== idx) settingsSection = _flatSections[next]
     }
 
-    // lets pages request a tab switch (0 Home, 1 Settings, 2 Recent) without a panel reference
     signal tabRequested(int index)
 
     function _validTab(index: int): int {
@@ -94,7 +92,6 @@ Singleton {
         }
         anchorX = x
         triggerScreen = screen ?? null
-        // reset here, not in close(): closing must not flash Home mid-fade
         activeTab = 0
         open = true
     }
@@ -110,8 +107,6 @@ Singleton {
         tabRequested(tab)
     }
 
-    // keybind/script entry point. No cursor, so the last anchor is kept and triggerScreen
-    // stays null — shell.qml resolves that to the focused output.
     IpcHandler {
         target: "menu"
 

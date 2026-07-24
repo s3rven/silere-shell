@@ -5,8 +5,6 @@ import "../../config"
 import "../../services"
 import "../common"
 
-// inline Wi-Fi picker. rescans only while `open`. tapping an open or saved network connects immediately; a new
-// secured network reveals an inline password field. connect/scan logic lives in the Network service.
 Item {
     id: root
 
@@ -15,7 +13,7 @@ Item {
     width: parent ? parent.width : 0
     implicitHeight: _col.implicitHeight
 
-    property string _selected: ""   // ssid awaiting password entry
+    property string _selected: ""
 
     function _canScan(): bool {
         return root.open && Network.toolAvailable && Network.wifiEnabled
@@ -48,7 +46,6 @@ Item {
         onTriggered: Network.scanWifi(false)
     }
 
-    // Close the password row once a connect succeeds (failure keeps it open).
     Connections {
         target: Network
         function onWifiConnectingChanged() {
@@ -69,7 +66,6 @@ Item {
             visible: root.open && Network.wifiNetworks.length === 0
             width: parent.width
             horizontalAlignment: Text.AlignHCenter
-            // Don't claim to be scanning when the radio is off — it never will.
             text: !Network.toolAvailable ? "Wi-Fi unavailable"
                 : !Network.wifiEnabled   ? "Wi-Fi is off"
                 : Network.wifiScanFailed ? "Could not scan for networks"
@@ -229,7 +225,6 @@ Item {
                     }
                 }
 
-                // Inline password entry for a new secured network.
                 Item {
                     width: parent.width
                     height: _entry._sel ? 44 : 0

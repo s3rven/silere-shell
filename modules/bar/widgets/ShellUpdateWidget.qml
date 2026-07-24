@@ -1,7 +1,6 @@
 import QtQuick
 import "../../../services"
 
-// shell self-update pill; hidden until a check/apply/pending state, click checks or applies (pull + restart)
 StatusActionPill {
     show: ShellSettings.barShowShellUpdate
         && (ShellUpdate.pending || ShellUpdate.checking || ShellUpdate.applying)

@@ -2,21 +2,17 @@ import QtQuick
 import "../../config"
 import "../../services"
 
-// the inner mark is the default content slot, parented into the 22px disc
 Item {
     id: root
 
     property color  chipColor: Theme.accent
-    // dark chips can provide a brighter keyboard-focus colour
     property color  ringColor: chipColor
     property bool   active:    false
     property string name:      ""
-    // announced ahead of the colour name so a swatch says what it is choosing
     property string groupLabel: ""
     default property alias content: _chip.data
 
     signal picked()
-    // (name, hovered) — caller threads this into the picker's shared readout.
     signal hoverChanged(string name, bool hovered)
 
     function _activate(): void { root.picked() }
@@ -42,8 +38,6 @@ Item {
         onTapped: root._activate()
     }
 
-    // Focus belongs to the control cell, not the colour itself. This keeps the
-    // colour disc clean while keyboard navigation remains obvious.
     Rectangle {
         anchors.fill: parent
         anchors.margins: 1

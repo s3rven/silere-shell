@@ -5,14 +5,10 @@ import "../../config"
 import "../../services"
 import "../common"
 
-// one side of the bar; owns the ordered widget slots + group dividers. left/right differ only by which order-keys array they read
 Row {
     id: zone
 
-    // The per-zone ordered widget keys (ShellSettings.barWidgetOrder{Left,Right}Keys).
     required property var orderKeys
-    // Shared key→Component map, owned by BarContent so the delegates keep its
-    // screen/textBudget closures.
     required property var widgetComponents
     property bool compact: ShellSettings.barCompact
 
@@ -29,19 +25,13 @@ Row {
         if (!meta) return false
         const setting = meta.setting || ""
         if (setting.length > 0 && ShellSettings[setting] === false) return false
-        // Avoid constructing hardware-only widget trees on machines where the
-        // capability does not exist. Their services remain live so hotplug or
-        // delayed discovery can add the widget later.
         if (key === "battery" && !Battery.available) return false
         if (key === "brightness" && (!Brightness.toolAvailable || Brightness.maxBrightness <= 0)) return false
         return true
     }
     readonly property var activeKeys: orderKeys.filter(key => zone._widgetEnabled(key))
 
-    // order-agnostic divider map: reads live slots through the Repeater (not fixed ids) so it holds under any order. _repRev bumps as delegates populate — itemAt() can return null before that
     property int _repRev: 0
-    // single reverse pass: a widget takes a divider when anything visible follows it,
-    // except in compact mode where later same-group widgets suppress it (group dividers)
     function _computeSeps(rep): var {
         zone._repRev
         const compact = zone._compact

@@ -10,29 +10,29 @@ Singleton {
 
     property bool   mediaProgress:       false
     property bool   mediaWidgetHelper:   false
-    property string mediaVisualizerPreset: "balanced" // "eco" | "balanced" | "smooth"
-    property string mediaVisualizerStyle:  "wave"     // "wave" | "bars" | "pulse"
-    property string mediaVisualizerPosition: "media"  // "media" | "center"
+    property string mediaVisualizerPreset: "balanced"
+    property string mediaVisualizerStyle:  "wave"
+    property string mediaVisualizerPosition: "media"
     property bool   workspaceShift:      false
     property bool   neutralTheme:        true
     property bool   neutralAccentAuto:   false
     property string neutralAccent:       "#b8bdd8"
-    property string matugenAccentRole:   "primary"   // which material role drives the accent in wallpaper mode
+    property string matugenAccentRole:   "primary"
     property string baseTone:            "charcoal"
     property bool   networkTrafficStats: false
-    property bool   networkSpeedInline:  false   // pin the live up/down speed next to the icon, not just on hover
-    property bool   netVpnShowLink:      false   // show "VPN / wifi|eth" so the underlying link stays visible
-    property string brightnessDevice:    ""      // empty = choose the best available backlight
+    property bool   networkSpeedInline:  false
+    property bool   netVpnShowLink:      false
+    property string brightnessDevice:    ""
     property bool   showSeconds:         false
     property bool   compactDate:         false
     property bool   clock12h:            false
     property bool   showWindowTitle:     false
     property bool   showWindowTitleApp:  false
-    property bool   windowTitleCenterGap: true   // centre in the free span between the zones instead of on the bar
+    property bool   windowTitleCenterGap: true
     property bool   updatesWidget:       false
     property bool   trayWidget:          false
     property bool   valuesOnHover:       true
-    property bool   hoverLevelBar:       false   // replace hidden battery/volume/brightness values with a compact level bar
+    property bool   hoverLevelBar:       false
     property bool   batteryAutoHide:     true
     property bool   barShowBattery:      true
     property bool   barShowNetwork:      true
@@ -44,31 +44,31 @@ Singleton {
 
     property bool   osdEnabled:     true
     property int    osdTimeout:     2000
-    property string osdKindFilter:  "both"   // "both" | "volume" | "brightness"
+    property string osdKindFilter:  "both"
     property bool   osdBatteryWarn: false
     property bool   osdTempWarn:    false
-    property bool   osdVolumeTint:  false    // volume emphasis: warm tint + slow shimmer as volume nears max
-    property bool   osdChargedNotify: false  // one-shot OSD peek when the battery reaches full
-    property bool   osdBarIntegrated: false  // show OSD inline in the bar center instead of a floating pill
-    property bool   osdMatchBar:      true   // floating OSD pill adopts the bar's height + corner radius
+    property bool   osdVolumeTint:  false
+    property bool   osdChargedNotify: false
+    property bool   osdBarIntegrated: false
+    property bool   osdMatchBar:      true
     property bool   reduceMotion:        false
     property bool   highContrast:        false
-    property real   outlineStrength:     1.0     // scales border/divider contrast across shell surfaces
-    property real   uiScale:             1.0     // shell font scale, 0.8–1.15
-    property string fontFamily:          ""      // "" = JetBrainsMono Nerd Font; picker offers installed Nerd families
+    property real   outlineStrength:     1.0
+    property real   uiScale:             1.0
+    property string fontFamily:          ""
 
     property bool   notifPopupEnabled:   true
-    property bool   notifFullscreenSilence: true   // archive popups while a window is fullscreen
-    property string notifPosition:       "top-right"  // "top-right" | "top-left" | "top-center"
-    property int    notifMaxVisible:     3            // 0 = unlimited
-    property bool   dndSchedule:         false        // auto do-not-disturb during quiet hours
-    property int    dndFrom:             22           // quiet-hours start hour (0-23)
-    property int    dndTo:               8            // quiet-hours end hour (0-23)
-    property string mediaWidgetFormat:   "title"  // "title" | "artist-title"
+    property bool   notifFullscreenSilence: true
+    property string notifPosition:       "top-right"
+    property int    notifMaxVisible:     3
+    property bool   dndSchedule:         false
+    property int    dndFrom:             22
+    property int    dndTo:               8
+    property string mediaWidgetFormat:   "title"
     property int    tempHotThreshold:    90
     property int    batteryLowThreshold: 20
     property int    notifDefaultTimeout: 5000
-    property int    sysAlertTimeout:     10000  // auto-close (ms) for silere's battery/temp alert notifications; 0 = stay until clicked
+    property int    sysAlertTimeout:     10000
     property bool   clockShowDate:       false
     property bool   barBorderVisible:    false
     property real   barLineStrength:     1.0
@@ -84,34 +84,32 @@ Singleton {
     property bool   screenshotGlowSweep:     false
 
     property real   dotOpacity:          0.28
-    property string dotStyle:            "·"       // "·" | "•" | "◦" | "|" | "slash" | "line" | "none"
-    // text stand-in for the drawn styles; │ reads thinner than ASCII |, and "none" still needs a delimiter inline
+    property string dotStyle:            "·"
     readonly property string dotTextGlyph: dotStyle === "|" || dotStyle === "line" ? "│"
                                          : dotStyle === "slash" ? "/"
                                          : dotStyle === "none"  ? "·"
                                          : dotStyle
-    property int    barSpacing:          11        // gap between bar widgets / separators
-    property bool   barAutoCompact:      true      // automatically tighten separators when the bar gets crowded
-    property bool   barCompact:          false     // fewer separators, tighter gaps
-    property bool   barHoverHighlight:   false     // soft capsule behind a bar widget while pointed at
+    property int    barSpacing:          11
+    property bool   barAutoCompact:      true
+    property bool   barCompact:          false
+    property bool   barHoverHighlight:   false
     property int    barHeight:           36
-    property bool   barFloating:         false     // detached rounded surface, matches the menu/calendar/notif panels
-    property real   barWidth:            0.90     // visual bar width, 0.5-1.0 of screen
-    property string barCornerStyle:      "round"  // "flat" | "round"
-    property int    barRadius:           14       // rounded-corner radius in px
-    property bool   barShadow:           false    // drop shadow under the floating surface
-    property real   barShadowStrength:   1.0      // scales the floating shadow's depth, 0.3-2.0
-    property string barPosition:         "top"     // "top" | "bottom"
+    property bool   barFloating:         false
+    property real   barWidth:            0.90
+    property string barCornerStyle:      "round"
+    property int    barRadius:           14
+    property bool   barShadow:           false
+    property real   barShadowStrength:   1.0
+    property string barPosition:         "top"
     property real   barOpacity:          0.88
-    property string barDisabledMonitors: ""        // comma-joined connector names whose bar is hidden
-    property string overlayMonitor:      ""        // "" = follow focus; else a monitor connector name for notifs/OSD
+    property string barDisabledMonitors: ""
+    property string overlayMonitor:      ""
 
     readonly property var _allBarWidgetKeys: ["workspaces", "shellUpdate", "tray", "updates", "network", "volume", "brightness", "battery", "media", "clock"]
 
     property string barWidgetOrderLeft:  "workspaces"
     property string barWidgetOrderRight: "shellUpdate,tray,updates,network,volume,brightness,battery,media,clock"
 
-    // self-healing: unknown/duplicate tokens dropped, and any key missing from both lists falls back to its default zone so a widget can't vanish
     readonly property var _zoneKeys: {
         const all = root._allBarWidgetKeys
         const valid = {}
@@ -146,12 +144,10 @@ Singleton {
     readonly property var _missingBarWidgetLocation: ({ zone: "", index: -1 })
     readonly property var _barWidgetLocations: root._zoneKeys.loc
 
-    // Shared lookup for both zone and in-zone position.
     function barWidgetLocate(key: string): var {
         return root._barWidgetLocations[key] || root._missingBarWidgetLocation
     }
 
-    // adjacent swap within the zone holding `key` — keyboard and the drag handle both funnel through this
     function moveBarWidget(key: string, delta: int): void {
         const loc = root.barWidgetLocate(key)
         if (loc.index < 0) return
@@ -163,7 +159,6 @@ Singleton {
         else                     root.barWidgetOrderRight = arr.join(",")
     }
 
-    // move `key` into `zone` at `atIndex`, removing it from its current zone first
     function setBarWidgetZone(key: string, zone: string, atIndex: int): void {
         if (root._allBarWidgetKeys.indexOf(key) < 0 || (zone !== "left" && zone !== "right"))
             return
@@ -186,8 +181,6 @@ Singleton {
         }
     }
 
-    // glyph/label/group/setting for the widgets settings list; group feeds BarContent's
-    // compact-mode divider fusing; setting is the bool prop the row toggles (empty for workspaces = placement only)
     readonly property var barWidgetMeta: ({
         workspaces:  { glyph: "󰊗", label: "Workspaces",      group: "workspaces", setting: "" },
         shellUpdate: { glyph: "󰑐", label: "Shell update",    group: "shell",  setting: "barShowShellUpdate" },
@@ -201,8 +194,8 @@ Singleton {
         clock:       { glyph: "󰅐", label: "Clock",           group: "clock",  setting: "barShowClock" }
     })
 
-    property int    nightLightTemp:      3500   // color temperature for hyprsunset, in Kelvin
-    property bool   nightLightAuto:     false  // auto-follow solar position
+    property int    nightLightTemp:      3500
+    property bool   nightLightAuto:     false
 
     property int    wsMinVisible:        5
     property bool   wsShowNumbers:       false
@@ -212,13 +205,12 @@ Singleton {
     property real   wsMarkerOpacity:     1.0
     property real   wsIconOpacity:       0.68
     property bool   wsIconMono:          true
-    property string wsActiveMarker:      "gem"  // "gem" | "dot"
+    property string wsActiveMarker:      "gem"
 
     property bool _loaded: false
     property bool _configDirReady: false
     property bool _savePendingForDir: false
     property int _saveFailureCount: 0
-    // placement-dependent windows wait for this so a saved barPosition doesn't flash at the wrong edge first
     readonly property bool ready: _loaded
     readonly property int _settingsVersion: 1
     property var _defaults: ({})
@@ -385,7 +377,6 @@ Singleton {
             const k = _schema[i].k
             if (!_sameValue(root[k], _defaults[k])) out.push(k)
         }
-        // value-only edits keep the same key set; skip the reassign so the settings list doesn't rebuild
         if (out.join(",") !== modifiedKeys.join(",")) modifiedKeys = out
     }
 
@@ -407,7 +398,6 @@ Singleton {
 
     Component.onCompleted: {
         _defaults = _captureDefaults()
-        // restart the debounced save on any change, one connection per schema property, so a new setting can't be forgotten
         for (let i = 0; i < _schema.length; i++)
             root[_schema[i].k + "Changed"].connect(root._onSettingChanged)
         root._ensureConfigDir()
@@ -442,7 +432,6 @@ Singleton {
         }
     }
 
-    // native file IO (no bash): atomic writes; watchChanges hot-applies external edits to settings.json
     FileView {
         id: _file
         path: root._configDir + "/settings.json"
@@ -451,7 +440,7 @@ Singleton {
         blockWrites:  true
         printErrors:  false
         onLoaded:      root._applyText(_file.text())
-        onLoadFailed:  root._loaded = true   // first run: defaults
+        onLoadFailed:  root._loaded = true
         onFileChanged: reload()
         onSaved: {
             root._saveFailureCount = 0
@@ -468,7 +457,6 @@ Singleton {
         }
     }
 
-    // deterministic name keeps repeated loads of a not-yet-resaved old file idempotent
     function _backupBeforeMigrate(raw: string, onDiskVersion: int): void {
         _backupFile.path = _configDir + "/settings.v" + onDiskVersion + ".bak.json"
         _backupFile.setText(raw)

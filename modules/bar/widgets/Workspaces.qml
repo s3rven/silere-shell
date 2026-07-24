@@ -32,13 +32,11 @@ Item {
 
     readonly property string monitorName: Compositor.monitorName(root.screen)
     readonly property bool monitorReady: monitorName.length > 0 && Compositor.activeWorkspaceId(monitorName) > 0
-    // no hide toggle; `show` exists only so BarContent's per-slot system can treat this like any widget
     readonly property bool show: true
     visible: show
     readonly property int  rawActiveId:  Compositor.activeWorkspaceId(root.monitorName)
     readonly property int  activeId:     rawActiveId > 0 ? rawActiveId : _lastNormalActiveId
 
-    // special/scratchpad shown on this monitor (Hyprland only; niri has no special workspaces)
     readonly property bool inSpecial: Compositor.hasSpecialWorkspaces && Compositor.specialOutput === root.monitorName
 
     readonly property var _workspaceOwners: {
@@ -69,7 +67,6 @@ Item {
         return owner !== undefined && owner !== root.monitorName
     }
 
-    // wsId → workspace lookup for this monitor, rebuilt on change for O(1) delegate access
     readonly property var _wsMap: {
         const m = {}
         const vals = Compositor.workspaces
@@ -92,7 +89,6 @@ Item {
         return ws !== null && ws.urgent
     }
 
-    // paging hides urgent workspaces on other pages; surface the first as a tap-to-jump tick beside the row instead of losing the signal
     readonly property int urgentOffPage: {
         const vals = Compositor.workspaces
         for (let i = 0; i < vals.length; i++) {
@@ -104,16 +100,12 @@ Item {
         return 0
     }
 
-    // class → {icon,name} memo; recomputes only on toplevel-list changes, no polling
     property var _appMetaCache: ({})
     function _appMeta(cls: string): var {
         const raw = String(cls || "").trim()
         const key = raw.toLowerCase()
         if (!key) return null
         if (root._appMetaCache[key] !== undefined) return root._appMetaCache[key]
-        // desktop-entry icon (zen → zen-browser), bare class (kitty), then the reverse-DNS tail
-        // (org.wezfurlong.wezterm → wezterm). no generic fallback: a placeholder tile shouts
-        // louder than the dots around it and says less than the occupied dot it would replace.
         const de = DesktopEntries.heuristicLookup(raw)
         const tail = key.indexOf(".") >= 0 ? key.split(".").pop() : ""
         const candidates = [de && de.icon, key, tail].filter(Boolean)
@@ -130,13 +122,10 @@ Item {
             names.push(apps[i].count > 1 ? apps[i].name + " ×" + apps[i].count : apps[i].name)
         return names.join(", ")
     }
-    // Desktop-entry changes need an explicit cache tick. Compositor owns the
-    // single coalesced toplevel refresh, so every monitor reads the same update.
     property int _wsAppsTick: 0
     Connections {
         target: ShellSettings
         function onWsShowAppIconsChanged() {
-            // settings flip, not a workspace hop: suppress the gem's move-pulse/glint/trail while the row re-lays out
             root._paging = true
             _pagingReset.restart()
         }
@@ -164,7 +153,6 @@ Item {
         }
     }
 
-    // wsId → [{icon,count}] for visible apps. reads each toplevel's *live* workspace, not the stale lastIpcObject,
     readonly property var _wsApps: {
         root._wsAppsTick
         const map = {}
@@ -249,11 +237,9 @@ Item {
         }
     }
 
-    // while a page flips the new buttons shouldn't each pop in — the group fade carries it; _paging gates the enter anim
     property bool _paging: false
     Timer { id: _pagingReset; interval: Motion.fast + Motion.width; onTriggered: root._paging = false }
 
-    // directional page flip: the new group slides in from the side being moved toward
     property int  _prevPageKey: 1
     property int  _pageDir:        1
     property real _pageShift:      0
@@ -309,7 +295,6 @@ Item {
         if (item) item.forceActiveFocus()
     }
 
-    // the active diamond is the Silere Anchor: tap opens the menu beneath the gem. map the gem centre to screen coords so the panel lines up under it
     function openAnchorMenu(): void {
         const pt = root.mapToItem(null, diamond.x + diamond.width / 2, 0)
         MenuState.toggleAt(pt.x, root.screen)
@@ -415,7 +400,6 @@ Item {
         readonly property color tint: {
             return root.urgent(root.activeId) ? Theme.warning : Theme.accent
         }
-        // animated proxy so _energy stays continuous — every other input already eases, this one would step
         property real _specialOn: root.inSpecial ? 0.65 : 0
         Behavior on _specialOn { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
         readonly property real _energy: Math.max(diamond._menuOn * 0.82,
@@ -427,8 +411,6 @@ Item {
         scale: _hoverScale * _tapScale * _moveScale * _specialScale
         transformOrigin: Item.Center
 
-        // ambient aura: wakes for hover/menu/special/move only, so it renders nothing at idle.
-        // no Behaviors here — _energy's inputs all ease upstream, downstream ones would just restart every frame
         Rectangle {
             anchors.centerIn: parent
             width:  parent.width + 14
@@ -518,7 +500,6 @@ Item {
             visible: root._gemMarker
         }
 
-        // tint kept separate so the urgent→accent swap still colour-animates
         Rectangle {
             anchors.fill: parent
             radius: root._gemMarker ? 2 : width / 2
@@ -559,7 +540,6 @@ Item {
             }
         }
 
-        // menu-open: the whole marker charges rather than punching a dark socket — luminance lifts uniformly
         Rectangle {
             anchors.fill: parent
             radius: root._gemMarker ? 2 : width / 2
@@ -570,7 +550,6 @@ Item {
             visible: opacity > 0.01
         }
 
-        // missed-notification badge under DND — popups are suppressed then, so the anchor is the only cue
         Rectangle {
             readonly property bool _show: Notifications.effectiveDnd && Notifications.missedCount > 0
             anchors.horizontalCenter: parent.horizontalCenter
@@ -594,7 +573,6 @@ Item {
             NumberAnimation { target: diamond; property: "_specialScale"; to: 1.055; duration: Motion.ms(90);  easing.type: Easing.OutCubic }
             NumberAnimation { target: diamond; property: "_specialScale"; to: 1.0;   duration: Motion.ms(185); easing.type: Easing.OutQuart }
         }
-        // 1 = sweep left→right, -1 = right→left; captured at glint start so the shimmer flows with the gem's travel
         property int _glintDir: 1
         SequentialAnimation {
             id: _glintAnim
@@ -671,7 +649,6 @@ Item {
                 readonly property bool occupied: root.occupied(wsId)
                 readonly property bool urgent:  root.urgent(wsId)
                 readonly property bool hovered: _hover.hovered
-                // gated separately from `hovered` so hover scale/color/tint respect the barHoverHighlight setting (default off)
                 readonly property bool _hoverFx: hovered && ShellSettings.barHoverHighlight
                 readonly property bool _showIcons: ShellSettings.wsShowAppIcons && !active && apps.length > 0
 
@@ -680,7 +657,6 @@ Item {
                 opacity: 1
                 scale:   1.0
 
-                // not gated on wsShowAppIcons: disabling it must glide the collapse too, not snap while the gem animates
                 Behavior on width {
                     enabled: !ShellSettings.reduceMotion
                     NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
@@ -700,7 +676,6 @@ Item {
                     NumberAnimation { target: ws; property: "scale"; to: 1.0; duration: Motion.ms(130); easing.type: Easing.OutCubic }
                 }
 
-                // ack for middle-click "move window here" — the move itself is invisible (window lands on a background ws)
                 SequentialAnimation {
                     id: _dropPulse
                     NumberAnimation { target: ws; property: "scale"; to: 1.12; duration: Motion.ms(70);  easing.type: Easing.OutQuad  }
@@ -773,13 +748,11 @@ Item {
                     acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
                     onTapped: (eventPoint, button) => {
                         if (button === Qt.MiddleButton) {
-                            // No focused window means nothing moves — don't fake an ack.
                             if (!Compositor.activeToplevel) return
                             Compositor.moveActiveToWorkspace(ws.wsId)
                             if (!ShellSettings.reduceMotion) _dropPulse.restart()
                             return
                         }
-                        // right-click belongs to the anchor: quick actions on the active marker, never a switch
                         if (button === Qt.RightButton) {
                             if (ws.active) {
                                 _tapPulse.restart()
@@ -810,7 +783,6 @@ Item {
                 readonly property real _pulseOpacity: _urgentFx.item ? _urgentFx.item.pulseOpacity : 1.0
                 readonly property real _shakeX: _urgentFx.item ? _urgentFx.item.shakeX : 0
                 property real _dotFade: 1.0
-                // neither a dot nor an app icon says which ws you'd jump to; hover swaps it for the number
                 readonly property bool _hoverReveal: ShellSettings.valuesOnHover && hovered
                     && !active && (_showIcons || !ShellSettings.wsShowNumbers)
                 property real _revealAmt: _hoverReveal ? 1 : 0
@@ -828,8 +800,6 @@ Item {
                 }
                 Connections {
                     target: ShellSettings
-                    // resync the shared diamond if the setting flips while this ws is active + hovered
-                    // (onHoveredChanged/onActiveChanged won't fire on their own here)
                     function onBarHoverHighlightChanged() {
                         if (ws.active) diamond._hoverScale = ws._hoverFx ? 1.10 : 1.0
                     }
@@ -915,7 +885,6 @@ Item {
     Item {
         id: _urgentTick
         readonly property bool shown: root.urgentOffPage > 0
-        // Hold the last id while fading out so the jump target doesn't blank mid-tap.
         property int targetWs: 0
         readonly property int _live: root.urgentOffPage
         on_LiveChanged: if (_live > 0) {

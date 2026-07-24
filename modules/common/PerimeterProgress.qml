@@ -1,7 +1,5 @@
 import QtQuick
 
-// rounded-rect perimeter: a full track outline plus a progress stroke walked by
-// arc length, so corners advance at the same rate as the straights
 Canvas {
     id: root
 

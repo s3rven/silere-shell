@@ -3,7 +3,6 @@ pragma Singleton
 import QtQuick
 import Quickshell
 
-// mirrors CalendarState
 Singleton {
     id: root
 

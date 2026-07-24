@@ -6,7 +6,7 @@ import "../../common"
 Pill {
     id: root
 
-    property var screen: null   // ShellScreen this bar sits on, for menu placement
+    property var screen: null
 
     readonly property bool show: ShellSettings.barShowVolume
     visible: show
@@ -19,7 +19,6 @@ Pill {
         : Audio.muted ? `Volume muted, ${Math.round(Audio.effectiveVolume * 100)} percent`
         : `Volume ${Math.round(Audio.effectiveVolume * 100)} percent`
     accessibleDescription: "Scroll to adjust volume. Activate to toggle mute."
-    // Icon signals mute; reserveText pins width to "100%" so it doesn't jitter.
     reserveText: "100%"
     text: !Audio.ready ? ""
         : (ShellSettings.valuesOnHover && !expanded) ? ""

@@ -1,6 +1,5 @@
 import QtQuick
 
-// infinite alert pulse: ping-pongs `targetProperty` on `target` between `floor` and `peak` (InOutSine), snaps to `restValue` when stopped. drive with `running`.
 SequentialAnimation {
     id: pulse
 

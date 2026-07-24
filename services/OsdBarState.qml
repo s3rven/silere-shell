@@ -4,11 +4,10 @@ import QtQuick
 import Quickshell
 import "../config"
 
-// owns all OSD trigger logic + state; display layers (pill, bar OSD widget) read it and run their own animations
 Singleton {
     id: root
 
-    property string kind:    ""      // "volume" | "brightness" | "battery" | "temp" | "notif"
+    property string kind:    ""
     property bool   showing: false
     property string icon:    ""
     property string nextIcon: ""
@@ -18,20 +17,16 @@ Singleton {
     property color  fillColor: Theme.accent
     readonly property bool hasBar: _hasBarKind(kind)
     readonly property real clamped: Math.max(0, Math.min(1, value))
-    // bar OSD is hidden under the overview/fullscreen, so display layers hand off to the floating pill (feedback never vanishes)
     readonly property bool barConcealed: OverviewState.active || Notifications.fullscreenActive
     property alias entries: _entries
     readonly property int activeCount: _entries.count
     Behavior on fillColor { ColorAnimation { duration: Motion.medium } }
 
-    // emitted when a show() lands while already visible — display layers kick a bump
     signal bumped()
     signal entryBumped(string kind)
 
-    // volume bar warms toward the warning hue near max — a "loud" cue
     readonly property color barColor: _barColor(kind, value, muted, fillColor)
 
-    // fast scroll bursts outrun the eased Behavior and look stuck — display layers should snap, not animate, while true
     property real _lastUpdateAt: 0
     property bool rapid: false
     Timer { id: _rapidTimer; interval: 180; repeat: false; onTriggered: root.rapid = false }
@@ -42,7 +37,6 @@ Singleton {
         _rapidTimer.restart()
     }
 
-    // skip the first brightness event, initial device scan can fire before we're ready
     property bool _seenInitialBrightness: false
     readonly property bool _batteryWatcherWanted: ShellSettings.osdEnabled
         && (ShellSettings.osdBatteryWarn || ShellSettings.osdChargedNotify)
@@ -62,7 +56,6 @@ Singleton {
     property var _expiresAt: ({})
     property var _removeAt: ({})
     property var _closingSig: ({})
-    // kind-keyed deadline: after a kind closes, ignore re-shows until it passes so a PipeWire echo can't bounce the OSD open; a real later change clears it
     property var _commitClose: ({})
     readonly property int _removeDelay: Motion.ms(170) + 70
     readonly property int _commitCloseWindow: Motion.ms(220) + 80
@@ -110,9 +103,6 @@ Singleton {
             return
         }
 
-        // fresh show (nothing visible, primary switched kind, or icon unset) jumps icon
-        // straight to value — the entrance reveals it. An icon change on a visible same-kind
-        // entry sets nextIcon first so onNextIconChanged stamps; ScriptAction commits icon at its midpoint.
         const fresh = !showing || kind !== best.kind || icon === ""
         kind = best.kind
         nextIcon = best.icon
@@ -146,7 +136,6 @@ Singleton {
         if (idx >= 0) {
             const old = _entries.get(idx)
             if (old.closing && _closingSig[kind] === sig) return false
-            // one model update, not one per role — avoids re-evaluating every delegate binding during bursts
             _entries.set(idx, data)
         } else {
             _entries.append(data)
@@ -184,12 +173,9 @@ Singleton {
     function _applyValues(kind: string, icon: string, value: real, label: string, muted: bool, color: color): void {
         const idx = _entryIndex(kind)
         const live = idx >= 0 && !_entries.get(idx).closing
-        // an echo repeats the value we just dismissed; matching on the signature and
-        // not just the window lets a genuinely new value re-open during the close
         if (!live && _closingSig[kind] === _sig(kind, value, muted)
             && (_commitClose[kind] || 0) > Date.now()) return
         if (!_upsertEntry(kind, icon, value, label, muted, color)) return
-        // a single deliberate step gets a bump; a scroll burst is already visible and mustn't keep a transform alive on slow GPUs
         if (live && !root.rapid && !ShellSettings.reduceMotion) {
             root.bumped()
             root.entryBumped(kind)
@@ -199,7 +185,6 @@ Singleton {
     function show(kind: string, icon: string, value: real, label: string, muted: bool): void {
         if (!_armed) return
         if (!ShellSettings.osdEnabled) return
-        // menu's quick sliders already show these live — a simultaneous OSD is double feedback
         if (MenuState.open) return
         if (ShellSettings.osdKindFilter === "volume"     && kind !== "volume")     return
         if (ShellSettings.osdKindFilter === "brightness" && kind !== "brightness") return
@@ -292,8 +277,6 @@ Singleton {
 
     Connections {
         target: Audio
-        // A mute/volume step can touch several Audio properties in one frame.
-        // Coalesce them so fullscreen handoff gets one current OSD entry.
         function onUiVolumeChanged() { root._queueVolumeUpdate() }
         function onTargetVolumeChanged() { root._queueVolumeUpdate() }
         function onPendingApplyChanged() { if (Audio.pendingApply) root._queueVolumeUpdate() }
@@ -306,7 +289,6 @@ Singleton {
             if (isFirst) return
             root._showDeviceName = true
             _deviceNameTimer.restart()
-            // same muted test as _updateVolume, so the bar fill renders consistently
             const effectiveMuted = Audio.muted || Audio.uiVolume <= 0
             root.show("volume", Audio.icon, Audio.uiVolume, `${name} · ${Audio.label}`, effectiveMuted)
         }
@@ -358,7 +340,6 @@ Singleton {
         }
     }
 
-    // one-time at startup: another daemon holds the bus so silere's notifs are dead; flash once (NotifWatch logs the culprit)
     Connections {
         target: NotifWatch
         function onConflictChanged() {

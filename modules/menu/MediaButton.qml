@@ -2,13 +2,11 @@ import QtQuick
 import "../../config"
 import "../../services"
 
-// secondary transport button (prev/next) for the media card; play/pause stays bespoke in HomePage (stamping glyph + accent pad)
 Item {
     id: root
 
     property string glyph:     ""
     property string accessibleName: "Media control"
-    // action availability: drives dimming and makes the button inert (no cursor, no hover/press) when off
     property bool   available: false
 
     signal triggered()

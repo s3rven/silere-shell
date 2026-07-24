@@ -21,7 +21,6 @@ Item {
         * _ul.floatingProgress
     transform: Scale { origin.y: _ul.height / 2; yScale: _ul.atBottom ? -1 : 1 }
 
-    // non-visual host for all glow state/sources/animations/previews; the strips below read its properties
     Item {
         id: _lineEffect
         anchors.fill: parent
@@ -39,7 +38,6 @@ Item {
         property bool _lastNetConnected: false
         readonly property real _tempGlowBase: (_tempGlowEnabled && CpuTemp.hot && !CpuTemp.critical) ? 0.32 : 0
         property real _tempPulseGlow: 0
-        // Reduce-motion: hold a static elevated glow on critical instead of pulsing.
         readonly property real _tempGlow: (ShellSettings.reduceMotion && _tempGlowEnabled && CpuTemp.critical)
             ? 0.5
             : _tempGlowBase + _tempPulseGlow
@@ -58,12 +56,9 @@ Item {
             enabled: !ShellSettings.reduceMotion
             NumberAnimation { duration: Motion.slow; easing.type: Easing.OutCubic }
         }
-        // Event intensity follows the visible glow control. Keeping this derived avoids a hidden persisted
-        // value becoming stale when settings are loaded or edited outside the UI.
         readonly property real _activeGlowStrength: Math.min(1, 0.45 + 0.4 * ShellSettings.glowStrength)
         readonly property real _scaledGlow:  (_primaryGlow + _stackBonus) * _activeGlowStrength
         readonly property real _eventGlow:   Math.max(_scaledGlow, _batteryGlow, _tempGlow)
-        // soft boost while cava runs — the waveform baseline sits on the underline, so glow makes them read as one
         property real _mediaGlow: (_glowEnabled && ShellSettings.mediaProgress && Media.shown && Media.cavaReady) ? 0.18 : 0
         Behavior on _mediaGlow {
             enabled: !ShellSettings.reduceMotion
@@ -99,11 +94,9 @@ Item {
         property real _sweepSpread: 0.28
         property real _bloomBoost:  0.0
         property real _screenshotSweepCenter: 0.50
-        // lean toward the alerting widget's zone — bar order is user-configurable, so a hardcoded side would sweep the wrong way
         function _widgetSweep(key: string): real {
             return ShellSettings.barWidgetLocate(key).zone === "left" ? 0.32 : 0.68
         }
-        // gradient peak: leans toward the widget that owns the event, centred otherwise
         readonly property real _sweepCenterTarget: {
             if (_notifFlash.running)                                         return 0.50
             if (_batteryGlowEnabled && (Battery.low || Battery.critical))    return _widgetSweep("battery")
@@ -265,7 +258,6 @@ Item {
             }
         }
 
-        // previews settings changes through the real animation path while the menu is open
         property bool _settingsReady: false
         Component.onCompleted: {
             _prevNotifCount = Notifications.activeCount
@@ -330,7 +322,6 @@ Item {
                 _lineEffect._playScreenshot()
         }
 
-        // transition flash only, persistent offline state lives in the network widget
         function _updateNetGlow(): void {
             const currentConnected = Network.available && Network.connected
             const disconnected = Network.available && !Network.connected
@@ -396,7 +387,6 @@ Item {
         }
     }
 
-    // faint base track so glow mode still shows an underline with no event active; event glow draws over it
     GlowLine {
         anchors.left:        parent.left
         anchors.right:       parent.right
@@ -415,7 +405,6 @@ Item {
         hiClamp: 0.97
     }
 
-    // flat event glow on the screen-facing side; non-floating bars only
     GlowLine {
         anchors.left:        parent.left
         anchors.right:       parent.right
@@ -462,7 +451,6 @@ Item {
         hiClamp: 0.92
     }
 
-    // event layer over the faint floating base
     FadingRim {
         id: _floatingRim
         radius: _ul.wrapRadius
@@ -473,7 +461,6 @@ Item {
             * ShellSettings.glowStrength) * _ul.floatingProgress
     }
 
-    // insets past the corner arcs and fades out at both ends, no mask/FBO needed
     GlowLine {
         id: _floatingLine
         anchors.left: parent.left
@@ -488,14 +475,11 @@ Item {
         peak:    _lineEffect._stopColor
         edge:    _lineEffect._stopColorMid
         center:  _lineEffect._sweepCenter
-        // a wider minimum fan than the flat line keeps the floating glow soft
         spread:  Math.max(0.20, _lineEffect._sweepSpread)
         loClamp: 0.08
         hiClamp: 0.92
     }
 
-    // six 1px gradient strips approximate a vertical halo without MultiEffect/offscreen targets;
-    // spread widens per row so the bloom fans out instead of rising as a hard-edged column
     Repeater {
         model: [
             { y: 1, c: 0.34, b: 0.38, s: 1.00 },
@@ -524,7 +508,6 @@ Item {
         }
     }
 
-    // localized moving streak, kept visually distinct from the centered bloom flash above
     Rectangle {
         id: _shotStreak
         readonly property real _trackW: Math.max(0, parent.width - _ul.wrapRadius * 2)

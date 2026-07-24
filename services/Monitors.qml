@@ -6,7 +6,6 @@ import Quickshell
 Singleton {
     id: root
 
-    // Follows focus unless the user pins a monitor.
     readonly property ShellScreen overlayScreen: {
         const screens = Quickshell.screens
         if (!screens || screens.length === 0) return null
@@ -27,7 +26,6 @@ Singleton {
 
     readonly property string activeName: overlayScreen ? overlayScreen.name : ""
 
-    // Disabled screens stored comma-joined; absent = bar on.
     function barEnabled(screen): bool {
         if (!screen) return false
         const off = ShellSettings.barDisabledMonitors
@@ -35,7 +33,6 @@ Singleton {
         return ("," + off + ",").indexOf("," + screen.name + ",") < 0
     }
 
-    // integrated overlays render on one bar; prefer the floating-overlay screen, fall back to a live bar if its bar is disabled
     readonly property ShellScreen overlayBarScreen: {
         const preferred = overlayScreen
         if (barEnabled(preferred)) return preferred

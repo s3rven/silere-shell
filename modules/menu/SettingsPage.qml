@@ -10,7 +10,6 @@ PageShell {
     implicitHeight: _detail.height
     enterFade: 145; exitFade: 110
 
-    // lags behind MenuState.settingsSection during the swap; detail pane renders whichever section this points at
     property string _shownSection: MenuState.settingsSection
     property int _sectionDir: 1
 
@@ -23,7 +22,6 @@ PageShell {
         interface: _secInterface, updates: _secUpdates, system: _secSystem
     })
 
-    // section id → { glyph, label, group, description, index }, for the detail-pane header
     readonly property var _sectionMeta: {
         const m = ({})
         const tree = MenuState.settingsTree
@@ -172,7 +170,6 @@ PageShell {
             }
         }
 
-        // one loader for all sections: only the visible one exists, swapped while the pane sits at opacity 0
         Loader {
             id: _detailBody
             y:      _detailHeader.height + _detail._bodyGap
@@ -270,6 +267,6 @@ PageShell {
                     && !root.powerOpen && !Idle.isIdle
             }
         }
-        }   // _detailBody
+        }
     }
 }

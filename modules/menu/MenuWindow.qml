@@ -28,7 +28,6 @@ PanelWindow {
     WlrLayershell.namespace: "silere-menu"
     WlrLayershell.keyboardFocus: MenuState.open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
-    // unmap the full-screen surface while closed so it isn't holding a screen-sized GPU buffer; stays mapped through the close animation
     visible: MenuState.open || panel.opacity > 0.001
 
     anchors {
@@ -46,7 +45,6 @@ PanelWindow {
             if (panel.powerOpen) {
                 panel.closePowerAndRestoreFocus()
             } else if (panel.activeTab === 0 && homeLoader.item && homeLoader.item.dismissInline()) {
-                // open wifi/bt picker folded away; menu stays
             } else {
                 MenuState.close()
             }
@@ -99,7 +97,6 @@ PanelWindow {
         }
     }
 
-    // shadow matches the other bar-edge popups; outside the card so the scale transform doesn't distort it
     Loader {
         active: (MenuState.open || panel.opacity > 0.001)
             && ShellSettings.barFloating && ShellSettings.barShadow
@@ -119,17 +116,12 @@ PanelWindow {
         open: MenuState.open
         anchorX: MenuState.anchorX
         barBottom: ShellSettings.barPosition === "bottom"
-        // Place every tab inside the widest responsive envelope from the
-        // start. The card may resize, but its left rail stays under the mouse.
         targetWidth: placementW
         animateScale: false
         animatePlacement: false
         border.width: 0
-        // Keep async page content inside the destination surface.
         clip: true
 
-        // Home/Notifications read best compact; Settings needs room for the
-        // category nav and detail column.
         readonly property int _compactW: 398
         readonly property int _powerW: 566
         readonly property int _settingsW: 630
@@ -139,23 +131,16 @@ PanelWindow {
         readonly property int _availablePanelW: win.width > 0
             ? Math.max(1, Math.floor(win.width - _minX * 2))
             : _settingsW
-        // Never force the popup beyond the output. Controls below already
-        // reflow; letting the surface shrink keeps both edges reachable.
         readonly property int panelW: Math.max(1,
             Math.min(_targetPanelW, _availablePanelW))
         readonly property int placementW: Math.max(1,
             Math.min(_settingsW, _availablePanelW))
-        // rail expands for Settings: icon strip stays fixed, category nav rides on beside it as one growing surface
         readonly property int railCollapsedW: 44
         readonly property int _navMinW: powerOpen ? 112 : 118
         readonly property int _navMaxW: activeTab === 1 ? 176 : 160
-        // Preserve a useful detail pane on narrow outputs. The category labels
-        // elide cleanly, while settings controls need at least twice this space.
         readonly property int navW: {
             const available = panelW - railCollapsedW
             const desired = Math.max(_navMinW, Math.round(panelW * 0.28))
-            // Prefer a readable nav, but never let it consume the last 96px of
-            // the detail pane on exceptionally narrow outputs.
             const detailSafe = Math.max(_navMinW, available - 224)
             const sidebarFit = Math.max(0, available - 96)
             return Math.max(0, Math.min(_navMaxW, desired, detailSafe, sidebarFit))
@@ -168,9 +153,7 @@ PanelWindow {
                 Math.round(12 + (panelW - 398) * 8 / 232)))
             : _railExpanded && panelW >= 460 ? 18 : 12
         readonly property int innerW: Math.max(1, contentW - contentPad * 2)
-        // shared height floor so every tab opens at the same size; taller content grows above it
         readonly property int idealMinH: 360
-        // min height so rail icons never overlap the power slot
         readonly property int minRailFitH: 252
         readonly property int _availablePanelH: win.height > 0
             ? Math.max(1, Math.floor(win.height - _edgeY - _minX))
@@ -226,7 +209,6 @@ PanelWindow {
             if (tab === 2) _recentLoaded = true
             if (tab !== MenuState.activeTab) MenuState.activeTab = tab
             contentFlick.contentY = 0
-            // panel is a ring-free Tab origin; otherwise focus strands in the disabled page
             if (focusNeedsReset) panel.forceActiveFocus()
         }
 
@@ -253,7 +235,6 @@ PanelWindow {
             contentFlick.contentY = Math.max(0, Math.min(maxY, target))
         }
 
-        // Cycle the rail in its visual order (Now, Recent, Settings) for Ctrl+Tab.
         readonly property var _tabOrder: [0, 2, 1]
         function _cycleTab(dir: int): void {
             const i = Math.max(0, _tabOrder.indexOf(activeTab))
@@ -276,7 +257,6 @@ PanelWindow {
             function onOpenChanged() {
                 if (MenuState.open) {
                     contentFlick.contentY = 0
-                    // deterministic Tab start: panel paints no focus ring, and this clears stale child focus from the previous open
                     panel.forceActiveFocus()
                 } else {
                     _outsideTapGuard.stop()
@@ -345,8 +325,8 @@ PanelWindow {
             x: 0; y: 0
             width: panel.railW
             height: panel.height
-            clip: false  // allow hover pills to overflow into content area
-            z: 6         // render above the content pane so pills aren't hidden
+            clip: false
+            z: 6
 
             Behavior on width {
                 enabled: panel._geometryReady && panel.open
@@ -354,7 +334,6 @@ PanelWindow {
                 NumberAnimation { duration: Motion.panelResize; easing.type: Easing.OutQuart }
             }
 
-            // background + divider live in a clipped sub-layer so the over-wide rounded background can't bleed past the rail edge; icons/pills stay unclipped
             Item {
                 anchors.fill: parent
                 clip: true
@@ -390,7 +369,6 @@ PanelWindow {
                     }
                 }
 
-                // settings categories in the clipped surface: the growing rail reveals them left-to-right, can't paint past the rail edge mid-animation
                 Item {
                     id: _settingsRailSurface
                     x: panel.railCollapsedW
@@ -431,7 +409,6 @@ PanelWindow {
                     }
                 }
 
-                // Same expanded rail surface as Settings, clipped from the bottom so it reveals upward from the power slot.
                 Item {
                     id: _powerRailSurface
                     x: panel.railCollapsedW
@@ -474,7 +451,6 @@ PanelWindow {
 
             }
 
-            // nav icons. rail order is visual only; tab index stays page-bound (0 Home / 1 Settings / 2 Notifications) so loaders and jump-to-tab keep working
             Column {
                 id: _railNav
                 width: panel.railCollapsedW
@@ -503,7 +479,6 @@ PanelWindow {
                     KeyNavigation.down: _railSettings
                     onTapped: panel.switchTab(2)
 
-                    // count badge on the icon's top-right, anchored to item centre so it stays glued regardless of rail width; rail-coloured ring lifts it off
                     Rectangle {
                         readonly property bool _show: Notifications.hasHistory && !_railRecent.active
                         anchors.horizontalCenter: parent.horizontalCenter
@@ -608,8 +583,6 @@ PanelWindow {
                 color: Theme.menuPane
             }
 
-            // Snap the destination to the divider grid. Content and the nav
-            // determine the compact height; the viewport handles overflow.
             readonly property int targetH: {
                 const contentH = tabContent.y + tabContent.height + 12
                 const navH = panel.activeTab === 1
@@ -636,7 +609,6 @@ PanelWindow {
                 maximumFlickVelocity: 2200
                 readonly property bool needsScroll:
                     contentHeight > panel.targetPanelH + 1
-                // Notifications owns the only scroll surface on its tab; other pages use this outer scroller
                 interactive: !panel.powerOpen && panel.activeTab !== 2 && needsScroll
 
                 function clampToContent(): void {
@@ -645,14 +617,13 @@ PanelWindow {
                     else if (contentY < 0) contentY = 0
                 }
 
-                // content can shrink while the viewport grows; both bounds move
                 onContentHeightChanged: clampToContent()
                 onHeightChanged: clampToContent()
 
                 Item {
                     id: tabContent
                     x: panel.contentPad
-                    y: 12   // 4px multiple, keeps card dividers on the grid
+                    y: 12
                     width: panel.innerW
                     readonly property bool _pagePending:
                         panel.activeTab === 1 ? settingsLoader.status !== Loader.Ready
@@ -747,7 +718,6 @@ PanelWindow {
                         id: homeLoader
                         width: parent.width
                         active: panel._homeLoaded
-                        // sync: the landing tab must be up with the open animation
                         asynchronous: false
                         sourceComponent: Component {
                             HomePage {
@@ -761,7 +731,6 @@ PanelWindow {
                     Loader {
                         id: settingsLoader
                         width: parent.width
-                        // build Settings only when the tab's first used — it's the largest subtree, preloading on every Home open costs memory + startup
                         active: panel._loadedDeferred && (panel._settingsLoaded || panel.activeTab === 1)
                         asynchronous: true
                         sourceComponent: Component {
@@ -776,7 +745,6 @@ PanelWindow {
                     Loader {
                         id: recentLoader
                         width: parent.width
-                        // build the archive only after first open; then cached until the menu's idle unload
                         active: panel._loadedDeferred && (panel._recentLoaded || panel.activeTab === 2)
                         asynchronous: true
                         sourceComponent: Component {
@@ -794,7 +762,6 @@ PanelWindow {
                 }
             }
 
-            // overflow cue for the shared Home/Settings scroller; without it, over-tall content (media + sun arc) clips with no hint. Notifications owns its own fade
             ListEdgeFade {
                 anchors.fill: contentFlick
                 list: contentFlick
@@ -803,8 +770,6 @@ PanelWindow {
                 z: 4
             }
 
-            // Quiet position cue for long Home/Settings pages. The edge fade
-            // says more content exists; this shows where the user is in it.
             Rectangle {
                 id: _contentScrollThumb
                 readonly property real _trackH: Math.max(1, contentPane.height - 16)

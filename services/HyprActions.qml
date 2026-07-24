@@ -5,13 +5,9 @@ import Quickshell
 import Quickshell.Io
 import "../config"
 
-// window-matching + focus heuristics (notifications, tray, media) over the
-// backend-neutral Compositor. dispatch to Hyprland lives here too so the
-// Lua-config quirk stays in one place; Compositor calls _dispatch for Hyprland.
 Singleton {
     id: root
 
-    // Auto-detected on startup; Settings.hyprLuaConfig can force true if detection misses
     property bool _luaDetected: false
     readonly property bool _useLua: Settings.hyprLuaConfig || _luaDetected
 
@@ -42,7 +38,6 @@ Singleton {
         return /^-?\d+$/.test(text) ? text : _quote(text)
     }
 
-    // Hyprland dispatch; Compositor routes here for the Hyprland backend.
     function _dispatch(dispatcher, args): void {
         if (!SystemTools.ready || !SystemTools.hasHyprctl) return
         if (root._useLua && (dispatcher === "focusmonitor" || dispatcher === "workspace"
@@ -83,7 +78,6 @@ Singleton {
             "sh", root._dispatchText(d1, a1), root._dispatchText(d2, a2)])
     }
 
-    // hyprctl joins trailing args with spaces, so the single-arg form is equivalent
     function _dispatchText(dispatcher, args): string {
         if (root._useLua) {
             const call = root._luaCall(dispatcher, args)
@@ -93,7 +87,6 @@ Singleton {
             ? dispatcher + " " + String(args) : dispatcher
     }
 
-    // live neutral toplevels; each carries appId/cls/initialClass/title/pid/ref/wsId/wsRef
     function _clients(): var {
         return Compositor.toplevels || []
     }
@@ -190,7 +183,6 @@ Singleton {
         let parent = -1
         if (end >= 0) {
             const parts = stat.slice(end + 1).trim().split(/\s+/)
-            // /proc/<pid>/stat fields after comm start with: state ppid ...
             parent = parts.length >= 2 ? root._toPid(parts[1]) : -1
         }
 
@@ -222,7 +214,6 @@ Singleton {
         let p = root._toPid(pid)
         const seen = ({})
 
-        // each level is a blocking /proc read; a notifier sits a few forks below its window, so 6 is ample
         for (let depth = 0; p > 1 && depth < 6 && !seen[p]; depth++) {
             seen[p] = true
 
@@ -255,19 +246,16 @@ Singleton {
         const cls  = root._compact(c.cls)
         const init = root._compact(c.initialClass)
 
-        // symmetric containment ("Telegram Desktop" ↔ org.telegram.desktop); length guard stops short classes matching everything
         return cls === app || init === app
             || (cls.length  > 2 && (app.endsWith(cls)  || cls.endsWith(app)))
             || (init.length > 2 && (app.endsWith(init) || init.endsWith(app)))
     }
 
-    // Web players report a browser window class instead of the player name.
     readonly property var _browserClasses: [
         "firefox", "librewolf", "zen", "waterfox",
         "chrome", "chromium", "brave", "edge", "opera", "vivaldi", "thorium"
     ]
 
-    // display names ("Spotify") whose window class only the .desktop file knows
     function _resolveByDesktopEntry(clients, name): var {
         const de = DesktopEntries.heuristicLookup(name)
         const startupClass = de?.startupClass ? String(de.startupClass) : ""
@@ -280,7 +268,6 @@ Singleton {
         return best
     }
 
-    // resolve notif → source window: PID chain → desktop-entry → appName; ties fall back to most-recently-focused of that app
     function _matchNotificationClient(notification): var {
         if (!notification) return null
 
@@ -291,23 +278,19 @@ Singleton {
         const pidHint = root._senderPid(notification)
         const deHint  = root._norm(notification.desktopEntry || hints["desktop-entry"] || "")
 
-        // 1. sender PID ancestry — catches notify-send/shell children by walking up to the client
         const pidMatch = root._clientFromPidChain(clients, pidHint)
         if (pidMatch && pidMatch.wsId >= 0) return pidMatch
 
-        // 2. desktop-entry hint → window class.
         if (deHint.length > 0) {
             const bestDesktop = root._chooseMatchingSource(clients, c => root._classMatches(c, deHint))
             if (bestDesktop && bestDesktop.wsId >= 0) return bestDesktop
         }
 
-        // 3. appName, directly against window classes.
         const appName = String(notification.appName || "")
         if (appName.length === 0) return null
 
         let bestApp = root._chooseMatchingSource(clients, c => root._appMatches(c, appName))
 
-        // 4. desktop-entry database, the same resolution the workspace icons use.
         if (!bestApp)
             bestApp = root._resolveByDesktopEntry(clients, appName)
 
@@ -319,13 +302,11 @@ Singleton {
         if (c) Compositor.focusToplevel(c)
     }
 
-    // Workspace id (as shown in the bar) of the notification's source window, or -1.
     function notificationSourceWorkspace(notification): int {
         const c = root._matchNotificationClient(notification)
         return c ? (c.wsId ?? -1) : -1
     }
 
-    // jump to the media window; matches player name → browser family → song title
     function focusMediaPlayer(playerName: string, songTitle: string): void {
         const clients = root._clients()
         if (clients.length === 0) return
@@ -353,7 +334,6 @@ Singleton {
         if (best) Compositor.focusToplevel(best)
     }
 
-    // many SNIs (Spotify) expose no Activate, so match id/title/tooltip → class → desktop-entry db; false when no live window
     function focusTrayItem(id: string, title: string, tooltip: string): bool {
         const clients = root._clients()
         if (clients.length === 0) return false
@@ -361,12 +341,10 @@ Singleton {
         const hints = [id, title, tooltip].filter(s => s && String(s).length > 0)
         let best = null
 
-        // 1. id / title / tooltip straight against window classes.
         for (let i = 0; i < hints.length && !best; i++)
             best = root._chooseMatchingSource(clients, c =>
                 root._classMatches(c, hints[i]) || root._appMatches(c, hints[i]))
 
-        // 2. desktop-entry database.
         for (let i = 0; i < hints.length && !best; i++)
             best = root._resolveByDesktopEntry(clients, hints[i])
 

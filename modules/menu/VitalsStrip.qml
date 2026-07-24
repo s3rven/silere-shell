@@ -18,22 +18,18 @@ Rectangle {
     border.width: 1
     border.color: Theme.menuCardBorder
 
-    // KPI column: value stacked over its label, gauge underneath — no dead space between label and value
     component Vital: Item {
         id: tile
 
         property string glyph: ""
         property string label: ""
         property string value: ""
-        // secondary reading (CPU temp) rendered smaller and muted beside the value
         property string sub: ""
         property real   progress: 0
-        // 0 ok, 1 warning, 2 critical
         property int    status: 0
         property real   pulse: 0
         property bool   live: true
         property bool   divider: true
-        // sides facing a divider get extra air; card-edge sides stay on the page rows' 14px inset
         readonly property int padL: divider ? 18 : 14
         property int          padR: 18
 
@@ -126,7 +122,6 @@ Rectangle {
             }
         }
 
-        // Baseline gauge: slider-language accent fill at rest, status-coloured for warning cells.
         Rectangle {
             anchors.left: parent.left;   anchors.leftMargin: tile.padL
             anchors.right: parent.right; anchors.rightMargin: tile.padR
@@ -148,7 +143,6 @@ Rectangle {
         }
     }
 
-    // no horizontal inset: each column carries the page rows' own 14px text inset
     Row {
         id: _grid
         y: root._pad

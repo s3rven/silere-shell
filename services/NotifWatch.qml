@@ -4,12 +4,9 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// one-shot startup diagnostic: if another daemon (mako/dunst/swaync) owns org.freedesktop.Notifications,
-// silere's server is queued and sees nothing. surfaces the culprit; OsdBarState watches `conflict` to flash a warning
 Singleton {
     id: root
 
-    // Non-empty = a rival daemon owns the bus name; holds its process name.
     property string conflict: ""
     property bool   _checked: false
     readonly property bool armed: SystemTools.hasBusctl

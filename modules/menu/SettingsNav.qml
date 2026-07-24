@@ -14,12 +14,8 @@ Item {
 
     signal currentPageRetapped()
 
-    // The open category is separate from the selected page: users can inspect
-    // another category without the detail pane jumping to its first entry.
     property int _expandedGroup: _groupIndexForSection(MenuState.settingsSection)
 
-    // Final tree height, so the popup floor does not follow every frame of a
-    // disclosure animation.
     implicitHeight: _navContentHeight()
 
     readonly property int _navTop:       8
@@ -108,8 +104,6 @@ Item {
         const margin = 7
         const maxY = Math.max(0, contentH - viewH)
         let target = _navScroll.contentY
-        // If the disclosed category is taller than the viewport, keep its
-        // header visible instead of bottom-aligning it out of view.
         if (bottom - top > viewH - margin * 2) target = top - margin
         else if (top - margin < target) target = top - margin
         else if (bottom + margin > target + viewH)

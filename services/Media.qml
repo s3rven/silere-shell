@@ -31,7 +31,6 @@ Singleton {
         && (player.playbackState !== MprisPlaybackState.Stopped || title.length > 0)
     readonly property bool playing: player ? player.isPlaying : false
 
-    // capability props live here so every consumer shares one tracked binding to the current player
     readonly property bool canTogglePlaying: player ? player.canTogglePlaying : false
     readonly property bool canGoNext:        player ? player.canGoNext : false
     readonly property bool canGoPrevious:    player ? player.canGoPrevious : false
@@ -51,7 +50,6 @@ Singleton {
     Timer { id: _pauseTimer; interval: 5000;  onTriggered: _hideTimer.start() }
     Timer { id: _hideTimer;  interval: 10000; onTriggered: root.shown = false  }
 
-    // anchor-extrapolate: MPRIS only reports position on change, so we record it + a timestamp and drift forward
     readonly property real length:      (player && player.lengthSupported) ? Math.max(0, player.length) : 0
     readonly property bool canSeek:     player ? player.canSeek : false
     readonly property bool hasPosition: player !== null && player.positionSupported && length > 0
@@ -120,7 +118,6 @@ Singleton {
     function _syncStableArt(): void {
         if (root.artUrl.length > 0) root.stableArtUrl = root.artUrl
         else if (!root.available)   root.stableArtUrl = ""
-        // else: player active, artUrl transiently empty — hold current art
     }
     onArtUrlChanged: _syncStableArt()
     onTitleChanged: { _reanchor(); _syncStableArt() }
@@ -216,8 +213,6 @@ Singleton {
     readonly property string _cavaConfigText:
         "[general]\n" +
         "bars = " + _cavaBars + "\n" +
-        // A stale MPRIS player can remain "playing" without producing audio.
-        // Let CAVA suspend its FFT after two quiet seconds and wake itself later.
         "sleep_timer = 2\n" +
         "framerate = " + _cavaFps + "\n" +
         "autosens = 1\n" +
@@ -255,7 +250,6 @@ Singleton {
         _cavaConfig.setText(root._cavaConfigText)
     }
 
-    // profile change bounces cava (ready false now, rewritten next tick) so it re-reads the new bars/fps
     on_CavaProfileKeyChanged: if (root._visualizerClients > 0) {
         root._cavaConfigReady = false
         _cavaConfigSync.restart()
@@ -276,7 +270,6 @@ Singleton {
         onSaveFailed: root._cavaConfigReady = false
     }
 
-    // debounce on the stop side so brief alt-tabs don't restart cava
     property bool _fsBlocked: false
     readonly property bool _fullscreenPauseWanted: ShellSettings.mediaProgress
     Connections {

@@ -13,7 +13,6 @@ Singleton {
     property alias missedCount: _persist.missedCount
     property var _seen:  ({})
     property var _times: ({})
-    // last content-update stamp; drives the popup dwell, not persisted
     property var _updateTimes: ({})
     property bool _persistentReady: false
     readonly property int _maxHistory: 20
@@ -64,7 +63,6 @@ Singleton {
         _persist.historyJson = JSON.stringify(out)
     }
 
-    // popups use the live ObjectModel so new cards don't cause a full Repeater rebuild
     readonly property var popupModel: notifServer.trackedNotifications
 
     function _ensurePersistentState(): void {
@@ -91,7 +89,6 @@ Singleton {
         }
         root._seen = savedSeen && typeof savedSeen === "object" && !Array.isArray(savedSeen) ? savedSeen : ({})
         root._times = savedTimes && typeof savedTimes === "object" && !Array.isArray(savedTimes) ? savedTimes : ({})
-        // last: the writes above must not echo back out to disk while restoring
         root._persistentReady = true
     }
 
@@ -138,7 +135,6 @@ Singleton {
         }
     }
 
-    // when the dwell should start counting: the latest content update, else arrival
     function updateTimeFor(id: int): real {
         const v = root._updateTimes[String(id)]
         return v !== undefined ? v : root.timeFor(id)
@@ -166,12 +162,11 @@ Singleton {
         // PersistentProperties survives a QML engine replacement. Keep JS
         // arrays/maps serialized so values never cross into the new engine.
         property string historyJson: "[]"
-        property string seenJson:  "{}"  // prevents shimmer replay on delegate rebuilds
-        property string timesJson: "{}"  // pins arrival timestamps
+        property string seenJson:  "{}"
+        property string timesJson: "{}"
     }
 
     signal sourcePulse(int wsId, bool critical)
-    // a replacement restarts the dwell; _times keeps the original arrival for the caption
     signal contentUpdated(int notifId)
 
     readonly property bool _fullscreenWatchWanted: ShellSettings.notifFullscreenSilence
@@ -184,7 +179,6 @@ Singleton {
     function refreshFullscreenState(): void { Compositor.refreshToplevels() }
     function toggleDnd(): void { dnd = !dnd }
 
-    // auto DND across the quiet-hours window; re-evaluates as the hour rolls (bound int, no timer)
     readonly property bool _quietActive: {
         if (!ShellSettings.dndSchedule) return false
         const from = ShellSettings.dndFrom, to = ShellSettings.dndTo
@@ -192,11 +186,8 @@ Singleton {
         const h = DateTime.hour24
         return from < to ? (h >= from && h < to) : (h >= from || h < to)
     }
-    // What actually silences popups: the manual toggle OR a scheduled quiet hour.
     readonly property bool effectiveDnd: dnd || _quietActive
     readonly property bool _silencingActive: effectiveDnd || fullscreenSilenced
-    // Clear only after every silencing reason ends. Turning manual DND off
-    // during quiet hours, or while fullscreen, must not erase the count early.
     on_SilencingActiveChanged: { if (!_silencingActive && missedCount !== 0) missedCount = 0 }
     function markSeen(id: int): void {
         root._ensurePersistentState()
@@ -220,8 +211,6 @@ Singleton {
     }
 
     function _notificationHistoryEntry(notification, id: int, time: real): var {
-        // The spec marks transient notifications as ineligible for any
-        // persistence surface, including Silere's in-memory history.
         if (!notification || notification.transient) return null
         return {
             id:      id,
@@ -240,8 +229,6 @@ Singleton {
         return root._notificationHistoryEntry(e.notification, e.id, root._times[e.id] ?? e.time)
     }
 
-    // Insert newest-first, but replace an existing replaces_id snapshot rather
-    // than filling history with every progress/message update.
     function _archiveNotification(notification, id: int, time: real): bool {
         const entry = root._notificationHistoryEntry(notification, id, time)
         if (!entry) return false
@@ -290,7 +277,6 @@ Singleton {
         if (list.length === 0 && lastCritical) lastCritical = false
     }
 
-    // strip Pango/HTML markup some apps send despite no-markup being advertised
     function plainText(s): string {
         if (!s) return ""
         return String(s)
@@ -378,7 +364,6 @@ Singleton {
             n.closed.connect(() => root._onClosed(n.id, n))
         }
         if (rebuilt.length > 0) root.list = rebuilt
-        // purge ids that closed while the shell was down
         const nextSeen = root._cloneMap(root._seen)
         let seenChanged = false
         for (const id in nextSeen) {
@@ -404,15 +389,12 @@ Singleton {
         bodySupported:       true
         bodyMarkupSupported: false
         actionsSupported:    true
-        // unset flag makes apps downgrade their content
         imageSupported:       true
         persistenceSupported: true
 
         onNotification: (n) => {
             root._ensurePersistentState()
             if (root.effectiveDnd && n.urgency !== NotificationUrgency.Critical) {
-                // DND suppresses the interruption, not the user's ability to
-                // review it later. Replacements update one history entry.
                 if (root._archiveNotification(n, n.id, Date.now()) || n.transient)
                     root.missedCount++
                 n.tracked = false
@@ -424,16 +406,11 @@ Singleton {
                 n.tracked = false
                 return
             }
-            // No popup surface exists at all with popups off, so nothing would ever
-            // expire these or write them to history — archive here instead of
-            // tracking them forever. Urgency earns no exemption: there is no card
-            // for a critical to appear on either.
             if (!ShellSettings.notifPopupEnabled) {
                 root._archiveNotification(n, n.id, Date.now())
                 n.tracked = false
                 return
             }
-            // Stamp arrival time once per id; a content update keeps the original.
             const arrivalTime = root._ensureTime(n.id)
             root.lastCritical = n.urgency === NotificationUrgency.Critical
 
@@ -459,7 +436,6 @@ Singleton {
             // connect once per object — stacked handlers fire _onClosed twice
             if (isNewObject) n.closed.connect(() => root._onClosed(n.id, n))
             n.tracked = true
-            // a reused object builds no new delegate, so nothing would restart its dwell
             if (existing >= 0 && !isNewObject) root.contentUpdated(n.id)
 
             if (ShellSettings.wsNotifPulse) {

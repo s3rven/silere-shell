@@ -7,8 +7,6 @@ import "../../config"
 import "../../services"
 import "../common"
 
-// quick actions under the workspace diamond (right-click): one-tap toggles that don't warrant the full menu.
-// rows stay open after a flip so the state reads; Escape/outside tap closes. render-only while open.
 PanelWindow {
     id: win
 
@@ -38,12 +36,10 @@ PanelWindow {
         target: ShellSettings
         function onBarPositionChanged() { if (QuickActionsState.open) QuickActionsState.close() }
     }
-    // both anchor under the diamond — the full menu supersedes
     Connections {
         target: MenuState
         function onOpenChanged() { if (MenuState.open && QuickActionsState.open) QuickActionsState.close() }
     }
-    // power profile is deliberately read-on-open, no monitor process
     Connections {
         target: QuickActionsState
         function onOpenChanged() {
@@ -68,7 +64,6 @@ PanelWindow {
         }
     }
 
-    // Floating drop shadow, same elevation cue as the bar/calendar/tray menu.
     Loader {
         active: (QuickActionsState.open || card.opacity > 0.001)
             && ShellSettings.barFloating && ShellSettings.barShadow
@@ -254,7 +249,6 @@ PanelWindow {
         width: contentW + pad * 2
         height: _rows.implicitHeight + pad * 2
 
-        // The card holds focus on open (paints nothing); Down/Tab enters rows.
         function _focusFirstRow(): void {
             const sibs = _rows.children
             for (let k = 0; k < sibs.length; k++) {
@@ -297,7 +291,6 @@ PanelWindow {
                 onTriggered: PowerProfiles.cycle()
             }
             QuickActionRow {
-                // airplane = every controllable radio off; toggling flips them together
                 readonly property bool _wifiCtl: Network.toolAvailable && Network.hasWifiDevice
                 readonly property bool _btCtl:   Bluetooth.available
                 readonly property bool _anyOn:   (_wifiCtl && Network.wifiEnabled) || (_btCtl && Bluetooth.enabled)

@@ -55,7 +55,6 @@ Item {
         anchors.rightMargin: 10
         anchors.top:        parent.top
         anchors.topMargin:  8
-        // fixed head height so the track's position can't drift with the font's line height
         height: 20
         clip: true
 
@@ -88,7 +87,6 @@ Item {
         }
     }
 
-    // reserve the widest common value so "9%"→"100%" can't shift the label edge mid-drag
     TextMetrics {
         id: _vm
         font.family: Settings.font
@@ -111,7 +109,6 @@ Item {
         renderType:     Text.NativeRendering
     }
 
-    // bottom-anchored (not chained under the head) so the thumb keeps clear of the card edge at every font
     SliderTrack {
         id: _track
         anchors.left:         parent.left

@@ -7,7 +7,6 @@ import "../../config"
 import "../../services"
 import "../common"
 
-// mirrors MenuWindow's full-screen mask so an outside tap dismisses without an exclusive zone
 PanelWindow {
     id: win
 
@@ -29,7 +28,6 @@ PanelWindow {
     WlrLayershell.namespace: "silere-calendar"
     WlrLayershell.keyboardFocus: CalendarState.open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
-    // unmap the full-screen surface while closed so it isn't holding a screen-sized GPU buffer at rest; stay mapped through the close anim, then drop
     visible: CalendarState.open || card.opacity > 0.001
 
     anchors { top: true; left: true; right: true; bottom: true }
@@ -98,16 +96,14 @@ PanelWindow {
 
         readonly property int  cell:     34
         readonly property int  pad:      14
-        readonly property int  weekCol:  22   // ISO week-number axis, left of the grid
+        readonly property int  weekCol:  22
         readonly property int  panelW:   weekCol + cell * 7 + pad * 2
 
-        // two month cursors: `disp*` leads (header, instant on nav), `shown*` trails.
-        // grid renders `shown*`, catches up at the slide mid-point so the swap reads as one motion.
         property int dispYear:  2000
         property int dispMonth: 0
         property int shownYear:  2000
         property int shownMonth: 0
-        property int navDir:     0      // -1 prev, +1 next — drives the slide direction
+        property int navDir:     0
 
         // "today" captured fresh on each open — the card persists, so a readonly `new Date()` binding would freeze at first build and highlight the wrong day forever
         property int    _todayY:      -1
@@ -116,24 +112,19 @@ PanelWindow {
         property int    _todayWeek:   -1
         property string todayWeekday: ""
 
-        // Monday-start.
-        readonly property int _firstJs:  new Date(shownYear, shownMonth, 1).getDay()   // 0 = Sun
+        readonly property int _firstJs:  new Date(shownYear, shownMonth, 1).getDay()
         readonly property int _lead:     (_firstJs + 6) % 7
         readonly property int _daysThis: new Date(shownYear, shownMonth + 1, 0).getDate()
         readonly property int _daysPrev: new Date(shownYear, shownMonth,     0).getDate()
         readonly property int _todayCell:
             (_todayY === shownYear && _todayM === shownMonth) ? _lead + _todayD - 1 : -1
-        // rows this month needs (4–6); avoids a permanent blank 6th row
         readonly property int _rowCount: Math.ceil((_lead + _daysThis) / 7)
-        // bound to the trailing cursor so the title swaps with the grid mid-slide
         readonly property string monthLabel: Qt.formatDateTime(new Date(shownYear, shownMonth, 1), "MMMM yyyy")
 
-        // ISO week for grid row r — column 0 is the row's Monday; JS normalises the offset.
         function _weekForRow(r: int): int {
             return DateTime.isoWeek(new Date(card.shownYear, card.shownMonth, 1 - card._lead + r * 7))
         }
 
-        // Snap both cursors (no slide), used on open so it just shows this month.
         function _snapToday(): void {
             const t = new Date()
             _todayY = t.getFullYear(); _todayM = t.getMonth(); _todayD = t.getDate()
@@ -143,7 +134,6 @@ PanelWindow {
             shownYear = _todayY; shownMonth = _todayM
             _gridSwap.stop(); _grid.opacity = 1; _grid.xOff = 0
         }
-        // Animated move to (y, m); dir picks the slide direction.
         function _go(y: int, m: int, dir: int): void {
             navDir = dir
             dispYear = y; dispMonth = m
@@ -176,7 +166,6 @@ PanelWindow {
                 } else _gridSwap.stop()
             }
         }
-        // keep "today" current if held open across midnight, without yanking the user back from a navigated month
         Connections {
             target: DateTime
             function onCachedDateCoreChanged() {
@@ -189,7 +178,6 @@ PanelWindow {
         }
         Component.onCompleted: card._snapToday()
 
-        // next moves the page left (content advances), prev moves it right.
         SequentialAnimation {
             id: _gridSwap
             ParallelAnimation {
@@ -215,7 +203,6 @@ PanelWindow {
         Accessible.role: Accessible.Pane
         Accessible.name: "Calendar"
 
-        // shift widens every month step to a year; _step already normalises the rollover
         function _span(event): int { return (event.modifiers & Qt.ShiftModifier) ? 12 : 1 }
 
         Keys.onLeftPressed:  event => { card._step(-card._span(event)); event.accepted = true }
@@ -349,7 +336,7 @@ PanelWindow {
 
             Row {
                 width: parent.width
-                Item { width: card.weekCol; height: 22 }   // week-axis header slot
+                Item { width: card.weekCol; height: 22 }
                 Repeater {
                     model: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
                     delegate: Item {
@@ -360,7 +347,7 @@ PanelWindow {
                         Text {
                             anchors.centerIn: parent
                             text: dayHdr.modelData
-                            color: Theme.withAlpha(Theme.subtext, dayHdr.index >= 5 ? 0.4 : 0.6)   // weekends quieter
+                            color: Theme.withAlpha(Theme.subtext, dayHdr.index >= 5 ? 0.4 : 0.6)
                             font.family: Settings.font; font.pixelSize: Settings.fontSize - 3
                             font.weight: Font.Medium; font.capitalization: Font.AllUppercase
                             renderType: Text.NativeRendering
@@ -369,7 +356,6 @@ PanelWindow {
                 }
             }
 
-            // Day grid: a month change re-evaluates cell bindings, no delegate churn.
             Item {
                 id: _gridWrap
                 width: parent.width
@@ -380,7 +366,6 @@ PanelWindow {
                     NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
                 }
 
-                // keyboard marks: one tab stop, arrows walk the month, Space toggles
                 property int kbdIndex: -1
                 readonly property int _kbdDay: kbdIndex - card._lead + 1
                 activeFocusOnTab: true
@@ -392,7 +377,6 @@ PanelWindow {
                 function _move(d: int): void {
                     kbdIndex = Math.max(card._lead, Math.min(card._lead + card._daysThis - 1, kbdIndex + d))
                 }
-                // month nav while focused: re-clamp so the ring can't sit on a spillover cell
                 Connections {
                     target: card
                     function onShownMonthChanged() { if (_gridWrap.kbdIndex >= 0) _gridWrap._move(0) }
@@ -411,7 +395,6 @@ PanelWindow {
                 Keys.onReturnPressed: e => _gridWrap._toggle(e)
                 Keys.onEnterPressed:  e => _gridWrap._toggle(e)
 
-                // ISO week axis — fixed reference the month slides beneath; fades with the grid swap so numbers change while invisible
                 Column {
                     id: _weekAxis
                     x: 0

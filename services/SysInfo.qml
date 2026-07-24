@@ -22,17 +22,15 @@ Singleton {
     readonly property string uptimeLabel: {
         if (uptimeSecs <= 0) return "—"
         const s = Math.floor(uptimeSecs)
-        if (s < 60) return s + "s"                       // fresh boot — show seconds, not "0m"
+        if (s < 60) return s + "s"
         const d = Math.floor(s / 86400)
         const h = Math.floor((s % 86400) / 3600)
         const m = Math.floor((s % 3600) / 60)
-        // two units at most — the third adds noise, not information
         if (d > 0) return d + "d " + h + "h"
         if (h > 0) return h + "h " + m + "m"
         return m + "m"
     }
 
-    // system stats only show on the Now page, so poll only while that tab's visible
     property bool _active: false
     readonly property bool _wanted: MenuState.open && MenuState.activeTab === 0 && !Idle.isIdle
 
@@ -59,7 +57,6 @@ Singleton {
     // Created lazily on first open, after open already flipped true, catch that missed edge.
     Component.onCompleted: if (_wanted) _startDelay.restart()
 
-    // Small delay so the loop isn't spawned during the open animation.
     Timer { id: _startDelay; interval: 120; onTriggered: root._activate() }
 
     Timer {

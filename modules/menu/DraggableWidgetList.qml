@@ -4,8 +4,6 @@ import QtQuick
 import "../../config"
 import "../../services"
 
-// Placement and visibility only. Widget-specific options live in their
-// relevant settings sections so this editor stays fast and uncluttered.
 Item {
     id: root
 
@@ -319,8 +317,6 @@ Item {
                 cursorShape: _drag.active ? Qt.ClosedHandCursor : Qt.OpenHandCursor
             }
 
-            // The row is the drag surface. Child taps (such as the visibility
-            // switch) still win when the pointer does not cross the drag threshold.
             DragHandler {
                 id: _drag
                 target: null

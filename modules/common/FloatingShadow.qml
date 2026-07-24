@@ -4,16 +4,12 @@ import QtQuick
 import QtQuick.Effects
 import "../../services"
 
-// Shared single-pass elevation cue for floating cards, pills, popups, and the bar.
-// One broad, slightly displaced shadow reads as both ambient and contact depth
-// without paying for two full-screen blur nodes per surface.
 Item {
     id: root
 
     required property real radius
     required property bool atBottom
 
-    // Larger surfaces (the bar) can spread the shadow a little wider.
     property real blur:   12
     property real offset: 4
 

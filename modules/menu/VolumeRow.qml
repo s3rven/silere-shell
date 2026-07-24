@@ -4,7 +4,6 @@ import QtQuick
 import "../../config"
 import "../../services"
 
-// volume slider with an inline output-device dropdown: the chevron expands the device list beneath the slider, in the card. option styling mirrors SelectRow
 Item {
     id: root
 
@@ -37,7 +36,6 @@ Item {
         if (item) item.forceActiveFocus()
     }
 
-    // Fold the dropdown away if the extra devices vanish.
     Connections {
         target: Audio
         function onSinkCountChanged() { if (Audio.sinkCount <= 1) root.open = false }

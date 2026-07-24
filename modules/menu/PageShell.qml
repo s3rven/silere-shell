@@ -44,7 +44,6 @@ Item {
         if (!MenuState.open) root._announceHidden()
     }
 
-    // Opening appears with the popup's fade; tab switches only crossfade.
     property bool _menuOpenSettled: false
     Connections {
         target: MenuState

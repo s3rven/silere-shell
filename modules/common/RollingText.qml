@@ -2,14 +2,12 @@ import QtQuick
 import "../../config"
 import "../../services"
 
-// for slow tickers (clock minute, date), not per-second
 Item {
     id: root
 
     property string text: ""
     property color  color: Theme.text
 
-    // clip only mid-roll — at rest text fits its box, so no permanent clip pass on the bar
     clip: _roll.running
     anchors.verticalCenter: parent ? parent.verticalCenter : undefined
     // Whole px so neighbours in a Row don't land on fractional pixels.
@@ -17,10 +15,8 @@ Item {
     implicitHeight: _main.implicitHeight
     width:  implicitWidth
     height: implicitHeight
-    // Smooth the rare width change (9:59 → 10:00) so the row glides, not jumps.
     Behavior on width { NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
 
-    // travel scales with the line so it reads the same at any font size
     readonly property real _dist: Math.max(6, implicitHeight * 0.6)
 
     property string _shown: ""
@@ -30,7 +26,7 @@ Item {
     onTextChanged: {
         if (_shown === text) return
         if (!_ready || ShellSettings.reduceMotion) { _shown = text; return }
-        _ghost.text = _shown   // snapshot the outgoing string
+        _ghost.text = _shown
         _shown = text
         _roll.restart()
     }
