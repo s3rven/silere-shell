@@ -21,6 +21,7 @@ Column {
         }
         SelectRow {
             glyph: "󰻂"; label: "Separator"
+            description: "Symbol shown between widget groups"
             currentValue: ShellSettings.dotStyle
             model: [
                 { value: "·",     label: "Dot ·"     },

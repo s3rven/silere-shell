@@ -9,12 +9,17 @@ Item {
 
     property string glyph:       ""
     property string label:       ""
+    property string description: ""
     property var    model:       []
     property var    currentValue
     property real   topRadius:    0
     property real   bottomRadius: 0
     property real   cardInset:    1
     readonly property int _optionsCapH: 224  // six rows plus list padding
+    readonly property bool _hasDesc: description.length > 0
+    readonly property int _headerH: _hasDesc
+        ? Math.max(56, 4 * Math.ceil((20 + _headerText.implicitHeight) / 4))
+        : 44
 
     signal chosen(var value)
 
@@ -67,7 +72,7 @@ Item {
     }
 
     width:  parent ? parent.width : 0
-    height: 44 + _options.height
+    height: _headerH + _options.height
     implicitHeight: height
     opacity: enabled ? 1.0 : 0.45
     Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium } }
@@ -75,7 +80,8 @@ Item {
     activeFocusOnTab: root.enabled
     Accessible.role: Accessible.ComboBox
     Accessible.name: root.label
-    Accessible.description: root._activeLabel
+    Accessible.description: root.description.length > 0
+        ? root.description + ". " + root._activeLabel : root._activeLabel
     Accessible.onPressAction: root._toggleOpen()
     Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root._toggleOpen(); event.accepted = true }
     Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._toggleOpen(); event.accepted = true }
@@ -97,7 +103,7 @@ Item {
 
     RowHoverBg {
         width:  parent.width
-        height: 44
+        height: root._headerH
         topRadius:    root.topRadius
         bottomRadius: root._open ? 0 : root.bottomRadius
         cardInset:    root.cardInset
@@ -123,19 +129,39 @@ Item {
         anchors.top:    parent.top
         anchors.left:   _glyph.right; anchors.leftMargin: root.glyph.length > 0 ? 10 : 0
         anchors.right:  _chevronSlot.left; anchors.rightMargin: 10
-        height: 44
-        Text {
-            id: _label
-            anchors.left:           parent.left
+        height: root._headerH
+        Column {
+            id: _headerText
+            anchors.left: parent.left
+            anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            text:       root.label
-            textFormat: Text.PlainText
-            elide:      Text.ElideRight
-            width:      parent.width
-            color:      Theme.withAlpha(Theme.text, 0.85)
-            font.family:    Settings.font
-            font.pixelSize: Settings.fontSize
-            renderType:     Text.NativeRendering
+            spacing: 2
+
+            Text {
+                id: _label
+                width: parent.width
+                text: root.label
+                textFormat: Text.PlainText
+                elide: Text.ElideRight
+                color: Theme.withAlpha(Theme.text, 0.85)
+                font.family: Settings.font
+                font.pixelSize: Settings.fontSize
+                renderType: Text.NativeRendering
+            }
+            Text {
+                visible: root._hasDesc
+                width: parent.width
+                text: root.description
+                textFormat: Text.PlainText
+                wrapMode: Text.WordWrap
+                maximumLineCount: 2
+                elide: Text.ElideRight
+                color: Theme.withAlpha(Theme.subtext, 0.52)
+                font.family: Settings.font
+                font.pixelSize: Math.max(8, Settings.fontSize - 2)
+                lineHeight: 1.1
+                renderType: Text.NativeRendering
+            }
         }
     }
     // Right slot: current value label + chevron
@@ -195,7 +221,7 @@ Item {
 
     Flickable {
         id: _options
-        anchors.top:  parent.top; anchors.topMargin: 44
+        anchors.top:  parent.top; anchors.topMargin: root._headerH
         anchors.left: parent.left
         anchors.right: parent.right
 
@@ -214,8 +240,8 @@ Item {
         Behavior on height {
             enabled: !ShellSettings.reduceMotion
             NumberAnimation {
-                duration:    root._open ? Motion.normal : Motion.fast
-                easing.type: Easing.OutCubic
+                duration: root._open ? Motion.medium : Motion.fast
+                easing.type: root._open ? Easing.OutQuart : Easing.InCubic
             }
         }
 
@@ -237,7 +263,7 @@ Item {
                 enabled: !ShellSettings.reduceMotion
                 NumberAnimation {
                     duration: Motion.fast
-                    easing.type: Easing.OutCubic
+                    easing.type: root._open ? Easing.OutCubic : Easing.InCubic
                 }
             }
 
@@ -367,7 +393,7 @@ Item {
         id: _scrollThumb
         anchors.right: parent.right
         anchors.rightMargin: 3
-        y: 48 + (_options.height - 8 - height)
+        y: root._headerH + 4 + (_options.height - 8 - height)
             * (_options.contentY / Math.max(1, _options.contentHeight - _options.height))
         width: 2
         height: Math.max(18, (_options.height - 8) * _options.height
