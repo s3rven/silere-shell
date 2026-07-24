@@ -17,7 +17,13 @@ Column {
     Item {
         width: 1
         height: root.open ? root.gap : 0
-        Behavior on height { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+        Behavior on height {
+            enabled: !ShellSettings.reduceMotion
+            NumberAnimation {
+                duration: Motion.medium
+                easing.type: root.open ? Easing.OutQuart : Easing.InCubic
+            }
+        }
     }
 
     CollapsibleSection {
