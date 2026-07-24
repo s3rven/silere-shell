@@ -94,11 +94,11 @@ Singleton {
     }
 
     // live neutral toplevels; each carries appId/cls/initialClass/title/pid/ref/wsId/wsRef
-    function _clients() {
+    function _clients(): var {
         return Compositor.toplevels || []
     }
 
-    function _hereWorkspaceRef() {
+    function _hereWorkspaceRef(): int {
         return Compositor.focusedWorkspaceRef
     }
 
@@ -117,11 +117,11 @@ Singleton {
         return root._norm(value).replace(/[^a-z0-9]/g, "")
     }
 
-    function _chooseSource(pool) {
+    function _chooseSource(pool): var {
         return root._chooseMatchingSource(pool || [], function() { return true })
     }
 
-    function _chooseMatchingSource(clients, matches) {
+    function _chooseMatchingSource(clients, matches): var {
         const hereRef = root._hereWorkspaceRef()
         let bestAny = null
         let bestElsewhere = null
@@ -140,7 +140,7 @@ Singleton {
         return bestElsewhere || bestAny
     }
 
-    function _pidMatches(clients, pid) {
+    function _pidMatches(clients, pid): var {
         const out = []
         for (let i = 0; i < clients.length; i++) {
             const c = clients[i]
@@ -218,7 +218,7 @@ Singleton {
         return -1
     }
 
-    function _clientFromPidChain(clients, pid) {
+    function _clientFromPidChain(clients, pid): var {
         let p = root._toPid(pid)
         const seen = ({})
 
@@ -268,7 +268,7 @@ Singleton {
     ]
 
     // display names ("Spotify") whose window class only the .desktop file knows
-    function _resolveByDesktopEntry(clients, name) {
+    function _resolveByDesktopEntry(clients, name): var {
         const de = DesktopEntries.heuristicLookup(name)
         const startupClass = de?.startupClass ? String(de.startupClass) : ""
         const desktopId    = de?.id ? String(de.id) : ""
@@ -281,7 +281,7 @@ Singleton {
     }
 
     // resolve notif → source window: PID chain → desktop-entry → appName; ties fall back to most-recently-focused of that app
-    function _matchNotificationClient(notification) {
+    function _matchNotificationClient(notification): var {
         if (!notification) return null
 
         const clients = root._clients()

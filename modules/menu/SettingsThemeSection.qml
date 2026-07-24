@@ -8,7 +8,7 @@ Column {
     width: parent ? parent.width : 0
     spacing: 0
 
-    function _hex2(v) {
+    function _hex2(v): string {
         const s = Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16)
         return s.length < 2 ? "0" + s : s
     }
@@ -37,7 +37,7 @@ Column {
                 height: 104
 
                 readonly property real _accentL: 0.70
-                function _accentForHS(h, s) {
+                function _accentForHS(h, s): string {
                     const c = Qt.hsla(h, s, _accentL, 1.0)
                     return "#" + root._hex2(c.r) + root._hex2(c.g) + root._hex2(c.b)
                 }

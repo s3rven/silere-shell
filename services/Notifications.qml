@@ -291,7 +291,7 @@ Singleton {
     }
 
     // strip Pango/HTML markup some apps send despite no-markup being advertised
-    function plainText(s) {
+    function plainText(s): string {
         if (!s) return ""
         return String(s)
             .replace(/<\/?(b|i|u|a|span|small|big|tt|markup|sub|sup|s)\b[^>]*>/gi, "")

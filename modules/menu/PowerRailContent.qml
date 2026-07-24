@@ -39,7 +39,7 @@ Item {
         }
     }
 
-    function _firstAction() {
+    function _firstAction(): var {
         if (_powLock.enabled) return _powLock
         if (_powSusp.enabled) return _powSusp
         if (_powReb.enabled)  return _powReb
@@ -47,7 +47,7 @@ Item {
         return null
     }
 
-    function _lastAction() {
+    function _lastAction(): var {
         if (_powOff.enabled)  return _powOff
         if (_powReb.enabled)  return _powReb
         if (_powSusp.enabled) return _powSusp
@@ -55,7 +55,7 @@ Item {
         return null
     }
 
-    function _navRows() {
+    function _navRows(): var {
         const rows = []
         if (_powMode.visible && _powMode.enabled) rows.push(_powMode)
         if (_powLock.enabled) rows.push(_powLock)
@@ -65,7 +65,7 @@ Item {
         return rows
     }
 
-    function _rowAfter(row, dir: int) {
+    function _rowAfter(row, dir: int): var {
         const rows = _navRows()
         if (rows.length === 0) return row
         const idx = rows.indexOf(row)

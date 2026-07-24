@@ -48,7 +48,7 @@ Item {
         function onEnabledChanged() { root._syncScanState() }
     }
 
-    function _devGlyph(icon) {
+    function _devGlyph(icon): string {
         const s = (icon || "").toLowerCase()
         if (s.indexOf("headset") >= 0 || s.indexOf("headphone") >= 0 || s.indexOf("audio") >= 0) return "󰋋"
         if (s.indexOf("mouse") >= 0)    return "󰍽"

@@ -56,7 +56,7 @@ Canvas {
     property real  _pulseG: -1
     property real  _pulseB: -1
 
-    function _pulseFill(ctx, glowH, ac) {
+    function _pulseFill(ctx, glowH, ac): var {
         if (_pulseH !== height || _pulseR !== ac.r || _pulseG !== ac.g || _pulseB !== ac.b) {
             _pulseFills = []
             _pulseH = height

@@ -22,7 +22,7 @@ PanelWindow {
     property var _activeMenu: null
     property bool _rootOpenedSent: false
 
-    function _menuRoot() {
+    function _menuRoot(): var {
         return win._activeMenu?.menu ?? win._activeMenu
     }
     function _emitMenuSignal(entry, signalName: string, fallbackName: string): bool {

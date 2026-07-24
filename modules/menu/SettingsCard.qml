@@ -35,7 +35,7 @@ Rectangle {
 
     RowDividers { column: col; lineColor: root.rowDivider }
 
-    function _edgeEl(container, first) {
+    function _edgeEl(container, first): var {
         const ch = container.children
         const end  = first ? ch.length : -1
         const step = first ? 1 : -1
