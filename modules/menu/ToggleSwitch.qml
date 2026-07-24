@@ -9,8 +9,8 @@ Item {
 
     property bool checked: false
     property color accentColor: Theme.accent
-    implicitWidth:  34
-    implicitHeight: 18
+    implicitWidth:  38
+    implicitHeight: 20
 
     property bool _animateX: false
     function armFlipAnimation(): void {
@@ -21,7 +21,7 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        radius: 9; antialiasing: true
+        radius: 10; antialiasing: true
         color: root.checked
             ? Theme.mix(Theme.menuControl, root.accentColor, ShellSettings.neutralTheme ? 0.22 : 0.38)
             : Theme.menuControl
@@ -36,7 +36,7 @@ Item {
         Rectangle {
             id: _knob
             anchors.verticalCenter: parent.verticalCenter
-            width: 14; height: 14; radius: 7
+            width: 16; height: 16; radius: 8
             antialiasing: true
             x:     root.checked ? parent.width - width - 2 : 2
             color: root.checked ? root.accentColor : Theme.mix(Theme.subtext, root.accentColor, 0.16)

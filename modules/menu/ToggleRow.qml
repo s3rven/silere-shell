@@ -25,7 +25,7 @@ Item {
                                             && (!root.enabled || !root.available)
     readonly property real _noteW: _showDependsNote
         ? Math.min(_noteText.implicitWidth, Math.max(46, root.width * 0.26)) : 0
-    readonly property real _rightSlotW: 34 + (_showDependsNote ? _noteW + 8 : 0)
+    readonly property real _rightSlotW: 38 + (_showDependsNote ? _noteW + 8 : 0)
     readonly property string _accessibleDescription: {
         const parts = []
         if (root.description.length > 0) parts.push(root.description)
@@ -143,14 +143,14 @@ Item {
         anchors.rightMargin:    12
         anchors.verticalCenter: parent.verticalCenter
         width: root._rightSlotW
-        height: 18
+        height: 20
 
         ToggleSwitch {
             id: _toggle
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            width: 34
-            height: 18
+            width: 38
+            height: 20
             checked: root.checked
         }
 

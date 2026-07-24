@@ -249,7 +249,7 @@ Item {
         anchors.rightMargin:    12
         anchors.verticalCenter: parent.verticalCenter
         height: 20
-        readonly property real _ctrlW: root.showSwitch ? 34
+        readonly property real _ctrlW: root.showSwitch ? 38
                                      : (root.valueText.length > 0 ? Math.ceil(_valMetrics.advanceWidth) : 0)
         width: (_chevron.visible ? _chevron.width + 8 : 0) + _ctrlW
 
