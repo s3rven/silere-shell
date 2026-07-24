@@ -186,6 +186,23 @@ PanelWindow {
         property bool _loadedDeferred: false
         property bool _settingsLoaded: false
         property bool _recentLoaded:   false
+        property bool _geometryReady:  false
+
+        Component.onCompleted: Qt.callLater(function() {
+            panel._geometryReady = true
+        })
+
+        function _settlePageVisuals(): void {
+            if (homeLoader.item) homeLoader.item.settleVisual(activeTab === 0)
+            if (settingsLoader.item) settingsLoader.item.settleVisual(activeTab === 1)
+            if (recentLoader.item) recentLoader.item.settleVisual(activeTab === 2)
+        }
+
+        onCloseFinished: {
+            if (open) return
+            _settlePageVisuals()
+            powerOpen = false
+        }
 
         function _ownsItem(item, ancestor): bool {
             let current = item
@@ -254,6 +271,7 @@ PanelWindow {
                 if (MenuState.activeTab === 1) panel._settingsLoaded = true
                 if (MenuState.activeTab === 2) panel._recentLoaded = true
                 contentFlick.contentY = 0
+                if (!MenuState.open) panel._settlePageVisuals()
             }
             function onOpenChanged() {
                 if (MenuState.open) {
@@ -298,10 +316,23 @@ PanelWindow {
         width:  panelW
         height: targetPanelH
 
+        Behavior on width {
+            enabled: panel._geometryReady && panel.open
+                && !ShellSettings.reduceMotion
+            NumberAnimation { duration: Motion.panelResize; easing.type: Easing.OutQuart }
+        }
+        Behavior on height {
+            enabled: panel._geometryReady && panel.open
+                && !ShellSettings.reduceMotion
+            SmoothedAnimation {
+                velocity: Motion.panelVelocity
+                maximumEasingTime: Motion.panelHeight
+                reversingMode: SmoothedAnimation.Sync
+            }
+        }
+
         onStateChanged: {
-            if (state === "hidden") {
-                powerOpen = false
-            } else {
+            if (state === "visible") {
                 if (activeTab === 1) _settingsLoaded = true
                 if (activeTab === 2) _recentLoaded = true
                 if (activeTab === 0) _homeLoaded = true
@@ -318,6 +349,12 @@ PanelWindow {
             height: panel.height
             clip: false  // allow hover pills to overflow into content area
             z: 6         // render above the content pane so pills aren't hidden
+
+            Behavior on width {
+                enabled: panel._geometryReady && panel.open
+                    && !ShellSettings.reduceMotion
+                NumberAnimation { duration: Motion.panelResize; easing.type: Easing.OutQuart }
+            }
 
             // background + divider live in a clipped sub-layer so the over-wide rounded background can't bleed past the rail edge; icons/pills stay unclipped
             Item {
@@ -398,7 +435,10 @@ PanelWindow {
 
                     Behavior on height {
                         enabled: !ShellSettings.reduceMotion
-                        NumberAnimation { duration: Motion.ms(170); easing.type: Easing.OutCubic }
+                        NumberAnimation {
+                            duration: Motion.panelHeight
+                            easing.type: panel.powerOpen ? Easing.OutQuart : Easing.InCubic
+                        }
                     }
                     Behavior on opacity {
                         enabled: !ShellSettings.reduceMotion
@@ -540,6 +580,12 @@ PanelWindow {
             width: panel.contentW
             clip: true
 
+            Behavior on x {
+                enabled: panel._geometryReady && panel.open
+                    && !ShellSettings.reduceMotion
+                NumberAnimation { duration: Motion.panelResize; easing.type: Easing.OutQuart }
+            }
+
             Rectangle {
                 x: -panel.radius
                 y: 0
@@ -576,8 +622,10 @@ PanelWindow {
                 boundsMovement: Flickable.StopAtBounds
                 flickDeceleration: 1800
                 maximumFlickVelocity: 2200
+                readonly property bool needsScroll:
+                    contentHeight > panel.targetPanelH + 1
                 // Notifications owns the only scroll surface on its tab; other pages use this outer scroller
-                interactive: !panel.powerOpen && panel.activeTab !== 2 && contentHeight > height + 1
+                interactive: !panel.powerOpen && panel.activeTab !== 2 && needsScroll
 
                 function clampToContent(): void {
                     const maxY = Math.max(0, contentHeight - height)
@@ -733,7 +781,7 @@ PanelWindow {
                 anchors.fill: contentFlick
                 list: contentFlick
                 fadeColor: Theme.menuPane
-                visible: panel.activeTab !== 2 && contentFlick.contentHeight > contentFlick.height + 1
+                visible: panel.activeTab !== 2 && contentFlick.needsScroll
                 z: 4
             }
 
@@ -757,7 +805,7 @@ PanelWindow {
                 color: Theme.accent
                 opacity: visible ? (contentFlick.moving ? 0.62 : 0.26) : 0
                 visible: !panel.powerOpen && panel.activeTab !== 2
-                    && contentFlick.contentHeight > contentFlick.height + 1
+                    && contentFlick.needsScroll
                 z: 5
 
                 Behavior on opacity {

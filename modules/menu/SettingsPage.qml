@@ -164,6 +164,7 @@ PageShell {
             id: _detailBody
             y:      _detailHeader.height + _detail._bodyGap
             width:  parent.width
+            height: item ? item.implicitHeight : 0
             sourceComponent: root._sectionComponents[root._shownSection] ?? _secSystem
 
         Component {

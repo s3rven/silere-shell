@@ -32,6 +32,14 @@ Item {
         root.pageHidden()
     }
 
+    function settleVisual(shown: bool): void {
+        _enter.stop()
+        _exit.stop()
+        root.opacity = shown ? 1.0 : 0.0
+        root._pageShift = 0
+        if (!MenuState.open) root._announceHidden()
+    }
+
     // Opening appears with the popup's fade; tab switches only crossfade.
     property bool _menuOpenSettled: false
     Connections {
