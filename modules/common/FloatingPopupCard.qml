@@ -17,17 +17,28 @@ Rectangle {
     // so a card that animates its width doesn't fight the x Behavior frame by frame
     property real targetWidth: width
     property bool animateScale: true
+    property bool animateOffset: true
     property bool animatePlacement: true
 
+    signal closeFinished()
+
+    property bool _transitionReady: false
     property bool _placementSettled: false
     readonly property real _originX: Math.max(0, Math.min(targetWidth, anchorX - x))
 
-    readonly property int  _barInset: ShellSettings.barFloating ? 4 : 0
+    property real _barInset: ShellSettings.barFloating ? 4 : 0
+    Behavior on _barInset {
+        enabled: !ShellSettings.reduceMotion
+        NumberAnimation { duration: Motion.barMorph; easing.type: Easing.OutCubic }
+    }
     readonly property int  _edgeY: _barInset + ShellSettings.barHeight + 8
     readonly property real _minX: radius + 4
     readonly property real _maxX: Math.max(_minX, win.width - targetWidth - _minX)
 
     property real scaleAmt: animateScale ? Motion.popScaleFrom : 1
+    property real edgeOffset: animateOffset
+        ? (barBottom ? Motion.popEdgeOffset : -Motion.popEdgeOffset) : 0
+    opacity: 0
 
     function _clampedX(px: real): real {
         return Math.max(_minX, Math.min(px, _maxX))
@@ -70,10 +81,18 @@ Rectangle {
         outlineColor: Theme.outline
     }
 
-    transform: Scale { origin.x: root._originX; origin.y: root.barBottom ? root.height : 0; xScale: root.scaleAmt; yScale: root.scaleAmt }
-    state: open ? "visible" : "hidden"
+    transform: [
+        Translate { y: root.edgeOffset },
+        Scale {
+            origin.x: root._originX
+            origin.y: root.barBottom ? root.height : 0
+            xScale: root.scaleAmt
+            yScale: root.scaleAmt
+        }
+    ]
+    state: open && _transitionReady ? "visible" : "hidden"
     layer.enabled: root.animateScale && !ShellSettings.reduceMotion
-        && opacity > 0.001 && scaleAmt < 0.999
+        && opacity > 0.001 && (scaleAmt < 0.999 || !root.open)
 
     Behavior on x {
         enabled: root.animatePlacement && root.state === "visible"
@@ -97,25 +116,49 @@ Rectangle {
         }
     }
 
-    Component.onCompleted: place()
+    Component.onCompleted: {
+        place()
+        if (root.open) _placementSettle.restart()
+        Qt.callLater(function() { root._transitionReady = true })
+    }
 
     states: [
-        State { name: "hidden";  PropertyChanges { root.scaleAmt: root.animateScale ? Motion.popScaleFrom : 1.0; root.opacity: 0 } },
-        State { name: "visible"; PropertyChanges { root.scaleAmt: 1.0; root.opacity: 1 } }
+        State {
+            name: "hidden"
+            PropertyChanges {
+                root.scaleAmt: root.animateScale ? Motion.popScaleFrom : 1.0
+                root.edgeOffset: root.animateOffset
+                    ? (root.barBottom ? Motion.popEdgeOffset : -Motion.popEdgeOffset) : 0
+                root.opacity: 0
+            }
+        },
+        State {
+            name: "visible"
+            PropertyChanges {
+                root.scaleAmt: 1.0
+                root.edgeOffset: 0
+                root.opacity: 1
+            }
+        }
     ]
     transitions: [
         Transition {
             from: "*"; to: "visible"
             ParallelAnimation {
-                NumberAnimation { target: root; property: "scaleAmt"; to: 1.0; duration: root.animateScale ? Motion.popIn : 0; easing.type: Easing.OutCubic }
-                NumberAnimation { target: root; property: "opacity";    to: 1.0; duration: Motion.popInFade; easing.type: Easing.OutCubic }
+                NumberAnimation { target: root; property: "scaleAmt";  to: 1.0; duration: root.animateScale ? Motion.popIn : 0; easing.type: Easing.OutQuart }
+                NumberAnimation { target: root; property: "edgeOffset"; to: 0.0; duration: root.animateOffset ? Motion.popIn : 0; easing.type: Easing.OutQuart }
+                NumberAnimation { target: root; property: "opacity";   to: 1.0; duration: Motion.popInFade; easing.type: Easing.OutCubic }
             }
         },
         Transition {
             from: "visible"; to: "hidden"
-            ParallelAnimation {
-                NumberAnimation { target: root; property: "scaleAmt"; to: root.animateScale ? Motion.popScaleFrom : 1.0; duration: root.animateScale ? Motion.popOut : 0; easing.type: Easing.InCubic }
-                NumberAnimation { target: root; property: "opacity";    to: 0.0; duration: Motion.popOutFade; easing.type: Easing.InCubic }
+            SequentialAnimation {
+                ParallelAnimation {
+                    NumberAnimation { target: root; property: "scaleAmt"; to: root.animateScale ? Motion.popScaleFrom : 1.0; duration: root.animateScale ? Motion.popOut : 0; easing.type: Easing.InCubic }
+                    NumberAnimation { target: root; property: "edgeOffset"; to: root.animateOffset ? (root.barBottom ? Motion.popEdgeOffset : -Motion.popEdgeOffset) : 0; duration: root.animateOffset ? Motion.popOut : 0; easing.type: Easing.InCubic }
+                    NumberAnimation { target: root; property: "opacity"; to: 0.0; duration: Motion.popOutFade; easing.type: Easing.InCubic }
+                }
+                ScriptAction { script: root.closeFinished() }
             }
         }
     ]

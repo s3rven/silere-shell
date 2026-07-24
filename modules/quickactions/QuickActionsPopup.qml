@@ -70,7 +70,8 @@ PanelWindow {
 
     // Floating drop shadow, same elevation cue as the bar/calendar/tray menu.
     Loader {
-        active: QuickActionsState.open && ShellSettings.barFloating && ShellSettings.barShadow
+        active: (QuickActionsState.open || card.opacity > 0.001)
+            && ShellSettings.barFloating && ShellSettings.barShadow
         anchors.fill: card
         opacity: card.opacity
         z: -1

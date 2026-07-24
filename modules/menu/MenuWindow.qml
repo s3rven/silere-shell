@@ -101,7 +101,8 @@ PanelWindow {
 
     // shadow matches the other bar-edge popups; outside the card so the scale transform doesn't distort it
     Loader {
-        active: MenuState.open && ShellSettings.barFloating && ShellSettings.barShadow
+        active: (MenuState.open || panel.opacity > 0.001)
+            && ShellSettings.barFloating && ShellSettings.barShadow
         anchors.fill: panel
         opacity: panel.opacity
         z: -1
@@ -121,8 +122,6 @@ PanelWindow {
         // Place every tab inside the widest responsive envelope from the
         // start. The card may resize, but its left rail stays under the mouse.
         targetWidth: placementW
-        // The main menu is large enough that scaling/placement motion reads as
-        // a panel slide. A quick fade is clearer and avoids a temporary FBO.
         animateScale: false
         animatePlacement: false
         border.width: 0

@@ -78,7 +78,8 @@ PanelWindow {
     }
 
     Loader {
-        active: CalendarState.open && ShellSettings.barFloating && ShellSettings.barShadow
+        active: (CalendarState.open || card.opacity > 0.001)
+            && ShellSettings.barFloating && ShellSettings.barShadow
         anchors.fill: card
         opacity: card.opacity
         z: -1

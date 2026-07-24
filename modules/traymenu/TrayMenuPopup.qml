@@ -407,7 +407,8 @@ PanelWindow {
 
     // Floating drop shadow, same elevation cue as the bar/OSD/notification cards.
     Loader {
-        active: TrayMenuState.open && ShellSettings.barFloating && ShellSettings.barShadow
+        active: (TrayMenuState.open || card.opacity > 0.001)
+            && ShellSettings.barFloating && ShellSettings.barShadow
         anchors.fill: card
         opacity: card.opacity
         z: -1
