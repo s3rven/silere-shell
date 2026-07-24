@@ -114,7 +114,7 @@ Item {
 
     NumberAnimation {
         id: _collapseAnim
-        target: card; property: "_collapse"
+        target: card; property: "collapseRatio"
         to: 0; duration: Motion.ms(190); easing.type: Easing.InCubic
     }
 
@@ -155,11 +155,10 @@ Item {
     }
 
     implicitWidth:  320
-    // collapses during dismiss so cards below glide up
-    property real _collapse: 1
+    property real collapseRatio: 1
 
     property real _collapseBasis: cardRect.height
-    implicitHeight: _collapseBasis * _collapse
+    implicitHeight: _collapseBasis * collapseRatio
     property int slideDir: 1
     readonly property real _hiddenX: slideDir * (implicitWidth + 16)
 

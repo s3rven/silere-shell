@@ -251,60 +251,72 @@ PanelWindow {
             }
         }
 
-        Repeater {
-            id: stack
-            model: Notifications.popupModel
+        Column {
+            id: cardCol
+            width: parent.width
+            spacing: 0
+            visible: height > 0.5
 
-            Item {
-                id: _slot
-                required property var modelData
-                required property int index
+            Repeater {
+                id: stack
+                model: Notifications.popupModel
 
-                readonly property bool shouldLoad: win._showAll
-                    || ShellSettings.notifMaxVisible <= 0
-                    || index < ShellSettings.notifMaxVisible
-                readonly property var cardItem: _cardLoader.item
-                property real timeoutStartedAt: 0
+                Item {
+                    id: _slot
+                    required property var modelData
+                    required property int index
 
-                width: win._cardW
-                height: cardItem ? cardItem.implicitHeight : 0
-                visible: shouldLoad
+                    readonly property bool shouldLoad: win._showAll
+                        || ShellSettings.notifMaxVisible <= 0
+                        || index < ShellSettings.notifMaxVisible
+                    readonly property var cardItem: _cardLoader.item
+                    property real timeoutStartedAt: 0
+                    readonly property real _gap: index < stack.count - 1 ? 6 : 0
 
-                anchors.right:            (win._left || win._center) ? undefined : parent?.right
-                anchors.left:             win._left   ? parent?.left : undefined
-                anchors.horizontalCenter: win._center ? parent?.horizontalCenter : undefined
+                    width: win._cardW
+                    height: cardItem
+                        ? cardItem.implicitHeight + _gap * cardItem.collapseRatio : 0
+                    visible: shouldLoad
 
-                Component.onCompleted: {
-                    if (shouldLoad) timeoutStartedAt = Notifications.updateTimeFor(modelData.id)
-                }
-                onShouldLoadChanged: {
-                    if (shouldLoad) timeoutStartedAt = Date.now()
-                    else timeoutStartedAt = 0
-                }
+                    anchors.right:            (win._left || win._center) ? undefined : parent?.right
+                    anchors.left:             win._left   ? parent?.left : undefined
+                    anchors.horizontalCenter: win._center ? parent?.horizontalCenter : undefined
 
-                Connections {
-                    target: Notifications
-                    function onContentUpdated(notifId: int): void {
-                        if (notifId === modelData.id && shouldLoad) timeoutStartedAt = Date.now()
+                    Component.onCompleted: {
+                        if (shouldLoad) timeoutStartedAt = Notifications.updateTimeFor(modelData.id)
                     }
-                }
+                    onShouldLoadChanged: {
+                        if (shouldLoad) timeoutStartedAt = Date.now()
+                        else timeoutStartedAt = 0
+                    }
 
-                Loader {
-                    id: _cardLoader
-                    anchors.fill: parent
-                    active: _slot.shouldLoad && _slot.timeoutStartedAt > 0
+                    Connections {
+                        target: Notifications
+                        function onContentUpdated(notifId: int): void {
+                            if (notifId === modelData.id && shouldLoad) timeoutStartedAt = Date.now()
+                        }
+                    }
 
-                    sourceComponent: NotificationCard {
-                        notification: _slot.modelData
-                        notifId: _slot.modelData.id
-                        createdAt: Notifications.timeFor(_slot.modelData.id)
-                        timeoutStartedAt: _slot.timeoutStartedAt
-                        slideDir: win._slideDir
+                    Loader {
+                        id: _cardLoader
+                        anchors.top: parent.top
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        height: _slot.cardItem ? _slot.cardItem.implicitHeight : 0
+                        active: _slot.shouldLoad && _slot.timeoutStartedAt > 0
 
-                        onDismissRequested: (id, notification, expired) => {
-                            Notifications.dismissObject(id, notification, expired)
-                            if (win._pendingDismissAll > 0)
-                                win._forgetPendingDismiss(id, notification)
+                        sourceComponent: NotificationCard {
+                            notification: _slot.modelData
+                            notifId: _slot.modelData.id
+                            createdAt: Notifications.timeFor(_slot.modelData.id)
+                            timeoutStartedAt: _slot.timeoutStartedAt
+                            slideDir: win._slideDir
+
+                            onDismissRequested: (id, notification, expired) => {
+                                Notifications.dismissObject(id, notification, expired)
+                                if (win._pendingDismissAll > 0)
+                                    win._forgetPendingDismiss(id, notification)
+                            }
                         }
                     }
                 }
