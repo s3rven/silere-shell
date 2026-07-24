@@ -17,7 +17,7 @@ Rectangle {
     width:  parent ? parent.width : 0
     implicitHeight: col.implicitHeight
     height: implicitHeight
-    radius: Theme.radiusControl
+    radius: Theme.radiusCard
     antialiasing: true
     clip: true
     color: Theme.menuCard
