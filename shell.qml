@@ -31,6 +31,11 @@ ShellRoot {
     // these are startup diagnostics/alerts whose watchers must arm before the user opens a panel.
     Component.onCompleted: {
         void NotifWatch.armed
+        // PowerProfiles reads on menu-open; created lazily it misses the very first open and
+        // the row sits on "Unavailable" until the menu is reopened. No process until then.
+        void PowerProfiles.available
+        // documented as always callable (`ipc call screenshot flash`), so it can't wait on the underline
+        void Screenshot.armed
         root.armSystemAlertsIfNeeded()
     }
 
