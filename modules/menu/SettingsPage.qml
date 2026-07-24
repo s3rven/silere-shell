@@ -12,6 +12,7 @@ PageShell {
 
     // lags behind MenuState.settingsSection during the swap; detail pane renders whichever section this points at
     property string _shownSection: MenuState.settingsSection
+    property int _sectionDir: 1
 
     readonly property var _sectionComponents: ({
         theme: _secTheme, nightlight: _secNightLight, surface: _secSurface,
@@ -61,6 +62,8 @@ PageShell {
         id: _detail
         width:  root.width
         height: _detailHeader.height + _bodyGap + _detailBody.height
+        property real _shift: 0
+        transform: Translate { x: _detail._shift }
 
         readonly property int _bodyGap: 8
 
@@ -68,25 +71,35 @@ PageShell {
             target: MenuState
             function onSettingsSectionChanged() {
                 if (ShellSettings.reduceMotion) {
+                    _detailSwap.stop()
                     root._shownSection = MenuState.settingsSection
                     _detail.opacity = 1
+                    _detail._shift = 0
                     return
                 }
-                if (!_detailSwap.running) _detailSwap.restart()
+                const current = root._sectionMeta[root._shownSection]?.index ?? 0
+                const next = root._sectionMeta[MenuState.settingsSection]?.index ?? current
+                root._sectionDir = next < current ? -1 : 1
+                _detailSwap.restart()
             }
         }
 
         SequentialAnimation {
             id: _detailSwap
-            NumberAnimation { target: _detail; property: "opacity"; to: 0.0; duration: Motion.ms(55); easing.type: Easing.InCubic }
-            ScriptAction    { script: root._shownSection = MenuState.settingsSection }
-            NumberAnimation { target: _detail; property: "opacity"; to: 1.0; duration: Motion.ms(105); easing.type: Easing.OutCubic }
-            ScriptAction { script: if (root._shownSection !== MenuState.settingsSection) _detailSwapAgain.restart() }
-        }
-        Timer {
-            id: _detailSwapAgain
-            interval: 0
-            onTriggered: if (!ShellSettings.reduceMotion && root._shownSection !== MenuState.settingsSection) _detailSwap.restart()
+            ParallelAnimation {
+                NumberAnimation { target: _detail; property: "opacity"; to: 0.0; duration: Motion.pageOut; easing.type: Easing.InCubic }
+                NumberAnimation { target: _detail; property: "_shift"; to: -root._sectionDir * 6; duration: Motion.pageOut; easing.type: Easing.InCubic }
+            }
+            ScriptAction {
+                script: {
+                    root._shownSection = MenuState.settingsSection
+                    _detail._shift = root._sectionDir * Motion.pageOffset
+                }
+            }
+            ParallelAnimation {
+                NumberAnimation { target: _detail; property: "opacity"; to: 1.0; duration: Motion.pageIn; easing.type: Easing.OutCubic }
+                NumberAnimation { target: _detail; property: "_shift"; to: 0.0; duration: Motion.pageIn; easing.type: Easing.OutQuart }
+            }
         }
 
         Item {

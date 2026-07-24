@@ -173,7 +173,7 @@ PanelWindow {
                 if (CalendarState.open) {
                     card._snapToday()
                     card.forceActiveFocus()
-                }
+                } else _gridSwap.stop()
             }
         }
         // keep "today" current if held open across midnight, without yanking the user back from a navigated month
@@ -189,24 +189,23 @@ PanelWindow {
         }
         Component.onCompleted: card._snapToday()
 
-        // month swap: old grid slides out + fades, shown cursor catches up at 0 opacity, new grid slides in from the other side + fades.
         // next moves the page left (content advances), prev moves it right.
         SequentialAnimation {
             id: _gridSwap
             ParallelAnimation {
-                NumberAnimation { target: _grid; property: "opacity"; to: 0;                duration: Motion.fast; easing.type: Easing.InCubic }
-                NumberAnimation { target: _grid; property: "xOff";    to: -card.navDir * 20; duration: Motion.fast; easing.type: Easing.InCubic }
+                NumberAnimation { target: _grid; property: "opacity"; to: 0;                duration: Motion.pageOut; easing.type: Easing.InCubic }
+                NumberAnimation { target: _grid; property: "xOff";    to: -card.navDir * 14; duration: Motion.pageOut; easing.type: Easing.InCubic }
             }
             ScriptAction {
                 script: {
                     card.shownYear = card.dispYear
                     card.shownMonth = card.dispMonth
-                    _grid.xOff = card.navDir * 20
+                    _grid.xOff = card.navDir * 14
                 }
             }
             ParallelAnimation {
-                NumberAnimation { target: _grid; property: "opacity"; to: 1; duration: Motion.normal; easing.type: Easing.OutCubic }
-                NumberAnimation { target: _grid; property: "xOff";    to: 0; duration: Motion.medium; easing.type: Easing.OutCubic }
+                NumberAnimation { target: _grid; property: "opacity"; to: 1; duration: Motion.pageIn; easing.type: Easing.OutCubic }
+                NumberAnimation { target: _grid; property: "xOff";    to: 0; duration: Motion.pageIn; easing.type: Easing.OutQuart }
             }
         }
 

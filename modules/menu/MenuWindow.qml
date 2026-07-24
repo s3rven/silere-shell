@@ -286,11 +286,9 @@ PanelWindow {
             function onSettingsSectionChanged() { _sectionScrollReset.restart() }
         }
 
-        // a new section starts at its top; the delay lands the jump inside the
-        // detail swap's opacity-0 gap so it is never seen
         Timer {
             id: _sectionScrollReset
-            interval: ShellSettings.reduceMotion ? 0 : Motion.ms(60)
+            interval: Motion.pageOut
             onTriggered: contentFlick.contentY = 0
         }
 
@@ -394,16 +392,30 @@ PanelWindow {
 
                 // settings categories in the clipped surface: the growing rail reveals them left-to-right, can't paint past the rail edge mid-animation
                 Item {
+                    id: _settingsRailSurface
                     x: panel.railCollapsedW
                     width: panel.navW
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
+                    property real _slide: panel.activeTab === 1
+                        && !panel.powerOpen ? 0 : -Motion.pageOffset
                     opacity: panel.activeTab === 1 && !panel.powerOpen ? 1 : 0
                     visible: opacity > 0.001
                     enabled: panel.activeTab === 1 && !panel.powerOpen
+                    transform: Translate { x: _settingsRailSurface._slide }
                     Behavior on opacity {
                         enabled: !ShellSettings.reduceMotion
-                        NumberAnimation { duration: Motion.fast }
+                        NumberAnimation {
+                            duration: panel.activeTab === 1 ? Motion.pageIn : Motion.pageOut
+                            easing.type: panel.activeTab === 1 ? Easing.OutCubic : Easing.InCubic
+                        }
+                    }
+                    Behavior on _slide {
+                        enabled: !ShellSettings.reduceMotion
+                        NumberAnimation {
+                            duration: panel.activeTab === 1 ? Motion.panelResize : Motion.pageOut
+                            easing.type: panel.activeTab === 1 ? Easing.OutQuart : Easing.InCubic
+                        }
                     }
 
                     Loader {
@@ -661,9 +673,15 @@ PanelWindow {
                         width: parent.width
                         height: implicitHeight
                         implicitHeight: Math.max(220, panel.idealMinH - tabContent.y - 16)
-                        visible: tabContent._pagePending
+                        opacity: tabContent._pagePending ? 1 : 0
+                        visible: opacity > 0.001
                         enabled: false
                         z: 5
+
+                        Behavior on opacity {
+                            enabled: !ShellSettings.reduceMotion
+                            NumberAnimation { duration: Motion.pageOut; easing.type: Easing.InCubic }
+                        }
 
                         Column {
                             anchors.centerIn: parent

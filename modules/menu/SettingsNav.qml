@@ -179,7 +179,7 @@ Item {
 
     Timer {
         id: _disclosureSettle
-        interval: ShellSettings.reduceMotion ? 0 : Motion.ms(155)
+        interval: Motion.medium
         onTriggered: root._scrollToExpandedGroup()
     }
 
@@ -221,7 +221,7 @@ Item {
 
         Behavior on contentY {
             enabled: !ShellSettings.reduceMotion && !_navScroll.moving
-            NumberAnimation { duration: Motion.ms(155); easing.type: Easing.OutCubic }
+            NumberAnimation { duration: Motion.medium; easing.type: Easing.OutQuart }
         }
 
         Item {
@@ -410,7 +410,7 @@ Item {
 
                                 Behavior on rotation {
                                     enabled: !ShellSettings.reduceMotion
-                                    NumberAnimation { duration: Motion.ms(145); easing.type: Easing.OutCubic }
+                                    NumberAnimation { duration: Motion.medium; easing.type: Easing.OutQuart }
                                 }
                                 Behavior on color {
                                     enabled: !ShellSettings.reduceMotion
@@ -431,7 +431,10 @@ Item {
 
                             Behavior on height {
                                 enabled: !ShellSettings.reduceMotion
-                                NumberAnimation { duration: Motion.ms(150); easing.type: Easing.OutCubic }
+                                NumberAnimation {
+                                    duration: Motion.medium
+                                    easing.type: _grp.expanded ? Easing.OutQuart : Easing.InCubic
+                                }
                             }
 
                             Column {
@@ -440,6 +443,24 @@ Item {
                                 y: root._childrenPad
                                 width: parent.width - 10
                                 spacing: root._navRowGap
+                                property real _shift: _grp.expanded ? 0 : -4
+                                opacity: _grp.expanded ? 1 : 0
+                                transform: Translate { y: _leafColumn._shift }
+
+                                Behavior on opacity {
+                                    enabled: !ShellSettings.reduceMotion
+                                    NumberAnimation {
+                                        duration: Motion.fast
+                                        easing.type: _grp.expanded ? Easing.OutCubic : Easing.InCubic
+                                    }
+                                }
+                                Behavior on _shift {
+                                    enabled: !ShellSettings.reduceMotion
+                                    NumberAnimation {
+                                        duration: Motion.medium
+                                        easing.type: _grp.expanded ? Easing.OutQuart : Easing.InCubic
+                                    }
+                                }
 
                                 Repeater {
                                     id: _leafRepeater
