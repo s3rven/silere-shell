@@ -7,6 +7,7 @@ SettingsWorkspacesSection 1.0 SettingsWorkspacesSection.qml
 SettingsPopupsSection 1.0 SettingsPopupsSection.qml
 SettingsUpdatesSection 1.0 SettingsUpdatesSection.qml
 SettingsSystemSection 1.0 SettingsSystemSection.qml
+SettingsInterfaceSection 1.0 SettingsInterfaceSection.qml
 SettingsNightLightSection 1.0 SettingsNightLightSection.qml
 SettingsSurfaceSection 1.0 SettingsSurfaceSection.qml
 SettingsSeparatorsSection 1.0 SettingsSeparatorsSection.qml

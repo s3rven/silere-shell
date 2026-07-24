@@ -20,7 +20,7 @@ PageShell {
         workspaces: _secWorkspaces, media: _secMedia, indicators: _secIndicators,
         widgets: _secWidgets,
         popups: _secPopups, osd: _secOsd, warnings: _secWarnings,
-        updates: _secUpdates, system: _secSystem
+        interface: _secInterface, updates: _secUpdates, system: _secSystem
     })
 
     // section id → { glyph, label, group, description, index }, for the detail-pane header
@@ -251,6 +251,11 @@ PageShell {
         Component {
             id: _secWarnings
             SettingsWarningsSection {}
+        }
+
+        Component {
+            id: _secInterface
+            SettingsInterfaceSection {}
         }
 
         Component {

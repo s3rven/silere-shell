@@ -1,7 +1,6 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import Quickshell
 import "../../config"
 import "../../services"
 
@@ -35,101 +34,9 @@ Column {
         return s.length > 0 ? s : "none"
     }
 
-    SectionLabel { label: "HARDWARE"; first: true; visible: Brightness.devices.length > 1 }
+    SectionLabel { label: "CHANGED SETTINGS"; first: true; visible: ShellSettings.modifiedKeys.length > 0 }
     SettingsCard {
-        visible: Brightness.devices.length > 1
-        SelectRow {
-            glyph: "󰃟"; label: "Brightness display"
-            currentValue: Brightness.deviceChoice
-            model: Brightness.deviceChoices
-            onChosen: (v) => ShellSettings.brightnessDevice = v
-        }
-    }
-
-    SectionLabel { label: "ACCESSIBILITY"; first: Brightness.devices.length <= 1 }
-    SettingsCard {
-        SelectRow {
-            glyph: "󰛖"; label: "Font"
-            currentValue: ShellSettings.fontFamily
-            model: {
-                const m = [{ value: "", label: "JetBrainsMono (default)", fontFamily: "JetBrainsMono Nerd Font" }]
-                const fams = FontScan.families
-                for (let i = 0; i < fams.length; i++) {
-                    const f = fams[i]
-                    if (f === "JetBrainsMono Nerd Font") continue
-                    m.push({ value: f, label: f.replace(/ Nerd Font( Mono)?$/, ""), fontFamily: f })
-                }
-                const cur = ShellSettings.fontFamily
-                if (cur.length > 0 && m.findIndex(e => e.value === cur) < 0)
-                    m.push({ value: cur, label: cur.replace(/ Nerd Font( Mono)?$/, "") + " (not installed)" })
-                return m
-            }
-            onChosen: (v) => ShellSettings.fontFamily = v
-        }
-        SelectRow {
-            glyph: "󰍉"; label: "UI scale"
-            currentValue: ShellSettings.uiScale
-            model: [
-                { value: 0.8,  label: "80%"  },
-                { value: 0.9,  label: "90%"  },
-                { value: 1.0,  label: "100%" },
-                { value: 1.1,  label: "110%" },
-                { value: 1.15, label: "115%" }
-            ]
-            onChosen: (v) => ShellSettings.uiScale = v
-        }
-        ToggleRow {
-            glyph: "󰹑"; label: "High contrast"
-            checked: ShellSettings.highContrast
-            onToggled: ShellSettings.highContrast = !ShellSettings.highContrast
-        }
-        ToggleRow {
-            glyph: "󱖳"; label: "Reduce motion"
-            checked: ShellSettings.reduceMotion
-            onToggled: ShellSettings.reduceMotion = !ShellSettings.reduceMotion
-        }
-    }
-
-    Loader {
-        width: parent.width
-        active: Quickshell.screens.length > 1
-        height: item ? item.implicitHeight : 0
-        sourceComponent: Component {
-            Column {
-                width: parent.width
-                SectionLabel { label: "MONITORS" }
-                SettingsCard {
-                    SelectRow {
-                        glyph: "󰍹"; label: "Popups & OSD on"
-                        currentValue: ShellSettings.overlayMonitor
-                        model: {
-                            const t = [{ value: "", label: "Focus" }]
-                            const s = Quickshell.screens || []
-                            for (let i = 0; i < s.length; i++) {
-                                const name = s[i].name
-                                t.push({ value: name, label: name })
-                            }
-                            return t
-                        }
-                        onChosen: (v) => ShellSettings.overlayMonitor = v
-                    }
-                    Repeater {
-                        model: Quickshell.screens
-                        delegate: ToggleRow {
-                            required property var modelData
-                            glyph: "󰍺"
-                            label: "Bar on " + modelData.name
-                            checked: Monitors.barEnabled(modelData)
-                            onToggled: Monitors.setBarEnabled(modelData.name, !checked)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    SectionLabel { label: "CHANGES & RESET" }
-    SettingsCard {
+        visible: ShellSettings.modifiedKeys.length > 0
         Item {
             id: _modHeader
             property bool open: false
@@ -206,91 +113,96 @@ Column {
         }
 
         CollapsibleSection {
-        id: _modifiedList
-        expanded: _modHeader.open && ShellSettings.modifiedKeys.length > 0
-        Repeater {
-            id: _modRepeater
-            // A closed reset list can otherwise instantiate nearly the whole
-            // settings schema. Retain it only through the collapse animation.
-            model: _modHeader.open || _modifiedList.height > 0.5
-                ? ShellSettings.modifiedKeys : []
-            delegate: Item {
-                id: _modRow
-                required property int index
-                required property string modelData
-                property real topRadius:    0
-                property real bottomRadius: 0
-                width: parent ? parent.width : 0
-                height: 44
+            id: _modifiedList
+            indent: 8
+            expanded: _modHeader.open && ShellSettings.modifiedKeys.length > 0
+            Repeater {
+                id: _modRepeater
+                model: _modHeader.open || _modifiedList.height > 0.5
+                    ? ShellSettings.modifiedKeys : []
+                delegate: Item {
+                    id: _modRow
+                    required property int index
+                    required property string modelData
+                    property real topRadius:    0
+                    property real bottomRadius: 0
+                    width: parent ? parent.width : 0
+                    height: 44
 
-                readonly property string pretty: modelData.replace(/([A-Z])/g, " $1").toLowerCase()
+                    readonly property string pretty: modelData.replace(/([A-Z])/g, " $1").toLowerCase()
 
-                function _reset(): void {
-                    if (_modRow.activeFocus) {
-                        root._restoreModifiedIndex = _modRow.index
-                        _restoreModifiedFocus.restart()
+                    function _reset(): void {
+                        if (_modRow.activeFocus) {
+                            root._restoreModifiedIndex = _modRow.index
+                            _restoreModifiedFocus.restart()
+                        }
+                        ShellSettings.resetKey(_modRow.modelData)
                     }
-                    ShellSettings.resetKey(_modRow.modelData)
-                }
 
-                activeFocusOnTab: true
-                Accessible.role: Accessible.Button
-                Accessible.name: "Reset " + pretty + " to default"
-                Accessible.onPressAction: _modRow._reset()
-                Keys.onSpacePressed:  e => { if (!e.isAutoRepeat) _modRow._reset(); e.accepted = true }
-                Keys.onReturnPressed: e => { if (!e.isAutoRepeat) _modRow._reset(); e.accepted = true }
-                Keys.onEnterPressed:  e => { if (!e.isAutoRepeat) _modRow._reset(); e.accepted = true }
+                    activeFocusOnTab: true
+                    Accessible.role: Accessible.Button
+                    Accessible.name: "Reset " + pretty + " to default"
+                    Accessible.onPressAction: _modRow._reset()
+                    Keys.onSpacePressed:  e => { if (!e.isAutoRepeat) _modRow._reset(); e.accepted = true }
+                    Keys.onReturnPressed: e => { if (!e.isAutoRepeat) _modRow._reset(); e.accepted = true }
+                    Keys.onEnterPressed:  e => { if (!e.isAutoRepeat) _modRow._reset(); e.accepted = true }
 
-                HoverHandler { id: _modHover; cursorShape: Qt.PointingHandCursor }
-                TapHandler { onTapped: _modRow._reset() }
-                RowHoverBg {
-                    anchors.fill: parent
-                    topRadius:    _modRow.topRadius
-                    bottomRadius: _modRow.bottomRadius
-                    active:       _modHover.hovered || _modRow.activeFocus
-                    focusActive:  _modRow.activeFocus
-                    fillOpacity:  _modRow.activeFocus ? 0.13 : 0.08
-                }
+                    HoverHandler { id: _modHover; cursorShape: Qt.PointingHandCursor }
+                    TapHandler { onTapped: _modRow._reset() }
+                    RowHoverBg {
+                        anchors.fill: parent
+                        topRadius:    _modRow.topRadius
+                        bottomRadius: _modRow.bottomRadius
+                        active:       _modHover.hovered || _modRow.activeFocus
+                        focusActive:  _modRow.activeFocus
+                        fillOpacity:  _modRow.activeFocus ? 0.13 : 0.08
+                    }
 
-                Text {
-                    id: _modLabel
-                    anchors.left: parent.left; anchors.leftMargin: 14
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: Math.max(0, Math.min(implicitWidth,
-                        parent.width - _modValue.width - _modResetGlyph.width - 46))
-                    text: _modRow.pretty
-                    elide: Text.ElideRight
-                    color: Theme.withAlpha(Theme.text, 0.85)
-                    font.family: Settings.font; font.pixelSize: Settings.fontSize
-                    renderType: Text.NativeRendering
-                }
-                Text {
-                    id: _modValue
-                    anchors.left: _modLabel.right; anchors.leftMargin: 8
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: Math.min(implicitWidth, 130)
-                    text: root._fmtSettingValue(ShellSettings[_modRow.modelData])
-                    elide: Text.ElideRight
-                    color: Theme.withAlpha(Theme.subtext, 0.5)
-                    font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
-                    renderType: Text.NativeRendering
-                }
-                Text {
-                    id: _modResetGlyph
-                    anchors.right: parent.right; anchors.rightMargin: 12
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "󰦛"
-                    color: (_modHover.hovered || _modRow.activeFocus)
-                        ? Theme.withAlpha(Theme.accent, 0.9)
-                        : Theme.withAlpha(Theme.subtext, 0.5)
-                    font.family: Settings.font; font.pixelSize: Settings.iconSize
-                    renderType: Text.NativeRendering
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    Text {
+                        id: _modLabel
+                        anchors.left: parent.left; anchors.leftMargin: 14
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Math.max(0, Math.min(implicitWidth,
+                            parent.width - _modValue.width - _modResetGlyph.width - 46))
+                        text: _modRow.pretty
+                        elide: Text.ElideRight
+                        color: Theme.withAlpha(Theme.text, 0.85)
+                        font.family: Settings.font; font.pixelSize: Settings.fontSize
+                        renderType: Text.NativeRendering
+                    }
+                    Text {
+                        id: _modValue
+                        anchors.left: _modLabel.right; anchors.leftMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Math.min(implicitWidth, 130)
+                        text: root._fmtSettingValue(ShellSettings[_modRow.modelData])
+                        elide: Text.ElideRight
+                        color: Theme.withAlpha(Theme.subtext, 0.5)
+                        font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
+                        renderType: Text.NativeRendering
+                    }
+                    Text {
+                        id: _modResetGlyph
+                        anchors.right: parent.right; anchors.rightMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "󰦛"
+                        color: (_modHover.hovered || _modRow.activeFocus)
+                            ? Theme.withAlpha(Theme.accent, 0.9)
+                            : Theme.withAlpha(Theme.subtext, 0.5)
+                        font.family: Settings.font; font.pixelSize: Settings.iconSize
+                        renderType: Text.NativeRendering
+                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    }
                 }
             }
         }
-        }
+    }
 
+    SectionLabel {
+        label: "RESET"
+        first: ShellSettings.modifiedKeys.length === 0
+    }
+    SettingsCard {
         Item {
             id: _resetRow
             width: parent.width; height: 44
@@ -375,6 +287,9 @@ Column {
                 font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
                 renderType: Text.NativeRendering
             }
+        }
+        HintText {
+            text: "Restores appearance, behavior, and layout settings to their built-in defaults."
         }
     }
 }

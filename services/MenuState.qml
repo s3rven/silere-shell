@@ -41,8 +41,8 @@ Singleton {
             { glyph: "󰈈", label: "Indicators", section: "indicators",
               description: "Titles, status widgets, and hover behavior" }
         ]},
-        { glyph: "󰂚", label: "Notifications", children: [
-            { glyph: "󰂚", label: "Popups", section: "popups",
+        { glyph: "󰂚", label: "Feedback", children: [
+            { glyph: "󰂚", label: "Notifications", section: "popups",
               description: "Placement, timing, and quiet hours" },
             { glyph: "󱀅", label: "OSD",    section: "osd",
               description: "Volume and brightness feedback" },
@@ -50,10 +50,12 @@ Singleton {
               description: "Battery and temperature warning thresholds" }
         ]},
         { glyph: "󰒓", label: "System", children: [
-            { glyph: "󰢻", label: "General", section: "system",
-              description: "Hardware, accessibility, and configuration" },
+            { glyph: "󰍉", label: "Interface", section: "interface",
+              description: "Font, scale, contrast, motion, and display routing" },
             { glyph: "󰚰", label: "Updates", section: "updates",
-              description: "Shell releases and system packages" }
+              description: "Shell releases and system packages" },
+            { glyph: "󰦛", label: "Maintenance", section: "system",
+              description: "Review changes and restore defaults" }
         ]}
     ]
 
