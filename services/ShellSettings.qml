@@ -206,12 +206,12 @@ Singleton {
 
     property int    wsMinVisible:        5
     property bool   wsShowNumbers:       false
-    property bool   wsRomanNumerals:     false
     property bool   wsScrollSwitch:      false
     property bool   wsShowAppIcons:      false
     property bool   wsNotifPulse:        false
     property real   wsMarkerOpacity:     1.0
-    property real   wsIconOpacity:       0.85
+    property real   wsIconOpacity:       0.68
+    property bool   wsIconMono:          true
     property string wsActiveMarker:      "gem"  // "gem" | "dot"
 
     property bool _loaded: false
@@ -321,12 +321,12 @@ Singleton {
         { k: "nightLightAuto",     t: "bool" },
         { k: "wsMinVisible",        t: "int",  min: 1,    max: 10 },
         { k: "wsShowNumbers",       t: "bool" },
-        { k: "wsRomanNumerals",     t: "bool" },
         { k: "wsScrollSwitch",      t: "bool" },
         { k: "wsShowAppIcons",      t: "bool" },
         { k: "wsNotifPulse",        t: "bool" },
         { k: "wsMarkerOpacity",     t: "real", min: 0.2, max: 1.0 },
         { k: "wsIconOpacity",       t: "real", min: 0.3, max: 1.0 },
+        { k: "wsIconMono",          t: "bool" },
         { k: "wsActiveMarker",      t: "enum", vals: ["gem", "dot"] }
     ]
 

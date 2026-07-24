@@ -48,18 +48,8 @@ Column {
             checked: ShellSettings.wsShowNumbers
             onToggled: ShellSettings.wsShowNumbers = !ShellSettings.wsShowNumbers
         }
-        CollapsibleSection {
-            expanded: ShellSettings.wsShowNumbers
-            ToggleRow {
-                glyph: "󰮚"; label: "Roman numerals"
-                checked: ShellSettings.wsRomanNumerals
-                onToggled: ShellSettings.wsRomanNumerals = !ShellSettings.wsRomanNumerals
-            }
-        }
         SliderRow {
-            glyph: ShellSettings.wsShowNumbers
-                ? (ShellSettings.wsRomanNumerals ? "Ⅰ" : "1")
-                : "•"
+            glyph: ShellSettings.wsShowNumbers ? "1" : "•"
             glyphColor: Theme.withAlpha(Theme.text, Math.max(0.35, ShellSettings.wsMarkerOpacity))
             label: "Marker opacity"
             value: ShellSettings.wsMarkerOpacity
@@ -74,7 +64,13 @@ Column {
             onToggled: ShellSettings.wsShowAppIcons = !ShellSettings.wsShowAppIcons
         }
         CollapsibleSection {
+            indent: 8
             expanded: ShellSettings.wsShowAppIcons
+            ToggleRow {
+                glyph: "󰹑"; label: "Monochrome icons"
+                checked: ShellSettings.wsIconMono
+                onToggled: ShellSettings.wsIconMono = !ShellSettings.wsIconMono
+            }
             SliderRow {
                 glyph: "󰋩"; label: "Icon opacity"
                 value: ShellSettings.wsIconOpacity

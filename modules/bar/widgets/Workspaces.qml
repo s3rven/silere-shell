@@ -15,7 +15,7 @@ Item {
     readonly property int minVisible: ShellSettings.wsMinVisible
     readonly property int btnW:       26
     readonly property int btnH:       24
-    readonly property int _iconSz: 16
+    readonly property int _iconSz: 14
     readonly property int gap:        3
 
     readonly property bool _gemMarker:  ShellSettings.wsActiveMarker === "gem"
@@ -104,23 +104,31 @@ Item {
         return 0
     }
 
-    // class → icon memo; recomputes only on toplevel-list changes, no polling
-    property var _iconCache: ({})
-    function _iconForClass(cls: string): string {
+    // class → {icon,name} memo; recomputes only on toplevel-list changes, no polling
+    property var _appMetaCache: ({})
+    function _appMeta(cls: string): var {
         const raw = String(cls || "").trim()
         const key = raw.toLowerCase()
-        if (!key) return ""
-        if (root._iconCache[key] !== undefined) return root._iconCache[key]
-        // try the desktop-entry icon first (zen → zen-browser), then the bare class (kitty),
-        // then the final segment for reverse-DNS ids (org.wezfurlong.wezterm → wezterm).
+        if (!key) return null
+        if (root._appMetaCache[key] !== undefined) return root._appMetaCache[key]
+        // desktop-entry icon (zen → zen-browser), bare class (kitty), then the reverse-DNS tail
+        // (org.wezfurlong.wezterm → wezterm). no generic fallback: a placeholder tile shouts
+        // louder than the dots around it and says less than the occupied dot it would replace.
         const de = DesktopEntries.heuristicLookup(raw)
         const tail = key.indexOf(".") >= 0 ? key.split(".").pop() : ""
         const candidates = [de && de.icon, key, tail].filter(Boolean)
         let src = ""
         for (let i = 0; i < candidates.length && !src; i++)
             src = Quickshell.iconPath(candidates[i], true)
-        root._iconCache[key] = src
-        return src
+        const meta = { icon: src, name: (de && de.name) || tail || key }
+        root._appMetaCache[key] = meta
+        return meta
+    }
+    function appSummary(apps): string {
+        const names = []
+        for (let i = 0; i < apps.length; i++)
+            names.push(apps[i].count > 1 ? apps[i].name + " ×" + apps[i].count : apps[i].name)
+        return names.join(", ")
     }
     // Desktop-entry changes need an explicit cache tick. Compositor owns the
     // single coalesced toplevel refresh, so every monitor reads the same update.
@@ -151,7 +159,7 @@ Item {
     Connections {
         target: ShellSettings.wsShowAppIcons ? DesktopEntries : null
         function onApplicationsChanged() {
-            root._iconCache = ({})
+            root._appMetaCache = ({})
             root._wsAppsTick++
         }
     }
@@ -177,10 +185,10 @@ Item {
             const key = wid + "|" + cls
             if (seen[key] !== undefined) { map[wid][seen[key]].count++; continue }
             if (map[wid].length >= 3) continue
-            const ic = root._iconForClass(rawCls)
-            if (!ic) continue
+            const meta = root._appMeta(rawCls)
+            if (!meta || !meta.icon) continue
             seen[key] = map[wid].length
-            map[wid].push({ icon: ic, count: 1 })
+            map[wid].push({ icon: meta.icon, name: meta.name, count: 1 })
         }
         return map
     }
@@ -273,16 +281,6 @@ Item {
             NumberAnimation { target: root; property: "opacity";    to: 1; duration: Motion.ms(150); easing.type: Easing.OutCubic }
             NumberAnimation { target: root; property: "_pageShift"; to: 0; duration: Motion.ms(165); easing.type: Easing.OutQuart }
         }
-    }
-
-    function toRoman(n: int): string {
-        if (n < 1 || n > 3999) return String(n)
-        const vals = [1000,900,500,400,100,90,50,40,10,9,5,4,1]
-        const syms = ["M","CM","D","CD","C","XC","L","XL","X","IX","V","IV","I"]
-        let r = ""
-        for (let i = 0; i < vals.length; i++)
-            while (n >= vals[i]) { r += syms[i]; n -= vals[i] }
-        return r
     }
 
     function activate(id: int): void {
@@ -713,7 +711,9 @@ Item {
                 Accessible.name: "Workspace " + wsId
                 Accessible.description: active ? "Current workspace"
                     : urgent ? "Urgent workspace"
-                    : occupied ? "Occupied workspace"
+                    : occupied ? (apps.length > 0
+                        ? "Occupied workspace: " + root.appSummary(apps)
+                        : "Occupied workspace")
                     : "Empty workspace"
                 Accessible.focusable: root.monitorReady
                 Accessible.onPressAction: ws._activateFromKeyboard()
@@ -810,9 +810,9 @@ Item {
                 readonly property real _pulseOpacity: _urgentFx.item ? _urgentFx.item.pulseOpacity : 1.0
                 readonly property real _shakeX: _urgentFx.item ? _urgentFx.item.shakeX : 0
                 property real _dotFade: 1.0
-                // dot mode tells you nothing about which ws you'd jump to; hover swaps the dot for its number
+                // neither a dot nor an app icon says which ws you'd jump to; hover swaps it for the number
                 readonly property bool _hoverReveal: ShellSettings.valuesOnHover && hovered
-                    && !active && !ShellSettings.wsShowNumbers && !_showIcons
+                    && !active && (_showIcons || !ShellSettings.wsShowNumbers)
                 property real _revealAmt: _hoverReveal ? 1 : 0
                 Behavior on _revealAmt { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
                 property real _dotAlpha: urgent ? 0.95 : occupied ? 0.65 : 0.28
@@ -856,11 +856,11 @@ Item {
                 Text {
                     anchors.centerIn: parent
                     transform: Translate { x: ws._shakeX }
-                    text:    ShellSettings.wsRomanNumerals ? root.toRoman(ws.wsId) : ws.wsId
-                    opacity: !ws._showIcons
-                        ? Math.max(ShellSettings.wsShowNumbers ? 1 : 0, ws._revealAmt)
-                          * (ws.active ? 0 : 1) * ws._pulseOpacity * ShellSettings.wsMarkerOpacity
-                        : 0
+                    text:    ws.wsId
+                    opacity: (ws._showIcons
+                            ? ws._revealAmt
+                            : Math.max(ShellSettings.wsShowNumbers ? 1 : 0, ws._revealAmt))
+                        * (ws.active ? 0 : 1) * ws._pulseOpacity * ShellSettings.wsMarkerOpacity
                     scale:   ws.active ? 0.6 : (ws._hoverFx ? 1.12 : 1)
                     color:   ws.urgent
                         ? Theme.warning
@@ -897,6 +897,7 @@ Item {
                 Loader {
                     anchors.centerIn: parent
                     transform: Translate { x: ws._shakeX }
+                    opacity: 1 - ws._revealAmt
                     active: ws._showIcons
                     sourceComponent: Component {
                         WorkspaceAppIcons {
