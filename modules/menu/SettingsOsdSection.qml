@@ -21,6 +21,7 @@ Column {
                 onToggled: ShellSettings.osdBarIntegrated = !ShellSettings.osdBarIntegrated
             }
             CollapsibleSection {
+                indent: 8
                 expanded: !ShellSettings.osdBarIntegrated
                 ToggleRow {
                     glyph: "󰖲"; label: "Match bar shape"

@@ -46,6 +46,7 @@ Column {
         }
         // no marks are drawn under "None", so the opacity control is moot
         CollapsibleSection {
+            indent: 8
             expanded: ShellSettings.dotStyle !== "none"
             SliderRow {
                 glyph: ShellSettings.dotTextGlyph

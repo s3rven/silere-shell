@@ -7,6 +7,7 @@ Item {
     id: root
 
     property bool expanded: true
+    property int indent: 0
     default property alias data: _content.data
 
     // lets an enclosing SettingsCard recurse through this group when deriving dividers/rounding, so nested rows behave like flat ones
@@ -31,14 +32,15 @@ Item {
     Behavior on height {
         enabled: !ShellSettings.reduceMotion
         NumberAnimation {
-            duration:    root.expanded ? Motion.normal : Motion.fast
-            easing.type: Easing.OutCubic
+            duration: root.expanded ? Motion.medium : Motion.fast
+            easing.type: root.expanded ? Easing.OutQuart : Easing.InCubic
         }
     }
 
     Column {
         id: _content
-        width: parent.width
+        x: root.indent
+        width: Math.max(1, parent.width - root.indent)
 
         y: 0
         opacity: root.expanded ? 1.0 : 0.0
@@ -46,7 +48,7 @@ Item {
             enabled: !ShellSettings.reduceMotion
             NumberAnimation {
                 duration: Motion.fast
-                easing.type: Easing.OutCubic
+                easing.type: root.expanded ? Easing.OutCubic : Easing.InCubic
             }
         }
     }

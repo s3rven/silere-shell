@@ -36,7 +36,7 @@ Repeater {
               && !(row.suppressDividerAbove ?? false) && opacity > 0.01
         // inset to the row's content edge so the seam reads as a division between rows,
         // not a cut through the card border; 12 keeps the x offset on the 4px grid
-        x: 12
+        x: (root.column ? root.column.x : 0) + 12
         // Row heights and panel offsets sit on the 4px grid (see fractional-scaling
         // notes), so row.y lands on whole physical px and every divider renders the
         // same thickness. `column.y` also supports any intentionally offset group.

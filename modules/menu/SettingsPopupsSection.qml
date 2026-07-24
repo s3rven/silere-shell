@@ -13,6 +13,7 @@ Column {
             onToggled: ShellSettings.notifPopupEnabled = !ShellSettings.notifPopupEnabled
         }
         CollapsibleSection {
+            indent: 8
             expanded: ShellSettings.notifPopupEnabled
             ToggleRow {
                 glyph: "󰊓"; label: "Hide in fullscreen"
@@ -70,6 +71,7 @@ Column {
             onToggled: ShellSettings.dndSchedule = !ShellSettings.dndSchedule
         }
         CollapsibleSection {
+            indent: 8
             expanded: ShellSettings.dndSchedule
             SliderRow {
                 glyph: "󰃰"; label: "From"

@@ -43,6 +43,7 @@ Column {
             onToggled: ShellSettings.barFloating = !ShellSettings.barFloating
         }
         CollapsibleSection {
+            indent: 8
             expanded: ShellSettings.barFloating
             SliderRow {
                 glyph: "󰁌"; label: "Width"
@@ -61,6 +62,7 @@ Column {
                 onChosen: (v) => ShellSettings.barCornerStyle = v
             }
             CollapsibleSection {
+                indent: 8
                 expanded: ShellSettings.barCornerStyle === "round"
                 SliderRow {
                     glyph: "󱓻"; label: "Roundness"
@@ -76,6 +78,7 @@ Column {
                 onToggled: ShellSettings.barShadow = !ShellSettings.barShadow
             }
             CollapsibleSection {
+                indent: 8
                 expanded: ShellSettings.barShadow
                 SliderRow {
                     glyph: "󰔏"; label: "Shadow depth"

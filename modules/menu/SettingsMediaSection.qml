@@ -31,6 +31,7 @@ Column {
             dependsNote: SystemTools.ready ? "cava missing" : "Checking"
         }
         CollapsibleSection {
+            indent: 8
             expanded: ShellSettings.mediaProgress && SystemTools.hasCava
             ChoiceChipRow {
                 glyph: "󰝚"; label: "Position"
