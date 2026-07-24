@@ -611,6 +611,7 @@ PageShell {
 
         SectionLabel {
             label: "Audio & Display"
+            showRule: true
             visible: Audio.ready || Brightness.maxBrightness > 0
         }
         // high-frequency controls up top; volume carries an inline output-device dropdown
@@ -636,6 +637,7 @@ PageShell {
         }
         SectionLabel {
             label: "Connectivity"
+            showRule: true
             visible: root._wifiAvailable || root._btAvailable
         }
         SettingsCard {
@@ -708,7 +710,7 @@ PageShell {
             }
         }
 
-        SectionLabel { label: "Controls" }
+        SectionLabel { label: "Controls"; showRule: true }
         SettingsCard {
             ControlRow {
                 id: _nightRow
@@ -795,7 +797,7 @@ PageShell {
             }
         }
 
-        SectionLabel { label: "System" }
+        SectionLabel { label: "System"; showRule: true }
         VitalsStrip {
             active: root.active
             width: parent.width

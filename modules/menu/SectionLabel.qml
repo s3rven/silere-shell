@@ -9,12 +9,12 @@ Item {
     property string glyph: ""
     // a page's topmost heading; not derived — one nested in a Loader still has nothing above it in its own column
     property bool   first: false
-    property bool   showRule: true
+    property bool   showRule: false
     // a heading takes no seam and induces none, so collapsing it with its card draws no stray line
     readonly property bool suppressDividerAbove: true
 
-    readonly property int _topGap: first ? 2 : Theme.gapSection
-    readonly property int _botGap: 6
+    readonly property int _topGap: first ? 4 : Theme.gapSection
+    readonly property int _botGap: 8
     readonly property int _contentH: glyph.length > 0 ? 22 : Math.max(14, _text.implicitHeight)
 
     width: parent ? parent.width : 0
@@ -33,7 +33,7 @@ Item {
         Rectangle {
             id: _marker
             anchors.left: parent.left
-            anchors.leftMargin: 2
+            anchors.leftMargin: 4
             anchors.verticalCenter: parent.verticalCenter
             width: root.glyph.length > 0 ? 22 : 3
             height: root.glyph.length > 0 ? 22 : Math.round(_text.implicitHeight * 0.82)
@@ -41,7 +41,7 @@ Item {
             antialiasing: true
             color: root.glyph.length > 0
                 ? Theme.withAlpha(Theme.accent, 0.075)
-                : Theme.withAlpha(Theme.menuTextMuted, 0.66)
+                : Theme.withAlpha(Theme.accent, 0.62)
             border.width: root.glyph.length > 0 ? 1 : 0
             border.color: Theme.withAlpha(Theme.accent, 0.16)
 
@@ -71,7 +71,7 @@ Item {
                 : Theme.withAlpha(Theme.menuTextMuted, 0.82)
             font.family: Settings.font
             font.pixelSize: root.glyph.length > 0
-                ? Math.max(9, Settings.fontSize - 2) : Settings.fontSize - 3
+                ? Math.max(9, Settings.fontSize - 2) : Settings.fontSize - 2
             font.letterSpacing: 0.45
             font.weight: Font.DemiBold
             font.capitalization: Font.AllUppercase
