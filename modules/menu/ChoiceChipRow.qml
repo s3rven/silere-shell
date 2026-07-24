@@ -20,10 +20,12 @@ Item {
     property real   cardInset:    1
     signal chosen(var value)
 
-    // settings never ellipsize: when the label can't fit beside the chips, the row grows a
-    // line and the chips drop below it. inputs are text metrics + fixed widths, so no layout loop
+    readonly property real _compactControlW:
+        Math.min(172, Math.max(1, width - 26))
+    readonly property real _inlineLabelW:
+        Math.max(0, width - 12 - _compactControlW - 14 - 10)
     readonly property bool _stacked: width > 0
-        && _labelRow.neededW > _segContainer.x - 14 - 10
+        && _labelRow.neededW > _inlineLabelW
 
     // 4px multiples: keep card dividers on whole physical px under fractional scaling
     width:  parent ? parent.width : 0
@@ -92,7 +94,8 @@ Item {
         id: _segContainer
         x: root.width - 12 - width
         y: root._stacked ? root.height - 12 - height : (root.height - height) / 2
-        width: Math.min(172, Math.max(1, root.width - 26))
+        width: Math.min(root._stacked ? 240 : 172,
+            Math.max(1, root.width - 26))
         height: 28
         radius:       Theme.radiusControl
         antialiasing: true
@@ -126,26 +129,19 @@ Item {
         readonly property real _cellW: Math.max(1,
             Math.floor((_segContainer.width - 8) / Math.max(1, root.model.length)))
 
-        // Underline hugs the chip's painted content, so short and long labels
-        // keep the compact selector style used throughout Settings.
-        function _markW(seg): real {
-            if (!seg) return 0
-            return Math.max(10, Math.min(seg.contentW + 2, seg.width - 10))
-        }
-
         Rectangle {
             readonly property bool shown: _segContainer._hoverSeg
                 && _segContainer._hoverIndex !== root._activeIndex
             x: _segContainer._hoverSeg
-                ? _segContainer._hoverSeg.x + _segRow.x
-                    + (_segContainer._hoverSeg.width - width) / 2
+                ? _segContainer._hoverSeg.x + _segRow.x + 2
                 : 4
-            y: parent.height - 4
-            width: _segContainer._markW(_segContainer._hoverSeg)
-            height: 2
-            radius: 1
+            y: 2
+            width: _segContainer._hoverSeg
+                ? Math.max(1, _segContainer._hoverSeg.width - 4) : 1
+            height: 24
+            radius: Theme.radiusControl - 3
             antialiasing: true
-            color: Theme.withAlpha(root.accentColor, 0.34)
+            color: Theme.withAlpha(Theme.text, 0.045)
             opacity: shown ? 1 : 0
             visible: opacity > 0.001
             Behavior on x {
@@ -158,17 +154,21 @@ Item {
         Rectangle {
             id: _indicator
             x: _segContainer._activeSeg
-                ? _segContainer._activeSeg.x + _segRow.x
-                    + (_segContainer._activeSeg.width - width) / 2
+                ? _segContainer._activeSeg.x + _segRow.x + 2
                 : 4
-            y: parent.height - 4
-            width: _segContainer._markW(_segContainer._activeSeg)
-            height: 2
-            radius: 1
+            y: 2
+            width: _segContainer._activeSeg
+                ? Math.max(1, _segContainer._activeSeg.width - 4) : 1
+            height: 24
+            radius: Theme.radiusControl - 3
             antialiasing: true
             opacity:      _segContainer._activeSeg ? 1.0 : 0.0
             visible:      opacity > 0.001
-            color: Theme.withAlpha(root.accentColor, 0.82)
+            color: Theme.mix(Theme.menuControl, root.accentColor,
+                ShellSettings.neutralTheme ? 0.16 : 0.24)
+            border.width: 1
+            border.color: Theme.withAlpha(root.accentColor,
+                ShellSettings.highContrast ? 0.62 : 0.34)
 
             Behavior on x        { enabled: _segContainer._animReady && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.width; easing.type: Easing.OutQuart } }
             Behavior on width    { enabled: _segContainer._animReady && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.width; easing.type: Easing.OutQuart } }
@@ -192,7 +192,6 @@ Item {
                     required property int index
 
                     readonly property bool   active:   index === root._activeIndex
-                    readonly property real   contentW: _content.width
                     readonly property string segGlyph: (modelData.glyph !== undefined && modelData.glyph !== null)
                         ? String(modelData.glyph) : ""
 
