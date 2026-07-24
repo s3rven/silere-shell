@@ -180,8 +180,8 @@ PanelWindow {
             function _activate(): void {
                 if (!_entry.on) return
                 if (_entry.sub) {
-                    _flyout.visible = !_flyout.visible
-                    if (_flyout.visible) Qt.callLater(_entry._focusFirstSub)
+                    _flyout.opened = !_flyout.opened
+                    if (_flyout.opened) Qt.callLater(_entry._focusFirstSub)
                 } else {
                     win._emitMenuSignal(_entry.modelData, "triggered", "sendTriggered")
                     TrayMenuState.close()
@@ -199,7 +199,7 @@ PanelWindow {
             Keys.onEnterPressed:  e => { if (!e.isAutoRepeat) _entry._activate(); e.accepted = true }
             Keys.onRightPressed:  e => {
                 if (_entry.sub) {
-                    if (!_flyout.visible) _flyout.visible = true
+                    if (!_flyout.opened) _flyout.opened = true
                     Qt.callLater(_entry._focusFirstSub)
                     e.accepted = true
                 } else {
@@ -207,7 +207,7 @@ PanelWindow {
                 }
             }
             Keys.onLeftPressed: e => {
-                if (_entry.sub && _flyout.visible) { _flyout.visible = false; e.accepted = true }
+                if (_entry.sub && _flyout.opened) { _flyout.opened = false; e.accepted = true }
                 else e.accepted = false
             }
 
@@ -232,7 +232,7 @@ PanelWindow {
                 anchors.fill: parent
                 radius: Theme.radiusControl
                 antialiasing: true
-                color: (_entry.on && (_rowHover.hovered || _flyout.visible || _entry.activeFocus))
+                color: (_entry.on && (_rowHover.hovered || _flyout.opened || _entry.activeFocus))
                     ? Theme.withAlpha(Theme.menuHover, 0.12) : "transparent"
                 Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
             }
@@ -241,7 +241,7 @@ PanelWindow {
                 id: _rowHover
                 enabled: _entry.on
                 cursorShape: Qt.PointingHandCursor
-                onHoveredChanged: if (hovered && _entry.sub) _flyout.visible = true
+                onHoveredChanged: if (hovered && _entry.sub) _flyout.opened = true
             }
             TapHandler {
                 enabled: _entry.on && !_entry.sub
@@ -252,7 +252,7 @@ PanelWindow {
             }
             TapHandler {
                 enabled: _entry.on && _entry.sub
-                onTapped: _flyout.visible = !_flyout.visible
+                onTapped: _flyout.opened = !_flyout.opened
             }
 
             Item {
@@ -330,7 +330,12 @@ PanelWindow {
             // flips to the left edge when it would run off-screen
             Rectangle {
                 id: _flyout
-                visible: false
+                property bool opened: false
+                property real _shift: opened ? 0 : (_flip ? 5 : -5)
+
+                visible: opened || opacity > 0.001
+                enabled: opened
+                opacity: opened ? 1 : 0
                 z: 10
                 readonly property real _w: win.menuWidth + pad * 2
                 readonly property int  pad: 6
@@ -347,21 +352,37 @@ PanelWindow {
                 color: Theme.popup
                 border.width: 1
                 border.color: Theme.outline
+                transform: Translate { x: _flyout._shift }
+
+                Behavior on opacity {
+                    enabled: !ShellSettings.reduceMotion
+                    NumberAnimation {
+                        duration: _flyout.opened ? Motion.medium : Motion.fast
+                        easing.type: _flyout.opened ? Easing.OutCubic : Easing.InCubic
+                    }
+                }
+                Behavior on _shift {
+                    enabled: !ShellSettings.reduceMotion
+                    NumberAnimation {
+                        duration: _flyout.opened ? Motion.medium : Motion.fast
+                        easing.type: _flyout.opened ? Easing.OutQuart : Easing.InCubic
+                    }
+                }
 
                 // apps populate submenu children lazily, only after the opened signal.
-                onVisibleChanged: {
+                onOpenedChanged: {
                     if (!_entry.sub) return
-                    if (visible) win._emitMenuSignal(_entry.modelData, "opened", "sendOpened")
+                    if (opened) win._emitMenuSignal(_entry.modelData, "opened", "sendOpened")
                     else win._emitMenuSignal(_entry.modelData, "closed", "sendClosed")
                 }
-                Component.onDestruction: if (_entry.sub && _flyout.visible) win._emitMenuSignal(_entry.modelData, "closed", "sendClosed")
+                Component.onDestruction: if (_entry.sub && _flyout.opened) win._emitMenuSignal(_entry.modelData, "closed", "sendClosed")
 
                 HoverHandler { id: _flyHover }
 
                 Timer {
                     id: _flyClose
                     interval: 180
-                    onTriggered: if (!_rowHover.hovered && !_flyHover.hovered) _flyout.visible = false
+                    onTriggered: if (!_rowHover.hovered && !_flyHover.hovered) _flyout.opened = false
                 }
                 Connections {
                     target: _flyHover
@@ -369,7 +390,7 @@ PanelWindow {
                 }
                 Connections {
                     target: _rowHover
-                    function onHoveredChanged() { if (!_rowHover.hovered && _flyout.visible) _flyClose.restart() }
+                    function onHoveredChanged() { if (!_rowHover.hovered && _flyout.opened) _flyClose.restart() }
                 }
 
                 Flickable {
