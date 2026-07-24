@@ -66,7 +66,7 @@ Column {
     SectionLabel { label: "QUIET HOURS" }
     SettingsCard {
         ToggleRow {
-            glyph: "󰂛"; label: "Auto do not disturb"
+            glyph: "󰂛"; label: "Scheduled do not disturb"
             checked: ShellSettings.dndSchedule
             onToggled: ShellSettings.dndSchedule = !ShellSettings.dndSchedule
         }

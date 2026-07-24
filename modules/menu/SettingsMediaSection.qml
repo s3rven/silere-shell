@@ -13,7 +13,7 @@ Column {
             onToggled: ShellSettings.mediaWidgetFormat = (ShellSettings.mediaWidgetFormat === "artist-title" ? "title" : "artist-title")
         }
         ToggleRow {
-            glyph: "󰐊"; label: "Playback helper"
+            glyph: "󰐊"; label: "Playback status"
             description: "Play state and progress in the bar"
             checked: ShellSettings.mediaWidgetHelper
             onToggled: ShellSettings.mediaWidgetHelper = !ShellSettings.mediaWidgetHelper

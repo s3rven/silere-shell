@@ -16,7 +16,7 @@ Column {
             onChanged: (v) => ShellSettings.wsMinVisible = v
         }
         ToggleRow {
-            glyph: "󰗘"; label: "Animated switch"
+            glyph: "󰗘"; label: "Switch animation"
             checked: ShellSettings.workspaceShift
             onToggled: ShellSettings.workspaceShift = !ShellSettings.workspaceShift
         }

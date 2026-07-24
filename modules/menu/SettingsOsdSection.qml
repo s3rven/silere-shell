@@ -7,11 +7,13 @@ Column {
 
     SettingsCard {
         ToggleRow {
-            glyph: "󱀅"; label: "Show OSD"
+            glyph: "󱀅"; label: "On-screen display"
+            description: "Show feedback when volume or brightness changes"
             checked: ShellSettings.osdEnabled
             onToggled: ShellSettings.osdEnabled = !ShellSettings.osdEnabled
         }
         CollapsibleSection {
+            indent: 8
             expanded: ShellSettings.osdEnabled
             // Mode: floating pill vs bar-inline. Drives which sub-options apply.
             ToggleRow {
@@ -41,7 +43,7 @@ Column {
                 onChosen: (v) => ShellSettings.osdTimeout = v
             }
             ChoiceChipRow {
-                glyph: "󰒓"; label: "Show for"
+                glyph: "󰒓"; label: "Feedback for"
                 currentValue: ShellSettings.osdKindFilter
                 model: [
                     { value: "both",       glyph: "󰓎", label: "Both" },
