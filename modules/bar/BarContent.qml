@@ -157,6 +157,7 @@ Item {
         transitions: [
             Transition {
                 to: "shown"
+                enabled: !ShellSettings.reduceMotion
                 SequentialAnimation {
                     PauseAnimation  { duration: Motion.fast }
                     ParallelAnimation {
@@ -167,6 +168,7 @@ Item {
             },
             Transition {
                 to: "hidden"
+                enabled: !ShellSettings.reduceMotion
                 ParallelAnimation {
                     NumberAnimation { property: "opacity"; duration: Motion.fast; easing.type: Easing.InCubic }
                     NumberAnimation { property: "scale";   duration: Motion.fast; easing.type: Easing.InCubic }

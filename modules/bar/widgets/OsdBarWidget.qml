@@ -34,6 +34,9 @@ Item {
         target: OsdBarState
         function onShowingChanged() { root._sync() }
         function onBarConcealedChanged() { root._sync() }
+        function onRapidChanged() {
+            if (!OsdBarState.rapid) root._refreshAlertWidth()
+        }
         function onBumped() { if (root.state === "visible" && !_bumpAnim.running) _bumpAnim.restart() }
         function onNextIconChanged() {
             if (OsdBarState.nextIcon === OsdBarState.icon) return

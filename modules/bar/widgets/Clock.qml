@@ -56,8 +56,8 @@ Row {
         visible: ShellSettings.clockShowDate || opacity > 0.001
         clip:    true
 
-        Behavior on width   { NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic } }
-        Behavior on opacity { NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic } }
+        Behavior on width   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic } }
+        Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic } }
 
         Row {
             id: _dateRow

@@ -20,7 +20,7 @@ Singleton {
     readonly property bool barConcealed: OverviewState.active || Notifications.fullscreenActive
     property alias entries: _entries
     readonly property int activeCount: _entries.count
-    Behavior on fillColor { ColorAnimation { duration: Motion.medium } }
+    Behavior on fillColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.medium } }
 
     signal bumped()
     signal entryBumped(string kind)
