@@ -99,7 +99,7 @@ Singleton {
     }
 
     function rowFill(hovered: bool, danger: bool): color {
-        return danger ? mix(menuCard, error, hovered ? 0.18 : 0.13)
+        return danger ? mix(menuCard, error, hovered ? 0.10 : 0.06)
                       : hovered ? mix(menuCard, text, 0.045) : menuCard
     }
 }

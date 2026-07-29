@@ -12,11 +12,16 @@ Item {
     property string wheelKey:  "quickslider"
     property string accessibleName: wheelKey
     property bool   glyphClickable: false
+    property string glyphActionName: ""
     property bool   expandable: false
     property bool   expanded:   false
+    // hold the chevron gutter open on a non-expandable row so stacked sliders keep one track length
+    property bool   reserveExpandSlot: false
+    readonly property bool _hasChevSlot: root.expandable || root.reserveExpandSlot
     property real   topRadius:    0
     property real   bottomRadius: 0
     property real   cardInset:    1
+    property real   cardLeftBleed: 0
 
     signal moved(real value)
     signal glyphClicked()
@@ -58,6 +63,7 @@ Item {
         topRadius:    root.topRadius
         bottomRadius: root.bottomRadius
         cardInset:    root.cardInset
+        leftBleed:    root.cardLeftBleed
         active:       (_rowHover.hovered || root.activeFocus) && root.enabled
         focusActive:  root.activeFocus && root.enabled
         fillOpacity:  root.activeFocus ? 0.13 : 0.08
@@ -70,16 +76,30 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         width: 18; height: 18
 
+        activeFocusOnTab: root.enabled && root.glyphClickable
+        Accessible.role: root.glyphClickable ? Accessible.Button : Accessible.NoRole
+        Accessible.name: root.glyphActionName
+        Accessible.onPressAction: if (root.glyphClickable) root.glyphClicked()
+        Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) root.glyphClicked(); event.accepted = true }
+        Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root.glyphClicked(); event.accepted = true }
+        Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) root.glyphClicked(); event.accepted = true }
+
         Text {
             anchors.centerIn: parent
             text: root.glyph
-            color: Theme.withAlpha(Theme.subtext, 0.85)
+            color: _g.activeFocus ? Theme.accent
+                 : (root.glyphClickable && _glyphHover.hovered) ? Theme.text
+                 : Theme.withAlpha(Theme.subtext, 0.85)
             font.family: Settings.font
             font.pixelSize: Settings.iconSize + 2
             renderType: Text.NativeRendering
+            Behavior on color {
+                enabled: !ShellSettings.reduceMotion
+                ColorAnimation { duration: Motion.fast }
+            }
         }
 
-        HoverHandler { enabled: root.glyphClickable; cursorShape: Qt.PointingHandCursor }
+        HoverHandler { id: _glyphHover; enabled: root.glyphClickable; cursorShape: Qt.PointingHandCursor }
         TapHandler   { enabled: root.glyphClickable; margin: 6; onTapped: root.glyphClicked() }
     }
 
@@ -103,7 +123,7 @@ Item {
         anchors.right: _v.left
         anchors.rightMargin: 10
         anchors.verticalCenter: parent.verticalCenter
-        width: root.expandable ? 24 : 0
+        width: root._hasChevSlot ? 24 : 0
         height: parent.height
         visible: root.expandable
         opacity: (_chevHover.hovered || activeFocus) ? 1.0 : 0.7
@@ -140,14 +160,17 @@ Item {
             rotation: root.expanded ? 180 : 0
             transformOrigin: Item.Center
             Behavior on rotation { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
-            Behavior on color    { ColorAnimation { duration: Motion.fast } }
+            Behavior on color {
+                enabled: !ShellSettings.reduceMotion
+                ColorAnimation { duration: Motion.fast }
+            }
         }
     }
 
     SliderTrack {
         id: _track
         anchors.left: _g.right;  anchors.leftMargin: 10
-        anchors.right: root.expandable ? _chev.left : _v.left
+        anchors.right: root._hasChevSlot ? _chev.left : _v.left
         anchors.rightMargin: 10
         anchors.verticalCenter: parent.verticalCenter
         height: 16

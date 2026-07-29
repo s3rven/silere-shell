@@ -114,7 +114,6 @@ Column {
 
         CollapsibleSection {
             id: _modifiedList
-            indent: 8
             expanded: _modHeader.open && ShellSettings.modifiedKeys.length > 0
             Repeater {
                 id: _modRepeater
@@ -126,6 +125,7 @@ Column {
                     required property string modelData
                     property real topRadius:    0
                     property real bottomRadius: 0
+                    property real cardLeftBleed: 0
                     width: parent ? parent.width : 0
                     height: 44
 
@@ -153,6 +153,7 @@ Column {
                         anchors.fill: parent
                         topRadius:    _modRow.topRadius
                         bottomRadius: _modRow.bottomRadius
+                        leftBleed:    _modRow.cardLeftBleed
                         active:       _modHover.hovered || _modRow.activeFocus
                         focusActive:  _modRow.activeFocus
                         fillOpacity:  _modRow.activeFocus ? 0.13 : 0.08
@@ -191,7 +192,10 @@ Column {
                             : Theme.withAlpha(Theme.subtext, 0.5)
                         font.family: Settings.font; font.pixelSize: Settings.iconSize
                         renderType: Text.NativeRendering
-                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        Behavior on color {
+                            enabled: !ShellSettings.reduceMotion
+                            ColorAnimation { duration: Motion.fast }
+                        }
                     }
                 }
             }
@@ -239,6 +243,10 @@ Column {
             Keys.onSpacePressed:  e => { if (!e.isAutoRepeat) _resetRow._activate(); e.accepted = true }
             Keys.onReturnPressed: e => { if (!e.isAutoRepeat) _resetRow._activate(); e.accepted = true }
             Keys.onEnterPressed:  e => { if (!e.isAutoRepeat) _resetRow._activate(); e.accepted = true }
+            Keys.onEscapePressed: e => {
+                if (_resetRow.armed) { _resetRow._disarm(); e.accepted = true }
+                else e.accepted = false
+            }
 
             HoverHandler {
                 id: _resetHover
@@ -268,7 +276,10 @@ Column {
                     color: _resetRow.armed ? Theme.error : Theme.withAlpha(Theme.subtext, 0.85)
                     font.family: Settings.font; font.pixelSize: Settings.iconSize + 2
                     renderType: Text.NativeRendering
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    Behavior on color {
+                        enabled: !ShellSettings.reduceMotion
+                        ColorAnimation { duration: Motion.fast }
+                    }
                 }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
@@ -276,7 +287,10 @@ Column {
                     color: _resetRow.armed ? Theme.error : Theme.withAlpha(Theme.text, 0.85)
                     font.family: Settings.font; font.pixelSize: Settings.fontSize
                     renderType: Text.NativeRendering
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    Behavior on color {
+                        enabled: !ShellSettings.reduceMotion
+                        ColorAnimation { duration: Motion.fast }
+                    }
                 }
             }
             Text {

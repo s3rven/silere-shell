@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import "../../config"
 import "../../services"
+import "../common"
 
 Item {
     id: root
@@ -15,6 +16,7 @@ Item {
     property real   topRadius:    0
     property real   bottomRadius: 0
     property real   cardInset:    1
+    property real   cardLeftBleed: 0
     readonly property int _optionsCapH: 224
     readonly property bool _hasDesc: description.length > 0
     readonly property int _headerH: _hasDesc
@@ -46,7 +48,7 @@ Item {
     }
 
     function _setOpen(next: bool): void {
-        if (!root.enabled) return
+        if (next && !root.enabled) return
         if (_open === next) {
             if (_open) Qt.callLater(root._focusActiveOption)
             return
@@ -58,6 +60,8 @@ Item {
     function _toggleOpen(): void {
         _setOpen(!_open)
     }
+
+    onEnabledChanged: if (!enabled) _setOpen(false)
 
     readonly property int _activeIndex: {
         for (let i = 0; i < model.length; i++)
@@ -97,8 +101,21 @@ Item {
     Keys.onDownPressed: event => { root._setOpen(true); event.accepted = true }
     Keys.onUpPressed: event => { root._setOpen(true); event.accepted = true }
 
-    HoverHandler { id: _hov; enabled: root.enabled; cursorShape: root.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor }
-    TapHandler   { enabled: root.enabled; onTapped: root._toggleOpen() }
+    Item {
+        id: _headerHitArea
+        width: parent.width
+        height: root._headerH
+
+        HoverHandler {
+            id: _hov
+            enabled: root.enabled
+            cursorShape: root.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+        }
+        TapHandler {
+            enabled: root.enabled
+            onTapped: root._toggleOpen()
+        }
+    }
 
     RowHoverBg {
         width:  parent.width
@@ -106,6 +123,7 @@ Item {
         topRadius:    root.topRadius
         bottomRadius: root._open ? 0 : root.bottomRadius
         cardInset:    root.cardInset
+        leftBleed:    root.cardLeftBleed
         active:       (_hov.hovered || root.activeFocus) && root.enabled
         focusActive:  root.activeFocus && root.enabled
         fillOpacity:  root.activeFocus ? 0.13 : 0.08
@@ -171,17 +189,23 @@ Item {
         height: 26
 
         Rectangle {
+            id: _chevronFill
             anchors.fill: parent
             radius: Theme.radiusControl - 2
             antialiasing: true
             color: Theme.mix(Theme.menuControl, root._open ? Theme.accent : Theme.text,
                 root._open ? (ShellSettings.neutralTheme ? 0.16 : 0.24) : 0.018)
-            border.width: 1
-            border.color: root._open
+            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+
+            readonly property color _outlineColor: root._open
                 ? Theme.withAlpha(Theme.accent, ShellSettings.highContrast ? 0.64 : 0.46)
                 : (_hov.hovered || root.activeFocus ? Theme.withAlpha(Theme.accent, 0.34) : Theme.menuControlLine)
-            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
-            Behavior on border.color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+
+            OutlineBorder {
+                radius: _chevronFill.radius
+                outlineColor: _chevronFill._outlineColor
+                Behavior on outlineColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+            }
         }
 
         Text {
@@ -199,7 +223,10 @@ Item {
             font.pixelSize: Settings.fontSize - 1
             font.weight:    root._open ? Font.DemiBold : Font.Medium
             renderType:     Text.NativeRendering
-            Behavior on color { ColorAnimation { duration: Motion.fast } }
+            Behavior on color {
+                enabled: !ShellSettings.reduceMotion
+                ColorAnimation { duration: Motion.fast }
+            }
         }
         Text {
             anchors.right:          parent.right
@@ -213,7 +240,10 @@ Item {
             font.pixelSize: Settings.fontSize
             renderType:     Text.NativeRendering
             Behavior on rotation { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
-            Behavior on color    { ColorAnimation { duration: Motion.fast } }
+            Behavior on color {
+                enabled: !ShellSettings.reduceMotion
+                ColorAnimation { duration: Motion.fast }
+            }
         }
     }
 
@@ -249,9 +279,9 @@ Item {
             y: 0
             opacity: root._open ? 1.0 : 0.0
 
-            Rectangle {
+            Hairline {
                 x: 12
-                width: parent.width - 24; height: 1
+                width: parent.width - 24
                 color: Theme.menuDivider
             }
             Item { width: parent.width; height: 3 }
@@ -326,6 +356,7 @@ Item {
                     }
 
                     Rectangle {
+                        id: _optFill
                         anchors.fill: parent
                         anchors.leftMargin: 8
                         anchors.rightMargin: 8
@@ -338,11 +369,14 @@ Item {
                             : _optHov.hovered || _opt.activeFocus
                                 ? Theme.withAlpha(Theme.text, 0.035)
                                 : "transparent"
-                        border.width: _opt.activeFocus ? 1 : 0
-                        border.color: Theme.withAlpha(Theme.accent, 0.58)
                         opacity: _opt.active || _opt.activeFocus || _optHov.hovered ? 1.0 : 0.0
                         Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
                         Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+
+                        OutlineBorder {
+                            radius: _optFill.radius
+                            outlineColor: _opt.activeFocus ? Theme.withAlpha(Theme.accent, 0.58) : "transparent"
+                        }
                     }
 
                     Text {
@@ -361,7 +395,10 @@ Item {
                         font.pixelSize: Settings.fontSize
                         font.weight:    _opt.active ? Font.DemiBold : Font.Normal
                         renderType:     Text.NativeRendering
-                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        Behavior on color {
+                            enabled: !ShellSettings.reduceMotion
+                            ColorAnimation { duration: Motion.fast }
+                        }
                     }
                     Text {
                         id: _check
@@ -384,17 +421,14 @@ Item {
         }
     }
 
-    Rectangle {
-        id: _scrollThumb
-        anchors.right: parent.right
-        anchors.rightMargin: 3
-        y: root._headerH + 4 + (_options.height - 8 - height)
-            * (_options.contentY / Math.max(1, _options.contentHeight - _options.height))
-        width: 2
-        height: Math.max(18, (_options.height - 8) * _options.height
-            / Math.max(1, _options.contentHeight))
-        radius: 1
-        color: Theme.withAlpha(Theme.subtext, 0.34)
-        visible: root._open && _options.contentHeight > _options.height + 1
+    MenuScrollThumb {
+        list: _options
+        shown: root._open
+        trackInset: 4
+        rightInset: 3
+        minimumLength: 18
+        color: Theme.subtext
+        idleOpacity: 0.34
+        movingOpacity: 0.56
     }
 }

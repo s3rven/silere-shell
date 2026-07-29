@@ -14,16 +14,20 @@ Item {
     property bool   available:    true
     property string dependsNote:  ""
     property real   cardInset:    1
+    property real   cardLeftBleed: 0
 
     signal toggled()
 
-    readonly property bool _hasDesc: root.description.length > 0
     readonly property bool _canToggle: root.enabled && (root.available || root.checked)
     readonly property bool _showDependsNote: root.dependsNote.length > 0
                                             && (!root.enabled || !root.available)
-    readonly property real _noteW: _showDependsNote
-        ? Math.min(_noteText.implicitWidth, Math.max(46, root.width * 0.26)) : 0
-    readonly property real _rightSlotW: 38 + (_showDependsNote ? _noteW + 8 : 0)
+    readonly property bool _hasDetail: root.description.length > 0
+                                    || root._showDependsNote
+    readonly property string _detailText: {
+        if (!root._showDependsNote) return root.description
+        if (root.description.length === 0) return root.dependsNote
+        return root.description + " · " + root.dependsNote
+    }
     readonly property string _accessibleDescription: {
         const parts = []
         if (root.description.length > 0) parts.push(root.description)
@@ -41,10 +45,10 @@ Item {
     // 4px multiple keeps card dividers on whole physical px under fractional scaling; a description grows the row to fit its wrapping subtitle, still snapped
     readonly property int _descPadV: 11
     width:          parent ? parent.width : 0
-    height:         _hasDesc ? 4 * Math.ceil((_descPadV * 2 + _textCol.implicitHeight) / 4) : 44
+    height:         _hasDetail ? 4 * Math.ceil((_descPadV * 2 + _textCol.implicitHeight) / 4) : 44
     implicitHeight: height
 
-    opacity: root.enabled && root.available ? 1.0 : (_canToggle ? 0.72 : 0.45)
+    opacity: root.enabled && root.available ? 1.0 : (_canToggle ? 0.72 : 0.52)
     Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium } }
 
     activeFocusOnTab: _canToggle
@@ -53,6 +57,7 @@ Item {
     Accessible.description: root._accessibleDescription
     Accessible.checked: root.checked
     Accessible.onPressAction: root._activate()
+    Accessible.onToggleAction: root._activate()
     Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
     Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
     Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
@@ -68,6 +73,7 @@ Item {
         topRadius:    root.topRadius
         bottomRadius: root.bottomRadius
         cardInset:    root.cardInset
+        leftBleed:    root.cardLeftBleed
         active:       (_hover.hovered || root.activeFocus) && root._canToggle
         focusActive:  root.activeFocus && root._canToggle
         fillOpacity:  root.activeFocus ? 0.13 : 0.08
@@ -87,7 +93,10 @@ Item {
         font.family:    Settings.font
         font.pixelSize: Settings.iconSize + 2
         renderType:     Text.NativeRendering
-        Behavior on color { ColorAnimation { duration: Motion.fast } }
+        Behavior on color {
+            enabled: !ShellSettings.reduceMotion
+            ColorAnimation { duration: Motion.fast }
+        }
     }
 
     Column {
@@ -111,19 +120,24 @@ Item {
             font.family:    Settings.font
             font.pixelSize: Settings.fontSize
             renderType:     Text.NativeRendering
-            Behavior on color { ColorAnimation { duration: Motion.fast } }
+            Behavior on color {
+                enabled: !ShellSettings.reduceMotion
+                ColorAnimation { duration: Motion.fast }
+            }
         }
 
         Text {
             id: _desc
-            visible: root._hasDesc
+            visible: root._hasDetail
             width:   parent.width
-            text:           root.description
+            text:           root._detailText
             textFormat:     Text.PlainText
             wrapMode:       Text.WordWrap
             maximumLineCount: 2
             elide:          Text.ElideRight
-            color:          Theme.withAlpha(Theme.subtext, 0.52)
+            color:          root._showDependsNote
+                ? Theme.withAlpha(Theme.mix(Theme.subtext, Theme.warning, 0.30), 0.72)
+                : Theme.withAlpha(Theme.subtext, 0.52)
             font.family:    Settings.font
             font.pixelSize: Math.max(8, Settings.fontSize - 2)
             lineHeight:     1.1
@@ -136,7 +150,7 @@ Item {
         anchors.right:          parent.right
         anchors.rightMargin:    12
         anchors.verticalCenter: parent.verticalCenter
-        width: root._rightSlotW
+        width: 38
         height: 20
 
         ToggleSwitch {
@@ -146,21 +160,7 @@ Item {
             width: 38
             height: 20
             checked: root.checked
-        }
-
-        Text {
-            id: _noteText
-            visible: root._showDependsNote
-            anchors.right: _toggle.left
-            anchors.rightMargin: 8
-            anchors.verticalCenter: parent.verticalCenter
-            width: root._noteW
-            horizontalAlignment: Text.AlignRight
-            text: root.dependsNote
-            elide: Text.ElideRight
-            color: Theme.withAlpha(Theme.subtext, 0.55)
-            font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
-            renderType: Text.NativeRendering
+            highlighted: (_hover.hovered || root.activeFocus) && root._canToggle
         }
     }
 }

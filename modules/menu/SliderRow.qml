@@ -1,5 +1,6 @@
 import QtQuick
 import "../../config"
+import "../../services"
 
 Item {
     id: root
@@ -19,6 +20,7 @@ Item {
     property real   topRadius:    0
     property real   bottomRadius: 0
     property real   cardInset:    1
+    property real   cardLeftBleed: 0
     property color  glyphColor:   Theme.withAlpha(Theme.subtext, 0.85)
 
     signal changed(real value)
@@ -29,11 +31,17 @@ Item {
     height:         56
     implicitHeight: 56
     opacity: root.enabled ? 1.0 : 0.45
+    Behavior on opacity {
+        enabled: !ShellSettings.reduceMotion
+        NumberAnimation { duration: Motion.medium }
+    }
 
     activeFocusOnTab: root.enabled
     Accessible.role: Accessible.Slider
     Accessible.name: root.label
     Accessible.description: root.displayValue
+    Accessible.onIncreaseAction: if (root.enabled) _track.nudge(1, 1)
+    Accessible.onDecreaseAction: if (root.enabled) _track.nudge(-1, 1)
     Keys.onPressed: event => _track.handleKey(event)
 
     HoverHandler { id: _rowHover; enabled: root.enabled }
@@ -42,6 +50,7 @@ Item {
         topRadius:    root.topRadius
         bottomRadius: root.bottomRadius
         cardInset:    root.cardInset
+        leftBleed:    root.cardLeftBleed
         active:       (_rowHover.hovered || root.activeFocus) && root.enabled
         focusActive:  root.activeFocus && root.enabled
         fillOpacity:  root.activeFocus ? 0.13 : 0.08

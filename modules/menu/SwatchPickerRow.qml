@@ -12,13 +12,21 @@ Item {
     property alias activeIndex: _sr.activeIndex
     property alias ringColor: _sr.ringColor
     property bool tintedReadout: false
-    readonly property bool _stacked: width > 0 && width < 240
 
     signal picked(int index)
 
     property real topRadius: 0
     property real bottomRadius: 0
     property real cardInset: 1
+    property real cardLeftBleed: 0
+
+    readonly property real _inlineNeededW: 14
+        + (root.glyph.length > 0 ? 28 : 0)
+        + Math.ceil(_label.implicitWidth)
+        + 10 + Math.min(96, Math.ceil(_readout.implicitWidth))
+        + 12 + _sr.implicitWidth + 12
+    readonly property bool _stacked: root.width > 0
+        && root._inlineNeededW > root.width
 
     width: parent ? parent.width : 0
     height: _stacked ? 76 : 44
@@ -33,8 +41,7 @@ Item {
         id: _glyph
         anchors.left: parent.left
         anchors.leftMargin: 14
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: root._stacked ? -16 : 0
+        y: Math.round((44 - height) / 2)
         visible: root.glyph.length > 0
         width: visible ? 18 : 0
         horizontalAlignment: Text.AlignHCenter
@@ -48,10 +55,10 @@ Item {
         id: _label
         anchors.left: _glyph.right
         anchors.leftMargin: root.glyph.length > 0 ? 10 : 0
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: root._stacked ? -16 : 0
-        width: Math.min(implicitWidth, Math.max(18, root.width - x
-            - (root._stacked ? 12 : _sr.width + 24)))
+        anchors.verticalCenter: _glyph.verticalCenter
+        anchors.right: _readout.visible ? _readout.left
+            : (root._stacked ? parent.right : _sr.left)
+        anchors.rightMargin: 10
         text:           root.label
         textFormat:     Text.PlainText
         elide:          Text.ElideRight
@@ -62,13 +69,11 @@ Item {
     }
     Text {
         id: _readout
-        visible: !root._stacked
-        anchors.left: _label.right
-        anchors.leftMargin: 10
-        anchors.right: _sr.left
+        visible: root._shownName.length > 0
+        anchors.right: root._stacked ? parent.right : _sr.left
         anchors.rightMargin: 12
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: root._stacked ? 16 : 0
+        anchors.verticalCenter: _glyph.verticalCenter
+        width: Math.min(96, implicitWidth)
         horizontalAlignment: Text.AlignRight
         text:           root._shownName
         textFormat:     Text.PlainText
@@ -79,7 +84,10 @@ Item {
         font.family:    Settings.font
         font.pixelSize: Settings.fontSize - 2
         renderType:     Text.NativeRendering
-        Behavior on color { ColorAnimation { duration: Motion.fast } }
+        Behavior on color {
+            enabled: !ShellSettings.reduceMotion
+            ColorAnimation { duration: Motion.fast }
+        }
     }
 
     SwatchRow {

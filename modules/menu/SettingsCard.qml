@@ -48,31 +48,35 @@ Rectangle {
         }
         return null
     }
-    function _collectRows(container, out) {
+    function _applyRows(container, leftOffset, first, last) {
+        const baseX = leftOffset ?? 0
         const ch = container.children
         for (let i = 0; i < ch.length; i++) {
             const c = ch[i]
             if (!c) continue
-            if (c.isRadiusGroup === true && c.radiusColumn) { root._collectRows(c.radiusColumn, out); continue }
-            if (c.topRadius !== undefined && c.bottomRadius !== undefined) out.push(c)
+            const childX = baseX + Math.max(0, Number(c.x) || 0)
+            if (c.isRadiusGroup === true && c.radiusColumn) {
+                const contentX = childX
+                    + Math.max(0, Number(c.radiusColumn.x) || 0)
+                root._applyRows(c.radiusColumn, contentX, first, last)
+                continue
+            }
+            if (c.topRadius === undefined || c.bottomRadius === undefined) continue
+
+            const bleed = Math.round(childX)
+            const top = c === first ? root.radius : 0
+            const bottom = c === last ? root.radius : 0
+            if (c.cardLeftBleed !== undefined && c.cardLeftBleed !== bleed)
+                c.cardLeftBleed = bleed
+            if (c.topRadius !== top) c.topRadius = top
+            if (c.bottomRadius !== bottom) c.bottomRadius = bottom
         }
     }
-
-    property var _cachedFirst: null
-    property var _cachedLast:  null
 
     function _applyRadii() {
         const fe = root._edgeEl(col, true)
         const le = root._edgeEl(col, false)
-        if (fe === root._cachedFirst && le === root._cachedLast) return
-        root._cachedFirst = fe
-        root._cachedLast  = le
-        const rows = []
-        root._collectRows(col, rows)
-        for (let i = 0; i < rows.length; i++) {
-            rows[i].topRadius    = (rows[i] === fe) ? root.radius : 0
-            rows[i].bottomRadius = (rows[i] === le) ? root.radius : 0
-        }
+        root._applyRows(col, 0, fe, le)
     }
 
     // re-derive when the row set could change. height moves on the obvious edits (collapsible opening, row hiding),

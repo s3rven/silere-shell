@@ -5,6 +5,12 @@ import Quickshell
 import "../services"
 
 Singleton {
+    // shared so selection, focus and section marks rasterize alike at 1.25x
+    readonly property int menuMarkerWidth: 3
+    readonly property int menuMarkerHeight: 18
+    readonly property real menuMarkerRadius: 1.5
+    readonly property real menuMarkerOpacity: 0.82
+
     function widgetGapFor(compact: bool): int {
         return compact ? Math.max(4, Math.round(ShellSettings.barSpacing * 0.5))
                        : ShellSettings.barSpacing

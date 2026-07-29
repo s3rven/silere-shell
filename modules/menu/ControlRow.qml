@@ -1,6 +1,7 @@
 import QtQuick
 import "../../config"
 import "../../services"
+import "../common"
 
 Item {
     id: root
@@ -20,6 +21,7 @@ Item {
     property real topRadius:    0
     property real bottomRadius: 0
     property real cardInset:    1
+    property real cardLeftBleed: 0
 
     signal activated()
     signal expandToggled()
@@ -110,8 +112,10 @@ Item {
         topRadius:    root.topRadius
         bottomRadius: root.bottomRadius
         cardInset:    root.cardInset
+        leftBleed:    root.cardLeftBleed
         active:       (_hover.hovered || root.activeFocus) && root._canTap
-        focusActive:  root.activeFocus && root._canTap
+        // stacking the focus marker on the active one lengthens the pill
+        focusActive:  root.activeFocus && root._canTap && !root.active
         fillOpacity:  root.activeFocus ? 0.13 : 0.08
     }
 
@@ -119,12 +123,17 @@ Item {
         anchors.left:           parent.left
         anchors.leftMargin:     root.cardInset + 2
         anchors.verticalCenter: parent.verticalCenter
-        width:  root.active ? 3 : 0
-        height: 18
-        radius: 1.5
+        width:  Metrics.menuMarkerWidth
+        height: Metrics.menuMarkerHeight
+        radius: Metrics.menuMarkerRadius
         antialiasing: true
         color:  root.accentColor
-        Behavior on width { enabled: root._ready && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: root.active ? Easing.OutCubic : Easing.InCubic } }
+        opacity: root.active ? Metrics.menuMarkerOpacity : 0
+        scale: root.active ? 1 : 0.55
+        transformOrigin: Item.Center
+        visible: opacity > 0.001
+        Behavior on opacity { enabled: root._ready && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
+        Behavior on scale { enabled: root._ready && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
     }
 
     Item {
@@ -143,7 +152,7 @@ Item {
             font.family:    Settings.font
             font.pixelSize: Settings.iconSize + 2
             renderType:     Text.NativeRendering
-            Behavior on color { ColorAnimation { duration: Motion.fast } }
+            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
         }
 
         Rectangle {
@@ -171,12 +180,16 @@ Item {
             color: (_badgeMouse.containsMouse || activeFocus)
                 ? Theme.mix(root.accentColor, Theme.text, 0.10)
                 : root.accentColor
-            border.width: activeFocus ? 2 : 1
-            border.color: activeFocus
-                ? Theme.withAlpha(Theme.text, 0.66)
-                : Theme.mix(Theme.menuCard, root.accentColor, _badgeMouse.containsMouse ? 0.42 : 0.55)
             Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
-            Behavior on border.color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+
+            OutlineBorder {
+                radius: _badge.radius
+                outlineWidth: _badge.activeFocus ? 2 : 1
+                outlineColor: _badge.activeFocus
+                    ? Theme.withAlpha(Theme.text, 0.66)
+                    : Theme.mix(Theme.menuCard, root.accentColor, _badgeMouse.containsMouse ? 0.42 : 0.55)
+                Behavior on outlineColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+            }
 
             Text {
                 id: _badgeTxt
@@ -220,7 +233,7 @@ Item {
             font.hintingPreference: Font.PreferFullHinting
             renderType:     Text.NativeRendering
             elide:          Text.ElideRight
-            Behavior on color { ColorAnimation { duration: Motion.fast } }
+            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
         }
 
         Text {
@@ -236,7 +249,7 @@ Item {
             font.hintingPreference: Font.PreferFullHinting
             renderType:     Text.NativeRendering
             elide:          Text.ElideRight
-            Behavior on color { ColorAnimation { duration: Motion.fast } }
+            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
         }
     }
 
@@ -258,6 +271,7 @@ Item {
             anchors.right:          parent.right
             anchors.verticalCenter: parent.verticalCenter
             checked:     root.active
+            highlighted: (_hover.hovered || root.activeFocus) && root._canTap
             accentColor: root.accentColor
         }
 
@@ -272,7 +286,7 @@ Item {
             font.pixelSize: Settings.fontSize - 1
             font.weight:    Font.Medium
             renderType:     Text.NativeRendering
-            Behavior on color { ColorAnimation { duration: Motion.fast } }
+            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
         }
 
         // MouseArea (not TapHandler) so it doesn't fire the row body tap too
@@ -315,7 +329,7 @@ Item {
                 rotation: root.expanded ? 180 : 0
                 transformOrigin: Item.Center
                 Behavior on rotation { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
-                Behavior on color    { ColorAnimation { duration: Motion.fast } }
+                Behavior on color    { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
             }
 
             HoverHandler { id: _chevHover; enabled: root.expandable; cursorShape: Qt.PointingHandCursor }
