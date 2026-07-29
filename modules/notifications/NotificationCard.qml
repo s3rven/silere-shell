@@ -17,6 +17,17 @@ Item {
     property var timeoutStartedAt: createdAt
 
     signal dismissRequested(int notifId, var notification, bool expired)
+    signal leaving()
+
+    // set while any card in the stack is animating out: the countdown rings are
+    // the frame budget, and a ring that stops ticking for one collapse is invisible
+    property bool quietPaint: false
+
+    // each ring costs a threaded canvas upload per tick, so the whole stack scales
+    // linearly; past a couple of cards nobody reads an individual arc that closely
+    property int stackSize: 1
+    readonly property int _ringTickMs: card.stackSize <= 2 ? 33
+        : card.stackSize <= 4 ? 50 : 66
 
     property bool _expired: false
     property bool _leaving: false
@@ -79,6 +90,7 @@ Item {
         if (!card.enabled) return
         card._expired = expired === true
         card._leaving = true
+        card.leaving()
         card._collapseBasis = cardRect.height
         _autoClose.stop()
         _arrivalShimmer.stop()
@@ -115,7 +127,7 @@ Item {
     NumberAnimation {
         id: _collapseAnim
         target: card; property: "collapseRatio"
-        to: 0; duration: Motion.ms(190); easing.type: Easing.InCubic
+        to: 0; duration: Motion.ms(190); easing.type: Easing.InOutCubic
     }
 
     Timer { id: _exitTimer; interval: Motion.ms(210) + 10; onTriggered: card.dismissRequested(card.notifId, card.notification, card._expired) }
@@ -160,6 +172,10 @@ Item {
     property real _collapseBasis: cardRect.height
     implicitHeight: _collapseBasis * collapseRatio
     property int slideDir: 1
+    // arriving from a full card width away has to be flung to cover the distance
+    // in any reasonable time; leaving still travels the whole way, since an exit
+    // reads as the card being taken off the stack
+    readonly property real _enterX:  slideDir * 44
     readonly property real _hiddenX: slideDir * (implicitWidth + 16)
 
     property real _hoverPausedMs: 0
@@ -183,28 +199,30 @@ Item {
     property real _countdownPulse:  1.0
     readonly property bool _showCountdown: card.visible && card.enabled
         && _autoClose.shouldRun && !ShellSettings.reduceMotion
-    readonly property real _trueRemaining: Math.max(0, _autoClose.fullInterval - (Date.now() - card.timeoutStartedAt) + card._hoverPausedMs)
 
-    NumberAnimation {
-        id: _countdownAnim
-        target: card; property: "_timeoutProgress"
-        from: _autoClose.fullInterval > 0 ? Math.min(1, card._trueRemaining / _autoClose.fullInterval) : 0
-        to:   0
-        duration: Math.max(1, card._trueRemaining)
-        running:  card._showCountdown
+    function _syncCountdown(): void {
+        const full = _autoClose.fullInterval
+        if (full <= 0) { card._timeoutProgress = 0; return }
+        const left = full - (Date.now() - card.timeoutStartedAt) + card._hoverPausedMs
+        card._timeoutProgress = Math.max(0, Math.min(1, left / full))
     }
 
-    // bound only while running — assigning paused on a stopped animation warns
-    Binding {
-        target: _countdownAnim
-        property: "paused"
-        value: _cardHover.hovered
-        when: _countdownAnim.running
-        restoreMode: Binding.RestoreNone
+    // measured: a 60fps NumberAnimation here cost ~15% of a core per visible
+    // card — every vsync re-ran the arc colour bindings, the pulse gate and a
+    // canvas paint request. the ring travels ~0.2px/ms, so ticking at the arc's
+    // own paint rate is indistinguishable and leaves the frame budget alone.
+    Timer {
+        id: _countdownTick
+        interval: card._ringTickMs
+        repeat:  true
+        running: card._showCountdown && !_cardHover.hovered && !card.quietPaint
+        triggeredOnStart: true
+        onTriggered: card._syncCountdown()
     }
 
     SequentialAnimation {
-        running: card._showCountdown && card._timeoutProgress < 0.18 && !_cardHover.hovered
+        running: card._showCountdown && card._timeoutProgress < 0.18
+            && !_cardHover.hovered && !card.quietPaint
         loops:   Animation.Infinite
         onRunningChanged: if (!running) card._countdownPulse = 1.0
         NumberAnimation { target: card; property: "_countdownPulse"; to: 0.5; duration: Motion.ms(420); easing.type: Easing.InOutSine }
@@ -221,6 +239,12 @@ Item {
                 card._hoverStartMs = 0
             }
         }
+    }
+
+    onTimeoutStartedAtChanged: {
+        card._hoverPausedMs = 0
+        card._hoverStartMs = _cardHover.hovered ? Date.now() : 0
+        card._syncCountdown()
     }
 
     Loader {
@@ -243,11 +267,13 @@ Item {
         antialiasing: true
 
         opacity: 0
-        x:       card._hiddenX
+        x:       card._enterX
 
         property bool _behaviorEnabled: false
+        // abs: a top-left stack slides to negative x, and a layer toggling off
+        // mid-slide flashes the card
         layer.enabled: card.visible && !ShellSettings.reduceMotion
-            && (_arrivalShimmer.running || x > 0.5 || opacity < 0.999)
+            && (_arrivalShimmer.running || Math.abs(x) > 0.5 || opacity < 0.999)
 
         Component.onCompleted: {
             const isNew = !Notifications.isSeen(card.notifId)
@@ -264,13 +290,16 @@ Item {
             }
         }
 
-        Behavior on x       { enabled: card.visible && cardRect._behaviorEnabled && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(200); easing.type: card._leaving ? Easing.InCubic : Easing.OutQuart } }
-        Behavior on opacity { enabled: card.visible && cardRect._behaviorEnabled && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(140) } }
+        Behavior on x       { enabled: card.visible && cardRect._behaviorEnabled && !ShellSettings.reduceMotion; NumberAnimation { duration: card._leaving ? Motion.ms(200) : Motion.ms(280); easing.type: card._leaving ? Easing.InCubic : Easing.OutCubic } }
+        // the fade has to outlast the slide in both directions: a 140ms fade
+        // against a 200ms InCubic exit is spent while the card is a third of the
+        // way out, so the peel never reads
+        Behavior on opacity { enabled: card.visible && cardRect._behaviorEnabled && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(200); easing.type: card._leaving ? Easing.InCubic : Easing.OutCubic } }
         Behavior on height  { enabled: card.visible && cardRect._behaviorEnabled && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
 
         color: Theme.rowFill(_cardHover.hovered, card.isCritical)
 
-        Behavior on color { ColorAnimation { duration: Motion.fast } }
+        Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
 
         ClippingRectangle {
             visible: card.showIconSlot
@@ -327,13 +356,15 @@ Item {
                     anchors.rightMargin: 18
                     text:           card.summaryText
                     textFormat:     Text.PlainText
-                    color:          card.isCritical ? Theme.error : Theme.text
+                    // the glyph, rim and ring already carry urgency; red text on
+                    // the red-tinted fill only costs contrast
+                    color:          Theme.text
                     font.family:    Settings.font
                     font.pixelSize: Settings.fontSize + 1
                     font.weight:    Font.DemiBold
                     renderType:     Text.NativeRendering
                     elide:          Text.ElideRight
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
                 }
             }
 
@@ -399,13 +430,9 @@ Item {
                     cache: false
                 }
 
-                Rectangle {
-                    anchors.fill: parent
+                OutlineBorder {
                     radius: _previewClip.radius
-                    color: "transparent"
-                    antialiasing: true
-                    border.width: 1
-                    border.color: Theme.menuControlLine
+                    outlineColor: Theme.menuControlLine
                 }
             }
 
@@ -431,12 +458,15 @@ Item {
                         color: _actMa.pressed       ? Theme.withAlpha(_tint, 0.24)
                              : _actMa.containsMouse ? Theme.withAlpha(_tint, 0.13)
                              :                        Theme.menuControl
-                        border.width: 1
-                        border.color: (_actMa.containsMouse || _actMa.pressed)
-                            ? Theme.withAlpha(_tint, 0.50)
-                            : Theme.withAlpha(_tint, 0.22)
-                        Behavior on color        { ColorAnimation { duration: Motion.fast } }
-                        Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+                        Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+
+                        OutlineBorder {
+                            radius: _actBtn.radius
+                            outlineColor: (_actMa.containsMouse || _actMa.pressed)
+                                ? Theme.withAlpha(_actBtn._tint, 0.50)
+                                : Theme.withAlpha(_actBtn._tint, 0.22)
+                            Behavior on outlineColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                        }
 
                         Accessible.role: Accessible.Button
                         Accessible.name: _actBtn.modelData.text
@@ -454,7 +484,7 @@ Item {
                             font.pixelSize: Settings.fontSize - 1
                             font.weight: Font.Medium
                             renderType: Text.NativeRendering
-                            Behavior on color { ColorAnimation { duration: Motion.fast } }
+                            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
                         }
 
                         MouseArea {
@@ -478,7 +508,7 @@ Item {
                     visible:        text.length > 0
                     text:           card.appNameText
                     textFormat:     Text.PlainText
-                    color:          Theme.withAlpha(Theme.menuTextMuted, card.isCritical ? 0.92 : 0.62)
+                    color:          Theme.withAlpha(Theme.menuTextMuted, card.isCritical ? 0.72 : 0.62)
                     font.family:    Settings.font
                     font.pixelSize: Settings.fontSize - 3
                     font.weight:    Font.Medium
@@ -563,16 +593,19 @@ Item {
             width: 22; height: 22; radius: 11
             antialiasing: true
             color:        _closeHover.hovered ? Theme.withAlpha(Theme.error, 0.18) : Theme.menuControl
-            border.width: 1
-            border.color: _closeHover.hovered ? Theme.withAlpha(Theme.error, 0.32) : Theme.menuControlLine
             opacity: _cardHover.hovered ? 1.0 : 0.48
+
+            OutlineBorder {
+                radius: 11
+                outlineColor: _closeHover.hovered ? Theme.withAlpha(Theme.error, 0.32) : Theme.menuControlLine
+                Behavior on outlineColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+            }
             scale:   _cardHover.hovered ? 1.0 : 0.90
             transformOrigin: Item.Center
             z: 2
-            Behavior on opacity      { NumberAnimation { duration: Motion.fast } }
-            Behavior on scale        { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-            Behavior on color        { ColorAnimation  { duration: Motion.fast } }
-            Behavior on border.color { ColorAnimation  { duration: Motion.fast } }
+            Behavior on opacity      { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
+            Behavior on scale        { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+            Behavior on color        { enabled: !ShellSettings.reduceMotion; ColorAnimation  { duration: Motion.fast } }
             Accessible.role: Accessible.Button
             Accessible.name: "Dismiss notification"
             Accessible.onPressAction: card.dismiss()
@@ -585,29 +618,30 @@ Item {
                 font.family:    Settings.font
                 font.pixelSize: Settings.fontSize - 2
                 renderType:     Text.NativeRendering
-                Behavior on color { ColorAnimation { duration: Motion.fast } }
+                Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
             }
         }
     }
 
-    Rectangle {
+    Item {
         id: _cardBorder
         anchors.fill: cardRect
-        radius:  cardRect.radius
-        color:   "transparent"
-        antialiasing: true
         opacity: cardRect.opacity
         visible: !card._showCountdown
-        border.width: 1
-        border.color: card.isCritical
-            ? Theme.withAlpha(Theme.error,  0.55)
-            : Theme.menuCardBorder
-        Behavior on border.color { ColorAnimation { duration: Motion.medium } }
+
+        OutlineBorder {
+            radius: cardRect.radius
+            outlineColor: card.isCritical
+                ? Theme.withAlpha(Theme.error,  0.32)
+                : Theme.menuCardBorder
+            Behavior on outlineColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.medium } }
+        }
     }
 
     PerimeterProgress {
         anchors.fill: cardRect
         visible: card._showCountdown
+        paused:  card.quietPaint
         opacity: cardRect.opacity * card._countdownPulse
         inset:        2.5
         cornerRadius: cardRect.radius
