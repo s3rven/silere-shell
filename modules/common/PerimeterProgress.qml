@@ -72,7 +72,16 @@ Canvas {
     property int minPaintMs: 30
     property real _lastPaintMs: 0
 
+    // each repaint re-strokes the whole perimeter into an image and uploads it,
+    // so callers freeze the arc while something more important is animating
+    property bool paused: false
+    onPausedChanged: {
+        if (paused) _paintDelay.stop()
+        else if (visible) _commitPaint()
+    }
+
     function _commitPaint(): void {
+        if (root.paused) return
         root._painted = root.progress
         root._lastPaintMs = Date.now()
         root.requestPaint()
@@ -83,7 +92,7 @@ Canvas {
     }
 
     function _queueProgressPaint(): void {
-        if (!root.visible) return
+        if (!root.visible || root.paused) return
         const now = Date.now()
         const endpoint = root.progress <= 0.002 || root.progress >= 0.998
         if (!endpoint && Math.abs(root.progress - root._painted)
