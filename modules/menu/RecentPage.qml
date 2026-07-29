@@ -106,7 +106,7 @@ PageShell {
             width: parent.width
             height: 38
 
-            Text {
+            ShellText {
                 id: _headerTitle
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
@@ -115,10 +115,8 @@ PageShell {
                     - (_countChip.visible ? _countChip.width + 9 : 0)))
                 text: "Notifications"
                 color: Theme.text
-                font.family: Settings.font
                 font.pixelSize: Settings.fontSize + 4
                 font.weight: Font.DemiBold
-                renderType: Text.NativeRendering
                 elide: Text.ElideRight
             }
 
@@ -134,15 +132,13 @@ PageShell {
                 antialiasing: true
                 color: Theme.withAlpha(Theme.subtext, 0.12)
 
-                Text {
+                ShellText {
                     id: _countTxt
                     anchors.centerIn: parent
                     text: String(Notifications.historyCount)
                     color: Theme.withAlpha(Theme.text, 0.62)
-                    font.family: Settings.font
                     font.pixelSize: Settings.fontSize - 3
                     font.weight: Font.DemiBold
-                    renderType: Text.NativeRendering
                 }
             }
 
@@ -193,25 +189,21 @@ PageShell {
                 Row {
                     anchors.centerIn: parent
                     spacing: 4
-                    Text {
+                    ShellText {
                         anchors.verticalCenter: parent.verticalCenter
                         text: "󰆴"
                         color: root._clearArmed ? Theme.error
                             : _clearHover.hovered ? Theme.withAlpha(Theme.text, 0.88) : Theme.withAlpha(Theme.subtext, 0.72)
-                        font.family: Settings.font
                         font.pixelSize: Settings.fontSize
-                        renderType: Text.NativeRendering
                         MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
                     }
-                    Text {
+                    ShellText {
                         anchors.verticalCenter: parent.verticalCenter
                         text: root._clearArmed ? "Confirm?" : "Clear"
                         color: root._clearArmed ? Theme.error
                             : _clearHover.hovered ? Theme.withAlpha(Theme.text, 0.88) : Theme.withAlpha(Theme.text, 0.76)
-                        font.family: Settings.font
                         font.pixelSize: Settings.fontSize - 2
                         font.weight: root._clearArmed ? Font.DemiBold : Font.Normal
-                        renderType: Text.NativeRendering
                         MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
                     }
                 }
@@ -243,26 +235,22 @@ PageShell {
                         outlineColor: Theme.menuCardBorder
                     }
 
-                    Text {
+                    ShellText {
                         anchors.centerIn: parent
                         text: "󰂛"
                         color: Theme.withAlpha(Theme.subtext, 0.34)
-                        font.family: Settings.font
                         font.pixelSize: 24
-                        renderType: Text.NativeRendering
                     }
                 }
 
                 Item { width: 1; height: 2 }
 
-                Text {
+                ShellText {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: "All caught up"
                     color: Theme.withAlpha(Theme.text, 0.78)
-                    font.family: Settings.font
                     font.pixelSize: Settings.fontSize + 1
                     font.weight: Font.Medium
-                    renderType: Text.NativeRendering
                 }
             }
         }
@@ -362,19 +350,17 @@ PageShell {
                                 Metrics.menuMarkerOpacity)
                         }
 
-                        Text {
+                        ShellText {
                             id: _secText
                             anchors.left:           _secTick.right
                             anchors.leftMargin:     7
                             anchors.verticalCenter: parent.verticalCenter
                             text: { root._timeTick; return root.sectionLabel(_entry.modelData.time) }
                             color: Theme.withAlpha(Theme.mix(Theme.subtext, Theme.accent, 0.22), 0.74)
-                            font.family: Settings.font
                             font.pixelSize: Settings.fontSize - 3
                             font.weight: Font.DemiBold
                             font.capitalization: Font.AllUppercase
                             font.letterSpacing: 0.4
-                            renderType: Text.NativeRendering
                         }
 
                         Hairline {
@@ -465,56 +451,45 @@ PageShell {
                                     asynchronous: true
                                 }
 
-                                Text {
+                                ShellText {
                                     id: _appName
                                     anchors.verticalCenter: parent.verticalCenter
                                     width: Math.max(0, parent.width - _entryTime.implicitWidth
                                         - parent.spacing - 28
                                         - (_appIcon.visible ? _appIcon.width + parent.spacing : 0))
                                     text: _entry.modelData.appName || "Notification"
-                                    textFormat: Text.PlainText
                                     color: _entry._critical ? Theme.error : Theme.withAlpha(Theme.subtext, 0.70)
-                                    font.family: Settings.font
                                     font.pixelSize: Settings.fontSize - 2
                                     font.weight: Font.Medium
-                                    renderType: Text.NativeRendering
                                     elide: Text.ElideRight
                                 }
 
-                                Text {
+                                ShellText {
                                     id: _entryTime
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: { root._timeTick; return root.formatTime(_entry.modelData.time) }
                                     color: Theme.withAlpha(Theme.subtext, 0.42)
-                                    font.family: Settings.font
                                     font.pixelSize: Settings.fontSize - 3
-                                    renderType: Text.NativeRendering
                                 }
                             }
 
-                            Text {
+                            ShellText {
                                 width: parent.width
                                 rightPadding: 28
                                 text: _entry.modelData.summary || "Notification"
-                                textFormat: Text.PlainText
                                 color: Theme.text
-                                font.family: Settings.font
                                 font.pixelSize: Settings.fontSize
                                 font.weight: Font.DemiBold
-                                renderType: Text.NativeRendering
                                 elide: Text.ElideRight
                             }
 
-                            Text {
+                            ShellText {
                                 id: _body
                                 width: parent.width
                                 visible: text.length > 0
                                 text: _entry.modelData.body || ""
-                                textFormat: Text.PlainText
                                 color: Theme.withAlpha(Theme.text, 0.58)
-                                font.family: Settings.font
                                 font.pixelSize: Settings.fontSize - 1
-                                renderType: Text.NativeRendering
                                 wrapMode: Text.WordWrap
                                 maximumLineCount: _entry._expanded ? 12 : 2
                                 elide: Text.ElideRight
@@ -562,13 +537,11 @@ PageShell {
                             HoverHandler { id: _removeHover; cursorShape: Qt.PointingHandCursor }
                             TapHandler { id: _removeTap; enabled: !root._clearing && !_entry._removing; onTapped: _entry.removeSelf() }
 
-                            Text {
+                            ShellText {
                                 anchors.centerIn: parent
                                 text: "󰅖"
                                 color: _removeHover.hovered ? Theme.error : Theme.withAlpha(Theme.subtext, 0.56)
-                                font.family: Settings.font
                                 font.pixelSize: Settings.fontSize - 2
-                                renderType: Text.NativeRendering
                             }
                         }
                     }

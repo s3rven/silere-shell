@@ -64,22 +64,18 @@ Rectangle {
         }
     }
 
-    Text {
+    ShellText {
         x: 14; y: 11
         text: root._isDay ? "Daylight" : "Night"
         color: Theme.text
-        font.family: Settings.font
         font.pixelSize: Settings.fontSize
-        renderType: Text.NativeRendering
     }
-    Text {
+    ShellText {
         anchors.right: parent.right; anchors.rightMargin: 14
         y: 12
         text: NightLight.phaseLabel
         color: Theme.withAlpha(Theme.subtext, 0.85)
-        font.family: Settings.font
         font.pixelSize: Settings.fontSize - 1
-        renderType: Text.NativeRendering
     }
 
     Loader {
@@ -238,16 +234,14 @@ Rectangle {
         x: 14
         anchors.bottom: parent.bottom; anchors.bottomMargin: 7
         spacing: 5
-        Text {
+        ShellText {
             text: "󰖜"; color: Theme.withAlpha(Theme.subtext, 0.8)
             font.family: Settings.font; font.pixelSize: Settings.fontSize
-            renderType: Text.NativeRendering
             anchors.verticalCenter: parent.verticalCenter
         }
-        Text {
+        ShellText {
             text: NightLight.sunriseLabel; color: Theme.subtext
             font.family: Settings.font; font.pixelSize: Settings.fontSize - 1
-            renderType: Text.NativeRendering
             anchors.verticalCenter: parent.verticalCenter
         }
     }
@@ -255,16 +249,14 @@ Rectangle {
         anchors.right: parent.right; anchors.rightMargin: 14
         anchors.bottom: parent.bottom; anchors.bottomMargin: 7
         spacing: 5
-        Text {
+        ShellText {
             text: NightLight.sunsetLabel; color: Theme.subtext
             font.family: Settings.font; font.pixelSize: Settings.fontSize - 1
-            renderType: Text.NativeRendering
             anchors.verticalCenter: parent.verticalCenter
         }
-        Text {
+        ShellText {
             text: "󰖛"; color: Theme.withAlpha(Theme.subtext, 0.8)
             font.family: Settings.font; font.pixelSize: Settings.fontSize
-            renderType: Text.NativeRendering
             anchors.verticalCenter: parent.verticalCenter
         }
     }

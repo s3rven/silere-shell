@@ -74,7 +74,7 @@ Item {
         readonly property real neededW: (root.glyph.length > 0 ? 28 : 0)
             + Math.ceil(_label.implicitWidth)
 
-        Text {
+        ShellText {
             id: _glyph
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
@@ -83,12 +83,10 @@ Item {
             horizontalAlignment: Text.AlignHCenter
             text: root.glyph
             color: Theme.withAlpha(Theme.subtext, 0.82)
-            font.family: Settings.font
             font.pixelSize: Settings.iconSize + 2
-            renderType: Text.NativeRendering
         }
 
-        Text {
+        ShellText {
             id: _label
             anchors.left: _glyph.right
             anchors.leftMargin: root.glyph.length > 0 ? 10 : 0
@@ -96,12 +94,9 @@ Item {
             width: Math.min(implicitWidth,
                 Math.max(18, parent.width - anchors.leftMargin - _glyph.width))
             text: root.label
-            textFormat: Text.PlainText
             elide: Text.ElideRight
             color: Theme.withAlpha(Theme.text, 0.88)
-            font.family: Settings.font
             font.pixelSize: Settings.fontSize
-            renderType: Text.NativeRendering
         }
     }
 
@@ -245,7 +240,7 @@ Item {
                             anchors.centerIn: parent
                             spacing: 4
 
-                            Text {
+                            ShellText {
                                 anchors.verticalCenter: parent.verticalCenter
                                 visible: _option.optionGlyph.length > 0
                                 text: _option.optionGlyph
@@ -253,16 +248,14 @@ Item {
                                     ? Theme.mix(Theme.text, root.accentColor, 0.12)
                                     : Theme.withAlpha(Theme.subtext,
                                         _hover.hovered ? 0.88 : 0.68)
-                                font.family: Settings.font
                                 font.pixelSize: Math.max(9, Settings.fontSize - 1)
                                 font.weight: Font.Medium
-                                renderType: Text.NativeRendering
                                 MotionBehavior on color {
                                     ColorAnimation { duration: Motion.fast }
                                 }
                             }
 
-                            Text {
+                            ShellText {
                                 anchors.verticalCenter: parent.verticalCenter
                                 visible: _option.optionLabel.length > 0
                                 width: Math.min(implicitWidth, Math.max(10,
@@ -272,20 +265,17 @@ Item {
                                 verticalAlignment: Text.AlignVCenter
                                 horizontalAlignment: Text.AlignHCenter
                                 text: _option.optionLabel
-                                textFormat: Text.PlainText
                                 elide: Text.ElideRight
                                 color: _option.active
                                     ? Theme.mix(Theme.text, root.accentColor,
                                         ShellSettings.highContrast ? 0 : 0.10)
                                     : Theme.withAlpha(Theme.subtext,
                                         _hover.hovered ? 0.90 : 0.72)
-                                font.family: Settings.font
                                 font.pixelSize: Math.max(9, Settings.fontSize - 1)
                                 fontSizeMode: Text.HorizontalFit
                                 minimumPixelSize: Math.max(8, Settings.fontSize - 3)
                                 font.weight: _option.active
                                     ? Font.DemiBold : Font.Medium
-                                renderType: Text.NativeRendering
                                 MotionBehavior on color {
                                     ColorAnimation { duration: Motion.fast }
                                 }

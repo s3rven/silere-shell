@@ -1,6 +1,7 @@
 import QtQuick
 import "../../config"
 import "../../services"
+import "../common"
 
 Item {
     id: root
@@ -37,7 +38,7 @@ Item {
     readonly property string _shownName: _shownIdx >= 0 && _shownIdx < _sr.options.length
         ? (_sr.options[_shownIdx].name ?? "") : ""
 
-    Text {
+    ShellText {
         id: _glyph
         anchors.left: parent.left
         anchors.leftMargin: 14
@@ -47,11 +48,9 @@ Item {
         horizontalAlignment: Text.AlignHCenter
         text:           root.glyph
         color:          Theme.withAlpha(Theme.subtext, 0.85)
-        font.family:    Settings.font
         font.pixelSize: Settings.iconSize + 2
-        renderType:     Text.NativeRendering
     }
-    Text {
+    ShellText {
         id: _label
         anchors.left: _glyph.right
         anchors.leftMargin: root.glyph.length > 0 ? 10 : 0
@@ -60,14 +59,11 @@ Item {
             : (root._stacked ? parent.right : _sr.left)
         anchors.rightMargin: 10
         text:           root.label
-        textFormat:     Text.PlainText
         elide:          Text.ElideRight
         color:          Theme.withAlpha(Theme.text, 0.85)
-        font.family:    Settings.font
         font.pixelSize: Settings.fontSize
-        renderType:     Text.NativeRendering
     }
-    Text {
+    ShellText {
         id: _readout
         visible: root._shownName.length > 0
         anchors.right: root._stacked ? parent.right : _sr.left
@@ -76,14 +72,11 @@ Item {
         width: Math.min(96, implicitWidth)
         horizontalAlignment: Text.AlignRight
         text:           root._shownName
-        textFormat:     Text.PlainText
         elide:          Text.ElideRight
         color:          root.tintedReadout && !ShellSettings.highContrast && root._shownIdx >= 0
             ? Theme.mix(Theme.subtext, _sr.colorAt(root._shownIdx), 0.62)
             : Theme.withAlpha(Theme.subtext, 0.7)
-        font.family:    Settings.font
         font.pixelSize: Settings.fontSize - 2
-        renderType:     Text.NativeRendering
         MotionBehavior on color {
             ColorAnimation { duration: Motion.fast }
         }

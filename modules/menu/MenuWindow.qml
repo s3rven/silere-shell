@@ -600,7 +600,7 @@ PanelWindow {
                         transformOrigin: Item.Center
                         MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
                         MotionBehavior on scale   {NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
-                        Text {
+                        ShellText {
                             id: _railBadgeCount
                             anchors.fill: parent
                             horizontalAlignment: Text.AlignHCenter
@@ -609,7 +609,6 @@ PanelWindow {
                             color: Theme.background
                             font.family: Settings.font; font.pixelSize: Settings.fontSize - 4
                             font.weight: Font.Bold
-                            renderType: Text.NativeRendering
                         }
                     }
                 }
@@ -809,19 +808,17 @@ PanelWindow {
                                         : Theme.withAlpha(Theme.accent, 0.20)
                                 }
 
-                                Text {
+                                ShellText {
                                     anchors.centerIn: parent
                                     text: tabContent._pageError ? "󰅙" : "󰔟"
                                     color: tabContent._pageError
                                         ? Theme.withAlpha(Theme.error, 0.82)
                                         : Theme.withAlpha(Theme.accent, 0.76)
-                                    font.family: Settings.font
                                     font.pixelSize: Settings.iconSize + 5
-                                    renderType: Text.NativeRendering
                                 }
                             }
 
-                            Text {
+                            ShellText {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 width: Math.max(1, _pagePlaceholder.width - 24)
                                 horizontalAlignment: Text.AlignHCenter
@@ -829,13 +826,11 @@ PanelWindow {
                                     ? "Couldn’t load this page"
                                     : panel.activeTab === 1 ? "Loading settings…" : "Loading notifications…"
                                 color: Theme.withAlpha(Theme.text, 0.76)
-                                font.family: Settings.font
                                 font.pixelSize: Settings.fontSize
                                 font.weight: Font.Medium
-                                renderType: Text.NativeRendering
                             }
 
-                            Text {
+                            ShellText {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 width: Math.max(1, _pagePlaceholder.width - 24)
                                 horizontalAlignment: Text.AlignHCenter
@@ -844,9 +839,7 @@ PanelWindow {
                                 wrapMode: Text.WordWrap
                                 maximumLineCount: 2
                                 color: Theme.withAlpha(Theme.subtext, 0.54)
-                                font.family: Settings.font
                                 font.pixelSize: Math.max(8, Settings.fontSize - 2)
-                                renderType: Text.NativeRendering
                             }
                         }
                     }

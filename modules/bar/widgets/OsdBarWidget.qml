@@ -1,6 +1,7 @@
 import QtQuick
 import "../../../config"
 import "../../../services"
+import "../../common"
 
 Item {
     id: root
@@ -111,7 +112,7 @@ Item {
             }
         ]
 
-        Text {
+        ShellText {
             id: _iconText
             anchors.verticalCenter: parent.verticalCenter
             width:               Settings.iconSize + 6   // fixed so the stamp's scale-to-0 doesn't collapse the Row
@@ -119,9 +120,7 @@ Item {
             transformOrigin:     Item.Center
             text:           OsdBarState.icon
             color:          OsdBarState.hasBar ? Theme.text : OsdBarState.fillColor
-            font.family:    Settings.font
             font.pixelSize: Settings.iconSize + 2
-            renderType:     Text.NativeRendering
             MotionBehavior on color {ColorAnimation { duration: Motion.medium } }
         }
 
@@ -165,12 +164,11 @@ Item {
             }
         }
 
-        Text {
+        ShellText {
             anchors.verticalCenter: parent.verticalCenter
             text:           !OsdBarState.hasBar ? OsdBarState.label
                             : OsdBarState.muted ? "Muted"
                             : (Math.round(OsdBarState.clamped * 100) + "%")
-            textFormat:     Text.PlainText
             width:          OsdBarState.hasBar
                                 ? Math.ceil(_maxLabel.advanceWidth) + 2
                                 : Math.max(implicitWidth, root._alertWidth)
@@ -178,10 +176,8 @@ Item {
             color:          OsdBarState.muted
                                 ? Theme.withAlpha(Theme.subtext, 0.7)
                                 : (OsdBarState.hasBar ? Theme.text : OsdBarState.fillColor)
-            font.family:    Settings.font
             font.pixelSize: Settings.fontSize
             font.weight:    Font.Medium
-            renderType:     Text.NativeRendering
             MotionBehavior on color {
                 ColorAnimation { duration: Motion.medium }
             }

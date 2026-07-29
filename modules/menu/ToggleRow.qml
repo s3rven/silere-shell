@@ -1,5 +1,6 @@
 import QtQuick
 import "../../config"
+import "../common"
 
 Item {
     id: root
@@ -78,7 +79,7 @@ Item {
         fillOpacity:  root.activeFocus ? 0.13 : 0.08
     }
 
-    Text {
+    ShellText {
         id: _glyph
         anchors.left:           parent.left
         anchors.leftMargin:     14
@@ -89,9 +90,7 @@ Item {
         color:          root.checked
             ? Theme.withAlpha(Theme.accent, 0.9)
             : Theme.withAlpha(Theme.subtext, 0.85)
-        font.family:    Settings.font
         font.pixelSize: Settings.iconSize + 2
-        renderType:     Text.NativeRendering
         MotionBehavior on color {
             ColorAnimation { duration: Motion.fast }
         }
@@ -106,39 +105,33 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         spacing: 2
 
-        Text {
+        ShellText {
             id: _label
             width: parent.width
             text:           root.label
-            textFormat:     Text.PlainText
             elide:          Text.ElideRight
             color:          root.checked
                 ? Theme.text
                 : Theme.withAlpha(Theme.text, 0.85)
-            font.family:    Settings.font
             font.pixelSize: Settings.fontSize
-            renderType:     Text.NativeRendering
             MotionBehavior on color {
                 ColorAnimation { duration: Motion.fast }
             }
         }
 
-        Text {
+        ShellText {
             id: _desc
             visible: root._hasDetail
             width:   parent.width
             text:           root._detailText
-            textFormat:     Text.PlainText
             wrapMode:       Text.WordWrap
             maximumLineCount: 2
             elide:          Text.ElideRight
             color:          root._showDependsNote
                 ? Theme.withAlpha(Theme.mix(Theme.subtext, Theme.warning, 0.30), 0.72)
                 : Theme.withAlpha(Theme.subtext, 0.52)
-            font.family:    Settings.font
             font.pixelSize: Math.max(8, Settings.fontSize - 2)
             lineHeight:     1.1
-            renderType:     Text.NativeRendering
         }
     }
 

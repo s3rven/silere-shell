@@ -147,7 +147,7 @@ Rectangle {
         NumberAnimation { duration: Motion.ms(105); easing.type: Easing.OutCubic }
     }
 
-    Text {
+    ShellText {
         id: _glyph
         anchors.left: parent.left
         anchors.leftMargin: 13
@@ -156,16 +156,14 @@ Rectangle {
         horizontalAlignment: Text.AlignHCenter
         text: root.glyph
         color: root._glyphFg
-        font.family: Settings.font
         font.pixelSize: Settings.fontSize
-        renderType: Text.NativeRendering
         transform: Translate { x: root._shift }
         MotionBehavior on color {
             ColorAnimation { duration: Motion.fast }
         }
     }
 
-    Text {
+    ShellText {
         id: _value
         visible: root._showValue
         anchors.right: parent.right
@@ -176,16 +174,14 @@ Rectangle {
         elide: Text.ElideRight
         horizontalAlignment: Text.AlignRight
         color: Theme.withAlpha(Theme.menuTextMuted, root._hot ? 0.84 : 0.66)
-        font.family: Settings.font
         font.pixelSize: Settings.fontSize - 2
         font.weight: Font.Medium
-        renderType: Text.NativeRendering
         MotionBehavior on color {
             ColorAnimation { duration: Motion.fast }
         }
     }
 
-    Text {
+    ShellText {
         anchors.left: _glyph.right
         anchors.leftMargin: 9
         anchors.right: parent.right
@@ -194,10 +190,8 @@ Rectangle {
         text: root.armed ? root.confirmLabel : root.label
         elide: Text.ElideRight
         color: root._fg
-        font.family: Settings.font
         font.pixelSize: Settings.fontSize - 1
         font.weight: root.armed ? Font.DemiBold : Font.Normal
-        renderType: Text.NativeRendering
         transform: Translate { x: root._shift }
         MotionBehavior on color {
             ColorAnimation { duration: Motion.fast }

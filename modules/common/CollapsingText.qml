@@ -30,14 +30,12 @@ Item {
         NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
     }
 
-    Text {
+    ShellText {
         id: _label
         anchors.left:           parent.left
         anchors.verticalCenter: parent.verticalCenter
         color:          root.color
-        font.family:    Settings.font
         font.pixelSize: Settings.fontSize
-        renderType:     Text.NativeRendering
         MotionBehavior on color {
             ColorAnimation { duration: Motion.color }
         }

@@ -1,5 +1,6 @@
 import QtQuick
 import "../../config"
+import "../common"
 
 Item {
     id: root
@@ -16,17 +17,14 @@ Item {
     implicitHeight: 4 * Math.ceil((_text.implicitHeight + _topPad + _bottomPad) / 4)
     clip: true
 
-    Text {
+    ShellText {
         id: _text
         x: root._hPad
         y: root._topPad
         width: Math.max(0, parent.width - root._hPad * 2)
         text:        root.text
-        textFormat:  Text.PlainText
         color:       Theme.withAlpha(Theme.subtext, 0.52)
-        font.family: Settings.font
         font.pixelSize: root._fontPx
-        renderType:  Text.NativeRendering
         wrapMode:    Text.WordWrap
     }
 }

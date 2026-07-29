@@ -54,12 +54,11 @@ Item {
             ColorAnimation { duration: Motion.fast }
         }
     }
-    Text {
+    ShellText {
         anchors.centerIn: parent
         text: root.glyph
         color: _hover.hovered ? Theme.withAlpha(Theme.text, 0.85) : Theme.withAlpha(Theme.text, 0.45)
         font.family: Settings.font; font.pixelSize: Settings.fontSize + 8
-        renderType: Text.NativeRendering
         MotionBehavior on color {
             ColorAnimation { duration: Motion.fast }
         }

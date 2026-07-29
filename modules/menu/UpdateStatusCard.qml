@@ -57,7 +57,7 @@ Rectangle {
             width: parent.width
             height: 56
 
-            Text {
+            ShellText {
                 id: _g
                 anchors.left: parent.left
                 anchors.leftMargin: 14
@@ -66,9 +66,7 @@ Rectangle {
                 horizontalAlignment: Text.AlignHCenter
                 text: root.glyph
                 color: root.statusColor
-                font.family: Settings.font
                 font.pixelSize: Settings.fontSize + 4
-                renderType: Text.NativeRendering
                 MotionBehavior on color {
                     ColorAnimation { duration: Motion.medium }
                 }
@@ -102,41 +100,35 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 3
 
-                Text {
+                ShellText {
                     id: _title
                     width: parent.width
                     text: root.title
-                    textFormat: Text.PlainText
                     elide: Text.ElideRight
                     color: Theme.text
-                    font.family: Settings.font
                     font.pixelSize: Settings.fontSize
                     font.weight: Font.Medium
-                    renderType: Text.NativeRendering
                 }
 
                 Item {
                     width: parent.width
                     height: Math.max(_status.implicitHeight, _sub.implicitHeight)
 
-                    Text {
+                    ShellText {
                         id: _status
                         anchors.left: parent.left
                         anchors.right: _sub.visible ? _sub.left : parent.right
                         anchors.rightMargin: _sub.visible ? 9 : 0
                         anchors.verticalCenter: parent.verticalCenter
                         text: root.status
-                        textFormat: Text.PlainText
                         elide: Text.ElideRight
                         color: Theme.withAlpha(root.statusColor, 0.9)
-                        font.family: Settings.font
                         font.pixelSize: Settings.fontSize - 2
-                        renderType: Text.NativeRendering
                         MotionBehavior on color {
                             ColorAnimation { duration: Motion.medium }
                         }
                     }
-                    Text {
+                    ShellText {
                         id: _sub
                         visible: root.meta.length > 0
                         anchors.right: parent.right
@@ -144,12 +136,9 @@ Rectangle {
                         width: Math.min(implicitWidth, parent.width * 0.46)
                         horizontalAlignment: Text.AlignRight
                         text: "·  " + root.meta
-                        textFormat: Text.PlainText
                         elide: Text.ElideRight
                         color: Theme.withAlpha(Theme.subtext, 0.5)
-                        font.family: Settings.font
                         font.pixelSize: Settings.fontSize - 2
-                        renderType: Text.NativeRendering
                     }
                 }
             }
@@ -197,22 +186,19 @@ Rectangle {
                 NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
             }
 
-            Text {
+            ShellText {
                 id: _detailText
                 x: 45
                 y: 3
                 width: parent.width - 45 - 13
                 text: root.detail
-                textFormat: Text.PlainText
                 wrapMode: Text.WordWrap
                 opacity: root.detail.length > 0 ? 1 : 0
                 color: root.detailError
                     ? Theme.withAlpha(Theme.warning, 0.85)
                     : Theme.withAlpha(Theme.subtext, 0.58)
-                font.family: Settings.font
                 font.pixelSize: Settings.fontSize - 2
                 lineHeight: 1.15
-                renderType: Text.NativeRendering
                 MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
             }
         }

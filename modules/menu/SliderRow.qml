@@ -1,5 +1,6 @@
 import QtQuick
 import "../../config"
+import "../common"
 
 Item {
     id: root
@@ -65,7 +66,7 @@ Item {
         height: 20
         clip: true
 
-        Text {
+        ShellText {
             id: _glyph
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
@@ -74,23 +75,18 @@ Item {
             horizontalAlignment: Text.AlignHCenter
             text:           root.glyph
             color:          root.glyphColor
-            font.family:    Settings.font
             font.pixelSize: Settings.iconSize + 2
-            renderType:     Text.NativeRendering
         }
-        Text {
+        ShellText {
             id: _label
             anchors.left:           _glyph.right
             anchors.leftMargin:     root.glyph.length > 0 ? 10 : 0
             anchors.right:          parent.right
             anchors.verticalCenter: parent.verticalCenter
             text:           root.label
-            textFormat:     Text.PlainText
             elide:          Text.ElideRight
             color:          Theme.withAlpha(Theme.text, 0.85)
-            font.family:    Settings.font
             font.pixelSize: Settings.fontSize
-            renderType:     Text.NativeRendering
         }
     }
 
@@ -101,7 +97,7 @@ Item {
         font.weight: Font.DemiBold
         text: "100%"
     }
-    Text {
+    ShellText {
         id: _valueText
         anchors.right:          parent.right
         anchors.rightMargin:    12
@@ -110,10 +106,8 @@ Item {
         horizontalAlignment: Text.AlignRight
         text:           root.displayValue
         color:          Theme.withAlpha(Theme.text, 0.58)
-        font.family:    Settings.font
         font.pixelSize: Math.max(9, Settings.fontSize - 1)
         font.weight:    Font.DemiBold
-        renderType:     Text.NativeRendering
     }
 
     SliderTrack {

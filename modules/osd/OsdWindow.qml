@@ -197,15 +197,13 @@ PanelWindow {
                             anchors.centerIn: parent
                             spacing: 10
 
-                            Text {
+                            ShellText {
                                 anchors.verticalCenter: parent.verticalCenter
                                 width:               20
                                 horizontalAlignment: Text.AlignHCenter
                                 text:           card.icon
                                 color:          card.hasBar ? Theme.text : card.fillColor
-                                font.family:    Settings.font
                                 font.pixelSize: Settings.fontSize + 4
-                                renderType:     Text.NativeRendering
                                 MotionBehavior on color {ColorAnimation { duration: Motion.medium } }
                             }
 
@@ -282,20 +280,17 @@ PanelWindow {
                                 text: "Muted"
                             }
 
-                            Text {
+                            ShellText {
                                 anchors.verticalCenter: parent.verticalCenter
                                 width: Math.max(Math.ceil(tm.advanceWidth),
                                     Math.min(Math.ceil(_labelMetrics.advanceWidth), card.pillW - card.chromeW)) + 2
                                 horizontalAlignment: Text.AlignRight
                                 elide:          Text.ElideRight
                                 text:           card.label
-                                textFormat:     Text.PlainText
                                 color:          card.muted
                                     ? Theme.withAlpha(Theme.subtext, 0.7)
                                     : (card.hasBar ? Theme.text : card.fillColor)
-                                font.family:    Settings.font
                                 font.pixelSize: Settings.fontSize
-                                renderType:     Text.NativeRendering
 
                                 MotionBehavior on color {
                                     ColorAnimation { duration: Motion.medium }

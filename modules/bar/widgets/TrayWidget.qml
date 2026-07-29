@@ -127,13 +127,11 @@ Item {
                     color: Theme.withAlpha(Theme.subtext, 0.12)
                     visible: !_icon.ready && _tile._fallbackDue
 
-                    Text {
+                    ShellText {
                         anchors.centerIn: parent
                         text: _tile.label.length > 0 ? _tile.label.charAt(0).toUpperCase() : "?"
                         color: Theme.subtext
-                        font.family: Settings.font
                         font.pixelSize: Math.max(9, Math.round(root.iconSize * 0.68))
-                        renderType: Text.NativeRendering
                     }
                 }
 

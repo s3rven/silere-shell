@@ -130,24 +130,20 @@ Item {
             anchors.centerIn: parent
             spacing: root.glyph.length > 0 && root.label.length > 0 ? 7 : 0
 
-            Text {
+            ShellText {
                 visible: root.glyph.length > 0
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.glyph
                 color: root._emphasis ? root._accent : Theme.withAlpha(Theme.subtext, 0.90)
-                font.family: Settings.font
                 font.pixelSize: Settings.fontSize
-                renderType: Text.NativeRendering
             }
-            Text {
+            ShellText {
                 visible: root.label.length > 0
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.armed ? "Press again" : root.label
                 color: root._emphasis ? Theme.text : Theme.withAlpha(Theme.text, 0.84)
-                font.family: Settings.font
                 font.pixelSize: Settings.fontSize - 1
                 font.weight: root._emphasis ? Font.DemiBold : Font.Normal
-                renderType: Text.NativeRendering
             }
         }
     }

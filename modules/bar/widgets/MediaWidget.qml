@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import "../../../config"
 import "../../../services"
+import "../../common"
 
 Item {
     id: root
@@ -137,16 +138,14 @@ Item {
             width: root._helperEnabled ? 14 : 0
             height: 16
 
-            Text {
+            ShellText {
                 id: _playIcon
                 anchors.centerIn: parent
                 text: root._playGlyph
                 color: Media.playing
                     ? Theme.withAlpha(Theme.accent, 0.92)
                     : Theme.withAlpha(Theme.subtext, 0.72)
-                font.family: Settings.font
                 font.pixelSize: Settings.iconSize + 1
-                renderType: Text.NativeRendering
                 scale: Media.playing ? 1.0 : 0.92
                 MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
                 MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
@@ -180,17 +179,14 @@ Item {
                 Qt.callLater(root._startMarquee)
             }
 
-            Text {
+            ShellText {
                 id: trackText
                 text:           textClip._shown
-                textFormat:     Text.PlainText
                 readonly property color _base: Media.playing ? Theme.text
                                                               : Theme.mix(Theme.text, Theme.subtext, 0.55)
                 color:          (_rootHover.hovered && ShellSettings.barHoverHighlight) ? Theme.mix(_base, Theme.accent, 0.30) : _base
                 MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
-                font.family:    Settings.font
                 font.pixelSize: Settings.fontSize
-                renderType:     Text.NativeRendering
                 width: ShellSettings.reduceMotion ? textClip.maxW : implicitWidth
                 elide: ShellSettings.reduceMotion ? Text.ElideRight : Text.ElideNone
 

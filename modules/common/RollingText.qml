@@ -33,14 +33,12 @@ Item {
         _roll.restart()
     }
 
-    Text {
+    ShellText {
         id: _main
         anchors.verticalCenter: parent.verticalCenter
         text:           root._shown
         color:          root.color
-        font.family:    Settings.font
         font.pixelSize: Settings.fontSize
-        renderType:     Text.NativeRendering
         property real rise: 0
         transform: Translate { y: _main.rise }
         MotionBehavior on color {
@@ -48,15 +46,13 @@ Item {
         }
     }
 
-    Text {
+    ShellText {
         id: _ghost
         anchors.verticalCenter: parent.verticalCenter
         opacity: 0
         visible: opacity > 0.001
         color:          root.color
-        font.family:    Settings.font
         font.pixelSize: Settings.fontSize
-        renderType:     Text.NativeRendering
         property real rise: 0
         transform: Translate { y: _ghost.rise }
         MotionBehavior on color {

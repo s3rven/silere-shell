@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import "../../config"
 import "../../services"
+import "../common"
 
 Item {
     id: root
@@ -163,20 +164,17 @@ Item {
                         MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
                     }
 
-                    Text {
+                    ShellText {
                         anchors.left: parent.left;  anchors.leftMargin: 42
                         anchors.right: parent.right; anchors.rightMargin: 12
                         anchors.verticalCenter: parent.verticalCenter
                         text:       _opt.modelData.label
-                        textFormat: Text.PlainText
                         elide:      Text.ElideRight
                         color: _opt.active
                             ? Theme.accent
                             : Theme.withAlpha(Theme.text, (_optHov.hovered || _opt.activeFocus) ? 0.90 : 0.70)
-                        font.family:    Settings.font
                         font.pixelSize: Settings.fontSize
                         font.weight:    _opt.active ? Font.DemiBold : Font.Normal
-                        renderType:     Text.NativeRendering
                         MotionBehavior on color {
                             ColorAnimation { duration: Motion.fast }
                         }

@@ -66,7 +66,7 @@ Item {
         topPadding: 4
         bottomPadding: 4
 
-        Text {
+        ShellText {
             visible: root.open && Network.wifiNetworks.length === 0
             width: parent.width
             horizontalAlignment: Text.AlignHCenter
@@ -78,7 +78,6 @@ Item {
             color: Network.wifiScanFailed ? Theme.withAlpha(Theme.error, 0.75)
                                            : Theme.withAlpha(Theme.subtext, 0.5)
             font.family: Settings.font; font.pixelSize: Settings.fontSize - 1
-            renderType: Text.NativeRendering
         }
 
         ListView {
@@ -188,25 +187,22 @@ Item {
                     HoverHandler { id: _rowHover; cursorShape: Qt.PointingHandCursor }
                     TapHandler { onTapped: _row._activate() }
 
-                    Text {
+                    ShellText {
                         id: _sig
                         anchors.left: parent.left; anchors.leftMargin: 12
                         anchors.verticalCenter: parent.verticalCenter
                         text: Network.signalGlyph(_entry.modelData.signal)
                         color: _entry.modelData.active ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.8)
                         font.family: Settings.font; font.pixelSize: Settings.fontSize + 1
-                        renderType: Text.NativeRendering
                     }
-                    Text {
+                    ShellText {
                         anchors.left: _sig.right; anchors.leftMargin: 10
                         anchors.right: _icons.left; anchors.rightMargin: 8
                         anchors.verticalCenter: parent.verticalCenter
                         text: _entry.modelData.ssid
-                        textFormat: Text.PlainText
                         color: _entry.modelData.active ? Theme.text : Theme.withAlpha(Theme.text, 0.85)
                         font.family: Settings.font; font.pixelSize: Settings.fontSize
                         font.weight: _entry.modelData.active ? Font.Medium : Font.Normal
-                        renderType: Text.NativeRendering
                         elide: Text.ElideRight
                     }
                     Row {
@@ -214,26 +210,23 @@ Item {
                         anchors.right: parent.right; anchors.rightMargin: 12
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 7
-                        Text {
+                        ShellText {
                             visible: _entry._connecting
                             text: "Connecting…"
                             color: Theme.withAlpha(Theme.subtext, 0.7)
                             font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
-                            renderType: Text.NativeRendering
                         }
-                        Text {
+                        ShellText {
                             visible: _entry.modelData.active && !_entry._connecting
                             text: "󰄬"
                             color: Theme.accent
                             font.family: Settings.font; font.pixelSize: Settings.fontSize
-                            renderType: Text.NativeRendering
                         }
-                        Text {
+                        ShellText {
                             visible: _entry.modelData.secured && !_entry._connecting
                             text: "󰌾"
                             color: Theme.withAlpha(Theme.subtext, 0.5)
                             font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
-                            renderType: Text.NativeRendering
                         }
                     }
                 }
@@ -289,7 +282,7 @@ Item {
                             Accessible.name: "Password for " + _entry.modelData.ssid
                             Keys.onEscapePressed: event => { root._selected = ""; event.accepted = true }
 
-                            Text {
+                            ShellText {
                                 anchors.fill: parent
                                 verticalAlignment: Text.AlignVCenter
                                 visible: _pw.text.length === 0
@@ -297,7 +290,6 @@ Item {
                                 color: _entry._failed ? Theme.withAlpha(Theme.error, 0.7)
                                                       : Theme.withAlpha(Theme.subtext, 0.45)
                                 font.family: Settings.font; font.pixelSize: Settings.fontSize
-                                renderType: Text.NativeRendering
                             }
                         }
 
@@ -329,12 +321,11 @@ Item {
 
                             HoverHandler { id: _joinHover; enabled: _join.enabled; cursorShape: Qt.PointingHandCursor }
                             TapHandler   { enabled: _join.enabled; onTapped: _join._activate() }
-                            Text {
+                            ShellText {
                                 anchors.centerIn: parent
                                 text: "󰌑"
                                 color: Theme.accent
                                 font.family: Settings.font; font.pixelSize: Settings.fontSize + 1
-                                renderType: Text.NativeRendering
                             }
                         }
                     }

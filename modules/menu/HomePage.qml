@@ -64,21 +64,19 @@ PageShell {
             width: parent.width
             height: 40
 
-            Text {
+            ShellText {
                 id: _dayLine
                 anchors.top: parent.top
                 anchors.left: parent.left
                 anchors.right: parent.right
                 text: DateTime.cachedWeekday
                 color: Theme.text
-                font.family: Settings.font
                 font.pixelSize: Settings.fontSize + 5
                 font.weight: Font.DemiBold
-                renderType: Text.NativeRendering
                 elide: Text.ElideRight
             }
 
-            Text {
+            ShellText {
                 id: _metaLine
                 anchors.left: parent.left
                 anchors.right: _uptimeRow.visible ? _uptimeRow.left : parent.right
@@ -89,24 +87,20 @@ PageShell {
                     ? DateTime.cachedMonthDay + " · Week " + DateTime.cachedWeek
                     : DateTime.cachedMonthDay
                 color: Theme.withAlpha(Theme.subtext, 0.78)
-                font.family: Settings.font
                 font.pixelSize: Settings.fontSize - 1
                 font.weight: Font.Medium
-                renderType: Text.NativeRendering
                 elide: Text.ElideRight
             }
 
-            Text {
+            ShellText {
                 id: _uptimeRow
                 anchors.right: parent.right
                 anchors.verticalCenter: _metaLine.verticalCenter
                 visible: SysInfo.uptimeSecs > 0
                 text: "up " + SysInfo.uptimeLabel
                 color: Theme.withAlpha(Theme.subtext, 0.62)
-                font.family: Settings.font
                 font.pixelSize: Settings.fontSize - 1
                 font.weight: Font.Medium
-                renderType: Text.NativeRendering
             }
         }
 
@@ -313,13 +307,11 @@ PageShell {
                         antialiasing: true
                         color: Theme.withAlpha(Theme.accent, 0.10)
                     }
-                    Text {
+                    ShellText {
                         anchors.centerIn: parent
                         text: "󰝚"
                         color: Theme.withAlpha(Theme.accent, 0.34)
-                        font.family: Settings.font
                         font.pixelSize: 19
-                        renderType: Text.NativeRendering
                     }
                 }
 
@@ -431,48 +423,39 @@ PageShell {
                         }
                     }
 
-                    Text {
+                    ShellText {
                         id: _identityText
                         width: parent.width
                         visible: _mediaCol._shownIdentity.length > 0
                         text: _mediaCol._shownIdentity.toUpperCase()
-                        textFormat: Text.PlainText
                         color: Theme.withAlpha(Theme.subtext, 0.5)
-                        font.family: Settings.font
                         font.pixelSize: Settings.fontSize - 3
                         font.weight: Font.Medium
                         font.letterSpacing: 1.2
-                        renderType: Text.NativeRendering
                         elide: Text.ElideRight
                     }
 
                     Item { width: 1; height: 4; visible: _identityText.visible }
 
-                    Text {
+                    ShellText {
                         id: _titleText
                         width: parent.width
                         text: _mediaCol._shownTitle.length > 0 ? _mediaCol._shownTitle : (_mediaCol._shownArtist.length > 0 ? _mediaCol._shownArtist : "Nothing playing")
-                        textFormat: Text.PlainText
                         color: Theme.text
-                        font.family: Settings.font
                         font.pixelSize: Settings.fontSize + 3
                         font.weight: Font.DemiBold
-                        renderType: Text.NativeRendering
                         elide: Text.ElideRight
                     }
 
                     Item { width: 1; height: 2; visible: _artistText.visible }
 
-                    Text {
+                    ShellText {
                         id: _artistText
                         width: parent.width
                         visible: _mediaCol._shownTitle.length > 0 && _mediaCol._shownArtist.length > 0
                         text: _mediaCol._shownArtist
-                        textFormat: Text.PlainText
                         color: Theme.withAlpha(Theme.subtext, 0.75)
-                        font.family: Settings.font
                         font.pixelSize: Settings.fontSize
-                        renderType: Text.NativeRendering
                         elide: Text.ElideRight
                     }
                 }
@@ -494,7 +477,7 @@ PageShell {
                     Accessible.description: Media.formatTime(Media.positionNow) + " of " + Media.formatTime(Media.length)
                     Keys.onPressed: event => _seekTrack.handleKey(event)
 
-                    Text {
+                    ShellText {
                         id: _elapsedLabel
                         width: _totalLabel.implicitWidth
                         horizontalAlignment: Text.AlignRight
@@ -502,19 +485,15 @@ PageShell {
                         anchors.verticalCenter: parent.verticalCenter
                         text:           Media.formatTime(_seekTrack.dragging ? _seekTrack.shownValue * Media.length : Media.positionNow)
                         color:          Theme.withAlpha(Theme.text, 0.62)
-                        font.family:    Settings.font
                         font.pixelSize: Settings.fontSize - 3
-                        renderType:     Text.NativeRendering
                     }
-                    Text {
+                    ShellText {
                         id: _totalLabel
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
                         text:           Media.formatTime(Media.length)
                         color:          Theme.withAlpha(Theme.text, 0.42)
-                        font.family:    Settings.font
                         font.pixelSize: Settings.fontSize - 3
-                        renderType:     Text.NativeRendering
                     }
 
                     SliderTrack {
@@ -597,7 +576,7 @@ PageShell {
                                 }
                             }
                         }
-                        Text {
+                        ShellText {
                             id: _playGlyph
                             anchors.centerIn: parent
                             property string shown: ""
@@ -606,7 +585,6 @@ PageShell {
                             text: shown
                             color: _playH.hovered ? Theme.text : Theme.withAlpha(Theme.text, 0.8)
                             font.family: Settings.font; font.pixelSize: Settings.fontSize + 10
-                            renderType: Text.NativeRendering
                             transformOrigin: Item.Center
                             MotionBehavior on color {
                                 ColorAnimation { duration: Motion.fast }

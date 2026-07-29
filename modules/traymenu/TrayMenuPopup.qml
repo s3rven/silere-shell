@@ -318,13 +318,12 @@ PanelWindow {
                     width: visible ? Settings.fontSize : 0
                     height: Settings.fontSize
 
-                    Text {
+                    ShellText {
                         anchors.centerIn: parent
                         visible: _entry.btnType === 1 && _entry.checked
                         text: "󰄬"
                         color: Theme.accent
                         font.family: Settings.font; font.pixelSize: Settings.fontSize
-                        renderType: Text.NativeRendering
                     }
                     Rectangle {
                         anchors.centerIn: parent
@@ -347,21 +346,19 @@ PanelWindow {
                     asynchronous: true
                 }
 
-                Text {
+                ShellText {
                     anchors.left: _entry.checkable ? _mark.right : _icon.visible ? _icon.right : parent.left
                     anchors.leftMargin: (_entry.checkable || _icon.visible) ? 8 : 0
                     anchors.right: _arrow.left
                     anchors.rightMargin: 8
                     anchors.verticalCenter: parent.verticalCenter
                     text: _entry.modelData?.text ?? ""
-                    textFormat: Text.PlainText
                     color: Theme.text
                     font.family: Settings.font; font.pixelSize: Settings.fontSize
-                    renderType: Text.NativeRendering
                     elide: Text.ElideRight
                 }
 
-                Text {
+                ShellText {
                     id: _arrow
                     visible: _entry.sub
                     width: visible ? implicitWidth : 0
@@ -370,7 +367,6 @@ PanelWindow {
                     text: "󰅂"
                     color: Theme.withAlpha(Theme.subtext, 0.7)
                     font.family: Settings.font; font.pixelSize: Settings.fontSize
-                    renderType: Text.NativeRendering
                 }
             }
 

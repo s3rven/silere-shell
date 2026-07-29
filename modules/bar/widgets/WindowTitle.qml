@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import "../../../config"
 import "../../../services"
+import "../../common"
 
 Item {
     id: root
@@ -206,7 +207,7 @@ Item {
         anchors.fill: parent
         clip: true
 
-        Text {
+        ShellText {
             id: content
             x: Math.round((parent.width - width) / 2)
             anchors.verticalCenter:       parent.verticalCenter
@@ -218,9 +219,7 @@ Item {
 
             text:           root._formatted
             textFormat:     Text.StyledText
-            font.family:    Settings.font
             font.pixelSize: Settings.fontSize
-            renderType:     Text.NativeRendering
             elide:          Text.ElideRight
             width:          Math.ceil(Math.min(implicitWidth,
                                      root.availableWidth >= 0 ? root.availableWidth : implicitWidth,

@@ -1,5 +1,6 @@
 import QtQuick
 import "../../config"
+import "../common"
 
 Item {
     id: root
@@ -25,7 +26,7 @@ Item {
         anchors.bottomMargin: root._botGap
         height: root._contentH
 
-        Text {
+        ShellText {
             id: _text
             anchors.left: parent.left
             anchors.leftMargin: 4
@@ -33,16 +34,13 @@ Item {
             anchors.rightMargin: 4
             anchors.verticalCenter: parent.verticalCenter
             text: root.label
-            textFormat: Text.PlainText
             elide: Text.ElideRight
             color: Theme.withAlpha(
                 Theme.mix(Theme.menuTextMuted, Theme.accent, 0.10), 0.84)
-            font.family: Settings.font
             font.pixelSize: Settings.fontSize - 2
             font.letterSpacing: 0.65
             font.weight: Font.DemiBold
             font.capitalization: Font.AllUppercase
-            renderType: Text.NativeRendering
         }
     }
 }

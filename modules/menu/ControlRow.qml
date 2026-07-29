@@ -143,15 +143,13 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         width: 18; height: 18
 
-        Text {
+        ShellText {
             id: _glyph
             anchors.centerIn: parent
             text:           root.glyph
             color:          root.active ? Theme.withAlpha(root.accentColor, 0.95)
                                         : Theme.withAlpha(Theme.subtext, 0.85)
-            font.family:    Settings.font
             font.pixelSize: Settings.iconSize + 2
-            renderType:     Text.NativeRendering
             MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
         }
 
@@ -191,15 +189,13 @@ Item {
                 MotionBehavior on outlineColor {ColorAnimation { duration: Motion.fast } }
             }
 
-            Text {
+            ShellText {
                 id: _badgeTxt
                 anchors.centerIn: parent
                 text:  root.badgeCount > 99 ? "99+" : root.badgeCount
                 color: Theme.background
-                font.family: Settings.font
                 font.pixelSize: Settings.fontSize - 4
                 font.weight: Font.Bold
-                renderType: Text.NativeRendering
             }
 
             MouseArea {
@@ -222,32 +218,26 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         spacing: 1
 
-        Text {
+        ShellText {
             width:          parent.width
             text:           root.title
-            textFormat:     Text.PlainText
             color:          root.active ? Theme.text : Theme.withAlpha(Theme.text, 0.85)
-            font.family:    Settings.font
             font.pixelSize: Settings.fontSize
             font.weight:    Font.DemiBold
             font.hintingPreference: Font.PreferFullHinting
-            renderType:     Text.NativeRendering
             elide:          Text.ElideRight
             MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
         }
 
-        Text {
+        ShellText {
             visible:        root.status.length > 0
             width:          parent.width
             text:           root.status
-            textFormat:     Text.PlainText
             color:          root.active ? Theme.mix(root.accentColor, Theme.text, 0.12)
                                         : Theme.withAlpha(Theme.subtext, 0.62)
-            font.family:    Settings.font
             font.pixelSize: Math.max(10, Settings.fontSize - 2)
             font.weight:    Font.Medium
             font.hintingPreference: Font.PreferFullHinting
-            renderType:     Text.NativeRendering
             elide:          Text.ElideRight
             MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
         }
@@ -275,17 +265,15 @@ Item {
             accentColor: root.accentColor
         }
 
-        Text {
+        ShellText {
             visible: !root.showSwitch && root.valueText.length > 0
             anchors.right:          parent.right
             anchors.verticalCenter: parent.verticalCenter
             text:           root.valueText
             color:          root.active ? Theme.mix(root.accentColor, Theme.text, 0.18)
                                         : Theme.withAlpha(Theme.text, 0.60)
-            font.family:    Settings.font
             font.pixelSize: Settings.fontSize - 1
             font.weight:    Font.Medium
-            renderType:     Text.NativeRendering
             MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
         }
 
@@ -318,14 +306,12 @@ Item {
                 }
             }
 
-            Text {
+            ShellText {
                 anchors.centerIn: parent
                 text: "󰅀"
                 color: (_chevHover.hovered || _chevron.activeFocus) ? Theme.text
                      : Theme.withAlpha(Theme.subtext, root.expanded ? 0.85 : 0.55)
-                font.family: Settings.font
                 font.pixelSize: Settings.fontSize
-                renderType: Text.NativeRendering
                 rotation: root.expanded ? 180 : 0
                 transformOrigin: Item.Center
                 MotionBehavior on rotation {NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }

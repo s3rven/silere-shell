@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import "../../config"
 import "../../services"
+import "../common"
 
 Column {
     id: root
@@ -66,7 +67,7 @@ Column {
                 fillOpacity:  _modHeader.activeFocus ? 0.13 : 0.08
             }
 
-            Text {
+            ShellText {
                 anchors.left: parent.left; anchors.leftMargin: 14
                 anchors.verticalCenter: parent.verticalCenter
                 width: 18
@@ -74,9 +75,8 @@ Column {
                 text: "󰏫"
                 color: Theme.withAlpha(Theme.subtext, 0.85)
                 font.family: Settings.font; font.pixelSize: Settings.iconSize + 2
-                renderType: Text.NativeRendering
             }
-            Text {
+            ShellText {
                 id: _modHeaderLabel
                 anchors.left: parent.left; anchors.leftMargin: 42
                 anchors.right: _modSummary.left; anchors.rightMargin: 8
@@ -85,28 +85,25 @@ Column {
                 elide: Text.ElideRight
                 color: Theme.withAlpha(Theme.text, 0.85)
                 font.family: Settings.font; font.pixelSize: Settings.fontSize
-                renderType: Text.NativeRendering
             }
             Row {
                 id: _modSummary
                 anchors.right: parent.right; anchors.rightMargin: 12
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 8
-                Text {
+                ShellText {
                     anchors.verticalCenter: parent.verticalCenter
                     text: String(ShellSettings.modifiedKeys.length)
                     color: Theme.withAlpha(Theme.subtext, 0.55)
                     font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
-                    renderType: Text.NativeRendering
                 }
-                Text {
+                ShellText {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "󰅀"
                     rotation: _modHeader.open ? 180 : 0
                     transformOrigin: Item.Center
                     color: _modHeader.open ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.58)
                     font.family: Settings.font; font.pixelSize: Settings.fontSize
-                    renderType: Text.NativeRendering
                     MotionBehavior on rotation {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
                 }
             }
@@ -159,7 +156,7 @@ Column {
                         fillOpacity:  _modRow.activeFocus ? 0.13 : 0.08
                     }
 
-                    Text {
+                    ShellText {
                         id: _modLabel
                         anchors.left: parent.left; anchors.leftMargin: 14
                         anchors.verticalCenter: parent.verticalCenter
@@ -169,9 +166,8 @@ Column {
                         elide: Text.ElideRight
                         color: Theme.withAlpha(Theme.text, 0.85)
                         font.family: Settings.font; font.pixelSize: Settings.fontSize
-                        renderType: Text.NativeRendering
                     }
-                    Text {
+                    ShellText {
                         id: _modValue
                         anchors.left: _modLabel.right; anchors.leftMargin: 8
                         anchors.verticalCenter: parent.verticalCenter
@@ -180,9 +176,8 @@ Column {
                         elide: Text.ElideRight
                         color: Theme.withAlpha(Theme.subtext, 0.5)
                         font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
-                        renderType: Text.NativeRendering
                     }
-                    Text {
+                    ShellText {
                         id: _modResetGlyph
                         anchors.right: parent.right; anchors.rightMargin: 12
                         anchors.verticalCenter: parent.verticalCenter
@@ -191,7 +186,6 @@ Column {
                             ? Theme.withAlpha(Theme.accent, 0.9)
                             : Theme.withAlpha(Theme.subtext, 0.5)
                         font.family: Settings.font; font.pixelSize: Settings.iconSize
-                        renderType: Text.NativeRendering
                         MotionBehavior on color {
                             ColorAnimation { duration: Motion.fast }
                         }
@@ -267,36 +261,33 @@ Column {
                 anchors.left: parent.left; anchors.leftMargin: 14
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 10
-                Text {
+                ShellText {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 18
                     horizontalAlignment: Text.AlignHCenter
                     text: "󰦛"
                     color: _resetRow.armed ? Theme.error : Theme.withAlpha(Theme.subtext, 0.85)
                     font.family: Settings.font; font.pixelSize: Settings.iconSize + 2
-                    renderType: Text.NativeRendering
                     MotionBehavior on color {
                         ColorAnimation { duration: Motion.fast }
                     }
                 }
-                Text {
+                ShellText {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "Reset all settings"
                     color: _resetRow.armed ? Theme.error : Theme.withAlpha(Theme.text, 0.85)
                     font.family: Settings.font; font.pixelSize: Settings.fontSize
-                    renderType: Text.NativeRendering
                     MotionBehavior on color {
                         ColorAnimation { duration: Motion.fast }
                     }
                 }
             }
-            Text {
+            ShellText {
                 anchors.right: parent.right; anchors.rightMargin: 12
                 anchors.verticalCenter: parent.verticalCenter
                 text: _resetRow.armed ? "confirm" : ""
                 color: Theme.withAlpha(Theme.error, 0.7)
                 font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
-                renderType: Text.NativeRendering
             }
         }
         HintText {

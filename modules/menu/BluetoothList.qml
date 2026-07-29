@@ -69,7 +69,7 @@ Item {
         topPadding: 4
         bottomPadding: 4
 
-        Text {
+        ShellText {
             visible: root.open && (!Bluetooth.available || !Bluetooth.enabled || Bluetooth.devices.length === 0)
             width: parent.width
             horizontalAlignment: Text.AlignHCenter
@@ -79,7 +79,6 @@ Item {
                 :                        "Searching for devices…"
             color: Theme.withAlpha(Theme.subtext, 0.5)
             font.family: Settings.font; font.pixelSize: Settings.fontSize - 1
-            renderType: Text.NativeRendering
         }
 
         ListView {
@@ -189,28 +188,25 @@ Item {
                     onClicked: _row._activate()
                 }
 
-                Text {
+                ShellText {
                     id: _g
                     anchors.left: parent.left; anchors.leftMargin: 12
                     anchors.verticalCenter: parent.verticalCenter
                     text: root._devGlyph(_row.modelData.icon)
                     color: _row.modelData.connected ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.8)
                     font.family: Settings.font; font.pixelSize: Settings.fontSize + 1
-                    renderType: Text.NativeRendering
                 }
-                Text {
+                ShellText {
                     anchors.left: _g.right; anchors.leftMargin: 10
                     anchors.right: _stateText.left; anchors.rightMargin: 8
                     anchors.verticalCenter: parent.verticalCenter
                     text: _row.modelData.deviceName || _row.modelData.name || _row.modelData.address || "Unknown"
-                    textFormat: Text.PlainText
                     color: _row.modelData.connected ? Theme.text : Theme.withAlpha(Theme.text, 0.85)
                     font.family: Settings.font; font.pixelSize: Settings.fontSize
                     font.weight: _row.modelData.connected ? Font.Medium : Font.Normal
-                    renderType: Text.NativeRendering
                     elide: Text.ElideRight
                 }
-                Text {
+                ShellText {
                     id: _stateText
                     anchors.right: parent.right; anchors.rightMargin: 12
                     anchors.verticalCenter: parent.verticalCenter
@@ -220,7 +216,6 @@ Item {
                          : Theme.withAlpha(Theme.subtext, 0.55)
                     font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
                     font.weight: (parent._armed || _row.modelData.pairing) ? Font.Medium : Font.Normal
-                    renderType: Text.NativeRendering
                     MotionBehavior on color {
                         ColorAnimation { duration: Motion.fast }
                     }

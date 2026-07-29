@@ -178,7 +178,7 @@ PanelWindow {
             MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
         }
 
-        Text {
+        ShellText {
             id: _glyph
             anchors.left: parent.left
             anchors.leftMargin: 10
@@ -187,24 +187,19 @@ PanelWindow {
             horizontalAlignment: Text.AlignHCenter
             text: _row.glyph
             color: _row.active ? Theme.withAlpha(Theme.accent, 0.95) : Theme.withAlpha(Theme.subtext, 0.85)
-            font.family: Settings.font
             font.pixelSize: Settings.fontSize + 1
-            renderType: Text.NativeRendering
             MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
         }
 
-        Text {
+        ShellText {
             anchors.left: _glyph.right
             anchors.leftMargin: 8
             anchors.right: _state.left
             anchors.rightMargin: 8
             anchors.verticalCenter: parent.verticalCenter
             text: _row.label
-            textFormat: Text.PlainText
             color: Theme.text
-            font.family: Settings.font
             font.pixelSize: Settings.fontSize
-            renderType: Text.NativeRendering
             elide: Text.ElideRight
         }
 
@@ -227,15 +222,13 @@ PanelWindow {
                 MotionBehavior on outlineColor {ColorAnimation { duration: Motion.fast } }
             }
 
-            Text {
+            ShellText {
                 id: _stateLabel
                 anchors.centerIn: parent
                 text: _row.stateText
                 color: _row.active ? Theme.mix(Theme.accent, Theme.text, 0.18) : Theme.withAlpha(Theme.subtext, 0.62)
-                font.family: Settings.font
                 font.pixelSize: Settings.fontSize - 2
                 font.weight: Font.Medium
-                renderType: Text.NativeRendering
                 MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
             }
         }

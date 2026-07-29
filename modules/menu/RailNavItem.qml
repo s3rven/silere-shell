@@ -88,7 +88,7 @@ Item {
         }
     }
 
-    Text {
+    ShellText {
         id: _iconText
         anchors.centerIn: parent
         anchors.horizontalCenterOffset:
@@ -98,9 +98,7 @@ Item {
             ? Theme.mix(root.accentColor, Theme.text, 0.10)
             : Theme.withAlpha(Theme.mix(Theme.subtext, root.accentColor, _hover.hovered || root.activeFocus ? 0.24 : 0),
                                _hover.hovered || root.activeFocus ? 0.78 : 0.50)
-        font.family: Settings.font
         font.pixelSize: Settings.iconSize + 2
-        renderType: Text.NativeRendering
         scale: _tap.pressed ? 0.92 : (root.active ? 1.015 : 1.0)
         transformOrigin: Item.Center
         MotionBehavior on color {ColorAnimation  { duration: Motion.fast } }
@@ -142,13 +140,12 @@ Item {
         MotionBehavior on _slide {
             NumberAnimation { duration: _pill._show ? Motion.fast : Motion.instant; easing.type: Easing.OutCubic }
         }
-        Text {
+        ShellText {
             id: _pillLabel
             anchors.centerIn: parent
             text: root.label
             color: Theme.withAlpha(Theme.text, 0.78)
             font.family: Settings.font; font.pixelSize: Settings.fontSize - 1
-            renderType: Text.NativeRendering
         }
     }
 }

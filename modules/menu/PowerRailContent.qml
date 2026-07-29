@@ -159,7 +159,7 @@ Item {
                 width: parent.width
                 height: 20
 
-                Text {
+                ShellText {
                     id: _actionsHdr
                     anchors.left: parent.left
                     anchors.leftMargin: 9
@@ -167,12 +167,10 @@ Item {
                     anchors.bottomMargin: 4
                     text: "Power"
                     color: Theme.withAlpha(Theme.menuTextMuted, 0.90)
-                    font.family: Settings.font
                     font.pixelSize: Settings.fontSize - 3
                     font.letterSpacing: 0.5
                     font.weight: Font.DemiBold
                     font.capitalization: Font.AllUppercase
-                    renderType: Text.NativeRendering
                 }
                 Hairline {
                     anchors.left: _actionsHdr.right

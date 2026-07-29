@@ -336,47 +336,39 @@ Item {
                 width:  parent.width
                 height: _summary.implicitHeight
 
-                Text {
+                ShellText {
                     id: _critIcon
                     visible: card.isCritical
                     anchors.left: parent.left
                     anchors.verticalCenter: _summary.verticalCenter
                     text:           "󰀦"
                     color:          Theme.error
-                    font.family:    Settings.font
                     font.pixelSize: Settings.fontSize + 1
-                    renderType:     Text.NativeRendering
                 }
 
-                Text {
+                ShellText {
                     id: _summary
                     anchors.left:       _critIcon.visible ? _critIcon.right : parent.left
                     anchors.leftMargin: _critIcon.visible ? 6 : 0
                     anchors.right:      parent.right
                     anchors.rightMargin: 18
                     text:           card.summaryText
-                    textFormat:     Text.PlainText
                     // the glyph, rim and ring already carry urgency; red text on
                     // the red-tinted fill only costs contrast
                     color:          Theme.text
-                    font.family:    Settings.font
                     font.pixelSize: Settings.fontSize + 1
                     font.weight:    Font.DemiBold
-                    renderType:     Text.NativeRendering
                     elide:          Text.ElideRight
                     MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
                 }
             }
 
-            Text {
+            ShellText {
                 visible:          card.hasBody
                 width:            parent.width
                 text:             card.bodyText
-                textFormat:       Text.PlainText
                 color:            Theme.withAlpha(Theme.menuTextMuted, 0.82)
-                font.family:      Settings.font
                 font.pixelSize:   Settings.fontSize - 1
-                renderType:       Text.NativeRendering
                 wrapMode:         Text.WordWrap
                 maximumLineCount: _cardHover.hovered ? 12 : 3
                 elide:            Text.ElideRight
@@ -471,18 +463,15 @@ Item {
                         Accessible.name: _actBtn.modelData.text
                         Accessible.onPressAction: card.invokeAction(_actBtn.modelData)
 
-                        Text {
+                        ShellText {
                             anchors.centerIn: parent
                             width: Math.min(implicitWidth, _actBtn.width - 16)
                             horizontalAlignment: Text.AlignHCenter
                             elide: Text.ElideRight
                             text: _actBtn.modelData.text
-                            textFormat: Text.PlainText
                             color: _actMa.containsMouse ? _actBtn._tint : Theme.withAlpha(Theme.text, 0.85)
-                            font.family: Settings.font
                             font.pixelSize: Settings.fontSize - 1
                             font.weight: Font.Medium
-                            renderType: Text.NativeRendering
                             MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
                         }
 
@@ -501,43 +490,35 @@ Item {
                 width: parent.width
                 spacing: 6
 
-                Text {
+                ShellText {
                     id: _appCap
                     anchors.verticalCenter: parent.verticalCenter
                     visible:        text.length > 0
                     text:           card.appNameText
-                    textFormat:     Text.PlainText
                     color:          Theme.withAlpha(Theme.menuTextMuted, card.isCritical ? 0.72 : 0.62)
-                    font.family:    Settings.font
                     font.pixelSize: Settings.fontSize - 3
                     font.weight:    Font.Medium
                     font.capitalization: Font.AllUppercase
                     font.letterSpacing:  0.6
-                    renderType:     Text.NativeRendering
                     elide:          Text.ElideRight
                     width: Math.min(implicitWidth, Math.max(0, parent.width - _capDot.implicitWidth - _capTime.implicitWidth - parent.spacing * 2))
                 }
 
-                Text {
+                ShellText {
                     id: _capDot
                     anchors.verticalCenter: parent.verticalCenter
                     visible: _appCap.visible
                     text:  "·"
                     color: Theme.withAlpha(Theme.menuTextFaint, 0.62)
-                    font.family:    Settings.font
                     font.pixelSize: Settings.fontSize - 3
-                    renderType:     Text.NativeRendering
                 }
 
-                Text {
+                ShellText {
                     id: _capTime
                     anchors.verticalCenter: parent.verticalCenter
                     text:           card._timeLabel
-                    textFormat:     Text.PlainText
                     color:          Theme.withAlpha(Theme.menuTextFaint, 0.70)
-                    font.family:    Settings.font
                     font.pixelSize: Settings.fontSize - 3
-                    renderType:     Text.NativeRendering
                 }
             }
         }
@@ -610,13 +591,11 @@ Item {
             Accessible.onPressAction: card.dismiss()
             HoverHandler { id: _closeHover; cursorShape: Qt.PointingHandCursor }
             TapHandler   { onTapped: card.dismiss() }
-            Text {
+            ShellText {
                 anchors.centerIn: parent
                 text:  "󰅖"
                 color: _closeHover.hovered ? Theme.error : Theme.withAlpha(Theme.menuTextMuted, 0.78)
-                font.family:    Settings.font
                 font.pixelSize: Settings.fontSize - 2
-                renderType:     Text.NativeRendering
                 MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
             }
         }

@@ -255,29 +255,26 @@ PanelWindow {
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 11
 
-                    Text {
+                    ShellText {
                         anchors.verticalCenter: parent.verticalCenter
                         text: card._todayD < 0 ? "" : card._todayD
                         color: Theme.accent
                         font.family: Settings.font; font.pixelSize: Settings.fontSize + 15; font.weight: Font.DemiBold
-                        renderType: Text.NativeRendering
                     }
                     Column {
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 1
-                        Text {
+                        ShellText {
                             text: card.todayWeekday
                             color: (_todayH.hovered || _todayButton.activeFocus) ? Theme.text : Theme.withAlpha(Theme.text, 0.9)
                             font.family: Settings.font; font.pixelSize: Settings.fontSize + 1; font.weight: Font.DemiBold
-                            renderType: Text.NativeRendering
                             MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
                         }
-                        Text {
+                        ShellText {
                             visible: card._todayWeek > 0
                             text: "Week " + card._todayWeek
                             color: Theme.withAlpha(Theme.subtext, 0.45)
                             font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
-                            renderType: Text.NativeRendering
                         }
                     }
                 }
@@ -315,13 +312,12 @@ PanelWindow {
                     Keys.onEnterPressed:  event => card._activateToday(event)
                     HoverHandler { id: _mH; cursorShape: Qt.PointingHandCursor }
                     TapHandler   { onTapped: card._goToday() }
-                    Text {
+                    ShellText {
                         id: _mLabel
                         anchors.centerIn: parent
                         text: card.monthLabel
                         color: (_mH.hovered || _monthButton.activeFocus) ? Theme.text : Theme.withAlpha(Theme.text, 0.9)
                         font.family: Settings.font; font.pixelSize: Settings.fontSize + 1; font.weight: Font.DemiBold
-                        renderType: Text.NativeRendering
                         MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
                     }
                 }
@@ -347,13 +343,12 @@ PanelWindow {
                         required property int index
                         required property string modelData
                         width: card.cell; height: 22
-                        Text {
+                        ShellText {
                             anchors.centerIn: parent
                             text: dayHdr.modelData
                             color: Theme.withAlpha(Theme.subtext, dayHdr.index >= 5 ? 0.4 : 0.6)
                             font.family: Settings.font; font.pixelSize: Settings.fontSize - 3
                             font.weight: Font.Medium; font.capitalization: Font.AllUppercase
-                            renderType: Text.NativeRendering
                         }
                     }
                 }
@@ -409,14 +404,12 @@ PanelWindow {
                             required property int index
                             width: card.weekCol
                             height: card.cell
-                            Text {
+                            ShellText {
                                 anchors.centerIn: parent
                                 text: card._weekForRow(_weekRow.index)
                                 color: Theme.withAlpha(Theme.subtext, 0.38)
-                                font.family: Settings.font
                                 font.pixelSize: Settings.fontSize - 4
                                 font.weight: Font.Medium
-                                renderType: Text.NativeRendering
                             }
                         }
                     }
@@ -471,16 +464,14 @@ PanelWindow {
                                     onTapped: CalendarState.toggleMark(card.shownYear, card.shownMonth, _dayCell.dayNum)
                                 }
 
-                                Text {
+                                ShellText {
                                     anchors.centerIn: parent
                                     text: _dayCell.dayNum
                                     color: _dayCell.today ? Theme.surface
                                          : _dayCell.cur   ? Theme.withAlpha(Theme.text, _dayCell.weekend ? 0.68 : 0.9)
                                          :                  Theme.withAlpha(Theme.subtext, 0.3)
-                                    font.family: Settings.font
                                     font.pixelSize: Settings.fontSize
                                     font.weight: _dayCell.today ? Font.DemiBold : Font.Normal
-                                    renderType: Text.NativeRendering
                                 }
 
                                 Rectangle {

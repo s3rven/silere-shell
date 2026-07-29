@@ -145,7 +145,7 @@ Item {
         width: parent.width
         height: root._toolbarH
 
-        Text {
+        ShellText {
             anchors.left: parent.left
             anchors.leftMargin: 12
             anchors.right: _reset.left
@@ -154,9 +154,7 @@ Item {
             text: "Drag rows to arrange"
             elide: Text.ElideRight
             color: Theme.withAlpha(Theme.subtext, 0.58)
-            font.family: Settings.font
             font.pixelSize: Settings.fontSize - 2
-            renderType: Text.NativeRendering
         }
 
         ActionButton {
@@ -195,17 +193,15 @@ Item {
             width: root.width
             height: root._zoneHeaderH
 
-            Text {
+            ShellText {
                 anchors.left: parent.left
                 anchors.leftMargin: 12
                 anchors.verticalCenter: parent.verticalCenter
                 text: _zoneHeader.isLeft ? "Left side" : "Right side"
                 color: _zoneHeader.hot
                     ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.54)
-                font.family: Settings.font
                 font.pixelSize: Settings.fontSize - 2
                 font.weight: Font.DemiBold
-                renderType: Text.NativeRendering
                 MotionBehavior on color {
                     ColorAnimation { duration: Motion.fast }
                 }
@@ -314,7 +310,7 @@ Item {
                 }
             }
 
-            Text {
+            ShellText {
                 id: _glyph
                 visible: root.width >= 180
                 anchors.left: parent.left
@@ -326,27 +322,22 @@ Item {
                 color: _row.checked
                     ? Theme.withAlpha(Theme.accent, 0.90)
                     : Theme.withAlpha(Theme.subtext, 0.48)
-                font.family: Settings.font
                 font.pixelSize: Settings.fontSize + 1
-                renderType: Text.NativeRendering
                 MotionBehavior on color {
                     ColorAnimation { duration: Motion.fast }
                 }
             }
 
-            Text {
+            ShellText {
                 anchors.left: _glyph.right
                 anchors.leftMargin: 7
                 anchors.right: _row.hasToggle ? _toggleTarget.left : parent.right
                 anchors.rightMargin: _row.hasToggle ? 4 : 12
                 anchors.verticalCenter: parent.verticalCenter
                 text: _row.meta.label
-                textFormat: Text.PlainText
                 elide: Text.ElideRight
                 color: _row.checked ? Theme.text : Theme.withAlpha(Theme.text, 0.48)
-                font.family: Settings.font
                 font.pixelSize: Settings.fontSize
-                renderType: Text.NativeRendering
                 MotionBehavior on color {
                     ColorAnimation { duration: Motion.fast }
                 }
@@ -453,13 +444,11 @@ Item {
                 }
             }
 
-            Text {
+            ShellText {
                 anchors.centerIn: parent
                 text: "Drop here"
                 color: Theme.withAlpha(Theme.subtext, _empty.hot ? 0.70 : 0.46)
-                font.family: Settings.font
                 font.pixelSize: Settings.fontSize - 3
-                renderType: Text.NativeRendering
             }
 
             MotionBehavior on y {

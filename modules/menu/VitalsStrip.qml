@@ -70,27 +70,23 @@ Rectangle {
             y: 11
             spacing: 4
 
-            Text {
+            ShellText {
                 id: _gl
                 text: tile.glyph
                 color: tile.pulse > 0.001
                     ? Theme.mix(Theme.menuTextMuted, tile.tint, 0.36 + tile.pulse * 0.38)
                     : Theme.withAlpha(Theme.menuTextMuted, 0.66)
-                font.family: Settings.font
                 font.pixelSize: Settings.fontSize - 3
-                renderType: Text.NativeRendering
             }
-            Text {
+            ShellText {
                 anchors.baseline: _gl.baseline
                 text: tile.label
                 color: Theme.withAlpha(Theme.menuTextMuted, 0.62)
-                font.family: Settings.font
                 font.pixelSize: Settings.fontSize - 3
                 font.letterSpacing: 0.4
                 font.weight: Font.DemiBold
                 font.capitalization: Font.AllUppercase
                 font.hintingPreference: Font.PreferFullHinting
-                renderType: Text.NativeRendering
             }
         }
 
@@ -102,7 +98,7 @@ Rectangle {
             anchors.topMargin: 3
             spacing: 4
 
-            Text {
+            ShellText {
                 id: _val
                 text: tile.value
                 color: tile.pulse > 0.001
@@ -110,23 +106,19 @@ Rectangle {
                     : tile.status > 0
                         ? Theme.mix(Theme.text, tile.tint, 0.45)
                         : Theme.withAlpha(Theme.text, 0.92)
-                font.family: Settings.font
                 font.pixelSize: Settings.fontSize + 4
                 font.weight: Font.DemiBold
                 font.hintingPreference: Font.PreferFullHinting
-                renderType: Text.NativeRendering
             }
-            Text {
+            ShellText {
                 visible: tile.sub !== ""
                 anchors.baseline: _val.baseline
                 text: tile.sub
                 color: tile.pulse > 0.001
                     ? Theme.mix(Theme.menuTextMuted, tile.tint, tile.pulse * 0.6)
                     : Theme.withAlpha(Theme.menuTextMuted, 0.85)
-                font.family: Settings.font
                 font.pixelSize: Settings.fontSize - 1
                 font.hintingPreference: Font.PreferFullHinting
-                renderType: Text.NativeRendering
             }
         }
 

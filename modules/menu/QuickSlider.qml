@@ -1,5 +1,6 @@
 import QtQuick
 import "../../config"
+import "../common"
 
 Item {
     id: root
@@ -83,15 +84,13 @@ Item {
         Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root.glyphClicked(); event.accepted = true }
         Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) root.glyphClicked(); event.accepted = true }
 
-        Text {
+        ShellText {
             anchors.centerIn: parent
             text: root.glyph
             color: _g.activeFocus ? Theme.accent
                  : (root.glyphClickable && _glyphHover.hovered) ? Theme.text
                  : Theme.withAlpha(Theme.subtext, 0.85)
-            font.family: Settings.font
             font.pixelSize: Settings.iconSize + 2
-            renderType: Text.NativeRendering
             MotionBehavior on color {
                 ColorAnimation { duration: Motion.fast }
             }
@@ -102,7 +101,7 @@ Item {
     }
 
     TextMetrics { id: _vm; font.family: Settings.font; font.pixelSize: Math.max(11, Settings.fontSize - 1); text: root.valueWidthText }
-    Text {
+    ShellText {
         id: _v
         anchors.right: parent.right; anchors.rightMargin: 12
         anchors.verticalCenter: parent.verticalCenter
@@ -110,9 +109,7 @@ Item {
         horizontalAlignment: Text.AlignRight
         text: root.valueText
         color: Theme.withAlpha(Theme.text, 0.60)
-        font.family: Settings.font
         font.pixelSize: Math.max(11, Settings.fontSize - 1)
-        renderType: Text.NativeRendering
         elide: Text.ElideRight
     }
 
@@ -148,13 +145,11 @@ Item {
         HoverHandler { id: _chevHover; cursorShape: Qt.PointingHandCursor }
         TapHandler   { onTapped: root.expandToggled() }
 
-        Text {
+        ShellText {
             anchors.centerIn: parent
             text: "󰅀"
             color: root.expanded || _chev.activeFocus ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.85)
-            font.family: Settings.font
             font.pixelSize: Settings.fontSize
-            renderType: Text.NativeRendering
             rotation: root.expanded ? 180 : 0
             transformOrigin: Item.Center
             MotionBehavior on rotation {NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }

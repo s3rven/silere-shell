@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import "../../config"
 import "../../services"
+import "../common"
 
 PageShell {
     id: root
@@ -116,7 +117,7 @@ PageShell {
             readonly property var _meta: root._sectionMeta[root._shownSection]
                 ?? ({ glyph: "", label: "", group: "Settings", description: "", index: 0 })
 
-            Text {
+            ShellText {
                 id: _hdrPath
                 anchors.left: parent.left
                 anchors.leftMargin: 2
@@ -125,12 +126,10 @@ PageShell {
                 anchors.topMargin: 1
                 text: _detailHeader._meta.group
                 color: Theme.withAlpha(Theme.accent, 0.76)
-                font.family: Settings.font
                 font.pixelSize: Math.max(8, Settings.fontSize - 3)
                 font.letterSpacing: 0.55
                 font.weight: Font.DemiBold
                 font.capitalization: Font.AllUppercase
-                renderType: Text.NativeRendering
                 elide: Text.ElideRight
             }
             Item {
@@ -141,16 +140,14 @@ PageShell {
                 width: 22
                 height: 34
 
-                Text {
+                ShellText {
                     anchors.centerIn: parent
                     text: _detailHeader._meta.glyph
                     color: Theme.withAlpha(Theme.accent, 0.82)
-                    font.family: Settings.font
                     font.pixelSize: Settings.fontSize + 2
-                    renderType: Text.NativeRendering
                 }
             }
-            Text {
+            ShellText {
                 id: _hdrTitle
                 anchors.left: _hdrIconSlot.right
                 anchors.leftMargin: 7
@@ -159,22 +156,18 @@ PageShell {
                 anchors.topMargin: -1
                 text: _detailHeader._meta.label
                 color: Theme.text
-                font.family: Settings.font
                 font.pixelSize: Settings.fontSize + 3
                 font.weight: Font.DemiBold
-                renderType: Text.NativeRendering
                 elide: Text.ElideRight
             }
-            Text {
+            ShellText {
                 anchors.left: _hdrTitle.left
                 anchors.right: parent.right
                 anchors.top: _hdrTitle.bottom
                 anchors.topMargin: 2
                 text: _detailHeader._meta.description
                 color: Theme.withAlpha(Theme.subtext, 0.58)
-                font.family: Settings.font
                 font.pixelSize: Math.max(8, Settings.fontSize - 2)
-                renderType: Text.NativeRendering
                 elide: Text.ElideRight
             }
         }

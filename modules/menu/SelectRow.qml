@@ -129,7 +129,7 @@ Item {
         fillOpacity:  root.activeFocus ? 0.13 : 0.08
     }
 
-    Text {
+    ShellText {
         id: _glyph
         anchors.left:           parent.left; anchors.leftMargin: 14
         anchors.verticalCenter: _header.verticalCenter
@@ -137,9 +137,7 @@ Item {
         horizontalAlignment: Text.AlignHCenter
         text:           root.glyph
         color:          Theme.withAlpha(Theme.subtext, 0.85)
-        font.family:    Settings.font
         font.pixelSize: Settings.iconSize + 2
-        renderType:     Text.NativeRendering
     }
     Item {
         id: _header
@@ -154,30 +152,24 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 2
 
-            Text {
+            ShellText {
                 id: _label
                 width: parent.width
                 text: root.label
-                textFormat: Text.PlainText
                 elide: Text.ElideRight
                 color: Theme.withAlpha(Theme.text, 0.85)
-                font.family: Settings.font
                 font.pixelSize: Settings.fontSize
-                renderType: Text.NativeRendering
             }
-            Text {
+            ShellText {
                 visible: root._hasDesc
                 width: parent.width
                 text: root.description
-                textFormat: Text.PlainText
                 wrapMode: Text.WordWrap
                 maximumLineCount: 2
                 elide: Text.ElideRight
                 color: Theme.withAlpha(Theme.subtext, 0.52)
-                font.family: Settings.font
                 font.pixelSize: Math.max(8, Settings.fontSize - 2)
                 lineHeight: 1.1
-                renderType: Text.NativeRendering
             }
         }
     }
@@ -208,7 +200,7 @@ Item {
             }
         }
 
-        Text {
+        ShellText {
             id: _valText
             anchors.left:           parent.left
             anchors.leftMargin:     9
@@ -216,18 +208,16 @@ Item {
             anchors.rightMargin:    21
             anchors.verticalCenter: parent.verticalCenter
             text:           root._activeLabel
-            textFormat:     Text.PlainText
             elide:          Text.ElideRight
             color:          root._open ? Theme.text : Theme.withAlpha(Theme.subtext, 0.76)
             font.family:    root._activeFont
             font.pixelSize: Settings.fontSize - 1
             font.weight:    root._open ? Font.DemiBold : Font.Medium
-            renderType:     Text.NativeRendering
             MotionBehavior on color {
                 ColorAnimation { duration: Motion.fast }
             }
         }
-        Text {
+        ShellText {
             anchors.right:          parent.right
             anchors.rightMargin:    7
             anchors.verticalCenter: parent.verticalCenter
@@ -235,9 +225,7 @@ Item {
             rotation: root._open ? 180 : 0
             transformOrigin: Item.Center
             color:   root._open ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.58)
-            font.family:    Settings.font
             font.pixelSize: Settings.fontSize
-            renderType:     Text.NativeRendering
             MotionBehavior on rotation {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
             MotionBehavior on color {
                 ColorAnimation { duration: Motion.fast }
@@ -375,14 +363,13 @@ Item {
                         }
                     }
 
-                    Text {
+                    ShellText {
                         anchors.left:           parent.left
                         anchors.leftMargin:     (root.glyph.length > 0 ? 42 : 24)
                         anchors.right:          _check.left
                         anchors.rightMargin:    8
                         anchors.verticalCenter: parent.verticalCenter
                         text:       _opt.modelData.label
-                        textFormat: Text.PlainText
                         elide:      Text.ElideRight
                         color:      _opt.active
                             ? Theme.text
@@ -390,12 +377,11 @@ Item {
                         font.family:    _opt.optionFont
                         font.pixelSize: Settings.fontSize
                         font.weight:    _opt.active ? Font.DemiBold : Font.Normal
-                        renderType:     Text.NativeRendering
                         MotionBehavior on color {
                             ColorAnimation { duration: Motion.fast }
                         }
                     }
-                    Text {
+                    ShellText {
                         id: _check
                         anchors.right:          parent.right
                         anchors.rightMargin:    17
@@ -404,9 +390,7 @@ Item {
                         horizontalAlignment: Text.AlignHCenter
                         text: "󰄬"
                         color: Theme.accent
-                        font.family: Settings.font
                         font.pixelSize: Settings.fontSize
-                        renderType: Text.NativeRendering
                         opacity: _opt.active ? 0.90 : 0.0
                         MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
                     }

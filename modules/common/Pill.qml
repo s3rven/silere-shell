@@ -225,15 +225,13 @@ Item {
             implicitWidth:  root._shownGlyph.length > 0 ? Metrics.iconCellFor(root.glyphPixelSize) : 0
             implicitHeight: _glyphText.implicitHeight
 
-            Text {
+            ShellText {
                 id: _glyphText
                 anchors.centerIn: parent
                 text:            root._shownGlyph
                 color:           root._hoverGlyphColor
                 transformOrigin: Item.Center
-                font.family:     Settings.font
                 font.pixelSize:  root.glyphPixelSize
-                renderType:      Text.NativeRendering
                 Behavior on color {
                     enabled: root.animateGlyphColor && !ShellSettings.reduceMotion
                     ColorAnimation { duration: Motion.color }
@@ -250,7 +248,7 @@ Item {
             height: _textEl.implicitHeight
             implicitWidth: _textEl.implicitWidth
 
-            Text {
+            ShellText {
                 id: _textEl
                 property string _shown: ""
                 readonly property bool _hasShownText: root.animateText ? _shown.length > 0 : root.hasText
@@ -259,11 +257,8 @@ Item {
                 horizontalAlignment: root.reserveText.length > 0 ? Text.AlignHCenter : Text.AlignLeft
                 elide:   Text.ElideRight
                 text:    root.animateText ? _shown : root.text
-                textFormat: Text.PlainText
                 color:   root._hoverTextColor
-                font.family:    Settings.font
                 font.pixelSize: Settings.fontSize
-                renderType: Text.NativeRendering
                 MotionBehavior on color {
                     ColorAnimation { duration: Motion.color }
                 }
@@ -317,13 +312,11 @@ Item {
                     width: _glyphBox.width
                     height: row.height
 
-                    Text {
+                    ShellText {
                         anchors.centerIn: parent
                         text:           root._shownGlyph
                         color:          root.contentScanColor
-                        font.family:    Settings.font
                         font.pixelSize: root.glyphPixelSize
-                        renderType:     Text.NativeRendering
                     }
                 }
 
@@ -332,18 +325,15 @@ Item {
                     width: _textBox.width
                     height: row.height
 
-                    Text {
+                    ShellText {
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width
                         // must match the real text's alignment (centers when a reserveText floor is set) or the swept copy lands offset and looks doubled/garbled
                         horizontalAlignment: root.reserveText.length > 0 ? Text.AlignHCenter : Text.AlignLeft
                         elide: Text.ElideRight
                         text: root.animateText ? _textEl._shown : root.text
-                        textFormat: Text.PlainText
                         color: root.contentScanColor
-                        font.family: Settings.font
                         font.pixelSize: Settings.fontSize
-                        renderType: Text.NativeRendering
                     }
                 }
             }

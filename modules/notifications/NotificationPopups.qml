@@ -136,26 +136,22 @@ PanelWindow {
                 anchors.centerIn: parent
                 spacing: 5
 
-                Text {
+                ShellText {
                     anchors.verticalCenter: parent.verticalCenter
                     text: chip.glyph
                     color: _hover.hovered ? chip.tint
                         : Theme.withAlpha(Theme.menuTextMuted, 0.76)
-                    font.family: Settings.font
                     font.pixelSize: Settings.fontSize - 1
-                    renderType: Text.NativeRendering
                     MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
                 }
 
-                Text {
+                ShellText {
                     anchors.verticalCenter: parent.verticalCenter
                     text: chip.label
                     color: _hover.hovered ? Theme.withAlpha(Theme.text, 0.90)
                         : Theme.withAlpha(Theme.menuTextMuted, 0.86)
-                    font.family: Settings.font
                     font.pixelSize: Settings.fontSize - 2
                     font.weight: Font.Medium
-                    renderType: Text.NativeRendering
                     MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
                 }
             }

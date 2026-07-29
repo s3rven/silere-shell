@@ -851,7 +851,7 @@ Item {
                     }
                 }
 
-                Text {
+                ShellText {
                     anchors.centerIn: parent
                     transform: Translate { x: ws._shakeX }
                     text:    ws.wsId
@@ -866,8 +866,6 @@ Item {
                             ? (ws._hoverFx ? Theme.accent : Theme.withAlpha(Theme.text, 0.85))
                             : (ws._hoverFx ? Theme.withAlpha(Theme.accent, 0.65) : Theme.withAlpha(Theme.subtext, 0.45)))
                     font.pixelSize: Settings.fontSize - 1
-                    font.family:    Settings.font
-                    renderType:     Text.NativeRendering
 
                     MotionBehavior on opacity {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
                     MotionBehavior on scale   {NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }

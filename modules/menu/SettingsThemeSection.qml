@@ -1,6 +1,7 @@
 import QtQuick
 import "../../config"
 import "../../services"
+import "../common"
 
 Column {
     id: root
@@ -71,19 +72,17 @@ Column {
                 property real bottomRadius: 0
                 property real cardInset: 1
 
-                Text {
+                ShellText {
                     id: _accentTitle
                     anchors.top:            parent.top; anchors.topMargin: 11
                     anchors.left:           parent.left; anchors.leftMargin: 16
                     anchors.right:          _accentReadout.left; anchors.rightMargin: 10
                     text:           "Accent"
                     color:          Theme.withAlpha(Theme.text, 0.85)
-                    font.family:    Settings.font
                     font.pixelSize: Settings.fontSize
-                    renderType:     Text.NativeRendering
                     elide:          Text.ElideRight
                 }
-                Text {
+                ShellText {
                     id: _accentReadout
                     anchors.top:            _accentTitle.top
                     anchors.right:          parent.right; anchors.rightMargin: 12
@@ -96,9 +95,7 @@ Column {
                     MotionBehavior on color {
                         ColorAnimation { duration: Motion.fast }
                     }
-                    font.family:    Settings.font
                     font.pixelSize: Settings.fontSize - 2
-                    renderType:     Text.NativeRendering
                     elide:          Text.ElideRight
                 }
 

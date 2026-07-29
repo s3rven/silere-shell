@@ -249,23 +249,20 @@ Item {
             width: root.width
             height: root.implicitHeight
 
-            Text {
+            ShellText {
                 x: 12
                 y: 10
                 width: Math.max(1, parent.width - 24)
                 height: 18
                 verticalAlignment: Text.AlignVCenter
                 text: "Settings"
-                textFormat: Text.PlainText
                 elide: Text.ElideRight
                 color: Theme.withAlpha(
                     Theme.mix(Theme.menuTextMuted, Theme.accent, 0.12), 0.82)
-                font.family: Settings.font
                 font.pixelSize: Math.max(8, Settings.fontSize - 2)
                 font.letterSpacing: 0.65
                 font.weight: Font.DemiBold
                 font.capitalization: Font.AllUppercase
-                renderType: Text.NativeRendering
             }
 
             Column {
@@ -392,7 +389,7 @@ Item {
                                     ? Theme.withAlpha(Theme.accent, 0.42)
                                     : "transparent"
                             }
-                            Text {
+                            ShellText {
                                 id: _groupGlyph
                                 visible: !root.compact
                                 anchors.left: parent.left
@@ -405,12 +402,10 @@ Item {
                                     ? Theme.mix(Theme.accent, Theme.text, 0.08)
                                     : Theme.withAlpha(Theme.menuTextMuted,
                                         _headerHover.hovered || _grpHeader.activeFocus || _grp.expanded ? 0.84 : 0.64)
-                                font.family: Settings.font
                                 font.pixelSize: Settings.fontSize
-                                renderType: Text.NativeRendering
                             }
 
-                            Text {
+                            ShellText {
                                 anchors.left: _groupGlyph.visible ? _groupGlyph.right : parent.left
                                 anchors.leftMargin: _groupGlyph.visible ? 8 : 10
                                 anchors.right: _groupChevron.left
@@ -421,15 +416,13 @@ Item {
                                     ? Theme.text
                                     : Theme.withAlpha(Theme.menuTextMuted,
                                         _headerHover.hovered || _grpHeader.activeFocus || _grp.expanded ? 0.94 : 0.80)
-                                font.family: Settings.font
                                 font.pixelSize: Settings.fontSize - 1
                                 font.weight: _grp.groupActive || _grp.expanded
                                     ? Font.DemiBold : Font.Normal
-                                renderType: Text.NativeRendering
                                 elide: Text.ElideRight
                             }
 
-                            Text {
+                            ShellText {
                                 id: _groupChevron
                                 anchors.right: parent.right
                                 anchors.rightMargin: 8
@@ -440,9 +433,7 @@ Item {
                                 color: Theme.withAlpha(Theme.subtext,
                                     _headerHover.hovered || _grpHeader.activeFocus ? 0.78
                                     : _grp.expanded ? 0.62 : 0.44)
-                                font.family: Settings.font
                                 font.pixelSize: Settings.fontSize - 2
-                                renderType: Text.NativeRendering
 
                                 MotionBehavior on rotation {
                                     NumberAnimation { duration: Motion.medium; easing.type: Easing.OutQuart }
@@ -572,7 +563,7 @@ Item {
                                                 : "transparent"
                                         }
 
-                                        Text {
+                                        ShellText {
                                             id: _leafGlyph
                                             visible: !root.compact
                                             anchors.left: parent.left
@@ -585,15 +576,13 @@ Item {
                                                 ? Theme.mix(Theme.accent, Theme.text, 0.10)
                                                 : Theme.withAlpha(Theme.subtext,
                                                     _leafHover.hovered || _leaf.activeFocus ? 0.72 : 0.46)
-                                            font.family: Settings.font
                                             font.pixelSize: Settings.fontSize
-                                            renderType: Text.NativeRendering
                                             MotionBehavior on color {
                                                 ColorAnimation { duration: Motion.fast }
                                             }
                                         }
 
-                                        Text {
+                                        ShellText {
                                             anchors.left: _leafGlyph.visible ? _leafGlyph.right : parent.left
                                             anchors.leftMargin: _leafGlyph.visible ? 8 : 12
                                             anchors.right: parent.right
@@ -605,10 +594,8 @@ Item {
                                                 ? Theme.text
                                                 : Theme.withAlpha(Theme.mix(Theme.subtext, Theme.text, 0.12),
                                                     _leafHover.hovered || _leaf.activeFocus ? 0.92 : 0.76)
-                                            font.family: Settings.font
                                             font.pixelSize: Settings.fontSize
                                             font.weight: _leaf.active ? Font.DemiBold : Font.Normal
-                                            renderType: Text.NativeRendering
                                             MotionBehavior on color {
                                                 ColorAnimation { duration: Motion.fast }
                                             }

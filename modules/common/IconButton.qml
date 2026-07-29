@@ -85,14 +85,12 @@ Item {
         }
     }
 
-    Text {
+    ShellText {
         anchors.centerIn: parent
         text: root.glyph
         color: root.activeFocus || _hover.hovered || root.pressed
             ? Theme.text : Theme.withAlpha(Theme.subtext, 0.72)
-        font.family: Settings.font
         font.pixelSize: root.glyphPixelSize
-        renderType: Text.NativeRendering
         scale: root.pressed ? 0.90 : 1.0
         transformOrigin: Item.Center
 
