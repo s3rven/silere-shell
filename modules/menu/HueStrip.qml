@@ -1,6 +1,7 @@
 import QtQuick
 import "../../config"
 import "../../services"
+import "../common"
 
 Item {
     id: root
@@ -24,6 +25,8 @@ Item {
     Accessible.role: Accessible.Slider
     Accessible.name: root.accessibleName
     Accessible.description: root.accessibleDescription
+    Accessible.onIncreaseAction: if (root.enabled && root.interactive) root._nudgeHue(1, 1)
+    Accessible.onDecreaseAction: if (root.enabled && root.interactive) root._nudgeHue(-1, 1)
 
     function _wrappedHue(h: real): real {
         return ((h % 1) + 1) % 1
@@ -38,7 +41,10 @@ Item {
     Keys.onLeftPressed: event => { root._nudgeHue(-1, (event.modifiers & Qt.ShiftModifier) ? 5 : 1); event.accepted = true }
     Keys.onRightPressed: event => { root._nudgeHue(1, (event.modifiers & Qt.ShiftModifier) ? 5 : 1); event.accepted = true }
 
-    Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+    Behavior on opacity {
+        enabled: !ShellSettings.reduceMotion
+        NumberAnimation { duration: Motion.fast }
+    }
 
     Rectangle {
         id: _well
@@ -48,12 +54,22 @@ Item {
         color: _mouse.containsMouse || root.activeFocus
             ? Theme.mix(Theme.menuControl, Theme.accent, 0.055)
             : Theme.menuControl
-        border.width: 1
-        border.color: root.activeFocus
-            ? Theme.withAlpha(Theme.accent, 0.58)
-            : _mouse.containsMouse ? Theme.menuControlLineHot : Theme.menuControlLine
-        Behavior on color { ColorAnimation { duration: Motion.fast } }
-        Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+        Behavior on color {
+            enabled: !ShellSettings.reduceMotion
+            ColorAnimation { duration: Motion.fast }
+        }
+
+        OutlineBorder {
+            radius: _well.radius
+            outlineWidth: root.activeFocus ? 2 : 1
+            outlineColor: root.activeFocus
+                ? Theme.withAlpha(Theme.accent, 0.58)
+                : _mouse.containsMouse ? Theme.menuControlLineHot : Theme.menuControlLine
+            Behavior on outlineColor {
+                enabled: !ShellSettings.reduceMotion
+                ColorAnimation { duration: Motion.fast }
+            }
+        }
     }
 
     Rectangle {
@@ -76,11 +92,10 @@ Item {
             GradientStop { position: 1.000; color: Qt.hsla(1.000, root.saturation, root.lightness, 1.0) }
         }
 
-        Rectangle {
+        Hairline {
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.top: parent.top
-            height: 1
             color: Theme.withAlpha(Theme.text, 0.24)
         }
     }

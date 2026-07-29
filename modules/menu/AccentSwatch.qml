@@ -1,6 +1,7 @@
 import QtQuick
 import "../../config"
 import "../../services"
+import "../common"
 
 Item {
     id: root
@@ -8,6 +9,7 @@ Item {
     property color  chipColor: Theme.accent
     property color  ringColor: chipColor
     property bool   active:    false
+    property bool   tabFocusable: true
     property string name:      ""
     property string groupLabel: ""
     default property alias content: _chip.data
@@ -19,7 +21,7 @@ Item {
 
     width: 26; height: 32
 
-    activeFocusOnTab: true
+    activeFocusOnTab: root.enabled && root.tabFocusable
     Accessible.role: Accessible.RadioButton
     Accessible.name: root.groupLabel.length > 0 ? root.groupLabel + ": " + root.name : root.name
     Accessible.checked: root.active
@@ -39,6 +41,7 @@ Item {
     }
 
     Rectangle {
+        id: _focusRing
         anchors.fill: parent
         anchors.margins: 1
         radius: 8
@@ -46,9 +49,15 @@ Item {
         color: root.activeFocus
             ? Theme.withAlpha(root.ringColor, 0.07)
             : "transparent"
-        border.width: root.activeFocus ? 1 : 0
-        border.color: Theme.withAlpha(root.ringColor, 0.52)
-        Behavior on color { ColorAnimation { duration: Motion.fast } }
+        Behavior on color {
+            enabled: !ShellSettings.reduceMotion
+            ColorAnimation { duration: Motion.fast }
+        }
+
+        OutlineBorder {
+            radius: _focusRing.radius
+            outlineColor: root.activeFocus ? Theme.withAlpha(root.ringColor, 0.52) : "transparent"
+        }
     }
     Rectangle {
         id: _chip

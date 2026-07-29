@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import "../../config"
+import "../common"
 
 Item {
     id: root
@@ -39,6 +40,16 @@ Item {
         return item ? _chipRow.x + item.x + item.width : 0
     }
 
+    // no clamping: an arrow key past the edge must not pick, or a row with
+    // nothing active (index -1) would select on the first keypress
+    function focusAndPick(index: int): void {
+        if (index < 0 || index >= _rep.count) return
+        const item = _rep.itemAt(index)
+        if (!item) return
+        item.forceActiveFocus()
+        if (index !== root.activeIndex) root.picked(index)
+    }
+
     // itemAt() is null while the repeater populates; the bump forces a re-eval
     property int _rev: 0
     Row {
@@ -65,6 +76,7 @@ Item {
                 name:      modelData.name ?? ""
                 groupLabel: root.groupLabel
                 active:    index === root.activeIndex
+                tabFocusable: index === Math.max(0, root.activeIndex)
                 onPicked:  root.picked(index)
                 onHoverChanged: (n, h) => {
                     if (h) root.hoveredIndex = index
@@ -72,14 +84,21 @@ Item {
                 }
                 onActiveFocusChanged: if (activeFocus) root.focusMoved(index)
                 Keys.onLeftPressed: event => {
-                    const it = _rep.itemAt(_sw.index - 1)
-                    if (it) it.forceActiveFocus()
+                    root.focusAndPick(_sw.index - 1)
                     event.accepted = true
                 }
                 Keys.onRightPressed: event => {
-                    const it = _rep.itemAt(_sw.index + 1)
-                    if (it) it.forceActiveFocus()
+                    root.focusAndPick(_sw.index + 1)
                     event.accepted = true
+                }
+                Keys.onPressed: event => {
+                    if (event.key === Qt.Key_Home) {
+                        root.focusAndPick(0)
+                        event.accepted = true
+                    } else if (event.key === Qt.Key_End) {
+                        root.focusAndPick(_rep.count - 1)
+                        event.accepted = true
+                    }
                 }
 
                 Grid {
@@ -92,18 +111,23 @@ Item {
                     }
                 }
                 Rectangle {
+                    id: _ring
                     anchors.centerIn: parent
                     width: _sw.active ? 28 : 22
                     height: width
                     radius: width / 2
                     antialiasing: true
                     color: "transparent"
-                    border.width: _sw.active ? 2 : 1
-                    border.color: _sw.active
-                        ? (root.ringColor.a > 0
-                            ? root.ringColor
-                            : Theme.mix(_sw.chipColor, Theme.text, 0.68))
-                        : Theme.withAlpha(Theme.subtext, 0.24)
+
+                    OutlineBorder {
+                        radius: _ring.radius
+                        outlineWidth: _sw.active ? 2 : 1
+                        outlineColor: _sw.active
+                            ? (root.ringColor.a > 0
+                                ? root.ringColor
+                                : Theme.mix(_sw.chipColor, Theme.text, 0.68))
+                            : Theme.withAlpha(Theme.subtext, 0.24)
+                    }
                 }
             }
         }
