@@ -124,6 +124,34 @@ else
   ok "Wayland" "public module only"
 fi
 
+section "loader lifetime bindings"
+# Loader.item only exists while Loader.active is true. Feeding item visibility
+# or status back into active creates a runtime binding loop that qmlcachegen
+# does not diagnose, so keep lifetime state outside the Loader instead.
+loader_item_cycles="$(grep -RInE --include='*.qml' \
+  '^[[:space:]]*(active:|\|\||&&).*(^|[^A-Za-z0-9_.])item(\?)?\.(opacity|visible|status)([^A-Za-z0-9_]|$)' \
+  shell.qml modules config services || true)"
+if [ -n "$loader_item_cycles" ]; then
+  fail "Loader.active must not depend on its own item:"
+  printf '%s\n' "$loader_item_cycles"
+else
+  ok "Loaders" "lifetime does not depend on Loader.item"
+fi
+
+section "coordinate mapping in bindings"
+# mapToItem()/mapFromItem() read ancestor geometry in C++, so a binding that
+# calls them captures no dependency and keeps its first, pre-layout answer
+# forever. Call them from a function when the position is needed instead.
+mapped_bindings="$(grep -RInE --include='*.qml' \
+  '^[[:space:]]*(readonly[[:space:]]+)?(property[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]+)?[A-Za-z_][A-Za-z0-9_.]*:.*map(To|From)Item\(' \
+  shell.qml modules config services | grep -vE ':[[:space:]]*on[A-Z][A-Za-z0-9_]*:' || true)"
+if [ -n "$mapped_bindings" ]; then
+  fail "mapToItem()/mapFromItem() must not be used in a property binding:"
+  printf '%s\n' "$mapped_bindings"
+else
+  ok "mapping" "coordinate mapping stays out of bindings"
+fi
+
 section "portable QML key handlers"
 # qmlcachegen accepts arbitrary Keys.onFooPressed names, but the live engine
 # rejects handlers that are not signals on QtQuick.Keys. Keep this allowlist
