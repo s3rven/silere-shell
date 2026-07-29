@@ -28,6 +28,14 @@ Pill {
     levelColor: Audio.muted ? Theme.subtext : Theme.accent
 
     Accessible.role: Accessible.Slider
+    Accessible.onIncreaseAction: if (Audio.ready) {
+        if (Audio.muted) Audio.unmute()
+        Audio.bumpBy(Audio.stepPct)
+    }
+    Accessible.onDecreaseAction: if (Audio.ready) {
+        if (Audio.muted) Audio.unmute()
+        Audio.bumpBy(-Audio.stepPct)
+    }
 
     Keys.onLeftPressed:  event => { if (Audio.ready) { if (Audio.muted) Audio.unmute(); Audio.bumpBy(-Audio.stepPct); event.accepted = true } else event.accepted = false }
     Keys.onDownPressed:  event => { if (Audio.ready) { if (Audio.muted) Audio.unmute(); Audio.bumpBy(-Audio.stepPct); event.accepted = true } else event.accepted = false }

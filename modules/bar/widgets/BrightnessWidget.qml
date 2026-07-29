@@ -26,6 +26,8 @@ Pill {
     activeFocusOnTab: canControl
     Accessible.role: Accessible.Slider
     Accessible.focusable: canControl
+    Accessible.onIncreaseAction: if (root.canControl) Brightness.bumpBy(Brightness.stepPct)
+    Accessible.onDecreaseAction: if (root.canControl) Brightness.bumpBy(-Brightness.stepPct)
 
     Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
 
