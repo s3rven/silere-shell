@@ -104,7 +104,8 @@ Singleton {
         watchChanges: true
         printErrors:  false
         onLoaded:     root._parse(_flag.text())
-        onLoadFailed: { root.count = 0; root.summary = ""; _applyTimeout.stop(); root.applying = false }
+        // --apply clears the flag before restarting, so a missing file proves nothing
+        onLoadFailed: { root.count = 0; root.summary = "" }
         onFileChanged: reload()
     }
 
