@@ -36,6 +36,9 @@ ShellRoot {
         void PowerProfiles.available
         // documented as always callable (`ipc call screenshot flash`), so it can't wait on the underline
         void Screenshot.armed
+        // same lazy-singleton trap: _probe() only runs on MenuState.open, but nothing
+        // else references ShellUpdate until the Updates settings page builds — after open
+        void ShellUpdate.pending
         root.armSystemAlertsIfNeeded()
     }
 
