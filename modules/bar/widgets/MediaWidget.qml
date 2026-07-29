@@ -22,7 +22,7 @@ Item {
         && ShellSettings.mediaVisualizerPosition === "media"
         && !ShellSettings.reduceMotion && !Idle.isIdle
         && root.barActive && root.show && Media.playing && Media.cavaReady && root._onActiveBar
-    readonly property bool _vizVisible: _vizLoader.item ? _vizLoader.item.visible : false
+    readonly property bool _vizVisible: _visualizerActive
     readonly property bool _helperEnabled: ShellSettings.mediaWidgetHelper
     readonly property string _playGlyph: Media.playing ? "󰏤" : "󰐊"
     property real textBudget: -1
@@ -41,6 +41,10 @@ Item {
         trackText.x = 0
         textClip.opacity = 1.0
     }
+    function _canAnimateTrack(): bool {
+        return root.barActive && root.show && !ShellSettings.reduceMotion
+            && !Idle.isIdle && root._onActiveBar
+    }
     function _startMarquee(): void {
         if (barActive && show && Media.playing && !Idle.isIdle && _onActiveBar
             && textClip.needsScroll && !_trackTransition.running)
@@ -56,7 +60,7 @@ Item {
     }
     onBarActiveChanged: {
         if (barActive) Qt.callLater(_startMarquee)
-        else           _scroll.stop()
+        else           _resetMarquee()
     }
 
     Behavior on implicitWidth {
@@ -73,7 +77,7 @@ Item {
             : Media.hasPosition ? 0.72
             : Media.playing ? 0.54 : 0.22
         visible: opacity > 0.01
-        Behavior on opacity { NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+        Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
 
         Rectangle {
             anchors.left: parent.left
@@ -145,7 +149,7 @@ Item {
                 font.pixelSize: Settings.iconSize + 1
                 renderType: Text.NativeRendering
                 scale: Media.playing ? 1.0 : 0.92
-                Behavior on color { ColorAnimation { duration: Motion.fast } }
+                Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
                 Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
             }
         }
@@ -184,7 +188,7 @@ Item {
                 readonly property color _base: Media.playing ? Theme.text
                                                               : Theme.mix(Theme.text, Theme.subtext, 0.55)
                 color:          (_rootHover.hovered && ShellSettings.barHoverHighlight) ? Theme.mix(_base, Theme.accent, 0.30) : _base
-                Behavior on color { ColorAnimation { duration: Motion.fast } }
+                Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
                 font.family:    Settings.font
                 font.pixelSize: Settings.fontSize
                 renderType:     Text.NativeRendering
@@ -212,7 +216,7 @@ Item {
                 target: Media
                 function onLabelChanged() {
                     root._pauseBreathSettled = false
-                    if (!root.show || ShellSettings.reduceMotion) {
+                    if (!root._canAnimateTrack()) {
                         root._resetMarquee()
                         return
                     }
@@ -241,7 +245,7 @@ Item {
             Connections {
                 target: Idle
                 function onIsIdleChanged() {
-                    if (Idle.isIdle) _scroll.stop()
+                    if (Idle.isIdle) root._resetMarquee()
                     else             root._startMarquee()
                 }
             }
@@ -250,7 +254,7 @@ Item {
                 target: Monitors
                 function onActiveNameChanged() {
                     if (root._onActiveBar) root._startMarquee()
-                    else { _scroll.stop(); trackText.x = 0 }
+                    else root._resetMarquee()
                 }
             }
 
