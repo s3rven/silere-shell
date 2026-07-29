@@ -153,14 +153,29 @@ Item {
         }
     }
 
-    readonly property var _wsApps: {
-        root._wsAppsTick
+    // niri refreshes its whole window snapshot on a title change; key off identity
+    readonly property string _wsAppsKey: {
+        if (!ShellSettings.wsShowAppIcons) return ""
+        const parts = [root._wsAppsTick, root.monitorName, root.visibleIds.join(",")]
+        const tops = Compositor.workspaceToplevels
+        for (let i = 0; i < tops.length; i++) {
+            const t = tops[i]
+            if (!t || t.output !== root.monitorName) continue
+            parts.push((t.wsId ?? 0) + ":" + String(t.appId || ""))
+        }
+        return parts.join("|")
+    }
+
+    property var _wsApps: ({})
+    on_WsAppsKeyChanged: root._rebuildWsApps()
+
+    function _rebuildWsApps(): void {
         const map = {}
-        if (!ShellSettings.wsShowAppIcons) return map
+        if (!ShellSettings.wsShowAppIcons) { root._wsApps = map; return }
         const seen = {}
         const shown = {}
         for (let i = 0; i < root.visibleIds.length; i++) shown[root.visibleIds[i]] = true
-        const tops = Compositor.toplevels
+        const tops = Compositor.workspaceToplevels
         for (let i = 0; i < tops.length; i++) {
             const t = tops[i]
             if (!t || t.output !== root.monitorName) continue
@@ -178,7 +193,7 @@ Item {
             seen[key] = map[wid].length
             map[wid].push({ icon: meta.icon, name: meta.name, count: 1 })
         }
-        return map
+        root._wsApps = map
     }
 
     function _btnW(wsId: int): int {
@@ -224,6 +239,7 @@ Item {
         _lastNormalActiveId = activeId
         _prevPageKey = pageKey
         _initialized = monitorReady
+        root._rebuildWsApps()
     }
 
     onRawActiveIdChanged: {

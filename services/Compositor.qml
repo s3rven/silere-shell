@@ -16,6 +16,8 @@ Singleton {
 
     readonly property var workspaces:     isNiri ? _niriWorkspaces : _hyprWorkspaces
     readonly property var toplevels:      isNiri ? _niriToplevels : _hyprToplevels
+    // off the live title path: an animated title would wake every bar per frame
+    readonly property var workspaceToplevels: isNiri ? _niriWorkspaceToplevels : _hyprBaseToplevels
     readonly property var activeToplevel: isNiri ? _niriActive : _hyprActive
     readonly property string focusedMonitor: isNiri ? _niriFocusedMon : _hyprFocusedMon
     readonly property int focusedWorkspaceRef: {
@@ -25,7 +27,7 @@ Singleton {
                 if (ws[i] && ws[i].is_focused) return ws[i].id
             return -1
         }
-        root._hyprTick
+        root._hyprLayoutTick
         return Hyprland.focusedWorkspace ? (Hyprland.focusedWorkspace.id ?? -1) : -1
     }
     readonly property bool overviewActive:   isNiri ? _niriOverview : _hyprOverview
@@ -97,7 +99,8 @@ Singleton {
         else if (addr.length > 0) HyprActions._dispatch("focuswindow", addr)
     }
 
-    property int _hyprTick: 0
+    property int _hyprLayoutTick: 0
+    property var _hyprLiveTitles: ({})
     property bool _hyprRefreshAgain: false
     property string _hyprActiveAddr: ""
     readonly property bool _liveTitlesWanted: ShellSettings.showWindowTitle
@@ -112,11 +115,30 @@ Singleton {
         _hyprRefreshSettle.restart()
     }
 
+    function _syncHyprLiveTitles(): void {
+        if (!root.isHyprland || !root._liveTitlesWanted) return
+        const tops = Hyprland.toplevels ? (Hyprland.toplevels.values ?? []) : []
+        const next = {}
+        for (let i = 0; i < tops.length; i++) {
+            const t = tops[i]
+            const c = t ? t.lastIpcObject : null
+            if (!c || !c.address) continue
+            next[c.address] = t.title || c.title || ""
+        }
+
+        const oldKeys = Object.keys(root._hyprLiveTitles)
+        const nextKeys = Object.keys(next)
+        if (oldKeys.length === nextKeys.length
+                && nextKeys.every(key => root._hyprLiveTitles[key] === next[key])) return
+        root._hyprLiveTitles = next
+    }
+
     Timer {
         id: _hyprRefreshSettle
         interval: 80
         onTriggered: {
-            root._hyprTick++
+            root._hyprLayoutTick++
+            root._syncHyprLiveTitles()
             if (!root._hyprRefreshAgain) return
             root._hyprRefreshAgain = false
             Hyprland.refreshToplevels()
@@ -128,14 +150,20 @@ Singleton {
     Timer {
         id: _hyprTitleSync
         interval: 180
-        onTriggered: root._hyprTick++
+        onTriggered: root._syncHyprLiveTitles()
     }
 
     Connections {
         target: Idle
         function onIsIdleChanged() {
-            if (Idle.isIdle) _hyprTitleSync.stop()
-            else root._hyprTick++
+            if (Idle.isIdle) {
+                _hyprTitleSync.stop()
+                _niriTitleSync.stop()
+            } else if (root.isNiri) {
+                root._niriTitleTick++
+            } else {
+                root._syncHyprLiveTitles()
+            }
         }
     }
 
@@ -145,22 +173,28 @@ Singleton {
             if (ShellSettings.wsShowAppIcons) root.refreshToplevels()
         }
         function onShowWindowTitleChanged(): void {
+            if (root.isNiri) {
+                _niriTitleSync.stop()
+                root._niriTitleTick++
+                return
+            }
             if (ShellSettings.showWindowTitle) {
                 root.refreshToplevels()
-                root._hyprTick++
+                root._syncHyprLiveTitles()
             } else {
                 _hyprTitleSync.stop()
+                root._hyprLiveTitles = ({})
             }
         }
     }
 
     readonly property string _hyprFocusedMon: {
-        root._hyprTick
+        root._hyprLayoutTick
         return Hyprland.focusedMonitor ? (Hyprland.focusedMonitor.name ?? "") : ""
     }
 
     readonly property var _hyprWorkspaces: {
-        root._hyprTick
+        root._hyprLayoutTick
         if (root.isNiri) return []
         const mons = Hyprland.monitors ? (Hyprland.monitors.values ?? []) : []
         const activeByOutput = {}
@@ -183,8 +217,10 @@ Singleton {
         return out
     }
 
-    readonly property var _hyprToplevels: {
-        root._hyprTick
+    // Everything except the live title is layout state. Build that shared base
+    // once; the title-facing list below only overlays the sampled strings.
+    readonly property var _hyprBaseToplevels: {
+        root._hyprLayoutTick
         if (root.isNiri) return []
         const wsOut = {}
         const wsVals = Hyprland.workspaces ? (Hyprland.workspaces.values ?? []) : []
@@ -201,14 +237,35 @@ Singleton {
             const wsId = c.workspace ? (c.workspace.id ?? -1) : -1
             out.push({
                 appId: (t.wayland && t.wayland.appId) || c.class || c.initialClass || "",
-                // t.title tracks live; lastIpcObject.title only moves on refreshToplevels()
-                title: t.title || c.title || "",
+                fallbackTitle: c.title || "",
                 cls: c.class ?? "", initialClass: c.initialClass ?? "",
                 pid: c.pid ?? -1, ref: c.address,
                 wsRef: wsId, wsId: wsId, output: wsOut[wsId] ?? "",
                 focused: !!(Hyprland.activeToplevel && Hyprland.activeToplevel === t),
                 focusRank: c.focusHistoryID ?? 9999,
                 fullscreen: !!c.fullscreen
+            })
+        }
+        return out
+    }
+
+    readonly property var _hyprToplevels: {
+        const base = root._hyprBaseToplevels
+        const out = []
+        for (let i = 0; i < base.length; i++) {
+            const t = base[i]
+            const liveTitle = root._hyprLiveTitles[t.ref]
+            out.push({
+                appId: t.appId,
+                // Live titles are sampled by _hyprTitleSync. Reading t.title in
+                // this binding would subscribe it to every compositor title frame.
+                title: liveTitle !== undefined ? liveTitle : t.fallbackTitle,
+                cls: t.cls, initialClass: t.initialClass,
+                pid: t.pid, ref: t.ref,
+                wsRef: t.wsRef, wsId: t.wsId, output: t.output,
+                focused: t.focused,
+                focusRank: t.focusRank,
+                fullscreen: t.fullscreen
             })
         }
         return out
@@ -255,7 +312,7 @@ Singleton {
                 }
                 root._hyprActiveAddr = addr
                 root.refreshToplevels()
-                root._hyprTick++
+                root._hyprLayoutTick++
                 return
             }
             if (n === "openwindow" || n === "closewindow" || n === "movewindow" || n === "movewindowv2"
@@ -268,7 +325,7 @@ Singleton {
             if (n === "workspace" || n === "workspacev2" || n === "focusedmon"
                 || n === "focusedmonv2" || n === "activemon")
                 root.workspaceActivated(root._hyprFocusedMon)
-            root._hyprTick++
+            root._hyprLayoutTick++
         }
     }
 
@@ -276,6 +333,15 @@ Singleton {
     property var _niriWinRaw: []
     property bool _niriOverview: false
     property bool _niriReady: false
+    property int _niriTitleTick: 0
+
+    // niri reports WindowOpenedOrChanged for title-only updates too. Mutate the
+    // raw snapshot immediately, but publish at most one title list per interval.
+    Timer {
+        id: _niriTitleSync
+        interval: 180
+        onTriggered: root._niriTitleTick++
+    }
 
     readonly property var _niriWorkspaces: {
         const src = root._niriWsRaw
@@ -293,8 +359,27 @@ Singleton {
         return out
     }
 
+    readonly property var _niriWorkspaceToplevels: {
+        const wins = root._niriWinRaw
+        const ws = root._niriWsRaw
+        const byId = {}
+        for (let i = 0; i < ws.length; i++) if (ws[i]) byId[ws[i].id] = ws[i]
+        const out = []
+        for (let i = 0; i < wins.length; i++) {
+            const w = wins[i]
+            if (!w) continue
+            const home = byId[w.workspace_id] || null
+            out.push({
+                appId: w.app_id ?? "",
+                wsId: home ? home.idx : -1,
+                output: home ? (home.output ?? "") : ""
+            })
+        }
+        return out
+    }
+
     readonly property var _niriToplevels: {
-        root._liveTitlesWanted
+        root._niriTitleTick
         const wins = root._niriWinRaw
         const ws = root._niriWsRaw
         const byId = {}
@@ -349,7 +434,6 @@ Singleton {
             || previous.is_fullscreen !== next.is_fullscreen
             || oldStamp.secs !== newStamp.secs
             || oldStamp.nanos !== newStamp.nanos
-            || (root._liveTitlesWanted && previous.title !== next.title)
     }
 
     function _onNiriLine(line): void {
@@ -414,7 +498,11 @@ Singleton {
             for (let i = 0; i < current.length; i++)
                 if (current[i] && current[i].id === w.id) { foundAt = i; break }
             if (foundAt >= 0 && !root._niriWindowChanged(current[foundAt], w)) {
+                const titleChanged = current[foundAt].title !== w.title
                 current[foundAt].title = w.title
+                if (titleChanged && root._liveTitlesWanted && !Idle.isIdle
+                        && !_niriTitleSync.running)
+                    _niriTitleSync.start()
                 return
             }
 
