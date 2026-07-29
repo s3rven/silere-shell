@@ -26,7 +26,10 @@ PageShell {
     }
 
     Timer { id: _clearArmTimer; interval: 3000; onTriggered: root._clearArmed = false }
-    onPageHidden: root._clearArmed = false
+    onPageHidden: {
+        _clearArmTimer.stop()
+        root._clearArmed = false
+    }
 
     function formatTime(ms): string {
         const diff = Math.max(0, Date.now() - Number(ms || Date.now()))
@@ -64,6 +67,9 @@ PageShell {
 
     function clearAll(): void {
         if (_clearing || Notifications.historyCount === 0) return
+        // clearing hides the header button; release focus before its tab-focus
+        // binding turns off or Qt warns and retains it
+        if (_clearButton.activeFocus) root.forceActiveFocus()
         if (ShellSettings.reduceMotion) {
             Notifications.clearHistory()
             return
@@ -104,12 +110,16 @@ PageShell {
                 id: _headerTitle
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
+                width: Math.max(1, Math.min(implicitWidth,
+                    (_clearButton.visible ? _clearButton.x - 10 : _header.width)
+                    - (_countChip.visible ? _countChip.width + 9 : 0)))
                 text: "Notifications"
                 color: Theme.text
                 font.family: Settings.font
                 font.pixelSize: Settings.fontSize + 4
                 font.weight: Font.DemiBold
                 renderType: Text.NativeRendering
+                elide: Text.ElideRight
             }
 
             Rectangle {
@@ -153,12 +163,17 @@ PageShell {
                     ? Theme.withAlpha(Theme.error, _clearTap.pressed ? 0.28 : 0.16)
                     : _clearTap.pressed ? Theme.withAlpha(Theme.error, 0.20)
                     : _clearHover.hovered ? Theme.withAlpha(Theme.subtext, 0.16) : Theme.menuControl
-                border.width: (activeFocus || root._clearArmed) ? 2 : 1
-                border.color: root._clearArmed
-                    ? Theme.withAlpha(Theme.error, 0.72)
-                    : activeFocus ? Theme.withAlpha(Theme.error, 0.88)
-                    : _clearHover.hovered ? Theme.menuControlLineHot : Theme.menuControlLine
                 opacity: root._clearing ? 0.45 : 1.0
+
+                OutlineBorder {
+                    radius: _clearButton.radius
+                    outlineWidth: (_clearButton.activeFocus || root._clearArmed) ? 2 : 1
+                    outlineColor: root._clearArmed
+                        ? Theme.withAlpha(Theme.error, 0.72)
+                        : _clearButton.activeFocus ? Theme.withAlpha(Theme.error, 0.88)
+                        : _clearHover.hovered ? Theme.menuControlLineHot : Theme.menuControlLine
+                    Behavior on outlineColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                }
 
                 Accessible.role: Accessible.Button
                 Accessible.name: "Clear all notifications"
@@ -170,9 +185,8 @@ PageShell {
                 Keys.onEscapePressed: event => { if (root._clearArmed) { root._clearArmed = false; event.accepted = true } else event.accepted = false }
 
                 Behavior on width { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-                Behavior on color { ColorAnimation { duration: Motion.fast } }
-                Behavior on border.color { ColorAnimation { duration: Motion.fast } }
-                Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
                 HoverHandler { id: _clearHover; enabled: !root._clearing; cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor }
                 TapHandler { id: _clearTap; enabled: !root._clearing; onTapped: root.requestClearAll() }
 
@@ -187,7 +201,7 @@ PageShell {
                         font.family: Settings.font
                         font.pixelSize: Settings.fontSize
                         renderType: Text.NativeRendering
-                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
@@ -198,7 +212,7 @@ PageShell {
                         font.pixelSize: Settings.fontSize - 2
                         font.weight: root._clearArmed ? Font.DemiBold : Font.Normal
                         renderType: Text.NativeRendering
-                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
                     }
                 }
             }
@@ -223,8 +237,11 @@ PageShell {
                     radius: 24
                     antialiasing: true
                     color: Theme.withAlpha(Theme.subtext, 0.07)
-                    border.width: 1
-                    border.color: Theme.menuCardBorder
+
+                    OutlineBorder {
+                        radius: 24
+                        outlineColor: Theme.menuCardBorder
+                    }
 
                     Text {
                         anchors.centerIn: parent
@@ -339,11 +356,12 @@ PageShell {
                             anchors.left:           parent.left
                             anchors.leftMargin:     2
                             anchors.verticalCenter: _secText.verticalCenter
-                            width:  3
-                            height: Math.round(_secText.implicitHeight * 0.82)
-                            radius: 1.5
+                            width:  Metrics.menuMarkerWidth
+                            height: Metrics.menuMarkerHeight
+                            radius: Metrics.menuMarkerRadius
                             antialiasing: true
-                            color:  Theme.withAlpha(Theme.accent, 0.75)
+                            color: Theme.withAlpha(Theme.accent,
+                                Metrics.menuMarkerOpacity)
                         }
 
                         Text {
@@ -361,12 +379,11 @@ PageShell {
                             renderType: Text.NativeRendering
                         }
 
-                        Rectangle {
+                        Hairline {
                             anchors.left:           _secText.right
                             anchors.leftMargin:     10
                             anchors.right:          parent.right
                             anchors.verticalCenter: _secText.verticalCenter
-                            height: 1
                             color:  Theme.withAlpha(Theme.subtext, 0.10)
                         }
                     }
@@ -381,13 +398,18 @@ PageShell {
                         antialiasing: true
                         clip: true
                         color: Theme.rowFill(_entryHover.hovered, _entry._critical)
-                        border.width: activeFocus ? 2 : 1
-                        border.color: _entry._critical
-                            ? Theme.withAlpha(Theme.error, 0.50)
-                            : activeFocus ? Theme.withAlpha(Theme.accent, 0.45)
-                            : Theme.menuCardBorder
 
-                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        OutlineBorder {
+                            radius: _card.radius
+                            outlineWidth: _card.activeFocus ? 2 : 1
+                            outlineColor: _entry._critical
+                                ? Theme.withAlpha(Theme.error, 0.50)
+                                : _card.activeFocus ? Theme.withAlpha(Theme.accent, 0.45)
+                                : Theme.menuCardBorder
+                            Behavior on outlineColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                        }
+
+                        Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
                         HoverHandler {
                             id: _entryHover
                             cursorShape: (_body.truncated || _entry._expanded) ? Qt.PointingHandCursor : Qt.ArrowCursor
@@ -474,6 +496,7 @@ PageShell {
 
                             Text {
                                 width: parent.width
+                                rightPadding: 28
                                 text: _entry.modelData.summary || "Notification"
                                 textFormat: Text.PlainText
                                 color: Theme.text
@@ -516,10 +539,6 @@ PageShell {
                             color: _removeTap.pressed
                                 ? Theme.withAlpha(Theme.error, 0.24)
                                 : _removeHover.hovered ? Theme.withAlpha(Theme.error, 0.17) : Theme.withAlpha(Theme.subtext, 0.08)
-                            border.width: activeFocus ? 2 : 1
-                            border.color: activeFocus
-                                ? Theme.withAlpha(Theme.error, 0.88)
-                                : _removeHover.hovered ? Theme.withAlpha(Theme.error, 0.36) : Theme.menuControlLine
                             opacity: _entryHover.hovered || activeFocus ? 1.0 : 0.62
                             scale: _entryHover.hovered || activeFocus ? 1.0 : 0.94
 
@@ -530,10 +549,18 @@ PageShell {
                             Keys.onReturnPressed: event => { if (!event.isAutoRepeat) _entry.removeSelf(); event.accepted = true }
                             Keys.onEnterPressed: event => { if (!event.isAutoRepeat) _entry.removeSelf(); event.accepted = true }
 
-                            Behavior on color { ColorAnimation { duration: Motion.fast } }
-                            Behavior on border.color { ColorAnimation { duration: Motion.fast } }
-                            Behavior on opacity { NumberAnimation { duration: Motion.fast } }
-                            Behavior on scale { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+                            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                            Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
+
+                            OutlineBorder {
+                                radius: _removeButton.radius
+                                outlineWidth: _removeButton.activeFocus ? 2 : 1
+                                outlineColor: _removeButton.activeFocus
+                                    ? Theme.withAlpha(Theme.error, 0.88)
+                                    : _removeHover.hovered ? Theme.withAlpha(Theme.error, 0.36) : Theme.menuControlLine
+                                Behavior on outlineColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                            }
+                            Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
                             HoverHandler { id: _removeHover; cursorShape: Qt.PointingHandCursor }
                             TapHandler { id: _removeTap; enabled: !root._clearing && !_entry._removing; onTapped: _entry.removeSelf() }
 
@@ -560,31 +587,12 @@ PageShell {
             maxOpacity: 0.42
         }
 
-        Rectangle {
-            id: _historyScrollThumb
-            readonly property real _trackH: Math.max(1, _historyList.height - 8)
-            readonly property real _overflow: Math.max(1,
-                _historyList.contentHeight - _historyList.height)
-
-            anchors.right: _historyList.right
-            anchors.rightMargin: 2
-            y: _historyList.y + 4 + Math.max(0, _trackH - height)
-                * (_historyList.contentY / _overflow)
-            width: 2
-            height: Math.min(_trackH, Math.max(22, _trackH * Math.min(1,
-                _historyList.height / Math.max(1, _historyList.contentHeight))))
-            radius: 1
-            antialiasing: true
-            color: Theme.accent
-            opacity: visible ? (_historyList.moving ? 0.62 : 0.26) : 0
-            visible: Notifications.hasHistory
-                && _historyList.contentHeight > _historyList.height + 1
+        MenuScrollThumb {
+            list: _historyList
+            trackInset: 4
+            rightInset: 2
+            shown: Notifications.hasHistory
             z: 3
-
-            Behavior on opacity {
-                enabled: !ShellSettings.reduceMotion
-                NumberAnimation { duration: Motion.fast }
-            }
         }
     }
 }
