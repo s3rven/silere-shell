@@ -11,6 +11,7 @@ Item {
     property real topRadius:    0
     property real bottomRadius: 0
     property real cardInset:    1
+    property real cardLeftBleed: 0
 
     width: parent ? parent.width : 0
     implicitHeight: _slider.height + _options.height
@@ -48,12 +49,14 @@ Item {
         topRadius:    root.topRadius
         bottomRadius: root.open ? 0 : root.bottomRadius
         cardInset:    root.cardInset
+        cardLeftBleed: root.cardLeftBleed
         glyph: Audio.icon
         wheelKey: "volume"
         accessibleName: "Volume"
         value: Audio.uiVolume
         valueText: Audio.label
         glyphClickable: true
+        glyphActionName: Audio.muted ? "Unmute" : "Mute"
         expandable: Audio.sinkCount > 1
         expanded: root.open
         onGlyphClicked: Audio.toggleMute()
@@ -177,7 +180,10 @@ Item {
                         font.pixelSize: Settings.fontSize
                         font.weight:    _opt.active ? Font.DemiBold : Font.Normal
                         renderType:     Text.NativeRendering
-                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        Behavior on color {
+                            enabled: !ShellSettings.reduceMotion
+                            ColorAnimation { duration: Motion.fast }
+                        }
                     }
                 }
             }

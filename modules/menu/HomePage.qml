@@ -1,8 +1,11 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import Quickshell
 import Quickshell.Widgets
 import "../../config"
 import "../../services"
+import "../common"
 
 PageShell {
     id: root
@@ -19,12 +22,20 @@ PageShell {
     readonly property int _itemGap: 8
     readonly property bool _wifiAvailable: Network.toolAvailable && Network.hasWifiDevice
     readonly property bool _btAvailable: Bluetooth.available
+    readonly property bool _brightnessAvailable: Brightness.toolAvailable && Brightness.maxBrightness > 0
     readonly property bool _wifiPickerOpen: _picker === "wifi"
     readonly property bool _btPickerOpen: _picker === "bt"
 
-    function _togglePicker(which: string): void { _picker = (_picker === which ? "" : which) }
+    function _togglePicker(which: string): void {
+        _picker = (_picker === which ? "" : which)
+        if (_picker !== "") _volumeRow.open = false
+    }
 
     function dismissInline(): bool {
+        if (_volumeRow.open) {
+            _volumeRow.open = false
+            return true
+        }
         if (_picker === "") return false
         _picker = ""
         return true
@@ -150,12 +161,15 @@ PageShell {
                 // border on a half physical pixel under fractional scaling and doubles it.
                 height: 4 * Math.ceil(Math.max(168,
                     16 + _controlsRow.height + _seekBlock + 12 + _mediaCol.implicitHeight + 26) / 4)
-                radius: 12
+                radius: Theme.radiusCard
                 color: Theme.menuCard
-                border.width: 1
-                border.color: Theme.menuCardBorder
                 opacity: Media.shown ? 1.0 : 0.0
                 visible: opacity > 0.01
+
+                OutlineBorder {
+                    radius: _mediaCard.radius
+                    outlineColor: Theme.menuCardBorder
+                }
 
                 // fade only, matched to the section's height ease: a scale leg here ran as a
                 // third competing animation and resampled NativeRendering text off-pixel
@@ -188,7 +202,9 @@ PageShell {
                         _pendingLayer = null
                         _artRetry.stop()
                         if (!url || url.length === 0) {
-                            _artA.opacity = 0; _artB.opacity = 0
+                            _artIn.stop(); _artInScale.stop(); _artOut.stop()
+                            _artA.opacity = 0; _artA.scale = 1.0; _artA.source = ""
+                            _artB.opacity = 0; _artB.scale = 1.0; _artB.source = ""
                             return
                         }
                         const idle = _useA ? _artB : _artA
@@ -196,6 +212,14 @@ PageShell {
                         // re-assigning an identical source is a no-op in Qt; clear first so an error retry reloads
                         if (String(idle.source) === url) idle.source = ""
                         idle.source = url
+                    }
+
+                    function _releaseLayer(img) {
+                        const current = _useA ? _artA : _artB
+                        if (!img || img === current || img === _pendingLayer) return
+                        img.opacity = 0
+                        img.scale = 1.0
+                        img.source = ""
                     }
 
                     property int _retries: 0
@@ -221,6 +245,7 @@ PageShell {
                         const outgoing = isA ? _artB : _artA
                         if (ShellSettings.reduceMotion) {
                             img.scale = 1.0; img.opacity = maxAlpha; outgoing.opacity = 0
+                            _releaseLayer(outgoing)
                             return
                         }
                         img.scale = 1.06
@@ -263,21 +288,29 @@ PageShell {
 
                     NumberAnimation { id: _artIn;      property: "opacity"; to: _art.maxAlpha; duration: Motion.ms(380); easing.type: Easing.OutCubic }
                     NumberAnimation { id: _artInScale; property: "scale";   to: 1.0;           duration: Motion.ms(520); easing.type: Easing.OutCubic }
-                    NumberAnimation { id: _artOut;     property: "opacity"; duration: Motion.ms(300);     easing.type: Easing.OutCubic }
+                    NumberAnimation {
+                        id: _artOut
+                        property: "opacity"
+                        duration: Motion.ms(300)
+                        easing.type: Easing.OutCubic
+                        onFinished: _art._releaseLayer(_artOut.target)
+                    }
                 }
 
+                // corner mark, not centred: the card's centre is occupied by the title block
                 Item {
-                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.right: parent.right
+                    anchors.rightMargin: 12
                     anchors.top: parent.top
-                    anchors.topMargin: 30
-                    width: 60; height: 60
+                    anchors.topMargin: 10
+                    width: 34; height: 34
                     opacity: Math.max(0, 1 - _art.shownAlpha / _art.maxAlpha)
                     visible: Media.shown && opacity > 0.01
 
                     Rectangle {
                         anchors.centerIn: parent
-                        width: 46; height: 46
-                        radius: 11
+                        width: 26; height: 26
+                        radius: 7
                         rotation: 45
                         antialiasing: true
                         color: Theme.withAlpha(Theme.accent, 0.10)
@@ -287,7 +320,7 @@ PageShell {
                         text: "󰝚"
                         color: Theme.withAlpha(Theme.accent, 0.34)
                         font.family: Settings.font
-                        font.pixelSize: 34
+                        font.pixelSize: 19
                         renderType: Text.NativeRendering
                     }
                 }
@@ -335,11 +368,12 @@ PageShell {
                     }
                 }
 
+                // down to the seek row, so the title and artist are part of the jump target
                 MouseArea {
                     anchors.top: parent.top
                     anchors.left: parent.left
                     anchors.right: parent.right
-                    anchors.bottom: _mediaCol.top
+                    anchors.bottom: _seek.top
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
                         MenuState.close()
@@ -369,7 +403,7 @@ PageShell {
                         _shownArtist   = Media.artist
                     }
 
-                    readonly property string trackKey: Media.title + " • " + Media.artist
+                    readonly property string trackKey: Media.identity + "\u0000" + Media.title + "\u0000" + Media.artist
                     onTrackKeyChanged: {
                         if (ShellSettings.reduceMotion || (_shownTitle === "" && _shownArtist === "")) {
                             _shownIdentity = Media.identity
@@ -527,7 +561,10 @@ PageShell {
                         opacity: _playBtn._on ? 1.0 : 0.25
                         scale: _playT.pressed ? 0.94 : 1.0
                         transformOrigin: Item.Center
-                        Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                        Behavior on opacity {
+                            enabled: !ShellSettings.reduceMotion
+                            NumberAnimation { duration: Motion.fast }
+                        }
                         Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
                         activeFocusOnTab: _playBtn._on
@@ -542,17 +579,28 @@ PageShell {
                         TapHandler   { id: _playT; enabled: _playBtn._on; onTapped: Media.togglePlay() }
 
                         Rectangle {
+                            id: _playFill
                             anchors.fill: parent
                             radius: Theme.radiusControl
                             antialiasing: true
                             color: _playT.pressed ? Theme.mix(Theme.menuControl, Theme.accent, 0.18)
                                 : _playH.hovered ? Theme.mix(Theme.menuControl, Theme.accent, 0.10)
                                 : Theme.menuControl
-                            border.width: 1
-                            border.color: _playBtn.activeFocus ? Theme.withAlpha(Theme.accent, 0.7)
-                                : Theme.menuControlLine
-                            Behavior on color        { ColorAnimation { duration: Motion.fast } }
-                            Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+                            Behavior on color {
+                                enabled: !ShellSettings.reduceMotion
+                                ColorAnimation { duration: Motion.fast }
+                            }
+
+                            OutlineBorder {
+                                radius: _playFill.radius
+                                outlineWidth: _playBtn.activeFocus ? 2 : 1
+                                outlineColor: _playBtn.activeFocus ? Theme.withAlpha(Theme.accent, 0.7)
+                                    : Theme.menuControlLine
+                                Behavior on outlineColor {
+                                    enabled: !ShellSettings.reduceMotion
+                                    ColorAnimation { duration: Motion.fast }
+                                }
+                            }
                         }
                         Text {
                             id: _playGlyph
@@ -565,7 +613,10 @@ PageShell {
                             font.family: Settings.font; font.pixelSize: Settings.fontSize + 10
                             renderType: Text.NativeRendering
                             transformOrigin: Item.Center
-                            Behavior on color { ColorAnimation { duration: Motion.fast } }
+                            Behavior on color {
+                                enabled: !ShellSettings.reduceMotion
+                                ColorAnimation { duration: Motion.fast }
+                            }
 
                             Component.onCompleted: { shown = target; _ready = true }
                             onTargetChanged: {
@@ -594,22 +645,24 @@ PageShell {
         }
 
         SectionLabel {
-            label: "Audio & Display"
-            showRule: true
-            visible: Audio.ready || Brightness.maxBrightness > 0
+            label: Audio.ready && root._brightnessAvailable ? "Audio & Display"
+                 : root._brightnessAvailable ? "Display"
+                 : "Audio"
+            visible: Audio.ready || root._brightnessAvailable
         }
         SettingsCard {
             id: _primaryControls
-            visible: Audio.ready || Brightness.maxBrightness > 0
-            rowDivider: "transparent"
+            visible: Audio.ready || root._brightnessAvailable
 
             VolumeRow {
                 id: _volumeRow
                 visible: Audio.ready
+                onOpenChanged: if (open) root._picker = ""
             }
             QuickSlider {
                 id: _brightnessSlider
-                visible: Brightness.toolAvailable && Brightness.maxBrightness > 0
+                visible: root._brightnessAvailable
+                reserveExpandSlot: _volumeRow.visible && Audio.sinkCount > 1
                 glyph: Brightness.icon
                 wheelKey: "brightness"
                 accessibleName: "Brightness"
@@ -620,7 +673,6 @@ PageShell {
         }
         SectionLabel {
             label: "Connectivity"
-            showRule: true
             visible: root._wifiAvailable || root._btAvailable
         }
         SettingsCard {
@@ -634,7 +686,7 @@ PageShell {
                 title: "Wi-Fi"
                 status: Network.wifiEnabled && Network.isWifi && Network.connected ? Network.connectionName
                       : _ethActive ? "Ethernet active"
-                      : Network.wifiEnabled ? "On"
+                      : Network.wifiEnabled ? "Not connected"
                       : "Off"
                 showSwitch: true
                 expandable: Network.wifiEnabled
@@ -673,7 +725,7 @@ PageShell {
                     ? (Bluetooth.connectedCount === 1
                         ? Bluetooth.connectedName + (Bluetooth.connectedBattery >= 0 ? "  " + Bluetooth.connectedBattery + "%" : "")
                         : Bluetooth.connectedCount + " connected")
-                    : ""
+                    : Bluetooth.enabled ? "Not connected" : "Off"
                 showSwitch: true
                 expandable: Bluetooth.enabled
                 expanded: root._btPickerOpen
@@ -693,7 +745,7 @@ PageShell {
             }
         }
 
-        SectionLabel { label: "Controls"; showRule: true }
+        SectionLabel { label: "Controls" }
         SettingsCard {
             ControlRow {
                 id: _nightRow
@@ -779,7 +831,7 @@ PageShell {
             }
         }
 
-        SectionLabel { label: "System"; showRule: true }
+        SectionLabel { label: "System" }
         VitalsStrip {
             active: root.active
             width: parent.width
