@@ -53,10 +53,22 @@ PanelWindow {
         _rootOpenedSent = false
     }
     function _setActiveMenu(handle): void {
-        if (win._activeMenu === handle) return
+        if (win._activeMenu === handle) {
+            // a quick close/reopen reuses the handle mid-fade: same object identity,
+            // but the previous close already cleared the sent flag
+            if (handle !== null) win._sendRootOpened()
+            return
+        }
         win._sendRootClosed()
         win._activeMenu = handle
         win._sendRootOpened()
+    }
+    function _closeFlyouts(): void {
+        const kids = win.contentItem.children
+        for (let i = 0; i < kids.length; i++) {
+            const k = kids[i]
+            if (k && k.opened === true) k.opened = false
+        }
     }
 
     onVisibleChanged: if (!visible) win._setActiveMenu(null)
@@ -104,6 +116,7 @@ PanelWindow {
             if (!TrayMenuState.open) {
                 _outsideTapGuard.stop()
                 win._ignoreOutsideTap = false
+                win._closeFlyouts()
                 win._sendRootClosed()
             } else {
                 win._sendRootOpened()
@@ -126,12 +139,26 @@ PanelWindow {
     Item { id: _fillArea; anchors.fill: parent }
     mask: Region { item: TrayMenuState.open ? _fillArea : null }
 
+    // submenu flyouts sit outside the card, as siblings of it under contentItem
+    function _overFlyout(p: point): bool {
+        const kids = win.contentItem.children
+        for (let i = 0; i < kids.length; i++) {
+            const k = kids[i]
+            if (!k || k.opened !== true || !k.visible) continue
+            if (p.x >= k.x && p.x <= k.x + k.width &&
+                p.y >= k.y && p.y <= k.y + k.height) return true
+        }
+        return false
+    }
+
     TapHandler {
         id: _dismiss
         enabled: TrayMenuState.open && card.scaleAmt > 0.95
+        // a TapHandler keeps a passive grab, so this fires for taps on rows too
         onTapped: {
             if (win._ignoreOutsideTap) return
             const p = _dismiss.point.position
+            if (win._overFlyout(p)) return
             if (p.x < card.x || p.x > card.x + card.width ||
                 p.y < card.y || p.y > card.y + card.height)
                 TrayMenuState.close()
@@ -144,6 +171,11 @@ PanelWindow {
         Item {
             id: _entry
             required property var modelData
+            // set by the containing flyout's Repeater for submenu rows only;
+            // lets Left-arrow close the right flyout now that it's reparented
+            // to the window root and no longer bubbles key events up to it
+            property Item ownerFlyout: null
+            property Flickable ownerScroll: null
 
             readonly property bool sep:       modelData?.isSeparator ?? false
             readonly property bool on:        (modelData?.enabled ?? true) && !sep
@@ -174,10 +206,29 @@ PanelWindow {
                     if (c && c.isMenuRow === true && c.on) { c.forceActiveFocus(); return }
                 }
             }
+            function closeFlyout(): void {
+                if (_flyout.opened) _flyout.opened = false
+            }
+            function _openFlyout(): void {
+                if (!_entry.sub || _flyout.opened) return
+                // A menu branch owns one visible child branch. Closing siblings
+                // avoids overlapping flyouts and releases their nested models.
+                const sibs = _entry.parent ? _entry.parent.children : []
+                for (let k = 0; k < sibs.length; k++) {
+                    const c = sibs[k]
+                    if (c !== _entry && c && typeof c.closeFlyout === "function")
+                        c.closeFlyout()
+                }
+                _flyout.opened = true
+            }
+            function _toggleFlyout(): void {
+                if (_flyout.opened) _entry.closeFlyout()
+                else _entry._openFlyout()
+            }
             function _activate(): void {
                 if (!_entry.on) return
                 if (_entry.sub) {
-                    _flyout.opened = !_flyout.opened
+                    _entry._toggleFlyout()
                     if (_flyout.opened) Qt.callLater(_entry._focusFirstSub)
                 } else {
                     win._emitMenuSignal(_entry.modelData, "triggered", "sendTriggered")
@@ -196,7 +247,7 @@ PanelWindow {
             Keys.onEnterPressed:  e => { if (!e.isAutoRepeat) _entry._activate(); e.accepted = true }
             Keys.onRightPressed:  e => {
                 if (_entry.sub) {
-                    if (!_flyout.opened) _flyout.opened = true
+                    _entry._openFlyout()
                     Qt.callLater(_entry._focusFirstSub)
                     e.accepted = true
                 } else {
@@ -204,7 +255,8 @@ PanelWindow {
                 }
             }
             Keys.onLeftPressed: e => {
-                if (_entry.sub && _flyout.opened) { _flyout.opened = false; e.accepted = true }
+                if (_entry.sub && _flyout.opened) { _entry.closeFlyout(); e.accepted = true }
+                else if (_entry.ownerFlyout) { _entry.ownerFlyout.opened = false; e.accepted = true }
                 else e.accepted = false
             }
 
@@ -213,14 +265,13 @@ PanelWindow {
                 menu: _entry.sub ? _entry.modelData : null
             }
 
-            Rectangle {
+            Hairline {
                 visible: _entry.sep
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.leftMargin: 8
                 anchors.rightMargin: 8
                 anchors.verticalCenter: parent.verticalCenter
-                height: 1
                 color: Theme.menuDivider
             }
 
@@ -238,7 +289,7 @@ PanelWindow {
                 id: _rowHover
                 enabled: _entry.on
                 cursorShape: Qt.PointingHandCursor
-                onHoveredChanged: if (hovered && _entry.sub) _flyout.opened = true
+                onHoveredChanged: if (hovered && _entry.sub) _entry._openFlyout()
             }
             TapHandler {
                 enabled: _entry.on && !_entry.sub
@@ -249,7 +300,7 @@ PanelWindow {
             }
             TapHandler {
                 enabled: _entry.on && _entry.sub
-                onTapped: _flyout.opened = !_flyout.opened
+                onTapped: _entry._toggleFlyout()
             }
 
             Item {
@@ -325,6 +376,9 @@ PanelWindow {
 
             Rectangle {
                 id: _flyout
+                // reparented to the window root: a descendant of the clipped row
+                // Flickable would have its submenu scissored away and never shown
+                parent: win.contentItem
                 property bool opened: false
                 property real _shift: opened ? 0 : (_flip ? 5 : -5)
 
@@ -334,20 +388,38 @@ PanelWindow {
                 z: 10
                 readonly property real _w: win.menuWidth + pad * 2
                 readonly property int  pad: 6
-                readonly property point _origin: _entry.mapToItem(null, 0, 0)
+                // mapToItem() captures no dependencies, so a binding here would keep
+                // the pre-layout position forever; re-snap off everything that moves the row
+                property point _origin: Qt.point(0, 0)
+                readonly property real _originTick: card.x + card.y + _entry.y
+                    + (_entry.ownerScroll ? _entry.ownerScroll.contentY : 0)
+                    + (_entry.ownerFlyout ? _entry.ownerFlyout.x + _entry.ownerFlyout.y : 0)
+                on_OriginTickChanged: if (_flyout.visible) _flyout._syncOrigin()
+                function _syncOrigin(): void {
+                    _flyout._origin = _entry.mapToItem(null, 0, 0)
+                }
+                function _holdsFocus(): bool {
+                    let it = _flyout.Window.activeFocusItem
+                    if (!it || it === win.contentItem) return true
+                    for (; it; it = it.parent) if (it === _flyout) return true
+                    return false
+                }
                 readonly property bool  _flip: _origin.x + _entry.width + 4 + _w > win.width
                 readonly property real _panelH: Math.min(_subCol.implicitHeight + pad * 2, Math.max(48, win.height - 8))
                 readonly property real _targetY: Math.max(4 - _origin.y, Math.min(-pad, win.height - 4 - _origin.y - _panelH))
-                x: _flip ? -(_w + 4) : (_entry.width + 4)
-                y: _targetY
+                x: _origin.x + (_flip ? -(_w + 4) : (_entry.width + 4))
+                y: _origin.y + _targetY
                 width:  _w
                 height: _panelH
                 radius: Math.min(win._cardRadius, height / 2)
                 antialiasing: true
                 color: Theme.popup
-                border.width: 1
-                border.color: Theme.outline
                 transform: Translate { x: _flyout._shift }
+
+                OutlineBorder {
+                    radius: _flyout.radius
+                    outlineColor: Theme.outline
+                }
 
                 Behavior on opacity {
                     enabled: !ShellSettings.reduceMotion
@@ -366,8 +438,15 @@ PanelWindow {
 
                 onOpenedChanged: {
                     if (!_entry.sub) return
-                    if (opened) win._emitMenuSignal(_entry.modelData, "opened", "sendOpened")
-                    else win._emitMenuSignal(_entry.modelData, "closed", "sendClosed")
+                    if (opened) {
+                        _flyout._syncOrigin()
+                        win._emitMenuSignal(_entry.modelData, "opened", "sendOpened")
+                    } else {
+                        win._emitMenuSignal(_entry.modelData, "closed", "sendClosed")
+                        // disabling the flyout strands focus at the window root; reclaiming
+                        // it unconditionally would steal it on every hover-out instead
+                        if (_flyout._holdsFocus()) _entry.forceActiveFocus()
+                    }
                 }
                 Component.onDestruction: if (_entry.sub && _flyout.opened) win._emitMenuSignal(_entry.modelData, "closed", "sendClosed")
 
@@ -376,7 +455,7 @@ PanelWindow {
                 Timer {
                     id: _flyClose
                     interval: 180
-                    onTriggered: if (!_rowHover.hovered && !_flyHover.hovered) _flyout.opened = false
+                    onTriggered: if (!_rowHover.hovered && !_flyHover.hovered) _entry.closeFlyout()
                 }
                 Connections {
                     target: _flyHover
@@ -405,8 +484,15 @@ PanelWindow {
                         width: win.menuWidth
                         spacing: 1
                         Repeater {
-                            model: _subOpener.children
+                            // Keep delegates through the close fade, then release
+                            // the entire nested branch while its flyout is hidden.
+                            model: _flyout.opened || _flyout.opacity > 0.001
+                                ? _subOpener.children : []
                             delegate: _rowDelegate
+                            onItemAdded: (index, item) => {
+                                item.ownerFlyout = _flyout
+                                item.ownerScroll = _subScroll
+                            }
                         }
                     }
                 }
@@ -482,6 +568,7 @@ PanelWindow {
                 Repeater {
                     model: _opener.children
                     delegate: _rowDelegate
+                    onItemAdded: (index, item) => item.ownerScroll = _scroll
                 }
             }
         }

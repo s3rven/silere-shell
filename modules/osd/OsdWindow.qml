@@ -178,15 +178,21 @@ PanelWindow {
                     }
 
                     Rectangle {
+                        id: _osdPillFill
                         anchors.fill: parent
                         radius: card.pillRadius
                         antialiasing: true
                         color: card.hasBar ? Theme.panel : Theme.surface
-                        border.width: 1
-                        border.color: !card.hasBar
+
+                        readonly property color _outlineColor: !card.hasBar
                             ? Theme.withAlpha(card.fillColor, 0.32)
                             : Theme.outline
-                        Behavior on border.color { ColorAnimation { duration: Motion.medium } }
+
+                        OutlineBorder {
+                            radius: _osdPillFill.radius
+                            outlineColor: _osdPillFill._outlineColor
+                            Behavior on outlineColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.medium } }
+                        }
 
                         Row {
                             anchors.centerIn: parent
