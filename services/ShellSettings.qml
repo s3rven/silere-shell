@@ -391,6 +391,9 @@ Singleton {
 
     Component.onDestruction: {
         _writeTimer.stop()
+        _saveRetry.stop()
+        // never overwrite the file with defaults never confirmed from disk
+        if (!root._loaded) return
         if (!_configDirReady)
             console.warn("silere-shell: saving settings before config dir is ready:", _configDir)
         _save(true)   // blocking write, so the quit-time save actually lands
