@@ -291,7 +291,11 @@ Singleton {
     // bare absolute paths resolve against the qml context (qrc:/...) and fail to load
     function fileUrl(raw): string {
         const value = String(raw || "").trim()
-        return value.startsWith("/") ? "file://" + encodeURI(value) : value
+        if (!value.startsWith("/")) return value
+        // encodeURI leaves # and ? intact, truncating filenames that contain them
+        return "file://" + value.split("/").map(function(part) {
+            return encodeURIComponent(part)
+        }).join("/")
     }
 
     function resolveIconSource(raw): string {
