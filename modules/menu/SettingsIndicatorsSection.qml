@@ -76,7 +76,8 @@ Column {
             }
         }
         ToggleRow {
-            glyph: "󰦝"; label: "Connection under VPN"
+            glyph: "󰦝"; label: "Link beside VPN"
+            description: "Show Wi-Fi or Ethernet next to the VPN icon"
             checked: ShellSettings.netVpnShowLink
             available: Network.toolAvailable
             dependsNote: "NetworkManager missing"
