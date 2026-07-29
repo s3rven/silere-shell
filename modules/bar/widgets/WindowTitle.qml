@@ -20,7 +20,7 @@ Item {
     onMonitorWsIdChanged: {
         if (monitorWsId > 0) {
             _wsJustChanged = true
-            if (_ready) _debounce.restart()
+            root._queueTransition()
         }
     }
 
@@ -68,6 +68,14 @@ Item {
     property real   _scaleStart: 1.0
     property real   _opTarget:   1.0
 
+    function _queueTransition(): void {
+        if (!root._ready || Idle.isIdle) return
+        // Every monitor sees the global active-toplevel signals. A title that is
+        // already hidden on this output has nothing to animate until focus returns.
+        if (!root.hasClient && root._op <= 0.001 && !_seq.running) return
+        _debounce.restart()
+    }
+
     readonly property bool _titleMatchesApp: {
         const title = root._norm(_shownTitle)
         const app = root._norm(_shownApp)
@@ -113,22 +121,27 @@ Item {
         Qt.callLater(function() { if (monitorWsId > 0) _lastWsId = monitorWsId })
     }
 
-    onHasClientChanged:  if (_ready && !Idle.isIdle) _debounce.restart()
-    onCurrentAppChanged: if (_ready && !Idle.isIdle) _debounce.restart()
+    onHasClientChanged:  root._queueTransition()
+    onCurrentAppChanged: root._queueTransition()
     Connections {
         target: ShellSettings
-        function onShowWindowTitleAppChanged() { if (root._ready) _debounce.restart() }
+        function onShowWindowTitleAppChanged() { root._queueTransition() }
     }
 
     onCurrentTitleChanged: {
-        if (!_ready || Idle.isIdle || _debounce.running || _seq.running) return
+        if (!_ready || !hasClient || Idle.isIdle || _debounce.running || _seq.running) return
         root._shownTitle = currentTitle
     }
 
     Connections {
         target: Idle
         function onIsIdleChanged() {
-            if (!Idle.isIdle && root._ready) _debounce.restart()
+            if (Idle.isIdle) {
+                _debounce.stop()
+                _seq.stop()
+            } else {
+                root._queueTransition()
+            }
         }
     }
 
