@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import "../../services"
 
@@ -55,7 +57,6 @@ Column {
             onToggled: root._setEnabled(!root._enabled)
         }
         CollapsibleSection {
-            indent: 8
             expanded: root._enabled
             ChoiceChipRow {
                 glyph: "󰒓"; label: "Mode"
@@ -82,7 +83,6 @@ Column {
                 }
             }
             CollapsibleSection {
-                indent: 8
                 expanded: ShellSettings.underlineGlow
                 ToggleRow {
                     glyph: "󰊠"; label: "Ambient glow"

@@ -64,7 +64,6 @@ Column {
             onToggled: ShellSettings.wsShowAppIcons = !ShellSettings.wsShowAppIcons
         }
         CollapsibleSection {
-            indent: 8
             expanded: ShellSettings.wsShowAppIcons
             ToggleRow {
                 glyph: "󰹑"; label: "Monochrome icons"

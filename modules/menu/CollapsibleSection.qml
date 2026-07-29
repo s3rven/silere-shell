@@ -6,7 +6,6 @@ Item {
     id: root
 
     property bool expanded: true
-    property int indent: 0
     default property alias data: _content.data
 
     readonly property bool isRadiusGroup: true
@@ -36,8 +35,7 @@ Item {
 
     Column {
         id: _content
-        x: root.indent
-        width: Math.max(1, parent.width - root.indent)
+        width: parent.width
 
         y: 0
         opacity: root.expanded ? 1.0 : 0.0

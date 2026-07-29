@@ -13,7 +13,6 @@ Column {
             onToggled: ShellSettings.showWindowTitle = !ShellSettings.showWindowTitle
         }
         CollapsibleSection {
-            indent: 8
             expanded: ShellSettings.showWindowTitle
             ToggleRow {
                 glyph: "󰀻"; label: "App name"
@@ -42,7 +41,6 @@ Column {
             onToggled: ShellSettings.valuesOnHover = !ShellSettings.valuesOnHover
         }
         CollapsibleSection {
-            indent: 8
             expanded: ShellSettings.valuesOnHover
             ToggleRow {
                 glyph: "󰦣"; label: "Compact level bars"
@@ -70,7 +68,6 @@ Column {
             onToggled: ShellSettings.networkTrafficStats = !ShellSettings.networkTrafficStats
         }
         CollapsibleSection {
-            indent: 8
             expanded: ShellSettings.networkTrafficStats
             ToggleRow {
                 glyph: "󰐃"; label: "Always show speed"

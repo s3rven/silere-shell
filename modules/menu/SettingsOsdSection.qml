@@ -13,7 +13,6 @@ Column {
             onToggled: ShellSettings.osdEnabled = !ShellSettings.osdEnabled
         }
         CollapsibleSection {
-            indent: 8
             expanded: ShellSettings.osdEnabled
             ToggleRow {
                 glyph: "󰀱"; label: "Show in bar"
@@ -22,7 +21,6 @@ Column {
                 onToggled: ShellSettings.osdBarIntegrated = !ShellSettings.osdBarIntegrated
             }
             CollapsibleSection {
-                indent: 8
                 expanded: !ShellSettings.osdBarIntegrated
                 ToggleRow {
                     glyph: "󰖲"; label: "Match bar shape"

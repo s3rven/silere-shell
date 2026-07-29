@@ -13,7 +13,6 @@ Column {
             onToggled: ShellSettings.nightLightAuto = !ShellSettings.nightLightAuto
         }
         CollapsibleSection {
-            indent: 8
             expanded: !ShellSettings.nightLightAuto
             SliderRow {
                 glyph: "󰖚"; label: "Color temperature"
@@ -24,7 +23,6 @@ Column {
             }
         }
         CollapsibleSection {
-            indent: 8
             expanded: ShellSettings.nightLightAuto
             HintText { text: "Temperature tracks sunset and sunrise at " + NightLight.locationLabel + "." }
         }

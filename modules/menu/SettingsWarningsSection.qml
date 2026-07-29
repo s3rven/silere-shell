@@ -45,7 +45,6 @@ Column {
             onChosen: (v) => root._setAlertMode(v, "osdBatteryWarn", "underlineBattGlow")
         }
         CollapsibleSection {
-            indent: 8
             expanded: root._battAlertMode !== "off"
             SliderRow {
                 glyph: "󱟢"; label: "Alert below"
@@ -75,7 +74,6 @@ Column {
             onChosen: (v) => root._setAlertMode(v, "osdTempWarn", "underlineTempGlow")
         }
         CollapsibleSection {
-            indent: 8
             expanded: root._tempAlertMode !== "off"
             SliderRow {
                 glyph: "󰔏"; label: "Alert above"
