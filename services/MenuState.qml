@@ -67,16 +67,9 @@ Singleton {
         }
         return out
     }
-    readonly property int settingsSectionCount: _flatSections.length
 
     function setSettingsSection(s: string): void {
         if (s !== settingsSection) settingsSection = s
-    }
-    function stepSettingsSection(delta: int): void {
-        const idx = _flatSections.indexOf(settingsSection)
-        if (idx < 0) return
-        const next = Math.max(0, Math.min(_flatSections.length - 1, idx + delta))
-        if (next !== idx) settingsSection = _flatSections[next]
     }
 
     signal tabRequested(int index)

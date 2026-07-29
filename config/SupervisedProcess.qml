@@ -10,7 +10,6 @@ Process {
     property int  stableAfter: 30000
     property var  giveUpCodes:   []
     property bool cleanExitOnly: false
-    readonly property bool gaveUp: _gaveUp
 
     property bool _cooldown: false
     property bool _gaveUp: false

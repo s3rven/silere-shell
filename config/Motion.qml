@@ -26,7 +26,6 @@ Singleton {
     readonly property int  popOutFade: _rm ? 0 : Math.round(120 / _s)
     readonly property int  popSettle:  _rm ? 0 : Math.round(210 / _s)
 
-    readonly property int panelResize: _rm ? 0 : Math.round(240 / _s)
     readonly property int panelHeight: _rm ? 0 : Math.round(210 / _s)
     readonly property real panelVelocity: 1200 * _s
     readonly property int pageIn:      _rm ? 0 : Math.round(180 / _s)
