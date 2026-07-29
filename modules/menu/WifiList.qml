@@ -16,7 +16,7 @@ Item {
     property string _selected: ""
 
     function _canScan(): bool {
-        return root.open && Network.toolAvailable && Network.wifiEnabled
+        return root.open && Network.toolAvailable && Network.wifiEnabled && !Idle.isIdle
     }
 
     function _syncScanState(): void {
@@ -53,6 +53,10 @@ Item {
         }
         function onWifiEnabledChanged() { root._syncScanState() }
         function onToolAvailableChanged() { root._syncScanState() }
+    }
+    Connections {
+        target: Idle
+        function onIsIdleChanged() { root._syncScanState() }
     }
 
     Column {
@@ -131,11 +135,22 @@ Item {
                     radius: 10
                     antialiasing: true
                     color: Theme.rowFill(_rowHover.hovered, false)
-                    border.width: activeFocus ? 2 : 1
-                    border.color: activeFocus ? Theme.withAlpha(Theme.accent, 0.55)
-                                : _entry.modelData.active ? Theme.withAlpha(Theme.accent, 0.45)
-                                                   : Theme.menuCardBorder
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    Behavior on color {
+                        enabled: !ShellSettings.reduceMotion
+                        ColorAnimation { duration: Motion.fast }
+                    }
+
+                    OutlineBorder {
+                        radius: _row.radius
+                        outlineWidth: _row.activeFocus ? 2 : 1
+                        outlineColor: _row.activeFocus ? Theme.withAlpha(Theme.accent, 0.55)
+                                    : _entry.modelData.active ? Theme.withAlpha(Theme.accent, 0.45)
+                                    : Theme.menuCardBorder
+                        Behavior on outlineColor {
+                            enabled: !ShellSettings.reduceMotion
+                            ColorAnimation { duration: Motion.fast }
+                        }
+                    }
 
                     activeFocusOnTab: true
                     Accessible.role: Accessible.ListItem
@@ -236,16 +251,23 @@ Item {
                     }
 
                     Rectangle {
+                        id: _pwField
                         width: parent.width
                         anchors.bottom: parent.bottom
                         height: 38
                         radius: 10
                         antialiasing: true
                         color: Theme.mix(Theme.surface, Theme.subtext, 0.09)
-                        border.width: 1
-                        border.color: _entry._failed ? Theme.withAlpha(Theme.error, 0.5)
-                                                      : Theme.withAlpha(Theme.accent, 0.3)
-                        Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+
+                        OutlineBorder {
+                            radius: _pwField.radius
+                            outlineColor: _entry._failed ? Theme.withAlpha(Theme.error, 0.5)
+                                                         : Theme.withAlpha(Theme.accent, 0.3)
+                            Behavior on outlineColor {
+                                enabled: !ShellSettings.reduceMotion
+                                ColorAnimation { duration: Motion.fast }
+                            }
+                        }
 
                         Connections {
                             target: Network
@@ -294,7 +316,10 @@ Item {
                             opacity: enabled ? 1.0 : 0.4
                             color: (_joinHover.hovered || activeFocus) ? Theme.withAlpha(Theme.accent, 0.30)
                                                                         : Theme.withAlpha(Theme.accent, 0.18)
-                            Behavior on color { ColorAnimation { duration: Motion.fast } }
+                            Behavior on color {
+                                enabled: !ShellSettings.reduceMotion
+                                ColorAnimation { duration: Motion.fast }
+                            }
 
                             Accessible.role: Accessible.Button
                             Accessible.name: "Connect to " + _entry.modelData.ssid

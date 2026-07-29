@@ -20,13 +20,14 @@ Item {
     property bool _searchLapsed: false
     Timer {
         interval: 10000
-        running: root.open && Bluetooth.available && Bluetooth.enabled && Bluetooth.devices.length === 0
+        running: root.open && Bluetooth.available && Bluetooth.enabled
+            && Bluetooth.devices.length === 0 && !Idle.isIdle
         onRunningChanged: if (running) root._searchLapsed = false
         onTriggered: root._searchLapsed = true
     }
 
     function _syncScanState(): void {
-        Bluetooth.setScan(root.open && Bluetooth.available && Bluetooth.enabled)
+        Bluetooth.setScan(root.open && Bluetooth.available && Bluetooth.enabled && !Idle.isIdle)
         if (!Bluetooth.available || !Bluetooth.enabled) {
             _disarmTimer.stop()
             root._armedAddr = ""
@@ -44,6 +45,10 @@ Item {
         target: Bluetooth
         function onAvailableChanged() { root._syncScanState() }
         function onEnabledChanged() { root._syncScanState() }
+    }
+    Connections {
+        target: Idle
+        function onIsIdleChanged() { root._syncScanState() }
     }
 
     function _devGlyph(icon): string {
@@ -110,12 +115,23 @@ Item {
                 radius: 10
                 antialiasing: true
                 color: Theme.rowFill(_ma.containsMouse, false)
-                border.width: activeFocus ? 2 : 1
-                border.color: (_armed || modelData.pairing) ? Theme.withAlpha(Theme.warning, 0.55)
-                            : modelData.connected               ? Theme.withAlpha(Theme.accent,  0.45)
-                            : activeFocus                        ? Theme.withAlpha(Theme.accent,  0.45)
-                            :                                     Theme.menuCardBorder
-                Behavior on color { ColorAnimation { duration: Motion.fast } }
+                Behavior on color {
+                    enabled: !ShellSettings.reduceMotion
+                    ColorAnimation { duration: Motion.fast }
+                }
+
+                OutlineBorder {
+                    radius: _row.radius
+                    outlineWidth: _row.activeFocus ? 2 : 1
+                    outlineColor: (_row._armed || _row.modelData.pairing) ? Theme.withAlpha(Theme.warning, 0.55)
+                                : _row.modelData.connected ? Theme.withAlpha(Theme.accent, 0.45)
+                                : _row.activeFocus         ? Theme.withAlpha(Theme.accent, 0.45)
+                                :                            Theme.menuCardBorder
+                    Behavior on outlineColor {
+                        enabled: !ShellSettings.reduceMotion
+                        ColorAnimation { duration: Motion.fast }
+                    }
+                }
 
                 activeFocusOnTab: true
                 Accessible.role: Accessible.ListItem
@@ -207,7 +223,10 @@ Item {
                     font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
                     font.weight: (parent._armed || _row.modelData.pairing) ? Font.Medium : Font.Normal
                     renderType: Text.NativeRendering
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    Behavior on color {
+                        enabled: !ShellSettings.reduceMotion
+                        ColorAnimation { duration: Motion.fast }
+                    }
                 }
             }
         }
