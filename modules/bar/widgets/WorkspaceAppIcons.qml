@@ -15,7 +15,7 @@ Row {
 
     readonly property bool _mono: ShellSettings.wsIconMono && !hoverFx
     // keyed off the setting, not _mono: swapping render paths mid-hover would snap instead of fade
-    readonly property bool _fxNeeded: ShellSettings.wsIconMono || ShellSettings.wsIconOpacity < 0.995
+    readonly property bool _fxNeeded: ShellSettings.wsIconMono
 
     spacing: 4
     opacity: pulseOpacity
@@ -49,21 +49,28 @@ Row {
                 fillMode: Image.PreserveAspectFit
                 asynchronous: true
                 visible: !root._fxNeeded
-            }
-
-            MultiEffect {
-                anchors.fill: _iconSrc
-                source: _iconSrc
-                visible: root._fxNeeded
                 opacity: root.hoverFx ? 1.0 : ShellSettings.wsIconOpacity
-                saturation: root._mono ? -1.0 : 0.0
                 Behavior on opacity {
                     enabled: !ShellSettings.reduceMotion
                     NumberAnimation { duration: Motion.fast }
                 }
-                Behavior on saturation {
-                    enabled: !ShellSettings.reduceMotion
-                    NumberAnimation { duration: Motion.fast }
+            }
+
+            Loader {
+                anchors.fill: _iconSrc
+                active: root._fxNeeded
+                sourceComponent: MultiEffect {
+                    source: _iconSrc
+                    opacity: root.hoverFx ? 1.0 : ShellSettings.wsIconOpacity
+                    saturation: root._mono ? -1.0 : 0.0
+                    Behavior on opacity {
+                        enabled: !ShellSettings.reduceMotion
+                        NumberAnimation { duration: Motion.fast }
+                    }
+                    Behavior on saturation {
+                        enabled: !ShellSettings.reduceMotion
+                        NumberAnimation { duration: Motion.fast }
+                    }
                 }
             }
 
