@@ -221,6 +221,29 @@ test_atomic_units() (
     fi
 )
 
+test_atomic_update_cache() (
+    local test_home="$TMP/update-cache-home"
+    local victim="$TMP/update-cache-victim"
+    HOME="$test_home"
+    XDG_CACHE_HOME="$test_home/cache"
+    SILERE_SCRIPT_LIB_ONLY=1 source "$ROOT/scripts/update.sh"
+
+    mkdir -p "$CACHE_DIR"
+    printf 'do not replace\n' > "$victim"
+    ln -s "$victim" "$FLAG"
+
+    _write_cache_file "$FLAG" "2" $'first change\nsecond change' \
+        || fail "atomic update cache writer failed"
+    assert_eq $'2\nfirst change\nsecond change' "$(<"$FLAG")" \
+        "atomic update cache content"
+    assert_eq "do not replace" "$(<"$victim")" \
+        "atomic update cache symlink target"
+    [ ! -L "$FLAG" ] || fail "atomic update cache left the stale symlink in place"
+    if find "$CACHE_DIR" -maxdepth 1 -name '.update-pending.??????' -print -quit | grep -q .; then
+        fail "temporary update cache file was left behind"
+    fi
+)
+
 test_update_refuses_dirty_apply() (
     local remote="$TMP/update-remote.git"
     local seed="$TMP/update-seed"
@@ -310,6 +333,7 @@ test_qml_module_lookup
 test_hypr_discovery
 test_niri_config_discovery
 test_atomic_units
+test_atomic_update_cache
 # repair.sh builds a git fixture; skip where git is absent (e.g. minimal CI runners)
 if command -v git >/dev/null 2>&1; then
     test_update_refuses_dirty_apply
