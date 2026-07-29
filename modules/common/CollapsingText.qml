@@ -1,5 +1,6 @@
 import QtQuick
 import "../../config"
+import "../../services"
 
 Item {
     id: root
@@ -26,7 +27,10 @@ Item {
           : Math.ceil(_label.implicitWidth)
     clip:   true
 
-    Behavior on width { NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic } }
+    Behavior on width {
+        enabled: !ShellSettings.reduceMotion
+        NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
+    }
 
     Text {
         id: _label
@@ -36,8 +40,14 @@ Item {
         font.family:    Settings.font
         font.pixelSize: Settings.fontSize
         renderType:     Text.NativeRendering
-        Behavior on color { ColorAnimation { duration: Motion.color } }
+        Behavior on color {
+            enabled: !ShellSettings.reduceMotion
+            ColorAnimation { duration: Motion.color }
+        }
         opacity:        root.expanded ? 1.0 : 0.0
-        Behavior on opacity { NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic } }
+        Behavior on opacity {
+            enabled: !ShellSettings.reduceMotion
+            NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
+        }
     }
 }

@@ -190,7 +190,7 @@ PanelWindow {
             font.family: Settings.font
             font.pixelSize: Settings.fontSize + 1
             renderType: Text.NativeRendering
-            Behavior on color { ColorAnimation { duration: Motion.fast } }
+            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
         }
 
         Text {
@@ -219,9 +219,13 @@ PanelWindow {
             antialiasing: true
             color: _row.active
                 ? Theme.withAlpha(Theme.accent, 0.13) : "transparent"
-            border.width: _row.active ? 1 : 0
-            border.color: Theme.withAlpha(Theme.accent, 0.22)
             Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+
+            OutlineBorder {
+                radius: _state.radius
+                outlineColor: _row.active ? Theme.withAlpha(Theme.accent, 0.22) : "transparent"
+                Behavior on outlineColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+            }
 
             Text {
                 id: _stateLabel

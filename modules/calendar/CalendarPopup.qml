@@ -270,7 +270,7 @@ PanelWindow {
                             color: (_todayH.hovered || _todayButton.activeFocus) ? Theme.text : Theme.withAlpha(Theme.text, 0.9)
                             font.family: Settings.font; font.pixelSize: Settings.fontSize + 1; font.weight: Font.DemiBold
                             renderType: Text.NativeRendering
-                            Behavior on color { ColorAnimation { duration: Motion.fast } }
+                            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
                         }
                         Text {
                             visible: card._todayWeek > 0
@@ -283,7 +283,10 @@ PanelWindow {
                 }
             }
 
-            Rectangle { width: parent.width; height: 1; color: Theme.withAlpha(Theme.subtext, 0.13) }
+            Hairline {
+                width: parent.width
+                color: Theme.withAlpha(Theme.subtext, 0.13)
+            }
 
             Item {
                 width: parent.width
@@ -319,7 +322,7 @@ PanelWindow {
                         color: (_mH.hovered || _monthButton.activeFocus) ? Theme.text : Theme.withAlpha(Theme.text, 0.9)
                         font.family: Settings.font; font.pixelSize: Settings.fontSize + 1; font.weight: Font.DemiBold
                         renderType: Text.NativeRendering
-                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
                     }
                 }
 
@@ -420,10 +423,10 @@ PanelWindow {
                     }
                 }
 
-                Rectangle {
-                    x: card.weekCol - 1
+                Hairline {
+                    x: card.weekCol - width
                     y: 0
-                    width: 1
+                    vertical: true
                     height: parent.height
                     color: Theme.withAlpha(Theme.subtext, 0.10)
                 }
@@ -461,7 +464,7 @@ PanelWindow {
                                 antialiasing: true
                                 color: _dayCell.today ? Theme.accent
                                      : (_dayH.hovered && _dayCell.cur ? Theme.withAlpha(Theme.subtext, 0.10) : "transparent")
-                                Behavior on color { ColorAnimation { duration: Motion.fast } }
+                                Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
 
                                 HoverHandler { id: _dayH; enabled: _dayCell.cur; cursorShape: Qt.PointingHandCursor }
                                 TapHandler {
@@ -489,7 +492,7 @@ PanelWindow {
                                     color: _dayCell.today ? Theme.surface : Theme.accent
                                     opacity: _dayCell.marked ? 1 : 0
                                     scale:   _dayCell.marked ? 1 : 0.3
-                                    Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                                    Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
                                     Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(125); easing.type: Easing.OutCubic } }
                                 }
 
@@ -498,9 +501,13 @@ PanelWindow {
                                     width: 30; height: 30; radius: 15
                                     antialiasing: true
                                     color: "transparent"
-                                    border.width: 2
-                                    border.color: Theme.withAlpha(Theme.accent, 0.6)
                                     visible: _gridWrap.activeFocus && _dayCell.index === _gridWrap.kbdIndex
+
+                                    OutlineBorder {
+                                        radius: 15
+                                        outlineWidth: 2
+                                        outlineColor: Theme.withAlpha(Theme.accent, 0.6)
+                                    }
                                 }
                             }
                         }

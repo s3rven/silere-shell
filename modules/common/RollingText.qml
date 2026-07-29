@@ -15,7 +15,10 @@ Item {
     implicitHeight: _main.implicitHeight
     width:  implicitWidth
     height: implicitHeight
-    Behavior on width { NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
+    Behavior on width {
+        enabled: !ShellSettings.reduceMotion
+        NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
+    }
 
     readonly property real _dist: Math.max(6, implicitHeight * 0.6)
 
@@ -41,7 +44,10 @@ Item {
         renderType:     Text.NativeRendering
         property real rise: 0
         transform: Translate { y: _main.rise }
-        Behavior on color { ColorAnimation { duration: Motion.color } }
+        Behavior on color {
+            enabled: !ShellSettings.reduceMotion
+            ColorAnimation { duration: Motion.color }
+        }
     }
 
     Text {
@@ -55,7 +61,10 @@ Item {
         renderType:     Text.NativeRendering
         property real rise: 0
         transform: Translate { y: _ghost.rise }
-        Behavior on color { ColorAnimation { duration: Motion.color } }
+        Behavior on color {
+            enabled: !ShellSettings.reduceMotion
+            ColorAnimation { duration: Motion.color }
+        }
     }
 
     ParallelAnimation {
