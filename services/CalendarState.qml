@@ -32,6 +32,7 @@ Singleton {
 
     property var marks: ({})
     property bool _savePendingForDir: false
+    property bool _saveDirty: false
     property string _lastSavedJson: ""
     property int _saveFailureCount: 0
 
@@ -42,6 +43,7 @@ Singleton {
         for (const key in marks) if (key !== k) next[key] = true
         if (marks[k] !== true) next[k] = true
         marks = next
+        _saveDirty = true
         ShellSettings._ensureConfigDir()
         _saveTimer.restart()
     }
@@ -65,7 +67,12 @@ Singleton {
         onTriggered: root._flush()
     }
     // blocking write (blockWrites) so a toggle inside the debounce window survives quit/reload
-    Component.onDestruction: if (_saveTimer.running) { _saveTimer.stop(); _flush() }
+    Component.onDestruction: {
+        const pending = root._saveDirty || _saveTimer.running || _saveRetry.running
+        _saveTimer.stop()
+        _saveRetry.stop()
+        if (pending) root._flush()
+    }
 
     Connections {
         target: ShellSettings
@@ -93,6 +100,7 @@ Singleton {
             } catch (e) { console.warn("silere-shell: bad calendar-marks.json, ignoring:", String(e)) }
         }
         onSaved: {
+            root._saveDirty = false
             root._saveFailureCount = 0
             _saveRetry.stop()
         }
