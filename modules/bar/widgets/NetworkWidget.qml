@@ -16,13 +16,47 @@ Pill {
     readonly property bool _disconnected: ShellSettings.barShowNetwork && canRead && Network.available && !Network.connected && !ShellSettings.reduceMotion
     property bool _pulseSettled: false
     readonly property bool _isPulsing: _disconnected && !_pulseSettled
+    readonly property bool _showPhysicalLink: Network.hasVpn
+        && ShellSettings.netVpnShowLink
+    readonly property string _physical: _physicalLabel()
+    readonly property string _signal: Network.isWifi && Network.signalStrength > 0
+        ? Network.signalStrength + "%"
+        : ""
+    readonly property string _linkSummary: {
+        if (!Network.connected) return ""
+        const label = root.compact ? Network.underlyingIcon
+            : Network.underlyingIcon + " " + root._physical
+        return root._signal.length > 0 ? label + " " + root._signal : label
+    }
+    readonly property string _inlineText: {
+        const parts = []
+        if (root._showPhysicalLink) parts.push(Network.underlyingIcon)
+        if (!root.compact && ShellSettings.networkSpeedInline && Network.trafficActive)
+            parts.push(Network.trafficLabel)
+        return root._join(parts)
+    }
+    readonly property string _detailText: {
+        if (!root.canRead) return "Network backend unavailable"
+        if (!Network.connected) return "Disconnected"
+
+        const parts = []
+        if (Network.hasVpn) parts.push(Network.vpnName.length > 0 ? Network.vpnName : "VPN")
+        if (root._showPhysicalLink) parts.push(root._linkSummary)
+        else if (!Network.hasVpn) {
+            const physical = root._signal.length > 0
+                ? root._physical + " " + root._signal
+                : root._physical
+            parts.push(physical)
+        }
+        if (Network.trafficActive) parts.push(Network.trafficLabel)
+        return root._join(parts)
+    }
 
     opacity:        _baseOpacity * _pulseOpacity
     visible:        show || opacity > 0
-    glyph:          (Network.hasVpn && ShellSettings.netVpnShowLink)
-                        ? Network.icon + " · " + Network.underlyingIcon
-                        : Network.icon
-    maxTextWidth:   220
+    // the icon cell is a fixed width: one glyph fits, two overflow it
+    glyph:          Network.icon
+    maxTextWidth:   compact ? 150 : 260
     shrinkDelay:    0
     activeFocusOnTab: show
     Accessible.focusable: true
@@ -30,10 +64,12 @@ Pill {
     Behavior on opacity { enabled: !root._isPulsing; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
     glyphColor:  canRead && Network.connected ? Theme.text : Theme.subtext
     textColor:   Theme.subtext
-    accessibleName: !canRead ? "Network status unavailable"
+    accessibleName: !canRead ? "Network backend unavailable"
         : !Network.available ? "Network unavailable"
         : !Network.connected ? "Network disconnected"
-        : `Network connected, ${root._physicalLabel()}${Network.isWifi && Network.signalStrength > 0 ? `, ${Network.signalStrength} percent signal` : ""}`
+        : Network.hasVpn
+            ? `VPN ${Network.vpnName || "active"}, over ${root._physical}${Network.isWifi && Network.signalStrength > 0 ? `, ${Network.signalStrength} percent signal` : ""}`
+            : `Network connected, ${root._physical}${Network.isWifi && Network.signalStrength > 0 ? `, ${Network.signalStrength} percent signal` : ""}`
 
     animateText: false
 
@@ -50,27 +86,7 @@ Pill {
         return parts.filter(p => p && p.length > 0).join(" · ")
     }
 
-    text: {
-        if (!expanded) {
-            if (ShellSettings.networkSpeedInline && Network.trafficActive)
-                return Network.trafficLabel
-            return ""
-        }
-        if (!canRead) return "nmcli missing"
-        if (!Network.connected) return "Disconnected"
-        const physical = root._physicalLabel()
-        const signal = Network.isWifi && Network.signalStrength > 0
-            ? Network.signalStrength + "%"
-            : ""
-        const traffic = Network.trafficActive ? Network.trafficLabel : ""
-        if (traffic.length > 0 && Network.hasVpn && Network.vpnName.length > 0)
-            return root._join([traffic, Network.vpnName, physical, signal])
-        if (traffic.length > 0)
-            return root._join([traffic, physical, signal])
-        if (Network.hasVpn && Network.vpnName.length > 0)
-            return root._join([Network.vpnName, physical, signal])
-        return root._join([physical, signal])
-    }
+    text: expanded ? _detailText : _inlineText
 
     PulseLoop {
         running: root.barActive && root._isPulsing && !Idle.isIdle
