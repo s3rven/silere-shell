@@ -8,7 +8,14 @@ Singleton {
     id: root
 
     // exact family only: Qt 6 passes this verbatim, a comma list trips fontconfig 2.18's family guesser
-    readonly property string font: ShellSettings.fontFamily.length > 0 ? ShellSettings.fontFamily : "JetBrainsMono Nerd Font"
+    readonly property string defaultFont: "JetBrainsMono Nerd Font"
+    readonly property string font: {
+        if (ShellSettings.fontFamily.length > 0) return ShellSettings.fontFamily
+        // the default is not installed everywhere; without a Nerd Font the bar is all tofu
+        const installed = FontScan.families
+        if (installed.length === 0 || installed.indexOf(root.defaultFont) >= 0) return root.defaultFont
+        return installed[0]
+    }
     // families render different optical sizes at equal px (Fantasque ≈ 10% shorter) — normalize on
     // xHeight, not line height: the Meslo LG variants differ only in line gap, not glyph size.
     // 0.55 = JetBrainsMono's xHeight/px, so the default family scales at exactly 1.0.
@@ -25,7 +32,8 @@ Singleton {
 
     readonly property bool hyprLuaConfig: false
 
-    readonly property list<string> lockCommand: ["hyprlock"]
+    readonly property list<string> lockCommand: SystemTools.hasHyprlock ? ["hyprlock"]
+        : SystemTools.hasLoginctl ? ["loginctl", "lock-session"] : []
     readonly property list<string> suspendCommand: SystemTools.hasSystemctl ? ["systemctl", "suspend"]
         : SystemTools.hasLoginctl ? ["loginctl", "suspend"] : []
     readonly property list<string> rebootCommand: SystemTools.hasSystemctl ? ["systemctl", "reboot"]
