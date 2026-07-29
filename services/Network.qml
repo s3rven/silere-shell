@@ -11,13 +11,6 @@ Singleton {
 
     readonly property bool toolAvailable: Networking.backend !== NetworkBackendType.None
     readonly property var _devices: Networking.devices.values || []
-    readonly property bool _wanted: !Idle.isIdle && (
-        ShellSettings.barShowNetwork
-        || ShellSettings.updatesWidget
-        || (ShellSettings.underlineGlow && ShellSettings.underlineNetGlow)
-        || MenuState.open
-        || QuickActionsState.open)
-    readonly property bool monitoring: toolAvailable && _wanted
 
     readonly property var _linkState: {
         const devices = root._devices
@@ -76,8 +69,14 @@ Singleton {
         return Math.round(Math.max(0, Math.min(1, best.network.signalStrength || 0)) * 100)
     }
 
-    property bool hasVpn: false
-    property string vpnName: ""
+    property var _vpnState: ({ active: false, name: "" })
+    readonly property bool hasVpn: _vpnState.active === true
+    readonly property string vpnName: _vpnState.name || ""
+    property bool _vpnCandidateActive: false
+    property string _vpnCandidateName: ""
+    property bool _vpnRefreshPending: false
+    readonly property bool _vpnWanted: !Idle.isIdle && available
+        && ShellSettings.barShowNetwork && SystemTools.hasNmcli
 
     function signalGlyph(s: int): string {
         return s > 75 ? "󰤨" : s > 50 ? "󰤥" : s > 25 ? "󰤢" : "󰤟"
@@ -287,7 +286,11 @@ Singleton {
     }
 
     function _queueVpnRefresh(): void {
-        if (!SystemTools.hasNmcli || !_wanted || _vpnProc.running) return
+        if (!root._vpnWanted) return
+        if (_vpnProc.running) {
+            root._vpnRefreshPending = true
+            return
+        }
         _vpnRefresh.restart()
     }
 
@@ -310,12 +313,11 @@ Singleton {
     }
 
     on_LinkSignatureChanged: _queueVpnRefresh()
-    on_WantedChanged: {
-        if (_wanted) _queueVpnRefresh()
+    on_VpnWantedChanged: {
+        if (_vpnWanted) _queueVpnRefresh()
         else {
             _vpnRefresh.stop()
-            root.clearWifiScan()
-            root._resetTraffic()
+            _vpnRefreshPending = false
         }
     }
 
@@ -335,26 +337,40 @@ Singleton {
         environment: ({ "LC_ALL": "C" })
         command: ["nmcli", "-t", "-f", "TYPE,NAME", "connection", "show", "--active"]
         onRunningChanged: if (running) {
-            root.hasVpn = false
-            root.vpnName = ""
+            root._vpnCandidateActive = false
+            root._vpnCandidateName = ""
         }
         stdout: SplitParser {
             onRead: line => {
-                if (root.hasVpn) return
+                if (root._vpnCandidateActive) return
                 const fields = root._splitNmcliLine(line)
                 if (fields.length >= 2
                         && (fields[0] === "vpn" || fields[0] === "wireguard" || fields[0] === "tun")) {
-                    root.hasVpn = true
-                    root.vpnName = fields.slice(1).join(":")
+                    root._vpnCandidateActive = true
+                    root._vpnCandidateName = fields.slice(1).join(":")
                 }
             }
+        }
+        onExited: (code) => {
+            // Keep the last known state through transient nmcli failures and
+            // publish successful results as one coherent update.
+            if (code === 0 && (root.hasVpn !== root._vpnCandidateActive
+                    || root.vpnName !== root._vpnCandidateName)) {
+                root._vpnState = {
+                    active: root._vpnCandidateActive,
+                    name: root._vpnCandidateName
+                }
+            }
+            const refreshAgain = root._vpnRefreshPending && root._vpnWanted
+            root._vpnRefreshPending = false
+            if (refreshAgain) _vpnRefresh.restart()
         }
     }
 
     Timer {
         interval: 300000
         repeat: true
-        running: root._wanted && SystemTools.hasNmcli
+        running: root._vpnWanted
         onTriggered: root._queueVpnRefresh()
     }
 
@@ -391,19 +407,20 @@ Singleton {
         _lastRxBytes = -1
         _lastTxBytes = -1
         _lastStatsMs = 0
+        _statsRefreshing = false
     }
 
     function _sampleTraffic(): void {
-        if (!statsWanted || !statsDeviceReady || Idle.isIdle || _statsRefreshing) return
+        if (!statsWanted || !statsDeviceReady || Idle.isIdle
+                || OverviewState.active || _statsRefreshing) return
         _statsRefreshing = true
-        try {
-            _netDevFile.reload()
-            if (!_netDevFile.waitForJob()) {
-                _resetTraffic()
-                return
-            }
+        _netDevFile.reload()
+    }
 
-            const lines = (_netDevFile.text() || "").split(/\r?\n/)
+    function _applyTrafficSample(raw: string): void {
+        if (!_statsRefreshing) return
+        try {
+            const lines = (raw || "").split(/\r?\n/)
             let rx = -1
             let tx = -1
             for (let i = 0; i < lines.length; i++) {
@@ -443,9 +460,12 @@ Singleton {
     FileView {
         id: _netDevFile
         path: root.statsWanted ? "/proc/net/dev" : ""
-        blockLoading: true
-        blockAllReads: true
+        blockLoading: false
+        blockAllReads: false
         printErrors: false
+        onLoaded: if (root._statsRefreshing)
+            root._applyTrafficSample(_netDevFile.text())
+        onLoadFailed: if (root._statsRefreshing) root._resetTraffic()
     }
 
     Timer {
@@ -453,7 +473,8 @@ Singleton {
         interval: 2000
         repeat: true
         triggeredOnStart: true
-        running: root.statsWanted && root.statsDeviceReady && !Idle.isIdle
+        running: root.statsWanted && root.statsDeviceReady
+            && !Idle.isIdle && !OverviewState.active
         onTriggered: root._sampleTraffic()
         onRunningChanged: if (!running) root._resetTraffic()
     }

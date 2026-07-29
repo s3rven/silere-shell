@@ -44,10 +44,14 @@ Singleton {
         _active = true
         _refreshFast()
         _refreshSlow()
+        // cpuPct is a delta between two /proc/stat reads; without a quick second
+        // sample the tile shows the last session's figure until the 2s poll lands
+        _cpuPrime.restart()
     }
 
     function _deactivate(): void {
         _startDelay.stop()
+        _cpuPrime.stop()
         _active = false
         _lastCpuTotal = 0
         _lastCpuIdle = 0
@@ -58,6 +62,7 @@ Singleton {
     Component.onCompleted: if (_wanted) _startDelay.restart()
 
     Timer { id: _startDelay; interval: 120; onTriggered: root._activate() }
+    Timer { id: _cpuPrime; interval: 250; onTriggered: if (root._active) _statFile.reload() }
 
     Timer {
         id: _poll
@@ -78,59 +83,55 @@ Singleton {
     FileView {
         id: _meminfoFile
         path: "/proc/meminfo"
-        blockLoading: true
-        blockAllReads: true
+        blockLoading: false
+        blockAllReads: false
         printErrors: false
+        onLoaded: root._applyMeminfo(_meminfoFile.text())
     }
 
     FileView {
         id: _uptimeFile
         path: "/proc/uptime"
-        blockLoading: true
-        blockAllReads: true
+        blockLoading: false
+        blockAllReads: false
         printErrors: false
+        onLoaded: root._applyUptime(_uptimeFile.text())
     }
 
     FileView {
         id: _statFile
         path: "/proc/stat"
-        blockLoading: true
-        blockAllReads: true
+        blockLoading: false
+        blockAllReads: false
         printErrors: false
+        onLoaded: root._applyCpuStat(_statFile.text())
     }
-
-    function _readView(view): string {
-        try {
-            view.waitForJob()
-            return view.text()
-        } catch (e) {
-            return ""
-        }
-    }
-
-    property bool _fastRefreshing: false
 
     function _refreshFast(): void {
-        if (_fastRefreshing || !_active) return
-        _fastRefreshing = true
-        try {
-
+        if (!_active) return
         _meminfoFile.reload()
         _uptimeFile.reload()
         _statFile.reload()
+    }
 
-        const mem = _readView(_meminfoFile)
+    function _applyMeminfo(mem: string): void {
+        if (!root._active) return
         const total = mem.match(/^MemTotal:\s+(\d+)/m)
         const avail = mem.match(/^MemAvailable:\s+(\d+)/m)
         if (total && avail) {
             root.memTotalKb = parseInt(total[1]) || 0
             root.memAvailKb = parseInt(avail[1]) || 0
         }
+    }
 
-        const up = _readView(_uptimeFile).trim().split(/\s+/)
+    function _applyUptime(raw: string): void {
+        if (!root._active) return
+        const up = raw.trim().split(/\s+/)
         if (up.length > 0) root.uptimeSecs = parseFloat(up[0]) || 0
+    }
 
-        const _cpuRaw = _readView(_statFile)
+    function _applyCpuStat(_cpuRaw: string): void {
+        if (!root._active) return
         const _cpuNl  = _cpuRaw.indexOf('\n')
         const cpuLine = _cpuNl < 0 ? _cpuRaw.trim() : _cpuRaw.slice(0, _cpuNl)
         const p = cpuLine.trim().split(/\s+/)
@@ -146,10 +147,6 @@ Singleton {
             }
             root._lastCpuTotal = total
             root._lastCpuIdle  = idle
-        }
-
-        } finally {
-            root._fastRefreshing = false
         }
     }
 
