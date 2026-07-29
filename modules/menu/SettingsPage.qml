@@ -13,6 +13,18 @@ PageShell {
     property string _shownSection: MenuState.settingsSection
     property int _sectionDir: 1
 
+    function _settleSection(): void {
+        _detailSwap.stop()
+        root._shownSection = MenuState.settingsSection
+        _detail.opacity = 1
+        _detail._shift = 0
+    }
+
+    onPageHidden: root._settleSection()
+    onPowerOpenChanged: {
+        if (root.powerOpen) root._settleSection()
+    }
+
     readonly property var _sectionComponents: ({
         theme: _secTheme, nightlight: _secNightLight, surface: _secSurface,
         separators: _secSeparators, underline: _secUnderline, clock: _secClock,
@@ -68,11 +80,8 @@ PageShell {
         Connections {
             target: MenuState
             function onSettingsSectionChanged() {
-                if (ShellSettings.reduceMotion) {
-                    _detailSwap.stop()
-                    root._shownSection = MenuState.settingsSection
-                    _detail.opacity = 1
-                    _detail._shift = 0
+                if (!root.active || root.powerOpen || ShellSettings.reduceMotion) {
+                    root._settleSection()
                     return
                 }
                 const current = root._sectionMeta[root._shownSection]?.index ?? 0
@@ -176,6 +185,7 @@ PageShell {
             width:  parent.width
             height: item ? item.implicitHeight : 0
             sourceComponent: root._sectionComponents[root._shownSection] ?? _secSystem
+        }
 
         Component {
             id: _secTheme
@@ -228,10 +238,10 @@ PageShell {
         Component {
             id: _secWidgets
             Column {
-            width: _detailBody.width
-            spacing: 0
+                width: _detailBody.width
+                spacing: 0
 
-            DraggableWidgetList { width: parent.width }
+                DraggableWidgetList { width: parent.width }
             }
         }
 
@@ -266,7 +276,6 @@ PageShell {
                 animationActive: root.active && root._shownSection === "updates"
                     && !root.powerOpen && !Idle.isIdle
             }
-        }
         }
     }
 }

@@ -119,13 +119,14 @@ PanelWindow {
         targetWidth: placementW
         animateScale: false
         animatePlacement: false
-        border.width: 0
         clip: true
 
         readonly property int _compactW: 398
         readonly property int _powerW: 566
         readonly property int _settingsW: 630
-        readonly property bool _railExpanded: activeTab === 1 || powerOpen
+        readonly property bool _settingsNavVisible:
+            activeTab === 1 && settingsNavOpen && !powerOpen
+        readonly property bool _railExpanded: _settingsNavVisible || powerOpen
         readonly property int _targetPanelW: activeTab === 1 ? _settingsW
             : powerOpen ? _powerW : _compactW
         readonly property int _availablePanelW: win.width > 0
@@ -147,6 +148,12 @@ PanelWindow {
         }
         readonly property int railExpandedW: railCollapsedW + navW
         readonly property int railW: _railExpanded ? railExpandedW : railCollapsedW
+        readonly property int _railMotionMs: _railExpanded
+            ? Motion.ms(165) : Motion.ms(115)
+        readonly property int _railMotionEasing: _railExpanded
+            ? Easing.OutQuint : Easing.InOutCubic
+        readonly property int _panelWidthMotionMs: activeTab === 1
+            ? Motion.ms(180) : Motion.ms(145)
         readonly property int contentW: panelW - railW
         readonly property int contentPad: activeTab === 1
             ? Math.max(12, Math.min(20,
@@ -155,9 +162,14 @@ PanelWindow {
         readonly property int innerW: Math.max(1, contentW - contentPad * 2)
         readonly property int idealMinH: 360
         readonly property int minRailFitH: 252
+        readonly property int pageTopInset: 12
+        readonly property int pageBottomInset: 12
         readonly property int _availablePanelH: win.height > 0
             ? Math.max(1, Math.floor(win.height - _edgeY - _minX))
             : contentPane.targetH
+        readonly property int recentViewportH: Math.max(1,
+            Math.min(idealMinH - pageTopInset - pageBottomInset,
+                _availablePanelH - pageTopInset - pageBottomInset))
         readonly property int targetPanelH: Math.max(1,
             Math.min(contentPane.targetH, _availablePanelH))
 
@@ -165,15 +177,53 @@ PanelWindow {
         readonly property var _focusWindow: panel.Window.window
 
         property bool powerOpen: false
-        property bool _homeLoaded:     false
+        property bool settingsNavOpen: true
         property bool _loadedDeferred: false
-        property bool _settingsLoaded: false
-        property bool _recentLoaded:   false
         property bool _geometryReady:  false
+        property bool _homeRetained:    false
+        property bool _settingsRetained: false
+        property bool _recentRetained:  false
+        // kept alive once incubated so later reveals are presentation-only
+        property bool _settingsNavRetained: false
 
-        Component.onCompleted: Qt.callLater(function() {
-            panel._geometryReady = true
-        })
+        Component.onCompleted: {
+            if (activeTab === 1) _settingsNavRetained = true
+            panel._syncPageRetention()
+            Qt.callLater(function() { panel._geometryReady = true })
+        }
+
+        function _syncPageRetention(): void {
+            if (activeTab === 0) {
+                _homeUnload.stop()
+                _homeRetained = true
+            } else if (_homeRetained) {
+                _homeUnload.restart()
+            }
+
+            if (!_loadedDeferred) {
+                _settingsUnload.stop()
+                _recentUnload.stop()
+                _settingsRetained = false
+                _recentRetained = false
+                return
+            }
+
+            if (activeTab === 1) {
+                _settingsUnload.stop()
+                _settingsRetained = true
+            } else if (_settingsRetained) {
+                _settingsUnload.restart()
+            }
+
+            if (activeTab === 2) {
+                _recentUnload.stop()
+                _recentRetained = true
+            } else if (_recentRetained) {
+                _recentUnload.restart()
+            }
+        }
+
+        on_LoadedDeferredChanged: _syncPageRetention()
 
         function _settlePageVisuals(): void {
             if (homeLoader.item) homeLoader.item.settleVisual(activeTab === 0)
@@ -184,6 +234,7 @@ PanelWindow {
         onCloseFinished: {
             if (open) return
             _settlePageVisuals()
+            if (powerOpen) _railPower.forceActiveFocus()
             powerOpen = false
         }
 
@@ -198,22 +249,39 @@ PanelWindow {
 
         function switchTab(idx: int): void {
             const tab = Math.max(0, Math.min(2, idx))
+            if (tab === 1) {
+                _settingsNavRetained = true
+                if (activeTab !== 1) settingsNavOpen = true
+            }
             const focusedItem = _focusWindow ? _focusWindow.activeFocusItem : null
             const focusNeedsReset = focusedItem && (
                 _ownsItem(focusedItem, tabContent)
                 || _ownsItem(focusedItem, _settingsNavLoader.item)
                 || _ownsItem(focusedItem, _powerRailLoader.item))
+            // move focus first: the tab change disables the page controls holding it
+            if (focusNeedsReset) panel.forceActiveFocus()
             if (powerOpen) powerOpen = false
-            if (tab === 0) _homeLoaded = true
-            if (tab === 1) _settingsLoaded = true
-            if (tab === 2) _recentLoaded = true
             if (tab !== MenuState.activeTab) MenuState.activeTab = tab
             contentFlick.contentY = 0
-            if (focusNeedsReset) panel.forceActiveFocus()
+        }
+
+        function toggleSettingsNav(): void {
+            if (activeTab !== 1) {
+                settingsNavOpen = true
+                switchTab(1)
+                return
+            }
+            const focusedItem = _focusWindow ? _focusWindow.activeFocusItem : null
+            if (settingsNavOpen && _ownsItem(focusedItem, _settingsNavLoader.item))
+                _railSettings.forceActiveFocus()
+            settingsNavOpen = !settingsNavOpen
         }
 
         function closePowerAndRestoreFocus(): void {
             if (!powerOpen) return
+            // PowerRailContent drops out of tab focus when inactive; hand focus
+            // over first or Qt rejects the activeFocusOnTab change
+            _railPower.forceActiveFocus()
             powerOpen = false
             _powerFocusRestore.restart()
         }
@@ -248,28 +316,58 @@ PanelWindow {
                 panel.switchTab(index)
             }
             function onActiveTabChanged() {
-                if (MenuState.activeTab === 0) panel._homeLoaded = true
-                if (MenuState.activeTab === 1) panel._settingsLoaded = true
-                if (MenuState.activeTab === 2) panel._recentLoaded = true
                 contentFlick.contentY = 0
+                panel._syncPageRetention()
                 if (!MenuState.open) panel._settlePageVisuals()
             }
             function onOpenChanged() {
                 if (MenuState.open) {
                     contentFlick.contentY = 0
+                    contentFlick.syncScrollAffordance()
                     panel.forceActiveFocus()
                 } else {
+                    _scrollSettle.stop()
+                    _sectionScrollReset.stop()
                     _outsideTapGuard.stop()
                     win._ignoreOutsideTap = false
                 }
             }
-            function onSettingsSectionChanged() { _sectionScrollReset.restart() }
+            function onSettingsSectionChanged() {
+                if (MenuState.open && panel.activeTab === 1)
+                    _sectionScrollReset.restart()
+            }
         }
 
         Timer {
             id: _sectionScrollReset
             interval: Motion.pageOut
             onTriggered: contentFlick.contentY = 0
+        }
+
+        Timer {
+            id: _homeUnload
+            interval: Math.max(Motion.pageOut, Motion.ms(100)) + 30
+            onTriggered: if (panel.activeTab !== 0) panel._homeRetained = false
+        }
+
+        Timer {
+            id: _settingsUnload
+            // warm window: cheap Home/Settings comparisons without a session-long retain
+            interval: 8000
+            onTriggered: if (panel.activeTab !== 1) panel._settingsRetained = false
+        }
+
+        Timer {
+            id: _recentUnload
+            interval: Math.max(Motion.pageOut, Motion.ms(100)) + 30
+            onTriggered: if (panel.activeTab !== 2) panel._recentRetained = false
+        }
+
+        Timer {
+            id: _settingsNavPrewarm
+            // incubate after the entrance settles; switchTab() skips this delay
+            interval: Motion.popIn + Motion.ms(70)
+            onTriggered: panel._settingsNavRetained = true
         }
 
         Timer {
@@ -297,7 +395,10 @@ PanelWindow {
         Behavior on width {
             enabled: panel._geometryReady && panel.open
                 && !ShellSettings.reduceMotion
-            NumberAnimation { duration: Motion.panelResize; easing.type: Easing.OutQuart }
+            NumberAnimation {
+                duration: panel._panelWidthMotionMs
+                easing.type: Easing.OutQuint
+            }
         }
         Behavior on height {
             enabled: panel._geometryReady && panel.open
@@ -311,12 +412,12 @@ PanelWindow {
 
         onStateChanged: {
             if (state === "visible") {
-                if (activeTab === 1) _settingsLoaded = true
-                if (activeTab === 2) _recentLoaded = true
-                if (activeTab === 0) _homeLoaded = true
                 if (!_loadedDeferred) {
                     Qt.callLater(function() { _loadedDeferred = true })
                 }
+                if (!_settingsNavRetained) _settingsNavPrewarm.restart()
+            } else {
+                _settingsNavPrewarm.stop()
             }
         }
 
@@ -331,7 +432,10 @@ PanelWindow {
             Behavior on width {
                 enabled: panel._geometryReady && panel.open
                     && !ShellSettings.reduceMotion
-                NumberAnimation { duration: Motion.panelResize; easing.type: Easing.OutQuart }
+                NumberAnimation {
+                    duration: panel._railMotionMs
+                    easing.type: panel._railMotionEasing
+                }
             }
 
             Item {
@@ -347,26 +451,21 @@ PanelWindow {
                     color: Theme.menuPane
                 }
 
-                Rectangle {
+                Hairline {
                     anchors.right: parent.right
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
-                    width: 1
+                    vertical: true
                     color: Theme.menuDivider
                 }
 
                 Rectangle {
                     x: panel.railCollapsedW
+                    width: Math.max(0, parent.width - x)
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
-                    width: 1
-                    color: Theme.menuDivider
-                    opacity: panel._railExpanded ? 1 : 0
-                    visible: opacity > 0.001
-                    Behavior on opacity {
-                        enabled: !ShellSettings.reduceMotion
-                        NumberAnimation { duration: Motion.medium }
-                    }
+                    color: Theme.mix(Theme.menuPane, Theme.menuControl, 0.14)
+                    visible: panel._railExpanded
                 }
 
                 Item {
@@ -375,31 +474,36 @@ PanelWindow {
                     width: panel.navW
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
-                    property real _slide: panel.activeTab === 1
-                        && !panel.powerOpen ? 0 : -Motion.pageOffset
-                    opacity: panel.activeTab === 1 && !panel.powerOpen ? 1 : 0
+                    property real _slide: panel._settingsNavVisible
+                        ? 0 : -Motion.pageOffset
+                    opacity: panel._settingsNavVisible ? 1 : 0
                     visible: opacity > 0.001
-                    enabled: panel.activeTab === 1 && !panel.powerOpen
+                    enabled: panel._settingsNavVisible
                     transform: Translate { x: _settingsRailSurface._slide }
                     Behavior on opacity {
                         enabled: !ShellSettings.reduceMotion
                         NumberAnimation {
-                            duration: panel.activeTab === 1 ? Motion.pageIn : Motion.pageOut
-                            easing.type: panel.activeTab === 1 ? Easing.OutCubic : Easing.InCubic
+                            duration: panel._settingsNavVisible
+                                ? Motion.ms(130) : Motion.ms(90)
+                            easing.type: panel._settingsNavVisible
+                                ? Easing.OutCubic : Easing.InCubic
                         }
                     }
                     Behavior on _slide {
                         enabled: !ShellSettings.reduceMotion
                         NumberAnimation {
-                            duration: panel.activeTab === 1 ? Motion.panelResize : Motion.pageOut
-                            easing.type: panel.activeTab === 1 ? Easing.OutQuart : Easing.InCubic
+                            duration: panel._railMotionMs
+                            easing.type: panel._railMotionEasing
                         }
                     }
 
                     Loader {
                         id: _settingsNavLoader
                         anchors.fill: parent
-                        active: panel._settingsLoaded || panel.activeTab === 1
+                        active: panel._settingsNavRetained
+                            || panel.activeTab === 1
+                        // prewarm incubates across frames; a direct reveal must finish now
+                        asynchronous: !panel._settingsNavVisible
                         sourceComponent: Component {
                             SettingsNav {
                                 powerOpen: panel.powerOpen
@@ -451,6 +555,8 @@ PanelWindow {
 
             }
 
+            RailLabelGroup { id: _railLabels }
+
             Column {
                 id: _railNav
                 width: panel.railCollapsedW
@@ -460,6 +566,7 @@ PanelWindow {
 
                 RailNavItem {
                     id: _railHome
+                    labels: _railLabels
                     railW: panel.railCollapsedW
                     glyph: "󰋜"
                     label: "Home"
@@ -471,6 +578,7 @@ PanelWindow {
 
                 RailNavItem {
                     id: _railRecent
+                    labels: _railLabels
                     railW: panel.railCollapsedW
                     glyph: "󰋚"
                     label: "Notifications"
@@ -512,13 +620,18 @@ PanelWindow {
 
                 RailNavItem {
                     id: _railSettings
+                    labels: _railLabels
                     railW: panel.railCollapsedW
-                    glyph: "󰒓"
+                    glyph: panel.activeTab === 1 ? "󰍜" : "󰒓"
                     label: "Settings"
+                    accessibleDescription: panel.activeTab === 1
+                        ? (panel.settingsNavOpen ? "Collapse the settings sidebar"
+                            : "Expand the settings sidebar")
+                        : "Open Settings"
                     active: panel.activeTab === 1
                     KeyNavigation.up: _railRecent
                     KeyNavigation.down: _railPower
-                    onTapped: panel.switchTab(1)
+                    onTapped: panel.toggleSettingsNav()
                 }
             }
 
@@ -531,17 +644,17 @@ PanelWindow {
                 height: 1 + 10 + 34
                 z: 9
 
-                Rectangle {
+                Hairline {
                     id: _railDivider
                     anchors.top: parent.top
                     anchors.horizontalCenter: parent.horizontalCenter
                     width: 18
-                    height: 1
                     color: Theme.menuDivider
                 }
 
                 RailNavItem {
                     id: _railPower
+                    labels: _railLabels
                     anchors.top: _railDivider.bottom
                     anchors.topMargin: 10
                     anchors.horizontalCenter: parent.horizontalCenter
@@ -554,7 +667,10 @@ PanelWindow {
                     KeyNavigation.down: _railHome
                     onTapped: {
                         if (panel.powerOpen) panel.closePowerAndRestoreFocus()
-                        else panel.powerOpen = true
+                        else {
+                            _railPower.forceActiveFocus()
+                            panel.powerOpen = true
+                        }
                     }
                 }
             }
@@ -570,7 +686,10 @@ PanelWindow {
             Behavior on x {
                 enabled: panel._geometryReady && panel.open
                     && !ShellSettings.reduceMotion
-                NumberAnimation { duration: Motion.panelResize; easing.type: Easing.OutQuart }
+                NumberAnimation {
+                    duration: panel._railMotionMs
+                    easing.type: panel._railMotionEasing
+                }
             }
 
             Rectangle {
@@ -584,7 +703,8 @@ PanelWindow {
             }
 
             readonly property int targetH: {
-                const contentH = tabContent.y + tabContent.height + 12
+                const contentH = tabContent.y + tabContent.height
+                    + panel.pageBottomInset
                 const navH = panel.activeTab === 1
                     ? (_settingsNavLoader.item?.implicitHeight ?? 0) + 16 : 0
                 return 4 * Math.ceil(Math.max(panel.minRailFitH,
@@ -602,14 +722,32 @@ PanelWindow {
                 id: contentFlick
                 anchors.fill: parent
                 contentWidth: width
-                contentHeight: tabContent.y + tabContent.height + 12
+                contentHeight: tabContent.y + tabContent.height
+                    + panel.pageBottomInset
                 clip: true
                 boundsMovement: Flickable.StopAtBounds
                 flickDeceleration: 1800
                 maximumFlickVelocity: 2200
-                readonly property bool needsScroll:
-                    contentHeight > panel.targetPanelH + 1
-                interactive: !panel.powerOpen && panel.activeTab !== 2 && needsScroll
+                readonly property bool _overflows: contentHeight > height + 1
+                // scrolling reacts at once; the edge fades wait out the resize so a
+                // page swap can't flash them (see MenuScrollThumb)
+                property bool needsScroll: false
+                function syncScrollAffordance(): void {
+                    if (!contentFlick._overflows) {
+                        _scrollSettle.stop()
+                        contentFlick.needsScroll = false
+                    } else if (panel.open) {
+                        _scrollSettle.restart()
+                    }
+                }
+                on_OverflowsChanged: syncScrollAffordance()
+                Timer {
+                    id: _scrollSettle
+                    interval: Motion.panelHeight
+                    onTriggered: contentFlick.needsScroll = contentFlick._overflows
+                }
+                Component.onCompleted: syncScrollAffordance()
+                interactive: !panel.powerOpen && panel.activeTab !== 2 && _overflows
 
                 function clampToContent(): void {
                     const maxY = Math.max(0, contentHeight - height)
@@ -623,7 +761,7 @@ PanelWindow {
                 Item {
                     id: tabContent
                     x: panel.contentPad
-                    y: 12
+                    y: panel.pageTopInset
                     width: panel.innerW
                     readonly property bool _pagePending:
                         panel.activeTab === 1 ? settingsLoader.status !== Loader.Ready
@@ -643,7 +781,8 @@ PanelWindow {
                         id: _pagePlaceholder
                         width: parent.width
                         height: implicitHeight
-                        implicitHeight: Math.max(220, panel.idealMinH - tabContent.y - 16)
+                        implicitHeight: Math.max(1, panel.idealMinH
+                            - panel.pageTopInset - panel.pageBottomInset)
                         opacity: tabContent._pagePending ? 1 : 0
                         visible: opacity > 0.001
                         enabled: false
@@ -667,10 +806,13 @@ PanelWindow {
                                 color: tabContent._pageError
                                     ? Theme.withAlpha(Theme.error, 0.10)
                                     : Theme.withAlpha(Theme.accent, 0.08)
-                                border.width: 1
-                                border.color: tabContent._pageError
-                                    ? Theme.withAlpha(Theme.error, 0.34)
-                                    : Theme.withAlpha(Theme.accent, 0.20)
+
+                                OutlineBorder {
+                                    radius: 20
+                                    outlineColor: tabContent._pageError
+                                        ? Theme.withAlpha(Theme.error, 0.34)
+                                        : Theme.withAlpha(Theme.accent, 0.20)
+                                }
 
                                 Text {
                                     anchors.centerIn: parent
@@ -717,7 +859,7 @@ PanelWindow {
                     Loader {
                         id: homeLoader
                         width: parent.width
-                        active: panel._homeLoaded
+                        active: panel._homeRetained
                         asynchronous: false
                         sourceComponent: Component {
                             HomePage {
@@ -731,7 +873,7 @@ PanelWindow {
                     Loader {
                         id: settingsLoader
                         width: parent.width
-                        active: panel._loadedDeferred && (panel._settingsLoaded || panel.activeTab === 1)
+                        active: panel._loadedDeferred && panel._settingsRetained
                         asynchronous: true
                         sourceComponent: Component {
                             SettingsPage {
@@ -745,15 +887,12 @@ PanelWindow {
                     Loader {
                         id: recentLoader
                         width: parent.width
-                        active: panel._loadedDeferred && (panel._recentLoaded || panel.activeTab === 2)
+                        active: panel._loadedDeferred && panel._recentRetained
                         asynchronous: true
                         sourceComponent: Component {
                             RecentPage {
                                 width: parent.width
-                                viewportHeight: Math.max(220,
-                                    Math.min(panel.idealMinH,
-                                        panel._availablePanelH)
-                                        - tabContent.y - 16)
+                                viewportHeight: panel.recentViewportH
                                 active: panel.activeTab === 2 && MenuState.open
                                 powerOpen: panel.powerOpen
                             }
@@ -770,41 +909,16 @@ PanelWindow {
                 z: 4
             }
 
-            Rectangle {
-                id: _contentScrollThumb
-                readonly property real _trackH: Math.max(1, contentPane.height - 16)
-                readonly property real _overflow: Math.max(1,
-                    contentFlick.contentHeight - contentFlick.height)
-
-                anchors.right: parent.right
-                anchors.rightMargin: 3
-                y: 8 + Math.max(0, _trackH - height)
-                    * (contentFlick.contentY / _overflow)
-                width: 2
-                height: Math.min(_trackH, Math.max(22, _trackH * Math.min(1,
-                    contentFlick.height / Math.max(1, contentFlick.contentHeight))))
-                radius: 1
-                antialiasing: true
-                color: Theme.accent
-                opacity: visible ? (contentFlick.moving ? 0.62 : 0.26) : 0
-                visible: !panel.powerOpen && panel.activeTab !== 2
-                    && contentFlick.needsScroll
+            MenuScrollThumb {
+                list: contentFlick
+                shown: !panel.powerOpen && panel.activeTab !== 2
                 z: 5
-
-                Behavior on opacity {
-                    enabled: !ShellSettings.reduceMotion
-                    NumberAnimation { duration: Motion.fast }
-                }
             }
         }
 
-        Rectangle {
-            anchors.fill: parent
+        OutlineBorder {
             radius: panel.radius
-            antialiasing: true
-            color: "transparent"
-            border.width: 1
-            border.color: Theme.outline
+            outlineColor: Theme.outline
             z: 20
         }
     }

@@ -18,13 +18,13 @@ Item {
 
     implicitHeight: _navContentHeight()
 
-    readonly property int _navTop:       8
+    readonly property int _navTop:      38
     readonly property int _navBottom:    8
-    readonly property int _groupH:      30
-    readonly property int _groupGap:     3
-    readonly property int _childrenPad:  4
-    readonly property int _navRowH:     30
-    readonly property int _navRowGap:    2
+    readonly property int _groupH:      29
+    readonly property int _groupGap:     2
+    readonly property int _childrenPad:  3
+    readonly property int _navRowH:     29
+    readonly property int _navRowGap:    1
 
     function _leaves(it): var {
         return it.children ? it.children : [it]
@@ -87,9 +87,12 @@ Item {
 
     function _sectionRowY(section: string): real {
         const groupIndex = root._groupIndexForSection(section)
+        if (groupIndex < 0) return root._navTop
+        const groupTop = root._groupY(groupIndex)
+        if (groupIndex !== root._expandedGroup) return groupTop
         const leafIndex = root._leafIndexForSection(groupIndex, section)
-        if (groupIndex < 0 || leafIndex < 0) return root._navTop
-        return root._groupY(groupIndex) + root._groupH + root._childrenPad
+        if (leafIndex < 0) return groupTop
+        return groupTop + root._groupH + root._childrenPad
             + leafIndex * (root._navRowH + root._navRowGap)
     }
 
@@ -112,12 +115,13 @@ Item {
     }
 
     function _scrollToSelection(): void {
+        if (!root.active) return
         const y = root._sectionRowY(MenuState.settingsSection)
         root._revealRange(y, y + root._navRowH)
     }
 
     function _scrollToExpandedGroup(): void {
-        if (root._expandedGroup < 0) return
+        if (!root.active || root._expandedGroup < 0) return
         const tree = MenuState.settingsTree
         const y = root._groupY(root._expandedGroup)
         root._revealRange(y, y + root._groupFinalHeight(root._expandedGroup,
@@ -128,9 +132,19 @@ Item {
         const oldGroup = root._expandedGroup >= 0
             ? _groupRepeater.itemAt(root._expandedGroup) : null
         const restoreFocus = oldGroup && oldGroup.hasFocusedItem()
-        root._expandedGroup = root._expandedGroup === index ? -1 : index
+        const opening = root._expandedGroup !== index
+        // move focus before collapsing destroys the focused leaf, or Qt
+        // rejects the activeFocusOnTab change
+        if (restoreFocus) root._focusGroupHeader(index)
+        root._expandedGroup = opening ? index : -1
         _disclosureSettle.restart()
-        if (restoreFocus) Qt.callLater(function() { root._focusGroupHeader(index) })
+
+        if (opening) {
+            const group = MenuState.settingsTree[index]
+            const leaves = root._leaves(group)
+            if (leaves.length > 0 && !root._groupContainsSection(group, MenuState.settingsSection))
+                root._activateSection(leaves[0].section)
+        }
     }
 
     function _activateSection(section: string): void {
@@ -183,20 +197,32 @@ Item {
         onTriggered: root._scrollToSelection()
     }
 
-    Component.onCompleted: Qt.callLater(root._scrollToSelection)
-    onActiveChanged: {
-        if (!active) return
+    function _selectGroupAndScroll(): void {
         const selectedGroup = root._groupIndexForSection(MenuState.settingsSection)
-        if (selectedGroup >= 0) root._expandedGroup = selectedGroup
-        Qt.callLater(root._scrollToSelection)
+        if (selectedGroup >= 0 && selectedGroup !== root._expandedGroup) {
+            root._expandedGroup = selectedGroup
+            _disclosureSettle.restart()
+        } else {
+            Qt.callLater(root._scrollToSelection)
+        }
+    }
+
+    Component.onCompleted: {
+        if (root.active) Qt.callLater(root._scrollToSelection)
+    }
+    onActiveChanged: {
+        if (!active) {
+            _disclosureSettle.stop()
+            _resizeSettle.stop()
+            return
+        }
+        root._selectGroupAndScroll()
     }
 
     Connections {
         target: MenuState
         function onSettingsSectionChanged() {
-            const selectedGroup = root._groupIndexForSection(MenuState.settingsSection)
-            if (selectedGroup >= 0) root._expandedGroup = selectedGroup
-            Qt.callLater(root._scrollToSelection)
+            if (root.active) root._selectGroupAndScroll()
         }
     }
 
@@ -211,7 +237,7 @@ Item {
         maximumFlickVelocity: 2200
         interactive: contentHeight > height + 1
 
-        onHeightChanged: _resizeSettle.restart()
+        onHeightChanged: if (root.active) _resizeSettle.restart()
 
         Behavior on contentY {
             enabled: !ShellSettings.reduceMotion && !_navScroll.moving
@@ -221,7 +247,26 @@ Item {
         Item {
             id: _content
             width: root.width
-            height: root._navContentHeight()
+            height: root.implicitHeight
+
+            Text {
+                x: 12
+                y: 10
+                width: Math.max(1, parent.width - 24)
+                height: 18
+                verticalAlignment: Text.AlignVCenter
+                text: "Settings"
+                textFormat: Text.PlainText
+                elide: Text.ElideRight
+                color: Theme.withAlpha(
+                    Theme.mix(Theme.menuTextMuted, Theme.accent, 0.12), 0.82)
+                font.family: Settings.font
+                font.pixelSize: Math.max(8, Settings.fontSize - 2)
+                font.letterSpacing: 0.65
+                font.weight: Font.DemiBold
+                font.capitalization: Font.AllUppercase
+                renderType: Text.NativeRendering
+            }
 
             Column {
                 id: _groupColumn
@@ -284,9 +329,12 @@ Item {
                                 ? Theme.withAlpha(Theme.accent, 0.065)
                                 : _headerHover.hovered
                                     ? Theme.withAlpha(Theme.text, 0.035)
-                                    : "transparent"
-                            border.width: activeFocus ? 1 : 0
-                            border.color: Theme.withAlpha(Theme.accent, 0.30)
+                                    : _grp.expanded
+                                        ? Theme.withAlpha(Theme.accent, 0.035)
+                                    : (_grp.groupActive && !_grp.expanded)
+                                        ? Theme.mix(Theme.menuControl, Theme.accent,
+                                            ShellSettings.highContrast ? 0.16 : 0.10)
+                                        : "transparent"
                             activeFocusOnTab: root.active
                             Accessible.role: Accessible.Button
                             Accessible.name: _grp.modelData.label + " settings category"
@@ -338,18 +386,13 @@ Item {
                                 enabled: !ShellSettings.reduceMotion
                                 ColorAnimation { duration: Motion.fast }
                             }
-                            Rectangle {
-                                visible: _grp.groupActive && !_grp.expanded
-                                anchors.left: parent.left
-                                anchors.leftMargin: 2
-                                anchors.verticalCenter: parent.verticalCenter
-                                width: 2
-                                height: 13
-                                radius: 1
-                                antialiasing: true
-                                color: Theme.accent
-                            }
 
+                            OutlineBorder {
+                                radius: _grpHeader.radius
+                                outlineColor: _grpHeader.activeFocus
+                                    ? Theme.withAlpha(Theme.accent, 0.42)
+                                    : "transparent"
+                            }
                             Text {
                                 id: _groupGlyph
                                 visible: !root.compact
@@ -433,9 +476,9 @@ Item {
 
                             Column {
                                 id: _leafColumn
-                                x: 10
+                                x: 8
                                 y: root._childrenPad
-                                width: parent.width - 10
+                                width: parent.width - 8
                                 spacing: root._navRowGap
                                 property real _shift: _grp.expanded ? 0 : -4
                                 opacity: _grp.expanded ? 1 : 0
@@ -458,7 +501,8 @@ Item {
 
                                 Repeater {
                                     id: _leafRepeater
-                                    model: _grp.leaves
+                                    model: _grp.expanded || _leafBox.height > 0.5
+                                        ? _grp.leaves : []
 
                                     delegate: Rectangle {
                                         id: _leaf
@@ -473,12 +517,10 @@ Item {
                                         antialiasing: true
                                         color: active
                                             ? Theme.mix(Theme.menuControl, Theme.accent,
-                                                ShellSettings.highContrast ? 0.10 : 0.035)
+                                                ShellSettings.highContrast ? 0.18 : 0.13)
                                             : _leafHover.hovered || activeFocus
                                                 ? Theme.withAlpha(Theme.text, 0.042)
                                                 : "transparent"
-                                        border.width: activeFocus ? 1 : 0
-                                        border.color: Theme.withAlpha(Theme.accent, 0.34)
 
                                         activeFocusOnTab: root.active && _grp.expanded
                                         Accessible.role: Accessible.Button
@@ -528,6 +570,13 @@ Item {
                                         Behavior on color {
                                             enabled: !ShellSettings.reduceMotion
                                             ColorAnimation { duration: Motion.fast }
+                                        }
+
+                                        OutlineBorder {
+                                            radius: _leaf.radius
+                                            outlineColor: _leaf.activeFocus
+                                                ? Theme.withAlpha(Theme.accent, 0.42)
+                                                : "transparent"
                                         }
 
                                         Text {

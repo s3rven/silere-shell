@@ -1,15 +1,21 @@
 import QtQuick
 import "../../config"
 import "../../services"
+import "../common"
 
 Item {
     id: root
 
     property string glyph: ""
     property string label: ""
+    property string accessibleDescription: ""
     property bool active: false
     property color accentColor: Theme.accent
     property int railW: 44
+    property RailLabelGroup labels: null
+    property bool _hoverReady: false
+
+    readonly property bool _hot: _hover.hovered || root.activeFocus
 
     signal tapped()
 
@@ -18,9 +24,35 @@ Item {
     activeFocusOnTab: true
     Accessible.role: Accessible.Button
     Accessible.name: root.label
+    Accessible.description: root.accessibleDescription.length > 0
+        ? root.accessibleDescription
+        : (root.active ? "Current page" : "Open " + root.label)
+    Accessible.selectable: true
+    Accessible.selected: root.active
     Accessible.onPressAction: root.tapped()
 
-    HoverHandler { id: _hover; cursorShape: Qt.PointingHandCursor }
+    Timer {
+        id: _labelDelay
+        interval: 220
+        onTriggered: root._hoverReady = _hover.hovered
+    }
+
+    HoverHandler {
+        id: _hover
+        cursorShape: Qt.PointingHandCursor
+        onHoveredChanged: {
+            if (hovered) {
+                // once one rail label has shown, the next reads instantly — a per-item
+                // delay makes a sweep down the rail look like it drops labels at random
+                if (root.labels && root.labels.warm) root._hoverReady = true
+                else _labelDelay.restart()
+            } else {
+                _labelDelay.stop()
+                root._hoverReady = false
+                if (root.labels) root.labels.release()
+            }
+        }
+    }
     TapHandler   { id: _tap; onTapped: root.tapped() }
     Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root.tapped(); event.accepted = true }
     Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root.tapped(); event.accepted = true }
@@ -37,18 +69,24 @@ Item {
     Rectangle {
         id: _activeBg
         anchors.centerIn: parent
-        width: 28; height: 28; radius: 8
+        width: 30; height: 30; radius: 9
         antialiasing: true
-        color: root.active ? Theme.menuControl
-                           : (_hover.hovered || root.activeFocus ? Theme.withAlpha(Theme.text, 0.045) : "transparent")
-        border.width: root.active || _hover.hovered || root.activeFocus ? 1 : 0
-        border.color: root.active ? Theme.menuControlLine
-                                  : Theme.menuControlLineHot
-        scale: (root.active || _hover.hovered || root.activeFocus) ? 1.0 : 0.90
+        color: _tap.pressed
+            ? Theme.mix(Theme.menuControl, root.accentColor, 0.10)
+            : root.active ? Theme.menuControl
+            : root._hot ? Theme.withAlpha(Theme.text, 0.050) : "transparent"
+        scale: _tap.pressed ? 0.94 : (root.active || root._hot ? 1.0 : 0.90)
         transformOrigin: Item.Center
         Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
-        Behavior on border.color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
         Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(135); easing.type: Easing.OutCubic } }
+
+        OutlineBorder {
+            radius: _activeBg.radius
+            outlineColor: (root.active || _hover.hovered || root.activeFocus)
+                ? (root.active ? Theme.menuControlLine : Theme.menuControlLineHot)
+                : "transparent"
+            Behavior on outlineColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+        }
     }
 
     Text {
@@ -72,17 +110,27 @@ Item {
 
     Rectangle {
         id: _pill
-        readonly property bool _show: _hover.hovered && !root.active
+        // focus alone only labels an inactive item: tapping Power force-focuses it,
+        // which otherwise pins the label open for as long as the rail stays open
+        readonly property bool _show: (_hover.hovered && root._hoverReady)
+            || (root.activeFocus && !root.active)
+        on_ShowChanged: if (_show && root.labels) root.labels.engage()
 
-        x: root.railW + 6
+        x: root.railW + 7
         anchors.verticalCenter: parent.verticalCenter
         width: _pillLabel.implicitWidth + 18
         height: 22; radius: 8
         color: Theme.menuCard
-        border.width: 1; border.color: Theme.menuCardBorder
         antialiasing: true
         opacity: _show ? 1.0 : 0.0
         scale:   _show ? 1.0 : 0.96
+        property real _slide: _show ? 0 : -3
+        transform: Translate { x: _pill._slide }
+
+        OutlineBorder {
+            radius: _pill.radius
+            outlineColor: Theme.menuCardBorder
+        }
         visible: opacity > 0.01
         transformOrigin: Item.Left
         z: 10
@@ -91,6 +139,10 @@ Item {
             NumberAnimation { duration: _pill._show ? Motion.fast : Motion.instant; easing.type: Easing.OutCubic }
         }
         Behavior on scale {
+            enabled: !ShellSettings.reduceMotion
+            NumberAnimation { duration: _pill._show ? Motion.fast : Motion.instant; easing.type: Easing.OutCubic }
+        }
+        Behavior on _slide {
             enabled: !ShellSettings.reduceMotion
             NumberAnimation { duration: _pill._show ? Motion.fast : Motion.instant; easing.type: Easing.OutCubic }
         }
