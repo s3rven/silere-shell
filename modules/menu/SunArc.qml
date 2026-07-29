@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import "../../config"
 import "../../services"
+import "../common"
 
 Rectangle {
     id: root
@@ -15,8 +16,11 @@ Rectangle {
     radius: flat ? 0 : 12
     antialiasing: !flat
     color: flat ? "transparent" : Theme.mix(Theme.surface, Theme.subtext, 0.06)
-    border.width: flat ? 0 : 1
-    border.color: Theme.menuCardBorder
+
+    OutlineBorder {
+        radius: root.radius
+        outlineColor: root.flat ? "transparent" : Theme.menuCardBorder
+    }
 
     readonly property bool _isDay: NightLight.isDaytime
 

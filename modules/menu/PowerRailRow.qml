@@ -47,11 +47,19 @@ Rectangle {
     color: root.armed
         ? Theme.withAlpha(Theme.error, 0.105)
         : root._hot ? Theme.withAlpha(Theme.text, 0.045) : "transparent"
-    border.width: root.activeFocus && !root.armed ? 1 : 0
-    border.color: root.armed ? Theme.withAlpha(Theme.error, 0.54)
-        : root.dangerous ? Theme.withAlpha(Theme.error, 0.34)
-        : Theme.menuControlLineHot
     activeFocusOnTab: root.enabled && root.interactive
+
+    OutlineBorder {
+        radius: root.radius
+        outlineWidth: 2
+        outlineColor: root.activeFocus && !root.armed
+            ? (root.dangerous ? Theme.withAlpha(Theme.error, 0.34) : Theme.menuControlLineHot)
+            : "transparent"
+        Behavior on outlineColor {
+            enabled: !ShellSettings.reduceMotion
+            ColorAnimation { duration: Motion.fast }
+        }
+    }
 
     Accessible.role: root.interactive ? Accessible.Button : Accessible.StaticText
     Accessible.name: root.armed ? root.label + ", press again to confirm" : root.label
@@ -134,10 +142,6 @@ Rectangle {
     }
 
     Behavior on color {
-        enabled: !ShellSettings.reduceMotion
-        ColorAnimation { duration: Motion.fast }
-    }
-    Behavior on border.color {
         enabled: !ShellSettings.reduceMotion
         ColorAnimation { duration: Motion.fast }
     }

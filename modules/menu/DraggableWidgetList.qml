@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import "../../config"
 import "../../services"
+import "../common"
 
 Item {
     id: root
@@ -128,12 +129,16 @@ Item {
     }
 
     Rectangle {
+        id: _surface
         anchors.fill: parent
         radius: Theme.radiusControl
         antialiasing: true
         color: Theme.menuCard
-        border.width: 1
-        border.color: Theme.menuCardBorder
+
+        OutlineBorder {
+            radius: _surface.radius
+            outlineColor: Theme.menuCardBorder
+        }
     }
 
     Item {
@@ -155,65 +160,25 @@ Item {
             renderType: Text.NativeRendering
         }
 
-        Item {
+        ActionButton {
             id: _reset
             anchors.right: parent.right
             anchors.rightMargin: 8
             anchors.verticalCenter: parent.verticalCenter
-            width: 44
-            height: 28
-            activeFocusOnTab: true
-
-            Accessible.role: Accessible.Button
-            Accessible.name: "Reset bar widgets"
-            Accessible.onPressAction: ShellSettings.resetBarWidgets()
-            Keys.onSpacePressed: event => {
-                if (!event.isAutoRepeat) ShellSettings.resetBarWidgets()
-                event.accepted = true
-            }
-            Keys.onReturnPressed: event => {
-                if (!event.isAutoRepeat) ShellSettings.resetBarWidgets()
-                event.accepted = true
-            }
-            Keys.onEnterPressed: event => {
-                if (!event.isAutoRepeat) ShellSettings.resetBarWidgets()
-                event.accepted = true
-            }
-            HoverHandler {
-                id: _resetHover
-                cursorShape: Qt.PointingHandCursor
-            }
-            TapHandler { onTapped: ShellSettings.resetBarWidgets() }
-
-            Text {
-                anchors.centerIn: parent
-                text: "Reset"
-                color: _reset.activeFocus || _resetHover.hovered
-                    ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.62)
-                font.family: Settings.font
-                font.pixelSize: Settings.fontSize - 2
-                renderType: Text.NativeRendering
-                Behavior on color { ColorAnimation { duration: Motion.fast } }
-            }
-
-            Rectangle {
-                visible: _reset.activeFocus
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                height: 2
-                radius: 1
-                color: Theme.accent
-            }
+            width: contentWidth
+            height: 24
+            radius: 7
+            label: "Reset"
+            accessibleName: "Reset bar widgets"
+            onTriggered: ShellSettings.resetBarWidgets()
         }
 
-        Rectangle {
+        Hairline {
             anchors.left: parent.left
             anchors.leftMargin: 10
             anchors.right: parent.right
             anchors.rightMargin: 10
             anchors.bottom: parent.bottom
-            height: 1
             color: Theme.menuDivider
         }
     }
@@ -242,7 +207,10 @@ Item {
                 font.pixelSize: Settings.fontSize - 2
                 font.weight: Font.DemiBold
                 renderType: Text.NativeRendering
-                Behavior on color { ColorAnimation { duration: Motion.fast } }
+                Behavior on color {
+                    enabled: !ShellSettings.reduceMotion
+                    ColorAnimation { duration: Motion.fast }
+                }
             }
 
             Behavior on y {
@@ -364,7 +332,10 @@ Item {
                 font.family: Settings.font
                 font.pixelSize: Settings.fontSize + 1
                 renderType: Text.NativeRendering
-                Behavior on color { ColorAnimation { duration: Motion.fast } }
+                Behavior on color {
+                    enabled: !ShellSettings.reduceMotion
+                    ColorAnimation { duration: Motion.fast }
+                }
             }
 
             Text {
@@ -380,7 +351,10 @@ Item {
                 font.family: Settings.font
                 font.pixelSize: Settings.fontSize
                 renderType: Text.NativeRendering
-                Behavior on color { ColorAnimation { duration: Motion.fast } }
+                Behavior on color {
+                    enabled: !ShellSettings.reduceMotion
+                    ColorAnimation { duration: Motion.fast }
+                }
             }
 
             Item {
@@ -390,7 +364,7 @@ Item {
                 width: 44
                 height: parent.height
 
-                HoverHandler { cursorShape: Qt.PointingHandCursor }
+                HoverHandler { id: _toggleHover; cursorShape: Qt.PointingHandCursor }
                 TapHandler {
                     onTapped: {
                         _toggle.armFlipAnimation()
@@ -402,6 +376,7 @@ Item {
                     id: _toggle
                     anchors.centerIn: parent
                     checked: _row.checked
+                    highlighted: _toggleHover.hovered || _keyFocus.activeFocus
                 }
             }
 
@@ -417,6 +392,7 @@ Item {
                 Accessible.description: (_row.zone === "left" ? "Left" : "Right")
                     + " side. Arrow keys navigate; Left and Right change sides; Control Up and Down reorder."
                 Accessible.onPressAction: activateToggle()
+                Accessible.onToggleAction: activateToggle()
 
                 function activateToggle(): bool {
                     if (!_row.hasToggle) return false
@@ -472,8 +448,16 @@ Item {
             radius: 8
             antialiasing: true
             color: Theme.withAlpha(Theme.accent, hot ? 0.08 : 0.025)
-            border.width: 1
-            border.color: Theme.withAlpha(Theme.accent, hot ? 0.38 : 0.14)
+
+            OutlineBorder {
+                radius: _empty.radius
+                outlineColor: Theme.withAlpha(Theme.accent,
+                    _empty.hot ? 0.38 : 0.14)
+                Behavior on outlineColor {
+                    enabled: !ShellSettings.reduceMotion
+                    ColorAnimation { duration: Motion.fast }
+                }
+            }
 
             Text {
                 anchors.centerIn: parent
@@ -488,8 +472,10 @@ Item {
                 enabled: !ShellSettings.reduceMotion
                 NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
             }
-            Behavior on color { ColorAnimation { duration: Motion.fast } }
-            Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+            Behavior on color {
+                enabled: !ShellSettings.reduceMotion
+                ColorAnimation { duration: Motion.fast }
+            }
         }
     }
 }

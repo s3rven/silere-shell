@@ -29,6 +29,8 @@ Rectangle {
 
     property bool flat: false
 
+    readonly property bool _compactActions: width < 300
+
     signal primaryTriggered()
     signal secondaryTriggered()
 
@@ -39,8 +41,11 @@ Rectangle {
     antialiasing: true
     clip: true
     color: root.flat ? "transparent" : Theme.menuCard
-    border.width: root.flat ? 0 : 1
-    border.color: Theme.menuCardBorder
+
+    OutlineBorder {
+        radius: root.radius
+        outlineColor: root.flat ? "transparent" : Theme.menuCardBorder
+    }
 
     Column {
         id: _col
@@ -64,7 +69,10 @@ Rectangle {
                 font.family: Settings.font
                 font.pixelSize: Settings.fontSize + 4
                 renderType: Text.NativeRendering
-                Behavior on color { ColorAnimation { duration: Motion.medium } }
+                Behavior on color {
+                    enabled: !ShellSettings.reduceMotion
+                    ColorAnimation { duration: Motion.medium }
+                }
 
                 transform: Rotation {
                     id: _rot
@@ -125,7 +133,10 @@ Rectangle {
                         font.family: Settings.font
                         font.pixelSize: Settings.fontSize - 2
                         renderType: Text.NativeRendering
-                        Behavior on color { ColorAnimation { duration: Motion.medium } }
+                        Behavior on color {
+                            enabled: !ShellSettings.reduceMotion
+                            ColorAnimation { duration: Motion.medium }
+                        }
                     }
                     Text {
                         id: _sub
@@ -156,7 +167,7 @@ Rectangle {
                     visible: root.secondaryShown
                     width: contentWidth
                     height: 28
-                    label: root.secondaryLabel
+                    label: root._compactActions ? "" : root.secondaryLabel
                     glyph: root.secondaryGlyph
                     accessibleName: root.secondaryAccessibleName
                     enabled: root.secondaryEnabled
@@ -164,10 +175,11 @@ Rectangle {
                 }
 
                 ActionButton {
-                    width: Math.max(contentWidth, 116)
+                    width: contentWidth
                     height: 28
-                    label: root.primaryLabel
+                    label: root._compactActions ? "" : root.primaryLabel
                     glyph: root.primaryGlyph
+                    accessibleName: root.primaryLabel
                     enabled: root.primaryEnabled
                     emphasis: root.primaryEmphasis
                     accentColor: root.primaryColor

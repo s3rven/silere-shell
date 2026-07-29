@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import "../../../config"
 import "../../../services"
+import "../../common"
 
 Item {
     id: root
@@ -20,6 +21,11 @@ Item {
 
     readonly property bool _gemMarker:  ShellSettings.wsActiveMarker === "gem"
     readonly property bool _dotMarker:  ShellSettings.wsActiveMarker === "dot"
+    readonly property bool _menuTargetsThisBar: {
+        const target = MenuState.triggerScreen
+        return target ? target.name === root.screen.name
+                      : Monitors.activeName === root.screen.name
+    }
 
     readonly property int effectiveWsCount: Math.max(1, minVisible)
     property int _lastNormalActiveId: 1
@@ -468,7 +474,7 @@ Item {
             scale:   root.inSpecial ? 1.0 : 0.76
             transformOrigin: Item.Center
             visible: root._gemMarker && opacity > 0.01
-            Behavior on opacity { NumberAnimation { duration: Motion.ms(root.inSpecial ? 180 : 130); easing.type: Easing.OutCubic } }
+            Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(root.inSpecial ? 180 : 130); easing.type: Easing.OutCubic } }
             Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(root.inSpecial ? 210 : 130); easing.type: Easing.OutQuart } }
         }
         Rectangle {
@@ -483,7 +489,7 @@ Item {
             scale:   root.inSpecial ? 1.0 : 0.68
             transformOrigin: Item.Center
             visible: opacity > 0.01
-            Behavior on opacity { NumberAnimation { duration: Motion.ms(root.inSpecial ? 165 : 120); easing.type: Easing.OutCubic } }
+            Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(root.inSpecial ? 165 : 120); easing.type: Easing.OutCubic } }
             Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(root.inSpecial ? 190 : 120); easing.type: Easing.OutQuart } }
         }
 
@@ -499,7 +505,7 @@ Item {
             opacity: root._gemMarker ? 0.55 + diamond._energy * 0.22 : diamond._energy * 0.60
             scale: 1.0 + diamond._energy * (root._gemMarker ? 0.035 : 0.10)
             visible: opacity > 0.01
-            Behavior on color   { ColorAnimation { duration: Motion.ms(150) } }
+            Behavior on color   { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.ms(150) } }
         }
 
         Rectangle {
@@ -522,7 +528,7 @@ Item {
             rotation: root._gemMarker ? 45 : 0
             antialiasing: true
             color: diamond.tint
-            Behavior on color { ColorAnimation { duration: Motion.ms(150) } }
+            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.ms(150) } }
 
             Rectangle {
                 anchors.fill: parent
@@ -580,7 +586,7 @@ Item {
             scale:   _show ? 1 : 0.2
             transformOrigin: Item.Center
             visible: opacity > 0.01
-            Behavior on opacity { NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
+            Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
             Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(150); easing.type: Easing.OutCubic } }
         }
 
@@ -610,8 +616,8 @@ Item {
         }
 
         Behavior on x           { enabled: ShellSettings.workspaceShift && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(190); easing.type: Easing.OutQuart } }
-        Behavior on opacity     { NumberAnimation { duration: Motion.ms(150) } }
-        Behavior on _hoverScale { NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
+        Behavior on opacity     { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(150) } }
+        Behavior on _hoverScale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
         Behavior on _trailX     { enabled: ShellSettings.workspaceShift && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(260); easing.type: Easing.OutQuart } }
 
         onTargetXChanged: {
@@ -642,8 +648,11 @@ Item {
         }
         Connections {
             target: MenuState
-            enabled: !ShellSettings.reduceMotion
-            function onOpenChanged() { if (MenuState.open) _menuRippleAnim.restart() }
+            enabled: !ShellSettings.reduceMotion && root.barActive
+            function onOpenChanged() {
+                if (MenuState.open && root._menuTargetsThisBar)
+                    _menuRippleAnim.restart()
+            }
         }
     }
 
@@ -747,17 +756,21 @@ Item {
                 HoverHandler { id: _hover; cursorShape: Qt.PointingHandCursor }
 
                 Rectangle {
+                    id: _wsFocusRing
                     anchors.centerIn: parent
                     width: Math.min(parent.width, root.btnW)
                     height: root.btnH
                     radius: height / 2
                     antialiasing: true
                     color: Theme.withAlpha(Theme.accent, 0.10)
-                    border.width: 1
-                    border.color: Theme.withAlpha(Theme.accent, 0.72)
                     opacity: ws.activeFocus ? 1.0 : 0.0
                     visible: opacity > 0.001
                     Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+
+                    OutlineBorder {
+                        radius: _wsFocusRing.radius
+                        outlineColor: Theme.withAlpha(Theme.accent, 0.72)
+                    }
                 }
 
                 TapHandler {
@@ -857,9 +870,9 @@ Item {
                     font.family:    Settings.font
                     renderType:     Text.NativeRendering
 
-                    Behavior on opacity { NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
-                    Behavior on scale   { NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
-                    Behavior on color   { ColorAnimation  { duration: Motion.color } }
+                    Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
+                    Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
+                    Behavior on color   { enabled: !ShellSettings.reduceMotion; ColorAnimation  { duration: Motion.color } }
                 }
 
                 Rectangle {
@@ -876,8 +889,8 @@ Item {
                     color: ws.urgent ? Theme.warning : Theme.withAlpha(Theme.subtext, 0.85)
                     scale: ws._hoverFx ? 1.2 : 1.0
 
-                    Behavior on color { ColorAnimation { duration: Motion.color } }
-                    Behavior on scale { NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
+                    Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.color } }
+                    Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
                 }
 
                 Loader {
@@ -914,7 +927,7 @@ Item {
         height: root.btnH
         opacity: shown ? 1 : 0
         visible: opacity > 0.01
-        Behavior on opacity { NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
+        Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
 
         activeFocusOnTab: shown
         Accessible.role: Accessible.Button

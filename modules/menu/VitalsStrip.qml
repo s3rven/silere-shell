@@ -1,6 +1,7 @@
 import QtQuick
 import "../../config"
 import "../../services"
+import "../common"
 
 // static layout + in-place bindings: no Repeater model or Canvas that would rebuild every 60fps alert poll
 Rectangle {
@@ -15,8 +16,11 @@ Rectangle {
     radius: Theme.radiusCard
     antialiasing: true
     color: Theme.menuCard
-    border.width: 1
-    border.color: Theme.menuCardBorder
+
+    OutlineBorder {
+        radius: root.radius
+        outlineColor: Theme.menuCardBorder
+    }
 
     component Vital: Item {
         id: tile
@@ -38,6 +42,10 @@ Rectangle {
                                     : Theme.menuTextMuted
 
         height: 70
+
+        Accessible.role: Accessible.StaticText
+        Accessible.name: tile.label
+        Accessible.description: tile.value + (tile.sub !== "" ? ", " + tile.sub : "")
 
         readonly property real _p: Math.max(0, Math.min(1, progress))
         property real _disp: _p
@@ -138,7 +146,10 @@ Rectangle {
                 radius: parent.radius
                 antialiasing: true
                 color: tile.status > 0 ? tile.tint : Theme.withAlpha(Theme.accent, 0.70)
-                Behavior on color { ColorAnimation { duration: Motion.color } }
+                Behavior on color {
+                    enabled: !ShellSettings.reduceMotion
+                    ColorAnimation { duration: Motion.color }
+                }
             }
         }
     }

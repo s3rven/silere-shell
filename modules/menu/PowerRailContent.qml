@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import "../../config"
 import "../../services"
+import "../common"
 
 Item {
     id: root
@@ -173,14 +174,12 @@ Item {
                     font.capitalization: Font.AllUppercase
                     renderType: Text.NativeRendering
                 }
-                Rectangle {
+                Hairline {
                     anchors.left: _actionsHdr.right
                     anchors.leftMargin: 8
                     anchors.right: parent.right
                     anchors.rightMargin: 8
                     anchors.verticalCenter: _actionsHdr.verticalCenter
-                    height: 1
-                    radius: 0.5
                     color: Theme.menuDivider
                 }
             }

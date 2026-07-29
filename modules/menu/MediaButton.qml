@@ -1,6 +1,7 @@
 import QtQuick
 import "../../config"
 import "../../services"
+import "../common"
 
 Item {
     id: root
@@ -15,7 +16,10 @@ Item {
     anchors.verticalCenter: parent ? parent.verticalCenter : undefined
 
     opacity: root.available ? 1.0 : 0.25
-    Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+    Behavior on opacity {
+        enabled: !ShellSettings.reduceMotion
+        NumberAnimation { duration: Motion.fast }
+    }
 
     activeFocusOnTab: root.available
     Accessible.role: Accessible.Button
@@ -32,15 +36,27 @@ Item {
     Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
     Rectangle {
+        id: _fill
         anchors.centerIn: parent
         width: 34; height: 34; radius: Theme.radiusControl
         antialiasing: true
         color: Theme.withAlpha(Theme.text, _tap.pressed ? 0.10 : 0.06)
-        border.width: root.activeFocus ? 1 : 0
-        border.color: Theme.withAlpha(Theme.accent, 0.6)
         opacity: (_hover.hovered || _tap.pressed || root.activeFocus) ? 1.0 : 0.0
-        Behavior on opacity { NumberAnimation { duration: Motion.fast } }
-        Behavior on color   { ColorAnimation  { duration: Motion.fast } }
+
+        OutlineBorder {
+            radius: _fill.radius
+            outlineWidth: 2
+            outlineColor: root.activeFocus ? Theme.withAlpha(Theme.accent, 0.6) : "transparent"
+        }
+
+        Behavior on opacity {
+            enabled: !ShellSettings.reduceMotion
+            NumberAnimation { duration: Motion.fast }
+        }
+        Behavior on color {
+            enabled: !ShellSettings.reduceMotion
+            ColorAnimation { duration: Motion.fast }
+        }
     }
     Text {
         anchors.centerIn: parent
@@ -48,6 +64,9 @@ Item {
         color: _hover.hovered ? Theme.withAlpha(Theme.text, 0.85) : Theme.withAlpha(Theme.text, 0.45)
         font.family: Settings.font; font.pixelSize: Settings.fontSize + 8
         renderType: Text.NativeRendering
-        Behavior on color { ColorAnimation { duration: Motion.fast } }
+        Behavior on color {
+            enabled: !ShellSettings.reduceMotion
+            ColorAnimation { duration: Motion.fast }
+        }
     }
 }

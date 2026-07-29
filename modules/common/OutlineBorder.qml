@@ -1,7 +1,9 @@
 import QtQuick
 import QtQuick.Shapes
 
-// uniform rounded-rect stroke; Rectangle.border over-weights rounded corners
+// uniform rounded-rect stroke; Rectangle.border over-weights rounded corners.
+// 1 logical px is the crisp width: thinner strokes land sub-pixel after the
+// compositor's fractional downscale and render at a fraction of their colour.
 Shape {
     id: root
 
