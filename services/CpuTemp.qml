@@ -68,6 +68,7 @@ Singleton {
     }
 
     function _resetState(): void {
+        root._reading = false
         root.temp = 0
         root._hotCount = 0
         root._criticalCount = 0
@@ -143,26 +144,33 @@ Singleton {
     FileView {
         id: _sensorFile
         path: root._sensorPath
-        blockLoading: true
-        blockAllReads: true
+        blockLoading: false
+        blockAllReads: false
         printErrors: false
+        onLoaded: root._finishSensorRead(_sensorFile.text())
+        onLoadFailed: root._failSensorRead()
     }
 
     function _readSensor(): void {
         if (!root._wanted || root._sensorPath.length === 0 || root._reading) return
         root._reading = true
-        try {
-            _sensorFile.reload()
-            if (!_sensorFile.waitForJob()) {
-                root._sensorPath = ""
-                if (!_detectProc.running) _detectProc.running = true
-                return
-            }
-            const t = root._normalizedTemp(parseFloat((_sensorFile.text() || "").trim()))
-            if (t > 0) root._sample(t)
-        } finally {
-            root._reading = false
-        }
+        _sensorFile.reload()
+    }
+
+    function _finishSensorRead(raw: string): void {
+        if (!root._reading) return
+        root._reading = false
+        if (!root._wanted) return
+        const t = root._normalizedTemp(parseFloat((raw || "").trim()))
+        if (t > 0) root._sample(t)
+    }
+
+    function _failSensorRead(): void {
+        if (!root._reading) return
+        root._reading = false
+        if (!root._wanted) return
+        root._sensorPath = ""
+        if (!_detectProc.running) _detectProc.running = true
     }
 
     Timer {
