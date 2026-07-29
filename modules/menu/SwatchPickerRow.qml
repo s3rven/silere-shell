@@ -31,7 +31,7 @@ Item {
     width: parent ? parent.width : 0
     height: _stacked ? 76 : 44
     opacity: enabled ? 1.0 : 0.45
-    Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium } }
+    MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
 
     readonly property int _shownIdx: _sr.hoveredIndex >= 0 ? _sr.hoveredIndex : _sr.activeIndex
     readonly property string _shownName: _shownIdx >= 0 && _shownIdx < _sr.options.length
@@ -84,8 +84,7 @@ Item {
         font.family:    Settings.font
         font.pixelSize: Settings.fontSize - 2
         renderType:     Text.NativeRendering
-        Behavior on color {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on color {
             ColorAnimation { duration: Motion.fast }
         }
     }

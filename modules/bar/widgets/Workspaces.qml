@@ -34,7 +34,7 @@ Item {
     implicitWidth:  wsRow.implicitWidth + (urgentOffPage > 0 ? 12 : 0)
     implicitHeight: btnH
 
-    Behavior on implicitWidth { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic } }
+    MotionBehavior on implicitWidth {NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic } }
 
     readonly property string monitorName: Compositor.monitorName(root.screen)
     readonly property bool monitorReady: monitorName.length > 0 && Compositor.activeWorkspaceId(monitorName) > 0
@@ -417,13 +417,13 @@ Item {
         property real _glint:        -1.15
         property real _trailX:       targetX
         property real _menuOn:    MenuState.open ? 1 : 0
-        Behavior on _menuOn { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(220); easing.type: Easing.OutCubic } }
+        MotionBehavior on _menuOn {NumberAnimation { duration: Motion.ms(220); easing.type: Easing.OutCubic } }
 
         readonly property color tint: {
             return root.urgent(root.activeId) ? Theme.warning : Theme.accent
         }
         property real _specialOn: root.inSpecial ? 0.65 : 0
-        Behavior on _specialOn { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
+        MotionBehavior on _specialOn {NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
         readonly property real _energy: Math.max(diamond._menuOn * 0.82,
                                                   _specialOn,
                                                   (_hoverScale - 1.0) * 4.2,
@@ -474,8 +474,8 @@ Item {
             scale:   root.inSpecial ? 1.0 : 0.76
             transformOrigin: Item.Center
             visible: root._gemMarker && opacity > 0.01
-            Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(root.inSpecial ? 180 : 130); easing.type: Easing.OutCubic } }
-            Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(root.inSpecial ? 210 : 130); easing.type: Easing.OutQuart } }
+            MotionBehavior on opacity {NumberAnimation { duration: Motion.ms(root.inSpecial ? 180 : 130); easing.type: Easing.OutCubic } }
+            MotionBehavior on scale   {NumberAnimation { duration: Motion.ms(root.inSpecial ? 210 : 130); easing.type: Easing.OutQuart } }
         }
         Rectangle {
             anchors.centerIn: parent
@@ -489,8 +489,8 @@ Item {
             scale:   root.inSpecial ? 1.0 : 0.68
             transformOrigin: Item.Center
             visible: opacity > 0.01
-            Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(root.inSpecial ? 165 : 120); easing.type: Easing.OutCubic } }
-            Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(root.inSpecial ? 190 : 120); easing.type: Easing.OutQuart } }
+            MotionBehavior on opacity {NumberAnimation { duration: Motion.ms(root.inSpecial ? 165 : 120); easing.type: Easing.OutCubic } }
+            MotionBehavior on scale   {NumberAnimation { duration: Motion.ms(root.inSpecial ? 190 : 120); easing.type: Easing.OutQuart } }
         }
 
         // filled rim, not a stroke (crisp on fractional displays); dot/ring reuse it as an energy-only halo
@@ -505,7 +505,7 @@ Item {
             opacity: root._gemMarker ? 0.55 + diamond._energy * 0.22 : diamond._energy * 0.60
             scale: 1.0 + diamond._energy * (root._gemMarker ? 0.035 : 0.10)
             visible: opacity > 0.01
-            Behavior on color   { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.ms(150) } }
+            MotionBehavior on color   {ColorAnimation { duration: Motion.ms(150) } }
         }
 
         Rectangle {
@@ -528,7 +528,7 @@ Item {
             rotation: root._gemMarker ? 45 : 0
             antialiasing: true
             color: diamond.tint
-            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.ms(150) } }
+            MotionBehavior on color {ColorAnimation { duration: Motion.ms(150) } }
 
             Rectangle {
                 anchors.fill: parent
@@ -586,8 +586,8 @@ Item {
             scale:   _show ? 1 : 0.2
             transformOrigin: Item.Center
             visible: opacity > 0.01
-            Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
-            Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(150); easing.type: Easing.OutCubic } }
+            MotionBehavior on opacity {NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
+            MotionBehavior on scale   {NumberAnimation { duration: Motion.ms(150); easing.type: Easing.OutCubic } }
         }
 
         SequentialAnimation {
@@ -616,8 +616,8 @@ Item {
         }
 
         Behavior on x           { enabled: ShellSettings.workspaceShift && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(190); easing.type: Easing.OutQuart } }
-        Behavior on opacity     { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(150) } }
-        Behavior on _hoverScale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
+        MotionBehavior on opacity     {NumberAnimation { duration: Motion.ms(150) } }
+        MotionBehavior on _hoverScale {NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
         Behavior on _trailX     { enabled: ShellSettings.workspaceShift && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(260); easing.type: Easing.OutQuart } }
 
         onTargetXChanged: {
@@ -682,8 +682,7 @@ Item {
                 opacity: 1
                 scale:   1.0
 
-                Behavior on width {
-                    enabled: !ShellSettings.reduceMotion
+                MotionBehavior on width {
                     NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
                 }
 
@@ -765,7 +764,7 @@ Item {
                     color: Theme.withAlpha(Theme.accent, 0.10)
                     opacity: ws.activeFocus ? 1.0 : 0.0
                     visible: opacity > 0.001
-                    Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+                    MotionBehavior on opacity {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
                     OutlineBorder {
                         radius: _wsFocusRing.radius
@@ -815,9 +814,9 @@ Item {
                 readonly property bool _hoverReveal: ShellSettings.valuesOnHover && hovered
                     && !active && (_showIcons || !ShellSettings.wsShowNumbers)
                 property real _revealAmt: _hoverReveal ? 1 : 0
-                Behavior on _revealAmt { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+                MotionBehavior on _revealAmt {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
                 property real _dotAlpha: urgent ? 0.95 : occupied ? 0.65 : 0.28
-                Behavior on _dotAlpha { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
+                MotionBehavior on _dotAlpha {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
 
                 Loader {
                     anchors.fill: parent
@@ -870,9 +869,9 @@ Item {
                     font.family:    Settings.font
                     renderType:     Text.NativeRendering
 
-                    Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
-                    Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
-                    Behavior on color   { enabled: !ShellSettings.reduceMotion; ColorAnimation  { duration: Motion.color } }
+                    MotionBehavior on opacity {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
+                    MotionBehavior on scale   {NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
+                    MotionBehavior on color   {ColorAnimation  { duration: Motion.color } }
                 }
 
                 Rectangle {
@@ -889,8 +888,8 @@ Item {
                     color: ws.urgent ? Theme.warning : Theme.withAlpha(Theme.subtext, 0.85)
                     scale: ws._hoverFx ? 1.2 : 1.0
 
-                    Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.color } }
-                    Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
+                    MotionBehavior on color {ColorAnimation { duration: Motion.color } }
+                    MotionBehavior on scale {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
                 }
 
                 Loader {
@@ -927,7 +926,7 @@ Item {
         height: root.btnH
         opacity: shown ? 1 : 0
         visible: opacity > 0.01
-        Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
+        MotionBehavior on opacity {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
 
         activeFocusOnTab: shown
         Accessible.role: Accessible.Button
@@ -969,7 +968,7 @@ Item {
             color: Theme.warning
             opacity: _urgentTick._pulse * ((_tickHover.hovered || _urgentTick.activeFocus) ? 1.0 : 0.9)
             scale: (_tickHover.hovered && ShellSettings.barHoverHighlight) || _urgentTick.activeFocus ? 1.25 : 1.0
-            Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+            MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
         }
     }
 }

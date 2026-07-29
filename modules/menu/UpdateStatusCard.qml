@@ -69,8 +69,7 @@ Rectangle {
                 font.family: Settings.font
                 font.pixelSize: Settings.fontSize + 4
                 renderType: Text.NativeRendering
-                Behavior on color {
-                    enabled: !ShellSettings.reduceMotion
+                MotionBehavior on color {
                     ColorAnimation { duration: Motion.medium }
                 }
 
@@ -133,8 +132,7 @@ Rectangle {
                         font.family: Settings.font
                         font.pixelSize: Settings.fontSize - 2
                         renderType: Text.NativeRendering
-                        Behavior on color {
-                            enabled: !ShellSettings.reduceMotion
+                        MotionBehavior on color {
                             ColorAnimation { duration: Motion.medium }
                         }
                     }
@@ -195,8 +193,7 @@ Rectangle {
             height: root.detail.length > 0 ? 4 * Math.ceil((_detailText.implicitHeight + 3 + 9) / 4) : 0
             clip: true
 
-            Behavior on height {
-                enabled: !ShellSettings.reduceMotion
+            MotionBehavior on height {
                 NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
             }
 
@@ -216,7 +213,7 @@ Rectangle {
                 font.pixelSize: Settings.fontSize - 2
                 lineHeight: 1.15
                 renderType: Text.NativeRendering
-                Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
+                MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
             }
         }
     }

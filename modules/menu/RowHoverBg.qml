@@ -1,6 +1,5 @@
 import QtQuick
 import "../../config"
-import "../../services"
 
 Item {
     id: root
@@ -34,8 +33,7 @@ Item {
 
         color:   root.fillColor
         opacity: root.active ? root.fillOpacity : 0
-        Behavior on opacity {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on opacity {
             NumberAnimation { duration: Motion.fast }
         }
     }
@@ -54,12 +52,10 @@ Item {
         transformOrigin: Item.Center
         visible: opacity > 0.001
 
-        Behavior on opacity {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on opacity {
             NumberAnimation { duration: Motion.fast }
         }
-        Behavior on scale {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on scale {
             NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
         }
     }

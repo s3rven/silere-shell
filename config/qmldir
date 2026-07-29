@@ -8,5 +8,6 @@ singleton Metrics       1.0 Metrics.qml
 singleton Settings      1.0 Settings.qml
 
 # helpers
+MotionBehavior 1.0 MotionBehavior.qml
 PulseLoop 1.0 PulseLoop.qml
 SupervisedProcess 1.0 SupervisedProcess.qml

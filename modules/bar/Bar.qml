@@ -16,13 +16,11 @@ PanelWindow {
 
     readonly property bool atBottom: ShellSettings.barPosition === "bottom"
     property real floatingProgress: ShellSettings.barFloating ? 1.0 : 0.0
-    Behavior on floatingProgress {
-        enabled: !ShellSettings.reduceMotion
+    MotionBehavior on floatingProgress {
         NumberAnimation { duration: Motion.barMorph; easing.type: Easing.OutCubic }
     }
     property real shadowProgress: ShellSettings.barShadow ? 1.0 : 0.0
-    Behavior on shadowProgress {
-        enabled: !ShellSettings.reduceMotion
+    MotionBehavior on shadowProgress {
         NumberAnimation { duration: Motion.barMorph; easing.type: Easing.OutCubic }
     }
     readonly property real _cornerRadiusTarget: ShellSettings.barCornerStyle === "round"
@@ -75,8 +73,7 @@ PanelWindow {
     color:         "transparent"
     readonly property int _targetCoreHeight: ShellSettings.barHeight + bar.surfaceInset * 2
     property real surfaceHeight: ShellSettings.barHeight
-    Behavior on surfaceHeight {
-        enabled: !ShellSettings.reduceMotion
+    MotionBehavior on surfaceHeight {
         NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
     }
     exclusiveZone: bar.concealed ? 0 : bar._targetCoreHeight
@@ -102,8 +99,7 @@ PanelWindow {
         width: bar.surfaceWidth
         height: bar.surfaceHeight
 
-        Behavior on width {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on width {
             NumberAnimation { duration: Motion.barMorph; easing.type: Easing.OutCubic }
         }
 

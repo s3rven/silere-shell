@@ -1,6 +1,5 @@
 import QtQuick
 import "../../config"
-import "../../services"
 import "../common"
 
 Item {
@@ -77,15 +76,15 @@ Item {
             : root._hot ? Theme.withAlpha(Theme.text, 0.050) : "transparent"
         scale: _tap.pressed ? 0.94 : (root.active || root._hot ? 1.0 : 0.90)
         transformOrigin: Item.Center
-        Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
-        Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(135); easing.type: Easing.OutCubic } }
+        MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
+        MotionBehavior on scale {NumberAnimation { duration: Motion.ms(135); easing.type: Easing.OutCubic } }
 
         OutlineBorder {
             radius: _activeBg.radius
             outlineColor: (root.active || _hover.hovered || root.activeFocus)
                 ? (root.active ? Theme.menuControlLine : Theme.menuControlLineHot)
                 : "transparent"
-            Behavior on outlineColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+            MotionBehavior on outlineColor {ColorAnimation { duration: Motion.fast } }
         }
     }
 
@@ -104,8 +103,8 @@ Item {
         renderType: Text.NativeRendering
         scale: _tap.pressed ? 0.92 : (root.active ? 1.015 : 1.0)
         transformOrigin: Item.Center
-        Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation  { duration: Motion.fast } }
-        Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(115); easing.type: Easing.OutCubic } }
+        MotionBehavior on color {ColorAnimation  { duration: Motion.fast } }
+        MotionBehavior on scale {NumberAnimation { duration: Motion.ms(115); easing.type: Easing.OutCubic } }
     }
 
     Rectangle {
@@ -134,16 +133,13 @@ Item {
         visible: opacity > 0.01
         transformOrigin: Item.Left
         z: 10
-        Behavior on opacity {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on opacity {
             NumberAnimation { duration: _pill._show ? Motion.fast : Motion.instant; easing.type: Easing.OutCubic }
         }
-        Behavior on scale {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on scale {
             NumberAnimation { duration: _pill._show ? Motion.fast : Motion.instant; easing.type: Easing.OutCubic }
         }
-        Behavior on _slide {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on _slide {
             NumberAnimation { duration: _pill._show ? Motion.fast : Motion.instant; easing.type: Easing.OutCubic }
         }
         Text {

@@ -147,8 +147,7 @@ PanelWindow {
                     NumberAnimation { target: card; property: "_bump"; to: 1.0;   duration: Motion.ms(130); easing.type: Easing.OutCubic }
                 }
 
-                Behavior on width {
-                    enabled: !ShellSettings.reduceMotion
+                MotionBehavior on width {
                     NumberAnimation { duration: Motion.ms(80); easing.type: Easing.OutCubic }
                 }
 
@@ -191,7 +190,7 @@ PanelWindow {
                         OutlineBorder {
                             radius: _osdPillFill.radius
                             outlineColor: _osdPillFill._outlineColor
-                            Behavior on outlineColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.medium } }
+                            MotionBehavior on outlineColor {ColorAnimation { duration: Motion.medium } }
                         }
 
                         Row {
@@ -207,7 +206,7 @@ PanelWindow {
                                 font.family:    Settings.font
                                 font.pixelSize: Settings.fontSize + 4
                                 renderType:     Text.NativeRendering
-                                Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.medium } }
+                                MotionBehavior on color {ColorAnimation { duration: Motion.medium } }
                             }
 
                             Rectangle {
@@ -298,8 +297,7 @@ PanelWindow {
                                 font.pixelSize: Settings.fontSize
                                 renderType:     Text.NativeRendering
 
-                                Behavior on color {
-                                    enabled: !ShellSettings.reduceMotion
+                                MotionBehavior on color {
                                     ColorAnimation { duration: Motion.medium }
                                 }
                             }

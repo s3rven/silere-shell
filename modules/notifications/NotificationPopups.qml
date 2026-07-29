@@ -95,8 +95,7 @@ PanelWindow {
             chip.triggered()
         }
 
-        Behavior on height {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on height {
             NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
         }
 
@@ -116,8 +115,8 @@ PanelWindow {
                 : _hover.hovered ? Theme.mix(Theme.menuControl, chip.tint, 0.15) : Theme.menuControl
             scale: chip.pressed ? 0.97 : 1
 
-            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
-            Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+            MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
+            MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
             OutlineBorder {
                 radius: _surface.radius
@@ -126,7 +125,7 @@ PanelWindow {
                     ? Theme.withAlpha(chip.tint, 0.72)
                     : _hover.hovered
                     ? Theme.withAlpha(chip.tint, 0.42) : Theme.menuControlLine
-                Behavior on outlineColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                MotionBehavior on outlineColor {ColorAnimation { duration: Motion.fast } }
             }
 
             HoverHandler { id: _hover; cursorShape: Qt.PointingHandCursor }
@@ -145,7 +144,7 @@ PanelWindow {
                     font.family: Settings.font
                     font.pixelSize: Settings.fontSize - 1
                     renderType: Text.NativeRendering
-                    Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                    MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
                 }
 
                 Text {
@@ -157,7 +156,7 @@ PanelWindow {
                     font.pixelSize: Settings.fontSize - 2
                     font.weight: Font.Medium
                     renderType: Text.NativeRendering
-                    Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                    MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
                 }
             }
         }

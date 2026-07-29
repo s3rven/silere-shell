@@ -15,8 +15,7 @@ Item {
     implicitHeight: _main.implicitHeight
     width:  implicitWidth
     height: implicitHeight
-    Behavior on width {
-        enabled: !ShellSettings.reduceMotion
+    MotionBehavior on width {
         NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
     }
 
@@ -44,8 +43,7 @@ Item {
         renderType:     Text.NativeRendering
         property real rise: 0
         transform: Translate { y: _main.rise }
-        Behavior on color {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on color {
             ColorAnimation { duration: Motion.color }
         }
     }
@@ -61,8 +59,7 @@ Item {
         renderType:     Text.NativeRendering
         property real rise: 0
         transform: Translate { y: _ghost.rise }
-        Behavior on color {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on color {
             ColorAnimation { duration: Motion.color }
         }
     }

@@ -55,8 +55,7 @@ Rectangle {
         outlineColor: root.activeFocus && !root.armed
             ? (root.dangerous ? Theme.withAlpha(Theme.error, 0.34) : Theme.menuControlLineHot)
             : "transparent"
-        Behavior on outlineColor {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on outlineColor {
             ColorAnimation { duration: Motion.fast }
         }
     }
@@ -141,12 +140,10 @@ Rectangle {
         else event.accepted = false
     }
 
-    Behavior on color {
-        enabled: !ShellSettings.reduceMotion
+    MotionBehavior on color {
         ColorAnimation { duration: Motion.fast }
     }
-    Behavior on _shift {
-        enabled: !ShellSettings.reduceMotion
+    MotionBehavior on _shift {
         NumberAnimation { duration: Motion.ms(105); easing.type: Easing.OutCubic }
     }
 
@@ -163,8 +160,7 @@ Rectangle {
         font.pixelSize: Settings.fontSize
         renderType: Text.NativeRendering
         transform: Translate { x: root._shift }
-        Behavior on color {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on color {
             ColorAnimation { duration: Motion.fast }
         }
     }
@@ -184,8 +180,7 @@ Rectangle {
         font.pixelSize: Settings.fontSize - 2
         font.weight: Font.Medium
         renderType: Text.NativeRendering
-        Behavior on color {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on color {
             ColorAnimation { duration: Motion.fast }
         }
     }
@@ -204,8 +199,7 @@ Rectangle {
         font.weight: root.armed ? Font.DemiBold : Font.Normal
         renderType: Text.NativeRendering
         transform: Translate { x: root._shift }
-        Behavior on color {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on color {
             ColorAnimation { duration: Motion.fast }
         }
     }

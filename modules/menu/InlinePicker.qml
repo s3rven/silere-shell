@@ -1,6 +1,5 @@
 import QtQuick
 import "../../config"
-import "../../services"
 
 Column {
     id: root
@@ -15,8 +14,7 @@ Column {
     Item {
         width: 1
         height: root.open ? root.gap : 0
-        Behavior on height {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on height {
             NumberAnimation {
                 duration: Motion.medium
                 easing.type: root.open ? Easing.OutQuart : Easing.InCubic

@@ -172,7 +172,7 @@ PageShell {
                         ? Theme.withAlpha(Theme.error, 0.72)
                         : _clearButton.activeFocus ? Theme.withAlpha(Theme.error, 0.88)
                         : _clearHover.hovered ? Theme.menuControlLineHot : Theme.menuControlLine
-                    Behavior on outlineColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                    MotionBehavior on outlineColor {ColorAnimation { duration: Motion.fast } }
                 }
 
                 Accessible.role: Accessible.Button
@@ -184,9 +184,9 @@ PageShell {
                 Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root.requestClearAll(); event.accepted = true }
                 Keys.onEscapePressed: event => { if (root._clearArmed) { root._clearArmed = false; event.accepted = true } else event.accepted = false }
 
-                Behavior on width { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-                Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
-                Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
+                MotionBehavior on width {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+                MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
+                MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
                 HoverHandler { id: _clearHover; enabled: !root._clearing; cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor }
                 TapHandler { id: _clearTap; enabled: !root._clearing; onTapped: root.requestClearAll() }
 
@@ -201,7 +201,7 @@ PageShell {
                         font.family: Settings.font
                         font.pixelSize: Settings.fontSize
                         renderType: Text.NativeRendering
-                        Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                        MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
@@ -212,7 +212,7 @@ PageShell {
                         font.pixelSize: Settings.fontSize - 2
                         font.weight: root._clearArmed ? Font.DemiBold : Font.Normal
                         renderType: Text.NativeRendering
-                        Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                        MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
                     }
                 }
             }
@@ -312,12 +312,10 @@ PageShell {
                     opacity: _removing ? 0 : 1
                     clip: true
 
-                    Behavior on height {
-                        enabled: !ShellSettings.reduceMotion
+                    MotionBehavior on height {
                         NumberAnimation { duration: Motion.fast; easing.type: Easing.InCubic }
                     }
-                    Behavior on opacity {
-                        enabled: !ShellSettings.reduceMotion
+                    MotionBehavior on opacity {
                         NumberAnimation { duration: Motion.fast }
                     }
 
@@ -406,10 +404,10 @@ PageShell {
                                 ? Theme.withAlpha(Theme.error, 0.50)
                                 : _card.activeFocus ? Theme.withAlpha(Theme.accent, 0.45)
                                 : Theme.menuCardBorder
-                            Behavior on outlineColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                            MotionBehavior on outlineColor {ColorAnimation { duration: Motion.fast } }
                         }
 
-                        Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                        MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
                         HoverHandler {
                             id: _entryHover
                             cursorShape: (_body.truncated || _entry._expanded) ? Qt.PointingHandCursor : Qt.ArrowCursor
@@ -549,8 +547,8 @@ PageShell {
                             Keys.onReturnPressed: event => { if (!event.isAutoRepeat) _entry.removeSelf(); event.accepted = true }
                             Keys.onEnterPressed: event => { if (!event.isAutoRepeat) _entry.removeSelf(); event.accepted = true }
 
-                            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
-                            Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
+                            MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
+                            MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
 
                             OutlineBorder {
                                 radius: _removeButton.radius
@@ -558,9 +556,9 @@ PageShell {
                                 outlineColor: _removeButton.activeFocus
                                     ? Theme.withAlpha(Theme.error, 0.88)
                                     : _removeHover.hovered ? Theme.withAlpha(Theme.error, 0.36) : Theme.menuControlLine
-                                Behavior on outlineColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                                MotionBehavior on outlineColor {ColorAnimation { duration: Motion.fast } }
                             }
-                            Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+                            MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
                             HoverHandler { id: _removeHover; cursorShape: Qt.PointingHandCursor }
                             TapHandler { id: _removeTap; enabled: !root._clearing && !_entry._removing; onTapped: _entry.removeSelf() }
 

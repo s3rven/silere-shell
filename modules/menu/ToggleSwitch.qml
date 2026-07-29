@@ -28,7 +28,7 @@ Item {
         color: root.checked
             ? Theme.mix(Theme.menuControl, root.accentColor, ShellSettings.neutralTheme ? 0.22 : 0.38)
             : Theme.mix(Theme.menuControl, Theme.text, root.highlighted ? 0.025 : 0)
-        Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+        MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
 
         readonly property color _outlineColor: root.checked
             ? (ShellSettings.neutralTheme ? Theme.withAlpha(root.accentColor, 0.46)
@@ -38,7 +38,7 @@ Item {
         OutlineBorder {
             radius: _track.radius
             outlineColor: _track._outlineColor
-            Behavior on outlineColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+            MotionBehavior on outlineColor {ColorAnimation { duration: Motion.fast } }
         }
 
         Rectangle {
@@ -50,7 +50,7 @@ Item {
             color: root.checked ? root.accentColor : Theme.mix(Theme.subtext, root.accentColor, 0.16)
 
             Behavior on x     { enabled: root._animateX && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutQuart } }
-            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+            MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
         }
     }
 }

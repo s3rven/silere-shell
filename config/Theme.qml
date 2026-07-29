@@ -78,8 +78,7 @@ Singleton {
         ? (ShellSettings.barCornerStyle === "flat" ? 0 : ShellSettings.barRadius)
         : radiusPanel
     property real surfaceRadius: _surfaceRadiusTarget
-    Behavior on surfaceRadius {
-        enabled: !ShellSettings.reduceMotion
+    MotionBehavior on surfaceRadius {
         NumberAnimation { duration: Motion.barMorph; easing.type: Easing.OutCubic }
     }
 

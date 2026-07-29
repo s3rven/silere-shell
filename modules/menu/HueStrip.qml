@@ -41,8 +41,7 @@ Item {
     Keys.onLeftPressed: event => { root._nudgeHue(-1, (event.modifiers & Qt.ShiftModifier) ? 5 : 1); event.accepted = true }
     Keys.onRightPressed: event => { root._nudgeHue(1, (event.modifiers & Qt.ShiftModifier) ? 5 : 1); event.accepted = true }
 
-    Behavior on opacity {
-        enabled: !ShellSettings.reduceMotion
+    MotionBehavior on opacity {
         NumberAnimation { duration: Motion.fast }
     }
 
@@ -54,8 +53,7 @@ Item {
         color: _mouse.containsMouse || root.activeFocus
             ? Theme.mix(Theme.menuControl, Theme.accent, 0.055)
             : Theme.menuControl
-        Behavior on color {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on color {
             ColorAnimation { duration: Motion.fast }
         }
 
@@ -65,8 +63,7 @@ Item {
             outlineColor: root.activeFocus
                 ? Theme.withAlpha(Theme.accent, 0.58)
                 : _mouse.containsMouse ? Theme.menuControlLineHot : Theme.menuControlLine
-            Behavior on outlineColor {
-                enabled: !ShellSettings.reduceMotion
+            MotionBehavior on outlineColor {
                 ColorAnimation { duration: Motion.fast }
             }
         }
@@ -111,7 +108,7 @@ Item {
         transformOrigin: Item.Center
 
         Behavior on x { enabled: !_mouse.pressed && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-        Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+        MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
         Rectangle {
             anchors.fill: parent

@@ -63,8 +63,7 @@ Item {
         else           _resetMarquee()
     }
 
-    Behavior on implicitWidth {
-        enabled: !ShellSettings.reduceMotion
+    MotionBehavior on implicitWidth {
         NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
     }
 
@@ -77,7 +76,7 @@ Item {
             : Media.hasPosition ? 0.72
             : Media.playing ? 0.54 : 0.22
         visible: opacity > 0.01
-        Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+        MotionBehavior on opacity {NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
 
         Rectangle {
             anchors.left: parent.left
@@ -149,8 +148,8 @@ Item {
                 font.pixelSize: Settings.iconSize + 1
                 renderType: Text.NativeRendering
                 scale: Media.playing ? 1.0 : 0.92
-                Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
-                Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+                MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
+                MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
             }
         }
 
@@ -188,7 +187,7 @@ Item {
                 readonly property color _base: Media.playing ? Theme.text
                                                               : Theme.mix(Theme.text, Theme.subtext, 0.55)
                 color:          (_rootHover.hovered && ShellSettings.barHoverHighlight) ? Theme.mix(_base, Theme.accent, 0.30) : _base
-                Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
                 font.family:    Settings.font
                 font.pixelSize: Settings.fontSize
                 renderType:     Text.NativeRendering

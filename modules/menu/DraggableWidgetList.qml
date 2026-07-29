@@ -39,8 +39,7 @@ Item {
     width: parent ? parent.width : 0
     height: _rightListTop + _rightCount * _rowH + _rightPad + _bottomPad
     implicitHeight: height
-    Behavior on height {
-        enabled: !ShellSettings.reduceMotion
+    MotionBehavior on height {
         NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
     }
 
@@ -207,14 +206,12 @@ Item {
                 font.pixelSize: Settings.fontSize - 2
                 font.weight: Font.DemiBold
                 renderType: Text.NativeRendering
-                Behavior on color {
-                    enabled: !ShellSettings.reduceMotion
+                MotionBehavior on color {
                     ColorAnimation { duration: Motion.fast }
                 }
             }
 
-            Behavior on y {
-                enabled: !ShellSettings.reduceMotion
+            MotionBehavior on y {
                 NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
             }
         }
@@ -332,8 +329,7 @@ Item {
                 font.family: Settings.font
                 font.pixelSize: Settings.fontSize + 1
                 renderType: Text.NativeRendering
-                Behavior on color {
-                    enabled: !ShellSettings.reduceMotion
+                MotionBehavior on color {
                     ColorAnimation { duration: Motion.fast }
                 }
             }
@@ -351,8 +347,7 @@ Item {
                 font.family: Settings.font
                 font.pixelSize: Settings.fontSize
                 renderType: Text.NativeRendering
-                Behavior on color {
-                    enabled: !ShellSettings.reduceMotion
+                MotionBehavior on color {
                     ColorAnimation { duration: Motion.fast }
                 }
             }
@@ -453,8 +448,7 @@ Item {
                 radius: _empty.radius
                 outlineColor: Theme.withAlpha(Theme.accent,
                     _empty.hot ? 0.38 : 0.14)
-                Behavior on outlineColor {
-                    enabled: !ShellSettings.reduceMotion
+                MotionBehavior on outlineColor {
                     ColorAnimation { duration: Motion.fast }
                 }
             }
@@ -468,12 +462,10 @@ Item {
                 renderType: Text.NativeRendering
             }
 
-            Behavior on y {
-                enabled: !ShellSettings.reduceMotion
+            MotionBehavior on y {
                 NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
             }
-            Behavior on color {
-                enabled: !ShellSettings.reduceMotion
+            MotionBehavior on color {
                 ColorAnimation { duration: Motion.fast }
             }
         }

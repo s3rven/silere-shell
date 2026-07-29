@@ -382,8 +382,7 @@ Item {
                                 onTapped: root._toggleGroup(_grp.index)
                             }
 
-                            Behavior on color {
-                                enabled: !ShellSettings.reduceMotion
+                            MotionBehavior on color {
                                 ColorAnimation { duration: Motion.fast }
                             }
 
@@ -445,12 +444,10 @@ Item {
                                 font.pixelSize: Settings.fontSize - 2
                                 renderType: Text.NativeRendering
 
-                                Behavior on rotation {
-                                    enabled: !ShellSettings.reduceMotion
+                                MotionBehavior on rotation {
                                     NumberAnimation { duration: Motion.medium; easing.type: Easing.OutQuart }
                                 }
-                                Behavior on color {
-                                    enabled: !ShellSettings.reduceMotion
+                                MotionBehavior on color {
                                     ColorAnimation { duration: Motion.fast }
                                 }
                             }
@@ -466,8 +463,7 @@ Item {
                             visible: height > 0
                             clip: height < _leafColumn.implicitHeight + root._childrenPad * 2
 
-                            Behavior on height {
-                                enabled: !ShellSettings.reduceMotion
+                            MotionBehavior on height {
                                 NumberAnimation {
                                     duration: Motion.medium
                                     easing.type: _grp.expanded ? Easing.OutQuart : Easing.InCubic
@@ -484,15 +480,13 @@ Item {
                                 opacity: _grp.expanded ? 1 : 0
                                 transform: Translate { y: _leafColumn._shift }
 
-                                Behavior on opacity {
-                                    enabled: !ShellSettings.reduceMotion
+                                MotionBehavior on opacity {
                                     NumberAnimation {
                                         duration: Motion.fast
                                         easing.type: _grp.expanded ? Easing.OutCubic : Easing.InCubic
                                     }
                                 }
-                                Behavior on _shift {
-                                    enabled: !ShellSettings.reduceMotion
+                                MotionBehavior on _shift {
                                     NumberAnimation {
                                         duration: Motion.medium
                                         easing.type: _grp.expanded ? Easing.OutQuart : Easing.InCubic
@@ -567,8 +561,7 @@ Item {
                                             onTapped: root._activateSection(_leaf.modelData.section)
                                         }
 
-                                        Behavior on color {
-                                            enabled: !ShellSettings.reduceMotion
+                                        MotionBehavior on color {
                                             ColorAnimation { duration: Motion.fast }
                                         }
 
@@ -595,8 +588,7 @@ Item {
                                             font.family: Settings.font
                                             font.pixelSize: Settings.fontSize
                                             renderType: Text.NativeRendering
-                                            Behavior on color {
-                                                enabled: !ShellSettings.reduceMotion
+                                            MotionBehavior on color {
                                                 ColorAnimation { duration: Motion.fast }
                                             }
                                         }
@@ -617,8 +609,7 @@ Item {
                                             font.pixelSize: Settings.fontSize
                                             font.weight: _leaf.active ? Font.DemiBold : Font.Normal
                                             renderType: Text.NativeRendering
-                                            Behavior on color {
-                                                enabled: !ShellSettings.reduceMotion
+                                            MotionBehavior on color {
                                                 ColorAnimation { duration: Motion.fast }
                                             }
                                         }

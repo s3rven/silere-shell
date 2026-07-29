@@ -44,8 +44,7 @@ Item {
     // only needed while a visible mark collapses; a clip node at rest is waste
     clip: mark.opacity > 0.001 && width < _markedSpan - 0.5
 
-    Behavior on _animatedSpan {
-        enabled: !ShellSettings.reduceMotion
+    MotionBehavior on _animatedSpan {
         NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
     }
 
@@ -55,8 +54,7 @@ Item {
         opacity: root._markWanted ? 1 : 0
         visible: opacity > 0.001
 
-        Behavior on opacity {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on opacity {
             NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
         }
 

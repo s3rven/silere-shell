@@ -1,6 +1,5 @@
 import QtQuick
 import "../../config"
-import "../../services"
 
 Item {
     id: root
@@ -31,8 +30,7 @@ Item {
     height:         56
     implicitHeight: 56
     opacity: root.enabled ? 1.0 : 0.45
-    Behavior on opacity {
-        enabled: !ShellSettings.reduceMotion
+    MotionBehavior on opacity {
         NumberAnimation { duration: Motion.medium }
     }
 

@@ -115,8 +115,7 @@ Item {
                 radius: 10
                 antialiasing: true
                 color: Theme.rowFill(_ma.containsMouse, false)
-                Behavior on color {
-                    enabled: !ShellSettings.reduceMotion
+                MotionBehavior on color {
                     ColorAnimation { duration: Motion.fast }
                 }
 
@@ -127,8 +126,7 @@ Item {
                                 : _row.modelData.connected ? Theme.withAlpha(Theme.accent, 0.45)
                                 : _row.activeFocus         ? Theme.withAlpha(Theme.accent, 0.45)
                                 :                            Theme.menuCardBorder
-                    Behavior on outlineColor {
-                        enabled: !ShellSettings.reduceMotion
+                    MotionBehavior on outlineColor {
                         ColorAnimation { duration: Motion.fast }
                     }
                 }
@@ -223,8 +221,7 @@ Item {
                     font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
                     font.weight: (parent._armed || _row.modelData.pairing) ? Font.Medium : Font.Normal
                     renderType: Text.NativeRendering
-                    Behavior on color {
-                        enabled: !ShellSettings.reduceMotion
+                    MotionBehavior on color {
                         ColorAnimation { duration: Motion.fast }
                     }
                 }

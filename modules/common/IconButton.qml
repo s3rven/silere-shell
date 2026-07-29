@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import "../../config"
-import "../../services"
 
 Item {
     id: root
@@ -81,8 +80,7 @@ Item {
             outlineColor: root.activeFocus ? Theme.withAlpha(root.accentColor, 0.68) : "transparent"
         }
 
-        Behavior on color {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on color {
             ColorAnimation { duration: Motion.fast }
         }
     }
@@ -98,12 +96,10 @@ Item {
         scale: root.pressed ? 0.90 : 1.0
         transformOrigin: Item.Center
 
-        Behavior on color {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on color {
             ColorAnimation { duration: Motion.fast }
         }
-        Behavior on scale {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on scale {
             NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
         }
     }

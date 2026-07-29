@@ -107,7 +107,7 @@ Column {
                     color: _modHeader.open ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.58)
                     font.family: Settings.font; font.pixelSize: Settings.fontSize
                     renderType: Text.NativeRendering
-                    Behavior on rotation { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
+                    MotionBehavior on rotation {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
                 }
             }
         }
@@ -192,8 +192,7 @@ Column {
                             : Theme.withAlpha(Theme.subtext, 0.5)
                         font.family: Settings.font; font.pixelSize: Settings.iconSize
                         renderType: Text.NativeRendering
-                        Behavior on color {
-                            enabled: !ShellSettings.reduceMotion
+                        MotionBehavior on color {
                             ColorAnimation { duration: Motion.fast }
                         }
                     }
@@ -276,8 +275,7 @@ Column {
                     color: _resetRow.armed ? Theme.error : Theme.withAlpha(Theme.subtext, 0.85)
                     font.family: Settings.font; font.pixelSize: Settings.iconSize + 2
                     renderType: Text.NativeRendering
-                    Behavior on color {
-                        enabled: !ShellSettings.reduceMotion
+                    MotionBehavior on color {
                         ColorAnimation { duration: Motion.fast }
                     }
                 }
@@ -287,8 +285,7 @@ Column {
                     color: _resetRow.armed ? Theme.error : Theme.withAlpha(Theme.text, 0.85)
                     font.family: Settings.font; font.pixelSize: Settings.fontSize
                     renderType: Text.NativeRendering
-                    Behavior on color {
-                        enabled: !ShellSettings.reduceMotion
+                    MotionBehavior on color {
                         ColorAnimation { duration: Motion.fast }
                     }
                 }

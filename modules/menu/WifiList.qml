@@ -135,8 +135,7 @@ Item {
                     radius: 10
                     antialiasing: true
                     color: Theme.rowFill(_rowHover.hovered, false)
-                    Behavior on color {
-                        enabled: !ShellSettings.reduceMotion
+                    MotionBehavior on color {
                         ColorAnimation { duration: Motion.fast }
                     }
 
@@ -146,8 +145,7 @@ Item {
                         outlineColor: _row.activeFocus ? Theme.withAlpha(Theme.accent, 0.55)
                                     : _entry.modelData.active ? Theme.withAlpha(Theme.accent, 0.45)
                                     : Theme.menuCardBorder
-                        Behavior on outlineColor {
-                            enabled: !ShellSettings.reduceMotion
+                        MotionBehavior on outlineColor {
                             ColorAnimation { duration: Motion.fast }
                         }
                     }
@@ -245,8 +243,7 @@ Item {
                     height: _entry._sel ? 44 : 0
                     clip: true
                     visible: height > 0.5
-                    Behavior on height {
-                        enabled: !ShellSettings.reduceMotion
+                    MotionBehavior on height {
                         NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
                     }
 
@@ -263,8 +260,7 @@ Item {
                             radius: _pwField.radius
                             outlineColor: _entry._failed ? Theme.withAlpha(Theme.error, 0.5)
                                                          : Theme.withAlpha(Theme.accent, 0.3)
-                            Behavior on outlineColor {
-                                enabled: !ShellSettings.reduceMotion
+                            MotionBehavior on outlineColor {
                                 ColorAnimation { duration: Motion.fast }
                             }
                         }
@@ -316,8 +312,7 @@ Item {
                             opacity: enabled ? 1.0 : 0.4
                             color: (_joinHover.hovered || activeFocus) ? Theme.withAlpha(Theme.accent, 0.30)
                                                                         : Theme.withAlpha(Theme.accent, 0.18)
-                            Behavior on color {
-                                enabled: !ShellSettings.reduceMotion
+                            MotionBehavior on color {
                                 ColorAnimation { duration: Motion.fast }
                             }
 

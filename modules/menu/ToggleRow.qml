@@ -1,6 +1,5 @@
 import QtQuick
 import "../../config"
-import "../../services"
 
 Item {
     id: root
@@ -49,7 +48,7 @@ Item {
     implicitHeight: height
 
     opacity: root.enabled && root.available ? 1.0 : (_canToggle ? 0.72 : 0.52)
-    Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium } }
+    MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
 
     activeFocusOnTab: _canToggle
     Accessible.role: Accessible.CheckBox
@@ -93,8 +92,7 @@ Item {
         font.family:    Settings.font
         font.pixelSize: Settings.iconSize + 2
         renderType:     Text.NativeRendering
-        Behavior on color {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on color {
             ColorAnimation { duration: Motion.fast }
         }
     }
@@ -120,8 +118,7 @@ Item {
             font.family:    Settings.font
             font.pixelSize: Settings.fontSize
             renderType:     Text.NativeRendering
-            Behavior on color {
-                enabled: !ShellSettings.reduceMotion
+            MotionBehavior on color {
                 ColorAnimation { duration: Motion.fast }
             }
         }

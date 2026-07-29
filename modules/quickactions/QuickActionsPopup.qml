@@ -162,7 +162,7 @@ PanelWindow {
                 ? Theme.withAlpha(Theme.accent, 0.14)
                 : (_rowHover.hovered || _row.activeFocus)
                     ? Theme.withAlpha(Theme.menuHover, 0.12) : "transparent"
-            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+            MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
         }
 
         Rectangle {
@@ -174,8 +174,8 @@ PanelWindow {
             color: Theme.accent
             opacity: _row.active ? 0.82 : 0.0
             scale: _row.active ? 1.0 : 0.5
-            Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
-            Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+            MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
+            MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
         }
 
         Text {
@@ -190,7 +190,7 @@ PanelWindow {
             font.family: Settings.font
             font.pixelSize: Settings.fontSize + 1
             renderType: Text.NativeRendering
-            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+            MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
         }
 
         Text {
@@ -219,12 +219,12 @@ PanelWindow {
             antialiasing: true
             color: _row.active
                 ? Theme.withAlpha(Theme.accent, 0.13) : "transparent"
-            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+            MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
 
             OutlineBorder {
                 radius: _state.radius
                 outlineColor: _row.active ? Theme.withAlpha(Theme.accent, 0.22) : "transparent"
-                Behavior on outlineColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                MotionBehavior on outlineColor {ColorAnimation { duration: Motion.fast } }
             }
 
             Text {
@@ -236,7 +236,7 @@ PanelWindow {
                 font.pixelSize: Settings.fontSize - 2
                 font.weight: Font.Medium
                 renderType: Text.NativeRendering
-                Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
             }
         }
     }

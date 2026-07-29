@@ -29,7 +29,7 @@ Pill {
                            : (Battery.low     ? 1.0 - Battery.alertPulse * 0.18 : 1.0))
     visible: _baseOpacity > 0
 
-    Behavior on _baseOpacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+    MotionBehavior on _baseOpacity {NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
 
     text: {
         if (ShellSettings.valuesOnHover && !expanded)

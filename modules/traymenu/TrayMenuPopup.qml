@@ -282,7 +282,7 @@ PanelWindow {
                 antialiasing: true
                 color: (_entry.on && (_rowHover.hovered || _flyout.opened || _entry.activeFocus))
                     ? Theme.withAlpha(Theme.menuHover, 0.12) : "transparent"
-                Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
             }
 
             HoverHandler {
@@ -421,15 +421,13 @@ PanelWindow {
                     outlineColor: Theme.outline
                 }
 
-                Behavior on opacity {
-                    enabled: !ShellSettings.reduceMotion
+                MotionBehavior on opacity {
                     NumberAnimation {
                         duration: _flyout.opened ? Motion.medium : Motion.fast
                         easing.type: _flyout.opened ? Easing.OutCubic : Easing.InCubic
                     }
                 }
-                Behavior on _shift {
-                    enabled: !ShellSettings.reduceMotion
+                MotionBehavior on _shift {
                     NumberAnimation {
                         duration: _flyout.opened ? Motion.medium : Motion.fast
                         easing.type: _flyout.opened ? Easing.OutQuart : Easing.InCubic

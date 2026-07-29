@@ -71,7 +71,7 @@ Item {
     implicitHeight: height
 
     opacity: _canTap ? 1.0 : 0.45
-    Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium } }
+    MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
 
     activeFocusOnTab: _canTap
     Accessible.role: root.showSwitch ? Accessible.CheckBox : Accessible.Button
@@ -152,7 +152,7 @@ Item {
             font.family:    Settings.font
             font.pixelSize: Settings.iconSize + 2
             renderType:     Text.NativeRendering
-            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+            MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
         }
 
         Rectangle {
@@ -180,7 +180,7 @@ Item {
             color: (_badgeMouse.containsMouse || activeFocus)
                 ? Theme.mix(root.accentColor, Theme.text, 0.10)
                 : root.accentColor
-            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+            MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
 
             OutlineBorder {
                 radius: _badge.radius
@@ -188,7 +188,7 @@ Item {
                 outlineColor: _badge.activeFocus
                     ? Theme.withAlpha(Theme.text, 0.66)
                     : Theme.mix(Theme.menuCard, root.accentColor, _badgeMouse.containsMouse ? 0.42 : 0.55)
-                Behavior on outlineColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                MotionBehavior on outlineColor {ColorAnimation { duration: Motion.fast } }
             }
 
             Text {
@@ -233,7 +233,7 @@ Item {
             font.hintingPreference: Font.PreferFullHinting
             renderType:     Text.NativeRendering
             elide:          Text.ElideRight
-            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+            MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
         }
 
         Text {
@@ -249,7 +249,7 @@ Item {
             font.hintingPreference: Font.PreferFullHinting
             renderType:     Text.NativeRendering
             elide:          Text.ElideRight
-            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+            MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
         }
     }
 
@@ -286,7 +286,7 @@ Item {
             font.pixelSize: Settings.fontSize - 1
             font.weight:    Font.Medium
             renderType:     Text.NativeRendering
-            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+            MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
         }
 
         // MouseArea (not TapHandler) so it doesn't fire the row body tap too
@@ -328,8 +328,8 @@ Item {
                 renderType: Text.NativeRendering
                 rotation: root.expanded ? 180 : 0
                 transformOrigin: Item.Center
-                Behavior on rotation { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
-                Behavior on color    { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                MotionBehavior on rotation {NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+                MotionBehavior on color    {ColorAnimation { duration: Motion.fast } }
             }
 
             HoverHandler { id: _chevHover; enabled: root.expandable; cursorShape: Qt.PointingHandCursor }

@@ -1,6 +1,5 @@
 import QtQuick
 import "../../config"
-import "../../services"
 import "../common"
 
 Item {
@@ -16,8 +15,7 @@ Item {
     anchors.verticalCenter: parent ? parent.verticalCenter : undefined
 
     opacity: root.available ? 1.0 : 0.25
-    Behavior on opacity {
-        enabled: !ShellSettings.reduceMotion
+    MotionBehavior on opacity {
         NumberAnimation { duration: Motion.fast }
     }
 
@@ -33,7 +31,7 @@ Item {
     TapHandler   { id: _tap;   enabled: root.available; onTapped: root.triggered() }
 
     scale: _tap.pressed ? 0.86 : 1.0; transformOrigin: Item.Center
-    Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+    MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
     Rectangle {
         id: _fill
@@ -49,12 +47,10 @@ Item {
             outlineColor: root.activeFocus ? Theme.withAlpha(Theme.accent, 0.6) : "transparent"
         }
 
-        Behavior on opacity {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on opacity {
             NumberAnimation { duration: Motion.fast }
         }
-        Behavior on color {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on color {
             ColorAnimation { duration: Motion.fast }
         }
     }
@@ -64,8 +60,7 @@ Item {
         color: _hover.hovered ? Theme.withAlpha(Theme.text, 0.85) : Theme.withAlpha(Theme.text, 0.45)
         font.family: Settings.font; font.pixelSize: Settings.fontSize + 8
         renderType: Text.NativeRendering
-        Behavior on color {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on color {
             ColorAnimation { duration: Motion.fast }
         }
     }

@@ -1,6 +1,5 @@
 import QtQuick
 import "../../config"
-import "../../services"
 
 Item {
     id: root
@@ -93,8 +92,7 @@ Item {
             font.family: Settings.font
             font.pixelSize: Settings.iconSize + 2
             renderType: Text.NativeRendering
-            Behavior on color {
-                enabled: !ShellSettings.reduceMotion
+            MotionBehavior on color {
                 ColorAnimation { duration: Motion.fast }
             }
         }
@@ -159,9 +157,8 @@ Item {
             renderType: Text.NativeRendering
             rotation: root.expanded ? 180 : 0
             transformOrigin: Item.Center
-            Behavior on rotation { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
-            Behavior on color {
-                enabled: !ShellSettings.reduceMotion
+            MotionBehavior on rotation {NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+            MotionBehavior on color {
                 ColorAnimation { duration: Motion.fast }
             }
         }

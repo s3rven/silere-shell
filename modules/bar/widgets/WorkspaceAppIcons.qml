@@ -19,8 +19,7 @@ Row {
 
     spacing: 4
     opacity: pulseOpacity
-    Behavior on opacity {
-        enabled: !ShellSettings.reduceMotion
+    MotionBehavior on opacity {
         NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
     }
 
@@ -34,8 +33,7 @@ Row {
             height: root.iconSize
             scale: root.hoverFx ? 1.08 : 1.0
 
-            Behavior on scale {
-                enabled: !ShellSettings.reduceMotion
+            MotionBehavior on scale {
                 NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
             }
 
@@ -50,8 +48,7 @@ Row {
                 asynchronous: true
                 visible: !root._fxNeeded
                 opacity: root.hoverFx ? 1.0 : ShellSettings.wsIconOpacity
-                Behavior on opacity {
-                    enabled: !ShellSettings.reduceMotion
+                MotionBehavior on opacity {
                     NumberAnimation { duration: Motion.fast }
                 }
             }
@@ -63,12 +60,10 @@ Row {
                     source: _iconSrc
                     opacity: root.hoverFx ? 1.0 : ShellSettings.wsIconOpacity
                     saturation: root._mono ? -1.0 : 0.0
-                    Behavior on opacity {
-                        enabled: !ShellSettings.reduceMotion
+                    MotionBehavior on opacity {
                         NumberAnimation { duration: Motion.fast }
                     }
-                    Behavior on saturation {
-                        enabled: !ShellSettings.reduceMotion
+                    MotionBehavior on saturation {
                         NumberAnimation { duration: Motion.fast }
                     }
                 }

@@ -159,12 +159,10 @@ Item {
             radius: height / 2
             outlineColor: _hoverCap._focus ? Theme.withAlpha(Theme.accent, 0.72) : "transparent"
         }
-        Behavior on opacity {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on opacity {
             NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
         }
-        Behavior on color {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on color {
             ColorAnimation { duration: Motion.fast }
         }
     }
@@ -178,8 +176,7 @@ Item {
         opacity: root.levelVisible && root.levelValue >= 0 ? 1 : 0
         visible: opacity > 0.001
 
-        Behavior on opacity {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on opacity {
             NumberAnimation { duration: Motion.fast }
         }
 
@@ -196,12 +193,10 @@ Item {
             color: root.levelColor
             opacity: 0.78
 
-            Behavior on width {
-                enabled: !ShellSettings.reduceMotion
+            MotionBehavior on width {
                 NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
             }
-            Behavior on color {
-                enabled: !ShellSettings.reduceMotion
+            MotionBehavior on color {
                 ColorAnimation { duration: Motion.color }
             }
         }
@@ -220,8 +215,7 @@ Item {
         scale: root.visualPressed ? 0.94 : 1.0
         transformOrigin: Item.Center
 
-        Behavior on scale {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on scale {
             NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
         }
 
@@ -270,8 +264,7 @@ Item {
                 font.family:    Settings.font
                 font.pixelSize: Settings.fontSize
                 renderType: Text.NativeRendering
-                Behavior on color {
-                    enabled: !ShellSettings.reduceMotion
+                MotionBehavior on color {
                     ColorAnimation { duration: Motion.color }
                 }
             }

@@ -52,16 +52,14 @@ Item {
             ? Math.min(0.95, 0.70 + 0.10 * _screenshotStrength)
             : (((_tempGlowEnabled && CpuTemp.critical) || (_batteryGlowEnabled && Battery.critical)) ? 0.74 : 0.62)
         property real _idleFloor: (_glowEnabled && ShellSettings.underlineIdleGlow) ? 0.20 : 0
-        Behavior on _idleFloor {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on _idleFloor {
             NumberAnimation { duration: Motion.slow; easing.type: Easing.OutCubic }
         }
         readonly property real _activeGlowStrength: Math.min(1, 0.45 + 0.4 * ShellSettings.glowStrength)
         readonly property real _scaledGlow:  (_primaryGlow + _stackBonus) * _activeGlowStrength
         readonly property real _eventGlow:   Math.max(_scaledGlow, _batteryGlow, _tempGlow)
         property real _mediaGlow: (_glowEnabled && ShellSettings.mediaProgress && Media.shown && Media.cavaReady) ? 0.18 : 0
-        Behavior on _mediaGlow {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on _mediaGlow {
             NumberAnimation { duration: Motion.slow; easing.type: Easing.OutCubic }
         }
         readonly property real _combined:    _glowEnabled ? Math.min(_ceiling, Math.max(_idleFloor, _eventGlow, _mediaGlow)) : 0
@@ -81,16 +79,16 @@ Item {
             return Theme.accent
         }
         property color _effectColor: _effectColorTarget
-        Behavior on _effectColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.ms(350) } }
+        MotionBehavior on _effectColor {ColorAnimation { duration: Motion.ms(350) } }
 
         property color _stopColor: Qt.rgba(
             _effectColorTarget.r, _effectColorTarget.g, _effectColorTarget.b, 0.9
         )
-        Behavior on _stopColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.ms(350) } }
+        MotionBehavior on _stopColor {ColorAnimation { duration: Motion.ms(350) } }
         property color _stopColorMid: Qt.rgba(
             _effectColorTarget.r, _effectColorTarget.g, _effectColorTarget.b, 0.45
         )
-        Behavior on _stopColorMid { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.ms(350) } }
+        MotionBehavior on _stopColorMid {ColorAnimation { duration: Motion.ms(350) } }
         property real _sweepSpread: 0.28
         property real _bloomBoost:  0.0
         property real _screenshotSweepCenter: 0.50

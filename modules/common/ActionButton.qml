@@ -1,6 +1,5 @@
 import QtQuick
 import "../../config"
-import "../../services"
 
 Item {
     id: root
@@ -26,8 +25,7 @@ Item {
 
     height: 34
     opacity: root.enabled ? 1.0 : 0.42
-    Behavior on opacity {
-        enabled: !ShellSettings.reduceMotion
+    MotionBehavior on opacity {
         NumberAnimation { duration: Motion.fast }
     }
 
@@ -105,13 +103,11 @@ Item {
                 ? Theme.withAlpha(Theme.subtext, 0.21)
                 : (_hover.hovered ? Theme.withAlpha(Theme.subtext, 0.16) : Theme.menuControl)
 
-        Behavior on scale {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on scale {
             NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
         }
 
-        Behavior on color {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on color {
             ColorAnimation { duration: Motion.fast }
         }
 
@@ -124,8 +120,7 @@ Item {
                     ? Theme.withAlpha(root._accent, 0.48)
                     : _hover.hovered ? Theme.menuControlLineHot : Theme.menuControlLine
 
-            Behavior on outlineColor {
-                enabled: !ShellSettings.reduceMotion
+            MotionBehavior on outlineColor {
                 ColorAnimation { duration: Motion.fast }
             }
         }

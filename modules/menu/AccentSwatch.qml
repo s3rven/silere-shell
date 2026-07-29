@@ -1,6 +1,5 @@
 import QtQuick
 import "../../config"
-import "../../services"
 import "../common"
 
 Item {
@@ -49,8 +48,7 @@ Item {
         color: root.activeFocus
             ? Theme.withAlpha(root.ringColor, 0.07)
             : "transparent"
-        Behavior on color {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on color {
             ColorAnimation { duration: Motion.fast }
         }
 
@@ -66,6 +64,6 @@ Item {
         color: root.chipColor
         scale: _t.pressed ? 0.90 : _h.hovered ? 1.04 : 1.0
         transformOrigin: Item.Center
-        Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+        MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
     }
 }

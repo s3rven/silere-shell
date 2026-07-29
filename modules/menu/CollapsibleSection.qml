@@ -1,6 +1,5 @@
 import QtQuick
 import "../../config"
-import "../../services"
 
 Item {
     id: root
@@ -25,8 +24,7 @@ Item {
     enabled: expanded
     visible: height > 0.5
 
-    Behavior on height {
-        enabled: !ShellSettings.reduceMotion
+    MotionBehavior on height {
         NumberAnimation {
             duration: root.expanded ? Motion.medium : Motion.fast
             easing.type: root.expanded ? Easing.OutQuart : Easing.InCubic
@@ -39,8 +37,7 @@ Item {
 
         y: 0
         opacity: root.expanded ? 1.0 : 0.0
-        Behavior on opacity {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on opacity {
             NumberAnimation {
                 duration: Motion.fast
                 easing.type: root.expanded ? Easing.OutCubic : Easing.InCubic

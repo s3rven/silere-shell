@@ -143,8 +143,7 @@ PageShell {
                 ? 4 * Math.ceil((_mediaLoader.item.height + 10) / 4) : 0
             clip: true
 
-            Behavior on height {
-                enabled: !ShellSettings.reduceMotion
+            MotionBehavior on height {
                 NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
             }
 
@@ -173,8 +172,7 @@ PageShell {
 
                 // fade only, matched to the section's height ease: a scale leg here ran as a
                 // third competing animation and resampled NativeRendering text off-pixel
-                Behavior on opacity {
-                    enabled: !ShellSettings.reduceMotion
+                MotionBehavior on opacity {
                     NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
                 }
 
@@ -561,11 +559,10 @@ PageShell {
                         opacity: _playBtn._on ? 1.0 : 0.25
                         scale: _playT.pressed ? 0.94 : 1.0
                         transformOrigin: Item.Center
-                        Behavior on opacity {
-                            enabled: !ShellSettings.reduceMotion
+                        MotionBehavior on opacity {
                             NumberAnimation { duration: Motion.fast }
                         }
-                        Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+                        MotionBehavior on scale   {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
                         activeFocusOnTab: _playBtn._on
                         Accessible.role: Accessible.Button
@@ -586,8 +583,7 @@ PageShell {
                             color: _playT.pressed ? Theme.mix(Theme.menuControl, Theme.accent, 0.18)
                                 : _playH.hovered ? Theme.mix(Theme.menuControl, Theme.accent, 0.10)
                                 : Theme.menuControl
-                            Behavior on color {
-                                enabled: !ShellSettings.reduceMotion
+                            MotionBehavior on color {
                                 ColorAnimation { duration: Motion.fast }
                             }
 
@@ -596,8 +592,7 @@ PageShell {
                                 outlineWidth: _playBtn.activeFocus ? 2 : 1
                                 outlineColor: _playBtn.activeFocus ? Theme.withAlpha(Theme.accent, 0.7)
                                     : Theme.menuControlLine
-                                Behavior on outlineColor {
-                                    enabled: !ShellSettings.reduceMotion
+                                MotionBehavior on outlineColor {
                                     ColorAnimation { duration: Motion.fast }
                                 }
                             }
@@ -613,8 +608,7 @@ PageShell {
                             font.family: Settings.font; font.pixelSize: Settings.fontSize + 10
                             renderType: Text.NativeRendering
                             transformOrigin: Item.Center
-                            Behavior on color {
-                                enabled: !ShellSettings.reduceMotion
+                            MotionBehavior on color {
                                 ColorAnimation { duration: Motion.fast }
                             }
 
@@ -710,7 +704,7 @@ PageShell {
         Item {
             width: 1
             height: (root._wifiAvailable && root._btAvailable) ? root._itemGap : 0
-            Behavior on height { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+            MotionBehavior on height {NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
         }
 
         SettingsCard {

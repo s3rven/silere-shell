@@ -79,7 +79,7 @@ Item {
     height: _headerH + _options.height
     implicitHeight: height
     opacity: enabled ? 1.0 : 0.45
-    Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium } }
+    MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
 
     activeFocusOnTab: root.enabled
     Accessible.role: Accessible.ComboBox
@@ -195,7 +195,7 @@ Item {
             antialiasing: true
             color: Theme.mix(Theme.menuControl, root._open ? Theme.accent : Theme.text,
                 root._open ? (ShellSettings.neutralTheme ? 0.16 : 0.24) : 0.018)
-            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+            MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
 
             readonly property color _outlineColor: root._open
                 ? Theme.withAlpha(Theme.accent, ShellSettings.highContrast ? 0.64 : 0.46)
@@ -204,7 +204,7 @@ Item {
             OutlineBorder {
                 radius: _chevronFill.radius
                 outlineColor: _chevronFill._outlineColor
-                Behavior on outlineColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                MotionBehavior on outlineColor {ColorAnimation { duration: Motion.fast } }
             }
         }
 
@@ -223,8 +223,7 @@ Item {
             font.pixelSize: Settings.fontSize - 1
             font.weight:    root._open ? Font.DemiBold : Font.Medium
             renderType:     Text.NativeRendering
-            Behavior on color {
-                enabled: !ShellSettings.reduceMotion
+            MotionBehavior on color {
                 ColorAnimation { duration: Motion.fast }
             }
         }
@@ -239,9 +238,8 @@ Item {
             font.family:    Settings.font
             font.pixelSize: Settings.fontSize
             renderType:     Text.NativeRendering
-            Behavior on rotation { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
-            Behavior on color {
-                enabled: !ShellSettings.reduceMotion
+            MotionBehavior on rotation {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
+            MotionBehavior on color {
                 ColorAnimation { duration: Motion.fast }
             }
         }
@@ -265,8 +263,7 @@ Item {
         clip:    true
         visible: height > 0.5
 
-        Behavior on height {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on height {
             NumberAnimation {
                 duration: root._open ? Motion.medium : Motion.fast
                 easing.type: root._open ? Easing.OutQuart : Easing.InCubic
@@ -286,8 +283,7 @@ Item {
             }
             Item { width: parent.width; height: 3 }
 
-            Behavior on opacity {
-                enabled: !ShellSettings.reduceMotion
+            MotionBehavior on opacity {
                 NumberAnimation {
                     duration: Motion.fast
                     easing.type: root._open ? Easing.OutCubic : Easing.InCubic
@@ -370,8 +366,8 @@ Item {
                                 ? Theme.withAlpha(Theme.text, 0.035)
                                 : "transparent"
                         opacity: _opt.active || _opt.activeFocus || _optHov.hovered ? 1.0 : 0.0
-                        Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
-                        Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                        MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
+                        MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
 
                         OutlineBorder {
                             radius: _optFill.radius
@@ -395,8 +391,7 @@ Item {
                         font.pixelSize: Settings.fontSize
                         font.weight:    _opt.active ? Font.DemiBold : Font.Normal
                         renderType:     Text.NativeRendering
-                        Behavior on color {
-                            enabled: !ShellSettings.reduceMotion
+                        MotionBehavior on color {
                             ColorAnimation { duration: Motion.fast }
                         }
                     }
@@ -413,7 +408,7 @@ Item {
                         font.pixelSize: Settings.fontSize
                         renderType: Text.NativeRendering
                         opacity: _opt.active ? 0.90 : 0.0
-                        Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
+                        MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
                     }
                 }
             }

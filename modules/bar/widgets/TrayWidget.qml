@@ -21,7 +21,7 @@ Item {
     implicitHeight: parent ? parent.height : 24
     visible: show
 
-    Behavior on implicitWidth { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
+    MotionBehavior on implicitWidth {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
 
     function _openMenu(item, tile): void {
         if (!item.hasMenu) return
@@ -69,7 +69,7 @@ Item {
                 opacity: passive ? 0.78 : 1.0
                 anchors.verticalCenter: parent.verticalCenter
 
-                Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.color } }
+                MotionBehavior on opacity {NumberAnimation { duration: Motion.color } }
 
                 Timer {
                     id: _labelDwell
@@ -93,8 +93,8 @@ Item {
                            : 0.0
                     visible: opacity > 0.001
 
-                    Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.color } }
-                    Behavior on color   { enabled: !ShellSettings.reduceMotion; ColorAnimation  { duration: Motion.color } }
+                    MotionBehavior on opacity {NumberAnimation { duration: Motion.color } }
+                    MotionBehavior on color   {ColorAnimation  { duration: Motion.color } }
                 }
 
                 PulseLoop {
@@ -162,8 +162,8 @@ Item {
                     opacity: ready ? 1.0 : 0.0
                     transformOrigin: Item.Center
                     scale: _ma.pressed ? 0.86 : 1.0
-                    Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
-                    Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+                    MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
+                    MotionBehavior on scale   {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
                 }
 
                 HoverHandler {

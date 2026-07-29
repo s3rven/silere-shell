@@ -122,7 +122,7 @@ Item {
             font.family:    Settings.font
             font.pixelSize: Settings.iconSize + 2
             renderType:     Text.NativeRendering
-            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.medium } }
+            MotionBehavior on color {ColorAnimation { duration: Motion.medium } }
         }
 
         Rectangle {
@@ -182,8 +182,7 @@ Item {
             font.pixelSize: Settings.fontSize
             font.weight:    Font.Medium
             renderType:     Text.NativeRendering
-            Behavior on color {
-                enabled: !ShellSettings.reduceMotion
+            MotionBehavior on color {
                 ColorAnimation { duration: Motion.medium }
             }
         }

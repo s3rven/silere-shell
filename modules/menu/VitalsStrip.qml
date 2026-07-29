@@ -146,8 +146,7 @@ Rectangle {
                 radius: parent.radius
                 antialiasing: true
                 color: tile.status > 0 ? tile.tint : Theme.withAlpha(Theme.accent, 0.70)
-                Behavior on color {
-                    enabled: !ShellSettings.reduceMotion
+                MotionBehavior on color {
                     ColorAnimation { duration: Motion.color }
                 }
             }

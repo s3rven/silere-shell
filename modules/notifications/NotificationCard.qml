@@ -299,7 +299,7 @@ Item {
 
         color: Theme.rowFill(_cardHover.hovered, card.isCritical)
 
-        Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+        MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
 
         ClippingRectangle {
             visible: card.showIconSlot
@@ -364,7 +364,7 @@ Item {
                     font.weight:    Font.DemiBold
                     renderType:     Text.NativeRendering
                     elide:          Text.ElideRight
-                    Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                    MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
                 }
             }
 
@@ -400,8 +400,7 @@ Item {
                         }
                         height: parent.height; radius: parent.radius
                         color:  Theme.accent
-                        Behavior on width {
-                            enabled: !ShellSettings.reduceMotion
+                        MotionBehavior on width {
                             NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
                         }
                     }
@@ -458,14 +457,14 @@ Item {
                         color: _actMa.pressed       ? Theme.withAlpha(_tint, 0.24)
                              : _actMa.containsMouse ? Theme.withAlpha(_tint, 0.13)
                              :                        Theme.menuControl
-                        Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                        MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
 
                         OutlineBorder {
                             radius: _actBtn.radius
                             outlineColor: (_actMa.containsMouse || _actMa.pressed)
                                 ? Theme.withAlpha(_actBtn._tint, 0.50)
                                 : Theme.withAlpha(_actBtn._tint, 0.22)
-                            Behavior on outlineColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                            MotionBehavior on outlineColor {ColorAnimation { duration: Motion.fast } }
                         }
 
                         Accessible.role: Accessible.Button
@@ -484,7 +483,7 @@ Item {
                             font.pixelSize: Settings.fontSize - 1
                             font.weight: Font.Medium
                             renderType: Text.NativeRendering
-                            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                            MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
                         }
 
                         MouseArea {
@@ -598,14 +597,14 @@ Item {
             OutlineBorder {
                 radius: 11
                 outlineColor: _closeHover.hovered ? Theme.withAlpha(Theme.error, 0.32) : Theme.menuControlLine
-                Behavior on outlineColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                MotionBehavior on outlineColor {ColorAnimation { duration: Motion.fast } }
             }
             scale:   _cardHover.hovered ? 1.0 : 0.90
             transformOrigin: Item.Center
             z: 2
-            Behavior on opacity      { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
-            Behavior on scale        { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-            Behavior on color        { enabled: !ShellSettings.reduceMotion; ColorAnimation  { duration: Motion.fast } }
+            MotionBehavior on opacity      {NumberAnimation { duration: Motion.fast } }
+            MotionBehavior on scale        {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+            MotionBehavior on color        {ColorAnimation  { duration: Motion.fast } }
             Accessible.role: Accessible.Button
             Accessible.name: "Dismiss notification"
             Accessible.onPressAction: card.dismiss()
@@ -618,7 +617,7 @@ Item {
                 font.family:    Settings.font
                 font.pixelSize: Settings.fontSize - 2
                 renderType:     Text.NativeRendering
-                Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
             }
         }
     }
@@ -634,7 +633,7 @@ Item {
             outlineColor: card.isCritical
                 ? Theme.withAlpha(Theme.error,  0.32)
                 : Theme.menuCardBorder
-            Behavior on outlineColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.medium } }
+            MotionBehavior on outlineColor {ColorAnimation { duration: Motion.medium } }
         }
     }
 

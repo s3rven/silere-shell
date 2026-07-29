@@ -93,8 +93,7 @@ Column {
                     color:          ShellSettings.highContrast
                         ? Theme.withAlpha(Theme.subtext, 0.7)
                         : Theme.mix(Theme.subtext, _accentPicker._shownColor, 0.62)
-                    Behavior on color {
-                        enabled: !ShellSettings.reduceMotion
+                    MotionBehavior on color {
                         ColorAnimation { duration: Motion.fast }
                     }
                     font.family:    Settings.font

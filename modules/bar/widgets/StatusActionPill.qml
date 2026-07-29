@@ -14,8 +14,8 @@ Pill {
     opacity: show ? 1.0 : 0.0
     scale:   show ? 1.0 : 0.7
     transformOrigin: Item.Center
-    Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
-    Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutQuart } }
+    MotionBehavior on opacity {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
+    MotionBehavior on scale   {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutQuart } }
 
     glyphPixelSize: Settings.iconSize + 1
     glyphColor:     Theme.accent

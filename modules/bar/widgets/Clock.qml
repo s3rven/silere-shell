@@ -45,7 +45,7 @@ Row {
 
     scale: _calTap.pressed ? 0.95 : 1.0
     transformOrigin: Item.Center
-    Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+    MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
     Item {
         id: _dateSectionClip
@@ -56,8 +56,8 @@ Row {
         visible: ShellSettings.clockShowDate || opacity > 0.001
         clip:    true
 
-        Behavior on width   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic } }
-        Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic } }
+        MotionBehavior on width   {NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic } }
+        MotionBehavior on opacity {NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic } }
 
         Row {
             id: _dateRow

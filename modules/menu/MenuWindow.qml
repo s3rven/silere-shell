@@ -480,8 +480,7 @@ PanelWindow {
                     visible: opacity > 0.001
                     enabled: panel._settingsNavVisible
                     transform: Translate { x: _settingsRailSurface._slide }
-                    Behavior on opacity {
-                        enabled: !ShellSettings.reduceMotion
+                    MotionBehavior on opacity {
                         NumberAnimation {
                             duration: panel._settingsNavVisible
                                 ? Motion.ms(130) : Motion.ms(90)
@@ -489,8 +488,7 @@ PanelWindow {
                                 ? Easing.OutCubic : Easing.InCubic
                         }
                     }
-                    Behavior on _slide {
-                        enabled: !ShellSettings.reduceMotion
+                    MotionBehavior on _slide {
                         NumberAnimation {
                             duration: panel._railMotionMs
                             easing.type: panel._railMotionEasing
@@ -526,15 +524,13 @@ PanelWindow {
                     visible: height > 0.5 || opacity > 0.001
                     enabled: panel.powerOpen
 
-                    Behavior on height {
-                        enabled: !ShellSettings.reduceMotion
+                    MotionBehavior on height {
                         NumberAnimation {
                             duration: Motion.panelHeight
                             easing.type: panel.powerOpen ? Easing.OutQuart : Easing.InCubic
                         }
                     }
-                    Behavior on opacity {
-                        enabled: !ShellSettings.reduceMotion
+                    MotionBehavior on opacity {
                         NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
                     }
 
@@ -602,8 +598,8 @@ PanelWindow {
                         scale:   _show ? 1.0 : 0.5
                         visible: opacity > 0.01
                         transformOrigin: Item.Center
-                        Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
-                        Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
+                        MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
+                        MotionBehavior on scale   {NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
                         Text {
                             id: _railBadgeCount
                             anchors.fill: parent
@@ -788,8 +784,7 @@ PanelWindow {
                         enabled: false
                         z: 5
 
-                        Behavior on opacity {
-                            enabled: !ShellSettings.reduceMotion
+                        MotionBehavior on opacity {
                             NumberAnimation { duration: Motion.pageOut; easing.type: Easing.InCubic }
                         }
 

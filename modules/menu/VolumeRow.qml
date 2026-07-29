@@ -75,8 +75,7 @@ Item {
         clip: true
         visible: height > 0.5
 
-        Behavior on height {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on height {
             NumberAnimation {
                 duration:    root.open ? Motion.medium : Motion.fast
                 easing.type: root.open ? Easing.OutQuart : Easing.InCubic
@@ -89,15 +88,13 @@ Item {
             y:       root.open ? 0 : -8
             opacity: root.open ? 1.0 : 0.0
 
-            Behavior on y {
-                enabled: !ShellSettings.reduceMotion
+            MotionBehavior on y {
                 NumberAnimation {
                     duration:    root.open ? Motion.medium : Motion.fast
                     easing.type: root.open ? Easing.OutQuart : Easing.InCubic
                 }
             }
-            Behavior on opacity {
-                enabled: !ShellSettings.reduceMotion
+            MotionBehavior on opacity {
                 NumberAnimation {
                     duration:    root.open ? Motion.medium : Motion.fast
                     easing.type: root.open ? Easing.OutCubic : Easing.InCubic
@@ -162,8 +159,8 @@ Item {
                         radius:  2
                         color:   Theme.accent
                         opacity: _opt.active ? 0.90 : 0.0
-                        Behavior on height  { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-                        Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
+                        MotionBehavior on height  {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+                        MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
                     }
 
                     Text {
@@ -180,8 +177,7 @@ Item {
                         font.pixelSize: Settings.fontSize
                         font.weight:    _opt.active ? Font.DemiBold : Font.Normal
                         renderType:     Text.NativeRendering
-                        Behavior on color {
-                            enabled: !ShellSettings.reduceMotion
+                        MotionBehavior on color {
                             ColorAnimation { duration: Motion.fast }
                         }
                     }

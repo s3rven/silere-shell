@@ -1,6 +1,5 @@
 import QtQuick
 import "../../config"
-import "../../services"
 
 Rectangle {
     id: root
@@ -57,8 +56,7 @@ Rectangle {
     opacity: visible ? (list.moving ? movingOpacity : idleOpacity) : 0
     visible: shown && list.visible && root._settled
 
-    Behavior on opacity {
-        enabled: !ShellSettings.reduceMotion
+    MotionBehavior on opacity {
         NumberAnimation { duration: Motion.fast }
     }
 }

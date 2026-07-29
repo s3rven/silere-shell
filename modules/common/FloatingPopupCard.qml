@@ -25,8 +25,7 @@ Rectangle {
     readonly property real _originX: Math.max(0, Math.min(targetWidth, anchorX - x))
 
     property real _barInset: ShellSettings.barFloating ? 4 : 0
-    Behavior on _barInset {
-        enabled: !ShellSettings.reduceMotion
+    MotionBehavior on _barInset {
         NumberAnimation { duration: Motion.barMorph; easing.type: Easing.OutCubic }
     }
     readonly property int  _edgeY: _barInset + ShellSettings.barHeight + 8

@@ -28,8 +28,7 @@ Item {
     property real titleAnchor: ShellSettings.windowTitleCenterGap
         ? (titleFreeLeft + titleFreeRight) / 2
         : width / 2
-    Behavior on titleAnchor {
-        enabled: !ShellSettings.reduceMotion
+    MotionBehavior on titleAnchor {
         NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
     }
 
@@ -196,20 +195,16 @@ Item {
         transformOrigin: Item.Center
         z: 1
 
-        Behavior on x {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on x {
             NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
         }
-        Behavior on width {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on width {
             NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
         }
-        Behavior on opacity {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on opacity {
             NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
         }
-        Behavior on scale {
-            enabled: !ShellSettings.reduceMotion
+        MotionBehavior on scale {
             NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
         }
     }

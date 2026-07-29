@@ -29,7 +29,7 @@ Pill {
     Accessible.onIncreaseAction: if (root.canControl) Brightness.bumpBy(Brightness.stepPct)
     Accessible.onDecreaseAction: if (root.canControl) Brightness.bumpBy(-Brightness.stepPct)
 
-    Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+    MotionBehavior on opacity {NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
 
     HoverHandler { cursorShape: root.canControl ? Qt.PointingHandCursor : Qt.ArrowCursor }
 

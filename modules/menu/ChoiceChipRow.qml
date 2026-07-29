@@ -51,8 +51,7 @@ Item {
     implicitHeight: height
     opacity: root.enabled ? 1.0 : 0.45
 
-    Behavior on opacity {
-        enabled: !ShellSettings.reduceMotion
+    MotionBehavior on opacity {
         NumberAnimation { duration: Motion.medium }
     }
 
@@ -229,8 +228,7 @@ Item {
                                 : _hover.hovered
                                     ? Theme.withAlpha(Theme.text, 0.042)
                                     : "transparent"
-                        Behavior on color {
-                            enabled: !ShellSettings.reduceMotion
+                        MotionBehavior on color {
                             ColorAnimation { duration: Motion.fast }
                         }
 
@@ -259,8 +257,7 @@ Item {
                                 font.pixelSize: Math.max(9, Settings.fontSize - 1)
                                 font.weight: Font.Medium
                                 renderType: Text.NativeRendering
-                                Behavior on color {
-                                    enabled: !ShellSettings.reduceMotion
+                                MotionBehavior on color {
                                     ColorAnimation { duration: Motion.fast }
                                 }
                             }
@@ -289,8 +286,7 @@ Item {
                                 font.weight: _option.active
                                     ? Font.DemiBold : Font.Medium
                                 renderType: Text.NativeRendering
-                                Behavior on color {
-                                    enabled: !ShellSettings.reduceMotion
+                                MotionBehavior on color {
                                     ColorAnimation { duration: Motion.fast }
                                 }
                             }

@@ -270,7 +270,7 @@ PanelWindow {
                             color: (_todayH.hovered || _todayButton.activeFocus) ? Theme.text : Theme.withAlpha(Theme.text, 0.9)
                             font.family: Settings.font; font.pixelSize: Settings.fontSize + 1; font.weight: Font.DemiBold
                             renderType: Text.NativeRendering
-                            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                            MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
                         }
                         Text {
                             visible: card._todayWeek > 0
@@ -322,7 +322,7 @@ PanelWindow {
                         color: (_mH.hovered || _monthButton.activeFocus) ? Theme.text : Theme.withAlpha(Theme.text, 0.9)
                         font.family: Settings.font; font.pixelSize: Settings.fontSize + 1; font.weight: Font.DemiBold
                         renderType: Text.NativeRendering
-                        Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                        MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
                     }
                 }
 
@@ -364,8 +364,7 @@ PanelWindow {
                 width: parent.width
                 height: card._rowCount * card.cell
                 clip: true
-                Behavior on height {
-                    enabled: !ShellSettings.reduceMotion
+                MotionBehavior on height {
                     NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
                 }
 
@@ -464,7 +463,7 @@ PanelWindow {
                                 antialiasing: true
                                 color: _dayCell.today ? Theme.accent
                                      : (_dayH.hovered && _dayCell.cur ? Theme.withAlpha(Theme.subtext, 0.10) : "transparent")
-                                Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                                MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
 
                                 HoverHandler { id: _dayH; enabled: _dayCell.cur; cursorShape: Qt.PointingHandCursor }
                                 TapHandler {
@@ -492,8 +491,8 @@ PanelWindow {
                                     color: _dayCell.today ? Theme.surface : Theme.accent
                                     opacity: _dayCell.marked ? 1 : 0
                                     scale:   _dayCell.marked ? 1 : 0.3
-                                    Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast } }
-                                    Behavior on scale   { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(125); easing.type: Easing.OutCubic } }
+                                    MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
+                                    MotionBehavior on scale   {NumberAnimation { duration: Motion.ms(125); easing.type: Easing.OutCubic } }
                                 }
 
                                 Rectangle {
