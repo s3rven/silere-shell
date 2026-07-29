@@ -122,7 +122,8 @@ Item {
     activeFocusOnTab: interactive
 
     Accessible.role: interactive ? Accessible.Button : Accessible.StaticText
-    Accessible.name: accessibleName
+    Accessible.name: accessibleName.length > 0
+        ? accessibleName : (text.length > 0 ? text : glyph)
     Accessible.description: accessibleDescription
     Accessible.focusable: interactive
     Accessible.onPressAction: if (root.interactive) root.activated()
@@ -216,15 +217,19 @@ Item {
         x: Math.round((parent.width - width) / 2)
         y: Math.round((parent.height - height) / 2)
         spacing: Metrics.pillGapFor(root.compact)
+        scale: root.visualPressed ? 0.94 : 1.0
+        transformOrigin: Item.Center
+
+        Behavior on scale {
+            enabled: !ShellSettings.reduceMotion
+            NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
+        }
 
         Item {
             id: _glyphBox
             anchors.verticalCenter: parent.verticalCenter
             implicitWidth:  root._shownGlyph.length > 0 ? Metrics.iconCellFor(root.glyphPixelSize) : 0
             implicitHeight: _glyphText.implicitHeight
-            scale: root.visualPressed ? 0.84 : 1.0
-            transformOrigin: Item.Center
-            Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
             Text {
                 id: _glyphText
@@ -354,6 +359,7 @@ Item {
 
     HoverHandler {
         id: _pillHover
+        enabled: root.enabled && root.visible
         margin: 0
         onHoveredChanged: {
             if (hovered) _hoverRevealTimer.restart()
