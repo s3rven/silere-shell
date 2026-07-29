@@ -210,7 +210,7 @@ Singleton {
         return -1
     }
 
-    function _clientFromPidChain(clients, pid): var {
+    function _clientFromPidChain(clients, pid, followParents: bool): var {
         let p = root._toPid(pid)
         const seen = ({})
 
@@ -221,6 +221,8 @@ Singleton {
             if (pool.length > 0)
                 return root._chooseSource(pool)
 
+            // arrival-time effects must not wait on /proc; name matching still applies
+            if (!followParents) break
             p = root._parentPid(p)
         }
 
@@ -268,7 +270,7 @@ Singleton {
         return best
     }
 
-    function _matchNotificationClient(notification): var {
+    function _matchNotificationClient(notification, followPidParents: bool): var {
         if (!notification) return null
 
         const clients = root._clients()
@@ -278,7 +280,7 @@ Singleton {
         const pidHint = root._senderPid(notification)
         const deHint  = root._norm(notification.desktopEntry || hints["desktop-entry"] || "")
 
-        const pidMatch = root._clientFromPidChain(clients, pidHint)
+        const pidMatch = root._clientFromPidChain(clients, pidHint, followPidParents)
         if (pidMatch && pidMatch.wsId >= 0) return pidMatch
 
         if (deHint.length > 0) {
@@ -298,12 +300,12 @@ Singleton {
     }
 
     function focusNotificationSource(notification): void {
-        const c = root._matchNotificationClient(notification)
+        const c = root._matchNotificationClient(notification, true)
         if (c) Compositor.focusToplevel(c)
     }
 
     function notificationSourceWorkspace(notification): int {
-        const c = root._matchNotificationClient(notification)
+        const c = root._matchNotificationClient(notification, false)
         return c ? (c.wsId ?? -1) : -1
     }
 
