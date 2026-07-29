@@ -1,7 +1,6 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import "../../config"
 import "../../services"
 import "../common"
 
@@ -10,14 +9,9 @@ Row {
 
     required property var orderKeys
     required property var widgetComponents
-    property bool compact: ShellSettings.barCompact
+    required property bool compact
 
-    readonly property int dotGap: Metrics.widgetGapFor(compact)
-    readonly property bool _compact: compact
-
-    property real _animatedGap: dotGap
-    spacing: Math.round(_animatedGap)
-    Behavior on _animatedGap { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+    spacing: 0
 
     function _widgetEnabled(key: string): bool {
         if (key.length === 0) return false
@@ -31,48 +25,69 @@ Row {
     }
     readonly property var activeKeys: orderKeys.filter(key => zone._widgetEnabled(key))
 
-    property int _repRev: 0
-    function _computeSeps(rep): var {
-        zone._repRev
-        const compact = zone._compact
-        const out = {}
-        const groupsAfter = {}
-        let anyAfter = false
-        for (let i = rep.count - 1; i >= 0; i--) {
-            const it = rep.itemAt(i)
-            if (!it || !it.key) continue
-            if (!it.show) { out[it.key] = false; continue }
-            const g = ShellSettings.barWidgetMeta[it.key].group
-            out[it.key] = anyAfter && (!compact || groupsAfter[g] !== true)
-            anyAfter = true
-            groupsAfter[g] = true
-        }
-        return out
+    // widgets only report real visibility once loaded, so rebuild off the
+    // rendered delegates rather than per-key state a reorder can leave stale
+    property var _visibleKeys: []
+    readonly property var visibleKeys: _visibleKeys
+
+    function _queueVisibilitySync(): void {
+        _visibilitySync.restart()
     }
-    readonly property var _seps: _computeSeps(_rep)
+
+    function _syncVisibility(): void {
+        const next = []
+        for (let i = 0; i < widgetRepeater.count; i++) {
+            const slot = widgetRepeater.itemAt(i)
+            if (slot && slot.show && slot.key.length > 0) next.push(slot.key)
+        }
+
+        if (next.length === zone._visibleKeys.length
+                && next.every((key, i) => key === zone._visibleKeys[i])) return
+        zone._visibleKeys = next
+    }
+
+    onActiveKeysChanged: _queueVisibilitySync()
+
+    Timer {
+        id: _visibilitySync
+        interval: 0
+        onTriggered: zone._syncVisibility()
+    }
 
     Repeater {
-        id: _rep
+        id: widgetRepeater
         // Bind delegates to their keys, not only to the array length. Reusing
         // numeric slots across a same-length reorder can leave a Loader paired
         // with the component that previously occupied that index.
         model: zone.activeKeys
-        onItemAdded: zone._repRev++
-        onItemRemoved: zone._repRev++
-
+        onItemAdded: zone._queueVisibilitySync()
+        onItemRemoved: zone._queueVisibilitySync()
         delegate: Row {
             id: _slot
             required property string modelData
             readonly property string key: modelData
-            readonly property bool widgetEnabled: zone._widgetEnabled(key)
-            readonly property bool show: widgetEnabled && _loader.loadedKey === key
+            readonly property bool show: _loader.loadedKey === key
                 && (_loader.item ? _loader.item.show : false)
+            // per-slot primitives: a placement change invalidates one divider,
+            // not a shared object map rebuilt for every widget
+            readonly property int visibleIndex: zone.visibleKeys.indexOf(key)
+            readonly property bool hasNext: visibleIndex >= 0
+                && visibleIndex + 1 < zone.visibleKeys.length
+            readonly property string nextKey: hasNext
+                ? zone.visibleKeys[visibleIndex + 1] : ""
+            readonly property var currentMeta: ShellSettings.barWidgetMeta[key] ?? null
+            readonly property var nextMeta: ShellSettings.barWidgetMeta[nextKey] ?? null
+            readonly property bool groupBreak: hasNext
+                && currentMeta !== null && nextMeta !== null
+                && currentMeta.group !== nextMeta.group
             height: parent.height
-            spacing: zone.spacing
+            spacing: 0
             // Read the plain `show`, never `.visible` — Item.visible cascades
             // from ancestors, so binding a row's visible to its descendant's is
             // a deadlock.
             visible: key.length > 0 && show
+            onShowChanged: zone._queueVisibilitySync()
+            Component.onCompleted: zone._queueVisibilitySync()
 
             Loader {
                 id: _loader
@@ -82,15 +97,20 @@ Row {
                 // different subpixel phase and appears alternately thin/thick.
                 width: item ? Math.ceil(item.implicitWidth) : 0
                 property string loadedKey: ""
-                active: _slot.widgetEnabled && _slot.key.length > 0
+                active: _slot.key.length > 0
                 sourceComponent: _slot.key.length > 0 ? zone.widgetComponents[_slot.key] : null
                 onSourceComponentChanged: loadedKey = ""
                 onActiveChanged: if (!active) loadedKey = ""
                 onLoaded: loadedKey = _slot.key
             }
-            Dot {
+
+            BarDivider {
                 compact: zone.compact
-                show: zone._seps[_slot.key] === true
+                hasNext: _slot.hasNext
+                marked: _slot.hasNext
+                    && (ShellSettings.barSeparatorMode === "widgets"
+                        || _slot.groupBreak)
+                groupBreak: _slot.groupBreak
             }
         }
     }

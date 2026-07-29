@@ -83,12 +83,13 @@ Singleton {
     property real   glowStrength:            1.0
     property bool   screenshotGlowSweep:     false
 
-    property real   dotOpacity:          0.28
-    property string dotStyle:            "·"
+    property real   dotOpacity:          0.38
+    property string dotStyle:            "line"
     readonly property string dotTextGlyph: dotStyle === "|" || dotStyle === "line" ? "│"
                                          : dotStyle === "slash" ? "/"
                                          : dotStyle === "none"  ? "·"
                                          : dotStyle
+    property string barSeparatorMode:   "groups"
     property int    barSpacing:          11
     property bool   barAutoCompact:      true
     property bool   barCompact:          false
@@ -183,13 +184,13 @@ Singleton {
 
     readonly property var barWidgetMeta: ({
         workspaces:  { glyph: "󰊗", label: "Workspaces",      group: "workspaces", setting: "" },
-        shellUpdate: { glyph: "󰑐", label: "Shell update",    group: "shell",  setting: "barShowShellUpdate" },
-        tray:        { glyph: "󰇘", label: "System tray",     group: "tray",   setting: "trayWidget" },
-        updates:     { glyph: "󰚰", label: "Package updates", group: "status", setting: "updatesWidget" },
-        network:     { glyph: "󰛳", label: "Network",         group: "status", setting: "barShowNetwork" },
+        shellUpdate: { glyph: "󰑐", label: "Shell update",    group: "updates", setting: "barShowShellUpdate" },
+        tray:        { glyph: "󰇘", label: "System tray",     group: "tray",    setting: "trayWidget" },
+        updates:     { glyph: "󰚰", label: "Package updates", group: "updates", setting: "updatesWidget" },
+        network:     { glyph: "󰛳", label: "Network",         group: "network", setting: "barShowNetwork" },
         volume:      { glyph: "󰕾", label: "Volume",          group: "levels", setting: "barShowVolume" },
         brightness:  { glyph: "󰃟", label: "Brightness",      group: "levels", setting: "barShowBrightness" },
-        battery:     { glyph: "󰂄", label: "Battery",         group: "levels", setting: "barShowBattery" },
+        battery:     { glyph: "󰂄", label: "Battery",         group: "power",  setting: "barShowBattery" },
         media:       { glyph: "󰝚", label: "Media",           group: "media",  setting: "barShowMedia" },
         clock:       { glyph: "󰅐", label: "Clock",           group: "clock",  setting: "barShowClock" }
     })
@@ -291,6 +292,7 @@ Singleton {
         { k: "screenshotGlowSweep", t: "bool" },
         { k: "dotOpacity",          t: "real", min: 0.05, max: 1.0 },
         { k: "dotStyle",            t: "enum", vals: ["·", "•", "◦", "|", "slash", "line", "none"] },
+        { k: "barSeparatorMode",    t: "enum", vals: ["groups", "widgets"] },
         { k: "barSpacing",          t: "int",  min: 4, max: 24 },
         { k: "barAutoCompact",      t: "bool" },
         { k: "barCompact",          t: "bool" },

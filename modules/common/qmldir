@@ -1,5 +1,6 @@
 Pill 1.0 Pill.qml
-Dot  1.0 Dot.qml
+BarDivider 1.0 BarDivider.qml
+Hairline 1.0 Hairline.qml
 CollapsingText 1.0 CollapsingText.qml
 RollingText 1.0 RollingText.qml
 ListEdgeFade 1.0 ListEdgeFade.qml

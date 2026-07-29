@@ -135,24 +135,20 @@ PanelWindow {
             opacity: contents.opacity * bar.floatingProgress
             visible: active && opacity > 0.001
             sourceComponent: Item {
-                Rectangle {
+                Hairline {
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.leftMargin: surface.radius
                     anchors.rightMargin: surface.radius
-                    y: bar.atBottom ? parent.height - 1 : 0
-                    height: 1
-                    antialiasing: false
+                    y: bar.atBottom ? parent.height - height : 0
                     color: Theme.withAlpha(Theme.text, ShellSettings.neutralTheme ? 0.045 : 0.065)
                 }
-                Rectangle {
+                Hairline {
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.leftMargin: surface.radius
                     anchors.rightMargin: surface.radius
-                    y: bar.atBottom ? 0 : parent.height - 1
-                    height: 1
-                    antialiasing: false
+                    y: bar.atBottom ? 0 : parent.height - height
                     color: Qt.rgba(0, 0, 0, bar.shadowOn
                         ? Math.min(0.16, 0.07 + 0.035 * ShellSettings.barShadowStrength)
                         : Math.min(0.11, 0.045 * ShellSettings.barLineStrength))
@@ -168,12 +164,10 @@ PanelWindow {
             active: ShellSettings.barBorderVisible
             opacity: contents.opacity * (1.0 - bar.floatingProgress)
             visible: active && opacity > 0.001
-            sourceComponent: Rectangle {
+            sourceComponent: Hairline {
                 anchors.left:  parent.left
                 anchors.right: parent.right
-                y: bar.atBottom ? 0 : parent.height - 1
-                height: 1
-                antialiasing: false
+                y: bar.atBottom ? 0 : parent.height - height
 
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
@@ -195,8 +189,16 @@ PanelWindow {
             property real _slideY: _hideY
             transform: Translate { y: contents._slideY }
 
+            function settle(shown: bool): void {
+                _enterAnim.stop()
+                _exitAnim.stop()
+                contents.opacity = shown ? 1 : 0
+                contents._slideY = shown ? 0 : contents._hideY
+            }
+
             Component.onCompleted: Qt.callLater(function() {
-                if (!bar.concealed) _enterAnim.start()
+                if (ShellSettings.reduceMotion) contents.settle(!bar.concealed)
+                else if (!bar.concealed) _enterAnim.start()
             })
 
             ParallelAnimation {
@@ -231,6 +233,10 @@ PanelWindow {
             Connections {
                 target: bar
                 function onConcealedChanged() {
+                    if (ShellSettings.reduceMotion) {
+                        contents.settle(!bar.concealed)
+                        return
+                    }
                     if (bar.concealed) {
                         _enterAnim.stop()
                         _exitAnim.start()
@@ -239,6 +245,14 @@ PanelWindow {
                         contents._slideY = contents._hideY
                         _enterAnim.start()
                     }
+                }
+            }
+
+            Connections {
+                target: ShellSettings
+                function onReduceMotionChanged() {
+                    if (ShellSettings.reduceMotion)
+                        contents.settle(!bar.concealed)
                 }
             }
 
@@ -270,12 +284,9 @@ PanelWindow {
             active: bar.wrapUnderline && ShellSettings.barBorderVisible
             opacity: contents.opacity * bar.floatingProgress
             visible: active && opacity > 0.001
-            sourceComponent: Rectangle {
+            sourceComponent: OutlineBorder {
                 radius: surface.radius
-                antialiasing: surface.radius > 0
-                color: "transparent"
-                border.width: 1
-                border.color: Theme.withAlpha(Theme.mix(Theme.subtext, Theme.accent, 0.30),
+                outlineColor: Theme.withAlpha(Theme.mix(Theme.subtext, Theme.accent, 0.30),
                     Math.min(0.42, 0.20 * ShellSettings.barLineStrength))
             }
         }

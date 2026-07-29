@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Window
 
 Rectangle {
     id: root
@@ -19,7 +20,7 @@ Rectangle {
     readonly property real _r:  Math.min(_hi, Math.max(_c, _c + Math.max(0, spread)))
     readonly property color _transparentEdge: Qt.rgba(edge.r, edge.g, edge.b, 0)
 
-    height: 1
+    height: 1 / Math.max(1, Screen.devicePixelRatio)
     antialiasing: false
 
     gradient: Gradient {

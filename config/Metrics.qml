@@ -6,20 +6,25 @@ import "../services"
 
 Singleton {
     function widgetGapFor(compact: bool): int {
-        return compact ? Math.max(3, ShellSettings.barSpacing - 6)
+        return compact ? Math.max(4, Math.round(ShellSettings.barSpacing * 0.5))
                        : ShellSettings.barSpacing
     }
 
-    function titleGapFor(compact: bool): int { return compact ? 7 : 10 }
+    // the divider owns the whole span between two widgets, not gap + mark + gap
+    function dividerSpanFor(compact: bool): int {
+        const gap = widgetGapFor(compact)
+        return compact ? Math.max(9, gap + 4)
+                       : Math.max(14, gap + 6)
+    }
+
+    function titleGapFor(compact: bool): int {
+        return Math.max(compact ? 6 : 9, widgetGapFor(compact))
+    }
 
     function pillPadFor(compact: bool): int { return compact ? 2 : 5 }
     function pillGapFor(compact: bool): int { return compact ? 3 : 5 }
 
     function clockDateGapFor(compact: bool): int { return compact ? 4 : 8 }
-
-    function dotSlotFor(slash: bool, compact: bool): int {
-        return compact ? (slash ? 5 : 4) : (slash ? 9 : 8)
-    }
 
     // Fixed icon cell: Text sizes glyphs by ink, which spans 0.64–1.08× the pixel size
     // across the Nerd icon set — a natural-width slot resizes on every glyph swap and
