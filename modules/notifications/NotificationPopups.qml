@@ -39,6 +39,130 @@ PanelWindow {
     readonly property int    _slideDir: _center ? 0 : (_left ? -1 : 1)
     readonly property bool   _barBottom: ShellSettings.barPosition === "bottom"
 
+    function _alignedX(containerWidth: real, itemWidth: real): real {
+        if (win._left) return 0
+        if (win._center) return Math.round((containerWidth - itemWidth) / 2)
+        return containerWidth - itemWidth
+    }
+
+    // inline components cannot reach the enclosing file's ids, so alignment
+    // arrives as flags rather than a call back into _alignedX
+    component NotifChip: Item {
+        id: chip
+
+        property bool shown: false
+        property bool alignLeft: false
+        property bool alignCenter: false
+        property string glyph: ""
+        property string label: ""
+        property string accessibleName: ""
+        property color tint: Theme.accent
+        property bool _keyboardPressed: false
+
+        readonly property bool pressed: _tap.pressed || _keyboardPressed
+
+        signal triggered()
+
+        width:   parent ? parent.width : 0
+        height:  shown ? 30 : 0
+        clip:    true
+        enabled: shown
+        visible: height > 0.5
+        activeFocusOnTab: shown
+
+        Accessible.role: Accessible.Button
+        Accessible.name: chip.accessibleName
+        Accessible.onPressAction: chip.triggered()
+
+        onActiveFocusChanged: if (!activeFocus) _keyboardPressed = false
+        onShownChanged: if (!shown) _keyboardPressed = false
+
+        Keys.onPressed: event => {
+            if (event.isAutoRepeat
+                    || (event.key !== Qt.Key_Space
+                        && event.key !== Qt.Key_Return
+                        && event.key !== Qt.Key_Enter)) return
+            chip._keyboardPressed = true
+            event.accepted = true
+        }
+        Keys.onReleased: event => {
+            if (!chip._keyboardPressed
+                    || (event.key !== Qt.Key_Space
+                        && event.key !== Qt.Key_Return
+                        && event.key !== Qt.Key_Enter)) return
+            chip._keyboardPressed = false
+            event.accepted = true
+            chip.triggered()
+        }
+
+        Behavior on height {
+            enabled: !ShellSettings.reduceMotion
+            NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
+        }
+
+        Rectangle {
+            id: _surface
+            x: chip.alignLeft ? 0
+                : chip.alignCenter ? Math.round((parent.width - width) / 2)
+                : parent.width - width
+            anchors.verticalCenter: parent.verticalCenter
+            width:  _row.implicitWidth + 20
+            height: 24
+            radius: 12
+            antialiasing: true
+            // the popup window is transparent, so an alpha tint here would let the
+            // desktop through instead of shading the chip — blend into the base
+            color: chip.pressed ? Theme.mix(Theme.menuControl, chip.tint, 0.26)
+                : _hover.hovered ? Theme.mix(Theme.menuControl, chip.tint, 0.15) : Theme.menuControl
+            scale: chip.pressed ? 0.97 : 1
+
+            Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+            Behavior on scale { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+
+            OutlineBorder {
+                radius: _surface.radius
+                outlineWidth: chip.activeFocus ? 2 : 1
+                outlineColor: chip.activeFocus
+                    ? Theme.withAlpha(chip.tint, 0.72)
+                    : _hover.hovered
+                    ? Theme.withAlpha(chip.tint, 0.42) : Theme.menuControlLine
+                Behavior on outlineColor { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+            }
+
+            HoverHandler { id: _hover; cursorShape: Qt.PointingHandCursor }
+            TapHandler   { id: _tap; onTapped: chip.triggered() }
+
+            Row {
+                id: _row
+                anchors.centerIn: parent
+                spacing: 5
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: chip.glyph
+                    color: _hover.hovered ? chip.tint
+                        : Theme.withAlpha(Theme.menuTextMuted, 0.76)
+                    font.family: Settings.font
+                    font.pixelSize: Settings.fontSize - 1
+                    renderType: Text.NativeRendering
+                    Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                }
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: chip.label
+                    color: _hover.hovered ? Theme.withAlpha(Theme.text, 0.90)
+                        : Theme.withAlpha(Theme.menuTextMuted, 0.86)
+                    font.family: Settings.font
+                    font.pixelSize: Settings.fontSize - 2
+                    font.weight: Font.Medium
+                    renderType: Text.NativeRendering
+                    Behavior on color { enabled: !ShellSettings.reduceMotion; ColorAnimation { duration: Motion.fast } }
+                }
+            }
+        }
+    }
+
     anchors {
         top:    !win._barBottom
         bottom: win._barBottom
@@ -56,12 +180,27 @@ PanelWindow {
     }
     mask: Region { item: outerCol }
 
-    property int _pendingDismissAll: 0
     property var _pendingDismissItems: []
+    readonly property int _pendingDismissAll: _pendingDismissItems.length
     property bool _showAll: false
     property int _batchExits: 0
     readonly property bool _dismissing: win._pendingDismissAll > 0 || _cascadeTimer.running
-    property int _dismissCount: 0
+
+    property bool _quietPaint: false
+
+    readonly property int _visibleCards: win._showAll || ShellSettings.notifMaxVisible <= 0
+        ? stack.count : Math.min(stack.count, ShellSettings.notifMaxVisible)
+
+    function _noteLeaving(): void {
+        win._quietPaint = true
+        _quietPaintHold.restart()
+    }
+
+    Timer {
+        id: _quietPaintHold
+        interval: Motion.ms(210) + 90
+        onTriggered: win._quietPaint = false
+    }
 
     function revealAll(): void {
         if (Notifications.activeCount > 0) win._showAll = true
@@ -69,29 +208,35 @@ PanelWindow {
 
     function dismissAll(): void {
         if (win._dismissing) return
-        var items = []
-        var pending = []
+
+        const pending = []
+        const inSnapshot = ({})
         const live = Notifications.list || []
-        for (var n = 0; n < live.length; n++) {
+        for (let n = 0; n < live.length; n++) {
             const entry = live[n]
-            if (entry && entry.notification)
-                pending.push({ id: entry.id, notification: entry.notification, expired: false })
+            if (!entry || !entry.notification) continue
+            pending.push({ id: entry.id, notification: entry.notification })
+            inSnapshot[entry.id] = true
         }
-        for (var i = 0; i < stack.count; i++) {
+        if (pending.length === 0) return
+
+        // the cascade draws from the tracked model but the snapshot from the
+        // service list; a card outside the snapshot can never report its exit,
+        // so counting it would leave the batch one short of completing
+        const items = []
+        for (let i = 0; i < stack.count; i++) {
             const slot = stack.itemAt(i)
-            if (!slot || !slot.cardItem) continue
+            if (!slot || !slot.cardItem || inSnapshot[slot.modelData.id] !== true) continue
             slot.cardItem.collapseOnDismiss = false
             items.push(slot.cardItem)
         }
+
         win._pendingDismissItems = pending
-        win._pendingDismissAll = pending.length
-        win._dismissCount = pending.length
         win._batchExits = items.length
-        if (pending.length === 0) return
         if (items.length === 0) { win._dismissPendingSnapshot(); return }
         if (ShellSettings.reduceMotion) {
-            for (var j = 0; j < items.length; j++) items[j].dismiss()
-            if (win._pendingDismissAll > 0) _cascadeSafety.restart()
+            for (let j = 0; j < items.length; j++) items[j].dismiss()
+            _cascadeSafety.restart()
             return
         }
         win._cascadeItems = items
@@ -126,10 +271,9 @@ PanelWindow {
     function _dismissPendingSnapshot(): void {
         const items = win._pendingDismissItems
         win._pendingDismissItems = []
-        win._pendingDismissAll = 0
         win._batchExits = 0
         for (let i = 0; i < items.length; i++)
-            Notifications.dismissObject(items[i].id, items[i].notification, items[i].expired)
+            Notifications.dismissObject(items[i].id, items[i].notification, false)
     }
 
     property var _cascadeItems: []
@@ -175,78 +319,15 @@ PanelWindow {
         }
         spacing: 6
 
-        Item {
-            id: _dismissBar
-            property bool shown: Notifications.activeCount > 1 || win._dismissing
-            width:   parent.width
-            height:  shown ? 38 : 0
-            clip:    true
-            enabled: shown
-            visible: height > 0.5
-
-            Behavior on height {
-                enabled: !ShellSettings.reduceMotion
-                NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
-            }
-
-            Rectangle {
-                id: _dismissSurface
-                anchors.right:            (win._left || win._center) ? undefined : parent?.right
-                anchors.left:             win._left   ? parent?.left : undefined
-                anchors.horizontalCenter: win._center ? parent?.horizontalCenter : undefined
-                y:       _dismissBar.shown ? 3 : 13
-                opacity: _dismissBar.shown ? 1.0 : 0.0
-                width: win._cardW
-                height: 32
-                radius: Theme.radiusControl
-                antialiasing: true
-                color: Theme.menuCard
-                border.width: 1
-                border.color: Theme.menuCardBorder
-
-                Behavior on y       { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
-                Behavior on opacity { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
-
-                Row {
-                    anchors.left: parent.left
-                    anchors.leftMargin: 10
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 6
-
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "󰂚"
-                        color: Theme.withAlpha(Theme.accent, 0.68)
-                        font.family: Settings.font
-                        font.pixelSize: Settings.fontSize - 1
-                        renderType: Text.NativeRendering
-                    }
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: (win._dismissing ? win._dismissCount : Notifications.activeCount) + " active"
-                        color: Theme.withAlpha(Theme.menuTextMuted, 0.72)
-                        font.family: Settings.font
-                        font.pixelSize: Settings.fontSize - 2
-                        font.weight: Font.Medium
-                        renderType: Text.NativeRendering
-                    }
-                }
-
-                ActionButton {
-                    anchors.right: parent.right
-                    anchors.rightMargin: 4
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: Math.max(contentWidth, 104)
-                    height: 24
-                    radius: 7
-                    glyph: "󰆴"
-                    label: "Dismiss all"
-                    emphasis: true
-                    accentColor: Theme.error
-                    accessibleName: "Dismiss all notifications"
-                    onTriggered: win.dismissAll()
-                }
-            }
+        NotifChip {
+            shown:          Notifications.activeCount > 1 || win._dismissing
+            alignLeft:      win._left
+            alignCenter:    win._center
+            glyph:          "󰆴"
+            label:          "Clear all"
+            tint:           Theme.error
+            accessibleName: "Dismiss all notifications"
+            onTriggered:    win.dismissAll()
         }
 
         Column {
@@ -276,9 +357,7 @@ PanelWindow {
                         ? cardItem.implicitHeight + _gap * cardItem.collapseRatio : 0
                     visible: shouldLoad
 
-                    anchors.right:            (win._left || win._center) ? undefined : parent?.right
-                    anchors.left:             win._left   ? parent?.left : undefined
-                    anchors.horizontalCenter: win._center ? parent?.horizontalCenter : undefined
+                    x: win._alignedX(parent.width, width)
 
                     Component.onCompleted: {
                         if (shouldLoad) timeoutStartedAt = Notifications.updateTimeFor(modelData.id)
@@ -291,7 +370,8 @@ PanelWindow {
                     Connections {
                         target: Notifications
                         function onContentUpdated(notifId: int): void {
-                            if (notifId === modelData.id && shouldLoad) timeoutStartedAt = Date.now()
+                            if (notifId === _slot.modelData.id && _slot.shouldLoad)
+                                _slot.timeoutStartedAt = Date.now()
                         }
                     }
 
@@ -309,9 +389,14 @@ PanelWindow {
                             createdAt: Notifications.timeFor(_slot.modelData.id)
                             timeoutStartedAt: _slot.timeoutStartedAt
                             slideDir: win._slideDir
+                            quietPaint: win._quietPaint
+                            stackSize: win._visibleCards
+
+                            onLeaving: win._noteLeaving()
 
                             onDismissRequested: (id, notification, expired) => {
-                                if (win._batchExits > 0) {
+                                if (win._batchExits > 0
+                                        && win._pendingDismissItems.some(it => it.id === id)) {
                                     win._noteBatchExit()
                                     return
                                 }
@@ -323,69 +408,16 @@ PanelWindow {
             }
         }
 
-        Item {
-            id: _moreChip
+        NotifChip {
             readonly property int _extra: !win._showAll && ShellSettings.notifMaxVisible > 0
                 ? Math.max(0, Notifications.activeCount - ShellSettings.notifMaxVisible) : 0
-            width:   parent.width
-            height:  _extra > 0 ? 30 : 0
-            visible: height > 0.5
-            clip:    true
-            Behavior on height { enabled: !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
-
-            Rectangle {
-                anchors.right:            (win._left || win._center) ? undefined : parent?.right
-                anchors.left:             win._left   ? parent?.left : undefined
-                anchors.horizontalCenter: win._center ? parent?.horizontalCenter : undefined
-                anchors.verticalCenter:   parent.verticalCenter
-                width:  _moreRow.implicitWidth + 20
-                height: 24
-                radius: 12
-                antialiasing: true
-                color: _moreTap.pressed
-                    ? Theme.withAlpha(Theme.accent, 0.20)
-                    : _moreHover.hovered ? Theme.withAlpha(Theme.accent, 0.11) : Theme.menuControl
-                border.width: 1
-                border.color: _moreHover.hovered
-                    ? Theme.withAlpha(Theme.accent, 0.42) : Theme.menuControlLine
-                Accessible.role: Accessible.Button
-                Accessible.name: "Show " + _moreChip._extra + " more notifications"
-                Accessible.onPressAction: win.revealAll()
-
-                Behavior on color { ColorAnimation { duration: Motion.fast } }
-                Behavior on border.color { ColorAnimation { duration: Motion.fast } }
-                HoverHandler { id: _moreHover; cursorShape: Qt.PointingHandCursor }
-                TapHandler { id: _moreTap; onTapped: win.revealAll() }
-
-                Row {
-                    id: _moreRow
-                    anchors.centerIn: parent
-                    spacing: 5
-
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "󰂚"
-                        color: _moreHover.hovered ? Theme.accent
-                            : Theme.withAlpha(Theme.menuTextMuted, 0.76)
-                        font.family: Settings.font
-                        font.pixelSize: Settings.fontSize - 1
-                        renderType: Text.NativeRendering
-                        Behavior on color { ColorAnimation { duration: Motion.fast } }
-                    }
-
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "Show " + _moreChip._extra + " more"
-                        color: _moreHover.hovered ? Theme.withAlpha(Theme.text, 0.90)
-                            : Theme.withAlpha(Theme.menuTextMuted, 0.86)
-                        font.family: Settings.font
-                        font.pixelSize: Settings.fontSize - 2
-                        font.weight: Font.Medium
-                        renderType: Text.NativeRendering
-                        Behavior on color { ColorAnimation { duration: Motion.fast } }
-                    }
-                }
-            }
+            shown:          _extra > 0
+            alignLeft:      win._left
+            alignCenter:    win._center
+            glyph:          "󰂚"
+            label:          "Show " + _extra + " more"
+            accessibleName: "Show " + _extra + " more notifications"
+            onTriggered:    win.revealAll()
         }
     }
 }
