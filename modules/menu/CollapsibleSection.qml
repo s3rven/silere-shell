@@ -5,7 +5,7 @@ Item {
     id: root
 
     property bool expanded: true
-    default property alias data: _content.data
+    default property alias rows: _content.data
 
     readonly property bool isRadiusGroup: true
     readonly property Item radiusColumn: _content
