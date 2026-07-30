@@ -263,7 +263,7 @@ Singleton {
         { k: "osdMatchBar",         t: "bool" },
         { k: "reduceMotion",        t: "bool" },
         { k: "highContrast",        t: "bool" },
-        { k: "outlineStrength",     t: "real", min: 0.5, max: 1.6 },
+        { k: "outlineStrength",     t: "real", min: 0.5, max: 2.4 },
         { k: "uiScale",             t: "real", min: 0.8, max: 1.15 },
         { k: "fontFamily",          t: "re",   re: /^[A-Za-z0-9 ._-]*$/ },
         { k: "notifPopupEnabled",   t: "bool" },
