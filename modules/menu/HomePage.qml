@@ -289,32 +289,6 @@ PageShell {
                     }
                 }
 
-                // corner mark, not centred: the card's centre is occupied by the title block
-                Item {
-                    anchors.right: parent.right
-                    anchors.rightMargin: 12
-                    anchors.top: parent.top
-                    anchors.topMargin: 10
-                    width: 34; height: 34
-                    opacity: Math.max(0, 1 - _art.shownAlpha / _art.maxAlpha)
-                    visible: Media.shown && opacity > 0.01
-
-                    Rectangle {
-                        anchors.centerIn: parent
-                        width: 26; height: 26
-                        radius: 7
-                        rotation: 45
-                        antialiasing: true
-                        color: Theme.withAlpha(Theme.accent, 0.10)
-                    }
-                    ShellText {
-                        anchors.centerIn: parent
-                        text: "󰝚"
-                        color: Theme.withAlpha(Theme.accent, 0.34)
-                        font.pixelSize: 19
-                    }
-                }
-
                 Rectangle {
                     anchors.left: parent.left
                     anchors.right: parent.right
