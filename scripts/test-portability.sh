@@ -15,6 +15,53 @@ assert_eq() {
     [ "$actual" = "$expected" ] || fail "$label (expected '$expected', got '$actual')"
 }
 
+test_xdg_paths_and_timer_default() (
+    local home="$TMP/xdg-home" actual
+    mkdir -p "$home"
+
+    actual="$(
+        HOME="$home" XDG_CONFIG_HOME=relative/config SILERE_SCRIPT_LIB_ONLY=1 \
+            bash -c 'source "$1"; printf "%s" "$CONFIG_HOME"' _ "$ROOT/scripts/install.sh"
+    )"
+    assert_eq "$home/.config" "$actual" "installer relative XDG config fallback"
+
+    actual="$(
+        HOME="$home" XDG_CONFIG_HOME=/absolute/config SILERE_SCRIPT_LIB_ONLY=1 \
+            bash -c 'source "$1"; printf "%s" "$CONFIG_HOME"' _ "$ROOT/scripts/uninstall.sh"
+    )"
+    assert_eq "/absolute/config" "$actual" "uninstaller absolute XDG config"
+
+    actual="$(
+        HOME="$home" XDG_CONFIG_HOME=relative/config XDG_CACHE_HOME=relative/cache \
+            SILERE_SCRIPT_LIB_ONLY=1 bash -c \
+            'source "$1"; printf "%s|%s" "$CACHE_DIR" "$SYSTEMD_USER_DIR"' \
+            _ "$ROOT/scripts/update.sh"
+    )"
+    assert_eq "$home/.cache/silere-shell|$home/.config/systemd/user" "$actual" \
+        "updater relative XDG fallbacks"
+
+    HOME="$home" XDG_CONFIG_HOME=relative/config SILERE_SCRIPT_LIB_ONLY=1 \
+        source "$ROOT/scripts/install.sh"
+    _answered_yes y || fail "lowercase yes was rejected"
+    _answered_yes Yes || fail "mixed-case yes was rejected"
+    if _answered_yes "" || _answered_yes n; then
+        fail "daily update timer was not default-off"
+    fi
+)
+
+test_fresh_install_permissions() (
+    local home="$TMP/install-mode-home" custom="$TMP/custom-install"
+    HOME="$home" XDG_CONFIG_HOME=relative SILERE_SCRIPT_LIB_ONLY=1 \
+        source "$ROOT/scripts/install.sh"
+
+    mkdir -m 0755 -p "$DEFAULT_DIR" "$custom"
+    _secure_fresh_default_install "$DEFAULT_DIR"
+    assert_eq "700" "$(stat -c '%a' "$DEFAULT_DIR")" "fresh default install mode"
+
+    _secure_fresh_default_install "$custom"
+    assert_eq "755" "$(stat -c '%a' "$custom")" "custom install mode"
+)
+
 test_marker_removal() (
     SILERE_SCRIPT_LIB_ONLY=1 source "$ROOT/scripts/uninstall.sh"
     local dir="$TMP/markers"
@@ -91,6 +138,72 @@ test_qml_module_lookup() (
     if _qml_module_available Silere.AbsentModule; then
         fail "absent QML module was reported as available"
     fi
+)
+
+test_font_archive_selection() (
+    SILERE_SCRIPT_LIB_ONLY=1 source "$ROOT/scripts/install.sh"
+    local source="$TMP/font-archive" destination="$TMP/font-install" archive="$TMP/fonts.tar.xz"
+    local name
+    local expected=(
+        JetBrainsMonoNerdFont-Regular.ttf
+        JetBrainsMonoNerdFont-Medium.ttf
+        JetBrainsMonoNerdFont-SemiBold.ttf
+        JetBrainsMonoNerdFont-Bold.ttf
+    )
+
+    mkdir -p "$source" "$destination"
+    for name in "${expected[@]}" \
+            JetBrainsMonoNerdFont-Italic.ttf \
+            JetBrainsMonoNerdFont-ExtraBold.ttf \
+            JetBrainsMonoNerdFontMono-Regular.ttf; do
+        printf 'fixture: %s\n' "$name" > "$source/$name"
+    done
+    tar -cJf "$archive" -C "$source" .
+    _extract_silere_fonts "$archive" "$destination" \
+        || fail "selected font extraction failed"
+
+    for name in "${expected[@]}"; do
+        [ -f "$destination/$name" ] || fail "required font was not extracted: $name"
+    done
+    set -- "$destination"/*.ttf
+    assert_eq "4" "$#" "selected font file count"
+    [ ! -e "$destination/JetBrainsMonoNerdFont-Italic.ttf" ] \
+        || fail "unused italic font was extracted"
+    [ ! -e "$destination/JetBrainsMonoNerdFontMono-Regular.ttf" ] \
+        || fail "unused Mono font was extracted"
+)
+
+test_install_path_safety() (
+    SILERE_SCRIPT_LIB_ONLY=1 source "$ROOT/scripts/install.sh"
+    local source="$TMP/existing-install" generic="$TMP/generic-repo" backup actual
+
+    actual="$(_normalized_install_path "$source")"
+    assert_eq "$source" "$actual" "normalized safe install path"
+    if (_normalized_install_path / >/dev/null 2>&1); then
+        fail "filesystem root was accepted as an install path"
+    fi
+    if (_normalized_install_path "$HOME" >/dev/null 2>&1); then
+        fail "home directory was accepted as an install path"
+    fi
+    if (_normalized_install_path "$CONFIG_HOME" >/dev/null 2>&1); then
+        fail "config root was accepted as an install path"
+    fi
+
+    mkdir -p "$source"
+    printf 'keep me\n' > "$source/user-file"
+    backup="$(_move_aside_path "$source")" || fail "existing install path was not preserved"
+    [ ! -e "$source" ] || fail "move-aside left the original path in place"
+    assert_eq "keep me" "$(<"$backup/user-file")" "move-aside preserved existing content"
+
+    _is_silere_checkout "$ROOT" || fail "Silere checkout fingerprint was rejected"
+    mkdir -p "$generic/.git"
+    if _is_silere_checkout "$generic"; then
+        fail "generic Git repository passed the Silere checkout fingerprint"
+    fi
+
+    printf '%s\n' '[templates.silere-shell]' > "$generic/matugen.toml"
+    _matugen_table_present "$generic/matugen.toml" \
+        || fail "unmanaged Matugen table was not detected"
 )
 
 make_proc() {
@@ -228,7 +341,10 @@ test_atomic_update_cache() (
     XDG_CACHE_HOME="$test_home/cache"
     SILERE_SCRIPT_LIB_ONLY=1 source "$ROOT/scripts/update.sh"
 
-    mkdir -p "$CACHE_DIR"
+    umask 022
+    _write_cache_file "$FLAG" "seed" || fail "update cache directory creation failed"
+    assert_eq "700" "$(stat -c '%a' "$CACHE_DIR")" "fresh update cache mode"
+    rm -f "$FLAG"
     printf 'do not replace\n' > "$victim"
     ln -s "$victim" "$FLAG"
 
@@ -245,21 +361,24 @@ test_atomic_update_cache() (
 )
 
 test_update_refuses_dirty_apply() (
+    export GIT_CONFIG_GLOBAL=/dev/null
+    export GIT_CONFIG_NOSYSTEM=1
     local remote="$TMP/update-remote.git"
     local seed="$TMP/update-seed"
     local client="$TMP/update-client"
     local test_home="$TMP/update-home"
-    local old_head
+    local old_head remote_head stub_dir="$TMP/update-stubs"
 
     git init --bare -q "$remote"
     git --git-dir="$remote" symbolic-ref HEAD refs/heads/main
     git init -q "$seed"
     git -C "$seed" config user.name "Silere test"
     git -C "$seed" config user.email "test@example.invalid"
-    mkdir -p "$seed/scripts"
+    mkdir -p "$seed/scripts/lib"
     cp "$ROOT/scripts/update.sh" "$seed/scripts/update.sh"
+    cp "$ROOT/scripts/lib/xdg.sh" "$seed/scripts/lib/xdg.sh"
     printf 'upstream v1\n' > "$seed/tracked.qml"
-    git -C "$seed" add scripts/update.sh tracked.qml
+    git -C "$seed" add scripts tracked.qml
     git -C "$seed" commit -qm "initial"
     git -C "$seed" branch -M main
     git -C "$seed" remote add origin "$remote"
@@ -272,13 +391,17 @@ test_update_refuses_dirty_apply() (
     git -C "$seed" commit -qam "upstream update"
     git -C "$seed" push -q
 
-    mkdir -p "$test_home"
-    HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" \
+    mkdir -p "$test_home" "$stub_dir"
+    printf '#!/bin/sh\nexit 1\n' > "$stub_dir/systemctl"
+    printf '#!/bin/sh\nexit 0\n' > "$stub_dir/notify-send"
+    chmod +x "$stub_dir/systemctl" "$stub_dir/notify-send"
+    HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" \
         bash "$client/scripts/update.sh" >/dev/null
+    remote_head="$(git -C "$client" rev-parse origin/main)"
     printf 'local customization\n' >> "$client/tracked.qml"
     old_head="$(git -C "$client" rev-parse HEAD)"
 
-    if HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" \
+    if HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" \
         bash "$client/scripts/update.sh" --apply >/dev/null 2>&1; then
         fail "dirty update apply unexpectedly succeeded"
     fi
@@ -287,9 +410,34 @@ test_update_refuses_dirty_apply() (
         || fail "dirty update apply changed the local edit"
     [ -z "$(git -C "$client" stash list)" ] \
         || fail "dirty update apply created a stash"
+
+    git -C "$client" restore tracked.qml
+    git -C "$client" update-ref -d refs/remotes/origin/main
+    mkdir -p "$test_home/cache/silere-shell"
+    printf '1\nupstream update\n' > "$test_home/cache/silere-shell/update-pending"
+    if HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" \
+        bash "$client/scripts/update.sh" --apply >/dev/null 2>&1; then
+        fail "update apply succeeded without origin/main"
+    fi
+    [ -f "$test_home/cache/silere-shell/update-pending" ] \
+        || fail "missing origin/main cleared the pending update flag"
+    assert_eq "$old_head" "$(git -C "$client" rev-parse HEAD)" "missing origin/main apply HEAD"
+
+    git -C "$client" update-ref refs/remotes/origin/main "$remote_head"
+    git -C "$client" remote set-url origin "$TMP/unavailable-update-origin.git"
+    if ! HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" \
+            PATH="$stub_dir:$PATH" \
+            bash "$client/scripts/update.sh" --apply >/dev/null 2>&1; then
+        fail "update apply contacted origin instead of using its fetched ref"
+    fi
+    assert_eq "$remote_head" "$(git -C "$client" rev-parse HEAD)" "offline update apply HEAD"
+    [ ! -e "$test_home/cache/silere-shell/update-pending" ] \
+        || fail "successful offline apply left the pending update flag"
 )
 
 test_repair_workflow() (
+    export GIT_CONFIG_GLOBAL=/dev/null
+    export GIT_CONFIG_NOSYSTEM=1
     local repo="$TMP/repair" preview
     mkdir -p "$repo/scripts"
     cp "$ROOT/scripts/repair.sh" "$repo/scripts/repair.sh"
@@ -327,9 +475,13 @@ test_repair_workflow() (
     assert_eq '{"barHeight":40}' "$(<"$repo/settings.json")" "repair undo personal settings"
 )
 
+test_xdg_paths_and_timer_default
+test_fresh_install_permissions
 test_marker_removal
 test_uninstall_targets_and_backups
 test_qml_module_lookup
+test_font_archive_selection
+test_install_path_safety
 test_hypr_discovery
 test_niri_config_discovery
 test_atomic_units

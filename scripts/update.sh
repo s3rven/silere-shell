@@ -3,14 +3,23 @@ set -euo pipefail
 export LC_ALL=C
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT/scripts/lib/xdg.sh"
 cd "$ROOT"
 
-CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/silere-shell"
+CACHE_HOME="$(_silere_xdg_home "${XDG_CACHE_HOME:-}" .cache)" || {
+    printf 'silere-update: HOME must be an absolute path\n' >&2
+    exit 1
+}
+CONFIG_HOME="$(_silere_xdg_home "${XDG_CONFIG_HOME:-}" .config)" || {
+    printf 'silere-update: HOME must be an absolute path\n' >&2
+    exit 1
+}
+CACHE_DIR="$CACHE_HOME/silere-shell"
 FLAG="$CACHE_DIR/update-pending"
 NOTIFIED="$CACHE_DIR/update-notified"
 TIMER_UNIT="silere-update.timer"
 SERVICE_UNIT="silere-update.service"
-SYSTEMD_USER_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+SYSTEMD_USER_DIR="$CONFIG_HOME/systemd/user"
 
 _notify() {
     command -v notify-send >/dev/null 2>&1 || return 0
@@ -39,7 +48,7 @@ _clear_flag() {
 _write_cache_file() {
     local target="$1" tmp
     shift
-    mkdir -p "$CACHE_DIR" || return 1
+    mkdir -m 0700 -p "$CACHE_DIR" || return 1
     tmp="$(mktemp "$CACHE_DIR/.${target##*/}.XXXXXX")" || return 1
     if ! printf '%s\n' "$@" > "$tmp" || ! mv -- "$tmp" "$target"; then
         rm -f -- "$tmp"
@@ -161,13 +170,14 @@ esac
 # The flag carries the pending commit summary written by the check pass.
 if [ "${1:-}" = "--apply" ]; then
     local_rev="$(git rev-parse HEAD)"
-    remote_rev="$(git rev-parse origin/main 2>/dev/null || echo "$local_rev")"
+    remote_rev="$(git rev-parse origin/main 2>/dev/null)" \
+        || _fail "origin/main is unavailable — check for updates again"
     _exit_if_not_behind "$local_rev" "$remote_rev" 0
     if _has_local_changes; then
         _fail "local changes detected — commit or stash them before applying the update"
     fi
-    if ! GIT_TERMINAL_PROMPT=0 git -C "$ROOT" pull --ff-only --quiet origin main; then
-        _fail "fast-forward pull failed — local branch diverged"
+    if ! git -C "$ROOT" merge --ff-only --quiet "$remote_rev"; then
+        _fail "fast-forward merge failed — local branch diverged"
     fi
     _clear_flag
     new_rev="$(git rev-parse HEAD)"

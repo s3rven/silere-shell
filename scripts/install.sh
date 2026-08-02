@@ -3,9 +3,13 @@ set -euo pipefail
 export LC_ALL=C
 
 REPO_URL="https://github.com/s3rven/silere-shell.git"
-CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
-DEFAULT_DIR="$CONFIG_HOME/silere-shell"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/xdg.sh"
+CONFIG_HOME="$(_silere_xdg_home "${XDG_CONFIG_HOME:-}" .config)" || {
+    printf 'silere: HOME must be an absolute path\n' >&2
+    exit 1
+}
+DEFAULT_DIR="$CONFIG_HOME/silere-shell"
 
 # ── colors ──────────────────────────────────────────────────────────────────────
 if [ -t 1 ]; then
@@ -31,6 +35,68 @@ _reject_unsafe_path() {
     if printf '%s' "$1" | LC_ALL=C grep -q '[[:cntrl:]]'; then
         _die "install path may not contain control characters or newlines: $1"
     fi
+}
+
+_normalized_install_path() {
+    local path source_root home_root config_root
+    _reject_unsafe_path "$1"
+    path="$(readlink -m -- "$1" 2>/dev/null)" || _die "could not resolve install path: $1"
+    home_root="$(readlink -m -- "$HOME" 2>/dev/null)" || _die "could not resolve home directory"
+    config_root="$(readlink -m -- "$CONFIG_HOME" 2>/dev/null)" || _die "could not resolve config directory"
+    case "$path" in
+        /|/bin|/boot|/dev|/etc|/home|/lib|/lib64|/media|/mnt|/opt|/proc|/root|/run|/sbin|/srv|/sys|/tmp|/usr|/var|"$home_root"|"$config_root")
+            _die "refusing unsafe install path: $path"
+            ;;
+    esac
+    source_root="$(readlink -m -- "$SCRIPT_DIR/..")"
+    if [ "$path" != "$source_root" ]; then
+        case "$source_root/" in
+            "$path/"*) _die "install path may not contain the running installer: $path" ;;
+        esac
+    fi
+    printf '%s\n' "$path"
+}
+
+_move_aside_path() {
+    local source="$1" stamp candidate suffix=0
+    stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+    candidate="${source}.silere-backup-$stamp"
+    while [ -e "$candidate" ] || [ -L "$candidate" ]; do
+        suffix=$((suffix + 1))
+        candidate="${source}.silere-backup-$stamp-$suffix"
+    done
+    mv -- "$source" "$candidate" || return 1
+    printf '%s\n' "$candidate"
+}
+
+_secure_fresh_default_install() {
+    [ "$1" = "$DEFAULT_DIR" ] || return 0
+    chmod 0700 "$1" || _warn "could not restrict permissions on $1"
+}
+
+_is_silere_checkout() {
+    local path="$1"
+    [ -f "$path/shell.qml" ] \
+        && [ -f "$path/services/qmldir" ] \
+        && [ -f "$path/scripts/update.sh" ]
+}
+
+_matugen_table_present() {
+    [ -f "$1" ] && grep -Eq '^[[:space:]]*\[templates\.silere-shell\][[:space:]]*(#.*)?$' "$1"
+}
+
+readonly -a SILERE_FONT_FILES=(
+    JetBrainsMonoNerdFont-Regular.ttf
+    JetBrainsMonoNerdFont-Medium.ttf
+    JetBrainsMonoNerdFont-SemiBold.ttf
+    JetBrainsMonoNerdFont-Bold.ttf
+)
+
+_extract_silere_fonts() {
+    local archive="$1" destination="$2"
+    tar -xJ -f "$archive" -C "$destination" \
+        --no-same-owner --no-same-permissions --no-overwrite-dir \
+        --wildcards --no-anchored "${SILERE_FONT_FILES[@]}"
 }
 
 _shell_quote() {
@@ -194,6 +260,10 @@ case "${1:-}" in
         exit 0
         ;;
 esac
+_answered_yes() {
+    [[ "$1" =~ ^[Yy] ]]
+}
+
 if [ "${SILERE_SCRIPT_LIB_ONLY:-0}" = "1" ]; then
     return 0 2>/dev/null || exit 0
 fi
@@ -205,6 +275,14 @@ _ask() {
     printf "  ${CYAN}::${R}  %s ${DIM}[Y/n]${R} " "$1"
     read -r reply </dev/tty
     [[ ! "$reply" =~ ^[Nn] ]]
+}
+
+_ask_no() {
+    local reply
+    _need_tty
+    printf "  ${CYAN}::${R}  %s ${DIM}[y/N]${R} " "$1"
+    read -r reply </dev/tty
+    _answered_yes "$reply"
 }
 
 _ask_path() {
@@ -426,9 +504,7 @@ else
             _warn "checksum mismatch on the font download — refusing to install it"
             _warn "expected $FONT_SHA256"
             _warn "install JetBrainsMono Nerd Font manually, or report this if it persists"
-        elif tar -xJ -f "$font_tmp" -C "$FONT_DIR" \
-                --no-same-owner --no-same-permissions --no-overwrite-dir \
-                --wildcards --no-anchored '*.ttf' 2>/dev/null; then
+        elif _extract_silere_fonts "$font_tmp" "$FONT_DIR" 2>/dev/null; then
             spin_stop
             rm -f "$font_tmp"
             fc-cache -f "$FONT_DIR" 2>/dev/null || true
@@ -449,10 +525,16 @@ _section "silere-shell"
 
 printf "  ${CYAN}::${R}  Install to: ${CYAN}%s${R}\n" "$DEFAULT_DIR"
 INSTALL_DIR="$(_ask_path)"
+INSTALL_DIR="$(_normalized_install_path "$INSTALL_DIR")"
+fresh_clone=false
 
-_reject_unsafe_path "$INSTALL_DIR"
+if [ "$INSTALL_DIR" = "$DEFAULT_DIR" ]; then
+    mkdir -m 0700 -p "$CONFIG_HOME" || _die "could not create $CONFIG_HOME"
+fi
 
 if [ -d "$INSTALL_DIR/.git" ]; then
+    _is_silere_checkout "$INSTALL_DIR" \
+        || _die "$INSTALL_DIR is a Git repository but not a Silere checkout — choose another path"
     _ok "already cloned at $INSTALL_DIR"
     install_has_changes=false
     if [ -n "$(git -C "$INSTALL_DIR" status --porcelain --untracked-files=normal)" ]; then
@@ -474,13 +556,23 @@ if [ -d "$INSTALL_DIR/.git" ]; then
     else
         _skip "using existing clone"
     fi
-elif [ -e "$INSTALL_DIR" ]; then
-    if _ask "Directory exists but is not a git repo. Remove it and clone fresh?"; then
-        rm -rf "$INSTALL_DIR"
+elif [ -e "$INSTALL_DIR" ] || [ -L "$INSTALL_DIR" ]; then
+    if _ask "Path exists but is not a git repo. Move it aside and clone fresh?"; then
+        install_backup="$(_move_aside_path "$INSTALL_DIR")" \
+            || _die "could not preserve existing path: $INSTALL_DIR"
+        _ok "preserved existing path at $install_backup"
         spin_start "cloning..."
         if ! GIT_TERMINAL_PROMPT=0 git clone --depth 1 --single-branch --quiet "$REPO_URL" "$INSTALL_DIR"; then
-            spin_stop; _die "git clone failed — check your connection"
+            spin_stop
+            if [ ! -e "$INSTALL_DIR" ] && [ ! -L "$INSTALL_DIR" ] \
+                    && mv -- "$install_backup" "$INSTALL_DIR"; then
+                _warn "clone failed; restored the original path"
+            else
+                _warn "clone failed; the original remains at $install_backup"
+            fi
+            _die "git clone failed — check your connection"
         fi
+        fresh_clone=true
         spin_stop; _ok "cloned to $INSTALL_DIR"
     else
         _die "$INSTALL_DIR exists but is not a git repo — pick a different path or clean it up manually"
@@ -490,7 +582,12 @@ else
     if ! GIT_TERMINAL_PROMPT=0 git clone --depth 1 --single-branch --quiet "$REPO_URL" "$INSTALL_DIR"; then
         spin_stop; _die "git clone failed — check your connection"
     fi
+    fresh_clone=true
     spin_stop; _ok "cloned to $INSTALL_DIR"
+fi
+
+if $fresh_clone; then
+    _secure_fresh_default_install "$INSTALL_DIR"
 fi
 
 ROOT="$INSTALL_DIR"
@@ -523,6 +620,9 @@ if ! $has_matugen; then
     _skip "matugen not installed"
 elif [ -f "$MATUGEN_CFG" ] && grep -q '# silere-shell begin' "$MATUGEN_CFG"; then
     _ok "entry already present"
+elif _matugen_table_present "$MATUGEN_CFG"; then
+    _warn "an unmanaged [templates.silere-shell] entry already exists"
+    _skip "left $MATUGEN_CFG unchanged"
 else
     if _ask "Add entry to $MATUGEN_CFG?"; then
         cfg_existed=false
@@ -699,7 +799,7 @@ _section "update-check timer"
 
 if ! command -v systemctl >/dev/null 2>&1; then
     _skip "systemctl not found"
-elif _ask "Install daily update-check timer (flags pending updates in the bar)?"; then
+elif _ask_no "Install daily update-check timer (flags pending updates in the bar)?"; then
     if "$ROOT/scripts/update.sh" --timer-enable 2>/dev/null; then
         _ok "enabled — checks for Silere updates and shows a bar badge when one is ready"
         did_update=true

@@ -3,6 +3,11 @@ set -euo pipefail
 export LC_ALL=C
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/xdg.sh"
+CONFIG_HOME="$(_silere_xdg_home "${XDG_CONFIG_HOME:-}" .config)" || {
+    printf 'silere-uninstall: HOME must be an absolute path\n' >&2
+    exit 1
+}
 
 # ── colors ──────────────────────────────────────────────────────────────────────
 if [ -t 1 ]; then
@@ -18,8 +23,6 @@ _warn() { printf "    ${YELLOW}warn${R}    %s\n" "$*"; }
 _info() { printf "  ${CYAN}::${R}  %s\n" "$*"; }
 
 _section() { printf "\n${BOLD}==> %s${R}\n" "$1"; }
-
-CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 
 _ask() {
     local reply
@@ -242,5 +245,5 @@ fi
 
 # ── done ─────────────────────────────────────────────────────────────────────────
 printf "\n${BOLD}==> done${R}\n"
-_warn "the repo directory was not deleted"
-printf "  to fully remove silere: ${DIM}rm -rf %s${R}\n\n" "$(cd "$(dirname "$0")/.." && pwd)"
+_warn "the Silere checkout, settings, and installed font were kept"
+printf "  checkout: ${DIM}%s${R}\n\n" "$(cd "$SCRIPT_DIR/.." && pwd)"

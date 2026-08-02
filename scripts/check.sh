@@ -3,6 +3,7 @@ set -eu
 export LC_ALL=C
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT/scripts/lib/xdg.sh"
 cd "$ROOT" || exit 1
 
 trap 'printf "\ninterrupted\n" >&2; exit 130' INT TERM
@@ -122,13 +123,16 @@ for _backlight in /sys/class/backlight/*; do
   [ -d "$_backlight" ] && _backlights+=("${_backlight##*/}")
 done
 if [ "${#_backlights[@]}" -gt 1 ]; then
-  ok "backlights" "${_backlights[*]} (choose the display in Settings > System)"
+  ok "backlights" "${_backlights[*]} (choose the display in Settings > Interface)"
 elif [ "${#_backlights[@]}" -eq 1 ]; then
   ok "backlight" "${_backlights[0]}"
 elif command -v brightnessctl >/dev/null 2>&1; then
   warn "backlight" "no display backlight detected"
 fi
-_cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+_cfg_home="$(_silere_xdg_home "${XDG_CONFIG_HOME:-}" .config)" || {
+  fail "XDG config" "HOME must be an absolute path"
+  _cfg_home=""
+}
 _wayland_socket() {
   [ -n "${WAYLAND_DISPLAY:-}" ] || return 1
   case "$WAYLAND_DISPLAY" in
