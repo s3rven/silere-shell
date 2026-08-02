@@ -33,7 +33,8 @@ PageShell {
         workspaces: _secWorkspaces, media: _secMedia, indicators: _secIndicators,
         widgets: _secWidgets,
         popups: _secPopups, osd: _secOsd, warnings: _secWarnings,
-        interface: _secInterface, updates: _secUpdates
+        interface: _secInterface, updates: _secUpdates,
+        maintenance: _secMaintenance
     })
 
     readonly property var _sectionMeta: {
@@ -292,6 +293,11 @@ PageShell {
                 animationActive: root.active && root._shownSection === "updates"
                     && !root.powerOpen && !Idle.isIdle
             }
+        }
+
+        Component {
+            id: _secMaintenance
+            SettingsMaintenanceSection {}
         }
     }
 }

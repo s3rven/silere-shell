@@ -59,7 +59,9 @@ Singleton {
             { glyph: "󰍉", label: "Interface", section: "interface",
               description: "Font, scale, contrast, motion, and display routing" },
             { glyph: "󰚰", label: "Updates", section: "updates",
-              description: "Shell releases and system packages" }
+              description: "Shell releases and system packages" },
+            { glyph: "󰦛", label: "Maintenance", section: "maintenance",
+              description: "Restore settings to their built-in defaults" }
         ]}
     ]
 

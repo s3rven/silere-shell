@@ -6,6 +6,7 @@ internal DraggableWidgetList DraggableWidgetList.qml
 internal SettingsClockSection SettingsClockSection.qml
 internal SettingsIndicatorsSection SettingsIndicatorsSection.qml
 internal SettingsInterfaceSection SettingsInterfaceSection.qml
+internal SettingsMaintenanceSection SettingsMaintenanceSection.qml
 internal SettingsMediaSection SettingsMediaSection.qml
 internal SettingsNightLightSection SettingsNightLightSection.qml
 internal SettingsOsdSection SettingsOsdSection.qml
