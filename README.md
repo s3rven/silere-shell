@@ -6,15 +6,37 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-747a98?style=flat-square&labelColor=17181d" alt="license: MIT"/></a>
-  <a href="https://quickshell.outfoxxed.me/"><img src="https://img.shields.io/badge/built%20on-Quickshell-747a98?style=flat-square&labelColor=17181d" alt="built on Quickshell"/></a>
+  <a href="https://quickshell.org/"><img src="https://img.shields.io/badge/built%20on-Quickshell-747a98?style=flat-square&labelColor=17181d" alt="built on Quickshell"/></a>
   <img src="https://img.shields.io/badge/runs%20on-Hyprland%20%C2%B7%20niri-747a98?style=flat-square&labelColor=17181d" alt="runs on Hyprland and niri"/>
 </p>
 
-Silere is a quiet shell for Hyprland and niri, built on Quickshell: a bar, a control menu, notifications, and colors pulled from your wallpaper or picked by hand. The quiet part is the point. Widgets only exist when their tools do, anything with a background cost stays off until you turn it on, and an idle session rounds to zero CPU. Every widget reorders, moves side to side, or switches off, and the look tunes down to separators and outlines. All plain settings, no plugin layer, no daemon.
+A quiet Quickshell desktop shell for Hyprland and niri — a configurable bar, a control menu, notifications, and colors drawn from your wallpaper or picked by hand.
 
-<p align="center">
-  <img src="assets/showcase.png" alt="silere shell showcase" width="900"/>
-</p>
+- **Quiet by default.** Nothing polls or runs in the background until you turn it on.
+- **Degrades, never breaks.** A missing tool disables one widget; the shell keeps running.
+- **No plugin layer, no extra daemon.** One process, one settings file.
+
+<table>
+  <tr>
+    <td colspan="2" align="center">
+      <img src="assets/shot-overview.png" alt="The Silere bar with the Now page open, showing audio, connectivity, controls, and system vitals." width="100%"/>
+      <br/>
+      <sub>The bar and the Now page — audio, connectivity, controls, and system vitals in one panel.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <img src="assets/shot-theme.png" alt="The theme settings panel, showing accent swatches, a hue strip, base tone, and outline strength." width="100%"/>
+      <br/>
+      <sub>Accent, base tone, and outline strength — a neutral palette, or colors pulled from your wallpaper.</sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <img src="assets/shot-layout.png" alt="The bar layout settings panel open, with the media visualizer running in the center of the bar." width="100%"/>
+      <br/>
+      <sub>Modular by design — move any widget, reshape the bar, and style it however you like.</sub>
+    </td>
+  </tr>
+</table>
 
 ## Install
 
@@ -26,11 +48,18 @@ cd silere-shell
 bash scripts/install.sh
 ```
 
-The installer copies Silere to `$XDG_CONFIG_HOME/silere-shell`, backs up anything it touches, and adds an autostart entry for whichever compositor you're on. Restart it and Silere comes up on its own. To remove everything: `bash scripts/uninstall.sh`.
+The installer puts a checkout in your XDG config directory, or another path you choose. It backs up files before editing them and asks before touching compositor autostart, then prints the final install path.
+
+To start it, restart your compositor — or try it right away with `qs -p /that/path/shell.qml`.
+
+To remove it, run `bash scripts/uninstall.sh` from the installed checkout. That clears autostart, theme, and update-timer integrations, but keeps the checkout, your settings, and the installed font.
 
 ## Optional tools
 
-Every widget checks for its tool at runtime. If a tool is missing, its widget hides and the rest of the shell keeps working.
+Silere runs without any of these. Each one you install adds a feature; each one you skip hides that widget or shows it as unavailable.
+
+<details>
+<summary>Full list of optional tools</summary>
 
 | tool | enables |
 |---|---|
@@ -42,8 +71,14 @@ Every widget checks for its tool at runtime. If a tool is missing, its widget hi
 | `matugen` | wallpaper theming |
 | `cava` | media visualizer |
 | `powerprofilesctl` | power profiles |
-| `inotifywait` | screenshot feedback |
+| `inotifywait` | automatic screenshot-file watcher for underline feedback |
 | `checkupdates` / `apt` / `dnf` / `zypper` / `xbps-install` | package update badge |
+| `paru` / `yay` | AUR update count on Arch Linux |
+| `hyprlock` | lock action |
+| `systemctl` / `loginctl` | suspend, reboot, and shutdown actions |
+| `notify-send` | battery, temperature, and update notifications |
+
+</details>
 
 ## Controls
 
@@ -63,33 +98,52 @@ Shell and package updates never install on their own; checks only update the bad
 
 ## Keybinds and scripts
 
-Silere exposes its main surfaces through Quickshell IPC, so compositor keybinds and scripts can open them without simulating a click. These examples use the installer's default path; when running from a checkout, point `-p` at that checkout's `shell.qml` instead.
+Every surface is scriptable over Quickshell IPC, so keybinds can open them without faking a click. Set `SILERE_DIR` to the path the installer printed — the usual default is below.
 
 ```bash
-qs ipc -p "${XDG_CONFIG_HOME:-$HOME/.config}/silere-shell/shell.qml" call menu toggle
-qs ipc -p "${XDG_CONFIG_HOME:-$HOME/.config}/silere-shell/shell.qml" call menu tab 2
-qs ipc -p "${XDG_CONFIG_HOME:-$HOME/.config}/silere-shell/shell.qml" call menu settings updates
-qs ipc -p "${XDG_CONFIG_HOME:-$HOME/.config}/silere-shell/shell.qml" call calendar toggle
-qs ipc -p "${XDG_CONFIG_HOME:-$HOME/.config}/silere-shell/shell.qml" call screenshot flash
+SILERE_DIR="$HOME/.config/silere-shell"
+qs ipc -p "$SILERE_DIR/shell.qml" call menu toggle
+qs ipc -p "$SILERE_DIR/shell.qml" call menu tab 2
+qs ipc -p "$SILERE_DIR/shell.qml" call menu settings updates
+qs ipc -p "$SILERE_DIR/shell.qml" call calendar toggle
+qs ipc -p "$SILERE_DIR/shell.qml" call screenshot flash
 ```
 
-Menu tabs are `0` (Home), `1` (Settings), and `2` (Recent). Settings sections are `theme`, `nightlight`, `surface`, `separators`, `underline`, `widgets`, `clock`, `workspaces`, `media`, `indicators`, `popups`, `osd`, `warnings`, `system`, and `updates`. `screenshot flash` lets a screenshot tool trigger the underline effect directly without the optional filesystem watcher.
+Menu tabs are `0` (Home), `1` (Settings), and `2` (Recent). Settings sections are `theme`, `nightlight`, `surface`, `separators`, `underline`, `widgets`, `clock`, `workspaces`, `media`, `indicators`, `popups`, `osd`, `warnings`, `interface`, `updates`, and `maintenance`. `screenshot flash` lets a screenshot tool trigger the underline effect directly without the optional filesystem watcher.
+
+## Configuration
+
+Everything is configurable from Settings inside the shell. Changes save themselves and apply without a restart.
+
+Overrides live in `$XDG_CONFIG_HOME/silere-shell/settings.json` (or `~/.config/silere-shell/settings.json`), independent of where the checkout is. Calendar marks sit beside it in `calendar-marks.json`. Only values that differ from their defaults are written, so the file stays short and readable.
+
+To restore defaults, use **Settings › System › Maintenance**. Editing the file by hand works too: delete a key to reset one option, or replace the whole file with `{ "__version": 1 }` to reset everything. Values are type-checked and numeric ranges clamped on load, and a file Silere cannot read is left alone rather than overwritten.
 
 ## Resource use
 
-Idle sits around half a percent of one core and 100 to 115 MB of memory (PSS). The optional clock seconds cost a bit more, closer to one percent. RSS reads higher because it counts libraries shared with every other Qt app, so PSS is the honest number. Memory doesn't creep over a session: album art and notification images drop from cache once they leave the screen, and the launcher tunes the allocator so freed pages go straight back to the OS. Heavy use peaks near 260 MB RSS and settles within seconds. The GPU rests too: the shell renders a frame only when something on screen changes.
+Idle sits under 1% of one CPU core at roughly 95–110 MB PSS on a reference session — PSS rather than RSS, since it apportions shared Qt libraries fairly. Your numbers will differ with hardware, drivers, and which widgets you enable.
 
-The one real cost is the cava visualizer: 15 to 20% of a core while music plays, and nothing once it stops.
+Measure your own with `bash scripts/bench.sh 5`. Cava is the main optional cost, and only while the visualizer is on screen.
 
 ## Troubleshooting
 
-If something looks off, run the shell in the foreground to read its errors:
+From the Silere checkout, first run the dependency and configuration checks:
+
+```bash
+bash scripts/check.sh
+```
+
+To inspect startup errors directly, run:
 
 ```bash
 qs -p shell.qml
 ```
 
-If notifications never appear, another daemon probably owns `org.freedesktop.Notifications`. If icons or text render in the wrong font, install a Nerd Font (like `ttf-jetbrains-mono-nerd`) and run `fc-cache -f`. On hybrid laptops with several `/sys/class/backlight` entries, pick the right display under Settings > System.
+If a shell update is blocked by local checkout edits, preview them with `bash scripts/repair.sh`. Running `bash scripts/repair.sh --apply` saves the edits in a reversible Git stash and restores the shipped files; `--undo` restores the latest saved repair.
+
+- **No notifications?** Another daemon already owns `org.freedesktop.Notifications`.
+- **Wrong icons or text?** Install a Nerd Font such as `ttf-jetbrains-mono-nerd`, then refresh the font cache.
+- **Brightness controls the wrong screen?** Pick the right backlight under Settings › Interface.
 
 ## Contributing
 
