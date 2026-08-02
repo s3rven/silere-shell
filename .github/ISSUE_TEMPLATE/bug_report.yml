@@ -26,10 +26,11 @@ body:
       required: true
 
   - type: input
-    id: hyprland
+    id: compositor
     attributes:
-      label: Hyprland version
-      description: Output from `hyprctl version`.
+      label: Compositor version
+      description: Hyprland or niri version, including how it was installed.
+      placeholder: Hyprland 0.50.1 or niri 26.02
     validations:
       required: true
 
@@ -55,14 +56,11 @@ body:
   - type: textarea
     id: environment
     attributes:
-      label: Environment
-      description: Your compositor and version (Hyprland or niri), Quickshell version, and distro. No scripts to run.
+      label: Additional environment details
+      description: GPU, multi-monitor layout, session setup, or anything else relevant to the problem.
       placeholder: |
-        Compositor: niri 26.04
-        Quickshell: 0.3.0
-        Distro: CachyOS
-    validations:
-      required: true
+        GPU: AMD Radeon 780M
+        Outputs: laptop at 1.25x plus an external display
 
   - type: textarea
     id: logs

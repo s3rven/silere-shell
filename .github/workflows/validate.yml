@@ -2,6 +2,7 @@ name: Validate
 
 on:
   push:
+    branches: [main]
   pull_request:
   schedule:
     # Weekly rolling-Arch probe catches upstream Quickshell compatibility drift.
@@ -10,6 +11,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -17,8 +22,8 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      # pinned to an immutable SHA: a moved v4 tag would otherwise run unreviewed code
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      # pinned to an immutable sha so a moved tag cannot run unreviewed code
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
       - name: Install validation dependencies
         run: pacman -Syu --noconfirm shellcheck quickshell
@@ -41,4 +46,4 @@ jobs:
           done
 
       - name: Headless QML import and type probe
-        run: bash scripts/test-qml-headless.sh
+        run: SILERE_REQUIRE_QML_TOOLS=1 bash scripts/test-qml-headless.sh

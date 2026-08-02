@@ -64,30 +64,36 @@ find_qml_import_root() {
 
 QMLCACHEGEN="$(find_qmlcachegen || true)"
 if [ -z "$QMLCACHEGEN" ]; then
+    if [ "${SILERE_REQUIRE_QML_TOOLS:-0}" = "1" ]; then
+        echo "FAIL: qmlcachegen not found" >&2
+        exit 1
+    fi
     echo "SKIP: qmlcachegen not found; headless QML type-check unavailable"
     exit 0
 fi
 QML_IMPORT_ROOT="$(find_qml_import_root || true)"
 if [ -z "$QML_IMPORT_ROOT" ]; then
+    if [ "${SILERE_REQUIRE_QML_TOOLS:-0}" = "1" ]; then
+        echo "FAIL: Quickshell QML module directory not found" >&2
+        exit 1
+    fi
     echo "SKIP: Quickshell QML module directory not found; headless QML type-check unavailable"
     exit 0
 fi
 
 tmp="$(mktemp -d "${TMPDIR:-/tmp}/silere-qmlcache.XXXXXX")"
-seeded_theme=false
-cleanup() {
-    if $seeded_theme; then rm -f "$ROOT/config/MatugenTheme.qml"; fi
-    rm -rf "$tmp"
-}
-trap cleanup EXIT
+trap 'rm -rf "$tmp"' EXIT
 
-if [ ! -f "$ROOT/config/MatugenTheme.qml" ]; then
-    if [ ! -f "$ROOT/config/MatugenTheme.default.qml" ]; then
+CHECK_ROOT="$tmp/source"
+mkdir -p "$CHECK_ROOT"
+cp -R "$ROOT/assets" "$ROOT/config" "$ROOT/modules" "$ROOT/services" "$CHECK_ROOT/"
+cp "$ROOT/shell.qml" "$CHECK_ROOT/shell.qml"
+if [ ! -f "$CHECK_ROOT/config/MatugenTheme.qml" ]; then
+    if [ ! -f "$CHECK_ROOT/config/MatugenTheme.default.qml" ]; then
         echo "FAIL: config/MatugenTheme.default.qml is missing" >&2
         exit 1
     fi
-    cp "$ROOT/config/MatugenTheme.default.qml" "$ROOT/config/MatugenTheme.qml"
-    seeded_theme=true
+    cp "$CHECK_ROOT/config/MatugenTheme.default.qml" "$CHECK_ROOT/config/MatugenTheme.qml"
 fi
 
 had_failure=0
@@ -97,41 +103,41 @@ while IFS= read -r f; do
     count=$((count + 1))
     if [ $((count % 20)) -eq 0 ]; then printf '.'; fi
     out="$tmp/$count.qmlc"
-    if err="$("$QMLCACHEGEN" --only-bytecode -I "$ROOT" -I "$QML_IMPORT_ROOT" -o "$out" "$f" 2>&1)"; then
+    if err="$("$QMLCACHEGEN" --only-bytecode -I "$CHECK_ROOT" -I "$QML_IMPORT_ROOT" -o "$out" "$f" 2>&1)"; then
         :
     else
         rc=$?
         [ "$rc" -eq 130 ] && exit 130
-        printf '\nFAIL: %s\n%s\n' "${f#"$ROOT"/}" "$err" >&2
+        printf '\nFAIL: %s\n%s\n' "${f#"$CHECK_ROOT"/}" "$err" >&2
         had_failure=1
     fi
-done < <(find "$ROOT" -name "*.qml" -not -path "*/.git/*")
+done < <(find "$CHECK_ROOT" -name "*.qml" -not -path "*/.git/*")
 printf '\n'
 
-# qmlcachegen --only-bytecode emits bytecode without erroring on a type left
-# unresolved by a missing import (RectangularShadow with no `import
-# QtQuick.Effects` still compiles). qmllint with the import category promoted to
-# an error catches exactly that. Unused imports are errors too, keeping optional
-# QML modules out of files that do not use them. A missing qmllint still
-# downgrades to a note rather than failing environments without the tool.
+# qmllint catches unresolved and unused imports that qmlcachegen accepts
 QMLLINT="$(find_qmllint || true)"
 if [ -z "$QMLLINT" ]; then
-    echo "note: qmllint not found; missing-import check skipped"
+    if [ "${SILERE_REQUIRE_QML_TOOLS:-0}" = "1" ]; then
+        echo "FAIL: qmllint not found" >&2
+        had_failure=1
+    else
+        echo "note: qmllint not found; missing-import check skipped"
+    fi
 else
     printf 'checking QML imports'
     lint_count=0
     while IFS= read -r f; do
         lint_count=$((lint_count + 1))
         if [ $((lint_count % 20)) -eq 0 ]; then printf '.'; fi
-        if err="$("$QMLLINT" --import error --unused-imports error -I "$ROOT" -I "$QML_IMPORT_ROOT" "$f" 2>&1)"; then
+        if err="$("$QMLLINT" --import error --unused-imports error -I "$CHECK_ROOT" -I "$QML_IMPORT_ROOT" "$f" 2>&1)"; then
             :
         else
             rc=$?
             [ "$rc" -eq 130 ] && exit 130
-            printf '\nFAIL: %s\n%s\n' "${f#"$ROOT"/}" "$err" >&2
+            printf '\nFAIL: %s\n%s\n' "${f#"$CHECK_ROOT"/}" "$err" >&2
             had_failure=1
         fi
-    done < <(find "$ROOT" -name "*.qml" -not -path "*/.git/*")
+    done < <(find "$CHECK_ROOT" -name "*.qml" -not -path "*/.git/*")
     printf '\n'
 fi
 

@@ -152,6 +152,19 @@ else
   ok "mapping" "coordinate mapping stays out of bindings"
 fi
 
+section "reduce-motion gating"
+# MotionBehavior carries the reduce-motion gate. A bare Behavior silently
+# animates for users who asked for no motion, so route every one through it
+# and put any extra condition on `gate:` instead of `enabled:`.
+bare_behaviors="$(grep -RInE --include='*.qml' '^[[:space:]]*Behavior[[:space:]]+on[[:space:]]' \
+  shell.qml modules config services || true)"
+if [ -n "$bare_behaviors" ]; then
+  fail "use MotionBehavior instead of a bare Behavior:"
+  printf '%s\n' "$bare_behaviors"
+else
+  ok "motion" "every Behavior carries the reduce-motion gate"
+fi
+
 section "portable QML key handlers"
 # qmlcachegen accepts arbitrary Keys.onFooPressed names, but the live engine
 # rejects handlers that are not signals on QtQuick.Keys. Keep this allowlist
@@ -184,12 +197,6 @@ if grep -qF '_availablePanelW' modules/menu/MenuWindow.qml \
 else
   fail "menu and notification popups must stay bounded to the target output"
 fi
-if grep -qF 'SettingsSystemSection {}' modules/menu/SettingsPage.qml \
-    && grep -qF 'SettingsSystemSection.qml' modules/menu/qmldir; then
-  ok "settings" "large system subtree remains isolated"
-else
-  fail "system settings must remain split from the main settings page"
-fi
 
 section "shellcheck"
 if command -v shellcheck >/dev/null 2>&1; then
@@ -219,6 +226,29 @@ else
   ok "qmldir" "all referenced files exist"
 fi
 
+section "menu module boundaries"
+menu_root_public="$(awk 'NF && $1 !~ /^#/ && $1 != "internal" {print $1}' modules/menu/qmldir)"
+settings_public="$(awk 'NF && $1 !~ /^#/ && $1 != "internal" {print $1}' modules/menu/settings/qmldir)"
+stray_settings="$(find modules/menu -maxdepth 1 -type f \
+  \( -name 'Settings*Section.qml' -o -name 'SettingsPage.qml' \
+     -o -name 'DraggableWidgetList.qml' \) -print)"
+back_imports="$(grep -RInE --include='*.qml' \
+  '^import[[:space:]]+"\.\."[[:space:]]*$|^import[[:space:]]+"\.\./settings"' \
+  modules/menu/controls modules/menu/settings || true)"
+if [ "$menu_root_public" != "MenuWindow" ]; then
+  fail "modules/menu must expose only MenuWindow; found: $menu_root_public"
+elif [ "$settings_public" != "SettingsPage" ]; then
+  fail "modules/menu/settings must expose only SettingsPage; found: $settings_public"
+elif [ -n "$stray_settings" ]; then
+  fail "settings implementation files belong in modules/menu/settings:"
+  printf '%s\n' "$stray_settings"
+elif [ -n "$back_imports" ]; then
+  fail "controls/settings must not import app-level menu code:"
+  printf '%s\n' "$back_imports"
+else
+  ok "menu modules" "root → settings → controls dependency stays one-way"
+fi
+
 section "settings schema coverage"
 settings="services/ShellSettings.qml"
 if [ -f "$settings" ]; then
@@ -246,9 +276,59 @@ else
     skip "settings" "ShellSettings.qml not found"
 fi
 
+section "bar widget layout API"
+# The three persisted order strings form one logical layout. Let ShellSettings
+# validate and update them together so arranger/bar callers cannot drift.
+direct_layout_writes="$(grep -RInE --include='*.qml' \
+  'ShellSettings\.barWidgetOrder(Left|Center|Right)[[:space:]]*=' \
+  shell.qml modules config || true)"
+if [ -n "$direct_layout_writes" ]; then
+    fail "bar widget order must be changed through ShellSettings layout methods:"
+    printf '%s\n' "$direct_layout_writes"
+else
+    ok "bar layout" "writes stay behind the settings API"
+fi
+
+section "config storage boundary"
+private_config_access="$(grep -RInE --include='*.qml' \
+  'ShellSettings\._(configDir|configDirReady|ensureConfigDir)' \
+  shell.qml modules services config || true)"
+if [ -n "$private_config_access" ]; then
+    fail "config consumers must use ConfigStore instead of ShellSettings internals:"
+    printf '%s\n' "$private_config_access"
+elif grep -qF 'ConfigStore.settingsPath' services/ShellSettings.qml \
+    && grep -qF 'ConfigStore.calendarMarksPath' services/CalendarState.qml; then
+    ok "config store" "paths and directory readiness have one owner"
+else
+    fail "settings and calendar persistence must use ConfigStore"
+fi
+
+section "solid structural surfaces"
+# Structural lines, progress fills, and readability scrims are intentionally
+# uniform. Gradients remain available to data visualisations and opt-in glows.
+solid_surface_files=(
+  modules/bar/Bar.qml
+  modules/common/BarDivider.qml
+  modules/menu/controls/RowDividers.qml
+  modules/common/ListEdgeLines.qml
+  modules/bar/widgets/MediaWidget.qml
+  modules/bar/widgets/OsdBarWidget.qml
+  modules/osd/OsdWindow.qml
+  modules/notifications/NotificationCard.qml
+  modules/menu/HomePage.qml
+)
+surface_gradients="$(grep -nHE 'Gradient|GradientStop|create(Linear|Radial)Gradient' \
+  "${solid_surface_files[@]}" || true)"
+if [ -n "$surface_gradients" ]; then
+    fail "structural surfaces must use uniform fills:"
+    printf '%s\n' "$surface_gradients"
+else
+    ok "solid fills" "structural surfaces contain no gradients"
+fi
+
 section "settings navigation coverage"
 settings_nav="services/MenuState.qml"
-settings_page="modules/menu/SettingsPage.qml"
+settings_page="modules/menu/settings/SettingsPage.qml"
 if [ -f "$settings_nav" ] && [ -f "$settings_page" ]; then
     nav_sections=$(grep -oE 'section: "[^"]+"' "$settings_nav" \
                    | sed -E 's/.*"([^"]+)"/\1/' | sort -u)
