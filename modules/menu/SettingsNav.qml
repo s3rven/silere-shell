@@ -9,7 +9,9 @@ Item {
     id: root
 
     property bool powerOpen: false
-    readonly property bool active: MenuState.open && MenuState.activeTab === 1 && !powerOpen
+    property bool navigationVisible: true
+    readonly property bool active: MenuState.settingsActive
+        && navigationVisible && !powerOpen
     readonly property bool compact: width < 132
 
     signal currentPageRetapped()
@@ -18,12 +20,12 @@ Item {
 
     implicitHeight: _navContentHeight()
 
-    readonly property int _navTop:      38
+    readonly property int _navTop:      10
     readonly property int _navBottom:    8
-    readonly property int _groupH:      29
-    readonly property int _groupGap:     2
-    readonly property int _childrenPad:  3
-    readonly property int _navRowH:     29
+    readonly property int _groupH:      27
+    readonly property int _groupGap:     1
+    readonly property int _childrenPad:  2
+    readonly property int _navRowH:     27
     readonly property int _navRowGap:    1
 
     function _leaves(it): var {
@@ -133,8 +135,7 @@ Item {
             ? _groupRepeater.itemAt(root._expandedGroup) : null
         const restoreFocus = oldGroup && oldGroup.hasFocusedItem()
         const opening = root._expandedGroup !== index
-        // move focus before collapsing destroys the focused leaf, or Qt
-        // rejects the activeFocusOnTab change
+        // move focus before collapsing destroys the focused leaf, or Qt rejects the activeFocusOnTab change
         if (restoreFocus) root._focusGroupHeader(index)
         root._expandedGroup = opening ? index : -1
         _disclosureSettle.restart()
@@ -165,8 +166,9 @@ Item {
         const group = _groupRepeater.itemAt(groupIndex)
         if (delta > 0 && group && group.expanded && group.focusLeaf(0)) return
 
-        const next = groupIndex + (delta < 0 ? -1 : 1)
-        if (next < 0 || next >= _groupRepeater.count) return
+        const count = _groupRepeater.count
+        if (count === 0) return
+        const next = (groupIndex + (delta < 0 ? -1 : 1) + count) % count
         const nextGroup = _groupRepeater.itemAt(next)
         if (!nextGroup) return
         if (delta < 0 && nextGroup.expanded && nextGroup.focusLastLeaf()) return
@@ -182,7 +184,8 @@ Item {
             return
         }
         if (delta < 0) group.focusHeader()
-        else root._focusGroupHeader(groupIndex + 1)
+        else if (_groupRepeater.count > 0)
+            root._focusGroupHeader((groupIndex + 1) % _groupRepeater.count)
     }
 
     Timer {
@@ -239,8 +242,8 @@ Item {
 
         onHeightChanged: if (root.active) _resizeSettle.restart()
 
-        Behavior on contentY {
-            enabled: !ShellSettings.reduceMotion && !_navScroll.moving
+        MotionBehavior on contentY {
+            gate: !_navScroll.moving
             NumberAnimation { duration: Motion.medium; easing.type: Easing.OutQuart }
         }
 
@@ -249,27 +252,11 @@ Item {
             width: root.width
             height: root.implicitHeight
 
-            ShellText {
-                x: 12
-                y: 10
-                width: Math.max(1, parent.width - 24)
-                height: 18
-                verticalAlignment: Text.AlignVCenter
-                text: "Settings"
-                elide: Text.ElideRight
-                color: Theme.withAlpha(
-                    Theme.mix(Theme.menuTextMuted, Theme.accent, 0.12), 0.82)
-                font.pixelSize: Math.max(8, Settings.fontSize - 2)
-                font.letterSpacing: 0.65
-                font.weight: Font.DemiBold
-                font.capitalization: Font.AllUppercase
-            }
-
             Column {
                 id: _groupColumn
-                x: 7
+                x: 6
                 y: root._navTop
-                width: parent.width - 14
+                width: parent.width - 12
                 spacing: root._groupGap
 
                 Repeater {
@@ -320,7 +307,7 @@ Item {
                             id: _grpHeader
                             width: parent.width
                             height: root._groupH
-                            radius: 7
+                            radius: 5
                             antialiasing: true
                             color: activeFocus
                                 ? Theme.withAlpha(Theme.accent, 0.065)
@@ -332,7 +319,7 @@ Item {
                                         ? Theme.mix(Theme.menuControl, Theme.accent,
                                             ShellSettings.highContrast ? 0.16 : 0.10)
                                         : "transparent"
-                            activeFocusOnTab: root.active
+                            activeFocusOnTab: true
                             Accessible.role: Accessible.Button
                             Accessible.name: _grp.modelData.label + " settings category"
                             Accessible.description: _grp.expanded
@@ -376,12 +363,13 @@ Item {
                                 cursorShape: Qt.PointingHandCursor
                             }
                             TapHandler {
-                                onTapped: root._toggleGroup(_grp.index)
+                                onTapped: {
+                                    _grpHeader.forceActiveFocus()
+                                    root._toggleGroup(_grp.index)
+                                }
                             }
 
-                            MotionBehavior on color {
-                                ColorAnimation { duration: Motion.fast }
-                            }
+                            ColorFade on color {}
 
                             OutlineBorder {
                                 radius: _grpHeader.radius
@@ -389,6 +377,7 @@ Item {
                                     ? Theme.withAlpha(Theme.accent, 0.42)
                                     : "transparent"
                             }
+
                             ShellText {
                                 id: _groupGlyph
                                 visible: !root.compact
@@ -416,9 +405,11 @@ Item {
                                     ? Theme.text
                                     : Theme.withAlpha(Theme.menuTextMuted,
                                         _headerHover.hovered || _grpHeader.activeFocus || _grp.expanded ? 0.94 : 0.80)
-                                font.pixelSize: Settings.fontSize - 1
+                                font.pixelSize: Math.max(8, Settings.fontSize - 2)
                                 font.weight: _grp.groupActive || _grp.expanded
                                     ? Font.DemiBold : Font.Normal
+                                font.letterSpacing: 0.35
+                                font.capitalization: Font.AllUppercase
                                 elide: Text.ElideRight
                             }
 
@@ -436,11 +427,12 @@ Item {
                                 font.pixelSize: Settings.fontSize - 2
 
                                 MotionBehavior on rotation {
-                                    NumberAnimation { duration: Motion.medium; easing.type: Easing.OutQuart }
+                                    NumberAnimation {
+                                        duration: _grp.expanded ? Motion.medium : Motion.fast
+                                        easing.type: _grp.expanded ? Easing.OutQuart : Easing.InCubic
+                                    }
                                 }
-                                MotionBehavior on color {
-                                    ColorAnimation { duration: Motion.fast }
-                                }
+                                ColorFade on color {}
                             }
                         }
 
@@ -456,16 +448,16 @@ Item {
 
                             MotionBehavior on height {
                                 NumberAnimation {
-                                    duration: Motion.medium
+                                    duration: _grp.expanded ? Motion.medium : Motion.fast
                                     easing.type: _grp.expanded ? Easing.OutQuart : Easing.InCubic
                                 }
                             }
 
                             Column {
                                 id: _leafColumn
-                                x: 8
+                                x: 6
                                 y: root._childrenPad
-                                width: parent.width - 8
+                                width: parent.width - 6
                                 spacing: root._navRowGap
                                 property real _shift: _grp.expanded ? 0 : -4
                                 opacity: _grp.expanded ? 1 : 0
@@ -479,7 +471,7 @@ Item {
                                 }
                                 MotionBehavior on _shift {
                                     NumberAnimation {
-                                        duration: Motion.medium
+                                        duration: _grp.expanded ? Motion.medium : Motion.fast
                                         easing.type: _grp.expanded ? Easing.OutQuart : Easing.InCubic
                                     }
                                 }
@@ -498,7 +490,7 @@ Item {
                                         readonly property string glyph: modelData.glyph ?? ""
                                         width: _leafColumn.width
                                         height: root._navRowH
-                                        radius: 8
+                                        radius: 5
                                         antialiasing: true
                                         color: active
                                             ? Theme.mix(Theme.menuControl, Theme.accent,
@@ -507,7 +499,7 @@ Item {
                                                 ? Theme.withAlpha(Theme.text, 0.042)
                                                 : "transparent"
 
-                                        activeFocusOnTab: root.active && _grp.expanded
+                                        activeFocusOnTab: _grp.expanded
                                         Accessible.role: Accessible.Button
                                         Accessible.name: _leaf.modelData.label
                                         Accessible.description: _leaf.modelData.description ?? ""
@@ -549,12 +541,13 @@ Item {
                                             cursorShape: Qt.PointingHandCursor
                                         }
                                         TapHandler {
-                                            onTapped: root._activateSection(_leaf.modelData.section)
+                                            onTapped: {
+                                                _leaf.forceActiveFocus()
+                                                root._activateSection(_leaf.modelData.section)
+                                            }
                                         }
 
-                                        MotionBehavior on color {
-                                            ColorAnimation { duration: Motion.fast }
-                                        }
+                                        ColorFade on color {}
 
                                         OutlineBorder {
                                             radius: _leaf.radius
@@ -576,10 +569,8 @@ Item {
                                                 ? Theme.mix(Theme.accent, Theme.text, 0.10)
                                                 : Theme.withAlpha(Theme.subtext,
                                                     _leafHover.hovered || _leaf.activeFocus ? 0.72 : 0.46)
-                                            font.pixelSize: Settings.fontSize
-                                            MotionBehavior on color {
-                                                ColorAnimation { duration: Motion.fast }
-                                            }
+                                            font.pixelSize: Settings.fontSize - 1
+                                            ColorFade on color {}
                                         }
 
                                         ShellText {
@@ -594,11 +585,9 @@ Item {
                                                 ? Theme.text
                                                 : Theme.withAlpha(Theme.mix(Theme.subtext, Theme.text, 0.12),
                                                     _leafHover.hovered || _leaf.activeFocus ? 0.92 : 0.76)
-                                            font.pixelSize: Settings.fontSize
+                                            font.pixelSize: Settings.fontSize - 1
                                             font.weight: _leaf.active ? Font.DemiBold : Font.Normal
-                                            MotionBehavior on color {
-                                                ColorAnimation { duration: Motion.fast }
-                                            }
+                                            ColorFade on color {}
                                         }
                                     }
                                 }
@@ -610,10 +599,9 @@ Item {
         }
     }
 
-    ListEdgeFade {
+    ListEdgeLines {
         anchors.fill: _navScroll
         visible: _navScroll.interactive
-        fadeColor: Theme.menuPane
         list: _navScroll
     }
 }

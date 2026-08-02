@@ -1,6 +1,7 @@
 import QtQuick
+import QtQuick.Shapes
 
-Canvas {
+Shape {
     id: root
 
     property real  progress: 0
@@ -10,123 +11,64 @@ Canvas {
     property color arcColor: "transparent"
     property real  trackWidth: 1
     property real  arcWidth: 1.5
+    property bool  paused: false
 
-    antialiasing: true
-    renderTarget:   Canvas.Image
-    renderStrategy: Canvas.Threaded
+    property real _shownProgress: 0
+    readonly property real _pathWidth: Math.max(0, width - inset * 2)
+    readonly property real _pathHeight: Math.max(0, height - inset * 2)
+    readonly property real _pathRadius: Math.max(0.5,
+        Math.min(cornerRadius - inset, Math.min(_pathWidth, _pathHeight) / 2))
+    readonly property real _perimeter: Math.max(0.001,
+        2 * (_pathWidth + _pathHeight - 4 * _pathRadius)
+        + 2 * Math.PI * _pathRadius)
 
-    onPaint: {
-        const ctx = getContext("2d")
-        ctx.clearRect(0, 0, width, height)
-        if (width <= 0 || height <= 0) return
+    preferredRendererType: Shape.CurveRenderer
 
-        const x = root.inset
-        const y = root.inset
-        const w = width  - root.inset * 2
-        const h = height - root.inset * 2
-        if (w <= 0 || h <= 0) return
-        const r  = Math.max(0.5, Math.min(root.cornerRadius - root.inset, Math.min(w, h) / 2))
-        const sx = Math.max(0, w - 2 * r)
-        const sy = Math.max(0, h - 2 * r)
-        const ar = Math.PI / 2 * r
-
-        ctx.beginPath()
-        ctx.moveTo(x + r, y)
-        ctx.lineTo(x + w - r, y)
-        ctx.arc(x + w - r, y + r,     r, -Math.PI / 2, 0)
-        ctx.lineTo(x + w, y + h - r)
-        ctx.arc(x + w - r, y + h - r, r, 0, Math.PI / 2)
-        ctx.lineTo(x + r, y + h)
-        ctx.arc(x + r, y + h - r,     r, Math.PI / 2, Math.PI)
-        ctx.lineTo(x, y + r)
-        ctx.arc(x + r, y + r,         r, Math.PI, 3 * Math.PI / 2)
-        ctx.lineWidth   = root.trackWidth
-        ctx.strokeStyle = root.trackColor
-        ctx.stroke()
-
-        const p = Math.max(0, Math.min(1, root.progress))
-        if (p <= 0.002) return
-        let t = p * (2 * sx + 2 * sy + 4 * ar)
-
-        let l
-        ctx.beginPath()
-        ctx.moveTo(x + r, y)
-        l = Math.min(t, sx); ctx.lineTo(x + r + l, y); t -= l
-        if (t > 0) { l = Math.min(t, ar); ctx.arc(x + w - r, y + r,     r, -Math.PI / 2, -Math.PI / 2 + l / r); t -= l }
-        if (t > 0) { l = Math.min(t, sy); ctx.lineTo(x + w, y + r + l); t -= l }
-        if (t > 0) { l = Math.min(t, ar); ctx.arc(x + w - r, y + h - r, r, 0, l / r); t -= l }
-        if (t > 0) { l = Math.min(t, sx); ctx.lineTo(x + w - r - l, y + h); t -= l }
-        if (t > 0) { l = Math.min(t, ar); ctx.arc(x + r, y + h - r,     r, Math.PI / 2, Math.PI / 2 + l / r); t -= l }
-        if (t > 0) { l = Math.min(t, sy); ctx.lineTo(x, y + h - r - l); t -= l }
-        if (t > 0) { l = Math.min(t, ar); ctx.arc(x + r, y + r,         r, Math.PI, Math.PI + l / r); t -= l }
-        ctx.lineWidth   = root.arcWidth
-        ctx.lineCap     = "round"
-        ctx.strokeStyle = root.arcColor
-        ctx.stroke()
-    }
-
-    property real _painted: -1
-    // cap to ~33fps and skip sub-pixel travel — the arc otherwise ticks every
-    // vsync frame, each one a threaded-canvas upload. 0 for a driver that already
-    // paces itself, where a second gate just eats frames to jitter.
-    property int minPaintMs: 30
-    property real _lastPaintMs: 0
-
-    // each repaint re-strokes the whole perimeter into an image and uploads it,
-    // so callers freeze the arc while something more important is animating
-    property bool paused: false
-    onPausedChanged: {
-        if (paused) _paintDelay.stop()
-        else if (visible) _commitPaint()
-    }
-
-    function _commitPaint(): void {
-        if (root.paused) return
-        root._painted = root.progress
-        root._lastPaintMs = Date.now()
-        root.requestPaint()
-    }
-
-    function _invalidate(): void {
-        if (root.visible) root._commitPaint()
-    }
-
-    function _queueProgressPaint(): void {
+    function _syncProgress(): void {
         if (!root.visible || root.paused) return
-        const now = Date.now()
-        const endpoint = root.progress <= 0.002 || root.progress >= 0.998
-        if (!endpoint && Math.abs(root.progress - root._painted)
-                * 2 * (root.width + root.height) < 1.0) return
-        const wait = root.minPaintMs - (now - root._lastPaintMs)
-        if (wait > 0) {
-            _paintDelay.interval = Math.max(1, Math.ceil(wait))
-            _paintDelay.restart()
-            return
-        }
-        _paintDelay.stop()
-        root._commitPaint()
+        root._shownProgress = Math.max(0, Math.min(1, root.progress))
     }
 
-    Timer {
-        id: _paintDelay
-        onTriggered: root._commitPaint()
-    }
+    Component.onCompleted: root._syncProgress()
+    onProgressChanged: root._syncProgress()
+    onPausedChanged: if (!paused) root._syncProgress()
+    onVisibleChanged: if (visible) root._syncProgress()
 
-    onProgressChanged: _queueProgressPaint()
-    onVisibleChanged: {
-        if (visible) {
-            _lastPaintMs = 0
-            _commitPaint()
-        } else {
-            _paintDelay.stop()
+    // one Shape keeps the static track cached and never re-uploads a texture per countdown tick, unlike Canvas
+    ShapePath {
+        strokeWidth: root.trackWidth
+        strokeColor: root.trackColor
+        fillColor: "transparent"
+
+        PathRectangle {
+            x: root.inset
+            y: root.inset
+            width: root._pathWidth
+            height: root._pathHeight
+            radius: root._pathRadius
         }
     }
-    onWidthChanged:        _invalidate()
-    onHeightChanged:       _invalidate()
-    onInsetChanged:        _invalidate()
-    onCornerRadiusChanged: _invalidate()
-    onTrackColorChanged:   _invalidate()
-    onArcColorChanged:     _invalidate()
-    onTrackWidthChanged:   _invalidate()
-    onArcWidthChanged:     _invalidate()
+
+    ShapePath {
+        readonly property real _dashUnits: root._perimeter / Math.max(0.01, strokeWidth)
+
+        strokeWidth: root.arcWidth
+        strokeColor: root._shownProgress <= 0.002 ? "transparent" : root.arcColor
+        strokeStyle: root._shownProgress >= 0.998
+            ? ShapePath.SolidLine : ShapePath.DashLine
+        dashPattern: [
+            Math.max(0.001, _dashUnits * root._shownProgress),
+            Math.max(0.001, _dashUnits * (1 - root._shownProgress))
+        ]
+        capStyle: ShapePath.RoundCap
+        fillColor: "transparent"
+
+        PathRectangle {
+            x: root.inset
+            y: root.inset
+            width: root._pathWidth
+            height: root._pathHeight
+            radius: root._pathRadius
+        }
+    }
 }

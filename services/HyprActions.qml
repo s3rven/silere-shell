@@ -3,13 +3,12 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
-import "../config"
 
 Singleton {
     id: root
 
     property bool _luaDetected: false
-    readonly property bool _useLua: Settings.hyprLuaConfig || _luaDetected
+    readonly property bool _useLua: _luaDetected
 
     Process {
         id: _luaCheck
@@ -69,8 +68,7 @@ Singleton {
         return ""
     }
 
-    // two detached hyprctl processes can land out of order; chain both in one sh.
-    // not --batch: its parser mangles the quoted/braced lua-framework calls
+    // chain in one sh: detached hyprctl processes land out of order, and --batch mangles the quoted lua-framework calls
     function _dispatchPair(d1, a1, d2, a2): void {
         if (!SystemTools.ready || !SystemTools.hasHyprctl) return
         Quickshell.execDetached(["sh", "-c",
@@ -101,7 +99,7 @@ Singleton {
     }
 
     function _norm(value): string {
-        let text = String(value || "").trim().toLowerCase()
+        let text = String(value || "").slice(0, 512).trim().toLowerCase()
         if (text.endsWith(".desktop")) text = text.slice(0, -8)
         return text
     }
@@ -259,7 +257,9 @@ Singleton {
     ]
 
     function _resolveByDesktopEntry(clients, name): var {
-        const de = DesktopEntries.heuristicLookup(name)
+        const identity = root._norm(name)
+        if (identity.length === 0) return null
+        const de = DesktopEntries.heuristicLookup(identity)
         const startupClass = de?.startupClass ? String(de.startupClass) : ""
         const desktopId    = de?.id ? String(de.id) : ""
         let best = null
@@ -288,7 +288,7 @@ Singleton {
             if (bestDesktop && bestDesktop.wsId >= 0) return bestDesktop
         }
 
-        const appName = String(notification.appName || "")
+        const appName = root._norm(notification.appName)
         if (appName.length === 0) return null
 
         let bestApp = root._chooseMatchingSource(clients, c => root._appMatches(c, appName))

@@ -10,15 +10,10 @@ Item {
     anchors.fill: parent
 
     property real floatingProgress: ShellSettings.barFloating ? 1.0 : 0.0
+    property real wrapRadius: 0
 
-    // Glow hugs the edge facing the desktop. Everything inside keeps its
-    // bottom-anchored layout; a bottom bar mirrors the whole item vertically,
-    // which flips positions and gradient directions together in one step
-    // (conditional anchor flips left elements stuck on the stale edge).
+    // a bottom bar mirrors the whole item vertically in one step; conditional anchor flips leave elements on the stale edge
     readonly property bool atBottom: ShellSettings.barPosition === "bottom"
-    readonly property real wrapRadius: (ShellSettings.barCornerStyle === "round"
-        ? Math.min(ShellSettings.barRadius, _ul.height / 2, _ul.width / 2) : 0)
-        * _ul.floatingProgress
     transform: Scale { origin.y: _ul.height / 2; yScale: _ul.atBottom ? -1 : 1 }
 
     Item {
@@ -106,10 +101,9 @@ Item {
             return 0.50
         }
         property real _sweepCenter: _sweepCenterTarget
-        Behavior on _sweepCenter {
+        MotionBehavior on _sweepCenter {
             // sweep already animates this frame-by-frame, a second Behavior would lag behind it
-            enabled: !ShellSettings.reduceMotion
-                && !(_lineEffect._shotActive && ShellSettings.screenshotGlowSweep)
+            gate: !(_lineEffect._shotActive && ShellSettings.screenshotGlowSweep)
             NumberAnimation { duration: Motion.ms(400); easing.type: Easing.OutCubic }
         }
 
@@ -121,7 +115,10 @@ Item {
             _screenshotSweep.stop()
             _screenshotGlow = 0
             _bloomBoost = 0
-            if (ShellSettings.screenshotGlowSweep && !ShellSettings.reduceMotion)
+            _sweepSpread = 0.28
+            _screenshotSweepCenter = 0.50
+            if (ShellSettings.reduceMotion) return
+            if (ShellSettings.screenshotGlowSweep)
                 _screenshotSweep.restart()
             else
                 _screenshotPulse.restart()
@@ -222,8 +219,7 @@ Item {
 
         readonly property bool _glowEnabled: ShellSettings.underlineGlow
 
-        // seeded, not bound: an overview toggle recreates this item, and starting
-        // from 0 makes the next dismissal read as an arrival and flash
+        // seeded, not bound: an overview toggle recreates this item and starting from 0 makes the next dismissal flash as an arrival
         property int  _prevNotifCount: 0
         property bool _skipNextNotif: false
 

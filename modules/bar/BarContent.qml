@@ -15,15 +15,29 @@ Item {
     property real fitWidth: 0
 
     property bool _autoCompact: false
+    property real _expandedWidthEstimate: 0
+    property real _lastCompactWidth: 0
     readonly property bool effectiveCompact: ShellSettings.barCompact || _autoCompact
     readonly property int gap: Metrics.titleGapFor(effectiveCompact)
+    readonly property bool centerHasWidgets: centerZone.implicitWidth > 0.5
+    readonly property real _widgetLayoutWidth: centerHasWidgets
+        ? centerZone.implicitWidth
+            + 2 * Math.max(leftZone.implicitWidth, rightZone.implicitWidth)
+            + gap * 2
+        : leftZone.implicitWidth + rightZone.implicitWidth + gap
+    readonly property real _osdLayoutWidth: _osdBarShowing && _osdLoader.item
+        ? _osdLoader.item.implicitWidth
+            + 2 * Math.max(leftZone.implicitWidth, rightZone.implicitWidth)
+            + gap * 2
+        : 0
     readonly property real minimumSurfaceWidth:
-        leftZone.implicitWidth + rightZone.implicitWidth + gap + Settings.hPad * 2
+        Math.max(_widgetLayoutWidth, _osdLayoutWidth) + Settings.hPad * 2
     readonly property int titleMinWidth: effectiveCompact ? 72 : 96
     readonly property real titleFreeLeft:  leftZone.implicitWidth + gap
     readonly property real titleFreeRight: width - rightZone.implicitWidth - gap
     readonly property real titleAvailableWidth: Math.max(0, titleFreeRight - titleFreeLeft)
-    readonly property bool titleHasRoom: titleAvailableWidth >= titleMinWidth
+    readonly property bool titleHasRoom: !centerHasWidgets
+        && titleAvailableWidth >= titleMinWidth
 
     property real titleAnchor: ShellSettings.windowTitleCenterGap
         ? (titleFreeLeft + titleFreeRight) / 2
@@ -35,30 +49,56 @@ Item {
     readonly property bool _compact: effectiveCompact
     readonly property int mediaTextBudget: {
         const base = _compact ? 120 : 160
-        if (!ShellSettings.showWindowTitle) return base
+        if (!ShellSettings.showWindowTitle || centerHasWidgets) return base
         return Math.max(76, Math.min(base, Math.round(width * 0.065)))
     }
 
     function _queueAutoCompact(): void {
-        if (!_compactSync.running) _compactSync.restart()
+        _compactSync.restart()
     }
 
     function _syncAutoCompact(): void {
         if (ShellSettings.barCompact || !ShellSettings.barAutoCompact || width <= 0) {
             _autoCompact = false
+            _expandedWidthEstimate = 0
+            _lastCompactWidth = 0
+            _compactModeSettle.stop()
             return
         }
 
-        const sideW = leftZone.implicitWidth + rightZone.implicitWidth
-        const reserve = ShellSettings.showWindowTitle ? 116 : 52
+        const layoutW = centerHasWidgets
+            ? _widgetLayoutWidth
+            : leftZone.implicitWidth + rightZone.implicitWidth
+                + (ShellSettings.showWindowTitle ? 116 : 52)
         const span = fitWidth > 0 ? Math.min(fitWidth, width) : width
-        const turnOn = span - reserve
-        const turnOff = span - reserve - 72
+        const capacity = span
 
-        if (!_autoCompact && sideW > turnOn)
-            _autoCompact = true
-        else if (_autoCompact && sideW < turnOff)
+        if (!_autoCompact) {
+            _expandedWidthEstimate = layoutW
+            _lastCompactWidth = 0
+            if (layoutW > capacity) {
+                _autoCompact = true
+                _compactModeSettle.restart()
+            }
+            return
+        }
+
+        if (_compactModeSettle.running) {
+            _lastCompactWidth = layoutW
+            return
+        }
+
+        if (_lastCompactWidth > 0) {
+            const delta = layoutW - _lastCompactWidth
+            _expandedWidthEstimate = Math.max(layoutW,
+                _expandedWidthEstimate + delta)
+        }
+        _lastCompactWidth = layoutW
+
+        if (_expandedWidthEstimate < capacity - 56) {
             _autoCompact = false
+            _lastCompactWidth = 0
+        }
     }
 
     onWidthChanged: _queueAutoCompact()
@@ -66,8 +106,14 @@ Item {
 
     Timer {
         id: _compactSync
-        interval: 1
+        interval: 24
         onTriggered: root._syncAutoCompact()
+    }
+
+    Timer {
+        id: _compactModeSettle
+        interval: Motion.width + 20
+        onTriggered: root._queueAutoCompact()
     }
 
     Connections {
@@ -77,14 +123,13 @@ Item {
         function onShowWindowTitleChanged() { root._queueAutoCompact() }
     }
 
-    // one Component per widget kind, chosen per-slot by whichever zone array holds the key.
-    // widgets bind height to root.height, not a forced-height Loader — Loader resize-to-fit mis-centres the diamond
-    Component { id: _cWorkspaces;  Workspaces       { anchors.verticalCenter: parent.verticalCenter; screen: root.screen; barActive: root.barActive } }
+    // widgets bind height to root.height, not a forced-height Loader - Loader resize-to-fit mis-centres the diamond
+    Component { id: _cWorkspaces;  Workspaces       { anchors.verticalCenter: parent.verticalCenter; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cShellUpdate; ShellUpdateWidget { anchors.verticalCenter: parent.verticalCenter; height: root.height; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cTray;        TrayWidget       { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cUpdates;     UpdatesWidget    { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cNetwork;     NetworkWidget    { anchors.verticalCenter: parent.verticalCenter; height: root.height; compact: root.effectiveCompact; barActive: root.barActive } }
-    Component { id: _cVolume;      Volume           { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact } }
+    Component { id: _cVolume;      Volume           { anchors.verticalCenter: parent.verticalCenter; height: root.height; compact: root.effectiveCompact } }
     Component { id: _cBrightness;  BrightnessWidget { anchors.verticalCenter: parent.verticalCenter; height: root.height; compact: root.effectiveCompact } }
     Component { id: _cBattery;     BatteryWidget    { anchors.verticalCenter: parent.verticalCenter; height: root.height; compact: root.effectiveCompact } }
     Component { id: _cMedia;       MediaWidget      { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; textBudget: root.mediaTextBudget; compact: root.effectiveCompact; barActive: root.barActive } }
@@ -116,8 +161,9 @@ Item {
         && !ShellSettings.reduceMotion && !Idle.isIdle
         && root.barActive && root._onActiveBar && Media.shown && Media.playing && Media.cavaReady
     readonly property bool _centerVizHasRoom: titleAvailableWidth >= 48
-    readonly property bool _centerVizShowing: _centerVizWanted && _centerVizHasRoom && !root._osdBarShowing
-    readonly property int _centerVizWidth: Math.round(Math.max(48, Math.min(
+    readonly property bool _centerVizShowing: _centerVizWanted && _centerVizHasRoom
+        && !root.centerHasWidgets && !root._osdBarShowing
+    readonly property int _centerVizWidth: Math.round(Math.max(48, Math.min(560,
         titleAvailableWidth,
         titleAvailableWidth * 0.68
     )))
@@ -142,8 +188,7 @@ Item {
         transformOrigin: Item.Center
         visible: opacity > 0.001
 
-        // no Behavior on x: titleAnchor already eases, and animating x too would lag the
-        // half-width term and drift the title sideways as new text fades in
+        // no Behavior on x: titleAnchor already eases, and animating x too drifts the title sideways as new text fades in
 
         readonly property bool _want: ShellSettings.showWindowTitle && root.titleHasRoom
             && !root._osdBarShowing && !root._centerVizShowing
@@ -176,17 +221,36 @@ Item {
         ]
     }
 
+    BarZone {
+        id: centerZone
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.verticalCenter: parent.verticalCenter
+        height: parent.height
+        orderKeys: ShellSettings.barWidgetOrderCenterKeys
+        widgetComponents: root._widgetComponents
+        compact: root.effectiveCompact
+        opacity: root._osdBarShowing ? 0 : 1
+        visible: opacity > 0.001
+        onImplicitWidthChanged: root._queueAutoCompact()
+
+        MotionBehavior on opacity {
+            NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
+        }
+    }
+
     Loader {
         id: _centerVisualizer
         anchors.verticalCenter: parent.verticalCenter
         x: root._centerVizX
-        width: root._centerVizShowing ? root._centerVizWidth : 0
+        width: root._centerVizWidth
         height: parent.height
         active: root._centerVizWanted && root._centerVizHasRoom
+            && !root.centerHasWidgets
         sourceComponent: Component {
             MediaVisualizer {
                 barName: root.screen ? root.screen.name : ""
                 presentationActive: root._centerVizShowing
+                lowPower: root.effectiveCompact || root._centerVizWidth < 260
             }
         }
         visible: opacity > 0.001
@@ -198,9 +262,6 @@ Item {
         MotionBehavior on x {
             NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
         }
-        MotionBehavior on width {
-            NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
-        }
         MotionBehavior on opacity {
             NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
         }
@@ -210,6 +271,7 @@ Item {
     }
 
     Loader {
+        id: _osdLoader
         anchors.centerIn: parent
         z: 2
         active: ShellSettings.osdEnabled && ShellSettings.osdBarIntegrated && root._isOverlayBar

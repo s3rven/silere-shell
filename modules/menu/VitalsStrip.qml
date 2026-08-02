@@ -49,8 +49,8 @@ Rectangle {
 
         readonly property real _p: Math.max(0, Math.min(1, progress))
         property real _disp: _p
-        Behavior on _disp {
-            enabled: tile.live && !ShellSettings.reduceMotion
+        MotionBehavior on _disp {
+            gate: tile.live
             NumberAnimation { duration: Motion.ms(450); easing.type: Easing.OutCubic }
         }
 
@@ -138,9 +138,7 @@ Rectangle {
                 radius: parent.radius
                 antialiasing: true
                 color: tile.status > 0 ? tile.tint : Theme.withAlpha(Theme.accent, 0.70)
-                MotionBehavior on color {
-                    ColorAnimation { duration: Motion.color }
-                }
+                ColorFade on color {}
             }
         }
     }

@@ -16,8 +16,7 @@ Singleton {
         _proc.running = true
     }
 
-    // singletons are lazy: creation means the picker is on screen, so scan right away —
-    // a menu-open signal would have fired before this object existed
+    // singletons are lazy: creation means the picker is on screen, and a menu-open signal would have fired before this object existed
     Component.onCompleted: scan()
     Connections {
         target: SystemTools
@@ -26,9 +25,7 @@ Singleton {
 
     Process {
         id: _proc
-        // %{family} is intentionally used instead of %{family[0]}. Fontconfig can
-        // expose aliases and style-specific family names in one comma-separated
-        // value; reading only slot zero makes installed fonts disappear from the picker.
+        // %{family} not %{family[0]}: fontconfig lists aliases in one comma-separated value, and slot zero drops installed fonts
         command: ["fc-list", "--format", "%{family}\n"]
         stdout: StdioCollector { id: _out }
         onExited: (code) => {

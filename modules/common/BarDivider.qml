@@ -5,8 +5,7 @@ import "../../services"
 Item {
     id: root
 
-    // the divider owns the whole span to the next widget; `marked` only adds
-    // the visual, so an unmarked one stays a plain gap of the same width
+    // the divider owns the whole span to the next widget; unmarked stays a plain gap of the same width
     property bool hasNext: false
     property bool marked: false
     property bool groupBreak: false
@@ -14,20 +13,14 @@ Item {
 
     readonly property string _style: ShellSettings.dotStyle
     readonly property bool _markWanted: hasNext && marked && _style !== "none"
-    // a group boundary keeps the wider span with the mark off, so Groups
-    // placement still reads as grouping under the None style
+    // a group boundary keeps the wider span with the mark off, so Groups placement still reads under the None style
     readonly property bool _wideSpan: hasNext && (_markWanted || groupBreak)
     readonly property int _plainSpan: Metrics.widgetGapFor(compact)
     readonly property int _markedSpan: Metrics.dividerSpanFor(compact)
-    // integer slot widths keep this stable; per-divider mapToItem snapping gave
-    // repeated siblings a bad local phase and made valid marks vanish
-    readonly property real _strokeW: 1
-
     readonly property bool _isDot: _style === "·" || _style === "•" || _style === "◦"
-    readonly property real _strokeScale: _style === "line" ? (compact ? 0.58 : 0.74)
-                                       : _style === "slash" ? (compact ? 0.54 : 0.68)
-                                       : (compact ? 0.46 : 0.58)
-    readonly property color _strokeEnd: _style === "line" ? "transparent" : Theme.barSeparator
+    readonly property real _strokeScale: _style === "line" ? (compact ? 0.54 : 0.64)
+                                       : _style === "slash" ? (compact ? 0.50 : 0.58)
+                                       : (compact ? 0.40 : 0.48)
 
     function _roundedSize(logicalSize: real): real {
         return Math.max(1, Math.round(logicalSize))
@@ -77,18 +70,12 @@ Item {
         Rectangle {
             visible: !root._isDot
             anchors.centerIn: parent
-            width: root._strokeW
+            width: root.compact ? 1.5 : 2
             height: root._roundedSize(Settings.capHeight * root._strokeScale)
-            gradient: Gradient {
-                orientation: Gradient.Vertical
-                GradientStop { position: 0;    color: root._strokeEnd }
-                GradientStop { position: 0.24; color: Theme.barSeparator }
-                GradientStop { position: 0.76; color: Theme.barSeparator }
-                GradientStop { position: 1;    color: root._strokeEnd }
-            }
+            color: Theme.barSeparator
             rotation: root._style === "slash" ? 18 : 0
-            radius: root._style === "slash" ? width / 2 : 0
-            antialiasing: root._style === "slash"
+            radius: width / 2
+            antialiasing: true
             transformOrigin: Item.Center
         }
     }

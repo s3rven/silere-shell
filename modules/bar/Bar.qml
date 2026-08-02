@@ -23,39 +23,36 @@ PanelWindow {
     MotionBehavior on shadowProgress {
         NumberAnimation { duration: Motion.barMorph; easing.type: Easing.OutCubic }
     }
-    readonly property real _cornerRadiusTarget: ShellSettings.barCornerStyle === "round"
-        ? Math.min(ShellSettings.barRadius, ShellSettings.barHeight / 2)
+    property real _cornerRadiusTarget: ShellSettings.barCornerStyle === "round"
+        ? ShellSettings.barRadius
         : 0
-    readonly property real cornerRadius: _cornerRadiusTarget * floatingProgress
+    MotionBehavior on _cornerRadiusTarget {
+        NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
+    }
+    readonly property real cornerRadius: Math.min(_cornerRadiusTarget,
+        bar.surfaceHeight / 2) * floatingProgress
     readonly property bool wrapUnderline: floatingProgress > 0.001
-    // side gap snaps to a multiple of 8 so the segment x lands on the 4px grid and maps to
-    // an integer output pixel at 2.5× effective scale — else a subpixel-bleed line at the left edge
+    // multiple of 8 so the segment x lands on the 4px grid and an integer output pixel at 2.5x, else a subpixel bleed line at the left edge
     readonly property real configuredSurfaceWidth: {
         if (!ShellSettings.barFloating) return width
         const rawGap = width * (1.0 - ShellSettings.barWidth)
         return width - 8 * Math.round(rawGap / 8)
     }
     property real _contentFloorWidth: 0
-    // A narrow floating bar must not crop a crowded one-sided widget zone. Grow
-    // by shrinking the side gap in 8px steps — snapping the width instead puts
-    // the centered x off the 4px grid when the output width isn't a multiple of 8.
+    // grow by shrinking the side gap in 8px steps; snapping the width puts the centered x off the 4px grid on odd output widths
     readonly property real surfaceWidth: {
         if (_contentFloorWidth <= configuredSurfaceWidth) return configuredSurfaceWidth
         const gap8 = 8 * Math.floor(Math.max(0, width - _contentFloorWidth) / 8)
         return Math.max(configuredSurfaceWidth, width - gap8)
     }
 
-    // Publish the child layout's requirement out of band. Some widget widths
-    // respond to available bar width, so a direct parent↔child binding here
-    // would form a binding loop.
+    // published out of band: some widget widths respond to bar width, so a direct parent-child binding loops
     Timer {
         id: _surfaceFitSync
         interval: 1
         onTriggered: bar._contentFloorWidth = _barContent.minimumSurfaceWidth
     }
-    // Constant 4 keeps the bar edge (and everything stacked below it) on the
-    // 4px grid, so hairlines land on whole physical px under fractional
-    // scaling.
+    // constant 4 keeps the bar edge on the 4px grid so hairlines land on whole physical px
     readonly property int surfaceInset: ShellSettings.barFloating ? 4 : 0
     readonly property real visualSurfaceInset: 4 * floatingProgress
 
@@ -77,8 +74,8 @@ PanelWindow {
         NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
     }
     exclusiveZone: bar.concealed ? 0 : bar._targetCoreHeight
-    implicitHeight: Math.ceil(bar.surfaceHeight
-        + (bar.insetPad + bar.effectPad) * bar.floatingProgress)
+    implicitHeight: 4 * Math.ceil((bar.surfaceHeight
+        + (bar.insetPad + bar.effectPad) * bar.floatingProgress) / 4)
 
     mask: Region { item: bar.concealed ? null : surface }
 
@@ -152,9 +149,7 @@ PanelWindow {
             }
         }
 
-        // The edge line sits on the side facing the desktop (bottom for a top bar).
-        // Positioned via y, not flipped anchors: conditional anchor bindings don't
-        // reliably clear the stale edge when the bar moves.
+        // positioned via y, not flipped anchors: conditional anchor bindings don't reliably clear the stale edge
         Loader {
             anchors.fill: parent
             active: ShellSettings.barBorderVisible
@@ -164,14 +159,7 @@ PanelWindow {
                 anchors.left:  parent.left
                 anchors.right: parent.right
                 y: bar.atBottom ? 0 : parent.height - height
-
-                gradient: Gradient {
-                    orientation: Gradient.Horizontal
-                    GradientStop { position: 0.0;  color: "transparent" }
-                    GradientStop { position: 0.25; color: Theme.withAlpha(Theme.subtext, bar.lineAlpha) }
-                    GradientStop { position: 0.75; color: Theme.withAlpha(Theme.subtext, bar.lineAlpha) }
-                    GradientStop { position: 1.0;  color: "transparent" }
-                }
+                color: Theme.withAlpha(Theme.subtext, bar.lineAlpha)
             }
         }
 
@@ -256,7 +244,10 @@ PanelWindow {
                 anchors.fill: parent
                 active: ShellSettings.underlineGlow && contents.opacity > 0.001 && !bar.concealed
                 sourceComponent: Component {
-                    BarUnderline { floatingProgress: bar.floatingProgress }
+                    BarUnderline {
+                        floatingProgress: bar.floatingProgress
+                        wrapRadius: surface.radius
+                    }
                 }
             }
 
@@ -264,8 +255,7 @@ PanelWindow {
                 id: _barContent
                 screen: bar.targetScreen
                 barActive: contents.opacity > 0.001 && !bar.concealed
-                // the configured span, not the grown one: surfaceWidth is derived
-                // from the zone widths, so measuring crowding against it is circular
+                // the configured span, not the grown one: surfaceWidth derives from the zone widths, so measuring crowding against it is circular
                 fitWidth: bar.configuredSurfaceWidth - Settings.hPad * 2
                 anchors.fill:        parent
                 anchors.leftMargin:  Settings.hPad

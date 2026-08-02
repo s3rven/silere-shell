@@ -1,15 +1,18 @@
 import QtQuick
 import QtQuick.Shapes
 
-// uniform rounded-rect stroke; Rectangle.border over-weights rounded corners.
-// 1 logical px is the crisp width: thinner strokes land sub-pixel after the
-// compositor's fractional downscale and render at a fraction of their colour.
+// uniform stroke (Rectangle.border over-weights rounded corners); 1 logical px is the floor, thinner lands sub-pixel after the fractional downscale
 Shape {
     id: root
 
     property real radius: 0
     property real outlineWidth: 1
     property color outlineColor: "transparent"
+
+    property real topLeftRadius: root.radius
+    property real topRightRadius: root.radius
+    property real bottomLeftRadius: root.radius
+    property real bottomRightRadius: root.radius
 
     anchors.fill: parent
     visible: outlineColor.a > 0 && outlineWidth > 0
@@ -23,7 +26,10 @@ Shape {
         PathRectangle {
             width: root.width
             height: root.height
-            radius: root.radius
+            topLeftRadius: root.topLeftRadius
+            topRightRadius: root.topRightRadius
+            bottomLeftRadius: root.bottomLeftRadius
+            bottomRightRadius: root.bottomRightRadius
             strokeAdjustment: root.outlineWidth
         }
     }

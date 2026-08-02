@@ -15,6 +15,7 @@ Item {
     enabled: root.show
 
     readonly property bool show: ShellSettings.barShowMedia && Media.shown
+    readonly property bool layoutVisible: show || implicitWidth > 0.5
 
     property var screen: null
     property bool barActive: true
@@ -27,7 +28,6 @@ Item {
     readonly property bool _helperEnabled: ShellSettings.mediaWidgetHelper
     readonly property string _playGlyph: Media.playing ? "󰏤" : "󰐊"
     property real textBudget: -1
-    property bool _pauseBreathSettled: false
     readonly property int _pillPad: Metrics.pillPadFor(compact)
 
     readonly property real _scrollSpeed:     38
@@ -54,10 +54,7 @@ Item {
 
     onShowChanged: {
         if (!show) _resetMarquee()
-        else {
-            if (!Media.playing) _pauseBreathSettled = false
-            Qt.callLater(_startMarquee)
-        }
+        else Qt.callLater(_startMarquee)
     }
     onBarActiveChanged: {
         if (barActive) Qt.callLater(_startMarquee)
@@ -87,13 +84,8 @@ Item {
             radius: height / 2
             antialiasing: true
             opacity: Media.hasPosition ? 1.0 : 0.75
-            gradient: Gradient {
-                orientation: Gradient.Horizontal
-                GradientStop { position: 0.0;  color: "transparent" }
-                GradientStop { position: 0.18; color: Theme.withAlpha(Theme.accent, Media.hasPosition ? 0.22 : 0.80) }
-                GradientStop { position: 0.82; color: Theme.withAlpha(Theme.accent, Media.hasPosition ? 0.22 : 0.80) }
-                GradientStop { position: 1.0;  color: "transparent" }
-            }
+            color: Theme.withAlpha(Theme.accent,
+                Media.hasPosition ? 0.22 : 0.80)
         }
 
         Rectangle {
@@ -105,10 +97,6 @@ Item {
             radius: height / 2
             antialiasing: true
             color: Theme.accent
-            Behavior on width {
-                enabled: Media.playing && !ShellSettings.reduceMotion
-                NumberAnimation { duration: Motion.ms(420); easing.type: Easing.Linear }
-            }
         }
     }
 
@@ -147,7 +135,7 @@ Item {
                     : Theme.withAlpha(Theme.subtext, 0.72)
                 font.pixelSize: Settings.iconSize + 1
                 scale: Media.playing ? 1.0 : 0.92
-                MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
+                ColorFade on color {}
                 MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
             }
         }
@@ -185,32 +173,20 @@ Item {
                 readonly property color _base: Media.playing ? Theme.text
                                                               : Theme.mix(Theme.text, Theme.subtext, 0.55)
                 color:          (_rootHover.hovered && ShellSettings.barHoverHighlight) ? Theme.mix(_base, Theme.accent, 0.30) : _base
-                MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
+                ColorFade on color {}
                 font.pixelSize: Settings.fontSize
                 width: ShellSettings.reduceMotion ? textClip.maxW : implicitWidth
                 elide: ShellSettings.reduceMotion ? Text.ElideRight : Text.ElideNone
 
                 opacity: Media.playing ? 1.0 : 0.72
-                Behavior on opacity {
-                    enabled: Media.playing && !ShellSettings.reduceMotion
+                MotionBehavior on opacity {
                     NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
-                }
-
-                SequentialAnimation on opacity {
-                    running: root.barActive && !Media.playing && root.show
-                        && !root._pauseBreathSettled
-                        && !ShellSettings.reduceMotion && !Idle.isIdle
-                        && (!root.screen || Monitors.activeName === root.screen.name)
-                    loops: Animation.Infinite
-                    NumberAnimation { to: 0.60; duration: Motion.ms(1400); easing.type: Easing.InOutSine }
-                    NumberAnimation { to: 0.92; duration: Motion.ms(1400); easing.type: Easing.InOutSine }
                 }
             }
 
             Connections {
                 target: Media
                 function onLabelChanged() {
-                    root._pauseBreathSettled = false
                     if (!root._canAnimateTrack()) {
                         root._resetMarquee()
                         return
@@ -222,7 +198,6 @@ Item {
                     if (Media.playing) {
                         root._startMarquee()
                     } else {
-                        root._pauseBreathSettled = false
                         _scroll.stop()
                         trackText.x = 0
                     }
@@ -289,13 +264,6 @@ Item {
             }
 
         }
-    }
-
-    Timer {
-        interval: 15000
-        running: root.barActive && root.show && !Media.playing
-            && !root._pauseBreathSettled && !Idle.isIdle
-        onTriggered: root._pauseBreathSettled = true
     }
 
     HoverHandler { id: _rootHover; cursorShape: Qt.PointingHandCursor }

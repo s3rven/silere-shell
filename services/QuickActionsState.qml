@@ -9,7 +9,7 @@ Singleton {
     property bool open: false
     property real anchorX: 0
     property bool barBottom: false
-    property var  triggerScreen: null
+    property ShellScreen triggerScreen: null
 
     function toggleAt(x: real, screen, bottom: bool): void {
         if (open) { close(); return }

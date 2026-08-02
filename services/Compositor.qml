@@ -52,18 +52,11 @@ Singleton {
         return -1
     }
 
-    function focusMonitor(name: string): void {
-        if (!name || name.length === 0) return
-        if (root.isNiri) { root._niriAction(["focus-monitor", name]); return }
-        HyprActions._dispatch("focusmonitor", name)
-    }
-
     function focusWorkspace(wsId, output): void {
         if (wsId === undefined || wsId === null || wsId < 0) return
         const mon = output || ""
         if (root.isNiri) {
-            // focus-workspace takes a per-output index, so the monitor switch must land
-            // first — chain both in one process, detached pairs can run out of order
+            // focus-workspace takes a per-output index, so the monitor switch must land first - chain both in one process
             if (mon.length > 0 && mon !== root._niriFocusedMon)
                 Quickshell.execDetached(["sh", "-c",
                     "niri msg action focus-monitor \"$1\" && niri msg action focus-workspace \"$2\"",
@@ -217,8 +210,7 @@ Singleton {
         return out
     }
 
-    // Everything except the live title is layout state. Build that shared base
-    // once; the title-facing list below only overlays the sampled strings.
+    // shared layout base built once; the title-facing list below only overlays the sampled strings
     readonly property var _hyprBaseToplevels: {
         root._hyprLayoutTick
         if (root.isNiri) return []
@@ -237,7 +229,7 @@ Singleton {
             const wsId = c.workspace ? (c.workspace.id ?? -1) : -1
             out.push({
                 appId: (t.wayland && t.wayland.appId) || c.class || c.initialClass || "",
-                fallbackTitle: c.title || "",
+                title: c.title || "",
                 cls: c.class ?? "", initialClass: c.initialClass ?? "",
                 pid: c.pid ?? -1, ref: c.address,
                 wsRef: wsId, wsId: wsId, output: wsOut[wsId] ?? "",
@@ -251,15 +243,15 @@ Singleton {
 
     readonly property var _hyprToplevels: {
         const base = root._hyprBaseToplevels
+        if (!root._liveTitlesWanted) return base
         const out = []
         for (let i = 0; i < base.length; i++) {
             const t = base[i]
             const liveTitle = root._hyprLiveTitles[t.ref]
             out.push({
                 appId: t.appId,
-                // Live titles are sampled by _hyprTitleSync. Reading t.title in
-                // this binding would subscribe it to every compositor title frame.
-                title: liveTitle !== undefined ? liveTitle : t.fallbackTitle,
+                // titles are sampled by _hyprTitleSync; reading t.title here would subscribe this binding to every title frame
+                title: liveTitle !== undefined ? liveTitle : t.title,
                 cls: t.cls, initialClass: t.initialClass,
                 pid: t.pid, ref: t.ref,
                 wsRef: t.wsRef, wsId: t.wsId, output: t.output,
@@ -335,8 +327,7 @@ Singleton {
     property bool _niriReady: false
     property int _niriTitleTick: 0
 
-    // niri reports WindowOpenedOrChanged for title-only updates too. Mutate the
-    // raw snapshot immediately, but publish at most one title list per interval.
+    // niri sends WindowOpenedOrChanged for title-only updates too: mutate now, publish at most one title list per interval
     Timer {
         id: _niriTitleSync
         interval: 180

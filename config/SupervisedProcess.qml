@@ -16,9 +16,7 @@ Process {
     property int _restartCount: 0
     readonly property int _effectiveRestartDelay: Math.min(maxRestartDelay,
         restartDelay * Math.pow(2, Math.max(0, _restartCount - 1)))
-    // Avoid a declarative Process.running binding here. During a hot reload,
-    // Quickshell briefly detaches bindings and would otherwise try to assign an
-    // undefined value to the bool property once per supervised process.
+    // no declarative running binding: a hot reload detaches bindings and assigns undefined to the bool
     function _syncRunning(): void {
         const wanted = superviseWhen === true && !_cooldown && !_gaveUp
         if (running !== wanted) running = wanted

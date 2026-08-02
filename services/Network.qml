@@ -104,7 +104,6 @@ Singleton {
     property string wifiError: ""
     property var _pendingNetwork: null
     readonly property bool wifiScanning: _scanWarmup.running
-    readonly property bool wifiScanFailed: false
 
     function _setScannerEnabled(enabled: bool): void {
         const devices = root._devices
@@ -318,6 +317,7 @@ Singleton {
         else {
             _vpnRefresh.stop()
             _vpnRefreshPending = false
+            _vpnProc.running = false
         }
     }
 
@@ -352,8 +352,7 @@ Singleton {
             }
         }
         onExited: (code) => {
-            // Keep the last known state through transient nmcli failures and
-            // publish successful results as one coherent update.
+            // hold the last known state through transient nmcli failures and publish one coherent update
             if (code === 0 && (root.hasVpn !== root._vpnCandidateActive
                     || root.vpnName !== root._vpnCandidateName)) {
                 root._vpnState = {
@@ -365,6 +364,12 @@ Singleton {
             root._vpnRefreshPending = false
             if (refreshAgain) _vpnRefresh.restart()
         }
+    }
+
+    Timer {
+        interval: 15000
+        running: _vpnProc.running
+        onTriggered: _vpnProc.running = false
     }
 
     Timer {

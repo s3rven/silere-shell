@@ -55,9 +55,7 @@ Rectangle {
         outlineColor: root.activeFocus && !root.armed
             ? (root.dangerous ? Theme.withAlpha(Theme.error, 0.34) : Theme.menuControlLineHot)
             : "transparent"
-        MotionBehavior on outlineColor {
-            ColorAnimation { duration: Motion.fast }
-        }
+        ColorFade on outlineColor {}
     }
 
     Accessible.role: root.interactive ? Accessible.Button : Accessible.StaticText
@@ -98,7 +96,7 @@ Rectangle {
     property real _confirmProgress: 0.0
     property real _confirmStartedMs: 0
 
-    // 30Hz, not a NumberAnimation: each tick is a threaded Canvas texture upload
+    // keep the confirmation countdown time-based so delayed frames never extend it
     Timer {
         interval: 33
         repeat: true
@@ -114,7 +112,6 @@ Rectangle {
         anchors.fill: parent
         visible: root.armed
         inset:        1.0
-        minPaintMs:   0
         cornerRadius: root.radius
         progress:     root._confirmProgress
         trackColor:   Theme.menuControlLine
@@ -140,9 +137,7 @@ Rectangle {
         else event.accepted = false
     }
 
-    MotionBehavior on color {
-        ColorAnimation { duration: Motion.fast }
-    }
+    ColorFade on color {}
     MotionBehavior on _shift {
         NumberAnimation { duration: Motion.ms(105); easing.type: Easing.OutCubic }
     }
@@ -158,9 +153,7 @@ Rectangle {
         color: root._glyphFg
         font.pixelSize: Settings.fontSize
         transform: Translate { x: root._shift }
-        MotionBehavior on color {
-            ColorAnimation { duration: Motion.fast }
-        }
+        ColorFade on color {}
     }
 
     ShellText {
@@ -176,9 +169,7 @@ Rectangle {
         color: Theme.withAlpha(Theme.menuTextMuted, root._hot ? 0.84 : 0.66)
         font.pixelSize: Settings.fontSize - 2
         font.weight: Font.Medium
-        MotionBehavior on color {
-            ColorAnimation { duration: Motion.fast }
-        }
+        ColorFade on color {}
     }
 
     ShellText {
@@ -193,8 +184,6 @@ Rectangle {
         font.pixelSize: Settings.fontSize - 1
         font.weight: root.armed ? Font.DemiBold : Font.Normal
         transform: Translate { x: root._shift }
-        MotionBehavior on color {
-            ColorAnimation { duration: Motion.fast }
-        }
+        ColorFade on color {}
     }
 }

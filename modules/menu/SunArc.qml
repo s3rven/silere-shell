@@ -218,7 +218,7 @@ Rectangle {
                     for (let i = 0; i <= M; i++) { const t = p * i / M; i ? ctx.lineTo(xAt(t), yAt(t)) : ctx.moveTo(xAt(t), yAt(t)) }
                     ctx.stroke()
 
-                    // sun disc + glow (radial gradient can't be cached — position moves each frame)
+                    // radial gradient can't be cached, the position moves each frame
                     const sx = xAt(p), sy = yAt(p)
                     const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, 12)
                     g.addColorStop(0, dynGlow); g.addColorStop(1, "transparent")

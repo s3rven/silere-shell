@@ -14,12 +14,13 @@ Item {
     property bool compact: ShellSettings.barCompact
     property bool barActive: true
     readonly property bool show: ShellSettings.trayWidget && _items.count > 0
+    readonly property bool layoutVisible: show || implicitWidth > 0.5
     readonly property int iconSize: Math.max(14, Math.min(18, Math.round(ShellSettings.barHeight * 0.44)))
     readonly property int _pillPad: Metrics.pillPadFor(compact)
 
     implicitWidth:  show ? _row.implicitWidth + _pillPad * 2 : 0
     implicitHeight: parent ? parent.height : 24
-    visible: show
+    visible: layoutVisible
 
     MotionBehavior on implicitWidth {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
 
@@ -44,7 +45,8 @@ Item {
         id: _row
         x: root._pillPad
         anchors.verticalCenter: parent.verticalCenter
-        spacing: Math.max(5, ShellSettings.barSpacing - 4)
+        spacing: root.compact ? Math.max(2, ShellSettings.barSpacing - 6)
+                              : Math.max(5, ShellSettings.barSpacing - 4)
 
         Repeater {
             id: _items
@@ -140,7 +142,7 @@ Item {
                     x: root.iconSize + 5
                     color: Theme.subtext
                     text: _tile.label.length > 22 ? _tile.label.slice(0, 21) + "…" : _tile.label
-                    expanded: (_tile._dwelled || _tile.activeFocus)
+                    expanded: ((_tile._dwelled && !root.compact) || _tile.activeFocus)
                         && _tile.label.length > 0 && !TrayMenuState.open
                 }
 

@@ -6,8 +6,12 @@ import "../../common"
 Pill {
     id: root
 
-    readonly property bool canControl: Brightness.toolAvailable && Brightness.maxBrightness > 0
-    readonly property bool show: ShellSettings.barShowBrightness && Brightness.maxBrightness > 0
+    readonly property bool canControl: Brightness.controllable
+    readonly property bool show: ShellSettings.barShowBrightness && canControl
+    readonly property real value: Brightness.pct
+    readonly property real minimumValue: 0
+    readonly property real maximumValue: 1
+    readonly property real stepSize: Brightness.stepPct / 100
 
     opacity:     canControl ? 1.0 : 0.45
     visible: show
@@ -17,6 +21,7 @@ Pill {
     text:        (ShellSettings.valuesOnHover && !expanded) ? ""
                  : (canControl ? Brightness.label : "—")
     textColor:   Theme.subtext
+    interactive: canControl
     levelValue: canControl ? Brightness.pct : -1
     levelVisible: canControl && ShellSettings.valuesOnHover && ShellSettings.hoverLevelBar && !expanded
     levelColor: Theme.accent
@@ -30,8 +35,6 @@ Pill {
     Accessible.onDecreaseAction: if (root.canControl) Brightness.bumpBy(-Brightness.stepPct)
 
     MotionBehavior on opacity {NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
-
-    HoverHandler { cursorShape: root.canControl ? Qt.PointingHandCursor : Qt.ArrowCursor }
 
     Keys.onLeftPressed:  event => { if (canControl) { Brightness.bumpBy(-Brightness.stepPct); event.accepted = true } else event.accepted = false }
     Keys.onDownPressed:  event => { if (canControl) { Brightness.bumpBy(-Brightness.stepPct); event.accepted = true } else event.accepted = false }

@@ -47,8 +47,7 @@ Item {
 
     property int  shrinkDelay: 600
     property real _minW: 0
-    // Whole px: fractional text widths put the pill (and every widget after it
-    // in the bar row) on fractional pixels, which blurs NativeRendering text.
+    // whole px: a fractional text width puts the pill and every widget after it off-pixel and blurs NativeRendering text
     readonly property real rowWidth: Math.ceil(row.implicitWidth)
     implicitWidth:  Math.max(rowWidth, _minW) + horizontalPadding * 2
 
@@ -67,6 +66,7 @@ Item {
         _hoverRevealTimer.stop()
         _shrinkDelay.stop()
         hoverActive = false
+        if (_ready) _settleAnimatedContent()
     }
 
     Timer {
@@ -88,16 +88,24 @@ Item {
 
     Component.onCompleted: {
         _shownGlyph = root.glyph
-        Qt.callLater(function() { _ready = true })
+        _nextGlyph = root.glyph
+        Qt.callLater(function() { if (root) root._ready = true })
+    }
+
+    function _settleAnimatedContent(): void {
+        _glyphStamp.stop()
+        _textSwap.stop()
+        _shownGlyph = root.glyph
+        _nextGlyph = root.glyph
+        _glyphText.scale = 1.0
+        _textEl.opacity = 1.0
+        if (root.animateText) _textEl._shown = root.text
     }
 
     onGlyphChanged: {
         if (!_ready) { _shownGlyph = glyph; return }
-        if (!animateGlyph || ShellSettings.reduceMotion) {
-            _glyphStamp.stop()
-            _shownGlyph = glyph
-            _nextGlyph = glyph
-            _glyphText.scale = 1.0
+        if (!root.visible || !animateGlyph || ShellSettings.reduceMotion) {
+            _settleAnimatedContent()
             return
         }
         _nextGlyph = glyph
@@ -109,11 +117,15 @@ Item {
         NumberAnimation { target: _glyphText; property: "scale"; to: 0.72; duration: Motion.instant; easing.type: Easing.InCubic }
         ScriptAction    { script: root._shownGlyph = root._nextGlyph }
         NumberAnimation { target: _glyphText; property: "scale"; from: 0.72; to: 1.0; duration: Motion.fast; easing.type: Easing.OutQuart }
-        onFinished: { if (root._nextGlyph !== root._shownGlyph) _glyphStamp.start() }
+        onFinished: {
+            if (root.visible && !ShellSettings.reduceMotion
+                    && root._nextGlyph !== root._shownGlyph)
+                _glyphStamp.start()
+        }
     }
 
-    Behavior on implicitWidth {
-        enabled: root._ready && !ShellSettings.reduceMotion
+    MotionBehavior on implicitWidth {
+        gate: root._ready && root.visible
         NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
     }
     implicitHeight: Math.max(pillH, parent ? parent.height : 0)
@@ -142,7 +154,6 @@ Item {
         root.activated()
     }
 
-    // fill on hover, ring on focus; never on press — a press-driven version flashed on every click
     Rectangle {
         id: _hoverCap
         anchors.horizontalCenter: parent.horizontalCenter
@@ -151,9 +162,12 @@ Item {
         height: root.pillH
         radius: height / 2
         readonly property bool _focus: root.activeFocusOnTab && root.activeFocus
-        color: _focus ? Theme.withAlpha(Theme.accent, 0.14)
-                      : Theme.withAlpha(Theme.mix(Theme.text, Theme.accent, 0.30), 0.07)
-        opacity: ((_pillHover.hovered && ShellSettings.barHoverHighlight) || _focus) ? 1.0 : 0.0
+        readonly property bool _hover: _pillHover.hovered
+            && ShellSettings.barHoverHighlight
+        color: root.visualPressed ? Theme.withAlpha(Theme.accent, 0.18)
+             : _focus ? Theme.withAlpha(Theme.accent, 0.14)
+             : Theme.withAlpha(Theme.mix(Theme.text, Theme.accent, 0.30), 0.07)
+        opacity: (_hover || _focus || root.visualPressed) ? 1.0 : 0.0
         visible: opacity > 0.001
         OutlineBorder {
             radius: height / 2
@@ -162,9 +176,7 @@ Item {
         MotionBehavior on opacity {
             NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
         }
-        MotionBehavior on color {
-            ColorAnimation { duration: Motion.fast }
-        }
+        ColorFade on color {}
     }
 
     Item {
@@ -196,15 +208,16 @@ Item {
             MotionBehavior on width {
                 NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
             }
-            MotionBehavior on color {
-                ColorAnimation { duration: Motion.color }
-            }
+            ColorFade on color {}
         }
     }
 
-    readonly property color _hoverGlyphColor: ((_pillHover.hovered && ShellSettings.barHoverHighlight) || activeFocus)
+    readonly property bool _contentHot: (_pillHover.hovered
+        && ShellSettings.barHoverHighlight)
+        || root.visualPressed || activeFocus
+    readonly property color _hoverGlyphColor: _contentHot
         ? Theme.mix(glyphColor, Theme.accent, 0.20) : glyphColor
-    readonly property color _hoverTextColor: ((_pillHover.hovered && ShellSettings.barHoverHighlight) || activeFocus)
+    readonly property color _hoverTextColor: _contentHot
         ? Theme.mix(textColor, Theme.accent, 0.16) : textColor
 
     Row {
@@ -232,10 +245,7 @@ Item {
                 color:           root._hoverGlyphColor
                 transformOrigin: Item.Center
                 font.pixelSize:  root.glyphPixelSize
-                Behavior on color {
-                    enabled: root.animateGlyphColor && !ShellSettings.reduceMotion
-                    ColorAnimation { duration: Motion.color }
-                }
+                ColorFade on color { gate: root.animateGlyphColor }
             }
         }
 
@@ -259,9 +269,7 @@ Item {
                 text:    root.animateText ? _shown : root.text
                 color:   root._hoverTextColor
                 font.pixelSize: Settings.fontSize
-                MotionBehavior on color {
-                    ColorAnimation { duration: Motion.color }
-                }
+                ColorFade on color {}
             }
 
             Component.onCompleted: if (root.animateText) _textEl._shown = root.text
@@ -271,10 +279,8 @@ Item {
                 enabled: root.animateText
                 function onTextChanged() {
                     if (!root._ready) { _textEl._shown = root.text; return }
-                    if (ShellSettings.reduceMotion) {
-                        _textSwap.stop()
-                        _textEl.opacity = 1.0
-                        _textEl._shown = root.text
+                    if (!root.visible || ShellSettings.reduceMotion) {
+                        root._settleAnimatedContent()
                         return
                     }
                     _textSwap.restart()
@@ -292,7 +298,8 @@ Item {
 
     Loader {
         id: _contentScan
-        active: root.contentScanEnabled && !ShellSettings.reduceMotion
+        active: root.visible && root.contentScanEnabled
+            && !ShellSettings.reduceMotion
         width: Math.max(1, root.contentScanWidth)
         height: row.height
         x: row.x - width + (row.width + width) * Math.max(0, Math.min(1, root.contentScanProgress))
@@ -344,6 +351,7 @@ Item {
         id: _pillHover
         enabled: root.enabled && root.visible
         margin: 0
+        cursorShape: root.interactive ? Qt.PointingHandCursor : Qt.ArrowCursor
         onHoveredChanged: {
             if (hovered) _hoverRevealTimer.restart()
             else { _hoverRevealTimer.stop(); root.hoverActive = false }
@@ -354,6 +362,14 @@ Item {
         id: _hoverRevealTimer
         interval: root.hoverRevealDelay
         onTriggered: root.hoverActive = true
+    }
+
+    Connections {
+        target: ShellSettings
+        function onReduceMotionChanged() {
+            if (ShellSettings.reduceMotion && root._ready)
+                root._settleAnimatedContent()
+        }
     }
 
     onActiveFocusChanged: {

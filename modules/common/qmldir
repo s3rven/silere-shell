@@ -3,9 +3,10 @@ BarDivider 1.0 BarDivider.qml
 Hairline 1.0 Hairline.qml
 CollapsingText 1.0 CollapsingText.qml
 RollingText 1.0 RollingText.qml
-ListEdgeFade 1.0 ListEdgeFade.qml
+ListEdgeLines 1.0 ListEdgeLines.qml
 FloatingShadow 1.0 FloatingShadow.qml
 FloatingPopupCard 1.0 FloatingPopupCard.qml
+PopupShadow 1.0 PopupShadow.qml
 IconButton 1.0 IconButton.qml
 OutlineBorder 1.0 OutlineBorder.qml
 FadingRim 1.0 FadingRim.qml

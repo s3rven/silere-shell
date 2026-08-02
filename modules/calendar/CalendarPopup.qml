@@ -75,17 +75,7 @@ PanelWindow {
         }
     }
 
-    Loader {
-        active: (CalendarState.open || card.opacity > 0.001)
-            && ShellSettings.barFloating && ShellSettings.barShadow
-        anchors.fill: card
-        opacity: card.opacity
-        z: -1
-        sourceComponent: FloatingShadow {
-            radius: card.radius
-            atBottom: card.barBottom
-        }
-    }
+    PopupShadow { card: card }
 
     FloatingPopupCard {
         id: card
@@ -268,7 +258,7 @@ PanelWindow {
                             text: card.todayWeekday
                             color: (_todayH.hovered || _todayButton.activeFocus) ? Theme.text : Theme.withAlpha(Theme.text, 0.9)
                             font.family: Settings.font; font.pixelSize: Settings.fontSize + 1; font.weight: Font.DemiBold
-                            MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
+                            ColorFade on color {}
                         }
                         ShellText {
                             visible: card._todayWeek > 0
@@ -318,7 +308,7 @@ PanelWindow {
                         text: card.monthLabel
                         color: (_mH.hovered || _monthButton.activeFocus) ? Theme.text : Theme.withAlpha(Theme.text, 0.9)
                         font.family: Settings.font; font.pixelSize: Settings.fontSize + 1; font.weight: Font.DemiBold
-                        MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
+                        ColorFade on color {}
                     }
                 }
 
@@ -365,11 +355,17 @@ PanelWindow {
 
                 property int kbdIndex: -1
                 readonly property int _kbdDay: kbdIndex - card._lead + 1
+                readonly property bool _kbdValid: kbdIndex >= card._lead && _kbdDay <= card._daysThis
                 activeFocusOnTab: true
                 Accessible.role: Accessible.List
                 Accessible.name: activeFocus && kbdIndex >= 0
                     ? Qt.formatDate(new Date(card.shownYear, card.shownMonth, _kbdDay), "d MMMM yyyy")
                     : "Calendar days"
+                Accessible.description: !_kbdValid ? "Use arrow keys to choose a day"
+                    : CalendarState.marks[CalendarState.markKey(card.shownYear, card.shownMonth, _kbdDay)] === true
+                        ? "Marked" : "Not marked"
+                Accessible.focusable: true
+                Accessible.onPressAction: _gridWrap._toggleSelected()
                 onActiveFocusChanged: if (activeFocus) kbdIndex = card._todayCell >= 0 ? card._todayCell : card._lead
                 function _move(d: int): void {
                     kbdIndex = Math.max(card._lead, Math.min(card._lead + card._daysThis - 1, kbdIndex + d))
@@ -379,9 +375,12 @@ PanelWindow {
                     function onShownMonthChanged() { if (_gridWrap.kbdIndex >= 0) _gridWrap._move(0) }
                     function onShownYearChanged()  { if (_gridWrap.kbdIndex >= 0) _gridWrap._move(0) }
                 }
-                function _toggle(event: var): void {
-                    if (!event.isAutoRepeat && kbdIndex >= card._lead && _kbdDay <= card._daysThis)
+                function _toggleSelected(): void {
+                    if (_kbdValid)
                         CalendarState.toggleMark(card.shownYear, card.shownMonth, _kbdDay)
+                }
+                function _toggle(event: var): void {
+                    if (!event.isAutoRepeat) _toggleSelected()
                     event.accepted = true
                 }
                 Keys.onLeftPressed:   e => { _gridWrap._move(-1); e.accepted = true }
@@ -429,7 +428,7 @@ PanelWindow {
                     x: card.weekCol + xOff
                     width: card.cell * 7
                     columns: 7
-                    // Layer only during the slide so translated NativeRendering text stays crisp.
+                    // layer only during the slide so translated NativeRendering text stays crisp
                     layer.enabled: _gridSwap.running && !ShellSettings.reduceMotion
 
                     Repeater {
@@ -456,7 +455,7 @@ PanelWindow {
                                 antialiasing: true
                                 color: _dayCell.today ? Theme.accent
                                      : (_dayH.hovered && _dayCell.cur ? Theme.withAlpha(Theme.subtext, 0.10) : "transparent")
-                                MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
+                                ColorFade on color {}
 
                                 HoverHandler { id: _dayH; enabled: _dayCell.cur; cursorShape: Qt.PointingHandCursor }
                                 TapHandler {

@@ -5,12 +5,6 @@ import Quickshell
 import "../services"
 
 Singleton {
-    // shared so selection, focus and section marks rasterize alike at 1.25x
-    readonly property int menuMarkerWidth: 3
-    readonly property int menuMarkerHeight: 18
-    readonly property real menuMarkerRadius: 1.5
-    readonly property real menuMarkerOpacity: 0.82
-
     function widgetGapFor(compact: bool): int {
         return compact ? Math.max(4, Math.round(ShellSettings.barSpacing * 0.5))
                        : ShellSettings.barSpacing
@@ -32,8 +26,6 @@ Singleton {
 
     function clockDateGapFor(compact: bool): int { return compact ? 4 : 8 }
 
-    // Fixed icon cell: Text sizes glyphs by ink, which spans 0.64–1.08× the pixel size
-    // across the Nerd icon set — a natural-width slot resizes on every glyph swap and
-    // shoves the whole row. 1.1× covers the widest measured ink in every offered family.
+    // fixed icon cell: Nerd glyph ink spans 0.64-1.08x the px size, so a natural-width slot shoves the row on every glyph swap
     function iconCellFor(pixelSize: int): int { return Math.ceil(pixelSize * 1.1) }
 }

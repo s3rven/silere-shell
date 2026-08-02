@@ -5,6 +5,7 @@ import Quickshell.Bluetooth as Bt
 import "../../config"
 import "../../services"
 import "../common"
+import "controls"
 
 Item {
     id: root
@@ -65,9 +66,9 @@ Item {
     Column {
         id: _col
         width: parent.width
-        spacing: 4
-        topPadding: 4
-        bottomPadding: 4
+        spacing: 0
+        topPadding: 2
+        bottomPadding: 2
 
         ShellText {
             visible: root.open && (!Bluetooth.available || !Bluetooth.enabled || Bluetooth.devices.length === 0)
@@ -91,7 +92,7 @@ Item {
             boundsMovement: Flickable.StopAtBounds
             flickDeceleration: 1800
             maximumFlickVelocity: 2200
-            spacing: 4
+            spacing: 0
             model: root.open ? Bluetooth.devices : []
 
             function _focusIndex(index: int): void {
@@ -105,35 +106,11 @@ Item {
                 })
             }
 
-            delegate: Rectangle {
+            delegate: InlineOptionRow {
                 id: _row
                 required property var modelData
                 required property int index
                 width: _list.width
-                height: 40
-                radius: 10
-                antialiasing: true
-                color: Theme.rowFill(_ma.containsMouse, false)
-                MotionBehavior on color {
-                    ColorAnimation { duration: Motion.fast }
-                }
-
-                OutlineBorder {
-                    radius: _row.radius
-                    outlineWidth: _row.activeFocus ? 2 : 1
-                    outlineColor: (_row._armed || _row.modelData.pairing) ? Theme.withAlpha(Theme.warning, 0.55)
-                                : _row.modelData.connected ? Theme.withAlpha(Theme.accent, 0.45)
-                                : _row.activeFocus         ? Theme.withAlpha(Theme.accent, 0.45)
-                                :                            Theme.menuCardBorder
-                    MotionBehavior on outlineColor {
-                        ColorAnimation { duration: Motion.fast }
-                    }
-                }
-
-                activeFocusOnTab: true
-                Accessible.role: Accessible.ListItem
-                Accessible.name: modelData.deviceName || modelData.name || modelData.address || "Unknown device"
-                Accessible.description: _state
 
                 readonly property bool   _armed: root._armedAddr === modelData.address && modelData.connected
                 readonly property int _batt: Math.round(modelData.battery > 1 ? modelData.battery : modelData.battery * 100)
@@ -145,6 +122,13 @@ Item {
                     : modelData.connected ? (modelData.batteryAvailable ? _batt + "%" : "Connected")
                     : modelData.paired    ? "Paired"
                     : "Pair"
+
+                glyph: root._devGlyph(modelData.icon)
+                label: modelData.deviceName || modelData.name || modelData.address || "Unknown"
+                status: _state
+                selected: modelData.connected
+                warning: _armed || modelData.pairing
+                accessibleDescription: _state
 
                 function _activate(): void {
                     const addr = modelData.address
@@ -165,9 +149,7 @@ Item {
                         Bluetooth.pairDevice(addr)
                     }
                 }
-                Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) _activate(); event.accepted = true }
-                Keys.onReturnPressed: event => { if (!event.isAutoRepeat) _activate(); event.accepted = true }
-                Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) _activate(); event.accepted = true }
+                onTriggered: _activate()
                 Keys.onUpPressed:     event => { _list._focusIndex(_row.index - 1); event.accepted = true }
                 Keys.onDownPressed:   event => { _list._focusIndex(_row.index + 1); event.accepted = true }
                 Keys.onPressed: event => {
@@ -179,52 +161,11 @@ Item {
                         event.accepted = true
                     }
                 }
-
-                MouseArea {
-                    id: _ma
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: _row._activate()
-                }
-
-                ShellText {
-                    id: _g
-                    anchors.left: parent.left; anchors.leftMargin: 12
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: root._devGlyph(_row.modelData.icon)
-                    color: _row.modelData.connected ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.8)
-                    font.family: Settings.font; font.pixelSize: Settings.fontSize + 1
-                }
-                ShellText {
-                    anchors.left: _g.right; anchors.leftMargin: 10
-                    anchors.right: _stateText.left; anchors.rightMargin: 8
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: _row.modelData.deviceName || _row.modelData.name || _row.modelData.address || "Unknown"
-                    color: _row.modelData.connected ? Theme.text : Theme.withAlpha(Theme.text, 0.85)
-                    font.family: Settings.font; font.pixelSize: Settings.fontSize
-                    font.weight: _row.modelData.connected ? Font.Medium : Font.Normal
-                    elide: Text.ElideRight
-                }
-                ShellText {
-                    id: _stateText
-                    anchors.right: parent.right; anchors.rightMargin: 12
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: parent._state
-                    color: (parent._armed || _row.modelData.pairing) ? Theme.warning
-                         : _row.modelData.connected ? Theme.accent
-                         : Theme.withAlpha(Theme.subtext, 0.55)
-                    font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
-                    font.weight: (parent._armed || _row.modelData.pairing) ? Font.Medium : Font.Normal
-                    MotionBehavior on color {
-                        ColorAnimation { duration: Motion.fast }
-                    }
-                }
             }
         }
     }
 
-    ListEdgeFade {
+    ListEdgeLines {
         x: 0; y: _col.y + _list.y
         width: parent.width; height: _list.height
         visible: _list.visible

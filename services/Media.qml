@@ -58,7 +58,7 @@ Singleton {
     property real  _anchorMs:   0
     property real  positionNow: 0
     readonly property real positionRatio: length > 0 ? Math.max(0, Math.min(1, positionNow / length)) : 0
-    readonly property bool positionVisible: (MenuState.open && MenuState.activeTab === 0)
+    readonly property bool positionVisible: MenuState.homeActive
         || (ShellSettings.barShowMedia && root.shown && ShellSettings.mediaWidgetHelper)
 
     function _reanchor(): void {
@@ -109,7 +109,7 @@ Singleton {
 
     readonly property string artUrl: {
         if (!player) return ""
-        // Spotify's Linux client reports an open.spotify.com/image link that 404s.
+        // Spotify's Linux client reports an open.spotify.com/image link that 404s
         return (player.trackArtUrl || "")
             .replace("https://open.spotify.com/image/", "https://i.scdn.co/image/")
     }
@@ -146,19 +146,31 @@ Singleton {
     readonly property string _cavaProfileKey: [
         _cavaBars,
         _cavaFps,
-        _cavaSensitivity,
         _cavaNoiseReduction
     ].join(":")
 
-    function registerVisualizer(lowPower): void {
-        _visualizerClients++
+    function registerVisualizer(lowPower: bool): void {
+        const warmHandoff = _visualizerStopGrace.running
+        if (_visualizerClients === 0 && !warmHandoff) _cavaConfigReady = false
         _visualizerDemand += lowPower ? 1 : 2
-        if (!root._cavaConfigReady) _cavaConfigSync.restart()
+        _visualizerClients++
+        if (!_cavaConfigReady || _writtenCavaProfileKey !== _cavaProfileKey)
+            _writeCavaConfig()
+        _visualizerStopGrace.stop()
     }
-    function unregisterVisualizer(lowPower): void {
+    function unregisterVisualizer(lowPower: bool): void {
+        if (_visualizerClients <= 0) return
+        if (_visualizerClients === 1) _visualizerStopGrace.restart()
         _visualizerClients = Math.max(0, _visualizerClients - 1)
         _visualizerDemand = Math.max(0, _visualizerDemand - (lowPower ? 1 : 2))
     }
+    function updateVisualizerPower(previousLowPower: bool, nextLowPower: bool): void {
+        if (previousLowPower === nextLowPower || _visualizerClients <= 0) return
+        _visualizerDemand = Math.max(0, _visualizerDemand
+            - (previousLowPower ? 1 : 2) + (nextLowPower ? 1 : 2))
+    }
+
+    Timer { id: _visualizerStopGrace; interval: 150 }
 
     readonly property int _cavaBars: {
         if (_visualizerLowPowerOnly)
@@ -193,13 +205,9 @@ Singleton {
         default:       return Math.max(28, 38 - shapeTrim)
         }
     }
-    readonly property real _cavaSensitivity:
-        ShellSettings.mediaVisualizerPreset === "eco" ? 120
-        : ShellSettings.mediaVisualizerPreset === "smooth" ? 165
-        : 145
     readonly property real _cavaNoiseReduction: {
         switch (ShellSettings.mediaVisualizerPreset) {
-        // CAVA expects this on a 0-100 scale, not a normalized 0-1 scale.
+        // cava expects this on a 0-100 scale, not a normalized 0-1 scale
         case "eco":    return 72
         case "smooth": return 46
         default:       return 58
@@ -216,7 +224,6 @@ Singleton {
         "sleep_timer = 2\n" +
         "framerate = " + _cavaFps + "\n" +
         "autosens = 1\n" +
-        "sensitivity = " + _cavaSensitivity + "\n" +
         "lower_cutoff_freq = 45\n" +
         "higher_cutoff_freq = 10000\n" +
         "\n[input]\n" +
@@ -232,28 +239,33 @@ Singleton {
         "channels = mono\n" +
         "\n[smoothing]\n" +
         "noise_reduction = " + _cavaNoiseReduction + "\n"
-    // never /tmp: world-writable + guessable path invites a symlink swap. XDG_RUNTIME_DIR always exists here (wayland socket lives in it)
+    // runtime-owned path avoids symlink attacks through /tmp
     readonly property string _cavaConfigPath: {
         const runtime = String(Quickshell.env("XDG_RUNTIME_DIR") || "").trim()
-        return runtime.length > 0
+        return runtime.startsWith("/")
             ? runtime + "/silere-shell-cava-" + Quickshell.processId + ".conf"
             : ""
     }
     property bool _cavaConfigReady: false
+    property string _writtenCavaProfileKey: ""
+    readonly property int _cavaReloadSignal: 10
 
-    // blockWrites makes setText synchronous; set ready first so onSaveFailed can veto it.
-    // don't wait for onSaved — it never fires on hot-reload (processId is stable → same
-    // path + identical content → no write → no save signal → cava stuck off)
+    // blocking writes let save failure veto readiness before cava starts
     function _writeCavaConfig(): void {
         if (root._cavaConfigPath.length === 0) return
+        _cavaConfigSync.stop()
+        const nextProfile = root._cavaProfileKey
+        const reloadRunning = _cavaProc.running
+            && root._writtenCavaProfileKey.length > 0
+            && root._writtenCavaProfileKey !== nextProfile
         root._cavaConfigReady = true
         _cavaConfig.setText(root._cavaConfigText)
+        if (!root._cavaConfigReady) return
+        root._writtenCavaProfileKey = nextProfile
+        if (reloadRunning) _cavaProc.signal(root._cavaReloadSignal)
     }
 
-    on_CavaProfileKeyChanged: if (root._visualizerClients > 0) {
-        root._cavaConfigReady = false
-        _cavaConfigSync.restart()
-    }
+    on_CavaProfileKeyChanged: if (root._visualizerClients > 0) _cavaConfigSync.restart()
 
     Timer {
         id: _cavaConfigSync
@@ -267,7 +279,10 @@ Singleton {
         atomicWrites: true
         blockWrites: true
         printErrors: false
-        onSaveFailed: root._cavaConfigReady = false
+        onSaveFailed: {
+            root._cavaConfigReady = false
+            root._writtenCavaProfileKey = ""
+        }
     }
 
     property bool _fsBlocked: false
@@ -293,7 +308,8 @@ Singleton {
     SupervisedProcess {
         id: _cavaProc
         command: ["cava", "-p", root._cavaConfigPath]
-        superviseWhen: root._cavaConfigReady && root.cavaReady && root._visualizerClients > 0
+        superviseWhen: root._cavaConfigReady && root.cavaReady
+            && (root._visualizerClients > 0 || _visualizerStopGrace.running)
             && root.available && root.playing && !Idle.isIdle && !root._fsBlocked
         restartDelay: 1000
         maxRestartDelay: 30000
@@ -309,7 +325,7 @@ Singleton {
                     const normalized = Math.max(0, Math.min(1, value / 12))
                     result.push(Math.pow(normalized, 1.3))
                 }
-                if (result.length < 1) return
+                if (result.length !== root._cavaBars) return
                 const prev = root.barHeights
                 let changed = prev.length !== result.length
                 for (let i = 0; !changed && i < result.length; i++)

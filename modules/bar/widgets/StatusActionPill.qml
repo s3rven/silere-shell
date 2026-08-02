@@ -9,8 +9,9 @@ Pill {
     property bool show: false
     property bool busy: false
     property bool barActive: true
+    readonly property bool layoutVisible: show || opacity > 0.01
 
-    visible: opacity > 0.01
+    visible: layoutVisible
     opacity: show ? 1.0 : 0.0
     scale:   show ? 1.0 : 0.7
     transformOrigin: Item.Center

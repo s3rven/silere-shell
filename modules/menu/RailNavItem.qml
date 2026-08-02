@@ -28,6 +28,7 @@ Item {
         : (root.active ? "Current page" : "Open " + root.label)
     Accessible.selectable: true
     Accessible.selected: root.active
+    Accessible.pressed: _tap.pressed
     Accessible.onPressAction: root.tapped()
 
     Timer {
@@ -41,8 +42,7 @@ Item {
         cursorShape: Qt.PointingHandCursor
         onHoveredChanged: {
             if (hovered) {
-                // once one rail label has shown, the next reads instantly — a per-item
-                // delay makes a sweep down the rail look like it drops labels at random
+                // one shared delay: a per-item one makes a sweep down the rail look like it drops labels at random
                 if (root.labels && root.labels.warm) root._hoverReady = true
                 else _labelDelay.restart()
             } else {
@@ -76,7 +76,7 @@ Item {
             : root._hot ? Theme.withAlpha(Theme.text, 0.050) : "transparent"
         scale: _tap.pressed ? 0.94 : (root.active || root._hot ? 1.0 : 0.90)
         transformOrigin: Item.Center
-        MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
+        ColorFade on color {}
         MotionBehavior on scale {NumberAnimation { duration: Motion.ms(135); easing.type: Easing.OutCubic } }
 
         OutlineBorder {
@@ -84,7 +84,7 @@ Item {
             outlineColor: (root.active || _hover.hovered || root.activeFocus)
                 ? (root.active ? Theme.menuControlLine : Theme.menuControlLineHot)
                 : "transparent"
-            MotionBehavior on outlineColor {ColorAnimation { duration: Motion.fast } }
+            ColorFade on outlineColor {}
         }
     }
 
@@ -101,14 +101,13 @@ Item {
         font.pixelSize: Settings.iconSize + 2
         scale: _tap.pressed ? 0.92 : (root.active ? 1.015 : 1.0)
         transformOrigin: Item.Center
-        MotionBehavior on color {ColorAnimation  { duration: Motion.fast } }
+        ColorFade on color {}
         MotionBehavior on scale {NumberAnimation { duration: Motion.ms(115); easing.type: Easing.OutCubic } }
     }
 
     Rectangle {
         id: _pill
-        // focus alone only labels an inactive item: tapping Power force-focuses it,
-        // which otherwise pins the label open for as long as the rail stays open
+        // not focus alone: tapping Power force-focuses it and would pin the label open while the rail stays open
         readonly property bool _show: (_hover.hovered && root._hoverReady)
             || (root.activeFocus && !root.active)
         on_ShowChanged: if (_show && root.labels) root.labels.engage()

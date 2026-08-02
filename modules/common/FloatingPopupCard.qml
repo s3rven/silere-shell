@@ -11,8 +11,7 @@ Rectangle {
     required property bool open
     required property real anchorX
     required property bool barBottom
-    // width the card is headed for; placement clamps against it, not the live width,
-    // so a card that animates its width doesn't fight the x Behavior frame by frame
+    // clamp against the width the card is headed for, not the live one, or an animating width fights the x Behavior every frame
     property real targetWidth: width
     property bool animateScale: true
     property bool animateOffset: true
@@ -91,9 +90,8 @@ Rectangle {
     layer.enabled: root.animateScale && !ShellSettings.reduceMotion
         && opacity > 0.001 && (scaleAmt < 0.999 || !root.open)
 
-    Behavior on x {
-        enabled: root.animatePlacement && root.state === "visible"
-            && !ShellSettings.reduceMotion && root._placementSettled
+    MotionBehavior on x {
+        gate: root.animatePlacement && root.state === "visible" && root._placementSettled
         NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
     }
 

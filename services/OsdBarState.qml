@@ -18,7 +18,7 @@ Singleton {
     readonly property bool hasBar: _hasBarKind(kind)
     readonly property real clamped: Math.max(0, Math.min(1, value))
     readonly property bool barConcealed: OverviewState.active || Notifications.fullscreenActive
-    property alias entries: _entries
+    readonly property alias entries: _entries
     readonly property int activeCount: _entries.count
     MotionBehavior on fillColor {ColorAnimation { duration: Motion.medium } }
 
@@ -79,6 +79,14 @@ Singleton {
             if (_entries.get(i).kind === kind) return i
         }
         return -1
+    }
+
+    function _hasActiveBarEntry(): bool {
+        for (let i = 0; i < _entries.count; i++) {
+            const entry = _entries.get(i)
+            if (!entry.closing && entry.hasBar) return true
+        }
+        return false
     }
 
     function _setExpiry(kind: string): void {
@@ -170,16 +178,17 @@ Singleton {
         _syncPrimary()
     }
 
-    function _applyValues(kind: string, icon: string, value: real, label: string, muted: bool, color: color): void {
+    function _applyValues(kind: string, icon: string, value: real, label: string, muted: bool, color: color): bool {
         const idx = _entryIndex(kind)
         const live = idx >= 0 && !_entries.get(idx).closing
         if (!live && _closingSig[kind] === _sig(kind, value, muted)
-            && (_commitClose[kind] || 0) > Date.now()) return
-        if (!_upsertEntry(kind, icon, value, label, muted, color)) return
+            && (_commitClose[kind] || 0) > Date.now()) return false
+        if (!_upsertEntry(kind, icon, value, label, muted, color)) return false
         if (live && !root.rapid && !ShellSettings.reduceMotion) {
             root.bumped()
             root.entryBumped(kind)
         }
+        return true
     }
 
     function show(kind: string, icon: string, value: real, label: string, muted: bool): void {
@@ -189,9 +198,10 @@ Singleton {
         if (ShellSettings.osdKindFilter === "volume"     && kind !== "volume")     return
         if (ShellSettings.osdKindFilter === "brightness" && kind !== "brightness") return
 
-        if (ShellSettings.osdBarIntegrated) Notifications.refreshFullscreenState()
+        const refreshFullscreen = ShellSettings.osdBarIntegrated && !root._hasActiveBarEntry()
         root.fillColor = Theme.accent
-        _applyValues(kind, icon, value, label, muted, Theme.accent)
+        if (_applyValues(kind, icon, value, label, muted, Theme.accent) && refreshFullscreen)
+            Notifications.refreshFullscreenState()
     }
 
     function showAlert(kind: string, icon: string, value: real, label: string, fillColor: color): void {

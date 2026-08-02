@@ -8,8 +8,16 @@ Item {
     id: root
 
     required property int workspaceId
+    required property bool barActive
     property real pulse: 0
     property bool critical: false
+
+    function _settle(): void {
+        _pulseAnim.stop()
+        root.pulse = 0
+    }
+
+    onBarActiveChanged: if (!barActive) root._settle()
 
     Rectangle {
         anchors.centerIn: parent
@@ -46,7 +54,7 @@ Item {
 
     Connections {
         target: Notifications
-        enabled: !ShellSettings.reduceMotion
+        enabled: root.barActive && !ShellSettings.reduceMotion && !Idle.isIdle
         function onSourcePulse(wsId, critical) {
             if (wsId !== root.workspaceId) return
             root.critical = critical
@@ -57,9 +65,14 @@ Item {
     Connections {
         target: ShellSettings
         function onReduceMotionChanged() {
-            if (!ShellSettings.reduceMotion) return
-            _pulseAnim.stop()
-            root.pulse = 0
+            if (ShellSettings.reduceMotion) root._settle()
+        }
+    }
+
+    Connections {
+        target: Idle
+        function onIsIdleChanged() {
+            if (Idle.isIdle) root._settle()
         }
     }
 

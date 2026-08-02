@@ -70,8 +70,7 @@ Singleton {
     function _cmd(): string {
         switch (root.manager) {
         case "pacman": {
-            // checkupdates self-syncs to a private db (no root, no system-db touch); rc 2 = no updates.
-            // a real failure prints ERR so a network blip holds the last count instead of zeroing the badge; timeout caps a hung sync
+            // checkupdates self-syncs to a private db; rc 2 = no updates, and ERR holds the last count so a network blip can't zero the badge
             const aur = SystemTools.hasParu ? root._limit(60, "paru -Qua") + " 2>/dev/null | grep -c ."
                       : SystemTools.hasYay  ? root._limit(60, "yay -Qua") + " 2>/dev/null | grep -c ."
                       : "echo 0"

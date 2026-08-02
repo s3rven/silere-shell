@@ -74,6 +74,7 @@ Singleton {
     readonly property int radiusPanel:   14
     readonly property int radiusCard:    12
     readonly property int radiusControl: 10
+    readonly property int radiusField:    6
     readonly property int _surfaceRadiusTarget: ShellSettings.barFloating
         ? (ShellSettings.barCornerStyle === "flat" ? 0 : ShellSettings.barRadius)
         : radiusPanel

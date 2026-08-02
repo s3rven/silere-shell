@@ -4,6 +4,7 @@ import QtQuick
 import "../../config"
 import "../../services"
 import "../common"
+import "controls"
 
 Item {
     id: root
@@ -62,9 +63,9 @@ Item {
     Column {
         id: _col
         width: parent.width
-        spacing: 4
-        topPadding: 4
-        bottomPadding: 4
+        spacing: 0
+        topPadding: 2
+        bottomPadding: 2
 
         ShellText {
             visible: root.open && Network.wifiNetworks.length === 0
@@ -72,11 +73,9 @@ Item {
             horizontalAlignment: Text.AlignHCenter
             text: !Network.toolAvailable ? "Wi-Fi unavailable"
                 : !Network.wifiEnabled   ? "Wi-Fi is off"
-                : Network.wifiScanFailed ? "Could not scan for networks"
                 : Network.wifiScanning   ? "Searching for networks…"
                 :                          "No networks found"
-            color: Network.wifiScanFailed ? Theme.withAlpha(Theme.error, 0.75)
-                                           : Theme.withAlpha(Theme.subtext, 0.5)
+            color: Theme.withAlpha(Theme.subtext, 0.5)
             font.family: Settings.font; font.pixelSize: Settings.fontSize - 1
         }
 
@@ -90,7 +89,7 @@ Item {
             boundsMovement: Flickable.StopAtBounds
             flickDeceleration: 1800
             maximumFlickVelocity: 2200
-            spacing: 4
+            spacing: 0
             model: root.open ? Network.wifiNetworks : []
 
             function _focusIndex(index: int): void {
@@ -127,32 +126,21 @@ Item {
 
                 on_SelChanged: if (!_sel) _pw.text = ""
 
-                Rectangle {
+                InlineOptionRow {
                     id: _row
                     width: parent.width
-                    height: 40
-                    radius: 10
-                    antialiasing: true
-                    color: Theme.rowFill(_rowHover.hovered, false)
-                    MotionBehavior on color {
-                        ColorAnimation { duration: Motion.fast }
-                    }
-
-                    OutlineBorder {
-                        radius: _row.radius
-                        outlineWidth: _row.activeFocus ? 2 : 1
-                        outlineColor: _row.activeFocus ? Theme.withAlpha(Theme.accent, 0.55)
-                                    : _entry.modelData.active ? Theme.withAlpha(Theme.accent, 0.45)
-                                    : Theme.menuCardBorder
-                        MotionBehavior on outlineColor {
-                            ColorAnimation { duration: Motion.fast }
-                        }
-                    }
-
-                    activeFocusOnTab: true
-                    Accessible.role: Accessible.ListItem
-                    Accessible.name: _entry.modelData.ssid
-                    Accessible.description: _entry.modelData.active ? "Connected"
+                    glyph: Network.signalGlyph(_entry.modelData.signal)
+                    label: _entry.modelData.ssid
+                    status: _entry.modelData.active ? "Connected"
+                        : _entry._connecting ? "Connecting…"
+                        : _entry._failed ? "Failed"
+                        : _entry._sel ? "Password"
+                        : _entry.modelData.secured ? "Secured"
+                        : "Open"
+                    selected: _entry.modelData.active
+                    highlighted: _entry._sel
+                    warning: _entry._failed
+                    accessibleDescription: _entry.modelData.active ? "Connected"
                         : _entry._connecting ? "Connecting"
                         : _entry._failed ? "Connection failed"
                         : _entry.modelData.secured ? "Secured network"
@@ -169,9 +157,7 @@ Item {
                             Network.connectWifi(_entry.modelData.ssid, "")
                         }
                     }
-                    Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) _activate(); event.accepted = true }
-                    Keys.onReturnPressed: event => { if (!event.isAutoRepeat) _activate(); event.accepted = true }
-                    Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) _activate(); event.accepted = true }
+                    onTriggered: _activate()
                     Keys.onUpPressed:     event => { _list._focusIndex(_entry.index - 1); event.accepted = true }
                     Keys.onDownPressed:   event => { _list._focusIndex(_entry.index + 1); event.accepted = true }
                     Keys.onPressed: event => {
@@ -183,69 +169,28 @@ Item {
                             event.accepted = true
                         }
                     }
-
-                    HoverHandler { id: _rowHover; cursorShape: Qt.PointingHandCursor }
-                    TapHandler { onTapped: _row._activate() }
-
-                    ShellText {
-                        id: _sig
-                        anchors.left: parent.left; anchors.leftMargin: 12
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: Network.signalGlyph(_entry.modelData.signal)
-                        color: _entry.modelData.active ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.8)
-                        font.family: Settings.font; font.pixelSize: Settings.fontSize + 1
-                    }
-                    ShellText {
-                        anchors.left: _sig.right; anchors.leftMargin: 10
-                        anchors.right: _icons.left; anchors.rightMargin: 8
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: _entry.modelData.ssid
-                        color: _entry.modelData.active ? Theme.text : Theme.withAlpha(Theme.text, 0.85)
-                        font.family: Settings.font; font.pixelSize: Settings.fontSize
-                        font.weight: _entry.modelData.active ? Font.Medium : Font.Normal
-                        elide: Text.ElideRight
-                    }
-                    Row {
-                        id: _icons
-                        anchors.right: parent.right; anchors.rightMargin: 12
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: 7
-                        ShellText {
-                            visible: _entry._connecting
-                            text: "Connecting…"
-                            color: Theme.withAlpha(Theme.subtext, 0.7)
-                            font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
-                        }
-                        ShellText {
-                            visible: _entry.modelData.active && !_entry._connecting
-                            text: "󰄬"
-                            color: Theme.accent
-                            font.family: Settings.font; font.pixelSize: Settings.fontSize
-                        }
-                        ShellText {
-                            visible: _entry.modelData.secured && !_entry._connecting
-                            text: "󰌾"
-                            color: Theme.withAlpha(Theme.subtext, 0.5)
-                            font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
-                        }
-                    }
                 }
 
                 Item {
                     width: parent.width
-                    height: _entry._sel ? 44 : 0
+                    height: _entry._sel ? 40 : 0
                     clip: true
                     visible: height > 0.5
                     MotionBehavior on height {
-                        NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
+                        NumberAnimation {
+                            duration: _entry._sel ? Motion.medium : Motion.fast
+                            easing.type: _entry._sel ? Easing.OutQuart : Easing.InCubic
+                        }
                     }
 
                     Rectangle {
                         id: _pwField
-                        width: parent.width
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        width: Math.max(0, parent.width - 16)
                         anchors.bottom: parent.bottom
-                        height: 38
-                        radius: 10
+                        anchors.bottomMargin: 2
+                        height: 36
+                        radius: Theme.radiusField
                         antialiasing: true
                         color: Theme.mix(Theme.surface, Theme.subtext, 0.09)
 
@@ -253,9 +198,7 @@ Item {
                             radius: _pwField.radius
                             outlineColor: _entry._failed ? Theme.withAlpha(Theme.error, 0.5)
                                                          : Theme.withAlpha(Theme.accent, 0.3)
-                            MotionBehavior on outlineColor {
-                                ColorAnimation { duration: Motion.fast }
-                            }
+                            ColorFade on outlineColor {}
                         }
 
                         Connections {
@@ -297,16 +240,14 @@ Item {
                             id: _join
                             anchors.right: parent.right; anchors.rightMargin: 5
                             anchors.verticalCenter: parent.verticalCenter
-                            width: 30; height: 28; radius: 8
+                            width: 30; height: 28; radius: Theme.radiusField
                             antialiasing: true
                             enabled: _pw.text.length > 0 && !_entry._connecting
                             activeFocusOnTab: enabled
                             opacity: enabled ? 1.0 : 0.4
                             color: (_joinHover.hovered || activeFocus) ? Theme.withAlpha(Theme.accent, 0.30)
                                                                         : Theme.withAlpha(Theme.accent, 0.18)
-                            MotionBehavior on color {
-                                ColorAnimation { duration: Motion.fast }
-                            }
+                            ColorFade on color {}
 
                             Accessible.role: Accessible.Button
                             Accessible.name: "Connect to " + _entry.modelData.ssid
@@ -334,7 +275,7 @@ Item {
         }
     }
 
-    ListEdgeFade {
+    ListEdgeLines {
         x: 0; y: _col.y + _list.y
         width: parent.width; height: _list.height
         visible: _list.visible

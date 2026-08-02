@@ -5,6 +5,7 @@ import Quickshell.Widgets
 import "../../config"
 import "../../services"
 import "../common"
+import "controls"
 
 PageShell {
     id: root
@@ -67,8 +68,7 @@ PageShell {
 
     function clearAll(): void {
         if (_clearing || Notifications.historyCount === 0) return
-        // clearing hides the header button; release focus before its tab-focus
-        // binding turns off or Qt warns and retains it
+        // release focus before the tab-focus binding turns off or Qt warns and retains it
         if (_clearButton.activeFocus) root.forceActiveFocus()
         if (ShellSettings.reduceMotion) {
             Notifications.clearHistory()
@@ -168,7 +168,7 @@ PageShell {
                         ? Theme.withAlpha(Theme.error, 0.72)
                         : _clearButton.activeFocus ? Theme.withAlpha(Theme.error, 0.88)
                         : _clearHover.hovered ? Theme.menuControlLineHot : Theme.menuControlLine
-                    MotionBehavior on outlineColor {ColorAnimation { duration: Motion.fast } }
+                    ColorFade on outlineColor {}
                 }
 
                 Accessible.role: Accessible.Button
@@ -181,7 +181,7 @@ PageShell {
                 Keys.onEscapePressed: event => { if (root._clearArmed) { root._clearArmed = false; event.accepted = true } else event.accepted = false }
 
                 MotionBehavior on width {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-                MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
+                ColorFade on color {}
                 MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
                 HoverHandler { id: _clearHover; enabled: !root._clearing; cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor }
                 TapHandler { id: _clearTap; enabled: !root._clearing; onTapped: root.requestClearAll() }
@@ -195,7 +195,7 @@ PageShell {
                         color: root._clearArmed ? Theme.error
                             : _clearHover.hovered ? Theme.withAlpha(Theme.text, 0.88) : Theme.withAlpha(Theme.subtext, 0.72)
                         font.pixelSize: Settings.fontSize
-                        MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
+                        ColorFade on color {}
                     }
                     ShellText {
                         anchors.verticalCenter: parent.verticalCenter
@@ -204,7 +204,7 @@ PageShell {
                             : _clearHover.hovered ? Theme.withAlpha(Theme.text, 0.88) : Theme.withAlpha(Theme.text, 0.76)
                         font.pixelSize: Settings.fontSize - 2
                         font.weight: root._clearArmed ? Font.DemiBold : Font.Normal
-                        MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
+                        ColorFade on color {}
                     }
                 }
             }
@@ -337,23 +337,10 @@ PageShell {
                         anchors.top:   parent.top
                         height: _entry._sectionHeight
 
-                        Rectangle {
-                            id: _secTick
-                            anchors.left:           parent.left
-                            anchors.leftMargin:     2
-                            anchors.verticalCenter: _secText.verticalCenter
-                            width:  Metrics.menuMarkerWidth
-                            height: Metrics.menuMarkerHeight
-                            radius: Metrics.menuMarkerRadius
-                            antialiasing: true
-                            color: Theme.withAlpha(Theme.accent,
-                                Metrics.menuMarkerOpacity)
-                        }
-
                         ShellText {
                             id: _secText
-                            anchors.left:           _secTick.right
-                            anchors.leftMargin:     7
+                            anchors.left:           parent.left
+                            anchors.leftMargin:     4
                             anchors.verticalCenter: parent.verticalCenter
                             text: { root._timeTick; return root.sectionLabel(_entry.modelData.time) }
                             color: Theme.withAlpha(Theme.mix(Theme.subtext, Theme.accent, 0.22), 0.74)
@@ -390,10 +377,10 @@ PageShell {
                                 ? Theme.withAlpha(Theme.error, 0.50)
                                 : _card.activeFocus ? Theme.withAlpha(Theme.accent, 0.45)
                                 : Theme.menuCardBorder
-                            MotionBehavior on outlineColor {ColorAnimation { duration: Motion.fast } }
+                            ColorFade on outlineColor {}
                         }
 
-                        MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
+                        ColorFade on color {}
                         HoverHandler {
                             id: _entryHover
                             cursorShape: (_body.truncated || _entry._expanded) ? Qt.PointingHandCursor : Qt.ArrowCursor
@@ -522,7 +509,7 @@ PageShell {
                             Keys.onReturnPressed: event => { if (!event.isAutoRepeat) _entry.removeSelf(); event.accepted = true }
                             Keys.onEnterPressed: event => { if (!event.isAutoRepeat) _entry.removeSelf(); event.accepted = true }
 
-                            MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
+                            ColorFade on color {}
                             MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
 
                             OutlineBorder {
@@ -531,7 +518,7 @@ PageShell {
                                 outlineColor: _removeButton.activeFocus
                                     ? Theme.withAlpha(Theme.error, 0.88)
                                     : _removeHover.hovered ? Theme.withAlpha(Theme.error, 0.36) : Theme.menuControlLine
-                                MotionBehavior on outlineColor {ColorAnimation { duration: Motion.fast } }
+                                ColorFade on outlineColor {}
                             }
                             MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
                             HoverHandler { id: _removeHover; cursorShape: Qt.PointingHandCursor }
@@ -548,14 +535,12 @@ PageShell {
             }
         }
 
-        ListEdgeFade {
+        ListEdgeLines {
             anchors.fill: _historyList
             visible: Notifications.hasHistory
             z: 2
             list: _historyList
-            fadeColor: Theme.menuPane
-            thickness: 10
-            maxOpacity: 0.42
+            maxOpacity: 0.72
         }
 
         MenuScrollThumb {

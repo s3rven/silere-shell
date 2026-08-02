@@ -31,11 +31,10 @@ Singleton {
         : "Up to date"
 
     readonly property string _cacheDir: {
-        const env = Quickshell.env("XDG_CACHE_HOME")
-        const base = (env && String(env).length > 0)
-            ? String(env)
-            : String(Quickshell.env("HOME")) + "/.cache"
-        return base + "/silere-shell"
+        const configured = String(Quickshell.env("XDG_CACHE_HOME") || "").trim()
+        if (configured.startsWith("/")) return configured + "/silere-shell"
+        const home = String(Quickshell.env("HOME") || "").trim()
+        return home.startsWith("/") ? home + "/.cache/silere-shell" : ""
     }
     readonly property string _script: Quickshell.shellDir + "/scripts/update.sh"
 
@@ -100,7 +99,7 @@ Singleton {
 
     FileView {
         id: _flag
-        path: root._cacheDir + "/update-pending"
+        path: root._cacheDir.length > 0 ? root._cacheDir + "/update-pending" : ""
         watchChanges: true
         printErrors:  false
         onLoaded:     root._parse(_flag.text())

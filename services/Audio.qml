@@ -8,11 +8,11 @@ import Quickshell.Services.Pipewire
 Singleton {
     id: root
 
-    property real stepPct: 0.05
+    readonly property real stepPct: 0.05
 
     readonly property PwNode     sink:  Pipewire.defaultAudioSink
     readonly property PwNodeAudio audio: sink ? sink.audio : null
-    readonly property bool ready: audio !== null
+    readonly property bool ready: Pipewire.ready && sink !== null && sink.ready && audio !== null
 
     property real targetVolume: ready ? audio.volume : 0
     property bool pendingApply: false
@@ -24,6 +24,8 @@ Singleton {
     property bool _desiredMuted: false
     property bool _muteWritePending: false
     readonly property int _maxConfirmRetries: 6
+    readonly property real _volumeEpsilon: 0.005
+    readonly property real _confirmTolerance: Math.max(_volumeEpsilon, stepPct * 0.5)
     property int _volRetries: 0
     property int _muteRetries: 0
     readonly property bool muted: ready ? _pendingMuted : false
@@ -50,7 +52,7 @@ Singleton {
 
     readonly property var sinkModel: sinks.map(n => ({ value: n, label: root.sinkLabel(n) }))
 
-    PwObjectTracker { objects: root.sinks }
+    PwObjectTracker { objects: root.sink ? [root.sink] : [] }
 
     function setSink(node): void {
         if (node) Pipewire.preferredDefaultAudioSink = node
@@ -62,16 +64,22 @@ Singleton {
     }
 
     function _clampVolume(v: real): real {
+        if (!isFinite(v)) return 0
         return Math.max(0, Math.min(1.0, v))
     }
 
-    // ready and audio are separate cached bindings — during a sink teardown (BT connect/disconnect)
-    // ready can lag true while audio already reads null, so guard on the same reference dereferenced
     function _enforceVolumeLimit(): void {
-        const a = audio
+        const a = ready ? audio : null
         if (!a) return
         const clamped = _clampVolume(a.volume)
-        if (Math.abs(a.volume - clamped) >= 0.005) _writeVolume(clamped)
+        if (Math.abs(a.volume - clamped) >= _volumeEpsilon) _writeVolume(clamped)
+    }
+
+    function _acceptVolume(actual: real): void {
+        targetVolume = _clampVolume(actual)
+        pendingApply = false
+        _volRetries = 0
+        pendingSafety.stop()
     }
 
     function _syncAudio(): void {
@@ -80,7 +88,7 @@ Singleton {
         pendingSafety.stop()
         muteSafety.stop()
         pendingApply = false
-        const a = audio
+        const a = ready ? audio : null
         targetVolume = a ? _clampVolume(a.volume) : 0
         _pendingMuted = a ? a.muted : false
         _desiredMuted = _pendingMuted
@@ -90,6 +98,7 @@ Singleton {
         if (a) Qt.callLater(root._enforceVolumeLimit)
     }
     onAudioChanged: _syncAudio()
+    onReadyChanged: _syncAudio()
     Component.onCompleted: {
         _componentReady = true
         _syncAudio()
@@ -103,12 +112,13 @@ Singleton {
             if (!a) return
             const actual = a.volume
             const clamped = root._clampVolume(actual)
-            if (Math.abs(actual - clamped) >= 0.005) {
+            if (Math.abs(actual - clamped) >= root._volumeEpsilon) {
                 root._writeVolume(clamped)
                 return
             }
-            if (root.pendingApply && Math.abs(actual - root.targetVolume) < 0.005)
-                root.pendingApply = false
+            if (root.pendingApply
+                    && Math.abs(clamped - root.targetVolume) <= root._confirmTolerance)
+                root._acceptVolume(clamped)
             else if (!root.pendingApply)
                 root.targetVolume = clamped
         }
@@ -135,7 +145,7 @@ Singleton {
         onTriggered: {
             const a = root.audio
             if (!a) return
-            if (Math.abs(a.volume - root.targetVolume) >= 0.005)
+            if (Math.abs(a.volume - root.targetVolume) >= root._volumeEpsilon)
                 a.volume = Math.max(0, Math.min(1.0, root.targetVolume))
         }
     }
@@ -146,13 +156,17 @@ Singleton {
         onTriggered: {
             const a = root.audio
             if (!a || !root.pendingApply) return
-            if (Math.abs(a.volume - root.targetVolume) >= 0.005) {
-                if (root._volRetries >= root._maxConfirmRetries) { root.pendingApply = false; return }
+            const actual = root._clampVolume(a.volume)
+            if (Math.abs(actual - root.targetVolume) > root._confirmTolerance) {
+                if (root._volRetries >= root._maxConfirmRetries) {
+                    root._acceptVolume(actual)
+                    return
+                }
                 root._volRetries++
                 a.volume = Math.max(0, Math.min(1.0, root.targetVolume))
                 pendingSafety.restart()
             } else {
-                root.pendingApply = false
+                root._acceptVolume(actual)
             }
         }
     }
@@ -178,23 +192,25 @@ Singleton {
     }
 
     function bumpBy(delta: real): void {
-        const a = audio
-        if (!a) return
+        const a = ready ? audio : null
+        if (!a || delta === 0) return
+        if (_pendingMuted) unmute()
         let v = pendingApply ? targetVolume : _clampVolume(a.volume)
         _writeVolume(v + delta)
     }
 
     function setVolume(v: real): void {
-        if (!audio) return
+        if (!ready || !audio) return
         if (_pendingMuted && v > 0) unmute()
         _writeVolume(v)
     }
 
     function _writeVolume(v: real): void {
-        const a = audio
+        const a = ready ? audio : null
         if (!a) return
         v = _clampVolume(v)
-        if (v === targetVolume && pendingApply) return
+        if (Math.abs(v - targetVolume) < _volumeEpsilon && pendingApply) return
+        if (!pendingApply && Math.abs(v - _clampVolume(a.volume)) < _volumeEpsilon) return
         targetVolume = v
         pendingApply = true
 
@@ -207,18 +223,18 @@ Singleton {
     }
 
     function toggleMute(): void {
-        if (!audio) return
+        if (!ready || !audio) return
         const wasMuted = _pendingMuted
         _setMuted(!wasMuted)
     }
 
     function unmute(): void {
-        if (!audio || !_pendingMuted) return
+        if (!ready || !audio || !_pendingMuted) return
         _setMuted(false)
     }
 
     function _setMuted(shouldMute: bool): void {
-        const a = audio
+        const a = ready ? audio : null
         if (!a) return
         _desiredMuted = shouldMute
         _pendingMuted = shouldMute

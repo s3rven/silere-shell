@@ -8,55 +8,36 @@ Item {
     property string glyph: ""
     property string accessibleName: label
     property bool emphasis: false
-    property bool confirm: false
-    property bool armed: false
-    property int confirmTimeout: 3000
     property color accentColor: Theme.accent
-    property real radius: Theme.radiusControl
+    property real radius: Theme.radiusField
 
     signal triggered()
 
     // ceil: a fractional width lands the outline stroke off-pixel under fractional scaling
-    readonly property real contentWidth: Math.ceil(_row.implicitWidth) + 22
-    readonly property bool _emphasis: root.emphasis || root.armed
-    readonly property color _accent: root.armed ? Theme.error : root.accentColor
+    readonly property real contentWidth: implicitWidth
     property bool _keyboardPressed: false
     readonly property bool pressed: _tap.pressed || root._keyboardPressed
 
-    height: 34
+    implicitWidth: Math.ceil(_row.implicitWidth) + 20
+    implicitHeight: 4 * Math.ceil(Math.max(32, Settings.capHeight + 14) / 4)
+    width: implicitWidth
+    height: implicitHeight
     opacity: root.enabled ? 1.0 : 0.42
     MotionBehavior on opacity {
         NumberAnimation { duration: Motion.fast }
     }
 
-    function disarm(): void {
-        _armTimer.stop()
-        root.armed = false
-    }
     function activate(): void {
-        if (!root.enabled) return
-        if (!root.confirm || root.armed) {
-            root.disarm()
-            root.triggered()
-        } else {
-            root.armed = true
-            _armTimer.restart()
-        }
+        if (root.enabled) root.triggered()
     }
 
-    Timer { id: _armTimer; interval: root.confirmTimeout; onTriggered: root.disarm() }
-    onEnabledChanged: {
-        if (!root.enabled) {
-            root._keyboardPressed = false
-            root.disarm()
-        }
-    }
+    onEnabledChanged: if (!root.enabled) root._keyboardPressed = false
     onActiveFocusChanged: if (!activeFocus) root._keyboardPressed = false
 
     activeFocusOnTab: root.enabled
     Accessible.role: Accessible.Button
     Accessible.name: root.accessibleName
-    Accessible.description: root.armed ? "Activate again to confirm" : ""
+    Accessible.pressed: root.pressed
     Accessible.onPressAction: root.activate()
     Keys.onPressed: event => {
         if (!root.enabled || event.isAutoRepeat
@@ -75,14 +56,10 @@ Item {
         event.accepted = true
         root.activate()
     }
-    Keys.onEscapePressed: event => {
-        if (root.armed) { root.disarm(); event.accepted = true }
-        else event.accepted = false
-    }
-
     HoverHandler {
         id: _hover
-        cursorShape: root.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+        enabled: root.enabled
+        cursorShape: Qt.PointingHandCursor
     }
     TapHandler {
         id: _tap
@@ -92,37 +69,31 @@ Item {
 
     Rectangle {
         id: _surface
-        anchors.fill: parent
+        anchors.left: parent.left
+        anchors.right: parent.right
+        y: root.pressed ? 1 : 0
+        height: parent.height - y
         radius: root.radius
         antialiasing: true
-        scale: root.pressed ? 0.965 : 1.0
-        color: root._emphasis
-            ? Theme.mix(Theme.menuControl, root._accent,
-                root.pressed ? 0.40 : _hover.hovered || root.armed ? 0.34 : 0.26)
+        color: root.emphasis
+            ? Theme.mix(Theme.menuControl, root.accentColor,
+                root.pressed ? 0.54 : _hover.hovered ? 0.48 : 0.42)
             : root.pressed
-                ? Theme.withAlpha(Theme.subtext, 0.21)
-                : (_hover.hovered ? Theme.withAlpha(Theme.subtext, 0.16) : Theme.menuControl)
+                ? Theme.withAlpha(Theme.text, 0.11)
+                : Theme.withAlpha(Theme.text, _hover.hovered ? 0.065 : 0.035)
 
-        MotionBehavior on scale {
-            NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
-        }
-
-        MotionBehavior on color {
-            ColorAnimation { duration: Motion.fast }
-        }
+        ColorFade on color {}
 
         OutlineBorder {
             radius: _surface.radius
             outlineWidth: root.activeFocus ? 2 : 1
             outlineColor: root.activeFocus
-                ? Theme.withAlpha(root._accent, 0.82)
-                : root._emphasis
-                    ? Theme.withAlpha(root._accent, 0.48)
-                    : _hover.hovered ? Theme.menuControlLineHot : Theme.menuControlLine
+                ? Theme.withAlpha(root.accentColor, 0.82)
+                : root.emphasis ? "transparent"
+                    : _hover.hovered
+                        ? Theme.menuControlLineHot : Theme.menuControlLine
 
-            MotionBehavior on outlineColor {
-                ColorAnimation { duration: Motion.fast }
-            }
+            ColorFade on outlineColor {}
         }
 
         Row {
@@ -134,16 +105,21 @@ Item {
                 visible: root.glyph.length > 0
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.glyph
-                color: root._emphasis ? root._accent : Theme.withAlpha(Theme.subtext, 0.90)
+                color: root.emphasis
+                    ? Theme.mix(Theme.text, root.accentColor, 0.10)
+                    : Theme.withAlpha(Theme.subtext, _hover.hovered ? 0.96 : 0.82)
                 font.pixelSize: Settings.fontSize
+                ColorFade on color {}
             }
             ShellText {
                 visible: root.label.length > 0
                 anchors.verticalCenter: parent.verticalCenter
-                text: root.armed ? "Press again" : root.label
-                color: root._emphasis ? Theme.text : Theme.withAlpha(Theme.text, 0.84)
+                text: root.label
+                color: root.emphasis ? Theme.text
+                    : Theme.withAlpha(Theme.text, _hover.hovered ? 0.94 : 0.80)
                 font.pixelSize: Settings.fontSize - 1
-                font.weight: root._emphasis ? Font.DemiBold : Font.Normal
+                font.weight: root.emphasis ? Font.DemiBold : Font.Normal
+                ColorFade on color {}
             }
         }
     }

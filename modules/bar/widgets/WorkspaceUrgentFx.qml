@@ -29,7 +29,7 @@ Item {
 
     Timer {
         interval: 15000
-        running: !root.settled && !Idle.isIdle
+        running: !root.settled && root.barActive && !Idle.isIdle
         onTriggered: root.settled = true
     }
 }

@@ -90,8 +90,8 @@ Canvas {
     function _setRegistered(want: bool): void {
         if (want) {
             if (_registered && _registeredLowPower !== lowPower) {
-                Media.unregisterVisualizer(_registeredLowPower)
-                _registered = false
+                Media.updateVisualizerPower(_registeredLowPower, lowPower)
+                _registeredLowPower = lowPower
             }
             if (!_registered) {
                 Media.registerVisualizer(lowPower)
@@ -189,11 +189,7 @@ Canvas {
             _fillB = ac.b
         }
 
-        // build the wave path once. bar centres are quadratic control points, curve
-        // passes through midpoints between centres → C1-smooth, no kinks, 1px inside each edge.
-        // single-pass: stroke the open wave first (crest near y=0 where fill alpha≈0, so
-        // the fill on top doesn't cover it), then extend the same path down and fill —
-        // ctx.stroke() leaves the path intact so lineTo continues from the last point.
+        // bar centres are quadratic control points and the curve passes through their midpoints; stroke the open wave before extending the same path down to fill - ctx.stroke() leaves the path intact
         ctx.beginPath()
         ctx.moveTo(1, cy[0])
         for (var i = 0; i < n - 1; i++) {

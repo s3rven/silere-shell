@@ -93,7 +93,7 @@ Singleton {
     property int    barSpacing:          11
     property bool   barAutoCompact:      true
     property bool   barCompact:          false
-    property bool   barHoverHighlight:   false
+    property bool   barHoverHighlight:   true
     property int    barHeight:           36
     property bool   barFloating:         false
     property real   barWidth:            0.90
@@ -106,25 +106,37 @@ Singleton {
     property string barDisabledMonitors: ""
     property string overlayMonitor:      ""
 
-    readonly property var _allBarWidgetKeys: ["workspaces", "shellUpdate", "tray", "updates", "network", "volume", "brightness", "battery", "media", "clock"]
+    readonly property var barWidgetKeys: ["workspaces", "shellUpdate", "tray", "updates", "network", "volume", "brightness", "battery", "media", "clock"]
 
-    property string barWidgetOrderLeft:  "workspaces"
-    property string barWidgetOrderRight: "shellUpdate,tray,updates,network,volume,brightness,battery,media,clock"
+    property string barWidgetOrderLeft:  "workspaces,media"
+    property string barWidgetOrderCenter: ""
+    property string barWidgetOrderRight: "shellUpdate,tray,updates,network,volume,brightness,battery,clock"
 
-    readonly property var _zoneKeys: {
-        const all = root._allBarWidgetKeys
+    function _widgetKeyList(value): var {
+        const raw = Array.isArray(value) ? value : String(value || "").split(",")
+        return raw.map(function(key) { return String(key).trim() })
+            .filter(function(key) { return key.length > 0 })
+    }
+
+    function _normaliseBarWidgetLayout(leftValue, centerValue, rightValue): var {
+        const all = root.barWidgetKeys
         const valid = {}
         for (let i = 0; i < all.length; i++) valid[all[i]] = true
-        const parse = s => (s || "").split(",").map(x => x.trim()).filter(x => x.length > 0)
         const seen = {}
-        const left = [], right = []
-        const leftRaw = parse(root.barWidgetOrderLeft)
+        const left = [], center = [], right = []
+        const leftRaw = root._widgetKeyList(leftValue)
         for (let i = 0; i < leftRaw.length; i++) {
             const k = leftRaw[i]
             if (seen[k] || valid[k] !== true) continue
             seen[k] = true; left.push(k)
         }
-        const rightRaw = parse(root.barWidgetOrderRight)
+        const centerRaw = root._widgetKeyList(centerValue)
+        for (let i = 0; i < centerRaw.length; i++) {
+            const k = centerRaw[i]
+            if (seen[k] || valid[k] !== true) continue
+            seen[k] = true; center.push(k)
+        }
+        const rightRaw = root._widgetKeyList(rightValue)
         for (let i = 0; i < rightRaw.length; i++) {
             const k = rightRaw[i]
             if (seen[k] || valid[k] !== true) continue
@@ -137,10 +149,14 @@ Singleton {
         }
         const loc = {}
         for (let i = 0; i < left.length; i++) loc[left[i]] = { zone: "left", index: i }
+        for (let i = 0; i < center.length; i++) loc[center[i]] = { zone: "center", index: i }
         for (let i = 0; i < right.length; i++) loc[right[i]] = { zone: "right", index: i }
-        return { left: left, right: right, loc: loc }
+        return { left: left, center: center, right: right, loc: loc }
     }
+    readonly property var _zoneKeys: root._normaliseBarWidgetLayout(
+        root.barWidgetOrderLeft, root.barWidgetOrderCenter, root.barWidgetOrderRight)
     readonly property var barWidgetOrderLeftKeys:  root._zoneKeys.left
+    readonly property var barWidgetOrderCenterKeys: root._zoneKeys.center
     readonly property var barWidgetOrderRightKeys: root._zoneKeys.right
     readonly property var _missingBarWidgetLocation: ({ zone: "", index: -1 })
     readonly property var _barWidgetLocations: root._zoneKeys.loc
@@ -152,35 +168,73 @@ Singleton {
     function moveBarWidget(key: string, delta: int): void {
         const loc = root.barWidgetLocate(key)
         if (loc.index < 0) return
-        const arr = (loc.zone === "left" ? root.barWidgetOrderLeftKeys : root.barWidgetOrderRightKeys).slice()
+        const arr = (loc.zone === "left" ? root.barWidgetOrderLeftKeys
+            : loc.zone === "center" ? root.barWidgetOrderCenterKeys
+            : root.barWidgetOrderRightKeys).slice()
         const j = loc.index + delta
         if (j < 0 || j >= arr.length) return
         const t = arr[loc.index]; arr[loc.index] = arr[j]; arr[j] = t
-        if (loc.zone === "left") root.barWidgetOrderLeft = arr.join(",")
-        else                     root.barWidgetOrderRight = arr.join(",")
+        if (loc.zone === "left")
+            root.setBarWidgetLayout(arr, root.barWidgetOrderCenterKeys, root.barWidgetOrderRightKeys)
+        else if (loc.zone === "center")
+            root.setBarWidgetLayout(root.barWidgetOrderLeftKeys, arr, root.barWidgetOrderRightKeys)
+        else
+            root.setBarWidgetLayout(root.barWidgetOrderLeftKeys, root.barWidgetOrderCenterKeys, arr)
+    }
+
+    function setBarWidgetLayout(leftKeys, centerKeys, rightKeys): void {
+        const layout = root._normaliseBarWidgetLayout(leftKeys, centerKeys, rightKeys)
+        const left = layout.left.join(",")
+        const center = layout.center.join(",")
+        const right = layout.right.join(",")
+        if (root.barWidgetOrderLeft !== left) root.barWidgetOrderLeft = left
+        if (root.barWidgetOrderCenter !== center) root.barWidgetOrderCenter = center
+        if (root.barWidgetOrderRight !== right) root.barWidgetOrderRight = right
     }
 
     function setBarWidgetZone(key: string, zone: string, atIndex: int): void {
-        if (root._allBarWidgetKeys.indexOf(key) < 0 || (zone !== "left" && zone !== "right"))
+        if (root.barWidgetKeys.indexOf(key) < 0
+                || (zone !== "left" && zone !== "center" && zone !== "right"))
             return
         const left  = root.barWidgetOrderLeftKeys.filter(k => k !== key)
+        const center = root.barWidgetOrderCenterKeys.filter(k => k !== key)
         const right = root.barWidgetOrderRightKeys.filter(k => k !== key)
-        const target = (zone === "left") ? left : right
+        const target = zone === "left" ? left : zone === "center" ? center : right
         const rawIndex = Number(atIndex)
         const clamped = isNaN(rawIndex) ? target.length : Math.max(0, Math.min(target.length, Math.round(rawIndex)))
         target.splice(clamped, 0, key)
-        root.barWidgetOrderLeft  = left.join(",")
-        root.barWidgetOrderRight = right.join(",")
+        root.setBarWidgetLayout(left, center, right)
     }
 
     function resetBarWidgets(): void {
-        root.barWidgetOrderLeft = _defaults.barWidgetOrderLeft
-        root.barWidgetOrderRight = _defaults.barWidgetOrderRight
+        root.setBarWidgetLayout(_defaults.barWidgetOrderLeft,
+            _defaults.barWidgetOrderCenter,
+            _defaults.barWidgetOrderRight)
         for (const key in root.barWidgetMeta) {
             const setting = root.barWidgetMeta[key].setting
             if (setting.length > 0) root[setting] = _defaults[setting]
         }
     }
+
+    function _barWidgetsModified(): bool {
+        if (!root.ready) return false
+        const current = root._normaliseBarWidgetLayout(
+            root.barWidgetOrderLeft, root.barWidgetOrderCenter,
+            root.barWidgetOrderRight)
+        const defaults = root._normaliseBarWidgetLayout(
+            root._defaults.barWidgetOrderLeft, root._defaults.barWidgetOrderCenter,
+            root._defaults.barWidgetOrderRight)
+        if (current.left.join(",") !== defaults.left.join(",")
+                || current.center.join(",") !== defaults.center.join(",")
+                || current.right.join(",") !== defaults.right.join(",")) return true
+        for (const key in root.barWidgetMeta) {
+            const setting = root.barWidgetMeta[key].setting
+            if (setting.length > 0
+                    && !root._sameValue(root[setting], root._defaults[setting])) return true
+        }
+        return false
+    }
+    readonly property bool barWidgetsModified: root._barWidgetsModified()
 
     readonly property var barWidgetMeta: ({
         workspaces:  { glyph: "󰊗", label: "Workspaces",      group: "workspaces", setting: "" },
@@ -194,6 +248,18 @@ Singleton {
         media:       { glyph: "󰝚", label: "Media",           group: "media",  setting: "barShowMedia" },
         clock:       { glyph: "󰅐", label: "Clock",           group: "clock",  setting: "barShowClock" }
     })
+
+    function barWidgetConfiguredVisible(key: string): bool {
+        const meta = root.barWidgetMeta[key]
+        if (!meta) return false
+        return meta.setting.length === 0 || root[meta.setting] !== false
+    }
+
+    function setBarWidgetConfiguredVisible(key: string, visible: bool): void {
+        const meta = root.barWidgetMeta[key]
+        if (!meta || meta.setting.length === 0) return
+        root[meta.setting] = visible
+    }
 
     property int    nightLightTemp:      3500
     property bool   nightLightAuto:     false
@@ -209,13 +275,20 @@ Singleton {
     property string wsActiveMarker:      "gem"
 
     property bool _loaded: false
-    property bool _configDirReady: false
     property bool _savePendingForDir: false
     property int _saveFailureCount: 0
+    property string _readError: ""
+    property string _writeError: ""
+    property bool _writeAllowed: false
     readonly property bool ready: _loaded
+    readonly property string settingsError: ConfigStore.error.length > 0
+        ? ConfigStore.error : _writeError.length > 0 ? _writeError : _readError
     readonly property int _settingsVersion: 1
     property var _defaults: ({})
     property string _lastSavedJson: ""
+    property real _loadedVersion: _settingsVersion
+    property var _futureSettings: ({})
+    property var _futureTouched: ({})
 
     // drives load/save/change-tracking. t: bool|int|real|enum|re — int/real use min/max, enum vals, re a pattern
     readonly property var _schema: [
@@ -265,7 +338,7 @@ Singleton {
         { k: "highContrast",        t: "bool" },
         { k: "outlineStrength",     t: "real", min: 0.5, max: 2.4 },
         { k: "uiScale",             t: "real", min: 0.8, max: 1.15 },
-        { k: "fontFamily",          t: "re",   re: /^[A-Za-z0-9 ._-]*$/ },
+        { k: "fontFamily",          t: "re",   re: /^[^\u0000-\u001F\u007F]{0,128}$/ },
         { k: "notifPopupEnabled",   t: "bool" },
         { k: "notifFullscreenSilence", t: "bool" },
         { k: "notifPosition",       t: "enum", vals: ["top-right", "top-left", "top-center"] },
@@ -309,6 +382,7 @@ Singleton {
         { k: "barDisabledMonitors", t: "re",   re: /^[A-Za-z0-9._,-]*$/ },
         { k: "overlayMonitor",      t: "re",   re: /^[A-Za-z0-9._-]*$/ },
         { k: "barWidgetOrderLeft",  t: "re",   re: /^[a-zA-Z]*(,[a-zA-Z]+)*$/ },
+        { k: "barWidgetOrderCenter", t: "re", re: /^[a-zA-Z]*(,[a-zA-Z]+)*$/ },
         { k: "barWidgetOrderRight", t: "re",   re: /^[a-zA-Z]*(,[a-zA-Z]+)*$/ },
 
         { k: "nightLightTemp",      t: "int",  min: 1000, max: 6500 },
@@ -323,7 +397,6 @@ Singleton {
         { k: "wsIconMono",          t: "bool" },
         { k: "wsActiveMarker",      t: "enum", vals: ["gem", "dot"] }
     ]
-
     function _coerce(s, v): void {
         switch (s.t) {
         case "bool":
@@ -343,6 +416,29 @@ Singleton {
         case "enum": if (s.vals.indexOf(v) >= 0) root[s.k] = v; break
         case "re":   if (typeof v === "string" && s.re.test(v)) root[s.k] = v; break
         }
+    }
+
+    property int _modifiedCount: 0
+    readonly property int modifiedCount: _modifiedCount
+
+    // recounted only on load and on the debounced save, never per keystroke
+    function _recountModified(): void {
+        let n = 0
+        for (let i = 0; i < _schema.length; i++)
+            if (!root._sameValue(root[_schema[i].k], root._defaults[_schema[i].k])) n++
+        root._modifiedCount = n
+    }
+
+    function resetToDefaults(): void {
+        for (let i = 0; i < _schema.length; i++) {
+            const k = _schema[i].k
+            if (k !== "barWidgetOrderLeft" && k !== "barWidgetOrderCenter"
+                    && k !== "barWidgetOrderRight")
+                root[k] = _defaults[k]
+        }
+        // the order keys go through the normalising setter, not a raw assignment
+        root.resetBarWidgets()
+        root._recountModified()
     }
 
     function _sameValue(a, b): bool {
@@ -366,71 +462,36 @@ Singleton {
         return j
     }
 
-    function _onSettingChanged(): void {
-        if (!_loaded) return
-        _recomputeModified()
+    function _onSettingChanged(key: string): void {
+        if (!_loaded || !_writeAllowed) return
+        if (_loadedVersion > _settingsVersion) _futureTouched[key] = true
         _writeTimer.restart()
-    }
-
-    property var modifiedKeys: []
-    function _recomputeModified(): void {
-        const out = []
-        for (let i = 0; i < _schema.length; i++) {
-            const k = _schema[i].k
-            if (!_sameValue(root[k], _defaults[k])) out.push(k)
-        }
-        if (out.join(",") !== modifiedKeys.join(",")) modifiedKeys = out
-    }
-
-    function resetKey(k: string): void {
-        if (_defaults[k] !== undefined) root[k] = _defaults[k]
-    }
-
-    function resetToDefaults(): void {
-        for (let i = 0; i < _schema.length; i++)
-            root[_schema[i].k] = _defaults[_schema[i].k]
     }
 
     Component.onDestruction: {
         _writeTimer.stop()
         _saveRetry.stop()
         // never overwrite the file with defaults never confirmed from disk
-        if (!root._loaded) return
-        if (!_configDirReady)
-            console.warn("silere-shell: saving settings before config dir is ready:", _configDir)
+        if (!root._loaded || !root._writeAllowed) return
+        if (!ConfigStore.ready)
+            console.warn("silere-shell: saving settings before config dir is ready:",
+                ConfigStore.directory)
         _save(true)   // blocking write, so the quit-time save actually lands
     }
 
     Component.onCompleted: {
         _defaults = _captureDefaults()
-        for (let i = 0; i < _schema.length; i++)
-            root[_schema[i].k + "Changed"].connect(root._onSettingChanged)
-        root._ensureConfigDir()
+        for (let i = 0; i < _schema.length; i++) {
+            const key = _schema[i].k
+            root[key + "Changed"].connect(function() { root._onSettingChanged(key) })
+        }
+        ConfigStore.ensureDirectory()
     }
 
-    readonly property string _configDir: {
-        const env = Quickshell.env("XDG_CONFIG_HOME")
-        const base = (env && String(env).length > 0)
-            ? String(env)
-            : String(Quickshell.env("HOME")) + "/.config"
-        return base + "/silere-shell"
-    }
-
-    function _ensureConfigDir(): void {
-        if (_configDirReady || _mkdirProc.running) return
-        _mkdirProc.running = true
-    }
-
-    Process {
-        id: _mkdirProc
-        command: ["mkdir", "-p", root._configDir]
-        onExited: (code) => {
-            root._configDirReady = code === 0
-            if (code !== 0) {
-                console.warn("silere-shell: failed to create settings directory:", root._configDir)
-                return
-            }
-            if (root._savePendingForDir) {
+    Connections {
+        target: ConfigStore
+        function onReadyChanged() {
+            if (ConfigStore.ready && root._savePendingForDir) {
                 root._savePendingForDir = false
                 root._save()
             }
@@ -439,31 +500,39 @@ Singleton {
 
     FileView {
         id: _file
-        path: root._configDir + "/settings.json"
+        path: ConfigStore.settingsPath
         watchChanges: true
         atomicWrites: true
         blockWrites:  true
         printErrors:  false
         onLoaded:      root._applyText(_file.text())
-        onLoadFailed:  root._loaded = true
+        onLoadFailed: error => {
+            root._writeAllowed = error === FileViewError.FileNotFound
+            root._readError = root._writeAllowed ? ""
+                : "Could not read settings.json. Existing data was left untouched."
+            root._loaded = true
+        }
         onFileChanged: reload()
         onSaved: {
             root._saveFailureCount = 0
+            root._futureTouched = ({})
+            root._readError = ""
+            root._writeError = ""
             _saveRetry.stop()
         }
         onSaveFailed: (error) => {
-            // _save() records the candidate before writing so watcher echoes
-            // can be ignored. Clear it on failure or the same settings would
-            // be mistaken for an already-persisted value forever.
+            // clear the candidate on failure, or the same settings stay mistaken for an already-persisted value forever
             root._lastSavedJson = ""
             root._saveFailureCount++
+            root._writeError = "Could not save settings. Changes may be lost."
             console.warn("silere-shell: failed to save settings.json:", error)
             if (root._saveFailureCount <= 3) _saveRetry.restart()
         }
     }
 
     function _backupBeforeMigrate(raw: string, onDiskVersion: int): void {
-        _backupFile.path = _configDir + "/settings.v" + onDiskVersion + ".bak.json"
+        _backupFile.path = ConfigStore.directory + "/settings.v"
+            + onDiskVersion + ".bak.json"
         _backupFile.setText(raw)
     }
 
@@ -478,15 +547,24 @@ Singleton {
     function _applyText(t: string): void {
         const raw = (t || "").trim()
         // our own atomic write echoes back through the watcher; skip it
-        if (raw === _lastSavedJson) { _loaded = true; return }
+        if (root._writeAllowed && raw === _lastSavedJson) { _loaded = true; return }
         try {
             const parsed = JSON.parse(raw || "{}")
             if (parsed === null || Array.isArray(parsed) || typeof parsed !== "object")
                 throw new Error("settings root must be an object")
-            const onDiskVersion = typeof parsed.__version === "number" ? parsed.__version : 0
+            const rawVersion = typeof parsed.__version === "number" && isFinite(parsed.__version)
+                ? parsed.__version : 0
+            const onDiskVersion = Math.max(0, Math.floor(rawVersion))
             if (onDiskVersion < _settingsVersion && Object.keys(parsed).length > 0)
                 _backupBeforeMigrate(raw, onDiskVersion)
-            const j = _migrate(parsed)
+            const fromFuture = onDiskVersion > _settingsVersion
+            _loadedVersion = fromFuture ? onDiskVersion : _settingsVersion
+            _futureSettings = fromFuture ? parsed : ({})
+            _futureTouched = ({})
+            if (fromFuture)
+                console.warn("silere-shell: settings.json is from newer version", onDiskVersion,
+                    "— preserving unknown values")
+            const j = fromFuture ? parsed : _migrate(parsed)
             if (_loaded) {
                 _loaded = false
                 for (let i = 0; i < _schema.length; i++) {
@@ -498,9 +576,15 @@ Singleton {
                 const s = _schema[i]
                 if (j[s.k] !== undefined) _coerce(s, j[s.k])
             }
-        } catch(e) { console.warn("silere-shell: failed to parse settings.json, keeping current settings:", String(e)) }
+            root._readError = ""
+            root._writeAllowed = true
+        } catch(e) {
+            root._writeAllowed = false
+            root._readError = "Could not read settings.json. Current settings were kept."
+            console.warn("silere-shell: failed to parse settings.json, keeping current settings:", String(e))
+        }
         _loaded = true
-        _recomputeModified()
+        root._recountModified()
     }
 
     Timer {
@@ -516,23 +600,33 @@ Singleton {
     }
 
     function _save(force): void {
-        if (!force && !_configDirReady) {
+        if (!root._writeAllowed) return
+        if (!force && !ConfigStore.ready) {
             _savePendingForDir = true
-            _ensureConfigDir()
+            ConfigStore.ensureDirectory()
             return
         }
-        const out = { __version: _settingsVersion }
+        const preserveFuture = _loadedVersion > _settingsVersion
+        const out = preserveFuture
+            ? JSON.parse(JSON.stringify(_futureSettings)) : ({})
+        out.__version = preserveFuture ? _loadedVersion : _settingsVersion
+        let changed = 0
         for (let i = 0; i < _schema.length; i++) {
             const key = _schema[i].k
-            if (!root._sameValue(root[key], root._defaults[key]))
+            const modified = !root._sameValue(root[key], root._defaults[key])
+            if (modified) {
                 out[key] = root[key]
+                changed++
+            } else if (!preserveFuture || root._futureTouched[key] === true) {
+                delete out[key]
+            }
         }
-        const j = JSON.stringify(out)
+        root._modifiedCount = changed
+        if (preserveFuture) _futureSettings = out
+        const j = JSON.stringify(out, null, 2)
         if (j === _lastSavedJson) return
         _lastSavedJson = j
-        // Alternate harmless trailing whitespace after a failed write. FileView
-        // coalesces identical setText() calls, so an exact retry may otherwise
-        // never reach the filesystem even though the previous save failed.
+        // alternate trailing whitespace: FileView coalesces identical setText() calls, so an exact retry never reaches the disk
         _file.setText(j + (root._saveFailureCount % 2 === 0 ? "\n" : "\n\n"))
     }
 }

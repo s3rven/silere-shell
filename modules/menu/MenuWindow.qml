@@ -6,6 +6,8 @@ import Quickshell.Wayland
 import "../../config"
 import "../../services"
 import "../common"
+import "controls"
+import "settings"
 
 PanelWindow {
     id: win
@@ -97,17 +99,7 @@ PanelWindow {
         }
     }
 
-    Loader {
-        active: (MenuState.open || panel.opacity > 0.001)
-            && ShellSettings.barFloating && ShellSettings.barShadow
-        anchors.fill: panel
-        opacity: panel.opacity
-        z: -1
-        sourceComponent: FloatingShadow {
-            radius: panel.radius
-            atBottom: panel.barBottom
-        }
-    }
+    PopupShadow { card: panel }
 
     FloatingPopupCard {
         id: panel
@@ -137,8 +129,8 @@ PanelWindow {
         readonly property int placementW: Math.max(1,
             Math.min(_settingsW, _availablePanelW))
         readonly property int railCollapsedW: 44
-        readonly property int _navMinW: powerOpen ? 112 : 118
-        readonly property int _navMaxW: activeTab === 1 ? 176 : 160
+        readonly property int _navMinW: 112
+        readonly property int _navMaxW: 160
         readonly property int navW: {
             const available = panelW - railCollapsedW
             const desired = Math.max(_navMinW, Math.round(panelW * 0.28))
@@ -183,7 +175,6 @@ PanelWindow {
         property bool _homeRetained:    false
         property bool _settingsRetained: false
         property bool _recentRetained:  false
-        // kept alive once incubated so later reveals are presentation-only
         property bool _settingsNavRetained: false
 
         Component.onCompleted: {
@@ -261,7 +252,7 @@ PanelWindow {
             // move focus first: the tab change disables the page controls holding it
             if (focusNeedsReset) panel.forceActiveFocus()
             if (powerOpen) powerOpen = false
-            if (tab !== MenuState.activeTab) MenuState.activeTab = tab
+            MenuState.selectTab(tab)
             contentFlick.contentY = 0
         }
 
@@ -279,8 +270,7 @@ PanelWindow {
 
         function closePowerAndRestoreFocus(): void {
             if (!powerOpen) return
-            // PowerRailContent drops out of tab focus when inactive; hand focus
-            // over first or Qt rejects the activeFocusOnTab change
+            // hand focus over first or Qt rejects the activeFocusOnTab change
             _railPower.forceActiveFocus()
             powerOpen = false
             _powerFocusRestore.restart()
@@ -322,10 +312,12 @@ PanelWindow {
             }
             function onOpenChanged() {
                 if (MenuState.open) {
+                    _closedUnload.stop()
                     contentFlick.contentY = 0
                     contentFlick.syncScrollAffordance()
                     panel.forceActiveFocus()
                 } else {
+                    _closedUnload.restart()
                     _scrollSettle.stop()
                     _sectionScrollReset.stop()
                     _outsideTapGuard.stop()
@@ -364,10 +356,16 @@ PanelWindow {
         }
 
         Timer {
-            id: _settingsNavPrewarm
-            // incubate after the entrance settles; switchTab() skips this delay
-            interval: Motion.popIn + Motion.ms(70)
-            onTriggered: panel._settingsNavRetained = true
+            id: _closedUnload
+            interval: Math.max(Motion.pageOut, Motion.ms(100)) + 120
+            onTriggered: {
+                if (MenuState.open) return
+                _settingsUnload.stop()
+                _recentUnload.stop()
+                panel._settingsRetained = false
+                panel._recentRetained = false
+                panel._settingsNavRetained = false
+            }
         }
 
         Timer {
@@ -392,17 +390,15 @@ PanelWindow {
         width:  panelW
         height: targetPanelH
 
-        Behavior on width {
-            enabled: panel._geometryReady && panel.open
-                && !ShellSettings.reduceMotion
+        MotionBehavior on width {
+            gate: panel._geometryReady && panel.open
             NumberAnimation {
                 duration: panel._panelWidthMotionMs
                 easing.type: Easing.OutQuint
             }
         }
-        Behavior on height {
-            enabled: panel._geometryReady && panel.open
-                && !ShellSettings.reduceMotion
+        MotionBehavior on height {
+            gate: panel._geometryReady && panel.open
             SmoothedAnimation {
                 velocity: Motion.panelVelocity
                 maximumEasingTime: Motion.panelHeight
@@ -412,12 +408,11 @@ PanelWindow {
 
         onStateChanged: {
             if (state === "visible") {
-                if (!_loadedDeferred) {
-                    Qt.callLater(function() { _loadedDeferred = true })
+                if (!panel._loadedDeferred) {
+                    Qt.callLater(function() {
+                        if (panel) panel._loadedDeferred = true
+                    })
                 }
-                if (!_settingsNavRetained) _settingsNavPrewarm.restart()
-            } else {
-                _settingsNavPrewarm.stop()
             }
         }
 
@@ -429,9 +424,8 @@ PanelWindow {
             clip: false
             z: 6
 
-            Behavior on width {
-                enabled: panel._geometryReady && panel.open
-                    && !ShellSettings.reduceMotion
+            MotionBehavior on width {
+                gate: panel._geometryReady && panel.open
                 NumberAnimation {
                     duration: panel._railMotionMs
                     easing.type: panel._railMotionEasing
@@ -499,12 +493,12 @@ PanelWindow {
                         id: _settingsNavLoader
                         anchors.fill: parent
                         active: panel._settingsNavRetained
-                            || panel.activeTab === 1
-                        // prewarm incubates across frames; a direct reveal must finish now
+                            || (MenuState.open && panel.activeTab === 1)
                         asynchronous: !panel._settingsNavVisible
                         sourceComponent: Component {
                             SettingsNav {
                                 powerOpen: panel.powerOpen
+                                navigationVisible: panel._settingsNavVisible
                                 onCurrentPageRetapped: contentFlick.contentY = 0
                             }
                         }
@@ -526,12 +520,15 @@ PanelWindow {
 
                     MotionBehavior on height {
                         NumberAnimation {
-                            duration: Motion.panelHeight
+                            duration: panel.powerOpen ? Motion.panelHeight : Motion.fast
                             easing.type: panel.powerOpen ? Easing.OutQuart : Easing.InCubic
                         }
                     }
                     MotionBehavior on opacity {
-                        NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
+                        NumberAnimation {
+                            duration: Motion.fast
+                            easing.type: panel.powerOpen ? Easing.OutCubic : Easing.InCubic
+                        }
                     }
 
                     Loader {
@@ -617,7 +614,7 @@ PanelWindow {
                     id: _railSettings
                     labels: _railLabels
                     railW: panel.railCollapsedW
-                    glyph: panel.activeTab === 1 ? "󰍜" : "󰒓"
+                    glyph: "󰒓"
                     label: "Settings"
                     accessibleDescription: panel.activeTab === 1
                         ? (panel.settingsNavOpen ? "Collapse the settings sidebar"
@@ -678,9 +675,8 @@ PanelWindow {
             width: panel.contentW
             clip: true
 
-            Behavior on x {
-                enabled: panel._geometryReady && panel.open
-                    && !ShellSettings.reduceMotion
+            MotionBehavior on x {
+                gate: panel._geometryReady && panel.open
                 NumberAnimation {
                     duration: panel._railMotionMs
                     easing.type: panel._railMotionEasing
@@ -724,8 +720,7 @@ PanelWindow {
                 flickDeceleration: 1800
                 maximumFlickVelocity: 2200
                 readonly property bool _overflows: contentHeight > height + 1
-                // scrolling reacts at once; the edge fades wait out the resize so a
-                // page swap can't flash them (see MenuScrollThumb)
+                // the edge fades wait out the resize so a page swap can't flash them (see MenuScrollThumb)
                 property bool needsScroll: false
                 function syncScrollAffordance(): void {
                     if (!contentFlick._overflows) {
@@ -889,10 +884,9 @@ PanelWindow {
                 }
             }
 
-            ListEdgeFade {
+            ListEdgeLines {
                 anchors.fill: contentFlick
                 list: contentFlick
-                fadeColor: Theme.menuPane
                 visible: panel.activeTab !== 2 && contentFlick.needsScroll
                 z: 4
             }

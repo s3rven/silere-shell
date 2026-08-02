@@ -16,6 +16,10 @@ Singleton {
     property var _updateTimes: ({})
     property bool _persistentReady: false
     readonly property int _maxHistory: 20
+    readonly property int _maxIdentityChars: 512
+    readonly property int _maxSummaryChars: 2048
+    readonly property int _maxBodyChars: 16384
+    readonly property int _maxSourceChars: 4096
     readonly property int activeCount: Array.isArray(list) ? list.length : 0
 
     // reassigning a var array resets the view — every delegate rebuilt, scroll to top, expanded card collapsed
@@ -24,16 +28,25 @@ Singleton {
     readonly property int historyCount: _history.count
     readonly property bool hasHistory: _history.count > 0
 
+    function _bounded(value, limit: int): string {
+        const text = String(value ?? "")
+        return text.length <= limit ? text : text.slice(0, Math.max(0, limit - 1)) + "…"
+    }
+
+    function identityText(value): string {
+        return root._bounded(value, root._maxIdentityChars)
+    }
+
     // roles are fixed by the first insert, so every entry (incl. one revived from JSON) needs the full shape
     function _normalizeEntry(e): var {
         if (!e || typeof e !== "object") return null
         return {
             id:           Number(e.id ?? -1),
-            appName:      String(e.appName ?? ""),
-            appIcon:      String(e.appIcon ?? ""),
-            desktopEntry: String(e.desktopEntry ?? ""),
-            summary:      String(e.summary ?? ""),
-            body:         String(e.body ?? ""),
+            appName:      root.identityText(e.appName),
+            appIcon:      root._bounded(e.appIcon, root._maxSourceChars),
+            desktopEntry: root.identityText(e.desktopEntry),
+            summary:      root._bounded(e.summary, root._maxSummaryChars),
+            body:         root._bounded(e.body, root._maxBodyChars),
             urgency:      Number(e.urgency ?? 1),
             time:         Number(e.time ?? 0)
         }
@@ -90,6 +103,7 @@ Singleton {
         root._seen = savedSeen && typeof savedSeen === "object" && !Array.isArray(savedSeen) ? savedSeen : ({})
         root._times = savedTimes && typeof savedTimes === "object" && !Array.isArray(savedTimes) ? savedTimes : ({})
         root._persistentReady = true
+        root._saveHistory()
     }
 
     on_SeenChanged:   if (_persistentReady) _persist.seenJson = JSON.stringify(_seen)
@@ -159,8 +173,7 @@ Singleton {
         reloadableId: "silereNotifications"
         property bool dnd: false
         property int  missedCount: 0
-        // PersistentProperties survives a QML engine replacement. Keep JS
-        // arrays/maps serialized so values never cross into the new engine.
+        // PersistentProperties survives an engine replacement; keep JS arrays serialized so values never cross engines
         property string historyJson: "[]"
         property string seenJson:  "{}"
         property string timesJson: "{}"
@@ -214,10 +227,10 @@ Singleton {
         if (!notification || notification.transient) return null
         return {
             id:      id,
-            appName: notification.appName || "",
-            appIcon: notification.appIcon || "",
-            desktopEntry: notification.desktopEntry || "",
-            summary: root.plainText(notification.summary),
+            appName: root.identityText(notification.appName),
+            appIcon: root._bounded(notification.appIcon, root._maxSourceChars),
+            desktopEntry: root.identityText(notification.desktopEntry),
+            summary: root.plainText(notification.summary, root._maxSummaryChars),
             body:    root.plainText(notification.body),
             urgency: notification.urgency,
             time:    time
@@ -277,20 +290,26 @@ Singleton {
         if (list.length === 0 && lastCritical) lastCritical = false
     }
 
-    function plainText(s): string {
+    function plainText(s, maxChars): string {
         if (!s) return ""
-        return String(s)
+        const requested = Number(maxChars)
+        const limit = isFinite(requested) && requested > 0
+            ? Math.min(root._maxBodyChars, Math.floor(requested)) : root._maxBodyChars
+        const source = root._bounded(s, limit * 2)
+        const plain = source
             .replace(/<\/?(b|i|u|a|span|small|big|tt|markup|sub|sup|s)\b[^>]*>/gi, "")
             .replace(/<br\s*\/?>/gi, " ")
             .replace(/&lt;/g, "<").replace(/&gt;/g, ">")
             .replace(/&quot;/g, "\"").replace(/&apos;/g, "'").replace(/&#39;/g, "'")
             .replace(/&nbsp;/g, " ").replace(/&hellip;/g, "…")
             .replace(/&amp;/g, "&")
+        return root._bounded(plain, limit)
     }
 
     // bare absolute paths resolve against the qml context (qrc:/...) and fail to load
     function fileUrl(raw): string {
         const value = String(raw || "").trim()
+        if (value.length > root._maxSourceChars) return ""
         if (!value.startsWith("/")) return value
         // encodeURI leaves # and ? intact, truncating filenames that contain them
         return "file://" + value.split("/").map(function(part) {
@@ -300,7 +319,7 @@ Singleton {
 
     function resolveIconSource(raw): string {
         const value = String(raw || "").trim()
-        if (value.length === 0) return ""
+        if (value.length === 0 || value.length > root._maxSourceChars) return ""
         if (value.startsWith("/")) return root.fileUrl(value)
         if (/^[a-z][a-z0-9+.-]*:/i.test(value)) return value
         return Quickshell.iconPath(value, true)
@@ -309,7 +328,7 @@ Singleton {
     function appIconSource(appIcon, desktopEntry, appName): string {
         const direct = root.resolveIconSource(appIcon)
         if (direct.length > 0) return direct
-        const identity = String(desktopEntry || appName || "")
+        const identity = root.identityText(desktopEntry || appName)
         const entry = DesktopEntries.heuristicLookup(identity)
         return entry && entry.icon ? root.resolveIconSource(entry.icon) : ""
     }

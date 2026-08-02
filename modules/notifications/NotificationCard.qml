@@ -1,7 +1,6 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import Quickshell
 import Quickshell.Widgets
 import Quickshell.Services.Notifications
 import "../../config"
@@ -19,20 +18,17 @@ Item {
     signal dismissRequested(int notifId, var notification, bool expired)
     signal leaving()
 
-    // set while any card in the stack is animating out: the countdown rings are
-    // the frame budget, and a ring that stops ticking for one collapse is invisible
+    // the countdown rings are the frame budget, and a ring that stops ticking for one collapse is invisible
     property bool quietPaint: false
 
-    // each ring costs a threaded canvas upload per tick, so the whole stack scales
-    // linearly; past a couple of cards nobody reads an individual arc that closely
+    // one short dashed path per tick, so the stack scales linearly; past a couple of cards nobody reads the arc that closely
     property int stackSize: 1
     readonly property int _ringTickMs: card.stackSize <= 2 ? 33
         : card.stackSize <= 4 ? 50 : 66
 
     property bool _expired: false
     property bool _leaving: false
-    // dismiss-all clears this: every card is leaving, so collapsing heights only
-    // drags the lower cards upward through their own exit slide
+    // dismiss-all clears this: every card is leaving, so collapsing heights only drags the lower ones through their own exit
     property bool collapseOnDismiss: true
 
     Accessible.role: Accessible.AlertMessage
@@ -42,18 +38,18 @@ Item {
 
     readonly property var _defaultAction: {
         const acts = notification.actions ?? []
-        for (let i = 0; i < acts.length; i++)
-            if (acts[i] && String(acts[i].identifier).toLowerCase() === "default") return acts[i]
+        for (let i = 0; i < acts.length && i < 64; i++)
+            if (acts[i] && Notifications.identityText(acts[i].identifier).toLowerCase() === "default") return acts[i]
         return null
     }
     readonly property var actionList: {
         const acts = notification.actions ?? []
         const out = []
-        for (let i = 0; i < acts.length && out.length < 4; i++) {
+        for (let i = 0; i < acts.length && i < 64 && out.length < 4; i++) {
             const a = acts[i]
             if (!a) continue
-            if (String(a.identifier).toLowerCase() === "default") continue
-            if (!a.text || String(a.text).trim().length === 0) continue
+            if (Notifications.identityText(a.identifier).toLowerCase() === "default") continue
+            if (card._actionText(a).length === 0) continue
             out.push(a)
         }
         return out
@@ -78,9 +74,9 @@ Item {
     readonly property bool showIconSlot: _previewSettled && (hasAppIcon
         || (hasNotificationImage && _previewImg.status === Image.Ready && !showContentImage))
 
-    readonly property string summaryText: Notifications.plainText(notification.summary)
+    readonly property string summaryText: Notifications.plainText(notification.summary, 2048)
     readonly property string bodyText:    Notifications.plainText(notification.body)
-    readonly property string appNameText: notification.appName || ""
+    readonly property string appNameText: Notifications.identityText(notification.appName)
     readonly property bool hasBody:       bodyText.length > 0
     readonly property bool isCritical: notification.urgency === NotificationUrgency.Critical
 
@@ -93,8 +89,6 @@ Item {
         card.leaving()
         card._collapseBasis = cardRect.height
         _autoClose.stop()
-        _arrivalShimmer.stop()
-        _shimmer.opacity = 0
         cardRect.opacity = 0
         cardRect.x = card._hiddenX
         card.enabled = false
@@ -111,7 +105,7 @@ Item {
         if (card._defaultAction)
             card._defaultAction.invoke()
         else if (card.showContentImage && card.contentImageTarget.length > 0)
-            Quickshell.execDetached(["xdg-open", card.contentImageTarget])
+            Qt.openUrlExternally(card.contentImageTarget)
 
         HyprActions.focusNotificationSource(card.notification)
         if (!card._defaultAction || !card.notification.resident)
@@ -122,6 +116,10 @@ Item {
         if (!card.enabled || !action) return
         action.invoke()
         if (!card.notification.resident) card.dismiss()
+    }
+
+    function _actionText(action): string {
+        return Notifications.plainText(action?.text, 256).trim()
     }
 
     NumberAnimation {
@@ -172,9 +170,7 @@ Item {
     property real _collapseBasis: cardRect.height
     implicitHeight: _collapseBasis * collapseRatio
     property int slideDir: 1
-    // arriving from a full card width away has to be flung to cover the distance
-    // in any reasonable time; leaving still travels the whole way, since an exit
-    // reads as the card being taken off the stack
+    // arrival is flung to cross a full card width in reasonable time; the exit still travels the whole way
     readonly property real _enterX:  slideDir * 44
     readonly property real _hiddenX: slideDir * (implicitWidth + 16)
 
@@ -207,10 +203,7 @@ Item {
         card._timeoutProgress = Math.max(0, Math.min(1, left / full))
     }
 
-    // measured: a 60fps NumberAnimation here cost ~15% of a core per visible
-    // card — every vsync re-ran the arc colour bindings, the pulse gate and a
-    // canvas paint request. the ring travels ~0.2px/ms, so ticking at the arc's
-    // own paint rate is indistinguishable and leaves the frame budget alone.
+    // measured: a 60fps NumberAnimation here cost ~15% of a core per card, re-running the arc colours, pulse gate and path every vsync
     Timer {
         id: _countdownTick
         interval: card._ringTickMs
@@ -270,10 +263,9 @@ Item {
         x:       card._enterX
 
         property bool _behaviorEnabled: false
-        // abs: a top-left stack slides to negative x, and a layer toggling off
-        // mid-slide flashes the card
+        // abs: a top-left stack slides to negative x, and a layer toggling off mid-slide flashes the card
         layer.enabled: card.visible && !ShellSettings.reduceMotion
-            && (_arrivalShimmer.running || Math.abs(x) > 0.5 || opacity < 0.999)
+            && (Math.abs(x) > 0.5 || opacity < 0.999)
 
         Component.onCompleted: {
             const isNew = !Notifications.isSeen(card.notifId)
@@ -282,7 +274,6 @@ Item {
                 _behaviorEnabled = true
                 opacity = 1.0
                 x = 0
-                if (card.visible && !ShellSettings.reduceMotion) _arrivalShimmer.restart()
             } else {
                 x = 0
                 opacity = 1.0
@@ -290,16 +281,14 @@ Item {
             }
         }
 
-        Behavior on x       { enabled: card.visible && cardRect._behaviorEnabled && !ShellSettings.reduceMotion; NumberAnimation { duration: card._leaving ? Motion.ms(200) : Motion.ms(280); easing.type: card._leaving ? Easing.InCubic : Easing.OutCubic } }
-        // the fade has to outlast the slide in both directions: a 140ms fade
-        // against a 200ms InCubic exit is spent while the card is a third of the
-        // way out, so the peel never reads
-        Behavior on opacity { enabled: card.visible && cardRect._behaviorEnabled && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(200); easing.type: card._leaving ? Easing.InCubic : Easing.OutCubic } }
-        Behavior on height  { enabled: card.visible && cardRect._behaviorEnabled && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
+        MotionBehavior on x       { gate: card.visible && cardRect._behaviorEnabled; NumberAnimation { duration: card._leaving ? Motion.ms(200) : Motion.ms(280); easing.type: card._leaving ? Easing.InCubic : Easing.OutCubic } }
+        // the fade must outlast the slide both ways: a 140ms fade against the 200ms exit is spent a third of the way out
+        MotionBehavior on opacity { gate: card.visible && cardRect._behaviorEnabled; NumberAnimation { duration: Motion.ms(200); easing.type: card._leaving ? Easing.InCubic : Easing.OutCubic } }
+        MotionBehavior on height  { gate: card.visible && cardRect._behaviorEnabled; NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
 
         color: Theme.rowFill(_cardHover.hovered, card.isCritical)
 
-        MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
+        ColorFade on color {}
 
         ClippingRectangle {
             visible: card.showIconSlot
@@ -353,13 +342,12 @@ Item {
                     anchors.right:      parent.right
                     anchors.rightMargin: 18
                     text:           card.summaryText
-                    // the glyph, rim and ring already carry urgency; red text on
-                    // the red-tinted fill only costs contrast
+                    // glyph, rim and ring already carry urgency; red text on the red-tinted fill only costs contrast
                     color:          Theme.text
                     font.pixelSize: Settings.fontSize + 1
                     font.weight:    Font.DemiBold
                     elide:          Text.ElideRight
-                    MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
+                    ColorFade on color {}
                 }
             }
 
@@ -449,18 +437,18 @@ Item {
                         color: _actMa.pressed       ? Theme.withAlpha(_tint, 0.24)
                              : _actMa.containsMouse ? Theme.withAlpha(_tint, 0.13)
                              :                        Theme.menuControl
-                        MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
+                        ColorFade on color {}
 
                         OutlineBorder {
                             radius: _actBtn.radius
                             outlineColor: (_actMa.containsMouse || _actMa.pressed)
                                 ? Theme.withAlpha(_actBtn._tint, 0.50)
                                 : Theme.withAlpha(_actBtn._tint, 0.22)
-                            MotionBehavior on outlineColor {ColorAnimation { duration: Motion.fast } }
+                            ColorFade on outlineColor {}
                         }
 
                         Accessible.role: Accessible.Button
-                        Accessible.name: _actBtn.modelData.text
+                        Accessible.name: card._actionText(_actBtn.modelData)
                         Accessible.onPressAction: card.invokeAction(_actBtn.modelData)
 
                         ShellText {
@@ -468,11 +456,11 @@ Item {
                             width: Math.min(implicitWidth, _actBtn.width - 16)
                             horizontalAlignment: Text.AlignHCenter
                             elide: Text.ElideRight
-                            text: _actBtn.modelData.text
+                            text: card._actionText(_actBtn.modelData)
                             color: _actMa.containsMouse ? _actBtn._tint : Theme.withAlpha(Theme.text, 0.85)
                             font.pixelSize: Settings.fontSize - 1
                             font.weight: Font.Medium
-                            MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
+                            ColorFade on color {}
                         }
 
                         MouseArea {
@@ -523,34 +511,6 @@ Item {
             }
         }
 
-        Rectangle {
-            id: _shimmer
-            x: -width; y: -parent.height * 0.35
-            width: 76; height: parent.height * 1.7
-            rotation: 12; opacity: 0
-            transformOrigin: Item.Center
-            gradient: Gradient {
-                orientation: Gradient.Horizontal
-                GradientStop { position: 0.00; color: Theme.withAlpha(Theme.text, 0.00) }
-                GradientStop { position: 0.48; color: Theme.withAlpha(Theme.text, card.isCritical ? 0.18 : 0.10) }
-                GradientStop { position: 1.00; color: Theme.withAlpha(Theme.text, 0.00) }
-            }
-        }
-
-        SequentialAnimation {
-            id: _arrivalShimmer
-            PauseAnimation { duration: Motion.ms(120) }
-            ParallelAnimation {
-                NumberAnimation { target: _shimmer; property: "x"; from: -_shimmer.width; to: cardRect.width + _shimmer.width; duration: Motion.ms(620); easing.type: Easing.Linear }
-                SequentialAnimation {
-                    NumberAnimation { target: _shimmer; property: "opacity"; from: 0; to: 1;   duration: Motion.ms(160); easing.type: Easing.OutCubic }
-                    PauseAnimation  { duration: Motion.ms(260) }
-                    NumberAnimation { target: _shimmer; property: "opacity"; to: 0;            duration: Motion.ms(300); easing.type: Easing.InCubic }
-                }
-            }
-            ScriptAction { script: { _shimmer.opacity = 0; _shimmer.x = -_shimmer.width } }
-        }
-
         MouseArea {
             id: _bodyArea
             anchors.fill: parent
@@ -578,14 +538,14 @@ Item {
             OutlineBorder {
                 radius: 11
                 outlineColor: _closeHover.hovered ? Theme.withAlpha(Theme.error, 0.32) : Theme.menuControlLine
-                MotionBehavior on outlineColor {ColorAnimation { duration: Motion.fast } }
+                ColorFade on outlineColor {}
             }
             scale:   _cardHover.hovered ? 1.0 : 0.90
             transformOrigin: Item.Center
             z: 2
             MotionBehavior on opacity      {NumberAnimation { duration: Motion.fast } }
             MotionBehavior on scale        {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-            MotionBehavior on color        {ColorAnimation  { duration: Motion.fast } }
+            ColorFade on color {}
             Accessible.role: Accessible.Button
             Accessible.name: "Dismiss notification"
             Accessible.onPressAction: card.dismiss()
@@ -596,7 +556,7 @@ Item {
                 text:  "󰅖"
                 color: _closeHover.hovered ? Theme.error : Theme.withAlpha(Theme.menuTextMuted, 0.78)
                 font.pixelSize: Settings.fontSize - 2
-                MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
+                ColorFade on color {}
             }
         }
     }

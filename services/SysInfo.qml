@@ -32,7 +32,7 @@ Singleton {
     }
 
     property bool _active: false
-    readonly property bool _wanted: MenuState.open && MenuState.activeTab === 0 && !Idle.isIdle
+    readonly property bool _wanted: MenuState.homeActive && !Idle.isIdle
 
     on_WantedChanged: {
         if (_wanted) _startDelay.restart()
@@ -44,8 +44,7 @@ Singleton {
         _active = true
         _refreshFast()
         _refreshSlow()
-        // cpuPct is a delta between two /proc/stat reads; without a quick second
-        // sample the tile shows the last session's figure until the 2s poll lands
+        // cpuPct is a delta between two /proc/stat reads; without a quick second sample the tile shows the last session's figure
         _cpuPrime.restart()
     }
 
@@ -58,7 +57,7 @@ Singleton {
         if (_slowProc.running) _slowProc.running = false
     }
 
-    // Created lazily on first open, after open already flipped true, catch that missed edge.
+    // created lazily on first open, after open already flipped true, catch that missed edge
     Component.onCompleted: if (_wanted) _startDelay.restart()
 
     Timer { id: _startDelay; interval: 120; onTriggered: root._activate() }

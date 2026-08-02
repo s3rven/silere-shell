@@ -16,9 +16,7 @@ Singleton {
         if (installed.length === 0 || installed.indexOf(root.defaultFont) >= 0) return root.defaultFont
         return installed[0]
     }
-    // families render different optical sizes at equal px (Fantasque ≈ 10% shorter) — normalize on
-    // xHeight, not line height: the Meslo LG variants differ only in line gap, not glyph size.
-    // 0.55 = JetBrainsMono's xHeight/px, so the default family scales at exactly 1.0.
+    // normalize on xHeight, not line height (the Meslo LG variants differ only in line gap); 0.55 = JetBrainsMono, so the default scales at 1.0
     readonly property real fontScale: Math.max(0.85, Math.min(1.2, 0.55 / Math.max(0.3, _fm.xHeight / 100)))
     readonly property int fontSize: Math.round(12 * ShellSettings.uiScale * fontScale)
     readonly property int iconSize: Math.round(12 * ShellSettings.uiScale)
@@ -29,8 +27,6 @@ Singleton {
     TextMetrics { id: _capM; font.family: root.font; font.pixelSize: root.fontSize; text: "M" }
 
     readonly property int hPad: 14
-
-    readonly property bool hyprLuaConfig: false
 
     readonly property list<string> lockCommand: SystemTools.hasHyprlock ? ["hyprlock"]
         : SystemTools.hasLoginctl ? ["loginctl", "lock-session"] : []

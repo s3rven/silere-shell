@@ -200,8 +200,7 @@ Singleton {
         }
     }
 
-    // _startGeo's triggers are all edge-driven and the menu is what instantiates
-    // this singleton, so the opening edge is already spent by first load
+    // the menu is what instantiates this singleton, so _startGeo's opening edge is already spent by first load
     Component.onCompleted: { _init(); _startGeo() }
 
     property bool _geoStarted: false

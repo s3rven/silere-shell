@@ -10,6 +10,7 @@ Item {
     id: root
 
     property bool barActive: true
+    property bool compact: ShellSettings.barCompact
 
     required property ShellScreen screen
 
@@ -148,9 +149,7 @@ Item {
         }
     }
 
-    // DesktopEntries loads asynchronously, a class resolved before it's ready
-    // (heuristicLookup → null) gets a stale empty cache entry. Drop the cache and
-    // recompute once entries land (or a .desktop is installed mid-session).
+    // DesktopEntries loads async: a class resolved before it's ready caches an empty entry, so drop the cache once entries land
     Connections {
         target: ShellSettings.wsShowAppIcons ? DesktopEntries : null
         function onApplicationsChanged() {
@@ -206,7 +205,8 @@ Item {
         if (ShellSettings.wsShowAppIcons && wsId !== activeId) {
             const apps = root.appsFor(wsId)
             if (apps && apps.length > 0)
-                return apps.length * _iconSz + (apps.length - 1) * 4 + 10
+                return (root.compact ? 1 : apps.length) * _iconSz
+                    + (root.compact ? 0 : (apps.length - 1) * 4) + 10
         }
         return btnW
     }
@@ -218,9 +218,8 @@ Item {
         return acc + (_btnW(activeId) - diamondW) / 2
     }
 
-    // Hyprland IDs are global. Skip IDs already owned by another output so a
-    // wide page cannot turn a monitor-local bar into a cross-monitor switcher.
-    readonly property var visibleIds: {
+    // hyprland ids are global: skip ids owned by another output or a wide page turns a monitor-local bar into a cross-monitor switcher
+    readonly property string _visibleIdsKey: {
         const ids = []
         const anchor = Math.max(1, root._monitorAnchorId)
         const active = Math.max(anchor, root.activeId)
@@ -234,6 +233,15 @@ Item {
             if (root._knownOnOtherMonitor(id)) continue
             if (logicalIndex >= pageStart) ids.push(id)
             logicalIndex++
+        }
+        return ids.join(",")
+    }
+    readonly property var visibleIds: {
+        const parts = root._visibleIdsKey.split(",")
+        const ids = []
+        for (let i = 0; i < parts.length; i++) {
+            const id = Number(parts[i])
+            if (isFinite(id)) ids.push(id)
         }
         return ids
     }
@@ -394,9 +402,7 @@ Item {
         visible: opacity > 0.01
     }
 
-    // No render layer: an FBO fringes the small sprite when scaled. 12px keeps the
-    // gem on whole pixels while leaving enough room for the layered facets to
-    // render cleanly when the bar is zoomed or screen-scaled.
+    // no render layer: an FBO fringes the small sprite when scaled, and 12px keeps the gem on whole pixels
     Item {
         id: diamond
         width:  root._dotMarker ? 8 : 12
@@ -416,7 +422,7 @@ Item {
         property real _specialScale: 1.0
         property real _glint:        -1.15
         property real _trailX:       targetX
-        property real _menuOn:    MenuState.open ? 1 : 0
+        property real _menuOn: root._menuTargetsThisBar && MenuState.open ? 1 : 0
         MotionBehavior on _menuOn {NumberAnimation { duration: Motion.ms(220); easing.type: Easing.OutCubic } }
 
         readonly property color tint: {
@@ -501,7 +507,8 @@ Item {
             radius: root._gemMarker ? 3 : width / 2
             rotation: root._gemMarker ? 45 : 0
             antialiasing: true
-            color: Theme.withAlpha(diamond.tint, MenuState.open ? 0.50 : 0.30)
+            color: Theme.withAlpha(diamond.tint,
+                root._menuTargetsThisBar && MenuState.open ? 0.50 : 0.30)
             opacity: root._gemMarker ? 0.55 + diamond._energy * 0.22 : diamond._energy * 0.60
             scale: 1.0 + diamond._energy * (root._gemMarker ? 0.035 : 0.10)
             visible: opacity > 0.01
@@ -615,10 +622,10 @@ Item {
             }
         }
 
-        Behavior on x           { enabled: ShellSettings.workspaceShift && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(190); easing.type: Easing.OutQuart } }
+        MotionBehavior on x           { gate: ShellSettings.workspaceShift; NumberAnimation { duration: Motion.ms(190); easing.type: Easing.OutQuart } }
         MotionBehavior on opacity     {NumberAnimation { duration: Motion.ms(150) } }
         MotionBehavior on _hoverScale {NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
-        Behavior on _trailX     { enabled: ShellSettings.workspaceShift && !ShellSettings.reduceMotion; NumberAnimation { duration: Motion.ms(260); easing.type: Easing.OutQuart } }
+        MotionBehavior on _trailX     { gate: ShellSettings.workspaceShift; NumberAnimation { duration: Motion.ms(260); easing.type: Easing.OutQuart } }
 
         onTargetXChanged: {
             if (!root.monitorReady) return
@@ -823,7 +830,10 @@ Item {
                     z: -1
                     active: ShellSettings.wsNotifPulse
                     sourceComponent: Component {
-                        WorkspaceNotifPulse { workspaceId: ws.wsId }
+                        WorkspaceNotifPulse {
+                            workspaceId: ws.wsId
+                            barActive: root.barActive
+                        }
                     }
                 }
                 Connections {
@@ -886,7 +896,7 @@ Item {
                     color: ws.urgent ? Theme.warning : Theme.withAlpha(Theme.subtext, 0.85)
                     scale: ws._hoverFx ? 1.2 : 1.0
 
-                    MotionBehavior on color {ColorAnimation { duration: Motion.color } }
+                    ColorFade on color {}
                     MotionBehavior on scale {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
                 }
 
@@ -897,7 +907,7 @@ Item {
                     active: ws._showIcons
                     sourceComponent: Component {
                         WorkspaceAppIcons {
-                            apps: ws.apps
+                            apps: root.compact ? ws.apps.slice(0, 1) : ws.apps
                             iconSize: root._iconSz
                             hoverFx: ws._hoverFx
                             pulseOpacity: ws._pulseOpacity
@@ -953,7 +963,8 @@ Item {
         }
         Timer {
             interval: 15000
-            running: _urgentTick.shown && !_urgentTick._pulseSettled && !Idle.isIdle
+            running: _urgentTick.shown && !_urgentTick._pulseSettled
+                && root.barActive && !Idle.isIdle
             onTriggered: _urgentTick._pulseSettled = true
         }
 

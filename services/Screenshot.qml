@@ -10,8 +10,7 @@ Singleton {
 
     signal flashed()
 
-    // shell.qml reads this at startup so the IPC handler registers: the only other reference
-    // lives in BarUnderline, which isn't loaded until the underline is switched on
+    // shell.qml reads this at startup so the IPC handler registers before BarUnderline, the only other reference, loads
     readonly property bool armed: true
 
     property real _lastFlashTime: 0

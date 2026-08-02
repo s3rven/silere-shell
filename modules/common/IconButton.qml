@@ -32,6 +32,7 @@ Item {
     Accessible.role: Accessible.Button
     Accessible.name: root.accessibleName
     Accessible.focusable: root.enabled
+    Accessible.pressed: root.pressed
     Accessible.onPressAction: root.activate()
 
     Keys.onPressed: event => {
@@ -80,9 +81,7 @@ Item {
             outlineColor: root.activeFocus ? Theme.withAlpha(root.accentColor, 0.68) : "transparent"
         }
 
-        MotionBehavior on color {
-            ColorAnimation { duration: Motion.fast }
-        }
+        ColorFade on color {}
     }
 
     ShellText {
@@ -94,9 +93,7 @@ Item {
         scale: root.pressed ? 0.90 : 1.0
         transformOrigin: Item.Center
 
-        MotionBehavior on color {
-            ColorAnimation { duration: Motion.fast }
-        }
+        ColorFade on color {}
         MotionBehavior on scale {
             NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
         }

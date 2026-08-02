@@ -69,10 +69,32 @@ Item {
     property real   _scaleStart: 1.0
     property real   _opTarget:   1.0
 
+    function _settleCurrent(): void {
+        _debounce.stop()
+        _seq.stop()
+        _wsJustChanged = false
+        if (monitorWsId > 0) _lastWsId = monitorWsId
+        _shownApp = _clean(currentApp)
+        _shownTitle = currentTitle
+        _shownShowApp = ShellSettings.showWindowTitleApp
+        _op = hasClient ? 1.0 : 0.0
+        _y = 0
+        _scale = 1.0
+    }
+
     function _queueTransition(): void {
         if (!root._ready || Idle.isIdle) return
-        // Every monitor sees the global active-toplevel signals. A title that is
-        // already hidden on this output has nothing to animate until focus returns.
+        if (ShellSettings.reduceMotion) {
+            root._settleCurrent()
+            return
+        }
+        if (!root._wsJustChanged && !_seq.running && !_debounce.running
+                && root._shownApp === root._clean(root.currentApp)
+                && root._shownTitle === root.currentTitle
+                && root._shownShowApp === ShellSettings.showWindowTitleApp
+                && Math.abs(root._op - (root.hasClient ? 1.0 : 0.0)) < 0.001)
+            return
+        // every monitor sees the global toplevel signals; a title already hidden on this output has nothing to animate
         if (!root.hasClient && root._op <= 0.001 && !_seq.running) return
         _debounce.restart()
     }
@@ -87,7 +109,7 @@ Item {
     function _esc(s: string): string {
         return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     }
-    // color -> #AARRGGBB, the form Qt's StyledText font-color parser accepts.
+    // color -> #AARRGGBB, the form Qt's StyledText font-color parser accepts
     function _h2(n: real): string {
         const v = Math.max(0, Math.min(255, Math.round(n)))
         return (v < 16 ? "0" : "") + v.toString(16)
@@ -119,7 +141,10 @@ Item {
         _shownShowApp = ShellSettings.showWindowTitleApp
         _op         = hasClient ? 1.0 : 0.0
         _ready      = true
-        Qt.callLater(function() { if (monitorWsId > 0) _lastWsId = monitorWsId })
+        Qt.callLater(function() {
+            if (root && root.monitorWsId > 0)
+                root._lastWsId = root.monitorWsId
+        })
     }
 
     onHasClientChanged:  root._queueTransition()
@@ -127,6 +152,9 @@ Item {
     Connections {
         target: ShellSettings
         function onShowWindowTitleAppChanged() { root._queueTransition() }
+        function onReduceMotionChanged() {
+            if (ShellSettings.reduceMotion) root._settleCurrent()
+        }
     }
 
     onCurrentTitleChanged: {
@@ -138,8 +166,7 @@ Item {
         target: Idle
         function onIsIdleChanged() {
             if (Idle.isIdle) {
-                _debounce.stop()
-                _seq.stop()
+                root._settleCurrent()
             } else {
                 root._queueTransition()
             }

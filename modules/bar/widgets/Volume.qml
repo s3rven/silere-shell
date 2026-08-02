@@ -6,9 +6,11 @@ import "../../common"
 Pill {
     id: root
 
-    property var screen: null
-
     readonly property bool show: ShellSettings.barShowVolume
+    readonly property real value: Audio.uiVolume
+    readonly property real minimumValue: 0
+    readonly property real maximumValue: 1
+    readonly property real stepSize: Audio.stepPct
     visible: show
 
     glyph:      Audio.icon
@@ -28,30 +30,27 @@ Pill {
     levelColor: Audio.muted ? Theme.subtext : Theme.accent
 
     Accessible.role: Accessible.Slider
+    Accessible.focusable: Audio.ready
     Accessible.onIncreaseAction: if (Audio.ready) {
-        if (Audio.muted) Audio.unmute()
         Audio.bumpBy(Audio.stepPct)
     }
     Accessible.onDecreaseAction: if (Audio.ready) {
-        if (Audio.muted) Audio.unmute()
         Audio.bumpBy(-Audio.stepPct)
     }
 
-    Keys.onLeftPressed:  event => { if (Audio.ready) { if (Audio.muted) Audio.unmute(); Audio.bumpBy(-Audio.stepPct); event.accepted = true } else event.accepted = false }
-    Keys.onDownPressed:  event => { if (Audio.ready) { if (Audio.muted) Audio.unmute(); Audio.bumpBy(-Audio.stepPct); event.accepted = true } else event.accepted = false }
-    Keys.onRightPressed: event => { if (Audio.ready) { if (Audio.muted) Audio.unmute(); Audio.bumpBy(Audio.stepPct);  event.accepted = true } else event.accepted = false }
-    Keys.onUpPressed:    event => { if (Audio.ready) { if (Audio.muted) Audio.unmute(); Audio.bumpBy(Audio.stepPct);  event.accepted = true } else event.accepted = false }
+    Keys.onLeftPressed:  event => { if (Audio.ready) { Audio.bumpBy(-Audio.stepPct); event.accepted = true } else event.accepted = false }
+    Keys.onDownPressed:  event => { if (Audio.ready) { Audio.bumpBy(-Audio.stepPct); event.accepted = true } else event.accepted = false }
+    Keys.onRightPressed: event => { if (Audio.ready) { Audio.bumpBy(Audio.stepPct);  event.accepted = true } else event.accepted = false }
+    Keys.onUpPressed:    event => { if (Audio.ready) { Audio.bumpBy(Audio.stepPct);  event.accepted = true } else event.accepted = false }
     Keys.onPressed: event => {
         if (!Audio.ready) return
         if (event.key === Qt.Key_PageDown || event.key === Qt.Key_PageUp) {
-            if (Audio.muted) Audio.unmute()
             Audio.bumpBy((event.key === Qt.Key_PageUp ? 1 : -1) * Audio.stepPct * 5)
             event.accepted = true
         } else if (event.key === Qt.Key_Home) {
             Audio.setVolume(0)
             event.accepted = true
         } else if (event.key === Qt.Key_End) {
-            if (Audio.muted) Audio.unmute()
             Audio.setVolume(1)
             event.accepted = true
         }
@@ -64,10 +63,7 @@ Pill {
             event.accepted = true
             if (!Audio.ready) return
             const n = Scroll.processControlWheel(event, "audio")
-            if (n !== 0) {
-                if (Audio.muted) Audio.unmute()
-                Audio.bumpBy(n * Audio.stepPct)
-            }
+            if (n !== 0) Audio.bumpBy(n * Audio.stepPct)
         }
     }
 

@@ -1,0 +1,19 @@
+# public settings surface
+SettingsPage 1.0 SettingsPage.qml
+
+# settings-only implementation types
+internal DraggableWidgetList DraggableWidgetList.qml
+internal SettingsClockSection SettingsClockSection.qml
+internal SettingsIndicatorsSection SettingsIndicatorsSection.qml
+internal SettingsInterfaceSection SettingsInterfaceSection.qml
+internal SettingsMediaSection SettingsMediaSection.qml
+internal SettingsNightLightSection SettingsNightLightSection.qml
+internal SettingsOsdSection SettingsOsdSection.qml
+internal SettingsPopupsSection SettingsPopupsSection.qml
+internal SettingsSeparatorsSection SettingsSeparatorsSection.qml
+internal SettingsSurfaceSection SettingsSurfaceSection.qml
+internal SettingsThemeSection SettingsThemeSection.qml
+internal SettingsUnderlineSection SettingsUnderlineSection.qml
+internal SettingsUpdatesSection SettingsUpdatesSection.qml
+internal SettingsWarningsSection SettingsWarningsSection.qml
+internal SettingsWorkspacesSection SettingsWorkspacesSection.qml

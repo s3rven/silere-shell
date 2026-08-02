@@ -57,9 +57,7 @@ Singleton {
     property bool _scanRequested: false
     function setScan(on: bool): void {
         const want = !!(on && adapter && adapter.enabled)
-        // onOpenChanged and Component.onCompleted can request the same state in
-        // one construction pass. Coalesce them before touching the D-Bus proxy;
-        // BlueZ otherwise reports "Operation already in progress".
+        // coalesce: onOpenChanged and Component.onCompleted can request the same state in one pass and BlueZ answers "Operation already in progress"
         _scanRequested = want
         if (!_scanSync.running) _scanSync.restart()
     }
@@ -74,8 +72,7 @@ Singleton {
         }
     }
 
-    // Dispatch by address through the raw _devices array so we always call
-    // methods on the live C++ object, not a sorted JS copy that may lose binding.
+    // dispatch by address through the raw _devices array to reach the live C++ object, not a sorted JS copy
     function connectDevice(address: string): void {
         for (let i = 0; i < _devices.length; i++) {
             const d = _devices[i]

@@ -1,0 +1,40 @@
+import QtQuick
+import "../../../config"
+
+Item {
+    id: root
+
+    property real  topRadius:    0
+    property real  bottomRadius: 0
+    property real  cardInset:    1
+    property real  leftBleed:    0
+    property bool  active:       false
+    property bool  focusActive:  false
+    property real  fillOpacity:  0.07
+    property color fillColor:    Theme.menuHover
+    property color focusColor:   Theme.accent
+
+    Rectangle {
+        readonly property real _topR: Math.max(0, root.topRadius    - root.cardInset)
+        readonly property real _botR: Math.max(0, root.bottomRadius - root.cardInset)
+
+        x:      -root.leftBleed + root.cardInset
+        y:      root.topRadius > 0 ? root.cardInset : 0
+        width:  Math.max(0, parent.width + root.leftBleed - root.cardInset * 2)
+        height: Math.max(0, parent.height
+            - (root.topRadius > 0 ? root.cardInset : 0)
+            - (root.bottomRadius > 0 ? root.cardInset : 0))
+
+        topLeftRadius:     _topR
+        topRightRadius:    _topR
+        bottomLeftRadius:  _botR
+        bottomRightRadius: _botR
+        antialiasing:      _topR > 0 || _botR > 0
+
+        color: Theme.withAlpha(root.fillColor,
+            root.active ? root.fillOpacity : 0)
+        border.width: root.focusActive ? 1 : 0
+        border.color: Theme.withAlpha(root.focusColor, 0.38)
+        ColorFade on color {}
+    }
+}

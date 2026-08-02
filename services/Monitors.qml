@@ -26,11 +26,23 @@ Singleton {
 
     readonly property string activeName: overlayScreen ? overlayScreen.name : ""
 
-    function barEnabled(screen): bool {
+    function _configuredBarEnabled(screen): bool {
         if (!screen) return false
         const off = ShellSettings.barDisabledMonitors
         if (!off || off.length === 0) return true
         return ("," + off + ",").indexOf("," + screen.name + ",") < 0
+    }
+
+    function barEnabled(screen): bool {
+        if (!screen) return false
+        if (_configuredBarEnabled(screen)) return true
+
+        const screens = Quickshell.screens || []
+        for (let i = 0; i < screens.length; i++)
+            if (_configuredBarEnabled(screens[i])) return false
+
+        const fallback = overlayScreen || screens[0]
+        return !!fallback && fallback.name === screen.name
     }
 
     readonly property ShellScreen overlayBarScreen: {

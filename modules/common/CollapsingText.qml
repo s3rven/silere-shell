@@ -7,10 +7,13 @@ Item {
     property alias text: _label.text
     property color color: Theme.text
     property bool  expanded: true
-    // Fixed-width floor measured from this string: ticking values (clock
-    // seconds) re-hint per digit pair under fractional scaling, and the ±1px
-    // implicitWidth wobble walks the whole bar once a second otherwise.
+    // fixed-width floor: ticking digits re-hint per pair under fractional scaling and the +-1px wobble walks the whole bar once a second
     property string reserveText: ""
+    property bool _ready: false
+
+    Component.onCompleted: Qt.callLater(function() {
+        if (root) root._ready = true
+    })
 
     TextMetrics {
         id: _reserve
@@ -24,9 +27,10 @@ Item {
     width:  !expanded ? 0
           : reserveText.length > 0 ? Math.ceil(_reserve.advanceWidth)
           : Math.ceil(_label.implicitWidth)
-    clip:   true
+    clip: width + 0.5 < Math.ceil(_label.implicitWidth)
 
     MotionBehavior on width {
+        gate: root._ready
         NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
     }
 
@@ -36,11 +40,10 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         color:          root.color
         font.pixelSize: Settings.fontSize
-        MotionBehavior on color {
-            ColorAnimation { duration: Motion.color }
-        }
+        ColorFade on color {}
         opacity:        root.expanded ? 1.0 : 0.0
         MotionBehavior on opacity {
+            gate: root._ready
             NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
         }
     }

@@ -6,15 +6,23 @@ import Quickshell.Widgets
 import "../../config"
 import "../../services"
 import "../common"
+import "controls"
 
 PageShell {
     id: root
 
     implicitHeight: _col.implicitHeight
     enterFade: 160; exitFade: 110
+    onPageShown: {
+        _mediaUnload.stop()
+        _mediaSection._mediaLoaded = Media.shown
+    }
     onPageHidden: {
         _picker = ""
         _volumeRow.open = false
+        _brightnessRow.open = false
+        if (ShellSettings.reduceMotion) _mediaSection._mediaLoaded = false
+        else _mediaUnload.restart()
     }
 
     property string _picker: ""
@@ -22,18 +30,25 @@ PageShell {
     readonly property int _itemGap: 8
     readonly property bool _wifiAvailable: Network.toolAvailable && Network.hasWifiDevice
     readonly property bool _btAvailable: Bluetooth.available
-    readonly property bool _brightnessAvailable: Brightness.toolAvailable && Brightness.maxBrightness > 0
+    readonly property bool _brightnessAvailable: Brightness.controllable
     readonly property bool _wifiPickerOpen: _picker === "wifi"
     readonly property bool _btPickerOpen: _picker === "bt"
 
     function _togglePicker(which: string): void {
         _picker = (_picker === which ? "" : which)
-        if (_picker !== "") _volumeRow.open = false
+        if (_picker !== "") {
+            _volumeRow.open = false
+            _brightnessRow.open = false
+        }
     }
 
     function dismissInline(): bool {
         if (_volumeRow.open) {
             _volumeRow.open = false
+            return true
+        }
+        if (_brightnessRow.open) {
+            _brightnessRow.open = false
             return true
         }
         if (_picker === "") return false
@@ -43,14 +58,17 @@ PageShell {
 
     Connections {
         target: Network
+        enabled: root.active
         function onWifiEnabledChanged() { if (root._picker === "wifi" && !Network.wifiEnabled) root._picker = "" }
     }
     Connections {
         target: Bluetooth
+        enabled: root.active
         function onEnabledChanged() { if (root._picker === "bt" && !Bluetooth.enabled) root._picker = "" }
     }
     Connections {
         target: NightLight
+        enabled: root.active
         function onEnabledChanged() { if (root._picker === "nightlight" && !NightLight.enabled) root._picker = "" }
     }
 
@@ -111,9 +129,10 @@ PageShell {
             width: parent.width
             property bool _mediaLoaded: false
 
-            Component.onCompleted: _mediaLoaded = Media.shown
+            Component.onCompleted: _mediaLoaded = root.active && Media.shown
             Connections {
                 target: Media
+                enabled: root.active
                 function onShownChanged() {
                     if (Media.shown) {
                         _mediaUnload.stop()
@@ -127,18 +146,21 @@ PageShell {
             }
             Timer {
                 id: _mediaUnload
-                interval: Motion.medium + Motion.ms(30)
-                onTriggered: if (!Media.shown) _mediaSection._mediaLoaded = false
+                interval: Motion.fast + Motion.ms(30)
+                onTriggered: if (!root.active || !Media.shown)
+                    _mediaSection._mediaLoaded = false
             }
 
-            // Snap to 4 logical px so rows below land on whole physical pixels
-            // under fractional scaling — unaligned offsets double their 1px borders.
+            // snap to 4 logical px: unaligned offsets double their 1px borders under fractional scaling
             height: Media.shown && _mediaLoader.item
                 ? 4 * Math.ceil((_mediaLoader.item.height + 10) / 4) : 0
             clip: true
 
             MotionBehavior on height {
-                NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
+                NumberAnimation {
+                    duration: Media.shown ? Motion.medium : Motion.fast
+                    easing.type: Media.shown ? Easing.OutQuart : Easing.InCubic
+                }
             }
 
             Loader {
@@ -150,8 +172,7 @@ PageShell {
                 id: _mediaCard
                 width: parent ? parent.width : 0
                 readonly property int _seekBlock: Media.hasPosition ? 26 : 0
-                // Snap to a 4px multiple: an integer-but-odd height lands the bottom
-                // border on a half physical pixel under fractional scaling and doubles it.
+                // 4px multiple: an odd height lands the bottom border on a half physical pixel and doubles it
                 height: 4 * Math.ceil(Math.max(168,
                     16 + _controlsRow.height + _seekBlock + 12 + _mediaCol.implicitHeight + 26) / 4)
                 radius: Theme.radiusCard
@@ -159,15 +180,24 @@ PageShell {
                 opacity: Media.shown ? 1.0 : 0.0
                 visible: opacity > 0.01
 
-                OutlineBorder {
-                    radius: _mediaCard.radius
-                    outlineColor: Theme.menuCardBorder
+                function _focusPlayer(): void {
+                    MenuState.close()
+                    HyprActions.focusMediaPlayer(Media.playerName, Media.title)
                 }
 
-                // fade only, matched to the section's height ease: a scale leg here ran as a
-                // third competing animation and resampled NativeRendering text off-pixel
+                OutlineBorder {
+                    radius: _mediaCard.radius
+                    outlineWidth: _playerTarget.activeFocus ? 2 : 1
+                    outlineColor: _playerTarget.activeFocus
+                        ? Theme.withAlpha(Theme.accent, 0.62) : Theme.menuCardBorder
+                }
+
+                // fade only: a scale leg ran as a third competing animation and resampled NativeRendering text off-pixel
                 MotionBehavior on opacity {
-                    NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
+                    NumberAnimation {
+                        duration: Media.shown ? Motion.medium : Motion.fast
+                        easing.type: Media.shown ? Easing.OutCubic : Easing.InCubic
+                    }
                 }
 
                 // on reappear, text may be stranded at opacity 0 by a crossfade interrupted while hidden
@@ -228,7 +258,7 @@ PageShell {
                     }
 
                     function _promote(img, isA) {
-                        // Object identity, not URL compare, Qt normalises URLs (e.g. %20).
+                        // object identity, not URL compare, Qt normalises URLs (e.g. %20)
                         if (img !== _pendingLayer || img.status !== Image.Ready) return
                         _pendingLayer = null
                         _artRetry.stop()
@@ -290,59 +320,29 @@ PageShell {
                 }
 
                 Rectangle {
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    height: parent.height * 0.26
+                    anchors.fill: parent
                     visible: _art.shownAlpha > 0.01
-                    gradient: Gradient {
-                        orientation: Gradient.Vertical
-                        GradientStop { position: 0.0; color: _mediaCard.color }
-                        GradientStop { position: 0.5; color: Theme.withAlpha(_mediaCard.color, 0.5) }
-                        GradientStop { position: 1.0; color: "transparent" }
-                    }
-                }
-
-                Rectangle {
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.bottom: parent.bottom
-                    height: parent.height * 0.70
-                    visible: _art.shownAlpha > 0.01
-                    gradient: Gradient {
-                        orientation: Gradient.Vertical
-                        GradientStop { position: 0.0;  color: "transparent" }
-                        GradientStop { position: 0.55; color: Theme.withAlpha(_mediaCard.color, 0.40) }
-                        GradientStop { position: 0.78; color: Theme.withAlpha(_mediaCard.color, 0.90) }
-                        GradientStop { position: 0.92; color: _mediaCard.color }
-                        GradientStop { position: 1.0;  color: _mediaCard.color }
-                    }
-                }
-
-                Rectangle {
-                    anchors.top: parent.top
-                    anchors.bottom: parent.bottom
-                    anchors.left: parent.left
-                    width: parent.width * 0.32
-                    visible: _art.shownAlpha > 0.01
-                    gradient: Gradient {
-                        orientation: Gradient.Horizontal
-                        GradientStop { position: 0.0; color: Theme.withAlpha(_mediaCard.color, 0.42) }
-                        GradientStop { position: 1.0; color: "transparent" }
-                    }
+                    color: Theme.withAlpha(_mediaCard.color, 0.72)
                 }
 
                 // down to the seek row, so the title and artist are part of the jump target
                 MouseArea {
+                    id: _playerTarget
                     anchors.top: parent.top
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.bottom: _seek.top
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        MenuState.close()
-                        HyprActions.focusMediaPlayer(Media.playerName, Media.title)
-                    }
+                    activeFocusOnTab: Media.available
+                    Accessible.role: Accessible.Button
+                    Accessible.name: Media.label.length > 0
+                        ? "Focus media player for " + Media.label : "Focus media player"
+                    Accessible.focusable: true
+                    Accessible.onPressAction: _mediaCard._focusPlayer()
+                    Keys.onSpacePressed: event => { if (!event.isAutoRepeat) _mediaCard._focusPlayer(); event.accepted = true }
+                    Keys.onReturnPressed: event => { if (!event.isAutoRepeat) _mediaCard._focusPlayer(); event.accepted = true }
+                    Keys.onEnterPressed: event => { if (!event.isAutoRepeat) _mediaCard._focusPlayer(); event.accepted = true }
+                    onClicked: _mediaCard._focusPlayer()
                 }
 
                 Column {
@@ -536,18 +536,14 @@ PageShell {
                             color: _playT.pressed ? Theme.mix(Theme.menuControl, Theme.accent, 0.18)
                                 : _playH.hovered ? Theme.mix(Theme.menuControl, Theme.accent, 0.10)
                                 : Theme.menuControl
-                            MotionBehavior on color {
-                                ColorAnimation { duration: Motion.fast }
-                            }
+                            ColorFade on color {}
 
                             OutlineBorder {
                                 radius: _playFill.radius
                                 outlineWidth: _playBtn.activeFocus ? 2 : 1
                                 outlineColor: _playBtn.activeFocus ? Theme.withAlpha(Theme.accent, 0.7)
                                     : Theme.menuControlLine
-                                MotionBehavior on outlineColor {
-                                    ColorAnimation { duration: Motion.fast }
-                                }
+                                ColorFade on outlineColor {}
                             }
                         }
                         ShellText {
@@ -560,9 +556,7 @@ PageShell {
                             color: _playH.hovered ? Theme.text : Theme.withAlpha(Theme.text, 0.8)
                             font.family: Settings.font; font.pixelSize: Settings.fontSize + 10
                             transformOrigin: Item.Center
-                            MotionBehavior on color {
-                                ColorAnimation { duration: Motion.fast }
-                            }
+                            ColorFade on color {}
 
                             Component.onCompleted: { shown = target; _ready = true }
                             onTargetChanged: {
@@ -603,18 +597,20 @@ PageShell {
             VolumeRow {
                 id: _volumeRow
                 visible: Audio.ready
-                onOpenChanged: if (open) root._picker = ""
+                reserveExpandSlot: _brightnessRow.visible && Brightness.devices.length > 1
+                onOpenChanged: if (open) {
+                    root._picker = ""
+                    _brightnessRow.open = false
+                }
             }
-            QuickSlider {
-                id: _brightnessSlider
+            BrightnessRow {
+                id: _brightnessRow
                 visible: root._brightnessAvailable
                 reserveExpandSlot: _volumeRow.visible && Audio.sinkCount > 1
-                glyph: Brightness.icon
-                wheelKey: "brightness"
-                accessibleName: "Brightness"
-                value: Brightness.pendingPercent / 100
-                valueText: Brightness.pendingPercent + "%"
-                onMoved: (v) => Brightness.setPercent(Math.round(v * 100))
+                onOpenChanged: if (open) {
+                    root._picker = ""
+                    _volumeRow.open = false
+                }
             }
         }
         SectionLabel {
@@ -622,10 +618,11 @@ PageShell {
             visible: root._wifiAvailable || root._btAvailable
         }
         SettingsCard {
-            visible: root._wifiAvailable
+            visible: root._wifiAvailable || root._btAvailable
 
             ControlRow {
                 id: _wifiRow
+                visible: root._wifiAvailable
                 readonly property bool _ethActive: Network.connected && Network.deviceType === "ethernet"
                 active: Network.wifiEnabled
                 glyph: Network.wifiEnabled ? "󰤨" : "󰤭"
@@ -640,30 +637,21 @@ PageShell {
                 onActivated: Network.toggleWifi()
                 onExpandToggled: root._togglePicker("wifi")
             }
-        }
 
-        InlinePicker {
-            open: root._wifiPickerOpen
-            gap: root._itemGap
-            content: Component {
-                WifiList {
-                    width: parent.width
-                    open: root._wifiPickerOpen
+            InlinePicker {
+                open: root._wifiPickerOpen
+                gap: 0
+                content: Component {
+                    WifiList {
+                        width: parent.width
+                        open: root._wifiPickerOpen
+                    }
                 }
             }
-        }
-
-        Item {
-            width: 1
-            height: (root._wifiAvailable && root._btAvailable) ? root._itemGap : 0
-            MotionBehavior on height {NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
-        }
-
-        SettingsCard {
-            visible: root._btAvailable
 
             ControlRow {
                 id: _btRow
+                visible: root._btAvailable
                 active: Bluetooth.enabled
                 glyph: Bluetooth.enabled ? "󰂯" : "󰂲"
                 title: "Bluetooth"
@@ -678,15 +666,15 @@ PageShell {
                 onActivated: Bluetooth.toggle()
                 onExpandToggled: root._togglePicker("bt")
             }
-        }
 
-        InlinePicker {
-            open: root._btPickerOpen
-            gap: root._itemGap
-            content: Component {
-                BluetoothList {
-                    width: parent.width
-                    open: root._btPickerOpen
+            InlinePicker {
+                open: root._btPickerOpen
+                gap: 0
+                content: Component {
+                    BluetoothList {
+                        width: parent.width
+                        open: root._btPickerOpen
+                    }
                 }
             }
         }
@@ -714,7 +702,7 @@ PageShell {
                     glyph: "󰖙"
                     label: "Follow sun position"
                     checked: ShellSettings.nightLightAuto
-                    onToggled: ShellSettings.nightLightAuto = !ShellSettings.nightLightAuto
+                    onToggled: nextChecked => ShellSettings.nightLightAuto = nextChecked
                 }
                 CollapsibleSection {
                     expanded: !ShellSettings.nightLightAuto
@@ -743,7 +731,7 @@ PageShell {
                 showSwitch: true
                 badgeCount: Notifications.effectiveDnd ? Notifications.missedCount : 0
                 onActivated: Notifications.toggleDnd()
-                onBadgeActivated: MenuState.showTab(2)
+                onBadgeActivated: MenuState.showTab(MenuState.recentTab)
             }
 
             ControlRow {

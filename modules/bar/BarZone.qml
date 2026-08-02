@@ -17,16 +17,16 @@ Row {
         if (key.length === 0) return false
         const meta = ShellSettings.barWidgetMeta[key]
         if (!meta) return false
-        const setting = meta.setting || ""
-        if (setting.length > 0 && ShellSettings[setting] === false) return false
+        if (!ShellSettings.barWidgetConfiguredVisible(key)) return false
         if (key === "battery" && !Battery.available) return false
-        if (key === "brightness" && (!Brightness.toolAvailable || Brightness.maxBrightness <= 0)) return false
+        if (key === "brightness" && !Brightness.controllable) return false
+        if (key === "media" && !Media.shown) return false
+        if (key === "shellUpdate"
+                && !ShellUpdate.pending && !ShellUpdate.checking && !ShellUpdate.applying) return false
         return true
     }
-    readonly property var activeKeys: orderKeys.filter(key => zone._widgetEnabled(key))
 
-    // widgets only report real visibility once loaded, so rebuild off the
-    // rendered delegates rather than per-key state a reorder can leave stale
+    // rebuild off the rendered delegates: widgets only report real visibility once loaded, and per-key state goes stale on reorder
     property var _visibleKeys: []
     readonly property var visibleKeys: _visibleKeys
 
@@ -46,7 +46,7 @@ Row {
         zone._visibleKeys = next
     }
 
-    onActiveKeysChanged: _queueVisibilitySync()
+    onOrderKeysChanged: _queueVisibilitySync()
 
     Timer {
         id: _visibilitySync
@@ -56,20 +56,21 @@ Row {
 
     Repeater {
         id: widgetRepeater
-        // Bind delegates to their keys, not only to the array length. Reusing
-        // numeric slots across a same-length reorder can leave a Loader paired
-        // with the component that previously occupied that index.
-        model: zone.activeKeys
+        // keep the model stable so transient state only unloads its own widget
+        model: zone.orderKeys
         onItemAdded: zone._queueVisibilitySync()
         onItemRemoved: zone._queueVisibilitySync()
         delegate: Row {
             id: _slot
             required property string modelData
             readonly property string key: modelData
-            readonly property bool show: _loader.loadedKey === key
-                && (_loader.item ? _loader.item.show : false)
-            // per-slot primitives: a placement change invalidates one divider,
-            // not a shared object map rebuilt for every widget
+            readonly property bool wanted: zone._widgetEnabled(key)
+            property bool keepLoaded: false
+            readonly property bool show: _loader.loadedKey === key && _loader.item
+                && (_loader.item.layoutVisible !== undefined
+                    ? _loader.item.layoutVisible
+                    : wanted && _loader.item.show)
+            // per-slot primitives so a placement change invalidates one divider, not a map rebuilt for every widget
             readonly property int visibleIndex: zone.visibleKeys.indexOf(key)
             readonly property bool hasNext: visibleIndex >= 0
                 && visibleIndex + 1 < zone.visibleKeys.length
@@ -82,22 +83,35 @@ Row {
                 && currentMeta.group !== nextMeta.group
             height: parent.height
             spacing: 0
-            // Read the plain `show`, never `.visible` — Item.visible cascades
-            // from ancestors, so binding a row's visible to its descendant's is
-            // a deadlock.
+            // child visible cascades from this row, so use its non-cascading layout state
             visible: key.length > 0 && show
             onShowChanged: zone._queueVisibilitySync()
-            Component.onCompleted: zone._queueVisibilitySync()
+            onWantedChanged: {
+                if (wanted) {
+                    _unload.stop()
+                    keepLoaded = true
+                } else if (keepLoaded) {
+                    _unload.restart()
+                }
+            }
+            Component.onCompleted: {
+                keepLoaded = wanted
+                zone._queueVisibilitySync()
+            }
+
+            Timer {
+                id: _unload
+                interval: 300
+                onTriggered: _slot.keepLoaded = false
+            }
 
             Loader {
                 id: _loader
                 anchors.verticalCenter: parent.verticalCenter
-                // Native text often reports fractional implicit widths. Round
-                // the slot, otherwise every later 1px divider inherits a
-                // different subpixel phase and appears alternately thin/thick.
+                // round the slot: fractional implicit widths give every later 1px divider a different subpixel phase
                 width: item ? Math.ceil(item.implicitWidth) : 0
                 property string loadedKey: ""
-                active: _slot.key.length > 0
+                active: _slot.keepLoaded && _slot.key.length > 0
                 sourceComponent: _slot.key.length > 0 ? zone.widgetComponents[_slot.key] : null
                 onSourceComponentChanged: loadedKey = ""
                 onActiveChanged: if (!active) loadedKey = ""

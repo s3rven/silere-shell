@@ -4,6 +4,7 @@ import QtQuick
 import "../../config"
 import "../../services"
 import "../common"
+import "controls"
 
 Item {
     id: root
@@ -13,10 +14,12 @@ Item {
     property real bottomRadius: 0
     property real cardInset:    1
     property real cardLeftBleed: 0
+    property bool reserveExpandSlot: false
 
     width: parent ? parent.width : 0
     implicitHeight: _slider.height + _options.height
     height: implicitHeight
+    readonly property bool _optionsShown: root.open || _options.height > 0.5
 
     function _focusCurrentSink(): void {
         if (!root.open) return
@@ -48,7 +51,7 @@ Item {
         y: 0
         width: parent.width
         topRadius:    root.topRadius
-        bottomRadius: root.open ? 0 : root.bottomRadius
+        bottomRadius: root._optionsShown ? 0 : root.bottomRadius
         cardInset:    root.cardInset
         cardLeftBleed: root.cardLeftBleed
         glyph: Audio.icon
@@ -60,6 +63,7 @@ Item {
         glyphActionName: Audio.muted ? "Unmute" : "Mute"
         expandable: Audio.sinkCount > 1
         expanded: root.open
+        reserveExpandSlot: root.reserveExpandSlot
         onGlyphClicked: Audio.toggleMute()
         onExpandToggled: {
             root.open = !root.open
@@ -68,51 +72,39 @@ Item {
         onMoved: (v) => Audio.setVolume(v)
     }
 
-    Item {
+    CollapsibleSection {
         id: _options
-        anchors.top: _slider.bottom
+        y: _slider.height
         width: parent.width
-        height: root.open ? _optCol.implicitHeight + 4 : 0
-        clip: true
-        visible: height > 0.5
-
-        MotionBehavior on height {
-            NumberAnimation {
-                duration:    root.open ? Motion.medium : Motion.fast
-                easing.type: root.open ? Easing.OutQuart : Easing.InCubic
-            }
-        }
+        expanded: root.open
 
         Column {
             id: _optCol
             width: parent.width
-            y:       root.open ? 0 : -8
-            opacity: root.open ? 1.0 : 0.0
+            bottomPadding: 2
 
-            MotionBehavior on y {
-                NumberAnimation {
-                    duration:    root.open ? Motion.medium : Motion.fast
-                    easing.type: root.open ? Easing.OutQuart : Easing.InCubic
-                }
+            Hairline {
+                x: 14
+                width: parent.width - 28
+                color: Theme.menuDivider
             }
-            MotionBehavior on opacity {
-                NumberAnimation {
-                    duration:    root.open ? Motion.medium : Motion.fast
-                    easing.type: root.open ? Easing.OutCubic : Easing.InCubic
-                }
-            }
+            Item { width: parent.width; height: 1 }
 
             Repeater {
                 id: _sinkRepeater
-                model: root.open ? Audio.sinkModel : []
-                delegate: Item {
+                model: root._optionsShown ? Audio.sinkModel : []
+                delegate: InlineOptionRow {
                     id: _opt
                     required property var modelData
                     required property int index
                     readonly property bool active: modelData.value === Audio.sink
 
-                    width:  _optCol.width
-                    height: 36
+                    width: _optCol.width
+                    glyph: "󰓃"
+                    label: modelData.label
+                    status: active ? "Current" : ""
+                    selected: active
+                    accessibleDescription: active ? "Current output" : "Output device"
 
                     function _choose(): void {
                         Audio.setSink(_opt.modelData.value)
@@ -120,13 +112,8 @@ Item {
                         _slider.forceActiveFocus()
                     }
 
-                    Accessible.role: Accessible.ListItem
-                    Accessible.name: _opt.modelData.label
-                    Accessible.description: _opt.active ? "Current output" : "Output device"
                     activeFocusOnTab: root.open
-                    Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) _opt._choose(); event.accepted = true }
-                    Keys.onReturnPressed: event => { if (!event.isAutoRepeat) _opt._choose(); event.accepted = true }
-                    Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) _opt._choose(); event.accepted = true }
+                    onTriggered: _choose()
                     Keys.onEscapePressed: event => { root.open = false; _slider.forceActiveFocus(); event.accepted = true }
                     Keys.onUpPressed:     event => { root._focusSinkIndex(_opt.index - 1); event.accepted = true }
                     Keys.onDownPressed:   event => { root._focusSinkIndex(_opt.index + 1); event.accepted = true }
@@ -137,46 +124,6 @@ Item {
                         } else if (event.key === Qt.Key_End) {
                             root._focusSinkIndex(_sinkRepeater.count - 1)
                             event.accepted = true
-                        }
-                    }
-
-                    HoverHandler { id: _optHov; cursorShape: Qt.PointingHandCursor }
-                    TapHandler { onTapped: _opt._choose() }
-
-                    RowHoverBg {
-                        anchors.fill: parent
-                        bottomRadius: _opt.index === Audio.sinkModel.length - 1 ? root.bottomRadius : 0
-                        cardInset:    root.cardInset
-                        active:       _optHov.hovered || _opt.activeFocus
-                        focusActive:  _opt.activeFocus
-                        fillOpacity:  _opt.activeFocus ? 0.13 : 0.08
-                    }
-
-                    Rectangle {
-                        anchors.left: parent.left; anchors.leftMargin: 2
-                        anchors.verticalCenter: parent.verticalCenter
-                        width:   3
-                        height:  _opt.active ? 16 : 0
-                        radius:  2
-                        color:   Theme.accent
-                        opacity: _opt.active ? 0.90 : 0.0
-                        MotionBehavior on height  {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-                        MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
-                    }
-
-                    ShellText {
-                        anchors.left: parent.left;  anchors.leftMargin: 42
-                        anchors.right: parent.right; anchors.rightMargin: 12
-                        anchors.verticalCenter: parent.verticalCenter
-                        text:       _opt.modelData.label
-                        elide:      Text.ElideRight
-                        color: _opt.active
-                            ? Theme.accent
-                            : Theme.withAlpha(Theme.text, (_optHov.hovered || _opt.activeFocus) ? 0.90 : 0.70)
-                        font.pixelSize: Settings.fontSize
-                        font.weight:    _opt.active ? Font.DemiBold : Font.Normal
-                        MotionBehavior on color {
-                            ColorAnimation { duration: Motion.fast }
                         }
                     }
                 }

@@ -8,8 +8,15 @@ Singleton {
     id: root
     property bool open:    false
     property real anchorX: 10
-    property var  triggerScreen: null
-    property int  activeTab: 0
+    property ShellScreen triggerScreen: null
+    readonly property int homeTab: 0
+    readonly property int settingsTab: 1
+    readonly property int recentTab: 2
+    property int _activeTab: homeTab
+    readonly property int activeTab: _activeTab
+    readonly property bool homeActive: open && activeTab === homeTab
+    readonly property bool settingsActive: open && activeTab === settingsTab
+    readonly property bool recentActive: open && activeTab === recentTab
 
     property string settingsSection: "theme"
 
@@ -52,9 +59,7 @@ Singleton {
             { glyph: "󰍉", label: "Interface", section: "interface",
               description: "Font, scale, contrast, motion, and display routing" },
             { glyph: "󰚰", label: "Updates", section: "updates",
-              description: "Shell releases and system packages" },
-            { glyph: "󰦛", label: "Maintenance", section: "system",
-              description: "Review changes and restore defaults" }
+              description: "Shell releases and system packages" }
         ]}
     ]
 
@@ -69,13 +74,20 @@ Singleton {
     }
 
     function setSettingsSection(s: string): void {
-        if (s !== settingsSection) settingsSection = s
+        const next = root._flatSections.indexOf(s) >= 0 ? s : "theme"
+        if (next !== settingsSection) settingsSection = next
     }
 
     signal tabRequested(int index)
 
     function _validTab(index: int): int {
-        return Math.max(0, Math.min(2, index))
+        return Math.max(homeTab, Math.min(recentTab, index))
+    }
+
+    function selectTab(index: int): int {
+        const tab = root._validTab(index)
+        if (root._activeTab !== tab) root._activeTab = tab
+        return tab
     }
 
     function toggleAt(x: real, screen): void {
@@ -85,7 +97,7 @@ Singleton {
         }
         anchorX = x
         triggerScreen = screen ?? null
-        activeTab = 0
+        _activeTab = homeTab
         open = true
     }
     function close(): void {
@@ -93,9 +105,8 @@ Singleton {
         if (open) open = false
     }
     function showTab(index: int): void {
-        const tab = _validTab(index)
+        const tab = selectTab(index)
         // set before opening: the lazy surface can't catch a pre-creation signal
-        activeTab = tab
         if (!open) open = true
         tabRequested(tab)
     }
@@ -106,25 +117,24 @@ Singleton {
         function toggle(): void {
             if (root.open) { root.close(); return }
             root.triggerScreen = null
-            root.activeTab = 0
+            root._activeTab = root.homeTab
             root.open = true
         }
         function close(): void { root.close() }
         function tab(index: int): string {
-            if (index < 0 || index > 2)
+            if (index < root.homeTab || index > root.recentTab)
                 return "unknown menu tab " + index + "; valid: 0 (home), 1 (settings), 2 (recent)"
             root.triggerScreen = null
             root.showTab(index)
             return "ok"
         }
-        // arbitrary strings arrive here, so validate at the boundary — setSettingsSection doesn't.
         // keep `section: "` out of any literal below: ci-lint harvests nav entries by that pattern
         function settings(name: string): string {
             if (root._flatSections.indexOf(name) < 0)
                 return "unknown settings page '" + name + "'; valid: " + root._flatSections.join(", ")
             root.triggerScreen = null
             root.setSettingsSection(name)
-            root.showTab(1)
+            root.showTab(root.settingsTab)
             return "ok"
         }
     }

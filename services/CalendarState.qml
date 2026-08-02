@@ -9,7 +9,7 @@ Singleton {
 
     property bool open: false
     property real anchorX: 0
-    property var  triggerScreen: null
+    property ShellScreen triggerScreen: null
 
     function toggleAt(x: real, screen): void {
         if (open) { close(); return }
@@ -37,6 +37,17 @@ Singleton {
     property int _saveFailureCount: 0
 
     function markKey(y: int, m: int, d: int): string { return y + "-" + (m + 1) + "-" + d }
+    function _validMarkKey(value): bool {
+        const match = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(value))
+        if (!match) return false
+        const year = Number(match[1])
+        const month = Number(match[2])
+        const day = Number(match[3])
+        if (year < 1 || month < 1 || month > 12 || day < 1) return false
+        const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)
+        const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        return day <= days[month - 1]
+    }
     function toggleMark(y: int, m: int, d: int): void {
         const k = markKey(y, m, d)
         const next = {}
@@ -44,14 +55,14 @@ Singleton {
         if (marks[k] !== true) next[k] = true
         marks = next
         _saveDirty = true
-        ShellSettings._ensureConfigDir()
+        ConfigStore.ensureDirectory()
         _saveTimer.restart()
     }
 
     function _flush(): void {
-        if (!ShellSettings._configDirReady) {
+        if (!ConfigStore.ready) {
             root._savePendingForDir = true
-            ShellSettings._ensureConfigDir()
+            ConfigStore.ensureDirectory()
             return
         }
         const json = JSON.stringify({ marks: Object.keys(root.marks) })
@@ -75,15 +86,15 @@ Singleton {
     }
 
     Connections {
-        target: ShellSettings
-        function on_ConfigDirReadyChanged() {
-            if (ShellSettings._configDirReady && root._savePendingForDir) root._flush()
+        target: ConfigStore
+        function onReadyChanged() {
+            if (ConfigStore.ready && root._savePendingForDir) root._flush()
         }
     }
 
     FileView {
         id: _marksFile
-        path: ShellSettings._configDir + "/calendar-marks.json"
+        path: ConfigStore.calendarMarksPath
         atomicWrites: true
         blockWrites:  true
         printErrors:  false
@@ -94,7 +105,7 @@ Singleton {
                 const next = {}
                 if (Array.isArray(j.marks))
                     for (let i = 0; i < j.marks.length; i++)
-                        if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(String(j.marks[i]))) next[j.marks[i]] = true
+                        if (root._validMarkKey(j.marks[i])) next[j.marks[i]] = true
                 root.marks = next
                 root._lastSavedJson = raw
             } catch (e) { console.warn("silere-shell: bad calendar-marks.json, ignoring:", String(e)) }

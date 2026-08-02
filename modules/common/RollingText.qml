@@ -10,12 +10,13 @@ Item {
 
     clip: _roll.running
     anchors.verticalCenter: parent ? parent.verticalCenter : undefined
-    // Whole px so neighbours in a Row don't land on fractional pixels.
+    // whole px so neighbours in a Row don't land on fractional pixels
     implicitWidth:  Math.ceil(_main.implicitWidth)
     implicitHeight: _main.implicitHeight
     width:  implicitWidth
     height: implicitHeight
     MotionBehavior on width {
+        gate: root._ready
         NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
     }
 
@@ -23,14 +24,37 @@ Item {
 
     property string _shown: ""
     property bool   _ready: false
-    Component.onCompleted: { _shown = text; _ready = true }
+    Component.onCompleted: {
+        _shown = text
+        Qt.callLater(function() { if (root) root._ready = true })
+    }
+
+    function _settle(): void {
+        _roll.stop()
+        _shown = text
+        _main.rise = 0
+        _main.opacity = 1
+        _ghost.rise = 0
+        _ghost.opacity = 0
+    }
 
     onTextChanged: {
         if (_shown === text) return
-        if (!_ready || ShellSettings.reduceMotion) { _shown = text; return }
+        if (!_ready || !visible || ShellSettings.reduceMotion) {
+            _settle()
+            return
+        }
         _ghost.text = _shown
         _shown = text
         _roll.restart()
+    }
+    onVisibleChanged: if (!visible && _ready) _settle()
+
+    Connections {
+        target: ShellSettings
+        function onReduceMotionChanged() {
+            if (ShellSettings.reduceMotion && root._ready) root._settle()
+        }
     }
 
     ShellText {
@@ -41,9 +65,7 @@ Item {
         font.pixelSize: Settings.fontSize
         property real rise: 0
         transform: Translate { y: _main.rise }
-        MotionBehavior on color {
-            ColorAnimation { duration: Motion.color }
-        }
+        ColorFade on color {}
     }
 
     ShellText {
@@ -55,9 +77,7 @@ Item {
         font.pixelSize: Settings.fontSize
         property real rise: 0
         transform: Translate { y: _ghost.rise }
-        MotionBehavior on color {
-            ColorAnimation { duration: Motion.color }
-        }
+        ColorFade on color {}
     }
 
     ParallelAnimation {

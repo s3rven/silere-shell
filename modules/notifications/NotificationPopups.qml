@@ -22,14 +22,18 @@ PanelWindow {
         ? 4 * Math.round(targetScreen.width * (1.0 - ShellSettings.barWidth) / 8)
         : 0
     readonly property real _edgeMargin: ShellSettings.barFloating ? Math.max(0, _barSideGap) : 10
+    readonly property int _barClearance: (ShellSettings.barFloating ? 4 : 0)
+        + ShellSettings.barHeight + 6
+    readonly property int _availableH: targetScreen
+        ? Math.max(64, Math.floor(targetScreen.height - _barClearance - 12)) : 640
+    readonly property int _availableContentH: Math.max(48,
+        _availableH - 12 - _shadowPad)
 
     implicitWidth:  _cardW + 24 + _shadowPad
-    // every implicitHeight change reconfigures the layer surface, and card arrival/
-    // dismiss animates height for ~160ms — quantizing to a coarse step means the
-    // surface only reconfigures on a boundary crossing, not once per frame. Ceil
-    // never clips, and input is masked to outerCol so the slack costs nothing.
+    // quantized: every implicitHeight change reconfigures the layer surface, and arrival/dismiss animates height for ~160ms
     readonly property int _contentH: Math.max(1, outerCol.implicitHeight + 12 + _shadowPad)
-    implicitHeight: Math.max(64, Math.ceil(win._contentH / 64) * 64)
+    implicitHeight: Math.min(_availableH,
+        Math.max(64, Math.ceil(win._contentH / 64) * 64))
 
     visible: ShellSettings.notifPopupEnabled && Notifications.activeCount > 0
 
@@ -45,8 +49,7 @@ PanelWindow {
         return containerWidth - itemWidth
     }
 
-    // inline components cannot reach the enclosing file's ids, so alignment
-    // arrives as flags rather than a call back into _alignedX
+    // inline components can't reach the enclosing file's ids, so alignment arrives as flags
     component NotifChip: Item {
         id: chip
 
@@ -96,7 +99,10 @@ PanelWindow {
         }
 
         MotionBehavior on height {
-            NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
+            NumberAnimation {
+                duration: chip.shown ? Motion.medium : Motion.fast
+                easing.type: chip.shown ? Easing.OutQuart : Easing.InCubic
+            }
         }
 
         Rectangle {
@@ -109,13 +115,12 @@ PanelWindow {
             height: 24
             radius: 12
             antialiasing: true
-            // the popup window is transparent, so an alpha tint here would let the
-            // desktop through instead of shading the chip — blend into the base
+            // the popup window is transparent, so an alpha tint would let the desktop through - blend into the base
             color: chip.pressed ? Theme.mix(Theme.menuControl, chip.tint, 0.26)
                 : _hover.hovered ? Theme.mix(Theme.menuControl, chip.tint, 0.15) : Theme.menuControl
             scale: chip.pressed ? 0.97 : 1
 
-            MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
+            ColorFade on color {}
             MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
             OutlineBorder {
@@ -125,7 +130,7 @@ PanelWindow {
                     ? Theme.withAlpha(chip.tint, 0.72)
                     : _hover.hovered
                     ? Theme.withAlpha(chip.tint, 0.42) : Theme.menuControlLine
-                MotionBehavior on outlineColor {ColorAnimation { duration: Motion.fast } }
+                ColorFade on outlineColor {}
             }
 
             HoverHandler { id: _hover; cursorShape: Qt.PointingHandCursor }
@@ -142,7 +147,7 @@ PanelWindow {
                     color: _hover.hovered ? chip.tint
                         : Theme.withAlpha(Theme.menuTextMuted, 0.76)
                     font.pixelSize: Settings.fontSize - 1
-                    MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
+                    ColorFade on color {}
                 }
 
                 ShellText {
@@ -152,7 +157,7 @@ PanelWindow {
                         : Theme.withAlpha(Theme.menuTextMuted, 0.86)
                     font.pixelSize: Settings.fontSize - 2
                     font.weight: Font.Medium
-                    MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
+                    ColorFade on color {}
                 }
             }
         }
@@ -215,9 +220,7 @@ PanelWindow {
         }
         if (pending.length === 0) return
 
-        // the cascade draws from the tracked model but the snapshot from the
-        // service list; a card outside the snapshot can never report its exit,
-        // so counting it would leave the batch one short of completing
+        // a card outside the snapshot can never report its exit, so counting it leaves the batch one short
         const items = []
         for (let i = 0; i < stack.count; i++) {
             const slot = stack.itemAt(i)
@@ -253,8 +256,7 @@ PanelWindow {
         function onNotifMaxVisibleChanged(): void { win._showAll = false }
     }
 
-    // a card removed the moment its own exit ends would snap the still-animating cards
-    // below it upward, so the whole batch is held and dropped once the last one lands
+    // removing a card the moment its own exit ends snaps the still-animating cards below it upward
     function _noteBatchExit(): void {
         if (win._batchExits <= 0) return
         win._batchExits--
@@ -282,7 +284,7 @@ PanelWindow {
             if (win._cascadeIdx >= win._cascadeItems.length) {
                 running = false
                 win._cascadeItems = []
-                // Don't clear the model here — each card finishes its own peel.
+                // don't clear the model here — each card finishes its own peel
                 if (win._pendingDismissAll > 0) _cascadeSafety.restart()
                 return
             }
@@ -315,6 +317,7 @@ PanelWindow {
         spacing: 6
 
         NotifChip {
+            id: _clearChip
             shown:          Notifications.activeCount > 1 || win._dismissing
             alignLeft:      win._left
             alignCenter:    win._center
@@ -325,85 +328,112 @@ PanelWindow {
             onTriggered:    win.dismissAll()
         }
 
-        Column {
-            id: cardCol
+        Item {
+            id: _cardViewport
             width: parent.width
-            spacing: 0
             visible: height > 0.5
+            height: Math.min(cardCol.implicitHeight, Math.max(48,
+                win._availableContentH - _clearChip.height - _moreChip.height
+                - outerCol.spacing * 2))
 
-            Repeater {
-                id: stack
-                model: Notifications.popupModel
+            Flickable {
+                id: _cardScroll
+                anchors.fill: parent
+                contentWidth: width
+                contentHeight: cardCol.implicitHeight
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                flickDeceleration: 1800
+                maximumFlickVelocity: 2200
+                interactive: contentHeight > height + 1
 
-                Item {
-                    id: _slot
-                    required property var modelData
-                    required property int index
+                Column {
+                    id: cardCol
+                    width: _cardScroll.width
+                    spacing: 0
 
-                    readonly property bool shouldLoad: win._showAll
-                        || ShellSettings.notifMaxVisible <= 0
-                        || index < ShellSettings.notifMaxVisible
-                    readonly property var cardItem: _cardLoader.item
-                    property real timeoutStartedAt: 0
-                    readonly property real _gap: index < stack.count - 1 ? 6 : 0
+                    Repeater {
+                        id: stack
+                        model: Notifications.popupModel
 
-                    width: win._cardW
-                    height: cardItem
-                        ? cardItem.implicitHeight + _gap * cardItem.collapseRatio : 0
-                    visible: shouldLoad
+                        Item {
+                            id: _slot
+                            required property var modelData
+                            required property int index
 
-                    x: win._alignedX(parent.width, width)
+                            readonly property bool shouldLoad: win._showAll
+                                || ShellSettings.notifMaxVisible <= 0
+                                || index < ShellSettings.notifMaxVisible
+                            readonly property var cardItem: _cardLoader.item
+                            property real timeoutStartedAt: 0
+                            readonly property real _gap: index < stack.count - 1 ? 6 : 0
 
-                    Component.onCompleted: {
-                        if (shouldLoad) timeoutStartedAt = Notifications.updateTimeFor(modelData.id)
-                    }
-                    onShouldLoadChanged: {
-                        if (shouldLoad) timeoutStartedAt = Date.now()
-                        else timeoutStartedAt = 0
-                    }
+                            width: win._cardW
+                            height: cardItem
+                                ? cardItem.implicitHeight + _gap * cardItem.collapseRatio : 0
+                            visible: shouldLoad
 
-                    Connections {
-                        target: Notifications
-                        function onContentUpdated(notifId: int): void {
-                            if (notifId === _slot.modelData.id && _slot.shouldLoad)
-                                _slot.timeoutStartedAt = Date.now()
-                        }
-                    }
+                            x: win._alignedX(parent.width, width)
 
-                    Loader {
-                        id: _cardLoader
-                        anchors.top: parent.top
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        height: _slot.cardItem ? _slot.cardItem.implicitHeight : 0
-                        active: _slot.shouldLoad && _slot.timeoutStartedAt > 0
+                            Component.onCompleted: {
+                                if (shouldLoad) timeoutStartedAt = Notifications.updateTimeFor(modelData.id)
+                            }
+                            onShouldLoadChanged: {
+                                if (shouldLoad) timeoutStartedAt = Date.now()
+                                else timeoutStartedAt = 0
+                            }
 
-                        sourceComponent: NotificationCard {
-                            notification: _slot.modelData
-                            notifId: _slot.modelData.id
-                            createdAt: Notifications.timeFor(_slot.modelData.id)
-                            timeoutStartedAt: _slot.timeoutStartedAt
-                            slideDir: win._slideDir
-                            quietPaint: win._quietPaint
-                            stackSize: win._visibleCards
-
-                            onLeaving: win._noteLeaving()
-
-                            onDismissRequested: (id, notification, expired) => {
-                                if (win._batchExits > 0
-                                        && win._pendingDismissItems.some(it => it.id === id)) {
-                                    win._noteBatchExit()
-                                    return
+                            Connections {
+                                target: Notifications
+                                function onContentUpdated(notifId: int): void {
+                                    if (notifId === _slot.modelData.id && _slot.shouldLoad)
+                                        _slot.timeoutStartedAt = Date.now()
                                 }
-                                Notifications.dismissObject(id, notification, expired)
+                            }
+
+                            Loader {
+                                id: _cardLoader
+                                anchors.top: parent.top
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                height: _slot.cardItem ? _slot.cardItem.implicitHeight : 0
+                                active: _slot.shouldLoad && _slot.timeoutStartedAt > 0
+
+                                sourceComponent: NotificationCard {
+                                    notification: _slot.modelData
+                                    notifId: _slot.modelData.id
+                                    createdAt: Notifications.timeFor(_slot.modelData.id)
+                                    timeoutStartedAt: _slot.timeoutStartedAt
+                                    slideDir: win._slideDir
+                                    quietPaint: win._quietPaint
+                                    stackSize: win._visibleCards
+
+                                    onLeaving: win._noteLeaving()
+
+                                    onDismissRequested: (id, notification, expired) => {
+                                        if (win._batchExits > 0
+                                                && win._pendingDismissItems.some(it => it.id === id)) {
+                                            win._noteBatchExit()
+                                            return
+                                        }
+                                        Notifications.dismissObject(id, notification, expired)
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
+
+            ListEdgeLines {
+                anchors.fill: _cardScroll
+                visible: _cardScroll.interactive
+                list: _cardScroll
+            }
         }
 
         NotifChip {
+            id: _moreChip
             readonly property int _extra: !win._showAll && ShellSettings.notifMaxVisible > 0
                 ? Math.max(0, Notifications.activeCount - ShellSettings.notifMaxVisible) : 0
             shown:          _extra > 0

@@ -9,7 +9,7 @@ Singleton {
     property bool open: false
     property real anchorX: 0
     property bool barBottom: false
-    property var  triggerScreen: null
+    property ShellScreen triggerScreen: null
     // QtObject (not var) so the reference auto-nulls when the SNI item dies with the menu open
     property QtObject menuHandle: null
 

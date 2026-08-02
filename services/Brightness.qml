@@ -13,10 +13,13 @@ Singleton {
     property var devices:           []
     property bool ready:            false
     readonly property bool toolAvailable:  SystemTools.hasBrightnessctl
+    readonly property bool controllable: toolAvailable && ready
+        && maxBrightness > 0 && _device.length > 0
     property bool _listed: false
     property bool _currentValid: false
     property bool _maxValid: false
     property int _reprobeAttempts: 0
+    property bool _applyQueued: false
 
     readonly property string deviceChoice: {
         const wanted = ShellSettings.brightnessDevice
@@ -33,7 +36,8 @@ Singleton {
         return out
     }
 
-    readonly property real   pct:   maxBrightness > 0 ? currentBrightness / maxBrightness : 0
+    readonly property real   pct: maxBrightness > 0
+        ? Math.max(0, Math.min(1, currentBrightness / maxBrightness)) : 0
     readonly property int    percent: Math.round(pct * 100)
     readonly property int    stepPct: 5
     readonly property string label:   `${percent}%`
@@ -52,17 +56,17 @@ Singleton {
     }
 
     function setPercent(p: int): void {
-        if (!toolAvailable || maxBrightness <= 0 || !_device) return
+        if (!controllable) return
         const clamped = Math.max(1, Math.min(100, Math.round(p)))
+        if (clamped === pendingPercent) return
         pendingPercent = clamped
         currentBrightness = Math.max(1, Math.round(maxBrightness * (clamped / 100)))
         _applyDebounce.restart()
     }
 
     function refresh(): void {
-        if (!toolAvailable || !_device || _applyDebounce.running) return
+        if (!toolAvailable || !_device || _applyDebounce.running || _setProc.running) return
         _brightnessFile.reload()
-        _maxBrightnessFile.reload()
     }
 
     Component.onCompleted: _init()
@@ -134,12 +138,17 @@ Singleton {
 
         const next = chosen ? chosen.name : ""
         if (root._device === next) {
-            if (next.length > 0) root.refresh()
+            if (next.length > 0) {
+                root.refresh()
+                if (!root._maxValid) _maxBrightnessFile.reload()
+            }
             return
         }
         root.ready = false
         root._currentValid = false
         root._maxValid = false
+        root._applyQueued = false
+        _applyDebounce.stop()
         root.currentBrightness = 0
         root.maxBrightness = 0
         root._device = next
@@ -197,28 +206,34 @@ Singleton {
             const value = root._readValue(_brightnessFile)
             root._currentValid = value >= 0
             if (root._currentValid) root.currentBrightness = value
-            else root._queueReprobe()
+            else {
+                root.currentBrightness = 0
+                root._queueReprobe()
+            }
             root._syncReady()
         }
         onLoadFailed: {
             root._currentValid = false
+            root.currentBrightness = 0
             root._syncReady()
             root._queueReprobe()
         }
-        // gate like refresh(): a stale readback landing mid-debounce would clobber the optimistic value and drop queued scroll steps
-        onFileChanged: if (!_applyDebounce.running) reload()
+        // stale readback during a pending write would discard queued scroll steps
+        onFileChanged: if (!_applyDebounce.running && !_setProc.running) reload()
     }
 
     FileView {
         id: _maxBrightnessFile
         path: root._device.length > 0 ? "/sys/class/backlight/" + root._device + "/max_brightness" : ""
-        watchChanges: root._device.length > 0
         printErrors: false
         onLoaded: {
             const value = root._readValue(_maxBrightnessFile)
             root._maxValid = value > 0
             if (root._maxValid) root.maxBrightness = value
-            else root._queueReprobe()
+            else {
+                root.maxBrightness = 0
+                root._queueReprobe()
+            }
             root._syncReady()
         }
         onLoadFailed: {
@@ -227,21 +242,31 @@ Singleton {
             root._syncReady()
             root._queueReprobe()
         }
-        onFileChanged: reload()
     }
 
     Timer {
         id: _applyDebounce
         interval: 50
         onTriggered: {
-            if (!root.toolAvailable || !root._device) return
-            if (_setProc.running) { restart(); return }
+            if (!root.controllable) return
+            if (_setProc.running) {
+                root._applyQueued = true
+                return
+            }
+            root._applyQueued = false
             _setProc.exec(["brightnessctl", "-d", root._device, "set", `${root.pendingPercent}%`, "-q"])
         }
     }
 
     Process {
         id: _setProc
-        onExited: Qt.callLater(root.refresh)
+        onExited: {
+            if (root._applyQueued) {
+                root._applyQueued = false
+                if (!_applyDebounce.running) _applyDebounce.restart()
+            } else if (!_applyDebounce.running) {
+                Qt.callLater(root.refresh)
+            }
+        }
     }
 }

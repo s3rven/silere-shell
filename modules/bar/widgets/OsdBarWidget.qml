@@ -20,10 +20,7 @@ Item {
     property real _y:    _slide
     property real _bump: 1.0
 
-    // State is set imperatively from OsdBarState.showing (synchronous, in the
-    // same call-stack as the dismiss). A passive `active` binding batches the
-    // flip, so a stray audio signal landing a frame after dismiss fired
-    // exit→enter — the OSD fading out, sweeping back in, then leaving again.
+    // set imperatively, inside the dismiss call-stack: a passive active binding batches the flip, so a late audio signal replays exit then enter
     state: "hidden"
     function _sync(): void {
         state = _shouldShow ? "visible" : "hidden"
@@ -140,25 +137,12 @@ Item {
                 }
                 height: parent.height
                 radius: parent.radius
+                color: OsdBarState.muted
+                    ? Theme.withAlpha(Theme.subtext, 0.58)
+                    : Theme.withAlpha(OsdBarState.barColor, 0.88)
 
-                gradient: Gradient {
-                    orientation: Gradient.Horizontal
-                    GradientStop {
-                        position: 0.0
-                        color: OsdBarState.muted
-                            ? Theme.withAlpha(Theme.subtext, 0.40)
-                            : Theme.withAlpha(OsdBarState.barColor, 0.65)
-                    }
-                    GradientStop {
-                        position: 1.0
-                        color: OsdBarState.muted
-                            ? Theme.withAlpha(Theme.subtext, 0.68)
-                            : Theme.withAlpha(OsdBarState.barColor, 0.95)
-                    }
-                }
-
-                Behavior on width {
-                    enabled: !ShellSettings.reduceMotion && root.state === "visible" && !OsdBarState.rapid
+                MotionBehavior on width {
+                    gate: root.state === "visible" && !OsdBarState.rapid
                     NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
                 }
             }

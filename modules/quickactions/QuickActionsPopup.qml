@@ -37,10 +37,6 @@ PanelWindow {
         function onBarPositionChanged() { if (QuickActionsState.open) QuickActionsState.close() }
     }
     Connections {
-        target: MenuState
-        function onOpenChanged() { if (MenuState.open && QuickActionsState.open) QuickActionsState.close() }
-    }
-    Connections {
         target: QuickActionsState
         function onOpenChanged() {
             if (QuickActionsState.open) {
@@ -64,17 +60,7 @@ PanelWindow {
         }
     }
 
-    Loader {
-        active: (QuickActionsState.open || card.opacity > 0.001)
-            && ShellSettings.barFloating && ShellSettings.barShadow
-        anchors.fill: card
-        opacity: card.opacity
-        z: -1
-        sourceComponent: FloatingShadow {
-            radius: card.radius
-            atBottom: card.barBottom
-        }
-    }
+    PopupShadow { card: card }
 
     component QuickActionRow: Item {
         id: _row
@@ -162,7 +148,7 @@ PanelWindow {
                 ? Theme.withAlpha(Theme.accent, 0.14)
                 : (_rowHover.hovered || _row.activeFocus)
                     ? Theme.withAlpha(Theme.menuHover, 0.12) : "transparent"
-            MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
+            ColorFade on color {}
         }
 
         Rectangle {
@@ -188,7 +174,7 @@ PanelWindow {
             text: _row.glyph
             color: _row.active ? Theme.withAlpha(Theme.accent, 0.95) : Theme.withAlpha(Theme.subtext, 0.85)
             font.pixelSize: Settings.fontSize + 1
-            MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
+            ColorFade on color {}
         }
 
         ShellText {
@@ -214,12 +200,12 @@ PanelWindow {
             antialiasing: true
             color: _row.active
                 ? Theme.withAlpha(Theme.accent, 0.13) : "transparent"
-            MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
+            ColorFade on color {}
 
             OutlineBorder {
                 radius: _state.radius
                 outlineColor: _row.active ? Theme.withAlpha(Theme.accent, 0.22) : "transparent"
-                MotionBehavior on outlineColor {ColorAnimation { duration: Motion.fast } }
+                ColorFade on outlineColor {}
             }
 
             ShellText {
@@ -229,7 +215,7 @@ PanelWindow {
                 color: _row.active ? Theme.mix(Theme.accent, Theme.text, 0.18) : Theme.withAlpha(Theme.subtext, 0.62)
                 font.pixelSize: Settings.fontSize - 2
                 font.weight: Font.Medium
-                MotionBehavior on color {ColorAnimation { duration: Motion.fast } }
+                ColorFade on color {}
             }
         }
     }

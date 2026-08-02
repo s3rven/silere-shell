@@ -12,6 +12,7 @@ Pill {
         && (canRead ? Network.available : true)
     property real _pulseOpacity: 1.0
     readonly property real _baseOpacity: !show ? 0.0 : canRead ? 1.0 : 0.45
+    readonly property bool layoutVisible: show || opacity > 0.001
 
     readonly property bool _disconnected: ShellSettings.barShowNetwork && canRead && Network.available && !Network.connected && !ShellSettings.reduceMotion
     property bool _pulseSettled: false
@@ -53,7 +54,7 @@ Pill {
     }
 
     opacity:        _baseOpacity * _pulseOpacity
-    visible:        show || opacity > 0
+    visible:        layoutVisible
     // the icon cell is a fixed width: one glyph fits, two overflow it
     glyph:          Network.icon
     maxTextWidth:   compact ? 150 : 260
@@ -61,7 +62,7 @@ Pill {
     activeFocusOnTab: show
     Accessible.focusable: true
 
-    Behavior on opacity { enabled: !root._isPulsing; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+    MotionBehavior on opacity { gate: !root._isPulsing; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
     glyphColor:  canRead && Network.connected ? Theme.text : Theme.subtext
     textColor:   Theme.subtext
     accessibleName: !canRead ? "Network backend unavailable"
@@ -98,7 +99,7 @@ Pill {
     Timer {
         id: _pulseSettle
         interval: 30000
-        running: root._disconnected && !root._pulseSettled
+        running: root.barActive && root._disconnected && !root._pulseSettled
         onTriggered: root._pulseSettled = true
     }
     Connections {

@@ -88,6 +88,12 @@ PanelWindow {
                 property real _slide: _hiddenSlide
                 property real _bump: 1.0
 
+                onClosingChanged: {
+                    if (!closing) return
+                    _bumpAnim.stop()
+                    card._bump = 1.0
+                }
+
                 width: pillW
                 height: 0
                 visible: osd._active && (_ready || _op > 0.001 || height > 0.5)
@@ -224,50 +230,12 @@ PanelWindow {
                                     height: parent.height
                                     radius: parent.radius
                                     clip: true
+                                    color: card.muted
+                                        ? Theme.withAlpha(Theme.subtext, 0.58)
+                                        : Theme.withAlpha(card.barColor, 0.88)
 
-                                    property real _shimmerPhase: 0
-
-                                    gradient: Gradient {
-                                        orientation: Gradient.Horizontal
-                                        GradientStop {
-                                            position: 0.0
-                                            color: card.muted
-                                                ? Theme.withAlpha(Theme.subtext, 0.40)
-                                                : Theme.withAlpha(card.barColor, 0.65)
-                                        }
-                                        GradientStop {
-                                            position: 1.0
-                                            color: card.muted
-                                                ? Theme.withAlpha(Theme.subtext, 0.68)
-                                                : Theme.withAlpha(card.barColor, 0.95)
-                                        }
-                                    }
-
-                                    Rectangle {
-                                        visible: !card.muted && !ShellSettings.reduceMotion
-                                        x: -40 + _fill._shimmerPhase * (_fill.width + 40)
-                                        width: 40
-                                        height: parent.height
-                                        gradient: Gradient {
-                                            orientation: Gradient.Horizontal
-                                            GradientStop { position: 0.0; color: "transparent" }
-                                            GradientStop { position: 0.5; color: Theme.withAlpha(Theme.text, 0.38) }
-                                            GradientStop { position: 1.0; color: "transparent" }
-                                        }
-                                    }
-
-                                    SequentialAnimation on _shimmerPhase {
-                                        running: osd._active && !card.closing && card.kind === "volume"
-                                            && ShellSettings.osdVolumeTint && !ShellSettings.reduceMotion
-                                        // setPaused() warns unless the animation is running
-                                        paused: running && card.muted
-                                        loops: Animation.Infinite
-                                        NumberAnimation { from: 0; to: 1; duration: Motion.ms(900); easing.type: Easing.Linear }
-                                        PauseAnimation  { duration: Motion.ms(800) }
-                                    }
-
-                                    Behavior on width {
-                                        enabled: !ShellSettings.reduceMotion && !card.closing && !OsdBarState.rapid
+                                    MotionBehavior on width {
+                                        gate: !card.closing && !OsdBarState.rapid
                                         NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
                                     }
                                 }

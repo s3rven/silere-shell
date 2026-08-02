@@ -1,0 +1,31 @@
+# containers and layout
+CollapsibleSection 1.0 CollapsibleSection.qml
+InlinePicker       1.0 InlinePicker.qml
+PageShell          1.0 PageShell.qml
+RowDividers        1.0 RowDividers.qml
+SettingsCard       1.0 SettingsCard.qml
+
+# rows and inputs
+ChoiceChipRow   1.0 ChoiceChipRow.qml
+ControlRow      1.0 ControlRow.qml
+InlineOptionRow 1.0 InlineOptionRow.qml
+QuickSlider     1.0 QuickSlider.qml
+SelectRow       1.0 SelectRow.qml
+SliderRow       1.0 SliderRow.qml
+SliderTrack     1.0 SliderTrack.qml
+ToggleRow       1.0 ToggleRow.qml
+ToggleSwitch    1.0 ToggleSwitch.qml
+
+# colour and content controls
+AccentSwatch    1.0 AccentSwatch.qml
+HueStrip        1.0 HueStrip.qml
+MediaButton     1.0 MediaButton.qml
+SwatchPickerRow 1.0 SwatchPickerRow.qml
+SwatchRow       1.0 SwatchRow.qml
+UpdateStatusCard 1.0 UpdateStatusCard.qml
+
+# presentation helpers
+HintText        1.0 HintText.qml
+MenuScrollThumb 1.0 MenuScrollThumb.qml
+RowHoverBg      1.0 RowHoverBg.qml
+SectionLabel    1.0 SectionLabel.qml
