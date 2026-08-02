@@ -27,18 +27,16 @@ ShellRoot {
         function onReloadCompleted() { Quickshell.inhibitReloadPopup() }
     }
 
-    // Quickshell lazy-loads singletons — reading a member instantiates them, a bare type reference won't.
-    // these are startup diagnostics/alerts whose watchers must arm before the user opens a panel.
+    // reading a member instantiates a lazy singleton; these watchers must arm before the user opens a panel
     Component.onCompleted: {
         void NotifWatch.armed
-        // PowerProfiles reads on menu-open; created lazily it misses the very first open and
-        // the row sits on "Unavailable" until the menu is reopened. No process until then.
+        // PowerProfiles reads on menu-open: created lazily it misses the first open and the row sits on "Unavailable"
         void PowerProfiles.available
         // documented as always callable (`ipc call screenshot flash`), so it can't wait on the underline
         void Screenshot.armed
-        // same lazy-singleton trap: _probe() only runs on MenuState.open, but nothing
-        // else references ShellUpdate until the Updates settings page builds — after open
+        // same trap: nothing else references ShellUpdate until the Updates page builds, after open
         void ShellUpdate.pending
+        void OverlayCoordinator.armed
         root.armSystemAlertsIfNeeded()
     }
 
@@ -54,8 +52,7 @@ ShellRoot {
             id: _barScope
             required property ShellScreen modelData
 
-            // recreate the bar window on edge change: remapping a live layer-shell surface's anchors leaves stale geometry, so tear down + map fresh.
-            // first map waits for settings so a saved bottom bar starts at the bottom instead of flashing top-then-recreating.
+            // recreate the window on edge change: remapping a live layer-shell surface leaves stale geometry; the first map waits for settings
             LazyLoader {
                 id: _barLoader
                 active: false
