@@ -35,30 +35,16 @@ Item {
     readonly property int  _scrollHoldEnd:   2200
     readonly property int  _scrollHoldLoop:  6000
 
-    function _resetMarquee(): void {
-        _scroll.stop()
+    // one condition rather than a web of handlers: every transition that can strand the
+    // marquee mid-slide (idle, monitor switch, sleeping bar, reduce-motion) flows through it
+    readonly property bool _animatable: root.barActive && root.show
+        && !ShellSettings.reduceMotion && !Idle.isIdle && root._onActiveBar
+
+    on_AnimatableChanged: {
+        if (root._animatable) return
         _trackTransition.stop()
         textClip._shown = Media.label
-        trackText.x = 0
         textClip.opacity = 1.0
-    }
-    function _canAnimateTrack(): bool {
-        return root.barActive && root.show && !ShellSettings.reduceMotion
-            && !Idle.isIdle && root._onActiveBar
-    }
-    function _startMarquee(): void {
-        if (barActive && show && Media.playing && !Idle.isIdle && _onActiveBar
-            && textClip.needsScroll && !_trackTransition.running)
-            _scroll.start()
-    }
-
-    onShowChanged: {
-        if (!show) _resetMarquee()
-        else Qt.callLater(_startMarquee)
-    }
-    onBarActiveChanged: {
-        if (barActive) Qt.callLater(_startMarquee)
-        else           _resetMarquee()
     }
 
     MotionBehavior on implicitWidth {
@@ -102,7 +88,12 @@ Item {
 
     Loader {
         id: _vizLoader
-        anchors.fill: parent
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.horizontalCenter: parent.horizontalCenter
+        // snapped to an 8px grid: the Canvas backing this width drops and reallocates its texture on
+        // every resize, and parent.width tracks root.implicitWidth's own MotionBehavior every frame
+        width: 8 * Math.round(parent.width / 8)
         active: root._visualizerActive
         sourceComponent: Component {
             MediaVisualizer {
@@ -156,23 +147,21 @@ Item {
             clip:   true
 
             property string _shown: ""
-            onMaxWChanged: {
-                _scroll.stop()
+            // a running NumberAnimation ignores a changed to:, and the running binding below
+            // can't see the distance move — restart by hand so a font or budget change re-aims it
+            on_OverflowChanged: {
                 trackText.x = 0
-                if (needsScroll) Qt.callLater(root._startMarquee)
+                if (_scroll.running) _scroll.restart()
             }
 
-            Component.onCompleted: {
-                _shown = Media.label
-                Qt.callLater(root._startMarquee)
-            }
+            Component.onCompleted: _shown = Media.label
 
             ShellText {
                 id: trackText
                 text:           textClip._shown
                 readonly property color _base: Media.playing ? Theme.text
                                                               : Theme.mix(Theme.text, Theme.subtext, 0.55)
-                color:          (_rootHover.hovered && ShellSettings.barHoverHighlight) ? Theme.mix(_base, Theme.accent, 0.30) : _base
+                color:          ((_rootHover.hovered && ShellSettings.barHoverHighlight) || root.activeFocus) ? Theme.mix(_base, Theme.accent, 0.30) : _base
                 ColorFade on color {}
                 font.pixelSize: Settings.fontSize
                 width: ShellSettings.reduceMotion ? textClip.maxW : implicitWidth
@@ -187,55 +176,26 @@ Item {
             Connections {
                 target: Media
                 function onLabelChanged() {
-                    if (!root._canAnimateTrack()) {
-                        root._resetMarquee()
-                        return
-                    }
-                    _scroll.stop()
-                    _trackTransition.restart()
-                }
-                function onPlayingChanged() {
-                    if (Media.playing) {
-                        root._startMarquee()
-                    } else {
-                        _scroll.stop()
-                        trackText.x = 0
-                    }
-                }
-            }
-
-            Connections {
-                target: ShellSettings
-                function onReduceMotionChanged() {
-                    if (ShellSettings.reduceMotion) root._resetMarquee()
-                    else                            root._startMarquee()
-                }
-            }
-
-            Connections {
-                target: Idle
-                function onIsIdleChanged() {
-                    if (Idle.isIdle) root._resetMarquee()
-                    else             root._startMarquee()
-                }
-            }
-
-            Connections {
-                target: Monitors
-                function onActiveNameChanged() {
-                    if (root._onActiveBar) root._startMarquee()
-                    else root._resetMarquee()
+                    if (root._animatable) _trackTransition.restart()
+                    else                  textClip._shown = Media.label
                 }
             }
 
             SequentialAnimation {
                 id: _scroll
+                running: root._animatable && Media.playing
+                    && textClip.needsScroll && !_trackTransition.running
+                // hover to read: the slide would otherwise walk out from under the pointer
+                paused: _scroll.running && _rootHover.hovered
+                onRunningChanged: if (!running) trackText.x = 0
                 loops: Animation.Infinite
                 PauseAnimation  { duration: root._scrollHoldStart }
+                // linear, or _scrollSpeed is a lie: an eased slide covers half the distance
+                // in the first fifth of _slideMs and then crawls, which is unreadable
                 NumberAnimation {
                     target: trackText; property: "x"
                     from: 0; to: -textClip._overflow
-                    duration: textClip._slideMs; easing.type: Easing.OutCubic
+                    duration: textClip._slideMs; easing.type: Easing.Linear
                 }
                 PauseAnimation  { duration: root._scrollHoldEnd }
                 NumberAnimation {
@@ -251,18 +211,7 @@ Item {
                 NumberAnimation { target: textClip; property: "opacity"; to: 0;   duration: Motion.ms(100); easing.type: Easing.InCubic  }
                 ScriptAction    { script: { textClip._shown = Media.label; trackText.x = 0 } }
                 NumberAnimation { target: textClip; property: "opacity"; to: 1.0; duration: Motion.ms(150); easing.type: Easing.OutCubic }
-                onFinished: root._startMarquee()
             }
-
-            onNeedsScrollChanged: {
-                if (!needsScroll) {
-                    _scroll.stop()
-                    trackText.x = 0
-                } else if (!_scroll.running) {
-                    root._startMarquee()
-                }
-            }
-
         }
     }
 
