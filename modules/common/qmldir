@@ -4,6 +4,8 @@ Hairline 1.0 Hairline.qml
 CollapsingText 1.0 CollapsingText.qml
 RollingText 1.0 RollingText.qml
 ListEdgeLines 1.0 ListEdgeLines.qml
+ScrollSettle 1.0 ScrollSettle.qml
+OutsideTapGuard 1.0 OutsideTapGuard.qml
 FloatingShadow 1.0 FloatingShadow.qml
 FloatingPopupCard 1.0 FloatingPopupCard.qml
 PopupShadow 1.0 PopupShadow.qml

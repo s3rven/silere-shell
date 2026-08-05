@@ -1,5 +1,6 @@
 import QtQuick
 import "../../../config"
+import "../../common"
 
 Rectangle {
     id: root
@@ -11,31 +12,13 @@ Rectangle {
     property int minimumLength: 22
     property real idleOpacity: 0.26
     property real movingOpacity: 0.62
+    property real fadeMultiplier: 1.0
 
-    // overflow is transiently true while the panel animates its height; settle it or the thumb blinks on every swap
-    readonly property bool _overflows: list.contentHeight > list.height + 1
-    property bool _settled: false
-    function _syncSettle(): void {
-        if (!root._overflows || !root.shown || !root.list.visible) {
-            _settle.stop()
-            root._settled = false
-            return
-        }
-        _settle.restart()
-    }
-    on_OverflowsChanged: _syncSettle()
-    onShownChanged: _syncSettle()
-    Connections {
-        target: root.list
-        function onVisibleChanged() { root._syncSettle() }
-    }
-    Timer {
+    ScrollSettle {
         id: _settle
-        interval: Motion.panelHeight
-        onTriggered: root._settled = root.shown && root.list.visible && root._overflows
+        list: root.list
+        armed: root.shown
     }
-    // a list built already overflowing never emits the change signal above
-    Component.onCompleted: _syncSettle()
 
     readonly property real _trackH: Math.max(1,
         list.height - trackInset * 2)
@@ -52,8 +35,8 @@ Rectangle {
     radius: 1
     antialiasing: true
     color: Theme.accent
-    opacity: visible ? (list.moving ? movingOpacity : idleOpacity) : 0
-    visible: shown && list.visible && root._settled
+    opacity: (visible ? (list.moving ? movingOpacity : idleOpacity) : 0) * root.fadeMultiplier
+    visible: _settle.ready
 
     MotionBehavior on opacity {
         NumberAnimation { duration: Motion.fast }

@@ -10,7 +10,6 @@ PageShell {
     id: root
 
     implicitHeight: _detail.height
-    enterFade: 145; exitFade: 110
 
     property string _shownSection: MenuState.settingsSection
     property int _sectionDir: 1

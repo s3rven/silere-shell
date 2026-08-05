@@ -139,7 +139,6 @@ Item {
         leftBleed:    root.cardLeftBleed
         active:       (_hov.hovered || root.activeFocus) && root.enabled
         focusActive:  root.activeFocus && root.enabled
-        fillOpacity:  root.activeFocus ? 0.13 : 0.08
     }
 
     ShellText {
@@ -181,7 +180,7 @@ Item {
                 maximumLineCount: 2
                 elide: Text.ElideRight
                 color: Theme.withAlpha(Theme.subtext, 0.52)
-                font.pixelSize: Math.max(8, Settings.fontSize - 2)
+                font.pixelSize: Math.max(9, Settings.fontSize - 2)
                 lineHeight: 1.1
             }
         }
@@ -258,12 +257,7 @@ Item {
         clip:    true
         visible: height > 0.5
 
-        MotionBehavior on height {
-            NumberAnimation {
-                duration: root._open ? Motion.medium : Motion.fast
-                easing.type: root._open ? Easing.OutQuart : Easing.InCubic
-            }
-        }
+        Disclosure on height { expanded: root._open }
 
         Column {
             id: _optCol

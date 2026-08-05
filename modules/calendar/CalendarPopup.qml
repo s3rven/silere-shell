@@ -13,7 +13,6 @@ PanelWindow {
     required property ShellScreen targetScreen
 
     readonly property string _output: Compositor.monitorName(win.screen)
-    property bool _ignoreOutsideTap: false
 
     Connections {
         target: Compositor
@@ -34,30 +33,9 @@ PanelWindow {
 
     Shortcut { sequence: "Escape"; context: Qt.ApplicationShortcut; enabled: CalendarState.open; onActivated: CalendarState.close() }
 
-    Connections {
-        target: ShellSettings
-        function onBarPositionChanged() {
-            if (!CalendarState.open) return
-            win._ignoreOutsideTap = true
-            _outsideTapGuard.restart()
-        }
-    }
-
-    Connections {
-        target: CalendarState
-        function onOpenChanged() {
-            if (!CalendarState.open) {
-                _outsideTapGuard.stop()
-                win._ignoreOutsideTap = false
-            }
-        }
-    }
-
-    Timer {
-        id: _outsideTapGuard
-        interval: 250
-        repeat: false
-        onTriggered: win._ignoreOutsideTap = false
+    OutsideTapGuard {
+        id: _tapGuard
+        open: CalendarState.open
     }
 
     Item { id: _fillArea; anchors.fill: parent }
@@ -67,7 +45,7 @@ PanelWindow {
         id: _dismiss
         enabled: CalendarState.open && card.scaleAmt > 0.95
         onTapped: {
-            if (win._ignoreOutsideTap) return
+            if (_tapGuard.ignoring) return
             const p = _dismiss.point.position
             if (p.x < card.x || p.x > card.x + card.width ||
                 p.y < card.y || p.y > card.y + card.height)
@@ -188,7 +166,7 @@ PanelWindow {
         }
 
         width:  panelW
-        height: _col.implicitHeight + pad * 2
+        height: 4 * Math.ceil((_col.implicitHeight + pad * 2) / 4)
         activeFocusOnTab: true
         Accessible.role: Accessible.Pane
         Accessible.name: "Calendar"
@@ -240,8 +218,28 @@ PanelWindow {
                 HoverHandler { id: _todayH; cursorShape: Qt.PointingHandCursor }
                 TapHandler   { onTapped: card._goToday() }
 
+                Rectangle {
+                    id: _todayFill
+                    x: 0
+                    width: _todayRow.width + 20
+                    height: parent.height
+                    radius: Theme.radiusControl
+                    antialiasing: true
+                    color: _todayButton.activeFocus
+                        ? Theme.withAlpha(Theme.accent, 0.13)
+                        : _todayH.hovered ? Theme.withAlpha(Theme.subtext, 0.12) : "transparent"
+                    ColorFade on color {}
+
+                    OutlineBorder {
+                        radius: _todayFill.radius
+                        outlineColor: _todayButton.activeFocus
+                            ? Theme.withAlpha(Theme.accent, Theme.focusRingAlpha) : "transparent"
+                    }
+                }
+
                 Row {
-                    anchors.left: parent.left
+                    id: _todayRow
+                    x: 10
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 11
 
@@ -272,7 +270,7 @@ PanelWindow {
 
             Hairline {
                 width: parent.width
-                color: Theme.withAlpha(Theme.subtext, 0.13)
+                color: Theme.withAlpha(Theme.subtext, Theme.lineAlpha(0.13))
             }
 
             Item {
@@ -302,6 +300,23 @@ PanelWindow {
                     Keys.onEnterPressed:  event => card._activateToday(event)
                     HoverHandler { id: _mH; cursorShape: Qt.PointingHandCursor }
                     TapHandler   { onTapped: card._goToday() }
+
+                    Rectangle {
+                        id: _monthFill
+                        anchors.fill: parent
+                        radius: Theme.radiusControl
+                        antialiasing: true
+                        color: _monthButton.activeFocus
+                            ? Theme.withAlpha(Theme.accent, 0.13)
+                            : _mH.hovered ? Theme.withAlpha(Theme.subtext, 0.12) : "transparent"
+                        ColorFade on color {}
+
+                        OutlineBorder {
+                            radius: _monthFill.radius
+                            outlineColor: _monthButton.activeFocus
+                                ? Theme.withAlpha(Theme.accent, Theme.focusRingAlpha) : "transparent"
+                        }
+                    }
                     ShellText {
                         id: _mLabel
                         anchors.centerIn: parent
@@ -419,7 +434,7 @@ PanelWindow {
                     y: 0
                     vertical: true
                     height: parent.height
-                    color: Theme.withAlpha(Theme.subtext, 0.10)
+                    color: Theme.withAlpha(Theme.subtext, Theme.lineAlpha(0.10))
                 }
 
                 Grid {
@@ -466,7 +481,7 @@ PanelWindow {
                                 ShellText {
                                     anchors.centerIn: parent
                                     text: _dayCell.dayNum
-                                    color: _dayCell.today ? Theme.surface
+                                    color: _dayCell.today ? Theme.background
                                          : _dayCell.cur   ? Theme.withAlpha(Theme.text, _dayCell.weekend ? 0.68 : 0.9)
                                          :                  Theme.withAlpha(Theme.subtext, 0.3)
                                     font.pixelSize: Settings.fontSize
@@ -478,7 +493,7 @@ PanelWindow {
                                     anchors.bottom: parent.bottom; anchors.bottomMargin: 3
                                     width: 4; height: 4; radius: 2
                                     antialiasing: true
-                                    color: _dayCell.today ? Theme.surface : Theme.accent
+                                    color: _dayCell.today ? Theme.background : Theme.accent
                                     opacity: _dayCell.marked ? 1 : 0
                                     scale:   _dayCell.marked ? 1 : 0.3
                                     MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
@@ -495,7 +510,7 @@ PanelWindow {
                                     OutlineBorder {
                                         radius: 15
                                         outlineWidth: 2
-                                        outlineColor: Theme.withAlpha(Theme.accent, 0.6)
+                                        outlineColor: Theme.withAlpha(Theme.accent, Theme.focusRingAlpha)
                                     }
                                 }
                             }

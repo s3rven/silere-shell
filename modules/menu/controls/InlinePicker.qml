@@ -14,12 +14,7 @@ Column {
     Item {
         width: 1
         height: root.open ? root.gap : 0
-        MotionBehavior on height {
-            NumberAnimation {
-                duration: root.open ? Motion.medium : Motion.fast
-                easing.type: root.open ? Easing.OutQuart : Easing.InCubic
-            }
-        }
+        Disclosure on height { expanded: root.open }
     }
 
     CollapsibleSection {

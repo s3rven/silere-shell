@@ -24,12 +24,7 @@ Item {
     enabled: expanded
     visible: height > 0.5
 
-    MotionBehavior on height {
-        NumberAnimation {
-            duration: root.expanded ? Motion.medium : Motion.fast
-            easing.type: root.expanded ? Easing.OutQuart : Easing.InCubic
-        }
-    }
+    Disclosure on height { expanded: root.expanded }
 
     Column {
         id: _content

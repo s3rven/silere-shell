@@ -15,8 +15,6 @@ PanelWindow {
 
     readonly property string _output: Compositor.monitorName(win.screen)
     readonly property int menuWidth: 220
-    readonly property real _cardRadius: Theme.radiusPanel
-    property bool _ignoreOutsideTap: false
 
     property var _activeMenu: null
     property bool _rootOpenedSent: false
@@ -99,34 +97,21 @@ PanelWindow {
 
     Shortcut { sequence: "Escape"; context: Qt.ApplicationShortcut; enabled: TrayMenuState.open; onActivated: TrayMenuState.close() }
 
-    Connections {
-        target: ShellSettings
-        function onBarPositionChanged() {
-            if (!TrayMenuState.open) return
-            win._ignoreOutsideTap = true
-            _outsideTapGuard.restart()
-        }
+    OutsideTapGuard {
+        id: _tapGuard
+        open: TrayMenuState.open
     }
 
     Connections {
         target: TrayMenuState
         function onOpenChanged() {
             if (!TrayMenuState.open) {
-                _outsideTapGuard.stop()
-                win._ignoreOutsideTap = false
                 win._closeFlyouts()
                 win._sendRootClosed()
             } else {
                 win._sendRootOpened()
             }
         }
-    }
-
-    Timer {
-        id: _outsideTapGuard
-        interval: 250
-        repeat: false
-        onTriggered: win._ignoreOutsideTap = false
     }
 
     QsMenuOpener {
@@ -154,7 +139,7 @@ PanelWindow {
         enabled: TrayMenuState.open && card.scaleAmt > 0.95
         // a TapHandler keeps a passive grab, so this fires for taps on rows too
         onTapped: {
-            if (win._ignoreOutsideTap) return
+            if (_tapGuard.ignoring) return
             const p = _dismiss.point.position
             if (win._overFlyout(p)) return
             if (p.x < card.x || p.x > card.x + card.width ||
@@ -291,7 +276,7 @@ PanelWindow {
                 radius: Theme.radiusControl
                 antialiasing: true
                 color: (_entry.on && (_rowHover.hovered || _flyout.opened || _entry.activeFocus))
-                    ? Theme.withAlpha(Theme.menuHover, 0.12) : "transparent"
+                    ? Theme.withAlpha(Theme.menuHover, 0.08) : "transparent"
                 ColorFade on color {}
             }
 
@@ -415,7 +400,7 @@ PanelWindow {
                 y: _origin.y + _targetY
                 width:  _w
                 height: _panelH
-                radius: Math.min(win._cardRadius, height / 2)
+                radius: Math.min(Theme.surfaceRadius, height / 2)
                 antialiasing: true
                 color: Theme.popup
                 transform: Translate { x: _flyout._shift }
@@ -425,18 +410,8 @@ PanelWindow {
                     outlineColor: Theme.outline
                 }
 
-                MotionBehavior on opacity {
-                    NumberAnimation {
-                        duration: _flyout.opened ? Motion.medium : Motion.fast
-                        easing.type: _flyout.opened ? Easing.OutCubic : Easing.InCubic
-                    }
-                }
-                MotionBehavior on _shift {
-                    NumberAnimation {
-                        duration: _flyout.opened ? Motion.medium : Motion.fast
-                        easing.type: _flyout.opened ? Easing.OutQuart : Easing.InCubic
-                    }
-                }
+                Disclosure on opacity { expanded: _flyout.opened; enterEasing: Easing.OutCubic }
+                Disclosure on _shift { expanded: _flyout.opened }
 
                 onOpenedChanged: {
                     if (!_entry.sub) return
@@ -520,7 +495,6 @@ PanelWindow {
 
         width:  win.menuWidth + pad * 2
         height: Math.min(_col.implicitHeight, _maxContentH) + pad * 2
-        radius: Math.min(win._cardRadius, height / 2)
 
         function _focusFirstRow(): void {
             const sibs = _col.children

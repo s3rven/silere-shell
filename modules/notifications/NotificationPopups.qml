@@ -98,12 +98,7 @@ PanelWindow {
             chip.triggered()
         }
 
-        MotionBehavior on height {
-            NumberAnimation {
-                duration: chip.shown ? Motion.medium : Motion.fast
-                easing.type: chip.shown ? Easing.OutQuart : Easing.InCubic
-            }
-        }
+        Disclosure on height { expanded: chip.shown }
 
         Rectangle {
             id: _surface
@@ -172,9 +167,9 @@ PanelWindow {
 
     margins {
         top:    win._barBottom ? 6
-            : (ShellSettings.barFloating ? 4 : 0) + ShellSettings.barHeight + 6
+            : (ShellSettings.barFloating ? 4 : 0) + ShellSettings.barHeight + 2
         bottom: win._barBottom
-            ? (ShellSettings.barFloating ? 4 : 0) + ShellSettings.barHeight + 6 : 0
+            ? (ShellSettings.barFloating ? 4 : 0) + ShellSettings.barHeight + 2 : 0
         right: win._pos === "top-right" ? Math.max(0, win._edgeMargin - win._shadowPad) : 0
         left:  win._left              ? Math.max(0, win._edgeMargin - win._shadowPad) : 0
     }
@@ -366,7 +361,7 @@ PanelWindow {
                                 || index < ShellSettings.notifMaxVisible
                             readonly property var cardItem: _cardLoader.item
                             property real timeoutStartedAt: 0
-                            readonly property real _gap: index < stack.count - 1 ? 6 : 0
+                            readonly property real _gap: index < win._visibleCards - 1 ? 6 : 0
 
                             width: win._cardW
                             height: cardItem

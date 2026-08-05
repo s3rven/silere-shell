@@ -15,7 +15,6 @@ PanelWindow {
     required property ShellScreen targetScreen
 
     readonly property string _output: Compositor.monitorName(win.screen)
-    property bool _ignoreOutsideTap: false
 
     Connections {
         target: Compositor
@@ -67,20 +66,9 @@ PanelWindow {
         onActivated: panel._cycleTab(-1)
     }
 
-    Connections {
-        target: ShellSettings
-        function onBarPositionChanged() {
-            if (!MenuState.open) return
-            win._ignoreOutsideTap = true
-            _outsideTapGuard.restart()
-        }
-    }
-
-    Timer {
-        id: _outsideTapGuard
-        interval: 250
-        repeat: false
-        onTriggered: win._ignoreOutsideTap = false
+    OutsideTapGuard {
+        id: _tapGuard
+        open: MenuState.open
     }
 
     Item { id: _fillArea; anchors.fill: parent }
@@ -90,7 +78,7 @@ PanelWindow {
         id: _dismiss
         enabled: MenuState.open && panel.scaleAmt > 0.95
         onTapped: {
-            if (win._ignoreOutsideTap) return
+            if (_tapGuard.ignoring) return
             const p = _dismiss.point.position
             if (p.x < panel.x || p.x > panel.x + panel.width ||
                 p.y < panel.y || p.y > panel.y + panel.height) {
@@ -139,13 +127,19 @@ PanelWindow {
             return Math.max(0, Math.min(_navMaxW, desired, detailSafe, sidebarFit))
         }
         readonly property int railExpandedW: railCollapsedW + navW
-        readonly property int railW: _railExpanded ? railExpandedW : railCollapsedW
+        // animated here, not on the rail Item: the content pane derives its x and width from this, and easing only the rail leaves the content snapping ahead of it
+        property int railW: _railExpanded ? railExpandedW : railCollapsedW
+        MotionBehavior on railW {
+            gate: panel._geometryReady && panel.open
+            NumberAnimation {
+                duration: panel._railMotionMs
+                easing.type: panel._railMotionEasing
+            }
+        }
         readonly property int _railMotionMs: _railExpanded
-            ? Motion.ms(165) : Motion.ms(115)
+            ? Motion.panelResize : Motion.panelCollapse
         readonly property int _railMotionEasing: _railExpanded
             ? Easing.OutQuint : Easing.InOutCubic
-        readonly property int _panelWidthMotionMs: activeTab === 1
-            ? Motion.ms(180) : Motion.ms(145)
         readonly property int contentW: panelW - railW
         readonly property int contentPad: activeTab === 1
             ? Math.max(12, Math.min(20,
@@ -314,14 +308,10 @@ PanelWindow {
                 if (MenuState.open) {
                     _closedUnload.stop()
                     contentFlick.contentY = 0
-                    contentFlick.syncScrollAffordance()
                     panel.forceActiveFocus()
                 } else {
                     _closedUnload.restart()
-                    _scrollSettle.stop()
                     _sectionScrollReset.stop()
-                    _outsideTapGuard.stop()
-                    win._ignoreOutsideTap = false
                 }
             }
             function onSettingsSectionChanged() {
@@ -390,18 +380,24 @@ PanelWindow {
         width:  panelW
         height: targetPanelH
 
+        // matches railW's own curve: the panel only ever changes width in lockstep with the rail
+        // expanding/collapsing (settings tab, power rail), so a mismatched duration/easing here
+        // reads as the panel's outer edge and the rail's inner edge disagreeing mid-motion
         MotionBehavior on width {
             gate: panel._geometryReady && panel.open
             NumberAnimation {
-                duration: panel._panelWidthMotionMs
-                easing.type: Easing.OutQuint
+                duration: panel._railMotionMs
+                easing.type: panel._railMotionEasing
             }
         }
+        // duration caps the velocity: without it a tall page swap crawls for ~700ms while the
+        // width beside it lands in _railMotionMs, and every scroll-affordance settle times out early
         MotionBehavior on height {
             gate: panel._geometryReady && panel.open
             SmoothedAnimation {
                 velocity: Motion.panelVelocity
-                maximumEasingTime: Motion.panelHeight
+                duration: Motion.panelResize
+                maximumEasingTime: Motion.panelResize
                 reversingMode: SmoothedAnimation.Sync
             }
         }
@@ -423,14 +419,6 @@ PanelWindow {
             height: panel.height
             clip: false
             z: 6
-
-            MotionBehavior on width {
-                gate: panel._geometryReady && panel.open
-                NumberAnimation {
-                    duration: panel._railMotionMs
-                    easing.type: panel._railMotionEasing
-                }
-            }
 
             Item {
                 anchors.fill: parent
@@ -459,7 +447,7 @@ PanelWindow {
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
                     color: Theme.mix(Theme.menuPane, Theme.menuControl, 0.14)
-                    visible: panel._railExpanded
+                    visible: parent.width > panel.railCollapsedW + 0.5
                 }
 
                 Item {
@@ -520,7 +508,7 @@ PanelWindow {
 
                     MotionBehavior on height {
                         NumberAnimation {
-                            duration: panel.powerOpen ? Motion.panelHeight : Motion.fast
+                            duration: panel.powerOpen ? Motion.panelResize : Motion.panelCollapse
                             easing.type: panel.powerOpen ? Easing.OutQuart : Easing.InCubic
                         }
                     }
@@ -575,6 +563,8 @@ PanelWindow {
                     railW: panel.railCollapsedW
                     glyph: "󰋚"
                     label: "Notifications"
+                    accessibleDescription: Notifications.hasHistory
+                        ? Notifications.historyCount + " notifications" : "No notifications"
                     active: panel.activeTab === 2
                     KeyNavigation.up: _railHome
                     KeyNavigation.down: _railSettings
@@ -670,18 +660,12 @@ PanelWindow {
 
         Item {
             id: contentPane
+            // no MotionBehavior here: x tracks panel.railW, which is already animated at the source —
+            // a second Behavior on top double-eases and lags the pane behind the rail it's supposed to hug
             x: panel.railW
             y: 0
             width: panel.contentW
             clip: true
-
-            MotionBehavior on x {
-                gate: panel._geometryReady && panel.open
-                NumberAnimation {
-                    duration: panel._railMotionMs
-                    easing.type: panel._railMotionEasing
-                }
-            }
 
             Rectangle {
                 x: -panel.radius
@@ -719,25 +703,8 @@ PanelWindow {
                 boundsMovement: Flickable.StopAtBounds
                 flickDeceleration: 1800
                 maximumFlickVelocity: 2200
-                readonly property bool _overflows: contentHeight > height + 1
-                // the edge fades wait out the resize so a page swap can't flash them (see MenuScrollThumb)
-                property bool needsScroll: false
-                function syncScrollAffordance(): void {
-                    if (!contentFlick._overflows) {
-                        _scrollSettle.stop()
-                        contentFlick.needsScroll = false
-                    } else if (panel.open) {
-                        _scrollSettle.restart()
-                    }
-                }
-                on_OverflowsChanged: syncScrollAffordance()
-                Timer {
-                    id: _scrollSettle
-                    interval: Motion.panelHeight
-                    onTriggered: contentFlick.needsScroll = contentFlick._overflows
-                }
-                Component.onCompleted: syncScrollAffordance()
-                interactive: !panel.powerOpen && panel.activeTab !== 2 && _overflows
+                interactive: !panel.powerOpen && panel.activeTab !== 2
+                    && _contentSettle.overflows
 
                 function clampToContent(): void {
                     const maxY = Math.max(0, contentHeight - height)
@@ -884,16 +851,22 @@ PanelWindow {
                 }
             }
 
+            ScrollSettle {
+                id: _contentSettle
+                list: contentFlick
+                armed: panel.open
+            }
+
             ListEdgeLines {
                 anchors.fill: contentFlick
                 list: contentFlick
-                visible: panel.activeTab !== 2 && contentFlick.needsScroll
+                visible: panel.activeTab !== 2 && _contentSettle.ready
                 z: 4
             }
 
             MenuScrollThumb {
                 list: contentFlick
-                shown: !panel.powerOpen && panel.activeTab !== 2
+                shown: panel.open && !panel.powerOpen && panel.activeTab !== 2
                 z: 5
             }
         }

@@ -25,7 +25,10 @@ Singleton {
     readonly property int  popOutFade: _rm ? 0 : 120
     readonly property int  popSettle:  _rm ? 0 : 210
 
-    readonly property int panelHeight: _rm ? 0 : 210
+    readonly property int panelResize:   _rm ? 0 : 165
+    readonly property int panelCollapse: _rm ? 0 : 115
+    // quiet window a viewport must hold before scroll affordances trust it (see ScrollSettle)
+    readonly property int panelSettle:   _rm ? 0 : 150
     readonly property real panelVelocity: 1200
     readonly property int pageIn:      _rm ? 0 : 180
     readonly property int pageOut:     _rm ? 0 : 110

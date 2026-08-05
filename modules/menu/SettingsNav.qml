@@ -238,7 +238,7 @@ Item {
         boundsMovement: Flickable.StopAtBounds
         flickDeceleration: 1800
         maximumFlickVelocity: 2200
-        interactive: contentHeight > height + 1
+        interactive: _navSettle.overflows
 
         onHeightChanged: if (root.active) _resizeSettle.restart()
 
@@ -307,7 +307,7 @@ Item {
                             id: _grpHeader
                             width: parent.width
                             height: root._groupH
-                            radius: 5
+                            radius: 8
                             antialiasing: true
                             color: activeFocus
                                 ? Theme.withAlpha(Theme.accent, 0.065)
@@ -374,7 +374,7 @@ Item {
                             OutlineBorder {
                                 radius: _grpHeader.radius
                                 outlineColor: _grpHeader.activeFocus
-                                    ? Theme.withAlpha(Theme.accent, 0.42)
+                                    ? Theme.withAlpha(Theme.accent, Theme.focusRingSoftAlpha)
                                     : "transparent"
                             }
 
@@ -426,12 +426,7 @@ Item {
                                     : _grp.expanded ? 0.62 : 0.44)
                                 font.pixelSize: Settings.fontSize - 2
 
-                                MotionBehavior on rotation {
-                                    NumberAnimation {
-                                        duration: _grp.expanded ? Motion.medium : Motion.fast
-                                        easing.type: _grp.expanded ? Easing.OutQuart : Easing.InCubic
-                                    }
-                                }
+                                Disclosure on rotation { expanded: _grp.expanded }
                                 ColorFade on color {}
                             }
                         }
@@ -446,12 +441,7 @@ Item {
                             visible: height > 0
                             clip: height < _leafColumn.implicitHeight + root._childrenPad * 2
 
-                            MotionBehavior on height {
-                                NumberAnimation {
-                                    duration: _grp.expanded ? Motion.medium : Motion.fast
-                                    easing.type: _grp.expanded ? Easing.OutQuart : Easing.InCubic
-                                }
-                            }
+                            Disclosure on height { expanded: _grp.expanded }
 
                             Column {
                                 id: _leafColumn
@@ -469,12 +459,7 @@ Item {
                                         easing.type: _grp.expanded ? Easing.OutCubic : Easing.InCubic
                                     }
                                 }
-                                MotionBehavior on _shift {
-                                    NumberAnimation {
-                                        duration: _grp.expanded ? Motion.medium : Motion.fast
-                                        easing.type: _grp.expanded ? Easing.OutQuart : Easing.InCubic
-                                    }
-                                }
+                                Disclosure on _shift { expanded: _grp.expanded }
 
                                 Repeater {
                                     id: _leafRepeater
@@ -490,7 +475,7 @@ Item {
                                         readonly property string glyph: modelData.glyph ?? ""
                                         width: _leafColumn.width
                                         height: root._navRowH
-                                        radius: 5
+                                        radius: 8
                                         antialiasing: true
                                         color: active
                                             ? Theme.mix(Theme.menuControl, Theme.accent,
@@ -552,7 +537,7 @@ Item {
                                         OutlineBorder {
                                             radius: _leaf.radius
                                             outlineColor: _leaf.activeFocus
-                                                ? Theme.withAlpha(Theme.accent, 0.42)
+                                                ? Theme.withAlpha(Theme.accent, Theme.focusRingSoftAlpha)
                                                 : "transparent"
                                         }
 
@@ -599,9 +584,15 @@ Item {
         }
     }
 
+    ScrollSettle {
+        id: _navSettle
+        list: _navScroll
+        armed: root.active
+    }
+
     ListEdgeLines {
         anchors.fill: _navScroll
-        visible: _navScroll.interactive
+        visible: _navSettle.ready
         list: _navScroll
     }
 }

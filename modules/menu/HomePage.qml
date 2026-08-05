@@ -12,7 +12,6 @@ PageShell {
     id: root
 
     implicitHeight: _col.implicitHeight
-    enterFade: 160; exitFade: 110
     onPageShown: {
         _mediaUnload.stop()
         _mediaSection._mediaLoaded = Media.shown
@@ -33,6 +32,23 @@ PageShell {
     readonly property bool _brightnessAvailable: Brightness.controllable
     readonly property bool _wifiPickerOpen: _picker === "wifi"
     readonly property bool _btPickerOpen: _picker === "bt"
+
+    function _shq(s): string {
+        return "'" + String(s).replace(/'/g, "'\\''") + "'"
+    }
+
+    function _runPower(command, failTitle): void {
+        if (!command || command.length === 0) return
+        if (!SystemTools.hasNotifySend) {
+            Quickshell.execDetached(command)
+            return
+        }
+        const note = "notify-send --urgency=critical --app-name=silere-shell " +
+            root._shq(failTitle) + " " + root._shq("It may require authorization or be blocked by a running task.")
+        const argv = ["bash", "-c", '"$@" || ' + note, "bash"]
+        for (let i = 0; i < command.length; i++) argv.push(String(command[i]))
+        Quickshell.execDetached(argv)
+    }
 
     function _togglePicker(which: string): void {
         _picker = (_picker === which ? "" : which)
@@ -80,7 +96,7 @@ PageShell {
         Item {
             id: _header
             width: parent.width
-            height: 40
+            height: 4 * Math.ceil((_dayLine.implicitHeight + 2 + _metaLine.implicitHeight) / 4)
 
             ShellText {
                 id: _dayLine
@@ -122,7 +138,11 @@ PageShell {
             }
         }
 
-        Item { width: 1; height: root._sectionGap }
+        Item {
+            width: 1
+            height: Media.shown ? root._sectionGap : 0
+            Disclosure on height { expanded: Media.shown }
+        }
 
         Item {
             id: _mediaSection
@@ -156,12 +176,7 @@ PageShell {
                 ? 4 * Math.ceil((_mediaLoader.item.height + 10) / 4) : 0
             clip: true
 
-            MotionBehavior on height {
-                NumberAnimation {
-                    duration: Media.shown ? Motion.medium : Motion.fast
-                    easing.type: Media.shown ? Easing.OutQuart : Easing.InCubic
-                }
-            }
+            Disclosure on height { expanded: Media.shown }
 
             Loader {
                 id: _mediaLoader
@@ -186,19 +201,16 @@ PageShell {
                 }
 
                 OutlineBorder {
+                    // above the album art and its scrim: both fill the card and are declared later
+                    z: 1
                     radius: _mediaCard.radius
                     outlineWidth: _playerTarget.activeFocus ? 2 : 1
                     outlineColor: _playerTarget.activeFocus
-                        ? Theme.withAlpha(Theme.accent, 0.62) : Theme.menuCardBorder
+                        ? Theme.withAlpha(Theme.accent, Theme.focusRingAlpha) : Theme.menuCardBorder
                 }
 
                 // fade only: a scale leg ran as a third competing animation and resampled NativeRendering text off-pixel
-                MotionBehavior on opacity {
-                    NumberAnimation {
-                        duration: Media.shown ? Motion.medium : Motion.fast
-                        easing.type: Media.shown ? Easing.OutCubic : Easing.InCubic
-                    }
-                }
+                Disclosure on opacity { expanded: Media.shown; enterEasing: Easing.OutCubic }
 
                 // on reappear, text may be stranded at opacity 0 by a crossfade interrupted while hidden
                 Connections {
@@ -211,7 +223,8 @@ PageShell {
                 Item {
                     id: _art
                     anchors.fill: parent
-                    readonly property real maxAlpha: 0.78
+                    // the scrim over this is uniform by contract, so the art's own ceiling is what stops highlights punching through the title
+                    readonly property real maxAlpha: 0.64
                     property bool _useA: true
                     property string _curUrl: ""
                     property var _pendingLayer: null
@@ -399,14 +412,43 @@ PageShell {
 
                     ShellText {
                         id: _identityText
+                        readonly property bool _switchable: Media.playerCount > 1
+                        readonly property bool _switchHover: _switchable && _identitySwitch.containsMouse
+                        readonly property bool _switchFocused: _switchable && _identityText.activeFocus
+
                         width: parent.width
                         visible: _mediaCol._shownIdentity.length > 0
                         text: _mediaCol._shownIdentity.toUpperCase()
-                        color: Theme.withAlpha(Theme.subtext, 0.5)
+                            + (_switchable ? "  󰅂" : "")
+                        color: _switchFocused ? Theme.accent
+                             : _switchHover   ? Theme.withAlpha(Theme.text, 0.78)
+                                              : Theme.withAlpha(Theme.subtext, 0.62)
                         font.pixelSize: Settings.fontSize - 3
                         font.weight: Font.Medium
                         font.letterSpacing: 1.2
                         elide: Text.ElideRight
+                        ColorFade on color {}
+
+                        activeFocusOnTab: _switchable
+                        Accessible.role: Accessible.Button
+                        Accessible.name: "Switch media player"
+                        Accessible.description: Media.identity
+                        Accessible.focusable: _switchable
+                        Accessible.onPressAction: Media.cyclePlayer()
+                        Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) Media.cyclePlayer(); event.accepted = true }
+                        Keys.onReturnPressed: event => { if (!event.isAutoRepeat) Media.cyclePlayer(); event.accepted = true }
+                        Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) Media.cyclePlayer(); event.accepted = true }
+
+                        MouseArea {
+                            id: _identitySwitch
+                            enabled: _identityText._switchable
+                            hoverEnabled: enabled
+                            y: -6
+                            width: Math.min(parent.paintedWidth, parent.width)
+                            height: parent.height + 12
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: Media.cyclePlayer()
+                        }
                     }
 
                     Item { width: 1; height: 4; visible: _identityText.visible }
@@ -414,7 +456,10 @@ PageShell {
                     ShellText {
                         id: _titleText
                         width: parent.width
-                        text: _mediaCol._shownTitle.length > 0 ? _mediaCol._shownTitle : (_mediaCol._shownArtist.length > 0 ? _mediaCol._shownArtist : "Nothing playing")
+                        text: _mediaCol._shownTitle.length > 0 ? _mediaCol._shownTitle
+                            : _mediaCol._shownArtist.length > 0 ? _mediaCol._shownArtist
+                            : _mediaCol._shownIdentity.length > 0 ? _mediaCol._shownIdentity
+                            : "Media"
                         color: Theme.text
                         font.pixelSize: Settings.fontSize + 3
                         font.weight: Font.DemiBold
@@ -449,6 +494,9 @@ PageShell {
                     Accessible.role: Accessible.Slider
                     Accessible.name: "Seek"
                     Accessible.description: Media.formatTime(Media.positionNow) + " of " + Media.formatTime(Media.length)
+                    Accessible.focusable: Media.canSeek
+                    Accessible.onIncreaseAction: if (Media.canSeek) _seekTrack.nudge(1, 1)
+                    Accessible.onDecreaseAction: if (Media.canSeek) _seekTrack.nudge(-1, 1)
                     Keys.onPressed: event => _seekTrack.handleKey(event)
 
                     ShellText {
@@ -466,7 +514,7 @@ PageShell {
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
                         text:           Media.formatTime(Media.length)
-                        color:          Theme.withAlpha(Theme.text, 0.42)
+                        color:          Theme.withAlpha(Theme.text, 0.55)
                         font.pixelSize: Settings.fontSize - 3
                     }
 
@@ -541,7 +589,7 @@ PageShell {
                             OutlineBorder {
                                 radius: _playFill.radius
                                 outlineWidth: _playBtn.activeFocus ? 2 : 1
-                                outlineColor: _playBtn.activeFocus ? Theme.withAlpha(Theme.accent, 0.7)
+                                outlineColor: _playBtn.activeFocus ? Theme.withAlpha(Theme.accent, Theme.focusRingAlpha)
                                     : Theme.menuControlLine
                                 ColorFade on outlineColor {}
                             }
@@ -625,9 +673,13 @@ PageShell {
                 visible: root._wifiAvailable
                 readonly property bool _ethActive: Network.connected && Network.deviceType === "ethernet"
                 active: Network.wifiEnabled
-                glyph: Network.wifiEnabled ? "󰤨" : "󰤭"
+                glyph: Network.wifiEnabled
+                    ? (Network.isWifi && Network.connected ? Network.signalGlyph(Network.signalStrength) : "󰤨")
+                    : "󰤭"
                 title: "Wi-Fi"
                 status: Network.wifiEnabled && Network.isWifi && Network.connected ? Network.connectionName
+                      : Network.wifiConnecting.length > 0 ? "Connecting to " + Network.wifiConnecting
+                      : Network.wifiError.length > 0 ? "Couldn't connect to " + Network.wifiError
                       : _ethActive ? "Ethernet active"
                       : Network.wifiEnabled ? "Not connected"
                       : "Off"
@@ -717,7 +769,6 @@ PageShell {
                     }
                 }
                 SunArc {
-                    flat: true
                     shown: root._picker === "nightlight" && MenuState.open
                 }
             }
@@ -725,11 +776,13 @@ PageShell {
             ControlRow {
                 id: _dndRow
                 active: Notifications.dnd
-                glyph: Notifications.effectiveDnd ? "󰂛" : "󰂚"
+                glyph: Notifications.effectiveDnd || Notifications.fullscreenSilenced ? "󰂛" : "󰂚"
                 title: "Do Not Disturb"
-                status: Notifications.effectiveDnd && !Notifications.dnd ? "Quiet hours" : ""
+                status: Notifications.effectiveDnd && !Notifications.dnd ? "Quiet hours"
+                    : Notifications.fullscreenSilenced ? "Fullscreen"
+                    : ""
                 showSwitch: true
-                badgeCount: Notifications.effectiveDnd ? Notifications.missedCount : 0
+                badgeCount: Notifications.effectiveDnd || Notifications.fullscreenSilenced ? Notifications.missedCount : 0
                 onActivated: Notifications.toggleDnd()
                 onBadgeActivated: MenuState.showTab(MenuState.recentTab)
             }
@@ -760,7 +813,7 @@ PageShell {
                 title: "Lock"
                 onActivated: {
                     MenuState.close()
-                    Quickshell.execDetached(Settings.lockCommand)
+                    root._runPower(Settings.lockCommand, "Lock failed")
                 }
             }
         }

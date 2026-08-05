@@ -70,7 +70,9 @@ Item {
         ShellText {
             visible: root.open && Network.wifiNetworks.length === 0
             width: parent.width
+            height: 4 * Math.ceil(Math.max(32, Settings.capHeight + 12) / 4)
             horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
             text: !Network.toolAvailable ? "Wi-Fi unavailable"
                 : !Network.wifiEnabled   ? "Wi-Fi is off"
                 : Network.wifiScanning   ? "Searching for networks…"
@@ -176,12 +178,7 @@ Item {
                     height: _entry._sel ? 40 : 0
                     clip: true
                     visible: height > 0.5
-                    MotionBehavior on height {
-                        NumberAnimation {
-                            duration: _entry._sel ? Motion.medium : Motion.fast
-                            easing.type: _entry._sel ? Easing.OutQuart : Easing.InCubic
-                        }
-                    }
+                    Disclosure on height { expanded: _entry._sel }
 
                     Rectangle {
                         id: _pwField
@@ -192,12 +189,13 @@ Item {
                         height: 36
                         radius: Theme.radiusField
                         antialiasing: true
-                        color: Theme.mix(Theme.surface, Theme.subtext, 0.09)
+                        color: Theme.menuControl
 
                         OutlineBorder {
                             radius: _pwField.radius
                             outlineColor: _entry._failed ? Theme.withAlpha(Theme.error, 0.5)
-                                                         : Theme.withAlpha(Theme.accent, 0.3)
+                                                         : _pw.activeFocus ? Theme.withAlpha(Theme.accent, Theme.focusRingSoftAlpha)
+                                                                            : Theme.menuControlLine
                             ColorFade on outlineColor {}
                         }
 
@@ -245,6 +243,7 @@ Item {
                             enabled: _pw.text.length > 0 && !_entry._connecting
                             activeFocusOnTab: enabled
                             opacity: enabled ? 1.0 : 0.4
+                            MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
                             color: (_joinHover.hovered || activeFocus) ? Theme.withAlpha(Theme.accent, 0.30)
                                                                         : Theme.withAlpha(Theme.accent, 0.18)
                             ColorFade on color {}

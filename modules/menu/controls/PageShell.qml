@@ -8,8 +8,6 @@ Item {
     required property bool active
     required property bool powerOpen
 
-    property int  enterFade: 140
-    property int  exitFade:  100
     property real enterShift: Motion.pageOffset
     property real exitShift: -Motion.pageOffset * 0.75
 
@@ -93,12 +91,12 @@ Item {
 
     ParallelAnimation {
         id: _enter
-        NumberAnimation { target: root; property: "opacity"; to: 1.0; duration: Math.max(Motion.pageIn, Motion.ms(root.enterFade)); easing.type: Easing.OutCubic }
+        NumberAnimation { target: root; property: "opacity"; to: 1.0; duration: Motion.pageIn; easing.type: Easing.OutCubic }
         NumberAnimation { target: root; property: "_pageShift"; to: 0.0; duration: Motion.pageIn; easing.type: Easing.OutQuart }
     }
     ParallelAnimation {
         id: _exit
-        NumberAnimation { target: root; property: "opacity"; to: 0.0; duration: Math.max(Motion.pageOut, Motion.ms(root.exitFade)); easing.type: Easing.InCubic }
+        NumberAnimation { target: root; property: "opacity"; to: 0.0; duration: Motion.pageOut; easing.type: Easing.InCubic }
         NumberAnimation { target: root; property: "_pageShift"; to: root.exitShift; duration: Motion.pageOut; easing.type: Easing.InCubic }
     }
 }

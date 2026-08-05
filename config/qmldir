@@ -9,6 +9,7 @@ singleton Settings      1.0 Settings.qml
 
 # helpers
 ColorFade 1.0 ColorFade.qml
+Disclosure 1.0 Disclosure.qml
 MotionBehavior 1.0 MotionBehavior.qml
 PulseLoop 1.0 PulseLoop.qml
 SupervisedProcess 1.0 SupervisedProcess.qml
