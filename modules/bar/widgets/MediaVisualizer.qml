@@ -8,19 +8,19 @@ Canvas {
 
     property string barName: ""
     property bool lowPower: false
-    property string styleOverride: ""
     property bool presentationActive: true
     readonly property bool _onActiveBar: barName.length === 0 || Monitors.activeName === barName
-    readonly property string _style: styleOverride.length > 0 ? styleOverride : ShellSettings.mediaVisualizerStyle
+    readonly property string _style: ShellSettings.mediaVisualizerStyle
     property bool _registered: false
     property bool _registeredLowPower: false
 
-    visible: presentationActive && (ShellSettings.mediaProgress || styleOverride.length > 0)
+    visible: presentationActive && ShellSettings.mediaProgress
         && !ShellSettings.reduceMotion && !Idle.isIdle
         && Media.shown && Media.playing && Media.cavaReady && _onActiveBar
         && width > 0 && height > 0
     renderTarget:   Canvas.Image
-    renderStrategy: lowPower ? Canvas.Immediate : Canvas.Threaded
+    // frozen once the context exists; binding it only logs "not changeable" and silently keeps the construction-time value
+    renderStrategy: Canvas.Threaded
 
     property var waveData: Media.barHeights
     readonly property bool _paintable: visible && width > 0 && height > 0

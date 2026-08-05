@@ -114,9 +114,7 @@ Item {
         cardInset:    root.cardInset
         leftBleed:    root.cardLeftBleed
         active:       (_hover.hovered || root.activeFocus) && root._canTap
-        // stacking the focus marker on the active one lengthens the pill
-        focusActive:  root.activeFocus && root._canTap && !root.active
-        fillOpacity:  root.activeFocus ? 0.13 : 0.08
+        focusActive:  root.activeFocus && root._canTap
     }
 
     Item {
@@ -138,7 +136,12 @@ Item {
 
         Rectangle {
             id: _badge
-            visible: root.badgeCount > 0
+            opacity: root.badgeCount > 0 ? 1.0 : 0.0
+            scale:   root.badgeCount > 0 ? 1.0 : 0.5
+            visible: opacity > 0.01
+            transformOrigin: Item.Center
+            MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
+            MotionBehavior on scale   {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
             anchors.horizontalCenter: parent.right
             anchors.verticalCenter:   parent.top
             anchors.horizontalCenterOffset: -2
@@ -148,7 +151,7 @@ Item {
             radius: 7.5
             antialiasing: true
             z: 2
-            activeFocusOnTab: visible
+            activeFocusOnTab: root.badgeCount > 0
             Accessible.role: Accessible.Button
             Accessible.name: "Open missed notifications"
             Accessible.description: root.badgeCount + (root.badgeCount === 1 ? " missed notification" : " missed notifications")
@@ -197,7 +200,7 @@ Item {
         anchors.left:           _iconSlot.right
         anchors.leftMargin:     10
         anchors.right:          _rightSlot.left
-        anchors.rightMargin:    8
+        anchors.rightMargin:    10
         anchors.verticalCenter: parent.verticalCenter
         spacing: 1
 
@@ -218,7 +221,7 @@ Item {
             text:           root.status
             color:          root.active ? Theme.mix(root.accentColor, Theme.text, 0.12)
                                         : Theme.withAlpha(Theme.subtext, 0.62)
-            font.pixelSize: Math.max(10, Settings.fontSize - 2)
+            font.pixelSize: Math.max(9, Settings.fontSize - 2)
             font.weight:    Font.Medium
             font.hintingPreference: Font.PreferFullHinting
             elide:          Text.ElideRight

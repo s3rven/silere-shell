@@ -21,13 +21,10 @@ Rectangle {
     property bool primaryEnabled: true
     property bool primaryEmphasis: false
     property color primaryColor: Theme.accent
-    property string secondaryLabel: ""
     property string secondaryGlyph: "󰑐"
     property string secondaryAccessibleName: "Refresh"
     property bool secondaryEnabled: true
     property bool secondaryShown: false
-
-    property bool flat: false
 
     readonly property bool _compactActions: width < 300
 
@@ -37,15 +34,10 @@ Rectangle {
     width: parent ? parent.width : 0
     implicitHeight: _col.implicitHeight
     height: implicitHeight
-    radius: root.flat ? 0 : Theme.radiusControl
+    radius: 0
     antialiasing: true
     clip: true
-    color: root.flat ? "transparent" : Theme.menuCard
-
-    OutlineBorder {
-        radius: root.radius
-        outlineColor: root.flat ? "transparent" : Theme.menuCardBorder
-    }
+    color: "transparent"
 
     Column {
         id: _col
@@ -62,7 +54,7 @@ Rectangle {
                 anchors.left: parent.left
                 anchors.leftMargin: 14
                 anchors.verticalCenter: _txt.verticalCenter
-                width: 20
+                width: 18
                 horizontalAlignment: Text.AlignHCenter
                 text: root.glyph
                 color: root.statusColor
@@ -83,18 +75,14 @@ Rectangle {
                     loops: Animation.Infinite
                     from: 0; to: 360
                     duration: Motion.ms(1100)
-                }
-                Connections {
-                    target: root
-                    function onBusyChanged() { if (!root.busy) _rot.angle = 0 }
-                    function onAnimationActiveChanged() { if (!root.animationActive) _rot.angle = 0 }
+                    onRunningChanged: if (!running) _rot.angle = 0
                 }
             }
 
             Column {
                 id: _txt
                 anchors.left: _g.right
-                anchors.leftMargin: 11
+                anchors.leftMargin: 10
                 anchors.right: _actions.left
                 anchors.rightMargin: 12
                 anchors.verticalCenter: parent.verticalCenter
@@ -146,14 +134,13 @@ Rectangle {
             Row {
                 id: _actions
                 anchors.right: parent.right
-                anchors.rightMargin: 10
+                anchors.rightMargin: 12
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 6
 
                 ActionButton {
                     visible: root.secondaryShown
                     height: 28
-                    label: root._compactActions ? "" : root.secondaryLabel
                     glyph: root.secondaryGlyph
                     accessibleName: root.secondaryAccessibleName
                     enabled: root.secondaryEnabled
@@ -186,9 +173,9 @@ Rectangle {
 
             ShellText {
                 id: _detailText
-                x: 45
+                x: 42
                 y: 3
-                width: parent.width - 45 - 13
+                width: parent.width - 42 - 12
                 text: root.detail
                 wrapMode: Text.WordWrap
                 opacity: root.detail.length > 0 ? 1 : 0

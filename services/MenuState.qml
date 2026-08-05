@@ -16,7 +16,6 @@ Singleton {
     readonly property int activeTab: _activeTab
     readonly property bool homeActive: open && activeTab === homeTab
     readonly property bool settingsActive: open && activeTab === settingsTab
-    readonly property bool recentActive: open && activeTab === recentTab
 
     property string settingsSection: "theme"
 

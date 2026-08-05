@@ -20,6 +20,7 @@ Item {
     width: buttonSize
     height: buttonSize
     opacity: enabled ? 1.0 : 0.38
+    MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
     activeFocusOnTab: enabled
 
     function activate(): void {
@@ -78,7 +79,8 @@ Item {
 
         OutlineBorder {
             radius: width / 2
-            outlineColor: root.activeFocus ? Theme.withAlpha(root.accentColor, 0.68) : "transparent"
+            outlineWidth: root.activeFocus ? 2 : 1
+            outlineColor: root.activeFocus ? Theme.withAlpha(root.accentColor, Theme.focusRingAlpha) : "transparent"
         }
 
         ColorFade on color {}

@@ -33,13 +33,20 @@ PageShell {
     }
 
     function formatTime(ms): string {
-        const diff = Math.max(0, Date.now() - Number(ms || Date.now()))
-        if (diff < 60000)     return "just now"
-        if (diff < 3600000)   return Math.floor(diff / 60000) + "m"
-        if (diff < 86400000)  return Math.floor(diff / 3600000) + "h"
-        if (diff < 172800000) return "Yesterday"
-        if (diff < 604800000) return Qt.formatDateTime(new Date(ms), "ddd")
-        return Qt.formatDateTime(new Date(ms), "MMM d")
+        const value = Number(ms || Date.now())
+        const diff = Math.max(0, Date.now() - value)
+        if (diff < 60000)   return "just now"
+        if (diff < 3600000) return Math.floor(diff / 60000) + "m"
+
+        const d = new Date(value)
+        const now = new Date()
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+        const day = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+        const age = today - day
+        if (age <= 0 && diff < 86400000) return Math.floor(diff / 3600000) + "h"
+        if (age < 172800000) return "Yesterday"
+        if (age < 604800000) return Qt.formatDateTime(d, "ddd")
+        return Qt.formatDateTime(d, "MMM d")
     }
 
     function dayKey(ms): string {
@@ -165,8 +172,8 @@ PageShell {
                     radius: _clearButton.radius
                     outlineWidth: (_clearButton.activeFocus || root._clearArmed) ? 2 : 1
                     outlineColor: root._clearArmed
-                        ? Theme.withAlpha(Theme.error, 0.72)
-                        : _clearButton.activeFocus ? Theme.withAlpha(Theme.error, 0.88)
+                        ? Theme.withAlpha(Theme.error, Theme.focusRingAlpha)
+                        : _clearButton.activeFocus ? Theme.withAlpha(Theme.error, Theme.focusRingAlpha)
                         : _clearHover.hovered ? Theme.menuControlLineHot : Theme.menuControlLine
                     ColorFade on outlineColor {}
                 }
@@ -217,6 +224,8 @@ PageShell {
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 10
             visible: !Notifications.hasHistory
+            Accessible.role: Accessible.StaticText
+            Accessible.name: "No notifications"
 
             Column {
                 anchors.centerIn: parent
@@ -373,9 +382,9 @@ PageShell {
                         OutlineBorder {
                             radius: _card.radius
                             outlineWidth: _card.activeFocus ? 2 : 1
-                            outlineColor: _entry._critical
-                                ? Theme.withAlpha(Theme.error, 0.50)
-                                : _card.activeFocus ? Theme.withAlpha(Theme.accent, 0.45)
+                            outlineColor: _card.activeFocus
+                                ? Theme.withAlpha(_entry._critical ? Theme.error : Theme.accent, Theme.focusRingAlpha)
+                                : _entry._critical ? Theme.withAlpha(Theme.error, 0.50)
                                 : Theme.menuCardBorder
                             ColorFade on outlineColor {}
                         }
@@ -417,11 +426,10 @@ PageShell {
                         Column {
                             id: _entryContent
                             anchors.left: parent.left
-                            anchors.leftMargin: 13
+                            anchors.leftMargin: 14
                             anchors.right: parent.right
                             anchors.rightMargin: 12
-                            anchors.top: parent.top
-                            anchors.topMargin: 9
+                            anchors.verticalCenter: parent.verticalCenter
                             spacing: 3
 
                             Row {
@@ -434,6 +442,8 @@ PageShell {
                                     visible: _entry._appIconSource.length > 0
                                     width: visible ? 16 : 0
                                     height: 16
+                                    // without this the themed icon decodes at its native size (often 256px+) to paint 16px
+                                    implicitSize: 16
                                     source: _entry._appIconSource
                                     asynchronous: true
                                 }
@@ -516,7 +526,7 @@ PageShell {
                                 radius: _removeButton.radius
                                 outlineWidth: _removeButton.activeFocus ? 2 : 1
                                 outlineColor: _removeButton.activeFocus
-                                    ? Theme.withAlpha(Theme.error, 0.88)
+                                    ? Theme.withAlpha(Theme.error, Theme.focusRingAlpha)
                                     : _removeHover.hovered ? Theme.withAlpha(Theme.error, 0.36) : Theme.menuControlLine
                                 ColorFade on outlineColor {}
                             }
@@ -538,6 +548,7 @@ PageShell {
         ListEdgeLines {
             anchors.fill: _historyList
             visible: Notifications.hasHistory
+            opacity: _historyList.opacity
             z: 2
             list: _historyList
             maxOpacity: 0.72
@@ -545,6 +556,7 @@ PageShell {
 
         MenuScrollThumb {
             list: _historyList
+            fadeMultiplier: _historyList.opacity
             trackInset: 4
             rightInset: 2
             shown: Notifications.hasHistory

@@ -13,8 +13,10 @@ Pill {
     readonly property real maximumValue: 1
     readonly property real stepSize: Brightness.stepPct / 100
 
-    opacity:     canControl ? 1.0 : 0.45
-    visible: show
+    property real _baseOpacity: show ? 1.0 : 0.0
+    readonly property bool layoutVisible: show || _baseOpacity > 0.001
+    opacity: _baseOpacity
+    visible: layoutVisible
     glyph:           Brightness.icon
     glyphColor:      canControl ? Theme.text : Theme.subtext
     reserveText: "100%"
@@ -34,7 +36,7 @@ Pill {
     Accessible.onIncreaseAction: if (root.canControl) Brightness.bumpBy(Brightness.stepPct)
     Accessible.onDecreaseAction: if (root.canControl) Brightness.bumpBy(-Brightness.stepPct)
 
-    MotionBehavior on opacity {NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+    MotionBehavior on _baseOpacity {NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
 
     Keys.onLeftPressed:  event => { if (canControl) { Brightness.bumpBy(-Brightness.stepPct); event.accepted = true } else event.accepted = false }
     Keys.onDownPressed:  event => { if (canControl) { Brightness.bumpBy(-Brightness.stepPct); event.accepted = true } else event.accepted = false }

@@ -172,7 +172,7 @@ Column {
                     { value: "charcoal", name: "Charcoal" },
                     { value: "graphite", name: "Graphite" }
                 ]
-                colors: ["#111216", "#191b21", "#20232b"]
+                colors: [Theme._tones.black.surface, Theme._tones.charcoal.surface, Theme._tones.graphite.surface]
                 activeIndex: options.findIndex(o => o.value === ShellSettings.baseTone)
                 ringColor: Theme.accent
                 onPicked: (i) => ShellSettings.baseTone = options[i].value

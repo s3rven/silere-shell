@@ -9,11 +9,11 @@ import "../controls"
 Item {
     id: root
 
-    readonly property int _toolbarH: 30
-    readonly property int _zoneHeaderH: 18
+    readonly property int _toolbarH: 32
+    readonly property int _zoneHeaderH: 20
     readonly property int _rowH: 32
-    readonly property int _emptyH: 26
-    readonly property int _bottomPad: 6
+    readonly property int _emptyH: 28
+    readonly property int _bottomPad: 8
     readonly property var _allKeys: ShellSettings.barWidgetKeys
     readonly property var _zones: ["left", "center", "right"]
 
@@ -173,7 +173,7 @@ Item {
     Rectangle {
         id: _surface
         anchors.fill: parent
-        radius: Theme.radiusControl
+        radius: Theme.radiusCard
         antialiasing: true
         color: Theme.menuCard
 
@@ -206,7 +206,6 @@ Item {
             anchors.rightMargin: 8
             anchors.verticalCenter: parent.verticalCenter
             height: 22
-            radius: 6
             label: "Reset"
             accessibleName: "Reset bar widgets"
             visible: ShellSettings.barWidgetsModified
@@ -316,8 +315,8 @@ Item {
             RowHoverBg {
                 anchors.fill: parent
                 cardInset: 0
-                topRadius: 8
-                bottomRadius: 8
+                topRadius: Theme.radiusControl
+                bottomRadius: Theme.radiusControl
                 active: _row.dragging || _rowHover.hovered || _keyFocus.activeFocus
                 focusActive: _keyFocus.activeFocus
                 fillColor: _row.dragging ? Theme.accent : Theme.text
@@ -365,7 +364,7 @@ Item {
                 id: _glyph
                 visible: root.width >= 180
                 anchors.left: parent.left
-                anchors.leftMargin: 12
+                anchors.leftMargin: 10
                 anchors.verticalCenter: parent.verticalCenter
                 width: visible ? 18 : 0
                 horizontalAlignment: Text.AlignHCenter
@@ -373,20 +372,20 @@ Item {
                 color: _row.checked
                     ? Theme.withAlpha(Theme.accent, 0.90)
                     : Theme.withAlpha(Theme.subtext, 0.48)
-                font.pixelSize: Settings.fontSize
+                font.pixelSize: Settings.iconSize + 2
                 ColorFade on color {}
             }
 
             ShellText {
                 anchors.left: _glyph.right
-                anchors.leftMargin: 7
+                anchors.leftMargin: 10
                 anchors.right: _row.hasToggle ? _toggleTarget.left : parent.right
-                anchors.rightMargin: _row.hasToggle ? 4 : 12
+                anchors.rightMargin: _row.hasToggle ? 4 : 8
                 anchors.verticalCenter: parent.verticalCenter
                 text: _row.meta.label
                 elide: Text.ElideRight
                 color: _row.checked ? Theme.text : Theme.withAlpha(Theme.text, 0.48)
-                font.pixelSize: Settings.fontSize - 1
+                font.pixelSize: Settings.fontSize
                 ColorFade on color {}
             }
 
@@ -394,6 +393,7 @@ Item {
                 id: _toggleTarget
                 visible: _row.hasToggle
                 anchors.right: parent.right
+                anchors.rightMargin: 8
                 width: 44
                 height: parent.height
 
@@ -490,7 +490,7 @@ Item {
                 : zone === "center" ? root._centerListTop
                 : root._rightListTop) + 2
             height: root._emptyH - 4
-            radius: 8
+            radius: Theme.radiusControl
             antialiasing: true
             color: Theme.withAlpha(Theme.accent, hot ? 0.08 : 0.025)
 

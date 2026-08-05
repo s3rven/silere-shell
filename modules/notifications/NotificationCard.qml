@@ -80,7 +80,7 @@ Item {
     readonly property bool hasBody:       bodyText.length > 0
     readonly property bool isCritical: notification.urgency === NotificationUrgency.Critical
 
-    readonly property real _cardRadius: Math.min(Theme.radiusPanel, ShellSettings.barHeight / 2)
+    readonly property real _cardRadius: Theme.surfaceRadius
 
     function dismiss(expired): void {
         if (!card.enabled) return
@@ -213,13 +213,12 @@ Item {
         onTriggered: card._syncCountdown()
     }
 
-    SequentialAnimation {
-        running: card._showCountdown && card._timeoutProgress < 0.18
+    PulseLoop {
+        active: card._showCountdown && card._timeoutProgress < 0.18
             && !_cardHover.hovered && !card.quietPaint
-        loops:   Animation.Infinite
-        onRunningChanged: if (!running) card._countdownPulse = 1.0
-        NumberAnimation { target: card; property: "_countdownPulse"; to: 0.5; duration: Motion.ms(420); easing.type: Easing.InOutSine }
-        NumberAnimation { target: card; property: "_countdownPulse"; to: 1.0; duration: Motion.ms(420); easing.type: Easing.InOutSine }
+        target: card; targetProperty: "_countdownPulse"
+        peak: 0.5; floor: 1.0; restValue: 1.0
+        duration: Motion.ms(420)
     }
 
     HoverHandler {
@@ -286,7 +285,10 @@ Item {
         MotionBehavior on opacity { gate: card.visible && cardRect._behaviorEnabled; NumberAnimation { duration: Motion.ms(200); easing.type: card._leaving ? Easing.InCubic : Easing.OutCubic } }
         MotionBehavior on height  { gate: card.visible && cardRect._behaviorEnabled; NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
 
-        color: Theme.rowFill(_cardHover.hovered, card.isCritical)
+        // same opaque chrome tone as the menu/calendar/tray popups, or a standalone card reads as a lighter floating row
+        color: card.isCritical
+            ? Theme.mix(Theme.popup, Theme.error, _cardHover.hovered ? 0.17 : 0.12)
+            : (_cardHover.hovered ? Theme.mix(Theme.popup, Theme.subtext, 0.06) : Theme.popup)
 
         ColorFade on color {}
 
@@ -571,7 +573,7 @@ Item {
             radius: cardRect.radius
             outlineColor: card.isCritical
                 ? Theme.withAlpha(Theme.error,  0.32)
-                : Theme.menuCardBorder
+                : Theme.outline
             MotionBehavior on outlineColor {ColorAnimation { duration: Motion.medium } }
         }
     }

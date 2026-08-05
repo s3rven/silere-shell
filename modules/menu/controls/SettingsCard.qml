@@ -8,8 +8,6 @@ Rectangle {
     id: root
 
     default property alias rows: col.data
-    property color rowDivider: Theme.menuDivider
-    property bool showBorder: true
 
     width:  parent ? parent.width : 0
     implicitHeight: col.implicitHeight
@@ -21,7 +19,7 @@ Rectangle {
 
     OutlineBorder {
         radius: root.radius
-        outlineColor: root.showBorder ? Theme.menuCardBorder : "transparent"
+        outlineColor: Theme.menuCardBorder
     }
 
     Column {
@@ -30,7 +28,7 @@ Rectangle {
         spacing: 0
     }
 
-    RowDividers { column: col; lineColor: root.rowDivider }
+    RowDividers { column: col }
 
     function _edgeEl(container, first): var {
         const ch = container.children

@@ -14,7 +14,6 @@ Rectangle {
     // clamp against the width the card is headed for, not the live one, or an animating width fights the x Behavior every frame
     property real targetWidth: width
     property bool animateScale: true
-    property bool animateOffset: true
     property bool animatePlacement: true
 
     signal closeFinished()
@@ -32,8 +31,7 @@ Rectangle {
     readonly property real _maxX: Math.max(_minX, win.width - targetWidth - _minX)
 
     property real scaleAmt: animateScale ? Motion.popScaleFrom : 1
-    property real edgeOffset: animateOffset
-        ? (barBottom ? Motion.popEdgeOffset : -Motion.popEdgeOffset) : 0
+    property real edgeOffset: barBottom ? Motion.popEdgeOffset : -Motion.popEdgeOffset
     opacity: 0
 
     function _clampedX(px: real): real {
@@ -122,8 +120,7 @@ Rectangle {
             name: "hidden"
             PropertyChanges {
                 root.scaleAmt: root.animateScale ? Motion.popScaleFrom : 1.0
-                root.edgeOffset: root.animateOffset
-                    ? (root.barBottom ? Motion.popEdgeOffset : -Motion.popEdgeOffset) : 0
+                root.edgeOffset: root.barBottom ? Motion.popEdgeOffset : -Motion.popEdgeOffset
                 root.opacity: 0
             }
         },
@@ -141,7 +138,7 @@ Rectangle {
             from: "*"; to: "visible"
             ParallelAnimation {
                 NumberAnimation { target: root; property: "scaleAmt";  to: 1.0; duration: root.animateScale ? Motion.popIn : 0; easing.type: Easing.OutQuart }
-                NumberAnimation { target: root; property: "edgeOffset"; to: 0.0; duration: root.animateOffset ? Motion.popIn : 0; easing.type: Easing.OutQuart }
+                NumberAnimation { target: root; property: "edgeOffset"; to: 0.0; duration: Motion.popIn; easing.type: Easing.OutQuart }
                 NumberAnimation { target: root; property: "opacity";   to: 1.0; duration: Motion.popInFade; easing.type: Easing.OutCubic }
             }
         },
@@ -150,7 +147,7 @@ Rectangle {
             SequentialAnimation {
                 ParallelAnimation {
                     NumberAnimation { target: root; property: "scaleAmt"; to: root.animateScale ? Motion.popScaleFrom : 1.0; duration: root.animateScale ? Motion.popOut : 0; easing.type: Easing.InCubic }
-                    NumberAnimation { target: root; property: "edgeOffset"; to: root.animateOffset ? (root.barBottom ? Motion.popEdgeOffset : -Motion.popEdgeOffset) : 0; duration: root.animateOffset ? Motion.popOut : 0; easing.type: Easing.InCubic }
+                    NumberAnimation { target: root; property: "edgeOffset"; to: root.barBottom ? Motion.popEdgeOffset : -Motion.popEdgeOffset; duration: Motion.popOut; easing.type: Easing.InCubic }
                     NumberAnimation { target: root; property: "opacity"; to: 0.0; duration: Motion.popOutFade; easing.type: Easing.InCubic }
                 }
                 ScriptAction { script: root.closeFinished() }

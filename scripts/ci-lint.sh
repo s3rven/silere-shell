@@ -164,6 +164,26 @@ if [ -n "$bare_behaviors" ]; then
 else
   ok "motion" "every Behavior carries the reduce-motion gate"
 fi
+# PulseLoop derives running from `active` so the gate cannot be bypassed. Setting
+# running: directly reintroduces an infinite loop that spins at zero duration.
+pulse_running="$(awk '
+  {
+    line = $0
+    sub(/\/\/.*/, "", line)
+    if (!inpulse && line ~ /PulseLoop[[:space:]]*\{/) { inpulse = 1; depth = 0 }
+    if (inpulse) {
+      if (line ~ /running:/) print FILENAME ":" FNR ":" $0
+      depth += gsub(/\{/, "{", line) - gsub(/\}/, "}", line)
+      if (depth <= 0) inpulse = 0
+    }
+  }
+' $(find modules config services -name '*.qml') || true)"
+if [ -n "$pulse_running" ]; then
+  fail "set active: on PulseLoop, not running::"
+  printf '%s\n' "$pulse_running"
+else
+  ok "motion" "PulseLoop gating stays on active"
+fi
 
 section "portable QML key handlers"
 # qmlcachegen accepts arbitrary Keys.onFooPressed names, but the live engine
@@ -179,6 +199,35 @@ if [ -n "$unsupported_key_handlers" ]; then
   while IFS= read -r handler; do printf '  Keys.%s\n' "$handler"; done <<< "$unsupported_key_handlers"
 else
   ok "Keys" "attached handlers are runtime-portable"
+fi
+
+section "reduce-motion durations"
+# The Behavior check above cannot see a NumberAnimation sitting inside a
+# Sequential/Parallel block or a states transition. Motion.* collapses to 0 under
+# reduce motion; a literal duration keeps animating for users who asked for none.
+# the exclusion must match only the declaration form: animation one-liners carry
+# `property: "_op"` on the same line and a bare `grep -v property` hides every real hit
+raw_durations="$(grep -RInE 'duration:[[:space:]]*[0-9]' --include='*.qml' \
+  shell.qml modules config services \
+  | grep -vE 'property[[:space:]]+(int|real|var)[[:space:]]+duration' || true)"
+if [ -n "$raw_durations" ]; then
+  fail "animation durations must route through Motion.* so reduce motion can zero them:"
+  printf '%s\n' "$raw_durations"
+else
+  ok "motion" "every animation duration routes through Motion"
+fi
+
+section "underscore property handlers"
+# Qt strips leading underscores before capitalising a handler name, so property
+# `_foo` is served by on_FooChanged. on_fooChanged type-checks, loads, and never
+# fires — there is no runtime warning for it either.
+lower_underscore_handlers="$(grep -RInE --include='*.qml' '^[[:space:]]*on_[a-z][A-Za-z0-9_]*[[:space:]]*:' \
+  shell.qml modules config services || true)"
+if [ -n "$lower_underscore_handlers" ]; then
+  fail "underscore handlers must capitalise the property name (on_FooChanged):"
+  printf '%s\n' "$lower_underscore_handlers"
+else
+  ok "handlers" "underscore property handlers are spelled so they fire"
 fi
 
 section "installer environment defaults"

@@ -11,7 +11,12 @@ Pill {
     readonly property real minimumValue: 0
     readonly property real maximumValue: 1
     readonly property real stepSize: Audio.stepPct
-    visible: show
+    property real _baseOpacity: show ? 1.0 : 0.0
+    readonly property bool layoutVisible: show || _baseOpacity > 0.001
+    opacity: _baseOpacity
+    visible: layoutVisible
+
+    MotionBehavior on _baseOpacity {NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
 
     glyph:      Audio.icon
     glyphColor: Audio.muted ? Theme.subtext : Theme.text

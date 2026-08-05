@@ -122,6 +122,6 @@ Singleton {
         target:         root
         targetProperty: "alertPulse"
         duration:       root.pulseDuration
-        running:        root.low && !ShellSettings.reduceMotion && !Idle.isIdle
+        active:         root.low && !Idle.isIdle
     }
 }

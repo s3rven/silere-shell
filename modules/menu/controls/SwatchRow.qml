@@ -118,6 +118,10 @@ Item {
                     antialiasing: true
                     color: "transparent"
 
+                    MotionBehavior on width {
+                        NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
+                    }
+
                     OutlineBorder {
                         radius: _ring.radius
                         outlineWidth: _sw.active ? 2 : 1
@@ -126,6 +130,7 @@ Item {
                                 ? root.ringColor
                                 : Theme.mix(_sw.chipColor, Theme.text, 0.68))
                             : Theme.withAlpha(Theme.subtext, 0.24)
+                        ColorFade on outlineColor {}
                     }
                 }
             }

@@ -40,7 +40,6 @@ Item {
     readonly property string monitorName: Compositor.monitorName(root.screen)
     readonly property bool monitorReady: monitorName.length > 0 && Compositor.activeWorkspaceId(monitorName) > 0
     readonly property bool show: true
-    visible: show
     readonly property int  rawActiveId:  Compositor.activeWorkspaceId(root.monitorName)
     readonly property int  activeId:     rawActiveId > 0 ? rawActiveId : _lastNormalActiveId
 
@@ -66,7 +65,7 @@ Item {
         }
         return first
     }
-    readonly property color _trailCoreClear: Qt.rgba(1, 1, 1, 0)
+    readonly property color _trailCoreClear: Theme.withAlpha(Theme.text, 0)
 
     function _knownOnOtherMonitor(id: int): bool {
         if (root.monitorName.length === 0) return false
@@ -291,7 +290,7 @@ Item {
 
     SequentialAnimation {
         id: _groupFadeAnim
-        NumberAnimation { target: root; property: "opacity"; to: 0; duration: Motion.ms(85);  easing.type: Easing.OutCubic }
+        NumberAnimation { target: root; property: "opacity"; to: 0; duration: Motion.ms(85);  easing.type: Easing.InCubic }
         ScriptAction    { script: root._pageShift = root._pageDir * 10 }
         ParallelAnimation {
             NumberAnimation { target: root; property: "opacity";    to: 1; duration: Motion.ms(150); easing.type: Easing.OutCubic }
@@ -395,8 +394,8 @@ Item {
         width: trail.width
         gradient: Gradient {
             orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: trail._rightward ? root._trailCoreClear : Qt.rgba(1, 1, 1, 0.95) }
-            GradientStop { position: 1.0; color: trail._rightward ? Qt.rgba(1, 1, 1, 0.95) : root._trailCoreClear }
+            GradientStop { position: 0.0; color: trail._rightward ? root._trailCoreClear : Theme.withAlpha(Theme.text, 0.95) }
+            GradientStop { position: 1.0; color: trail._rightward ? Theme.withAlpha(Theme.text, 0.95) : root._trailCoreClear }
         }
         opacity: trail._strength * 0.88
         visible: opacity > 0.01
@@ -686,7 +685,6 @@ Item {
 
                 width:   root._btnW(wsId)
                 height:  root.btnH
-                opacity: 1
                 scale:   1.0
 
                 MotionBehavior on width {
@@ -764,18 +762,18 @@ Item {
                 Rectangle {
                     id: _wsFocusRing
                     anchors.centerIn: parent
-                    width: Math.min(parent.width, root.btnW)
+                    width: parent.width
                     height: root.btnH
-                    radius: height / 2
+                    radius: Metrics.hoverRadiusFor(height)
                     antialiasing: true
-                    color: Theme.withAlpha(Theme.accent, 0.10)
+                    color: Theme.withAlpha(Theme.accent, 0.14)
                     opacity: ws.activeFocus ? 1.0 : 0.0
                     visible: opacity > 0.001
                     MotionBehavior on opacity {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
                     OutlineBorder {
                         radius: _wsFocusRing.radius
-                        outlineColor: Theme.withAlpha(Theme.accent, 0.72)
+                        outlineColor: Theme.withAlpha(Theme.accent, Theme.focusRingAlpha)
                     }
                 }
 
@@ -897,6 +895,7 @@ Item {
                     scale: ws._hoverFx ? 1.2 : 1.0
 
                     ColorFade on color {}
+                    MotionBehavior on width {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
                     MotionBehavior on scale {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
                 }
 
@@ -949,6 +948,24 @@ Item {
 
         HoverHandler { id: _tickHover; enabled: _urgentTick.shown; cursorShape: Qt.PointingHandCursor }
         TapHandler   { enabled: _urgentTick.shown; onTapped: _urgentTick._jump() }
+
+        Rectangle {
+            id: _tickFocusRing
+            anchors.centerIn: parent
+            width: parent.width
+            height: root.btnH
+            radius: Metrics.hoverRadiusFor(height)
+            antialiasing: true
+            color: Theme.withAlpha(Theme.accent, 0.14)
+            opacity: _urgentTick.activeFocus ? 1.0 : 0.0
+            visible: opacity > 0.001
+            MotionBehavior on opacity {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+
+            OutlineBorder {
+                radius: _tickFocusRing.radius
+                outlineColor: Theme.withAlpha(Theme.accent, Theme.focusRingAlpha)
+            }
+        }
 
         property real _pulse: 1.0
         property bool _pulseSettled: false

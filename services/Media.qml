@@ -9,9 +9,44 @@ import "../config"
 Singleton {
     id: root
 
-    readonly property var player: {
+    // ephemeral by design: players come and go, so a pinned choice is dropped the moment its player leaves the bus
+    property string preferredPlayer: ""
+
+    readonly property var playerList: {
+        const out = []
         const players = Mpris.players.values ?? []
+        for (let i = 0; i < players.length; i++)
+            if (players[i]) out.push(players[i])
+        // playerctld only mirrors the real players; keep it solely when nothing else is on the bus
+        const real = out.filter(p => (p.dbusName || "").indexOf("playerctld") < 0)
+        return real.length > 0 ? real : out
+    }
+    readonly property int playerCount: playerList.length
+
+    onPlayerListChanged: {
+        if (root.preferredPlayer.length === 0) return
+        for (let i = 0; i < root.playerList.length; i++)
+            if (root.playerList[i].dbusName === root.preferredPlayer) return
+        root.preferredPlayer = ""
+    }
+
+    function cyclePlayer(): void {
+        const players = root.playerList
+        if (players.length < 2) return
+        let idx = -1
+        for (let i = 0; i < players.length; i++)
+            if (players[i] === root.player) { idx = i; break }
+        root.preferredPlayer = players[(idx + 1) % players.length].dbusName
+    }
+
+    readonly property var player: {
+        const players = root.playerList
         let fallback = null
+
+        if (root.preferredPlayer.length > 0) {
+            for (let i = 0; i < players.length; i++)
+                if (players[i].dbusName === root.preferredPlayer) return players[i]
+        }
 
         for (let i = 0; i < players.length; i++) {
             const p = players[i]

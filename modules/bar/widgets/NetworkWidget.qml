@@ -58,7 +58,8 @@ Pill {
     // the icon cell is a fixed width: one glyph fits, two overflow it
     glyph:          Network.icon
     maxTextWidth:   compact ? 150 : 260
-    shrinkDelay:    0
+    // above the 2s traffic-stats poll: shrinkDelay:0 re-animated the pill's width on every single tick
+    shrinkDelay:    2400
     activeFocusOnTab: show
     Accessible.focusable: true
 
@@ -90,7 +91,7 @@ Pill {
     text: expanded ? _detailText : _inlineText
 
     PulseLoop {
-        running: root.barActive && root._isPulsing && !Idle.isIdle
+        active: root.barActive && root._isPulsing && !Idle.isIdle
         target: root; targetProperty: "_pulseOpacity"
         peak: 0.5; floor: 1.0; restValue: 1.0
         duration: Motion.ms(800)

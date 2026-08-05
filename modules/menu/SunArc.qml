@@ -8,19 +8,10 @@ import "../common"
 Rectangle {
     id: root
 
-    property bool flat: false
-
     width:  parent ? parent.width : 0
     implicitHeight: 132
     height: implicitHeight
-    radius: flat ? 0 : 12
-    antialiasing: !flat
-    color: flat ? "transparent" : Theme.mix(Theme.surface, Theme.subtext, 0.06)
-
-    OutlineBorder {
-        radius: root.radius
-        outlineColor: root.flat ? "transparent" : Theme.menuCardBorder
-    }
+    color: "transparent"
 
     readonly property bool _isDay: NightLight.isDaytime
 
@@ -45,7 +36,8 @@ Rectangle {
     function _playSweep(): void {
         if (!root.shown) return
         const target = Math.max(0, NightLight.dayProgress)
-        if (ShellSettings.reduceMotion) { _sweep.stop(); root.animProg = target; return }
+        // the night paint branch doesn't read animProg, so sweeping through it there is pure wasted repaint
+        if (ShellSettings.reduceMotion || !NightLight.isDaytime) { _sweep.stop(); root.animProg = target; return }
         _sweep.stop(); _sweep.to = target; _sweep.restart()
     }
     Component.onCompleted: Qt.callLater(root._playSweep)
@@ -107,7 +99,7 @@ Rectangle {
                 readonly property color moonArcColor: Theme.withAlpha(Theme.subtext, 0.50)
                 readonly property color moonDisc:     Theme.withAlpha(Theme.text, 0.88)
                 readonly property color moonGlow:     Theme.withAlpha(Theme.subtext, 0.20)
-                readonly property color cardColor:    root.flat ? Theme.menuCard : root.color
+                readonly property color cardColor:    Theme.menuCard
                 readonly property bool  isDay:        NightLight.isDaytime
                 readonly property real  nightProg:    NightLight.nightProgress
                 onNightProgChanged: if (!isDay && root.shown && MenuState.open) requestPaint()

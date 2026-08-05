@@ -36,7 +36,7 @@ Singleton {
         target:         root
         targetProperty: "alertPulse"
         duration:       root.pulseDuration
-        running:        root.hot && !ShellSettings.reduceMotion && root.needed && !Idle.isIdle
+        active:         root.hot && root.needed && !Idle.isIdle
     }
 
     function _sample(t: real): void {

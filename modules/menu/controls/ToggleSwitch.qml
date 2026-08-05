@@ -40,7 +40,7 @@ Item {
             radius: _track.radius
             outlineWidth: root.focused ? 2 : 1
             outlineColor: root.focused
-                ? Theme.withAlpha(root.accentColor, 0.78)
+                ? Theme.withAlpha(root.accentColor, Theme.focusRingAlpha)
                 : root.checked
                     ? (root.highlighted
                         ? Theme.withAlpha(root.accentColor, 0.48)

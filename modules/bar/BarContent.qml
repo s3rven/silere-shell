@@ -161,12 +161,17 @@ Item {
         && !ShellSettings.reduceMotion && !Idle.isIdle
         && root.barActive && root._onActiveBar && Media.shown && Media.playing && Media.cavaReady
     readonly property bool _centerVizHasRoom: titleAvailableWidth >= 48
+    // center widgets and the title keep their slot; the visualizer drops behind them instead of being suppressed
+    readonly property bool _centerVizBehind: root.centerHasWidgets
+        || (ShellSettings.showWindowTitle && root.titleHasRoom)
+    readonly property real _centerVizBehindOpacity: 0.30
     readonly property bool _centerVizShowing: _centerVizWanted && _centerVizHasRoom
-        && !root.centerHasWidgets && !root._osdBarShowing
-    readonly property int _centerVizWidth: Math.round(Math.max(48, Math.min(560,
-        titleAvailableWidth,
+        && !root._osdBarShowing
+    // snapped to an 8px grid: the Canvas backing this width drops and reallocates its texture on every resize,
+    // and titleAvailableWidth moves every frame during the bar's layout animations
+    readonly property int _centerVizWidth: 8 * Math.round(Math.max(48, Math.min(560,
         titleAvailableWidth * 0.68
-    )))
+    )) / 8)
     readonly property real _centerVizTravel: Math.max(0, titleAvailableWidth - _centerVizWidth)
     readonly property int _centerVizX: Math.round(titleFreeLeft + _centerVizTravel / 2)
 
@@ -191,7 +196,7 @@ Item {
         // no Behavior on x: titleAnchor already eases, and animating x too drifts the title sideways as new text fades in
 
         readonly property bool _want: ShellSettings.showWindowTitle && root.titleHasRoom
-            && !root._osdBarShowing && !root._centerVizShowing
+            && !root._osdBarShowing
         state: _want ? "shown" : "hidden"
 
         states: [
@@ -245,19 +250,22 @@ Item {
         width: root._centerVizWidth
         height: parent.height
         active: root._centerVizWanted && root._centerVizHasRoom
-            && !root.centerHasWidgets
         sourceComponent: Component {
             MediaVisualizer {
                 barName: root.screen ? root.screen.name : ""
                 presentationActive: root._centerVizShowing
+                // dimmed behind the title/widgets: full rate and bar count buy detail nobody can see
                 lowPower: root.effectiveCompact || root._centerVizWidth < 260
+                    || root._centerVizBehind
             }
         }
         visible: opacity > 0.001
-        opacity: root._centerVizShowing ? 1.0 : 0.0
+        opacity: !root._centerVizShowing ? 0.0
+            : root._centerVizBehind ? root._centerVizBehindOpacity : 1.0
         scale: root._centerVizShowing ? 1.0 : 0.94
         transformOrigin: Item.Center
-        z: 1
+        // behind the widgets and the title, still above the bar surface painted by Bar.qml
+        z: root._centerVizBehind ? -1 : 1
 
         MotionBehavior on x {
             NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }

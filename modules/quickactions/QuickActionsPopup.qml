@@ -147,7 +147,7 @@ PanelWindow {
             color: _row._pressed
                 ? Theme.withAlpha(Theme.accent, 0.14)
                 : (_rowHover.hovered || _row.activeFocus)
-                    ? Theme.withAlpha(Theme.menuHover, 0.12) : "transparent"
+                    ? Theme.withAlpha(Theme.menuHover, 0.08) : "transparent"
             ColorFade on color {}
         }
 
@@ -201,6 +201,7 @@ PanelWindow {
             color: _row.active
                 ? Theme.withAlpha(Theme.accent, 0.13) : "transparent"
             ColorFade on color {}
+            MotionBehavior on width {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
             OutlineBorder {
                 radius: _state.radius

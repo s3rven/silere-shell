@@ -33,48 +33,37 @@ Column {
             dependsNote: SystemTools.ready ? "cava missing" : "Checking"
         }
         CollapsibleSection {
-            id: _visualizerSection
             expanded: ShellSettings.mediaProgress && SystemTools.hasCava
-            Loader {
-                width: parent.width
-                active: _visualizerSection.expanded || _visualizerSection.height > 0.5
-                height: item ? item.implicitHeight : 0
-                sourceComponent: Component {
-                    Column {
-                        width: parent.width
-                        ChoiceChipRow {
-                            glyph: "󰝚"; label: "Position"
-                            currentValue: ShellSettings.mediaVisualizerPosition
-                            model: [
-                                { value: "media",  label: "Media" },
-                                { value: "center", label: "Center" }
-                            ]
-                            onChosen: (v) => ShellSettings.mediaVisualizerPosition = v
-                        }
-                        ChoiceChipRow {
-                            glyph: "󰝚"; label: "Shape"
-                            currentValue: ShellSettings.mediaVisualizerStyle
-                            model: [
-                                { value: "wave",  label: "Wave" },
-                                { value: "bars",  label: "Bars" },
-                                { value: "pulse", label: "Pulse" }
-                            ]
-                            onChosen: (v) => ShellSettings.mediaVisualizerStyle = v
-                        }
-                        ChoiceChipRow {
-                            glyph: "󰓅"; label: "Preset"
-                            currentValue: ShellSettings.mediaVisualizerPreset
-                            model: [
-                                { value: "eco",      label: "Eco" },
-                                { value: "balanced", label: "Balanced" },
-                                { value: "smooth",   label: "Smooth" }
-                            ]
-                            onChosen: (v) => ShellSettings.mediaVisualizerPreset = v
-                        }
-                        HintText { text: "Preset sets bar count and framerate — Eco costs the least CPU." }
-                    }
-                }
+            ChoiceChipRow {
+                glyph: "󰝚"; label: "Position"
+                currentValue: ShellSettings.mediaVisualizerPosition
+                model: [
+                    { value: "media",  label: "Media" },
+                    { value: "center", label: "Center" }
+                ]
+                onChosen: (v) => ShellSettings.mediaVisualizerPosition = v
             }
+            ChoiceChipRow {
+                glyph: "󰝚"; label: "Shape"
+                currentValue: ShellSettings.mediaVisualizerStyle
+                model: [
+                    { value: "wave",  label: "Wave" },
+                    { value: "bars",  label: "Bars" },
+                    { value: "pulse", label: "Pulse" }
+                ]
+                onChosen: (v) => ShellSettings.mediaVisualizerStyle = v
+            }
+            ChoiceChipRow {
+                glyph: "󰓅"; label: "Preset"
+                currentValue: ShellSettings.mediaVisualizerPreset
+                model: [
+                    { value: "eco",      label: "Eco" },
+                    { value: "balanced", label: "Balanced" },
+                    { value: "smooth",   label: "Smooth" }
+                ]
+                onChosen: (v) => ShellSettings.mediaVisualizerPreset = v
+            }
+            HintText { text: "Preset sets bar count and framerate — Eco costs the least CPU." }
         }
     }
 }

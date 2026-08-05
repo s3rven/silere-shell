@@ -44,6 +44,7 @@ Rectangle {
     radius: 8
     antialiasing: true
     opacity: root.enabled ? 1.0 : 0.38
+    MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
     color: root.armed
         ? Theme.withAlpha(Theme.error, 0.105)
         : root._hot ? Theme.withAlpha(Theme.text, 0.045) : "transparent"
@@ -145,9 +146,9 @@ Rectangle {
     ShellText {
         id: _glyph
         anchors.left: parent.left
-        anchors.leftMargin: 13
+        anchors.leftMargin: 14
         anchors.verticalCenter: parent.verticalCenter
-        width: 19
+        width: 18
         horizontalAlignment: Text.AlignHCenter
         text: root.glyph
         color: root._glyphFg
@@ -160,7 +161,7 @@ Rectangle {
         id: _value
         visible: root._showValue
         anchors.right: parent.right
-        anchors.rightMargin: 11
+        anchors.rightMargin: 12
         anchors.verticalCenter: parent.verticalCenter
         width: Math.min(implicitWidth, root._valueMaxW)
         text: root.value
@@ -174,9 +175,9 @@ Rectangle {
 
     ShellText {
         anchors.left: _glyph.right
-        anchors.leftMargin: 9
+        anchors.leftMargin: 10
         anchors.right: parent.right
-        anchors.rightMargin: root._showValue ? Math.round(_value.width + 19) : 11
+        anchors.rightMargin: root._showValue ? Math.round(_value.width + 20) : 12
         anchors.verticalCenter: parent.verticalCenter
         text: root.armed ? root.confirmLabel : root.label
         elide: Text.ElideRight

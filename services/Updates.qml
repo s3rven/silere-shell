@@ -8,6 +8,11 @@ Singleton {
     id: root
 
     property int  count: 0
+    property int  repoCount: 0
+    property int  aurCount: 0
+    // rebuilt only on a completed check, never bound per frame; capped so a long-neglected system can't build a huge model
+    property var  packages: []
+    readonly property int _maxDetail: 80
     property bool ready: false
     property bool lastFailed: false
     property string lastError: ""
@@ -59,6 +64,7 @@ Singleton {
     readonly property string statusText: isChecking ? "Checking"
         : lastFailed ? "Check failed"
         : !enabled ? "Disabled"
+        : !SystemTools.ready ? "Detecting"
         : !supported ? "Unsupported"
         : ready ? (count > 0 ? label : "Up to date")
         : "Waiting"
@@ -71,20 +77,24 @@ Singleton {
         switch (root.manager) {
         case "pacman": {
             // checkupdates self-syncs to a private db; rc 2 = no updates, and ERR holds the last count so a network blip can't zero the badge
-            const aur = SystemTools.hasParu ? root._limit(60, "paru -Qua") + " 2>/dev/null | grep -c ."
-                      : SystemTools.hasYay  ? root._limit(60, "yay -Qua") + " 2>/dev/null | grep -c ."
-                      : "echo 0"
+            const aur = SystemTools.hasParu ? root._limit(60, "paru -Qua") + " 2>/dev/null"
+                      : SystemTools.hasYay  ? root._limit(60, "yay -Qua") + " 2>/dev/null"
+                      : "true"
             return "out=$(" + root._limit(90, "checkupdates") + " 2>&1); rc=$?; " +
                    "if [ \"$rc\" -ne 0 ] && [ \"$rc\" -ne 2 ]; then echo \"ERR checkupdates failed (exit $rc)\"; exit 0; fi; " +
+                   "aurout=$(" + aur + "); " +
                    "repo=$(printf '%s' \"$out\" | grep -c .); " +
-                   "aur=$(" + aur + "); " +
-                   "echo $((repo + aur))"
+                   "aur=$(printf '%s' \"$aurout\" | grep -c .); " +
+                   "echo $((repo + aur)); " +
+                   "echo \"SPLIT $repo $aur\"; " +
+                   "printf '%s\\n' \"$out\"; printf '%s\\n' \"$aurout\""
         }
         case "aur": {
             const tool = SystemTools.hasParu ? "paru" : "yay"
             return "out=$(" + root._limit(90, tool + " -Qu") + " 2>&1); rc=$?; " +
                    "if [ \"$rc\" -ne 0 ] && [ -n \"$out\" ]; then echo \"ERR " + tool + " check failed (exit $rc)\"; exit 0; fi; " +
-                   "printf '%s\\n' \"$out\" | grep -c ."
+                   "printf '%s' \"$out\" | grep -c .; " +
+                   "printf '%s\\n' \"$out\""
         }
         case "apt":    return "out=$(" + root._limit(120, "apt list --upgradable") + " 2>&1); rc=$?; " +
                               "if [ \"$rc\" -ne 0 ]; then echo \"ERR apt check failed (exit $rc)\"; exit 0; fi; " +
@@ -102,6 +112,36 @@ Singleton {
         return "echo 0"
     }
 
+    // checkupdates and paru -Qua both print "name oldver -> newver"; anything else stays a bare count
+    function _parseDetail(text: string): void {
+        const lines = text.split("\n")
+        let repo = -1, aur = -1, start = 1
+        const split = lines.length > 1 ? lines[1].trim() : ""
+        if (split.startsWith("SPLIT ")) {
+            const p = split.split(/\s+/)
+            repo = parseInt(p[1]); aur = parseInt(p[2])
+            start = 2
+        }
+        // repo lines come first, then AUR; budget for the AUR tail so a long repo list can't crowd it out
+        const repoBudget = Math.max(0, root._maxDetail - Math.max(0, aur))
+        const out = []
+        let seen = 0, repoShown = 0
+        for (let i = start; i < lines.length && out.length < root._maxDetail; i++) {
+            const parts = lines[i].trim().split(/\s+/)
+            if (parts.length < 4 || parts[2] !== "->") continue
+            const isAur = repo >= 0 && seen >= repo
+            seen++
+            if (!isAur) {
+                if (repoShown >= repoBudget) continue
+                repoShown++
+            }
+            out.push({ name: parts[0], from: parts[1], to: parts[3], aur: isAur })
+        }
+        root.repoCount = repo >= 0 ? repo : root.count
+        root.aurCount  = aur  >= 0 ? aur  : 0
+        root.packages  = out
+    }
+
     function refresh(): void {
         // read the setting directly — on a manual toggle the `enabled` alias may not have re-evaluated yet
         if (!ShellSettings.updatesWidget || !supported || _proc.running) return
@@ -115,6 +155,9 @@ Singleton {
         _reconnect.stop()
         if (_proc.running) _proc.running = false
         root.count = 0
+        root.repoCount = 0
+        root.aurCount = 0
+        root.packages = []
         root.ready = true
         root.lastFailed = false
         root.lastError = ""
@@ -135,6 +178,7 @@ Singleton {
             const n = parseInt(t)
             if (!t.startsWith("ERR") && !isNaN(n)) {
                 root.count = n
+                root._parseDetail(t)
                 root.lastFailed = false
                 root.lastError = ""
             } else {

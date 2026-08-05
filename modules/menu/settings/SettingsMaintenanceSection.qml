@@ -35,8 +35,9 @@ Column {
                 ? ShellSettings.modifiedCount + (ShellSettings.modifiedCount === 1
                     ? " setting changed" : " settings changed")
                 : "Everything is at its default"
-            valueText: root._armed ? "tap again" : ""
+            valueText: root._armed ? "Tap again" : ""
             accentColor: root._armed ? Theme.error : Theme.accent
+            active: root._armed
             available: ShellSettings.modifiedCount > 0
             onActivated: {
                 if (root._armed) {

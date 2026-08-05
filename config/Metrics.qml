@@ -24,6 +24,12 @@ Singleton {
     function pillPadFor(compact: bool): int { return compact ? 2 : 5 }
     function pillGapFor(compact: bool): int { return compact ? 3 : 5 }
 
+    // hover surfaces borrow the bar's own corner rounding; a capsule inside a gently rounded bar reads as a foreign shape
+    function hoverRadiusFor(size: real): real {
+        const corner = ShellSettings.barCornerStyle === "round" ? ShellSettings.barRadius : 0
+        return Math.max(3, Math.min(size / 2, corner))
+    }
+
     function clockDateGapFor(compact: bool): int { return compact ? 4 : 8 }
 
     // fixed icon cell: Nerd glyph ink spans 0.64-1.08x the px size, so a natural-width slot shoves the row on every glyph swap

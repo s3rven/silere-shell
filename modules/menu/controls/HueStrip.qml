@@ -75,7 +75,7 @@ Item {
             radius: _well.radius
             outlineWidth: root.activeFocus ? 2 : 1
             outlineColor: root.activeFocus
-                ? Theme.withAlpha(Theme.accent, 0.58)
+                ? Theme.withAlpha(Theme.accent, Theme.focusRingAlpha)
                 : _mouse.containsMouse ? Theme.menuControlLineHot : Theme.menuControlLine
             ColorFade on outlineColor {}
         }

@@ -7,7 +7,7 @@ Item {
 
     property string text: ""
     readonly property bool suppressDividerAbove: true
-    readonly property int _hPad: Math.max(10, Settings.hPad - 2)
+    readonly property int _hPad: 14
     readonly property int _topPad: 4
     readonly property int _bottomPad: 8
     readonly property int _fontPx: Math.max(8, Settings.fontSize - 2)

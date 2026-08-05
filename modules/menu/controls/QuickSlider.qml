@@ -74,7 +74,6 @@ Item {
         leftBleed:    root.cardLeftBleed
         active:       (_rowHover.hovered || root.activeFocus) && root.enabled
         focusActive:  root.activeFocus && root.enabled
-        fillOpacity:  root.activeFocus ? 0.13 : 0.08
     }
 
     Item {
@@ -106,7 +105,7 @@ Item {
         TapHandler   { enabled: root.glyphClickable; margin: 6; onTapped: root.glyphClicked() }
     }
 
-    TextMetrics { id: _vm; font.family: Settings.font; font.pixelSize: Math.max(11, Settings.fontSize - 1); text: root.valueWidthText }
+    TextMetrics { id: _vm; font.family: Settings.font; font.pixelSize: Math.max(9, Settings.fontSize - 1); text: root.valueWidthText }
     ShellText {
         id: _v
         anchors.right: parent.right; anchors.rightMargin: 12
@@ -115,7 +114,7 @@ Item {
         horizontalAlignment: Text.AlignRight
         text: root.valueText
         color: Theme.withAlpha(Theme.text, 0.60)
-        font.pixelSize: Math.max(11, Settings.fontSize - 1)
+        font.pixelSize: Math.max(9, Settings.fontSize - 1)
         elide: Text.ElideRight
     }
 
@@ -128,6 +127,7 @@ Item {
         height: parent.height
         visible: root.expandable
         opacity: (_chevHover.hovered || activeFocus) ? 1.0 : 0.7
+        MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
 
         activeFocusOnTab: root.enabled && root.expandable
 

@@ -202,7 +202,7 @@ Item {
             SequentialAnimation {
                 NumberAnimation { target: _lineEffect; property: "_sweepSpread"; to: 0.10; duration: Motion.ms(180); easing.type: Easing.OutCubic }
                 NumberAnimation {
-                    target: _lineEffect; property: "_sweepSpread"; to: 0.045
+                    target: _lineEffect; property: "_sweepSpread"; to: 0.28
                     duration: Math.max(300, _lineEffect._screenshotDuration - Motion.ms(180))
                     easing.type: Easing.InOutCubic
                 }
@@ -377,7 +377,7 @@ Item {
             peak:           _lineEffect._tempPeak
             floor:          _lineEffect._tempFloor
             duration:       _lineEffect._tempPulseDur
-            running:        _lineEffect._tempGlowEnabled && CpuTemp.critical && !ShellSettings.reduceMotion && !Idle.isIdle
+            active:         _lineEffect._tempGlowEnabled && CpuTemp.critical && !Idle.isIdle
         }
     }
 

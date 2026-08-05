@@ -1,5 +1,7 @@
 import QtQuick
+import "../services"
 
+// carries the reduce-motion gate so no call site can forget it; a 0-duration infinite loop would spin instead of resting
 SequentialAnimation {
     id: pulse
 
@@ -9,7 +11,9 @@ SequentialAnimation {
     property real   floor:     0.0
     property int    duration:  2000
     property real   restValue: 0.0
+    property bool   active:    false
 
+    running: active && !ShellSettings.reduceMotion && duration > 0
     loops: Animation.Infinite
     onRunningChanged: if (!running && target && targetProperty) target[targetProperty] = restValue
     onDurationChanged: if (running) restart()

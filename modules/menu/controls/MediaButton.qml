@@ -45,7 +45,7 @@ Item {
         OutlineBorder {
             radius: _fill.radius
             outlineWidth: 2
-            outlineColor: root.activeFocus ? Theme.withAlpha(Theme.accent, 0.6) : "transparent"
+            outlineColor: root.activeFocus ? Theme.withAlpha(Theme.accent, Theme.focusRingAlpha) : "transparent"
         }
 
         MotionBehavior on opacity {

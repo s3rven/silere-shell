@@ -18,11 +18,11 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "silere-osd"
 
-    implicitHeight: 150
+    implicitHeight: Math.max(150, Math.ceil((stack.implicitHeight + 24) / 64) * 64)
 
     readonly property bool _bottom: ShellSettings.barPosition === "bottom"
     readonly property int _barInset: ShellSettings.barFloating ? 4 : 0
-    readonly property int _edgeY: _barInset + ShellSettings.barHeight + 8
+    readonly property int _edgeY: _barInset + ShellSettings.barHeight + 2
     readonly property bool _active: !ShellSettings.osdBarIntegrated || OsdBarState.barConcealed
 
     anchors {
@@ -219,7 +219,7 @@ PanelWindow {
                                 width:  136
                                 height: 6
                                 radius: 3
-                                color:  Theme.withAlpha(Theme.text, 0.22)
+                                color:  Theme.menuTrack
 
                                 Rectangle {
                                     id: _fill

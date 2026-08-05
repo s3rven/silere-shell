@@ -14,6 +14,11 @@ Item {
     property var    currentValue
     property color  accentColor: Theme.accent
 
+    property real topRadius:    0
+    property real bottomRadius: 0
+    property real cardInset:    1
+    property real cardLeftBleed: 0
+
     signal chosen(var value)
 
     readonly property int _optionCount: Math.max(1, root.model.length)
@@ -57,6 +62,17 @@ Item {
         if (!activeFocus || _optionRepeater.count <= 0) return
         const item = _optionRepeater.itemAt(Math.max(0, root._activeIndex))
         if (item) item.forceActiveFocus()
+    }
+
+    HoverHandler { id: _rowHover; enabled: root.enabled }
+    RowHoverBg {
+        anchors.fill: parent
+        topRadius:    root.topRadius
+        bottomRadius: root.bottomRadius
+        cardInset:    root.cardInset
+        leftBleed:    root.cardLeftBleed
+        active:       (_rowHover.hovered || root.activeFocus) && root.enabled
+        focusActive:  root.activeFocus && root.enabled
     }
 
     Item {
@@ -243,7 +259,7 @@ Item {
                             bottomRightRadius: _surface.bottomRightRadius
                             outlineWidth: _option.activeFocus ? 2 : 1
                             outlineColor: _option.activeFocus
-                                ? Theme.withAlpha(root.accentColor, 0.68)
+                                ? Theme.withAlpha(root.accentColor, Theme.focusRingAlpha)
                                 : _option.active
                                     ? Theme.withAlpha(root.accentColor, Theme.lineAlpha(0.15))
                                     : _hover.hovered

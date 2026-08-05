@@ -33,7 +33,7 @@ Item {
 
     Timer {
         id: _labelDelay
-        interval: 220
+        interval: 80
         onTriggered: root._hoverReady = _hover.hovered
     }
 

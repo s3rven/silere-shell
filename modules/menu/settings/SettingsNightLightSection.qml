@@ -28,8 +28,8 @@ Column {
             HintText { text: "Temperature tracks sunset and sunrise at " + NightLight.locationLabel + "." }
         }
     }
-    HintText {
+    SettingsCard {
         visible: !NightLight.toolAvailable
-        text: "hyprsunset is not installed."
+        HintText { text: "hyprsunset is not installed." }
     }
 }

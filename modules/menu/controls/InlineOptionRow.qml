@@ -32,6 +32,7 @@ Item {
     width: parent ? parent.width : 0
     height: rowHeight
     opacity: root.enabled && root.interactive ? 1.0 : 0.48
+    MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
     activeFocusOnTab: root.enabled && root.interactive
 
     Accessible.role: root.accessibleRole
@@ -112,7 +113,7 @@ Item {
         anchors.left: _glyph.right
         anchors.leftMargin: 10
         anchors.right: _status.left
-        anchors.rightMargin: 8
+        anchors.rightMargin: 10
         anchors.verticalCenter: parent.verticalCenter
         text: root.label
         elide: Text.ElideRight
@@ -128,6 +129,7 @@ Item {
         id: _status
         anchors.right: _check.left
         anchors.rightMargin: root.selected ? 6 : 0
+        MotionBehavior on anchors.rightMargin { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
         anchors.verticalCenter: parent.verticalCenter
         width: Math.min(implicitWidth, Math.max(0, root.width * 0.34))
         horizontalAlignment: Text.AlignRight
@@ -144,7 +146,7 @@ Item {
     ShellText {
         id: _check
         anchors.right: parent.right
-        anchors.rightMargin: 15
+        anchors.rightMargin: 12
         anchors.verticalCenter: parent.verticalCenter
         width: root.selected ? 18 : 0
         horizontalAlignment: Text.AlignHCenter

@@ -71,6 +71,10 @@ Singleton {
     readonly property color menuTextMuted:   mix(subtext, text, _hc ? 0.45 : (_n ? 0.30 : 0.24))
     readonly property color menuTextFaint:   mix(subtext, text, _hc ? 0.25 : (_n ? 0.15 : 0.10))
 
+    // shared focus-ring weight: button-family controls (2px) vs embedded row/track indicators (1px)
+    readonly property real focusRingAlpha:     0.72
+    readonly property real focusRingSoftAlpha: 0.42
+
     readonly property int radiusPanel:   14
     readonly property int radiusCard:    12
     readonly property int radiusControl: 10

@@ -53,7 +53,7 @@ Item {
 
         OutlineBorder {
             radius: _focusRing.radius
-            outlineColor: root.activeFocus ? Theme.withAlpha(root.ringColor, 0.52) : "transparent"
+            outlineColor: root.activeFocus ? Theme.withAlpha(root.ringColor, Theme.focusRingSoftAlpha) : "transparent"
         }
     }
     Rectangle {

@@ -203,8 +203,8 @@ Item {
 
         ParallelAnimation {
             NumberAnimation {                 target: root; property: "_op";    to: 0; duration: Motion.ms(90);  easing.type: Easing.InCubic  }
-            NumberAnimation { id: _yOut;      target: root; property: "_y";            duration: Motion.ms(115); easing.type: Easing.OutCubic }
-            NumberAnimation { id: _scaleOut;  target: root; property: "_scale";        duration: Motion.ms(105); easing.type: Easing.OutCubic }
+            NumberAnimation { id: _yOut;      target: root; property: "_y";            duration: Motion.ms(115); easing.type: Easing.InCubic }
+            NumberAnimation { id: _scaleOut;  target: root; property: "_scale";        duration: Motion.ms(105); easing.type: Easing.InCubic }
         }
         ScriptAction {
             script: {

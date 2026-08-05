@@ -117,7 +117,7 @@ Item {
                 : Theme.mix(Theme.text, Theme.accent,
                             root.hoverGrow && _ma.containsMouse ? 0.30 : 0.12)
             border.width: root.focused ? 1 : 0
-            border.color: Theme.withAlpha(Theme.accent, 0.55)
+            border.color: Theme.withAlpha(Theme.accent, Theme.focusRingSoftAlpha)
             MotionBehavior on scale { gate: root.animate; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
             MotionBehavior on color { gate: root.animate; ColorAnimation  { duration: Motion.fast } }
         }

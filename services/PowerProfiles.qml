@@ -13,7 +13,8 @@ Singleton {
 
     readonly property string label: profile === "performance" ? "Performance"
                                   : profile === "power-saver" ? "Power Saver"
-                                  : profile === "balanced"    ? "Balanced" : ""
+                                  : profile === "balanced"    ? "Balanced"
+                                  : profile.length > 0        ? profile.replace(/-/g, " ") : ""
     readonly property string glyph: profile === "performance" ? "󰓅"
                                   : profile === "power-saver" ? "󰾆" : "󰾅"
 

@@ -19,7 +19,6 @@ Item {
     property int    horizontalPadding: Metrics.pillPadFor(compact)
     property bool   animateGlyph: true
     property bool   animateText: false
-    property bool   animateGlyphColor: true
     property int    glyphPixelSize: Settings.iconSize + 2
     property string reserveText: ""
     readonly property real _reserveW: reserveText.length > 0 ? Math.ceil(_reserveMetrics.advanceWidth) : 0
@@ -160,7 +159,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         width: parent.width
         height: root.pillH
-        radius: height / 2
+        radius: Metrics.hoverRadiusFor(height)
         readonly property bool _focus: root.activeFocusOnTab && root.activeFocus
         readonly property bool _hover: _pillHover.hovered
             && ShellSettings.barHoverHighlight
@@ -170,8 +169,9 @@ Item {
         opacity: (_hover || _focus || root.visualPressed) ? 1.0 : 0.0
         visible: opacity > 0.001
         OutlineBorder {
-            radius: height / 2
-            outlineColor: _hoverCap._focus ? Theme.withAlpha(Theme.accent, 0.72) : "transparent"
+            radius: _hoverCap.radius
+            outlineWidth: _hoverCap._focus ? 2 : 1
+            outlineColor: _hoverCap._focus ? Theme.withAlpha(Theme.accent, Theme.focusRingAlpha) : "transparent"
         }
         MotionBehavior on opacity {
             NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
@@ -245,7 +245,7 @@ Item {
                 color:           root._hoverGlyphColor
                 transformOrigin: Item.Center
                 font.pixelSize:  root.glyphPixelSize
-                ColorFade on color { gate: root.animateGlyphColor }
+                ColorFade on color {}
             }
         }
 

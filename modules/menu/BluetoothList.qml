@@ -73,7 +73,9 @@ Item {
         ShellText {
             visible: root.open && (!Bluetooth.available || !Bluetooth.enabled || Bluetooth.devices.length === 0)
             width: parent.width
+            height: 4 * Math.ceil(Math.max(32, Settings.capHeight + 12) / 4)
             horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
             text: !Bluetooth.available ? "Bluetooth unavailable"
                 : !Bluetooth.enabled   ? "Bluetooth is off"
                 : root._searchLapsed   ? "No devices found"

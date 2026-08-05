@@ -23,7 +23,7 @@ Item {
         : Battery.full ? "Full"
         : Battery.charging ? "AC"
         : "Battery"
-    readonly property string _batteryValue: Battery.label.length > 0 ? Battery.label : ""
+    readonly property string _batteryValue: Battery.label
     readonly property string _profileValue: PowerProfiles.profile !== "" ? PowerProfiles.label
         : PowerProfiles.syncing ? "..."
         : ""
@@ -131,7 +131,7 @@ Item {
                 width: parent.width
                 label: "Mode"
                 value: root._profileValue
-                glyph: PowerProfiles.glyph.length > 0 ? PowerProfiles.glyph : "󰾅"
+                glyph: PowerProfiles.glyph
                 enabled: PowerProfiles.available && PowerProfiles.profile !== ""
                 KeyNavigation.down: root._rowAfter(_powMode, 1)
                 KeyNavigation.up: root._rowAfter(_powMode, -1)
@@ -192,7 +192,7 @@ Item {
                 KeyNavigation.down: root._rowAfter(_powLock, 1)
                 onTriggered: {
                     MenuState.close()
-                    Quickshell.execDetached(Settings.lockCommand)
+                    root.runPower(Settings.lockCommand, "Lock failed")
                 }
             }
 

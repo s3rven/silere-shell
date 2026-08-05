@@ -77,7 +77,6 @@ Item {
         leftBleed:    root.cardLeftBleed
         active:       (_hover.hovered || root.activeFocus) && root._canToggle
         focusActive:  root.activeFocus && root._canToggle
-        fillOpacity:  root.activeFocus ? 0.13 : 0.08
     }
 
     ShellText {
@@ -100,7 +99,7 @@ Item {
         anchors.left:           _glyph.right
         anchors.leftMargin:     10
         anchors.right:          _rightSlot.left
-        anchors.rightMargin:    8
+        anchors.rightMargin:    10
         anchors.verticalCenter: parent.verticalCenter
         spacing: 2
 
@@ -127,7 +126,7 @@ Item {
             color:          root._showDependsNote
                 ? Theme.withAlpha(Theme.mix(Theme.subtext, Theme.warning, 0.30), 0.72)
                 : Theme.withAlpha(Theme.subtext, 0.52)
-            font.pixelSize: Math.max(8, Settings.fontSize - 2)
+            font.pixelSize: Math.max(9, Settings.fontSize - 2)
             lineHeight:     1.1
         }
     }

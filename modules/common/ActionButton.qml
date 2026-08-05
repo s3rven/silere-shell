@@ -73,6 +73,7 @@ Item {
         anchors.right: parent.right
         y: root.pressed ? 1 : 0
         height: parent.height - y
+        MotionBehavior on y {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
         radius: root.radius
         antialiasing: true
         color: root.emphasis
@@ -88,7 +89,7 @@ Item {
             radius: _surface.radius
             outlineWidth: root.activeFocus ? 2 : 1
             outlineColor: root.activeFocus
-                ? Theme.withAlpha(root.accentColor, 0.82)
+                ? Theme.withAlpha(root.accentColor, Theme.focusRingAlpha)
                 : root.emphasis ? "transparent"
                     : _hover.hovered
                         ? Theme.menuControlLineHot : Theme.menuControlLine

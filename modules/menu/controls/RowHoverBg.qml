@@ -10,7 +10,7 @@ Item {
     property real  leftBleed:    0
     property bool  active:       false
     property bool  focusActive:  false
-    property real  fillOpacity:  0.07
+    property real  fillOpacity:  focusActive ? 0.13 : 0.08
     property color fillColor:    Theme.menuHover
     property color focusColor:   Theme.accent
 
@@ -34,7 +34,7 @@ Item {
         color: Theme.withAlpha(root.fillColor,
             root.active ? root.fillOpacity : 0)
         border.width: root.focusActive ? 1 : 0
-        border.color: Theme.withAlpha(root.focusColor, 0.38)
+        border.color: Theme.withAlpha(root.focusColor, Theme.focusRingSoftAlpha)
         ColorFade on color {}
     }
 }

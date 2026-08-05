@@ -18,11 +18,14 @@ Item {
     readonly property int iconSize: Math.max(14, Math.min(18, Math.round(ShellSettings.barHeight * 0.44)))
     readonly property int _pillPad: Metrics.pillPadFor(compact)
 
-    implicitWidth:  show ? _row.implicitWidth + _pillPad * 2 : 0
+    // only appearing/leaving eases; hover growth is already eased by the label, and a second ease on top lags the slot behind its own content
+    property real _showProgress: show ? 1.0 : 0.0
+    implicitWidth:  (_row.implicitWidth + _pillPad * 2) * _showProgress
     implicitHeight: parent ? parent.height : 24
     visible: layoutVisible
+    clip: _showProgress < 0.999
 
-    MotionBehavior on implicitWidth {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
+    MotionBehavior on _showProgress {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
 
     function _openMenu(item, tile): void {
         if (!item.hasMenu) return
@@ -75,19 +78,21 @@ Item {
 
                 Timer {
                     id: _labelDwell
-                    interval: 350
+                    interval: 80
                     onTriggered: _tile._dwelled = true
                 }
 
                 Rectangle {
+                    id: _hoverCap
                     x: -3
                     anchors.verticalCenter: parent.verticalCenter
-                    width: root.iconSize + 6
-                    height: root.iconSize + 6
-                    radius: Math.min(width, height) / 2
-                    color: _tile.needsAttention
-                        ? Theme.withAlpha(Theme.accent, 0.20)
-                        : Theme.withAlpha(Theme.accent, _ma.pressed ? 0.26 : 0.14)
+                    width: _tile.width + 6
+                    height: 24
+                    radius: Metrics.hoverRadiusFor(height)
+                    color: _tile.needsAttention ? Theme.withAlpha(Theme.accent, 0.20)
+                         : _ma.pressed           ? Theme.withAlpha(Theme.accent, 0.18)
+                         : _tile.activeFocus     ? Theme.withAlpha(Theme.accent, 0.14)
+                         : Theme.withAlpha(Theme.mix(Theme.text, Theme.accent, 0.30), 0.07)
                     opacity: _tile.needsAttention ? _tile.attnPulse
                            : _ma.pressed          ? 1.0
                            : (_iconHover.hovered && ShellSettings.barHoverHighlight) ? 1.0
@@ -95,13 +100,18 @@ Item {
                            : 0.0
                     visible: opacity > 0.001
 
+                    OutlineBorder {
+                        radius: _hoverCap.radius
+                        outlineColor: _tile.activeFocus ? Theme.withAlpha(Theme.accent, Theme.focusRingAlpha) : "transparent"
+                    }
+
                     MotionBehavior on opacity {NumberAnimation { duration: Motion.color } }
                     MotionBehavior on color   {ColorAnimation  { duration: Motion.color } }
                 }
 
                 PulseLoop {
-                    running: root.barActive && _tile.needsAttention && !_tile._attentionSettled
-                        && !ShellSettings.reduceMotion && !Idle.isIdle
+                    active: root.barActive && _tile.needsAttention && !_tile._attentionSettled
+                        && !Idle.isIdle
                     target: _tile; targetProperty: "attnPulse"
                     peak: 0.4; floor: 1.0; restValue: 1.0
                     duration: Motion.ms(900)
@@ -161,7 +171,7 @@ Item {
                     visible: opacity > 0.01
                     opacity: ready ? 1.0 : 0.0
                     transformOrigin: Item.Center
-                    scale: _ma.pressed ? 0.86 : 1.0
+                    scale: _ma.pressed ? 0.94 : 1.0
                     MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
                     MotionBehavior on scale   {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
                 }
