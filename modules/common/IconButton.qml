@@ -9,7 +9,7 @@ Item {
     property string glyph: ""
     property string accessibleName: "Action"
     property color accentColor: Theme.accent
-    property int buttonSize: 28
+    property int buttonSize: Metrics.rowHeightFor(28)
     property int glyphPixelSize: Settings.fontSize + 2
 
     signal triggered()

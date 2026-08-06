@@ -19,7 +19,7 @@ Item {
     signal tapped()
 
     width: railW
-    height: 34
+    height: Metrics.rowHeightFor(34)
     activeFocusOnTab: true
     Accessible.role: Accessible.Button
     Accessible.name: root.label
@@ -115,7 +115,7 @@ Item {
         x: root.railW + 7
         anchors.verticalCenter: parent.verticalCenter
         width: _pillLabel.implicitWidth + 18
-        height: 22; radius: 8
+        height: 22; radius: Theme.radiusInline
         color: Theme.menuCard
         antialiasing: true
         opacity: _show ? 1.0 : 0.0
@@ -144,7 +144,7 @@ Item {
             anchors.centerIn: parent
             text: root.label
             color: Theme.withAlpha(Theme.text, 0.78)
-            font.family: Settings.font; font.pixelSize: Settings.fontSize - 1
+            font.family: Settings.font; font.pixelSize: Settings.fontLabel
         }
     }
 }

@@ -281,7 +281,7 @@ Item {
                                     ? Theme.mix(Theme.text, root.accentColor, 0.24)
                                     : Theme.withAlpha(Theme.subtext,
                                         _hover.hovered ? 0.88 : 0.68)
-                                font.pixelSize: Math.max(9, Settings.fontSize - 1)
+                                font.pixelSize: Settings.fontLabel
                                 font.weight: Font.Medium
                                 ColorFade on color {}
                             }
@@ -301,9 +301,9 @@ Item {
                                         ShellSettings.highContrast ? 0 : 0.22)
                                     : Theme.withAlpha(Theme.subtext,
                                         _hover.hovered ? 0.90 : 0.72)
-                                font.pixelSize: Math.max(9, Settings.fontSize - 1)
+                                font.pixelSize: Settings.fontLabel
                                 fontSizeMode: Text.HorizontalFit
-                                minimumPixelSize: Math.max(8, Settings.fontSize - 2)
+                                minimumPixelSize: Settings.fontCaption
                                 font.weight: _option.active
                                     ? Font.DemiBold : Font.Medium
                                 ColorFade on color {}

@@ -307,7 +307,7 @@ Item {
                             id: _grpHeader
                             width: parent.width
                             height: root._groupH
-                            radius: 8
+                            radius: Theme.radiusInline
                             antialiasing: true
                             color: activeFocus
                                 ? Theme.withAlpha(Theme.accent, 0.065)
@@ -405,7 +405,7 @@ Item {
                                     ? Theme.text
                                     : Theme.withAlpha(Theme.menuTextMuted,
                                         _headerHover.hovered || _grpHeader.activeFocus || _grp.expanded ? 0.94 : 0.80)
-                                font.pixelSize: Math.max(8, Settings.fontSize - 2)
+                                font.pixelSize: Settings.fontCaption
                                 font.weight: _grp.groupActive || _grp.expanded
                                     ? Font.DemiBold : Font.Normal
                                 font.letterSpacing: 0.35
@@ -424,7 +424,7 @@ Item {
                                 color: Theme.withAlpha(Theme.subtext,
                                     _headerHover.hovered || _grpHeader.activeFocus ? 0.78
                                     : _grp.expanded ? 0.62 : 0.44)
-                                font.pixelSize: Settings.fontSize - 2
+                                font.pixelSize: Settings.fontCaption
 
                                 Disclosure on rotation { expanded: _grp.expanded }
                                 ColorFade on color {}
@@ -475,7 +475,7 @@ Item {
                                         readonly property string glyph: modelData.glyph ?? ""
                                         width: _leafColumn.width
                                         height: root._navRowH
-                                        radius: 8
+                                        radius: Theme.radiusInline
                                         antialiasing: true
                                         color: active
                                             ? Theme.mix(Theme.menuControl, Theme.accent,
@@ -554,7 +554,7 @@ Item {
                                                 ? Theme.mix(Theme.accent, Theme.text, 0.10)
                                                 : Theme.withAlpha(Theme.subtext,
                                                     _leafHover.hovered || _leaf.activeFocus ? 0.72 : 0.46)
-                                            font.pixelSize: Settings.fontSize - 1
+                                            font.pixelSize: Settings.fontLabel
                                             ColorFade on color {}
                                         }
 
@@ -570,7 +570,7 @@ Item {
                                                 ? Theme.text
                                                 : Theme.withAlpha(Theme.mix(Theme.subtext, Theme.text, 0.12),
                                                     _leafHover.hovered || _leaf.activeFocus ? 0.92 : 0.76)
-                                            font.pixelSize: Settings.fontSize - 1
+                                            font.pixelSize: Settings.fontLabel
                                             font.weight: _leaf.active ? Font.DemiBold : Font.Normal
                                             ColorFade on color {}
                                         }

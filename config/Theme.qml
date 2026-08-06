@@ -78,6 +78,8 @@ Singleton {
     readonly property int radiusPanel:   14
     readonly property int radiusCard:    12
     readonly property int radiusControl: 10
+    // one step tighter than a control: nav and rail rows, inline wells, compact action buttons
+    readonly property int radiusInline:   8
     readonly property int radiusField:    6
     readonly property int _surfaceRadiusTarget: ShellSettings.barFloating
         ? (ShellSettings.barCornerStyle === "flat" ? 0 : ShellSettings.barRadius)

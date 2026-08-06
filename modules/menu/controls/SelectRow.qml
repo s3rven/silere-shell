@@ -180,7 +180,7 @@ Item {
                 maximumLineCount: 2
                 elide: Text.ElideRight
                 color: Theme.withAlpha(Theme.subtext, 0.52)
-                font.pixelSize: Math.max(9, Settings.fontSize - 2)
+                font.pixelSize: Settings.fontCaption
                 lineHeight: 1.1
             }
         }
@@ -220,7 +220,7 @@ Item {
             color: root._open ? Theme.text
                 : Theme.withAlpha(Theme.text, _hov.hovered ? 0.90 : 0.78)
             font.family:    root._activeFont
-            font.pixelSize: Settings.fontSize - 1
+            font.pixelSize: Settings.fontLabel
             font.weight:    root._open ? Font.DemiBold : Font.Medium
             ColorFade on color {}
         }

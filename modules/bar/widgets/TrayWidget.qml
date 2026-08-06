@@ -106,7 +106,7 @@ Item {
                     }
 
                     MotionBehavior on opacity {NumberAnimation { duration: Motion.color } }
-                    MotionBehavior on color   {ColorAnimation  { duration: Motion.color } }
+                    ColorFade on color {}
                 }
 
                 PulseLoop {

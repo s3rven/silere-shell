@@ -37,7 +37,7 @@ Item {
             elide: Text.ElideRight
             color: Theme.withAlpha(
                 Theme.mix(Theme.menuTextMuted, Theme.accent, 0.10), 0.84)
-            font.pixelSize: Settings.fontSize - 2
+            font.pixelSize: Settings.fontCaption
             font.letterSpacing: 0.65
             font.weight: Font.DemiBold
             font.capitalization: Font.AllUppercase

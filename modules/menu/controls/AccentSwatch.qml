@@ -44,7 +44,7 @@ Item {
         id: _focusRing
         anchors.fill: parent
         anchors.margins: 1
-        radius: 8
+        radius: Theme.radiusInline
         antialiasing: true
         color: root.activeFocus
             ? Theme.withAlpha(root.ringColor, 0.07)

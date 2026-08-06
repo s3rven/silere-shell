@@ -121,7 +121,7 @@ PageShell {
                     ? DateTime.cachedMonthDay + " · Week " + DateTime.cachedWeek
                     : DateTime.cachedMonthDay
                 color: Theme.withAlpha(Theme.subtext, 0.78)
-                font.pixelSize: Settings.fontSize - 1
+                font.pixelSize: Settings.fontLabel
                 font.weight: Font.Medium
                 elide: Text.ElideRight
             }
@@ -133,7 +133,7 @@ PageShell {
                 visible: SysInfo.uptimeSecs > 0
                 text: "up " + SysInfo.uptimeLabel
                 color: Theme.withAlpha(Theme.subtext, 0.62)
-                font.pixelSize: Settings.fontSize - 1
+                font.pixelSize: Settings.fontLabel
                 font.weight: Font.Medium
             }
         }
@@ -423,7 +423,7 @@ PageShell {
                         color: _switchFocused ? Theme.accent
                              : _switchHover   ? Theme.withAlpha(Theme.text, 0.78)
                                               : Theme.withAlpha(Theme.subtext, 0.62)
-                        font.pixelSize: Settings.fontSize - 3
+                        font.pixelSize: Settings.fontMicro
                         font.weight: Font.Medium
                         font.letterSpacing: 1.2
                         elide: Text.ElideRight
@@ -507,7 +507,7 @@ PageShell {
                         anchors.verticalCenter: parent.verticalCenter
                         text:           Media.formatTime(_seekTrack.dragging ? _seekTrack.shownValue * Media.length : Media.positionNow)
                         color:          Theme.withAlpha(Theme.text, 0.62)
-                        font.pixelSize: Settings.fontSize - 3
+                        font.pixelSize: Settings.fontMicro
                     }
                     ShellText {
                         id: _totalLabel
@@ -515,7 +515,7 @@ PageShell {
                         anchors.verticalCenter: parent.verticalCenter
                         text:           Media.formatTime(Media.length)
                         color:          Theme.withAlpha(Theme.text, 0.55)
-                        font.pixelSize: Settings.fontSize - 3
+                        font.pixelSize: Settings.fontMicro
                     }
 
                     SliderTrack {

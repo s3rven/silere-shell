@@ -19,7 +19,7 @@ Item {
     readonly property bool pressed: _tap.pressed || root._keyboardPressed
 
     implicitWidth: Math.ceil(_row.implicitWidth) + 20
-    implicitHeight: 4 * Math.ceil(Math.max(32, Settings.capHeight + 14) / 4)
+    implicitHeight: Metrics.rowHeightFor(32)
     width: implicitWidth
     height: implicitHeight
     opacity: root.enabled ? 1.0 : 0.42
@@ -118,7 +118,7 @@ Item {
                 text: root.label
                 color: root.emphasis ? Theme.text
                     : Theme.withAlpha(Theme.text, _hover.hovered ? 0.94 : 0.80)
-                font.pixelSize: Settings.fontSize - 1
+                font.pixelSize: Settings.fontLabel
                 font.weight: root.emphasis ? Font.DemiBold : Font.Normal
                 ColorFade on color {}
             }

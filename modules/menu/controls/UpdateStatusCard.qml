@@ -111,7 +111,7 @@ Rectangle {
                         text: root.status
                         elide: Text.ElideRight
                         color: Theme.withAlpha(root.statusColor, 0.9)
-                        font.pixelSize: Settings.fontSize - 2
+                        font.pixelSize: Settings.fontCaption
                         MotionBehavior on color {
                             ColorAnimation { duration: Motion.medium }
                         }
@@ -126,7 +126,7 @@ Rectangle {
                         text: "·  " + root.meta
                         elide: Text.ElideRight
                         color: Theme.withAlpha(Theme.subtext, 0.5)
-                        font.pixelSize: Settings.fontSize - 2
+                        font.pixelSize: Settings.fontCaption
                     }
                 }
             }
@@ -182,7 +182,7 @@ Rectangle {
                 color: root.detailError
                     ? Theme.withAlpha(Theme.warning, 0.85)
                     : Theme.withAlpha(Theme.subtext, 0.58)
-                font.pixelSize: Settings.fontSize - 2
+                font.pixelSize: Settings.fontCaption
                 lineHeight: 1.15
                 MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
             }

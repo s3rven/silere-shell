@@ -76,7 +76,7 @@ Item {
         color:          root.tintedReadout && !ShellSettings.highContrast && root._shownIdx >= 0
             ? Theme.mix(Theme.subtext, _sr.colorAt(root._shownIdx), 0.62)
             : Theme.withAlpha(Theme.subtext, 0.7)
-        font.pixelSize: Settings.fontSize - 2
+        font.pixelSize: Settings.fontCaption
         ColorFade on color {}
     }
 

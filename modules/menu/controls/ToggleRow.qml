@@ -42,10 +42,11 @@ Item {
         root.toggled(!root.checked)
     }
 
-    // 4px multiple keeps card dividers on whole physical px under fractional scaling; a description grows the row to fit its wrapping subtitle, still snapped
+    // a description grows the row to fit its wrapping subtitle, still on the shared grid
     readonly property int _descPadV: 11
     width:          parent ? parent.width : 0
-    height:         _hasDetail ? 4 * Math.ceil((_descPadV * 2 + _textCol.implicitHeight) / 4) : 44
+    height:         _hasDetail ? 4 * Math.ceil((_descPadV * 2 + _textCol.implicitHeight) / 4)
+                               : Metrics.rowHeightFor(44)
     implicitHeight: height
 
     opacity: root.enabled && root.available ? 1.0 : (_canToggle ? 0.72 : 0.52)
@@ -126,7 +127,7 @@ Item {
             color:          root._showDependsNote
                 ? Theme.withAlpha(Theme.mix(Theme.subtext, Theme.warning, 0.30), 0.72)
                 : Theme.withAlpha(Theme.subtext, 0.52)
-            font.pixelSize: Math.max(9, Settings.fontSize - 2)
+            font.pixelSize: Settings.fontCaption
             lineHeight:     1.1
         }
     }

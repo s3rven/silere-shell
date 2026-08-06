@@ -167,7 +167,7 @@ Item {
                     anchors.bottomMargin: 4
                     text: "Power"
                     color: Theme.withAlpha(Theme.menuTextMuted, 0.90)
-                    font.pixelSize: Settings.fontSize - 3
+                    font.pixelSize: Settings.fontMicro
                     font.letterSpacing: 0.5
                     font.weight: Font.DemiBold
                     font.capitalization: Font.AllUppercase

@@ -32,6 +32,14 @@ Singleton {
 
     function clockDateGapFor(compact: bool): int { return compact ? 4 : 8 }
 
+    // one grid for every menu row and button: 4px multiples keep card dividers on whole
+    // physical px under fractional scaling, and a row grows past its design height only
+    // when the font does, so a raised uiScale cannot crush the label
+    function rowHeightFor(design: real): int {
+        return 4 * Math.ceil((design
+            + Math.max(0, Settings.capHeight - Settings.capHeightBase)) / 4)
+    }
+
     // fixed icon cell: Nerd glyph ink spans 0.64-1.08x the px size, so a natural-width slot shoves the row on every glyph swap
     function iconCellFor(pixelSize: int): int { return Math.ceil(pixelSize * 1.1) }
 }

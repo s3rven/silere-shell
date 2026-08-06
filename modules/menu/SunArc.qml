@@ -67,7 +67,7 @@ Rectangle {
         y: 12
         text: NightLight.phaseLabel
         color: Theme.withAlpha(Theme.subtext, 0.85)
-        font.pixelSize: Settings.fontSize - 1
+        font.pixelSize: Settings.fontLabel
     }
 
     Loader {
@@ -233,7 +233,7 @@ Rectangle {
         }
         ShellText {
             text: NightLight.sunriseLabel; color: Theme.subtext
-            font.family: Settings.font; font.pixelSize: Settings.fontSize - 1
+            font.family: Settings.font; font.pixelSize: Settings.fontLabel
             anchors.verticalCenter: parent.verticalCenter
         }
     }
@@ -243,7 +243,7 @@ Rectangle {
         spacing: 5
         ShellText {
             text: NightLight.sunsetLabel; color: Theme.subtext
-            font.family: Settings.font; font.pixelSize: Settings.fontSize - 1
+            font.family: Settings.font; font.pixelSize: Settings.fontLabel
             anchors.verticalCenter: parent.verticalCenter
         }
         ShellText {

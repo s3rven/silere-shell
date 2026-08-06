@@ -32,7 +32,7 @@ Item {
     signal expandToggled()
 
     width:  parent ? parent.width : 0
-    height: 40
+    height: Metrics.rowHeightFor(40)
 
     function _handleKey(event): void {
         if (root.expandable && (event.modifiers & Qt.AltModifier)) {
@@ -105,7 +105,7 @@ Item {
         TapHandler   { enabled: root.glyphClickable; margin: 6; onTapped: root.glyphClicked() }
     }
 
-    TextMetrics { id: _vm; font.family: Settings.font; font.pixelSize: Math.max(9, Settings.fontSize - 1); text: root.valueWidthText }
+    TextMetrics { id: _vm; font.family: Settings.font; font.pixelSize: Settings.fontLabel; text: root.valueWidthText }
     ShellText {
         id: _v
         anchors.right: parent.right; anchors.rightMargin: 12
@@ -114,7 +114,7 @@ Item {
         horizontalAlignment: Text.AlignRight
         text: root.valueText
         color: Theme.withAlpha(Theme.text, 0.60)
-        font.pixelSize: Math.max(9, Settings.fontSize - 1)
+        font.pixelSize: Settings.fontLabel
         elide: Text.ElideRight
     }
 

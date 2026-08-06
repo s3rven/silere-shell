@@ -41,7 +41,7 @@ Rectangle {
                                     : status === 1 ? Theme.warning
                                     : Theme.menuTextMuted
 
-        height: 70
+        height: Metrics.rowHeightFor(70)
 
         Accessible.role: Accessible.StaticText
         Accessible.name: tile.label
@@ -76,13 +76,13 @@ Rectangle {
                 color: tile.pulse > 0.001
                     ? Theme.mix(Theme.menuTextMuted, tile.tint, 0.36 + tile.pulse * 0.38)
                     : Theme.withAlpha(Theme.menuTextMuted, 0.66)
-                font.pixelSize: Settings.fontSize - 3
+                font.pixelSize: Settings.fontMicro
             }
             ShellText {
                 anchors.baseline: _gl.baseline
                 text: tile.label
                 color: Theme.withAlpha(Theme.menuTextMuted, 0.62)
-                font.pixelSize: Settings.fontSize - 3
+                font.pixelSize: Settings.fontMicro
                 font.letterSpacing: 0.4
                 font.weight: Font.DemiBold
                 font.capitalization: Font.AllUppercase
@@ -117,7 +117,7 @@ Rectangle {
                 color: tile.pulse > 0.001
                     ? Theme.mix(Theme.menuTextMuted, tile.tint, tile.pulse * 0.6)
                     : Theme.withAlpha(Theme.menuTextMuted, 0.85)
-                font.pixelSize: Settings.fontSize - 1
+                font.pixelSize: Settings.fontLabel
                 font.hintingPreference: Font.PreferFullHinting
             }
         }

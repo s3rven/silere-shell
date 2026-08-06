@@ -594,7 +594,7 @@ PanelWindow {
                             verticalAlignment: Text.AlignVCenter
                             text: Notifications.historyCount > 99 ? "99+" : Notifications.historyCount
                             color: Theme.background
-                            font.family: Settings.font; font.pixelSize: Settings.fontSize - 4
+                            font.family: Settings.font; font.pixelSize: Settings.fontTiny
                             font.weight: Font.Bold
                         }
                     }
@@ -801,7 +801,7 @@ PanelWindow {
                                 wrapMode: Text.WordWrap
                                 maximumLineCount: 2
                                 color: Theme.withAlpha(Theme.subtext, 0.54)
-                                font.pixelSize: Math.max(8, Settings.fontSize - 2)
+                                font.pixelSize: Settings.fontCaption
                             }
                         }
                     }

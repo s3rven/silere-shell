@@ -20,7 +20,7 @@ Item {
     signal picked(int index)
     signal focusMoved(int index)
 
-    implicitHeight: 32
+    implicitHeight: Metrics.rowHeightFor(32)
     implicitWidth: edgePadding * 2 + options.length * 26
         + Math.max(0, options.length - 1) * packSpacing
 

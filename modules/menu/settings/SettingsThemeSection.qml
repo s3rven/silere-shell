@@ -93,7 +93,7 @@ Column {
                         ? Theme.withAlpha(Theme.subtext, 0.7)
                         : Theme.mix(Theme.subtext, _accentPicker._shownColor, 0.62)
                     ColorFade on color {}
-                    font.pixelSize: Settings.fontSize - 2
+                    font.pixelSize: Settings.fontCaption
                     elide:          Text.ElideRight
                 }
 

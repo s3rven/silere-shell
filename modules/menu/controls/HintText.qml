@@ -10,7 +10,7 @@ Item {
     readonly property int _hPad: 14
     readonly property int _topPad: 4
     readonly property int _bottomPad: 8
-    readonly property int _fontPx: Math.max(8, Settings.fontSize - 2)
+    readonly property int _fontPx: Settings.fontCaption
 
     width: parent ? parent.width : 0
     // snapped to 4 so rows below stay on the divider grid

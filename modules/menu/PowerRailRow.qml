@@ -40,8 +40,8 @@ Rectangle {
                 : Theme.withAlpha(Theme.subtext, root._hot ? 0.78 : 0.56)
 
     width: parent ? parent.width : implicitWidth
-    height: 30
-    radius: 8
+    height: Metrics.rowHeightFor(30)
+    radius: Theme.radiusInline
     antialiasing: true
     opacity: root.enabled ? 1.0 : 0.38
     MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
@@ -168,7 +168,7 @@ Rectangle {
         elide: Text.ElideRight
         horizontalAlignment: Text.AlignRight
         color: Theme.withAlpha(Theme.menuTextMuted, root._hot ? 0.84 : 0.66)
-        font.pixelSize: Settings.fontSize - 2
+        font.pixelSize: Settings.fontCaption
         font.weight: Font.Medium
         ColorFade on color {}
     }
@@ -182,7 +182,7 @@ Rectangle {
         text: root.armed ? root.confirmLabel : root.label
         elide: Text.ElideRight
         color: root._fg
-        font.pixelSize: Settings.fontSize - 1
+        font.pixelSize: Settings.fontLabel
         font.weight: root.armed ? Font.DemiBold : Font.Normal
         transform: Translate { x: root._shift }
         ColorFade on color {}

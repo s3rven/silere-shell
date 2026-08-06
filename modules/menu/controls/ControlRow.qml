@@ -66,7 +66,7 @@ Item {
     }
 
     width:          parent ? parent.width : 0
-    height:         48
+    height:         Metrics.rowHeightFor(48)
     implicitHeight: height
 
     opacity: _canTap ? 1.0 : 0.45
@@ -180,7 +180,7 @@ Item {
                 anchors.centerIn: parent
                 text:  root.badgeCount > 99 ? "99+" : root.badgeCount
                 color: Theme.background
-                font.pixelSize: Settings.fontSize - 4
+                font.pixelSize: Settings.fontTiny
                 font.weight: Font.Bold
             }
 
@@ -221,7 +221,7 @@ Item {
             text:           root.status
             color:          root.active ? Theme.mix(root.accentColor, Theme.text, 0.12)
                                         : Theme.withAlpha(Theme.subtext, 0.62)
-            font.pixelSize: Math.max(9, Settings.fontSize - 2)
+            font.pixelSize: Settings.fontCaption
             font.weight:    Font.Medium
             font.hintingPreference: Font.PreferFullHinting
             elide:          Text.ElideRight
@@ -239,7 +239,7 @@ Item {
                                      : (root.valueText.length > 0 ? Math.ceil(_valMetrics.advanceWidth) : 0)
         width: (_chevron.visible ? _chevron.width + 8 : 0) + _ctrlW
 
-        TextMetrics { id: _valMetrics; font.family: Settings.font; font.pixelSize: Settings.fontSize - 1; text: root.valueText }
+        TextMetrics { id: _valMetrics; font.family: Settings.font; font.pixelSize: Settings.fontLabel; text: root.valueText }
 
         ToggleSwitch {
             id: _switch
@@ -260,7 +260,7 @@ Item {
             text:           root.valueText
             color:          root.active ? Theme.mix(root.accentColor, Theme.text, 0.18)
                                         : Theme.withAlpha(Theme.text, 0.60)
-            font.pixelSize: Settings.fontSize - 1
+            font.pixelSize: Settings.fontLabel
             font.weight:    Font.Medium
             ColorFade on color {}
         }

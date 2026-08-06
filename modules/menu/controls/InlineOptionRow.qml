@@ -21,8 +21,7 @@ Item {
 
     signal triggered()
 
-    readonly property int rowHeight: 4 * Math.ceil(
-        Math.max(32, Settings.capHeight + 12) / 4)
+    readonly property int rowHeight: Metrics.rowHeightFor(32)
     readonly property bool _hot: _hover.hovered || _tap.pressed || root.activeFocus
 
     function trigger(): void {
@@ -138,7 +137,7 @@ Item {
         color: root.warning ? Theme.warning
             : root.selected ? Theme.mix(root.accentColor, Theme.text, 0.14)
             : Theme.withAlpha(Theme.subtext, root._hot ? 0.70 : 0.54)
-        font.pixelSize: Math.max(9, Settings.fontSize - 2)
+        font.pixelSize: Settings.fontCaption
         font.weight: root.warning || root.selected ? Font.Medium : Font.Normal
         ColorFade on color {}
     }

@@ -9,7 +9,7 @@ import "../controls"
 Item {
     id: root
 
-    readonly property int _toolbarH: 32
+    readonly property int _toolbarH: Metrics.rowHeightFor(32)
     readonly property int _zoneHeaderH: 20
     readonly property int _rowH: 32
     readonly property int _emptyH: 28
@@ -197,7 +197,7 @@ Item {
             text: "Drag to reorder or move between lanes"
             elide: Text.ElideRight
             color: Theme.withAlpha(Theme.subtext, 0.58)
-            font.pixelSize: Settings.fontSize - 2
+            font.pixelSize: Settings.fontCaption
         }
 
         ActionButton {
@@ -205,7 +205,7 @@ Item {
             anchors.right: parent.right
             anchors.rightMargin: 8
             anchors.verticalCenter: parent.verticalCenter
-            height: 22
+            height: Metrics.rowHeightFor(24)
             label: "Reset"
             accessibleName: "Reset bar widgets"
             visible: ShellSettings.barWidgetsModified
@@ -252,7 +252,7 @@ Item {
                     + " · " + _zoneHeader.count
                 color: _zoneHeader.hot
                     ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.54)
-                font.pixelSize: Math.max(8, Settings.fontSize - 3)
+                font.pixelSize: Settings.fontMicro
                 font.weight: Font.DemiBold
                 ColorFade on color {}
             }
@@ -505,7 +505,7 @@ Item {
                 anchors.centerIn: parent
                 text: "Drop here"
                 color: Theme.withAlpha(Theme.subtext, _empty.hot ? 0.70 : 0.46)
-                font.pixelSize: Settings.fontSize - 3
+                font.pixelSize: Settings.fontMicro
             }
 
             ColorFade on color {}

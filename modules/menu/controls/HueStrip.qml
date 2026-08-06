@@ -22,7 +22,7 @@ Item {
     signal picked(real hue)
 
     width: parent ? parent.width : 0
-    height: 24
+    height: Metrics.rowHeightFor(24)
     opacity: root.enabled && root.interactive ? (root.dimmed ? 0.72 : 1.0) : 0.45
 
     activeFocusOnTab: root.enabled && root.interactive
@@ -64,7 +64,7 @@ Item {
     Rectangle {
         id: _well
         anchors.fill: parent
-        radius: 8
+        radius: Theme.radiusInline
         antialiasing: true
         color: _mouse.containsMouse || root.activeFocus
             ? Theme.mix(Theme.menuControl, Theme.accent, 0.055)

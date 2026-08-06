@@ -30,8 +30,8 @@ Item {
 
     // 4px multiple so row.y inside SettingsCard lands on whole physical px and every divider renders one thickness
     width:          parent ? parent.width : 0
-    height:         56
-    implicitHeight: 56
+    height:         Metrics.rowHeightFor(56)
+    implicitHeight: height
     opacity: root.enabled ? 1.0 : 0.45
     MotionBehavior on opacity {
         NumberAnimation { duration: Motion.medium }
@@ -95,7 +95,7 @@ Item {
     TextMetrics {
         id: _vm
         font.family: Settings.font
-        font.pixelSize: Math.max(9, Settings.fontSize - 1)
+        font.pixelSize: Settings.fontLabel
         font.weight: Font.DemiBold
         text: "100%"
     }
@@ -108,7 +108,7 @@ Item {
         horizontalAlignment: Text.AlignRight
         text:           root.displayValue
         color:          Theme.withAlpha(Theme.text, 0.58)
-        font.pixelSize: Math.max(9, Settings.fontSize - 1)
+        font.pixelSize: Settings.fontLabel
         font.weight:    Font.DemiBold
     }
 

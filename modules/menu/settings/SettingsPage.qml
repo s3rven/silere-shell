@@ -138,7 +138,7 @@ PageShell {
                 anchors.topMargin: 1
                 text: _detailHeader._meta.group
                 color: Theme.withAlpha(Theme.accent, 0.76)
-                font.pixelSize: Math.max(8, Settings.fontSize - 3)
+                font.pixelSize: Settings.fontMicro
                 font.letterSpacing: 0.55
                 font.weight: Font.DemiBold
                 font.capitalization: Font.AllUppercase
@@ -181,7 +181,7 @@ PageShell {
                 anchors.topMargin: 2
                 text: _detailHeader._meta.description
                 color: Theme.withAlpha(Theme.subtext, 0.58)
-                font.pixelSize: Math.max(8, Settings.fontSize - 2)
+                font.pixelSize: Settings.fontCaption
                 elide: Text.ElideRight
             }
             ShellText {
@@ -193,7 +193,7 @@ PageShell {
                 anchors.topMargin: 4
                 text: ShellSettings.settingsError
                 color: Theme.warning
-                font.pixelSize: Math.max(8, Settings.fontSize - 3)
+                font.pixelSize: Settings.fontMicro
                 elide: Text.ElideRight
                 Accessible.role: Accessible.StaticText
                 Accessible.name: "Configuration warning: " + text

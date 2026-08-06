@@ -78,7 +78,7 @@ Item {
                 : Network.wifiScanning   ? "Searching for networks…"
                 :                          "No networks found"
             color: Theme.withAlpha(Theme.subtext, 0.5)
-            font.family: Settings.font; font.pixelSize: Settings.fontSize - 1
+            font.family: Settings.font; font.pixelSize: Settings.fontLabel
         }
 
         ListView {
@@ -186,7 +186,7 @@ Item {
                         width: Math.max(0, parent.width - 16)
                         anchors.bottom: parent.bottom
                         anchors.bottomMargin: 2
-                        height: 36
+                        height: Metrics.rowHeightFor(36)
                         radius: Theme.radiusField
                         antialiasing: true
                         color: Theme.menuControl

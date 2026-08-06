@@ -262,7 +262,7 @@ PanelWindow {
                             visible: card._todayWeek > 0
                             text: "Week " + card._todayWeek
                             color: Theme.withAlpha(Theme.subtext, 0.45)
-                            font.family: Settings.font; font.pixelSize: Settings.fontSize - 2
+                            font.family: Settings.font; font.pixelSize: Settings.fontCaption
                         }
                     }
                 }
@@ -352,7 +352,7 @@ PanelWindow {
                             anchors.centerIn: parent
                             text: dayHdr.modelData
                             color: Theme.withAlpha(Theme.subtext, dayHdr.index >= 5 ? 0.4 : 0.6)
-                            font.family: Settings.font; font.pixelSize: Settings.fontSize - 3
+                            font.family: Settings.font; font.pixelSize: Settings.fontMicro
                             font.weight: Font.Medium; font.capitalization: Font.AllUppercase
                         }
                     }
@@ -422,7 +422,7 @@ PanelWindow {
                                 anchors.centerIn: parent
                                 text: card._weekForRow(_weekRow.index)
                                 color: Theme.withAlpha(Theme.subtext, 0.38)
-                                font.pixelSize: Settings.fontSize - 4
+                                font.pixelSize: Settings.fontTiny
                                 font.weight: Font.Medium
                             }
                         }

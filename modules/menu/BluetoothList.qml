@@ -81,7 +81,7 @@ Item {
                 : root._searchLapsed   ? "No devices found"
                 :                        "Searching for devices…"
             color: Theme.withAlpha(Theme.subtext, 0.5)
-            font.family: Settings.font; font.pixelSize: Settings.fontSize - 1
+            font.family: Settings.font; font.pixelSize: Settings.fontLabel
         }
 
         ListView {

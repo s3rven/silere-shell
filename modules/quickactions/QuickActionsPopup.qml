@@ -101,7 +101,7 @@ PanelWindow {
         }
 
         width: parent ? parent.width : 0
-        height: 38
+        height: Metrics.rowHeightFor(38)
 
         activeFocusOnTab: visible
         Accessible.role: _row.checkable ? Accessible.CheckBox : Accessible.Button
@@ -214,7 +214,7 @@ PanelWindow {
                 anchors.centerIn: parent
                 text: _row.stateText
                 color: _row.active ? Theme.mix(Theme.accent, Theme.text, 0.18) : Theme.withAlpha(Theme.subtext, 0.62)
-                font.pixelSize: Settings.fontSize - 2
+                font.pixelSize: Settings.fontCaption
                 font.weight: Font.Medium
                 ColorFade on color {}
             }
