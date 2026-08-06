@@ -174,7 +174,7 @@ PanelWindow {
                     ]
 
                     Loader {
-                        active: ShellSettings.barFloating && ShellSettings.barShadow
+                        active: ShellSettings.barShadow
                         anchors.fill: parent
                         sourceComponent: FloatingShadow {
                             radius: card.pillRadius

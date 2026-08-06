@@ -240,7 +240,7 @@ Item {
     }
 
     Loader {
-        active: card.visible && ShellSettings.barFloating && ShellSettings.barShadow
+        active: card.visible && ShellSettings.barShadow
         anchors.fill: cardRect
         opacity: cardRect.opacity
         z: -1
@@ -358,7 +358,7 @@ Item {
                 width:            parent.width
                 text:             card.bodyText
                 color:            Theme.withAlpha(Theme.menuTextMuted, 0.82)
-                font.pixelSize:   Settings.fontSize - 1
+                font.pixelSize:   Settings.fontLabel
                 wrapMode:         Text.WordWrap
                 maximumLineCount: _cardHover.hovered ? 12 : 3
                 elide:            Text.ElideRight
@@ -433,8 +433,8 @@ Item {
                         readonly property int _n: Math.max(1, card.actionList.length)
 
                         width: (contentCol.width - 7 * (_n - 1)) / _n
-                        height: 30
-                        radius: 8
+                        height: Metrics.rowHeightFor(30)
+                        radius: Theme.radiusInline
                         antialiasing: true
                         color: _actMa.pressed       ? Theme.withAlpha(_tint, 0.24)
                              : _actMa.containsMouse ? Theme.withAlpha(_tint, 0.13)
@@ -460,7 +460,7 @@ Item {
                             elide: Text.ElideRight
                             text: card._actionText(_actBtn.modelData)
                             color: _actMa.containsMouse ? _actBtn._tint : Theme.withAlpha(Theme.text, 0.85)
-                            font.pixelSize: Settings.fontSize - 1
+                            font.pixelSize: Settings.fontLabel
                             font.weight: Font.Medium
                             ColorFade on color {}
                         }
@@ -486,7 +486,7 @@ Item {
                     visible:        text.length > 0
                     text:           card.appNameText
                     color:          Theme.withAlpha(Theme.menuTextMuted, card.isCritical ? 0.72 : 0.62)
-                    font.pixelSize: Settings.fontSize - 3
+                    font.pixelSize: Settings.fontMicro
                     font.weight:    Font.Medium
                     font.capitalization: Font.AllUppercase
                     font.letterSpacing:  0.6
@@ -500,7 +500,7 @@ Item {
                     visible: _appCap.visible
                     text:  "·"
                     color: Theme.withAlpha(Theme.menuTextFaint, 0.62)
-                    font.pixelSize: Settings.fontSize - 3
+                    font.pixelSize: Settings.fontMicro
                 }
 
                 ShellText {
@@ -508,7 +508,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     text:           card._timeLabel
                     color:          Theme.withAlpha(Theme.menuTextFaint, 0.70)
-                    font.pixelSize: Settings.fontSize - 3
+                    font.pixelSize: Settings.fontMicro
                 }
             }
         }
@@ -557,7 +557,7 @@ Item {
                 anchors.centerIn: parent
                 text:  "󰅖"
                 color: _closeHover.hovered ? Theme.error : Theme.withAlpha(Theme.menuTextMuted, 0.78)
-                font.pixelSize: Settings.fontSize - 2
+                font.pixelSize: Settings.fontCaption
                 ColorFade on color {}
             }
         }

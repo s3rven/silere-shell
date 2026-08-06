@@ -15,7 +15,7 @@ PanelWindow {
     color:          "transparent"
     exclusiveZone:  -1
 
-    readonly property int _shadowPad: (ShellSettings.barFloating && ShellSettings.barShadow) ? 16 : 0
+    readonly property int _shadowPad: ShellSettings.barShadow ? 16 : 0
     readonly property int _cardW: Math.max(180, Math.min(320,
         targetScreen ? targetScreen.width - 24 - _shadowPad : 320))
     readonly property real _barSideGap: ShellSettings.barFloating && targetScreen
@@ -141,7 +141,7 @@ PanelWindow {
                     text: chip.glyph
                     color: _hover.hovered ? chip.tint
                         : Theme.withAlpha(Theme.menuTextMuted, 0.76)
-                    font.pixelSize: Settings.fontSize - 1
+                    font.pixelSize: Settings.fontLabel
                     ColorFade on color {}
                 }
 
@@ -150,7 +150,7 @@ PanelWindow {
                     text: chip.label
                     color: _hover.hovered ? Theme.withAlpha(Theme.text, 0.90)
                         : Theme.withAlpha(Theme.menuTextMuted, 0.86)
-                    font.pixelSize: Settings.fontSize - 2
+                    font.pixelSize: Settings.fontCaption
                     font.weight: Font.Medium
                     ColorFade on color {}
                 }

@@ -8,8 +8,7 @@ Loader {
 
     required property FloatingPopupCard card
 
-    active: (card.open || card.opacity > 0.001)
-        && ShellSettings.barFloating && ShellSettings.barShadow
+    active: (card.open || card.opacity > 0.001) && ShellSettings.barShadow
     anchors.fill: card
     opacity: card.opacity
     z: -1
