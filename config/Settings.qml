@@ -10,9 +10,14 @@ Singleton {
     // exact family only: Qt 6 passes this verbatim, a comma list trips fontconfig 2.18's family guesser
     readonly property string defaultFont: "JetBrainsMono Nerd Font"
     readonly property string font: {
-        if (ShellSettings.fontFamily.length > 0) return ShellSettings.fontFamily
-        // the default is not installed everywhere; without a Nerd Font the bar is all tofu
         const installed = FontScan.families
+        const chosen = ShellSettings.fontFamily
+        // only drop a chosen family we can prove is gone (uninstalled, or settings carried to
+        // another machine): an empty scan means fc-list is absent or still running, and the
+        // menu that would fix a bad font renders in it too
+        if (chosen.length > 0 && (installed.length === 0 || installed.indexOf(chosen) >= 0))
+            return chosen
+        // the default is not installed everywhere; without a Nerd Font the bar is all tofu
         if (installed.length === 0 || installed.indexOf(root.defaultFont) >= 0) return root.defaultFont
         return installed[0]
     }
@@ -25,6 +30,17 @@ Singleton {
 
     readonly property int capHeight: Math.ceil(_capM.height)
     TextMetrics { id: _capM; font.family: root.font; font.pixelSize: root.fontSize; text: "M" }
+
+    // the same measure at uiScale 1.0; row metrics grow past their design height only above it
+    readonly property int capHeightBase: Math.ceil(_capBaseM.height)
+    TextMetrics { id: _capBaseM; font.family: root.font; font.pixelSize: Math.round(12 * root.fontScale); text: "M" }
+
+    // small type steps floor so a lowered uiScale cannot push secondary text under
+    // legibility; sizes above body need no floor
+    readonly property int fontLabel:   Math.max(9, fontSize - 1)
+    readonly property int fontCaption: Math.max(9, fontSize - 2)
+    readonly property int fontMicro:   Math.max(8, fontSize - 3)
+    readonly property int fontTiny:    Math.max(8, fontSize - 4)
 
     readonly property int hPad: 14
 

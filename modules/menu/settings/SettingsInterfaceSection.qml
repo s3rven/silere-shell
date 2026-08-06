@@ -42,6 +42,10 @@ Column {
             }
             onChosen: (v) => ShellSettings.fontFamily = v
         }
+        HintText {
+            visible: FontScan.scanned && FontScan.families.length === 0
+            text: "No Nerd Font found; shell icons render as boxes until one is installed."
+        }
         SelectRow {
             glyph: "󰍉"; label: "UI scale"
             description: "Text and icon size throughout the shell"

@@ -8,6 +8,8 @@ Singleton {
     id: root
 
     property list<string> families: []
+    // true only after fc-list has exited cleanly, so "no families" can be told apart from "not asked yet"
+    property bool scanned: false
     property bool _scanned: false
 
     function scan(): void {
@@ -52,6 +54,7 @@ Singleton {
             }
             out.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }))
             root.families = out
+            root.scanned = true
         }
     }
 }
