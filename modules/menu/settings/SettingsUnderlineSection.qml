@@ -51,6 +51,12 @@ Column {
         }
     }
 
+    // pairs with EVENTS below: both headings appear together, so a lone card is never labelled
+    CollapsibleSection {
+        expanded: ShellSettings.underlineGlow
+        SectionLabel { label: "APPEARANCE"; first: true }
+    }
+
     SettingsCard {
         ToggleRow {
             glyph: "󰍴"; label: "Underline"
@@ -140,6 +146,17 @@ Column {
                         HintText {
                             visible: !SystemTools.hasInotifywait
                             text: "Screenshot feedback needs inotify-tools."
+                        }
+                        HintText {
+                            // reactive mode drops the static line, so with no source at all the bar shows nothing
+                            visible: !ShellSettings.underlineIdleGlow
+                                && !ShellSettings.underlineNotifGlow
+                                && !ShellSettings.underlineNetGlow
+                                && !ShellSettings.underlineBattGlow
+                                && !ShellSettings.underlineTempGlow
+                                && !ShellSettings.underlineScreenshotGlow
+                                && !ShellSettings.mediaProgress
+                            text: "Nothing lights the underline yet; turn on an event above or Ambient glow."
                         }
                     }
                 }
