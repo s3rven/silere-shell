@@ -30,12 +30,12 @@ Column {
             checked: ShellSettings.mediaProgress
             onToggled: nextChecked => ShellSettings.mediaProgress = nextChecked
             available: !SystemTools.ready || SystemTools.hasCava
-            dependsNote: SystemTools.ready ? "cava missing" : "Checking"
+            dependsNote: SystemTools.ready ? "No cava" : "Checking"
         }
         CollapsibleSection {
             expanded: ShellSettings.mediaProgress && SystemTools.hasCava
             ChoiceChipRow {
-                glyph: "󰝚"; label: "Position"
+                glyph: "󰍹"; label: "Position"
                 currentValue: ShellSettings.mediaVisualizerPosition
                 model: [
                     { value: "media",  label: "Media" },
@@ -44,7 +44,7 @@ Column {
                 onChosen: (v) => ShellSettings.mediaVisualizerPosition = v
             }
             ChoiceChipRow {
-                glyph: "󰝚"; label: "Shape"
+                glyph: "󰀁"; label: "Shape"
                 currentValue: ShellSettings.mediaVisualizerStyle
                 model: [
                     { value: "wave",  label: "Wave" },

@@ -101,7 +101,7 @@ Column {
                     SectionLabel { label: "ALERTS" }
                     SettingsCard {
                         SelectRow {
-                            glyph: "󰀦"; label: "Auto-dismiss"
+                            glyph: "󰔛"; label: "Dismiss after"
                             currentValue: ShellSettings.sysAlertTimeout
                             fallbackLabel: ShellSettings.sysAlertTimeout === 0
                                 ? "Stay" : (ShellSettings.sysAlertTimeout / 1000) + "s"

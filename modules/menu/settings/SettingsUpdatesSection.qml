@@ -116,7 +116,7 @@ Column {
                             text: _pkg.modelData.name
                             elide: Text.ElideRight
                             color: Theme.withAlpha(Theme.text, 0.80)
-                            font.pixelSize: Settings.fontSize - 1
+                            font.pixelSize: Settings.fontLabel
                         }
                         ShellText {
                             id: _ver
@@ -126,7 +126,7 @@ Column {
                             text: _pkg.modelData.to + (_pkg.modelData.aur ? "  AUR" : "")
                             color: Theme.withAlpha(Theme.subtext,
                                 _pkg.modelData.aur ? 0.75 : 0.55)
-                            font.pixelSize: Settings.fontSize - 2
+                            font.pixelSize: Settings.fontCaption
                         }
                     }
                 }
@@ -147,6 +147,7 @@ Column {
         }
         ToggleRow {
             glyph: "󰥔"; label: "Daily update check"
+            description: "Looks for new Silere Shell releases, not system packages"
             checked: ShellUpdate.timerEnabled
             enabled: !ShellUpdate.timerBusy
             available: ShellUpdate.timerSupported

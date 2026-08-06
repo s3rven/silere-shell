@@ -66,7 +66,7 @@ Column {
             glyph: "󰓅"; label: "Network speed"
             checked: ShellSettings.networkTrafficStats
             available: Network.toolAvailable
-            dependsNote: "NetworkManager missing"
+            dependsNote: "No NetworkManager"
             onToggled: nextChecked => ShellSettings.networkTrafficStats = nextChecked
         }
         CollapsibleSection {
@@ -82,7 +82,7 @@ Column {
             description: "Show Wi-Fi or Ethernet next to the VPN icon"
             checked: ShellSettings.netVpnShowLink
             available: Network.toolAvailable
-            dependsNote: "NetworkManager missing"
+            dependsNote: "No NetworkManager"
             onToggled: nextChecked => ShellSettings.netVpnShowLink = nextChecked
         }
     }
