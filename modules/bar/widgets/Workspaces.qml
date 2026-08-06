@@ -4,7 +4,6 @@ import QtQuick
 import Quickshell
 import "../../../config"
 import "../../../services"
-import "../../common"
 
 Item {
     id: root
@@ -20,8 +19,6 @@ Item {
     readonly property int _iconSz: 14
     readonly property int gap:        3
 
-    readonly property bool _gemMarker:  ShellSettings.wsActiveMarker === "gem"
-    readonly property bool _dotMarker:  ShellSettings.wsActiveMarker === "dot"
     readonly property bool _menuTargetsThisBar: {
         const target = MenuState.triggerScreen
         return target ? target.name === root.screen.name
@@ -65,7 +62,6 @@ Item {
         }
         return first
     }
-    readonly property color _trailCoreClear: Theme.withAlpha(Theme.text, 0)
 
     function _knownOnOtherMonitor(id: int): bool {
         if (root.monitorName.length === 0) return false
@@ -84,7 +80,6 @@ Item {
     }
 
     function wsObjFor(id) { return root._wsMap[id] ?? null }
-    function clearColor(c: color): color { return Qt.rgba(c.r, c.g, c.b, 0) }
     function appsFor(id) { return root._wsApps[id] ?? [] }
     function occupied(id: int): bool {
         const ws = root.wsObjFor(id)
@@ -121,12 +116,6 @@ Item {
         const meta = { icon: src, name: (de && de.name) || tail || key }
         root._appMetaCache[key] = meta
         return meta
-    }
-    function appSummary(apps): string {
-        const names = []
-        for (let i = 0; i < apps.length; i++)
-            names.push(apps[i].count > 1 ? apps[i].name + " ×" + apps[i].count : apps[i].name)
-        return names.join(", ")
     }
     property int _wsAppsTick: 0
     Connections {
@@ -209,12 +198,12 @@ Item {
         }
         return btnW
     }
-    function _diamondX(diamondW: real): real {
+    function _markerX(markerW: real): real {
         let acc = 0
         const ids = visibleIds
         for (let i = 0; i < ids.length && ids[i] !== activeId; i++)
             acc += _btnW(ids[i]) + gap
-        return acc + (_btnW(activeId) - diamondW) / 2
+        return acc + (_btnW(activeId) - markerW) / 2
     }
 
     // hyprland ids are global: skip ids owned by another output or a wide page turns a monitor-local bar into a cross-monitor switcher
@@ -325,12 +314,12 @@ Item {
     }
 
     function openAnchorMenu(): void {
-        const pt = root.mapToItem(null, diamond.x + diamond.width / 2, 0)
+        const pt = root.mapToItem(null, marker.centerX, 0)
         MenuState.toggleAt(pt.x, root.screen)
     }
 
     function openQuickActions(): void {
-        const pt = root.mapToItem(null, diamond.x + diamond.width / 2, 0)
+        const pt = root.mapToItem(null, marker.centerX, 0)
         QuickActionsState.toggleAt(pt.x, root.screen, ShellSettings.barPosition === "bottom")
     }
 
@@ -344,322 +333,30 @@ Item {
         }
     }
 
-    Rectangle {
-        id: trail
-        readonly property real _head: diamond.x + diamond.width / 2
-        readonly property real _tail: diamond._trailX + diamond.width / 2
-        readonly property real _gap:  Math.abs(_head - _tail)
-        readonly property bool _rightward: _head >= _tail
-        readonly property real _strength: (ShellSettings.workspaceShift && !root._paging) ? Math.min(1, _gap / 13) : 0
+    property int _hoveredWsId: 0
 
-        height: 4 + _strength * 4
-        radius: height / 2
-        antialiasing: true
-        y: (root.btnH - height) / 2
-        x:     Math.min(_head, _tail) - height / 2
-        width: _gap + height
-        gradient: Gradient {
-            orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: trail._rightward ? root.clearColor(diamond.tint) : diamond.tint }
-            GradientStop { position: 1.0; color: trail._rightward ? diamond.tint : root.clearColor(diamond.tint) }
-        }
-        opacity: _strength * 0.93
-        visible: opacity > 0.01
+    WorkspaceTrail {
+        headX: marker.centerX
+        tailX: marker.trailX
+        tint: marker.tint
+        rowHeight: root.btnH
+        running: ShellSettings.workspaceShift && !root._paging
     }
 
-    Rectangle {
-        id: trailGlow
-        height: 10 + trail._strength * 4
-        radius: height / 2
-        antialiasing: true
-        y: (root.btnH - height) / 2
-        x: trail.x
-        width: trail.width
-        gradient: Gradient {
-            orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: trail._rightward ? root.clearColor(diamond.tint) : diamond.tint }
-            GradientStop { position: 1.0; color: trail._rightward ? diamond.tint : root.clearColor(diamond.tint) }
-        }
-        opacity: trail._strength * 0.20
-        visible: opacity > 0.01
-    }
-
-    Rectangle {
-        id: trailCore
-        height: 1.5 + trail._strength * 1.5
-        radius: height / 2
-        antialiasing: true
-        y: (root.btnH - height) / 2
-        x: trail.x
-        width: trail.width
-        gradient: Gradient {
-            orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: trail._rightward ? root._trailCoreClear : Theme.withAlpha(Theme.text, 0.95) }
-            GradientStop { position: 1.0; color: trail._rightward ? Theme.withAlpha(Theme.text, 0.95) : root._trailCoreClear }
-        }
-        opacity: trail._strength * 0.88
-        visible: opacity > 0.01
-    }
-
-    // no render layer: an FBO fringes the small sprite when scaled, and 12px keeps the gem on whole pixels
-    Item {
-        id: diamond
-        width:  root._dotMarker ? 8 : 12
-        height: width
-        y: (root.btnH - height) / 2
-        opacity: root.monitorReady && root.activeIndex >= 0 ? 0.92 : 0
-        visible: opacity > 0.01
-
-        readonly property real targetX: root.activeIndex >= 0
-            ? root._diamondX(width)
-            : 0
-        x: targetX
-
-        property real _hoverScale:   1.0
-        property real _tapScale:     1.0
-        property real _moveScale:    1.0
-        property real _specialScale: 1.0
-        property real _glint:        -1.15
-        property real _trailX:       targetX
-        property real _menuOn: root._menuTargetsThisBar && MenuState.open ? 1 : 0
-        MotionBehavior on _menuOn {NumberAnimation { duration: Motion.ms(220); easing.type: Easing.OutCubic } }
-
-        readonly property color tint: {
-            return root.urgent(root.activeId) ? Theme.warning : Theme.accent
-        }
-        property real _specialOn: root.inSpecial ? 0.65 : 0
-        MotionBehavior on _specialOn {NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
-        readonly property real _energy: Math.max(diamond._menuOn * 0.82,
-                                                  _specialOn,
-                                                  (_hoverScale - 1.0) * 4.2,
-                                                  (_tapScale   - 1.0) * 2.2,
-                                                  (_moveScale  - 1.0) * 3.0)
-
-        scale: _hoverScale * _tapScale * _moveScale * _specialScale
-        transformOrigin: Item.Center
-
-        Rectangle {
-            anchors.centerIn: parent
-            width:  parent.width + 14
-            height: width
-            radius: 4
-            rotation: 45
-            antialiasing: true
-            color: Theme.withAlpha(diamond.tint, 0.34)
-            opacity: diamond._energy * 0.22
-            scale: 0.70 + diamond._energy * 0.22
-            visible: root._gemMarker && opacity > 0.01
-        }
-
-        Rectangle {
-            id: _menuRipple
-            anchors.centerIn: parent
-            width:  parent.width + 6
-            height: width
-            radius: root._gemMarker ? 4 : width / 2
-            rotation: root._gemMarker ? 45 : 0
-            antialiasing: true
-            color: Theme.withAlpha(diamond.tint, 0.5)
-            opacity: 0
-            scale: 1.0
-            transformOrigin: Item.Center
-            visible: opacity > 0.01
-        }
-
-        // special-workspace frame; filled layers not strokes — 1px rotated borders look uneven on fractional displays
-        Rectangle {
-            anchors.centerIn: parent
-            width:  parent.width + 16
-            height: width
-            radius: 4
-            rotation: 45
-            antialiasing: true
-            color: Theme.withAlpha(diamond.tint, 0.20)
-            opacity: root.inSpecial ? 0.62 : 0.0
-            scale:   root.inSpecial ? 1.0 : 0.76
-            transformOrigin: Item.Center
-            visible: root._gemMarker && opacity > 0.01
-            MotionBehavior on opacity {NumberAnimation { duration: Motion.ms(root.inSpecial ? 180 : 130); easing.type: Easing.OutCubic } }
-            MotionBehavior on scale   {NumberAnimation { duration: Motion.ms(root.inSpecial ? 210 : 130); easing.type: Easing.OutQuart } }
-        }
-        Rectangle {
-            anchors.centerIn: parent
-            width:  parent.width + 8
-            height: width
-            radius: root._gemMarker ? 3 : width / 2
-            rotation: root._gemMarker ? 45 : 0
-            antialiasing: true
-            color: Theme.withAlpha(diamond.tint, 0.34)
-            opacity: root.inSpecial ? 0.96 : 0.0
-            scale:   root.inSpecial ? 1.0 : 0.68
-            transformOrigin: Item.Center
-            visible: opacity > 0.01
-            MotionBehavior on opacity {NumberAnimation { duration: Motion.ms(root.inSpecial ? 165 : 120); easing.type: Easing.OutCubic } }
-            MotionBehavior on scale   {NumberAnimation { duration: Motion.ms(root.inSpecial ? 190 : 120); easing.type: Easing.OutQuart } }
-        }
-
-        // filled rim, not a stroke (crisp on fractional displays); dot/ring reuse it as an energy-only halo
-        Rectangle {
-            anchors.centerIn: parent
-            width:  parent.width + 4
-            height: width
-            radius: root._gemMarker ? 3 : width / 2
-            rotation: root._gemMarker ? 45 : 0
-            antialiasing: true
-            color: Theme.withAlpha(diamond.tint,
-                root._menuTargetsThisBar && MenuState.open ? 0.50 : 0.30)
-            opacity: root._gemMarker ? 0.55 + diamond._energy * 0.22 : diamond._energy * 0.60
-            scale: 1.0 + diamond._energy * (root._gemMarker ? 0.035 : 0.10)
-            visible: opacity > 0.01
-            MotionBehavior on color   {ColorAnimation { duration: Motion.ms(150) } }
-        }
-
-        Rectangle {
-            z: -1
-            anchors.centerIn: parent
-            anchors.verticalCenterOffset: 2
-            width:  parent.width + 5
-            height: width
-            radius: 4
-            rotation: 45
-            antialiasing: true
-            color: Qt.rgba(0, 0, 0, 0.32)
-            opacity: 0.14
-            visible: root._gemMarker
-        }
-
-        Rectangle {
-            anchors.fill: parent
-            radius: root._gemMarker ? 2 : width / 2
-            rotation: root._gemMarker ? 45 : 0
-            antialiasing: true
-            color: diamond.tint
-            MotionBehavior on color {ColorAnimation { duration: Motion.ms(150) } }
-
-            Rectangle {
-                anchors.fill: parent
-                radius: parent.radius
-                antialiasing: true
-                visible: root._gemMarker
-                gradient: Gradient {
-                    GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.20) }
-                    GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.20) }
-                }
-            }
-
-            Item {
-                anchors.fill: parent
-                clip: true
-                visible: _glintAnim.running && root._gemMarker
-                Rectangle {
-                    width: 2
-                    height: parent.height + 8
-                    radius: 1
-                    antialiasing: true
-                    x: {
-                        const t = (diamond._glint + 1.15) / 2.3
-                        const p = diamond._glintDir >= 0 ? t : 1 - t
-                        return Math.round(p * (parent.width + width)) - width
-                    }
-                    y: -4
-                    rotation: -18
-                    color: Qt.rgba(1, 1, 1, 0.48)
-                }
-            }
-        }
-
-        Rectangle {
-            anchors.fill: parent
-            radius: root._gemMarker ? 2 : width / 2
-            rotation: root._gemMarker ? 45 : 0
-            antialiasing: true
-            color: Qt.rgba(1, 1, 1, 1)
-            opacity: diamond._menuOn * 0.22
-            visible: opacity > 0.01
-        }
-
-        Rectangle {
-            readonly property bool _show: Notifications.effectiveDnd && Notifications.missedCount > 0
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.top:       parent.top
-            anchors.topMargin: -1
-            width:  4
-            height: 4
-            radius: width / 2
-            antialiasing: true
-            color: Theme.error
-            opacity: _show ? 1 : 0
-            scale:   _show ? 1 : 0.2
-            transformOrigin: Item.Center
-            visible: opacity > 0.01
-            MotionBehavior on opacity {NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
-            MotionBehavior on scale   {NumberAnimation { duration: Motion.ms(150); easing.type: Easing.OutCubic } }
-        }
-
-        SequentialAnimation {
-            id: _specialPulse
-            NumberAnimation { target: diamond; property: "_specialScale"; to: 1.055; duration: Motion.ms(90);  easing.type: Easing.OutCubic }
-            NumberAnimation { target: diamond; property: "_specialScale"; to: 1.0;   duration: Motion.ms(185); easing.type: Easing.OutQuart }
-        }
-        property int _glintDir: 1
-        SequentialAnimation {
-            id: _glintAnim
-            ScriptAction { script: {
-                diamond._glintDir = (diamond.targetX >= diamond.x) ? 1 : -1
-                diamond._glint = -1.15
-            } }
-            NumberAnimation { target: diamond; property: "_glint"; to: 1.15; duration: Motion.ms(260); easing.type: Easing.OutCubic }
-            ScriptAction { script: diamond._glint = -1.15 }
-        }
-        Connections {
-            target: root
-            enabled: !ShellSettings.reduceMotion
-            function onInSpecialChanged() {
-                if (!root.inSpecial) return
-                _specialPulse.restart()
-                if (root._gemMarker) _glintAnim.restart()
-            }
-        }
-
-        MotionBehavior on x           { gate: ShellSettings.workspaceShift; NumberAnimation { duration: Motion.ms(190); easing.type: Easing.OutQuart } }
-        MotionBehavior on opacity     {NumberAnimation { duration: Motion.ms(150) } }
-        MotionBehavior on _hoverScale {NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
-        MotionBehavior on _trailX     { gate: ShellSettings.workspaceShift; NumberAnimation { duration: Motion.ms(260); easing.type: Easing.OutQuart } }
-
-        onTargetXChanged: {
-            if (!root.monitorReady) return
-            if (root._paging) return
-            if (Math.abs(targetX - x) < 2) return
-            if (!ShellSettings.workspaceShift || ShellSettings.reduceMotion) return
-            _moveAnim.restart()
-            if (root._gemMarker) _glintAnim.restart()
-        }
-
-        SequentialAnimation {
-            id: _moveAnim
-            NumberAnimation { target: diamond; property: "_moveScale"; to: 1.08; duration: Motion.ms(65);  easing.type: Easing.OutQuad }
-            NumberAnimation { target: diamond; property: "_moveScale"; to: 1.0;  duration: Motion.ms(140); easing.type: Easing.OutCubic }
-        }
-
-        SequentialAnimation {
-            id: _tapPulse
-            NumberAnimation { target: diamond; property: "_tapScale"; to: 1.14; duration: Motion.ms(70);  easing.type: Easing.OutQuad }
-            NumberAnimation { target: diamond; property: "_tapScale"; to: 1.0;  duration: Motion.ms(145); easing.type: Easing.OutCubic }
-        }
-
-        ParallelAnimation {
-            id: _menuRippleAnim
-            NumberAnimation { target: _menuRipple; property: "scale";   from: 0.9;  to: 2.7; duration: Motion.ms(540); easing.type: Easing.OutCubic }
-            NumberAnimation { target: _menuRipple; property: "opacity"; from: 0.55; to: 0;   duration: Motion.ms(540); easing.type: Easing.OutCubic }
-        }
-        Connections {
-            target: MenuState
-            enabled: !ShellSettings.reduceMotion && root.barActive
-            function onOpenChanged() {
-                if (MenuState.open && root._menuTargetsThisBar)
-                    _menuRippleAnim.restart()
-            }
-        }
+    WorkspaceMarker {
+        id: marker
+        style: ShellSettings.wsActiveMarker
+        rowHeight: root.btnH
+        targetX: root.activeIndex >= 0 ? root._markerX(marker.width) : 0
+        shown: root.monitorReady && root.activeIndex >= 0
+        inSpecial: root.inSpecial
+        urgent: root.urgent(root.activeId)
+        menuTargets: root._menuTargetsThisBar
+        barActive: root.barActive
+        paging: root._paging
+        monitorReady: root.monitorReady
+        shiftEnabled: ShellSettings.workspaceShift
+        hovered: root._hoveredWsId === root.activeId && ShellSettings.barHoverHighlight
     }
 
     Row {
@@ -670,331 +367,43 @@ Item {
             id: _wsRepeater
             model: root.visibleIds
 
-            Item {
+            WorkspaceButton {
                 id: ws
                 required property int modelData
-                required property int index
-                readonly property int  wsId:    modelData
-                readonly property bool active:  root.monitorReady && root.activeId === wsId
-                readonly property var  apps:    root.appsFor(wsId)
-                readonly property bool occupied: root.occupied(wsId)
-                readonly property bool urgent:  root.urgent(wsId)
-                readonly property bool hovered: _hover.hovered
-                readonly property bool _hoverFx: hovered && ShellSettings.barHoverHighlight
-                readonly property bool _showIcons: ShellSettings.wsShowAppIcons && !active && apps.length > 0
 
-                width:   root._btnW(wsId)
-                height:  root.btnH
-                scale:   1.0
+                wsId:         modelData
+                siblingCount: _wsRepeater.count
+                monitorReady: root.monitorReady
+                active:       root.monitorReady && root.activeId === wsId
+                occupied:     root.occupied(wsId)
+                urgent:       root.urgent(wsId)
+                apps:         root.appsFor(wsId)
+                compact:      root.compact
+                iconSize:     root._iconSz
+                cellWidth:    root._btnW(wsId)
+                rowHeight:    root.btnH
+                barActive:    root.barActive
+                initialized:  root._initialized
+                paging:       root._paging
 
-                MotionBehavior on width {
-                    NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
-                }
-
-                activeFocusOnTab: root.monitorReady
-
-                Component.onCompleted: {
-                    _dotFade = active ? 0 : 1
-                    if (!root._initialized || ShellSettings.reduceMotion || root._paging) return
-                    scale = 0
-                    _enterAnim.start()
-                }
-
-                SequentialAnimation {
-                    id: _enterAnim
-                    NumberAnimation { target: ws; property: "scale"; to: 1.0; duration: Motion.ms(130); easing.type: Easing.OutCubic }
-                }
-
-                SequentialAnimation {
-                    id: _dropPulse
-                    NumberAnimation { target: ws; property: "scale"; to: 1.12; duration: Motion.ms(70);  easing.type: Easing.OutQuad  }
-                    NumberAnimation { target: ws; property: "scale"; to: 1.0;  duration: Motion.ms(145); easing.type: Easing.OutCubic }
-                }
-
-                Accessible.role: Accessible.Button
-                Accessible.name: "Workspace " + wsId
-                Accessible.description: active ? "Current workspace"
-                    : urgent ? "Urgent workspace"
-                    : occupied ? (apps.length > 0
-                        ? "Occupied workspace: " + root.appSummary(apps)
-                        : "Occupied workspace")
-                    : "Empty workspace"
-                Accessible.focusable: root.monitorReady
-                Accessible.onPressAction: ws._activateFromKeyboard()
-
-                function _activateFromKeyboard(): void {
-                    if (!root.monitorReady) return
-                    if (ws.active) {
-                        _tapPulse.restart()
-                        if (!ShellSettings.reduceMotion && root._gemMarker) _glintAnim.restart()
-                        root.openAnchorMenu()
-                    } else {
-                        root.activate(ws.wsId)
-                    }
-                }
-
-                Keys.onSpacePressed: event => {
-                    if (!event.isAutoRepeat) ws._activateFromKeyboard()
-                    event.accepted = true
-                }
-                Keys.onReturnPressed: event => {
-                    if (!event.isAutoRepeat) ws._activateFromKeyboard()
-                    event.accepted = true
-                }
-                Keys.onEnterPressed: event => {
-                    if (!event.isAutoRepeat) ws._activateFromKeyboard()
-                    event.accepted = true
-                }
-                Keys.onLeftPressed:  event => { root._focusWsIndex(ws.index - 1); event.accepted = true }
-                Keys.onRightPressed: event => { root._focusWsIndex(ws.index + 1); event.accepted = true }
-                Keys.onPressed: event => {
-                    if (event.key === Qt.Key_Home) {
-                        root._focusWsIndex(0)
-                        event.accepted = true
-                    } else if (event.key === Qt.Key_End) {
-                        root._focusWsIndex(_wsRepeater.count - 1)
-                        event.accepted = true
-                    }
-                }
-
-                HoverHandler { id: _hover; cursorShape: Qt.PointingHandCursor }
-
-                Rectangle {
-                    id: _wsFocusRing
-                    anchors.centerIn: parent
-                    width: parent.width
-                    height: root.btnH
-                    radius: Metrics.hoverRadiusFor(height)
-                    antialiasing: true
-                    color: Theme.withAlpha(Theme.accent, 0.14)
-                    opacity: ws.activeFocus ? 1.0 : 0.0
-                    visible: opacity > 0.001
-                    MotionBehavior on opacity {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-
-                    OutlineBorder {
-                        radius: _wsFocusRing.radius
-                        outlineColor: Theme.withAlpha(Theme.accent, Theme.focusRingAlpha)
-                    }
-                }
-
-                TapHandler {
-                    acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
-                    onTapped: (eventPoint, button) => {
-                        if (button === Qt.MiddleButton) {
-                            if (!Compositor.activeToplevel) return
-                            Compositor.moveActiveToWorkspace(ws.wsId)
-                            if (!ShellSettings.reduceMotion) _dropPulse.restart()
-                            return
-                        }
-                        if (button === Qt.RightButton) {
-                            if (ws.active) {
-                                _tapPulse.restart()
-                                if (!ShellSettings.reduceMotion && root._gemMarker) _glintAnim.restart()
-                                root.openQuickActions()
-                            }
-                            return
-                        }
-                        if (ws.active) {
-                            _tapPulse.restart()
-                            if (!ShellSettings.reduceMotion && root._gemMarker) _glintAnim.restart()
-                            root.openAnchorMenu()
-                        } else {
-                            root.activate(ws.wsId)
-                        }
-                    }
-                }
-
-                onHoveredChanged: { if (active) diamond._hoverScale = _hoverFx ? 1.10 : 1.0 }
-                onActiveChanged: {
-                    diamond._hoverScale = (active && _hoverFx) ? 1.10 : 1.0
-                    if (ShellSettings.reduceMotion) { _dotFade = active ? 0 : 1; return }
-                    _dotFadeOut.stop(); _dotFadeIn.stop()
-                    if (active) _dotFadeOut.restart()
-                    else        _dotFadeIn.restart()
-                }
-
-                readonly property real _pulseOpacity: _urgentFx.item ? _urgentFx.item.pulseOpacity : 1.0
-                readonly property real _shakeX: _urgentFx.item ? _urgentFx.item.shakeX : 0
-                property real _dotFade: 1.0
-                readonly property bool _hoverReveal: ShellSettings.valuesOnHover && hovered
-                    && !active && (_showIcons || !ShellSettings.wsShowNumbers)
-                property real _revealAmt: _hoverReveal ? 1 : 0
-                MotionBehavior on _revealAmt {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-                property real _dotAlpha: urgent ? 0.95 : occupied ? 0.65 : 0.28
-                MotionBehavior on _dotAlpha {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
-
-                Loader {
-                    anchors.fill: parent
-                    z: -1
-                    active: ShellSettings.wsNotifPulse
-                    sourceComponent: Component {
-                        WorkspaceNotifPulse {
-                            workspaceId: ws.wsId
-                            barActive: root.barActive
-                        }
-                    }
-                }
-                Connections {
-                    target: ShellSettings
-                    function onBarHoverHighlightChanged() {
-                        if (ws.active) diamond._hoverScale = ws._hoverFx ? 1.10 : 1.0
-                    }
-                }
-                NumberAnimation {
-                    id: _dotFadeOut
-                    target: ws; property: "_dotFade"; to: 0
-                    duration: Motion.ms(120); easing.type: Easing.OutCubic
-                }
-                SequentialAnimation {
-                    id: _dotFadeIn
-                    PauseAnimation  { duration: Motion.ms(150) }
-                    NumberAnimation { target: ws; property: "_dotFade"; to: 1; duration: Motion.ms(220); easing.type: Easing.OutCubic }
-                }
-
-                Loader {
-                    id: _urgentFx
-                    active: ws.urgent && !ws.active
-                    sourceComponent: Component {
-                        WorkspaceUrgentFx { barActive: root.barActive }
-                    }
-                }
-
-                ShellText {
-                    anchors.centerIn: parent
-                    transform: Translate { x: ws._shakeX }
-                    text:    ws.wsId
-                    opacity: (ws._showIcons
-                            ? ws._revealAmt
-                            : Math.max(ShellSettings.wsShowNumbers ? 1 : 0, ws._revealAmt))
-                        * (ws.active ? 0 : 1) * ws._pulseOpacity * ShellSettings.wsMarkerOpacity
-                    scale:   ws.active ? 0.6 : (ws._hoverFx ? 1.12 : 1)
-                    color:   ws.urgent
-                        ? Theme.warning
-                        : (ws.occupied
-                            ? (ws._hoverFx ? Theme.accent : Theme.withAlpha(Theme.text, 0.85))
-                            : (ws._hoverFx ? Theme.withAlpha(Theme.accent, 0.65) : Theme.withAlpha(Theme.subtext, 0.45)))
-                    font.pixelSize: Settings.fontSize - 1
-
-                    MotionBehavior on opacity {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
-                    MotionBehavior on scale   {NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
-                    MotionBehavior on color   {ColorAnimation  { duration: Motion.color } }
-                }
-
-                Rectangle {
-                    anchors.centerIn: parent
-                    transform: Translate { x: ws._shakeX }
-                    width:  ws.urgent ? 6 : (ws.occupied ? 5 : 4)
-                    height: width
-                    radius: width / 2
-                    antialiasing: true
-                    visible: !ShellSettings.wsShowNumbers && !ws._showIcons
-                    opacity: (1 - ws._revealAmt) * ws._dotFade * (ws._hoverFx && !ws.urgent
-                             ? Math.min(1, ws._dotAlpha + 0.18)
-                             : ws._dotAlpha) * ws._pulseOpacity * ShellSettings.wsMarkerOpacity
-                    color: ws.urgent ? Theme.warning : Theme.withAlpha(Theme.subtext, 0.85)
-                    scale: ws._hoverFx ? 1.2 : 1.0
-
-                    ColorFade on color {}
-                    MotionBehavior on width {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
-                    MotionBehavior on scale {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
-                }
-
-                Loader {
-                    anchors.centerIn: parent
-                    transform: Translate { x: ws._shakeX }
-                    opacity: 1 - ws._revealAmt
-                    active: ws._showIcons
-                    sourceComponent: Component {
-                        WorkspaceAppIcons {
-                            apps: root.compact ? ws.apps.slice(0, 1) : ws.apps
-                            iconSize: root._iconSz
-                            hoverFx: ws._hoverFx
-                            pulseOpacity: ws._pulseOpacity
-                        }
-                    }
+                onActivateRequested:      root.activate(wsId)
+                onAnchorMenuRequested:     root.openAnchorMenu()
+                onQuickActionsRequested:   root.openQuickActions()
+                onMarkerPulseRequested:    marker.pulse()
+                onFocusSiblingRequested:   i => root._focusWsIndex(i)
+                onHoverReported:           (id, on) => {
+                    if (on) root._hoveredWsId = id
+                    else if (root._hoveredWsId === id) root._hoveredWsId = 0
                 }
             }
         }
     }
 
-    Item {
-        id: _urgentTick
-        readonly property bool shown: root.urgentOffPage > 0
-        property int targetWs: 0
-        readonly property int _live: root.urgentOffPage
-        on_LiveChanged: if (_live > 0) {
-            if (targetWs !== _live) _pulseSettled = false
-            targetWs = _live
-        }
-        Component.onCompleted: if (_live > 0) targetWs = _live
-
+    WorkspaceUrgentTick {
         x: wsRow.implicitWidth + 2
-        width: 10
-        height: root.btnH
-        opacity: shown ? 1 : 0
-        visible: opacity > 0.01
-        MotionBehavior on opacity {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
-
-        activeFocusOnTab: shown
-        Accessible.role: Accessible.Button
-        Accessible.name: "Urgent workspace " + targetWs
-        Accessible.description: "Activate to jump to it."
-        Accessible.onPressAction: _urgentTick._jump()
-
-        function _jump(): void { if (shown) root.activate(targetWs) }
-        Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) _urgentTick._jump(); event.accepted = true }
-        Keys.onReturnPressed: event => { if (!event.isAutoRepeat) _urgentTick._jump(); event.accepted = true }
-        Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) _urgentTick._jump(); event.accepted = true }
-
-        HoverHandler { id: _tickHover; enabled: _urgentTick.shown; cursorShape: Qt.PointingHandCursor }
-        TapHandler   { enabled: _urgentTick.shown; onTapped: _urgentTick._jump() }
-
-        Rectangle {
-            id: _tickFocusRing
-            anchors.centerIn: parent
-            width: parent.width
-            height: root.btnH
-            radius: Metrics.hoverRadiusFor(height)
-            antialiasing: true
-            color: Theme.withAlpha(Theme.accent, 0.14)
-            opacity: _urgentTick.activeFocus ? 1.0 : 0.0
-            visible: opacity > 0.001
-            MotionBehavior on opacity {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-
-            OutlineBorder {
-                radius: _tickFocusRing.radius
-                outlineColor: Theme.withAlpha(Theme.accent, Theme.focusRingAlpha)
-            }
-        }
-
-        property real _pulse: 1.0
-        property bool _pulseSettled: false
-        onShownChanged: if (shown) _pulseSettled = false
-        SequentialAnimation {
-            running: _urgentTick.shown && !_urgentTick._pulseSettled
-                && root.barActive && !ShellSettings.reduceMotion && !Idle.isIdle
-            loops:   Animation.Infinite
-            onRunningChanged: if (!running) _urgentTick._pulse = 1.0
-            NumberAnimation { target: _urgentTick; property: "_pulse"; to: 0.35; duration: Motion.ms(550); easing.type: Easing.InOutSine }
-            NumberAnimation { target: _urgentTick; property: "_pulse"; to: 1.0;  duration: Motion.ms(550); easing.type: Easing.InOutSine }
-        }
-        Timer {
-            interval: 15000
-            running: _urgentTick.shown && !_urgentTick._pulseSettled
-                && root.barActive && !Idle.isIdle
-            onTriggered: _urgentTick._pulseSettled = true
-        }
-
-        Rectangle {
-            anchors.centerIn: parent
-            width:  5
-            height: 5
-            radius: 2.5
-            antialiasing: true
-            color: Theme.warning
-            opacity: _urgentTick._pulse * ((_tickHover.hovered || _urgentTick.activeFocus) ? 1.0 : 0.9)
-            scale: (_tickHover.hovered && ShellSettings.barHoverHighlight) || _urgentTick.activeFocus ? 1.25 : 1.0
-            MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-        }
+        liveId: root.urgentOffPage
+        rowHeight: root.btnH
+        barActive: root.barActive
+        onJumpRequested: id => root.activate(id)
     }
 }
