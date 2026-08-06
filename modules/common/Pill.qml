@@ -41,7 +41,7 @@ Item {
 
     signal activated()
 
-    readonly property int  pillH:   24
+    readonly property int  pillH:   Metrics.barRowHeight
     readonly property bool hasText: text.length > 0
 
     property int  shrinkDelay: 600

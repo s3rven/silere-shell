@@ -87,7 +87,7 @@ Item {
                     x: -3
                     anchors.verticalCenter: parent.verticalCenter
                     width: _tile.width + 6
-                    height: 24
+                    height: Metrics.barRowHeight
                     radius: Metrics.hoverRadiusFor(height)
                     color: _tile.needsAttention ? Theme.withAlpha(Theme.accent, 0.20)
                          : _ma.pressed           ? Theme.withAlpha(Theme.accent, 0.18)

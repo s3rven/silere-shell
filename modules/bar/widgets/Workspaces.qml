@@ -14,9 +14,9 @@ Item {
     required property ShellScreen screen
 
     readonly property int minVisible: ShellSettings.wsMinVisible
-    readonly property int btnW:       26
-    readonly property int btnH:       24
-    readonly property int _iconSz: 14
+    readonly property int btnH:       Metrics.barRowHeight
+    readonly property int btnW:       btnH + 2
+    readonly property int _iconSz:    Settings.iconSize + 2
     readonly property int gap:        3
 
     readonly property bool _menuTargetsThisBar: {

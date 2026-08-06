@@ -42,4 +42,7 @@ Singleton {
 
     // fixed icon cell: Nerd glyph ink spans 0.64-1.08x the px size, so a natural-width slot shoves the row on every glyph swap
     function iconCellFor(pixelSize: int): int { return Math.ceil(pixelSize * 1.1) }
+
+    // one height for every bar capsule, focus ring and workspace cell, on the menu rows' grid
+    readonly property int barRowHeight: rowHeightFor(24)
 }
