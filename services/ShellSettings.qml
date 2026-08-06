@@ -13,7 +13,7 @@ Singleton {
     property string mediaVisualizerPreset: "balanced"
     property string mediaVisualizerStyle:  "wave"
     property string mediaVisualizerPosition: "media"
-    property bool   workspaceShift:      false
+    property bool   workspaceShift:      true
     property bool   neutralTheme:        true
     property bool   neutralAccentAuto:   false
     property string neutralAccent:       "#b8bdd8"
