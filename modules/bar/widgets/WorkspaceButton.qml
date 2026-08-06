@@ -23,6 +23,7 @@ Item {
     required property bool barActive
     required property bool initialized
     required property bool paging
+    required property bool markerCovers
 
     signal activateRequested()
     signal anchorMenuRequested()
@@ -33,7 +34,9 @@ Item {
 
     readonly property bool hovered: _hover.hovered
     readonly property bool _hoverFx: hovered && ShellSettings.barHoverHighlight
-    readonly property bool _showIcons: ShellSettings.wsShowAppIcons && !active && apps.length > 0
+    // an underline marker leaves the cell centre free, so the active workspace keeps its own content
+    readonly property bool _blanked: active && markerCovers
+    readonly property bool _showIcons: ShellSettings.wsShowAppIcons && !_blanked && apps.length > 0
 
     width:  cellWidth
     height: rowHeight
@@ -46,7 +49,7 @@ Item {
     activeFocusOnTab: monitorReady
 
     Component.onCompleted: {
-        _dotFade = active ? 0 : 1
+        _dotFade = _blanked ? 0 : 1
         if (!initialized || ShellSettings.reduceMotion || paging) return
         scale = 0
         _enterAnim.start()
@@ -157,21 +160,21 @@ Item {
         }
     }
 
-    onActiveChanged: {
-        if (ShellSettings.reduceMotion) { _dotFade = active ? 0 : 1; return }
+    on_BlankedChanged: {
+        if (ShellSettings.reduceMotion) { _dotFade = _blanked ? 0 : 1; return }
         _dotFadeOut.stop(); _dotFadeIn.stop()
-        if (active) _dotFadeOut.restart()
-        else        _dotFadeIn.restart()
+        if (_blanked) _dotFadeOut.restart()
+        else          _dotFadeIn.restart()
     }
 
     readonly property real _pulseOpacity: _urgentFx.item ? _urgentFx.item.pulseOpacity : 1.0
     readonly property real _shakeX: _urgentFx.item ? _urgentFx.item.shakeX : 0
     property real _dotFade: 1.0
     readonly property bool _hoverReveal: ShellSettings.valuesOnHover && hovered
-        && !active && (_showIcons || !ShellSettings.wsShowNumbers)
+        && !_blanked && (_showIcons || !ShellSettings.wsShowNumbers)
     property real _revealAmt: _hoverReveal ? 1 : 0
     MotionBehavior on _revealAmt {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-    property real _dotAlpha: urgent ? 0.95 : occupied ? 0.65 : 0.28
+    property real _dotAlpha: urgent ? 0.95 : active ? 1.0 : occupied ? 0.65 : 0.28
     MotionBehavior on _dotAlpha {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
 
     Loader {
@@ -212,10 +215,12 @@ Item {
         opacity: (root._showIcons
                 ? root._revealAmt
                 : Math.max(ShellSettings.wsShowNumbers ? 1 : 0, root._revealAmt))
-            * (root.active ? 0 : 1) * root._pulseOpacity * ShellSettings.wsMarkerOpacity
-        scale:   root.active ? 0.6 : (root._hoverFx ? 1.12 : 1)
+            * (root._blanked ? 0 : 1) * root._pulseOpacity * ShellSettings.wsMarkerOpacity
+        scale:   root._blanked ? 0.6 : (root._hoverFx ? 1.12 : 1)
         color:   root.urgent
             ? Theme.warning
+            : root.active
+            ? Theme.accent
             : (root.occupied
                 ? (root._hoverFx ? Theme.accent : Theme.withAlpha(Theme.text, 0.85))
                 : (root._hoverFx ? Theme.withAlpha(Theme.accent, 0.65) : Theme.withAlpha(Theme.subtext, 0.45)))
@@ -229,7 +234,7 @@ Item {
     Rectangle {
         anchors.centerIn: parent
         transform: Translate { x: root._shakeX }
-        width:  root.urgent ? 6 : (root.occupied ? 5 : 4)
+        width:  root.urgent ? 6 : (root.active || root.occupied ? 5 : 4)
         height: width
         radius: width / 2
         antialiasing: true
@@ -237,7 +242,9 @@ Item {
         opacity: (1 - root._revealAmt) * root._dotFade * (root._hoverFx && !root.urgent
                  ? Math.min(1, root._dotAlpha + 0.18)
                  : root._dotAlpha) * root._pulseOpacity * ShellSettings.wsMarkerOpacity
-        color: root.urgent ? Theme.warning : Theme.withAlpha(Theme.subtext, 0.85)
+        color: root.urgent ? Theme.warning
+             : root.active ? Theme.accent
+             : Theme.withAlpha(Theme.subtext, 0.85)
         scale: root._hoverFx ? 1.2 : 1.0
 
         ColorFade on color {}

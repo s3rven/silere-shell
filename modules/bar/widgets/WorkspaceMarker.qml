@@ -4,12 +4,13 @@ import QtQuick
 import "../../../config"
 import "../../../services"
 
-// no render layer: an FBO fringes the small sprite when scaled, and 12px keeps the gem on whole pixels
+// no render layer: an FBO fringes the small sprite when scaled, and the even sizes below keep the gem on whole pixels
 Item {
     id: root
 
     required property string style
     required property real rowHeight
+    required property real cellWidth
     required property real targetX
     required property bool shown
     required property bool inSpecial
@@ -23,6 +24,7 @@ Item {
 
     readonly property bool gem: style === "gem"
     readonly property bool _dot: style === "dot"
+    readonly property bool _bar: style === "bar"
 
     readonly property real centerX: x + width / 2
     readonly property real trailX: _trailX + width / 2
@@ -38,9 +40,14 @@ Item {
         _glintAnim.restart()
     }
 
-    width: _dot ? 8 : 12
-    height: width
-    y: (rowHeight - height) / 2
+    readonly property real _sprite: _dot ? 2 * Math.round(rowHeight / 6)
+                                         : 2 * Math.round(rowHeight / 4)
+    // settled width for the caller to centre on; feeding the animated one back into targetX restarts the slide every frame
+    readonly property real markerWidth: _bar ? Math.max(10, cellWidth - 6) : _sprite
+    width:  markerWidth
+    height: _bar ? 2 : _sprite
+    // whole multiple of 4 from the row top: a 1px-phased underline doubles on a fractional display
+    y: _bar ? rowHeight - 4 : (rowHeight - height) / 2
     opacity: shown ? 0.92 : 0
     visible: opacity > 0.01
 
@@ -63,7 +70,9 @@ Item {
                                               (_tapScale   - 1.0) * 2.2,
                                               (_moveScale  - 1.0) * 3.0)
 
-    scale: _hoverScale * _tapScale * _moveScale * _specialScale
+    // the sprite bounces; a full-cell underline scaled that hard just overhangs its cell
+    readonly property real _scaleStack: _hoverScale * _tapScale * _moveScale * _specialScale
+    scale: _bar ? 1 + (_scaleStack - 1) * 0.35 : _scaleStack
     transformOrigin: Item.Center
 
     Rectangle {
@@ -91,7 +100,7 @@ Item {
         opacity: 0
         scale: 1.0
         transformOrigin: Item.Center
-        visible: opacity > 0.01
+        visible: !root._bar && opacity > 0.01
     }
 
     // special-workspace frame; filled layers not strokes — 1px rotated borders look uneven on fractional displays
@@ -121,7 +130,7 @@ Item {
         opacity: root.inSpecial ? 0.96 : 0.0
         scale:   root.inSpecial ? 1.0 : 0.68
         transformOrigin: Item.Center
-        visible: opacity > 0.01
+        visible: !root._bar && opacity > 0.01
         MotionBehavior on opacity {NumberAnimation { duration: Motion.ms(root.inSpecial ? 165 : 120); easing.type: Easing.OutCubic } }
         MotionBehavior on scale   {NumberAnimation { duration: Motion.ms(root.inSpecial ? 190 : 120); easing.type: Easing.OutQuart } }
     }
@@ -137,8 +146,33 @@ Item {
         color: Theme.withAlpha(root.tint, root.menuTargets && MenuState.open ? 0.50 : 0.30)
         opacity: root.gem ? 0.55 + root._energy * 0.22 : root._energy * 0.60
         scale: 1.0 + root._energy * (root.gem ? 0.035 : 0.10)
-        visible: opacity > 0.01
+        visible: !root._bar && opacity > 0.01
         MotionBehavior on color   {ColorAnimation { duration: Motion.ms(150) } }
+    }
+
+    Rectangle {
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.verticalCenter:   parent.verticalCenter
+        width:  parent.width + 6
+        height: parent.height + 6
+        radius: height / 2
+        antialiasing: true
+        color: Theme.withAlpha(root.tint, 0.22)
+        opacity: root._bar ? 0.12 + root._energy * 0.50 : 0
+        visible: root._bar && opacity > 0.01
+    }
+
+    // second stroke above the line stands in for the gem's special-workspace frame
+    Rectangle {
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: -4
+        width:  parent.width * 0.55
+        height: parent.height
+        radius: height / 2
+        antialiasing: true
+        color: root.tint
+        opacity: root._bar ? root._specialOn * 1.2 : 0
+        visible: root._bar && opacity > 0.01
     }
 
     Rectangle {
@@ -157,7 +191,7 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        radius: root.gem ? 2 : width / 2
+        radius: root.gem ? 2 : Math.min(width, height) / 2
         rotation: root.gem ? 45 : 0
         antialiasing: true
         color: root.tint
@@ -197,7 +231,7 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        radius: root.gem ? 2 : width / 2
+        radius: root.gem ? 2 : Math.min(width, height) / 2
         rotation: root.gem ? 45 : 0
         antialiasing: true
         color: Qt.rgba(1, 1, 1, 1)
@@ -207,9 +241,9 @@ Item {
 
     Rectangle {
         readonly property bool _show: Notifications.effectiveDnd && Notifications.missedCount > 0
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.top:       parent.top
-        anchors.topMargin: -1
+        // placed, not anchored: the underline needs it at the line's tip and a conditional anchor leaves the stale edge set
+        x: root._bar ? root.width - width + 2 : (root.width - width) / 2
+        y: -1
         width:  4
         height: 4
         radius: width / 2
@@ -246,6 +280,7 @@ Item {
     }
 
     MotionBehavior on x           { gate: root.shiftEnabled; NumberAnimation { duration: Motion.ms(190); easing.type: Easing.OutQuart } }
+    MotionBehavior on width       { gate: root.shiftEnabled && root._bar; NumberAnimation { duration: Motion.ms(190); easing.type: Easing.OutQuart } }
     MotionBehavior on opacity     {NumberAnimation { duration: Motion.ms(150) } }
     MotionBehavior on _hoverScale {NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
     MotionBehavior on _trailX     { gate: root.shiftEnabled; NumberAnimation { duration: Motion.ms(260); easing.type: Easing.OutQuart } }
@@ -277,7 +312,7 @@ Item {
     }
     Connections {
         target: MenuState
-        enabled: !ShellSettings.reduceMotion && root.barActive
+        enabled: !ShellSettings.reduceMotion && root.barActive && !root._bar
         function onOpenChanged() {
             if (MenuState.open && root.menuTargets)
                 _menuRippleAnim.restart()

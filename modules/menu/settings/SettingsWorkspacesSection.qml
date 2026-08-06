@@ -40,7 +40,8 @@ Column {
             currentValue: ShellSettings.wsActiveMarker
             model: [
                 { value: "gem", label: "Gem" },
-                { value: "dot", label: "Dot" }
+                { value: "dot", label: "Dot" },
+                { value: "bar", label: "Bar" }
             ]
             onChosen: (v) => ShellSettings.wsActiveMarker = v
         }

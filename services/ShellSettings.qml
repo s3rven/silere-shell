@@ -395,7 +395,7 @@ Singleton {
         { k: "wsMarkerOpacity",     t: "real", min: 0.2, max: 1.0 },
         { k: "wsIconOpacity",       t: "real", min: 0.3, max: 1.0 },
         { k: "wsIconMono",          t: "bool" },
-        { k: "wsActiveMarker",      t: "enum", vals: ["gem", "dot"] }
+        { k: "wsActiveMarker",      t: "enum", vals: ["gem", "dot", "bar"] }
     ]
     function _coerce(s, v): void {
         switch (s.t) {

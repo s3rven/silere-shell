@@ -189,8 +189,10 @@ Item {
         root._wsApps = map
     }
 
+    readonly property bool markerCovers: ShellSettings.wsActiveMarker !== "bar"
+
     function _btnW(wsId: int): int {
-        if (ShellSettings.wsShowAppIcons && wsId !== activeId) {
+        if (ShellSettings.wsShowAppIcons && !(wsId === activeId && root.markerCovers)) {
             const apps = root.appsFor(wsId)
             if (apps && apps.length > 0)
                 return (root.compact ? 1 : apps.length) * _iconSz
@@ -347,7 +349,8 @@ Item {
         id: marker
         style: ShellSettings.wsActiveMarker
         rowHeight: root.btnH
-        targetX: root.activeIndex >= 0 ? root._markerX(marker.width) : 0
+        cellWidth: root._btnW(root.activeId)
+        targetX: root.activeIndex >= 0 ? root._markerX(marker.markerWidth) : 0
         shown: root.monitorReady && root.activeIndex >= 0
         inSpecial: root.inSpecial
         urgent: root.urgent(root.activeId)
@@ -385,6 +388,7 @@ Item {
                 barActive:    root.barActive
                 initialized:  root._initialized
                 paging:       root._paging
+                markerCovers: root.markerCovers
 
                 onActivateRequested:      root.activate(wsId)
                 onAnchorMenuRequested:     root.openAnchorMenu()
