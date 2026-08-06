@@ -111,7 +111,7 @@ PageShell {
         Item {
             id: _header
             width: parent.width
-            height: 38
+            height: Metrics.rowHeightFor(38)
 
             ShellText {
                 id: _headerTitle
@@ -144,7 +144,7 @@ PageShell {
                     anchors.centerIn: parent
                     text: String(Notifications.historyCount)
                     color: Theme.withAlpha(Theme.text, 0.62)
-                    font.pixelSize: Settings.fontSize - 3
+                    font.pixelSize: Settings.fontMicro
                     font.weight: Font.DemiBold
                 }
             }
@@ -155,7 +155,7 @@ PageShell {
                 anchors.verticalCenter: parent.verticalCenter
                 visible: Notifications.hasHistory
                 width: visible ? (root._clearArmed ? 92 : 68) : 0
-                height: 30
+                height: Metrics.rowHeightFor(30)
                 radius: Theme.radiusControl
                 antialiasing: true
                 activeFocusOnTab: visible
@@ -209,7 +209,7 @@ PageShell {
                         text: root._clearArmed ? "Confirm?" : "Clear"
                         color: root._clearArmed ? Theme.error
                             : _clearHover.hovered ? Theme.withAlpha(Theme.text, 0.88) : Theme.withAlpha(Theme.text, 0.76)
-                        font.pixelSize: Settings.fontSize - 2
+                        font.pixelSize: Settings.fontCaption
                         font.weight: root._clearArmed ? Font.DemiBold : Font.Normal
                         ColorFade on color {}
                     }
@@ -353,7 +353,7 @@ PageShell {
                             anchors.verticalCenter: parent.verticalCenter
                             text: { root._timeTick; return root.sectionLabel(_entry.modelData.time) }
                             color: Theme.withAlpha(Theme.mix(Theme.subtext, Theme.accent, 0.22), 0.74)
-                            font.pixelSize: Settings.fontSize - 3
+                            font.pixelSize: Settings.fontMicro
                             font.weight: Font.DemiBold
                             font.capitalization: Font.AllUppercase
                             font.letterSpacing: 0.4
@@ -418,7 +418,9 @@ PageShell {
                             anchors.left: parent.left
                             anchors.verticalCenter: parent.verticalCenter
                             width: _entry._critical ? 3 : 0
-                            height: 30
+                            // tracks the card less its 20px padding; a fixed height left the mark
+                            // stubby once an expanded entry grew the card
+                            height: Math.max(0, parent.height - 20)
                             radius: 1.5
                             color: Theme.error
                         }
@@ -456,7 +458,7 @@ PageShell {
                                         - (_appIcon.visible ? _appIcon.width + parent.spacing : 0))
                                     text: _entry.modelData.appName || "Notification"
                                     color: _entry._critical ? Theme.error : Theme.withAlpha(Theme.subtext, 0.70)
-                                    font.pixelSize: Settings.fontSize - 2
+                                    font.pixelSize: Settings.fontCaption
                                     font.weight: Font.Medium
                                     elide: Text.ElideRight
                                 }
@@ -466,7 +468,7 @@ PageShell {
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: { root._timeTick; return root.formatTime(_entry.modelData.time) }
                                     color: Theme.withAlpha(Theme.subtext, 0.42)
-                                    font.pixelSize: Settings.fontSize - 3
+                                    font.pixelSize: Settings.fontMicro
                                 }
                             }
 
@@ -486,7 +488,7 @@ PageShell {
                                 visible: text.length > 0
                                 text: _entry.modelData.body || ""
                                 color: Theme.withAlpha(Theme.text, 0.58)
-                                font.pixelSize: Settings.fontSize - 1
+                                font.pixelSize: Settings.fontLabel
                                 wrapMode: Text.WordWrap
                                 maximumLineCount: _entry._expanded ? 12 : 2
                                 elide: Text.ElideRight
@@ -538,7 +540,7 @@ PageShell {
                                 anchors.centerIn: parent
                                 text: "󰅖"
                                 color: _removeHover.hovered ? Theme.error : Theme.withAlpha(Theme.subtext, 0.56)
-                                font.pixelSize: Settings.fontSize - 2
+                                font.pixelSize: Settings.fontCaption
                             }
                         }
                     }
