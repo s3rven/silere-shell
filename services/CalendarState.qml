@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "../config"
 
 Singleton {
     id: root
@@ -31,10 +32,7 @@ Singleton {
     }
 
     property var marks: ({})
-    property bool _savePendingForDir: false
     property bool _saveDirty: false
-    property string _lastSavedJson: ""
-    property int _saveFailureCount: 0
 
     function markKey(y: int, m: int, d: int): string { return y + "-" + (m + 1) + "-" + d }
     function _validMarkKey(value): bool {
@@ -55,71 +53,39 @@ Singleton {
         if (marks[k] !== true) next[k] = true
         marks = next
         _saveDirty = true
-        ConfigStore.ensureDirectory()
-        _saveTimer.restart()
+        _store.queue()
     }
 
-    function _flush(): void {
-        if (!ConfigStore.ready) {
-            root._savePendingForDir = true
-            ConfigStore.ensureDirectory()
-            return
-        }
-        const json = JSON.stringify({ marks: Object.keys(root.marks) })
-        if (json === root._lastSavedJson) return
-        root._savePendingForDir = false
-        root._lastSavedJson = json
-        _marksFile.setText(json + (root._saveFailureCount % 2 === 0 ? "\n" : "\n\n"))
-    }
-    Timer { id: _saveTimer; interval: 400; onTriggered: root._flush() }
-    Timer {
-        id: _saveRetry
-        interval: Math.min(8000, 1000 * Math.pow(2, Math.max(0, root._saveFailureCount - 1)))
-        onTriggered: root._flush()
-    }
-    // blocking write (blockWrites) so a toggle inside the debounce window survives quit/reload
+    // blocking write (blockWrites) so a toggle inside the debounce window survives a reload;
+    // SIGTERM tears the process down without running this, so it is no guard against a kill
     Component.onDestruction: {
-        const pending = root._saveDirty || _saveTimer.running || _saveRetry.running
-        _saveTimer.stop()
-        _saveRetry.stop()
-        if (pending) root._flush()
+        const pending = root._saveDirty || _store.pending
+        _store.stop()
+        if (pending) _store.flush(true)
     }
 
-    Connections {
-        target: ConfigStore
-        function onReadyChanged() {
-            if (ConfigStore.ready && root._savePendingForDir) root._flush()
-        }
-    }
-
-    FileView {
-        id: _marksFile
+    PersistedFile {
+        id: _store
         path: ConfigStore.calendarMarksPath
-        atomicWrites: true
-        blockWrites:  true
-        printErrors:  false
-        onLoaded: {
+        serialize: () => JSON.stringify({ marks: Object.keys(root.marks) })
+        onLoaded: raw => {
             try {
-                const raw = (_marksFile.text() || "").trim()
-                const j = JSON.parse(raw || "{}")
+                const trimmed = raw.trim()
+                const j = JSON.parse(trimmed || "{}")
                 const next = {}
                 if (Array.isArray(j.marks))
                     for (let i = 0; i < j.marks.length; i++)
                         if (root._validMarkKey(j.marks[i])) next[j.marks[i]] = true
                 root.marks = next
-                root._lastSavedJson = raw
-            } catch (e) { console.warn("silere-shell: bad calendar-marks.json, ignoring:", String(e)) }
+                _store.lastSavedText = trimmed
+            } catch (e) {
+                // a file we could not read may still hold marks; writing this session's set over it loses them
+                _store.writeAllowed = false
+                console.warn("silere-shell: bad calendar-marks.json, ignoring:", String(e))
+            }
         }
-        onSaved: {
-            root._saveDirty = false
-            root._saveFailureCount = 0
-            _saveRetry.stop()
-        }
-        onSaveFailed: (error) => {
-            root._lastSavedJson = ""
-            root._saveFailureCount++
-            console.warn("silere-shell: failed to save calendar marks:", error)
-            if (root._saveFailureCount <= 3) _saveRetry.restart()
-        }
+        onLoadFailed: error => _store.writeAllowed = error === FileViewError.FileNotFound
+        onSaved: root._saveDirty = false
+        onSaveFailed: error => console.warn("silere-shell: failed to save calendar marks:", error)
     }
 }

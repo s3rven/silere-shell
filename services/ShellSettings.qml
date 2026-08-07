@@ -4,6 +4,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "../config"
 
 Singleton {
     id: root
@@ -277,17 +278,14 @@ Singleton {
     property string wsActiveMarker:      "gem"
 
     property bool _loaded: false
-    property bool _savePendingForDir: false
-    property int _saveFailureCount: 0
     property string _readError: ""
     property string _writeError: ""
-    property bool _writeAllowed: false
+    property string _diskText: ""
     readonly property bool ready: _loaded
     readonly property string settingsError: ConfigStore.error.length > 0
         ? ConfigStore.error : _writeError.length > 0 ? _writeError : _readError
     readonly property int _settingsVersion: 1
     property var _defaults: ({})
-    property string _lastSavedJson: ""
     property real _loadedVersion: _settingsVersion
     property var _futureSettings: ({})
     property var _futureTouched: ({})
@@ -459,20 +457,19 @@ Singleton {
     }
 
     function _onSettingChanged(key: string): void {
-        if (!_loaded || !_writeAllowed) return
+        if (!_loaded || !_store.writeAllowed) return
         if (_loadedVersion > _settingsVersion) _futureTouched[key] = true
-        _writeTimer.restart()
+        _store.queue()
     }
 
     Component.onDestruction: {
-        _writeTimer.stop()
-        _saveRetry.stop()
+        _store.stop()
         // never overwrite the file with defaults never confirmed from disk
-        if (!root._loaded || !root._writeAllowed) return
+        if (!root._loaded || !_store.writeAllowed) return
         if (!ConfigStore.ready)
             console.warn("silere-shell: saving settings before config dir is ready:",
                 ConfigStore.directory)
-        _save(true)   // blocking write, so the quit-time save actually lands
+        _store.flush(true)   // blocking write, so the reload-time save actually lands
     }
 
     Component.onCompleted: {
@@ -484,50 +481,35 @@ Singleton {
         ConfigStore.ensureDirectory()
     }
 
-    Connections {
-        target: ConfigStore
-        function onReadyChanged() {
-            if (ConfigStore.ready && root._savePendingForDir) {
-                root._savePendingForDir = false
-                root._save()
-            }
-        }
-    }
-
-    FileView {
-        id: _file
+    PersistedFile {
+        id: _store
         path: ConfigStore.settingsPath
         watchChanges: true
-        atomicWrites: true
-        blockWrites:  true
-        printErrors:  false
-        onLoaded:      root._applyText(_file.text())
+        writeAllowed: false
+        serialize: () => root._serialize()
+        onLoaded: raw => {
+            root._diskText = raw
+            root._applyText(raw)
+        }
         onLoadFailed: error => {
-            root._writeAllowed = error === FileViewError.FileNotFound
-            root._readError = root._writeAllowed ? ""
+            _store.writeAllowed = error === FileViewError.FileNotFound
+            root._readError = _store.writeAllowed ? ""
                 : "Could not read settings.json. Existing data was left untouched."
             root._loaded = true
         }
-        onFileChanged: reload()
         onSaved: {
-            root._saveFailureCount = 0
             root._futureTouched = ({})
             root._readError = ""
             root._writeError = ""
-            _saveRetry.stop()
         }
-        onSaveFailed: (error) => {
-            // clear the candidate on failure, or the same settings stay mistaken for an already-persisted value forever
-            root._lastSavedJson = ""
-            root._saveFailureCount++
+        onSaveFailed: error => {
             root._writeError = "Could not save settings. Changes may be lost."
             console.warn("silere-shell: failed to save settings.json:", error)
-            if (root._saveFailureCount <= 3) _saveRetry.restart()
         }
     }
 
     function _backupSettings(tag: string): void {
-        const body = (_file.text() || "").trim()
+        const body = root._diskText.trim()
         if (body.length === 0) return
         _backupFile.path = ConfigStore.directory + "/settings." + tag + ".bak.json"
         _backupFile.setText(body)
@@ -544,7 +526,7 @@ Singleton {
     function _applyText(t: string): void {
         const raw = (t || "").trim()
         // our own atomic write echoes back through the watcher; skip it
-        if (root._writeAllowed && raw === _lastSavedJson) { _loaded = true; return }
+        if (_store.writeAllowed && raw === _store.lastSavedText) { _loaded = true; return }
         try {
             const parsed = JSON.parse(raw || "{}")
             if (parsed === null || Array.isArray(parsed) || typeof parsed !== "object")
@@ -573,9 +555,9 @@ Singleton {
                 if (parsed[s.k] !== undefined) _coerce(s, parsed[s.k])
             }
             root._readError = ""
-            root._writeAllowed = true
+            _store.writeAllowed = true
         } catch(e) {
-            root._writeAllowed = false
+            _store.writeAllowed = false
             root._readError = "Could not read settings.json. Current settings were kept."
             console.warn("silere-shell: failed to parse settings.json, keeping current settings:", String(e))
         }
@@ -583,25 +565,7 @@ Singleton {
         root._recountModified()
     }
 
-    Timer {
-        id: _writeTimer
-        interval: 400
-        onTriggered: root._save()
-    }
-
-    Timer {
-        id: _saveRetry
-        interval: Math.min(8000, 1000 * Math.pow(2, Math.max(0, root._saveFailureCount - 1)))
-        onTriggered: root._save()
-    }
-
-    function _save(force): void {
-        if (!root._writeAllowed) return
-        if (!force && !ConfigStore.ready) {
-            _savePendingForDir = true
-            ConfigStore.ensureDirectory()
-            return
-        }
+    function _serialize(): string {
         const preserveFuture = _loadedVersion > _settingsVersion
         const out = preserveFuture
             ? JSON.parse(JSON.stringify(_futureSettings)) : ({})
@@ -619,10 +583,6 @@ Singleton {
         }
         root._modifiedCount = changed
         if (preserveFuture) _futureSettings = out
-        const j = JSON.stringify(out, null, 2)
-        if (j === _lastSavedJson) return
-        _lastSavedJson = j
-        // alternate trailing whitespace: FileView coalesces identical setText() calls, so an exact retry never reaches the disk
-        _file.setText(j + (root._saveFailureCount % 2 === 0 ? "\n" : "\n\n"))
+        return JSON.stringify(out, null, 2)
     }
 }
