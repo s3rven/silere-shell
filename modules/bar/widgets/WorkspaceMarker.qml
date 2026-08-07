@@ -27,7 +27,10 @@ Item {
     readonly property bool _bar: style === "bar"
 
     readonly property real centerX: x + width / 2
+    readonly property real centerY: y + height / 2
     readonly property real trailX: _trailX + width / 2
+    // a 2px line trailed by the sprite's comet reads as a blob, not a streak
+    readonly property real trailWeight: _bar ? 0.4 : 1
     readonly property color tint: root.urgent ? Theme.warning : Theme.accent
 
     function pulse(): void {
@@ -150,9 +153,10 @@ Item {
         MotionBehavior on color   {ColorAnimation { duration: Motion.ms(150) } }
     }
 
+    // blooms up off the line: centred it would spill a pixel past the row's bottom edge
     Rectangle {
         anchors.horizontalCenter: parent.horizontalCenter
-        anchors.verticalCenter:   parent.verticalCenter
+        anchors.bottom: parent.bottom
         width:  parent.width + 6
         height: parent.height + 6
         radius: height / 2

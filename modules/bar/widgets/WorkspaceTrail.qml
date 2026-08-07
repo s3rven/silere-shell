@@ -8,7 +8,8 @@ Item {
 
     required property real headX
     required property real tailX
-    required property real rowHeight
+    required property real centerY
+    required property real weight
     required property color tint
     required property bool running
 
@@ -23,10 +24,10 @@ Item {
 
     Rectangle {
         id: band
-        height: 4 + root._strength * 4
+        height: (4 + root._strength * 4) * root.weight
         radius: height / 2
         antialiasing: true
-        y: (root.rowHeight - height) / 2
+        y: root.centerY - height / 2
         x: root._left - height / 2
         width: root._gap + height
         gradient: Gradient {
@@ -39,10 +40,10 @@ Item {
     }
 
     Rectangle {
-        height: 10 + root._strength * 4
+        height: (10 + root._strength * 4) * root.weight
         radius: height / 2
         antialiasing: true
-        y: (root.rowHeight - height) / 2
+        y: root.centerY - height / 2
         x: band.x
         width: band.width
         gradient: Gradient {
@@ -55,10 +56,10 @@ Item {
     }
 
     Rectangle {
-        height: 1.5 + root._strength * 1.5
+        height: Math.max(1, (1.5 + root._strength * 1.5) * root.weight)
         radius: height / 2
         antialiasing: true
-        y: (root.rowHeight - height) / 2
+        y: root.centerY - height / 2
         x: band.x
         width: band.width
         gradient: Gradient {

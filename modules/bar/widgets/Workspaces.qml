@@ -340,8 +340,9 @@ Item {
     WorkspaceTrail {
         headX: marker.centerX
         tailX: marker.trailX
+        centerY: marker.centerY
+        weight: marker.trailWeight
         tint: marker.tint
-        rowHeight: root.btnH
         running: ShellSettings.workspaceShift && !root._paging
     }
 
