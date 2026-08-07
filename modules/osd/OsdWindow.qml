@@ -190,7 +190,7 @@ PanelWindow {
                         color: card.hasBar ? Theme.panel : Theme.surface
 
                         readonly property color _outlineColor: !card.hasBar
-                            ? Theme.withAlpha(card.fillColor, 0.32)
+                            ? Theme.withAlpha(card.fillColor, 0.55)
                             : Theme.outline
 
                         OutlineBorder {
@@ -255,9 +255,10 @@ PanelWindow {
                                 horizontalAlignment: Text.AlignRight
                                 elide:          Text.ElideRight
                                 text:           card.label
+                                // the glyph and rim carry the alert; a coloured readout only costs contrast
                                 color:          card.muted
                                     ? Theme.withAlpha(Theme.subtext, 0.7)
-                                    : (card.hasBar ? Theme.text : card.fillColor)
+                                    : Theme.text
                                 font.pixelSize: Settings.fontSize
 
                                 MotionBehavior on color {
