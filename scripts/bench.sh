@@ -63,6 +63,13 @@ cpu_ticks() {
     awk '{print ($14 + $15)}' "/proc/$target/stat" 2>/dev/null || printf '0\n'
 }
 
+# A shell that leaks descriptors climbs here while everything else looks flat.
+fd_count() {
+    local target="$1" value
+    value="$(ls -1 "/proc/$target/fd" 2>/dev/null | wc -l)" || true
+    printf '%s\n' "${value:-0}"
+}
+
 tree_cpu_ticks() {
     local total member
     total="$(cpu_ticks "$pid")"
@@ -76,6 +83,7 @@ tree_cpu_ticks() {
 # Main-process CPU baseline before the sample window.
 read -r u1 s1 < <(awk '{print $14, $15}' "/proc/$pid/stat")
 tree_ticks1="$(tree_cpu_ticks)"
+fds1="$(fd_count "$pid")"
 
 # Sample both the Quickshell process and its helper-process tree. Helpers can
 # appear or disappear during the window, so discover them on every sample.
@@ -144,6 +152,16 @@ tree_ticks2="$(tree_cpu_ticks)"
 tree_cpu="$(awk -v a="$tree_ticks1" -v b="$tree_ticks2" -v k="$clk" -v s="$secs" \
     'BEGIN{printf "%.1f", (b-a)/k/s*100}')"
 
+fds2="$(fd_count "$pid")"
+fd_delta=$((fds2 - fds1))
+if [ "$fd_delta" -gt 0 ]; then
+    fd_trend="+$fd_delta over ${secs}s"
+elif [ "$fd_delta" -lt 0 ]; then
+    fd_trend="$fd_delta over ${secs}s"
+else
+    fd_trend="flat over ${secs}s"
+fi
+
 threads="$(awk '/^Threads:/{print $2; exit}' "/proc/$pid/status")"
 visualizer="stopped"
 helpers=0
@@ -169,5 +187,6 @@ printf 'main mem:   PSS %s MB, USS %s MB, HWM %s MB\n' "$pss" "$uss" "$vmpeak"
 printf 'tree rss:   %d MB avg / %d MB peak, PSS %s MB\n' "$tree_avg" "$tree_peak" "$tree_pss"
 printf 'cpu:        %s%% main / %s%% tree\n' "$cpu" "$tree_cpu"
 printf 'processes:  %s threads + %s helpers\n' "$threads" "$helpers"
+printf 'fds:        %s open (%s)\n' "$fds2" "$fd_trend"
 printf 'visualizer: %s\n' "$visualizer"
 printf 'allocator:  %s\n' "$allocator"

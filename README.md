@@ -103,7 +103,9 @@ To restore defaults, use Settings > System > Maintenance. Editing the file by ha
 
 On a reference session, idle use measured under 1% of one CPU core and roughly 95–110 MB PSS. Results vary with hardware, drivers, and which widgets you enable. PSS is the more useful number for Qt applications because it apportions shared libraries.
 
-Measure your own running checkout with `bash scripts/bench.sh 5`. Cava is the main optional CPU cost, and only while the visualizer is on screen.
+For scale, an empty Quickshell panel doing nothing measured about 57 MB PSS on the same machine, so a large part of that figure is the Qt and GPU driver floor rather than Silere itself.
+
+Measure your own running checkout with `bash scripts/bench.sh 5`. Cava is the main optional CPU cost, and only while the visualizer is on screen. The report also tracks open file descriptors and whether the count moved during the sample, so a descriptor leak shows up as a climbing number while everything else stays flat.
 
 ## Troubleshooting
 
