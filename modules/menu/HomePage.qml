@@ -768,6 +768,10 @@ PageShell {
                         onChanged: (v) => ShellSettings.nightLightTemp = v
                     }
                 }
+                CollapsibleSection {
+                    expanded: ShellSettings.nightLightAuto
+                    HintText { text: "Temperature tracks sunset and sunrise at " + NightLight.locationLabel + "." }
+                }
                 SunArc {
                     shown: root._picker === "nightlight" && MenuState.open
                 }

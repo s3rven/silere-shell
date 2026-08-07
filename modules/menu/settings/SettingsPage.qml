@@ -27,7 +27,7 @@ PageShell {
     }
 
     readonly property var _sectionComponents: ({
-        theme: _secTheme, nightlight: _secNightLight, surface: _secSurface,
+        theme: _secTheme, surface: _secSurface,
         separators: _secSeparators, underline: _secUnderline, clock: _secClock,
         workspaces: _secWorkspaces, media: _secMedia, indicators: _secIndicators,
         widgets: _secWidgets,
@@ -211,11 +211,6 @@ PageShell {
         Component {
             id: _secTheme
             SettingsThemeSection {}
-        }
-
-        Component {
-            id: _secNightLight
-            SettingsNightLightSection {}
         }
 
         Component {
