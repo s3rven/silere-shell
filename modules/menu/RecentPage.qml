@@ -377,7 +377,7 @@ PageShell {
                         radius: Theme.radiusControl
                         antialiasing: true
                         clip: true
-                        color: Theme.rowFill(_entryHover.hovered, _entry._critical)
+                        color: Theme.rowFill(_entryHover.hovered)
 
                         OutlineBorder {
                             radius: _card.radius

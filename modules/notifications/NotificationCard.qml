@@ -285,10 +285,9 @@ Item {
         MotionBehavior on opacity { gate: card.visible && cardRect._behaviorEnabled; NumberAnimation { duration: Motion.ms(200); easing.type: card._leaving ? Easing.InCubic : Easing.OutCubic } }
         MotionBehavior on height  { gate: card.visible && cardRect._behaviorEnabled; NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
 
-        // same opaque chrome tone as the menu/calendar/tray popups, or a standalone card reads as a lighter floating row
-        color: card.isCritical
-            ? Theme.mix(Theme.popup, Theme.error, _cardHover.hovered ? 0.17 : 0.12)
-            : (_cardHover.hovered ? Theme.mix(Theme.popup, Theme.subtext, 0.06) : Theme.popup)
+        // same opaque chrome tone as the menu/calendar/tray popups, or a standalone card reads as a lighter floating row.
+        // urgency rides the outline, glyph and ring only: tinting the whole fill red drowns the text it is warning about
+        color: _cardHover.hovered ? Theme.mix(Theme.popup, Theme.subtext, 0.06) : Theme.popup
 
         ColorFade on color {}
 
@@ -571,8 +570,9 @@ Item {
 
         OutlineBorder {
             radius: cardRect.radius
+            outlineWidth: card.isCritical ? 2 : 1
             outlineColor: card.isCritical
-                ? Theme.withAlpha(Theme.error,  0.32)
+                ? Theme.withAlpha(Theme.error,  0.62)
                 : Theme.outline
             MotionBehavior on outlineColor {ColorAnimation { duration: Motion.medium } }
         }
