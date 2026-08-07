@@ -21,9 +21,9 @@ Item {
         anchors.fill: parent
 
         property real _notifGlow:   0
-        readonly property bool _batteryGlowEnabled: _glowEnabled && ShellSettings.underlineBattGlow
-        readonly property bool _tempGlowEnabled: _glowEnabled && ShellSettings.underlineTempGlow
-        readonly property bool _networkGlowEnabled: _glowEnabled && ShellSettings.underlineNetGlow
+        readonly property bool _batteryGlowEnabled: ShellSettings.underlineBattGlow
+        readonly property bool _tempGlowEnabled: ShellSettings.underlineTempGlow
+        readonly property bool _networkGlowEnabled: ShellSettings.underlineNetGlow
         readonly property real _batteryGlow: _batteryGlowEnabled
             ? (Battery.critical ? 0.64 - Battery.alertPulse * 0.26
                : (Battery.low   ? 0.44 - Battery.alertPulse * 0.20 : 0))
@@ -38,7 +38,7 @@ Item {
             : _tempGlowBase + _tempPulseGlow
         readonly property real _screenshotStrength: ShellSettings.screenshotGlowSweep ? 1.1 : 1.0
         readonly property int  _screenshotDuration: ShellSettings.screenshotGlowSweep ? 800 : 650
-        readonly property real _screenshotEventGlow: (_glowEnabled && ShellSettings.underlineScreenshotGlow)
+        readonly property real _screenshotEventGlow: ShellSettings.underlineScreenshotGlow
             ? _screenshotGlow * (ShellSettings.screenshotGlowSweep ? 0.24 : 0.62) * _screenshotStrength : 0
         readonly property real _primaryGlow: Math.max(_notifGlow, _batteryGlow, _networkGlowEnabled ? _networkGlow : 0, _tempGlow, _screenshotEventGlow)
         readonly property real _stackedGlow: _notifGlow + _batteryGlow + (_networkGlowEnabled ? _networkGlow : 0) + _tempGlow + _screenshotEventGlow
@@ -46,18 +46,18 @@ Item {
         readonly property real _ceiling:     _shotActive
             ? Math.min(0.95, 0.70 + 0.10 * _screenshotStrength)
             : (((_tempGlowEnabled && CpuTemp.critical) || (_batteryGlowEnabled && Battery.critical)) ? 0.74 : 0.62)
-        property real _idleFloor: (_glowEnabled && ShellSettings.underlineIdleGlow) ? 0.20 : 0
+        property real _idleFloor: ShellSettings.underlineIdleGlow ? 0.20 : 0
         MotionBehavior on _idleFloor {
             NumberAnimation { duration: Motion.slow; easing.type: Easing.OutCubic }
         }
         readonly property real _activeGlowStrength: Math.min(1, 0.45 + 0.4 * ShellSettings.glowStrength)
         readonly property real _scaledGlow:  (_primaryGlow + _stackBonus) * _activeGlowStrength
         readonly property real _eventGlow:   Math.max(_scaledGlow, _batteryGlow, _tempGlow)
-        property real _mediaGlow: (_glowEnabled && ShellSettings.mediaProgress && Media.shown && Media.cavaReady) ? 0.18 : 0
+        property real _mediaGlow: (ShellSettings.mediaProgress && Media.shown && Media.cavaReady) ? 0.18 : 0
         MotionBehavior on _mediaGlow {
             NumberAnimation { duration: Motion.slow; easing.type: Easing.OutCubic }
         }
-        readonly property real _combined:    _glowEnabled ? Math.min(_ceiling, Math.max(_idleFloor, _eventGlow, _mediaGlow)) : 0
+        readonly property real _combined:    Math.min(_ceiling, Math.max(_idleFloor, _eventGlow, _mediaGlow))
 
         readonly property color _screenshotColor: Theme.text
         readonly property bool _batteryCritical: _batteryGlowEnabled && Battery.critical
@@ -94,7 +94,7 @@ Item {
             if (_notifFlash.running)                                         return 0.50
             if (_batteryGlowEnabled && (Battery.low || Battery.critical))    return _widgetSweep("battery")
             if (_tempGlowEnabled && (CpuTemp.hot || CpuTemp.critical))       return _widgetSweep("battery")
-            if (_glowEnabled && ShellSettings.underlineScreenshotGlow
+            if (ShellSettings.underlineScreenshotGlow
                 && _shotActive)                                              return ShellSettings.screenshotGlowSweep && !ShellSettings.reduceMotion
                                                                                   ? _screenshotSweepCenter : 0.50
             if (_netLossFlash.running)                                       return _widgetSweep("network")
@@ -129,7 +129,7 @@ Item {
             function onFlashed() {
                 _lineEffect._skipNextNotif = true
                 _skipResetTimer.restart()
-                if (ShellSettings.underlineScreenshotGlow && ShellSettings.underlineGlow)
+                if (ShellSettings.underlineScreenshotGlow)
                     _lineEffect._playScreenshot()
             }
         }
@@ -217,8 +217,6 @@ Item {
             }
         }
 
-        readonly property bool _glowEnabled: ShellSettings.underlineGlow
-
         // seeded, not bound: an overview toggle recreates this item and starting from 0 makes the next dismissal flash as an arrival
         property int  _prevNotifCount: 0
         property bool _skipNextNotif: false
@@ -229,7 +227,7 @@ Item {
                 const incoming = Notifications.activeCount > _lineEffect._prevNotifCount
                 if (incoming && _lineEffect._skipNextNotif) {
                     _lineEffect._skipNextNotif = false
-                } else if (ShellSettings.underlineNotifGlow && ShellSettings.underlineGlow && incoming && !ShellSettings.reduceMotion) {
+                } else if (ShellSettings.underlineNotifGlow && incoming && !ShellSettings.reduceMotion) {
                     _notifFlash.restart()
                 }
                 _lineEffect._prevNotifCount = Notifications.activeCount
@@ -261,8 +259,7 @@ Item {
             })
         }
         function _canPreview(): bool {
-            return _settingsReady && MenuState.open && ShellSettings.underlineGlow
-                && !ShellSettings.reduceMotion
+            return _settingsReady && MenuState.open && !ShellSettings.reduceMotion
         }
         function _stopTransient(): void {
             _previewTimer.stop()
@@ -280,10 +277,6 @@ Item {
         }
         Connections {
             target: ShellSettings
-            function onUnderlineGlowChanged() {
-                if (ShellSettings.underlineGlow && _lineEffect._canPreview()) _previewTimer.restart()
-                else if (!ShellSettings.underlineGlow) _lineEffect._stopTransient()
-            }
             function onUnderlineNotifGlowChanged() {
                 if (ShellSettings.underlineNotifGlow && _lineEffect._canPreview()) _previewTimer.restart()
             }
@@ -327,7 +320,7 @@ Item {
                 return
             }
 
-            if (_lastNetConnected && disconnected && ShellSettings.underlineNetGlow && ShellSettings.underlineGlow && !ShellSettings.reduceMotion) {
+            if (_lastNetConnected && disconnected && ShellSettings.underlineNetGlow && !ShellSettings.reduceMotion) {
                 _netLossFlash.restart()
             } else if (currentConnected || !Network.available) {
                 _netLossFlash.stop()
@@ -387,7 +380,7 @@ Item {
         anchors.leftMargin:  _ul.wrapRadius
         anchors.rightMargin: _ul.wrapRadius
         anchors.bottom:      parent.bottom
-        visible: _lineEffect._glowEnabled && opacity > 0.001
+        visible: opacity > 0.001
         height: 2
         opacity: Math.min(0.58, 0.34 * ShellSettings.glowStrength)
             * (1.0 - _ul.floatingProgress)
@@ -405,7 +398,7 @@ Item {
         anchors.leftMargin:  _ul.wrapRadius
         anchors.rightMargin: _ul.wrapRadius
         anchors.bottom:      parent.bottom
-        visible: _lineEffect._glowEnabled && opacity > 0.001
+        visible: opacity > 0.001
         height: 2
         opacity: Math.min(_lineEffect._ceiling,
             _lineEffect._combined * ShellSettings.glowStrength)
@@ -422,7 +415,7 @@ Item {
         id: _floatingBaseRim
         radius: _ul.wrapRadius
         rimColor: Theme.mix(Theme.subtext, _lineEffect._effectColor, 0.18)
-        visible: _lineEffect._glowEnabled && opacity > 0.001
+        visible: opacity > 0.001
         opacity: Math.min(0.20, 0.12 * ShellSettings.glowStrength)
             * _ul.floatingProgress
     }
@@ -434,7 +427,7 @@ Item {
         anchors.leftMargin: _ul.wrapRadius
         anchors.rightMargin: _ul.wrapRadius
         anchors.bottom: parent.bottom
-        visible: _lineEffect._glowEnabled && opacity > 0.001
+        visible: opacity > 0.001
         opacity: Math.min(0.42, 0.24 * ShellSettings.glowStrength)
             * _ul.floatingProgress
         peak:    Theme.withAlpha(Theme.mix(Theme.subtext, _lineEffect._effectColor, 0.28), 0.64)
@@ -449,7 +442,7 @@ Item {
         id: _floatingRim
         radius: _ul.wrapRadius
         rimColor: _lineEffect._effectColor
-        visible: _lineEffect._glowEnabled && opacity > 0.001
+        visible: opacity > 0.001
         opacity: Math.min(0.42,
             (_lineEffect._combined * 0.34 + _lineEffect._bloomBoost * 0.16)
             * ShellSettings.glowStrength) * _ul.floatingProgress
@@ -462,7 +455,7 @@ Item {
         anchors.leftMargin: _ul.wrapRadius
         anchors.rightMargin: _ul.wrapRadius
         anchors.bottom: parent.bottom
-        visible: _lineEffect._glowEnabled && opacity > 0.001
+        visible: opacity > 0.001
         opacity: Math.min(0.72,
             (_lineEffect._combined * 0.58 + _lineEffect._bloomBoost * 0.28)
             * ShellSettings.glowStrength) * _ul.floatingProgress
@@ -491,7 +484,7 @@ Item {
             anchors.rightMargin: _ul.wrapRadius
             anchors.bottom: parent.bottom
             anchors.bottomMargin: modelData.y
-            visible: _lineEffect._glowEnabled && opacity > 0.001
+            visible: opacity > 0.001
             opacity: Math.min(0.84,
                 (_lineEffect._combined * modelData.c + _lineEffect._bloomBoost * modelData.b)
                 * ShellSettings.glowStrength)
@@ -516,7 +509,7 @@ Item {
         width: _streakW
         height: 4
         antialiasing: false
-        visible: _lineEffect._glowEnabled && ShellSettings.underlineScreenshotGlow
+        visible: ShellSettings.underlineScreenshotGlow
             && ShellSettings.screenshotGlowSweep && _lineEffect._shotActive && _trackW > 1
         opacity: Math.min(0.9,
             _lineEffect._screenshotGlow * 0.72 * _lineEffect._screenshotStrength)
