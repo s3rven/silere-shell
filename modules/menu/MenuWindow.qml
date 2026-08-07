@@ -163,7 +163,9 @@ PanelWindow {
         readonly property var _focusWindow: panel.Window.window
 
         property bool powerOpen: false
-        property bool settingsNavOpen: true
+        // pinned wins over the session toggle, so the rail button can never collapse the list
+        property bool _settingsNavOpen: true
+        readonly property bool settingsNavOpen: ShellSettings.settingsNavPinned || _settingsNavOpen
         property bool _loadedDeferred: false
         property bool _geometryReady:  false
         property bool _homeRetained:    false
@@ -236,7 +238,7 @@ PanelWindow {
             const tab = Math.max(0, Math.min(2, idx))
             if (tab === 1) {
                 _settingsNavRetained = true
-                if (activeTab !== 1) settingsNavOpen = true
+                if (activeTab !== 1) _settingsNavOpen = true
             }
             const focusedItem = _focusWindow ? _focusWindow.activeFocusItem : null
             const focusNeedsReset = focusedItem && (
@@ -252,14 +254,18 @@ PanelWindow {
 
         function toggleSettingsNav(): void {
             if (activeTab !== 1) {
-                settingsNavOpen = true
+                _settingsNavOpen = true
                 switchTab(1)
+                return
+            }
+            if (ShellSettings.settingsNavPinned) {
+                _settingsNavLoader.item?.forceActiveFocus()
                 return
             }
             const focusedItem = _focusWindow ? _focusWindow.activeFocusItem : null
             if (settingsNavOpen && _ownsItem(focusedItem, _settingsNavLoader.item))
                 _railSettings.forceActiveFocus()
-            settingsNavOpen = !settingsNavOpen
+            _settingsNavOpen = !settingsNavOpen
         }
 
         function closePowerAndRestoreFocus(): void {
@@ -606,10 +612,10 @@ PanelWindow {
                     railW: panel.railCollapsedW
                     glyph: "󰒓"
                     label: "Settings"
-                    accessibleDescription: panel.activeTab === 1
-                        ? (panel.settingsNavOpen ? "Collapse the settings sidebar"
-                            : "Expand the settings sidebar")
-                        : "Open Settings"
+                    accessibleDescription: panel.activeTab !== 1 ? "Open Settings"
+                        : ShellSettings.settingsNavPinned ? "Focus the settings sidebar"
+                        : panel.settingsNavOpen ? "Collapse the settings sidebar"
+                        : "Expand the settings sidebar"
                     active: panel.activeTab === 1
                     KeyNavigation.up: _railRecent
                     KeyNavigation.down: _railPower

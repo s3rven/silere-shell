@@ -52,6 +52,7 @@ Singleton {
     property bool   osdChargedNotify: false
     property bool   osdBarIntegrated: false
     property bool   osdMatchBar:      true
+    property bool   settingsNavPinned:   true
     property bool   reduceMotion:        false
     property bool   highContrast:        false
     property real   outlineStrength:     1.0
@@ -336,6 +337,7 @@ Singleton {
         { k: "osdChargedNotify",    t: "bool" },
         { k: "osdBarIntegrated",    t: "bool" },
         { k: "osdMatchBar",         t: "bool" },
+        { k: "settingsNavPinned",   t: "bool" },
         { k: "reduceMotion",        t: "bool" },
         { k: "highContrast",        t: "bool" },
         { k: "outlineStrength",     t: "real", min: 0.5, max: 2.4 },

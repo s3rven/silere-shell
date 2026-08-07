@@ -67,6 +67,12 @@ Column {
             onToggled: nextChecked => ShellSettings.highContrast = nextChecked
         }
         ToggleRow {
+            glyph: "󱂪"; label: "Expand all settings categories"
+            description: "Open every group at once instead of one at a time; each still collapses on click"
+            checked: ShellSettings.settingsNavPinned
+            onToggled: nextChecked => ShellSettings.settingsNavPinned = nextChecked
+        }
+        ToggleRow {
             glyph: "󱖳"; label: "Reduce motion"
             description: "Use instant transitions throughout the shell"
             checked: ShellSettings.reduceMotion

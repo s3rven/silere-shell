@@ -17,6 +17,21 @@ Item {
     signal currentPageRetapped()
 
     property int _expandedGroup: _groupIndexForSection(MenuState.settingsSection)
+    // pinned drops the accordion: groups start open and each collapses on its own.
+    // reassigned, never mutated, so the bindings that call _isExpanded re-evaluate
+    readonly property bool allExpanded: ShellSettings.settingsNavPinned
+    property var _collapsed: ({})
+    function _isExpanded(index: int): bool {
+        return root.allExpanded ? root._collapsed[index] !== true
+                                : index === root._expandedGroup
+    }
+    function _setCollapsed(index: int, on: bool): void {
+        const next = {}
+        for (const k in root._collapsed) if (root._collapsed[k]) next[k] = true
+        if (on) next[index] = true
+        else delete next[index]
+        root._collapsed = next
+    }
 
     implicitHeight: _navContentHeight()
 
@@ -62,7 +77,7 @@ Item {
     }
 
     function _groupFinalHeight(index: int, it): real {
-        if (index !== root._expandedGroup) return root._groupH
+        if (!root._isExpanded(index)) return root._groupH
         const leaves = root._leaves(it)
         return root._groupH + root._childrenPad * 2
             + leaves.length * root._navRowH
@@ -91,7 +106,7 @@ Item {
         const groupIndex = root._groupIndexForSection(section)
         if (groupIndex < 0) return root._navTop
         const groupTop = root._groupY(groupIndex)
-        if (groupIndex !== root._expandedGroup) return groupTop
+        if (!root._isExpanded(groupIndex)) return groupTop
         const leafIndex = root._leafIndexForSection(groupIndex, section)
         if (leafIndex < 0) return groupTop
         return groupTop + root._groupH + root._childrenPad
@@ -131,6 +146,11 @@ Item {
     }
 
     function _toggleGroup(index: int): void {
+        if (root.allExpanded) {
+            root._setCollapsed(index, root._isExpanded(index))
+            _disclosureSettle.restart()
+            return
+        }
         const oldGroup = root._expandedGroup >= 0
             ? _groupRepeater.itemAt(root._expandedGroup) : null
         const restoreFocus = oldGroup && oldGroup.hasFocusedItem()
@@ -202,6 +222,16 @@ Item {
 
     function _selectGroupAndScroll(): void {
         const selectedGroup = root._groupIndexForSection(MenuState.settingsSection)
+        // a section can be selected from the page side; never leave it hidden in a collapsed group
+        if (root.allExpanded) {
+            if (selectedGroup >= 0 && !root._isExpanded(selectedGroup)) {
+                root._setCollapsed(selectedGroup, false)
+                _disclosureSettle.restart()
+            } else {
+                Qt.callLater(root._scrollToSelection)
+            }
+            return
+        }
         if (selectedGroup >= 0 && selectedGroup !== root._expandedGroup) {
             root._expandedGroup = selectedGroup
             _disclosureSettle.restart()
@@ -270,7 +300,7 @@ Item {
                         required property var modelData
 
                         readonly property var leaves: root._leaves(modelData)
-                        readonly property bool expanded: root._expandedGroup === index
+                        readonly property bool expanded: root._isExpanded(index)
                         readonly property bool groupActive: root._groupContainsSection(
                             modelData, MenuState.settingsSection)
 
