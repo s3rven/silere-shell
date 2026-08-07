@@ -3,7 +3,6 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import "../../../config"
 import "../../../services"
-import "../../common"
 
 Item {
     id: root
@@ -43,22 +42,9 @@ Item {
     HoverHandler { id: _tickHover; enabled: root.shown; cursorShape: Qt.PointingHandCursor }
     TapHandler   { enabled: root.shown; onTapped: root._jump() }
 
-    Rectangle {
-        id: _tickFocusRing
-        anchors.centerIn: parent
-        width: parent.width
-        height: root.rowHeight
-        radius: Metrics.hoverRadiusFor(height)
-        antialiasing: true
-        color: Theme.withAlpha(Theme.accent, 0.14)
-        opacity: root.activeFocus ? 1.0 : 0.0
-        visible: opacity > 0.001
-        MotionBehavior on opacity {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-
-        OutlineBorder {
-            radius: _tickFocusRing.radius
-            outlineColor: Theme.withAlpha(Theme.accent, Theme.focusRingAlpha)
-        }
+    WorkspaceFocusRing {
+        rowHeight: root.rowHeight
+        shown: root.activeFocus
     }
 
     property real _pulse: 1.0

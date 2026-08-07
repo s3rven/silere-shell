@@ -122,22 +122,9 @@ Item {
     HoverHandler { id: _hover; cursorShape: Qt.PointingHandCursor }
     onHoveredChanged: root.hoverReported(root.wsId, root.hovered)
 
-    Rectangle {
-        id: _focusRing
-        anchors.centerIn: parent
-        width: parent.width
-        height: root.rowHeight
-        radius: Metrics.hoverRadiusFor(height)
-        antialiasing: true
-        color: Theme.withAlpha(Theme.accent, 0.14)
-        opacity: root.activeFocus ? 1.0 : 0.0
-        visible: opacity > 0.001
-        MotionBehavior on opacity {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-
-        OutlineBorder {
-            radius: _focusRing.radius
-            outlineColor: Theme.withAlpha(Theme.accent, Theme.focusRingAlpha)
-        }
+    WorkspaceFocusRing {
+        rowHeight: root.rowHeight
+        shown: root.activeFocus
     }
 
     TapHandler {
