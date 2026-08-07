@@ -35,8 +35,6 @@ PanelWindow {
     implicitHeight: Math.min(_availableH,
         Math.max(64, Math.ceil(win._contentH / 64) * 64))
 
-    visible: ShellSettings.notifPopupEnabled && Notifications.activeCount > 0
-
     readonly property string _pos:     ShellSettings.notifPosition
     readonly property bool   _left:     _pos === "top-left"
     readonly property bool   _center:   _pos === "top-center"
