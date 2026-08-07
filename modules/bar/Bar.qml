@@ -155,11 +155,15 @@ PanelWindow {
             active: ShellSettings.barBorderVisible
             opacity: contents.opacity * (1.0 - bar.floatingProgress)
             visible: active && opacity > 0.001
-            sourceComponent: Hairline {
-                anchors.left:  parent.left
-                anchors.right: parent.right
-                y: bar.atBottom ? 0 : parent.height - height
-                color: Theme.withAlpha(Theme.subtext, bar.lineAlpha)
+            // wrapped: a Loader stretches its root item to the Loader's size, which turns the
+            // hairline into a full-height wash over the whole bar
+            sourceComponent: Item {
+                Hairline {
+                    anchors.left:  parent.left
+                    anchors.right: parent.right
+                    y: bar.atBottom ? 0 : parent.height - height
+                    color: Theme.withAlpha(Theme.subtext, bar.lineAlpha)
+                }
             }
         }
 
