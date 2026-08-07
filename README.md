@@ -15,7 +15,7 @@ Silere is a quiet Quickshell desktop shell for Hyprland and niri. It gives you a
 Background features stay off until you turn them on. When a tool it relies on is missing, that one widget disappears and the rest of the shell keeps working. There is no plugin layer and no extra daemon.
 
 <p align="center">
-  <img src="assets/shot-overview.png" alt="The Silere bar with the Now page open" width="900"/>
+  <img src="assets/shot-desktop.webp" alt="The Silere bar with the menu panel open" width="900"/>
 </p>
 
 ## Install
@@ -92,6 +92,10 @@ qs ipc -p "$SILERE_DIR/shell.qml" call screenshot flash
 Menu tabs are `0` (Home), `1` (Settings), and `2` (Recent). Settings sections are `theme`, `nightlight`, `surface`, `separators`, `underline`, `widgets`, `clock`, `workspaces`, `media`, `indicators`, `popups`, `osd`, `warnings`, `interface`, `updates`, and `maintenance`. `screenshot flash` lets a screenshot tool trigger the underline effect directly without the optional filesystem watcher.
 
 ## Configuration
+
+<p align="center">
+  <img src="assets/shot-surfaces.webp" alt="The menu panel, the settings rail, and the calendar" width="900"/>
+</p>
 
 Everything is configurable from Settings inside the shell. Changes save on their own and apply without a restart.
 
