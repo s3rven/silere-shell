@@ -95,7 +95,7 @@ Singleton {
     property int    barSpacing:          11
     property bool   barAutoCompact:      true
     property bool   barCompact:          false
-    property bool   barHoverHighlight:   true
+    property bool   barHoverHighlight:   false
     property int    barHeight:           36
     property bool   barFloating:         false
     property real   barWidth:            0.90
