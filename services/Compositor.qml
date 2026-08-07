@@ -195,6 +195,16 @@ Singleton {
             const m = mons[i]
             if (m && m.name && m.activeWorkspace) activeByOutput[m.name] = m.activeWorkspace.id
         }
+        // hyprland keeps a workspace object alive after its last window closes, so existence is
+        // not occupancy; count real toplevels or an emptied workspace stays lit like a full one
+        const tops = Hyprland.toplevels ? (Hyprland.toplevels.values ?? []) : []
+        const winCount = {}
+        for (let i = 0; i < tops.length; i++) {
+            const c = tops[i] ? tops[i].lastIpcObject : null
+            if (!c || !c.address) continue
+            const id = c.workspace ? (c.workspace.id ?? -1) : -1
+            if (id > 0) winCount[id] = (winCount[id] ?? 0) + 1
+        }
         const vals = Hyprland.workspaces ? (Hyprland.workspaces.values ?? []) : []
         const out = []
         for (let i = 0; i < vals.length; i++) {
@@ -204,7 +214,8 @@ Singleton {
             out.push({
                 wsId: ws.id, name: ws.name ?? "", output: output,
                 active: activeByOutput[output] === ws.id,
-                urgent: ws.urgent ?? false, occupied: true, ref: ws.id
+                urgent: ws.urgent ?? false,
+                occupied: (winCount[ws.id] ?? 0) > 0, ref: ws.id
             })
         }
         return out
