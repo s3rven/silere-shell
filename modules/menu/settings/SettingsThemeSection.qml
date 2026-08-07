@@ -168,7 +168,7 @@ Column {
             }
 
             SwatchPickerRow {
-                glyph: "󰏘"; label: "Base tone"
+                glyph: "󰏘"; label: "Base"
                 options: [
                     { value: "black",    name: "Black"    },
                     { value: "charcoal", name: "Charcoal" },
@@ -185,7 +185,7 @@ Column {
             expanded: !ShellSettings.neutralTheme
 
             SwatchPickerRow {
-                glyph: "󰔎"; label: "Accent role"
+                glyph: "󰔎"; label: "Accent"
                 options: [
                     { value: "primary",   name: "Primary"   },
                     { value: "secondary", name: "Secondary" },
@@ -195,6 +195,25 @@ Column {
                 activeIndex: options.findIndex(o => o.value === ShellSettings.matugenAccentRole)
                 tintedReadout: true
                 onPicked: (i) => ShellSettings.matugenAccentRole = options[i].value
+            }
+
+            SwatchPickerRow {
+                glyph: "󰏘"; label: "Base"
+                // same names and order as the neutral tones: each depth was solved to land on that
+                // tone's luminance, so calling them anything else invents a second vocabulary
+                options: [
+                    { value: "deeper", name: "Black"    },
+                    { value: "deep",   name: "Charcoal" },
+                    { value: "none",   name: "Graphite" }
+                ]
+                colors: [
+                    Theme.mix(MatugenTheme.background, "#000000", Theme._depths.deeper),
+                    Theme.mix(MatugenTheme.background, "#000000", Theme._depths.deep),
+                    Theme.mix(MatugenTheme.background, "#000000", Theme._depths.none)
+                ]
+                activeIndex: options.findIndex(o => o.value === ShellSettings.matugenDepth)
+                ringColor: Theme.accent
+                onPicked: (i) => ShellSettings.matugenDepth = options[i].value
             }
         }
 
