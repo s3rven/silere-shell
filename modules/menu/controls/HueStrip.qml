@@ -89,7 +89,6 @@ Item {
         height: 8
         radius: 4
         antialiasing: true
-        clip: true
         gradient: Gradient {
             orientation: Gradient.Horizontal
             GradientStop { position: 0.000; color: Qt.hsla(0.000, root.saturation, root.lightness, 1.0) }
@@ -99,13 +98,6 @@ Item {
             GradientStop { position: 0.667; color: Qt.hsla(0.667, root.saturation, root.lightness, 1.0) }
             GradientStop { position: 0.833; color: Qt.hsla(0.833, root.saturation, root.lightness, 1.0) }
             GradientStop { position: 1.000; color: Qt.hsla(1.000, root.saturation, root.lightness, 1.0) }
-        }
-
-        Hairline {
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.top: parent.top
-            color: Theme.withAlpha(Theme.text, 0.24)
         }
     }
 
