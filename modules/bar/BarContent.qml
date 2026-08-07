@@ -153,7 +153,7 @@ Item {
     }
 
     readonly property bool _isOverlayBar: root.screen && root.screen.name === Monitors.overlayBarName
-    readonly property bool _onActiveBar: !root.screen || Monitors.activeName === root.screen.name
+    readonly property bool _onActiveBar: Monitors.isActive(root.screen)
     readonly property bool _osdBarShowing: ShellSettings.osdEnabled && ShellSettings.osdBarIntegrated
         && root._isOverlayBar && OsdBarState.showing && !OsdBarState.barConcealed
     readonly property bool _centerVizMode: ShellSettings.mediaVisualizerPosition === "center"
@@ -252,7 +252,7 @@ Item {
         active: root._centerVizWanted && root._centerVizHasRoom
         sourceComponent: Component {
             MediaVisualizer {
-                barName: root.screen ? root.screen.name : ""
+                screen: root.screen
                 presentationActive: root._centerVizShowing
                 // dimmed behind the title/widgets: full rate and bar count buy detail nobody can see
                 lowPower: root.effectiveCompact || root._centerVizWidth < 260

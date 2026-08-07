@@ -26,6 +26,10 @@ Singleton {
 
     readonly property string activeName: overlayScreen ? overlayScreen.name : ""
 
+    function isActive(screen): bool {
+        return !screen || activeName === screen.name
+    }
+
     function _configuredBarEnabled(screen): bool {
         if (!screen) return false
         const off = ShellSettings.barDisabledMonitors

@@ -6,10 +6,10 @@ Canvas {
     id: _viz
     anchors.fill: parent
 
-    property string barName: ""
+    property var screen: null
     property bool lowPower: false
     property bool presentationActive: true
-    readonly property bool _onActiveBar: barName.length === 0 || Monitors.activeName === barName
+    readonly property bool _onActiveBar: Monitors.isActive(screen)
     readonly property string _style: ShellSettings.mediaVisualizerStyle
     property bool _registered: false
     property bool _registeredLowPower: false

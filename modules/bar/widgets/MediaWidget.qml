@@ -19,7 +19,7 @@ Item {
 
     property var screen: null
     property bool barActive: true
-    readonly property bool _onActiveBar: !root.screen || Monitors.activeName === root.screen.name
+    readonly property bool _onActiveBar: Monitors.isActive(root.screen)
     readonly property bool _visualizerActive: ShellSettings.mediaProgress
         && ShellSettings.mediaVisualizerPosition === "media"
         && !ShellSettings.reduceMotion && !Idle.isIdle
@@ -97,7 +97,7 @@ Item {
         active: root._visualizerActive
         sourceComponent: Component {
             MediaVisualizer {
-                barName: root.screen ? root.screen.name : ""
+                screen: root.screen
                 lowPower: root.compact
             }
         }
