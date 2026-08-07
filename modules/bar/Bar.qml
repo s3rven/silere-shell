@@ -144,7 +144,7 @@ PanelWindow {
                     y: bar.atBottom ? 0 : parent.height - height
                     color: Qt.rgba(0, 0, 0, bar.shadowOn
                         ? Math.min(0.16, 0.07 + 0.035 * ShellSettings.barShadowStrength)
-                        : Math.min(0.11, 0.045 * ShellSettings.barLineStrength))
+                        : Math.min(0.14, 0.045 * ShellSettings.barLineStrength))
                 }
             }
         }
@@ -273,7 +273,7 @@ PanelWindow {
             sourceComponent: OutlineBorder {
                 radius: surface.radius
                 outlineColor: Theme.withAlpha(Theme.mix(Theme.subtext, Theme.accent, 0.30),
-                    Math.min(0.42, 0.20 * ShellSettings.barLineStrength))
+                    Math.min(0.62, 0.20 * ShellSettings.barLineStrength))
             }
         }
     }

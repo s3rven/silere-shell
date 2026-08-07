@@ -78,7 +78,8 @@ Column {
                 glyph: "󰃠"
                 label: ShellSettings.underlineGlow ? "Glow strength" : "Line strength"
                 value: ShellSettings.underlineGlow ? ShellSettings.glowStrength : ShellSettings.barLineStrength
-                min: 0.5; max: 2.0; step: 0.05
+                // the glow layers saturate their own clamps by 1.7; only the static line has room above 2
+                min: 0.5; max: ShellSettings.underlineGlow ? 2.0 : 3.0; step: 0.05
                 displayValue: Math.round((ShellSettings.underlineGlow
                     ? ShellSettings.glowStrength : ShellSettings.barLineStrength) * 100) + "%"
                 onChanged: (v) => {

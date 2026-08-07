@@ -355,7 +355,7 @@ Singleton {
         { k: "sysAlertTimeout",     t: "int",  min: 0,    max: 30000 },
         { k: "clockShowDate",       t: "bool" },
         { k: "barBorderVisible",    t: "bool" },
-        { k: "barLineStrength",     t: "real", min: 0.5, max: 2.0 },
+        { k: "barLineStrength",     t: "real", min: 0.5, max: 3.0 },
         { k: "underlineGlow",       t: "bool" },
         { k: "underlineIdleGlow",   t: "bool" },
         { k: "underlineNotifGlow",  t: "bool" },
