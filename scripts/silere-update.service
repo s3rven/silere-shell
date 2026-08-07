@@ -1,6 +1,5 @@
 [Unit]
 Description=Silere Shell update check
-After=network-online.target
 
 [Service]
 Type=oneshot
