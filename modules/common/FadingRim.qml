@@ -9,6 +9,9 @@ Shape {
     property real band: 1
 
     anchors.fill: parent
+    // without it Shape tessellates the corner arcs and a 1px ring facets visibly there —
+    // same reason OutlineBorder and PerimeterProgress set it
+    preferredRendererType: Shape.CurveRenderer
 
     ShapePath {
         strokeColor: "transparent"
