@@ -8,10 +8,6 @@ Pill {
 
     readonly property bool canControl: Brightness.controllable
     readonly property bool show: ShellSettings.barShowBrightness && canControl
-    readonly property real value: Brightness.pct
-    readonly property real minimumValue: 0
-    readonly property real maximumValue: 1
-    readonly property real stepSize: Brightness.stepPct / 100
 
     property real _baseOpacity: show ? 1.0 : 0.0
     readonly property bool layoutVisible: show || _baseOpacity > 0.001

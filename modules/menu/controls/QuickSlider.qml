@@ -11,9 +11,6 @@ Item {
     property string valueWidthText: "100%"
     property string wheelKey:  "quickslider"
     property string accessibleName: wheelKey
-    readonly property real minimumValue: _track.min
-    readonly property real maximumValue: _track.max
-    readonly property real stepSize: _track.step
     property bool   glyphClickable: false
     property string glyphActionName: ""
     property bool   expandable: false

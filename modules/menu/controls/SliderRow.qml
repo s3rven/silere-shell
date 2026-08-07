@@ -17,9 +17,6 @@ Item {
     property real   min:          0.0
     property real   max:          1.0
     property real   step:         0.05
-    readonly property real minimumValue: min
-    readonly property real maximumValue: max
-    readonly property real stepSize: step
     property real   topRadius:    0
     property real   bottomRadius: 0
     property real   cardInset:    1

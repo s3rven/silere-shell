@@ -15,9 +15,6 @@ Item {
     property string accessibleName: "Hue"
     property string accessibleDescription: ""
     readonly property real value: Math.round(_wrappedHue(hue) * 360) % 360
-    readonly property real minimumValue: 0
-    readonly property real maximumValue: 359
-    readonly property real stepSize: 7.2
 
     signal picked(real hue)
 
