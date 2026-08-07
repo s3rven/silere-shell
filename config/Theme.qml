@@ -76,8 +76,10 @@ Singleton {
                                                 : _n ? withAlpha(_lineBase, lineAlpha(0.075))
                                                      : withAlpha(_lineBase, lineAlpha(0.085))
     readonly property color menuHover:       accent
+    // wallpaper's card sits a step higher than neutral's, so its control needs a wider mix to hold
+    // the same ~3 L* separation above the card that neutral gets from 0.060 -> 0.090
     readonly property color menuControl:     _n ? mix(background, text, _hc ? 0.125 : 0.090)
-                                                : mix(background, text, _hc ? 0.130 : 0.09)
+                                                : mix(background, text, _hc ? 0.130 : 0.100)
     readonly property color menuControlLine: _hc ? withAlpha(text, lineAlpha(0.24))
                                                 : _n ? withAlpha(_lineBase, lineAlpha(0.115))
                                                      : withAlpha(_lineBase, lineAlpha(0.135))
