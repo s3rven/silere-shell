@@ -11,6 +11,7 @@ Singleton {
     property string summary: ""
     property bool   applying: false
     property string currentVersion: ""
+    property string buildDate: ""
     property real   lastCheckMs: 0
     property string lastCheckError: ""
     property string lastApplyError: ""
@@ -29,6 +30,12 @@ Singleton {
         : lastCheckError.length > 0 ? "Check failed"
         : pending ? label
         : "Up to date"
+
+    readonly property bool upToDate: !applying && !checking && !pending
+        && lastApplyError.length === 0 && lastCheckError.length === 0
+    // the bar pill renders statusText and must not grow with it; this longer form is menu-only
+    readonly property string statusDetail: upToDate && buildDate.length > 0
+        ? statusText + " · built " + buildDate : statusText
 
     readonly property string _cacheDir: {
         const configured = String(Quickshell.env("XDG_CACHE_HOME") || "").trim()
@@ -94,7 +101,12 @@ Singleton {
         id: _versionProc
         command: ["bash", root._script, "--version"]
         stdout: StdioCollector { id: _versionOut }
-        onExited: (code) => { if (code === 0) root.currentVersion = (_versionOut.text || "").trim() }
+        onExited: (code) => {
+            if (code !== 0) return
+            const parts = (_versionOut.text || "").trim().split(/\s+/)
+            root.currentVersion = parts[0] ?? ""
+            root.buildDate = parts[1] ?? ""
+        }
     }
 
     FileView {

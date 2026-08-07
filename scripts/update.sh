@@ -149,7 +149,8 @@ git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1 || _fail "not a git repo: $RO
 
 case "${1:-}" in
     --version)
-        git -C "$ROOT" rev-parse --short HEAD
+        # "<short-sha> <YYYY-MM-DD>"; the date is what makes a rolling hash mean anything
+        git -C "$ROOT" log -1 --format='%h %cs'
         exit 0
         ;;
     --timer-status)

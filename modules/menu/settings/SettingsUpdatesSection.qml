@@ -22,7 +22,7 @@ Column {
                 : ShellUpdate.lastCheckError.length > 0 || ShellUpdate.lastApplyError.length > 0 ? "󰀦"
                 : ShellUpdate.pending ? "󰚰" : "󰄬"
             title: "Silere Shell"
-            status: ShellUpdate.statusText
+            status: ShellUpdate.statusDetail
             meta: ShellUpdate.currentVersion.length > 0 ? "#" + ShellUpdate.currentVersion : ""
             detail: ShellUpdate.lastApplyError.length > 0 ? ShellUpdate.lastApplyError
                 : ShellUpdate.lastCheckError.length > 0 ? ShellUpdate.lastCheckError
