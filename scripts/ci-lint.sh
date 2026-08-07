@@ -101,6 +101,7 @@ check_qml_locale_count() {
   fi
 }
 check_qml_locale_count services/Battery.qml 1
+check_qml_locale_count services/CpuTemp.qml 1
 check_qml_locale_count services/Network.qml 1
 check_qml_locale_count services/PowerProfiles.qml 1
 check_qml_locale_count services/Updates.qml 1
@@ -426,6 +427,20 @@ if [ -f "$theme_tmpl" ] && [ -f "$theme_default" ]; then
     fi
 else
     skip "theme" "matugen template or bundled default not found"
+fi
+
+# The accent picker marks a swatch active by string-matching neutralAccent against
+# its own preset list, so a default with no matching swatch opens with nothing
+# selected on a fresh config.
+section "accent preset coverage"
+accent_section="modules/menu/settings/SettingsThemeSection.qml"
+accent_default="$(sed -n 's/^[[:space:]]*property string neutralAccent:[[:space:]]*"\(#[0-9a-fA-F]\{3,8\}\)".*/\1/p' services/ShellSettings.qml)"
+if [ -z "$accent_default" ]; then
+  fail "could not read the neutralAccent default from services/ShellSettings.qml"
+elif grep -qiF "\"$accent_default\"" "$accent_section"; then
+  ok "accent" "default $accent_default has a preset swatch"
+else
+  fail "neutralAccent default $accent_default has no swatch in $accent_section"
 fi
 
 section "portability regressions"
