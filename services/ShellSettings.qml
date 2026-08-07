@@ -434,6 +434,7 @@ Singleton {
     }
 
     function resetToDefaults(): void {
+        _backupSettings("pre-reset")
         for (let i = 0; i < _schema.length; i++) {
             const k = _schema[i].k
             if (k !== "barWidgetOrderLeft" && k !== "barWidgetOrderCenter"
@@ -525,10 +526,11 @@ Singleton {
         }
     }
 
-    function _backupBeforeMigrate(raw: string, onDiskVersion: int): void {
-        _backupFile.path = ConfigStore.directory + "/settings.v"
-            + onDiskVersion + ".bak.json"
-        _backupFile.setText(raw)
+    function _backupSettings(tag: string): void {
+        const body = (_file.text() || "").trim()
+        if (body.length === 0) return
+        _backupFile.path = ConfigStore.directory + "/settings." + tag + ".bak.json"
+        _backupFile.setText(body)
     }
 
     FileView {
@@ -536,7 +538,7 @@ Singleton {
         atomicWrites: true
         blockWrites:  true
         printErrors:  false
-        onSaveFailed: (error) => console.warn("silere-shell: failed to back up settings before migration:", error)
+        onSaveFailed: (error) => console.warn("silere-shell: failed to back up settings.json:", error)
     }
 
     function _applyText(t: string): void {
@@ -551,7 +553,7 @@ Singleton {
                 ? parsed.__version : 0
             const onDiskVersion = Math.max(0, Math.floor(rawVersion))
             if (onDiskVersion < _settingsVersion && Object.keys(parsed).length > 0)
-                _backupBeforeMigrate(raw, onDiskVersion)
+                _backupSettings("v" + onDiskVersion)
             const fromFuture = onDiskVersion > _settingsVersion
             _loadedVersion = fromFuture ? onDiskVersion : _settingsVersion
             _futureSettings = fromFuture ? parsed : ({})

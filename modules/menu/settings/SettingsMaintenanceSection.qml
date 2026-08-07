@@ -52,7 +52,8 @@ Column {
         }
         HintText {
             text: "Restores appearance, behavior, and layout to their built-in defaults. "
-                + "Your wallpaper theme and calendar marks are untouched."
+                + "Your wallpaper theme and calendar marks are untouched. "
+                + "The current settings are copied to settings.pre-reset.bak.json first."
         }
     }
 
