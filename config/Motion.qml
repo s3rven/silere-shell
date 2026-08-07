@@ -25,6 +25,10 @@ Singleton {
     readonly property int  popOutFade: _rm ? 0 : 120
     readonly property int  popSettle:  _rm ? 0 : 210
 
+    // scroll physics are user-driven, not animation: they stay put under reduce-motion
+    readonly property real flickDeceleration: 1800
+    readonly property real flickVelocity:     2200
+
     readonly property int panelResize:   _rm ? 0 : 165
     readonly property int panelCollapse: _rm ? 0 : 115
     // quiet window a viewport must hold before scroll affordances trust it (see ScrollSettle)

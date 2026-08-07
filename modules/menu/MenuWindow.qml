@@ -701,8 +701,8 @@ PanelWindow {
                     + panel.pageBottomInset
                 clip: true
                 boundsMovement: Flickable.StopAtBounds
-                flickDeceleration: 1800
-                maximumFlickVelocity: 2200
+                flickDeceleration: Motion.flickDeceleration
+                maximumFlickVelocity: Motion.flickVelocity
                 interactive: !panel.powerOpen && panel.activeTab !== 2
                     && _contentSettle.overflows
 

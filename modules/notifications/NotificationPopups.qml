@@ -338,8 +338,8 @@ PanelWindow {
                 contentHeight: cardCol.implicitHeight
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
-                flickDeceleration: 1800
-                maximumFlickVelocity: 2200
+                flickDeceleration: Motion.flickDeceleration
+                maximumFlickVelocity: Motion.flickVelocity
                 interactive: contentHeight > height + 1
 
                 Column {

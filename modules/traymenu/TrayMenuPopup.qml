@@ -450,8 +450,8 @@ PanelWindow {
                     contentWidth: width
                     contentHeight: _subCol.implicitHeight
                     boundsBehavior: Flickable.StopAtBounds
-                    flickDeceleration: 1800
-                    maximumFlickVelocity: 2200
+                    flickDeceleration: Motion.flickDeceleration
+                    maximumFlickVelocity: Motion.flickVelocity
                     clip: true
                     interactive: contentHeight > height
 
@@ -519,8 +519,8 @@ PanelWindow {
             contentWidth: width
             contentHeight: _col.implicitHeight
             boundsBehavior: Flickable.StopAtBounds
-            flickDeceleration: 1800
-            maximumFlickVelocity: 2200
+            flickDeceleration: Motion.flickDeceleration
+            maximumFlickVelocity: Motion.flickVelocity
             clip: true
             interactive: contentHeight > height
 

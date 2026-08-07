@@ -108,6 +108,8 @@ Column {
                     contentHeight: height
                     flickableDirection: Flickable.HorizontalFlick
                     boundsMovement: Flickable.StopAtBounds
+                    flickDeceleration: Motion.flickDeceleration
+                    maximumFlickVelocity: Motion.flickVelocity
                     interactive: contentWidth > width + 1
                     clip: true
 

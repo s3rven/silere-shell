@@ -251,8 +251,8 @@ Item {
         contentWidth: width
         contentHeight: _optCol.implicitHeight
         boundsMovement: Flickable.StopAtBounds
-        flickDeceleration: 1800
-        maximumFlickVelocity: 1800
+        flickDeceleration: Motion.flickDeceleration
+        maximumFlickVelocity: Motion.flickVelocity
         interactive: contentHeight > height + 1
         clip:    true
         visible: height > 0.5

@@ -236,8 +236,8 @@ Item {
         contentHeight: _content.height
         clip: true
         boundsMovement: Flickable.StopAtBounds
-        flickDeceleration: 1800
-        maximumFlickVelocity: 2200
+        flickDeceleration: Motion.flickDeceleration
+        maximumFlickVelocity: Motion.flickVelocity
         interactive: _navSettle.overflows
 
         onHeightChanged: if (root.active) _resizeSettle.restart()
