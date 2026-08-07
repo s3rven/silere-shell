@@ -20,7 +20,7 @@ Background features stay off until you turn them on. When a tool it relies on is
 
 ## Install
 
-You need `git`, Hyprland or niri, and a current Quickshell build.
+You need `git`, Hyprland or niri, and Quickshell 0.3 or newer. The installer checks every QML module Silere imports and names any that are missing.
 
 ```bash
 git clone https://github.com/s3rven/silere-shell
