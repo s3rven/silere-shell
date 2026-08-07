@@ -18,7 +18,7 @@ Item {
     readonly property real _strength: running ? Math.min(1, _gap / 13) : 0
     readonly property real _left: Math.min(headX, tailX)
 
-    readonly property color _tintClear: Qt.rgba(tint.r, tint.g, tint.b, 0)
+    readonly property color _tintClear: Theme.withAlpha(tint, 0)
     readonly property color _core: Theme.withAlpha(Theme.text, 0.95)
     readonly property color _coreClear: Theme.withAlpha(Theme.text, 0)
 

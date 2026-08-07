@@ -499,9 +499,7 @@ Item {
         id: _shotStreak
         readonly property real _trackW: Math.max(0, parent.width - _ul.wrapRadius * 2)
         readonly property real _streakW: Math.min(_trackW, Math.min(180, Math.max(64, _trackW * 0.16)))
-        readonly property color _edgeColor: Qt.rgba(_lineEffect._screenshotColor.r,
-                                                    _lineEffect._screenshotColor.g,
-                                                    _lineEffect._screenshotColor.b, 0)
+        readonly property color _edgeColor: Theme.withAlpha(_lineEffect._screenshotColor, 0)
 
         x: Math.max(_ul.wrapRadius, Math.min(parent.width - _ul.wrapRadius - width,
             _ul.wrapRadius + _lineEffect._screenshotSweepCenter * _trackW - width / 2))
