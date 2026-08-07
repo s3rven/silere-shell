@@ -36,7 +36,12 @@ Column {
             Item {
                 id: _accentPicker
                 width: parent.width
-                height: 96
+                // derived, not a constant: the swatch row and title grow with uiScale and a fixed box clips them.
+                // same formula as SwatchPickerRow._headerH so this header shares the neighbouring rows' rhythm
+                readonly property int _titleH: 4 * Math.ceil(Math.max(40,
+                    _accentGlyph.implicitHeight + 12, _accentTitle.implicitHeight + 12) / 4)
+                readonly property int _swatchH: Metrics.rowHeightFor(32)
+                height: _titleH + _swatchH + 4 + _hueStrip.height + 8
 
                 readonly property real _accentL: 0.70
                 function _accentForHS(h, s): string {
@@ -72,10 +77,22 @@ Column {
                 readonly property string _shownName: _swatchRow.hoveredIndex >= 0 ? _options[_swatchRow.hoveredIndex].name : _activeName
                 readonly property color  _shownColor: _swatchRow.hoveredIndex >= 0 ? _swColors[_swatchRow.hoveredIndex] : _curColor
 
+                // glyph cell and margins mirror SwatchPickerRow's header, or this stacked block
+                // sits 26px off the label column every neighbouring row shares
+                ShellText {
+                    id: _accentGlyph
+                    anchors.left:   parent.left; anchors.leftMargin: 14
+                    y: Math.round((_accentPicker._titleH - height) / 2)
+                    width: 18
+                    horizontalAlignment: Text.AlignHCenter
+                    text:           "󰔎"
+                    color:          Theme.withAlpha(Theme.subtext, 0.85)
+                    font.pixelSize: Settings.iconSize + 2
+                }
                 ShellText {
                     id: _accentTitle
-                    anchors.top:            parent.top; anchors.topMargin: 8
-                    anchors.left:           parent.left; anchors.leftMargin: 16
+                    anchors.left:           _accentGlyph.right; anchors.leftMargin: 10
+                    anchors.verticalCenter: _accentGlyph.verticalCenter
                     anchors.right:          _accentReadout.left; anchors.rightMargin: 10
                     text:           "Accent"
                     color:          Theme.withAlpha(Theme.text, 0.85)
@@ -84,9 +101,9 @@ Column {
                 }
                 ShellText {
                     id: _accentReadout
-                    anchors.top:            _accentTitle.top
                     anchors.right:          parent.right; anchors.rightMargin: 12
-                    width:                  Math.min(96, Math.max(56, parent.width * 0.34))
+                    anchors.verticalCenter: _accentGlyph.verticalCenter
+                    width:                  Math.min(84, implicitWidth)
                     horizontalAlignment:    Text.AlignRight
                     text:           _accentPicker._shownName
                     color:          ShellSettings.highContrast
@@ -100,10 +117,10 @@ Column {
                 Flickable {
                     id: _swatchViewport
                     anchors.top:        parent.top
-                    anchors.topMargin:  28
+                    anchors.topMargin:  _accentPicker._titleH
                     anchors.left:       parent.left;  anchors.leftMargin:  12
                     anchors.right:      parent.right; anchors.rightMargin: 12
-                    height: 32
+                    height: _accentPicker._swatchH
                     contentWidth: _swatchRow.width
                     contentHeight: height
                     flickableDirection: Flickable.HorizontalFlick
