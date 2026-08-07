@@ -391,19 +391,27 @@ Singleton {
         && deviceName.indexOf("/") < 0
         && deviceName.indexOf("..") < 0
     readonly property bool statsWanted: ShellSettings.barShowNetwork && ShellSettings.networkTrafficStats
-    readonly property bool trafficActive: statsWanted && connected
-        && (downBps >= 1024 || upBps >= 1024)
+    property bool _trafficLatch: false
+    readonly property bool trafficActive: statsWanted && connected && _trafficLatch
     readonly property string trafficLabel: "󰁅 " + formatRate(downBps) + " 󰁝 " + formatRate(upBps)
 
+    // a bare threshold flaps the label in and out every tick on idle browsing
+    function _updateTrafficLatch(): void {
+        const peak = Math.max(root.downBps, root.upBps)
+        if (peak >= 2048) root._trafficLatch = true
+        else if (peak < 512) root._trafficLatch = false
+    }
+
+    // fixed columns in the bar's monospace font: a variable-width readout re-animates the pill every tick
     function formatRate(bps: real): string {
         const value = Math.max(0, bps)
-        if (value >= 1073741824)
-            return (value / 1073741824).toFixed(value >= 10737418240 ? 0 : 1) + " GB/s"
-        if (value >= 1048576)
-            return (value / 1048576).toFixed(value >= 10485760 ? 0 : 1) + " MB/s"
-        if (value >= 1024)
-            return (value / 1024).toFixed(value >= 10240 ? 0 : 1) + " KB/s"
-        return Math.round(value) + " B/s"
+        let n = value
+        let unit = "B/s"
+        if (value >= 1073741824)   { n = value / 1073741824; unit = "GB/s" }
+        else if (value >= 1048576) { n = value / 1048576;    unit = "MB/s" }
+        else if (value >= 1024)    { n = value / 1024;       unit = "KB/s" }
+        const text = (n >= 100 || unit === "B/s") ? String(Math.round(n)) : n.toFixed(1)
+        return ("    " + text).slice(-4) + " " + (unit + " ").slice(0, 4)
     }
 
     function _resetTraffic(): void {
@@ -413,11 +421,12 @@ Singleton {
         _lastTxBytes = -1
         _lastStatsMs = 0
         _statsRefreshing = false
+        _trafficLatch = false
     }
 
+    // no in-flight guard: a reload that never reports back would wedge the poll for the session
     function _sampleTraffic(): void {
-        if (!statsWanted || !statsDeviceReady || Idle.isIdle
-                || OverviewState.active || _statsRefreshing) return
+        if (!statsWanted || !statsDeviceReady || Idle.isIdle || OverviewState.active) return
         _statsRefreshing = true
         _netDevFile.reload()
     }
@@ -448,6 +457,7 @@ Singleton {
             if (root._lastRxBytes >= 0 && root._lastTxBytes >= 0 && root._lastStatsMs > 0 && dt >= 0.2) {
                 root.downBps = rx >= root._lastRxBytes ? (rx - root._lastRxBytes) / dt : 0
                 root.upBps = tx >= root._lastTxBytes ? (tx - root._lastTxBytes) / dt : 0
+                root._updateTrafficLatch()
             }
             root._lastRxBytes = rx
             root._lastTxBytes = tx
