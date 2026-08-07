@@ -457,15 +457,6 @@ Singleton {
         return d
     }
 
-    function _migrate(j): var {
-        // v0 wrote every key with no version marker; unknown/deprecated keys drop on the next _save()
-        delete j.midnightNeutral
-        delete j.warmNeutral
-        delete j.screenshotGlowTint
-        delete j.activeGlowStrength
-        return j
-    }
-
     function _onSettingChanged(key: string): void {
         if (!_loaded || !_writeAllowed) return
         if (_loadedVersion > _settingsVersion) _futureTouched[key] = true
@@ -568,7 +559,6 @@ Singleton {
             if (fromFuture)
                 console.warn("silere-shell: settings.json is from newer version", onDiskVersion,
                     "— preserving unknown values")
-            const j = fromFuture ? parsed : _migrate(parsed)
             if (_loaded) {
                 _loaded = false
                 for (let i = 0; i < _schema.length; i++) {
@@ -578,7 +568,7 @@ Singleton {
             }
             for (let i = 0; i < _schema.length; i++) {
                 const s = _schema[i]
-                if (j[s.k] !== undefined) _coerce(s, j[s.k])
+                if (parsed[s.k] !== undefined) _coerce(s, parsed[s.k])
             }
             root._readError = ""
             root._writeAllowed = true
