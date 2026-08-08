@@ -229,6 +229,15 @@ Singleton {
         _pendingNetwork = null
     }
 
+    // Disabling Wi-Fi tears down the backend-side request. Clear our local
+    // request too, otherwise its timeout reports a stale failure after Wi-Fi
+    // has already been turned off.
+    function _cancelWifiConnect(): void {
+        _connectTimeout.stop()
+        wifiConnecting = ""
+        _pendingNetwork = null
+    }
+
     function connectWifi(ssid: string, password: string): void {
         if (!toolAvailable || ssid.length === 0) return
         const network = _findWifiNetwork(ssid)
@@ -265,11 +274,17 @@ Singleton {
     Connections {
         target: Networking
         function onWifiEnabledChanged() {
-            if (!Networking.wifiEnabled) root.clearWifiScan()
+            if (!Networking.wifiEnabled) {
+                root.clearWifiScan()
+                root._cancelWifiConnect()
+            }
         }
     }
 
-    onHasWifiDeviceChanged: if (_scannerWanted) Qt.callLater(() => root._setScannerEnabled(true))
+    onHasWifiDeviceChanged: {
+        if (!root.hasWifiDevice) root._cancelWifiConnect()
+        else if (_scannerWanted) Qt.callLater(() => root._setScannerEnabled(true))
+    }
 
     Timer {
         id: _scanWarmup
