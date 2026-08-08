@@ -1,0 +1,88 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # the same gate main gets: a tag that cannot pass validation must not become a release
+  validate:
+    runs-on: ubuntu-latest
+    container: archlinux:base
+    timeout-minutes: 15
+
+    steps:
+      - name: Install validation dependencies
+        run: pacman -Syu --noconfirm git shellcheck quickshell
+
+      # pinned to an immutable sha so a moved tag cannot run unreviewed code
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+
+      - name: Structural and portability validation
+        run: SILERE_REQUIRE_GIT_TESTS=1 bash scripts/ci-lint.sh
+
+      - name: Quickshell package compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          qs --version
+          source scripts/lib/qml-modules.sh
+          for module in "${SILERE_REQUIRED_QML_MODULES[@]}"; do
+            _qml_module_available "$module" || {
+              echo "::error::required QML module is missing: $module"
+              exit 1
+            }
+            echo "ok: $module"
+          done
+
+      - name: Headless QML import and type probe
+        run: SILERE_REQUIRE_QML_TOOLS=1 bash scripts/test-qml-headless.sh
+
+  publish:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+
+      - name: Draft notes from the changelog
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          # fails when the tag has no changelog section, so notes can never be invented here
+          bash scripts/release-notes.sh "$version" > "$RUNNER_TEMP/notes.md"
+          echo "version=$version" >> "$GITHUB_ENV"
+
+      # gh ships on the runner, so no third-party action handles the release token
+      - name: Publish the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "::notice::$GITHUB_REF_NAME already exists; updating its notes"
+            gh release edit "$GITHUB_REF_NAME" \
+              --title "Silere Shell $version" \
+              --notes-file "$RUNNER_TEMP/notes.md"
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --title "Silere Shell $version" \
+              --notes-file "$RUNNER_TEMP/notes.md" \
+              --verify-tag
+          fi
