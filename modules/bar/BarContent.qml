@@ -48,8 +48,12 @@ Item {
 
     readonly property bool _compact: effectiveCompact
     readonly property int mediaTextBudget: {
-        const base = _compact ? 120 : 160
-        if (!ShellSettings.showWindowTitle || centerHasWidgets) return base
+        const preferred = ShellSettings.mediaWidgetMaxWidth
+        const base = _compact ? Math.min(120, preferred) : preferred
+        if (ShellSettings.mediaWidgetFixedWidth
+                || !ShellSettings.showWindowTitle || centerHasWidgets) return base
+        // a share of the whole bar, not of titleAvailableWidth: the media widget sits inside a zone
+        // that feeds titleFreeLeft/Right, so measuring the free gap here would bind into a loop
         return Math.max(76, Math.min(base, Math.round(width * 0.065)))
     }
 
