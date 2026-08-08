@@ -176,8 +176,14 @@ Item {
     readonly property int _centerVizWidth: 8 * Math.round(Math.max(48, Math.min(560,
         titleAvailableWidth * 0.68
     )) / 8)
-    readonly property real _centerVizTravel: Math.max(0, titleAvailableWidth - _centerVizWidth)
-    readonly property int _centerVizX: Math.round(titleFreeLeft + _centerVizTravel / 2)
+    // centre widgets anchor to the bar's centre, so the visualiser sitting behind them has to use
+    // that same axis; with the slot free it follows the title's anchor rule instead
+    readonly property real _centerVizAnchor:
+        root.centerHasWidgets || !ShellSettings.windowTitleCenterGap
+            ? width / 2 : (titleFreeLeft + titleFreeRight) / 2
+    readonly property int _centerVizX: Math.round(Math.max(titleFreeLeft,
+        Math.min(_centerVizAnchor - _centerVizWidth / 2,
+                 titleFreeRight - _centerVizWidth)))
 
     Loader {
         id: _wTitle

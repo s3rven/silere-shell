@@ -40,7 +40,8 @@ Canvas {
     }
 
     property var   _fill:   null
-    property var   _edge:   null
+    property var   _edgeL:  null
+    property var   _edgeR:  null
     property real  _fillH:  -1
     property real  _fillR:  -1
     property real  _fillG:  -1
@@ -71,19 +72,25 @@ Canvas {
         return cached
     }
 
+    // destination-out, not destination-in: in erases every pixel the source misses, so it would
+    // have to cover the whole canvas to preserve a middle it never actually changes
     function _fadeEdges(ctx) {
         var fadeW = Math.min(width * 0.18, 22)
-        if (!_edge || Math.round(_edgeW) !== Math.round(width)) {
-            var m = ctx.createLinearGradient(0, 0, width, 0)
-            m.addColorStop(0.0,                 "transparent")
-            m.addColorStop(fadeW / width,       "black")
-            m.addColorStop(1.0 - fadeW / width, "black")
-            m.addColorStop(1.0,                 "transparent")
-            _edge = m; _edgeW = width
+        if (fadeW <= 0.5) return
+        if (!_edgeL || Math.round(_edgeW) !== Math.round(width)) {
+            var l = ctx.createLinearGradient(0, 0, fadeW, 0)
+            l.addColorStop(0.0, "black")
+            l.addColorStop(1.0, "transparent")
+            var r = ctx.createLinearGradient(width - fadeW, 0, width, 0)
+            r.addColorStop(0.0, "transparent")
+            r.addColorStop(1.0, "black")
+            _edgeL = l; _edgeR = r; _edgeW = width
         }
-        ctx.globalCompositeOperation = "destination-in"
-        ctx.fillStyle = _edge
-        ctx.fillRect(0, 0, width, height)
+        ctx.globalCompositeOperation = "destination-out"
+        ctx.fillStyle = _edgeL
+        ctx.fillRect(0, 0, fadeW, height)
+        ctx.fillStyle = _edgeR
+        ctx.fillRect(width - fadeW, 0, fadeW, height)
         ctx.globalCompositeOperation = "source-over"
     }
 
