@@ -13,6 +13,11 @@ Item {
 
     property real availableWidth: -1
 
+    readonly property real   _widthCap: {
+        const self = root.screen
+        return self ? Math.round(self.width * 0.25) : Infinity
+    }
+
     readonly property string monitorName: Compositor.monitorName(root.screen)
     readonly property int    monitorWsId: Compositor.activeWorkspaceId(root.monitorName)
     property int             _lastWsId:      1
@@ -250,7 +255,7 @@ Item {
             elide:          Text.ElideRight
             width:          Math.ceil(Math.min(implicitWidth,
                                      root.availableWidth >= 0 ? root.availableWidth : implicitWidth,
-                                     Math.round(root.screen.width * 0.25)))
+                                     root._widthCap))
         }
     }
 }

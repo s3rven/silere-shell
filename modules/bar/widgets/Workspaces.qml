@@ -20,9 +20,11 @@ Item {
     readonly property int gap:        3
 
     readonly property bool _menuTargetsThisBar: {
+        const self = root.screen
+        if (!self) return false
         const target = MenuState.triggerScreen
-        return target ? target.name === root.screen.name
-                      : Monitors.activeName === root.screen.name
+        return target ? target.name === self.name
+                      : Monitors.activeName === self.name
     }
 
     readonly property int effectiveWsCount: Math.max(1, minVisible)
