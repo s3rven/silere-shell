@@ -7,14 +7,24 @@ import "../../../services"
 Item {
     id: root
 
-    required property int workspaceId
     required property bool barActive
     property real pulse: 0
     property bool critical: false
+    signal finished()
 
     function _settle(): void {
         _pulseAnim.stop()
         root.pulse = 0
+        root.finished()
+    }
+
+    function play(isCritical: bool): void {
+        if (!root.barActive || ShellSettings.reduceMotion || Idle.isIdle) {
+            root.finished()
+            return
+        }
+        root.critical = isCritical
+        _pulseAnim.restart()
     }
 
     onBarActiveChanged: if (!barActive) root._settle()
@@ -53,17 +63,10 @@ Item {
     }
 
     Connections {
-        target: Notifications
-        enabled: root.barActive && !ShellSettings.reduceMotion && !Idle.isIdle
-        function onSourcePulse(wsId, critical) {
-            if (wsId !== root.workspaceId) return
-            root.critical = critical
-            _pulseAnim.restart()
-        }
-    }
-
-    Connections {
         target: ShellSettings
+        function onWsNotifPulseChanged() {
+            if (!ShellSettings.wsNotifPulse) root._settle()
+        }
         function onReduceMotionChanged() {
             if (ShellSettings.reduceMotion) root._settle()
         }
@@ -78,6 +81,7 @@ Item {
 
     SequentialAnimation {
         id: _pulseAnim
+        onFinished: root.finished()
         NumberAnimation {
             target: root
             property: "pulse"

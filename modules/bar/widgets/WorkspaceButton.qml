@@ -157,6 +157,23 @@ Item {
     readonly property real _pulseOpacity: _urgentFx.item ? _urgentFx.item.pulseOpacity : 1.0
     readonly property real _shakeX: _urgentFx.item ? _urgentFx.item.shakeX : 0
     property real _dotFade: 1.0
+    property bool _notifPulseLoaded: false
+    property bool _notifPulseCritical: false
+
+    function playNotificationPulse(critical: bool): void {
+        if (!root.barActive || !ShellSettings.wsNotifPulse
+                || ShellSettings.reduceMotion || Idle.isIdle) return
+        _pulseUnload.stop()
+        root._notifPulseCritical = critical
+        if (_notifPulse.item) _notifPulse.item.play(critical)
+        else root._notifPulseLoaded = true
+    }
+
+    Timer {
+        id: _pulseUnload
+        interval: 0
+        onTriggered: root._notifPulseLoaded = false
+    }
     readonly property bool _hoverReveal: ShellSettings.valuesOnHover && hovered
         && !_blanked && (_showIcons || !ShellSettings.wsShowNumbers)
     property real _revealAmt: _hoverReveal ? 1 : 0
@@ -165,13 +182,15 @@ Item {
     MotionBehavior on _dotAlpha {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
 
     Loader {
+        id: _notifPulse
         anchors.fill: parent
         z: -1
-        active: ShellSettings.wsNotifPulse
+        active: root._notifPulseLoaded
+        onLoaded: if (item) item.play(root._notifPulseCritical)
         sourceComponent: Component {
             WorkspaceNotifPulse {
-                workspaceId: root.wsId
                 barActive: root.barActive
+                onFinished: _pulseUnload.restart()
             }
         }
     }

@@ -337,6 +337,20 @@ Item {
 
     property int _hoveredWsId: 0
 
+    // One listener routes pulses to the matching button. Previously every
+    // visible workspace kept its own listener and renderer alive while idle.
+    Connections {
+        target: Notifications
+        enabled: root.barActive && ShellSettings.wsNotifPulse
+            && !ShellSettings.reduceMotion && !Idle.isIdle
+        function onSourcePulse(wsId, critical) {
+            const index = root.visibleIds.indexOf(wsId)
+            if (index < 0) return
+            const button = _wsRepeater.itemAt(index)
+            if (button) button.playNotificationPulse(critical)
+        }
+    }
+
     WorkspaceTrail {
         headX: marker.centerX
         tailX: marker.trailX
