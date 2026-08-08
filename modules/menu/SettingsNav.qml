@@ -14,8 +14,7 @@ Item {
 
     signal currentPageRetapped()
 
-    // The open-groups preference drops the accordion: groups start open and
-    // each still collapses independently. Reassignment keeps bindings live.
+    // pinned mode never assigns _expandedGroup, so it stays bound to the selected section's group
     property int _expandedGroup: _groupIndexForSection(MenuState.settingsSection)
     readonly property bool allExpanded: ShellSettings.settingsNavPinned
     property var _collapsed: ({})
@@ -35,10 +34,10 @@ Item {
 
     readonly property int _navTop:      42
     readonly property int _navBottom:    8
-    readonly property int _groupH:      29
+    readonly property int _groupH:      Metrics.rowHeightFor(28)
     readonly property int _groupGap:     2
     readonly property int _childrenPad:  2
-    readonly property int _navRowH:     29
+    readonly property int _navRowH:     Metrics.rowHeightFor(28)
     readonly property int _navRowGap:    1
 
     function _leaves(it): var {
@@ -143,18 +142,30 @@ Item {
         root._revealRange(y, y + root._navRowH)
     }
 
-    function _scrollToExpandedGroup(): void {
-        if (!root.active || root._expandedGroup < 0) return
+    function _scrollToGroup(index: int): void {
+        if (!root.active || index < 0) return
         const tree = MenuState.settingsTree
-        const y = root._groupY(root._expandedGroup)
-        root._revealRange(y, y + root._groupFinalHeight(root._expandedGroup,
-                                                        tree[root._expandedGroup]))
+        if (index >= tree.length) return
+        const y = root._groupY(index)
+        root._revealRange(y, y + root._groupFinalHeight(index, tree[index]))
+    }
+
+    function _settleTo(index: int): void {
+        root._settleGroup = index
+        _disclosureSettle.restart()
     }
 
     function _toggleGroup(index: int): void {
         if (root.allExpanded) {
-            root._setCollapsed(index, root._isExpanded(index))
-            _disclosureSettle.restart()
+            const collapsing = root._isExpanded(index)
+            // the leaf holding focus is destroyed the moment the group collapses, and under
+            // reduce-motion the disclosure snaps shut with no animation to defer that
+            if (collapsing) {
+                const grp = _groupRepeater.itemAt(index)
+                if (grp && grp.hasFocusedItem()) root._focusGroupHeader(index)
+            }
+            root._setCollapsed(index, collapsing)
+            root._settleTo(index)
             return
         }
         const oldGroup = root._expandedGroup >= 0
@@ -164,7 +175,7 @@ Item {
         // move focus before collapsing destroys the focused leaf, or Qt rejects the activeFocusOnTab change
         if (restoreFocus) root._focusGroupHeader(index)
         root._expandedGroup = opening ? index : -1
-        _disclosureSettle.restart()
+        root._settleTo(opening ? index : -1)
 
         if (opening) {
             const group = MenuState.settingsTree[index]
@@ -219,10 +230,11 @@ Item {
             root._focusGroupHeader((groupIndex + 1) % _groupRepeater.count)
     }
 
+    property int _settleGroup: -1
     Timer {
         id: _disclosureSettle
         interval: Motion.medium
-        onTriggered: root._scrollToExpandedGroup()
+        onTriggered: root._scrollToGroup(root._settleGroup)
     }
 
     Timer {
@@ -237,7 +249,7 @@ Item {
         if (root.allExpanded) {
             if (selectedGroup >= 0 && !root._isExpanded(selectedGroup)) {
                 root._setCollapsed(selectedGroup, false)
-                _disclosureSettle.restart()
+                root._settleTo(selectedGroup)
             } else {
                 Qt.callLater(root._scrollToSelection)
             }
@@ -245,7 +257,7 @@ Item {
         }
         if (selectedGroup >= 0 && selectedGroup !== root._expandedGroup) {
             root._expandedGroup = selectedGroup
-            _disclosureSettle.restart()
+            root._settleTo(selectedGroup)
         } else {
             Qt.callLater(root._scrollToSelection)
         }
@@ -590,8 +602,8 @@ Item {
                                             event.accepted = true
                                         }
                                         Keys.onLeftPressed: event => {
-                                            root._toggleGroup(_grp.index)
                                             _grpHeader.forceActiveFocus()
+                                            root._toggleGroup(_grp.index)
                                             event.accepted = true
                                         }
                                         Keys.onUpPressed: event => {
