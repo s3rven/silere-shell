@@ -12,18 +12,34 @@ PageShell {
     implicitHeight: _detail.height
 
     property string _shownSection: MenuState.settingsSection
-    property int _sectionDir: 1
+    // assigned once to drop the binding: live, it swaps the section the instant MenuState changes,
+    // so the first transition fades out content that was already replaced
+    Component.onCompleted: root._shownSection = MenuState.settingsSection
+    property bool _awaitingSectionEnter: false
+    signal sectionSwapped()
 
     function _settleSection(): void {
         _detailSwap.stop()
+        _detailEnter.stop()
+        _sectionEnterDefer.stop()
+        root._awaitingSectionEnter = false
+        const changed = root._shownSection !== MenuState.settingsSection
         root._shownSection = MenuState.settingsSection
         _detail.opacity = 1
         _detail._shift = 0
+        if (changed) root.sectionSwapped()
     }
 
     onPageHidden: root._settleSection()
     onPowerOpenChanged: {
         if (root.powerOpen) root._settleSection()
+    }
+
+    Connections {
+        target: ShellSettings
+        function onReduceMotionChanged() {
+            if (ShellSettings.reduceMotion) root._settleSection()
+        }
     }
 
     readonly property var _sectionComponents: ({
@@ -39,7 +55,6 @@ PageShell {
     readonly property var _sectionMeta: {
         const m = ({})
         const tree = MenuState.settingsTree
-        let index = 0
         for (let i = 0; i < tree.length; i++) {
             const it = tree[i]
             if (it.children) {
@@ -48,18 +63,14 @@ PageShell {
                     m[c.section] = {
                         glyph: c.glyph,
                         label: c.label,
-                        group: it.label,
-                        description: c.description ?? "",
-                        index: index++
+                        description: c.description ?? ""
                     }
                 }
             } else {
                 m[it.section] = {
                     glyph: it.glyph,
                     label: it.label,
-                    group: "Settings",
-                    description: it.description ?? "",
-                    index: index++
+                    description: it.description ?? ""
                 }
             }
         }
@@ -75,7 +86,7 @@ PageShell {
         width:  root.width
         height: _detailHeader.height + _bodyGap + _detailBody.height
         property real _shift: 0
-        transform: Translate { x: _detail._shift }
+        transform: Translate { y: _detail._shift }
 
         readonly property int _bodyGap: 8
 
@@ -86,71 +97,65 @@ PageShell {
                     root._settleSection()
                     return
                 }
-                const current = root._sectionMeta[root._shownSection]?.index ?? 0
-                const next = root._sectionMeta[MenuState.settingsSection]?.index ?? current
-                root._sectionDir = next < current ? -1 : 1
+                root._awaitingSectionEnter = false
+                _sectionEnterDefer.stop()
+                _detailEnter.stop()
                 _detailSwap.restart()
             }
         }
 
         SequentialAnimation {
             id: _detailSwap
-            ParallelAnimation {
-                NumberAnimation { target: _detail; property: "opacity"; to: 0.0; duration: Motion.pageOut; easing.type: Easing.InCubic }
-                NumberAnimation { target: _detail; property: "_shift"; to: -root._sectionDir * 6; duration: Motion.pageOut; easing.type: Easing.InCubic }
-            }
+            NumberAnimation { target: _detail; property: "opacity"; to: 0.0; duration: Motion.pageOut; easing.type: Easing.InCubic }
             ScriptAction {
                 script: {
+                    root._awaitingSectionEnter = true
                     root._shownSection = MenuState.settingsSection
-                    _detail._shift = root._sectionDir * Motion.pageOffset
+                    _detail._shift = Motion.pageOffset
+                    root.sectionSwapped()
+                    _sectionEnterDefer.restart()
                 }
             }
-            ParallelAnimation {
-                NumberAnimation { target: _detail; property: "opacity"; to: 1.0; duration: Motion.pageIn; easing.type: Easing.OutCubic }
-                NumberAnimation { target: _detail; property: "_shift"; to: 0.0; duration: Motion.pageIn; easing.type: Easing.OutQuart }
+        }
+
+        Timer {
+            id: _sectionEnterDefer
+            interval: 0
+            onTriggered: {
+                if (!root._awaitingSectionEnter) return
+                root._awaitingSectionEnter = false
+                if (!root.active || root.powerOpen || ShellSettings.reduceMotion) {
+                    _detail.opacity = 1
+                    _detail._shift = 0
+                    return
+                }
+                _detailEnter.restart()
             }
+        }
+
+        ParallelAnimation {
+            id: _detailEnter
+            NumberAnimation { target: _detail; property: "opacity"; to: 1.0; duration: Motion.pageIn; easing.type: Easing.OutCubic }
+            NumberAnimation { target: _detail; property: "_shift"; to: 0.0; duration: Motion.pageIn; easing.type: Easing.OutQuart }
         }
 
         Item {
             id: _detailHeader
             width: parent.width
-            // derive from text metrics: reading the anchored children's y fed parent.height back into the anchor solver and looped
-            readonly property real _iconTop: 1 + _hdrPath.implicitHeight + 6
-            readonly property real _titleTop: _iconTop - 1
-            readonly property real _descriptionBottom: _titleTop
-                + _hdrTitle.implicitHeight + 2 + _hdrDescription.implicitHeight
-            readonly property real _mainBottom: Math.max(
-                _iconTop + Math.max(34, _hdrIcon.implicitHeight + 6),
-                _descriptionBottom)
+            readonly property real _mainH: Math.max(30, _hdrText.implicitHeight)
             readonly property real _contentBottom: _hdrError.visible
-                ? _descriptionBottom + 4 + _hdrError.implicitHeight
-                : _mainBottom
+                ? _mainH + 4 + _hdrError.implicitHeight
+                : _mainH
             height: 4 * Math.ceil((_contentBottom + 4) / 4)
             readonly property var _meta: root._sectionMeta[root._shownSection]
-                ?? ({ glyph: "", label: "", group: "Settings", description: "", index: 0 })
+                ?? ({ glyph: "", label: "", description: "" })
 
-            ShellText {
-                id: _hdrPath
-                anchors.left: parent.left
-                anchors.leftMargin: 2
-                anchors.right: parent.right
-                anchors.top: parent.top
-                anchors.topMargin: 1
-                text: _detailHeader._meta.group
-                color: Theme.withAlpha(Theme.accent, 0.76)
-                font.pixelSize: Settings.fontMicro
-                font.letterSpacing: 0.55
-                font.weight: Font.DemiBold
-                font.capitalization: Font.AllUppercase
-                elide: Text.ElideRight
-            }
             Item {
                 id: _hdrIconSlot
                 anchors.left: parent.left
-                anchors.top: _hdrPath.bottom
-                anchors.topMargin: 6
+                anchors.verticalCenter: _hdrText.verticalCenter
                 width: 22
-                height: Math.max(34, _hdrIcon.implicitHeight + 6)
+                height: 22
 
                 ShellText {
                     id: _hdrIcon
@@ -160,37 +165,43 @@ PageShell {
                     font.pixelSize: Settings.fontSize + 2
                 }
             }
-            ShellText {
-                id: _hdrTitle
+
+            Column {
+                id: _hdrText
                 anchors.left: _hdrIconSlot.right
                 anchors.leftMargin: 7
                 anchors.right: parent.right
-                anchors.top: _hdrIconSlot.top
-                anchors.topMargin: -1
-                text: _detailHeader._meta.label
-                color: Theme.text
-                font.pixelSize: Settings.fontSize + 3
-                font.weight: Font.DemiBold
-                elide: Text.ElideRight
+                y: Math.round((_detailHeader._mainH - implicitHeight) / 2)
+                height: implicitHeight
+                spacing: 1
+
+                ShellText {
+                    id: _hdrTitle
+                    width: parent.width
+                    text: _detailHeader._meta.label
+                    color: Theme.text
+                    font.pixelSize: Settings.fontSize + 3
+                    font.weight: Font.DemiBold
+                    elide: Text.ElideRight
+                    Accessible.description: _detailHeader._meta.description
+                }
+
+                ShellText {
+                    width: parent.width
+                    visible: _detailHeader._meta.description.length > 0
+                    text: _detailHeader._meta.description
+                    color: Theme.withAlpha(Theme.subtext, 0.62)
+                    font.pixelSize: Settings.fontCaption
+                    elide: Text.ElideRight
+                }
             }
-            ShellText {
-                id: _hdrDescription
-                anchors.left: _hdrTitle.left
-                anchors.right: parent.right
-                anchors.top: _hdrTitle.bottom
-                anchors.topMargin: 2
-                text: _detailHeader._meta.description
-                color: Theme.withAlpha(Theme.subtext, 0.58)
-                font.pixelSize: Settings.fontCaption
-                elide: Text.ElideRight
-            }
+
             ShellText {
                 id: _hdrError
                 visible: ShellSettings.settingsError.length > 0
-                anchors.left: _hdrTitle.left
+                anchors.left: _hdrText.left
                 anchors.right: parent.right
-                anchors.top: _hdrDescription.bottom
-                anchors.topMargin: 4
+                y: _detailHeader._mainH + 4
                 text: ShellSettings.settingsError
                 color: Theme.warning
                 font.pixelSize: Settings.fontMicro

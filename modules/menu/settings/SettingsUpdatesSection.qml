@@ -139,21 +139,20 @@ Column {
         }
         ToggleRow {
             glyph: "󰚰"; label: "Track package updates"
-            description: "Pending-update badge in the bar"
+            description: "Show pending count in bar"
             checked: ShellSettings.updatesWidget
             onToggled: nextChecked => ShellSettings.updatesWidget = nextChecked
             available: !SystemTools.ready || Updates.supported
             dependsNote: "No package manager"
         }
         ToggleRow {
-            glyph: "󰥔"; label: "Daily update check"
-            description: "Looks for new Silere Shell releases, not system packages"
+            glyph: "󰥔"; label: "Daily shell update check"
             checked: ShellUpdate.timerEnabled
             enabled: !ShellUpdate.timerBusy
             available: ShellUpdate.timerSupported
             dependsNote: ShellUpdate.timerBusy ? "Working" : (!SystemTools.ready ? "Checking" : "No systemd")
             onToggled: nextChecked => ShellUpdate.setTimerEnabled(nextChecked)
         }
-        HintText { text: "Checks never install anything on their own." }
+        HintText { text: "Checks never install updates." }
     }
 }

@@ -36,12 +36,14 @@ Column {
     SectionLabel { label: "CONTENT" }
     SettingsCard {
         ChoiceChipRow {
-            glyph: "◆"; label: "Active marker"
+            glyph: ShellSettings.wsActiveMarker === "bar" ? "━"
+                : ShellSettings.wsActiveMarker === "dot" ? "●" : "◆"
+            label: "Active marker"
             currentValue: ShellSettings.wsActiveMarker
             model: [
                 { value: "gem", label: "Gem" },
                 { value: "dot", label: "Dot" },
-                { value: "bar", label: "Bar" }
+                { value: "bar", label: "Line" }
             ]
             onChosen: (v) => ShellSettings.wsActiveMarker = v
         }
@@ -61,7 +63,7 @@ Column {
         }
         ToggleRow {
             glyph: "󰀻"; label: "App icons"
-            description: "Show up to three running apps on occupied workspaces"
+            description: "Up to three apps per workspace"
             checked: ShellSettings.wsShowAppIcons
             onToggled: nextChecked => ShellSettings.wsShowAppIcons = nextChecked
         }

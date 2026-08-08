@@ -147,9 +147,14 @@ Column {
                         options: _accentPicker._options
                         colors:  _accentPicker._swColors
                         activeIndex: _accentPicker._activeIndex
-                        onActiveIndexChanged: Qt.callLater(function() {
-                            _swatchViewport.revealIndex(_swatchRow.activeIndex)
-                        })
+                        // timer, not Qt.callLater: this dies with the section, where a deferred
+                        // call survives the swap and fires against a destroyed viewport
+                        onActiveIndexChanged: _revealDefer.restart()
+                        Timer {
+                            id: _revealDefer
+                            interval: 0
+                            onTriggered: _swatchViewport.revealIndex(_swatchRow.activeIndex)
+                        }
                         onFocusMoved: (i) => _swatchViewport.revealIndex(i)
                         onPicked: (i) => {
                             if (_accentPicker._options[i].auto) {
@@ -191,7 +196,8 @@ Column {
                     { value: "charcoal", name: "Charcoal" },
                     { value: "graphite", name: "Graphite" }
                 ]
-                colors: [Theme._tones.black.surface, Theme._tones.charcoal.surface, Theme._tones.graphite.surface]
+                // preview Theme.background exactly: the elevated surface read lighter than the applied color
+                colors: [Theme._tones.black.background, Theme._tones.charcoal.background, Theme._tones.graphite.background]
                 activeIndex: options.findIndex(o => o.value === ShellSettings.baseTone)
                 ringColor: Theme.accent
                 onPicked: (i) => ShellSettings.baseTone = options[i].value

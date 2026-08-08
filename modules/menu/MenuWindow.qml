@@ -105,7 +105,7 @@ PanelWindow {
         readonly property int _powerW: 566
         readonly property int _settingsW: 630
         readonly property bool _settingsNavVisible:
-            activeTab === 1 && settingsNavOpen && !powerOpen
+            activeTab === 1 && !powerOpen
         readonly property bool _railExpanded: _settingsNavVisible || powerOpen
         readonly property int _targetPanelW: activeTab === 1 ? _settingsW
             : powerOpen ? _powerW : _compactW
@@ -140,11 +140,12 @@ PanelWindow {
             ? Motion.panelResize : Motion.panelCollapse
         readonly property int _railMotionEasing: _railExpanded
             ? Easing.OutQuint : Easing.InOutCubic
-        readonly property int contentW: panelW - railW
+        // live width, not the target: the page reflows ahead of the outer edge otherwise
+        readonly property int contentW: Math.max(1, Math.round(width - railW))
         readonly property int contentPad: activeTab === 1
             ? Math.max(12, Math.min(20,
-                Math.round(12 + (panelW - 398) * 8 / 232)))
-            : _railExpanded && panelW >= 460 ? 18 : 12
+                Math.round(12 + (width - 398) * 8 / 232)))
+            : _railExpanded && width >= 460 ? 18 : 12
         readonly property int innerW: Math.max(1, contentW - contentPad * 2)
         readonly property int idealMinH: 360
         readonly property int minRailFitH: 252
@@ -163,9 +164,6 @@ PanelWindow {
         readonly property var _focusWindow: panel.Window.window
 
         property bool powerOpen: false
-        // pinned wins over the session toggle, so the rail button can never collapse the list
-        property bool _settingsNavOpen: true
-        readonly property bool settingsNavOpen: ShellSettings.settingsNavPinned || _settingsNavOpen
         property bool _loadedDeferred: false
         property bool _geometryReady:  false
         property bool _homeRetained:    false
@@ -186,6 +184,9 @@ PanelWindow {
             } else if (_homeRetained) {
                 _homeUnload.restart()
             }
+
+            if (activeTab === 1)
+                _settingsNavRetained = true
 
             if (!_loadedDeferred) {
                 _settingsUnload.stop()
@@ -236,10 +237,6 @@ PanelWindow {
 
         function switchTab(idx: int): void {
             const tab = Math.max(0, Math.min(2, idx))
-            if (tab === 1) {
-                _settingsNavRetained = true
-                if (activeTab !== 1) _settingsNavOpen = true
-            }
             const focusedItem = _focusWindow ? _focusWindow.activeFocusItem : null
             const focusNeedsReset = focusedItem && (
                 _ownsItem(focusedItem, tabContent)
@@ -250,22 +247,6 @@ PanelWindow {
             if (powerOpen) powerOpen = false
             MenuState.selectTab(tab)
             contentFlick.contentY = 0
-        }
-
-        function toggleSettingsNav(): void {
-            if (activeTab !== 1) {
-                _settingsNavOpen = true
-                switchTab(1)
-                return
-            }
-            if (ShellSettings.settingsNavPinned) {
-                _settingsNavLoader.item?.forceActiveFocus()
-                return
-            }
-            const focusedItem = _focusWindow ? _focusWindow.activeFocusItem : null
-            if (settingsNavOpen && _ownsItem(focusedItem, _settingsNavLoader.item))
-                _railSettings.forceActiveFocus()
-            _settingsNavOpen = !settingsNavOpen
         }
 
         function closePowerAndRestoreFocus(): void {
@@ -317,19 +298,8 @@ PanelWindow {
                     panel.forceActiveFocus()
                 } else {
                     _closedUnload.restart()
-                    _sectionScrollReset.stop()
                 }
             }
-            function onSettingsSectionChanged() {
-                if (MenuState.open && panel.activeTab === 1)
-                    _sectionScrollReset.restart()
-            }
-        }
-
-        Timer {
-            id: _sectionScrollReset
-            interval: Motion.pageOut
-            onTriggered: contentFlick.contentY = 0
         }
 
         Timer {
@@ -340,9 +310,14 @@ PanelWindow {
 
         Timer {
             id: _settingsUnload
-            // warm window: cheap Home/Settings comparisons without a session-long retain
+            // Keep Settings warm briefly for quick comparisons, then release
+            // both the page and its category delegates together.
             interval: 8000
-            onTriggered: if (panel.activeTab !== 1) panel._settingsRetained = false
+            onTriggered: {
+                if (panel.activeTab === 1) return
+                panel._settingsRetained = false
+                panel._settingsNavRetained = false
+            }
         }
 
         Timer {
@@ -386,9 +361,7 @@ PanelWindow {
         width:  panelW
         height: targetPanelH
 
-        // matches railW's own curve: the panel only ever changes width in lockstep with the rail
-        // expanding/collapsing (settings tab, power rail), so a mismatched duration/easing here
-        // reads as the panel's outer edge and the rail's inner edge disagreeing mid-motion
+        // must match railW's curve, or the panel's outer edge and the rail's inner edge disagree mid-motion
         MotionBehavior on width {
             gate: panel._geometryReady && panel.open
             NumberAnimation {
@@ -404,7 +377,8 @@ PanelWindow {
                 velocity: Motion.panelVelocity
                 duration: Motion.panelResize
                 maximumEasingTime: Motion.panelResize
-                reversingMode: SmoothedAnimation.Sync
+                // Immediate retargets without carrying the old velocity; Sync snaps the panel edge on a reversal
+                reversingMode: SmoothedAnimation.Immediate
             }
         }
 
@@ -444,7 +418,11 @@ PanelWindow {
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
                     vertical: true
+                    // The expanded drawer is declared later, so keep the rail
+                    // edge above its surface instead of letting it paint over it.
+                    z: 20
                     color: Theme.menuDivider
+                    ColorFade on color {}
                 }
 
                 Rectangle {
@@ -492,7 +470,6 @@ PanelWindow {
                         sourceComponent: Component {
                             SettingsNav {
                                 powerOpen: panel.powerOpen
-                                navigationVisible: panel._settingsNavVisible
                                 onCurrentPageRetapped: contentFlick.contentY = 0
                             }
                         }
@@ -612,14 +589,17 @@ PanelWindow {
                     railW: panel.railCollapsedW
                     glyph: "󰒓"
                     label: "Settings"
-                    accessibleDescription: panel.activeTab !== 1 ? "Open Settings"
-                        : ShellSettings.settingsNavPinned ? "Focus the settings sidebar"
-                        : panel.settingsNavOpen ? "Collapse the settings sidebar"
-                        : "Expand the settings sidebar"
+                    accessibleDescription: panel.activeTab === 1
+                        ? "Focus Settings categories" : "Open Settings"
                     active: panel.activeTab === 1
                     KeyNavigation.up: _railRecent
                     KeyNavigation.down: _railPower
-                    onTapped: panel.toggleSettingsNav()
+                    onTapped: {
+                        if (panel.activeTab === 1)
+                            _settingsNavLoader.item?.focusNavigation()
+                        else
+                            panel.switchTab(1)
+                    }
                 }
             }
 
@@ -836,6 +816,7 @@ PanelWindow {
                                 width: parent.width
                                 active: panel.activeTab === 1 && MenuState.open
                                 powerOpen: panel.powerOpen
+                                onSectionSwapped: contentFlick.contentY = 0
                             }
                         }
                     }

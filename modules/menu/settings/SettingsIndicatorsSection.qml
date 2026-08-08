@@ -32,13 +32,11 @@ Column {
     SettingsCard {
         ToggleRow {
             glyph: "󰍽"; label: "Hover highlight"
-            description: "Tint bar items when the pointer is over them"
             checked: ShellSettings.barHoverHighlight
             onToggled: nextChecked => ShellSettings.barHoverHighlight = nextChecked
         }
         ToggleRow {
             glyph: "󰈈"; label: "Reveal values on hover"
-            description: "Battery, volume, brightness, and workspace numbers"
             checked: ShellSettings.valuesOnHover
             onToggled: nextChecked => ShellSettings.valuesOnHover = nextChecked
         }
@@ -47,7 +45,7 @@ Column {
             ToggleRow {
                 glyph: "󰦣"; label: "Compact level bars"
                 checked: ShellSettings.hoverLevelBar
-                description: "Show battery, volume, and brightness levels before hover"
+                description: "Keep levels visible"
                 onToggled: nextChecked => ShellSettings.hoverLevelBar = nextChecked
             }
         }
@@ -78,8 +76,7 @@ Column {
             }
         }
         ToggleRow {
-            glyph: "󰦝"; label: "Link beside VPN"
-            description: "Show Wi-Fi or Ethernet next to the VPN icon"
+            glyph: "󰦝"; label: "Connection beside VPN"
             checked: ShellSettings.netVpnShowLink
             available: Network.toolAvailable
             dependsNote: "No NetworkManager"

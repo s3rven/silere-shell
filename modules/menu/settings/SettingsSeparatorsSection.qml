@@ -19,7 +19,7 @@ Column {
             expanded: !ShellSettings.barCompact
             ToggleRow {
                 glyph: "󰁌"; label: "Auto tighten"
-                description: "Tightens spacing when widgets crowd the bar"
+                description: "Tighten when widgets crowd the bar"
                 checked: ShellSettings.barAutoCompact
                 onToggled: nextChecked => ShellSettings.barAutoCompact = nextChecked
             }
@@ -40,7 +40,7 @@ Column {
     SettingsCard {
         SelectRow {
             glyph: ShellSettings.dotTextGlyph; label: "Style"
-            description: "Marker between bar widgets"
+            description: "Divider between widgets"
             currentValue: ShellSettings.dotStyle
             model: [
                 { value: "line",  label: "Line"       },

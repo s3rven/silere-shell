@@ -31,7 +31,7 @@ Column {
     SettingsCard {
         ControlRow {
             glyph: "󰦛"
-            title: root._armed ? "Confirm reset" : "Restore default settings"
+            title: root._armed ? "Confirm reset" : "Restore defaults"
             status: ShellSettings.modifiedCount > 0
                 ? ShellSettings.modifiedCount + (ShellSettings.modifiedCount === 1
                     ? " setting changed" : " settings changed")
@@ -51,9 +51,7 @@ Column {
             }
         }
         HintText {
-            text: "Restores appearance, behavior, and layout to their built-in defaults. "
-                + "Your wallpaper theme and calendar marks are untouched. "
-                + "The current settings are copied to settings.pre-reset.bak.json first."
+            text: "Backs up current settings before resetting. Wallpaper colors and calendar marks stay."
         }
     }
 
@@ -89,8 +87,8 @@ Column {
         ControlRow {
             visible: SystemTools.ready && root._issues.length === 0
             glyph: "󰗠"
-            title: "Everything Silere needs is present"
-            status: "No feature is hidden for a missing dependency"
+            title: "All optional tools found"
+            status: "No features are hidden"
             available: false
         }
         ControlRow {
@@ -112,8 +110,7 @@ Column {
         }
         HintText {
             visible: root._issues.length > 0
-            text: "Silere hides a feature rather than showing it broken. Installing the package "
-                + "named here turns the matching feature back on with no further setup."
+            text: "Install the listed package to enable its feature."
         }
     }
 }

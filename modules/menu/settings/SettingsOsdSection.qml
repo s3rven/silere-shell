@@ -9,7 +9,6 @@ Column {
     SettingsCard {
         ToggleRow {
             glyph: "󱀅"; label: "On-screen display"
-            description: "Show feedback when volume or brightness changes"
             checked: ShellSettings.osdEnabled
             onToggled: nextChecked => ShellSettings.osdEnabled = nextChecked
         }
@@ -17,7 +16,7 @@ Column {
             expanded: ShellSettings.osdEnabled
             ToggleRow {
                 glyph: "󰀱"; label: "Show in bar"
-                description: "Volume and brightness in the bar center"
+                description: "Use bar center instead of a popup"
                 checked: ShellSettings.osdBarIntegrated
                 onToggled: nextChecked => ShellSettings.osdBarIntegrated = nextChecked
             }
@@ -53,7 +52,7 @@ Column {
             }
             ToggleRow {
                 glyph: "󰓎"; label: "Volume emphasis"
-                description: "Warm tint as volume nears max"
+                description: "Warm tint near maximum"
                 checked: ShellSettings.osdVolumeTint
                 onToggled: nextChecked => ShellSettings.osdVolumeTint = nextChecked
             }

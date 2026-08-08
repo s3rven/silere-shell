@@ -13,7 +13,6 @@ Column {
     SettingsCard {
         SelectRow {
             glyph: "󰛖"; label: "Font"
-            description: "Typeface used for text and shell icons"
             currentValue: ShellSettings.fontFamily
             model: {
                 const m = [{
@@ -48,7 +47,6 @@ Column {
         }
         SelectRow {
             glyph: "󰍉"; label: "UI scale"
-            description: "Text and icon size throughout the shell"
             currentValue: ShellSettings.uiScale
             fallbackLabel: Math.round(ShellSettings.uiScale * 100) + "%"
             model: [
@@ -62,19 +60,18 @@ Column {
         }
         ToggleRow {
             glyph: "󰹑"; label: "High contrast"
-            description: "Strengthen boundaries and selected states"
             checked: ShellSettings.highContrast
             onToggled: nextChecked => ShellSettings.highContrast = nextChecked
         }
         ToggleRow {
-            glyph: "󱂪"; label: "Expand all settings categories"
-            description: "Open every group at once instead of one at a time; each still collapses on click"
+            glyph: "󱂪"; label: "Keep groups open"
+            description: "Show multiple category groups"
             checked: ShellSettings.settingsNavPinned
             onToggled: nextChecked => ShellSettings.settingsNavPinned = nextChecked
         }
         ToggleRow {
             glyph: "󱖳"; label: "Reduce motion"
-            description: "Use instant transitions throughout the shell"
+            description: "Disable transitions"
             checked: ShellSettings.reduceMotion
             onToggled: nextChecked => ShellSettings.reduceMotion = nextChecked
         }
@@ -89,8 +86,7 @@ Column {
 
         SelectRow {
             visible: Brightness.devices.length > 1
-            glyph: "󰃟"; label: "Brightness control"
-            description: "Display adjusted by the brightness widget"
+            glyph: "󰃟"; label: "Brightness display"
             currentValue: Brightness.deviceChoice
             model: Brightness.deviceChoices
             onChosen: (v) => ShellSettings.brightnessDevice = v
@@ -98,8 +94,8 @@ Column {
 
         SelectRow {
             visible: Quickshell.screens.length > 1
-            glyph: "󰍹"; label: "Popups and OSD"
-            description: "Choose a display or follow keyboard focus"
+            glyph: "󰍹"; label: "Overlay display"
+            description: "Follow focus or choose a display"
             currentValue: ShellSettings.overlayMonitor
             fallbackLabel: ShellSettings.overlayMonitor.length > 0
                 ? ShellSettings.overlayMonitor + " (unavailable)" : "Follow focus"

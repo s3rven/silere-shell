@@ -80,7 +80,7 @@ Column {
     SettingsCard {
         ToggleRow {
             glyph: "󰘷"; label: "Shell shadows"
-            description: "Popups, notifications and the OSD; the bar casts one only while floating"
+            description: "Popups, notifications, OSD, and floating bar"
             checked: ShellSettings.barShadow
             onToggled: nextChecked => ShellSettings.barShadow = nextChecked
         }

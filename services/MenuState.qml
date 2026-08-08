@@ -19,46 +19,48 @@ Singleton {
 
     property string settingsSection: "theme"
 
+    // Order by user impact and frequency: global appearance first, daily bar
+    // surfaces next, then feedback; operational and recovery tools stay last.
     readonly property var settingsTree: [
         { glyph: "󰉦", label: "Appearance", children: [
             { glyph: "󰉦", label: "Theme",       section: "theme",
-              description: "Palette, accent, contrast, and outlines" }
+              description: "Colors, accent, and contrast" },
+            { glyph: "󰍉", label: "Interface", section: "interface",
+              description: "Font, scale, motion, and displays" }
         ]},
         { glyph: "󰕮", label: "Bar", children: [
             { glyph: "󰍹", label: "Layout",    section: "surface",
-              description: "Position, size, shape, and surface behavior" },
-            { glyph: "󰻂", label: "Spacing",   section: "separators",
-              description: "Widget gaps, compacting, and separators" },
+              description: "Bar position, size, and shape" },
             { glyph: "󰍴", label: "Underline", section: "underline",
-              description: "Static line or reactive event glow" }
+              description: "Line and event glow" },
+            { glyph: "󰻂", label: "Spacing",   section: "separators",
+              description: "Gaps and dividers" }
         ]},
         { glyph: "󰀻", label: "Widgets", children: [
-            { glyph: "󰀻", label: "Arrange",    section: "widgets",
-              description: "Order and visibility of bar widgets" },
-            { glyph: "󰅐", label: "Clock",      section: "clock",
-              description: "Date, time format, and seconds" },
             { glyph: "󰕰", label: "Workspaces", section: "workspaces",
-              description: "Workspace layout, labels, and window counts" },
+              description: "Markers, labels, and app icons" },
+            { glyph: "󰅐", label: "Clock",      section: "clock",
+              description: "Date and time" },
             { glyph: "󰝚", label: "Media",      section: "media",
-              description: "Track text and audio visualization" },
+              description: "Track details and visualizer" },
             { glyph: "󰈈", label: "Indicators", section: "indicators",
-              description: "Titles, status widgets, and hover behavior" }
+              description: "Titles, status, and hover" },
+            { glyph: "󰀻", label: "Order & visibility", section: "widgets",
+              description: "Choose and reorder bar widgets" }
         ]},
         { glyph: "󰂚", label: "Feedback", children: [
             { glyph: "󰂚", label: "Notifications", section: "popups",
-              description: "Placement, timing, and quiet hours" },
+              description: "Position, timeout, and quiet hours" },
             { glyph: "󱀅", label: "OSD",    section: "osd",
               description: "Volume and brightness feedback" },
             { glyph: "󰀦", label: "Alerts", section: "warnings",
-              description: "Battery and temperature warning thresholds" }
+              description: "Battery and temperature limits" }
         ]},
         { glyph: "󰒓", label: "System", children: [
-            { glyph: "󰍉", label: "Interface", section: "interface",
-              description: "Font, scale, contrast, motion, and display routing" },
             { glyph: "󰚰", label: "Updates", section: "updates",
               description: "Shell releases and system packages" },
             { glyph: "󰦛", label: "Maintenance", section: "maintenance",
-              description: "Restore settings to their built-in defaults" }
+              description: "Defaults and dependencies" }
         ]}
     ]
 
