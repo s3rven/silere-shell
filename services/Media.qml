@@ -144,6 +144,7 @@ Singleton {
 
     readonly property string artUrl: {
         if (!player) return ""
+        // remote art is allowed on purpose where notification icons are denied: mpris art genuinely is a url
         // Spotify's Linux client reports an open.spotify.com/image link that 404s
         return (player.trackArtUrl || "")
             .replace("https://open.spotify.com/image/", "https://i.scdn.co/image/")
