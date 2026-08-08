@@ -95,7 +95,9 @@ Singleton {
     Connections {
         target: MenuState
         function onOpenChanged() {
-            if (MenuState.open && root.toolAvailable && !root.ready) {
+            if (MenuState.open && root.toolAvailable) {
+                // Backlight devices can appear after login (dock/GPU hot-plug).
+                // Relist on the user-driven menu edge instead of polling while idle.
                 root._reprobeAttempts = 0
                 _reprobe.restart()
             }
