@@ -6,6 +6,9 @@ Item {
 
     property bool expanded: true
     default property alias rows: _content.data
+    // Semantic presence changes once per toggle. Divider/corner discovery can
+    // depend on this instead of rereading animated height every frame.
+    readonly property bool layoutPresent: expanded
 
     readonly property bool isRadiusGroup: true
     readonly property Item radiusColumn: _content
@@ -22,7 +25,7 @@ Item {
     height:  expanded ? _content.implicitHeight : 0
     clip:    true
     enabled: expanded
-    visible: height > 0.5
+    visible: expanded || height > 0.5
 
     Disclosure on height { expanded: root.expanded }
 

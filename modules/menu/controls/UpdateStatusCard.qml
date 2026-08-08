@@ -25,6 +25,7 @@ Rectangle {
     property string secondaryAccessibleName: "Refresh"
     property bool secondaryEnabled: true
     property bool secondaryShown: false
+    readonly property bool layoutPresent: visible
 
     readonly property bool _compactActions: width < 300
 

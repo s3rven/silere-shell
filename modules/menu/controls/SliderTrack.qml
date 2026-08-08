@@ -19,6 +19,8 @@ Item {
     property color trackColor: Theme.menuTrack
     property real hitPad: 10
 
+    implicitHeight: 16
+
     readonly property real shownValue: _shownValue
     readonly property bool dragging: _ma.pressed
     property real _shownValue: value
@@ -48,6 +50,7 @@ Item {
         _setFromUser(_shownValue + dir * baseStep * mult)
     }
     function handleKey(event): void {
+        if (!root.interactive) return
         const big = (event.modifiers & Qt.ShiftModifier) ? 10 : 1
         switch (event.key) {
         case Qt.Key_Left:

@@ -30,13 +30,23 @@ Rectangle {
 
     RowDividers { column: col }
 
+    function _present(item): bool {
+        if (!item) return false
+        if (item.layoutPresent !== undefined)
+            return item.layoutPresent === true
+        if (item.topRadius !== undefined
+                || item.suppressDividerAbove !== undefined)
+            return item.visible
+        return item.visible && item.height > 0.5
+    }
+
     function _edgeEl(container, first): var {
         const ch = container.children
         const end  = first ? ch.length : -1
         const step = first ? 1 : -1
         for (let i = first ? 0 : ch.length - 1; i !== end; i += step) {
             const c = ch[i]
-            if (!c || !c.visible || !(c.height > 0.5)) continue
+            if (!root._present(c)) continue
             if (c.isRadiusGroup === true && c.radiusColumn) {
                 const inner = root._edgeEl(c.radiusColumn, first)
                 if (inner) return inner
@@ -46,6 +56,10 @@ Rectangle {
         }
         return null
     }
+
+    // bindings, not a height handler: these identities change only when a row appears or disappears
+    readonly property var _firstEdge: root._edgeEl(col, true)
+    readonly property var _lastEdge: root._edgeEl(col, false)
     function _applyRows(container, leftOffset, first, last) {
         const baseX = leftOffset ?? 0
         const ch = container.children
@@ -72,14 +86,13 @@ Rectangle {
     }
 
     function _applyRadii() {
-        const fe = root._edgeEl(col, true)
-        const le = root._edgeEl(col, false)
-        root._applyRows(col, 0, fe, le)
+        root._applyRows(col, 0, root._firstEdge, root._lastEdge)
     }
 
     // zero-interval timer, not Qt.callLater: it dies with the card, where a callLater deferred past a section swap fires in a dead context and warns
     Timer { id: _radiiDefer; interval: 0; onTriggered: root._applyRadii() }
-    onImplicitHeightChanged: _radiiDefer.restart()
+    on_FirstEdgeChanged:     _radiiDefer.restart()
+    on_LastEdgeChanged:      _radiiDefer.restart()
     // a Column keeps counting hidden children, so a card in an unshown section flips visible without changing implicitHeight
     onVisibleChanged:        _radiiDefer.restart()
     Component.onCompleted:   root._applyRadii()
