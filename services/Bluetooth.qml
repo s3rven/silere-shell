@@ -11,7 +11,9 @@ Singleton {
     readonly property bool available: adapter !== null
     readonly property bool enabled:   adapter ? adapter.enabled : false
 
-    readonly property var _devices: (adapter && adapter.devices) ? adapter.devices.values : []
+    // Backend models can be momentarily empty while BlueZ re-enumerates.
+    readonly property var _devices: (adapter && adapter.devices)
+        ? (adapter.devices.values || []) : []
 
     readonly property int connectedCount: {
         let n = 0

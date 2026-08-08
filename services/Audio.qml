@@ -41,7 +41,8 @@ Singleton {
 
     readonly property var sinks: {
         const out = []
-        const all = Pipewire.nodes.values
+        // PipeWire briefly detaches its node model while reconnecting.
+        const all = Pipewire.nodes ? (Pipewire.nodes.values || []) : []
         for (let i = 0; i < all.length; i++) {
             const n = all[i]
             if (n && n.isSink && !n.isStream) out.push(n)

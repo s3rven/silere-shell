@@ -154,6 +154,15 @@ else
   ok "Bluetooth" "battery labels use a validated shared conversion"
 fi
 
+section "live backend collection fallbacks"
+if grep -qF 'const all = Pipewire.nodes.values' services/Audio.qml; then
+  fail "PipeWire node model must tolerate a reconnecting backend"
+elif grep -qF '? adapter.devices.values : []' services/Bluetooth.qml; then
+  fail "Bluetooth device model must tolerate backend re-enumeration"
+else
+  ok "collections" "live backend models have empty-state fallbacks"
+fi
+
 section "public Quickshell imports"
 if grep -R -n -F 'import Quickshell.Wayland._' --include='*.qml' .; then
   fail "QML files must not import private Quickshell Wayland modules"
