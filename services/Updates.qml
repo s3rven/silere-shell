@@ -119,7 +119,8 @@ Singleton {
         const split = lines.length > 1 ? lines[1].trim() : ""
         if (split.startsWith("SPLIT ")) {
             const p = split.split(/\s+/)
-            repo = parseInt(p[1]); aur = parseInt(p[2])
+            const r = parseInt(p[1]), a = parseInt(p[2])
+            if (!isNaN(r) && !isNaN(a)) { repo = r; aur = a }
             start = 2
         }
         // repo lines come first, then AUR; budget for the AUR tail so a long repo list can't crowd it out
