@@ -4,7 +4,7 @@ import QtQuick
 import "../../../config"
 import "../../../services"
 
-// no render layer: an FBO fringes the small sprite when scaled, and the even sizes below keep the gem on whole pixels
+// no render layer: an FBO fringes the small sprite when scaled, and the even sprite sizes keep the gem on whole pixels
 Item {
     id: root
 
@@ -29,8 +29,8 @@ Item {
     readonly property real centerX: x + width / 2
     readonly property real centerY: y + height / 2
     readonly property real trailX: _trailX + width / 2
-    // a 2px line trailed by the sprite's comet reads as a blob, not a streak
-    readonly property real trailWeight: _bar ? 0.4 : 1
+    // the line keeps a slimmer trail than the sprites, but enough weight to read as motion
+    readonly property real trailWeight: _bar ? 0.55 : 1
     readonly property color tint: root.urgent ? Theme.warning : Theme.accent
 
     function pulse(): void {
@@ -39,19 +39,19 @@ Item {
         glint()
     }
     function glint(): void {
-        if (!root.gem || ShellSettings.reduceMotion) return
+        if ((!root.gem && !root._bar) || ShellSettings.reduceMotion) return
         _glintAnim.restart()
     }
 
     readonly property real _sprite: _dot ? 2 * Math.round(rowHeight / 6)
                                          : 2 * Math.round(rowHeight / 4)
     // settled width for the caller to centre on; feeding the animated one back into targetX restarts the slide every frame
-    readonly property real markerWidth: _bar ? Math.max(10, cellWidth - 6) : _sprite
+    readonly property real markerWidth: _bar ? Math.max(14, cellWidth - 8) : _sprite
     width:  markerWidth
-    height: _bar ? 2 : _sprite
-    // whole multiple of 4 from the row top: a 1px-phased underline doubles on a fractional display
-    y: _bar ? rowHeight - 4 : (rowHeight - height) / 2
-    opacity: shown ? 0.92 : 0
+    height: _bar ? 3 : _sprite
+    // keep the line two pixels clear of the cell edge so its halo is not clipped by the bar
+    y: _bar ? rowHeight - 5 : (rowHeight - height) / 2
+    opacity: shown ? (_bar ? 0.98 : 0.92) : 0
     visible: opacity > 0.01
 
     x: targetX
@@ -73,9 +73,9 @@ Item {
                                               (_tapScale   - 1.0) * 2.2,
                                               (_moveScale  - 1.0) * 3.0)
 
-    // the sprite bounces; a full-cell underline scaled that hard just overhangs its cell
+    // the sprite bounces; the wider line gets only a restrained version of that response
     readonly property real _scaleStack: _hoverScale * _tapScale * _moveScale * _specialScale
-    scale: _bar ? 1 + (_scaleStack - 1) * 0.35 : _scaleStack
+    scale: _bar ? 1 + (_scaleStack - 1) * 0.22 : _scaleStack
     transformOrigin: Item.Center
 
     Rectangle {
@@ -153,29 +153,29 @@ Item {
         MotionBehavior on color   {ColorAnimation { duration: Motion.ms(150) } }
     }
 
-    // blooms up off the line: centred it would spill a pixel past the row's bottom edge
     Rectangle {
         anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: parent.bottom
-        width:  parent.width + 6
-        height: parent.height + 6
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.verticalCenterOffset: 1
+        width: parent.width + 4
+        height: parent.height + 2
         radius: height / 2
         antialiasing: true
-        color: Theme.withAlpha(root.tint, 0.22)
-        opacity: root._bar ? 0.12 + root._energy * 0.50 : 0
-        visible: root._bar && opacity > 0.01
+        color: Qt.rgba(0, 0, 0, 0.30)
+        opacity: root._bar ? 0.45 : 0
+        visible: root._bar
     }
 
-    // second stroke above the line stands in for the gem's special-workspace frame
+    // a compact second rail distinguishes a special workspace without changing the main target
     Rectangle {
         anchors.horizontalCenter: parent.horizontalCenter
-        y: -4
-        width:  parent.width * 0.55
-        height: parent.height
+        y: -3
+        width:  Math.max(7, parent.width * 0.42)
+        height: 2
         radius: height / 2
         antialiasing: true
         color: root.tint
-        opacity: root._bar ? root._specialOn * 1.2 : 0
+        opacity: root._bar ? root._specialOn * 1.35 : 0
         visible: root._bar && opacity > 0.01
     }
 
@@ -215,9 +215,9 @@ Item {
         Item {
             anchors.fill: parent
             clip: true
-            visible: _glintAnim.running && root.gem
+            visible: _glintAnim.running && (root.gem || root._bar)
             Rectangle {
-                width: 2
+                width: root._bar ? 7 : 2
                 height: parent.height + 8
                 radius: 1
                 antialiasing: true
@@ -227,9 +227,21 @@ Item {
                     return Math.round(p * (parent.width + width)) - width
                 }
                 y: -4
-                rotation: -18
-                color: Qt.rgba(1, 1, 1, 0.48)
+                rotation: root._bar ? 0 : -18
+                color: Qt.rgba(1, 1, 1, root._bar ? 0.34 : 0.48)
             }
+        }
+
+        Rectangle {
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.top: parent.top
+            width: Math.min(10, Math.max(5, parent.width * 0.34))
+            height: 1
+            radius: height / 2
+            antialiasing: true
+            color: Qt.rgba(1, 1, 1, 0.62)
+            opacity: root._bar ? 0.58 + root._energy * 0.24 : 0
+            visible: root._bar
         }
     }
 
@@ -273,7 +285,7 @@ Item {
             root._glintDir = (root.targetX >= root.x) ? 1 : -1
             root._glint = -1.15
         } }
-        NumberAnimation { target: root; property: "_glint"; to: 1.15; duration: Motion.ms(260); easing.type: Easing.OutCubic }
+        NumberAnimation { target: root; property: "_glint"; to: 1.15; duration: Motion.ms(root._bar ? 220 : 260); easing.type: Easing.OutCubic }
         ScriptAction { script: root._glint = -1.15 }
     }
 
@@ -316,10 +328,11 @@ Item {
     }
     Connections {
         target: MenuState
-        enabled: !ShellSettings.reduceMotion && root.barActive && !root._bar
+        enabled: !ShellSettings.reduceMotion && root.barActive
         function onOpenChanged() {
-            if (MenuState.open && root.menuTargets)
-                _menuRippleAnim.restart()
+            if (!MenuState.open || !root.menuTargets) return
+            if (root._bar) root.glint()
+            else _menuRippleAnim.restart()
         }
     }
 }
