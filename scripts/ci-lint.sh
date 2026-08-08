@@ -106,6 +106,16 @@ check_qml_locale_count services/Network.qml 1
 check_qml_locale_count services/PowerProfiles.qml 1
 check_qml_locale_count services/Updates.qml 1
 
+section "optional tool detection"
+# The status of the final command in a shell `for` loop becomes the loop's
+# status. Since fc-list is optional and currently last, an explicit success is
+# required or its absence makes SystemTools discard every earlier match.
+if grep -qF '"done; exit 0"]' services/SystemTools.qml; then
+  ok "SystemTools" "optional final lookup cannot fail the completed probe"
+else
+  fail "SystemTools tool probe must exit successfully after scanning optional tools"
+fi
+
 section "credential handling"
 if grep -qF 'cmd.push("password")' services/Network.qml; then
   fail "Wi-Fi credentials must not be passed in process argv"

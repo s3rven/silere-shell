@@ -53,7 +53,9 @@ Singleton {
             "for t in brightnessctl inotifywait nmcli cava hyprsunset hyprlock systemctl loginctl hyprctl pgrep pkill notify-send " +
             "busctl checkupdates paru yay timeout apt dnf zypper xbps-install powerprofilesctl fc-list; do " +
             "  command -v \"$t\" >/dev/null 2>&1 && echo \"$t\"; " +
-            "done"])
+            // The last lookup is optional; do not inherit its `command -v`
+            // status and discard every tool found before it.
+            "done; exit 0"])
     }
 
     Component.onCompleted: refresh()
@@ -62,7 +64,13 @@ Singleton {
         id: _checkProc
         stdout: StdioCollector { id: _checkOut }
         onExited: (code) => {
-            if (code !== 0) { root.ready = true; return }
+            if (code !== 0) {
+                // A refresh must not leave removed tools advertised forever.
+                root._tools = ({})
+                root.packageFamily = ""
+                root.ready = true
+                return
+            }
             const found = {}
             let family = ""
             const lines = (_checkOut.text || "").split(/\r?\n/)
