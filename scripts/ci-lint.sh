@@ -145,6 +145,15 @@ else
   ok "Wi-Fi" "credentials stay out of argv"
 fi
 
+section "Bluetooth battery normalization"
+if ! grep -qF 'function batteryPercent(device)' services/Bluetooth.qml; then
+  fail "Bluetooth battery conversion must have one validated service helper"
+elif grep -qF 'Math.round(modelData.battery' modules/menu/BluetoothList.qml; then
+  fail "Bluetooth menu must use the shared battery conversion"
+else
+  ok "Bluetooth" "battery labels use a validated shared conversion"
+fi
+
 section "public Quickshell imports"
 if grep -R -n -F 'import Quickshell.Wayland._' --include='*.qml' .; then
   fail "QML files must not import private Quickshell Wayland modules"

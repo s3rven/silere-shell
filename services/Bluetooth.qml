@@ -28,11 +28,20 @@ Singleton {
         return ""
     }
 
+    // BlueZ can briefly advertise batteryAvailable before the percentage
+    // arrives. Keep the conversion and validation in one place so every UI
+    // surface falls back to its non-battery label instead of showing NaN%.
+    function batteryPercent(device): int {
+        if (!device || !device.batteryAvailable) return -1
+        const raw = Number(device.battery)
+        if (!isFinite(raw) || raw < 0) return -1
+        return Math.max(0, Math.min(100, Math.round(raw > 1 ? raw : raw * 100)))
+    }
+
     readonly property int connectedBattery: {
         for (let i = 0; i < _devices.length; i++) {
             const d = _devices[i]
-            if (d && d.connected && d.batteryAvailable)
-                return Math.round(d.battery > 1 ? d.battery : d.battery * 100)
+            if (d && d.connected) return root.batteryPercent(d)
         }
         return -1
     }

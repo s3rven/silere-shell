@@ -115,13 +115,13 @@ Item {
                 width: _list.width
 
                 readonly property bool   _armed: root._armedAddr === modelData.address && modelData.connected
-                readonly property int _batt: Math.round(modelData.battery > 1 ? modelData.battery : modelData.battery * 100)
+                readonly property int _batt: Bluetooth.batteryPercent(modelData)
                 readonly property string _state:
                     _armed ? "Disconnect?"
                     : modelData.pairing ? "Cancel?"
                     : modelData.state === Bt.BluetoothDeviceState.Connecting    ? "Connecting…"
                     : modelData.state === Bt.BluetoothDeviceState.Disconnecting ? "Disconnecting…"
-                    : modelData.connected ? (modelData.batteryAvailable ? _batt + "%" : "Connected")
+                    : modelData.connected ? (_batt >= 0 ? _batt + "%" : "Connected")
                     : modelData.paired    ? "Paired"
                     : "Pair"
 
