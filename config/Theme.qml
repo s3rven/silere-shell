@@ -42,8 +42,8 @@ Singleton {
     readonly property color _warnAnchor: "#d4ad77"
     readonly property color _okAnchor:   "#94bd8b"
     readonly property color error:      _n ? "#dd92a2" : MatugenTheme.error
-    readonly property color warning:    _n ? _warnAnchor : mix(_warnAnchor, MatugenTheme.warning, 0.30)
-    readonly property color success:    _n ? _okAnchor   : mix(_okAnchor,   MatugenTheme.success, 0.30)
+    readonly property color warning:    _n ? _warnAnchor : tintKeepingChroma(_warnAnchor, MatugenTheme.warning, 0.30)
+    readonly property color success:    _n ? _okAnchor   : tintKeepingChroma(_okAnchor,   MatugenTheme.success, 0.30)
 
     function _lin(c: real): real {
         return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
@@ -129,6 +129,39 @@ Singleton {
             base.b * (1 - a) + tint.b * a,
             1.0
         )
+    }
+
+    function _unlin(c: real): real {
+        return c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055
+    }
+
+    function _labOf(c: color): var {
+        const r = _lin(c.r), g = _lin(c.g), b = _lin(c.b)
+        const f = t => t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116
+        const fx = f((0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047)
+        const fy = f(0.2126 * r + 0.7152 * g + 0.0722 * b)
+        const fz = f((0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883)
+        return { L: 116 * fy - 16, a: 500 * (fx - fy), b: 200 * (fy - fz) }
+    }
+
+    function _labColor(L: real, a: real, b: real): color {
+        const fy = (L + 16) / 116, fx = fy + a / 500, fz = fy - b / 200
+        const g = t => { const c = t * t * t; return c > 0.008856 ? c : (t - 16 / 116) / 7.787 }
+        const X = g(fx) * 0.95047, Y = g(fy), Z = g(fz) * 1.08883
+        const ch = v => Math.max(0, Math.min(1, _unlin(Math.max(0, Math.min(1, v)))))
+        return Qt.rgba(ch( 3.2406 * X - 1.5372 * Y - 0.4986 * Z),
+                       ch(-0.9689 * X + 1.8758 * Y + 0.0415 * Z),
+                       ch( 0.0557 * X - 0.2040 * Y + 1.0570 * Z), 1.0)
+    }
+
+    // an srgb lerp between distant hues cancels chroma, so put the anchor's chroma back after
+    function tintKeepingChroma(anchor: color, tint: color, a: real): color {
+        const blended = mix(anchor, tint, a)
+        const m = _labOf(blended), src = _labOf(anchor)
+        const cm = Math.sqrt(m.a * m.a + m.b * m.b)
+        if (cm < 0.0001) return blended
+        const k = Math.sqrt(src.a * src.a + src.b * src.b) / cm
+        return _labColor(m.L, m.a * k, m.b * k)
     }
 
     function rowFill(hovered: bool): color {
