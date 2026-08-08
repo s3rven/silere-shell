@@ -165,6 +165,8 @@ Item {
                         modelData.glyph === undefined || modelData.glyph === null
                             ? "" : String(modelData.glyph)
 
+                    FocusVisual { id: _optionFocusVisual; target: _option }
+
                     width: _choiceGroup.cellW
                         + (index < _choiceGroup.cellRemainder ? 1 : 0)
                     height: _choiceGroup.height
@@ -174,6 +176,16 @@ Item {
                     Accessible.checked: active
                     Accessible.onPressAction: {
                         if (root.enabled) root.chosen(modelData.value)
+                    }
+                    Keys.onPressed: event => {
+                        _optionFocusVisual.noteKeyboardInput()
+                        if (event.key === Qt.Key_Home) {
+                            root._focusOption(0, true)
+                            event.accepted = true
+                        } else if (event.key === Qt.Key_End) {
+                            root._focusOption(_optionRepeater.count - 1, true)
+                            event.accepted = true
+                        }
                     }
 
                     Keys.onSpacePressed: event => {
@@ -207,16 +219,6 @@ Item {
                         root._focusOption(index + 1, true)
                         event.accepted = true
                     }
-                    Keys.onPressed: event => {
-                        if (event.key === Qt.Key_Home) {
-                            root._focusOption(0, true)
-                            event.accepted = true
-                        } else if (event.key === Qt.Key_End) {
-                            root._focusOption(_optionRepeater.count - 1, true)
-                            event.accepted = true
-                        }
-                    }
-
                     HoverHandler {
                         id: _hover
                         enabled: root.enabled
@@ -226,7 +228,10 @@ Item {
                     TapHandler {
                         id: _tap
                         enabled: root.enabled
-                        onTapped: root.chosen(_option.modelData.value)
+                        onTapped: {
+                            _optionFocusVisual.takePointerFocus()
+                            root.chosen(_option.modelData.value)
+                        }
                     }
 
                     Rectangle {
@@ -245,7 +250,7 @@ Item {
                                     : ShellSettings.neutralTheme ? 0.16 : 0.19)
                             : _tap.pressed
                                 ? Theme.withAlpha(Theme.text, 0.09)
-                                : _option.activeFocus
+                                : _optionFocusVisual.active
                                     ? Theme.withAlpha(root.accentColor, 0.10)
                                 : _hover.hovered
                                     ? Theme.withAlpha(Theme.text, 0.050)
@@ -257,8 +262,8 @@ Item {
                             topRightRadius: _surface.topRightRadius
                             bottomLeftRadius: _surface.bottomLeftRadius
                             bottomRightRadius: _surface.bottomRightRadius
-                            outlineWidth: _option.activeFocus ? 2 : 1
-                            outlineColor: _option.activeFocus
+                            outlineWidth: _optionFocusVisual.active ? 2 : 1
+                            outlineColor: _optionFocusVisual.active
                                 ? Theme.withAlpha(root.accentColor, Theme.focusRingAlpha)
                                 : _option.active
                                     ? Theme.withAlpha(root.accentColor, Theme.lineAlpha(0.15))

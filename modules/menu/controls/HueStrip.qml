@@ -15,6 +15,12 @@ Item {
     property string accessibleName: "Hue"
     property string accessibleDescription: ""
     readonly property real value: Math.round(_wrappedHue(hue) * 360) % 360
+    // Names consumed by Qt's QAccessibleValueInterface.
+    readonly property real minimumValue: 0
+    readonly property real maximumValue: 359
+    readonly property real stepSize: 1
+
+    FocusVisual { id: _focusVisual; target: root }
 
     signal picked(real hue)
 
@@ -41,12 +47,14 @@ Item {
     }
     function _nudgeHue(dir: int, mult: int): void {
         if (!root.enabled || !root.interactive) return
-        root.picked(root._wrappedHue(root.hue + dir * 0.02 * mult))
+        root.picked(root._wrappedHue(root.hue
+            + dir * root.stepSize * mult / 360))
     }
 
-    Keys.onLeftPressed: event => { root._nudgeHue(-1, (event.modifiers & Qt.ShiftModifier) ? 5 : 1); event.accepted = true }
-    Keys.onRightPressed: event => { root._nudgeHue(1, (event.modifiers & Qt.ShiftModifier) ? 5 : 1); event.accepted = true }
+    Keys.onLeftPressed: event => { _focusVisual.noteKeyboardInput(); root._nudgeHue(-1, (event.modifiers & Qt.ShiftModifier) ? 5 : 1); event.accepted = true }
+    Keys.onRightPressed: event => { _focusVisual.noteKeyboardInput(); root._nudgeHue(1, (event.modifiers & Qt.ShiftModifier) ? 5 : 1); event.accepted = true }
     Keys.onPressed: event => {
+        _focusVisual.noteKeyboardInput()
         if (!root.enabled || !root.interactive) return
         if (event.key === Qt.Key_Home) {
             root.picked(0)
@@ -66,15 +74,15 @@ Item {
         anchors.fill: parent
         radius: Theme.radiusInline
         antialiasing: true
-        color: _mouse.containsMouse || root.activeFocus
+        color: _mouse.containsMouse || _focusVisual.active
             ? Theme.mix(Theme.menuControl, Theme.accent, 0.055)
             : Theme.menuControl
         ColorFade on color {}
 
         OutlineBorder {
             radius: _well.radius
-            outlineWidth: root.activeFocus ? 2 : 1
-            outlineColor: root.activeFocus
+            outlineWidth: _focusVisual.active ? 2 : 1
+            outlineColor: _focusVisual.active
                 ? Theme.withAlpha(Theme.accent, Theme.focusRingAlpha)
                 : _mouse.containsMouse ? Theme.menuControlLineHot : Theme.menuControlLine
             ColorFade on outlineColor {}
@@ -108,7 +116,7 @@ Item {
         y: (parent.height - height) / 2
         x: Math.round(_track.x + root._clampedHue(root.hue) * _track.width
             - width / 2)
-        scale: _mouse.pressed ? 0.92 : (_mouse.containsMouse || root.activeFocus ? 1.04 : 1.0)
+        scale: _mouse.pressed ? 0.92 : (_mouse.containsMouse || _focusVisual.active ? 1.04 : 1.0)
         transformOrigin: Item.Center
 
         MotionBehavior on x { gate: !_mouse.pressed; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
@@ -145,7 +153,10 @@ Item {
                 (mx - _track.x) / Math.max(1, _track.width)))
         }
 
-        onPressed: mouse => _set(mouse.x)
+        onPressed: mouse => {
+            _focusVisual.takePointerFocus()
+            _set(mouse.x)
+        }
         onPositionChanged: mouse => { if (pressed) _set(mouse.x) }
     }
 

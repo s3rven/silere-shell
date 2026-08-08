@@ -7,6 +7,10 @@ Item {
 
     property string glyph:     ""
     property real   value:     0
+    // Names consumed by Qt's QAccessibleValueInterface.
+    readonly property real minimumValue: 0
+    readonly property real maximumValue: 1
+    readonly property real stepSize: 0.05
     property string valueText: ""
     property string valueWidthText: "100%"
     property string wheelKey:  "quickslider"
@@ -18,6 +22,7 @@ Item {
     property string expandLabel: "output device"
     // hold the chevron gutter open on a non-expandable row so stacked sliders keep one track length
     property bool   reserveExpandSlot: false
+    property bool   lastExpandFromPointer: false
     readonly property bool _hasChevSlot: root.expandable || root.reserveExpandSlot
     property real   topRadius:    0
     property real   bottomRadius: 0
@@ -28,26 +33,43 @@ Item {
     signal glyphClicked()
     signal expandToggled()
 
+    FocusVisual { id: _focusVisual; target: root }
+
+    function focusFromPointer(): void {
+        _focusVisual.takePointerFocus()
+    }
+
+    function focusFromKeyboard(): void {
+        _focusVisual.noteKeyboardInput()
+        root.forceActiveFocus()
+    }
+
+    function _requestExpand(fromPointer: bool): void {
+        root.lastExpandFromPointer = fromPointer
+        root.expandToggled()
+    }
+
     width:  parent ? parent.width : 0
     implicitHeight: Metrics.rowHeightFor(40)
     height: implicitHeight
 
     function _handleKey(event): void {
+        _focusVisual.noteKeyboardInput()
         if (!root.enabled) return
         if (root.expandable && (event.modifiers & Qt.AltModifier)) {
             if (event.key === Qt.Key_Down) {
-                if (!root.expanded) root.expandToggled()
+                if (!root.expanded) root._requestExpand(false)
                 event.accepted = true
                 return
             }
             if (event.key === Qt.Key_Up) {
-                if (root.expanded) root.expandToggled()
+                if (root.expanded) root._requestExpand(false)
                 event.accepted = true
                 return
             }
         }
         if (root.expandable && root.expanded && event.key === Qt.Key_Escape) {
-            root.expandToggled()
+            root._requestExpand(false)
             event.accepted = true
             return
         }
@@ -71,12 +93,13 @@ Item {
         bottomRadius: root.bottomRadius
         cardInset:    root.cardInset
         leftBleed:    root.cardLeftBleed
-        active:       (_rowHover.hovered || root.activeFocus) && root.enabled
-        focusActive:  root.activeFocus && root.enabled
+        active:       (_rowHover.hovered || _focusVisual.active) && root.enabled
+        focusActive:  _focusVisual.active && root.enabled
     }
 
     Item {
         id: _g
+        FocusVisual { id: _glyphFocusVisual; target: _g }
         anchors.left:           parent.left
         anchors.leftMargin:     14
         anchors.verticalCenter: parent.verticalCenter
@@ -86,6 +109,7 @@ Item {
         Accessible.role: root.glyphClickable ? Accessible.Button : Accessible.NoRole
         Accessible.name: root.glyphActionName
         Accessible.onPressAction: if (root.enabled && root.glyphClickable) root.glyphClicked()
+        Keys.onPressed: _glyphFocusVisual.noteKeyboardInput()
         Keys.onSpacePressed:  event => { if (!event.isAutoRepeat && root.enabled && root.glyphClickable) root.glyphClicked(); event.accepted = true }
         Keys.onReturnPressed: event => { if (!event.isAutoRepeat && root.enabled && root.glyphClickable) root.glyphClicked(); event.accepted = true }
         Keys.onEnterPressed:  event => { if (!event.isAutoRepeat && root.enabled && root.glyphClickable) root.glyphClicked(); event.accepted = true }
@@ -93,7 +117,7 @@ Item {
         ShellText {
             anchors.centerIn: parent
             text: root.glyph
-            color: _g.activeFocus ? Theme.accent
+            color: _glyphFocusVisual.active ? Theme.accent
                  : (root.glyphClickable && _glyphHover.hovered) ? Theme.text
                  : Theme.withAlpha(Theme.subtext, 0.85)
             font.pixelSize: Settings.iconSize + 2
@@ -101,7 +125,14 @@ Item {
         }
 
         HoverHandler { id: _glyphHover; enabled: root.enabled && root.glyphClickable; cursorShape: Qt.PointingHandCursor }
-        TapHandler   { enabled: root.enabled && root.glyphClickable; margin: 6; onTapped: root.glyphClicked() }
+        TapHandler {
+            enabled: root.enabled && root.glyphClickable
+            margin: 6
+            onTapped: {
+                _glyphFocusVisual.takePointerFocus()
+                root.glyphClicked()
+            }
+        }
     }
 
     TextMetrics { id: _vm; font.family: Settings.font; font.pixelSize: Settings.fontLabel; text: root.valueWidthText }
@@ -119,13 +150,14 @@ Item {
 
     Item {
         id: _chev
+        FocusVisual { id: _chevronFocusVisual; target: _chev }
         anchors.right: _v.left
         anchors.rightMargin: 10
         anchors.verticalCenter: parent.verticalCenter
         width: root._hasChevSlot ? 24 : 0
         height: parent.height
         visible: root.expandable
-        opacity: (_chevHover.hovered || activeFocus) ? 1.0 : 0.7
+        opacity: (_chevHover.hovered || _chevronFocusVisual.active) ? 1.0 : 0.7
         MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
 
         activeFocusOnTab: root.enabled && root.expandable
@@ -133,14 +165,16 @@ Item {
         Accessible.role: Accessible.Button
         Accessible.name: root.accessibleName + " " + root.expandLabel
         Accessible.description: root.expanded ? "Open" : "Closed"
-        Accessible.onPressAction: if (root.enabled && root.expandable) root.expandToggled()
+        Accessible.onPressAction: if (root.enabled && root.expandable) root._requestExpand(false)
 
-        Keys.onSpacePressed:  event => { if (!event.isAutoRepeat && root.enabled && root.expandable) root.expandToggled(); event.accepted = true }
-        Keys.onReturnPressed: event => { if (!event.isAutoRepeat && root.enabled && root.expandable) root.expandToggled(); event.accepted = true }
-        Keys.onEnterPressed:  event => { if (!event.isAutoRepeat && root.enabled && root.expandable) root.expandToggled(); event.accepted = true }
+        Keys.onPressed: _chevronFocusVisual.noteKeyboardInput()
+
+        Keys.onSpacePressed:  event => { if (!event.isAutoRepeat && root.enabled && root.expandable) root._requestExpand(false); event.accepted = true }
+        Keys.onReturnPressed: event => { if (!event.isAutoRepeat && root.enabled && root.expandable) root._requestExpand(false); event.accepted = true }
+        Keys.onEnterPressed:  event => { if (!event.isAutoRepeat && root.enabled && root.expandable) root._requestExpand(false); event.accepted = true }
         Keys.onEscapePressed: event => {
             if (root.enabled && root.expandable && root.expanded) {
-                root.expandToggled()
+                root._requestExpand(false)
                 event.accepted = true
             } else {
                 event.accepted = false
@@ -148,12 +182,18 @@ Item {
         }
 
         HoverHandler { id: _chevHover; enabled: root.enabled && root.expandable; cursorShape: Qt.PointingHandCursor }
-        TapHandler   { enabled: root.enabled && root.expandable; onTapped: root.expandToggled() }
+        TapHandler {
+            enabled: root.enabled && root.expandable
+            onTapped: {
+                _chevronFocusVisual.takePointerFocus()
+                root._requestExpand(true)
+            }
+        }
 
         ShellText {
             anchors.centerIn: parent
             text: "󰅀"
-            color: root.expanded || _chev.activeFocus ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.85)
+            color: root.expanded || _chevronFocusVisual.active ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.85)
             font.pixelSize: Settings.fontSize
             rotation: root.expanded ? 180 : 0
             transformOrigin: Item.Center
@@ -171,9 +211,10 @@ Item {
         height: 16
 
         interactive: root.enabled
-        focused:     root.activeFocus
+        focused:     _focusVisual.active
         value: root.value
         wheelKey: "qslider:" + root.wheelKey
+        onInteractionStarted: _focusVisual.takePointerFocus()
         onChanged: value => root.moved(value)
     }
 }

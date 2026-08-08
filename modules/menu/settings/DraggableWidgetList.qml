@@ -329,6 +329,8 @@ Item {
 
             function focusRow(): void { _keyFocus.forceActiveFocus() }
 
+            FocusVisual { id: _rowFocusVisual; target: _keyFocus }
+
             MotionBehavior on y {
                 gate: !_row.dragging
                 NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
@@ -338,11 +340,11 @@ Item {
                 cardInset: 0
                 topRadius: Theme.radiusControl
                 bottomRadius: Theme.radiusControl
-                active: _row.dragging || _rowHover.hovered || _keyFocus.activeFocus
-                focusActive: _keyFocus.activeFocus
+                active: _row.dragging || _rowHover.hovered || _rowFocusVisual.active
+                focusActive: _rowFocusVisual.active
                 fillColor: _row.dragging ? Theme.accent : Theme.text
                 fillOpacity: _row.dragging ? 0.11
-                    : (_keyFocus.activeFocus ? 0.07 : 0.04)
+                    : (_rowFocusVisual.active ? 0.07 : 0.04)
             }
 
             HoverHandler {
@@ -357,6 +359,7 @@ Item {
 
                 onActiveChanged: {
                     if (active) {
+                        _rowFocusVisual.takePointerFocus()
                         root._beginDrag(_row.key)
                         startY = root._dragY
                     } else {
@@ -436,6 +439,7 @@ Item {
                 TapHandler {
                     id: _toggleTap
                     onTapped: {
+                        _rowFocusVisual.takePointerFocus()
                         _toggle.armFlipAnimation()
                         ShellSettings.setBarWidgetConfiguredVisible(
                             _row.key, !_row.checked)
@@ -447,7 +451,7 @@ Item {
                     anchors.centerIn: parent
                     checked: _row.checked
                     highlighted: _toggleHover.hovered
-                    focused: _keyFocus.activeFocus
+                    focused: _rowFocusVisual.active
                     pressed: _toggleTap.pressed
                 }
             }
@@ -466,6 +470,8 @@ Item {
                     + " zone. Drag to move; arrow keys navigate; Left and Right change zones; Control Up and Down reorder."
                 Accessible.onPressAction: activateToggle()
                 Accessible.onToggleAction: activateToggle()
+
+                Keys.onPressed: _rowFocusVisual.noteKeyboardInput()
 
                 function activateToggle(): bool {
                     if (!_row.hasToggle) return false
@@ -538,7 +544,7 @@ Item {
 
             ShellText {
                 anchors.centerIn: parent
-                text: "Drop here"
+                text: root._draggingKey.length > 0 ? "Drop here" : "Empty"
                 color: Theme.withAlpha(Theme.subtext, _empty.hot ? 0.70 : 0.46)
                 font.pixelSize: Settings.fontMicro
             }

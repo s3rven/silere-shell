@@ -11,10 +11,15 @@ Item {
     property bool active: false
     property color accentColor: Theme.accent
     property int railW: 44
+    // Expanded drawers already provide their own labels. Keeping this tooltip
+    // open there paints it over the drawer's controls.
+    property bool labelPillEnabled: true
     property RailLabelGroup labels: null
     property bool _hoverReady: false
 
-    readonly property bool _hot: _hover.hovered || root.activeFocus
+    FocusVisual { id: _focusVisual; target: root }
+
+    readonly property bool _hot: _hover.hovered || _focusVisual.active
 
     signal tapped()
 
@@ -52,7 +57,14 @@ Item {
             }
         }
     }
-    TapHandler   { id: _tap; onTapped: root.tapped() }
+    TapHandler {
+        id: _tap
+        onTapped: {
+            _focusVisual.takePointerFocus()
+            root.tapped()
+        }
+    }
+    Keys.onPressed: _focusVisual.noteKeyboardInput()
     Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root.tapped(); event.accepted = true }
     Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root.tapped(); event.accepted = true }
     Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root.tapped(); event.accepted = true }
@@ -81,7 +93,7 @@ Item {
 
         OutlineBorder {
             radius: _activeBg.radius
-            outlineColor: (root.active || _hover.hovered || root.activeFocus)
+            outlineColor: (root.active || _hover.hovered || _focusVisual.active)
                 ? (root.active ? Theme.menuControlLine : Theme.menuControlLineHot)
                 : "transparent"
             ColorFade on outlineColor {}
@@ -96,8 +108,8 @@ Item {
         text: root.glyph
         color: root.active
             ? Theme.mix(root.accentColor, Theme.text, 0.10)
-            : Theme.withAlpha(Theme.mix(Theme.subtext, root.accentColor, _hover.hovered || root.activeFocus ? 0.24 : 0),
-                               _hover.hovered || root.activeFocus ? 0.78 : 0.50)
+            : Theme.withAlpha(Theme.mix(Theme.subtext, root.accentColor, _hover.hovered || _focusVisual.active ? 0.24 : 0),
+                               _hover.hovered || _focusVisual.active ? 0.78 : 0.50)
         font.pixelSize: Settings.iconSize + 2
         scale: _tap.pressed ? 0.92 : (root.active ? 1.015 : 1.0)
         transformOrigin: Item.Center
@@ -108,8 +120,9 @@ Item {
     Rectangle {
         id: _pill
         // not focus alone: tapping Power force-focuses it and would pin the label open while the rail stays open
-        readonly property bool _show: (_hover.hovered && root._hoverReady)
-            || (root.activeFocus && !root.active)
+        readonly property bool _show: root.labelPillEnabled
+            && ((_hover.hovered && root._hoverReady)
+                || (_focusVisual.active && !root.active))
         on_ShowChanged: if (_show && root.labels) root.labels.engage()
 
         x: root.railW + 7

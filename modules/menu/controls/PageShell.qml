@@ -10,6 +10,7 @@ Item {
 
     property real enterShift: Motion.pageOffset
     property real exitShift: -Motion.pageOffset * 0.75
+    property bool animateOnCreate: false
 
     signal pageShown()
     signal pageHidden()
@@ -52,9 +53,14 @@ Item {
     }
 
     Component.onCompleted: {
-        root.opacity = root.active ? 1.0 : 0.0
-        root._pageShift = 0
+        const enterNow = root.active && root.animateOnCreate
+            && MenuState.open && !ShellSettings.reduceMotion
+        root.opacity = root.active && !enterNow ? 1.0 : 0.0
+        root._pageShift = enterNow ? root.enterShift : 0
         if (MenuState.open) Qt.callLater(() => root._menuOpenSettled = true)
+        if (enterNow) Qt.callLater(function() {
+            if (root.active) _enter.restart()
+        })
         Qt.callLater(root._announceShown)
     }
 

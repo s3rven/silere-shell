@@ -166,6 +166,7 @@ PanelWindow {
         property bool powerOpen: false
         property bool _loadedDeferred: false
         property bool _geometryReady:  false
+        property bool _outerHeightMotion: false
         property bool _homeRetained:    false
         property bool _settingsRetained: false
         property bool _recentRetained:  false
@@ -245,8 +246,15 @@ PanelWindow {
             // move focus first: the tab change disables the page controls holding it
             if (focusNeedsReset) panel.forceActiveFocus()
             if (powerOpen) powerOpen = false
+            if (tab !== activeTab) panel._armOuterHeightMotion()
             MenuState.selectTab(tab)
             contentFlick.contentY = 0
+        }
+
+        function _armOuterHeightMotion(): void {
+            if (!panel.open || ShellSettings.reduceMotion) return
+            panel._outerHeightMotion = true
+            _outerHeightMotionHold.restart()
         }
 
         function closePowerAndRestoreFocus(): void {
@@ -287,13 +295,22 @@ PanelWindow {
                 panel.switchTab(index)
             }
             function onActiveTabChanged() {
+                panel._armOuterHeightMotion()
                 contentFlick.contentY = 0
                 panel._syncPageRetention()
                 if (!MenuState.open) panel._settlePageVisuals()
             }
+            function onSettingsSectionChanged() {
+                if (MenuState.settingsActive) panel._armOuterHeightMotion()
+            }
             function onOpenChanged() {
                 if (MenuState.open) {
                     _closedUnload.stop()
+                    // closeFinished is canceled when a close animation reverses;
+                    // transient drawer state must not depend on that callback.
+                    panel.powerOpen = false
+                    panel._outerHeightMotion = false
+                    _outerHeightMotionHold.stop()
                     contentFlick.contentY = 0
                     panel.forceActiveFocus()
                 } else {
@@ -351,6 +368,12 @@ PanelWindow {
             onTriggered: if (MenuState.open && !panel.powerOpen) _railPower.forceActiveFocus()
         }
 
+        Timer {
+            id: _outerHeightMotionHold
+            interval: Motion.pageOut + Motion.panelResize + Motion.ms(60)
+            onTriggered: panel._outerHeightMotion = false
+        }
+
         Connections {
             target: panel._focusWindow
             function onActiveFocusItemChanged() {
@@ -372,7 +395,10 @@ PanelWindow {
         // duration caps the velocity: without it a tall page swap crawls for ~700ms while the
         // width beside it lands in _railMotionMs, and every scroll-affordance settle times out early
         MotionBehavior on height {
-            gate: panel._geometryReady && panel.open
+            // Inner disclosures already animate their own height. Let the card
+            // follow those values directly; reserve this outer easing for page
+            // and settings-section swaps, where the content height jumps.
+            gate: panel._geometryReady && panel.open && panel._outerHeightMotion
             SmoothedAnimation {
                 velocity: Motion.panelVelocity
                 duration: Motion.panelResize
@@ -382,13 +408,12 @@ PanelWindow {
             }
         }
 
-        onStateChanged: {
-            if (state === "visible") {
-                if (!panel._loadedDeferred) {
-                    Qt.callLater(function() {
-                        if (panel) panel._loadedDeferred = true
-                    })
-                }
+        onFullyShownChanged: {
+            if (fullyShown && !panel._loadedDeferred) {
+                Qt.callLater(function() {
+                    if (panel && panel.fullyShown)
+                        panel._loadedDeferred = true
+                })
             }
         }
 
@@ -534,6 +559,8 @@ PanelWindow {
                     railW: panel.railCollapsedW
                     glyph: "󰋜"
                     label: "Home"
+                    labelPillEnabled: !panel._railExpanded
+                        || panel.navW < panel._navMinW
                     active: panel.activeTab === 0
                     KeyNavigation.up: _railPower
                     KeyNavigation.down: _railRecent
@@ -546,6 +573,8 @@ PanelWindow {
                     railW: panel.railCollapsedW
                     glyph: "󰋚"
                     label: "Notifications"
+                    labelPillEnabled: !panel._railExpanded
+                        || panel.navW < panel._navMinW
                     accessibleDescription: Notifications.hasHistory
                         ? Notifications.historyCount + " notifications" : "No notifications"
                     active: panel.activeTab === 2
@@ -589,6 +618,8 @@ PanelWindow {
                     railW: panel.railCollapsedW
                     glyph: "󰒓"
                     label: "Settings"
+                    labelPillEnabled: !panel._railExpanded
+                        || panel.navW < panel._navMinW
                     accessibleDescription: panel.activeTab === 1
                         ? "Focus Settings categories" : "Open Settings"
                     active: panel.activeTab === 1
@@ -629,6 +660,8 @@ PanelWindow {
                     railW: panel.railCollapsedW
                     glyph: "󰐥"
                     label: "Power"
+                    labelPillEnabled: !panel._railExpanded
+                        || panel.navW < panel._navMinW
                     accentColor: Theme.error
                     active: panel.powerOpen
                     KeyNavigation.up: _railSettings
@@ -802,6 +835,7 @@ PanelWindow {
                                 width: parent.width
                                 active: panel.activeTab === 0 && MenuState.open
                                 powerOpen: panel.powerOpen
+                                animateOnCreate: panel.fullyShown
                             }
                         }
                     }
@@ -816,6 +850,7 @@ PanelWindow {
                                 width: parent.width
                                 active: panel.activeTab === 1 && MenuState.open
                                 powerOpen: panel.powerOpen
+                                animateOnCreate: panel.fullyShown
                                 onSectionSwapped: contentFlick.contentY = 0
                             }
                         }
@@ -832,6 +867,7 @@ PanelWindow {
                                 viewportHeight: panel.recentViewportH
                                 active: panel.activeTab === 2 && MenuState.open
                                 powerOpen: panel.powerOpen
+                                animateOnCreate: panel.fullyShown
                             }
                         }
                     }
@@ -842,6 +878,9 @@ PanelWindow {
                 id: _contentSettle
                 list: contentFlick
                 armed: panel.open
+                contextKey: panel.activeTab === 1
+                    ? "settings:" + MenuState.settingsSection
+                    : "tab:" + panel.activeTab
             }
 
             ListEdgeLines {

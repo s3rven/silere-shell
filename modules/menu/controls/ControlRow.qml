@@ -15,6 +15,8 @@ Item {
     property bool   showSwitch:   false
     property bool   expandable:   false
     property bool   expanded:     false
+    property bool   passive:      false
+    property bool   chevronTabFocusable: true
     property int    badgeCount:   0
 
     property real topRadius:    0
@@ -26,14 +28,26 @@ Item {
     signal expandToggled()
     signal badgeActivated()
 
-    readonly property bool _canTap: root.enabled && root.available
+    readonly property bool _canTap: !root.passive && root.enabled && root.available
     readonly property string _accessibleDetail: {
-        let detail = root.status.length > 0 ? root.status : root.valueText
-        if (root.expandable) {
-            const state = root.expanded ? "Expanded" : "Collapsed"
-            detail = detail.length > 0 ? detail + ", " + state : state
-        }
-        return detail
+        const parts = []
+        if (root.status.length > 0) parts.push(root.status)
+        if (root.valueText.length > 0) parts.push(root.valueText)
+        if (root.expandable) parts.push(root.expanded ? "Expanded" : "Collapsed")
+        return parts.join(", ")
+    }
+
+    FocusVisual { id: _focusVisual; target: root }
+    readonly property bool pointerFocusActive:
+        root.activeFocus && _focusVisual.pointerOwned
+
+    function focusFromPointer(): void {
+        _focusVisual.takePointerFocus()
+    }
+
+    function focusFromKeyboard(): void {
+        _focusVisual.noteKeyboardInput()
+        root.forceActiveFocus()
     }
 
     function _activate(): void {
@@ -69,15 +83,19 @@ Item {
     height:         Metrics.rowHeightFor(48)
     implicitHeight: height
 
-    opacity: _canTap ? 1.0 : 0.45
+    opacity: root.passive ? 1.0 : (_canTap ? 1.0 : 0.45)
     MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
 
     activeFocusOnTab: _canTap
-    Accessible.role: root.showSwitch ? Accessible.Switch : Accessible.Button
+    Accessible.role: root.passive ? Accessible.StaticText
+        : root.showSwitch ? Accessible.Switch : Accessible.Button
     Accessible.name: root.title
     Accessible.description: root._accessibleDetail
-    Accessible.checked: root.active
-    Accessible.onPressAction: root._activate()
+    Accessible.focusable: root._canTap
+    Accessible.checkable: !root.passive && root.showSwitch
+    Accessible.checked: !root.passive && root.showSwitch && root.active
+    Accessible.onPressAction: if (!root.passive) root._activate()
+    Keys.onPressed: _focusVisual.noteKeyboardInput()
     Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
     Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
     Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
@@ -102,8 +120,11 @@ Item {
     TapHandler {
         id: _tap
         enabled: root._canTap
-        onTapped: (eventPoint, button) => {
-            if (!root._insideChevron(eventPoint.position) && !root._insideBadge(eventPoint.position)) root._activate()
+        onTapped: (eventPoint) => {
+            if (!root._insideChevron(eventPoint.position) && !root._insideBadge(eventPoint.position)) {
+                root.focusFromPointer()
+                root._activate()
+            }
         }
     }
 
@@ -113,8 +134,8 @@ Item {
         bottomRadius: root.bottomRadius
         cardInset:    root.cardInset
         leftBleed:    root.cardLeftBleed
-        active:       (_hover.hovered || root.activeFocus) && root._canTap
-        focusActive:  root.activeFocus && root._canTap
+        active:       (_hover.hovered || _focusVisual.active) && root._canTap
+        focusActive:  _focusVisual.active && root._canTap
     }
 
     Item {
@@ -136,6 +157,7 @@ Item {
 
         Rectangle {
             id: _badge
+            FocusVisual { id: _badgeFocusVisual; target: _badge }
             opacity: root.badgeCount > 0 ? 1.0 : 0.0
             scale:   root.badgeCount > 0 ? 1.0 : 0.5
             visible: opacity > 0.01
@@ -157,19 +179,21 @@ Item {
             Accessible.description: root.badgeCount + (root.badgeCount === 1 ? " missed notification" : " missed notifications")
             Accessible.onPressAction: root._activateBadge()
 
+            Keys.onPressed: _badgeFocusVisual.noteKeyboardInput()
+
             Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) root._activateBadge(); event.accepted = true }
             Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._activateBadge(); event.accepted = true }
             Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) root._activateBadge(); event.accepted = true }
 
-            color: (_badgeMouse.containsMouse || activeFocus)
+            color: (_badgeMouse.containsMouse || _badgeFocusVisual.active)
                 ? Theme.mix(root.accentColor, Theme.text, 0.10)
                 : root.accentColor
             ColorFade on color {}
 
             OutlineBorder {
                 radius: _badge.radius
-                outlineWidth: _badge.activeFocus ? 2 : 1
-                outlineColor: _badge.activeFocus
+                outlineWidth: _badgeFocusVisual.active ? 2 : 1
+                outlineColor: _badgeFocusVisual.active
                     ? Theme.withAlpha(Theme.text, 0.66)
                     : Theme.mix(Theme.menuCard, root.accentColor, _badgeMouse.containsMouse ? 0.42 : 0.55)
                 ColorFade on outlineColor {}
@@ -190,7 +214,10 @@ Item {
                 anchors.margins: -4
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: root._activateBadge()
+                onClicked: {
+                    _badgeFocusVisual.takePointerFocus()
+                    root._activateBadge()
+                }
             }
         }
     }
@@ -234,7 +261,7 @@ Item {
         anchors.right:          parent.right
         anchors.rightMargin:    12
         anchors.verticalCenter: parent.verticalCenter
-        height: 20
+        height: root.height
         readonly property real _ctrlW: root.showSwitch ? 36
                                      : (root.valueText.length > 0 ? Math.ceil(_valMetrics.advanceWidth) : 0)
         width: (_chevron.visible ? _chevron.width + 8 : 0) + _ctrlW
@@ -248,7 +275,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             checked:     root.active
             highlighted: _hover.hovered && root._canTap
-            focused: root.activeFocus && root._canTap
+            focused: _focusVisual.active && root._canTap
             pressed: _tap.pressed
             accentColor: root.accentColor
         }
@@ -268,6 +295,7 @@ Item {
         // MouseArea (not TapHandler) so it doesn't fire the row body tap too
         Item {
             id: _chevron
+            FocusVisual { id: _chevronFocusVisual; target: _chevron }
             visible: root.expandable
             width:  visible ? 24 : 0
             height: parent.height
@@ -276,11 +304,15 @@ Item {
                 ? parent.width - _rightSlot._ctrlW - 8 - width
                 : 0
             activeFocusOnTab: root._canTap && root.expandable
+                && root.chevronTabFocusable
 
             Accessible.role: Accessible.Button
+            Accessible.ignored: !root.chevronTabFocusable
             Accessible.name: root.title + " details"
             Accessible.description: root.expanded ? "Expanded" : "Collapsed"
             Accessible.onPressAction: root._toggleExpanded()
+
+            Keys.onPressed: _chevronFocusVisual.noteKeyboardInput()
 
             Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) root._toggleExpanded(); event.accepted = true }
             Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._toggleExpanded(); event.accepted = true }
@@ -297,7 +329,7 @@ Item {
             ShellText {
                 anchors.centerIn: parent
                 text: "󰅀"
-                color: (_chevHover.hovered || _chevron.activeFocus) ? Theme.text
+                color: (_chevHover.hovered || _chevronFocusVisual.active) ? Theme.text
                      : Theme.withAlpha(Theme.subtext, root.expanded ? 0.85 : 0.55)
                 font.pixelSize: Settings.fontSize
                 rotation: root.expanded ? 180 : 0
@@ -309,10 +341,14 @@ Item {
             HoverHandler { id: _chevHover; enabled: root.expandable; cursorShape: Qt.PointingHandCursor }
             MouseArea {
                 anchors.fill: parent
-                anchors.margins: -4
+                anchors.leftMargin: -4
+                anchors.rightMargin: -4
                 enabled: root.expandable
                 cursorShape: Qt.PointingHandCursor
-                onClicked: root._toggleExpanded()
+                onClicked: {
+                    _chevronFocusVisual.takePointerFocus()
+                    root._toggleExpanded()
+                }
             }
         }
     }

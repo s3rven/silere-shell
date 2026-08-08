@@ -7,10 +7,6 @@ import "../controls"
 Column {
     id: root
 
-    // the section is destroyed on navigate-away, so the "restore my last mode" memory lives on the page
-    property string lastStyle: "static"
-    signal styleRemembered(string style)
-
     width: parent ? parent.width : 0
     spacing: 0
 
@@ -28,19 +24,20 @@ Column {
 
     function _setEnabled(enabled) {
         if (!enabled) {
-            root.styleRemembered(root._style)
+            ShellSettings.underlineLastStyle = root._style
             ShellSettings.barBorderVisible = false
             ShellSettings.underlineGlow = false
             return
         }
-        root._setStyle(root.lastStyle)
+        root._setStyle(ShellSettings.underlineLastStyle)
     }
 
     function _setStyle(style) {
-        root.styleRemembered(style)
-        ShellSettings.barBorderVisible = style === "static"
-        ShellSettings.underlineGlow = style === "glow"
-        if (style === "glow" && !ShellSettings.underlineIdleGlow
+        const next = style === "glow" ? "glow" : "static"
+        ShellSettings.underlineLastStyle = next
+        ShellSettings.barBorderVisible = next === "static"
+        ShellSettings.underlineGlow = next === "glow"
+        if (next === "glow" && !ShellSettings.underlineIdleGlow
                 && !ShellSettings.underlineNotifGlow
                 && !ShellSettings.underlineBattGlow
                 && !ShellSettings.underlineNetGlow

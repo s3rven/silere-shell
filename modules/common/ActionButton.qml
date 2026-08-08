@@ -18,6 +18,8 @@ Item {
     property bool _keyboardPressed: false
     readonly property bool pressed: _tap.pressed || root._keyboardPressed
 
+    FocusVisual { id: _focusVisual; target: root }
+
     implicitWidth: Math.ceil(_row.implicitWidth) + 20
     implicitHeight: Metrics.rowHeightFor(32)
     width: implicitWidth
@@ -41,6 +43,7 @@ Item {
     Accessible.pressed: root.pressed
     Accessible.onPressAction: root.activate()
     Keys.onPressed: event => {
+        _focusVisual.noteKeyboardInput()
         if (!root.enabled || (event.key !== Qt.Key_Space
                 && event.key !== Qt.Key_Return
                 && event.key !== Qt.Key_Enter)) return
@@ -66,7 +69,10 @@ Item {
     TapHandler {
         id: _tap
         enabled: root.enabled
-        onTapped: root.activate()
+        onTapped: {
+            _focusVisual.takePointerFocus()
+            root.activate()
+        }
     }
 
     Rectangle {
@@ -89,8 +95,8 @@ Item {
 
         OutlineBorder {
             radius: _surface.radius
-            outlineWidth: root.activeFocus ? 2 : 1
-            outlineColor: root.activeFocus
+            outlineWidth: _focusVisual.active ? 2 : 1
+            outlineColor: _focusVisual.active
                 ? Theme.withAlpha(root.accentColor, Theme.focusRingAlpha)
                 : root.emphasis ? "transparent"
                     : _hover.hovered

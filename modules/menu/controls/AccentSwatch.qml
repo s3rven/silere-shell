@@ -16,6 +16,8 @@ Item {
     signal picked()
     signal hoverChanged(string name, bool hovered)
 
+    FocusVisual { id: _focusVisual; target: root }
+
     function _activate(): void { if (root.enabled) root.picked() }
 
     implicitWidth: 26
@@ -29,6 +31,7 @@ Item {
     Accessible.checkable: true
     Accessible.checked: root.active
     Accessible.onPressAction: root._activate()
+    Keys.onPressed: _focusVisual.noteKeyboardInput()
     Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
     Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
     Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
@@ -42,7 +45,10 @@ Item {
     TapHandler {
         id: _t
         enabled: root.enabled
-        onTapped: root._activate()
+        onTapped: {
+            _focusVisual.takePointerFocus()
+            root._activate()
+        }
     }
 
     Rectangle {
@@ -51,14 +57,14 @@ Item {
         anchors.margins: 1
         radius: Theme.radiusInline
         antialiasing: true
-        color: root.activeFocus
+        color: _focusVisual.active
             ? Theme.withAlpha(root.ringColor, 0.07)
             : "transparent"
         ColorFade on color {}
 
         OutlineBorder {
             radius: _focusRing.radius
-            outlineColor: root.activeFocus ? Theme.withAlpha(root.ringColor, Theme.focusRingSoftAlpha) : "transparent"
+            outlineColor: _focusVisual.active ? Theme.withAlpha(root.ringColor, Theme.focusRingSoftAlpha) : "transparent"
         }
     }
     Rectangle {

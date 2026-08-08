@@ -89,13 +89,13 @@ Column {
             glyph: "󰗠"
             title: "All optional tools found"
             status: "No features are hidden"
-            available: false
+            passive: true
         }
         ControlRow {
             visible: !SystemTools.ready
             glyph: "󰋼"
             title: "Checking optional tools…"
-            available: false
+            passive: true
         }
         Repeater {
             model: root._issues
@@ -105,7 +105,7 @@ Column {
                 title: modelData.n
                 status: modelData.s
                 valueText: modelData.v
-                available: false
+                passive: true
             }
         }
         HintText {

@@ -35,6 +35,10 @@ Item {
         return parts.join(". ")
     }
 
+    FocusVisual { id: _focusVisual; target: root }
+    readonly property bool pointerFocusActive:
+        root.activeFocus && _focusVisual.pointerOwned
+
     function _activate(): void {
         if (!_canToggle) return
         // animate the knob only on a real user flip; section switches re-run layout and would otherwise slide every checked knob
@@ -59,6 +63,7 @@ Item {
     Accessible.checked: root.checked
     Accessible.onPressAction: root._activate()
     Accessible.onToggleAction: root._activate()
+    Keys.onPressed: _focusVisual.noteKeyboardInput()
     Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
     Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
     Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
@@ -67,7 +72,10 @@ Item {
     TapHandler {
         id: _tap
         enabled: root._canToggle
-        onTapped: root._activate()
+        onTapped: {
+            _focusVisual.takePointerFocus()
+            root._activate()
+        }
     }
 
     RowHoverBg {
@@ -76,8 +84,8 @@ Item {
         bottomRadius: root.bottomRadius
         cardInset:    root.cardInset
         leftBleed:    root.cardLeftBleed
-        active:       (_hover.hovered || root.activeFocus) && root._canToggle
-        focusActive:  root.activeFocus && root._canToggle
+        active:       (_hover.hovered || _focusVisual.active) && root._canToggle
+        focusActive:  _focusVisual.active && root._canToggle
     }
 
     ShellText {
@@ -148,7 +156,7 @@ Item {
             height: 20
             checked: root.checked
             highlighted: _hover.hovered && root._canToggle
-            focused: root.activeFocus && root._canToggle
+            focused: _focusVisual.active && root._canToggle
             pressed: _tap.pressed
         }
     }

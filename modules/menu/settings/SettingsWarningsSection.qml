@@ -27,20 +27,20 @@ Column {
     readonly property var _alertChipModel: ShellSettings.underlineGlow
         ? [
             { value: "off",  label: "Off"  },
-            { value: "osd",  label: "OSD"  },
+            { value: "osd",  label: "Alert" },
             { value: "glow", label: "Glow" },
             { value: "both", label: "Both" }
         ]
         : [
             { value: "off", label: "Off" },
-            { value: "osd", label: "OSD" }
+            { value: "osd", label: "Alert" }
           ]
 
     SectionLabel { label: "BATTERY"; first: true; visible: Battery.available }
     SettingsCard {
         visible: Battery.available
         ChoiceChipRow {
-            glyph: "󱟢"; label: "Low battery alert"
+            glyph: "󱟢"; label: "Low battery warning"
             currentValue: root._battAlertMode
             model: root._alertChipModel
             onChosen: (v) => root._setAlertMode(v, "osdBatteryWarn", "underlineBattGlow")
@@ -58,7 +58,7 @@ Column {
             HintText { text: "Escalates to critical at " + Math.max(5, Math.round(ShellSettings.batteryLowThreshold / 2)) + "%." }
         }
         ToggleRow {
-            glyph: "󰂄"; label: "Fully-charged alert"
+            glyph: "󰂄"; label: "Fully-charged OSD"
             enabled: ShellSettings.osdEnabled
             checked: ShellSettings.osdChargedNotify
             onToggled: nextChecked => ShellSettings.osdChargedNotify = nextChecked
@@ -69,7 +69,7 @@ Column {
     SectionLabel { label: "CPU TEMPERATURE"; first: !Battery.available }
     SettingsCard {
         ChoiceChipRow {
-            glyph: "󰔏"; label: "High temp alert"
+            glyph: "󰔏"; label: "High temperature warning"
             currentValue: root._tempAlertMode
             model: root._alertChipModel
             onChosen: (v) => root._setAlertMode(v, "osdTempWarn", "underlineTempGlow")
@@ -98,10 +98,10 @@ Column {
             sourceComponent: Component {
                 Column {
                     width: parent.width
-                    SectionLabel { label: "ALERTS" }
+                    SectionLabel { label: "DESKTOP NOTIFICATIONS" }
                     SettingsCard {
                         SelectRow {
-                            glyph: "󰔛"; label: "Dismiss after"
+                            glyph: "󰔛"; label: "Notification timeout"
                             currentValue: ShellSettings.sysAlertTimeout
                             fallbackLabel: ShellSettings.sysAlertTimeout === 0
                                 ? "Stay" : (ShellSettings.sysAlertTimeout / 1000) + "s"
@@ -112,6 +112,11 @@ Column {
                                 { value: 0,     label: "Stay" }
                             ]
                             onChosen: (v) => ShellSettings.sysAlertTimeout = v
+                        }
+                        HintText {
+                            text: ShellSettings.osdEnabled
+                                ? "Alert also appears in the shell OSD."
+                                : "Enable the global OSD to also show the shell alert."
                         }
                     }
                 }

@@ -17,6 +17,8 @@ Item {
     property bool _keyboardPressed: false
     readonly property bool pressed: _tap.pressed || _keyboardPressed
 
+    FocusVisual { id: _focusVisual; target: root }
+
     implicitWidth: buttonSize
     implicitHeight: buttonSize
     width: implicitWidth
@@ -39,6 +41,7 @@ Item {
     Accessible.onPressAction: root.activate()
 
     Keys.onPressed: event => {
+        _focusVisual.noteKeyboardInput()
         if (!root.enabled || (event.key !== Qt.Key_Space
                 && event.key !== Qt.Key_Return
                 && event.key !== Qt.Key_Enter)) return
@@ -65,7 +68,10 @@ Item {
     TapHandler {
         id: _tap
         enabled: root.enabled
-        onTapped: root.activate()
+        onTapped: {
+            _focusVisual.takePointerFocus()
+            root.activate()
+        }
     }
 
     Rectangle {
@@ -74,7 +80,7 @@ Item {
         antialiasing: true
         color: root.pressed
             ? Theme.withAlpha(root.accentColor, 0.20)
-            : root.activeFocus
+            : _focusVisual.active
                 ? Theme.withAlpha(root.accentColor, 0.13)
                 : _hover.hovered
                     ? Theme.withAlpha(Theme.subtext, 0.12)
@@ -82,8 +88,8 @@ Item {
 
         OutlineBorder {
             radius: width / 2
-            outlineWidth: root.activeFocus ? 2 : 1
-            outlineColor: root.activeFocus ? Theme.withAlpha(root.accentColor, Theme.focusRingAlpha) : "transparent"
+            outlineWidth: _focusVisual.active ? 2 : 1
+            outlineColor: _focusVisual.active ? Theme.withAlpha(root.accentColor, Theme.focusRingAlpha) : "transparent"
         }
 
         ColorFade on color {}
@@ -92,7 +98,7 @@ Item {
     ShellText {
         anchors.centerIn: parent
         text: root.glyph
-        color: root.activeFocus || _hover.hovered || root.pressed
+        color: _focusVisual.active || _hover.hovered || root.pressed
             ? Theme.text : Theme.withAlpha(Theme.subtext, 0.72)
         font.pixelSize: root.glyphPixelSize
         scale: root.pressed ? 0.90 : 1.0

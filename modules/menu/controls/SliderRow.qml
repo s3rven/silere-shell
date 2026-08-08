@@ -17,11 +17,17 @@ Item {
     property real   min:          0.0
     property real   max:          1.0
     property real   step:         0.05
+    // Names consumed by Qt's QAccessibleValueInterface.
+    readonly property real minimumValue: root.min
+    readonly property real maximumValue: root.max
+    readonly property real stepSize: root.step
     property real   topRadius:    0
     property real   bottomRadius: 0
     property real   cardInset:    1
     property real   cardLeftBleed: 0
     property color  glyphColor:   Theme.withAlpha(Theme.subtext, 0.85)
+
+    FocusVisual { id: _focusVisual; target: root }
 
     signal changed(real value)
 
@@ -41,7 +47,10 @@ Item {
     Accessible.focusable: root.enabled
     Accessible.onIncreaseAction: if (root.enabled) _track.nudge(1, 1)
     Accessible.onDecreaseAction: if (root.enabled) _track.nudge(-1, 1)
-    Keys.onPressed: event => _track.handleKey(event)
+    Keys.onPressed: event => {
+        _focusVisual.noteKeyboardInput()
+        _track.handleKey(event)
+    }
 
     HoverHandler { id: _rowHover; enabled: root.enabled }
     RowHoverBg {
@@ -50,8 +59,8 @@ Item {
         bottomRadius: root.bottomRadius
         cardInset:    root.cardInset
         leftBleed:    root.cardLeftBleed
-        active:       (_rowHover.hovered || root.activeFocus) && root.enabled
-        focusActive:  root.activeFocus && root.enabled
+        active:       (_rowHover.hovered || _focusVisual.active) && root.enabled
+        focusActive:  _focusVisual.active && root.enabled
     }
 
     Item {
@@ -121,12 +130,13 @@ Item {
         hitPad: 8
 
         interactive: root.enabled
-        focused:     root.activeFocus
+        focused:     _focusVisual.active
         value: root.value
         min:   root.min
         max:   root.max
         step:  root.step
         wheelKey: "slider:" + root.label
+        onInteractionStarted: _focusVisual.takePointerFocus()
         onChanged: value => root.changed(value)
     }
 }

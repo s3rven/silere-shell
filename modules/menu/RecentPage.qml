@@ -75,8 +75,9 @@ PageShell {
 
     function clearAll(): void {
         if (_clearing || Notifications.historyCount === 0) return
-        // release focus before the tab-focus binding turns off or Qt warns and retains it
-        if (_clearButton.activeFocus) root.forceActiveFocus()
+        // A pointer tap does not focus the Clear button, so a notification delegate
+        // may still own focus. Release it before clearHistory destroys every delegate.
+        root.forceActiveFocus()
         if (ShellSettings.reduceMotion) {
             Notifications.clearHistory()
             return
@@ -280,6 +281,12 @@ PageShell {
             cacheBuffer: 120
             model: Notifications.historyModel
 
+            function revealIndex(rowIndex: int): void {
+                if (rowIndex < 0 || rowIndex >= count) return
+                currentIndex = rowIndex
+                positionViewAtIndex(rowIndex, ListView.Contain)
+            }
+
             delegate: Item {
                     id: _entry
                     // a ListModel delegate gets roles, not modelData; alias so the rest of the entry reads the same
@@ -297,7 +304,6 @@ PageShell {
                     readonly property int _fullHeight: _sectionHeight + _cardHeight
                     property bool _removing: false
                     property bool _expanded: false
-                    property var _pendingRemove: null
 
                     function _toggleExpand(): void {
                         if (_expanded) _expanded = false
@@ -305,39 +311,27 @@ PageShell {
                     }
 
                     width: _historyList.width
-                    height: _removing ? 0 : _fullHeight
-                    opacity: _removing ? 0 : 1
+                    height: _fullHeight
                     clip: true
-
-                    MotionBehavior on height {
-                        NumberAnimation { duration: Motion.fast; easing.type: Easing.InCubic }
-                    }
-                    MotionBehavior on opacity {
-                        NumberAnimation { duration: Motion.fast }
-                    }
 
                     function removeSelf(): void {
                         if (_removing || root._clearing) return
-                        // plain values: a ListModel row belongs to its delegate and shifts if a notif lands mid-animation
-                        const key = { time: _entry.modelData.time, summary: _entry.modelData.summary }
-                        if (ShellSettings.reduceMotion) {
-                            Notifications.removeFromHistory(key)
-                            return
+                        const rowIndex = index
+                        if (_removeButton.activeFocus || _card.activeFocus) {
+                            let nextItem = rowIndex + 1 < Notifications.historyModel.count
+                                ? _historyList.itemAtIndex(rowIndex + 1) : null
+                            if (!nextItem && rowIndex > 0)
+                                nextItem = _historyList.itemAtIndex(rowIndex - 1)
+                            if (nextItem) nextItem.focusRemoveButton()
+                            else root.forceActiveFocus()
                         }
-                        _pendingRemove = key
+                        // Persist immediately. A delegate-owned delay is lost if
+                        // the user changes pages before its timer fires.
                         _removing = true
-                        _removeTimer.restart()
+                        Notifications.removeFromHistory(rowIndex)
                     }
 
-                    Timer {
-                        id: _removeTimer
-                        interval: Motion.fast + 35
-                        onTriggered: {
-                            if (_entry._pendingRemove !== null)
-                                Notifications.removeFromHistory(_entry._pendingRemove)
-                            _entry._pendingRemove = null
-                        }
-                    }
+                    function focusRemoveButton(): void { _removeButton.forceActiveFocus() }
 
                     Item {
                         visible: _entry._showSection
@@ -405,6 +399,9 @@ PageShell {
                         }
 
                         activeFocusOnTab: _body.truncated || _entry._expanded
+                        onActiveFocusChanged: {
+                            if (activeFocus) _historyList.revealIndex(_entry.index)
+                        }
                         Accessible.role: activeFocusOnTab ? Accessible.Button : Accessible.StaticText
                         Accessible.name: String(_entry.modelData.summary || "Notification")
                         Accessible.description: activeFocusOnTab
@@ -505,7 +502,10 @@ PageShell {
                             height: 24
                             radius: 12
                             antialiasing: true
-                            activeFocusOnTab: true
+                            activeFocusOnTab: !_entry._removing
+                            onActiveFocusChanged: {
+                                if (activeFocus) _historyList.revealIndex(_entry.index)
+                            }
                             z: 2
 
                             color: _removeTap.pressed

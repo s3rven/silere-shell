@@ -18,13 +18,28 @@ Item {
     property int accessibleRole: Accessible.ListItem
     property string accessibleName: label
     property string accessibleDescription: status
+    property bool lastTriggerFromPointer: false
+    readonly property bool pointerFocusActive:
+        root.activeFocus && _focusVisual.pointerOwned
 
     signal triggered()
 
-    readonly property int rowHeight: Metrics.rowHeightFor(32)
-    readonly property bool _hot: _hover.hovered || _tap.pressed || root.activeFocus
+    FocusVisual { id: _focusVisual; target: root }
 
-    function trigger(): void {
+    readonly property int rowHeight: Metrics.rowHeightFor(32)
+    readonly property bool _hot: _hover.hovered || _tap.pressed || _focusVisual.active
+
+    function focusFromPointer(): void {
+        _focusVisual.takePointerFocus()
+    }
+
+    function focusFromKeyboard(): void {
+        _focusVisual.noteKeyboardInput()
+        root.forceActiveFocus()
+    }
+
+    function trigger(fromPointer): void {
+        root.lastTriggerFromPointer = fromPointer === true
         if (root.enabled && root.interactive) root.triggered()
     }
 
@@ -44,18 +59,19 @@ Item {
     Accessible.checkable: root.accessibleRole === Accessible.RadioButton
     Accessible.checked: root.accessibleRole === Accessible.RadioButton && root.selected
     Accessible.pressed: _tap.pressed
-    Accessible.onPressAction: root.trigger()
+    Accessible.onPressAction: root.trigger(false)
+    Keys.onPressed: _focusVisual.noteKeyboardInput()
 
     Keys.onSpacePressed: event => {
-        if (!event.isAutoRepeat) root.trigger()
+        if (!event.isAutoRepeat) root.trigger(false)
         event.accepted = true
     }
     Keys.onReturnPressed: event => {
-        if (!event.isAutoRepeat) root.trigger()
+        if (!event.isAutoRepeat) root.trigger(false)
         event.accepted = true
     }
     Keys.onEnterPressed: event => {
-        if (!event.isAutoRepeat) root.trigger()
+        if (!event.isAutoRepeat) root.trigger(false)
         event.accepted = true
     }
 
@@ -67,7 +83,10 @@ Item {
     TapHandler {
         id: _tap
         enabled: root.enabled && root.interactive
-        onTapped: root.trigger()
+        onTapped: {
+            root.focusFromPointer()
+            root.trigger(true)
+        }
     }
 
     Rectangle {
@@ -85,7 +104,7 @@ Item {
                         : ShellSettings.neutralTheme ? 0.065 : 0.085)
                 : root.highlighted
                     ? Theme.withAlpha(root.accentColor, root._hot ? 0.075 : 0.050)
-                    : root.activeFocus
+                    : _focusVisual.active
                         ? Theme.withAlpha(root.accentColor,
                             ShellSettings.highContrast ? 0.12 : 0.055)
                     : _tap.pressed ? Theme.withAlpha(Theme.text, 0.055)

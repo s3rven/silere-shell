@@ -30,7 +30,17 @@ PageShell {
         if (changed) root.sectionSwapped()
     }
 
-    onPageHidden: root._settleSection()
+    function _pauseSectionVisual(): void {
+        _detailSwap.stop()
+        _detailEnter.stop()
+        _sectionEnterDefer.stop()
+        root._awaitingSectionEnter = false
+        // Keep the current opacity/offset while PageShell fades the whole page.
+        // Restoring full opacity here produces a flash during a fast tab switch.
+    }
+
+    onPageHidden: root._pauseSectionVisual()
+    onPageShown: root._settleSection()
     onPowerOpenChanged: {
         if (root.powerOpen) root._settleSection()
     }
@@ -76,10 +86,6 @@ PageShell {
         }
         return m
     }
-
-    // outlives the section component, which is destroyed whenever the user navigates away
-    property string _lastUnderlineStyle:
-        ShellSettings.underlineGlow ? "glow" : "static"
 
     Item {
         id: _detail
@@ -183,6 +189,8 @@ PageShell {
                     font.pixelSize: Settings.fontSize + 3
                     font.weight: Font.DemiBold
                     elide: Text.ElideRight
+                    Accessible.role: Accessible.Heading
+                    Accessible.name: text
                     Accessible.description: _detailHeader._meta.description
                 }
 
@@ -236,10 +244,7 @@ PageShell {
 
         Component {
             id: _secUnderline
-            SettingsUnderlineSection {
-                lastStyle: root._lastUnderlineStyle
-                onStyleRemembered: (style) => root._lastUnderlineStyle = style
-            }
+            SettingsUnderlineSection {}
         }
 
         Component {

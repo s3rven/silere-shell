@@ -6,6 +6,9 @@ Item {
 
     required property Flickable list
     property bool armed: true
+    // A shared Flickable can present several pages. A new page must earn its
+    // own settled state, while same-page disclosures keep the existing state.
+    property string contextKey: ""
 
     readonly property bool overflows: list.contentHeight > list.height + 1
     readonly property bool ready: armed && list.visible && overflows && _settled
@@ -23,8 +26,15 @@ Item {
         _quiet.restart()
     }
 
+    function reset(): void {
+        _quiet.stop()
+        root._settled = false
+        root.sync()
+    }
+
     onOverflowsChanged: sync()
     onArmedChanged: sync()
+    onContextKeyChanged: reset()
 
     // a resizing viewport reads as overflowing for the whole animation; wait out the geometry, not a fixed delay
     Connections {

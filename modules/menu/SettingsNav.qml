@@ -17,7 +17,10 @@ Item {
     // pinned mode never assigns _expandedGroup, so it stays bound to the selected section's group
     property int _expandedGroup: _groupIndexForSection(MenuState.settingsSection)
     readonly property bool allExpanded: ShellSettings.settingsNavPinned
+    onAllExpandedChanged: Qt.callLater(root._syncTabCursorToSelection)
     property var _collapsed: ({})
+    property int _tabGroupIndex: -1
+    property int _tabLeafIndex: -1
     function _isExpanded(index: int): bool {
         return root.allExpanded ? root._collapsed[index] !== true
                                 : index === root._expandedGroup
@@ -65,17 +68,35 @@ Item {
         return -1
     }
 
-    function _groupModified(it): bool {
-        const leaves = root._leaves(it)
-        for (let i = 0; i < leaves.length; i++)
-            if (ShellSettings.modifiedSections[leaves[i].section] === true) return true
-        return false
-    }
-
     function _groupContainsSection(it, section: string): bool {
         const leaves = root._leaves(it)
         for (let i = 0; i < leaves.length; i++) {
             if (leaves[i].section === section) return true
+        }
+        return false
+    }
+
+    function _setTabCursor(groupIndex: int, leafIndex: int): void {
+        root._tabGroupIndex = groupIndex
+        root._tabLeafIndex = leafIndex
+    }
+
+    function _syncTabCursorToSelection(): void {
+        const groupIndex = root._groupIndexForSection(MenuState.settingsSection)
+        if (groupIndex < 0) {
+            root._setTabCursor(MenuState.settingsTree.length > 0 ? 0 : -1, -1)
+            return
+        }
+        const leafIndex = root._isExpanded(groupIndex)
+            ? root._leafIndexForSection(groupIndex, MenuState.settingsSection)
+            : -1
+        root._setTabCursor(groupIndex, leafIndex)
+    }
+
+    function _navigationHasFocus(): bool {
+        for (let i = 0; i < _groupRepeater.count; i++) {
+            const group = _groupRepeater.itemAt(i)
+            if (group && group.hasFocusedItem()) return true
         }
         return false
     }
@@ -134,6 +155,17 @@ Item {
         else if (bottom + margin > target + viewH)
             target = bottom + margin - viewH
         _navScroll.contentY = Math.max(0, Math.min(maxY, target))
+    }
+
+    function _revealGroupHeader(groupIndex: int): void {
+        const y = root._groupY(groupIndex)
+        root._revealRange(y, y + root._groupH)
+    }
+
+    function _revealGroupLeaf(groupIndex: int, leafIndex: int): void {
+        const y = root._groupY(groupIndex) + root._groupH + root._childrenPad
+            + leafIndex * (root._navRowH + root._navRowGap)
+        root._revealRange(y, y + root._navRowH)
     }
 
     function _scrollToSelection(): void {
@@ -201,6 +233,11 @@ Item {
 
     function focusNavigation(): void {
         const selected = root._groupIndexForSection(MenuState.settingsSection)
+        if (selected >= 0) {
+            const group = _groupRepeater.itemAt(selected)
+            const leaf = root._leafIndexForSection(selected, MenuState.settingsSection)
+            if (group && group.focusLeaf(leaf)) return
+        }
         root._focusGroupHeader(selected >= 0 ? selected : 0)
     }
 
@@ -264,6 +301,7 @@ Item {
     }
 
     Component.onCompleted: {
+        root._syncTabCursorToSelection()
         if (root.active) Qt.callLater(root._scrollToSelection)
     }
     onActiveChanged: {
@@ -272,6 +310,7 @@ Item {
             _resizeSettle.stop()
             return
         }
+        if (root._tabGroupIndex < 0) root._syncTabCursorToSelection()
         root._selectGroupAndScroll()
     }
 
@@ -279,6 +318,8 @@ Item {
         target: MenuState
         function onSettingsSectionChanged() {
             if (root.active) root._selectGroupAndScroll()
+            if (!root._navigationHasFocus())
+                Qt.callLater(root._syncTabCursorToSelection)
         }
     }
 
@@ -350,7 +391,10 @@ Item {
                         height: _grpHeader.height + _leafBox.height
 
                         function focusHeader(): void {
+                            root._setTabCursor(_grp.index, -1)
+                            _headerFocusVisual.noteKeyboardInput()
                             _grpHeader.forceActiveFocus()
+                            root._revealGroupHeader(_grp.index)
                         }
 
                         function focusLeaf(index: int): bool {
@@ -358,7 +402,9 @@ Item {
                                 return false
                             const leaf = _leafRepeater.itemAt(index)
                             if (!leaf) return false
-                            leaf.forceActiveFocus()
+                            root._setTabCursor(_grp.index, index)
+                            leaf.focusFromKeyboard()
+                            root._revealGroupLeaf(_grp.index, index)
                             return true
                         }
 
@@ -377,11 +423,12 @@ Item {
 
                         Rectangle {
                             id: _grpHeader
+                            FocusVisual { id: _headerFocusVisual; target: _grpHeader }
                             width: parent.width
                             height: root._groupH
                             radius: Theme.radiusInline
                             antialiasing: true
-                            color: activeFocus
+                            color: _headerFocusVisual.active
                                 ? Theme.withAlpha(Theme.accent, 0.065)
                                 : _headerHover.hovered
                                     ? Theme.withAlpha(Theme.text, 0.035)
@@ -391,17 +438,24 @@ Item {
                                         ? Theme.mix(Theme.menuControl, Theme.accent,
                                             ShellSettings.highContrast ? 0.16 : 0.10)
                                         : "transparent"
-                            activeFocusOnTab: true
+                            activeFocusOnTab: root._tabGroupIndex === _grp.index
+                                && root._tabLeafIndex < 0
+                            onActiveFocusChanged: if (activeFocus)
+                                root._setTabCursor(_grp.index, -1)
                             Accessible.role: Accessible.Button
                             Accessible.name: _grp.modelData.label + " settings category"
                             Accessible.description: {
                                 if (_grp.expanded) return "Expanded, activate to collapse"
-                                const base = _grp.groupActive
-                                    ? "Collapsed, contains the current page"
-                                    : "Collapsed, activate to expand"
-                                return _groupDot.visible ? base + ". Contains changes from defaults" : base
+                                if (_grp.groupActive)
+                                    return "Collapsed, contains the current page"
+                                if (!root.allExpanded && _grp.leaves.length > 0)
+                                    return "Collapsed, activate to expand and open "
+                                        + _grp.leaves[0].label
+                                return "Collapsed, activate to expand"
                             }
                             Accessible.onPressAction: root._toggleGroup(_grp.index)
+
+                            Keys.onPressed: _headerFocusVisual.noteKeyboardInput()
 
                             Keys.onSpacePressed: event => {
                                 if (!event.isAutoRepeat) root._toggleGroup(_grp.index)
@@ -438,7 +492,7 @@ Item {
                             }
                             TapHandler {
                                 onTapped: {
-                                    _grpHeader.forceActiveFocus()
+                                    _headerFocusVisual.takePointerFocus()
                                     root._toggleGroup(_grp.index)
                                 }
                             }
@@ -447,7 +501,7 @@ Item {
 
                             OutlineBorder {
                                 radius: _grpHeader.radius
-                                outlineColor: _grpHeader.activeFocus
+                                outlineColor: _headerFocusVisual.active
                                     ? Theme.withAlpha(Theme.accent, Theme.focusRingSoftAlpha)
                                     : "transparent"
                             }
@@ -464,40 +518,25 @@ Item {
                                 color: _grp.groupActive && !_grp.expanded
                                     ? Theme.mix(Theme.accent, Theme.text, 0.08)
                                     : Theme.withAlpha(Theme.menuTextMuted,
-                                        _headerHover.hovered || _grpHeader.activeFocus || _grp.expanded ? 0.84 : 0.64)
+                                        _headerHover.hovered || _headerFocusVisual.active || _grp.expanded ? 0.84 : 0.64)
                                 font.pixelSize: Settings.fontSize
                             }
 
                             ShellText {
                                 anchors.left: _groupGlyph.visible ? _groupGlyph.right : parent.left
                                 anchors.leftMargin: _groupGlyph.visible ? 8 : 10
-                                anchors.right: _groupDot.visible ? _groupDot.left : _groupChevron.left
+                                anchors.right: _groupChevron.left
                                 anchors.rightMargin: 6
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: _grp.modelData.label
                                 color: _grp.groupActive && !_grp.expanded
                                     ? Theme.text
                                     : Theme.withAlpha(Theme.menuTextMuted,
-                                        _headerHover.hovered || _grpHeader.activeFocus || _grp.expanded ? 0.94 : 0.80)
+                                        _headerHover.hovered || _headerFocusVisual.active || _grp.expanded ? 0.94 : 0.80)
                                 font.pixelSize: Settings.fontLabel
                                 font.weight: _grp.groupActive || _grp.expanded
                                     ? Font.DemiBold : Font.Normal
                                 elide: Text.ElideRight
-                            }
-
-                            // only while collapsed: an expanded group shows its leaves' own dots
-                            Rectangle {
-                                id: _groupDot
-                                visible: !_grp.expanded && root._groupModified(_grp.modelData)
-                                anchors.right: _groupChevron.left
-                                anchors.rightMargin: 7
-                                anchors.verticalCenter: parent.verticalCenter
-                                width: 4
-                                height: 4
-                                radius: 2
-                                antialiasing: true
-                                color: Theme.withAlpha(Theme.subtext, 0.38)
-                                ColorFade on color {}
                             }
 
                             ShellText {
@@ -509,7 +548,7 @@ Item {
                                 rotation: _grp.expanded ? 90 : 0
                                 transformOrigin: Item.Center
                                 color: Theme.withAlpha(Theme.subtext,
-                                    _headerHover.hovered || _grpHeader.activeFocus ? 0.78
+                                    _headerHover.hovered || _headerFocusVisual.active ? 0.78
                                     : _grp.expanded ? 0.62 : 0.44)
                                 font.pixelSize: Settings.fontCaption
 
@@ -556,35 +595,41 @@ Item {
                                     delegate: Rectangle {
                                         id: _leaf
 
+                                        FocusVisual { id: _leafFocusVisual; target: _leaf }
+
                                         required property int index
                                         required property var modelData
                                         readonly property bool active: MenuState.settingsSection === modelData.section
                                         readonly property string glyph: modelData.glyph ?? ""
-                                        readonly property bool modified:
-                                            ShellSettings.modifiedSections[modelData.section] === true
                                         width: _leafColumn.width
                                         height: root._navRowH
                                         radius: Theme.radiusInline
                                         antialiasing: true
-                                        color: active
-                                            ? Theme.mix(Theme.menuControl, Theme.accent,
-                                                ShellSettings.highContrast ? 0.18 : 0.13)
-                                            : _leafHover.hovered || activeFocus
-                                                ? Theme.withAlpha(Theme.text, 0.042)
-                                                : "transparent"
+                                        color: _leafHover.hovered || _leafFocusVisual.active
+                                            ? Theme.withAlpha(Theme.text, 0.042)
+                                            : _leaf.active
+                                                ? Theme.withAlpha(Theme.accent,
+                                                    ShellSettings.highContrast ? 0.14 : 0.075)
+                                            : "transparent"
 
                                         activeFocusOnTab: _grp.expanded
+                                            && root._tabGroupIndex === _grp.index
+                                            && root._tabLeafIndex === _leaf.index
+                                        onActiveFocusChanged: if (activeFocus)
+                                            root._setTabCursor(_grp.index, _leaf.index)
                                         Accessible.role: Accessible.Button
                                         Accessible.name: _leaf.modelData.label
-                                        Accessible.description: {
-                                            const d = _leaf.modelData.description ?? ""
-                                            if (!_leaf.modified) return d
-                                            return d.length > 0 ? d + ". Changed from defaults"
-                                                                : "Changed from defaults"
-                                        }
+                                        Accessible.description: _leaf.modelData.description ?? ""
                                         Accessible.selectable: true
                                         Accessible.selected: active
                                         Accessible.onPressAction: root._activateSection(_leaf.modelData.section)
+
+                                        function focusFromKeyboard(): void {
+                                            _leafFocusVisual.noteKeyboardInput()
+                                            _leaf.forceActiveFocus()
+                                        }
+
+                                        Keys.onPressed: _leafFocusVisual.noteKeyboardInput()
 
                                         Keys.onSpacePressed: event => {
                                             if (!event.isAutoRepeat)
@@ -602,6 +647,7 @@ Item {
                                             event.accepted = true
                                         }
                                         Keys.onLeftPressed: event => {
+                                            _headerFocusVisual.noteKeyboardInput()
                                             _grpHeader.forceActiveFocus()
                                             root._toggleGroup(_grp.index)
                                             event.accepted = true
@@ -621,7 +667,7 @@ Item {
                                         }
                                         TapHandler {
                                             onTapped: {
-                                                _leaf.forceActiveFocus()
+                                                _leafFocusVisual.takePointerFocus()
                                                 root._activateSection(_leaf.modelData.section)
                                             }
                                         }
@@ -630,9 +676,10 @@ Item {
 
                                         OutlineBorder {
                                             radius: _leaf.radius
-                                            outlineColor: _leaf.activeFocus
+                                            outlineColor: _leafFocusVisual.active
                                                 ? Theme.withAlpha(Theme.accent, Theme.focusRingSoftAlpha)
                                                 : "transparent"
+                                            ColorFade on outlineColor {}
                                         }
 
                                         ShellText {
@@ -647,37 +694,23 @@ Item {
                                             color: _leaf.active
                                                 ? Theme.mix(Theme.accent, Theme.text, 0.10)
                                                 : Theme.withAlpha(Theme.subtext,
-                                                    _leafHover.hovered || _leaf.activeFocus ? 0.72 : 0.46)
+                                                    _leafHover.hovered || _leafFocusVisual.active ? 0.72 : 0.46)
                                             font.pixelSize: Settings.fontLabel
-                                            ColorFade on color {}
-                                        }
-
-                                        Rectangle {
-                                            id: _leafDot
-                                            visible: _leaf.modified
-                                            anchors.right: parent.right
-                                            anchors.rightMargin: 9
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            width: 4
-                                            height: 4
-                                            radius: 2
-                                            antialiasing: true
-                                            color: Theme.withAlpha(Theme.subtext, _leaf.active ? 0.58 : 0.38)
                                             ColorFade on color {}
                                         }
 
                                         ShellText {
                                             anchors.left: _leafGlyph.visible ? _leafGlyph.right : parent.left
                                             anchors.leftMargin: _leafGlyph.visible ? 8 : 12
-                                            anchors.right: _leafDot.visible ? _leafDot.left : parent.right
-                                            anchors.rightMargin: _leafDot.visible ? 6 : 8
+                                            anchors.right: parent.right
+                                            anchors.rightMargin: 8
                                             anchors.verticalCenter: parent.verticalCenter
                                             text: _leaf.modelData.label
                                             elide: Text.ElideRight
                                             color: _leaf.active
                                                 ? Theme.text
                                                 : Theme.withAlpha(Theme.mix(Theme.subtext, Theme.text, 0.12),
-                                                    _leafHover.hovered || _leaf.activeFocus ? 0.92 : 0.76)
+                                                    _leafHover.hovered || _leafFocusVisual.active ? 0.92 : 0.76)
                                             font.pixelSize: Settings.fontLabel
                                             font.weight: _leaf.active ? Font.DemiBold : Font.Normal
                                             ColorFade on color {}

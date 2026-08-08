@@ -51,41 +51,85 @@ PageShell {
     }
 
     function _togglePicker(which: string): void {
-        _picker = (_picker === which ? "" : which)
-        if (_picker !== "") {
-            _volumeRow.open = false
-            _brightnessRow.open = false
+        if (_picker === which) {
+            root._closePicker()
+            return
         }
+        const pickerMoved = root._closePicker()
+        const volumeMoved = _volumeRow.closeInline()
+        const brightnessMoved = _brightnessRow.closeInline()
+        _picker = which
+        if (pickerMoved || volumeMoved || brightnessMoved) {
+            const fromPointer = which === "wifi" ? _wifiRow.pointerFocusActive
+                : which === "bt" ? _btRow.pointerFocusActive
+                : _nightRow.pointerFocusActive
+            root._focusPickerTrigger(which, fromPointer)
+        }
+    }
+
+    function _ownsItem(item, ancestor): bool {
+        let current = item
+        while (current) {
+            if (current === ancestor) return true
+            current = current.parent
+        }
+        return false
+    }
+
+    function _focusPickerTrigger(which: string, fromPointer): void {
+        const trigger = which === "wifi" ? _wifiRow
+            : which === "bt" ? _btRow : _nightRow
+        if (!trigger) return
+        if (fromPointer === true) trigger.focusFromPointer()
+        else trigger.focusFromKeyboard()
+    }
+
+    function _closePicker(): bool {
+        const which = root._picker
+        if (which === "") return false
+        const focusWindow = root.Window.window
+        const focusedItem = focusWindow ? focusWindow.activeFocusItem : null
+        const ownsFocus = which === "wifi" ? root._ownsItem(focusedItem, _wifiPicker)
+            : which === "bt" ? root._ownsItem(focusedItem, _btPicker)
+            : root._ownsItem(focusedItem, _nightPicker)
+        if (ownsFocus) root._focusPickerTrigger(which,
+            focusedItem && focusedItem.pointerFocusActive === true)
+        root._picker = ""
+        return ownsFocus
     }
 
     function dismissInline(): bool {
         if (_volumeRow.open) {
-            _volumeRow.open = false
+            _volumeRow.closeInline()
             return true
         }
         if (_brightnessRow.open) {
-            _brightnessRow.open = false
+            _brightnessRow.closeInline()
             return true
         }
-        if (_picker === "") return false
-        _picker = ""
-        return true
+        return root._closePicker()
     }
 
     Connections {
         target: Network
         enabled: root.active
-        function onWifiEnabledChanged() { if (root._picker === "wifi" && !Network.wifiEnabled) root._picker = "" }
+        function onWifiEnabledChanged() {
+            if (root._picker === "wifi" && !Network.wifiEnabled) root._closePicker()
+        }
     }
     Connections {
         target: Bluetooth
         enabled: root.active
-        function onEnabledChanged() { if (root._picker === "bt" && !Bluetooth.enabled) root._picker = "" }
+        function onEnabledChanged() {
+            if (root._picker === "bt" && !Bluetooth.enabled) root._closePicker()
+        }
     }
     Connections {
         target: NightLight
         enabled: root.active
-        function onEnabledChanged() { if (root._picker === "nightlight" && !NightLight.enabled) root._picker = "" }
+        function onEnabledChanged() {
+            if (root._picker === "nightlight" && !NightLight.enabled) root._closePicker()
+        }
     }
 
     Column {
@@ -200,6 +244,13 @@ PageShell {
                     HyprActions.focusMediaPlayer(Media.playerName, Media.title)
                 }
 
+                function settleMediaVisual(): void {
+                    _mediaCol.settleText()
+                    if (_artIn.running) _artIn.complete()
+                    if (_artInScale.running) _artInScale.complete()
+                    if (_artOut.running) _artOut.complete()
+                }
+
                 OutlineBorder {
                     // above the album art and its scrim: both fill the card and are declared later
                     z: 1
@@ -216,8 +267,19 @@ PageShell {
                 Connections {
                     target: Media
                     function onShownChanged() {
-                        if (Media.shown) { _textFade.stop(); _mediaCol.opacity = 1.0; _mediaCol._slide = 0 }
+                        if (Media.shown) _mediaCard.settleMediaVisual()
                     }
+                }
+                Connections {
+                    target: ShellSettings
+                    function onReduceMotionChanged() {
+                        if (ShellSettings.reduceMotion) _mediaCard.settleMediaVisual()
+                    }
+                }
+                Connections {
+                    target: root
+                    function onPageHidden() { _mediaCard.settleMediaVisual() }
+                    function onPageShown() { _mediaCard.settleMediaVisual() }
                 }
 
                 Item {
@@ -374,6 +436,14 @@ PageShell {
                     property string _shownIdentity: ""
                     property string _shownTitle:    ""
                     property string _shownArtist:   ""
+                    function settleText(): void {
+                        _textFade.stop()
+                        _shownIdentity = Media.identity
+                        _shownTitle = Media.title
+                        _shownArtist = Media.artist
+                        opacity = 1.0
+                        _slide = 0
+                    }
                     Component.onCompleted: {
                         _shownIdentity = Media.identity
                         _shownTitle    = Media.title
@@ -383,11 +453,7 @@ PageShell {
                     readonly property string trackKey: Media.identity + "\u0000" + Media.title + "\u0000" + Media.artist
                     onTrackKeyChanged: {
                         if (ShellSettings.reduceMotion || (_shownTitle === "" && _shownArtist === "")) {
-                            _shownIdentity = Media.identity
-                            _shownTitle    = Media.title
-                            _shownArtist   = Media.artist
-                            opacity = 1.0
-                            _slide  = 0
+                            _mediaCol.settleText()
                             return
                         }
                         _textFade.restart()
@@ -481,6 +547,7 @@ PageShell {
 
                 Item {
                     id: _seek
+                    FocusVisual { id: _seekFocusVisual; target: _seek }
                     visible: Media.hasPosition
                     anchors {
                         left:  parent.left;  leftMargin:  16
@@ -491,13 +558,20 @@ PageShell {
                     height: visible ? 14 : 0
 
                     activeFocusOnTab: Media.canSeek
+                    readonly property real value: Media.positionRatio
+                    readonly property real minimumValue: 0
+                    readonly property real maximumValue: 1
+                    readonly property real stepSize: _seekTrack.step
                     Accessible.role: Accessible.Slider
                     Accessible.name: "Seek"
                     Accessible.description: Media.formatTime(Media.positionNow) + " of " + Media.formatTime(Media.length)
                     Accessible.focusable: Media.canSeek
                     Accessible.onIncreaseAction: if (Media.canSeek) _seekTrack.nudge(1, 1)
                     Accessible.onDecreaseAction: if (Media.canSeek) _seekTrack.nudge(-1, 1)
-                    Keys.onPressed: event => _seekTrack.handleKey(event)
+                    Keys.onPressed: event => {
+                        _seekFocusVisual.noteKeyboardInput()
+                        _seekTrack.handleKey(event)
+                    }
 
                     ShellText {
                         id: _elapsedLabel
@@ -526,13 +600,14 @@ PageShell {
                         height: 12
 
                         interactive: Media.canSeek
-                        focused:     _seek.activeFocus
+                        focused:     _seekFocusVisual.active
                         showThumb:   Media.canSeek
                         hoverGrow:   false
                         animate:     false
                         commitOnRelease: true
                         trackColor:  Theme.withAlpha(Theme.text, 0.20)
                         value: Media.positionRatio
+                        onInteractionStarted: _seekFocusVisual.takePointerFocus()
                         onChanged: value => { if (Media.canSeek) Media.seekToRatio(value) }
                     }
                 }
@@ -647,8 +722,9 @@ PageShell {
                 visible: Audio.ready
                 reserveExpandSlot: _brightnessRow.visible && Brightness.devices.length > 1
                 onOpenChanged: if (open) {
-                    root._picker = ""
-                    _brightnessRow.open = false
+                    const pickerMoved = root._closePicker()
+                    const brightnessMoved = _brightnessRow.closeInline()
+                    if (pickerMoved || brightnessMoved) _volumeRow.focusPrimary()
                 }
             }
             BrightnessRow {
@@ -656,8 +732,9 @@ PageShell {
                 visible: root._brightnessAvailable
                 reserveExpandSlot: _volumeRow.visible && Audio.sinkCount > 1
                 onOpenChanged: if (open) {
-                    root._picker = ""
-                    _volumeRow.open = false
+                    const pickerMoved = root._closePicker()
+                    const volumeMoved = _volumeRow.closeInline()
+                    if (pickerMoved || volumeMoved) _brightnessRow.focusPrimary()
                 }
             }
         }
@@ -691,6 +768,7 @@ PageShell {
             }
 
             InlinePicker {
+                id: _wifiPicker
                 open: root._wifiPickerOpen
                 gap: 0
                 content: Component {
@@ -720,6 +798,7 @@ PageShell {
             }
 
             InlinePicker {
+                id: _btPicker
                 open: root._btPickerOpen
                 gap: 0
                 content: Component {
@@ -749,6 +828,7 @@ PageShell {
             }
 
             CollapsibleSection {
+                id: _nightPicker
                 expanded: root._picker === "nightlight"
                 ToggleRow {
                     glyph: "󰖙"

@@ -12,6 +12,8 @@ Item {
 
     signal triggered()
 
+    FocusVisual { id: _focusVisual; target: root }
+
     implicitWidth: 32
     implicitHeight: 44
     width: implicitWidth
@@ -29,12 +31,20 @@ Item {
     Accessible.focusable: root.interactive
     Accessible.pressed: _tap.pressed
     Accessible.onPressAction: if (root.interactive) root.triggered()
+    Keys.onPressed: _focusVisual.noteKeyboardInput()
     Keys.onSpacePressed: event => { if (!event.isAutoRepeat && root.interactive) root.triggered(); event.accepted = true }
     Keys.onReturnPressed: event => { if (!event.isAutoRepeat && root.interactive) root.triggered(); event.accepted = true }
     Keys.onEnterPressed: event => { if (!event.isAutoRepeat && root.interactive) root.triggered(); event.accepted = true }
 
     HoverHandler { id: _hover; enabled: root.interactive; cursorShape: Qt.PointingHandCursor }
-    TapHandler   { id: _tap;   enabled: root.interactive; onTapped: root.triggered() }
+    TapHandler {
+        id: _tap
+        enabled: root.interactive
+        onTapped: {
+            _focusVisual.takePointerFocus()
+            root.triggered()
+        }
+    }
 
     scale: _tap.pressed ? 0.86 : 1.0; transformOrigin: Item.Center
     MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
@@ -45,12 +55,12 @@ Item {
         width: 34; height: 34; radius: Theme.radiusControl
         antialiasing: true
         color: Theme.withAlpha(Theme.text, _tap.pressed ? 0.10 : 0.06)
-        opacity: (_hover.hovered || _tap.pressed || root.activeFocus) ? 1.0 : 0.0
+        opacity: (_hover.hovered || _tap.pressed || _focusVisual.active) ? 1.0 : 0.0
 
         OutlineBorder {
             radius: _fill.radius
             outlineWidth: 2
-            outlineColor: root.activeFocus ? Theme.withAlpha(Theme.accent, Theme.focusRingAlpha) : "transparent"
+            outlineColor: _focusVisual.active ? Theme.withAlpha(Theme.accent, Theme.focusRingAlpha) : "transparent"
         }
 
         MotionBehavior on opacity {

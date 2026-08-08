@@ -33,13 +33,19 @@ Item {
     signal chosen(var value)
 
     property bool _open: false
+    property int _focusIndex: -1
+    property bool _deferredPointerFocus: false
 
-    function _focusOption(index: int): void {
+    FocusVisual { id: _focusVisual; target: root }
+
+    function _focusOption(index: int, fromPointer: bool): void {
         if (!_open || _optRepeater.count <= 0) return
         const i = Math.max(0, Math.min(_optRepeater.count - 1, index))
         const item = _optRepeater.itemAt(i)
         if (item) {
-            item.forceActiveFocus()
+            root._focusIndex = i
+            if (fromPointer) item.focusFromPointer()
+            else item.focusFromKeyboard()
             const viewportH = Math.min(_optCol.implicitHeight, root._optionsCapH)
             if (item.y < _options.contentY + 4)
                 _options.contentY = Math.max(0, item.y - 4)
@@ -50,32 +56,48 @@ Item {
         }
     }
 
-    function _focusActiveOption(): void {
-        _focusOption(Math.max(0, _activeIndex))
+    function _focusActiveOption(fromPointer: bool): void {
+        _focusOption(Math.max(0, _activeIndex), fromPointer)
     }
 
-    function _setOpen(next: bool): void {
+    function _setOpen(next: bool, fromPointer: bool): void {
         if (next && !root.enabled) return
         if (_open === next) {
-            if (_open) _focusDefer.restart()
+            if (_open) {
+                root._deferredPointerFocus = fromPointer
+                _focusDefer.restart()
+            }
             return
         }
         _focusDefer.stop()
-        if (!next && root.enabled) root.forceActiveFocus()
+        if (!next && root.enabled) {
+            if (fromPointer) _focusVisual.takePointerFocus()
+            else {
+                _focusVisual.noteKeyboardInput()
+                root.forceActiveFocus()
+            }
+        }
         _open = next
-        if (_open) _focusDefer.restart()
+        if (!next) root._focusIndex = -1
+        if (_open) {
+            root._deferredPointerFocus = fromPointer
+            _focusDefer.restart()
+        }
     }
 
-    function _toggleOpen(): void {
-        _setOpen(!_open)
+    function _toggleOpen(fromPointer: bool): void {
+        _setOpen(!_open, fromPointer)
     }
 
-    onEnabledChanged: if (!enabled) _setOpen(false)
+    onEnabledChanged: if (!enabled) _setOpen(false, false)
 
     Timer {
         id: _focusDefer
         interval: 0
-        onTriggered: root._focusActiveOption()
+        onTriggered: {
+            root._focusActiveOption(root._deferredPointerFocus)
+            root._deferredPointerFocus = false
+        }
     }
 
     readonly property int _activeIndex: model.findIndex(o => o.value === currentValue)
@@ -93,25 +115,25 @@ Item {
     opacity: enabled ? 1.0 : 0.45
     MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
 
-    activeFocusOnTab: root.enabled
+    activeFocusOnTab: root.enabled && !root._open
     Accessible.role: Accessible.ComboBox
     Accessible.name: root.label
     Accessible.description: root.description.length > 0
         ? root.description + ". " + root._activeLabel : root._activeLabel
-    Accessible.onPressAction: root._toggleOpen()
-    Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root._toggleOpen(); event.accepted = true }
-    Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._toggleOpen(); event.accepted = true }
-    Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root._toggleOpen(); event.accepted = true }
+    Accessible.onPressAction: root._toggleOpen(false)
+    Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root._toggleOpen(false); event.accepted = true }
+    Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._toggleOpen(false); event.accepted = true }
+    Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root._toggleOpen(false); event.accepted = true }
     Keys.onEscapePressed: event => {
         if (root._open) {
-            root._setOpen(false)
+            root._setOpen(false, false)
             event.accepted = true
         } else {
             event.accepted = false
         }
     }
-    Keys.onDownPressed: event => { root._setOpen(true); event.accepted = true }
-    Keys.onUpPressed: event => { root._setOpen(true); event.accepted = true }
+    Keys.onDownPressed: event => { root._setOpen(true, false); event.accepted = true }
+    Keys.onUpPressed: event => { root._setOpen(true, false); event.accepted = true }
 
     Item {
         id: _headerHitArea
@@ -126,7 +148,7 @@ Item {
         TapHandler {
             id: _headerTap
             enabled: root.enabled
-            onTapped: root._toggleOpen()
+            onTapped: root._toggleOpen(true)
         }
     }
 
@@ -137,8 +159,8 @@ Item {
         bottomRadius: root._open ? 0 : root.bottomRadius
         cardInset:    root.cardInset
         leftBleed:    root.cardLeftBleed
-        active:       (_hov.hovered || root.activeFocus) && root.enabled
-        focusActive:  root.activeFocus && root.enabled
+        active:       (_hov.hovered || _focusVisual.active) && root.enabled
+        focusActive:  _focusVisual.active && root.enabled
     }
 
     ShellText {
@@ -202,7 +224,7 @@ Item {
                 ? Theme.withAlpha(Theme.accent, 0.075)
                 : _headerTap.pressed
                     ? Theme.withAlpha(Theme.text, 0.075)
-                    : _hov.hovered || root.activeFocus
+                    : _hov.hovered || _focusVisual.active
                         ? Theme.withAlpha(Theme.text, 0.040)
                         : "transparent"
             ColorFade on color {}
@@ -298,22 +320,23 @@ Item {
                     labelFontFamily: optionFont
                     selected: active
                     activeFocusOnTab: root.enabled && root._open
+                        && _opt.index === root._focusIndex
                     accessibleRole: Accessible.RadioButton
                     accessibleName: root.label + ": " + label
 
                     onTriggered: {
                         root.chosen(_opt.modelData.value)
-                        root._setOpen(false)
+                        root._setOpen(false, _opt.lastTriggerFromPointer)
                     }
-                    Keys.onEscapePressed: event => { root._setOpen(false); event.accepted = true }
-                    Keys.onUpPressed:     event => { root._focusOption(_opt.index - 1); event.accepted = true }
-                    Keys.onDownPressed:   event => { root._focusOption(_opt.index + 1); event.accepted = true }
+                    Keys.onEscapePressed: event => { root._setOpen(false, false); event.accepted = true }
+                    Keys.onUpPressed:     event => { root._focusOption(_opt.index - 1, false); event.accepted = true }
+                    Keys.onDownPressed:   event => { root._focusOption(_opt.index + 1, false); event.accepted = true }
                     Keys.onPressed: event => {
                         if (event.key === Qt.Key_Home) {
-                            root._focusOption(0)
+                            root._focusOption(0, false)
                             event.accepted = true
                         } else if (event.key === Qt.Key_End) {
-                            root._focusOption(root.model.length - 1)
+                            root._focusOption(root.model.length - 1, false)
                             event.accepted = true
                         }
                     }

@@ -28,6 +28,14 @@ Rectangle {
     readonly property bool layoutPresent: visible
 
     readonly property bool _compactActions: width < 300
+    readonly property string _accessibleDescription: {
+        const parts = []
+        if (root.status.length > 0) parts.push(root.status)
+        if (root.meta.length > 0) parts.push(root.meta)
+        if (root.busy) parts.push("In progress")
+        if (root.detail.length > 0) parts.push(root.detail)
+        return parts.join(". ")
+    }
 
     signal primaryTriggered()
     signal secondaryTriggered()
@@ -39,6 +47,10 @@ Rectangle {
     antialiasing: true
     clip: true
     color: "transparent"
+
+    Accessible.role: Accessible.Grouping
+    Accessible.name: root.title
+    Accessible.description: root._accessibleDescription
 
     Column {
         id: _col

@@ -74,49 +74,100 @@ ShellRoot {
         id: _pl
         required property bool wantOpen
         required property Component surface
+        property ShellScreen requestedScreen: null
+        readonly property ShellScreen latchedScreen: _latchedScreen
+        property ShellScreen _latchedScreen: null
         property int unloadDelay: Math.max(40,
             Math.max(Motion.popOut, Motion.popOutFade) + 30)
+
+        function _ensureLoaded(): void {
+            _plUnload.stop()
+            // A live layer-shell surface must stay on the screen it was
+            // created for. A fast reopen on another output recreates it rather
+            // than remapping the still-exiting surface in place.
+            if (_plLoader.active && _pl._latchedScreen
+                    && _pl.requestedScreen
+                    && _pl._latchedScreen !== _pl.requestedScreen) {
+                _plLoader.active = false
+                _pl._latchedScreen = _pl.requestedScreen
+                Qt.callLater(function() {
+                    if (_pl.wantOpen) {
+                        _pl._latchedScreen = _pl.requestedScreen
+                        _plLoader.active = true
+                    }
+                })
+                return
+            }
+            // Same-screen close/reopen can safely reverse the existing card.
+            if (!_plLoader.active) _pl._latchedScreen = _pl.requestedScreen
+            _plLoader.active = true
+        }
+
         onWantOpenChanged: {
-            if (wantOpen) { _plUnload.stop(); _plLoader.active = true }
+            if (wantOpen) _pl._ensureLoaded()
             else _plUnload.restart()
         }
         LazyLoader {
             id: _plLoader
             active: false
-            Component.onCompleted: if (_pl.wantOpen) active = true
+            Component.onCompleted: if (_pl.wantOpen) _pl._ensureLoaded()
             component: _pl.surface
         }
-        Timer { id: _plUnload; interval: _pl.unloadDelay; onTriggered: _plLoader.active = false }
+        Timer {
+            id: _plUnload
+            interval: _pl.unloadDelay
+            onTriggered: {
+                if (_pl.wantOpen) return
+                _plLoader.active = false
+            }
+        }
     }
 
     PopupLoader {
+        id: _osdPopup
         wantOpen: ShellSettings.osdEnabled && OsdBarState.activeCount > 0
+        requestedScreen: root.activeOverlayScreen
         unloadDelay: 50
-        surface: Component { OsdWindow { targetScreen: root.activeOverlayScreen } }
-    }
-
-    LazyLoader {
-        active: ShellSettings.notifPopupEnabled && Notifications.activeCount > 0
-        component: NotificationPopups { targetScreen: root.activeOverlayScreen }
+        surface: Component { OsdWindow { targetScreen: _osdPopup.latchedScreen } }
     }
 
     PopupLoader {
+        id: _notificationPopup
+        wantOpen: ShellSettings.notifPopupEnabled
+            && Notifications.activeCount > 0
+        requestedScreen: root.activeOverlayScreen
+        surface: Component {
+            NotificationPopups {
+                targetScreen: _notificationPopup.latchedScreen
+            }
+        }
+    }
+
+    PopupLoader {
+        id: _menuPopup
         wantOpen: MenuState.open
-        surface: Component { MenuWindow { targetScreen: MenuState.triggerScreen ?? root.activeOverlayScreen } }
+        requestedScreen: MenuState.triggerScreen ?? root.activeOverlayScreen
+        surface: Component { MenuWindow { targetScreen: _menuPopup.latchedScreen } }
     }
 
     PopupLoader {
+        id: _calendarPopup
         wantOpen: CalendarState.open
-        surface: Component { CalendarPopup { targetScreen: CalendarState.triggerScreen ?? root.activeOverlayScreen } }
+        requestedScreen: CalendarState.triggerScreen ?? root.activeOverlayScreen
+        surface: Component { CalendarPopup { targetScreen: _calendarPopup.latchedScreen } }
     }
 
     PopupLoader {
+        id: _trayPopup
         wantOpen: TrayMenuState.open
-        surface: Component { TrayMenuPopup { targetScreen: TrayMenuState.triggerScreen ?? root.activeOverlayScreen } }
+        requestedScreen: TrayMenuState.triggerScreen ?? root.activeOverlayScreen
+        surface: Component { TrayMenuPopup { targetScreen: _trayPopup.latchedScreen } }
     }
 
     PopupLoader {
+        id: _quickActionsPopup
         wantOpen: QuickActionsState.open
-        surface: Component { QuickActionsPopup { targetScreen: QuickActionsState.triggerScreen ?? root.activeOverlayScreen } }
+        requestedScreen: QuickActionsState.triggerScreen ?? root.activeOverlayScreen
+        surface: Component { QuickActionsPopup { targetScreen: _quickActionsPopup.latchedScreen } }
     }
 }

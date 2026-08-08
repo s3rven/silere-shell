@@ -15,36 +15,73 @@ Item {
     property real cardInset: 1
     property real cardLeftBleed: 0
     property bool reserveExpandSlot: false
+    property int _focusIndex: -1
 
     width: parent ? parent.width : 0
     implicitHeight: _slider.height + _options.height
     height: implicitHeight
     readonly property bool _optionsShown: root.open || _options.height > 0.5
+    onOpenChanged: if (!open) _focusIndex = -1
 
-    function _focusCurrentDevice(): void {
+    function _ownsItem(item, ancestor): bool {
+        let current = item
+        while (current) {
+            if (current === ancestor) return true
+            current = current.parent
+        }
+        return false
+    }
+
+    function focusPrimary(fromPointer): void {
+        if (fromPointer === true) _slider.focusFromPointer()
+        else _slider.focusFromKeyboard()
+    }
+
+    function closeInline(): bool {
+        if (!root.open) return false
+        const focusWindow = root.Window.window
+        const focusedItem = focusWindow ? focusWindow.activeFocusItem : null
+        const restore = root._ownsItem(focusedItem, _options)
+        // Move focus before disabling the collapsing subtree.
+        if (restore) root.focusPrimary(
+            focusedItem && focusedItem.pointerFocusActive === true)
+        root.open = false
+        return restore
+    }
+
+    function _focusCurrentDevice(fromPointer: bool): void {
         if (!root.open) return
         for (let i = 0; i < _deviceRepeater.count; i++) {
             const item = _deviceRepeater.itemAt(i)
             if (item && item.active) {
-                item.forceActiveFocus()
+                root._focusIndex = i
+                if (fromPointer) item.focusFromPointer()
+                else item.focusFromKeyboard()
                 return
             }
         }
         const first = _deviceRepeater.itemAt(0)
-        if (first) first.forceActiveFocus()
+        if (first) {
+            root._focusIndex = 0
+            if (fromPointer) first.focusFromPointer()
+            else first.focusFromKeyboard()
+        }
     }
 
     function _focusDeviceIndex(index: int): void {
         if (!root.open || _deviceRepeater.count <= 0) return
         const i = Math.max(0, Math.min(_deviceRepeater.count - 1, index))
         const item = _deviceRepeater.itemAt(i)
-        if (item) item.forceActiveFocus()
+        if (item) {
+            root._focusIndex = i
+            item.focusFromKeyboard()
+        }
     }
 
     Connections {
         target: Brightness
         function onDevicesChanged(): void {
-            if (Brightness.devices.length <= 1) root.open = false
+            if (Brightness.devices.length <= 1) root.closeInline()
         }
     }
 
@@ -66,7 +103,12 @@ Item {
         expandLabel: "brightness device"
         onExpandToggled: {
             root.open = !root.open
-            if (root.open) Qt.callLater(root._focusCurrentDevice)
+            if (root.open) {
+                const fromPointer = _slider.lastExpandFromPointer
+                Qt.callLater(function() {
+                    root._focusCurrentDevice(fromPointer)
+                })
+            }
         }
         onMoved: value => Brightness.setPercent(Math.round(value * 100))
     }
@@ -106,15 +148,18 @@ Item {
                     selected: active
                     accessibleDescription: active ? "Current brightness device" : "Brightness device"
                     activeFocusOnTab: root.open
+                        && _option.index === root._focusIndex
+                    onActiveFocusChanged: if (activeFocus) root._focusIndex = _option.index
 
                     onTriggered: {
                         ShellSettings.brightnessDevice = modelData.value
+                        if (_option.lastTriggerFromPointer) _slider.focusFromPointer()
+                        else _slider.focusFromKeyboard()
                         root.open = false
-                        _slider.forceActiveFocus()
                     }
                     Keys.onEscapePressed: event => {
+                        _slider.focusFromKeyboard()
                         root.open = false
-                        _slider.forceActiveFocus()
                         event.accepted = true
                     }
                     Keys.onUpPressed: event => {

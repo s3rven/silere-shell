@@ -18,6 +18,9 @@ Item {
     implicitHeight: 4 * Math.ceil((_topGap + _contentH + _botGap) / 4)
     height: implicitHeight
 
+    Accessible.role: Accessible.Heading
+    Accessible.name: root.label
+
     Item {
         id: _band
         anchors.left: parent.left
@@ -41,6 +44,7 @@ Item {
             font.letterSpacing: 0.65
             font.weight: Font.DemiBold
             font.capitalization: Font.AllUppercase
+            Accessible.ignored: true
         }
     }
 }
