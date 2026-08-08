@@ -12,9 +12,7 @@ Singleton {
     readonly property string font: {
         const installed = FontScan.families
         const chosen = ShellSettings.fontFamily
-        // only drop a chosen family we can prove is gone (uninstalled, or settings carried to
-        // another machine): an empty scan means fc-list is absent or still running, and the
-        // menu that would fix a bad font renders in it too
+        // an empty scan means fc-list is absent or still running, not that the font is gone
         if (chosen.length > 0 && (installed.length === 0 || installed.indexOf(chosen) >= 0))
             return chosen
         // the default is not installed everywhere; without a Nerd Font the bar is all tofu

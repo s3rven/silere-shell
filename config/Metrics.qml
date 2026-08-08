@@ -32,9 +32,7 @@ Singleton {
 
     function clockDateGapFor(compact: bool): int { return compact ? 4 : 8 }
 
-    // one grid for every menu row and button: 4px multiples keep card dividers on whole
-    // physical px under fractional scaling, and a row grows past its design height only
-    // when the font does, so a raised uiScale cannot crush the label
+    // 4px multiples keep dividers on whole physical px under fractional scaling; grows only with the font
     function rowHeightFor(design: real): int {
         return 4 * Math.ceil((design
             + Math.max(0, Settings.capHeight - Settings.capHeightBase)) / 4)
