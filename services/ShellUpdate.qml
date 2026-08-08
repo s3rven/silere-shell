@@ -54,7 +54,9 @@ Singleton {
     }
 
     function apply(): void {
-        if (applying || _applyProc.running || !pending) return
+        // Keep fetch/check and merge/apply out of the same checkout at the same
+        // time even when this API is called outside the guarded settings UI.
+        if (checking || applying || _applyProc.running || !pending) return
         applying = true
         lastApplyError = ""
         _applyTimedOut = false
