@@ -87,6 +87,7 @@ Scope {
         onSaved: {
             root.failureCount = 0
             _retry.stop()
+            ConfigStore.hardenFile(root.path)
             root.saved()
         }
         onSaveFailed: error => {

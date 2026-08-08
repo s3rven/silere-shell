@@ -696,7 +696,7 @@ MALLOC_ENV_ARG='MALLOC_CONF="${MALLOC_CONF-'"$MALLOC_TUNE"'}" '
 QSG_ENV_ARG='QSG_TRANSIENT_IMAGES="${QSG_TRANSIENT_IMAGES-'"$QSG_TUNE"'}" '
 EGL_ENV_ARG=""
 [ -n "$EGL_PIN" ] && EGL_ENV_ARG='__EGL_VENDOR_LIBRARY_FILENAMES="${__EGL_VENDOR_LIBRARY_FILENAMES-'"$_mesa_egl"'}" '
-LAUNCH_CMD="{ sleep 1; env ${MALLOC_ENV_ARG}${QSG_ENV_ARG}${EGL_ENV_ARG}qs -p \"\$(printf '%b' $ROOT_PRINTF_BYTES)/shell.qml\"; }"
+LAUNCH_CMD="{ umask 077; sleep 1; env ${MALLOC_ENV_ARG}${QSG_ENV_ARG}${EGL_ENV_ARG}qs -p \"\$(printf '%b' $ROOT_PRINTF_BYTES)/shell.qml\"; }"
 LAUNCH_CMD_LUA="$(_lua_string "$LAUNCH_CMD")"
 
 _already_present() { grep -qF 'silere-shell begin' "$1" 2>/dev/null; }

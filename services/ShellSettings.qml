@@ -520,6 +520,7 @@ Singleton {
         atomicWrites: true
         blockWrites:  true
         printErrors:  false
+        onSaved: ConfigStore.hardenFile(_backupFile.path)
         onSaveFailed: (error) => console.warn("silere-shell: failed to back up settings.json:", error)
     }
 
