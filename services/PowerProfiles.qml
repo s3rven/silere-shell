@@ -8,7 +8,7 @@ Singleton {
     id: root
 
     readonly property bool available: SystemTools.hasPowerProfilesCtl
-    readonly property bool syncing: _get.running || _getRetry.running
+    readonly property bool syncing: _get.running || _set.running || _getRetry.running
     property string profile: ""
 
     readonly property string label: profile === "performance" ? "Performance"
@@ -19,13 +19,25 @@ Singleton {
                                   : profile === "power-saver" ? "󰾆" : "󰾅"
 
     property int _writeGen: 0
+    property bool _correctiveRefreshPending: false
 
     property int _getRetries: 0
     readonly property int _getRetryMax: 4
-    Timer { id: _getRetry; interval: 600; onTriggered: root.refresh() }
+    Timer {
+        id: _getRetry
+        interval: 600
+        onTriggered: {
+            if (_get.running || _set.running) {
+                restart()
+                return
+            }
+            root.refresh()
+        }
+    }
 
     function refresh(): void {
-        if (!available || _get.running) return
+        if (!available || _get.running || _set.running) return
+        _correctiveRefreshPending = false
         _get._gen = root._writeGen
         _get.exec(["powerprofilesctl", "get"])
     }
@@ -44,7 +56,7 @@ Singleton {
         target: MenuState
         function onOpenChanged() {
             if (MenuState.open) { root._getRetries = 0; root.refresh() }
-            else _getRetry.stop()
+            else if (!root._correctiveRefreshPending) _getRetry.stop()
         }
     }
     Connections {
@@ -70,6 +82,11 @@ Singleton {
     }
     Process {
         id: _set
-        onExited: (code) => { if (code !== 0) root.refresh() }
+        onExited: (code) => {
+            if (code === 0) return
+            root._correctiveRefreshPending = true
+            root._getRetries = 0
+            _getRetry.restart()
+        }
     }
 }

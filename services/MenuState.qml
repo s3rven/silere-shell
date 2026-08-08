@@ -24,9 +24,9 @@ Singleton {
     readonly property var settingsTree: [
         { glyph: "󰉦", label: "Appearance", children: [
             { glyph: "󰉦", label: "Theme",       section: "theme",
-              description: "Colors, accent, and contrast" },
+              description: "Colors, accent, and outlines" },
             { glyph: "󰍉", label: "Interface", section: "interface",
-              description: "Font, scale, motion, and displays" }
+              description: "Font, scale, contrast, motion, and displays" }
         ]},
         { glyph: "󰕮", label: "Bar", children: [
             { glyph: "󰍹", label: "Layout",    section: "surface",

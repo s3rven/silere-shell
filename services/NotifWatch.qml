@@ -34,13 +34,17 @@ Singleton {
     Process {
         id: _proc
         running: false
+        // Ignore only this process. Another Quickshell instance can own the
+        // notification name too, and is still a real conflict worth showing.
         command: ["bash", "-c",
-            "raw=$(busctl --user call org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus GetNameOwner s org.freedesktop.Notifications 2>/dev/null); " +
+            "self=$1; raw=$(busctl --user call org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus GetNameOwner s org.freedesktop.Notifications 2>/dev/null); " +
             "set -- $raw; o=${2#\"}; o=${o%\"}; [ -n \"$o\" ] || exit 0; " +
             "raw=$(busctl --user call org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus GetConnectionUnixProcessID s \"$o\" 2>/dev/null); " +
             "set -- $raw; p=$2; case $p in ''|*[!0-9]*) exit 0;; esac; " +
+            "[ \"$p\" = \"$self\" ] && exit 0; " +
             "c=; IFS= read -r c < \"/proc/$p/comm\" 2>/dev/null || exit 0; " +
-            "case \"$c\" in *quickshell*|qs) exit 0;; \"\") exit 0;; *) echo \"$c\";; esac"]
+            "case \"$c\" in \"\") exit 0;; *) echo \"$c\";; esac",
+            "bash", String(Quickshell.processId)]
         stdout: StdioCollector { id: _out }
         onExited: {
             const name = (_out.text || "").trim()

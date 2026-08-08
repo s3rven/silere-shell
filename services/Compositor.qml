@@ -305,6 +305,11 @@ Singleton {
                     _hyprTitleSync.start()
                 return
             }
+            // the shell's own popups, OSD and notifications each fire openlayer/closelayer, and
+            // none of these touch the workspace, monitor or toplevel lists the models read
+            if (n === "openlayer" || n === "closelayer" || n === "submap"
+                    || n === "activelayout" || n === "screencast")
+                return
             // activewindow refires per title frame; only v2's address distinguishes a real focus change
             if (n === "activewindowv2") {
                 const addr = String(event.data ?? "")

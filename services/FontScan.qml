@@ -32,7 +32,9 @@ Singleton {
         stdout: StdioCollector { id: _out }
         onExited: (code) => {
             if (code !== 0) { root._scanned = false; return }
-            const variants = {}
+            // Font family aliases are external input; a null-prototype table
+            // keeps names such as "constructor" from colliding with JS built-ins.
+            const variants = Object.create(null)
             const lines = (_out.text || "").split("\n")
             for (let i = 0; i < lines.length; i++) {
                 const aliases = lines[i].split(",")
@@ -42,7 +44,7 @@ Singleton {
                     if (!match || match[1] === "Symbols") continue
                     const base = match[1]
                     const variant = match[2] || "Regular"
-                    if (!variants[base]) variants[base] = {}
+                    if (!variants[base]) variants[base] = Object.create(null)
                     variants[base][variant] = f
                 }
             }

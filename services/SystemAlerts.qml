@@ -13,8 +13,8 @@ Singleton {
     property bool _battCritSent: false
     property bool _cpuCritSent:  false
 
-    function _send(summary: string, body: string, urgency: string): void {
-        if (!SystemTools.ready || !SystemTools.hasNotifySend) return
+    function _send(summary: string, body: string, urgency: string): bool {
+        if (!SystemTools.ready || !SystemTools.hasNotifySend) return false
         Quickshell.execDetached([
             "notify-send",
             "--urgency=" + urgency,
@@ -23,30 +23,43 @@ Singleton {
             summary,
             body
         ])
+        return true
     }
 
     function _checkBattLow(): void {
         if (Battery.low && ShellSettings.osdBatteryWarn && !_battLowSent) {
-            _battLowSent = true
-            _send("Battery Low",
+            if (_send("Battery Low",
                 Math.round(Battery.pct) + "% remaining — consider plugging in",
-                "normal")
+                "normal")) _battLowSent = true
         }
     }
     function _checkBattCrit(): void {
         if (Battery.critical && ShellSettings.osdBatteryWarn && !_battCritSent) {
-            _battCritSent = true
-            _send("Battery Critical",
+            if (_send("Battery Critical",
                 Math.round(Battery.pct) + "% — plug in now",
-                "critical")
+                "critical")) _battCritSent = true
         }
     }
     function _checkCpuCrit(): void {
         if (CpuTemp.critical && ShellSettings.osdTempWarn && !_cpuCritSent) {
-            _cpuCritSent = true
-            _send("CPU Critical Temperature",
+            if (_send("CPU Critical Temperature",
                 Math.round(CpuTemp.temp) + "°C — reduce load immediately",
-                "critical")
+                "critical")) _cpuCritSent = true
+        }
+    }
+
+    function _checkCurrentWarnings(): void {
+        if (Battery.critical) _checkBattCrit()
+        else _checkBattLow()
+        _checkCpuCrit()
+    }
+
+    Component.onCompleted: Qt.callLater(root._checkCurrentWarnings)
+
+    Connections {
+        target: SystemTools
+        function onReadyChanged(): void {
+            if (SystemTools.ready) root._checkCurrentWarnings()
         }
     }
 

@@ -49,7 +49,19 @@ Singleton {
         return { best: best, hasWifi: hasWifi }
     }
 
-    readonly property bool available: toolAvailable && _devices.length > 0
+    readonly property bool _rawAvailable: toolAvailable && _devices.length > 0
+    // the device model empties for a frame while NetworkManager re-enumerates (vpn up/down, resume)
+    property bool available: false
+    on_RawAvailableChanged: {
+        if (root._rawAvailable) { _availableGrace.stop(); root.available = true }
+        else if (root.available) _availableGrace.restart()
+    }
+    Timer {
+        id: _availableGrace
+        interval: 2500
+        onTriggered: root.available = root._rawAvailable
+    }
+    Component.onCompleted: root.available = root._rawAvailable
     readonly property bool connected: _linkState.best !== null
     readonly property bool isWifi: connected && _linkState.best.wifi
     readonly property bool hasWifiDevice: _linkState.hasWifi
@@ -145,7 +157,9 @@ Singleton {
 
     function _wifiList(): var {
         if (!_scannerWanted) return []
-        const bySsid = {}
+        // SSIDs are external strings: a normal object loses names such as
+        // "constructor" and lets "__proto__" alter the lookup prototype.
+        const bySsid = Object.create(null)
         const order = []
         const devices = root._devices
 
