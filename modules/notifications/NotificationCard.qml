@@ -566,7 +566,6 @@ Item {
         id: _cardBorder
         anchors.fill: cardRect
         opacity: cardRect.opacity
-        visible: !card._showCountdown
 
         OutlineBorder {
             radius: cardRect.radius
@@ -586,7 +585,7 @@ Item {
         inset:        2.5
         cornerRadius: cardRect.radius
         progress:     card._timeoutProgress
-        trackColor:   Theme.menuControlLine
+        trackColor:   "transparent"
         arcColor:     card.isCritical ? Theme.error
                     : (card._timeoutProgress < 0.30 ? Theme.warning : Theme.accent)
     }
