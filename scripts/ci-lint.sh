@@ -170,6 +170,23 @@ else
   ok "Wayland" "public module only"
 fi
 
+section "niri event stream lifecycle"
+# Quickshell Socket buffers writes until flush(), so the Niri event-stream
+# subscription otherwise never reaches the compositor. A dropped compositor
+# socket also changes connected to false and needs an explicit retry.
+if ! awk '
+    /write\("\\"EventStream\\"\\n"\)/ { line = NR }
+    line && NR <= line + 2 && /flush\(\)/ { flushed = 1 }
+    END { exit !flushed }
+' services/Compositor.qml; then
+  fail "Niri EventStream request must flush the socket write"
+elif ! grep -qF 'id: _niriReconnect' services/Compositor.qml \
+    || ! grep -qF 'running: root.isNiri && !_niriSocket.connected' services/Compositor.qml; then
+  fail "Niri socket must retry after a dropped connection"
+else
+  ok "niri socket" "event stream flushes and reconnects"
+fi
+
 section "loader lifetime bindings"
 # Loader.item only exists while Loader.active is true. Feeding item visibility
 # or status back into active creates a runtime binding loop that qmlcachegen

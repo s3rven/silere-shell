@@ -550,17 +550,34 @@ Singleton {
         }
     }
 
+    // Socket.connected is both the current state and the connect request. A
+    // compositor restart drops it to false, so retry until the replacement
+    // niri socket accepts the event stream again.
+    Timer {
+        id: _niriReconnect
+        interval: 1500
+        repeat: true
+        running: root.isNiri && !_niriSocket.connected
+        onTriggered: _niriSocket.connected = true
+    }
+
     Socket {
         id: _niriSocket
         path: root.isNiri ? root._niriSock : ""
-        connected: root.isNiri
+        connected: false
         parser: SplitParser {
             splitMarker: "\n"
             onRead: line => root._onNiriLine(line)
         }
+        Component.onCompleted: if (root.isNiri) connected = true
         onConnectedChanged: {
-            if (connected) write("\"EventStream\"\n")
-            else root._niriReady = false
+            if (connected) {
+                write("\"EventStream\"\n")
+                flush()
+            } else {
+                root._niriReady = false
+                _niriReconnect.restart()
+            }
         }
     }
 }
