@@ -103,7 +103,9 @@ Item {
         return 0
     }
 
-    property var _appMetaCache: ({})
+    // Window classes are compositor-supplied, so they must not inherit keys
+    // such as "constructor" from Object.prototype.
+    property var _appMetaCache: Object.create(null)
     function _appMeta(cls: string): var {
         const raw = String(cls || "").trim()
         const key = raw.toLowerCase()
@@ -143,7 +145,7 @@ Item {
     Connections {
         target: ShellSettings.wsShowAppIcons ? DesktopEntries : null
         function onApplicationsChanged() {
-            root._appMetaCache = ({})
+            root._appMetaCache = Object.create(null)
             root._wsAppsTick++
         }
     }
@@ -210,11 +212,25 @@ Item {
         return acc + (_btnW(activeId) - markerW) / 2
     }
 
+    // niri indices are per-output and dynamic, and it always keeps one trailing empty workspace;
+    // padding past the last one renders slots focus-workspace cannot resolve. 0 = hyprland, no cap
+    readonly property int _idCap: {
+        if (!Compositor.isNiri) return 0
+        let last = 0
+        const vals = Compositor.workspaces
+        for (let i = 0; i < vals.length; i++) {
+            const ws = vals[i]
+            if (ws && ws.output === root.monitorName && ws.wsId > last) last = ws.wsId
+        }
+        return last
+    }
+
     // hyprland ids are global: skip ids owned by another output or a wide page turns a monitor-local bar into a cross-monitor switcher
     readonly property string _visibleIdsKey: {
         const ids = []
         const anchor = Math.max(1, root._monitorAnchorId)
         const active = Math.max(anchor, root.activeId)
+        const cap = root._idCap
         let activeLogicalIndex = 0
         for (let id = anchor; id < active; id++)
             if (!root._knownOnOtherMonitor(id)) activeLogicalIndex++
@@ -222,6 +238,7 @@ Item {
             * root.effectiveWsCount
         let logicalIndex = 0
         for (let id = anchor; ids.length < root.effectiveWsCount; id++) {
+            if (cap > 0 && id > cap) break
             if (root._knownOnOtherMonitor(id)) continue
             if (logicalIndex >= pageStart) ids.push(id)
             logicalIndex++
@@ -229,6 +246,7 @@ Item {
         return ids.join(",")
     }
     readonly property var visibleIds: {
+        if (root._visibleIdsKey.length === 0) return []
         const parts = root._visibleIdsKey.split(",")
         const ids = []
         for (let i = 0; i < parts.length; i++) {
@@ -351,15 +369,6 @@ Item {
             const button = _wsRepeater.itemAt(index)
             if (button) button.playNotificationPulse(critical)
         }
-    }
-
-    WorkspaceTrail {
-        headX: marker.centerX
-        tailX: marker.trailX
-        centerY: marker.centerY
-        weight: marker.trailWeight
-        tint: marker.tint
-        running: ShellSettings.workspaceShift && !root._paging
     }
 
     WorkspaceMarker {

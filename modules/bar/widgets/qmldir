@@ -1,7 +1,6 @@
 Workspaces    1.0 Workspaces.qml
 WorkspaceButton   1.0 WorkspaceButton.qml
 WorkspaceMarker   1.0 WorkspaceMarker.qml
-WorkspaceTrail    1.0 WorkspaceTrail.qml
 WorkspaceUrgentTick 1.0 WorkspaceUrgentTick.qml
 WorkspaceAppIcons 1.0 WorkspaceAppIcons.qml
 WorkspaceNotifPulse 1.0 WorkspaceNotifPulse.qml

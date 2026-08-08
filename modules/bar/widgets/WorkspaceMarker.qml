@@ -28,9 +28,6 @@ Item {
 
     readonly property real centerX: x + width / 2
     readonly property real centerY: y + height / 2
-    readonly property real trailX: _trailX + width / 2
-    // the line keeps a slimmer trail than the sprites, but enough weight to read as motion
-    readonly property real trailWeight: _bar ? 0.55 : 1
     readonly property color tint: root.urgent ? Theme.warning : Theme.accent
 
     function pulse(): void {
@@ -61,7 +58,6 @@ Item {
     property real _moveScale:    1.0
     property real _specialScale: 1.0
     property real _glint:        -1.15
-    property real _trailX:       targetX
     property real _menuOn: root.menuTargets && MenuState.open ? 1 : 0
     MotionBehavior on _menuOn {NumberAnimation { duration: Motion.ms(220); easing.type: Easing.OutCubic } }
 
@@ -299,7 +295,6 @@ Item {
     MotionBehavior on width       { gate: root.shiftEnabled && root._bar; NumberAnimation { duration: Motion.ms(190); easing.type: Easing.OutQuart } }
     MotionBehavior on opacity     {NumberAnimation { duration: Motion.ms(150) } }
     MotionBehavior on _hoverScale {NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
-    MotionBehavior on _trailX     { gate: root.shiftEnabled; NumberAnimation { duration: Motion.ms(260); easing.type: Easing.OutQuart } }
 
     onTargetXChanged: {
         if (!root.monitorReady || root.paging) return
