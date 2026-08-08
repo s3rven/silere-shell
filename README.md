@@ -21,33 +21,17 @@ No plugin layer. No extra daemon. Background features stay off until you turn th
 
 ## What you get
 
-**Bar** — workspaces, media, network, volume, brightness, battery, clock, tray, and update badges, dragged between left, centre, and right from Settings. The focused window title sits in the centre. Per-monitor.
+- **Bar**: workspaces, media, network, volume, brightness, battery, clock, tray, updates. Drag them between left, centre and right; per-monitor, with the window title in the middle.
+- **Menu**: one panel of live controls, settings, notification history.
+- **Notifications**: actions and images, do not disturb with quiet hours, silence while fullscreen.
+- **Theming**: matugen from your wallpaper or a hand-picked accent, over three dark base tones.
+- **Calendar** from the clock, **OSD** for volume and brightness, **quick actions** for night light, power profiles and airplane mode.
 
-**Menu** — one panel with three tabs: live controls, full settings, and notification history.
-
-**Notifications** — popups with actions and images, a history you can scroll back through, do not disturb with a quiet-hours schedule, and automatic silence while a window is fullscreen.
-
-**Theming** — colors generated from your wallpaper with matugen, or pick an accent by hand. Three dark base tones: black, charcoal, and graphite. Everything restyles live as you choose.
-
-**Calendar** — month view from the clock, with marks you can keep on dates.
-
-**On-screen display** — volume and brightness changes, plus battery and temperature warnings.
-
-**Quick actions** — do not disturb, microphone, night light, power profiles, and airplane mode, from a right-click on the active workspace diamond.
-
-The menu, the calendar, and the screenshot flash are scriptable over IPC, so your compositor keybinds can drive them directly.
-
-## What it doesn't do
-
-Silere is a shell, not a desktop environment. There is deliberately **no launcher, no dock, no clipboard manager, and no weather widget** — those are separate tools that do the job better, and bundling them is how shells get heavy.
-
-It is not a settings panel for your other applications. The installer edits two things outside its own checkout, your compositor's autostart and matugen's config, it asks first, and it backs up what it touches.
-
-Silere is one process, and nothing else of its own runs alongside it. The optional update check is a daily systemd timer that starts, checks, and exits.
+The menu, the calendar and the screenshot flash are scriptable over IPC.
 
 ## Resource use
 
-Idle use on a reference session measured **under 1% of one CPU core** and roughly **95–110 MB PSS**. An empty Quickshell panel doing nothing measured about **57 MB PSS** on the same machine, so much of that is the Qt and GPU driver floor rather than Silere.
+Idle use on a reference session measured **under 1% of one CPU core** and roughly **95-110 MB PSS**. An empty Quickshell panel doing nothing measured about **57 MB PSS** on the same machine, so much of that is the Qt and GPU driver floor rather than Silere.
 
 Results vary with hardware, drivers, and which widgets you enable. Measure your own checkout with `bash scripts/bench.sh 5`. The report tracks open file descriptors too, so a leak shows up as a climbing number while everything else stays flat.
 
@@ -70,7 +54,7 @@ To start it, restart your compositor, or try it right away with `qs -p /that/pat
 To remove it, run `bash scripts/uninstall.sh` from the installed checkout. That clears autostart, theme, and update-timer integrations, but keeps the checkout, your settings, and the installed font.
 
 <details>
-<summary><b>Optional tools</b> — Silere runs without all of these</summary>
+<summary><b>Optional tools</b>, none of them required</summary>
 
 <br>
 
