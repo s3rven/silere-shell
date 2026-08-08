@@ -21,6 +21,7 @@ Item {
     property string _draggingKey: ""
     property real _dragY: 0
     property string _pendingFocusKey: ""
+    property bool _resetArmed: false
 
     readonly property var _leftKeys: _draggingKey.length > 0
         ? _previewLayout.left : ShellSettings.barWidgetOrderLeftKeys
@@ -170,6 +171,12 @@ Item {
         }
     }
 
+    Timer {
+        id: _resetArmTimeout
+        interval: 3000
+        onTriggered: root._resetArmed = false
+    }
+
     Rectangle {
         id: _surface
         anchors.fill: parent
@@ -206,11 +213,25 @@ Item {
             anchors.rightMargin: 8
             anchors.verticalCenter: parent.verticalCenter
             height: Metrics.rowHeightFor(24)
-            label: "Reset"
-            accessibleName: "Reset bar widgets"
+            label: root._resetArmed ? "Confirm" : "Reset"
+            accessibleName: root._resetArmed
+                ? "Confirm resetting bar widgets" : "Reset bar widgets"
+            emphasis: root._resetArmed
+            accentColor: root._resetArmed ? Theme.warning : Theme.accent
             visible: ShellSettings.barWidgetsModified
             width: visible ? implicitWidth : 0
+            onVisibleChanged: if (!visible) {
+                _resetArmTimeout.stop()
+                root._resetArmed = false
+            }
             onTriggered: {
+                if (!root._resetArmed) {
+                    root._resetArmed = true
+                    _resetArmTimeout.restart()
+                    return
+                }
+                _resetArmTimeout.stop()
+                root._resetArmed = false
                 const ordered = root._leftKeys.concat(root._centerKeys, root._rightKeys)
                 if (ordered.length > 0) root._focusKey(ordered[0])
                 ShellSettings.resetBarWidgets()
@@ -379,13 +400,27 @@ Item {
             ShellText {
                 anchors.left: _glyph.right
                 anchors.leftMargin: 10
-                anchors.right: _row.hasToggle ? _toggleTarget.left : parent.right
-                anchors.rightMargin: _row.hasToggle ? 4 : 8
+                anchors.right: _dragGrip.left
+                anchors.rightMargin: 4
                 anchors.verticalCenter: parent.verticalCenter
                 text: _row.meta.label
                 elide: Text.ElideRight
                 color: _row.checked ? Theme.text : Theme.withAlpha(Theme.text, 0.48)
                 font.pixelSize: Settings.fontSize
+                ColorFade on color {}
+            }
+
+            ShellText {
+                id: _dragGrip
+                anchors.right: _row.hasToggle ? _toggleTarget.left : parent.right
+                anchors.rightMargin: _row.hasToggle ? 1 : 9
+                anchors.verticalCenter: parent.verticalCenter
+                width: 18
+                horizontalAlignment: Text.AlignHCenter
+                text: "󰇙"
+                color: Theme.withAlpha(Theme.subtext,
+                    _row.dragging || _rowHover.hovered ? 0.68 : 0.38)
+                font.pixelSize: Settings.fontLabel
                 ColorFade on color {}
             }
 
@@ -428,7 +463,7 @@ Item {
                 Accessible.checked: _row.checked
                 Accessible.description: (_row.zone === "left" ? "Left"
                     : _row.zone === "center" ? "Center" : "Right")
-                    + " zone. Arrow keys navigate; Left and Right change zones; Control Up and Down reorder."
+                    + " zone. Drag to move; arrow keys navigate; Left and Right change zones; Control Up and Down reorder."
                 Accessible.onPressAction: activateToggle()
                 Accessible.onToggleAction: activateToggle()
 
