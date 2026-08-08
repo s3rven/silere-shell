@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
+import Quickshell.Wayland
 import "../../config"
 import "../../services"
 import "../common"
@@ -10,6 +11,8 @@ PanelWindow {
     id: win
 
     required property ShellScreen targetScreen
+
+    WlrLayershell.namespace: "silere-notifications"
 
     screen:         targetScreen
     color:          "transparent"
