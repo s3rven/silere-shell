@@ -11,6 +11,14 @@ Column {
 
     property bool animationActive: true
     property bool _listOpen: false
+    property bool _changesOpen: false
+    readonly property bool _changesAvailable: ShellUpdate.pending
+        && ShellUpdate.pendingCommits.length > 0
+    readonly property bool _packagesAvailable: Updates.count > 0
+        && !Updates.lastFailed && Updates.packages.length > 0
+
+    on_ChangesAvailableChanged: if (!_changesAvailable) _changesOpen = false
+    on_PackagesAvailableChanged: if (!_packagesAvailable) _listOpen = false
 
     width: parent ? parent.width : 0
     spacing: 0
@@ -23,11 +31,14 @@ Column {
                 : ShellUpdate.pending ? "󰚰" : "󰄬"
             title: "Silere Shell"
             status: ShellUpdate.statusDetail
-            meta: ShellUpdate.currentVersion.length > 0 ? "#" + ShellUpdate.currentVersion : ""
+            meta: ShellUpdate.versionLabel
             detail: ShellUpdate.lastApplyError.length > 0 ? ShellUpdate.lastApplyError
                 : ShellUpdate.lastCheckError.length > 0 ? ShellUpdate.lastCheckError
-                : ShellUpdate.pending ? ShellUpdate.summary : ""
+                : ShellUpdate.pending && ShellUpdate.blockedReason.length > 0
+                    ? ShellUpdate.blockedReason + " — installing will not run until that is resolved"
+                : ShellUpdate.versionDetail
             detailError: ShellUpdate.lastApplyError.length > 0 || ShellUpdate.lastCheckError.length > 0
+                || (ShellUpdate.pending && ShellUpdate.blockedReason.length > 0)
             statusColor: ShellUpdate.lastCheckError.length > 0 || ShellUpdate.lastApplyError.length > 0
                 ? Theme.warning : ShellUpdate.checking || ShellUpdate.applying || ShellUpdate.pending
                     ? Theme.accent : Theme.success
@@ -36,6 +47,7 @@ Column {
             primaryLabel: ShellUpdate.pending || ShellUpdate.applying ? "Install" : "Check"
             primaryGlyph: ShellUpdate.pending ? "󰅢" : "󰓦"
             primaryEnabled: !ShellUpdate.checking && !ShellUpdate.applying
+                && (!ShellUpdate.pending || ShellUpdate.blockedReason.length === 0)
             primaryEmphasis: ShellUpdate.pending
             onPrimaryTriggered: {
                 if (ShellUpdate.pending) ShellUpdate.apply()
@@ -46,6 +58,80 @@ Column {
             secondaryGlyph: "󰑐"
             secondaryEnabled: !ShellUpdate.checking && !ShellUpdate.applying
             onSecondaryTriggered: ShellUpdate.check()
+        }
+
+        ControlRow {
+            glyph: "󰜘"
+            title: "Pending changes"
+            status: ShellUpdate.targetLabel.length > 0
+                ? "Moves to " + ShellUpdate.targetLabel : ""
+            valueText: ShellUpdate.pendingCommits.length < ShellUpdate.count
+                ? ShellUpdate.pendingCommits.length + " of " + ShellUpdate.count
+                : String(ShellUpdate.count)
+            visible: root._changesAvailable
+            expandable: true
+            chevronTabFocusable: false
+            expanded: root._changesOpen && root._changesAvailable
+            onExpandToggled: root._changesOpen = !root._changesOpen
+            onActivated: root._changesOpen = !root._changesOpen
+        }
+        CollapsibleSection {
+            expanded: root._changesOpen && root._changesAvailable
+            Item {
+                width: parent ? parent.width : 0
+                height: Math.min(_commits.contentHeight, 240)
+
+                ListView {
+                    id: _commits
+                    anchors.fill: parent
+                    clip: true
+                    interactive: contentHeight > height
+                    boundsMovement: Flickable.StopAtBounds
+                    flickDeceleration: Motion.flickDeceleration
+                    maximumFlickVelocity: Motion.flickVelocity
+                    spacing: 0
+                    model: root._changesOpen && root._changesAvailable
+                        ? ShellUpdate.pendingCommits : []
+
+                    Accessible.role: Accessible.List
+                    Accessible.name: "Pending shell changes"
+
+                    delegate: Item {
+                        id: _commit
+                        required property var modelData
+                        width: parent ? parent.width : 0
+                        height: Math.max(22, Settings.capHeight + 8)
+                        Accessible.role: Accessible.ListItem
+                        Accessible.name: _commit.modelData.subject
+                            + ", " + _commit.modelData.hash
+                        ShellText {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 42
+                            anchors.right: _hash.left
+                            anchors.rightMargin: 8
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: _commit.modelData.subject
+                            elide: Text.ElideRight
+                            color: Theme.withAlpha(Theme.text, 0.80)
+                            font.pixelSize: Settings.fontLabel
+                        }
+                        ShellText {
+                            id: _hash
+                            anchors.right: parent.right
+                            anchors.rightMargin: 12
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: _commit.modelData.hash
+                            color: Theme.withAlpha(Theme.subtext, 0.55)
+                            font.pixelSize: Settings.fontCaption
+                        }
+                    }
+                }
+
+                ListEdgeLines {
+                    anchors.fill: parent
+                    list: _commits
+                }
+            }
         }
 
         UpdateStatusCard {
@@ -79,14 +165,15 @@ Column {
             title: "Pending packages"
             valueText: Updates.packages.length < Updates.count
                 ? Updates.packages.length + " of " + Updates.count : String(Updates.count)
-            visible: Updates.count > 0 && !Updates.lastFailed && Updates.packages.length > 0
+            visible: root._packagesAvailable
             expandable: true
-            expanded: root._listOpen
+            chevronTabFocusable: false
+            expanded: root._listOpen && root._packagesAvailable
             onExpandToggled: root._listOpen = !root._listOpen
             onActivated: root._listOpen = !root._listOpen
         }
         CollapsibleSection {
-            expanded: root._listOpen && Updates.count > 0 && !Updates.lastFailed
+            expanded: root._listOpen && root._packagesAvailable
             Item {
                 width: parent ? parent.width : 0
                 height: Math.min(_packages.contentHeight, 240)
@@ -100,13 +187,21 @@ Column {
                     flickDeceleration: Motion.flickDeceleration
                     maximumFlickVelocity: Motion.flickVelocity
                     spacing: 0
-                    model: root._listOpen ? Updates.packages : []
+                    model: root._listOpen && root._packagesAvailable
+                        ? Updates.packages : []
+
+                    Accessible.role: Accessible.List
+                    Accessible.name: "Pending system packages"
 
                     delegate: Item {
                         id: _pkg
                         required property var modelData
                         width: parent ? parent.width : 0
                         height: Math.max(22, Settings.capHeight + 8)
+                        Accessible.role: Accessible.ListItem
+                        Accessible.name: _pkg.modelData.name + ", version "
+                            + _pkg.modelData.to
+                            + (_pkg.modelData.aur ? ", AUR" : "")
                         ShellText {
                             anchors.left: parent.left
                             anchors.leftMargin: 42
@@ -147,6 +242,7 @@ Column {
         }
         ToggleRow {
             glyph: "󰥔"; label: "Daily shell update check"
+            description: ShellUpdate.nextCheckText
             checked: ShellUpdate.timerEnabled
             enabled: !ShellUpdate.timerBusy
             available: ShellUpdate.timerSupported

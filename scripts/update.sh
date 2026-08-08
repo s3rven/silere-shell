@@ -17,6 +17,7 @@ CONFIG_HOME="$(_silere_xdg_home "${XDG_CONFIG_HOME:-}" .config)" || {
 CACHE_DIR="$CACHE_HOME/silere-shell"
 FLAG="$CACHE_DIR/update-pending"
 NOTIFIED="$CACHE_DIR/update-notified"
+CHECKED="$CACHE_DIR/update-checked"
 TIMER_UNIT="silere-update.timer"
 SERVICE_UNIT="silere-update.service"
 SYSTEMD_USER_DIR="$CONFIG_HOME/systemd/user"
@@ -60,6 +61,32 @@ _has_local_changes() {
     [ -n "$(git -C "$ROOT" status --porcelain --untracked-files=normal)" ]
 }
 
+_fetch_main() {
+    local shallow
+    shallow="$(git -C "$ROOT" rev-parse --is-shallow-repository 2>/dev/null || true)"
+    if [ "$shallow" = true ]; then
+        # Older installer releases used --depth 1. Tags alone do not cross that
+        # boundary, so git describe cannot recover the installed release until
+        # the main-branch history is completed once.
+        GIT_TERMINAL_PROMPT=0 git fetch --quiet --unshallow --tags origin main
+    else
+        GIT_TERMINAL_PROMPT=0 git fetch --quiet --tags origin main
+    fi
+}
+
+_acquire_update_lock() {
+    # util-linux is part of the normal Linux base. Keep the updater functional
+    # on unusually minimal systems, but serialize check/apply whenever flock is
+    # available so a timer run cannot race a manual install over refs/cache.
+    command -v flock >/dev/null 2>&1 || return 0
+    mkdir -m 0700 -p "$CACHE_DIR" \
+        || _quiet_fail "could not create the update cache directory"
+    exec 9>>"$CACHE_DIR/update.lock" \
+        || _quiet_fail "could not open the update lock"
+    flock -n 9 \
+        || _quiet_fail "another update check or install is already running"
+}
+
 _systemd_execstart() {
     local escaped="$ROOT/scripts/update.sh"
     escaped="${escaped//\\/\\\\}"
@@ -73,11 +100,34 @@ _systemd_execstart() {
 _timer_status() {
     if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1; then
         echo supported=1
-        systemctl --user is-enabled --quiet "$TIMER_UNIT" 2>/dev/null && echo enabled=1 || echo enabled=0
+        if systemctl --user is-enabled --quiet "$TIMER_UNIT" 2>/dev/null; then
+            echo enabled=1
+            # without --timestamp=unix systemctl renders a locale date here; empty on
+            # systemd older than 247, and empty whenever the timer is not scheduled
+            local next
+            next="$(systemctl --user show "$TIMER_UNIT" -p NextElapseUSecRealtime \
+                --value --timestamp=unix 2>/dev/null || true)"
+            printf 'next=%s\n' "${next#@}"
+        else
+            echo enabled=0
+        fi
     else
         echo supported=0
         echo enabled=0
     fi
+}
+
+_version_info() {
+    local head tag ahead=0 branch dirty=0
+    head="$(git -C "$ROOT" log -1 --format='%h %cs')"
+    tag="$(git -C "$ROOT" describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || true)"
+    if [ -n "$tag" ]; then
+        ahead="$(git -C "$ROOT" rev-list --count "$tag..HEAD" 2>/dev/null || echo 0)"
+    fi
+    branch="$(git -C "$ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+    if _has_local_changes; then dirty=1; fi
+    printf 'sha=%s\ndate=%s\ntag=%s\nahead=%s\nbranch=%s\ndirty=%s\n' \
+        "${head%% *}" "${head##* }" "$tag" "$ahead" "$branch" "$dirty"
 }
 
 _write_update_units() {
@@ -149,8 +199,7 @@ git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1 || _fail "not a git repo: $RO
 
 case "${1:-}" in
     --version)
-        # "<short-sha> <YYYY-MM-DD>"; the date is what makes a rolling hash mean anything
-        git -C "$ROOT" log -1 --format='%h %cs'
+        _version_info
         exit 0
         ;;
     --timer-status)
@@ -167,9 +216,16 @@ case "${1:-}" in
         ;;
 esac
 
+_acquire_update_lock
+
 # --apply: fast-forward to the already-fetched origin/main and restart the shell.
 # The flag carries the pending commit summary written by the check pass.
 if [ "${1:-}" = "--apply" ]; then
+    apply_branch="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
+    [ -n "$apply_branch" ] \
+        || _fail "checkout is on a detached HEAD — switch to main before applying"
+    [ "$apply_branch" = main ] \
+        || _fail "checkout is on branch $apply_branch — switch to main before applying"
     local_rev="$(git rev-parse HEAD)"
     remote_rev="$(git rev-parse origin/main 2>/dev/null)" \
         || _fail "origin/main is unavailable — check for updates again"
@@ -196,8 +252,12 @@ fi
 # Default (check): fetch and flag a pending update; never restarts on its own, so
 # the shell can surface an indicator instead of vanishing mid-session.
 
-GIT_TERMINAL_PROMPT=0 git fetch --quiet origin main \
-    || _quiet_fail "git fetch failed (check network / connectivity)"
+_fetch_main || _quiet_fail "git fetch failed (check network / connectivity)"
+
+# Records a successful check whatever its outcome, so the shell can report when
+# it last reached origin even after a restart or an unattended timer run.
+_write_cache_file "$CHECKED" "$(date +%s)" \
+    || echo "silere-update: could not record the update check time" >&2
 
 local_rev="$(git rev-parse HEAD)"
 remote_rev="$(git rev-parse origin/main)"
@@ -205,8 +265,10 @@ _exit_if_not_behind "$local_rev" "$remote_rev" 1
 
 count="$(git rev-list --count "${local_rev}..${remote_rev}")"
 summary="$(git log -5 --oneline --no-decorate "${local_rev}..${remote_rev}")"
+target_tag="$(git describe --tags --abbrev=0 --match 'v[0-9]*' "$remote_rev" 2>/dev/null || true)"
 
-_write_cache_file "$FLAG" "$count" "$summary" \
+_write_cache_file "$FLAG" "$count" \
+    "target $(git rev-parse --short "$remote_rev") $target_tag" "$summary" \
     || _quiet_fail "failed to write update status"
 
 # The badge is the persistent reminder. Notify once per pending revision, or a

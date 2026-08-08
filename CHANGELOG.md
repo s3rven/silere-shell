@@ -17,7 +17,37 @@ install receives changes as they land, not when a version is published here.
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- The shell update card names the installed version by tag — `v0.1.0`, or
+  `v0.1.0 +12` when the checkout sits that many commits past one — and reports
+  its commit, branch and build date underneath.
+- A pending shell update expands into the individual commits it would install,
+  and names the version it moves to when the update crosses a tag.
+- Update checks record when they last reached the remote, unattended runs
+  included, so the card can report it after a restart rather than only within
+  the session that ran the check.
+- The daily update check reports when it next runs.
+
+### Changed
+
+- The update card states up front when the checkout is on another branch, on a
+  detached HEAD, or carries local changes. Those are the conditions the
+  installer refuses to run in, and they were previously only reported after
+  Install had already failed.
+- Pending commits moved out of the card's status line into their own expandable
+  list, matching how pending packages are already presented.
+- The bar no longer rebuilds its workspace and window models when a layer surface
+  opens or closes. The shell's own menus, notifications and on-screen display are
+  the usual source of those events, and none of them change what the models hold.
+  Twenty open/close cycles cost 43 rebuilds of each model before, and none now.
+
+### Fixed
+
+- On niri, the workspace strip no longer pads out to a fixed number of slots.
+  niri numbers workspaces per output and keeps the set dynamic, so the padding
+  drew slots whose index `focus-workspace` could not resolve: they looked
+  clickable and did nothing.
 
 ## [0.1.0] - 2026-08-08
 
