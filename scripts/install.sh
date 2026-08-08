@@ -384,7 +384,7 @@ qs_modules_ok=true
 if $has_qs; then
     for module in "${SILERE_REQUIRED_QML_MODULES[@]}"; do
         if ! _qml_module_available "$module"; then
-            _warn "required Quickshell module missing: $module"
+            _warn "required QML module missing: $module"
             qs_modules_ok=false
         fi
     done
@@ -562,7 +562,7 @@ elif [ -e "$INSTALL_DIR" ] || [ -L "$INSTALL_DIR" ]; then
             || _die "could not preserve existing path: $INSTALL_DIR"
         _ok "preserved existing path at $install_backup"
         spin_start "cloning..."
-        if ! GIT_TERMINAL_PROMPT=0 git clone --depth 1 --single-branch --quiet "$REPO_URL" "$INSTALL_DIR"; then
+        if ! GIT_TERMINAL_PROMPT=0 git clone --single-branch --quiet "$REPO_URL" "$INSTALL_DIR"; then
             spin_stop
             if [ ! -e "$INSTALL_DIR" ] && [ ! -L "$INSTALL_DIR" ] \
                     && mv -- "$install_backup" "$INSTALL_DIR"; then
@@ -579,7 +579,7 @@ elif [ -e "$INSTALL_DIR" ] || [ -L "$INSTALL_DIR" ]; then
     fi
 else
     spin_start "cloning..."
-    if ! GIT_TERMINAL_PROMPT=0 git clone --depth 1 --single-branch --quiet "$REPO_URL" "$INSTALL_DIR"; then
+    if ! GIT_TERMINAL_PROMPT=0 git clone --single-branch --quiet "$REPO_URL" "$INSTALL_DIR"; then
         spin_stop; _die "git clone failed — check your connection"
     fi
     fresh_clone=true

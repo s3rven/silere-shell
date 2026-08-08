@@ -211,7 +211,7 @@ require_qml_module() {
   if [ -n "$found" ]; then
     ok "$module" "$found"
   else
-    fail "$module" "required Quickshell QML module not found in import paths"
+    fail "$module" "required QML module not found in import paths"
   fi
 }
 

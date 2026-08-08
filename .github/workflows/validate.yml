@@ -22,14 +22,16 @@ jobs:
     timeout-minutes: 15
 
     steps:
+      - name: Install validation dependencies
+        run: pacman -Syu --noconfirm git shellcheck quickshell
+
       # pinned to an immutable sha so a moved tag cannot run unreviewed code
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-
-      - name: Install validation dependencies
-        run: pacman -Syu --noconfirm shellcheck quickshell
+        with:
+          persist-credentials: false
 
       - name: Structural and portability validation
-        run: bash scripts/ci-lint.sh
+        run: SILERE_REQUIRE_GIT_TESTS=1 bash scripts/ci-lint.sh
 
       - name: Quickshell package compatibility
         shell: bash
@@ -39,7 +41,7 @@ jobs:
           source scripts/lib/qml-modules.sh
           for module in "${SILERE_REQUIRED_QML_MODULES[@]}"; do
             _qml_module_available "$module" || {
-              echo "::error::required Quickshell service module is missing: $module"
+              echo "::error::required QML module is missing: $module"
               exit 1
             }
             echo "ok: $module"

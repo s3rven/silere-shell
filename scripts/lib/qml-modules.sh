@@ -5,8 +5,14 @@
 # import paths rather than assuming one distro layout.
 
 SILERE_REQUIRED_QML_MODULES=(
+    QtQuick
+    QtQuick.Effects
+    QtQuick.Shapes
+    QtQuick.Window
+    Quickshell
     Quickshell.Bluetooth
     Quickshell.Hyprland
+    Quickshell.Io
     Quickshell.Networking
     Quickshell.Services.Mpris
     Quickshell.Services.Notifications

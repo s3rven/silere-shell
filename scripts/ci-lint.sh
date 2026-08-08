@@ -13,6 +13,7 @@
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT" || exit 1
+source "$ROOT/scripts/lib/qml-modules.sh"
 status=0
 seen_section=0
 section() {
@@ -34,8 +35,8 @@ fail() { printf 'fail %s\n' "$*" >&2; status=1; }
 script_files=(scripts/*.sh scripts/lib/*.sh)
 
 section "merge conflict markers"
-# grep, not git grep: in CI the container may have no git at checkout time, so
-# the tree is checked out without a .git. This lint is meant to run on a plain tree.
+# grep, not git grep: this lint is also meant to work from a release archive or
+# any other plain source tree without repository metadata.
 if grep -rn -I -E '^(<<<<<<< |=======$|>>>>>>> )' --exclude-dir=.git . ; then
   fail "conflict markers found"
 else
@@ -61,6 +62,27 @@ check_service_module Media Quickshell.Services.Mpris
 check_service_module Notifications Quickshell.Services.Notifications
 check_service_module Bluetooth Quickshell.Bluetooth
 check_service_module Network Quickshell.Networking
+
+section "external QML module inventory"
+imported_modules="$(
+  # MatugenTheme.qml is a local generated file; inventory the shipped template
+  # instead so personal output cannot change validation results.
+  grep -RhE --include='*.qml' --exclude='MatugenTheme.qml' \
+    '^[[:space:]]*import[[:space:]]+[A-Za-z][A-Za-z0-9_.]*([[:space:]]|$)' \
+    shell.qml modules config services assets/matugen-theme.qml \
+    | awk '$1 == "import" { print $2 }' | sort -u
+)"
+required_modules="$(printf '%s\n' "${SILERE_REQUIRED_QML_MODULES[@]}" | sort -u)"
+unlisted_modules="$(comm -23 <(printf '%s\n' "$imported_modules") \
+  <(printf '%s\n' "$required_modules"))"
+unused_modules="$(comm -13 <(printf '%s\n' "$imported_modules") \
+  <(printf '%s\n' "$required_modules"))"
+if [ -n "$unlisted_modules" ] || [ -n "$unused_modules" ]; then
+  [ -z "$unlisted_modules" ] || fail "unlisted unconditional QML modules: $unlisted_modules"
+  [ -z "$unused_modules" ] || fail "required QML modules no longer imported: $unused_modules"
+else
+  ok "modules" "inventory covers every unconditional external import"
+fi
 
 section "local singleton imports"
 missing_singleton_import=0
@@ -342,6 +364,25 @@ else
 fi
 
 section "bar widget layout API"
+# The settings key list, settings metadata, and runtime component registry are
+# three views of one widget catalog. A widget is incomplete if any view drifts.
+widget_keys="$(awk '/barWidgetKeys:[[:space:]]*\[/{take=1} take{print; if ($0 ~ /\]/) exit}' \
+  services/ShellSettings.qml | grep -oE '"[A-Za-z][A-Za-z0-9]*"' | tr -d '"' | sort)"
+widget_meta="$(awk '/barWidgetMeta:[[:space:]]*\(\{/{take=1; next} \
+  take && /^[[:space:]]*\}\)/{exit} take{print}' services/ShellSettings.qml \
+  | sed -nE 's/^[[:space:]]*([A-Za-z][A-Za-z0-9]*):.*/\1/p' | sort)"
+widget_components="$(awk '/_widgetComponents:[[:space:]]*\(\{/{take=1; next} \
+  take && /^[[:space:]]*\}\)/{exit} take{print}' modules/bar/BarContent.qml \
+  | grep -oE '[A-Za-z][A-Za-z0-9]*[[:space:]]*:' | tr -d ': ' | sort)"
+if [ -z "$widget_keys" ] || [ "$widget_keys" != "$widget_meta" ] \
+        || [ "$widget_keys" != "$widget_components" ]; then
+    fail "barWidgetKeys, barWidgetMeta, and _widgetComponents must be nonempty and identical"
+    printf 'keys:\n%s\nmeta:\n%s\ncomponents:\n%s\n' \
+      "$widget_keys" "$widget_meta" "$widget_components"
+else
+    ok "bar widgets" "keys, metadata, and components agree"
+fi
+
 # The three persisted order strings form one logical layout. Let ShellSettings
 # validate and update them together so arranger/bar callers cannot drift.
 direct_layout_writes="$(grep -RInE --include='*.qml' \
