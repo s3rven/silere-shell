@@ -145,6 +145,10 @@ Singleton {
     function refresh(): void {
         // read the setting directly — on a manual toggle the `enabled` alias may not have re-evaluated yet
         if (!ShellSettings.updatesWidget || !supported || _proc.running) return
+        // A manual check supersedes delayed recovery work. Leaving either timer
+        // armed makes a successful check run again a few seconds/minutes later.
+        _retry.stop()
+        _reconnect.stop()
         root._timedOut = false
         _proc.exec(["bash", "-c", root._cmd()])
     }
@@ -181,6 +185,8 @@ Singleton {
                 root._parseDetail(t)
                 root.lastFailed = false
                 root.lastError = ""
+                _retry.stop()
+                _reconnect.stop()
             } else {
                 root.lastFailed = true
                 root.lastError = t.startsWith("ERR") ? t.substring(3).trim() : "Package check returned no count"
