@@ -20,6 +20,8 @@ Singleton {
     readonly property int _maxSummaryChars: 2048
     readonly property int _maxBodyChars: 16384
     readonly property int _maxSourceChars: 4096
+    // Image fetches these over the network, and icon/image fields are raw d-bus input from any sender
+    readonly property var _remoteSource: /^(?:https?|ftps?):/i
     readonly property int activeCount: Array.isArray(list) ? list.length : 0
 
     // reassigning a var array resets the view — every delegate rebuilt, scroll to top, expanded card collapsed
@@ -310,6 +312,7 @@ Singleton {
     function fileUrl(raw): string {
         const value = String(raw || "").trim()
         if (value.length > root._maxSourceChars) return ""
+        if (root._remoteSource.test(value)) return ""
         if (!value.startsWith("/")) return value
         // encodeURI leaves # and ? intact, truncating filenames that contain them
         return "file://" + value.split("/").map(function(part) {
@@ -321,6 +324,7 @@ Singleton {
         const value = String(raw || "").trim()
         if (value.length === 0 || value.length > root._maxSourceChars) return ""
         if (value.startsWith("/")) return root.fileUrl(value)
+        if (root._remoteSource.test(value)) return ""
         if (/^[a-z][a-z0-9+.-]*:/i.test(value)) return value
         return Quickshell.iconPath(value, true)
     }
