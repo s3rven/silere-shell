@@ -414,6 +414,35 @@ else
     skip "navigation" "settings navigation files not found"
 fi
 
+section "settings section attribution"
+shell_settings="services/ShellSettings.qml"
+if [ -f "$shell_settings" ] && [ -f "$settings_nav" ]; then
+    # the nav dot lies if a schema key is unattributed or points at a page that does not exist
+    attr_nav=$(grep -oE 'section: "[^"]+"' "$settings_nav" \
+               | sed -E 's/.*"([^"]+)"/\1/' | sort -u)
+    schema_block=$(sed -n '/readonly property var _schema: \[/,/^[[:space:]]*\]/p' "$shell_settings")
+    schema_keys=$(printf '%s\n' "$schema_block" | grep -cE '\{ k: "')
+    schema_secs=$(printf '%s\n' "$schema_block" | grep -cE 'sec: "')
+    if [ "$schema_keys" -ne "$schema_secs" ]; then
+        fail "settings schema entries missing a sec: attribution ($schema_secs of $schema_keys):"
+        printf '%s\n' "$schema_block" | grep -E '\{ k: "' | grep -v 'sec: "' \
+            | sed -E 's/^[[:space:]]*/  /'
+    else
+        used_secs=$(printf '%s\n' "$schema_block" | grep -oE 'sec: "[^"]*"' \
+                    | sed -E 's/.*"([^"]*)"/\1/' | tr ',' '\n' \
+                    | grep -vx '-' | grep -v '^$' | sort -u)
+        unknown=$(comm -23 <(printf '%s\n' "$used_secs") <(printf '%s\n' "$attr_nav"))
+        if [ -n "$unknown" ]; then
+            fail "settings schema attributed to unknown pages:"
+            while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$unknown"
+        else
+            ok "attribution" "$schema_keys schema keys map to known settings pages"
+        fi
+    fi
+else
+    skip "attribution" "settings schema files not found"
+fi
+
 section "theme palette coverage"
 theme_tmpl="assets/matugen-theme.qml"
 theme_default="config/MatugenTheme.default.qml"

@@ -9,16 +9,14 @@ Item {
     id: root
 
     property bool powerOpen: false
-    property bool navigationVisible: true
-    readonly property bool active: MenuState.settingsActive
-        && navigationVisible && !powerOpen
+    readonly property bool active: MenuState.settingsActive && !powerOpen
     readonly property bool compact: width < 132
 
     signal currentPageRetapped()
 
+    // The open-groups preference drops the accordion: groups start open and
+    // each still collapses independently. Reassignment keeps bindings live.
     property int _expandedGroup: _groupIndexForSection(MenuState.settingsSection)
-    // pinned drops the accordion: groups start open and each collapses on its own.
-    // reassigned, never mutated, so the bindings that call _isExpanded re-evaluate
     readonly property bool allExpanded: ShellSettings.settingsNavPinned
     property var _collapsed: ({})
     function _isExpanded(index: int): bool {
@@ -35,12 +33,12 @@ Item {
 
     implicitHeight: _navContentHeight()
 
-    readonly property int _navTop:      10
+    readonly property int _navTop:      42
     readonly property int _navBottom:    8
-    readonly property int _groupH:      27
-    readonly property int _groupGap:     1
+    readonly property int _groupH:      29
+    readonly property int _groupGap:     2
     readonly property int _childrenPad:  2
-    readonly property int _navRowH:     27
+    readonly property int _navRowH:     29
     readonly property int _navRowGap:    1
 
     function _leaves(it): var {
@@ -66,6 +64,13 @@ Item {
             if (leaves[i].section === section) return i
         }
         return -1
+    }
+
+    function _groupModified(it): bool {
+        const leaves = root._leaves(it)
+        for (let i = 0; i < leaves.length; i++)
+            if (ShellSettings.modifiedSections[leaves[i].section] === true) return true
+        return false
     }
 
     function _groupContainsSection(it, section: string): bool {
@@ -114,7 +119,8 @@ Item {
     }
 
     function _revealRange(top: real, bottom: real): void {
-        const contentH = root._navContentHeight()
+        // implicitHeight already caches the same tree calculation for layout.
+        const contentH = root.implicitHeight
         const viewH = _navScroll.height
         if (contentH <= viewH + 1) {
             _navScroll.contentY = 0
@@ -180,6 +186,11 @@ Item {
         if (index < 0 || index >= _groupRepeater.count) return
         const group = _groupRepeater.itemAt(index)
         if (group) group.focusHeader()
+    }
+
+    function focusNavigation(): void {
+        const selected = root._groupIndexForSection(MenuState.settingsSection)
+        root._focusGroupHeader(selected >= 0 ? selected : 0)
     }
 
     function _moveFromHeader(groupIndex: int, delta: int): void {
@@ -268,7 +279,7 @@ Item {
         boundsMovement: Flickable.StopAtBounds
         flickDeceleration: Motion.flickDeceleration
         maximumFlickVelocity: Motion.flickVelocity
-        interactive: _navSettle.overflows
+        interactive: contentHeight > height + 1
 
         onHeightChanged: if (root.active) _resizeSettle.restart()
 
@@ -281,6 +292,25 @@ Item {
             id: _content
             width: root.width
             height: root.implicitHeight
+
+            Item {
+                id: _drawerHeader
+                x: 8
+                y: 6
+                width: Math.max(1, parent.width - 16)
+                height: 28
+
+                ShellText {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Settings"
+                    color: Theme.withAlpha(Theme.text, 0.88)
+                    font.pixelSize: Settings.fontSize
+                    font.weight: Font.DemiBold
+                    elide: Text.ElideRight
+                }
+            }
 
             Column {
                 id: _groupColumn
@@ -352,11 +382,13 @@ Item {
                             activeFocusOnTab: true
                             Accessible.role: Accessible.Button
                             Accessible.name: _grp.modelData.label + " settings category"
-                            Accessible.description: _grp.expanded
-                                ? "Expanded, activate to collapse"
-                                : (_grp.groupActive
+                            Accessible.description: {
+                                if (_grp.expanded) return "Expanded, activate to collapse"
+                                const base = _grp.groupActive
                                     ? "Collapsed, contains the current page"
-                                    : "Collapsed, activate to expand")
+                                    : "Collapsed, activate to expand"
+                                return _groupDot.visible ? base + ". Contains changes from defaults" : base
+                            }
                             Accessible.onPressAction: root._toggleGroup(_grp.index)
 
                             Keys.onSpacePressed: event => {
@@ -427,7 +459,7 @@ Item {
                             ShellText {
                                 anchors.left: _groupGlyph.visible ? _groupGlyph.right : parent.left
                                 anchors.leftMargin: _groupGlyph.visible ? 8 : 10
-                                anchors.right: _groupChevron.left
+                                anchors.right: _groupDot.visible ? _groupDot.left : _groupChevron.left
                                 anchors.rightMargin: 6
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: _grp.modelData.label
@@ -435,12 +467,25 @@ Item {
                                     ? Theme.text
                                     : Theme.withAlpha(Theme.menuTextMuted,
                                         _headerHover.hovered || _grpHeader.activeFocus || _grp.expanded ? 0.94 : 0.80)
-                                font.pixelSize: Settings.fontCaption
+                                font.pixelSize: Settings.fontLabel
                                 font.weight: _grp.groupActive || _grp.expanded
                                     ? Font.DemiBold : Font.Normal
-                                font.letterSpacing: 0.35
-                                font.capitalization: Font.AllUppercase
                                 elide: Text.ElideRight
+                            }
+
+                            // only while collapsed: an expanded group shows its leaves' own dots
+                            Rectangle {
+                                id: _groupDot
+                                visible: !_grp.expanded && root._groupModified(_grp.modelData)
+                                anchors.right: _groupChevron.left
+                                anchors.rightMargin: 7
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 4
+                                height: 4
+                                radius: 2
+                                antialiasing: true
+                                color: Theme.withAlpha(Theme.subtext, 0.38)
+                                ColorFade on color {}
                             }
 
                             ShellText {
@@ -503,6 +548,8 @@ Item {
                                         required property var modelData
                                         readonly property bool active: MenuState.settingsSection === modelData.section
                                         readonly property string glyph: modelData.glyph ?? ""
+                                        readonly property bool modified:
+                                            ShellSettings.modifiedSections[modelData.section] === true
                                         width: _leafColumn.width
                                         height: root._navRowH
                                         radius: Theme.radiusInline
@@ -517,7 +564,12 @@ Item {
                                         activeFocusOnTab: _grp.expanded
                                         Accessible.role: Accessible.Button
                                         Accessible.name: _leaf.modelData.label
-                                        Accessible.description: _leaf.modelData.description ?? ""
+                                        Accessible.description: {
+                                            const d = _leaf.modelData.description ?? ""
+                                            if (!_leaf.modified) return d
+                                            return d.length > 0 ? d + ". Changed from defaults"
+                                                                : "Changed from defaults"
+                                        }
                                         Accessible.selectable: true
                                         Accessible.selected: active
                                         Accessible.onPressAction: root._activateSection(_leaf.modelData.section)
@@ -588,11 +640,25 @@ Item {
                                             ColorFade on color {}
                                         }
 
+                                        Rectangle {
+                                            id: _leafDot
+                                            visible: _leaf.modified
+                                            anchors.right: parent.right
+                                            anchors.rightMargin: 9
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            width: 4
+                                            height: 4
+                                            radius: 2
+                                            antialiasing: true
+                                            color: Theme.withAlpha(Theme.subtext, _leaf.active ? 0.58 : 0.38)
+                                            ColorFade on color {}
+                                        }
+
                                         ShellText {
                                             anchors.left: _leafGlyph.visible ? _leafGlyph.right : parent.left
                                             anchors.leftMargin: _leafGlyph.visible ? 8 : 12
-                                            anchors.right: parent.right
-                                            anchors.rightMargin: 8
+                                            anchors.right: _leafDot.visible ? _leafDot.left : parent.right
+                                            anchors.rightMargin: _leafDot.visible ? 6 : 8
                                             anchors.verticalCenter: parent.verticalCenter
                                             text: _leaf.modelData.label
                                             elide: Text.ElideRight
@@ -614,15 +680,4 @@ Item {
         }
     }
 
-    ScrollSettle {
-        id: _navSettle
-        list: _navScroll
-        armed: root.active
-    }
-
-    ListEdgeLines {
-        anchors.fill: _navScroll
-        visible: _navSettle.ready
-        list: _navScroll
-    }
 }

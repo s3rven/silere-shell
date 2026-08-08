@@ -11,6 +11,8 @@ Singleton {
 
     property bool   mediaProgress:       false
     property bool   mediaWidgetHelper:   false
+    property bool   mediaWidgetFixedWidth: false
+    property int    mediaWidgetMaxWidth: 160
     property string mediaVisualizerPreset: "balanced"
     property string mediaVisualizerStyle:  "wave"
     property string mediaVisualizerPosition: "media"
@@ -36,6 +38,7 @@ Singleton {
     property bool   valuesOnHover:       true
     property bool   hoverLevelBar:       false
     property bool   batteryAutoHide:     true
+    property bool   barShowWorkspaces:   true
     property bool   barShowBattery:      true
     property bool   barShowNetwork:      true
     property bool   barShowClock:        true
@@ -240,7 +243,7 @@ Singleton {
     readonly property bool barWidgetsModified: root._barWidgetsModified()
 
     readonly property var barWidgetMeta: ({
-        workspaces:  { glyph: "󰊗", label: "Workspaces",      group: "workspaces", setting: "" },
+        workspaces:  { glyph: "󰊗", label: "Workspaces",      group: "workspaces", setting: "barShowWorkspaces" },
         shellUpdate: { glyph: "󰑐", label: "Shell update",    group: "updates", setting: "barShowShellUpdate" },
         tray:        { glyph: "󰇘", label: "System tray",     group: "tray",    setting: "trayWidget" },
         updates:     { glyph: "󰚰", label: "Package updates", group: "updates", setting: "updatesWidget" },
@@ -292,112 +295,115 @@ Singleton {
 
     // drives load/save/change-tracking. t: bool|int|real|enum|re — int/real use min/max, enum vals, re a pattern
     readonly property var _schema: [
-        { k: "mediaProgress",       t: "bool" },
-        { k: "mediaWidgetHelper",   t: "bool" },
-        { k: "mediaVisualizerPreset", t: "enum", vals: ["eco", "balanced", "smooth"] },
-        { k: "mediaVisualizerStyle",  t: "enum", vals: ["wave", "bars", "pulse"] },
-        { k: "mediaVisualizerPosition", t: "enum", vals: ["media", "center"] },
-        { k: "workspaceShift",      t: "bool" },
-        { k: "neutralTheme",        t: "bool" },
-        { k: "neutralAccentAuto",   t: "bool" },
-        { k: "neutralAccent",       t: "re",   re: /^#[0-9a-fA-F]{6}$/ },
-        { k: "matugenAccentRole",   t: "enum", vals: ["primary", "secondary", "tertiary"] },
-        { k: "matugenDepth",        t: "enum", vals: ["none", "deep", "deeper"] },
-        { k: "baseTone",            t: "enum", vals: ["black", "charcoal", "graphite"] },
-        { k: "networkTrafficStats", t: "bool" },
-        { k: "networkSpeedInline",  t: "bool" },
-        { k: "netVpnShowLink",      t: "bool" },
-        { k: "brightnessDevice",    t: "re",   re: /^[A-Za-z0-9_.:+@-]*$/ },
-        { k: "showSeconds",         t: "bool" },
-        { k: "compactDate",         t: "bool" },
-        { k: "clock12h",            t: "bool" },
-        { k: "showWindowTitle",     t: "bool" },
-        { k: "showWindowTitleApp",  t: "bool" },
-        { k: "windowTitleCenterGap", t: "bool" },
-        { k: "updatesWidget",       t: "bool" },
-        { k: "trayWidget",          t: "bool" },
-        { k: "valuesOnHover",       t: "bool" },
-        { k: "hoverLevelBar",       t: "bool" },
-        { k: "batteryAutoHide",     t: "bool" },
-        { k: "barShowBattery",      t: "bool" },
-        { k: "barShowNetwork",      t: "bool" },
-        { k: "barShowClock",        t: "bool" },
-        { k: "barShowShellUpdate",  t: "bool" },
-        { k: "barShowVolume",       t: "bool" },
-        { k: "barShowBrightness",   t: "bool" },
-        { k: "barShowMedia",        t: "bool" },
-        { k: "osdEnabled",          t: "bool" },
-        { k: "osdTimeout",          t: "int",  min: 500,  max: 10000 },
-        { k: "osdKindFilter",       t: "enum", vals: ["both", "volume", "brightness"] },
-        { k: "osdBatteryWarn",      t: "bool" },
-        { k: "osdTempWarn",         t: "bool" },
-        { k: "osdVolumeTint",       t: "bool" },
-        { k: "osdChargedNotify",    t: "bool" },
-        { k: "osdBarIntegrated",    t: "bool" },
-        { k: "osdMatchBar",         t: "bool" },
-        { k: "settingsNavPinned",   t: "bool" },
-        { k: "reduceMotion",        t: "bool" },
-        { k: "highContrast",        t: "bool" },
-        { k: "outlineStrength",     t: "real", min: 0.5, max: 2.4 },
-        { k: "uiScale",             t: "real", min: 0.8, max: 1.15 },
-        { k: "fontFamily",          t: "re",   re: /^[^\u0000-\u001F\u007F]{0,128}$/ },
-        { k: "notifPopupEnabled",   t: "bool" },
-        { k: "notifFullscreenSilence", t: "bool" },
-        { k: "notifPosition",       t: "enum", vals: ["top-right", "top-left", "top-center"] },
-        { k: "notifMaxVisible",     t: "int",  min: 0, max: 20 },
-        { k: "dndSchedule",         t: "bool" },
-        { k: "dndFrom",             t: "int",  min: 0, max: 23 },
-        { k: "dndTo",               t: "int",  min: 0, max: 23 },
-        { k: "mediaWidgetFormat",   t: "enum", vals: ["title", "artist-title"] },
-        { k: "tempHotThreshold",    t: "int",  min: 50,   max: 105 },
-        { k: "batteryLowThreshold", t: "int",  min: 5,    max: 50 },
-        { k: "notifDefaultTimeout", t: "int",  min: 1000, max: 30000 },
-        { k: "sysAlertTimeout",     t: "int",  min: 0,    max: 30000 },
-        { k: "clockShowDate",       t: "bool" },
-        { k: "barBorderVisible",    t: "bool" },
-        { k: "barLineStrength",     t: "real", min: 0.5, max: 3.0 },
-        { k: "underlineGlow",       t: "bool" },
-        { k: "underlineIdleGlow",   t: "bool" },
-        { k: "underlineNotifGlow",  t: "bool" },
-        { k: "underlineBattGlow",   t: "bool" },
-        { k: "underlineNetGlow",    t: "bool" },
-        { k: "underlineTempGlow",   t: "bool" },
-        { k: "underlineScreenshotGlow", t: "bool" },
-        { k: "glowStrength",        t: "real", min: 0.5, max: 2.0 },
-        { k: "screenshotGlowSweep", t: "bool" },
-        { k: "dotOpacity",          t: "real", min: 0.05, max: 1.0 },
-        { k: "dotStyle",            t: "enum", vals: ["·", "•", "◦", "|", "slash", "line", "none"] },
-        { k: "barSeparatorMode",    t: "enum", vals: ["groups", "widgets"] },
-        { k: "barSpacing",          t: "int",  min: 4, max: 24 },
-        { k: "barAutoCompact",      t: "bool" },
-        { k: "barCompact",          t: "bool" },
-        { k: "barHoverHighlight",   t: "bool" },
-        { k: "barHeight",           t: "int",  min: 24,   max: 60 },
-        { k: "barFloating",         t: "bool" },
-        { k: "barWidth",            t: "real", min: 0.5,  max: 1.0 },
-        { k: "barCornerStyle",      t: "enum", vals: ["flat", "round"] },
-        { k: "barRadius",           t: "int",  min: 0,    max: 28 },
-        { k: "barShadow",           t: "bool" },
-        { k: "barShadowStrength",   t: "real", min: 0.3,  max: 2.0 },
-        { k: "barPosition",         t: "enum", vals: ["top", "bottom"] },
-        { k: "barOpacity",          t: "real", min: 0.4,  max: 1.0 },
-        { k: "barDisabledMonitors", t: "re",   re: /^[A-Za-z0-9._,-]*$/ },
-        { k: "overlayMonitor",      t: "re",   re: /^[A-Za-z0-9._-]*$/ },
-        { k: "barWidgetOrderLeft",  t: "re",   re: /^[a-zA-Z]*(,[a-zA-Z]+)*$/ },
-        { k: "barWidgetOrderCenter", t: "re", re: /^[a-zA-Z]*(,[a-zA-Z]+)*$/ },
-        { k: "barWidgetOrderRight", t: "re",   re: /^[a-zA-Z]*(,[a-zA-Z]+)*$/ },
+        { k: "mediaProgress",       t: "bool", sec: "media" },
+        { k: "mediaWidgetHelper",   t: "bool", sec: "media" },
+        { k: "mediaWidgetFixedWidth", t: "bool", sec: "media" },
+        { k: "mediaWidgetMaxWidth", t: "int", min: 80, max: 260, sec: "media" },
+        { k: "mediaVisualizerPreset", t: "enum", vals: ["eco", "balanced", "smooth"], sec: "media" },
+        { k: "mediaVisualizerStyle",  t: "enum", vals: ["wave", "bars", "pulse"], sec: "media" },
+        { k: "mediaVisualizerPosition", t: "enum", vals: ["media", "center"], sec: "media" },
+        { k: "workspaceShift",      t: "bool", sec: "workspaces" },
+        { k: "neutralTheme",        t: "bool", sec: "theme" },
+        { k: "neutralAccentAuto",   t: "bool", sec: "theme" },
+        { k: "neutralAccent",       t: "re",   re: /^#[0-9a-fA-F]{6}$/, sec: "theme" },
+        { k: "matugenAccentRole",   t: "enum", vals: ["primary", "secondary", "tertiary"], sec: "theme" },
+        { k: "matugenDepth",        t: "enum", vals: ["none", "deep", "deeper"], sec: "theme" },
+        { k: "baseTone",            t: "enum", vals: ["black", "charcoal", "graphite"], sec: "theme" },
+        { k: "networkTrafficStats", t: "bool", sec: "indicators" },
+        { k: "networkSpeedInline",  t: "bool", sec: "indicators" },
+        { k: "netVpnShowLink",      t: "bool", sec: "indicators" },
+        { k: "brightnessDevice",    t: "re",   re: /^[A-Za-z0-9_.:+@-]*$/, sec: "interface" },
+        { k: "showSeconds",         t: "bool", sec: "clock" },
+        { k: "compactDate",         t: "bool", sec: "clock" },
+        { k: "clock12h",            t: "bool", sec: "clock" },
+        { k: "showWindowTitle",     t: "bool", sec: "indicators" },
+        { k: "showWindowTitleApp",  t: "bool", sec: "indicators" },
+        { k: "windowTitleCenterGap", t: "bool", sec: "indicators" },
+        { k: "updatesWidget",       t: "bool", sec: "widgets" },
+        { k: "trayWidget",          t: "bool", sec: "widgets" },
+        { k: "valuesOnHover",       t: "bool", sec: "indicators" },
+        { k: "hoverLevelBar",       t: "bool", sec: "indicators" },
+        { k: "batteryAutoHide",     t: "bool", sec: "indicators" },
+        { k: "barShowWorkspaces",   t: "bool", sec: "widgets" },
+        { k: "barShowBattery",      t: "bool", sec: "widgets" },
+        { k: "barShowNetwork",      t: "bool", sec: "widgets" },
+        { k: "barShowClock",        t: "bool", sec: "widgets" },
+        { k: "barShowShellUpdate",  t: "bool", sec: "widgets" },
+        { k: "barShowVolume",       t: "bool", sec: "widgets" },
+        { k: "barShowBrightness",   t: "bool", sec: "widgets" },
+        { k: "barShowMedia",        t: "bool", sec: "widgets" },
+        { k: "osdEnabled",          t: "bool", sec: "osd" },
+        { k: "osdTimeout",          t: "int",  min: 500,  max: 10000, sec: "osd" },
+        { k: "osdKindFilter",       t: "enum", vals: ["both", "volume", "brightness"], sec: "osd" },
+        { k: "osdBatteryWarn",      t: "bool", sec: "warnings" },
+        { k: "osdTempWarn",         t: "bool", sec: "warnings" },
+        { k: "osdVolumeTint",       t: "bool", sec: "osd" },
+        { k: "osdChargedNotify",    t: "bool", sec: "warnings" },
+        { k: "osdBarIntegrated",    t: "bool", sec: "osd" },
+        { k: "osdMatchBar",         t: "bool", sec: "osd" },
+        { k: "settingsNavPinned",   t: "bool", sec: "interface" },
+        { k: "reduceMotion",        t: "bool", sec: "interface" },
+        { k: "highContrast",        t: "bool", sec: "interface" },
+        { k: "outlineStrength",     t: "real", min: 0.5, max: 2.4, sec: "theme" },
+        { k: "uiScale",             t: "real", min: 0.8, max: 1.15, sec: "interface" },
+        { k: "fontFamily",          t: "re",   re: /^[^\u0000-\u001F\u007F]{0,128}$/, sec: "interface" },
+        { k: "notifPopupEnabled",   t: "bool", sec: "popups" },
+        { k: "notifFullscreenSilence", t: "bool", sec: "popups" },
+        { k: "notifPosition",       t: "enum", vals: ["top-right", "top-left", "top-center"], sec: "popups" },
+        { k: "notifMaxVisible",     t: "int",  min: 0, max: 20, sec: "popups" },
+        { k: "dndSchedule",         t: "bool", sec: "popups" },
+        { k: "dndFrom",             t: "int",  min: 0, max: 23, sec: "popups" },
+        { k: "dndTo",               t: "int",  min: 0, max: 23, sec: "popups" },
+        { k: "mediaWidgetFormat",   t: "enum", vals: ["title", "artist-title"], sec: "media" },
+        { k: "tempHotThreshold",    t: "int",  min: 50,   max: 105, sec: "warnings" },
+        { k: "batteryLowThreshold", t: "int",  min: 5,    max: 50, sec: "warnings" },
+        { k: "notifDefaultTimeout", t: "int",  min: 1000, max: 30000, sec: "popups" },
+        { k: "sysAlertTimeout",     t: "int",  min: 0,    max: 30000, sec: "warnings" },
+        { k: "clockShowDate",       t: "bool", sec: "clock" },
+        { k: "barBorderVisible",    t: "bool", sec: "underline" },
+        { k: "barLineStrength",     t: "real", min: 0.5, max: 3.0, sec: "underline" },
+        { k: "underlineGlow",       t: "bool", sec: "underline" },
+        { k: "underlineIdleGlow",   t: "bool", sec: "underline" },
+        { k: "underlineNotifGlow",  t: "bool", sec: "underline" },
+        { k: "underlineBattGlow",   t: "bool", sec: "underline,warnings" },
+        { k: "underlineNetGlow",    t: "bool", sec: "underline" },
+        { k: "underlineTempGlow",   t: "bool", sec: "underline,warnings" },
+        { k: "underlineScreenshotGlow", t: "bool", sec: "underline" },
+        { k: "glowStrength",        t: "real", min: 0.5, max: 2.0, sec: "underline" },
+        { k: "screenshotGlowSweep", t: "bool", sec: "underline" },
+        { k: "dotOpacity",          t: "real", min: 0.05, max: 1.0, sec: "separators" },
+        { k: "dotStyle",            t: "enum", vals: ["·", "•", "◦", "|", "slash", "line", "none"], sec: "separators" },
+        { k: "barSeparatorMode",    t: "enum", vals: ["groups", "widgets"], sec: "separators" },
+        { k: "barSpacing",          t: "int",  min: 4, max: 24, sec: "separators" },
+        { k: "barAutoCompact",      t: "bool", sec: "separators" },
+        { k: "barCompact",          t: "bool", sec: "separators" },
+        { k: "barHoverHighlight",   t: "bool", sec: "indicators" },
+        { k: "barHeight",           t: "int",  min: 24,   max: 60, sec: "surface" },
+        { k: "barFloating",         t: "bool", sec: "surface" },
+        { k: "barWidth",            t: "real", min: 0.5,  max: 1.0, sec: "surface" },
+        { k: "barCornerStyle",      t: "enum", vals: ["flat", "round"], sec: "surface" },
+        { k: "barRadius",           t: "int",  min: 0,    max: 28, sec: "surface" },
+        { k: "barShadow",           t: "bool", sec: "surface" },
+        { k: "barShadowStrength",   t: "real", min: 0.3,  max: 2.0, sec: "surface" },
+        { k: "barPosition",         t: "enum", vals: ["top", "bottom"], sec: "surface" },
+        { k: "barOpacity",          t: "real", min: 0.4,  max: 1.0, sec: "surface" },
+        { k: "barDisabledMonitors", t: "re",   re: /^[A-Za-z0-9._,-]*$/, sec: "interface" },
+        { k: "overlayMonitor",      t: "re",   re: /^[A-Za-z0-9._-]*$/, sec: "interface" },
+        { k: "barWidgetOrderLeft",  t: "re",   re: /^[a-zA-Z]*(,[a-zA-Z]+)*$/, sec: "widgets" },
+        { k: "barWidgetOrderCenter", t: "re", re: /^[a-zA-Z]*(,[a-zA-Z]+)*$/, sec: "widgets" },
+        { k: "barWidgetOrderRight", t: "re",   re: /^[a-zA-Z]*(,[a-zA-Z]+)*$/, sec: "widgets" },
 
-        { k: "nightLightTemp",      t: "int",  min: 1000, max: 6500 },
-        { k: "nightLightAuto",     t: "bool" },
-        { k: "wsMinVisible",        t: "int",  min: 1,    max: 10 },
-        { k: "wsShowNumbers",       t: "bool" },
-        { k: "wsScrollSwitch",      t: "bool" },
-        { k: "wsShowAppIcons",      t: "bool" },
-        { k: "wsNotifPulse",        t: "bool" },
-        { k: "wsMarkerOpacity",     t: "real", min: 0.2, max: 1.0 },
-        { k: "wsIconOpacity",       t: "real", min: 0.3, max: 1.0 },
-        { k: "wsIconMono",          t: "bool" },
-        { k: "wsActiveMarker",      t: "enum", vals: ["gem", "dot", "bar"] }
+        { k: "nightLightTemp",      t: "int",  min: 1000, max: 6500, sec: "-" },
+        { k: "nightLightAuto",     t: "bool", sec: "-" },
+        { k: "wsMinVisible",        t: "int",  min: 1,    max: 10, sec: "workspaces" },
+        { k: "wsShowNumbers",       t: "bool", sec: "workspaces" },
+        { k: "wsScrollSwitch",      t: "bool", sec: "workspaces" },
+        { k: "wsShowAppIcons",      t: "bool", sec: "workspaces" },
+        { k: "wsNotifPulse",        t: "bool", sec: "workspaces" },
+        { k: "wsMarkerOpacity",     t: "real", min: 0.2, max: 1.0, sec: "workspaces" },
+        { k: "wsIconOpacity",       t: "real", min: 0.3, max: 1.0, sec: "workspaces" },
+        { k: "wsIconMono",          t: "bool", sec: "workspaces" },
+        { k: "wsActiveMarker",      t: "enum", vals: ["gem", "dot", "bar"], sec: "workspaces" }
     ]
     function _coerce(s, v): void {
         switch (s.t) {
@@ -422,13 +428,28 @@ Singleton {
 
     property int _modifiedCount: 0
     readonly property int modifiedCount: _modifiedCount
+    property var _modifiedSections: ({})
+    readonly property var modifiedSections: _modifiedSections
+
+    // "-" marks a key with no settings page of its own, so it can never light a nav dot
+    function _markSection(into, sec): void {
+        if (!sec || sec === "-") return
+        const parts = sec.split(",")
+        for (let i = 0; i < parts.length; i++) into[parts[i]] = true
+    }
 
     // recounted only on load and on the debounced save, never per keystroke
     function _recountModified(): void {
         let n = 0
-        for (let i = 0; i < _schema.length; i++)
-            if (!root._sameValue(root[_schema[i].k], root._defaults[_schema[i].k])) n++
+        const secs = ({})
+        for (let i = 0; i < _schema.length; i++) {
+            const s = _schema[i]
+            if (root._sameValue(root[s.k], root._defaults[s.k])) continue
+            n++
+            root._markSection(secs, s.sec)
+        }
         root._modifiedCount = n
+        root._modifiedSections = secs
     }
 
     function resetToDefaults(): void {
@@ -572,17 +593,20 @@ Singleton {
             ? JSON.parse(JSON.stringify(_futureSettings)) : ({})
         out.__version = preserveFuture ? _loadedVersion : _settingsVersion
         let changed = 0
+        const secs = ({})
         for (let i = 0; i < _schema.length; i++) {
             const key = _schema[i].k
             const modified = !root._sameValue(root[key], root._defaults[key])
             if (modified) {
                 out[key] = root[key]
                 changed++
+                root._markSection(secs, _schema[i].sec)
             } else if (!preserveFuture || root._futureTouched[key] === true) {
                 delete out[key]
             }
         }
         root._modifiedCount = changed
+        root._modifiedSections = secs
         if (preserveFuture) _futureSettings = out
         return JSON.stringify(out, null, 2)
     }
