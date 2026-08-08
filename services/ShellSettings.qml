@@ -11,8 +11,6 @@ Singleton {
 
     property bool   mediaProgress:       false
     property bool   mediaWidgetHelper:   false
-    property bool   mediaWidgetFixedWidth: false
-    property int    mediaWidgetMaxWidth: 160
     property string mediaVisualizerPreset: "balanced"
     property string mediaVisualizerStyle:  "wave"
     property string mediaVisualizerPosition: "media"
@@ -80,6 +78,7 @@ Singleton {
     property real   barLineStrength:     1.0
 
     property bool   underlineGlow:       false
+    property string underlineLastStyle:  "static"
     property bool   underlineIdleGlow:   false
     property bool   underlineNotifGlow:  false
     property bool   underlineBattGlow:   false
@@ -297,8 +296,6 @@ Singleton {
     readonly property var _schema: [
         { k: "mediaProgress",       t: "bool", sec: "media" },
         { k: "mediaWidgetHelper",   t: "bool", sec: "media" },
-        { k: "mediaWidgetFixedWidth", t: "bool", sec: "media" },
-        { k: "mediaWidgetMaxWidth", t: "int", min: 80, max: 260, sec: "media" },
         { k: "mediaVisualizerPreset", t: "enum", vals: ["eco", "balanced", "smooth"], sec: "media" },
         { k: "mediaVisualizerStyle",  t: "enum", vals: ["wave", "bars", "pulse"], sec: "media" },
         { k: "mediaVisualizerPosition", t: "enum", vals: ["media", "center"], sec: "media" },
@@ -363,6 +360,7 @@ Singleton {
         { k: "barBorderVisible",    t: "bool", sec: "underline" },
         { k: "barLineStrength",     t: "real", min: 0.5, max: 3.0, sec: "underline" },
         { k: "underlineGlow",       t: "bool", sec: "underline" },
+        { k: "underlineLastStyle",  t: "enum", vals: ["static", "glow"], sec: "underline" },
         { k: "underlineIdleGlow",   t: "bool", sec: "underline" },
         { k: "underlineNotifGlow",  t: "bool", sec: "underline" },
         { k: "underlineBattGlow",   t: "bool", sec: "underline,warnings" },
@@ -427,33 +425,26 @@ Singleton {
     }
 
     property int _modifiedCount: 0
+    property var _modifiedKeys: Object.create(null)
     readonly property int modifiedCount: _modifiedCount
-    property var _modifiedSections: ({})
-    readonly property var modifiedSections: _modifiedSections
 
-    // "-" marks a key with no settings page of its own, so it can never light a nav dot
-    function _markSection(into, sec): void {
-        if (!sec || sec === "-") return
-        const parts = sec.split(",")
-        for (let i = 0; i < parts.length; i++) into[parts[i]] = true
-    }
-
-    // recounted only on load and on the debounced save, never per keystroke
     function _recountModified(): void {
         let n = 0
-        const secs = ({})
+        const keys = Object.create(null)
         for (let i = 0; i < _schema.length; i++) {
-            const s = _schema[i]
-            if (root._sameValue(root[s.k], root._defaults[s.k])) continue
+            const key = _schema[i].k
+            if (root._sameValue(root[key], root._defaults[key])) continue
+            keys[key] = true
             n++
-            root._markSection(secs, s.sec)
         }
+        root._modifiedKeys = keys
         root._modifiedCount = n
-        root._modifiedSections = secs
     }
 
     function resetToDefaults(): void {
-        _backupSettings("pre-reset")
+        // Capture the values visible in the UI, including changes still inside
+        // PersistedFile's debounce window, rather than the older disk echo.
+        _backupSettingsText("pre-reset", root._serialize())
         for (let i = 0; i < _schema.length; i++) {
             const k = _schema[i].k
             if (k !== "barWidgetOrderLeft" && k !== "barWidgetOrderCenter"
@@ -478,7 +469,17 @@ Singleton {
     }
 
     function _onSettingChanged(key: string): void {
-        if (!_loaded || !_store.writeAllowed) return
+        if (!_loaded) return
+        // Sliders can emit dozens of changes per second. Track the one key
+        // that moved instead of rescanning the entire schema on every tick.
+        const modified = !root._sameValue(root[key], root._defaults[key])
+        const wasModified = root._modifiedKeys[key] === true
+        if (modified !== wasModified) {
+            if (modified) root._modifiedKeys[key] = true
+            else delete root._modifiedKeys[key]
+            root._modifiedCount += modified ? 1 : -1
+        }
+        if (!_store.writeAllowed) return
         if (_loadedVersion > _settingsVersion) _futureTouched[key] = true
         _store.queue()
     }
@@ -529,11 +530,15 @@ Singleton {
         }
     }
 
-    function _backupSettings(tag: string): void {
-        const body = root._diskText.trim()
+    function _backupSettingsText(tag: string, text: string): void {
+        const body = (text || "").trim()
         if (body.length === 0) return
         _backupFile.path = ConfigStore.directory + "/settings." + tag + ".bak.json"
         _backupFile.setText(body)
+    }
+
+    function _backupSettings(tag: string): void {
+        root._backupSettingsText(tag, root._diskText)
     }
 
     FileView {
@@ -576,6 +581,13 @@ Singleton {
                 const s = _schema[i]
                 if (parsed[s.k] !== undefined) _coerce(s, parsed[s.k])
             }
+            // The two legacy booleans represent one mode. Prefer reactive if
+            // hand-edited JSON enables both, and seed the persisted restore mode
+            // for settings files written before underlineLastStyle existed.
+            if (root.underlineGlow && root.barBorderVisible)
+                root.barBorderVisible = false
+            if (root.underlineGlow) root.underlineLastStyle = "glow"
+            else if (root.barBorderVisible) root.underlineLastStyle = "static"
             root._readError = ""
             _store.writeAllowed = true
         } catch(e) {
@@ -593,20 +605,19 @@ Singleton {
             ? JSON.parse(JSON.stringify(_futureSettings)) : ({})
         out.__version = preserveFuture ? _loadedVersion : _settingsVersion
         let changed = 0
-        const secs = ({})
+        const modifiedKeys = Object.create(null)
         for (let i = 0; i < _schema.length; i++) {
             const key = _schema[i].k
-            const modified = !root._sameValue(root[key], root._defaults[key])
-            if (modified) {
+            if (!root._sameValue(root[key], root._defaults[key])) {
                 out[key] = root[key]
+                modifiedKeys[key] = true
                 changed++
-                root._markSection(secs, _schema[i].sec)
             } else if (!preserveFuture || root._futureTouched[key] === true) {
                 delete out[key]
             }
         }
+        root._modifiedKeys = modifiedKeys
         root._modifiedCount = changed
-        root._modifiedSections = secs
         if (preserveFuture) _futureSettings = out
         return JSON.stringify(out, null, 2)
     }
