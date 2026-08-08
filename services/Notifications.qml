@@ -11,9 +11,11 @@ Singleton {
     property var list: []
     property alias dnd:         _persist.dnd
     property alias missedCount: _persist.missedCount
-    property var _seen:  ({})
-    property var _times: ({})
-    property var _updateTimes: ({})
+    // These maps are restored from persisted JSON. Keep their prototype empty
+    // so a malformed key cannot change object behaviour between reloads.
+    property var _seen:  Object.create(null)
+    property var _times: Object.create(null)
+    property var _updateTimes: Object.create(null)
     property bool _persistentReady: false
     readonly property int _maxHistory: 20
     readonly property int _maxIdentityChars: 512
@@ -82,8 +84,8 @@ Singleton {
 
     function _ensurePersistentState(): void {
         // var properties can be undefined for one frame during hot-reload
-        if (!root._seen || typeof root._seen !== "object") root._seen = ({})
-        if (!root._times || typeof root._times !== "object") root._times = ({})
+        if (!root._seen || typeof root._seen !== "object") root._seen = Object.create(null)
+        if (!root._times || typeof root._times !== "object") root._times = Object.create(null)
     }
 
     function _parsePersistentJson(raw: string, fallback): var {
@@ -93,8 +95,8 @@ Singleton {
 
     function _restorePersistentState(): void {
         const savedHistory = root._parsePersistentJson(_persist.historyJson, [])
-        const savedSeen = root._parsePersistentJson(_persist.seenJson, ({}))
-        const savedTimes = root._parsePersistentJson(_persist.timesJson, ({}))
+        const savedSeen = root._parsePersistentJson(_persist.seenJson, Object.create(null))
+        const savedTimes = root._parsePersistentJson(_persist.timesJson, Object.create(null))
         _history.clear()
         if (Array.isArray(savedHistory)) {
             for (let i = 0; i < savedHistory.length && i < root._maxHistory; i++) {
@@ -102,8 +104,8 @@ Singleton {
                 if (e) _history.append(e)
             }
         }
-        root._seen = savedSeen && typeof savedSeen === "object" && !Array.isArray(savedSeen) ? savedSeen : ({})
-        root._times = savedTimes && typeof savedTimes === "object" && !Array.isArray(savedTimes) ? savedTimes : ({})
+        root._seen = root._cloneMap(savedSeen)
+        root._times = root._cloneMap(savedTimes)
         root._persistentReady = true
         root._saveHistory()
     }
@@ -112,9 +114,10 @@ Singleton {
     on_TimesChanged:  if (_persistentReady) _persist.timesJson = JSON.stringify(_times)
 
     function _cloneMap(map): var {
-        const out = {}
+        const out = Object.create(null)
         if (!map || typeof map !== "object") return out
-        for (const k in map) out[k] = map[k]
+        const keys = Object.keys(map)
+        for (let i = 0; i < keys.length; i++) out[keys[i]] = map[keys[i]]
         return out
     }
 
