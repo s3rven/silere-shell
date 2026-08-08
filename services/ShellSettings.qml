@@ -19,8 +19,8 @@ Singleton {
     property bool   neutralAccentAuto:   false
     property string neutralAccent:       "#b8bdd8"
     property string matugenAccentRole:   "primary"
-    property string matugenDepth:        "none"
-    property string baseTone:            "charcoal"
+    property string matugenDepth:        "deeper"
+    property string baseTone:            "black"
     property bool   networkTrafficStats: false
     property bool   networkSpeedInline:  false
     property bool   netVpnShowLink:      false

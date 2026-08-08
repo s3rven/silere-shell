@@ -9,9 +9,9 @@ Singleton {
     readonly property bool _hc: ShellSettings.highContrast
 
     readonly property var _tones: ({
-        black:    { background: "#030405", surface: "#111216", subtext: "#9296a1" },
-        charcoal: { background: "#0b0c10", surface: "#191b21", subtext: "#9a9eaa" },
-        graphite: { background: "#111319", surface: "#20232b", subtext: "#a3a7b2" }
+        black:    { background: "#030405", surface: "#121214", subtext: "#9296a1" },
+        charcoal: { background: "#0b0c0e", surface: "#1b1b1c", subtext: "#9a9eaa" },
+        graphite: { background: "#131315", surface: "#232324", subtext: "#a3a7b2" }
     })
     readonly property var _pal: _tones[ShellSettings.baseTone] ?? _tones.charcoal
 
@@ -38,14 +38,20 @@ Singleton {
     readonly property color subtext:    _hc ? mix(_subtextBase, text, 0.32) : _subtextBase
     readonly property color surface:    _hc ? mix(_surfaceBase, text, 0.035) : _surfaceBase
     readonly property color accent:     _n ? (ShellSettings.neutralAccentAuto ? MatugenTheme.accent : ShellSettings.neutralAccent) : _matuAccent
-    // matugen's warning/success are M3 tertiary/secondary — palette slots with no semantic meaning,
-    // so a wallpaper can hand back a pink "warning" or a grey-blue "success". anchor the hue and let
-    // matugen tint it. error is left alone: M3's error role is genuinely semantic.
+    // matugen warning/success are M3 tertiary/secondary with no semantic meaning, so anchor the hue and let it tint; error is real
     readonly property color _warnAnchor: "#d4ad77"
     readonly property color _okAnchor:   "#94bd8b"
     readonly property color error:      _n ? "#dd92a2" : MatugenTheme.error
     readonly property color warning:    _n ? _warnAnchor : mix(_warnAnchor, MatugenTheme.warning, 0.30)
     readonly property color success:    _n ? _okAnchor   : mix(_okAnchor,   MatugenTheme.success, 0.30)
+
+    function _lin(c: real): real {
+        return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+    }
+    readonly property real _baseL: 903.3 * (0.2126 * _lin(background.r)
+                                          + 0.7152 * _lin(background.g)
+                                          + 0.0722 * _lin(background.b))
+    readonly property real _elevK: Math.min(1.33, Math.max(1.0, 1.0 + 0.098 * (3.36 - _baseL)))
 
     readonly property real _lineK: ShellSettings.outlineStrength
     function lineAlpha(a: real): real { return Math.min(1, a * _lineK) }
@@ -65,10 +71,10 @@ Singleton {
         _hc ? Math.max(0.90, ShellSettings.barOpacity) : ShellSettings.barOpacity)
     readonly property color popup: background
 
-    readonly property color menuPane:        _n ? mix(background, text, _hc ? 0.050 : 0.030)
-                                                : mix(background, _hc ? text : surface, _hc ? 0.055 : 0.18)
-    readonly property color menuCard:        _n ? mix(background, text, _hc ? 0.090 : 0.060)
-                                                : mix(background, text, _hc ? 0.100 : 0.07)
+    readonly property color menuPane:        _n ? mix(background, text, _elevK * (_hc ? 0.050 : 0.030))
+                                                : mix(background, _hc ? text : surface, _elevK * (_hc ? 0.055 : 0.18))
+    readonly property color menuCard:        _n ? mix(background, text, _elevK * (_hc ? 0.090 : 0.060))
+                                                : mix(background, text, _elevK * (_hc ? 0.100 : 0.07))
     readonly property color menuCardBorder:  _hc ? withAlpha(text, lineAlpha(0.22))
                                                 : _n ? withAlpha(_lineBase, lineAlpha(0.105))
                                                      : withAlpha(mix(_lineBase, accent, 0.22), lineAlpha(0.17))
@@ -78,8 +84,8 @@ Singleton {
     readonly property color menuHover:       accent
     // wallpaper's card sits a step higher than neutral's, so its control needs a wider mix to hold
     // the same ~3 L* separation above the card that neutral gets from 0.060 -> 0.090
-    readonly property color menuControl:     _n ? mix(background, text, _hc ? 0.125 : 0.090)
-                                                : mix(background, text, _hc ? 0.130 : 0.100)
+    readonly property color menuControl:     _n ? mix(background, text, _elevK * (_hc ? 0.125 : 0.090))
+                                                : mix(background, text, _elevK * (_hc ? 0.130 : 0.100))
     readonly property color menuControlLine: _hc ? withAlpha(text, lineAlpha(0.24))
                                                 : _n ? withAlpha(_lineBase, lineAlpha(0.115))
                                                      : withAlpha(_lineBase, lineAlpha(0.135))
@@ -126,6 +132,6 @@ Singleton {
     }
 
     function rowFill(hovered: bool): color {
-        return hovered ? mix(menuCard, text, 0.045) : menuCard
+        return hovered ? mix(menuCard, text, 0.045 * _elevK) : menuCard
     }
 }
