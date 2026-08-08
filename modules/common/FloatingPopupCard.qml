@@ -20,6 +20,10 @@ Rectangle {
 
     property bool _transitionReady: false
     property bool _placementSettled: false
+    property bool _hardClamping: false
+    property bool _closing: false
+    readonly property bool fullyShown: root.open && root._transitionReady
+        && !_enterAnimation.running && root.opacity >= 0.999
     readonly property real _originX: Math.max(0, Math.min(targetWidth, anchorX - x))
 
     property real _barInset: ShellSettings.barFloating ? 4 : 0
@@ -30,9 +34,55 @@ Rectangle {
     readonly property real _minX: radius + 4
     readonly property real _maxX: Math.max(_minX, win.width - targetWidth - _minX)
 
-    property real scaleAmt: animateScale ? Motion.popScaleFrom : 1
-    property real edgeOffset: barBottom ? Motion.popEdgeOffset : -Motion.popEdgeOffset
+    property real scaleAmt: 1
+    property real edgeOffset: 0
     opacity: 0
+
+    function _hiddenScale(): real {
+        return root.animateScale ? Motion.popScaleFrom : 1.0
+    }
+
+    function _hiddenEdge(): real {
+        return root.barBottom ? Motion.popEdgeOffset : -Motion.popEdgeOffset
+    }
+
+    function _snapOpen(): void {
+        _enterAnimation.stop()
+        _exitAnimation.stop()
+        root._closing = false
+        root.scaleAmt = 1.0
+        root.edgeOffset = 0.0
+        root.opacity = 1.0
+    }
+
+    function _snapClosed(notify: bool): void {
+        const shouldNotify = notify && (root._closing || root.opacity > 0.001)
+        _enterAnimation.stop()
+        _exitAnimation.stop()
+        root.scaleAmt = root._hiddenScale()
+        root.edgeOffset = root._hiddenEdge()
+        root.opacity = 0.0
+        root._closing = false
+        if (shouldNotify) root.closeFinished()
+    }
+
+    function _startOpen(): void {
+        _exitAnimation.stop()
+        root._closing = false
+        if (ShellSettings.reduceMotion) root._snapOpen()
+        else _enterAnimation.restart()
+    }
+
+    function _startClose(): void {
+        _enterAnimation.stop()
+        if (root.opacity <= 0.001 && !_exitAnimation.running) {
+            root._snapClosed(false)
+            return
+        }
+        root._closing = true
+        if (ShellSettings.reduceMotion) root._snapClosed(true)
+        else _exitAnimation.restart()
+    }
 
     function _clampedX(px: real): real {
         return Math.max(_minX, Math.min(px, _maxX))
@@ -46,11 +96,18 @@ Rectangle {
     }
     function reclamp(): void {
         const nx = Math.round(_clampedX(x))
-        if (Math.abs(nx - x) > 0.5) x = nx
+        if (Math.abs(nx - x) <= 0.5) return
+        // Clamp corrections are geometry invariants, not placement motion.
+        // Snapping also avoids retargeting x on every radius-animation frame.
+        _hardClamping = true
+        x = nx
+        _hardClamping = false
     }
 
-    on_MinXChanged: reclamp()
-    on_MaxXChanged: reclamp()
+    onRadiusChanged: {
+        if (ShellSettings.reduceMotion) root.reclamp()
+        else _radiusReclamp.restart()
+    }
     // place() not reclamp(): clamping the old x makes a widening card grow from its left edge
     onTargetWidthChanged: if (open) place()
     onAnchorXChanged: place()
@@ -63,7 +120,14 @@ Rectangle {
             _placementSettle.stop()
             _placementSettled = false
         }
+        if (_transitionReady) {
+            if (open) root._startOpen()
+            else root._startClose()
+        }
     }
+
+    onBarBottomChanged: if (!root.open && !_exitAnimation.running)
+        root.edgeOffset = root._hiddenEdge()
 
     y: Math.round(barBottom ? (win.height - _edgeY - height) : _edgeY)
     radius: Theme.surfaceRadius
@@ -84,12 +148,12 @@ Rectangle {
             yScale: root.scaleAmt
         }
     ]
-    state: open && _transitionReady ? "visible" : "hidden"
     layer.enabled: root.animateScale && !ShellSettings.reduceMotion
         && opacity > 0.001 && (scaleAmt < 0.999 || !root.open)
 
     MotionBehavior on x {
-        gate: root.animatePlacement && root.state === "visible" && root._placementSettled
+        gate: root.animatePlacement && root.open && root._transitionReady
+            && root._placementSettled && !root._hardClamping
         NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
     }
 
@@ -98,6 +162,23 @@ Rectangle {
         interval: Motion.popSettle
         repeat: false
         onTriggered: root._placementSettled = true
+    }
+
+    Timer {
+        id: _radiusReclamp
+        interval: 40
+        onTriggered: root.reclamp()
+    }
+
+    Connections {
+        target: ShellSettings
+        function onReduceMotionChanged() {
+            if (!ShellSettings.reduceMotion) return
+            if (root.open) root._snapOpen()
+            else root._snapClosed(true)
+            _radiusReclamp.stop()
+            root.reclamp()
+        }
     }
 
     Connections {
@@ -112,46 +193,34 @@ Rectangle {
     Component.onCompleted: {
         place()
         if (root.open) _placementSettle.restart()
-        Qt.callLater(function() { root._transitionReady = true })
+        root._snapClosed(false)
+        Qt.callLater(function() {
+            root._transitionReady = true
+            if (root.open) root._startOpen()
+        })
     }
 
-    states: [
-        State {
-            name: "hidden"
-            PropertyChanges {
-                root.scaleAmt: root.animateScale ? Motion.popScaleFrom : 1.0
-                root.edgeOffset: root.barBottom ? Motion.popEdgeOffset : -Motion.popEdgeOffset
-                root.opacity: 0
-            }
-        },
-        State {
-            name: "visible"
-            PropertyChanges {
-                root.scaleAmt: 1.0
-                root.edgeOffset: 0
-                root.opacity: 1
-            }
+    ParallelAnimation {
+        id: _enterAnimation
+        NumberAnimation { target: root; property: "scaleAmt";  to: 1.0; duration: root.animateScale ? Motion.popIn : 0; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.emphasizedDecel }
+        NumberAnimation { target: root; property: "edgeOffset"; to: 0.0; duration: Motion.popIn; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.emphasizedDecel }
+        NumberAnimation { target: root; property: "opacity";   to: 1.0; duration: Motion.popInFade; easing.type: Easing.OutCubic }
+    }
+
+    ParallelAnimation {
+        id: _exitAnimation
+        NumberAnimation { target: root; property: "scaleAmt"; to: root._hiddenScale(); duration: root.animateScale ? Motion.popOut : 0; easing.type: Easing.InCubic }
+        NumberAnimation { target: root; property: "edgeOffset"; to: root._hiddenEdge(); duration: Motion.popOut; easing.type: Easing.InCubic }
+        NumberAnimation { target: root; property: "opacity"; to: 0.0; duration: Motion.popOutFade; easing.type: Easing.InCubic }
+        onFinished: {
+            if (root.open || !root._closing) return
+            // Target inputs (notably bar edge) can change mid-exit. Normalize
+            // to today's hidden state before the next open reverses from it.
+            root.scaleAmt = root._hiddenScale()
+            root.edgeOffset = root._hiddenEdge()
+            root.opacity = 0.0
+            root._closing = false
+            root.closeFinished()
         }
-    ]
-    transitions: [
-        Transition {
-            from: "*"; to: "visible"
-            ParallelAnimation {
-                NumberAnimation { target: root; property: "scaleAmt";  to: 1.0; duration: root.animateScale ? Motion.popIn : 0; easing.type: Easing.OutQuart }
-                NumberAnimation { target: root; property: "edgeOffset"; to: 0.0; duration: Motion.popIn; easing.type: Easing.OutQuart }
-                NumberAnimation { target: root; property: "opacity";   to: 1.0; duration: Motion.popInFade; easing.type: Easing.OutCubic }
-            }
-        },
-        Transition {
-            from: "visible"; to: "hidden"
-            SequentialAnimation {
-                ParallelAnimation {
-                    NumberAnimation { target: root; property: "scaleAmt"; to: root.animateScale ? Motion.popScaleFrom : 1.0; duration: root.animateScale ? Motion.popOut : 0; easing.type: Easing.InCubic }
-                    NumberAnimation { target: root; property: "edgeOffset"; to: root.barBottom ? Motion.popEdgeOffset : -Motion.popEdgeOffset; duration: Motion.popOut; easing.type: Easing.InCubic }
-                    NumberAnimation { target: root; property: "opacity"; to: 0.0; duration: Motion.popOutFade; easing.type: Easing.InCubic }
-                }
-                ScriptAction { script: root.closeFinished() }
-            }
-        }
-    ]
+    }
 }

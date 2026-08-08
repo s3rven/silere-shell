@@ -17,7 +17,7 @@ MotionBehavior {
     Component.onDestruction: root._geometrySettle.stop()
 
     NumberAnimation {
-        duration: expanded ? Motion.medium : Motion.fast
-        easing.type: expanded ? enterEasing : Easing.InCubic
+        duration: root.expanded ? Motion.medium : Motion.fast
+        easing.type: root.expanded ? root.enterEasing : Easing.InCubic
     }
 }

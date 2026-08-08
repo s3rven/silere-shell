@@ -62,7 +62,7 @@ Item {
                 ? Theme.mix(Theme.text, root.accentColor, 0.06)
                 : Theme.mix(Theme.subtext, Theme.text, 0.18)
 
-            MotionBehavior on x     { gate: root._animateX; NumberAnimation { duration: Motion.normal; easing.type: Easing.OutQuart } }
+            MotionBehavior on x     { gate: root._animateX; NumberAnimation { duration: Motion.normal; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.emphasizedDecel } }
             ColorFade on color {}
         }
     }

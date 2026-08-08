@@ -17,6 +17,9 @@ Singleton {
     readonly property int width:   _rm ? 0 : 160
     readonly property int color:   _rm ? 0 : 150
 
+    // m3 emphasized-decelerate; the trailing 1,1 is the bezier end point qt requires
+    readonly property var emphasizedDecel: [0.05, 0.7, 0.1, 1.0, 1, 1]
+
     readonly property real popScaleFrom: 0.975
     readonly property real popEdgeOffset: 8
     readonly property int  popIn:      _rm ? 0 : 210
@@ -29,12 +32,14 @@ Singleton {
     readonly property real flickDeceleration: 1800
     readonly property real flickVelocity:     2200
 
-    readonly property int panelResize:   _rm ? 0 : 165
+    // the largest moving surface in the shell: a pill's duration reads as a snap at this size
+    readonly property int panelResize:   _rm ? 0 : 240
     readonly property int panelCollapse: _rm ? 0 : 115
     // quiet window a viewport must hold before scroll affordances trust it (see ScrollSettle)
     readonly property int panelSettle:   _rm ? 0 : 150
     readonly property real panelVelocity: 1200
-    readonly property int pageIn:      _rm ? 0 : 180
+    // never shorter than panelResize, or content lands opaque inside a still-resizing panel
+    readonly property int pageIn:      _rm ? 0 : panelResize
     readonly property int pageOut:     _rm ? 0 : 110
     readonly property real pageOffset: 8
 
