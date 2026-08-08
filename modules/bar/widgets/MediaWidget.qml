@@ -134,19 +134,16 @@ Item {
         Item {
             id: textClip
             anchors.verticalCenter: parent.verticalCenter
-            readonly property bool fixedWidth: ShellSettings.mediaWidgetFixedWidth
             readonly property int  maxW: Math.round(Math.max(52, Math.min(
-                root.compact
-                    ? Math.min(120, ShellSettings.mediaWidgetMaxWidth)
-                    : ShellSettings.mediaWidgetMaxWidth,
+                root.compact ? 120 : Metrics.mediaTrackWidth,
                 root.textBudget > 0 ? root.textBudget : 9999
             )))
-            readonly property bool needsScroll: !fixedWidth
-                && trackText.implicitWidth > maxW && !ShellSettings.reduceMotion
+            readonly property bool needsScroll:
+                trackText.implicitWidth > maxW && !ShellSettings.reduceMotion
             readonly property real _overflow:   Math.max(0, trackText.implicitWidth - maxW)
             readonly property int  _slideMs:    Math.max(1800, Math.round(_overflow / root._scrollSpeed * 1000))
             readonly property int  _returnMs:   Math.max(1100, Math.round(_slideMs * 0.65))
-            width:  fixedWidth ? maxW : Math.min(trackText.implicitWidth, maxW)
+            width:  Math.min(trackText.implicitWidth, maxW)
             height: trackText.implicitHeight
             clip:   true
 
@@ -168,10 +165,8 @@ Item {
                 color:          ((_rootHover.hovered && ShellSettings.barHoverHighlight) || root.activeFocus) ? Theme.mix(_base, Theme.accent, 0.30) : _base
                 ColorFade on color {}
                 font.pixelSize: Settings.fontSize
-                width: textClip.fixedWidth || ShellSettings.reduceMotion
-                    ? textClip.maxW : implicitWidth
-                elide: textClip.fixedWidth || ShellSettings.reduceMotion
-                    ? Text.ElideRight : Text.ElideNone
+                width: ShellSettings.reduceMotion ? textClip.maxW : implicitWidth
+                elide: ShellSettings.reduceMotion ? Text.ElideRight : Text.ElideNone
 
                 opacity: Media.playing ? 1.0 : 0.72
                 MotionBehavior on opacity {

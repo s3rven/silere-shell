@@ -43,4 +43,8 @@ Singleton {
 
     // one height for every bar capsule, focus ring and workspace cell, on the menu rows' grid
     readonly property int barRowHeight: rowHeightFor(24)
+
+    // the track title sizes to its text and marquees past this; a reserved slot left the pill
+    // padded out on short titles and dragged the visualiser along with it
+    readonly property int mediaTrackWidth: 160
 }
