@@ -16,9 +16,12 @@ Item {
     signal picked()
     signal hoverChanged(string name, bool hovered)
 
-    function _activate(): void { root.picked() }
+    function _activate(): void { if (root.enabled) root.picked() }
 
-    width: 26; height: 32
+    implicitWidth: 26
+    implicitHeight: 32
+    width: implicitWidth
+    height: implicitHeight
 
     activeFocusOnTab: root.enabled && root.tabFocusable
     Accessible.role: Accessible.RadioButton
@@ -32,11 +35,13 @@ Item {
 
     HoverHandler {
         id: _h
+        enabled: root.enabled
         cursorShape: Qt.PointingHandCursor
         onHoveredChanged: root.hoverChanged(root.name, hovered)
     }
     TapHandler {
         id: _t
+        enabled: root.enabled
         onTapped: root._activate()
     }
 

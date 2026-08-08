@@ -17,8 +17,10 @@ Item {
     property bool _keyboardPressed: false
     readonly property bool pressed: _tap.pressed || _keyboardPressed
 
-    width: buttonSize
-    height: buttonSize
+    implicitWidth: buttonSize
+    implicitHeight: buttonSize
+    width: implicitWidth
+    height: implicitHeight
     opacity: enabled ? 1.0 : 0.38
     MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
     activeFocusOnTab: enabled
@@ -37,20 +39,21 @@ Item {
     Accessible.onPressAction: root.activate()
 
     Keys.onPressed: event => {
-        if (!root.enabled || event.isAutoRepeat
-                || (event.key !== Qt.Key_Space
-                    && event.key !== Qt.Key_Return
-                    && event.key !== Qt.Key_Enter)) return
-        root._keyboardPressed = true
+        if (!root.enabled || (event.key !== Qt.Key_Space
+                && event.key !== Qt.Key_Return
+                && event.key !== Qt.Key_Enter)) return
         event.accepted = true
+        if (event.isAutoRepeat) return
+        root._keyboardPressed = true
     }
     Keys.onReleased: event => {
         if (!root._keyboardPressed
                 || (event.key !== Qt.Key_Space
                     && event.key !== Qt.Key_Return
                     && event.key !== Qt.Key_Enter)) return
-        root._keyboardPressed = false
         event.accepted = true
+        if (event.isAutoRepeat) return
+        root._keyboardPressed = false
         root.activate()
     }
 

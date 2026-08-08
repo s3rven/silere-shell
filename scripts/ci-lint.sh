@@ -197,6 +197,25 @@ else
   ok "Keys" "attached handlers are runtime-portable"
 fi
 
+# A held activation key produces auto-repeat release events on Qt. Triggering
+# from those releases activates early (and can repeat) instead of waiting for
+# the user's real key-up event.
+release_without_repeat=""
+while IFS=: read -r file line _; do
+  [ -n "$file" ] || continue
+  end=$((line + 14))
+  if ! sed -n "${line},${end}p" "$file" | grep -q 'isAutoRepeat'; then
+    release_without_repeat="${release_without_repeat}${file}:${line}"$'\n'
+  fi
+done < <(grep -RInE --include='*.qml' 'Keys\.onReleased' shell.qml modules config services || true)
+release_without_repeat="${release_without_repeat%$'\n'}"
+if [ -n "$release_without_repeat" ]; then
+  fail "release-based key activation must ignore auto-repeat releases:"
+  printf '%s\n' "$release_without_repeat"
+else
+  ok "Keys" "release-based activation waits for the real key-up event"
+fi
+
 section "reduce-motion durations"
 # The Behavior check above cannot see a NumberAnimation sitting inside a
 # Sequential/Parallel block or a states transition. Motion.* collapses to 0 under

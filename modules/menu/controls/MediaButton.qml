@@ -8,28 +8,33 @@ Item {
     property string glyph:     ""
     property string accessibleName: "Media control"
     property bool   available: false
+    readonly property bool interactive: root.enabled && root.available
 
     signal triggered()
 
-    width: 32; height: 44
+    implicitWidth: 32
+    implicitHeight: 44
+    width: implicitWidth
+    height: implicitHeight
     anchors.verticalCenter: parent ? parent.verticalCenter : undefined
 
-    opacity: root.available ? 1.0 : 0.25
+    opacity: root.interactive ? 1.0 : 0.25
     MotionBehavior on opacity {
         NumberAnimation { duration: Motion.fast }
     }
 
-    activeFocusOnTab: root.available
+    activeFocusOnTab: root.interactive
     Accessible.role: Accessible.Button
     Accessible.name: root.accessibleName
+    Accessible.focusable: root.interactive
     Accessible.pressed: _tap.pressed
-    Accessible.onPressAction: if (root.available) root.triggered()
-    Keys.onSpacePressed: event => { if (!event.isAutoRepeat && root.available) root.triggered(); event.accepted = true }
-    Keys.onReturnPressed: event => { if (!event.isAutoRepeat && root.available) root.triggered(); event.accepted = true }
-    Keys.onEnterPressed: event => { if (!event.isAutoRepeat && root.available) root.triggered(); event.accepted = true }
+    Accessible.onPressAction: if (root.interactive) root.triggered()
+    Keys.onSpacePressed: event => { if (!event.isAutoRepeat && root.interactive) root.triggered(); event.accepted = true }
+    Keys.onReturnPressed: event => { if (!event.isAutoRepeat && root.interactive) root.triggered(); event.accepted = true }
+    Keys.onEnterPressed: event => { if (!event.isAutoRepeat && root.interactive) root.triggered(); event.accepted = true }
 
-    HoverHandler { id: _hover; enabled: root.available; cursorShape: Qt.PointingHandCursor }
-    TapHandler   { id: _tap;   enabled: root.available; onTapped: root.triggered() }
+    HoverHandler { id: _hover; enabled: root.interactive; cursorShape: Qt.PointingHandCursor }
+    TapHandler   { id: _tap;   enabled: root.interactive; onTapped: root.triggered() }
 
     scale: _tap.pressed ? 0.86 : 1.0; transformOrigin: Item.Center
     MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }

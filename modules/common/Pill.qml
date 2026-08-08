@@ -67,6 +67,8 @@ Item {
         hoverActive = false
         if (_ready) _settleAnimatedContent()
     }
+    onInteractiveChanged: if (!interactive) root._keyboardPressed = false
+    onEnabledChanged: if (!enabled) root._keyboardPressed = false
 
     Timer {
         id: _shrinkDelay
@@ -130,26 +132,29 @@ Item {
     implicitHeight: Math.max(pillH, parent ? parent.height : 0)
     // only while it eases open into wider text, or the scan sweeps in from off-pill; a standing clip node breaks batching
     clip: _contentScan.active || row.width > width
-    activeFocusOnTab: interactive
+    activeFocusOnTab: root.enabled && interactive
 
     Accessible.role: interactive ? Accessible.Button : Accessible.StaticText
     Accessible.name: accessibleName.length > 0
         ? accessibleName : (text.length > 0 ? text : glyph)
     Accessible.description: accessibleDescription
-    Accessible.focusable: interactive
-    Accessible.onPressAction: if (root.interactive) root.activated()
+    Accessible.focusable: root.enabled && interactive
+    Accessible.onPressAction: if (root.enabled && root.interactive) root.activated()
 
     Keys.onPressed: event => {
-        if (!root.interactive || (event.key !== Qt.Key_Space && event.key !== Qt.Key_Return && event.key !== Qt.Key_Enter))
+        if (!root.enabled || !root.interactive
+                || (event.key !== Qt.Key_Space && event.key !== Qt.Key_Return && event.key !== Qt.Key_Enter))
             return
-        root._keyboardPressed = true
         event.accepted = true
+        if (event.isAutoRepeat) return
+        root._keyboardPressed = true
     }
     Keys.onReleased: event => {
         if (!root._keyboardPressed || (event.key !== Qt.Key_Space && event.key !== Qt.Key_Return && event.key !== Qt.Key_Enter))
             return
-        root._keyboardPressed = false
         event.accepted = true
+        if (event.isAutoRepeat) return
+        root._keyboardPressed = false
         root.activated()
     }
 

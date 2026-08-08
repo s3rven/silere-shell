@@ -29,9 +29,11 @@ Item {
     signal expandToggled()
 
     width:  parent ? parent.width : 0
-    height: Metrics.rowHeightFor(40)
+    implicitHeight: Metrics.rowHeightFor(40)
+    height: implicitHeight
 
     function _handleKey(event): void {
+        if (!root.enabled) return
         if (root.expandable && (event.modifiers & Qt.AltModifier)) {
             if (event.key === Qt.Key_Down) {
                 if (!root.expanded) root.expandToggled()
@@ -83,10 +85,10 @@ Item {
         activeFocusOnTab: root.enabled && root.glyphClickable
         Accessible.role: root.glyphClickable ? Accessible.Button : Accessible.NoRole
         Accessible.name: root.glyphActionName
-        Accessible.onPressAction: if (root.glyphClickable) root.glyphClicked()
-        Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) root.glyphClicked(); event.accepted = true }
-        Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root.glyphClicked(); event.accepted = true }
-        Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) root.glyphClicked(); event.accepted = true }
+        Accessible.onPressAction: if (root.enabled && root.glyphClickable) root.glyphClicked()
+        Keys.onSpacePressed:  event => { if (!event.isAutoRepeat && root.enabled && root.glyphClickable) root.glyphClicked(); event.accepted = true }
+        Keys.onReturnPressed: event => { if (!event.isAutoRepeat && root.enabled && root.glyphClickable) root.glyphClicked(); event.accepted = true }
+        Keys.onEnterPressed:  event => { if (!event.isAutoRepeat && root.enabled && root.glyphClickable) root.glyphClicked(); event.accepted = true }
 
         ShellText {
             anchors.centerIn: parent
@@ -98,8 +100,8 @@ Item {
             ColorFade on color {}
         }
 
-        HoverHandler { id: _glyphHover; enabled: root.glyphClickable; cursorShape: Qt.PointingHandCursor }
-        TapHandler   { enabled: root.glyphClickable; margin: 6; onTapped: root.glyphClicked() }
+        HoverHandler { id: _glyphHover; enabled: root.enabled && root.glyphClickable; cursorShape: Qt.PointingHandCursor }
+        TapHandler   { enabled: root.enabled && root.glyphClickable; margin: 6; onTapped: root.glyphClicked() }
     }
 
     TextMetrics { id: _vm; font.family: Settings.font; font.pixelSize: Settings.fontLabel; text: root.valueWidthText }
@@ -131,13 +133,13 @@ Item {
         Accessible.role: Accessible.Button
         Accessible.name: root.accessibleName + " " + root.expandLabel
         Accessible.description: root.expanded ? "Open" : "Closed"
-        Accessible.onPressAction: root.expandToggled()
+        Accessible.onPressAction: if (root.enabled && root.expandable) root.expandToggled()
 
-        Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) root.expandToggled(); event.accepted = true }
-        Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root.expandToggled(); event.accepted = true }
-        Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) root.expandToggled(); event.accepted = true }
+        Keys.onSpacePressed:  event => { if (!event.isAutoRepeat && root.enabled && root.expandable) root.expandToggled(); event.accepted = true }
+        Keys.onReturnPressed: event => { if (!event.isAutoRepeat && root.enabled && root.expandable) root.expandToggled(); event.accepted = true }
+        Keys.onEnterPressed:  event => { if (!event.isAutoRepeat && root.enabled && root.expandable) root.expandToggled(); event.accepted = true }
         Keys.onEscapePressed: event => {
-            if (root.expanded) {
+            if (root.enabled && root.expandable && root.expanded) {
                 root.expandToggled()
                 event.accepted = true
             } else {
@@ -145,8 +147,8 @@ Item {
             }
         }
 
-        HoverHandler { id: _chevHover; cursorShape: Qt.PointingHandCursor }
-        TapHandler   { onTapped: root.expandToggled() }
+        HoverHandler { id: _chevHover; enabled: root.enabled && root.expandable; cursorShape: Qt.PointingHandCursor }
+        TapHandler   { enabled: root.enabled && root.expandable; onTapped: root.expandToggled() }
 
         ShellText {
             anchors.centerIn: parent

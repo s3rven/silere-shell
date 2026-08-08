@@ -124,16 +124,18 @@ PanelWindow {
                 e.accepted = true
                 return
             }
-            if (e.isAutoRepeat || (e.key !== Qt.Key_Space
-                    && e.key !== Qt.Key_Return && e.key !== Qt.Key_Enter)) return
-            _row._keyboardPressed = true
+            if (e.key !== Qt.Key_Space
+                    && e.key !== Qt.Key_Return && e.key !== Qt.Key_Enter) return
             e.accepted = true
+            if (e.isAutoRepeat) return
+            _row._keyboardPressed = true
         }
         Keys.onReleased: e => {
             if (!_row._keyboardPressed || (e.key !== Qt.Key_Space
                     && e.key !== Qt.Key_Return && e.key !== Qt.Key_Enter)) return
-            _row._keyboardPressed = false
             e.accepted = true
+            if (e.isAutoRepeat) return
+            _row._keyboardPressed = false
             _row._activate()
         }
 

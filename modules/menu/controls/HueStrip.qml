@@ -19,7 +19,8 @@ Item {
     signal picked(real hue)
 
     width: parent ? parent.width : 0
-    height: Metrics.rowHeightFor(24)
+    implicitHeight: Metrics.rowHeightFor(24)
+    height: implicitHeight
     opacity: root.enabled && root.interactive ? (root.dimmed ? 0.72 : 1.0) : 0.45
 
     activeFocusOnTab: root.enabled && root.interactive
@@ -39,12 +40,14 @@ Item {
         return Math.max(0, Math.min(359 / 360, h))
     }
     function _nudgeHue(dir: int, mult: int): void {
+        if (!root.enabled || !root.interactive) return
         root.picked(root._wrappedHue(root.hue + dir * 0.02 * mult))
     }
 
     Keys.onLeftPressed: event => { root._nudgeHue(-1, (event.modifiers & Qt.ShiftModifier) ? 5 : 1); event.accepted = true }
     Keys.onRightPressed: event => { root._nudgeHue(1, (event.modifiers & Qt.ShiftModifier) ? 5 : 1); event.accepted = true }
     Keys.onPressed: event => {
+        if (!root.enabled || !root.interactive) return
         if (event.key === Qt.Key_Home) {
             root.picked(0)
             event.accepted = true

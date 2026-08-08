@@ -79,20 +79,21 @@ PanelWindow {
         onShownChanged: if (!shown) _keyboardPressed = false
 
         Keys.onPressed: event => {
-            if (event.isAutoRepeat
-                    || (event.key !== Qt.Key_Space
+            if (event.key !== Qt.Key_Space
                         && event.key !== Qt.Key_Return
-                        && event.key !== Qt.Key_Enter)) return
-            chip._keyboardPressed = true
+                        && event.key !== Qt.Key_Enter) return
             event.accepted = true
+            if (event.isAutoRepeat) return
+            chip._keyboardPressed = true
         }
         Keys.onReleased: event => {
             if (!chip._keyboardPressed
                     || (event.key !== Qt.Key_Space
                         && event.key !== Qt.Key_Return
                         && event.key !== Qt.Key_Enter)) return
-            chip._keyboardPressed = false
             event.accepted = true
+            if (event.isAutoRepeat) return
+            chip._keyboardPressed = false
             chip.triggered()
         }
 

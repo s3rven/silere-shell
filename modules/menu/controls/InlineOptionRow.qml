@@ -29,7 +29,8 @@ Item {
     }
 
     width: parent ? parent.width : 0
-    height: rowHeight
+    implicitHeight: rowHeight
+    height: implicitHeight
     opacity: root.enabled && root.interactive ? 1.0 : 0.48
     MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
     activeFocusOnTab: root.enabled && root.interactive
