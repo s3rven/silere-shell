@@ -840,14 +840,18 @@ $did_tmpl      && printf "    ${GREEN}ok${R}      matugen template\n" || printf 
 $did_toml      && printf "    ${GREEN}ok${R}      matugen toml\n"     || printf "    ${DIM}skip${R}    matugen toml\n"
 $did_autostart && printf "    ${GREEN}ok${R}      autostart\n"        || printf "    ${DIM}skip${R}    autostart\n"
 $did_update    && printf "    ${GREEN}ok${R}      update-check timer\n" || printf "    ${DIM}skip${R}    update-check timer\n"
+# a missing runtime and an unwired autostart are independent, so report them
+# separately — chaining them tells a user to restart into a shell nothing launches
+printf '\n'
 if ! $has_qs; then
-    printf "\n  ${YELLOW}install Quickshell${R}, then restart your compositor to launch silere\n"
+    printf "  ${YELLOW}install Quickshell${R}\n"
 elif ! $qs_modules_ok; then
-    printf "\n  ${YELLOW}install a complete current Quickshell build${R}, then restart your compositor\n"
-elif $autostart_ready; then
-    printf "\n  restart your compositor to launch silere\n"
+    printf "  ${YELLOW}install a complete current Quickshell build${R}\n"
+fi
+if $autostart_ready; then
+    printf "  restart your compositor to launch silere\n"
 else
-    printf "\n  ${YELLOW}autostart is not set up${R} — silere will not start on its own\n"
+    printf "  ${YELLOW}autostart is not set up${R} — silere will not start on its own\n"
     printf "  add the line above to your Hyprland or niri config, or run it now:\n"
     printf "    ${DIM}qs -p %s/shell.qml${R}\n" "$ROOT"
 fi
