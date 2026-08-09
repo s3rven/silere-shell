@@ -77,6 +77,8 @@ Installing one turns on the matching feature. Skipping it hides that widget or m
 | `systemctl` / `loginctl` | suspend, reboot, and shutdown actions |
 | `notify-send` | battery, temperature, and update notifications |
 
+The installer also reports on `busctl`, `pgrep`, `pkill` and `timeout`. Those ship with systemd, procps and coreutils, so they are listed only so a minimal system can see what is missing.
+
 </details>
 
 ## Configuration
@@ -90,6 +92,8 @@ Everything is configurable from Settings inside the shell. Changes save on their
 Overrides live in `$XDG_CONFIG_HOME/silere-shell/settings.json`, independent of where the checkout is. Only values that differ from their defaults are written, so the file stays short and readable. Calendar marks sit beside it in `calendar-marks.json`.
 
 To restore defaults, use **Settings › System › Maintenance**. Editing the file by hand works too: delete a key to reset one option, or replace the whole file with `{ "__version": 1 }` to reset everything. Values are type-checked and numeric ranges are clamped on load, and a file Silere cannot read is left alone instead of overwritten.
+
+When a release changes the settings format, the old file is copied to `settings.v<N>.bak.json` beside it before anything is migrated, and settings written by a newer version than you run keep their unknown values instead of being stripped.
 
 ## Controls
 
