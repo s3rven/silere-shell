@@ -61,6 +61,17 @@ _has_local_changes() {
     [ -n "$(git -C "$ROOT" status --porcelain --untracked-files=normal)" ]
 }
 
+# A blackholed network keeps a fetch running past the shell's own check timeout,
+# and the orphan inherits the update lock's fd — wedging every later run behind
+# it. The systemd path is already capped by TimeoutStartSec; this covers the rest.
+_git_fetch() {
+    if command -v timeout >/dev/null 2>&1; then
+        GIT_TERMINAL_PROMPT=0 timeout 90 git fetch --quiet "$@"
+    else
+        GIT_TERMINAL_PROMPT=0 git fetch --quiet "$@"
+    fi
+}
+
 _fetch_main() {
     local shallow
     shallow="$(git -C "$ROOT" rev-parse --is-shallow-repository 2>/dev/null || true)"
@@ -68,9 +79,9 @@ _fetch_main() {
         # Older installer releases used --depth 1. Tags alone do not cross that
         # boundary, so git describe cannot recover the installed release until
         # the main-branch history is completed once.
-        GIT_TERMINAL_PROMPT=0 git fetch --quiet --unshallow --tags origin main
+        _git_fetch --unshallow --tags origin main
     else
-        GIT_TERMINAL_PROMPT=0 git fetch --quiet --tags origin main
+        _git_fetch --tags origin main
     fi
 }
 
