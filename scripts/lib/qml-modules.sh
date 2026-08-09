@@ -43,6 +43,11 @@ for _silere_qtpaths in qtpaths6 qtpaths; do
 done
 unset _silere_qtpaths
 _silere_qml_import_roots+=(/usr/lib/qt6/qml /usr/lib64/qt6/qml /usr/local/lib/qt6/qml)
+# debian hides qml under a multiarch triplet and ships qtpaths6 in a dev package
+for _silere_qml_multiarch in /usr/lib/*-linux-gnu*/qt6/qml; do
+    [ -d "$_silere_qml_multiarch" ] && _silere_qml_import_roots+=("$_silere_qml_multiarch")
+done
+unset _silere_qml_multiarch
 
 _qml_module_available() {
     local module_path="${1//./\/}" root
