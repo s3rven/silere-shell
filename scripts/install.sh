@@ -469,6 +469,9 @@ _font_download_tools_ready() {
     local -a missing=()
     command -v curl >/dev/null 2>&1 || missing+=("curl")
     command -v tar  >/dev/null 2>&1 || missing+=("tar")
+    # the release artifact is .tar.xz and tar shells out to xz to read it, so a
+    # missing xz otherwise surfaces as "extract failed" after a 30 MB download
+    command -v xz   >/dev/null 2>&1 || missing+=("xz")
     command -v sha256sum >/dev/null 2>&1 || command -v shasum >/dev/null 2>&1 || missing+=("sha256sum")
     if [ "${#missing[@]}" -eq 0 ]; then
         return 0
