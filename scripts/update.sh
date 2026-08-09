@@ -85,6 +85,16 @@ _fetch_main() {
     fi
 }
 
+# A failed load makes qs exit non-zero at once, and the service restarts it every
+# few seconds forever — no bar, no menu, and no UI left to roll back from. Type-check
+# the merged tree first (~15s) and only restart into it if it actually loads. Skipping
+# the gate when the checker or qs is missing keeps the updater usable without them.
+_merged_tree_loads() {
+    [ -r "$ROOT/scripts/test-qml-headless.sh" ] || return 0
+    command -v qs >/dev/null 2>&1 || return 0
+    bash "$ROOT/scripts/test-qml-headless.sh" >/dev/null 2>&1
+}
+
 _acquire_update_lock() {
     # util-linux is part of the normal Linux base. Keep the updater functional
     # on unusually minimal systems, but serialize check/apply whenever flock is
@@ -246,6 +256,11 @@ if [ "${1:-}" = "--apply" ]; then
     fi
     if ! git -C "$ROOT" merge --ff-only --quiet "$remote_rev"; then
         _fail "fast-forward merge failed — local branch diverged"
+    fi
+    if ! _merged_tree_loads; then
+        git -C "$ROOT" reset --hard --quiet "$local_rev" \
+            || _fail "the update does not load and the checkout could not be rolled back — reset to $local_rev by hand"
+        _fail "the update does not load and was rolled back — the shell was left running"
     fi
     _clear_flag
     new_rev="$(git rev-parse HEAD)"
