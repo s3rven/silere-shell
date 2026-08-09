@@ -1,1 +1,8 @@
-blank_issues_enabled: true
+blank_issues_enabled: false
+contact_links:
+  - name: Question or install help
+    url: https://github.com/s3rven/silere-shell/discussions/new?category=q-a
+    about: Not sure whether it is a bug? Ask here — no template, no required fields.
+  - name: Idea or "what if the bar could…"
+    url: https://github.com/s3rven/silere-shell/discussions/new?category=ideas
+    about: Rough ideas without a proposal. Feature requests with a concrete behavior belong in an issue.

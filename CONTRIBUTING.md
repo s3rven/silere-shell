@@ -2,7 +2,7 @@
 
 Any idea is fair game. A bug report, a typo fix, a whole new widget, a "what if the bar could…" question with no code attached — all of it is welcome, and you don't need to know QML to open one.
 
-If you're not sure whether something fits, open an issue and ask. That's what it's for. There's no proposal format and nothing gets rejected for being too small or too ambitious.
+If you're not sure whether something fits, ask in [Discussions](https://github.com/s3rven/silere-shell/discussions) — no template, no required fields, and nothing gets turned away for being too small or too ambitious. Issues use templates because a bug is unfixable without your distro, compositor and Quickshell version; questions and half-formed ideas don't need any of that.
 
 ## What happens to your pull request
 
