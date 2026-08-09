@@ -320,6 +320,19 @@ else
   fail "installer launcher must preserve MALLOC_CONF and QSG_TRANSIENT_IMAGES overrides"
 fi
 
+section "terminal detection"
+# `[ -r /dev/tty ]` only stats the device node — it succeeds in a session with no
+# controlling terminal, where the following read fails with ENXIO and leaves the
+# reply unset, so `set -u` aborts with a cryptic error instead of the intended
+# "needs a terminal" message. Open the device to test it.
+tty_readability_tests="$(grep -nE '^[^#]*\[[[:space:]]+-r[[:space:]]+/dev/tty[[:space:]]+\]' "${script_files[@]}" || true)"
+if [ -n "$tty_readability_tests" ]; then
+  fail "test /dev/tty by opening it ({ : </dev/tty; } 2>/dev/null), not with -r:"
+  printf '%s\n' "$tty_readability_tests"
+else
+  ok "tty" "terminal checks open /dev/tty instead of stat-ing it"
+fi
+
 section "shellcheck"
 if command -v shellcheck >/dev/null 2>&1; then
   # error severity only — real bugs gate the build, style nits don't

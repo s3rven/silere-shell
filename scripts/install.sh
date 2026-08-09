@@ -27,8 +27,12 @@ _die()  { _err "$*"; exit 1; }
 
 _section() { printf "\n${BOLD}==> %s${R}\n" "$1"; }
 
+# -r only stats the device node: it succeeds with no controlling terminal, where
+# opening it fails with ENXIO. Open it for real, or every prompt below dies on an
+# unset reply instead of reporting the missing terminal.
 _need_tty() {
-    [ -r /dev/tty ] || _die "interactive install requires a TTY — clone the repo and run scripts/install.sh from a terminal"
+    { : </dev/tty; } 2>/dev/null \
+        || _die "interactive install requires a TTY — clone the repo and run scripts/install.sh from a terminal"
 }
 
 _reject_unsafe_path() {

@@ -18,14 +18,19 @@ else
 fi
 
 _ok()   { printf "    ${GREEN}ok${R}      %s\n" "$*"; }
+_die()  { printf "    ${RED}error${R}   %s\n" "$*" >&2; exit 1; }
 _skip() { printf "    ${DIM}skip${R}    %s\n" "$*"; }
 _warn() { printf "    ${YELLOW}warn${R}    %s\n" "$*"; }
 _info() { printf "  ${CYAN}::${R}  %s\n" "$*"; }
 
 _section() { printf "\n${BOLD}==> %s${R}\n" "$1"; }
 
+# opening /dev/tty is the only real test: -r passes with no controlling terminal
+# and the read below would then die on an unset reply instead of saying why
 _ask() {
     local reply
+    { : </dev/tty; } 2>/dev/null \
+        || _die "interactive uninstall requires a TTY — run scripts/uninstall.sh from a terminal"
     printf "  ${CYAN}::${R}  %s ${DIM}[y/N]${R} " "$1"
     read -r reply </dev/tty
     [[ "$reply" =~ ^[Yy] ]]

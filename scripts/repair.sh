@@ -43,7 +43,9 @@ _confirm() {
     if [ "${ASSUME_YES:-0}" = "1" ]; then
         return 0
     fi
-    [ -r /dev/tty ] || _die "confirmation needs a terminal; add --yes to run non-interactively"
+    # -r succeeds with no controlling terminal; only opening it proves one exists
+    { : </dev/tty; } 2>/dev/null \
+        || _die "confirmation needs a terminal; add --yes to run non-interactively"
     printf '%s [y/N] ' "$prompt" >/dev/tty
     read -r reply </dev/tty
     [[ "$reply" =~ ^[Yy]$ ]]
