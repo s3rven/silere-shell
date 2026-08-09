@@ -442,7 +442,7 @@ PanelWindow {
                     function onHoveredChanged() { if (!_rowHover.hovered && _flyout.opened) _flyClose.restart() }
                 }
 
-                Flickable {
+                ShellFlickable {
                     id: _subScroll
                     x: _flyout.pad; y: _flyout.pad
                     width: win.menuWidth
@@ -450,9 +450,6 @@ PanelWindow {
                     contentWidth: width
                     contentHeight: _subCol.implicitHeight
                     boundsBehavior: Flickable.StopAtBounds
-                    flickDeceleration: Motion.flickDeceleration
-                    maximumFlickVelocity: Motion.flickVelocity
-                    clip: true
                     interactive: contentHeight > height
 
                     Column {
@@ -511,7 +508,7 @@ PanelWindow {
         }
         Component.onCompleted: if (TrayMenuState.open) card.forceActiveFocus()
 
-        Flickable {
+        ShellFlickable {
             id: _scroll
             x: card.pad; y: card.pad
             width: win.menuWidth
@@ -519,9 +516,6 @@ PanelWindow {
             contentWidth: width
             contentHeight: _col.implicitHeight
             boundsBehavior: Flickable.StopAtBounds
-            flickDeceleration: Motion.flickDeceleration
-            maximumFlickVelocity: Motion.flickVelocity
-            clip: true
             interactive: contentHeight > height
 
             Column {

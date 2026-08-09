@@ -323,15 +323,12 @@ Item {
         }
     }
 
-    Flickable {
+    ShellFlickable {
         id: _navScroll
         anchors.fill: parent
         contentWidth: width
         contentHeight: _content.height
-        clip: true
         boundsMovement: Flickable.StopAtBounds
-        flickDeceleration: Motion.flickDeceleration
-        maximumFlickVelocity: Motion.flickVelocity
         interactive: contentHeight > height + 1
 
         onHeightChanged: if (root.active) _resizeSettle.restart()

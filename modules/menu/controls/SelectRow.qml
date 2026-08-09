@@ -261,7 +261,7 @@ Item {
         }
     }
 
-    Flickable {
+    ShellFlickable {
         id: _options
         anchors.top:  parent.top; anchors.topMargin: root._headerH
         anchors.left: parent.left
@@ -273,10 +273,7 @@ Item {
         contentWidth: width
         contentHeight: _optCol.implicitHeight
         boundsMovement: Flickable.StopAtBounds
-        flickDeceleration: Motion.flickDeceleration
-        maximumFlickVelocity: Motion.flickVelocity
         interactive: contentHeight > height + 1
-        clip:    true
         visible: height > 0.5
 
         Disclosure on height { expanded: root._open }

@@ -114,7 +114,7 @@ Column {
                     elide:          Text.ElideRight
                 }
 
-                Flickable {
+                ShellFlickable {
                     id: _swatchViewport
                     anchors.top:        parent.top
                     anchors.topMargin:  _accentPicker._titleH
@@ -125,10 +125,7 @@ Column {
                     contentHeight: height
                     flickableDirection: Flickable.HorizontalFlick
                     boundsMovement: Flickable.StopAtBounds
-                    flickDeceleration: Motion.flickDeceleration
-                    maximumFlickVelocity: Motion.flickVelocity
                     interactive: contentWidth > width + 1
-                    clip: true
 
                     function revealIndex(index: int): void {
                         if (!interactive || index < 0) return

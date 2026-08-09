@@ -81,14 +81,11 @@ Column {
                 width: parent ? parent.width : 0
                 height: Math.min(_commits.contentHeight, 240)
 
-                ListView {
+                ShellListView {
                     id: _commits
                     anchors.fill: parent
-                    clip: true
                     interactive: contentHeight > height
                     boundsMovement: Flickable.StopAtBounds
-                    flickDeceleration: Motion.flickDeceleration
-                    maximumFlickVelocity: Motion.flickVelocity
                     spacing: 0
                     model: root._changesOpen && root._changesAvailable
                         ? ShellUpdate.pendingCommits : []
@@ -178,14 +175,11 @@ Column {
                 width: parent ? parent.width : 0
                 height: Math.min(_packages.contentHeight, 240)
 
-                ListView {
+                ShellListView {
                     id: _packages
                     anchors.fill: parent
-                    clip: true
                     interactive: contentHeight > height
                     boundsMovement: Flickable.StopAtBounds
-                    flickDeceleration: Motion.flickDeceleration
-                    maximumFlickVelocity: Motion.flickVelocity
                     spacing: 0
                     model: root._listOpen && root._packagesAvailable
                         ? Updates.packages : []

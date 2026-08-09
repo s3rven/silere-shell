@@ -81,16 +81,13 @@ Item {
             font.family: Settings.font; font.pixelSize: Settings.fontLabel
         }
 
-        ListView {
+        ShellListView {
             id: _list
             width: parent.width
             height: Math.min(contentHeight, 240)
             visible: root.open && Network.wifiNetworks.length > 0
-            clip: true
             interactive: contentHeight > height
             boundsMovement: Flickable.StopAtBounds
-            flickDeceleration: Motion.flickDeceleration
-            maximumFlickVelocity: Motion.flickVelocity
             spacing: 0
             model: root.open ? Network.wifiNetworks : []
 

@@ -265,7 +265,7 @@ PageShell {
             }
         }
 
-        ListView {
+        ShellListView {
             id: _historyList
             anchors.top: _header.bottom
             anchors.topMargin: 8
@@ -274,10 +274,7 @@ PageShell {
             width: parent.width
             spacing: 8
             visible: Notifications.hasHistory
-            clip: true
             boundsMovement: Flickable.StopAtBounds
-            flickDeceleration: Motion.flickDeceleration
-            maximumFlickVelocity: Motion.flickVelocity
             cacheBuffer: 120
             model: Notifications.historyModel
 

@@ -333,15 +333,12 @@ PanelWindow {
                 win._availableContentH - _clearChip.height - _moreChip.height
                 - outerCol.spacing * 2))
 
-            Flickable {
+            ShellFlickable {
                 id: _cardScroll
                 anchors.fill: parent
                 contentWidth: width
                 contentHeight: cardCol.implicitHeight
-                clip: true
                 boundsBehavior: Flickable.StopAtBounds
-                flickDeceleration: Motion.flickDeceleration
-                maximumFlickVelocity: Motion.flickVelocity
                 interactive: contentHeight > height + 1
 
                 Column {

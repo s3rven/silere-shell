@@ -712,16 +712,13 @@ PanelWindow {
                 onTapped: panel.closePowerAndRestoreFocus()
             }
 
-            Flickable {
+            ShellFlickable {
                 id: contentFlick
                 anchors.fill: parent
                 contentWidth: width
                 contentHeight: tabContent.y + tabContent.height
                     + panel.pageBottomInset
-                clip: true
                 boundsMovement: Flickable.StopAtBounds
-                flickDeceleration: Motion.flickDeceleration
-                maximumFlickVelocity: Motion.flickVelocity
                 interactive: !panel.powerOpen && panel.activeTab !== 2
                     && _contentSettle.overflows
 
