@@ -1,46 +1,52 @@
 # Contributing
 
-Thanks for taking an interest in Silere. Ideas, bug reports, fixes, big features, tiny typo catches, all of it is welcome, and you don't need to be a QML expert to help out. Open an issue to talk about user-facing behavior, or send a pull request once a change feels ready. Not sure about something? Open the issue anyway and we'll figure it out together.
+Any idea is fair game. A bug report, a typo fix, a whole new widget, a "what if the bar could…" question with no code attached — all of it is welcome, and you don't need to know QML to open one.
+
+If you're not sure whether something fits, open an issue and ask. That's what it's for. There's no proposal format and nothing gets rejected for being too small or too ambitious.
+
+## What happens to your pull request
+
+Nothing lands on `main` on its own. You fork, push a branch, and open a PR; it gets reviewed and merged by hand. CI runs the lint, the Quickshell-module probe, and a headless type-check on every PR, so you don't need to run anything locally — push and let it report back.
+
+Reviews are about whether the change fits the shell, not about style-policing. Expect questions and sometimes a "let's not" — Silere stays deliberately small, so some good ideas still get turned down. That's not a judgment on the idea or the code.
 
 ## Bug reports
 
-No scripts to run. A useful report includes:
+No scripts to run. Helpful things to include:
 
-- distribution, Quickshell version/source, and compositor (Hyprland or niri) version;
-- exact reproduction steps and what you expected instead;
-- relevant foreground `qs -p shell.qml` output;
-- whether it also happens on the current `main` branch.
+- your distro, compositor (Hyprland or niri), and Quickshell version;
+- what you did, and what you expected instead;
+- output from running `qs -p shell.qml` in a terminal, if there is any;
+- whether it also happens on current `main`.
 
-Please strip usernames, window titles, network names, and anything else private from logs and screenshots.
+Please scrub usernames, window titles, network names, and anything else private out of logs and screenshots.
 
-## Project layout
+## Where things live
 
-- `config/` contains visual tokens and small shared runtime helpers.
-- `services/` contains the singleton state and system-integration API. Services do not create UI.
-- `modules/common/` contains primitives shared by more than one surface.
-- `modules/bar/` contains the bar layout; its widgets live in `modules/bar/widgets/`.
-- `modules/menu/` contains the menu window and Home-specific features.
-- `modules/menu/controls/` contains reusable menu inputs, rows, and layout helpers.
-- `modules/menu/settings/` contains Settings navigation content and Settings-only components.
-- the remaining `modules/` folders each own one shell surface.
-- `scripts/` contains installation, repair, validation, and benchmarking tools.
+- `config/` — visual tokens and small shared helpers.
+- `services/` — singleton state and system integration. No UI here.
+- `modules/common/` — primitives used by more than one surface.
+- `modules/bar/` — the bar, with its widgets in `widgets/`.
+- `modules/menu/` — the menu window, plus `controls/` (reusable rows and inputs) and `settings/` (Settings-only content).
+- other `modules/` folders — one shell surface each.
+- `scripts/` — install, repair, validation, benchmarking.
 
-Keep dependencies flowing from a surface toward shared pieces. App-level `modules/menu/` code may use `settings/` or `controls/`, and Settings may use controls; neither lower layer may import app-level menu code, and controls must not import Settings. Add a type to the `qmldir` beside its file, and mark it `internal` unless another directory imports it.
+Imports flow from a surface toward the shared pieces: menu code may use `controls/` and `settings/`, but `controls/` doesn't reach back into Settings or menu code. New types go in the `qmldir` next to the file, marked `internal` unless another directory imports them.
 
-## Component conventions
+## How the existing code works
 
-- Give reusable components useful `implicitWidth` and `implicitHeight` defaults so callers only override size when layout requires it.
-- Treat properties as inputs and signals as user intent. Signals should carry the requested value, such as `toggled(nextChecked)`, instead of making every caller invert stale state.
-- Use `MotionBehavior` or `ColorFade` for state changes, and stop timers, loops, loaders, and helper processes while their surface is hidden or idle.
-- Include keyboard activation and the matching `Accessible` role, name, and state in the component itself.
-- Keep one visual behavior in one component. Prefer extending a shared row or control over copying its hover, focus, animation, or accessibility code.
+Not rules so much as the patterns you'll see everywhere — matching them keeps a change easy to review:
 
-## Changes
+- reusable components set their own `implicitWidth`/`implicitHeight`, so callers only override size when layout demands it;
+- properties are inputs, signals are intent — `toggled(nextChecked)` carries the new value rather than making callers invert stale state;
+- state changes animate through `MotionBehavior` or `ColorFade`, and timers, loops, and helper processes stop while their surface is hidden or idle;
+- keyboard activation and the matching `Accessible` role/name/state live in the component itself;
+- one visual behavior lives in one place — extending a shared row usually beats copying its hover, focus, and animation code.
 
-Keep each change scoped to one behavior. Follow the existing QML component and service patterns, keep optional integrations dormant when unused, and leave a useful disabled or missing-tool state. Don't commit `config/MatugenTheme.qml`, `settings.json`, `calendar-marks.json`, or other generated and personal files.
+For anything visual, it helps to check keyboard focus, reduced motion, a narrow bar, and what happens when an optional tool is missing. A before/after screenshot is worth a lot when the diff doesn't show it.
 
-CI runs the lint, required Quickshell-module probe, and headless type-check on every pull request, so you don't need to run anything yourself. Just push and let it validate. (The `scripts/` helpers are there if you like to check locally, but they're optional.)
+Don't commit generated or personal files: `config/MatugenTheme.qml`, `settings.json`, `calendar-marks.json`.
 
-For visual changes, test keyboard focus, reduced motion, narrow bar and menu layouts, and missing dependencies. A before/after screenshot or short clip helps when the difference isn't obvious from the code.
+## One last thing
 
-Your code doesn't need to be perfect before we talk. As long as the reproduction, the user impact, and the tradeoffs are clear enough to look at, that's plenty to start from.
+Your branch doesn't have to be finished to start a conversation. If the problem and the rough shape of the fix are clear, that's plenty.
