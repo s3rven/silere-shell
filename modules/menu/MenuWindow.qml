@@ -227,22 +227,13 @@ PanelWindow {
             powerOpen = false
         }
 
-        function _ownsItem(item, ancestor): bool {
-            let current = item
-            while (current) {
-                if (current === ancestor) return true
-                current = current.parent
-            }
-            return false
-        }
-
         function switchTab(idx: int): void {
             const tab = Math.max(0, Math.min(2, idx))
             const focusedItem = _focusWindow ? _focusWindow.activeFocusItem : null
             const focusNeedsReset = focusedItem && (
-                _ownsItem(focusedItem, tabContent)
-                || _ownsItem(focusedItem, _settingsNavLoader.item)
-                || _ownsItem(focusedItem, _powerRailLoader.item))
+                ItemTree.isInside(focusedItem, tabContent)
+                || ItemTree.isInside(focusedItem, _settingsNavLoader.item)
+                || ItemTree.isInside(focusedItem, _powerRailLoader.item))
             // move focus first: the tab change disables the page controls holding it
             if (focusNeedsReset) panel.forceActiveFocus()
             if (powerOpen) powerOpen = false
@@ -268,7 +259,7 @@ PanelWindow {
         function _revealFocusedControl(): void {
             if (powerOpen || activeTab === 2 || !MenuState.open) return
             const item = _focusWindow ? _focusWindow.activeFocusItem : null
-            if (!item || !_ownsItem(item, tabContent)) return
+            if (!item || !ItemTree.isInside(item, tabContent)) return
 
             const p = item.mapToItem(contentFlick.contentItem, 0, 0)
             const margin = 12

@@ -18,3 +18,4 @@ ShellText 1.0 ShellText.qml
 FocusVisual 1.0 FocusVisual.qml
 ShellFlickable 1.0 ShellFlickable.qml
 ShellListView 1.0 ShellListView.qml
+singleton ItemTree 1.0 ItemTree.qml

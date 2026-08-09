@@ -23,15 +23,6 @@ Item {
     readonly property bool _optionsShown: root.open || _options.height > 0.5
     onOpenChanged: if (!open) _focusIndex = -1
 
-    function _ownsItem(item, ancestor): bool {
-        let current = item
-        while (current) {
-            if (current === ancestor) return true
-            current = current.parent
-        }
-        return false
-    }
-
     function focusPrimary(fromPointer): void {
         if (fromPointer === true) _slider.focusFromPointer()
         else _slider.focusFromKeyboard()
@@ -41,7 +32,7 @@ Item {
         if (!root.open) return false
         const focusWindow = root.Window.window
         const focusedItem = focusWindow ? focusWindow.activeFocusItem : null
-        const restore = root._ownsItem(focusedItem, _options)
+        const restore = ItemTree.isInside(focusedItem, _options)
         // Move focus before disabling the collapsing subtree.
         if (restore) root.focusPrimary(
             focusedItem && focusedItem.pointerFocusActive === true)

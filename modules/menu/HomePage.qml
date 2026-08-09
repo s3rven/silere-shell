@@ -67,15 +67,6 @@ PageShell {
         }
     }
 
-    function _ownsItem(item, ancestor): bool {
-        let current = item
-        while (current) {
-            if (current === ancestor) return true
-            current = current.parent
-        }
-        return false
-    }
-
     function _focusPickerTrigger(which: string, fromPointer): void {
         const trigger = which === "wifi" ? _wifiRow
             : which === "bt" ? _btRow : _nightRow
@@ -89,9 +80,9 @@ PageShell {
         if (which === "") return false
         const focusWindow = root.Window.window
         const focusedItem = focusWindow ? focusWindow.activeFocusItem : null
-        const ownsFocus = which === "wifi" ? root._ownsItem(focusedItem, _wifiPicker)
-            : which === "bt" ? root._ownsItem(focusedItem, _btPicker)
-            : root._ownsItem(focusedItem, _nightPicker)
+        const ownsFocus = which === "wifi" ? ItemTree.isInside(focusedItem, _wifiPicker)
+            : which === "bt" ? ItemTree.isInside(focusedItem, _btPicker)
+            : ItemTree.isInside(focusedItem, _nightPicker)
         if (ownsFocus) root._focusPickerTrigger(which,
             focusedItem && focusedItem.pointerFocusActive === true)
         root._picker = ""
