@@ -596,6 +596,7 @@ fi
 
 ROOT="$INSTALL_DIR"
 did_tmpl=false did_toml=false did_autostart=false did_update=false
+autostart_ready=false
 ROOT_PRINTF_BYTES="$(_shell_quote "$(_shell_printf_bytes "$ROOT")")"
 MATUGEN_OUTPUT_TOML="$(_toml_basic_string "$ROOT/config/MatugenTheme.qml")"
 MATUGEN_INPUT_TOML="$(_toml_basic_string "$CONFIG_HOME/matugen/templates/silere-shell/Theme.qml")"
@@ -730,12 +731,12 @@ if [ -n "${NIRI_SOCKET:-}" ] || [ "${XDG_CURRENT_DESKTOP:-}" = "niri" ] \
     else
         _ok "found niri config at $(_tilde "$NIRI_CONFIG")"
         if _already_present "$NIRI_CONFIG"; then
-            _ok "already present in $(_tilde "$NIRI_CONFIG")"
+            _ok "already present in $(_tilde "$NIRI_CONFIG")"; autostart_ready=true
         elif _ask "Add spawn-at-startup to $(_tilde "$NIRI_CONFIG")?"; then
             _reject_unsafe_path "$NIRI_CONFIG"
             _backup "$NIRI_CONFIG"
             printf '\n// silere-shell begin\n%s\n// silere-shell end\n' "$NIRI_SPAWN" >> "$NIRI_CONFIG"
-            _ok "added to $(_tilde "$NIRI_CONFIG")"; did_autostart=true
+            _ok "added to $(_tilde "$NIRI_CONFIG")"; did_autostart=true autostart_ready=true
         else
             _skip "skipped — add manually: $NIRI_SPAWN"
         fi
@@ -763,7 +764,7 @@ if [[ "$HYPR_CONFIG" == *.lua ]]; then
     _ok "found Hyprland Lua config at $(_tilde "$HYPR_CONFIG")"
 
     if [ -n "$LUA_EXEC_FILE" ] && _already_present "$LUA_EXEC_FILE"; then
-        _ok "already present in $(_tilde "$LUA_EXEC_FILE")"
+        _ok "already present in $(_tilde "$LUA_EXEC_FILE")"; autostart_ready=true
     elif [ -n "$LUA_EXEC_FILE" ]; then
         if _ask "Add autostart to $(_tilde "$LUA_EXEC_FILE")?"; then
             _backup "$LUA_EXEC_FILE"
@@ -775,7 +776,7 @@ hl.on("hyprland.start", function()
 end)
 -- silere-shell end
 EOF
-            _ok "added to $(_tilde "$LUA_EXEC_FILE")"; did_autostart=true
+            _ok "added to $(_tilde "$LUA_EXEC_FILE")"; did_autostart=true autostart_ready=true
         else
             _skip "skipped — add manually: hl.exec_cmd($LAUNCH_CMD_LUA)"
         fi
@@ -791,7 +792,7 @@ EOF
 elif [[ "$HYPR_CONFIG" == *.conf ]]; then
     _ok "found Hyprland config at $(_tilde "$HYPR_CONFIG")"
     if _already_present "$HYPR_CONFIG"; then
-        _ok "already present in $(_tilde "$HYPR_CONFIG")"
+        _ok "already present in $(_tilde "$HYPR_CONFIG")"; autostart_ready=true
     else
         if _ask "Add exec-once to $(_tilde "$HYPR_CONFIG")?"; then
             _backup "$HYPR_CONFIG"
@@ -801,7 +802,7 @@ elif [[ "$HYPR_CONFIG" == *.conf ]]; then
 exec-once = $LAUNCH_CMD
 # silere-shell end
 EOF
-            _ok "added"; did_autostart=true
+            _ok "added"; did_autostart=true autostart_ready=true
         else
             _skip "skipped — add manually: exec-once = $LAUNCH_CMD"
         fi
@@ -836,11 +837,15 @@ $did_tmpl      && printf "    ${GREEN}ok${R}      matugen template\n" || printf 
 $did_toml      && printf "    ${GREEN}ok${R}      matugen toml\n"     || printf "    ${DIM}skip${R}    matugen toml\n"
 $did_autostart && printf "    ${GREEN}ok${R}      autostart\n"        || printf "    ${DIM}skip${R}    autostart\n"
 $did_update    && printf "    ${GREEN}ok${R}      update-check timer\n" || printf "    ${DIM}skip${R}    update-check timer\n"
-if $has_qs && $qs_modules_ok; then
-    printf "\n  restart your compositor to launch silere\n"
-elif $has_qs; then
-    printf "\n  ${YELLOW}install a complete current Quickshell build${R}, then restart your compositor\n"
-else
+if ! $has_qs; then
     printf "\n  ${YELLOW}install Quickshell${R}, then restart your compositor to launch silere\n"
+elif ! $qs_modules_ok; then
+    printf "\n  ${YELLOW}install a complete current Quickshell build${R}, then restart your compositor\n"
+elif $autostart_ready; then
+    printf "\n  restart your compositor to launch silere\n"
+else
+    printf "\n  ${YELLOW}autostart is not set up${R} — silere will not start on its own\n"
+    printf "  add the line above to your Hyprland or niri config, or run it now:\n"
+    printf "    ${DIM}qs -p %s/shell.qml${R}\n" "$ROOT"
 fi
 printf "  to uninstall: ${DIM}%s/scripts/uninstall.sh${R}\n\n" "$ROOT"
