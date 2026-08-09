@@ -89,6 +89,18 @@ _fetch_main() {
 # few seconds forever — no bar, no menu, and no UI left to roll back from. Type-check
 # the merged tree first (~15s) and only restart into it if it actually loads. Skipping
 # the gate when the checker or qs is missing keeps the updater usable without them.
+# The unit name is fixed, so a --apply run from a second checkout would otherwise
+# restart whichever shell is live, not the one it just updated. systemd expands %h
+# in ExecStart before reporting it, so the resolved path is safe to match on.
+_unit_runs_this_checkout() {
+    local exec_start
+    exec_start="$(systemctl --user show silere-shell.service -p ExecStart --value 2>/dev/null || true)"
+    case "$exec_start" in
+        *" $ROOT/shell.qml"*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 _merged_tree_loads() {
     [ -r "$ROOT/scripts/test-qml-headless.sh" ] || return 0
     command -v qs >/dev/null 2>&1 || return 0
@@ -267,7 +279,8 @@ if [ "${1:-}" = "--apply" ]; then
     count="$(git rev-list --count "${local_rev}..${new_rev}")"
     plural="change"; [ "$count" -ne 1 ] && plural="changes"
     # systemd unit only exists on dev installs; exec-once users restart by hand
-    if systemctl --user is-active --quiet silere-shell.service 2>/dev/null; then
+    if systemctl --user is-active --quiet silere-shell.service 2>/dev/null \
+            && _unit_runs_this_checkout; then
         systemctl --user restart silere-shell.service
     else
         _notify "Silere Shell updated" "$count new $plural — restart the shell to use it"
