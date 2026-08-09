@@ -90,15 +90,6 @@ Item {
                     root.focusAndPick(_sw.index + 1)
                     event.accepted = true
                 }
-                Keys.onPressed: event => {
-                    if (event.key === Qt.Key_Home) {
-                        root.focusAndPick(0)
-                        event.accepted = true
-                    } else if (event.key === Qt.Key_End) {
-                        root.focusAndPick(_rep.count - 1)
-                        event.accepted = true
-                    }
-                }
 
                 Grid {
                     anchors.centerIn: parent

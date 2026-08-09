@@ -161,15 +161,6 @@ Item {
                         root._focusDeviceIndex(_option.index + 1)
                         event.accepted = true
                     }
-                    Keys.onPressed: event => {
-                        if (event.key === Qt.Key_Home) {
-                            root._focusDeviceIndex(0)
-                            event.accepted = true
-                        } else if (event.key === Qt.Key_End) {
-                            root._focusDeviceIndex(_deviceRepeater.count - 1)
-                            event.accepted = true
-                        }
-                    }
                 }
             }
         }

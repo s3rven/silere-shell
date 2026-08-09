@@ -151,15 +151,6 @@ Item {
                 onTriggered: _activate()
                 Keys.onUpPressed:     event => { _list._focusIndex(_row.index - 1); event.accepted = true }
                 Keys.onDownPressed:   event => { _list._focusIndex(_row.index + 1); event.accepted = true }
-                Keys.onPressed: event => {
-                    if (event.key === Qt.Key_Home) {
-                        _list._focusIndex(0)
-                        event.accepted = true
-                    } else if (event.key === Qt.Key_End) {
-                        _list._focusIndex(_list.count - 1)
-                        event.accepted = true
-                    }
-                }
             }
         }
     }

@@ -53,17 +53,7 @@ Item {
 
     Keys.onLeftPressed: event => { _focusVisual.noteKeyboardInput(); root._nudgeHue(-1, (event.modifiers & Qt.ShiftModifier) ? 5 : 1); event.accepted = true }
     Keys.onRightPressed: event => { _focusVisual.noteKeyboardInput(); root._nudgeHue(1, (event.modifiers & Qt.ShiftModifier) ? 5 : 1); event.accepted = true }
-    Keys.onPressed: event => {
-        _focusVisual.noteKeyboardInput()
-        if (!root.enabled || !root.interactive) return
-        if (event.key === Qt.Key_Home) {
-            root.picked(0)
-            event.accepted = true
-        } else if (event.key === Qt.Key_End) {
-            root.picked(359 / 360)
-            event.accepted = true
-        }
-    }
+    Keys.onPressed: _focusVisual.noteKeyboardInput()
 
     MotionBehavior on opacity {
         NumberAnimation { duration: Motion.fast }

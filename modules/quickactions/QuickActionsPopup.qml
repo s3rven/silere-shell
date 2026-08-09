@@ -92,10 +92,6 @@ PanelWindow {
             if (i >= 0 && rows.length > 0)
                 rows[(i + dir + rows.length) % rows.length].forceActiveFocus()
         }
-        function _focusEdge(last: bool): void {
-            const rows = _menuRows()
-            if (rows.length > 0) rows[last ? rows.length - 1 : 0].forceActiveFocus()
-        }
         function _activate(): void {
             if (_row.visible) _row.triggered()
         }
@@ -114,16 +110,6 @@ PanelWindow {
         Keys.onUpPressed:     e => { _row._moveFocus(-1); e.accepted = true }
         Keys.onDownPressed:   e => { _row._moveFocus(1);  e.accepted = true }
         Keys.onPressed: e => {
-            if (e.key === Qt.Key_Home) {
-                _row._focusEdge(false)
-                e.accepted = true
-                return
-            }
-            if (e.key === Qt.Key_End) {
-                _row._focusEdge(true)
-                e.accepted = true
-                return
-            }
             if (e.key !== Qt.Key_Space
                     && e.key !== Qt.Key_Return && e.key !== Qt.Key_Enter) return
             e.accepted = true

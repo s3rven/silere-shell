@@ -177,16 +177,7 @@ Item {
                     Accessible.onPressAction: {
                         if (root.enabled) root.chosen(modelData.value)
                     }
-                    Keys.onPressed: event => {
-                        _optionFocusVisual.noteKeyboardInput()
-                        if (event.key === Qt.Key_Home) {
-                            root._focusOption(0, true)
-                            event.accepted = true
-                        } else if (event.key === Qt.Key_End) {
-                            root._focusOption(_optionRepeater.count - 1, true)
-                            event.accepted = true
-                        }
-                    }
+                    Keys.onPressed: _optionFocusVisual.noteKeyboardInput()
 
                     Keys.onSpacePressed: event => {
                         if (!event.isAutoRepeat && root.enabled)

@@ -328,16 +328,6 @@ Item {
                     Keys.onEscapePressed: event => { root._setOpen(false, false); event.accepted = true }
                     Keys.onUpPressed:     event => { root._focusOption(_opt.index - 1, false); event.accepted = true }
                     Keys.onDownPressed:   event => { root._focusOption(_opt.index + 1, false); event.accepted = true }
-                    Keys.onPressed: event => {
-                        if (event.key === Qt.Key_Home) {
-                            root._focusOption(0, false)
-                            event.accepted = true
-                        } else if (event.key === Qt.Key_End) {
-                            root._focusOption(root.model.length - 1, false)
-                            event.accepted = true
-                        }
-                    }
-
                 }
             }
         }

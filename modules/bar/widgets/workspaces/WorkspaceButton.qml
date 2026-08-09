@@ -109,15 +109,6 @@ Item {
     }
     Keys.onLeftPressed:  event => { root.focusSiblingRequested(root.index - 1); event.accepted = true }
     Keys.onRightPressed: event => { root.focusSiblingRequested(root.index + 1); event.accepted = true }
-    Keys.onPressed: event => {
-        if (event.key === Qt.Key_Home) {
-            root.focusSiblingRequested(0)
-            event.accepted = true
-        } else if (event.key === Qt.Key_End) {
-            root.focusSiblingRequested(root.siblingCount - 1)
-            event.accepted = true
-        }
-    }
 
     HoverHandler { id: _hover; cursorShape: Qt.PointingHandCursor }
     onHoveredChanged: root.hoverReported(root.wsId, root.hovered)

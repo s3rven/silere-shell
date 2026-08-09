@@ -60,14 +60,6 @@ Item {
         case Qt.Key_Right:
         case Qt.Key_Up:
             nudge(1, big); event.accepted = true; return
-        case Qt.Key_PageDown:
-            nudge(-1, 10); event.accepted = true; return
-        case Qt.Key_PageUp:
-            nudge(1, 10); event.accepted = true; return
-        case Qt.Key_Home:
-            _setFromUser(min, false); event.accepted = true; return
-        case Qt.Key_End:
-            _setFromUser(max, false); event.accepted = true; return
         }
     }
 

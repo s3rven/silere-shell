@@ -159,15 +159,6 @@ Item {
                     }
                     Keys.onUpPressed:     event => { root._focusSinkIndex(_opt.index - 1); event.accepted = true }
                     Keys.onDownPressed:   event => { root._focusSinkIndex(_opt.index + 1); event.accepted = true }
-                    Keys.onPressed: event => {
-                        if (event.key === Qt.Key_Home) {
-                            root._focusSinkIndex(0)
-                            event.accepted = true
-                        } else if (event.key === Qt.Key_End) {
-                            root._focusSinkIndex(_sinkRepeater.count - 1)
-                            event.accepted = true
-                        }
-                    }
                 }
             }
         }
