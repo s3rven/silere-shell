@@ -748,11 +748,7 @@ if [[ "$HYPR_CONFIG" == *.lua ]]; then
         [ -f "$candidate" ] && { LUA_EXEC_FILE="$candidate"; break; }
     done
 
-    # the snippet uses a framework-specific API; only emit it where that framework exists
-    if [ -n "$LUA_EXEC_FILE" ] && ! grep -qE 'hyprland\.lib|hl\.on' "$LUA_EXEC_FILE" "$HYPR_CONFIG" 2>/dev/null; then
-        _warn "Lua config found but no hyprland.lib/hl.on framework detected"
-        _warn "add manually: local h = require(\"hyprland.lib\"); h.exec($LAUNCH_CMD_LUA)"
-    elif [ -n "$LUA_EXEC_FILE" ] && _already_present "$LUA_EXEC_FILE"; then
+    if [ -n "$LUA_EXEC_FILE" ] && _already_present "$LUA_EXEC_FILE"; then
         _ok "already present in $LUA_EXEC_FILE"
     elif [ -n "$LUA_EXEC_FILE" ]; then
         if _ask "Add autostart to ${LUA_EXEC_FILE##*/}?"; then
@@ -760,19 +756,18 @@ if [[ "$HYPR_CONFIG" == *.lua ]]; then
             cat >> "$LUA_EXEC_FILE" <<EOF
 
 -- silere-shell begin
-local _silere_lib = require("hyprland.lib")
 hl.on("hyprland.start", function()
-    _silere_lib.exec($LAUNCH_CMD_LUA)
+    hl.exec_cmd($LAUNCH_CMD_LUA)
 end)
 -- silere-shell end
 EOF
             _ok "added to $LUA_EXEC_FILE"; did_autostart=true
         else
-            _skip "skipped — add manually: _silere_lib.exec($LAUNCH_CMD_LUA)"
+            _skip "skipped — add manually: hl.exec_cmd($LAUNCH_CMD_LUA)"
         fi
     else
         _warn "Lua config detected but no execs.lua found"
-        _warn "add manually: local h = require(\"hyprland.lib\"); h.exec($LAUNCH_CMD_LUA)"
+        _warn "add manually: hl.on(\"hyprland.start\", function() hl.exec_cmd($LAUNCH_CMD_LUA) end)"
     fi
 
 elif [[ "$HYPR_CONFIG" == *.conf ]]; then
