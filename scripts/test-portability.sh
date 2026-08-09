@@ -171,6 +171,12 @@ test_headless_qml_import_roots() (
 )
 
 test_font_archive_selection() (
+    # the fixture is a .tar.xz, so without xz this reports a tar crash as a lint
+    # failure. xz-utils is not installed by default on debian.
+    if ! command -v xz >/dev/null 2>&1; then
+        printf 'SKIP: xz not installed; font archive selection not tested\n'
+        return 0
+    fi
     SILERE_SCRIPT_LIB_ONLY=1 source "$ROOT/scripts/install.sh"
     local source="$TMP/font-archive" destination="$TMP/font-install" archive="$TMP/fonts.tar.xz"
     local name
