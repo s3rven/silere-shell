@@ -1,11 +1,4 @@
 Workspaces    1.0 Workspaces.qml
-WorkspaceButton   1.0 WorkspaceButton.qml
-WorkspaceMarker   1.0 WorkspaceMarker.qml
-WorkspaceUrgentTick 1.0 WorkspaceUrgentTick.qml
-WorkspaceAppIcons 1.0 WorkspaceAppIcons.qml
-WorkspaceNotifPulse 1.0 WorkspaceNotifPulse.qml
-WorkspaceUrgentFx 1.0 WorkspaceUrgentFx.qml
-WorkspaceFocusRing 1.0 WorkspaceFocusRing.qml
 WindowTitle   1.0 WindowTitle.qml
 Clock         1.0 Clock.qml
 Volume        1.0 Volume.qml

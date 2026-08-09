@@ -1,8 +1,8 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import "../../../config"
-import "../../common"
+import "../../../../config"
+import "../../../common"
 
 Rectangle {
     id: root

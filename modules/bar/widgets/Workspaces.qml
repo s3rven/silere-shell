@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import "../../../config"
 import "../../../services"
+import "workspaces"
 
 Item {
     id: root

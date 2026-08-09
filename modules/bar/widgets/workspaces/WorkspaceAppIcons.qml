@@ -2,8 +2,8 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Effects
-import "../../../config"
-import "../../../services"
+import "../../../../config"
+import "../../../../services"
 
 Row {
     id: root

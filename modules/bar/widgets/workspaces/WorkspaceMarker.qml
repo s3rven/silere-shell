@@ -1,8 +1,8 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import "../../../config"
-import "../../../services"
+import "../../../../config"
+import "../../../../services"
 
 // no render layer: an FBO fringes the small sprite when scaled, and the even sprite sizes keep the gem on whole pixels
 Item {
