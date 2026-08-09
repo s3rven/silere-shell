@@ -705,6 +705,15 @@ LAUNCH_CMD_LUA="$(_lua_string "$LAUNCH_CMD")"
 
 _already_present() { grep -qF 'silere-shell begin' "$1" 2>/dev/null; }
 
+# autostart targets sit several levels deep and there can be more than one
+# execs.lua candidate, so every prompt below names the file it will append to
+_tilde() {
+    case "$1" in
+        "$HOME"/*) printf '~%s' "${1#"$HOME"}" ;;
+        *) printf '%s' "$1" ;;
+    esac
+}
+
 # niri documents NIRI_CONFIG as its own config override; SILERE_NIRI_CONFIG wins over it
 NIRI_CONFIG_OVERRIDE="${SILERE_NIRI_CONFIG:-${NIRI_CONFIG:-}}"
 NIRI_CONFIG="$(_niri_config_path)"
@@ -716,17 +725,20 @@ if [ -n "${NIRI_SOCKET:-}" ] || [ "${XDG_CURRENT_DESKTOP:-}" = "niri" ] \
     || { [ -z "$HYPR_CONFIG" ] && [ -f "$NIRI_CONFIG" ]; }; then
     NIRI_SPAWN="spawn-at-startup \"sh\" \"-c\" $(_lua_string "$LAUNCH_CMD")"
     if [ ! -f "$NIRI_CONFIG" ]; then
-        _warn "no niri config at $NIRI_CONFIG"
+        _warn "no niri config at $(_tilde "$NIRI_CONFIG")"
         _warn "add manually: $NIRI_SPAWN"
-    elif _already_present "$NIRI_CONFIG"; then
-        _ok "already present in $NIRI_CONFIG"
-    elif _ask "Add spawn-at-startup to $NIRI_CONFIG?"; then
-        _reject_unsafe_path "$NIRI_CONFIG"
-        _backup "$NIRI_CONFIG"
-        printf '\n// silere-shell begin\n%s\n// silere-shell end\n' "$NIRI_SPAWN" >> "$NIRI_CONFIG"
-        _ok "added to $NIRI_CONFIG"; did_autostart=true
     else
-        _skip "skipped — add manually: $NIRI_SPAWN"
+        _ok "found niri config at $(_tilde "$NIRI_CONFIG")"
+        if _already_present "$NIRI_CONFIG"; then
+            _ok "already present in $(_tilde "$NIRI_CONFIG")"
+        elif _ask "Add spawn-at-startup to $(_tilde "$NIRI_CONFIG")?"; then
+            _reject_unsafe_path "$NIRI_CONFIG"
+            _backup "$NIRI_CONFIG"
+            printf '\n// silere-shell begin\n%s\n// silere-shell end\n' "$NIRI_SPAWN" >> "$NIRI_CONFIG"
+            _ok "added to $(_tilde "$NIRI_CONFIG")"; did_autostart=true
+        else
+            _skip "skipped — add manually: $NIRI_SPAWN"
+        fi
     fi
     _autostart_done=true
 fi
@@ -748,10 +760,12 @@ if [[ "$HYPR_CONFIG" == *.lua ]]; then
         [ -f "$candidate" ] && { LUA_EXEC_FILE="$candidate"; break; }
     done
 
+    _ok "found Hyprland Lua config at $(_tilde "$HYPR_CONFIG")"
+
     if [ -n "$LUA_EXEC_FILE" ] && _already_present "$LUA_EXEC_FILE"; then
-        _ok "already present in $LUA_EXEC_FILE"
+        _ok "already present in $(_tilde "$LUA_EXEC_FILE")"
     elif [ -n "$LUA_EXEC_FILE" ]; then
-        if _ask "Add autostart to ${LUA_EXEC_FILE##*/}?"; then
+        if _ask "Add autostart to $(_tilde "$LUA_EXEC_FILE")?"; then
             _backup "$LUA_EXEC_FILE"
             cat >> "$LUA_EXEC_FILE" <<EOF
 
@@ -761,20 +775,25 @@ hl.on("hyprland.start", function()
 end)
 -- silere-shell end
 EOF
-            _ok "added to $LUA_EXEC_FILE"; did_autostart=true
+            _ok "added to $(_tilde "$LUA_EXEC_FILE")"; did_autostart=true
         else
             _skip "skipped — add manually: hl.exec_cmd($LAUNCH_CMD_LUA)"
         fi
     else
-        _warn "Lua config detected but no execs.lua found"
-        _warn "add manually: hl.on(\"hyprland.start\", function() hl.exec_cmd($LAUNCH_CMD_LUA) end)"
+        # appending to hyprland.lua itself is not safe: Lua requires `return` to end
+        # a block, so a snippet after it is a syntax error that breaks the whole config
+        _warn "Lua config detected but no execs.lua found — looked in:"
+        _warn "  $(_tilde "$HYPR_DIR")/{custom,hyprland}/execs.lua and $(_tilde "$HYPR_DIR")/execs.lua"
+        _warn "create one of those and re-run, or add manually:"
+        _warn "  hl.on(\"hyprland.start\", function() hl.exec_cmd($LAUNCH_CMD_LUA) end)"
     fi
 
 elif [[ "$HYPR_CONFIG" == *.conf ]]; then
+    _ok "found Hyprland config at $(_tilde "$HYPR_CONFIG")"
     if _already_present "$HYPR_CONFIG"; then
-        _ok "already present in $HYPR_CONFIG"
+        _ok "already present in $(_tilde "$HYPR_CONFIG")"
     else
-        if _ask "Add exec-once to $HYPR_CONFIG?"; then
+        if _ask "Add exec-once to $(_tilde "$HYPR_CONFIG")?"; then
             _backup "$HYPR_CONFIG"
             cat >> "$HYPR_CONFIG" <<EOF
 
