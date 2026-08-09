@@ -302,8 +302,11 @@ fi
 section "underscore property handlers"
 # Qt strips leading underscores before capitalising a handler name, so property
 # `_foo` is served by on_FooChanged. on_fooChanged type-checks, loads, and never
-# fires — there is no runtime warning for it either.
-lower_underscore_handlers="$(grep -RInE --include='*.qml' '^[[:space:]]*on_[a-z][A-Za-z0-9_]*[[:space:]]*:' \
+# fires — there is no runtime warning for it either. Connections spells the same
+# handler as a function, where the mistake is just as quiet.
+lower_underscore_handlers="$(grep -RInE --include='*.qml' \
+  -e '^[[:space:]]*on_[a-z][A-Za-z0-9_]*[[:space:]]*:' \
+  -e 'function[[:space:]]+on_[a-z][A-Za-z0-9_]*[[:space:]]*\(' \
   shell.qml modules config services || true)"
 if [ -n "$lower_underscore_handlers" ]; then
   fail "underscore handlers must capitalise the property name (on_FooChanged):"
