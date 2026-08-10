@@ -57,7 +57,7 @@ Item {
         anchors.right:  parent.right
         height: 2
         opacity: !root.show || !root._helperEnabled || root._vizVisible ? 0.0
-            : Media.hasPosition ? 0.72
+            : Media.lengthKnown ? 0.72
             : Media.playing ? 0.54 : 0.22
         visible: opacity > 0.01
         MotionBehavior on opacity {NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
@@ -69,13 +69,13 @@ Item {
             height: 1.5
             radius: height / 2
             antialiasing: true
-            opacity: Media.hasPosition ? 1.0 : 0.75
+            opacity: Media.lengthKnown ? 1.0 : 0.75
             color: Theme.withAlpha(Theme.accent,
-                Media.hasPosition ? 0.22 : 0.80)
+                Media.lengthKnown ? 0.22 : 0.80)
         }
 
         Rectangle {
-            visible: Media.hasPosition
+            visible: Media.lengthKnown
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
             width: Math.max(0, parent.width * Media.positionRatio)
@@ -218,10 +218,10 @@ Item {
 
     HoverHandler { id: _rootHover; cursorShape: Qt.PointingHandCursor }
 
-    activeFocusOnTab: root.show
+    activeFocusOnTab: root.show || root.activeFocus
     Accessible.role: Accessible.Button
     Accessible.name: Media.label.length > 0 ? "Now playing: " + Media.label : "Media"
-    Accessible.description: (Media.hasPosition
+    Accessible.description: (Media.lengthKnown
         ? Media.formatTime(Media.positionNow) + " of " + Media.formatTime(Media.length) + ". "
         : "") + "Activate to toggle playback. Scroll to skip tracks."
     Accessible.onPressAction: Media.togglePlay()

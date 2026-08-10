@@ -85,9 +85,14 @@ Singleton {
     Timer { id: _pauseTimer; interval: 5000;  onTriggered: _hideTimer.start() }
     Timer { id: _hideTimer;  interval: 10000; onTriggered: root.shown = false  }
 
-    readonly property real length:      (player && player.lengthSupported) ? Math.max(0, player.length) : 0
+    // MPRIS reports 2^63-1 microseconds for anything with no end, which every live
+    // stream is; a real track is never a day long, so past the cap it means unknown
+    readonly property real _rawLength:  (player && player.lengthSupported) ? Math.max(0, player.length) : 0
+    readonly property bool lengthKnown: _rawLength > 0 && _rawLength <= 86400
+    readonly property real length:      lengthKnown ? _rawLength : 0
     readonly property bool canSeek:     player ? player.canSeek : false
-    readonly property bool hasPosition: player !== null && player.positionSupported && length > 0
+    // position still ticks without a length; only the ratio and the seek bar need one
+    readonly property bool hasPosition: player !== null && player.positionSupported
 
     property real  _anchorPos:  0
     property real  _anchorMs:   0
