@@ -31,7 +31,9 @@ The menu, the calendar and the screenshot flash are scriptable over IPC.
 
 ## Resource use
 
-Idle use on a reference session measured **under 1% of one CPU core** and roughly **95-110 MB PSS**. An empty Quickshell panel doing nothing measured about **57 MB PSS** on the same machine, so much of that is the Qt and GPU driver floor rather than Silere.
+Idle use on a reference session measured **under 1% of one CPU core** and **95-110 MB PSS** shortly after start, settling near **120 MB** after an hour and staying there. An empty Quickshell panel doing nothing measured about **57 MB PSS** on the same machine, so much of that is the Qt and GPU driver floor rather than Silere.
+
+CPU sits near zero when nothing is happening and rises with what is on screen: a playing track costs about four times idle, and the media visualizer costs more than everything else combined. Once the session goes idle, or the bar steps aside for the compositor overview, every animation stops on its own until you come back.
 
 Results vary with hardware, drivers, and which widgets you enable. Measure your own checkout with `bash scripts/bench.sh 5`. The report tracks open file descriptors too, so a leak shows up as a climbing number while everything else stays flat.
 
@@ -99,13 +101,14 @@ When a release changes the settings format, the old file is copied to `settings.
 
 | area | actions |
 |---|---|
-| workspaces | click switches. On the active diamond, click opens the menu and right-click opens quick actions. Middle-click sends the focused window to that workspace. |
+| workspaces | click switches. On the active diamond, click opens the menu and right-click opens quick actions. Middle-click sends the focused window to that workspace. Scroll switches too, once you turn it on under Settings › Workspaces. |
 | clock | click opens the calendar. Middle-click cycles seconds and date. |
-| calendar | scroll or arrow keys change the month. Click the header to jump back to today. |
+| calendar | scroll or arrow keys change the month. Page Up and Page Down step a month, Home jumps to today, and holding Shift moves a whole year instead. Click the header to jump back to today. |
 | media | click plays or pauses. Scroll changes track. Middle-click jumps to the player. |
-| volume | scroll changes volume. Click mutes. |
-| brightness | scroll changes brightness. |
-| tray | click jumps to the app. Right-click opens its menu. |
+| volume | scroll or arrow keys change volume. Click mutes. |
+| brightness | scroll or arrow keys change brightness. |
+| tray | click jumps to the app. Right-click opens its menu, and Shift with Enter or Space opens it from the keyboard. Middle-click runs the app's secondary action, and scrolling is passed through to the app. |
+| notifications | click runs the default action. Right-click dismisses. Middle-click jumps to the app that sent it. |
 | menu | Escape steps back, then closes. Click anywhere outside to close. |
 | history | click an entry to read it in full. |
 
@@ -152,7 +155,7 @@ To inspect startup errors directly, run `qs -p shell.qml`.
 
 <br>
 
-**Notifications never appear.** Another daemon already owns `org.freedesktop.Notifications`.
+**Notifications never appear.** Another daemon already owns `org.freedesktop.Notifications`. Silere works out which one and says so in an alert naming the process, a few seconds after start.
 
 **Icons or text use the wrong font.** Install a Nerd Font such as `ttf-jetbrains-mono-nerd`, then refresh the user font cache.
 

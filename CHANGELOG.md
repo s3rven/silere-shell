@@ -11,7 +11,50 @@ rather than when a version is published here.
 
 ## [Unreleased]
 
-Nothing yet.
+Settings carry over; a stored `barCornerStyle` of "flat" becomes a Roundness of 0.
+
+### Added
+
+- Night Light and the daily update check say why a switch flipped back, instead of
+  failing silently. `hyprsunset` exiting on its own now reports its own last line.
+- Reset backups are stamped with the time, so a second reset no longer overwrites
+  the record of the first. The five newest are kept.
+
+### Changed
+
+- Choice controls — Source, Date, Position and the rest — are separated chips. The
+  selected one carries an accent outline instead of a filled plate, so accent stays
+  a state colour rather than a resting one.
+- Bar corner style folded into Roundness: 0 is flat. The slider only appears for a
+  floating bar, since a docked bar does not paint its own corners.
+- The Night Light panel builds when you open it, as the Wi-Fi and Bluetooth panels
+  already did.
+- "Fully-charged OSD" is now "Fully charged alert", and the desktop-notification
+  timeout reads "Dismiss after" like the other two timeout rows.
+- README resource figures re-measured, including how much of the memory is the Qt
+  and GPU driver floor rather than Silere.
+
+### Fixed
+
+- A setting changed in the last fraction of a second before logout is no longer
+  lost. Toggles and choices are written immediately; sliders still settle first.
+- The same for marking a day in the calendar.
+- A double-click can no longer arm and confirm a destructive action in one gesture.
+  Affects the power actions, clearing notification history, and resetting settings.
+- A row that disables itself while handling its own click no longer comes back
+  looking keyboard-focused.
+- "Always show speed" no longer appears underneath a Network speed row that is
+  disabled for want of NetworkManager.
+- The bar underline preview no longer reaches for an effect that is not built yet.
+
+### Removed
+
+- The "Bar corner style" setting. Roundness 0 is flat.
+
+### Security
+
+- The installer creates its config directory as 0700 for the whole path, not only
+  the last segment.
 
 ## [0.2.0] - 2026-08-10
 
