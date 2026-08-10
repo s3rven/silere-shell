@@ -5,6 +5,7 @@ MenuWindow 1.0 MenuWindow.qml
 internal BluetoothList BluetoothList.qml
 internal BrightnessRow BrightnessRow.qml
 internal HomePage HomePage.qml
+internal MediaCard MediaCard.qml
 internal PowerRailContent PowerRailContent.qml
 internal PowerRailRow PowerRailRow.qml
 internal RailLabelGroup RailLabelGroup.qml
