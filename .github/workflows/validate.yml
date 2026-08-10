@@ -49,3 +49,8 @@ jobs:
 
       - name: Headless QML import and type probe
         run: SILERE_REQUIRE_QML_TOOLS=1 bash scripts/test-qml-headless.sh
+
+      - name: Settings surface build probe
+        # offscreen QPA needs no display; catches runtime-only errors in the
+        # lazily-loaded settings pages that qmlcachegen and qmllint cannot see
+        run: bash scripts/test-surfaces.sh

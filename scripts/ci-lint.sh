@@ -229,7 +229,11 @@ else
 fi
 # PulseLoop derives running from `active` so the gate cannot be bypassed. Setting
 # running: directly reintroduces an infinite loop that spins at zero duration.
-pulse_running="$(awk '
+# -print0/xargs: an unquoted $(find) word-splits on a path containing a space,
+# which would feed awk bogus filenames and let `|| true` swallow the failure —
+# the check would then pass by reporting nothing.
+pulse_running="$(find modules config services -name '*.qml' -print0 \
+  | xargs -0 -r awk '
   {
     line = $0
     sub(/\/\/.*/, "", line)
@@ -240,7 +244,7 @@ pulse_running="$(awk '
       if (depth <= 0) inpulse = 0
     }
   }
-' $(find modules config services -name '*.qml') || true)"
+' || true)"
 if [ -n "$pulse_running" ]; then
   fail "set active: on PulseLoop, not running::"
   printf '%s\n' "$pulse_running"
@@ -266,14 +270,18 @@ fi
 
 # A held activation key produces auto-repeat release events on Qt. Triggering
 # from those releases activates early (and can repeat) instead of waiting for
-# the user's real key-up event.
+# the user's real key-up event. KeyActivation owns that rule; a handler that
+# delegates to it inherits the guard, anything else must spell it out again.
+# The delegating form must be matched on the handler's OWN line: scanning the
+# 15-line window for it lets a neighbouring delegated handler excuse a
+# hand-rolled one that never checks isAutoRepeat.
 release_without_repeat=""
-while IFS=: read -r file line _; do
+while IFS=: read -r file line text; do
   [ -n "$file" ] || continue
+  printf '%s' "$text" | grep -qE '\.release\(' && continue
   end=$((line + 14))
-  if ! sed -n "${line},${end}p" "$file" | grep -q 'isAutoRepeat'; then
-    release_without_repeat="${release_without_repeat}${file}:${line}"$'\n'
-  fi
+  sed -n "${line},${end}p" "$file" | grep -q 'isAutoRepeat' && continue
+  release_without_repeat="${release_without_repeat}${file}:${line}"$'\n'
 done < <(grep -RInE --include='*.qml' 'Keys\.onReleased' shell.qml modules config services || true)
 release_without_repeat="${release_without_repeat%$'\n'}"
 if [ -n "$release_without_repeat" ]; then

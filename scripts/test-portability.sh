@@ -351,6 +351,7 @@ test_niri_config_discovery() {
 
 test_atomic_units() (
     SILERE_SCRIPT_LIB_ONLY=1 source "$ROOT/scripts/update.sh"
+    local generated source_root="$ROOT" odd_root
     SYSTEMD_USER_DIR="$TMP/units"
     mkdir -p "$SYSTEMD_USER_DIR"
     printf 'old service\n' > "$SYSTEMD_USER_DIR/$SERVICE_UNIT"
@@ -368,6 +369,25 @@ test_atomic_units() (
     if find "$SYSTEMD_USER_DIR" -maxdepth 1 -name '.silere-update.*.??????' -print -quit | grep -q .; then
         fail "temporary unit file was left behind"
     fi
+
+    # Exercise both escaping layers with a legal custom checkout path. systemd
+    # expands $ and %; its unit parser consumes the quote/backslash escapes.
+    odd_root="$TMP/unit-\${HOME}-%-quote\"-slash\\-amp&-pipe|"
+    mkdir -p "$odd_root/scripts" "$TMP/odd-units"
+    cp "$source_root/scripts/$SERVICE_UNIT" "$source_root/scripts/$TIMER_UNIT" \
+        "$odd_root/scripts/"
+    ROOT="$odd_root"
+    SYSTEMD_USER_DIR="$TMP/odd-units"
+    generated="$(_systemd_execstart)"
+    _write_update_units || fail "special-character unit writer failed"
+    assert_eq "ExecStart=$generated" \
+        "$(grep '^ExecStart=' "$SYSTEMD_USER_DIR/$SERVICE_UNIT")" \
+        "generated service preserved its escaped ExecStart"
+    [[ "$generated" == *'$${HOME}'* ]] \
+        || fail "generated service did not preserve a literal dollar in the checkout path"
+    [[ "$generated" == *'%%'* && "$generated" == *'quote\"'* \
+        && "$generated" == *'slash\\'* ]] \
+        || fail "generated service did not escape special checkout path characters"
 )
 
 test_atomic_update_cache() (
@@ -675,6 +695,77 @@ test_repair_workflow() (
     assert_eq '{"barHeight":40}' "$(<"$repo/settings.json")" "repair undo personal settings"
 )
 
+test_update_rolls_back_broken_merge() (
+    export GIT_CONFIG_GLOBAL=/dev/null
+    export GIT_CONFIG_NOSYSTEM=1
+    local remote="$TMP/rollback-remote.git"
+    local seed="$TMP/rollback-seed"
+    local client="$TMP/rollback-client"
+    local test_home="$TMP/rollback-home"
+    local stub_dir="$TMP/rollback-stubs"
+    local good_head
+
+    git init --bare -q "$remote"
+    git --git-dir="$remote" symbolic-ref HEAD refs/heads/main
+    git init -q "$seed"
+    git -C "$seed" config user.name "Silere test"
+    git -C "$seed" config user.email "test@example.invalid"
+    mkdir -p "$seed/scripts/lib"
+    cp "$ROOT/scripts/update.sh" "$seed/scripts/update.sh"
+    cp "$ROOT/scripts/lib/xdg.sh" "$seed/scripts/lib/xdg.sh"
+    # the gate runs whatever type-checker the merged tree ships, so the fixture owns
+    # the verdict. update.sh itself must stay byte-identical across these commits:
+    # it is mid-execution when the merge rewrites the worktree.
+    printf '#!/bin/sh\nexit 0\n' > "$seed/scripts/test-qml-headless.sh"
+    printf 'upstream v1\n' > "$seed/tracked.qml"
+    git -C "$seed" add scripts tracked.qml
+    git -C "$seed" commit -qm "initial"
+    git -C "$seed" branch -M main
+    git -C "$seed" remote add origin "$remote"
+    git -C "$seed" push -q -u origin main
+
+    git clone -q "$remote" "$client"
+    git -C "$client" config user.name "Silere test"
+    git -C "$client" config user.email "test@example.invalid"
+    good_head="$(git -C "$client" rev-parse HEAD)"
+
+    mkdir -p "$test_home" "$stub_dir"
+    printf '#!/bin/sh\nexit 1\n' > "$stub_dir/systemctl"
+    printf '#!/bin/sh\nexit 0\n' > "$stub_dir/notify-send"
+    # the gate skips itself when qs is absent, so without this stub the rollback
+    # assertions below would pass on a machine that never ran the check at all
+    printf '#!/bin/sh\nexit 0\n' > "$stub_dir/qs"
+    chmod +x "$stub_dir/systemctl" "$stub_dir/notify-send" "$stub_dir/qs"
+
+    printf 'upstream v2\n' > "$seed/tracked.qml"
+    printf '#!/bin/sh\nexit 1\n' > "$seed/scripts/test-qml-headless.sh"
+    git -C "$seed" commit -qam "broken upstream"
+    git -C "$seed" push -q
+
+    HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" \
+        bash "$client/scripts/update.sh" >/dev/null
+    if HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" \
+            bash "$client/scripts/update.sh" --apply >/dev/null 2>&1; then
+        fail "an update that fails the load gate was applied anyway"
+    fi
+    assert_eq "$good_head" "$(git -C "$client" rev-parse HEAD)" "rolled back HEAD"
+    assert_eq "upstream v1" "$(cat "$client/tracked.qml")" "rolled back worktree"
+    [ -f "$test_home/cache/silere-shell/update-pending" ] \
+        || fail "rollback cleared the pending update flag"
+
+    # positive control: the same path must still apply when the merged tree loads,
+    # or a gate that always failed would satisfy every assertion above
+    printf '#!/bin/sh\nexit 0\n' > "$seed/scripts/test-qml-headless.sh"
+    printf 'upstream v3\n' > "$seed/tracked.qml"
+    git -C "$seed" commit -qam "working upstream"
+    git -C "$seed" push -q
+    HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" \
+        bash "$client/scripts/update.sh" >/dev/null
+    HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" \
+        bash "$client/scripts/update.sh" --apply >/dev/null
+    assert_eq "upstream v3" "$(cat "$client/tracked.qml")" "applied a tree that loads"
+)
+
 test_xdg_paths_and_timer_default
 test_fresh_install_permissions
 test_marker_removal
@@ -691,6 +782,7 @@ test_atomic_update_cache
 # CI opts into making an accidental missing dependency a hard failure.
 if command -v git >/dev/null 2>&1; then
     test_update_refuses_dirty_apply
+    test_update_rolls_back_broken_merge
     test_update_reporting
     test_repair_workflow
 else

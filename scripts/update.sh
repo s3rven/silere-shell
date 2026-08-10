@@ -101,10 +101,37 @@ _unit_runs_this_checkout() {
     esac
 }
 
+# The type-check compiles every file but never loads shell.qml, and a missing
+# property or unresolvable type surfaces only at load — which is precisely the
+# break this gate exists to catch. Launching for real is the only thing that
+# sees it. Offscreen cannot stand in: with no PanelWindow backend every tree
+# fails alike. Skipped when a display, timeout or the theme is missing, so a
+# headless or bare checkout is never rolled back over a condition of its own.
+_merged_tree_starts() {
+    command -v timeout >/dev/null 2>&1 || return 0
+    [ -n "${WAYLAND_DISPLAY:-}" ] || return 0
+    [ -n "${XDG_RUNTIME_DIR:-}" ] && [ -d "$XDG_RUNTIME_DIR" ] || return 0
+    [ -f "$ROOT/config/MatugenTheme.qml" ] || return 0
+    local log code=0 verdict=0
+    log="$(mktemp "${TMPDIR:-/tmp}/silere-update-smoke.XXXXXX.log")" || return 0
+    timeout 5s qs -p "$ROOT/shell.qml" --no-color >"$log" 2>&1 || code=$?
+    # 124 is the timeout firing, i.e. it stayed up for the whole window
+    if [ "$code" -ne 0 ] && [ "$code" -ne 124 ]; then
+        # an unreachable display is not the update's fault; never roll back over it
+        grep -qE 'Failed to create wl_display|could not connect to display|no Qt platform plugin could be initialized' "$log" \
+            || verdict=1
+    elif grep -qE 'Failed to load configuration|Type [^ ]+ unavailable|module ".*" is not installed' "$log"; then
+        verdict=1
+    fi
+    rm -f "$log"
+    return "$verdict"
+}
+
 _merged_tree_loads() {
     [ -r "$ROOT/scripts/test-qml-headless.sh" ] || return 0
     command -v qs >/dev/null 2>&1 || return 0
-    bash "$ROOT/scripts/test-qml-headless.sh" >/dev/null 2>&1
+    bash "$ROOT/scripts/test-qml-headless.sh" >/dev/null 2>&1 || return 1
+    _merged_tree_starts
 }
 
 _acquire_update_lock() {
@@ -124,10 +151,24 @@ _systemd_execstart() {
     local escaped="$ROOT/scripts/update.sh"
     escaped="${escaped//\\/\\\\}"
     escaped="${escaped//\"/\\\"}"
+    # ExecStart expands ${NAME} even inside a quoted argument. A custom
+    # checkout path may contain those bytes literally; systemd spells a
+    # literal dollar as $$.
+    escaped="${escaped//\$/\$\$}"
     escaped="${escaped//%/%%}"
-    escaped="${escaped//&/\\&}"
-    escaped="${escaped//|/\\|}"
     printf '/bin/sh -c '\''exec "$1"'\'' silere-update "%s"\n' "$escaped"
+}
+
+_render_update_service() {
+    local line exec_start
+    exec_start="$(_systemd_execstart)"
+    while IFS= read -r line || [ -n "$line" ]; do
+        if [ "$line" = 'ExecStart=__ROOT__/scripts/update.sh' ]; then
+            printf 'ExecStart=%s\n' "$exec_start"
+        else
+            printf '%s\n' "$line"
+        fi
+    done < "$ROOT/scripts/$SERVICE_UNIT"
 }
 
 _timer_status() {
@@ -171,8 +212,7 @@ _write_update_units() {
         return 1
     }
 
-    if ! sed "s|^ExecStart=__ROOT__/scripts/update.sh$|ExecStart=$(_systemd_execstart)|" \
-        "$ROOT/scripts/$SERVICE_UNIT" > "$service_tmp" \
+    if ! _render_update_service > "$service_tmp" \
         || ! cp "$ROOT/scripts/$TIMER_UNIT" "$timer_tmp"; then
         rm -f "$service_tmp" "$timer_tmp"
         return 1
@@ -197,8 +237,9 @@ _set_timer() {
     if [ "$want" = "1" ]; then
         mkdir -p "$SYSTEMD_USER_DIR"
         _write_update_units || _fail "failed to install systemd user units"
-        systemctl --user daemon-reload
-        systemctl --user enable --now "$TIMER_UNIT" >/dev/null
+        systemctl --user daemon-reload || _fail "systemctl daemon-reload failed"
+        systemctl --user enable --now "$TIMER_UNIT" >/dev/null \
+            || _fail "could not enable $TIMER_UNIT"
     else
         systemctl --user disable --now "$TIMER_UNIT" >/dev/null 2>&1 || true
         systemctl --user daemon-reload
@@ -235,17 +276,22 @@ case "${1:-}" in
         _version_info
         exit 0
         ;;
+    # read-only, so it runs outside the update lock like --version does
+    --recent)
+        git -C "$ROOT" log -10 --oneline --no-decorate HEAD 2>/dev/null || true
+        exit 0
+        ;;
     --timer-status)
         _timer_status
         exit 0
         ;;
     --timer-enable)
         _set_timer 1
-        exit 0
+        exit $?
         ;;
     --timer-disable)
         _set_timer 0
-        exit 0
+        exit $?
         ;;
 esac
 

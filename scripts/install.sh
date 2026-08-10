@@ -536,7 +536,10 @@ INSTALL_DIR="$(_normalized_install_path "$INSTALL_DIR")"
 fresh_clone=false
 
 if [ "$INSTALL_DIR" = "$DEFAULT_DIR" ]; then
-    mkdir -m 0700 -p "$CONFIG_HOME" || _die "could not create $CONFIG_HOME"
+    # -m with -p only applies to the deepest directory, so any parent this
+    # creates would land at the umask default; clamp it for the whole path.
+    (umask 077 && mkdir -p "$CONFIG_HOME") || _die "could not create $CONFIG_HOME"
+    chmod 0700 "$CONFIG_HOME" || _die "could not secure $CONFIG_HOME"
 fi
 
 if [ -d "$INSTALL_DIR/.git" ]; then

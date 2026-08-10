@@ -320,9 +320,13 @@ if command -v qs >/dev/null 2>&1; then
     # seeded theme and the temp log, on interrupt as well as normal exit.
     _seeded_theme=false
     smoke_log=""
+    cov_log=""
+    cov_cfg=""
     _smoke_cleanup() {
       if [ "$_seeded_theme" = true ]; then rm -f config/MatugenTheme.qml; fi
       if [ -n "$smoke_log" ]; then rm -f "$smoke_log"; fi
+      if [ -n "$cov_log" ]; then rm -f "$cov_log"; fi
+      if [ -n "$cov_cfg" ]; then rm -rf "$cov_cfg"; fi
       return 0
     }
     trap _smoke_cleanup EXIT
@@ -346,10 +350,70 @@ if command -v qs >/dev/null 2>&1; then
       fail "startup" "Quickshell reported a QML compatibility error"
     else
       ok "startup" "Quickshell stayed alive for 5 seconds without load errors"
+
+      # Every default-off setting gates a Loader, so the pass above never loads those
+      # paths and the type-check cannot see a runtime-only error inside one. Load once
+      # more with them all on, in a scratch config so real settings stay untouched.
+      # nightLightAuto and neutralAccentAuto drive a gamma tool and matugen hooks;
+      # reduceMotion would zero the animations this is meant to instantiate.
+      cov_keys="$(sed -n 's/.*property bool[[:space:]]\{1,\}\([A-Za-z_][A-Za-z0-9_]*\)[[:space:]]*:[[:space:]]*false.*/\1/p' \
+        services/ShellSettings.qml \
+        | grep -vxE '_loaded|nightLightAuto|neutralAccentAuto|reduceMotion' || true)"
+      if [ -z "$cov_keys" ]; then
+        warn "off-path load" "no default-off settings found; coverage pass skipped"
+      else
+        cov_cfg="$(mktemp -d "${TMPDIR:-/tmp}/silere-qs-cov.XXXXXX")"
+        mkdir -p "$cov_cfg/silere-shell"
+        { printf '{\n'
+          printf '%s\n' "$cov_keys" | sed '$!s/.*/  "&": true,/; $s/.*/  "&": true/'
+          printf '}\n'
+        } > "$cov_cfg/silere-shell/settings.json"
+        cov_log="$(mktemp "${TMPDIR:-/tmp}/silere-qs-cov.XXXXXX.log")"
+        code=0
+        XDG_CONFIG_HOME="$cov_cfg" timeout 5s qs -p shell.qml --no-color \
+          >"$cov_log" 2>&1 || code=$?
+        if [ "$code" -ne 0 ] && [ "$code" -ne 124 ]; then
+          cat "$cov_log"
+          fail "off-path load" "Quickshell exited with status $code with every option on"
+        elif grep -qE 'Failed to load configuration|Type [^ ]+ unavailable|Cannot assign to non-existent property|is not a type' "$cov_log"; then
+          cat "$cov_log"
+          fail "off-path load" "a default-off code path failed to load"
+        else
+          # a script error does not fail the load, so this is the only pass that sees one.
+          # warn rather than fail: absent hardware can make a path throw on machines this
+          # one cannot stand in for
+          cov_script="$(grep -oE 'ReferenceError: [^,]*|TypeError: [^,]*|Invalid write to global property "[^"]*"' \
+            "$cov_log" | sort -u | head -3 || true)"
+          if [ -n "$cov_script" ]; then
+            printf '%s\n' "$cov_script" | sed 's/^/       /'
+            warn "off-path load" "a default-off path loaded but threw at runtime"
+          else
+            ok "off-path load" "$(printf '%s\n' "$cov_keys" | wc -l | tr -d ' ') default-off settings loaded without errors"
+          fi
+        fi
+      fi
     fi
   fi
 else
   fail "startup" "Quickshell missing; runtime smoke test could not run"
+fi
+
+section "surface build"
+# The passes above launch the shell but never open the menu, so no settings
+# section is ever built and a runtime-only error inside one stays invisible.
+if [ -f scripts/test-surfaces.sh ]; then
+  surf_code=0
+  surf_out="$(bash scripts/test-surfaces.sh 2>&1)" || surf_code=$?
+  if [ "$surf_code" -ne 0 ]; then
+    printf '%s\n' "$surf_out" | sed 's/^/       /'
+    fail "surfaces" "a settings section failed to build standalone"
+  elif printf '%s' "$surf_out" | grep -q '^SKIP'; then
+    warn "surfaces" "$(printf '%s' "$surf_out" | sed -n 's/^SKIP: //p' | head -1)"
+  else
+    ok "surfaces" "$(printf '%s' "$surf_out" | tail -1)"
+  fi
+else
+  warn "surfaces" "scripts/test-surfaces.sh missing; section build check skipped"
 fi
 
 if [ "$status" -eq 0 ]; then
