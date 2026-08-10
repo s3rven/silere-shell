@@ -1,11 +1,23 @@
 import QtQuick
 import "../../../config"
 import "../../../services"
+import "../../common"
 import "../controls"
 
 Column {
     width: parent ? parent.width : 0
     spacing: 0
+
+    Component {
+        id: _dividerPreview
+        BarDivider {
+            compact: false
+            hasNext: true
+            marked: true
+            styleOverride: parent && parent.optionValue !== undefined
+                ? String(parent.optionValue) : ""
+        }
+    }
 
     SectionLabel { label: "LAYOUT"; first: true }
     SettingsCard {
@@ -24,24 +36,22 @@ Column {
                 onToggled: nextChecked => ShellSettings.barAutoCompact = nextChecked
             }
         }
-        ChoiceChipRow {
+        SliderRow {
             glyph: "󰤼"; label: "Spacing"
-            currentValue: ShellSettings.barSpacing
-            model: [
-                { value: 8,  label: "Tight"  },
-                { value: 11, label: "Normal" },
-                { value: 15, label: "Loose"  }
-            ]
-            onChosen: (v) => ShellSettings.barSpacing = v
+            value: ShellSettings.barSpacing
+            min: 4; max: 24; step: 1
+            displayValue: ShellSettings.barSpacing + "px"
+            onChanged: (v) => ShellSettings.barSpacing = Math.round(v)
         }
     }
 
     SectionLabel { label: "DIVIDERS" }
     SettingsCard {
         SelectRow {
-            glyph: ShellSettings.dotTextGlyph; label: "Style"
+            label: "Style"
             description: "Divider between widgets"
             currentValue: ShellSettings.dotStyle
+            optionPreview: _dividerPreview
             model: [
                 { value: "line",  label: "Line"       },
                 { value: "|",     label: "Short line" },

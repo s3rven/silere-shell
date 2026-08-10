@@ -31,6 +31,10 @@ Item {
 
     width: parent ? parent.width : 0
     height: _stacked ? root._stackedH : root._headerH
+    // same reflow as ChoiceChipRow: glide across the stacking threshold, don't pop
+    MotionBehavior on height {
+        NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
+    }
     opacity: enabled ? 1.0 : 0.45
     MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
 

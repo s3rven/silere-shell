@@ -254,8 +254,9 @@ Item {
         Component.onCompleted: {
             _prevNotifCount = Notifications.activeCount
             Qt.callLater(() => {
-                _settingsReady = true
-                if (_canPreview()) _previewTimer.restart()
+                if (!_lineEffect) return
+                _lineEffect._settingsReady = true
+                if (_lineEffect._canPreview()) _previewTimer.restart()
             })
         }
         function _canPreview(): bool {

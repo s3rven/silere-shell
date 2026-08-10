@@ -17,6 +17,7 @@ PageShell {
 
     property bool _clearing: false
     property bool _clearArmed: false
+    property real _clearArmedAtMs: 0
     property int _timeTick: 0
 
     Timer {
@@ -69,8 +70,12 @@ PageShell {
 
     function requestClearAll(): void {
         if (_clearing || Notifications.historyCount === 0) return
-        if (_clearArmed) { _clearArmed = false; _clearArmTimer.stop(); clearAll() }
-        else { _clearArmed = true; _clearArmTimer.restart() }
+        if (_clearArmed) {
+            // TapHandler fires once per tap, so a double-click would arm and confirm in one gesture
+            if (Date.now() - root._clearArmedAtMs < Metrics.confirmGuardMs) return
+            _clearArmed = false; _clearArmTimer.stop(); clearAll()
+        }
+        else { _clearArmed = true; root._clearArmedAtMs = Date.now(); _clearArmTimer.restart() }
     }
 
     function clearAll(): void {
@@ -499,7 +504,7 @@ PageShell {
                             height: 24
                             radius: 12
                             antialiasing: true
-                            activeFocusOnTab: !_entry._removing
+                            activeFocusOnTab: !_entry._removing || activeFocus
                             onActiveFocusChanged: {
                                 if (activeFocus) _historyList.revealIndex(_entry.index)
                             }

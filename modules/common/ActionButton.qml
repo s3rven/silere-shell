@@ -15,10 +15,15 @@ Item {
 
     // ceil: a fractional width lands the outline stroke off-pixel under fractional scaling
     readonly property real contentWidth: implicitWidth
-    property bool _keyboardPressed: false
-    readonly property bool pressed: _tap.pressed || root._keyboardPressed
+    readonly property bool pressed: _tap.pressed || _keys.pressed
 
     FocusVisual { id: _focusVisual; target: root }
+    KeyActivation {
+        id: _keys
+        enabled: root.enabled
+        focusVisual: _focusVisual
+        onActivated: root.activate()
+    }
 
     implicitWidth: Math.ceil(_row.implicitWidth) + 20
     implicitHeight: Metrics.rowHeightFor(32)
@@ -33,34 +38,17 @@ Item {
         if (root.enabled) root.triggered()
     }
 
-    onEnabledChanged: if (!root.enabled) root._keyboardPressed = false
-    onActiveFocusChanged: if (!activeFocus) root._keyboardPressed = false
+    onEnabledChanged: if (!root.enabled) _keys.cancel()
+    onActiveFocusChanged: if (!activeFocus) _keys.cancel()
 
-    activeFocusOnTab: root.enabled
+    activeFocusOnTab: root.enabled || root.activeFocus
     Accessible.role: Accessible.Button
     Accessible.name: root.accessibleName
     Accessible.focusable: root.enabled
     Accessible.pressed: root.pressed
     Accessible.onPressAction: root.activate()
-    Keys.onPressed: event => {
-        _focusVisual.noteKeyboardInput()
-        if (!root.enabled || (event.key !== Qt.Key_Space
-                && event.key !== Qt.Key_Return
-                && event.key !== Qt.Key_Enter)) return
-        event.accepted = true
-        if (event.isAutoRepeat) return
-        root._keyboardPressed = true
-    }
-    Keys.onReleased: event => {
-        if (!root._keyboardPressed
-                || (event.key !== Qt.Key_Space
-                    && event.key !== Qt.Key_Return
-                    && event.key !== Qt.Key_Enter)) return
-        event.accepted = true
-        if (event.isAutoRepeat) return
-        root._keyboardPressed = false
-        root.activate()
-    }
+    Keys.onPressed:  event => _keys.press(event)
+    Keys.onReleased: event => _keys.release(event)
     HoverHandler {
         id: _hover
         enabled: root.enabled

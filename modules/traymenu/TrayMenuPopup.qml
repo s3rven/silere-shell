@@ -227,7 +227,7 @@ PanelWindow {
                 }
             }
 
-            activeFocusOnTab: _entry.on
+            activeFocusOnTab: _entry.on || activeFocus
             Accessible.role: _entry.sep ? Accessible.Separator : Accessible.MenuItem
             Accessible.name: _entry.modelData?.text ?? ""
             Accessible.focusable: _entry.on

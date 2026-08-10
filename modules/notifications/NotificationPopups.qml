@@ -61,44 +61,31 @@ PanelWindow {
         property string label: ""
         property string accessibleName: ""
         property color tint: Theme.accent
-        property bool _keyboardPressed: false
-
-        readonly property bool pressed: _tap.pressed || _keyboardPressed
+        readonly property bool pressed: _tap.pressed || _keys.pressed
 
         signal triggered()
+
+        KeyActivation {
+            id: _keys
+            onActivated: chip.triggered()
+        }
 
         width:   parent ? parent.width : 0
         height:  shown ? 30 : 0
         clip:    true
         enabled: shown
         visible: height > 0.5
-        activeFocusOnTab: shown
+        activeFocusOnTab: shown || activeFocus
 
         Accessible.role: Accessible.Button
         Accessible.name: chip.accessibleName
         Accessible.onPressAction: chip.triggered()
 
-        onActiveFocusChanged: if (!activeFocus) _keyboardPressed = false
-        onShownChanged: if (!shown) _keyboardPressed = false
+        onActiveFocusChanged: if (!activeFocus) _keys.cancel()
+        onShownChanged: if (!shown) _keys.cancel()
 
-        Keys.onPressed: event => {
-            if (event.key !== Qt.Key_Space
-                        && event.key !== Qt.Key_Return
-                        && event.key !== Qt.Key_Enter) return
-            event.accepted = true
-            if (event.isAutoRepeat) return
-            chip._keyboardPressed = true
-        }
-        Keys.onReleased: event => {
-            if (!chip._keyboardPressed
-                    || (event.key !== Qt.Key_Space
-                        && event.key !== Qt.Key_Return
-                        && event.key !== Qt.Key_Enter)) return
-            event.accepted = true
-            if (event.isAutoRepeat) return
-            chip._keyboardPressed = false
-            chip.triggered()
-        }
+        Keys.onPressed:  event => _keys.press(event)
+        Keys.onReleased: event => _keys.release(event)
 
         Disclosure on height { expanded: chip.shown }
 

@@ -41,6 +41,12 @@ Item {
     }
 
     // no clamping: an arrow key past the edge must not pick, or a row with index -1 selects on the first keypress
+    // picking repaints the whole accent palette, so a held arrow must not walk the row
+    function _step(event, index: int): void {
+        if (!event.isAutoRepeat) root.focusAndPick(index)
+        event.accepted = true
+    }
+
     function focusAndPick(index: int): void {
         if (index < 0 || index >= _rep.count) return
         const item = _rep.itemAt(index)
@@ -82,14 +88,8 @@ Item {
                     else if (root.hoveredIndex === index) root.hoveredIndex = -1
                 }
                 onActiveFocusChanged: if (activeFocus) root.focusMoved(index)
-                Keys.onLeftPressed: event => {
-                    root.focusAndPick(_sw.index - 1)
-                    event.accepted = true
-                }
-                Keys.onRightPressed: event => {
-                    root.focusAndPick(_sw.index + 1)
-                    event.accepted = true
-                }
+                Keys.onLeftPressed:  event => root._step(event, _sw.index - 1)
+                Keys.onRightPressed: event => root._step(event, _sw.index + 1)
 
                 Grid {
                     anchors.centerIn: parent

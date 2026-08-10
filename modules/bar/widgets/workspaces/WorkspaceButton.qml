@@ -46,7 +46,7 @@ Item {
         NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
     }
 
-    activeFocusOnTab: monitorReady
+    activeFocusOnTab: monitorReady || activeFocus
 
     Component.onCompleted: {
         _dotFade = _blanked ? 0 : 1

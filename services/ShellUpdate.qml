@@ -15,6 +15,7 @@ Singleton {
     property real   lastCheckMs: 0
     property string lastCheckError: ""
     property string lastApplyError: ""
+    property string timerError: ""
     property bool   timerSupported: false
     property bool   timerEnabled: false
     readonly property bool timerBusy: _timerStatus.running || _timerSet.running
@@ -137,6 +138,7 @@ Singleton {
 
     function setTimerEnabled(enabled: bool): void {
         if (timerBusy || !timerSupported) return
+        root.timerError = ""
         _timerSet.exec(["bash", root._script, enabled ? "--timer-enable" : "--timer-disable"])
     }
 
@@ -181,6 +183,28 @@ Singleton {
             if (at > 0) out[lines[i].slice(0, at)] = lines[i].slice(at + 1).trim()
         }
         return out
+    }
+
+    // history of what is already installed; the pending list disappears the moment it is applied
+    property var  recentCommits: []
+    property bool recentReady: false
+    readonly property bool recentBusy: _recentProc.running
+
+    function refreshRecent(): void {
+        if (_recentProc.running) return
+        _recentProc.running = true
+    }
+
+    onCurrentVersionChanged: root.recentReady = false
+
+    Process {
+        id: _recentProc
+        command: ["bash", root._script, "--recent"]
+        stdout: StdioCollector { id: _recentOut }
+        onExited: (code) => {
+            root.recentCommits = code === 0 ? root._parseCommits(_recentOut.text) : []
+            root.recentReady = true
+        }
     }
 
     function _refreshVersion(): void {
@@ -349,7 +373,12 @@ Singleton {
 
     Process {
         id: _timerSet
-        onExited: {
+        stderr: StdioCollector { id: _timerSetErr }
+        onExited: (code) => {
+            // the switch is bound to the unit's real state, so a swallowed failure just
+            // flips it back with no reason given
+            root.timerError = code === 0 ? ""
+                : (_timerSetErr.text.trim().split("\n").pop() || "Could not change the update timer")
             root.refreshTimer()
         }
     }

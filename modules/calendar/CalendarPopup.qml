@@ -192,7 +192,7 @@ PanelWindow {
             acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
             onWheel: (e) => {
                 const n = Scroll.processControlWheel(e, "calendar")
-                if (n !== 0) card._step(n > 0 ? -Math.abs(n) : Math.abs(n))
+                if (n !== 0) card._step(-n)
             }
         }
 
@@ -204,7 +204,8 @@ PanelWindow {
 
             Item {
                 id: _todayButton
-                width: parent.width
+                // the pill, not the row: a full-width hit area lights the narrow fill from 200px away
+                width: _todayRow.width + 20
                 height: 40
                 activeFocusOnTab: true
 
@@ -220,9 +221,7 @@ PanelWindow {
 
                 Rectangle {
                     id: _todayFill
-                    x: 0
-                    width: _todayRow.width + 20
-                    height: parent.height
+                    anchors.fill: parent
                     radius: Theme.radiusControl
                     antialiasing: true
                     color: _todayButton.activeFocus
@@ -293,7 +292,8 @@ PanelWindow {
                     width: _mLabel.implicitWidth + 16; height: 26
                     activeFocusOnTab: true
                     Accessible.role: Accessible.Button
-                    Accessible.name: "Jump to today"
+                    // distinct from the today pill's: two controls reading "Jump to today" are indistinguishable by voice
+                    Accessible.name: card.monthLabel + ", jump to today"
                     Accessible.onPressAction: card._goToday()
                     Keys.onSpacePressed:  event => card._activateToday(event)
                     Keys.onReturnPressed: event => card._activateToday(event)
@@ -340,7 +340,16 @@ PanelWindow {
 
             Row {
                 width: parent.width
-                Item { width: card.weekCol; height: 22 }
+                Item {
+                    width: card.weekCol; height: 22
+                    ShellText {
+                        anchors.centerIn: parent
+                        text: "Wk"
+                        color: Theme.withAlpha(Theme.subtext, 0.30)
+                        font.family: Settings.font; font.pixelSize: Settings.fontTiny
+                        font.weight: Font.Medium; font.capitalization: Font.AllUppercase
+                    }
+                }
                 Repeater {
                     model: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
                     delegate: Item {

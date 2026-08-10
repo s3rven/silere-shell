@@ -52,11 +52,16 @@ Item {
     height:         _hasDetail ? 4 * Math.ceil((_descPadV * 2 + _textCol.implicitHeight) / 4)
                                : Metrics.rowHeightFor(44)
     implicitHeight: height
+    // a live dependsNote lengthens the detail text mid-interaction (toggling the update
+    // timer appends "Working"), which can rewrap and change this height under the cursor
+    MotionBehavior on height {
+        NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
+    }
 
     opacity: root.enabled && root.available ? 1.0 : (_canToggle ? 0.72 : 0.52)
     MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
 
-    activeFocusOnTab: _canToggle
+    activeFocusOnTab: _canToggle || root.activeFocus
     Accessible.role: Accessible.Switch
     Accessible.name: root.label
     Accessible.description: root._accessibleDescription

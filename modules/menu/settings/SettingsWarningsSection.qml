@@ -15,8 +15,10 @@ Column {
         return o && g ? "both" : o ? "osd" : g ? "glow" : "off"
     }
     function _setAlertMode(v, osdKey, glowKey): void {
-        ShellSettings[osdKey] = (v === "osd" || v === "both")
-        ShellSettings[glowKey] = (v === "glow" || v === "both")
+        ShellSettings.batch(() => {
+            ShellSettings[osdKey] = (v === "osd" || v === "both")
+            ShellSettings[glowKey] = (v === "glow" || v === "both")
+        })
     }
 
     readonly property string _battAlertMode: root._alertMode(
@@ -58,7 +60,7 @@ Column {
             HintText { text: "Escalates to critical at " + Math.max(5, Math.round(ShellSettings.batteryLowThreshold / 2)) + "%." }
         }
         ToggleRow {
-            glyph: "󰂄"; label: "Fully-charged OSD"
+            glyph: "󰂄"; label: "Fully charged alert"
             enabled: ShellSettings.osdEnabled
             checked: ShellSettings.osdChargedNotify
             onToggled: nextChecked => ShellSettings.osdChargedNotify = nextChecked
@@ -101,7 +103,7 @@ Column {
                     SectionLabel { label: "DESKTOP NOTIFICATIONS" }
                     SettingsCard {
                         SelectRow {
-                            glyph: "󰔛"; label: "Notification timeout"
+                            glyph: "󰔛"; label: "Dismiss after"
                             currentValue: ShellSettings.sysAlertTimeout
                             fallbackLabel: ShellSettings.sysAlertTimeout === 0
                                 ? "Stay" : (ShellSettings.sysAlertTimeout / 1000) + "s"

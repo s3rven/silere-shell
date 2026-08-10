@@ -10,6 +10,7 @@ Pill {
     readonly property bool show: ShellSettings.barShowBattery && Battery.available && !autoHidden
     property real _baseOpacity: show ? 1.0 : 0.0
     readonly property bool layoutVisible: show || _baseOpacity > 0.001
+    collapsed: !show
 
     glyph:          Battery.icon
     glyphPixelSize: Settings.iconSize + 3
@@ -24,7 +25,7 @@ Pill {
     levelVisible:   Battery.pct > 0 && ShellSettings.valuesOnHover
                     && ShellSettings.hoverLevelBar && !expanded
     levelColor:     Battery.iconColor
-    activeFocusOnTab: show
+    activeFocusOnTab: show || activeFocus
     Accessible.focusable: true
     opacity: _baseOpacity * (Battery.critical ? 1.0 - Battery.alertPulse * 0.60
                            : (Battery.low     ? 1.0 - Battery.alertPulse * 0.18 : 1.0))

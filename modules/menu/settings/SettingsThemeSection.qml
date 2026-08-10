@@ -153,14 +153,14 @@ Column {
                             onTriggered: _swatchViewport.revealIndex(_swatchRow.activeIndex)
                         }
                         onFocusMoved: (i) => _swatchViewport.revealIndex(i)
-                        onPicked: (i) => {
+                        onPicked: (i) => ShellSettings.batch(() => {
                             if (_accentPicker._options[i].auto) {
                                 ShellSettings.neutralAccentAuto = true
                             } else {
                                 ShellSettings.neutralAccentAuto = false
                                 ShellSettings.neutralAccent = _accentPicker._options[i].color
                             }
-                        }
+                        })
                     }
                 }
 
@@ -179,10 +179,10 @@ Column {
                     accessibleDescription: ShellSettings.neutralAccentAuto
                         ? "Auto accent; adjust to switch to a custom color"
                         : _accentPicker._shownName
-                    onPicked: hue => {
+                    onPicked: hue => ShellSettings.batch(() => {
                         ShellSettings.neutralAccentAuto = false
                         ShellSettings.neutralAccent = _accentPicker._accentForHS(hue, _accentPicker._curSat)
-                    }
+                    })
                 }
             }
 

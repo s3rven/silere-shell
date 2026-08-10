@@ -86,7 +86,7 @@ Item {
     opacity: root.passive ? 1.0 : (_canTap ? 1.0 : 0.45)
     MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
 
-    activeFocusOnTab: _canTap
+    activeFocusOnTab: _canTap || root.activeFocus
     Accessible.role: root.passive ? Accessible.StaticText
         : root.showSwitch ? Accessible.Switch : Accessible.Button
     Accessible.name: root.title
@@ -173,7 +173,7 @@ Item {
             radius: 7.5
             antialiasing: true
             z: 2
-            activeFocusOnTab: root.badgeCount > 0
+            activeFocusOnTab: root.badgeCount > 0 || activeFocus
             Accessible.role: Accessible.Button
             Accessible.name: "Open missed notifications"
             Accessible.description: root.badgeCount + (root.badgeCount === 1 ? " missed notification" : " missed notifications")

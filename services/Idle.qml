@@ -11,7 +11,7 @@ Singleton {
 
     IdleMonitor {
         id: _monitor
-        timeout: 600              // seconds — aligned with hypridle dpms-off
+        timeout: 600              // seconds — aligned with hypridle's screen-blank stage
         respectInhibitors: true
     }
 }

@@ -24,8 +24,12 @@ QtObject {
     property Connections _focusWatcher: Connections {
         target: root.target
         function onActiveFocusChanged(): void {
-            if (!root.target || !root.target.activeFocus)
-                root.pointerOwned = false
+            if (!root.target || root.target.activeFocus) return
+            // Qt drops focus when an item is disabled and restores it on re-enable. A row that
+            // disables itself while its own click is being handled would come back looking
+            // keyboard-focused, so pointer ownership has to survive that round trip.
+            if (!root.target.enabled) return
+            root.pointerOwned = false
         }
     }
 }

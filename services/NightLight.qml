@@ -8,6 +8,7 @@ Singleton {
     id: root
 
     property bool enabled:        false
+    property string lastError:    ""
     property bool _stopping:      false
     property bool _pendingEnable: false
     readonly property bool toolAvailable: SystemTools.hasHyprsunset
@@ -156,6 +157,7 @@ Singleton {
     }
 
     function _startSunset(): void {
+        root.lastError = ""
         _sunsetProc.command = ["hyprsunset", "-t", String(temperature)]
         _sunsetProc.running = true
         enabled = true
@@ -240,7 +242,8 @@ Singleton {
     Process {
         id: _sunsetProc
         running: false
-        onExited: {
+        stderr: StdioCollector { id: _sunsetErr }
+        onExited: (code) => {
             if (root._stopping) {
                 root._stopping = false
                 if (root._pendingEnable) {
@@ -249,6 +252,10 @@ Singleton {
                 }
                 return
             }
+            // not a deliberate stop: hyprsunset quit on its own, and enabled was set
+            // optimistically at launch, so without this the toggle just flips back unexplained
+            if (code !== 0)
+                root.lastError = _sunsetErr.text.trim().split("\n").pop() || "hyprsunset stopped unexpectedly"
             if (root.enabled) root.enabled = false
         }
     }

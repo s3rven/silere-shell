@@ -24,18 +24,49 @@ Item {
     readonly property int _optionCount: Math.max(1, root.model.length)
     readonly property int _controlH: 4 * Math.ceil(
         Math.max(28, Settings.capHeight + 12) / 4)
-    readonly property int _inlineH: 4 * Math.ceil(Math.max(40,
+    // floor matches ToggleRow: every single-line settings row shares one height,
+    // and the two-line rows (slider with a track, toggle with a description) share 56
+    readonly property int _inlineH: 4 * Math.ceil(Math.max(44,
         _labelRow.height + 12, root._controlH + 12) / 4)
     readonly property int _stackedH: 4 * Math.ceil(Math.max(56,
         6 + _labelRow.height + 4 + root._controlH + 6) / 4)
-    readonly property real _preferredControlW: Math.min(208,
-        Math.max(144, root._optionCount * 60))
+    readonly property int _chipGap: 5
+    // detached chips size to the widest option so every chip in a row matches,
+    // instead of splitting a fixed track into equal cells
+    FontMetrics {
+        id: _chipFm
+        font.family: Settings.font
+        font.pixelSize: Settings.fontLabel
+        font.weight: Font.DemiBold
+    }
+    readonly property real _widestOptionW: {
+        const dep = _chipFm.font.pixelSize + _chipFm.font.weight
+        let w = 0
+        for (let i = 0; i < root.model.length; i++) {
+            const o = root.model[i]
+            let cw = _chipFm.advanceWidth(String(o.label ?? ""))
+            if (o.glyph !== undefined && o.glyph !== null
+                    && String(o.glyph).length > 0) cw += 18
+            w = Math.max(w, cw)
+        }
+        return w
+    }
+    readonly property int _chipW: Math.max(44, Math.ceil(root._widestOptionW) + 22)
+    readonly property real _preferredControlW: Math.min(236,
+        root._chipW * root._optionCount + root._chipGap * (root._optionCount - 1))
     readonly property real _inlineLabelW:
         Math.max(0, root.width - 12 - root._preferredControlW - 14 - 10)
     readonly property bool _stacked: root.width > 0
         && _labelRow.neededW > root._inlineLabelW
 
     readonly property int _activeIndex: root.model.findIndex(o => o.value === root.currentValue)
+
+    // arrow keys select as they move, and an enum write flushes to disk immediately,
+    // so an auto-repeating arrow would apply every option in the row at the repeat rate
+    function _step(event, index: int): void {
+        if (!event.isAutoRepeat) root._focusOption(index, true)
+        event.accepted = true
+    }
 
     function _focusOption(index: int, choose: bool): void {
         const count = _optionRepeater.count
@@ -51,6 +82,11 @@ Item {
     width: parent ? parent.width : 0
     height: root._stacked ? root._stackedH : root._inlineH
     implicitHeight: height
+    // the settings pane width animates when the nav rail expands, and crossing the
+    // stacking threshold mid-glide would pop this row 20px while everything else eases
+    MotionBehavior on height {
+        NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
+    }
     opacity: root.enabled ? 1.0 : 0.45
 
     MotionBehavior on opacity {
@@ -123,30 +159,17 @@ Item {
         width: Math.min(root._preferredControlW, Math.max(1, root.width - 28))
         height: root._controlH
 
+        readonly property int _gapTotal: root._chipGap * (root._optionCount - 1)
         readonly property int contentW: Math.max(1,
-            Math.floor(width))
+            Math.floor(width) - _gapTotal)
         readonly property int cellW: Math.max(1,
             Math.floor(contentW / root._optionCount))
         readonly property int cellRemainder: Math.max(0,
             contentW - cellW * root._optionCount)
 
-        Rectangle {
-            id: _groupTrack
-            anchors.fill: parent
-            radius: Theme.radiusField
-            antialiasing: true
-            color: Theme.mix(Theme.menuCard, Theme.text, 0.028)
-
-            OutlineBorder {
-                radius: _groupTrack.radius
-                outlineColor: Theme.menuControlLine
-                ColorFade on outlineColor {}
-            }
-        }
-
         Row {
             anchors.fill: parent
-            spacing: 0
+            spacing: root._chipGap
 
             Repeater {
                 id: _optionRepeater
@@ -194,22 +217,10 @@ Item {
                             root.chosen(modelData.value)
                         event.accepted = true
                     }
-                    Keys.onLeftPressed: event => {
-                        root._focusOption(index - 1, true)
-                        event.accepted = true
-                    }
-                    Keys.onRightPressed: event => {
-                        root._focusOption(index + 1, true)
-                        event.accepted = true
-                    }
-                    Keys.onUpPressed: event => {
-                        root._focusOption(index - 1, true)
-                        event.accepted = true
-                    }
-                    Keys.onDownPressed: event => {
-                        root._focusOption(index + 1, true)
-                        event.accepted = true
-                    }
+                    Keys.onLeftPressed:  event => root._step(event, _option.index - 1)
+                    Keys.onRightPressed: event => root._step(event, _option.index + 1)
+                    Keys.onUpPressed:    event => root._step(event, _option.index - 1)
+                    Keys.onDownPressed:  event => root._step(event, _option.index + 1)
                     HoverHandler {
                         id: _hover
                         enabled: root.enabled
@@ -228,39 +239,33 @@ Item {
                     Rectangle {
                         id: _surface
                         anchors.fill: parent
-                        topLeftRadius: _option.index === 0 ? Theme.radiusField : 0
-                        bottomLeftRadius: topLeftRadius
-                        topRightRadius: _option.index === root._optionCount - 1
-                            ? Theme.radiusField : 0
-                        bottomRightRadius: topRightRadius
+                        radius: Theme.radiusField
                         antialiasing: true
+                        // ghost: the selected chip carries only its accent outline, so the
+                        // resting fill belongs to the unselected ones
                         color: _option.active
-                            ? Theme.withAlpha(root.accentColor,
-                                _tap.pressed ? 0.24
-                                    : _hover.hovered ? 0.21
-                                    : ShellSettings.neutralTheme ? 0.16 : 0.19)
+                            ? (_tap.pressed
+                                ? Theme.withAlpha(root.accentColor, 0.10)
+                                : _hover.hovered
+                                    ? Theme.withAlpha(root.accentColor, 0.07)
+                                    : "transparent")
                             : _tap.pressed
                                 ? Theme.withAlpha(Theme.text, 0.09)
-                                : _optionFocusVisual.active
-                                    ? Theme.withAlpha(root.accentColor, 0.10)
                                 : _hover.hovered
-                                    ? Theme.withAlpha(Theme.text, 0.050)
-                                    : "transparent"
+                                    ? Theme.withAlpha(Theme.text, 0.055)
+                                    : Theme.withAlpha(Theme.text, 0.028)
                         ColorFade on color {}
 
                         OutlineBorder {
-                            topLeftRadius: _surface.topLeftRadius
-                            topRightRadius: _surface.topRightRadius
-                            bottomLeftRadius: _surface.bottomLeftRadius
-                            bottomRightRadius: _surface.bottomRightRadius
+                            radius: _surface.radius
                             outlineWidth: _optionFocusVisual.active ? 2 : 1
                             outlineColor: _optionFocusVisual.active
                                 ? Theme.withAlpha(root.accentColor, Theme.focusRingAlpha)
                                 : _option.active
-                                    ? Theme.withAlpha(root.accentColor, Theme.lineAlpha(0.15))
+                                    ? Theme.controlLineActive(root.accentColor)
                                     : _hover.hovered
-                                        ? Theme.withAlpha(Theme.text, Theme.lineAlpha(0.09))
-                                        : "transparent"
+                                        ? Theme.menuControlLineHot
+                                        : Theme.menuControlLine
                             ColorFade on outlineColor {}
                         }
 
@@ -308,20 +313,6 @@ Item {
 
                     }
 
-                    Hairline {
-                        vertical: true
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        height: Math.max(0, parent.height - 12)
-                        color: Theme.menuDivider
-                        opacity: _option.index < root._optionCount - 1
-                            && !_option.active
-                            && root._activeIndex !== _option.index + 1 ? 1 : 0
-                        visible: opacity > 0.001
-                        MotionBehavior on opacity {
-                            NumberAnimation { duration: Motion.fast }
-                        }
-                    }
                 }
             }
         }

@@ -12,6 +12,7 @@ Pill {
     readonly property bool layoutVisible: show || opacity > 0.01
 
     visible: layoutVisible
+    collapsed: !show
     opacity: show ? 1.0 : 0.0
     scale:   show ? 1.0 : 0.7
     transformOrigin: Item.Center

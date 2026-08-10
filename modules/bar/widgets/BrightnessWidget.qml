@@ -11,6 +11,7 @@ Pill {
 
     property real _baseOpacity: show ? 1.0 : 0.0
     readonly property bool layoutVisible: show || _baseOpacity > 0.001
+    collapsed: !show
     opacity: _baseOpacity
     visible: layoutVisible
     glyph:           Brightness.icon
@@ -26,7 +27,7 @@ Pill {
     accessibleName: canControl ? `Brightness ${Brightness.percent} percent` : "Brightness unavailable"
     accessibleDescription: "Scroll to adjust brightness."
 
-    activeFocusOnTab: canControl
+    activeFocusOnTab: canControl || activeFocus
     Accessible.role: Accessible.Slider
     Accessible.focusable: canControl
     Accessible.onIncreaseAction: if (root.canControl) Brightness.bumpBy(Brightness.stepPct)

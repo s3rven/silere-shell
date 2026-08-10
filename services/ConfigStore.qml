@@ -41,6 +41,16 @@ Singleton {
         return /^[a-z0-9.-]+$/i.test(path.slice(prefix.length, path.length - suffix.length))
     }
 
+    // stamped reset backups would otherwise accumulate forever
+    function pruneBackups(): void {
+        if (root.directory.length === 0) return
+        Quickshell.execDetached(["bash", "-c",
+            "cd -- \"$1\" 2>/dev/null || exit 0; "
+            + "ls -1t settings.pre-reset-*.bak.json 2>/dev/null | tail -n +6 | "
+            + "while IFS= read -r f; do [ -L \"$f\" ] || rm -f -- \"$f\"; done",
+            "bash", root.directory])
+    }
+
     function hardenFile(path: string): void {
         // Only files owned by this store may be chmodded. Keep the path as a
         // separate argv entry so even unusual XDG paths never become syntax.

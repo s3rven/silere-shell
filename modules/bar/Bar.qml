@@ -23,9 +23,7 @@ PanelWindow {
     MotionBehavior on shadowProgress {
         NumberAnimation { duration: Motion.barMorph; easing.type: Easing.OutCubic }
     }
-    property real _cornerRadiusTarget: ShellSettings.barCornerStyle === "round"
-        ? ShellSettings.barRadius
-        : 0
+    property real _cornerRadiusTarget: ShellSettings.barRadius
     MotionBehavior on _cornerRadiusTarget {
         NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
     }

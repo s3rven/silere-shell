@@ -1,7 +1,6 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import Quickshell
 import "../../config"
 import "../../services"
 import "../common"
@@ -89,32 +88,6 @@ Item {
     Keys.onUpPressed: event => { root.focusLastAction(); event.accepted = true }
     Keys.onLeftPressed: event => { root.focusLastAction(); event.accepted = true }
 
-    function commandAvailable(command): bool {
-        if (!command || command.length === 0) return false
-        const tool = String(command[0])
-        if (tool === "hyprlock")  return SystemTools.hasHyprlock
-        if (tool === "systemctl") return SystemTools.hasSystemctl
-        if (tool === "loginctl")  return SystemTools.hasLoginctl
-        return true
-    }
-
-    function _shq(s): string {
-        return "'" + String(s).replace(/'/g, "'\\''") + "'"
-    }
-
-    function runPower(command, failTitle): void {
-        if (!command || command.length === 0) return
-        if (!SystemTools.hasNotifySend) {
-            Quickshell.execDetached(command)
-            return
-        }
-        const note = "notify-send --urgency=critical --app-name=silere-shell " +
-            _shq(failTitle) + " " + _shq("It may require authorization or be blocked by a running task.")
-        const argv = ["bash", "-c", '"$@" || ' + note, "bash"]
-        for (let i = 0; i < command.length; i++) argv.push(String(command[i]))
-        Quickshell.execDetached(argv)
-    }
-
     Column {
         id: _body
         width: parent.width
@@ -187,12 +160,12 @@ Item {
                 width: parent.width
                 label: "Lock"
                 glyph: "󰍁"
-                enabled: root.commandAvailable(Settings.lockCommand)
+                enabled: SystemTools.commandAvailable(Settings.lockCommand)
                 KeyNavigation.up: root._rowAfter(_powLock, -1)
                 KeyNavigation.down: root._rowAfter(_powLock, 1)
                 onTriggered: {
                     MenuState.close()
-                    root.runPower(Settings.lockCommand, "Lock failed")
+                    SystemTools.runOrNotify(Settings.lockCommand, "Lock failed")
                 }
             }
 
@@ -201,12 +174,12 @@ Item {
                 width: parent.width
                 label: "Sleep"
                 glyph: "󰒲"
-                enabled: root.commandAvailable(Settings.suspendCommand)
+                enabled: SystemTools.commandAvailable(Settings.suspendCommand)
                 KeyNavigation.up: root._rowAfter(_powSusp, -1)
                 KeyNavigation.down: root._rowAfter(_powSusp, 1)
                 onTriggered: {
                     MenuState.close()
-                    root.runPower(Settings.suspendCommand, "Suspend failed")
+                    SystemTools.runOrNotify(Settings.suspendCommand, "Suspend failed")
                 }
             }
 
@@ -215,7 +188,7 @@ Item {
                 width: parent.width
                 label: "Reboot"
                 glyph: "󰑐"
-                enabled: root.commandAvailable(Settings.rebootCommand)
+                enabled: SystemTools.commandAvailable(Settings.rebootCommand)
                 confirm: true
                 dangerous: true
                 KeyNavigation.up: root._rowAfter(_powReb, -1)
@@ -223,7 +196,7 @@ Item {
                 onArmedChanged: if (armed) _powOff.disarm()
                 onTriggered: {
                     MenuState.close()
-                    root.runPower(Settings.rebootCommand, "Reboot failed")
+                    SystemTools.runOrNotify(Settings.rebootCommand, "Reboot failed")
                 }
             }
 
@@ -232,7 +205,7 @@ Item {
                 width: parent.width
                 label: "Power off"
                 glyph: "󰐥"
-                enabled: root.commandAvailable(Settings.poweroffCommand)
+                enabled: SystemTools.commandAvailable(Settings.poweroffCommand)
                 confirm: true
                 dangerous: true
                 KeyNavigation.up: root._rowAfter(_powOff, -1)
@@ -240,7 +213,7 @@ Item {
                 onArmedChanged: if (armed) _powReb.disarm()
                 onTriggered: {
                     MenuState.close()
-                    root.runPower(Settings.poweroffCommand, "Shut down failed")
+                    SystemTools.runOrNotify(Settings.poweroffCommand, "Shut down failed")
                 }
             }
         }

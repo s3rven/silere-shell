@@ -14,10 +14,15 @@ Item {
 
     signal triggered()
 
-    property bool _keyboardPressed: false
-    readonly property bool pressed: _tap.pressed || _keyboardPressed
+    readonly property bool pressed: _tap.pressed || _keys.pressed
 
     FocusVisual { id: _focusVisual; target: root }
+    KeyActivation {
+        id: _keys
+        enabled: root.enabled
+        focusVisual: _focusVisual
+        onActivated: root.activate()
+    }
 
     implicitWidth: buttonSize
     implicitHeight: buttonSize
@@ -25,14 +30,14 @@ Item {
     height: implicitHeight
     opacity: enabled ? 1.0 : 0.38
     MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
-    activeFocusOnTab: enabled
+    activeFocusOnTab: enabled || activeFocus
 
     function activate(): void {
         if (root.enabled) root.triggered()
     }
 
-    onActiveFocusChanged: if (!activeFocus) _keyboardPressed = false
-    onEnabledChanged: if (!enabled) _keyboardPressed = false
+    onActiveFocusChanged: if (!activeFocus) _keys.cancel()
+    onEnabledChanged: if (!enabled) _keys.cancel()
 
     Accessible.role: Accessible.Button
     Accessible.name: root.accessibleName
@@ -40,25 +45,8 @@ Item {
     Accessible.pressed: root.pressed
     Accessible.onPressAction: root.activate()
 
-    Keys.onPressed: event => {
-        _focusVisual.noteKeyboardInput()
-        if (!root.enabled || (event.key !== Qt.Key_Space
-                && event.key !== Qt.Key_Return
-                && event.key !== Qt.Key_Enter)) return
-        event.accepted = true
-        if (event.isAutoRepeat) return
-        root._keyboardPressed = true
-    }
-    Keys.onReleased: event => {
-        if (!root._keyboardPressed
-                || (event.key !== Qt.Key_Space
-                    && event.key !== Qt.Key_Return
-                    && event.key !== Qt.Key_Enter)) return
-        event.accepted = true
-        if (event.isAutoRepeat) return
-        root._keyboardPressed = false
-        root.activate()
-    }
+    Keys.onPressed:  event => _keys.press(event)
+    Keys.onReleased: event => _keys.release(event)
 
     HoverHandler {
         id: _hover

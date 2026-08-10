@@ -18,15 +18,19 @@ Column {
         : "flash"
 
     function _setScreenshotStyle(style) {
-        ShellSettings.underlineScreenshotGlow = style !== "off"
-        ShellSettings.screenshotGlowSweep = style === "sweep"
+        ShellSettings.batch(() => {
+            ShellSettings.underlineScreenshotGlow = style !== "off"
+            ShellSettings.screenshotGlowSweep = style === "sweep"
+        })
     }
 
     function _setEnabled(enabled) {
         if (!enabled) {
-            ShellSettings.underlineLastStyle = root._style
-            ShellSettings.barBorderVisible = false
-            ShellSettings.underlineGlow = false
+            ShellSettings.batch(() => {
+                ShellSettings.underlineLastStyle = root._style
+                ShellSettings.barBorderVisible = false
+                ShellSettings.underlineGlow = false
+            })
             return
         }
         root._setStyle(ShellSettings.underlineLastStyle)
@@ -34,18 +38,20 @@ Column {
 
     function _setStyle(style) {
         const next = style === "glow" ? "glow" : "static"
-        ShellSettings.underlineLastStyle = next
-        ShellSettings.barBorderVisible = next === "static"
-        ShellSettings.underlineGlow = next === "glow"
-        if (next === "glow" && !ShellSettings.underlineIdleGlow
-                && !ShellSettings.underlineNotifGlow
-                && !ShellSettings.underlineBattGlow
-                && !ShellSettings.underlineNetGlow
-                && !ShellSettings.underlineTempGlow
-                && !ShellSettings.underlineScreenshotGlow) {
-            ShellSettings.underlineNotifGlow = true
-            ShellSettings.underlineNetGlow = true
-        }
+        ShellSettings.batch(() => {
+            ShellSettings.underlineLastStyle = next
+            ShellSettings.barBorderVisible = next === "static"
+            ShellSettings.underlineGlow = next === "glow"
+            if (next === "glow" && !ShellSettings.underlineIdleGlow
+                    && !ShellSettings.underlineNotifGlow
+                    && !ShellSettings.underlineBattGlow
+                    && !ShellSettings.underlineNetGlow
+                    && !ShellSettings.underlineTempGlow
+                    && !ShellSettings.underlineScreenshotGlow) {
+                ShellSettings.underlineNotifGlow = true
+                ShellSettings.underlineNetGlow = true
+            }
+        })
     }
 
     // pairs with EVENTS below: both headings appear together, so a lone card is never labelled

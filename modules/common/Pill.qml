@@ -36,19 +36,25 @@ Item {
     readonly property bool expanded: hoverActive || activeFocus
 
     property bool   pressed: false
-    property bool   _keyboardPressed: false
-    readonly property bool visualPressed: pressed || _keyboardPressed
+    readonly property bool visualPressed: pressed || _keys.pressed
 
     signal activated()
+
+    KeyActivation {
+        id: _keys
+        enabled: root.enabled && root.interactive
+        onActivated: root.activated()
+    }
 
     readonly property int  pillH:   Metrics.barRowHeight
     readonly property bool hasText: text.length > 0
 
+    property bool collapsed: false
     property int  shrinkDelay: 600
     property real _minW: 0
     // whole px: a fractional text width puts the pill and every widget after it off-pixel and blurs NativeRendering text
     readonly property real rowWidth: Math.ceil(row.implicitWidth)
-    implicitWidth:  Math.max(rowWidth, _minW) + horizontalPadding * 2
+    implicitWidth:  collapsed ? 0 : Math.max(rowWidth, _minW) + horizontalPadding * 2
 
     onRowWidthChanged: {
         if (shrinkDelay <= 0) {
@@ -67,8 +73,8 @@ Item {
         hoverActive = false
         if (_ready) _settleAnimatedContent()
     }
-    onInteractiveChanged: if (!interactive) root._keyboardPressed = false
-    onEnabledChanged: if (!enabled) root._keyboardPressed = false
+    onInteractiveChanged: if (!interactive) _keys.cancel()
+    onEnabledChanged: if (!enabled) _keys.cancel()
 
     Timer {
         id: _shrinkDelay
@@ -126,13 +132,17 @@ Item {
     }
 
     MotionBehavior on implicitWidth {
-        gate: root._ready && root.visible
+        // not visible: it reads through the parent, so a collapsing pill turns its own
+        // gate off partway and the signal means "my zone is showing", not "I am open"
+        gate: root._ready
         NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
     }
     implicitHeight: Math.max(pillH, parent ? parent.height : 0)
     // only while it eases open into wider text, or the scan sweeps in from off-pill; a standing clip node breaks batching
     clip: _contentScan.active || row.width > width
-    activeFocusOnTab: root.enabled && interactive
+    // Qt refuses to clear activeFocusOnTab on the focused item and never retries, which
+    // would strand a hidden pill in the tab chain; holding it true re-evaluates on blur
+    activeFocusOnTab: (root.enabled && interactive) || root.activeFocus
 
     Accessible.role: interactive ? Accessible.Button : Accessible.StaticText
     Accessible.name: accessibleName.length > 0
@@ -141,22 +151,8 @@ Item {
     Accessible.focusable: root.enabled && interactive
     Accessible.onPressAction: if (root.enabled && root.interactive) root.activated()
 
-    Keys.onPressed: event => {
-        if (!root.enabled || !root.interactive
-                || (event.key !== Qt.Key_Space && event.key !== Qt.Key_Return && event.key !== Qt.Key_Enter))
-            return
-        event.accepted = true
-        if (event.isAutoRepeat) return
-        root._keyboardPressed = true
-    }
-    Keys.onReleased: event => {
-        if (!root._keyboardPressed || (event.key !== Qt.Key_Space && event.key !== Qt.Key_Return && event.key !== Qt.Key_Enter))
-            return
-        event.accepted = true
-        if (event.isAutoRepeat) return
-        root._keyboardPressed = false
-        root.activated()
-    }
+    Keys.onPressed:  event => _keys.press(event)
+    Keys.onReleased: event => _keys.release(event)
 
     Rectangle {
         id: _hoverCap
@@ -379,7 +375,7 @@ Item {
 
     onActiveFocusChanged: {
         if (!activeFocus && !hovered) {
-            _keyboardPressed = false
+            _keys.cancel()
             hoverActive = false
         }
     }

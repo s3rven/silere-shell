@@ -211,7 +211,7 @@ Item {
                 Accessible.name: label
                 Accessible.description: modelData.tooltipDescription
                 Accessible.onPressAction: root._activateItem(_tile.modelData, _tile)
-                activeFocusOnTab: root.show
+                activeFocusOnTab: root.show || activeFocus
                 function _keyActivate(event): void {
                     if (event.isAutoRepeat) { event.accepted = true; return }
                     if (event.modifiers & Qt.ShiftModifier) root._openMenu(_tile.modelData, _tile)

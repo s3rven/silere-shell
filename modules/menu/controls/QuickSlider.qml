@@ -50,7 +50,8 @@ Item {
     }
 
     width:  parent ? parent.width : 0
-    implicitHeight: Metrics.rowHeightFor(40)
+    // matches ControlRow: the Home page reads as one row rhythm, not two
+    implicitHeight: Metrics.rowHeightFor(48)
     height: implicitHeight
 
     function _handleKey(event): void {

@@ -79,7 +79,7 @@ PanelWindow {
                 readonly property int chromeW: hasBar ? 216 : 70
                 readonly property int pillW: Math.max(268, Math.min(520, chromeW + Math.ceil(_labelMetrics.advanceWidth) + 2))
                 readonly property real pillRadius: ShellSettings.osdMatchBar
-                    ? (ShellSettings.barCornerStyle === "flat" ? 0 : Math.min(ShellSettings.barRadius, pillH / 2))
+                    ? Math.min(ShellSettings.barRadius, pillH / 2)
                     : Math.min(Theme.radiusPanel, pillH / 2)
                 readonly property real _hiddenSlide: osd._bottom ? 7 : -7
 

@@ -72,8 +72,7 @@ Item {
             ? _widgetLayoutWidth
             : leftZone.implicitWidth + rightZone.implicitWidth
                 + (ShellSettings.showWindowTitle ? 116 : 52)
-        const span = fitWidth > 0 ? Math.min(fitWidth, width) : width
-        const capacity = span
+        const capacity = fitWidth > 0 ? Math.min(fitWidth, width) : width
 
         if (!_autoCompact) {
             _expandedWidthEstimate = layoutW

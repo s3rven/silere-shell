@@ -12,6 +12,13 @@ Column {
     property bool animationActive: true
     property bool _listOpen: false
     property bool _changesOpen: false
+    property bool _recentOpen: false
+
+    // git only runs when the row is opened, never on the page building
+    function _toggleRecent(): void {
+        root._recentOpen = !root._recentOpen
+        if (root._recentOpen && !ShellUpdate.recentReady) ShellUpdate.refreshRecent()
+    }
     readonly property bool _changesAvailable: ShellUpdate.pending
         && ShellUpdate.pendingCommits.length > 0
     readonly property bool _packagesAvailable: Updates.count > 0
@@ -131,6 +138,72 @@ Column {
             }
         }
 
+        ControlRow {
+            glyph: "󰄉"
+            title: "Recent changes"
+            status: ShellUpdate.recentBusy ? "Reading history" : ""
+            valueText: ShellUpdate.recentReady
+                ? String(ShellUpdate.recentCommits.length) : ""
+            expandable: true
+            chevronTabFocusable: false
+            expanded: root._recentOpen
+            onExpandToggled: root._toggleRecent()
+            onActivated: root._toggleRecent()
+        }
+        CollapsibleSection {
+            expanded: root._recentOpen
+            Item {
+                width: parent ? parent.width : 0
+                height: Math.min(_recent.contentHeight, 240)
+
+                ShellListView {
+                    id: _recent
+                    anchors.fill: parent
+                    interactive: contentHeight > height
+                    boundsMovement: Flickable.StopAtBounds
+                    spacing: 0
+                    model: root._recentOpen ? ShellUpdate.recentCommits : []
+
+                    Accessible.role: Accessible.List
+                    Accessible.name: "Recent shell changes"
+
+                    delegate: Item {
+                        id: _rc
+                        required property var modelData
+                        width: parent ? parent.width : 0
+                        height: Math.max(22, Settings.capHeight + 8)
+                        Accessible.role: Accessible.ListItem
+                        Accessible.name: _rc.modelData.subject + ", " + _rc.modelData.hash
+                        ShellText {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 42
+                            anchors.right: _rcHash.left
+                            anchors.rightMargin: 8
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: _rc.modelData.subject
+                            elide: Text.ElideRight
+                            color: Theme.withAlpha(Theme.text, 0.80)
+                            font.pixelSize: Settings.fontLabel
+                        }
+                        ShellText {
+                            id: _rcHash
+                            anchors.right: parent.right
+                            anchors.rightMargin: 12
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: _rc.modelData.hash
+                            color: Theme.withAlpha(Theme.subtext, 0.55)
+                            font.pixelSize: Settings.fontCaption
+                        }
+                    }
+                }
+
+                ListEdgeLines {
+                    anchors.fill: parent
+                    list: _recent
+                }
+            }
+        }
+
         UpdateStatusCard {
             animationActive: root.animationActive
             glyph: Updates.isChecking ? "󰓦" : Updates.lastFailed ? "󰀦" : Updates.icon
@@ -236,7 +309,8 @@ Column {
         }
         ToggleRow {
             glyph: "󰥔"; label: "Daily shell update check"
-            description: ShellUpdate.nextCheckText
+            description: ShellUpdate.timerError.length > 0
+                ? ShellUpdate.timerError : ShellUpdate.nextCheckText
             checked: ShellUpdate.timerEnabled
             enabled: !ShellUpdate.timerBusy
             available: ShellUpdate.timerSupported

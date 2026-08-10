@@ -71,6 +71,8 @@ Rectangle {
     function activate(): void {
         if (!root.enabled || !root.interactive) return
         if (!root.confirm || root.armed) {
+            // TapHandler fires once per tap, so a double-click would arm and confirm in one gesture
+            if (root.armed && Date.now() - root._confirmStartedMs < Metrics.confirmGuardMs) return
             root.disarm()
             root.triggered()
         } else {
@@ -111,7 +113,9 @@ Rectangle {
 
     PerimeterProgress {
         anchors.fill: parent
-        visible: root.armed
+        // the ticker that drains this is a motion gate, so under reduce motion the ring
+        // would sit full for the whole window and read as "nothing is expiring"
+        visible: root.armed && !ShellSettings.reduceMotion
         inset:        1.0
         cornerRadius: root.radius
         progress:     root._confirmProgress

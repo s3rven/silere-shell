@@ -53,7 +53,9 @@ Singleton {
         if (marks[k] !== true) next[k] = true
         marks = next
         _saveDirty = true
-        _store.queue()
+        // one click is one discrete change: write through rather than sit in the
+        // debounce window, which a SIGTERM would discard with no hook to save it
+        _store.flush(false)
     }
 
     // blocking write (blockWrites) so a toggle inside the debounce window survives a reload;

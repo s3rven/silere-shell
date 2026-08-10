@@ -118,6 +118,10 @@ Column {
                 glyph: "󰍺"
                 label: "Bar on " + modelData.name
                 checked: Monitors.barEnabled(modelData)
+                // turning off the last one is refused, and a switch that springs back
+                // with no reason reads as a broken toggle
+                enabled: !checked || Monitors.liveBarCount > 1
+                dependsNote: "Keeps the menu reachable"
                 onToggled: nextChecked => Monitors.setBarEnabled(
                     modelData.name, nextChecked)
             }

@@ -229,7 +229,7 @@ Item {
                             width: 30; height: 28; radius: Theme.radiusField
                             antialiasing: true
                             enabled: _pw.text.length > 0 && !_entry._connecting
-                            activeFocusOnTab: enabled
+                            activeFocusOnTab: enabled || activeFocus
                             opacity: enabled ? 1.0 : 0.4
                             MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
                             color: (_joinHover.hovered || activeFocus) ? Theme.withAlpha(Theme.accent, 0.30)

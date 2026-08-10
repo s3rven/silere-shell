@@ -102,7 +102,6 @@ Singleton {
     property int    barHeight:           36
     property bool   barFloating:         false
     property real   barWidth:            0.90
-    property string barCornerStyle:      "round"
     property int    barRadius:           14
     property bool   barShadow:           false
     property real   barShadowStrength:   1.0
@@ -283,6 +282,7 @@ Singleton {
     property string _readError: ""
     property string _writeError: ""
     property string _diskText: ""
+    property string _appliedText: ""
     readonly property bool ready: _loaded
     readonly property string settingsError: ConfigStore.error.length > 0
         ? ConfigStore.error : _writeError.length > 0 ? _writeError : _readError
@@ -379,7 +379,6 @@ Singleton {
         { k: "barHeight",           t: "int",  min: 24,   max: 60, sec: "surface" },
         { k: "barFloating",         t: "bool", sec: "surface" },
         { k: "barWidth",            t: "real", min: 0.5,  max: 1.0, sec: "surface" },
-        { k: "barCornerStyle",      t: "enum", vals: ["flat", "round"], sec: "surface" },
         { k: "barRadius",           t: "int",  min: 0,    max: 28, sec: "surface" },
         { k: "barShadow",           t: "bool", sec: "surface" },
         { k: "barShadowStrength",   t: "real", min: 0.3,  max: 2.0, sec: "surface" },
@@ -426,6 +425,13 @@ Singleton {
 
     property int _modifiedCount: 0
     property var _modifiedKeys: Object.create(null)
+    // Quickshell exits hard on SIGTERM: neither Component.onDestruction nor
+    // Qt.application.aboutToQuit runs, so anything still inside PersistedFile's
+    // debounce window is lost on logout. Toggles and chips change at human pace,
+    // so they write straight through; sliders and the hue strip keep the debounce.
+    property var _discreteKeys: Object.create(null)
+    // reset assigns every key at once; one write at the end, not one per toggle
+    property bool _bulkAssign: false
     readonly property int modifiedCount: _modifiedCount
 
     function _recountModified(): void {
@@ -441,10 +447,29 @@ Singleton {
         root._modifiedCount = n
     }
 
+    function _backupStamp(): string {
+        const d = new Date()
+        const p = (n) => (n < 10 ? "0" : "") + n
+        return "" + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate())
+            + "-" + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds())
+    }
+
+    // one user action that moves several keys is still one settings change: without
+    // this each discrete key flushes the whole file on its own
+    function batch(apply): void {
+        if (root._bulkAssign) { apply(); return }
+        root._bulkAssign = true
+        try { apply() } finally { root._bulkAssign = false }
+        _store.flush(false)
+    }
+
     function resetToDefaults(): void {
         // Capture the values visible in the UI, including changes still inside
         // PersistedFile's debounce window, rather than the older disk echo.
-        _backupSettingsText("pre-reset", root._serialize())
+        // Stamped: a fixed name let a second reset overwrite the backup of the first.
+        _backupSettingsText("pre-reset-" + root._backupStamp(), root._serialize())
+        ConfigStore.pruneBackups()
+        root._bulkAssign = true
         for (let i = 0; i < _schema.length; i++) {
             const k = _schema[i].k
             if (k !== "barWidgetOrderLeft" && k !== "barWidgetOrderCenter"
@@ -453,6 +478,8 @@ Singleton {
         }
         // the order keys go through the normalising setter, not a raw assignment
         root.resetBarWidgets()
+        root._bulkAssign = false
+        _store.flush(false)
         root._recountModified()
     }
 
@@ -481,7 +508,8 @@ Singleton {
         }
         if (!_store.writeAllowed) return
         if (_loadedVersion > _settingsVersion) _futureTouched[key] = true
-        _store.queue()
+        if (!root._bulkAssign && root._discreteKeys[key] === true) _store.flush(false)
+        else _store.queue()
     }
 
     Component.onDestruction: {
@@ -497,7 +525,9 @@ Singleton {
     Component.onCompleted: {
         _defaults = _captureDefaults()
         for (let i = 0; i < _schema.length; i++) {
-            const key = _schema[i].k
+            const s = _schema[i]
+            const key = s.k
+            if (s.t === "bool" || s.t === "enum") root._discreteKeys[key] = true
             root[key + "Changed"].connect(function() { root._onSettingChanged(key) })
         }
         ConfigStore.ensureDirectory()
@@ -553,7 +583,14 @@ Singleton {
     function _applyText(t: string): void {
         const raw = (t || "").trim()
         // our own atomic write echoes back through the watcher; skip it
-        if (_store.writeAllowed && raw === _store.lastSavedText) { _loaded = true; return }
+        if (_store.writeAllowed && raw === _store.lastSavedText) {
+            root._appliedText = raw
+            _loaded = true
+            return
+        }
+        // the startup chmod trips the watcher too: re-running the reload path below would bounce
+        // every setting through its default and back, rebuilding the bar on the way
+        if (_loaded && raw === root._appliedText) return
         try {
             const parsed = JSON.parse(raw || "{}")
             if (parsed === null || Array.isArray(parsed) || typeof parsed !== "object")
@@ -588,6 +625,9 @@ Singleton {
                 root.barBorderVisible = false
             if (root.underlineGlow) root.underlineLastStyle = "glow"
             else if (root.barBorderVisible) root.underlineLastStyle = "static"
+            // barCornerStyle folded into barRadius, where 0 is flat; carry the old choice over
+            if (parsed.barCornerStyle === "flat") root.barRadius = 0
+            root._appliedText = raw
             root._readError = ""
             _store.writeAllowed = true
         } catch(e) {

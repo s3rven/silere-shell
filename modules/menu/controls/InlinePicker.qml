@@ -1,21 +1,13 @@
 import QtQuick
-import "../../../config"
 
 Column {
     id: root
 
     property bool open: false
-    property int gap: 8
     property Component content: null
 
     width: parent ? parent.width : 0
     spacing: 0
-
-    Item {
-        width: 1
-        height: root.open ? root.gap : 0
-        Disclosure on height { expanded: root.open }
-    }
 
     CollapsibleSection {
         id: _section

@@ -15,6 +15,8 @@ Item {
     property bool warning: false
     property bool interactive: true
     property string labelFontFamily: Settings.font
+    property Component preview: null
+    property var previewValue
     property int accessibleRole: Accessible.ListItem
     property string accessibleName: label
     property string accessibleDescription: status
@@ -119,6 +121,7 @@ Item {
         anchors.leftMargin: 14
         anchors.verticalCenter: parent.verticalCenter
         width: 18
+        visible: root.preview === null
         horizontalAlignment: Text.AlignHCenter
         text: root.glyph
         color: root.warning ? Theme.warning
@@ -126,6 +129,17 @@ Item {
             : Theme.withAlpha(Theme.subtext, 0.78)
         font.pixelSize: Settings.iconSize + 1
         ColorFade on color {}
+    }
+
+    Loader {
+        anchors.left: _glyph.left
+        anchors.verticalCenter: parent.verticalCenter
+        width: _glyph.width
+        height: parent.height
+        active: root.preview !== null
+        sourceComponent: root.preview
+        // the component is shared by every row, so it reads its subject off the Loader it lands in
+        readonly property var optionValue: root.previewValue
     }
 
     ShellText {

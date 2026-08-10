@@ -40,7 +40,7 @@ Item {
         NumberAnimation { duration: Motion.medium }
     }
 
-    activeFocusOnTab: root.enabled
+    activeFocusOnTab: root.enabled || root.activeFocus
     Accessible.role: Accessible.Slider
     Accessible.name: root.label
     Accessible.description: root.displayValue

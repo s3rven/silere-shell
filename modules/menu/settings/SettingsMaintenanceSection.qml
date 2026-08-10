@@ -9,6 +9,7 @@ Column {
     spacing: 0
 
     property bool _armed: false
+    property real _armedAtMs: 0
 
     function _disarm(): void {
         root._armed = false
@@ -42,10 +43,13 @@ Column {
             available: ShellSettings.modifiedCount > 0
             onActivated: {
                 if (root._armed) {
+                    // TapHandler fires once per tap, so a double-click would arm and confirm in one gesture
+                    if (Date.now() - root._armedAtMs < Metrics.confirmGuardMs) return
                     root._disarm()
                     ShellSettings.resetToDefaults()
                 } else {
                     root._armed = true
+                    root._armedAtMs = Date.now()
                     _armTimer.restart()
                 }
             }

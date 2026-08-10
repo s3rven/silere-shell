@@ -28,7 +28,7 @@ Item {
     visible: opacity > 0.01
     MotionBehavior on opacity {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
 
-    activeFocusOnTab: shown
+    activeFocusOnTab: shown || activeFocus
     Accessible.role: Accessible.Button
     Accessible.name: "Urgent workspace " + targetWs
     Accessible.description: "Activate to jump to it."

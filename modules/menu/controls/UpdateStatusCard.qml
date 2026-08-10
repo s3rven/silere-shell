@@ -101,45 +101,49 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 3
 
-                ShellText {
-                    id: _title
-                    width: parent.width
-                    text: root.title
-                    elide: Text.ElideRight
-                    color: Theme.text
-                    font.pixelSize: Settings.fontSize
-                    font.weight: Font.Medium
-                }
-
+                // the version/manager label rides with the title, not the status line:
+                // sharing a line with the status starved it by a few px and elided it
                 Item {
                     width: parent.width
-                    height: Math.max(_status.implicitHeight, _sub.implicitHeight)
+                    height: Math.max(_title.implicitHeight, _sub.implicitHeight)
 
                     ShellText {
-                        id: _status
+                        id: _title
                         anchors.left: parent.left
-                        anchors.right: _sub.visible ? _sub.left : parent.right
-                        anchors.rightMargin: _sub.visible ? 9 : 0
                         anchors.verticalCenter: parent.verticalCenter
-                        text: root.status
+                        width: Math.min(implicitWidth, Math.max(40, parent.width
+                            - (_sub.visible ? _sub.width + 8 : 0)))
+                        text: root.title
                         elide: Text.ElideRight
-                        color: Theme.withAlpha(root.statusColor, 0.9)
-                        font.pixelSize: Settings.fontCaption
-                        MotionBehavior on color {
-                            ColorAnimation { duration: Motion.medium }
-                        }
+                        color: Theme.text
+                        font.pixelSize: Settings.fontSize
+                        font.weight: Font.Medium
                     }
                     ShellText {
                         id: _sub
                         visible: root.meta.length > 0
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: Math.min(implicitWidth, parent.width * 0.46)
-                        horizontalAlignment: Text.AlignRight
-                        text: "·  " + root.meta
+                        anchors.left: _title.right
+                        anchors.leftMargin: 8
+                        anchors.baseline: _title.baseline
+                        // caps on the parent alone: reading _title.width here closed a
+                        // binding loop, since the title already sizes itself off this one
+                        width: Math.min(implicitWidth, Math.max(0, parent.width * 0.46 - 8))
+                        text: root.meta
                         elide: Text.ElideRight
                         color: Theme.withAlpha(Theme.subtext, 0.5)
                         font.pixelSize: Settings.fontCaption
+                    }
+                }
+
+                ShellText {
+                    id: _status
+                    width: parent.width
+                    text: root.status
+                    elide: Text.ElideRight
+                    color: Theme.withAlpha(root.statusColor, 0.9)
+                    font.pixelSize: Settings.fontCaption
+                    MotionBehavior on color {
+                        ColorAnimation { duration: Motion.medium }
                     }
                 }
             }

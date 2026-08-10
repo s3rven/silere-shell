@@ -49,6 +49,13 @@ Singleton {
         return !!fallback && fallback.name === screen.name
     }
 
+    readonly property int liveBarCount: {
+        const screens = Quickshell.screens || []
+        let n = 0
+        for (let i = 0; i < screens.length; i++) if (barEnabled(screens[i])) n++
+        return n
+    }
+
     readonly property ShellScreen overlayBarScreen: {
         const preferred = overlayScreen
         if (barEnabled(preferred)) return preferred
@@ -70,10 +77,7 @@ Singleton {
         } else {
             if (idx >= 0) return
             // never turn off the last live bar — the menu opens from it
-            const screens = Quickshell.screens || []
-            let live = 0
-            for (let i = 0; i < screens.length; i++) if (barEnabled(screens[i])) live++
-            if (live <= 1) return
+            if (root.liveBarCount <= 1) return
             parts.push(name)
         }
         ShellSettings.barDisabledMonitors = parts.join(",")

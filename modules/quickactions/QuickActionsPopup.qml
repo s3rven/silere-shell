@@ -71,11 +71,14 @@ PanelWindow {
         property bool   active: false
         property bool   checkable: true
         readonly property bool isMenuRow: true
-        readonly property bool on: true
-        property bool _keyboardPressed: false
-        readonly property bool _pressed: _rowTap.pressed || _keyboardPressed
+        readonly property bool _pressed: _rowTap.pressed || _keys.pressed
 
         signal triggered()
+
+        KeyActivation {
+            id: _keys
+            onActivated: _row._activate()
+        }
 
         function _menuRows(): var {
             const sibs = _row.parent ? _row.parent.children : []
@@ -106,24 +109,11 @@ PanelWindow {
         Accessible.checked: _row.checkable && _row.active
         Accessible.focusable: _row.visible
         Accessible.onPressAction: _row._activate()
-        onActiveFocusChanged: if (!activeFocus) _keyboardPressed = false
+        onActiveFocusChanged: if (!activeFocus) _keys.cancel()
         Keys.onUpPressed:     e => { _row._moveFocus(-1); e.accepted = true }
         Keys.onDownPressed:   e => { _row._moveFocus(1);  e.accepted = true }
-        Keys.onPressed: e => {
-            if (e.key !== Qt.Key_Space
-                    && e.key !== Qt.Key_Return && e.key !== Qt.Key_Enter) return
-            e.accepted = true
-            if (e.isAutoRepeat) return
-            _row._keyboardPressed = true
-        }
-        Keys.onReleased: e => {
-            if (!_row._keyboardPressed || (e.key !== Qt.Key_Space
-                    && e.key !== Qt.Key_Return && e.key !== Qt.Key_Enter)) return
-            e.accepted = true
-            if (e.isAutoRepeat) return
-            _row._keyboardPressed = false
-            _row._activate()
-        }
+        Keys.onPressed:  e => _keys.press(e)
+        Keys.onReleased: e => _keys.release(e)
 
         HoverHandler { id: _rowHover; cursorShape: Qt.PointingHandCursor }
         TapHandler   { id: _rowTap; onTapped: _row._activate() }

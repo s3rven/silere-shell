@@ -35,6 +35,34 @@ Singleton {
     readonly property bool hasPowerProfilesCtl: _tools.powerprofilesctl ?? false
     readonly property bool hasFcList:        _tools["fc-list"] ?? false
 
+    function _shq(s: string): string {
+        return "'" + String(s).replace(/'/g, "'\\''") + "'"
+    }
+
+    // the power commands are already derived from these flags; this is the guard for a
+    // tool that went away between derivation and the click
+    function commandAvailable(command): bool {
+        if (!command || command.length === 0) return false
+        const tool = String(command[0])
+        if (tool === "hyprlock")  return root.hasHyprlock
+        if (tool === "systemctl") return root.hasSystemctl
+        if (tool === "loginctl")  return root.hasLoginctl
+        return true
+    }
+
+    function runOrNotify(command, failTitle: string): void {
+        if (!command || command.length === 0) return
+        if (!root.hasNotifySend) {
+            Quickshell.execDetached(command)
+            return
+        }
+        const note = "notify-send --urgency=critical --app-name=silere-shell " +
+            root._shq(failTitle) + " " + root._shq("It may require authorization or be blocked by a running task.")
+        const argv = ["bash", "-c", '"$@" || ' + note, "bash"]
+        for (let i = 0; i < command.length; i++) argv.push(String(command[i]))
+        Quickshell.execDetached(argv)
+    }
+
     function refresh(): void {
         if (_checkProc.running) return
         ready = false

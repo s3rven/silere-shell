@@ -51,7 +51,7 @@ Column {
         }
     }
 
-    SectionLabel { label: "STATUS WIDGETS" }
+    SectionLabel { label: "BATTERY" }
     SettingsCard {
         ToggleRow {
             glyph: "󰂃"; label: "Hide charged battery"
@@ -60,6 +60,10 @@ Column {
             dependsNote: "No battery"
             onToggled: nextChecked => ShellSettings.batteryAutoHide = nextChecked
         }
+    }
+
+    SectionLabel { label: "NETWORK" }
+    SettingsCard {
         ToggleRow {
             glyph: "󰓅"; label: "Network speed"
             checked: ShellSettings.networkTrafficStats
@@ -68,7 +72,7 @@ Column {
             onToggled: nextChecked => ShellSettings.networkTrafficStats = nextChecked
         }
         CollapsibleSection {
-            expanded: ShellSettings.networkTrafficStats
+            expanded: ShellSettings.networkTrafficStats && Network.toolAvailable
             ToggleRow {
                 glyph: "󰐃"; label: "Always show speed"
                 checked: ShellSettings.networkSpeedInline

@@ -9,6 +9,7 @@ Pill {
     readonly property bool show: ShellSettings.barShowVolume
     property real _baseOpacity: show ? 1.0 : 0.0
     readonly property bool layoutVisible: show || _baseOpacity > 0.001
+    collapsed: !show
     opacity: _baseOpacity
     visible: layoutVisible
 

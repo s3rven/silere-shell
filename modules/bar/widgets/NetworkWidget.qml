@@ -13,6 +13,7 @@ Pill {
     property real _pulseOpacity: 1.0
     readonly property real _baseOpacity: !show ? 0.0 : canRead ? 1.0 : 0.45
     readonly property bool layoutVisible: show || opacity > 0.001
+    collapsed: !show
 
     readonly property bool _disconnected: ShellSettings.barShowNetwork && canRead && Network.available && !Network.connected && !ShellSettings.reduceMotion
     property bool _pulseSettled: false
@@ -60,7 +61,7 @@ Pill {
     maxTextWidth:   compact ? 150 : 260
     // above the 2s traffic-stats poll: shrinkDelay:0 re-animated the pill's width on every single tick
     shrinkDelay:    2400
-    activeFocusOnTab: show
+    activeFocusOnTab: show || activeFocus
     Accessible.focusable: true
 
     MotionBehavior on opacity { gate: !root._isPulsing; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }

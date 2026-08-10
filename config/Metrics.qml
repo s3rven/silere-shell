@@ -5,6 +5,10 @@ import Quickshell
 import "../services"
 
 Singleton {
+    // an arm-then-confirm row must reject the second half of a double-click; not a Motion
+    // token because every one of those returns 0 under reduce motion, which would re-arm the trap
+    readonly property int confirmGuardMs: 400
+
     function widgetGapFor(compact: bool): int {
         return compact ? Math.max(4, Math.round(ShellSettings.barSpacing * 0.5))
                        : ShellSettings.barSpacing
@@ -26,8 +30,7 @@ Singleton {
 
     // hover surfaces borrow the bar's own corner rounding; a capsule inside a gently rounded bar reads as a foreign shape
     function hoverRadiusFor(size: real): real {
-        const corner = ShellSettings.barCornerStyle === "round" ? ShellSettings.barRadius : 0
-        return Math.max(3, Math.min(size / 2, corner))
+        return Math.max(3, Math.min(size / 2, ShellSettings.barRadius))
     }
 
     function clockDateGapFor(compact: bool): int { return compact ? 4 : 8 }

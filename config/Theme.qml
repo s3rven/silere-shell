@@ -92,6 +92,9 @@ Singleton {
     readonly property color menuControlLineHot: _hc ? withAlpha(accent, lineAlpha(0.45))
                                                    : _n ? withAlpha(_lineBase, lineAlpha(0.18))
                                                         : withAlpha(mix(_lineBase, accent, 0.18), lineAlpha(0.20))
+    // selection has to out-weigh the accent hover line, or under high contrast the chip
+    // being hovered reads as the chosen one. Takes the caller's accent, not the theme's.
+    function controlLineActive(c: color): color { return withAlpha(c, lineAlpha(_hc ? 0.60 : 0.32)) }
     readonly property color menuTrack:       _hc ? withAlpha(text, 0.22)
                                                 : _n ? withAlpha(_lineBase, 0.14)
                                                      : withAlpha(_lineBase, 0.16)
@@ -109,7 +112,7 @@ Singleton {
     readonly property int radiusInline:   8
     readonly property int radiusField:    6
     readonly property int _surfaceRadiusTarget: ShellSettings.barFloating
-        ? (ShellSettings.barCornerStyle === "flat" ? 0 : ShellSettings.barRadius)
+        ? ShellSettings.barRadius
         : radiusPanel
     property real surfaceRadius: _surfaceRadiusTarget
     MotionBehavior on surfaceRadius {

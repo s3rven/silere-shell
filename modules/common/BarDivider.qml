@@ -11,7 +11,10 @@ Item {
     property bool groupBreak: false
     required property bool compact
 
-    readonly property string _style: ShellSettings.dotStyle
+    // preview surfaces draw a style the setting is not on yet; empty means follow the setting
+    property string styleOverride: ""
+    readonly property string _style: styleOverride.length > 0
+        ? styleOverride : ShellSettings.dotStyle
     readonly property bool _markWanted: hasNext && marked && _style !== "none"
     // a group boundary keeps the wider span with the mark off, so Groups placement still reads under the None style
     readonly property bool _wideSpan: hasNext && (_markWanted || groupBreak)

@@ -12,6 +12,8 @@ Item {
     property string description: ""
     property var    model:       []
     property var    currentValue
+    // one component serves the header and every option; each reads its subject off its own Loader
+    property Component optionPreview: null
     property string fallbackLabel: currentValue === undefined || currentValue === null
         ? "" : String(currentValue)
     property real   topRadius:    0
@@ -19,16 +21,25 @@ Item {
     property real   cardInset:    1
     property real   cardLeftBleed: 0
     readonly property bool _hasDesc: description.length > 0
+    readonly property bool _hasLead: glyph.length > 0 || optionPreview !== null
     readonly property int _controlH: 4 * Math.ceil(
         Math.max(28, Settings.capHeight + 12) / 4)
     readonly property int _optionH: 4 * Math.ceil(
         Math.max(32, Settings.capHeight + 12) / 4)
     readonly property int _optionsCapH: Math.min(224, root._optionH * 7)
+    // 44/56 are the shared single-line and two-line row heights; a select row that
+    // sits between toggles must not be the one that breaks the rhythm
     readonly property int _headerH: 4 * Math.ceil(Math.max(
-        root._hasDesc ? 52 : 40,
+        root._hasDesc ? 56 : 44,
         _headerText.implicitHeight + 12,
         _glyph.implicitHeight + 12,
         root._controlH + 12) / 4)
+
+    // The value pill grows into whatever the label leaves free, keeping 96px for the
+    // label itself. A flat 148 cap truncated long values (font and display names)
+    // on a wide row while most of the middle sat empty.
+    readonly property int _leadW: root._hasLead ? 14 + 18 + 10 : 14
+    readonly property int _pillMaxW: Math.max(92, root.width - root._leadW - 10 - 12 - 96)
 
     signal chosen(var value)
 
@@ -167,16 +178,27 @@ Item {
         id: _glyph
         anchors.left:           parent.left; anchors.leftMargin: 14
         anchors.verticalCenter: _header.verticalCenter
-        width: root.glyph.length > 0 ? 18 : 0
+        width: root._hasLead ? 18 : 0
+        visible: root.optionPreview === null
         horizontalAlignment: Text.AlignHCenter
         text:           root.glyph
         color:          Theme.withAlpha(Theme.subtext, 0.85)
         font.pixelSize: Settings.iconSize + 2
     }
+
+    Loader {
+        anchors.left: _glyph.left
+        anchors.verticalCenter: _glyph.verticalCenter
+        width: _glyph.width
+        height: root._controlH
+        active: root.optionPreview !== null
+        sourceComponent: root.optionPreview
+        readonly property var optionValue: root.currentValue
+    }
     Item {
         id: _header
         anchors.top:    parent.top
-        anchors.left:   _glyph.right; anchors.leftMargin: root.glyph.length > 0 ? 10 : 0
+        anchors.left:   _glyph.right; anchors.leftMargin: root._hasLead ? 10 : 0
         anchors.right:  _chevronSlot.left; anchors.rightMargin: 10
         height: root._headerH
         Column {
@@ -211,8 +233,7 @@ Item {
         id: _chevronSlot
         anchors.right:          parent.right; anchors.rightMargin: 12
         anchors.verticalCenter: _header.verticalCenter
-        width: Math.min(Math.max(92, _valText.implicitWidth + 34),
-            Math.min(148, Math.max(92, root.width * 0.42)))
+        width: Math.min(Math.max(92, _valText.implicitWidth + 34), root._pillMaxW)
         height: root._controlH
 
         Rectangle {
@@ -315,6 +336,8 @@ Item {
                     width: _optCol.width
                     label: String(modelData.label ?? "")
                     labelFontFamily: optionFont
+                    preview: root.optionPreview
+                    previewValue: modelData.value
                     selected: active
                     activeFocusOnTab: root.enabled && root._open
                         && _opt.index === root._focusIndex
