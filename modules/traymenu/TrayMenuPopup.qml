@@ -24,17 +24,21 @@ PanelWindow {
     }
     function _emitMenuSignal(entry, signalName: string, fallbackName: string): bool {
         if (entry === null || entry === undefined) return false
+        try {
+            const fn = entry[signalName]
+            if (typeof fn === "function") {
+                fn()
+                return true
+            }
 
-        const fn = entry[signalName]
-        if (typeof fn === "function") {
-            fn()
-            return true
-        }
-
-        const fallback = entry[fallbackName]
-        if (typeof fallback === "function") {
-            fallback()
-            return true
+            const fallback = entry[fallbackName]
+            if (typeof fallback === "function") {
+                fallback()
+                return true
+            }
+        } catch (error) {
+            console.warn("silere-shell: tray menu signal failed:", String(error))
+            return false
         }
 
         console.warn("silere-shell: tray menu entry has no", signalName, "signal")
@@ -69,7 +73,7 @@ PanelWindow {
     }
 
     onVisibleChanged: if (!visible) win._setActiveMenu(null)
-    // openAt() set the handle before this popup existed, so seed from the current state on creation
+    // the handle is set before this popup exists, so seed from the current state on creation
     Component.onCompleted: if (TrayMenuState.menuHandle !== null) win._setActiveMenu(TrayMenuState.menuHandle)
     Connections {
         target: TrayMenuState
@@ -157,14 +161,17 @@ PanelWindow {
             // submenu rows only: lets Left-arrow close the right flyout, reparented to the window root and no longer bubbling keys up
             property Item ownerFlyout: null
             property Flickable ownerScroll: null
+            property int menuDepth: 0
 
             readonly property bool sep:       modelData?.isSeparator ?? false
             readonly property bool on:        (modelData?.enabled ?? true) && !sep
-            readonly property bool sub:       modelData?.hasChildren ?? false
+            readonly property bool sub:       (modelData?.hasChildren ?? false)
+                && menuDepth < 8
             readonly property int  btnType:   modelData?.buttonType ?? 0
             readonly property bool checkable: btnType !== 0
             readonly property bool checked:   (modelData?.checkState ?? Qt.Unchecked) === Qt.Checked
-            readonly property string iconSrc: modelData?.icon ?? ""
+            readonly property string label: IconResolver.boundedText(modelData?.text, 256)
+            readonly property string iconSrc: IconResolver.iconSource(modelData?.icon)
             readonly property bool isMenuRow: !sep
 
             width: win.menuWidth
@@ -229,7 +236,7 @@ PanelWindow {
 
             activeFocusOnTab: _entry.on || activeFocus
             Accessible.role: _entry.sep ? Accessible.Separator : Accessible.MenuItem
-            Accessible.name: _entry.modelData?.text ?? ""
+            Accessible.name: _entry.label
             Accessible.focusable: _entry.on
             Accessible.checkable: _entry.checkable
             Accessible.checked: _entry.checked
@@ -347,7 +354,7 @@ PanelWindow {
                     anchors.right: _arrow.left
                     anchors.rightMargin: 8
                     anchors.verticalCenter: parent.verticalCenter
-                    text: _entry.modelData?.text ?? ""
+                    text: _entry.label
                     color: Theme.text
                     font.family: Settings.font; font.pixelSize: Settings.fontSize
                     elide: Text.ElideRight
@@ -463,6 +470,7 @@ PanelWindow {
                             onItemAdded: (index, item) => {
                                 item.ownerFlyout = _flyout
                                 item.ownerScroll = _subScroll
+                                item.menuDepth = _entry.menuDepth + 1
                             }
                         }
                     }
@@ -483,7 +491,7 @@ PanelWindow {
         id: card
         win: win
         open: TrayMenuState.open
-        anchorX: TrayMenuState.anchorX
+        anchorX: TrayMenuState.effectiveAnchorX
         barBottom: TrayMenuState.barBottom
 
         readonly property int pad: 6
