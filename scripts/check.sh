@@ -306,6 +306,20 @@ if ! bash scripts/test-qml-headless.sh; then
   status=1
 fi
 
+section "behavioral logic"
+if [ -f scripts/test-logic.sh ]; then
+  logic_out=""
+  if logic_out="$(bash scripts/test-logic.sh 2>&1)"; then
+    ok "logic" "$logic_out"
+  else
+    status=1
+    fail "logic" "behavioral probe failed"
+    printf '%s\n' "$logic_out"
+  fi
+else
+  fail "logic" "scripts/test-logic.sh missing"
+fi
+
 section "quickshell smoke"
 if command -v qs >/dev/null 2>&1; then
   if [ -z "${WAYLAND_DISPLAY:-}" ]; then
