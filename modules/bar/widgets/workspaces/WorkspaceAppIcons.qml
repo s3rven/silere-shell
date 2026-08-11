@@ -4,6 +4,7 @@ import QtQuick
 import QtQuick.Effects
 import "../../../../config"
 import "../../../../services"
+import "../../../common"
 
 Row {
     id: root
@@ -46,7 +47,7 @@ Row {
                 sourceSize.height: root.iconSize * 2
                 fillMode: Image.PreserveAspectFit
                 asynchronous: true
-                visible: !root._fxNeeded
+                visible: !root._fxNeeded && status === Image.Ready
                 opacity: root.hoverFx ? 1.0 : ShellSettings.wsIconOpacity
                 MotionBehavior on opacity {
                     NumberAnimation { duration: Motion.fast }
@@ -55,7 +56,7 @@ Row {
 
             Loader {
                 anchors.fill: _iconSrc
-                active: root._fxNeeded
+                active: root._fxNeeded && _iconSrc.status === Image.Ready
                 sourceComponent: MultiEffect {
                     source: _iconSrc
                     opacity: root.hoverFx ? 1.0 : ShellSettings.wsIconOpacity
@@ -66,6 +67,21 @@ Row {
                     MotionBehavior on saturation {
                         NumberAnimation { duration: Motion.fast }
                     }
+                }
+            }
+
+            Rectangle {
+                anchors.fill: parent
+                radius: width / 2
+                color: Theme.withAlpha(Theme.subtext, 0.12)
+                visible: _iconSrc.status === Image.Error
+                    || appIcon.modelData.icon.length === 0
+
+                ShellText {
+                    anchors.centerIn: parent
+                    text: appIcon.modelData.fallback || "?"
+                    color: Theme.subtext
+                    font.pixelSize: Math.max(9, Math.round(root.iconSize * 0.68))
                 }
             }
 

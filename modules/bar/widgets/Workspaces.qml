@@ -19,6 +19,14 @@ Item {
     readonly property int btnW:       btnH + 2
     readonly property int _iconSz:    Settings.iconSize + 2
     readonly property int gap:        3
+    // Updated imperatively because mapToItem() does not expose ancestor geometry
+    // dependencies to the QML binding engine.
+    property real menuAnchorX: 0
+
+    function _syncMenuAnchor(): void {
+        const pt = root.mapToItem(null, marker.centerX, 0)
+        if (isFinite(pt.x)) root.menuAnchorX = pt.x
+    }
 
     readonly property bool _menuTargetsThisBar: {
         const self = root.screen
@@ -46,7 +54,7 @@ Item {
     readonly property bool inSpecial: Compositor.hasSpecialWorkspaces && Compositor.specialOutput === root.monitorName
 
     readonly property var _workspaceOwners: {
-        const owners = {}
+        const owners = Object.create(null)
         if (Compositor.isNiri) return owners
         const vals = Compositor.workspaces
         for (let i = 0; i < vals.length; i++) {
@@ -73,7 +81,7 @@ Item {
     }
 
     readonly property var _wsMap: {
-        const m = {}
+        const m = Object.create(null)
         const vals = Compositor.workspaces
         for (let i = 0; i < vals.length; i++) {
             const ws = vals[i]
@@ -107,19 +115,25 @@ Item {
     // Window classes are compositor-supplied, so they must not inherit keys
     // such as "constructor" from Object.prototype.
     property var _appMetaCache: Object.create(null)
+    property int _appMetaCacheSize: 0
+    readonly property int _appMetaCacheLimit: 256
+
+    function _clearAppMetaCache(): void {
+        root._appMetaCache = Object.create(null)
+        root._appMetaCacheSize = 0
+    }
+
     function _appMeta(cls: string): var {
-        const raw = String(cls || "").trim()
+        const raw = Compositor.boundedExternalText(
+            cls, Compositor.maxWindowIdentityChars).trim()
         const key = raw.toLowerCase()
         if (!key) return null
         if (root._appMetaCache[key] !== undefined) return root._appMetaCache[key]
-        const de = DesktopEntries.heuristicLookup(raw)
-        const tail = key.indexOf(".") >= 0 ? key.split(".").pop() : ""
-        const candidates = [de && de.icon, key, tail].filter(Boolean)
-        let src = ""
-        for (let i = 0; i < candidates.length && !src; i++)
-            src = Quickshell.iconPath(candidates[i], true)
-        const meta = { icon: src, name: (de && de.name) || tail || key }
+        if (root._appMetaCacheSize >= root._appMetaCacheLimit)
+            root._clearAppMetaCache()
+        const meta = IconResolver.appMeta(raw)
         root._appMetaCache[key] = meta
+        root._appMetaCacheSize++
         return meta
     }
     property int _wsAppsTick: 0
@@ -146,7 +160,7 @@ Item {
     Connections {
         target: ShellSettings.wsShowAppIcons ? DesktopEntries : null
         function onApplicationsChanged() {
-            root._appMetaCache = Object.create(null)
+            root._clearAppMetaCache()
             root._wsAppsTick++
         }
     }
@@ -159,19 +173,20 @@ Item {
         for (let i = 0; i < tops.length; i++) {
             const t = tops[i]
             if (!t || t.output !== root.monitorName) continue
-            parts.push((t.wsId ?? 0) + ":" + String(t.appId || ""))
+            parts.push((t.wsId ?? 0) + ":" + Compositor.boundedExternalText(
+                t.appId, Compositor.maxWindowIdentityChars))
         }
         return parts.join("|")
     }
 
-    property var _wsApps: ({})
+    property var _wsApps: Object.create(null)
     on_WsAppsKeyChanged: root._rebuildWsApps()
 
     function _rebuildWsApps(): void {
-        const map = {}
+        const map = Object.create(null)
         if (!ShellSettings.wsShowAppIcons) { root._wsApps = map; return }
-        const seen = {}
-        const shown = {}
+        const seen = Object.create(null)
+        const shown = Object.create(null)
         for (let i = 0; i < root.visibleIds.length; i++) shown[root.visibleIds[i]] = true
         const tops = Compositor.workspaceToplevels
         for (let i = 0; i < tops.length; i++) {
@@ -179,7 +194,8 @@ Item {
             if (!t || t.output !== root.monitorName) continue
             const wid = t.wsId ?? 0
             if (shown[wid] !== true) continue
-            const rawCls = String(t.appId || "")
+            const rawCls = Compositor.boundedExternalText(
+                t.appId, Compositor.maxWindowIdentityChars)
             const cls = rawCls.toLowerCase()
             if (!cls) continue
             if (!map[wid]) map[wid] = []
@@ -187,9 +203,14 @@ Item {
             if (seen[key] !== undefined) { map[wid][seen[key]].count++; continue }
             if (map[wid].length >= 3) continue
             const meta = root._appMeta(rawCls)
-            if (!meta || !meta.icon) continue
+            if (!meta) continue
             seen[key] = map[wid].length
-            map[wid].push({ icon: meta.icon, name: meta.name, count: 1 })
+            map[wid].push({
+                icon: meta.icon,
+                name: meta.name,
+                fallback: meta.fallback,
+                count: 1
+            })
         }
         root._wsApps = map
     }
@@ -300,6 +321,12 @@ Item {
         else root.opacity = 1
     }
 
+    // reflow only: the marker slide and the page shift are animations, and following
+    // them retargets an open popup's x every frame
+    onXChanged: root._syncMenuAnchor()
+    onYChanged: root._syncMenuAnchor()
+    onImplicitWidthChanged: root._syncMenuAnchor()
+
     SequentialAnimation {
         id: _groupFadeAnim
         NumberAnimation { target: root; property: "opacity"; to: 0; duration: Motion.ms(85);  easing.type: Easing.InCubic }
@@ -340,13 +367,14 @@ Item {
     }
 
     function openAnchorMenu(): void {
-        const pt = root.mapToItem(null, marker.centerX, 0)
-        MenuState.toggleAt(pt.x, root.screen)
+        root._syncMenuAnchor()
+        MenuState.toggleAt(root.menuAnchorX, root.screen, root)
     }
 
     function openQuickActions(): void {
-        const pt = root.mapToItem(null, marker.centerX, 0)
-        QuickActionsState.toggleAt(pt.x, root.screen, ShellSettings.barPosition === "bottom")
+        root._syncMenuAnchor()
+        QuickActionsState.toggleAt(root.menuAnchorX, root.screen,
+            Metrics.barAtBottom, root)
     }
 
     WheelHandler {
