@@ -41,6 +41,9 @@ its slider; both drew the same thing there already, so nothing looks different.
 - A workspace app icon falls back to a lettered badge when the application ships no
   icon at all. Those windows used to be dropped from the row, so a workspace holding
   only unpackaged apps looked empty.
+- A notification whose app icon is missing or fails to load shows the app's initial,
+  in the popup and in the history list. The icon slot also keeps its width either
+  way, so a notification with no icon no longer shifts its own header text.
 
 ### Changed
 
