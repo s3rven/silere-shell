@@ -93,6 +93,8 @@ The installer also reports on `busctl`, `pgrep`, `pkill` and `timeout`. Those sh
 
 Everything is configurable from Settings inside the shell. Changes save on their own and apply without a restart.
 
+Notification history keeps up to 20 entries by default. Under **Settings › Notifications › History**, you can change that limit or turn off **Keep after restart**; turning it off clears saved notification text and keeps new history only for the current session.
+
 Overrides live in `$XDG_CONFIG_HOME/silere-shell/settings.json`, independent of where the checkout is. Only values that differ from their defaults are written, so the file stays short and readable. Calendar marks sit beside it in `calendar-marks.json`.
 
 To restore defaults, use **Settings › System › Maintenance**. Editing the file by hand works too: delete a key to reset one option, or replace the whole file with `{ "__version": 1 }` to reset everything. Values are type-checked and numeric ranges are clamped on load, and a file Silere cannot read is left alone instead of overwritten.

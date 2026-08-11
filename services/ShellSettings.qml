@@ -65,6 +65,8 @@ Singleton {
     property bool   notifFullscreenSilence: true
     property string notifPosition:       "top-right"
     property int    notifMaxVisible:     3
+    property bool   notifHistoryPersistent: true
+    property int    notifHistoryLimit:   20
     property bool   dndSchedule:         false
     property int    dndFrom:             22
     property int    dndTo:               8
@@ -350,6 +352,8 @@ Singleton {
         { k: "notifFullscreenSilence", t: "bool", sec: "popups" },
         { k: "notifPosition",       t: "enum", vals: ["top-right", "top-left", "top-center"], sec: "popups" },
         { k: "notifMaxVisible",     t: "int",  min: 0, max: 20, sec: "popups" },
+        { k: "notifHistoryPersistent", t: "bool", sec: "popups" },
+        { k: "notifHistoryLimit",   t: "int",  min: 5, max: 100, sec: "popups" },
         { k: "dndSchedule",         t: "bool", sec: "popups" },
         { k: "dndFrom",             t: "int",  min: 0, max: 23, sec: "popups" },
         { k: "dndTo",               t: "int",  min: 0, max: 23, sec: "popups" },

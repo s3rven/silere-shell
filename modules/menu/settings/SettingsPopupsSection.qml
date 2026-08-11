@@ -58,6 +58,23 @@ Column {
         }
     }
 
+    SectionLabel { label: "HISTORY" }
+    SettingsCard {
+        ToggleRow {
+            glyph: "󰋚"; label: "Keep after restart"
+            description: "Otherwise clear saved text and keep this session only"
+            checked: ShellSettings.notifHistoryPersistent
+            onToggled: nextChecked => ShellSettings.notifHistoryPersistent = nextChecked
+        }
+        SliderRow {
+            glyph: "󰒓"; label: "History limit"
+            displayValue: ShellSettings.notifHistoryLimit
+            value: ShellSettings.notifHistoryLimit
+            min: 5; max: 100; step: 5
+            onChanged: (v) => ShellSettings.notifHistoryLimit = Math.round(v)
+        }
+    }
+
     SectionLabel { label: "QUIET HOURS" }
     SettingsCard {
         ToggleRow {

@@ -17,7 +17,7 @@ Singleton {
     property var _times: Object.create(null)
     property var _updateTimes: Object.create(null)
     property bool _persistentReady: false
-    readonly property int _maxHistory: 20
+    readonly property int _maxHistory: Math.max(5, ShellSettings.notifHistoryLimit)
     readonly property int _maxIdentityChars: 512
     readonly property int _maxSummaryChars: 2048
     readonly property int _maxBodyChars: 16384
@@ -77,7 +77,8 @@ Singleton {
                 summary: h.summary, body: h.body, urgency: h.urgency, time: h.time
             })
         }
-        _persist.historyJson = JSON.stringify(out)
+        _persist.historyJson = ShellSettings.notifHistoryPersistent
+            ? JSON.stringify(out) : "[]"
     }
 
     readonly property var popupModel: notifServer.trackedNotifications
@@ -94,7 +95,8 @@ Singleton {
     }
 
     function _restorePersistentState(): void {
-        const savedHistory = root._parsePersistentJson(_persist.historyJson, [])
+        const savedHistory = ShellSettings.notifHistoryPersistent
+            ? root._parsePersistentJson(_persist.historyJson, []) : []
         const savedSeen = root._parsePersistentJson(_persist.seenJson, Object.create(null))
         const savedTimes = root._parsePersistentJson(_persist.timesJson, Object.create(null))
         _history.clear()
@@ -108,6 +110,20 @@ Singleton {
         root._times = root._cloneMap(savedTimes)
         root._persistentReady = true
         root._saveHistory()
+    }
+
+    Connections {
+        target: ShellSettings
+        function onNotifHistoryLimitChanged() {
+            root._trimHistory()
+            root._saveHistory()
+        }
+        function onNotifHistoryPersistentChanged() {
+            // Privacy-first: turning persistence off removes text restored from
+            // an earlier session. New entries still form an in-memory history.
+            if (!ShellSettings.notifHistoryPersistent) _history.clear()
+            root._saveHistory()
+        }
     }
 
     on_SeenChanged:   if (_persistentReady) _persist.seenJson = JSON.stringify(_seen)
