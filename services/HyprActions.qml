@@ -7,16 +7,6 @@ import Quickshell.Io
 Singleton {
     id: root
 
-    property bool _luaDetected: false
-    readonly property bool _useLua: _luaDetected
-
-    Process {
-        id: _luaCheck
-        command: ["bash", Quickshell.shellDir + "/scripts/install.sh", "--hypr-config-kind"]
-        onExited: (code) => { root._luaDetected = (code === 0); HyprDispatch.useLua = root._luaDetected }
-        Component.onCompleted: running = Compositor.isHyprland
-    }
-
     FileView {
         id: _pidStatFile
         blockLoading: true

@@ -2,14 +2,41 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 
 // The mechanism for talking to Hyprland, with no opinion about compositor state.
-// HyprActions owns the state-aware behaviour and sets useLua; keeping the two
-// apart is what stops Compositor and HyprActions depending on each other.
+// Keeping it separate from HyprActions is what stops Compositor and HyprActions
+// depending on each other.
 Singleton {
     id: root
 
+    // the lua config framework replaces the plain dispatchers, so this has to be
+    // known here rather than set by a caller: whichever singleton dispatches
+    // first may be the only one ever instantiated
     property bool useLua: false
+    property bool _luaChecked: false
+
+    Process {
+        id: _luaCheck
+        command: ["bash", Quickshell.shellDir + "/scripts/install.sh", "--hypr-config-kind"]
+        onExited: (code) => {
+            root.useLua = (code === 0)
+            root._luaChecked = true
+        }
+    }
+
+    // hasHyprctl arrives asynchronously, so this is retried rather than read once
+    function _detectLua(): void {
+        if (root._luaChecked || _luaCheck.running) return
+        if (!SystemTools.ready || !SystemTools.hasHyprctl) return
+        _luaCheck.running = true
+    }
+
+    Component.onCompleted: root._detectLua()
+    Connections {
+        target: SystemTools
+        function onReadyChanged() { root._detectLua() }
+    }
 
     function _quote(value): string {
         return "\"" + String(value).replace(/\\/g, "\\\\").replace(/"/g, "\\\"") + "\""
