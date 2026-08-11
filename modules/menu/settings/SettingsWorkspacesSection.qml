@@ -11,10 +11,8 @@ Column {
     SettingsCard {
         SliderRow {
             glyph: "󰕰"; label: "Visible"
-            value: ShellSettings.wsMinVisible
-            min: 1; max: 10; step: 1
+            key: "wsMinVisible"
             displayValue: ShellSettings.wsMinVisible
-            onChanged: (v) => ShellSettings.wsMinVisible = v
         }
         ChoiceChipRow {
             glyph: ShellSettings.wsActiveMarker === "bar" ? "━"
@@ -34,37 +32,30 @@ Column {
     SettingsCard {
         ToggleRow {
             glyph: "󰎠"; label: "Numbers"
-            checked: ShellSettings.wsShowNumbers
-            onToggled: nextChecked => ShellSettings.wsShowNumbers = nextChecked
+            key: "wsShowNumbers"
         }
         SliderRow {
             glyph: ShellSettings.wsShowNumbers ? "1" : "•"
             glyphColor: Theme.withAlpha(Theme.text, Math.max(0.35, ShellSettings.wsMarkerOpacity))
             label: ShellSettings.wsShowNumbers ? "Number opacity" : "Dot opacity"
-            value: ShellSettings.wsMarkerOpacity
-            min: 0.2; max: 1.0; step: 0.05
+            key: "wsMarkerOpacity"
             displayValue: Math.round(ShellSettings.wsMarkerOpacity * 100) + "%"
-            onChanged: (v) => ShellSettings.wsMarkerOpacity = v
         }
         ToggleRow {
             glyph: "󰀻"; label: "App icons"
             description: "Up to three apps per workspace"
-            checked: ShellSettings.wsShowAppIcons
-            onToggled: nextChecked => ShellSettings.wsShowAppIcons = nextChecked
+            key: "wsShowAppIcons"
         }
         CollapsibleSection {
             expanded: ShellSettings.wsShowAppIcons
             ToggleRow {
                 glyph: "󰹑"; label: "Monochrome icons"
-                checked: ShellSettings.wsIconMono
-                onToggled: nextChecked => ShellSettings.wsIconMono = nextChecked
+                key: "wsIconMono"
             }
             SliderRow {
                 glyph: "󰋩"; label: "Icon opacity"
-                value: ShellSettings.wsIconOpacity
-                min: 0.3; max: 1.0; step: 0.05
+                key: "wsIconOpacity"
                 displayValue: Math.round(ShellSettings.wsIconOpacity * 100) + "%"
-                onChanged: (v) => ShellSettings.wsIconOpacity = v
             }
         }
     }
@@ -73,24 +64,20 @@ Column {
     SettingsCard {
         ToggleRow {
             glyph: "󱕒"; label: "Scroll to switch"
-            checked: ShellSettings.wsScrollSwitch
-            onToggled: nextChecked => ShellSettings.wsScrollSwitch = nextChecked
+            key: "wsScrollSwitch"
         }
         ToggleRow {
             glyph: "󰗘"; label: "Switch animation"
-            checked: ShellSettings.workspaceShift
-            onToggled: nextChecked => ShellSettings.workspaceShift = nextChecked
+            key: "workspaceShift"
         }
         ToggleRow {
             glyph: "󰂟"; label: "Notification pulse"
-            checked: ShellSettings.wsNotifPulse
-            onToggled: nextChecked => ShellSettings.wsNotifPulse = nextChecked
+            key: "wsNotifPulse"
         }
         ToggleRow {
             glyph: "󰕦"; label: "Urgent window pulse"
             description: "Animate a workspace demanding attention"
-            checked: ShellSettings.wsUrgentPulse
-            onToggled: nextChecked => ShellSettings.wsUrgentPulse = nextChecked
+            key: "wsUrgentPulse"
         }
     }
 }

@@ -51,10 +51,9 @@ Column {
             expanded: root._battAlertMode !== "off"
             SliderRow {
                 glyph: "󱟢"; label: "Alert below"
-                value: ShellSettings.batteryLowThreshold
-                min: 5; max: 50; step: 5
+                key: "batteryLowThreshold"
+                step: 5
                 displayValue: ShellSettings.batteryLowThreshold + "%"
-                onChanged: (v) => ShellSettings.batteryLowThreshold = v
                 glyphColor: Battery.critical ? Theme.error : (Battery.low ? Theme.warning : Theme.withAlpha(Theme.subtext, 0.85))
             }
             HintText { text: "Escalates to critical at " + Math.max(5, Math.round(ShellSettings.batteryLowThreshold / 2)) + "%." }
@@ -62,8 +61,7 @@ Column {
         ToggleRow {
             glyph: "󰂄"; label: "Fully charged alert"
             enabled: ShellSettings.osdEnabled
-            checked: ShellSettings.osdChargedNotify
-            onToggled: nextChecked => ShellSettings.osdChargedNotify = nextChecked
+            key: "osdChargedNotify"
             dependsNote: "OSD off"
         }
     }
@@ -80,10 +78,9 @@ Column {
             expanded: root._tempAlertMode !== "off"
             SliderRow {
                 glyph: "󰔏"; label: "Alert above"
-                value: ShellSettings.tempHotThreshold
-                min: 50; max: 105; step: 5
+                key: "tempHotThreshold"
+                step: 5
                 displayValue: ShellSettings.tempHotThreshold + "°"
-                onChanged: (v) => ShellSettings.tempHotThreshold = v
                 glyphColor: CpuTemp.critical ? Theme.error : (CpuTemp.hot ? Theme.warning : Theme.withAlpha(Theme.subtext, 0.85))
             }
             HintText { text: "Escalates to critical at " + (ShellSettings.tempHotThreshold + 8) + "°." }

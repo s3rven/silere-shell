@@ -10,23 +10,20 @@ Column {
     SettingsCard {
         ToggleRow {
             glyph: "󱀅"; label: "On-screen display"
-            checked: ShellSettings.osdEnabled
-            onToggled: nextChecked => ShellSettings.osdEnabled = nextChecked
+            key: "osdEnabled"
         }
         CollapsibleSection {
             expanded: ShellSettings.osdEnabled
             ToggleRow {
                 glyph: "󰀱"; label: "Show in bar"
                 description: "Use bar center instead of a popup"
-                checked: ShellSettings.osdBarIntegrated
-                onToggled: nextChecked => ShellSettings.osdBarIntegrated = nextChecked
+                key: "osdBarIntegrated"
             }
             CollapsibleSection {
                 expanded: !ShellSettings.osdBarIntegrated
                 ToggleRow {
                     glyph: "󰖲"; label: "Match bar shape"
-                    checked: ShellSettings.osdMatchBar
-                    onToggled: nextChecked => ShellSettings.osdMatchBar = nextChecked
+                    key: "osdMatchBar"
                 }
             }
         }
@@ -40,9 +37,8 @@ Column {
             SliderRow {
                 glyph: "󰔛"; label: "Dismiss after"
                 displayValue: (ShellSettings.osdTimeout / 1000) + "s"
-                value: ShellSettings.osdTimeout
-                min: 500; max: 10000; step: 500
-                onChanged: (v) => ShellSettings.osdTimeout = v
+                key: "osdTimeout"
+                step: 500
             }
             ChoiceChipRow {
                 glyph: "󰒓"; label: "Feedback for"
@@ -59,8 +55,7 @@ Column {
                 ToggleRow {
                     glyph: "󰓎"; label: "Volume emphasis"
                     description: "Warm tint near maximum"
-                    checked: ShellSettings.osdVolumeTint
-                    onToggled: nextChecked => ShellSettings.osdVolumeTint = nextChecked
+                    key: "osdVolumeTint"
                 }
             }
         }

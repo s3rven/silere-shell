@@ -10,20 +10,17 @@ Column {
     SettingsCard {
         ToggleRow {
             glyph: "󰦩"; label: "Window title"
-            checked: ShellSettings.showWindowTitle
-            onToggled: nextChecked => ShellSettings.showWindowTitle = nextChecked
+            key: "showWindowTitle"
         }
         CollapsibleSection {
             expanded: ShellSettings.showWindowTitle
             ToggleRow {
                 glyph: "󰀻"; label: "App name"
-                checked: ShellSettings.showWindowTitleApp
-                onToggled: nextChecked => ShellSettings.showWindowTitleApp = nextChecked
+                key: "showWindowTitleApp"
             }
             ToggleRow {
                 glyph: "󰉞"; label: "Center between widgets"
-                checked: ShellSettings.windowTitleCenterGap
-                onToggled: nextChecked => ShellSettings.windowTitleCenterGap = nextChecked
+                key: "windowTitleCenterGap"
             }
         }
     }
@@ -32,13 +29,11 @@ Column {
     SettingsCard {
         ToggleRow {
             glyph: "󰍽"; label: "Hover highlight"
-            checked: ShellSettings.barHoverHighlight
-            onToggled: nextChecked => ShellSettings.barHoverHighlight = nextChecked
+            key: "barHoverHighlight"
         }
         ToggleRow {
             glyph: "󰈈"; label: "Reveal values on hover"
-            checked: ShellSettings.valuesOnHover
-            onToggled: nextChecked => ShellSettings.valuesOnHover = nextChecked
+            key: "valuesOnHover"
         }
         CollapsibleSection {
             expanded: ShellSettings.valuesOnHover
@@ -56,8 +51,7 @@ Column {
         visible: Battery.available
         ToggleRow {
             glyph: "󰂃"; label: "Hide charged battery"
-            checked: ShellSettings.batteryAutoHide
-            onToggled: nextChecked => ShellSettings.batteryAutoHide = nextChecked
+            key: "batteryAutoHide"
         }
     }
 
@@ -74,8 +68,7 @@ Column {
             expanded: ShellSettings.networkTrafficStats && Network.toolAvailable
             ToggleRow {
                 glyph: "󰐃"; label: "Always show speed"
-                checked: ShellSettings.networkSpeedInline
-                onToggled: nextChecked => ShellSettings.networkSpeedInline = nextChecked
+                key: "networkSpeedInline"
             }
         }
         ToggleRow {

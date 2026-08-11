@@ -97,8 +97,7 @@ Column {
                 expanded: ShellSettings.underlineGlow
                 ToggleRow {
                     glyph: "󰊠"; label: "Ambient glow"
-                    checked: ShellSettings.underlineIdleGlow
-                    onToggled: nextChecked => ShellSettings.underlineIdleGlow = nextChecked
+                    key: "underlineIdleGlow"
                 }
             }
         }
@@ -118,23 +117,19 @@ Column {
                     SettingsCard {
                         ToggleRow {
                             glyph: "󰂚"; label: "Notifications"
-                            checked: ShellSettings.underlineNotifGlow
-                            onToggled: nextChecked => ShellSettings.underlineNotifGlow = nextChecked
+                            key: "underlineNotifGlow"
                         }
                         ToggleRow {
                             glyph: "󰤭"; label: "Network disconnect"
-                            checked: ShellSettings.underlineNetGlow
-                            onToggled: nextChecked => ShellSettings.underlineNetGlow = nextChecked
+                            key: "underlineNetGlow"
                         }
                         ToggleRow {
                             glyph: "󱃍"; label: "Battery low"
-                            checked: ShellSettings.underlineBattGlow
-                            onToggled: nextChecked => ShellSettings.underlineBattGlow = nextChecked
+                            key: "underlineBattGlow"
                         }
                         ToggleRow {
                             glyph: "󰔏"; label: "Temperature"
-                            checked: ShellSettings.underlineTempGlow
-                            onToggled: nextChecked => ShellSettings.underlineTempGlow = nextChecked
+                            key: "underlineTempGlow"
                         }
                         ChoiceChipRow {
                             glyph: "󰄀"; label: "Screenshots"

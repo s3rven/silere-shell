@@ -24,24 +24,20 @@ Column {
         ToggleRow {
             glyph: "󰡍"; label: "Compact spacing"
             description: "Reduce widget padding and gaps"
-            checked: ShellSettings.barCompact
-            onToggled: nextChecked => ShellSettings.barCompact = nextChecked
+            key: "barCompact"
         }
         CollapsibleSection {
             expanded: !ShellSettings.barCompact
             ToggleRow {
                 glyph: "󰁌"; label: "Auto tighten"
                 description: "Tighten when widgets crowd the bar"
-                checked: ShellSettings.barAutoCompact
-                onToggled: nextChecked => ShellSettings.barAutoCompact = nextChecked
+                key: "barAutoCompact"
             }
         }
         SliderRow {
             glyph: "󰤼"; label: "Spacing"
-            value: ShellSettings.barSpacing
-            min: 4; max: 24; step: 1
+            key: "barSpacing"
             displayValue: ShellSettings.barSpacing + "px"
-            onChanged: (v) => ShellSettings.barSpacing = Math.round(v)
         }
     }
 
@@ -78,10 +74,8 @@ Column {
                 glyph: ShellSettings.dotTextGlyph
                 glyphColor: Theme.withAlpha(Theme.text, Math.max(0.35, ShellSettings.dotOpacity))
                 label: "Opacity"
-                value: ShellSettings.dotOpacity
-                min: 0.10; max: 1.0; step: 0.05
+                key: "dotOpacity"
                 displayValue: Math.round(ShellSettings.dotOpacity * 100) + "%"
-                onChanged: (v) => ShellSettings.dotOpacity = v
             }
         }
     }

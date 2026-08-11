@@ -1,5 +1,6 @@
 import QtQuick
 import "../../../config"
+import "../../../services"
 import "../../common"
 
 MenuRow {
@@ -7,7 +8,8 @@ MenuRow {
 
     property string label:        ""
     property string description:  ""
-    property bool   checked:      false
+    property string key:          ""
+    property bool   checked:      root.key.length > 0 ? !!ShellSettings[root.key] : false
     property bool   available:    true
     property string dependsNote:  ""
 
@@ -16,6 +18,15 @@ MenuRow {
     rowInteractive: root._canToggle
 
     signal toggled(bool nextChecked)
+
+    // Connections, not an onToggled handler: a handler here would be replaced by
+    // one written at the use site instead of running alongside it
+    Connections {
+        target: root
+        function onToggled(nextChecked) {
+            if (root.key.length > 0) ShellSettings.setValue(root.key, nextChecked)
+        }
+    }
 
     readonly property bool _canToggle: root.enabled && (root.available || root.checked)
     readonly property bool _showDependsNote: root.dependsNote.length > 0

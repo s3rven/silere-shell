@@ -346,10 +346,8 @@ Column {
 
         SliderRow {
             glyph: "󰃇"; label: "Outline strength"
-            value: ShellSettings.outlineStrength
-            min: 0.5; max: 2.4; step: 0.05
+            key: "outlineStrength"
             displayValue: Math.round(ShellSettings.outlineStrength * 100) + "%"
-            onChanged: (v) => ShellSettings.outlineStrength = v
         }
     }
 }

@@ -32,8 +32,7 @@ Column {
         }
         ToggleRow {
             glyph: "󱑂"; label: "Seconds"
-            checked: ShellSettings.showSeconds
-            onToggled: nextChecked => ShellSettings.showSeconds = nextChecked
+            key: "showSeconds"
         }
     }
 }

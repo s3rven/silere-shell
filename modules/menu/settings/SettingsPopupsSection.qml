@@ -10,15 +10,13 @@ Column {
     SettingsCard {
         ToggleRow {
             glyph: "󰂚"; label: "Popup notifications"
-            checked: ShellSettings.notifPopupEnabled
-            onToggled: nextChecked => ShellSettings.notifPopupEnabled = nextChecked
+            key: "notifPopupEnabled"
         }
         CollapsibleSection {
             expanded: ShellSettings.notifPopupEnabled
             ToggleRow {
                 glyph: "󰊓"; label: "Hide in fullscreen"
-                checked: ShellSettings.notifFullscreenSilence
-                onToggled: nextChecked => ShellSettings.notifFullscreenSilence = nextChecked
+                key: "notifFullscreenSilence"
             }
         }
     }
@@ -31,9 +29,8 @@ Column {
             SliderRow {
                 glyph: "󰔛"; label: "Dismiss after"
                 displayValue: (ShellSettings.notifDefaultTimeout / 1000) + "s"
-                value: ShellSettings.notifDefaultTimeout
-                min: 1000; max: 30000; step: 1000
-                onChanged: (v) => ShellSettings.notifDefaultTimeout = v
+                key: "notifDefaultTimeout"
+                step: 1000
             }
             ChoiceChipRow {
                 glyph: "󰍹"; label: "Position"
@@ -63,15 +60,13 @@ Column {
         ToggleRow {
             glyph: "󰋚"; label: "Keep after restart"
             description: "Otherwise clear saved text and keep this session only"
-            checked: ShellSettings.notifHistoryPersistent
-            onToggled: nextChecked => ShellSettings.notifHistoryPersistent = nextChecked
+            key: "notifHistoryPersistent"
         }
         SliderRow {
             glyph: "󰒓"; label: "History limit"
             displayValue: ShellSettings.notifHistoryLimit
-            value: ShellSettings.notifHistoryLimit
-            min: 5; max: 100; step: 5
-            onChanged: (v) => ShellSettings.notifHistoryLimit = Math.round(v)
+            key: "notifHistoryLimit"
+            step: 5
         }
     }
 
@@ -79,24 +74,19 @@ Column {
     SettingsCard {
         ToggleRow {
             glyph: "󰂛"; label: "Scheduled do not disturb"
-            checked: ShellSettings.dndSchedule
-            onToggled: nextChecked => ShellSettings.dndSchedule = nextChecked
+            key: "dndSchedule"
         }
         CollapsibleSection {
             expanded: ShellSettings.dndSchedule
             SliderRow {
                 glyph: "󰃰"; label: "From"
                 displayValue: (ShellSettings.dndFrom < 10 ? "0" : "") + ShellSettings.dndFrom + ":00"
-                value: ShellSettings.dndFrom
-                min: 0; max: 23; step: 1
-                onChanged: (v) => ShellSettings.dndFrom = v
+                key: "dndFrom"
             }
             SliderRow {
                 glyph: "󰃰"; label: "To"
                 displayValue: (ShellSettings.dndTo < 10 ? "0" : "") + ShellSettings.dndTo + ":00"
-                value: ShellSettings.dndTo
-                min: 0; max: 23; step: 1
-                onChanged: (v) => ShellSettings.dndTo = v
+                key: "dndTo"
             }
         }
     }

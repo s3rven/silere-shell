@@ -17,8 +17,7 @@ Column {
         ToggleRow {
             glyph: "󰐊"; label: "Playback status"
             description: "Show play state and progress"
-            checked: ShellSettings.mediaWidgetHelper
-            onToggled: nextChecked => ShellSettings.mediaWidgetHelper = nextChecked
+            key: "mediaWidgetHelper"
         }
     }
 
@@ -27,8 +26,7 @@ Column {
         ToggleRow {
             glyph: "󰱐"; label: "Audio visualizer"
             description: "Active during playback"
-            checked: ShellSettings.mediaProgress
-            onToggled: nextChecked => ShellSettings.mediaProgress = nextChecked
+            key: "mediaProgress"
             available: !SystemTools.ready || SystemTools.hasCava
             dependsNote: SystemTools.ready ? "No cava" : "Checking"
         }

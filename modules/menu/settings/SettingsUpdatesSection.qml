@@ -321,8 +321,7 @@ Column {
         ToggleRow {
             glyph: "󰚰"; label: "Track package updates"
             description: "Show pending count in bar"
-            checked: ShellSettings.updatesWidget
-            onToggled: nextChecked => ShellSettings.updatesWidget = nextChecked
+            key: "updatesWidget"
             available: !SystemTools.ready || Updates.supported
             dependsNote: "No package manager"
         }

@@ -1,5 +1,6 @@
 import QtQuick
 import "../../../config"
+import "../../../services"
 import "../../common"
 
 MenuRow {
@@ -12,10 +13,12 @@ MenuRow {
         const ratio = Math.max(0, Math.min(1, (value - min) / range))
         return Math.round(ratio * 100) + "%"
     }
-    property real   value:        0.5
-    property real   min:          0.0
-    property real   max:          1.0
-    property real   step:         0.05
+    property string key:          ""
+    readonly property var _schema: root.key.length > 0 ? ShellSettings.schemaFor(root.key) : null
+    property real   value:        root.key.length > 0 ? Number(ShellSettings[root.key]) : 0.5
+    property real   min:          root._schema ? Number(root._schema.min) : 0.0
+    property real   max:          root._schema ? Number(root._schema.max) : 1.0
+    property real   step:         root._schema && root._schema.t === "int" ? 1 : 0.05
     // Names consumed by Qt's QAccessibleValueInterface.
     readonly property real minimumValue: root.min
     readonly property real maximumValue: root.max
@@ -29,6 +32,13 @@ MenuRow {
     rowInteractive: root.enabled
 
     signal changed(real value)
+
+    Connections {
+        target: root
+        function onChanged(value) {
+            if (root.key.length > 0) ShellSettings.setValue(root.key, value)
+        }
+    }
 
     // 4px multiple so row.y inside SettingsCard lands on whole physical px and every divider renders one thickness
     height:         Metrics.rowHeightFor(56)

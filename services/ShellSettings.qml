@@ -410,6 +410,19 @@ Singleton {
         { k: "wsIconMono",          t: "bool", sec: "workspaces" },
         { k: "wsActiveMarker",      t: "enum", vals: ["gem", "dot", "bar"], sec: "workspaces" }
     ]
+    // a settings row binds by key: the schema already states type and range, so a
+    // row that restates them is duplication the two can drift apart on
+    function schemaFor(key: string): var {
+        for (let i = 0; i < root._schema.length; i++)
+            if (root._schema[i].k === key) return root._schema[i]
+        return null
+    }
+
+    function setValue(key: string, value): void {
+        const entry = root.schemaFor(key)
+        if (entry) root._coerce(entry, value)
+    }
+
     function _coerce(s, v): void {
         switch (s.t) {
         case "bool":

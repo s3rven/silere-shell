@@ -29,10 +29,9 @@ Column {
         }
         SliderRow {
             glyph: "󰗌"; label: "Opacity"
-            value: ShellSettings.barOpacity
-            min: 0.4; max: 1.0; step: 0.02
+            key: "barOpacity"
+            step: 0.02
             displayValue: Math.round(ShellSettings.barOpacity * 100) + "%"
-            onChanged: (v) => ShellSettings.barOpacity = v
         }
     }
 
@@ -40,25 +39,22 @@ Column {
     SettingsCard {
         ToggleRow {
             glyph: "󰖲"; label: "Floating bar"
-            checked: ShellSettings.barFloating
-            onToggled: nextChecked => ShellSettings.barFloating = nextChecked
+            key: "barFloating"
         }
         CollapsibleSection {
             expanded: ShellSettings.barFloating
             SliderRow {
                 glyph: "󰁌"; label: "Width"
-                value: ShellSettings.barWidth
-                min: 0.5; max: 1.0; step: 0.02
+                key: "barWidth"
+                step: 0.02
                 displayValue: Math.round(ShellSettings.barWidth * 100) + "%"
-                onChanged: (v) => ShellSettings.barWidth = v
             }
             // stepped in 4s: the bar edge has to stay on the 4px grid or hairlines straddle a physical pixel
             SliderRow {
                 glyph: "󰡏"; label: "Edge gap"
-                value: ShellSettings.barGap
-                min: 0; max: 24; step: 4
+                key: "barGap"
+                step: 4
                 displayValue: ShellSettings.barGap === 0 ? "None" : ShellSettings.barGap + "px"
-                onChanged: (v) => ShellSettings.barGap = Math.round(v)
             }
         }
         // only the floating bar paints its own corners; docked multiplies the radius by 0
@@ -66,10 +62,8 @@ Column {
             expanded: ShellSettings.barFloating
             SliderRow {
                 glyph: "󱓻"; label: "Roundness"
-                value: ShellSettings.barRadius
-                min: 0; max: 28; step: 1
+                key: "barRadius"
                 displayValue: ShellSettings.barRadius === 0 ? "Flat" : ShellSettings.barRadius + "px"
-                onChanged: (v) => ShellSettings.barRadius = Math.round(v)
             }
         }
     }
@@ -79,17 +73,15 @@ Column {
         ToggleRow {
             glyph: "󰘷"; label: "Shell shadows"
             description: "Popups, notifications, OSD, and floating bar"
-            checked: ShellSettings.barShadow
-            onToggled: nextChecked => ShellSettings.barShadow = nextChecked
+            key: "barShadow"
         }
         CollapsibleSection {
             expanded: ShellSettings.barShadow
             SliderRow {
                 glyph: "󰘷"; label: "Shadow depth"
-                value: ShellSettings.barShadowStrength
-                min: 0.3; max: 1.6; step: 0.1
+                key: "barShadowStrength"
+                step: 0.1
                 displayValue: Math.round(ShellSettings.barShadowStrength * 100) + "%"
-                onChanged: (v) => ShellSettings.barShadowStrength = v
             }
         }
     }

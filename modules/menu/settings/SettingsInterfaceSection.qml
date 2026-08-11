@@ -60,20 +60,17 @@ Column {
         }
         ToggleRow {
             glyph: "󰹑"; label: "High contrast"
-            checked: ShellSettings.highContrast
-            onToggled: nextChecked => ShellSettings.highContrast = nextChecked
+            key: "highContrast"
         }
         ToggleRow {
             glyph: "󱂪"; label: "Keep groups open"
             description: "Show multiple category groups"
-            checked: ShellSettings.settingsNavPinned
-            onToggled: nextChecked => ShellSettings.settingsNavPinned = nextChecked
+            key: "settingsNavPinned"
         }
         ToggleRow {
             glyph: "󱖳"; label: "Reduce motion"
             description: "Disable transitions"
-            checked: ShellSettings.reduceMotion
-            onToggled: nextChecked => ShellSettings.reduceMotion = nextChecked
+            key: "reduceMotion"
         }
     }
 
