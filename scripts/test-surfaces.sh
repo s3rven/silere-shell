@@ -75,6 +75,8 @@ default_cfg="$(mktemp -d "${TMPDIR:-/tmp}/silere-surfaces-cfg.XXXXXX")"
 a11y_cfg="$(mktemp -d "${TMPDIR:-/tmp}/silere-surfaces-cfg.XXXXXX")"
 allon_cfg="$(mktemp -d "${TMPDIR:-/tmp}/silere-surfaces-cfg.XXXXXX")"
 scale_cfg="$(mktemp -d "${TMPDIR:-/tmp}/silere-surfaces-cfg.XXXXXX")"
+probe_runtime="$(mktemp -d "${TMPDIR:-/tmp}/silere-surfaces-runtime.XXXXXX")"
+chmod 0700 "$probe_runtime"
 probe_pid=""
 cleanup() {
     if [ -n "${probe_pid:-}" ] && kill -0 "$probe_pid" 2>/dev/null; then
@@ -82,7 +84,7 @@ cleanup() {
         wait "$probe_pid" 2>/dev/null || true
     fi
     rm -f "$log"
-    rm -rf "$default_cfg" "$a11y_cfg" "$allon_cfg" "$scale_cfg"
+    rm -rf "$default_cfg" "$a11y_cfg" "$allon_cfg" "$scale_cfg" "$probe_runtime"
 }
 trap cleanup EXIT
 
@@ -130,7 +132,8 @@ printf '{"__version":1,"uiScale":%s}\n' "$ui_max" > "$scale_cfg/silere-shell/set
 # kill that PID. Never pkill — a name match would take down the user's shell.
 run_probe() {  # $1 = label, $2 = XDG_CONFIG_HOME
     : > "$log"
-    XDG_CONFIG_HOME="$2" SILERE_PROBE_ROOT="$ROOT" SILERE_PROBE_LIST="$list" \
+    XDG_CONFIG_HOME="$2" XDG_RUNTIME_DIR="$probe_runtime" \
+        SILERE_PROBE_ROOT="$ROOT" SILERE_PROBE_LIST="$list" \
         QT_FORCE_STDERR_LOGGING=1 QT_QPA_PLATFORM=offscreen \
         qs -p "$PROBE" --no-color >"$log" 2>&1 &
     probe_pid=$!

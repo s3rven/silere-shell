@@ -13,6 +13,11 @@ ShellRoot {
     property int _failures: 0
     property int _checks: 0
 
+    QtObject {
+        id: probeAnchor
+        property real menuAnchorX: 42
+    }
+
     function _check(condition: bool, label: string): void {
         root._checks++
         if (condition) return
@@ -44,6 +49,81 @@ ShellRoot {
             "calendar rejects non-leap day")
         root._check(!CalendarState._validMarkKey("2024-13-1"),
             "calendar rejects invalid month")
+
+        CalendarState.toggleAt(probeAnchor.menuAnchorX, null, probeAnchor)
+        root._check(CalendarState.effectiveAnchorX === 42,
+            "calendar reads its live popup anchor")
+        probeAnchor.menuAnchorX = 73
+        root._check(CalendarState.effectiveAnchorX === 73,
+            "calendar follows popup anchor movement")
+        CalendarState.close()
+
+        const popupEdge = Metrics.popupClearance(8)
+        const topPopupY = Metrics.popupY(1000, 200, false, popupEdge)
+        const bottomPopupY = Metrics.popupY(1000, 200, true, popupEdge)
+        root._check(isFinite(topPopupY) && isFinite(bottomPopupY),
+            "popup placement stays finite")
+        root._check(topPopupY + bottomPopupY + 200 === 1000,
+            "top and bottom popup placement is symmetric")
+
+        root._check(IconResolver.localSource("https://example.invalid/icon.png") === "",
+            "icon resolver rejects remote URLs")
+        root._check(IconResolver.localSource("data:image/png;base64,AAAA") === "",
+            "icon resolver rejects data URLs")
+        root._check(IconResolver.localSource("file://example.invalid/icon.png") === "",
+            "icon resolver rejects remote file authorities")
+        root._check(IconResolver.localSource("file:relative-icon.png") === "",
+            "icon resolver rejects relative file URLs")
+        root._check(IconResolver.localSource("file:///tmp/icon.png") === "file:///tmp/icon.png",
+            "icon resolver keeps absolute file URLs")
+        root._check(IconResolver.localSource("image://icon/test") === "image://icon/test",
+            "icon resolver keeps Qt image providers")
+        root._check(IconResolver.localSource("/tmp/icon #?.png")
+                === "file:///tmp/icon%20%23%3F.png",
+            "icon resolver encodes local file paths")
+        const bounded = IconResolver.boundedText("abcdef", 4)
+        root._check(bounded === "abc…" && bounded.length === 4,
+            "icon resolver bounds external labels")
+
+        const longWindowText = "x".repeat(Compositor.maxWindowTitleChars + 20)
+        const boundedWindowText = Compositor.boundedExternalText(
+            longWindowText, Compositor.maxWindowTitleChars)
+        root._check(boundedWindowText.length === Compositor.maxWindowTitleChars
+                && boundedWindowText.endsWith("…"),
+            "compositor bounds client-controlled window text")
+
+        const longMediaText = "m".repeat(Media.maxMetadataChars + 20)
+        root._check(Media.boundedMetadataText(longMediaText, Media.maxMetadataChars).length
+                === Media.maxMetadataChars,
+            "media service bounds player metadata")
+        root._check(Media.artSource("data:image/png;base64,AAAA") === "",
+            "media service rejects inline artwork data")
+        root._check(Media.artSource("https://example.invalid/cover.jpg")
+                === "https://example.invalid/cover.jpg",
+            "media service keeps intentional HTTP artwork")
+        root._check(Media.artSource("file://example.invalid/cover.jpg") === "",
+            "media service rejects remote file artwork")
+        root._check(Media.artSource("https://example.invalid/bad\ncover.jpg") === "",
+            "media service rejects control characters in artwork URLs")
+        root._check(Media.finiteNonnegative(NaN) === 0
+                && Media.finiteNonnegative(Infinity) === 0
+                && Media.finiteNonnegative(12.5) === 12.5,
+            "media service normalizes non-finite timing metadata")
+        root._check(Audio._clampVolume(NaN) === 0
+                && Audio._clampVolume(Infinity) === 0
+                && Audio._clampVolume(1.5) === 1,
+            "audio service normalizes non-finite backend volume")
+        root._check(Audio.sinkLabel({ description: "s".repeat(300) }).length === 256,
+            "audio service bounds PipeWire sink labels")
+
+        const commitLines = []
+        for (let i = 0; i < ShellUpdate.maxCommitDetail + 20; i++)
+            commitLines.push("abcdef" + i + " " + "subject".repeat(100))
+        const parsedCommits = ShellUpdate._parseCommits(commitLines.join("\n"))
+        root._check(parsedCommits.length === ShellUpdate.maxCommitDetail,
+            "shell update caps commit detail models")
+        root._check(parsedCommits[0].subject.length === ShellUpdate.maxCommitSubjectChars,
+            "shell update bounds commit subjects")
 
         const originalLimit = ShellSettings.notifHistoryLimit
         ShellSettings._coerce({ k: "notifHistoryLimit", t: "int", min: 5, max: 100 }, 999)
