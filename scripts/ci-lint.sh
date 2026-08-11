@@ -363,12 +363,15 @@ elif ! grep -qF "depends=('quickshell>=0.3')" "$aur_dir/PKGBUILD" \
   fail "AUR package must enforce the documented Quickshell 0.3 minimum"
 elif command -v makepkg >/dev/null 2>&1; then
   aur_srcinfo="$(mktemp "${TMPDIR:-/tmp}/silere-srcinfo.XXXXXX")"
-  if (cd "$aur_dir" && makepkg --printsrcinfo -p PKGBUILD) >"$aur_srcinfo" \
-      && cmp -s "$aur_srcinfo" "$aur_dir/.SRCINFO"; then
+  # makepkg refuses to run as root, which is exactly how a container CI runs it;
+  # that is "could not check", not "stale", and the two must not report the same
+  if ! (cd "$aur_dir" && makepkg --printsrcinfo -p PKGBUILD) >"$aur_srcinfo" 2>/dev/null \
+      || [ ! -s "$aur_srcinfo" ]; then
+    skip "AUR" "makepkg cannot run here; dependency floor still checked"
+  elif [ "$(cat "$aur_srcinfo")" = "$(cat "$aur_dir/.SRCINFO")" ]; then
     ok "AUR" ".SRCINFO matches PKGBUILD"
   else
     fail "packaging/aur/.SRCINFO is stale; regenerate it with makepkg --printsrcinfo"
-    diff -u "$aur_dir/.SRCINFO" "$aur_srcinfo" || true
   fi
   rm -f "$aur_srcinfo"
 else
