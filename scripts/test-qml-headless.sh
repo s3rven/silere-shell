@@ -114,22 +114,31 @@ if [ ! -f "$CHECK_ROOT/config/MatugenTheme.qml" ]; then
 fi
 
 had_failure=0
-count=0
-printf 'checking QML bytecode'
-while IFS= read -r f; do
-    count=$((count + 1))
-    if [ $((count % 20)) -eq 0 ]; then printf '.'; fi
-    out="$tmp/$count.qmlc"
-    if err="$("$QMLCACHEGEN" --only-bytecode -I "$CHECK_ROOT" "${qml_import_args[@]}" -o "$out" "$f" 2>&1)"; then
-        :
-    else
-        rc=$?
-        [ "$rc" -eq 130 ] && exit 130
-        printf '\nFAIL: %s\n%s\n' "${f#"$CHECK_ROOT"/}" "$err" >&2
-        had_failure=1
-    fi
-done < <(find "$CHECK_ROOT" -name "*.qml" -not -path "*/.git/*")
-printf '\n'
+jobs_n="$(nproc 2>/dev/null || echo 4)"
+
+# paths never contain newlines here, so one per line round-trips into the workers
+printf '%s\n' "${qml_import_args[@]}" > "$tmp/import-args"
+mapfile -d '' -t QML_FILES < <(find "$CHECK_ROOT" -name "*.qml" -not -path "*/.git/*" -print0)
+
+cat > "$tmp/cachegen-one.sh" <<EOS
+#!/usr/bin/env bash
+set -u
+mapfile -t args < "$tmp/import-args"
+out="\$(printf '%s' "\$1" | cksum | tr -d ' ')"
+if err="\$("$QMLCACHEGEN" --only-bytecode -I "$CHECK_ROOT" "\${args[@]}" -o "$tmp/\$out.qmlc" "\$1" 2>&1)"; then
+    exit 0
+fi
+printf '\nFAIL: %s\n%s\n' "\${1#$CHECK_ROOT/}" "\$err" >&2
+exit 1
+EOS
+chmod +x "$tmp/cachegen-one.sh"
+
+printf 'checking QML bytecode (%s files, %s jobs)\n' "${#QML_FILES[@]}" "$jobs_n"
+rc=0
+printf '%s\0' "${QML_FILES[@]}" \
+    | xargs -0 -P "$jobs_n" -n 1 "$tmp/cachegen-one.sh" || rc=$?
+[ "$rc" -eq 130 ] && exit 130
+[ "$rc" -ne 0 ] && had_failure=1
 
 # qmllint catches unresolved and unused imports that qmlcachegen accepts
 QMLLINT="$(find_qmllint || true)"
@@ -181,21 +190,28 @@ else
         echo "      update the Qt declarative tooling, or remove this older qmllint from PATH" >&2
         had_failure=1
     else
-        printf 'checking QML imports'
-        lint_count=0
-        while IFS= read -r f; do
-            lint_count=$((lint_count + 1))
-            if [ $((lint_count % 20)) -eq 0 ]; then printf '.'; fi
-            if err="$("$QMLLINT" "${qmllint_args[@]}" -I "$CHECK_ROOT" "${qml_import_args[@]}" "$f" 2>&1)"; then
-                :
-            else
-                rc=$?
-                [ "$rc" -eq 130 ] && exit 130
-                printf '\nFAIL: %s\n%s\n' "${f#"$CHECK_ROOT"/}" "$err" >&2
-                had_failure=1
-            fi
-        done < <(find "$CHECK_ROOT" -name "*.qml" -not -path "*/.git/*")
-        printf '\n'
+        printf '%s\n' "${qmllint_args[@]}" > "$tmp/lint-args"
+        # the tree carries a clean baseline of qmltypes warnings; only a non-zero batch is news
+        cat > "$tmp/qmllint-batch.sh" <<EOS
+#!/usr/bin/env bash
+set -u
+mapfile -t args < "$tmp/import-args"
+mapfile -t largs < "$tmp/lint-args"
+if err="\$("$QMLLINT" "\${largs[@]}" -I "$CHECK_ROOT" "\${args[@]}" "\$@" 2>&1)"; then
+    exit 0
+fi
+printf '\n%s\n' "\$err" >&2
+exit 1
+EOS
+        chmod +x "$tmp/qmllint-batch.sh"
+
+        printf 'checking QML imports (%s files, %s jobs)\n' "${#QML_FILES[@]}" "$jobs_n"
+        # qmllint takes a batch per process, so the run costs jobs × startup, not files × startup
+        rc=0
+        printf '%s\0' "${QML_FILES[@]}" \
+            | xargs -0 -P "$jobs_n" -n 8 "$tmp/qmllint-batch.sh" || rc=$?
+        [ "$rc" -eq 130 ] && exit 130
+        [ "$rc" -ne 0 ] && had_failure=1
     fi
 fi
 
@@ -203,4 +219,4 @@ if [ "$had_failure" -ne 0 ]; then
     echo "FAIL: headless QML type-check found broken imports/types" >&2
     exit 1
 fi
-echo "headless QML type-check passed ($count files)"
+echo "headless QML type-check passed (${#QML_FILES[@]} files)"

@@ -349,6 +349,8 @@ if command -v shellcheck >/dev/null 2>&1; then
   # Warnings include mode/word-splitting mistakes that are real portability or
   # permission bugs. Intentional sourced-library false positives are suppressed
   # at their declaration so a new warning cannot disappear in the noise.
+  # one invocation, not per-file: shellcheck resolves assignments and uses across the whole set,
+  # so sharding it invents SC2154/SC2034 false positives
   if shellcheck --severity=warning "${script_files[@]}"; then ok "shellcheck"; else fail "shellcheck reported warnings"; fi
 else
   skip "shellcheck" "not installed"

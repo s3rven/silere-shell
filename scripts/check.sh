@@ -356,7 +356,7 @@ if command -v qs >/dev/null 2>&1; then
         cat "$smoke_log"
         fail "startup" "Quickshell exited with status $code"
       fi
-    elif grep -qE 'Failed to load configuration|Type [^ ]+ unavailable|module ".*" is not installed' "$smoke_log"; then
+    elif grep -qE 'Failed to load configuration|Type [^ ]+ unavailable|module ".*" is not installed|Binding loop detected' "$smoke_log"; then
       cat "$smoke_log"
       fail "startup" "Quickshell reported a QML compatibility error"
     else
@@ -386,7 +386,7 @@ if command -v qs >/dev/null 2>&1; then
         if [ "$code" -ne 0 ] && [ "$code" -ne 124 ]; then
           cat "$cov_log"
           fail "off-path load" "Quickshell exited with status $code with every option on"
-        elif grep -qE 'Failed to load configuration|Type [^ ]+ unavailable|Cannot assign to non-existent property|is not a type' "$cov_log"; then
+        elif grep -qE 'Failed to load configuration|Type [^ ]+ unavailable|Cannot assign to non-existent property|is not a type|Binding loop detected' "$cov_log"; then
           cat "$cov_log"
           fail "off-path load" "a default-off code path failed to load"
         else

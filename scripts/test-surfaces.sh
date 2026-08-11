@@ -130,10 +130,12 @@ printf '{"__version":1,"uiScale":%s}\n' "$ui_max" > "$scale_cfg/silere-shell/set
 # Neither Qt.exit() nor Quickshell.exit() ends a Quickshell process, so the probe
 # cannot quit itself: run it in the background, wait for its sentinel line, then
 # kill that PID. Never pkill — a name match would take down the user's shell.
-run_probe() {  # $1 = label, $2 = XDG_CONFIG_HOME
+run_probe() {  # $1 = label, $2 = XDG_CONFIG_HOME, $3 = Qt scale
+    local qt_scale="${3:-1}"
     : > "$log"
     XDG_CONFIG_HOME="$2" XDG_RUNTIME_DIR="$probe_runtime" \
         SILERE_PROBE_ROOT="$ROOT" SILERE_PROBE_LIST="$list" \
+        QT_SCALE_FACTOR="$qt_scale" \
         QT_FORCE_STDERR_LOGGING=1 QT_QPA_PLATFORM=offscreen \
         qs -p "$PROBE" --no-color >"$log" 2>&1 &
     probe_pid=$!
@@ -160,7 +162,7 @@ run_probe() {  # $1 = label, $2 = XDG_CONFIG_HOME
     local errs
     # grep is line-oriented, so [^\n] here means "not backslash or n" and would
     # truncate "Cannot assign to non-existent..." at the first n. Use .* instead.
-    errs="$(grep -oE 'Unable to assign .*|Cannot assign .*|is not a type|ReferenceError: [^,]*|TypeError: [^,]*' "$log" \
+    errs="$(grep -oE 'Unable to assign .*|Cannot assign .*|is not a type|ReferenceError: [^,]*|TypeError: [^,]*|Binding loop detected[^,]*' "$log" \
         | sort -u | head -10 || true)"
     if [ -n "$errs" ]; then
         printf '%s\n' "$errs" | sed "s/^/  [$1] /" >&2
@@ -181,4 +183,5 @@ run_probe "default" "$default_cfg"
 run_probe "a11y" "$a11y_cfg"
 run_probe "all-on" "$allon_cfg"
 run_probe "max-scale" "$scale_cfg"
-echo "surface probe passed (default + reduce-motion/high-contrast + every option on + largest type)"
+run_probe "fractional" "$default_cfg" "1.25"
+echo "surface probe passed (default + reduce-motion/high-contrast + every option on + largest type + fractional scale)"

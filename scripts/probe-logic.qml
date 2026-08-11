@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import "config"
 import "services"
+import "modules/menu/controls"
 
 // Small behavioral assertions for pure logic that a type-check or construction
 // probe cannot validate. Keep this free of compositor and hardware dependencies.
@@ -17,6 +18,9 @@ ShellRoot {
         id: probeAnchor
         property real menuAnchorX: 42
     }
+
+    Component { id: sliderTrackFactory; SliderTrack {} }
+    Component { id: gradientSliderFactory; GradientSlider {} }
 
     function _check(condition: bool, label: string): void {
         root._checks++
@@ -92,8 +96,17 @@ ShellRoot {
         const bounded = SafeText.boundedText("abcdef", 4)
         root._check(bounded === "abc…" && bounded.length === 4,
             "icon resolver bounds external labels")
+        const boundedEmoji = SafeText.boundedText("ab🦊cd", 4)
+        root._check(boundedEmoji === "ab…"
+                && !(boundedEmoji.charCodeAt(boundedEmoji.length - 2) >= 0xD800
+                    && boundedEmoji.charCodeAt(boundedEmoji.length - 2) <= 0xDBFF),
+            "text clipping never leaves half a surrogate pair")
         root._check(SafeText.singleLineText("  alpha\nbeta\u202E  ", 32) === "alpha beta",
             "icon resolver flattens controls in external labels")
+        root._check(SafeText.initial("👩🏽‍💻 developer", "?") === "👩🏽‍💻",
+            "icon resolver keeps a joined emoji grapheme whole")
+        root._check(SafeText.boundedText("ab👩🏽‍💻cd", 8) === "ab…",
+            "text clipping never splits a joined emoji grapheme")
 
         const longWindowText = "x".repeat(Compositor.maxWindowTitleChars + 20)
         const boundedWindowText = SafeText.singleLineText(
@@ -128,6 +141,81 @@ ShellRoot {
             "audio service normalizes non-finite backend volume")
         root._check(Audio.sinkLabel({ description: "s".repeat(300) }).length === 256,
             "audio service bounds PipeWire sink labels")
+
+        const track = sliderTrackFactory.createObject(root, {
+            width: 100, value: 0.5, min: 0, max: 1, step: 0.1
+        })
+        let trackChanged = -1
+        track.changed.connect(value => trackChanged = value)
+        let keyEvent = { key: Qt.Key_Home, modifiers: 0, accepted: false }
+        track.handleKey(keyEvent)
+        root._check(track.shownValue === 0 && trackChanged === 0 && keyEvent.accepted,
+            "slider Home reaches the minimum")
+        keyEvent = { key: Qt.Key_End, modifiers: 0, accepted: false }
+        track.handleKey(keyEvent)
+        root._check(track.shownValue === 1 && trackChanged === 1 && keyEvent.accepted,
+            "slider End reaches the maximum")
+        keyEvent = { key: Qt.Key_PageDown, modifiers: 0, accepted: false }
+        track.handleKey(keyEvent)
+        root._check(track.shownValue === 0 && trackChanged === 0 && keyEvent.accepted,
+            "slider Page Down applies ten steps")
+        root._check(track._posToVal(0) === 0 && track._posToVal(100) === 1,
+            "slider inset endpoints preserve the full range")
+        track.interactive = false
+        track.nudge(1, 1)
+        root._check(track.shownValue === 0,
+            "non-interactive slider ignores keyboard nudges")
+        track.destroy()
+
+        const gradient = gradientSliderFactory.createObject(root, {
+            width: 100, position: 0.5, displayScale: 360, wraps: true
+        })
+        let picked = -1
+        gradient.picked.connect(value => picked = value)
+        keyEvent = { key: Qt.Key_Home, modifiers: 0, accepted: false }
+        gradient._handleKey(keyEvent)
+        root._check(picked === 0 && keyEvent.accepted,
+            "colour slider Home reaches the minimum")
+        keyEvent = { key: Qt.Key_End, modifiers: 0, accepted: false }
+        gradient._handleKey(keyEvent)
+        root._check(Math.abs(picked - 359 / 360) < 0.000001 && keyEvent.accepted,
+            "wrapping colour slider End reaches its last distinct value")
+        gradient.interactive = false
+        picked = -1
+        gradient._nudge(1, 1)
+        root._check(picked === -1,
+            "non-interactive colour slider ignores keyboard nudges")
+        gradient.destroy()
+
+        const toolsWas = SystemTools._tools
+        const familyWas = SystemTools.packageFamily
+        const readyWas = SystemTools.ready
+        const updateCommand = function(family, tools) {
+            SystemTools.packageFamily = family
+            SystemTools._tools = tools
+            SystemTools.ready = true
+            return Updates._cmd()
+        }
+        root._check(updateCommand("pacman", { checkupdates: true }).includes("checkupdates"),
+            "package updates build the pacman command")
+        root._check(updateCommand("pacman", { paru: true }).includes("paru -Qu"),
+            "package updates build the AUR fallback command")
+        root._check(updateCommand("apt", { apt: true }).includes("apt list --upgradable"),
+            "package updates build the apt command")
+        root._check(updateCommand("dnf", { dnf: true }).includes("dnf -q check-update"),
+            "package updates build the dnf command")
+        root._check(updateCommand("zypper", { zypper: true }).includes("zypper -q list-updates"),
+            "package updates build the zypper command")
+        root._check(updateCommand("xbps", { "xbps-install": true }).includes("xbps-install -Mun"),
+            "package updates build the XBPS command")
+        Updates.count = 3
+        Updates._parseDetail("3\nSPLIT 2 1\none 1 -> 2\ntwo 2 -> 3\naur 4 -> 5")
+        root._check(Updates.repoCount === 2 && Updates.aurCount === 1
+                && Updates.packages.length === 3 && Updates.packages[2].aur,
+            "package updates split repository and AUR details")
+        SystemTools._tools = toolsWas
+        SystemTools.packageFamily = familyWas
+        SystemTools.ready = readyWas
 
         const commitLines = []
         for (let i = 0; i < ShellUpdate.maxCommitDetail + 20; i++)
