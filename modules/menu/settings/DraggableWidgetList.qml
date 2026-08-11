@@ -9,10 +9,13 @@ import "../controls"
 Item {
     id: root
 
+    // the page's scroll container, so a drag can reach lanes past the viewport edge
+    property Flickable scroller: null
+
     readonly property int _toolbarH: Metrics.rowHeightFor(32)
     readonly property int _zoneHeaderH: 20
-    readonly property int _rowH: 32
-    readonly property int _emptyH: 28
+    readonly property int _rowH: Metrics.rowHeightFor(32)
+    readonly property int _emptyH: Metrics.rowHeightFor(28)
     readonly property int _bottomPad: 8
     readonly property var _allKeys: ShellSettings.barWidgetKeys
     readonly property var _zones: ["left", "center", "right"]
@@ -109,6 +112,8 @@ Item {
             ShellSettings.barWidgetOrderCenterKeys.slice(),
             ShellSettings.barWidgetOrderRightKeys.slice())
         root._dragY = root._yForSlot(root._combinedSlotOf(key))
+        root._dragScrollOffset = 0
+        root._autoScrollDir = 0
         root._draggingKey = key
     }
 
@@ -123,8 +128,68 @@ Item {
         root._previewLayout = root._makePreviewLayout(left, center, right)
     }
 
+    function _clampDragY(y: real): real {
+        const maxY = root._rightEmpty ? root._rightListTop
+            : root._rightListTop + (root._rightCount - 1) * root._rowH
+        return Math.max(root._leftListTop, Math.min(maxY, y))
+    }
+
+    function _applyDragPosition(key: string): void {
+        const targetZone = root._zoneForY(root._dragY)
+        const slot = root._slotForY(root._dragY)
+        const targetIndex = targetZone === "left" ? slot
+            : targetZone === "center" ? slot - root._leftCount
+            : slot - root._leftCount - root._centerCount
+        const loc = root._locate(key)
+        if (targetZone !== loc.zone || targetIndex !== loc.index)
+            root._previewMove(key, targetZone, targetIndex)
+    }
+
+    // the pointer stays put while the view scrolls, so edge distance is measured in the
+    // scroller's own coordinates, not the list's
+    function _updateAutoScroll(): void {
+        const f = root.scroller
+        if (!f || root._draggingKey.length === 0) {
+            root._autoScrollDir = 0
+            return
+        }
+        const p = root.mapToItem(f, 0, root._dragY + root._rowH / 2)
+        root._autoScrollDir = p.y < root._rowH ? -1
+            : p.y > f.height - root._rowH ? 1 : 0
+    }
+
+    property int _autoScrollDir: 0
+    // translation is measured from the grab point, so auto-scrolled distance has to be
+    // carried separately or the next pointer move undoes it
+    property real _dragScrollOffset: 0
+
+    Timer {
+        id: _autoScrollTick
+        interval: 16
+        repeat: true
+        running: root._autoScrollDir !== 0 && root._draggingKey.length > 0
+            && root.scroller !== null
+        onTriggered: {
+            const f = root.scroller
+            if (!f) return
+            const maxY = Math.max(0, f.contentHeight - f.height)
+            const next = Math.max(0, Math.min(maxY, f.contentY + root._autoScrollDir * 6))
+            const delta = next - f.contentY
+            if (delta === 0) {
+                root._autoScrollDir = 0
+                return
+            }
+            f.contentY = next
+            // carry the row with the view or it slides out from under the pointer
+            root._dragScrollOffset += delta
+            root._dragY = root._clampDragY(root._dragY + delta)
+            root._applyDragPosition(root._draggingKey)
+        }
+    }
+
     function _finishDrag(key: string): void {
         if (root._draggingKey !== key) return
+        root._autoScrollDir = 0
         ShellSettings.setBarWidgetLayout(
             root._previewLayout.left, root._previewLayout.center,
             root._previewLayout.right)
@@ -201,7 +266,7 @@ Item {
             anchors.right: _reset.left
             anchors.rightMargin: 8
             anchors.verticalCenter: parent.verticalCenter
-            text: "Drag to reorder or move between lanes"
+            text: "Drag to reorder · arrow keys move between lanes"
             elide: Text.ElideRight
             color: Theme.withAlpha(Theme.subtext, 0.58)
             font.pixelSize: Settings.fontCaption
@@ -369,18 +434,10 @@ Item {
 
                 onTranslationChanged: {
                     if (!active) return
-                    const maxY = root._rightEmpty ? root._rightListTop
-                        : root._rightListTop + (root._rightCount - 1) * root._rowH
-                    root._dragY = Math.max(root._leftListTop,
-                        Math.min(maxY, startY + translation.y))
-
-                    const targetZone = root._zoneForY(root._dragY)
-                    const slot = root._slotForY(root._dragY)
-                    const targetIndex = targetZone === "left" ? slot
-                        : targetZone === "center" ? slot - root._leftCount
-                        : slot - root._leftCount - root._centerCount
-                    if (targetZone !== _row.zone || targetIndex !== _row.zoneIndex)
-                        root._previewMove(_row.key, targetZone, targetIndex)
+                    root._dragY = root._clampDragY(
+                        startY + translation.y + root._dragScrollOffset)
+                    root._applyDragPosition(_row.key)
+                    root._updateAutoScroll()
                 }
             }
 

@@ -11,6 +11,9 @@ PageShell {
 
     implicitHeight: _detail.height
 
+    // the arranger scrolls this while a row is dragged past the viewport edge
+    property Flickable scroller: null
+
     property string _shownSection: MenuState.settingsSection
     // assigned once to drop the binding: live, it swaps the section the instant MenuState changes,
     // so the first transition fades out content that was already replaced
@@ -273,7 +276,7 @@ PageShell {
                 width: _detailBody.width
                 spacing: 0
 
-                DraggableWidgetList { width: parent.width }
+                DraggableWidgetList { width: parent.width; scroller: root.scroller }
             }
         }
 

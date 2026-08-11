@@ -839,6 +839,7 @@ PanelWindow {
                                 active: panel.activeTab === 1 && MenuState.open
                                 powerOpen: panel.powerOpen
                                 animateOnCreate: panel.fullyShown
+                                scroller: contentFlick
                                 onSectionSwapped: contentFlick.contentY = 0
                             }
                         }
