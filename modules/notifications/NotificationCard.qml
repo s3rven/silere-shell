@@ -320,6 +320,8 @@ Item {
             IconImage {
                 id: _headerIcon
                 anchors.fill: parent
+                // without this the themed icon decodes at its native size (often 256px+) to paint 24px
+                implicitSize: 24
                 source: card.hasNotificationImage && !card.showContentImage
                     && _previewImg.status === Image.Ready
                     ? card.notificationImageSource : card.appIconSource
