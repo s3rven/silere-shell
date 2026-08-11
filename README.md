@@ -53,6 +53,8 @@ The installer checks every QML module Silere imports and names any that are miss
 
 To start it, restart your compositor, or try it right away with `qs -p /that/path/shell.qml`.
 
+Once it's running, **click the active workspace diamond** to open the menu and settings. That is the way in, so it is worth binding a key to it early — see [Keybinds and scripts](#keybinds-and-scripts).
+
 To remove it, run `bash scripts/uninstall.sh` from the installed checkout. That clears autostart, theme, and update-timer integrations, but keeps the checkout, your settings, and the installed font.
 
 <details>

@@ -1,51 +1,109 @@
 # Changelog
 
-Notable changes to Silere Shell.
-
-Versions follow [Semantic Versioning](https://semver.org/) loosely while in `0.x`:
-minor versions change features, patch versions fix them. The settings file has its
-own `__version` and migrates separately.
+Notable changes to Silere Shell. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
+[Semantic Versioning](https://semver.org/) loosely while in `0.x`: minor versions
+change features, patch versions fix them.
 
 The updater tracks `main`, not tags, so a running install gets changes as they land
-rather than when a version is published here.
+rather than when a version is published here. The settings file has its own
+`__version` and migrates separately.
 
 ## [Unreleased]
 
-Settings carry over; a stored `barCornerStyle` of "flat" becomes a Roundness of 0.
+**Upgrading:** settings carry over. A stored `barCornerStyle` of "flat" becomes a
+Roundness of 0. A custom accent you already set is left exactly as it is. :D
 
 ### Added
 
-- Night Light and the daily update check say why a switch flipped back, instead of
-  failing silently. `hyprsunset` exiting on its own now reports its own last line.
+- Accent colours can be mixed by hand. A Custom swatch at the end of the accent row
+  opens a hue strip and an intensity strip. Before this there was only a hue strip,
+  and it silently reused the saturation of whatever colour was already set, so the
+  first custom colour anyone picked inherited the palest preset and stayed there.
+- An AUR package. `packaging/aur` carries the PKGBUILD, and an install with no git
+  checkout hides the git-backed update controls instead of failing on them.
+- Edge gap for a floating bar, adjustable from 0 to 24 px.
+- Workspace urgent pulse is its own toggle.
+- Night Light and the daily update check say why a switch flipped back rather than
+  failing silently. `hyprsunset` exiting on its own reports its last output line.
 - Reset backups are stamped with the time, so a second reset no longer overwrites
   the record of the first. The five newest are kept.
+- Hovering a notification stack holds the timer on every card in it. Cards used to
+  expire out from under the pointer and reflow what you were reading.
+- The settings category rail draws an edge line when there is more to scroll.
+- Notification history animates. Dismissing one entry glides the rest up instead of
+  snapping them, a newly archived notification fades in, and expanding a truncated
+  body eases the row open.
 
 ### Changed
 
-- Choice controls — Source, Date, Position and the rest — are separated chips. The
-  selected one carries an accent outline instead of a filled plate, so accent stays
-  a state colour rather than a resting one.
-- Bar corner style folded into Roundness: 0 is flat. The slider only appears for a
-  floating bar, since a docked bar does not paint its own corners.
+- Accent colours are mixed in LCh at a fixed lightness. In HSL, sweeping the hue
+  swung lightness across 34 points of L\* while the built-in presets span 5, so a
+  hand-picked colour came out either glaring or muddy depending on where you landed.
+  Every hue now sits at the presets' own lightness and stays inside sRGB.
+- Choice controls (Source, Date, Position and the rest) are separated chips, and the
+  selected one carries an accent outline instead of a filled plate.
+- Bar corner style folded into Roundness, where 0 is flat. The slider appears only
+  for a floating bar, since a docked bar does not paint its own corners.
+- Workspace settings are grouped under General, Content and Behavior.
+- Marker opacity reads "Number opacity" or "Dot opacity" depending on which the
+  marker is actually drawing.
+- The widget arranger follows the interface scale and scrolls the settings page
+  when a dragged row reaches an edge, so every lane stays reachable at large type.
+- OSD settings are grouped, and a row that depends on a toggle now sits under it.
+- The Battery settings section is hidden on systems with no battery instead of
+  showing a disabled row.
+- Base is one row for both theme sources. Switching Source recolours it in place
+  instead of collapsing one row and expanding a near-identical one.
+- Every scrolling surface rebounds the same way on a flick. The notification list
+  and both tray menus had drifted to a hard stop.
 - The Night Light panel builds when you open it, as the Wi-Fi and Bluetooth panels
   already did.
 - "Fully-charged OSD" is now "Fully charged alert", and the desktop-notification
   timeout reads "Dismiss after" like the other two timeout rows.
-- README resource figures re-measured, including how much of the memory is the Qt
-  and GPU driver floor rather than Silere.
+- `update.sh` answers version and status queries on an install with no git checkout
+  instead of treating it as a failure.
+- Both "Dismiss after" rows are sliders rather than fixed buttons, and reach the
+  range the settings file already allowed: 10 s for the OSD, 30 s for notifications.
+  The button rows stopped at 5 s and 15 s, so most of the range was unreachable.
+- The media visualizer fades out when playback stops. It holds its last frame for
+  the length of the fade and drops the cava client immediately; before, it was
+  destroyed in the same frame the fade began, so the fade played against nothing.
+- README resource figures re-measured, separating Silere's own memory from the Qt
+  and GPU driver floor.
 
 ### Fixed
 
+- Moving one accent strip no longer nudges the other. Both axes were read back out
+  of the stored colour, so each one inherited the other's rounding, and the strip
+  you were not touching animated the drift.
+- The hue strip works at zero intensity. Every hue wrote the same grey, so the
+  thumb snapped straight back and the strip did nothing at all.
+- A custom colour keeps its hue near grey. An 8-bit near-grey carries no hue to
+  recover, and the reading it produced was noise.
 - A setting changed in the last fraction of a second before logout is no longer
-  lost. Toggles and choices are written immediately; sliders still settle first.
-- The same for marking a day in the calendar.
+  lost. Toggles and choices write immediately; sliders still settle first, and
+  calendar day marks write the same way.
 - A double-click can no longer arm and confirm a destructive action in one gesture.
   Affects the power actions, clearing notification history, and resetting settings.
 - A row that disables itself while handling its own click no longer comes back
   looking keyboard-focused.
+- Hidden controls stay out of the tab chain, and every control activates from the
+  keyboard the same way.
+- A track that reports no length no longer shows one.
 - "Always show speed" no longer appears underneath a Network speed row that is
   disabled for want of NetworkManager.
 - The bar underline preview no longer reaches for an effect that is not built yet.
+- The bar no longer holds width for a window title it is not drawing. With the title
+  on but no room to draw it, the media text was squeezed and the bar latched into
+  compact for a title that never appeared — easiest to hit with the visualizer
+  centred, which competes for the same space.
+- The OSD shows again while the menu is open on a page with no volume or brightness
+  row. It was suppressed for the whole menu, not only the page that replaces it.
+- The workspace missed-notification dot appears while a fullscreen window is
+  silencing notifications, not only during Do Not Disturb.
+- Notification popups follow the configured floating-bar edge gap instead of using
+  the old fixed inset.
 
 ### Removed
 
@@ -58,7 +116,8 @@ Settings carry over; a stored `barCornerStyle` of "flat" becomes a Roundness of 
 
 ## [0.2.0] - 2026-08-10
 
-Mostly install and update fixes. Settings carry over untouched, nothing migrates.
+**Upgrading:** settings carry over untouched, nothing migrates. Mostly install and
+update fixes.
 
 ### Added
 
@@ -75,10 +134,10 @@ Mostly install and update fixes. Settings carry over untouched, nothing migrates
 - The update card warns about a wrong branch, detached HEAD or local edits before
   you press Install, not after it fails.
 - Pending commits moved into their own expandable list.
-- The bar stops rebuilding its workspace and window models when a layer opens or
+- The bar no longer rebuilds its workspace and window models when a layer opens or
   closes. Twenty menu cycles cost 43 rebuilds before, none now.
-- Retimed panel, popup and toggle motion. Split the floating shadow into an
-  ambient and a contact layer.
+- Retimed panel, popup and toggle motion.
+- The floating shadow is split into an ambient and a contact layer.
 - The media widget sizes to its text instead of holding a fixed slot.
 - Accents keep the chroma that sRGB blending used to cancel.
 - The Hyprland Lua autostart snippet uses the native `hl.exec_cmd`.
@@ -120,11 +179,11 @@ Mostly install and update fixes. Settings carry over untouched, nothing migrates
 ## [0.1.0] - 2026-08-08
 
 First tagged release. Silere had been in daily use for a while; this is just a
-point to refer back to.
+point to refer back to. Needs Quickshell 0.3 or newer and either Hyprland or niri.
+Everything else is optional, and the README lists what each tool turns on.
 
-Needs Quickshell 0.3 or newer and either Hyprland or niri. Everything else is
-optional, and the README lists what each tool turns on. Grouped by area here,
-since a first release has nothing to differ from.
+Grouped by area rather than by change type, since a first release has nothing to
+differ from.
 
 ### Shell
 
