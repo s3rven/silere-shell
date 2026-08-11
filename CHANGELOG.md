@@ -34,6 +34,8 @@ Roundness of 0. A custom accent you already set is left exactly as it is. :D
 - Notification history animates. Dismissing one entry glides the rest up instead of
   snapping them, a newly archived notification fades in, and expanding a truncated
   body eases the row open.
+- Notification history has privacy controls: its size is adjustable, and saved
+  notification text can be cleared and kept only for the current session.
 
 ### Changed
 
@@ -104,6 +106,10 @@ Roundness of 0. A custom accent you already set is left exactly as it is. :D
   silencing notifications, not only during Do Not Disturb.
 - Notification popups follow the configured floating-bar edge gap instead of using
   the old fixed inset.
+- Calendar mark read and save failures are shown inside the calendar, and fixing a
+  malformed marks file re-enables writes without restarting the shell.
+- The bundled AUR metadata reports a real VCS version and enforces the same
+  Quickshell 0.3 minimum as the installer documentation.
 
 ### Removed
 
@@ -113,6 +119,7 @@ Roundness of 0. A custom accent you already set is left exactly as it is. :D
 
 - The installer creates its config directory as 0700 for the whole path, not only
   the last segment.
+- The updater creates and re-hardens its whole cache path with private permissions.
 
 ## [0.2.0] - 2026-08-10
 
