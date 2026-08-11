@@ -41,41 +41,95 @@ Column {
                 readonly property int _titleH: 4 * Math.ceil(Math.max(40,
                     _accentGlyph.implicitHeight + 12, _accentTitle.implicitHeight + 12) / 4)
                 readonly property int _swatchH: Metrics.rowHeightFor(32)
-                height: _titleH + _swatchH + 4 + _hueStrip.height + 8
+                height: _titleH + _swatchH + _customStrips.height + 8
 
-                readonly property real _accentL: 0.70
-                function _accentForHS(h, s): string {
-                    const c = Qt.hsla(h, s, _accentL, 1.0)
+                // the palette's own working point: presets measure L* 68-73, C* 25-35
+                readonly property real _accentL: 70.8
+                readonly property real _accentCMax: 38
+                function _accentForCh(hue01, c01): string {
+                    const c = Theme.lchColor(_accentPicker._accentL,
+                        c01 * _accentPicker._accentCMax, hue01 * 360)
                     return "#" + root._hex2(c.r) + root._hex2(c.g) + root._hex2(c.b)
                 }
                 readonly property color _curColor: ShellSettings.neutralAccentAuto ? MatugenTheme.accent : ShellSettings.neutralAccent
-                readonly property real  _curHue:   isNaN(_curColor.hslHue) || _curColor.hslHue < 0 ? 0 : _curColor.hslHue
-                readonly property real  _curSat:   isNaN(_curColor.hslSaturation) || _curColor.hslSaturation < 0.08 ? 0.72 : _curColor.hslSaturation
+                readonly property var  _curLch:  Theme.lchOf(_curColor)
+
+                // the strips own hue and intensity; the stored hex is only their output.
+                // reading both back out of one 8-bit colour made each axis inherit the
+                // other's rounding, and the untouched thumb animated that drift
+                property real _hueMemo: 0
+                property real _satMemo: 0
+                property bool _stripWrite: false
+                // an 8-bit near-grey carries no hue: below this the recovered angle is noise
+                readonly property real _hueFloorC: 3.0
+
+                function _syncFromColor(): void {
+                    const l = _accentPicker._curLch
+                    if (l.C >= _accentPicker._hueFloorC) _accentPicker._hueMemo = l.h / 360
+                    _accentPicker._satMemo = Math.min(1, l.C / _accentPicker._accentCMax)
+                }
+                function _writeStrips(hue01: real, sat01: real): void {
+                    _accentPicker._hueMemo = hue01
+                    _accentPicker._satMemo = sat01
+                    _accentPicker._stripWrite = true
+                    ShellSettings.batch(() => {
+                        ShellSettings.neutralAccentAuto = false
+                        ShellSettings.neutralAccent = _accentPicker._accentForCh(hue01, sat01)
+                    })
+                    _accentPicker._stripWrite = false
+                }
+                on_CurColorChanged: if (!_stripWrite) _syncFromColor()
+                Component.onCompleted: _syncFromColor()
+
+                readonly property real _curHue: _hueMemo
+                readonly property real _curSat: _satMemo
+                // the hue rail must stay readable at zero intensity, where the colour is grey
+                readonly property real _railC: Math.max(_satMemo * _accentCMax, 20)
+                // line the rails up with the swatch run, not the viewport that scrolls it
+                readonly property int _railX: 12 + _swatchRow.edgePadding
 
                 readonly property var _options: [
-                    { auto: true,  color: "",        name: "Auto"   },
-                    { auto: false, color: "#b8bdd8", name: "Mist"   },
-                    { auto: false, color: "#82aee5", name: "Blue"   },
-                    { auto: false, color: "#b79bd7", name: "Violet" },
-                    { auto: false, color: "#78bfb5", name: "Teal"   },
-                    { auto: false, color: "#94bd8b", name: "Green"  },
-                    { auto: false, color: "#dd92a2", name: "Rose"   },
-                    { auto: false, color: "#d4ad77", name: "Amber"  }
+                    { auto: true,  custom: false, color: "",        name: "Auto"   },
+                    { auto: false, custom: false, color: "#b8bdd8", name: "Mist"   },
+                    { auto: false, custom: false, color: "#82aee5", name: "Blue"   },
+                    { auto: false, custom: false, color: "#b79bd7", name: "Violet" },
+                    { auto: false, custom: false, color: "#78bfb5", name: "Teal"   },
+                    { auto: false, custom: false, color: "#94bd8b", name: "Green"  },
+                    { auto: false, custom: false, color: "#dd92a2", name: "Rose"   },
+                    { auto: false, custom: false, color: "#d4ad77", name: "Amber"  },
+                    { auto: false, custom: true,  color: "",        name: "Custom" }
                 ]
-                readonly property int _activeIndex: {
+                readonly property int _customIndex: _options.length - 1
+                readonly property int _presetIndex: {
                     if (ShellSettings.neutralAccentAuto) return 0
                     const current = String(ShellSettings.neutralAccent).toLowerCase()
-                    for (let i = 1; i < _options.length; i++)
+                    for (let i = 1; i < _customIndex; i++)
                         if (String(_options[i].color).toLowerCase() === current) return i
                     return -1
                 }
+                // tapping Custom keeps the strips open even while the colour still equals a preset
+                property bool _customPinned: false
+                readonly property bool _customOpen: !ShellSettings.neutralAccentAuto
+                    && (_customPinned || _presetIndex < 0)
+                readonly property int _activeIndex: _customOpen ? _customIndex : _presetIndex
 
-                readonly property var _swColors: _options.map(o => o.auto ? MatugenTheme.accent : o.color)
-                readonly property string _activeName: _activeIndex >= 0
-                    ? _options[_activeIndex].name
-                    : String(ShellSettings.neutralAccent).toUpperCase()
-                readonly property string _shownName: _swatchRow.hoveredIndex >= 0 ? _options[_swatchRow.hoveredIndex].name : _activeName
-                readonly property color  _shownColor: _swatchRow.hoveredIndex >= 0 ? _swColors[_swatchRow.hoveredIndex] : _curColor
+                readonly property var _swColors: _options.map(o => o.auto ? MatugenTheme.accent
+                    : o.custom ? _accentPicker._curColor : o.color)
+                // dependent bindings settle in stages, so an index can be transiently out of
+                // range here even though no steady state produces one
+                function _nameAt(i: int): string {
+                    const o = i >= 0 && i < _options.length ? _options[i] : null
+                    return o ? o.name : ""
+                }
+                // a preset reads by name; a custom colour has none, so show what it actually is
+                readonly property string _activeName: _customOpen
+                    ? String(ShellSettings.neutralAccent).toUpperCase()
+                    : _nameAt(_activeIndex)
+                readonly property string _shownName: _swatchRow.hoveredIndex >= 0
+                    ? _nameAt(_swatchRow.hoveredIndex) : _activeName
+                readonly property color  _shownColor: _swatchRow.hoveredIndex >= 0
+                    && _swatchRow.hoveredIndex < _swColors.length
+                    ? _swColors[_swatchRow.hoveredIndex] : _curColor
 
                 // glyph cell and margins mirror SwatchPickerRow's header, or this stacked block
                 // sits 26px off the label column every neighbouring row shares
@@ -153,52 +207,93 @@ Column {
                             onTriggered: _swatchViewport.revealIndex(_swatchRow.activeIndex)
                         }
                         onFocusMoved: (i) => _swatchViewport.revealIndex(i)
-                        onPicked: (i) => ShellSettings.batch(() => {
-                            if (_accentPicker._options[i].auto) {
-                                ShellSettings.neutralAccentAuto = true
-                            } else {
+                        onPicked: (i) => {
+                            const opt = _accentPicker._options[i]
+                            _accentPicker._customPinned = !!opt.custom
+                            ShellSettings.batch(() => {
+                                if (opt.auto) {
+                                    ShellSettings.neutralAccentAuto = true
+                                    return
+                                }
                                 ShellSettings.neutralAccentAuto = false
-                                ShellSettings.neutralAccent = _accentPicker._options[i].color
-                            }
-                        })
+                                // Custom opens on the colour already stored; only a preset overwrites it
+                                if (!opt.custom) ShellSettings.neutralAccent = opt.color
+                            })
+                        }
                     }
                 }
 
-                HueStrip {
-                    id: _hueStrip
-                    anchors.top:       _swatchViewport.bottom; anchors.topMargin: 4
-                    anchors.left:      parent.left;  anchors.leftMargin:  12
-                    anchors.right:     parent.right; anchors.rightMargin: 12
-                    height: 24
-                    hue: _accentPicker._curHue
-                    saturation: _accentPicker._curSat
-                    lightness: _accentPicker._accentL
-                    thumbColor: _accentPicker._curColor
-                    dimmed: ShellSettings.neutralAccentAuto
-                    accessibleName: "Accent hue"
-                    accessibleDescription: ShellSettings.neutralAccentAuto
-                        ? "Auto accent; adjust to switch to a custom color"
-                        : _accentPicker._shownName
-                    onPicked: hue => ShellSettings.batch(() => {
-                        ShellSettings.neutralAccentAuto = false
-                        ShellSettings.neutralAccent = _accentPicker._accentForHS(hue, _accentPicker._curSat)
-                    })
+                Item {
+                    id: _customStrips
+                    anchors.top:   _swatchViewport.bottom
+                    anchors.left:  parent.left
+                    anchors.right: parent.right
+                    clip: true
+                    height: _accentPicker._customOpen ? _stripCol.implicitHeight : 0
+                    visible: height > 0.5
+                    enabled: _accentPicker._customOpen
+
+                    Disclosure on height { expanded: _accentPicker._customOpen }
+
+                    Column {
+                        id: _stripCol
+                        width: parent.width
+                        topPadding: 4
+                        spacing: 4
+                        opacity: _accentPicker._customOpen ? 1.0 : 0.0
+                        MotionBehavior on opacity {
+                            NumberAnimation {
+                                duration: Motion.fast
+                                easing.type: _accentPicker._customOpen ? Easing.OutCubic : Easing.InCubic
+                            }
+                        }
+
+                        GradientSlider {
+                            id: _hueStrip
+                            x: _accentPicker._railX
+                            width: Math.max(1, parent.width - _accentPicker._railX * 2)
+                            height: 24
+                            position: _accentPicker._curHue
+                            thumbColor: _accentPicker._curColor
+                            accessibleName: "Accent hue"
+                            accessibleDescription: _accentPicker._shownName
+                            trackGradient: Gradient {
+                                orientation: Gradient.Horizontal
+                                GradientStop { position: 0.000; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC,   0) }
+                                GradientStop { position: 0.167; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC,  60) }
+                                GradientStop { position: 0.333; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC, 120) }
+                                GradientStop { position: 0.500; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC, 180) }
+                                GradientStop { position: 0.667; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC, 240) }
+                                GradientStop { position: 0.833; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC, 300) }
+                                GradientStop { position: 1.000; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC, 360) }
+                            }
+                            onPicked: hue => _accentPicker._writeStrips(hue, _accentPicker._satMemo)
+                        }
+
+                        GradientSlider {
+                            id: _satStrip
+                            x: _accentPicker._railX
+                            width: Math.max(1, parent.width - _accentPicker._railX * 2)
+                            height: 24
+                            position: _accentPicker._curSat
+                            thumbColor: _accentPicker._curColor
+                            wraps: false
+                            displayScale: 100
+                            valueUnit: "percent"
+                            wheelKey: "accent-chroma"
+                            accessibleName: "Accent intensity"
+                            accessibleDescription: _accentPicker._shownName
+                            trackGradient: Gradient {
+                                orientation: Gradient.Horizontal
+                                GradientStop { position: 0.0; color: Theme.lchColor(_accentPicker._accentL, 0, _accentPicker._curHue * 360) }
+                                GradientStop { position: 1.0; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._accentCMax, _accentPicker._curHue * 360) }
+                            }
+                            onPicked: sat => _accentPicker._writeStrips(_accentPicker._hueMemo, sat)
+                        }
+                    }
                 }
             }
 
-            SwatchPickerRow {
-                glyph: "󰏘"; label: "Base"
-                options: [
-                    { value: "black",    name: "Black"    },
-                    { value: "charcoal", name: "Charcoal" },
-                    { value: "graphite", name: "Graphite" }
-                ]
-                // preview Theme.background exactly: the elevated surface read lighter than the applied color
-                colors: [Theme._tones.black.background, Theme._tones.charcoal.background, Theme._tones.graphite.background]
-                activeIndex: options.findIndex(o => o.value === ShellSettings.baseTone)
-                ringColor: Theme.accent
-                onPicked: (i) => ShellSettings.baseTone = options[i].value
-            }
         }
 
         CollapsibleSection {
@@ -217,23 +312,35 @@ Column {
                 onPicked: (i) => ShellSettings.matugenAccentRole = options[i].value
             }
 
-            SwatchPickerRow {
-                glyph: "󰏘"; label: "Base"
-                // same names and order as the neutral tones: each depth was solved to land on that
-                // tone's luminance, so calling them anything else invents a second vocabulary
-                options: [
-                    { value: "deeper", name: "Black"    },
-                    { value: "deep",   name: "Charcoal" },
-                    { value: "none",   name: "Graphite" }
-                ]
-                colors: [
-                    Theme.mix(MatugenTheme.background, "#000000", Theme._depths.deeper),
-                    Theme.mix(MatugenTheme.background, "#000000", Theme._depths.deep),
-                    Theme.mix(MatugenTheme.background, "#000000", Theme._depths.none)
-                ]
-                activeIndex: options.findIndex(o => o.value === ShellSettings.matugenDepth)
-                ringColor: Theme.accent
-                onPicked: (i) => ShellSettings.matugenDepth = options[i].value
+        }
+
+        // one row for both sources: each depth was solved to land on the matching neutral
+        // tone's luminance, so the three names mean the same thing on either side. Keeping it
+        // outside both groups means a Source switch recolours it instead of collapsing it.
+        SwatchPickerRow {
+            readonly property bool _neutral: ShellSettings.neutralTheme
+            glyph: "󰏘"; label: "Base"
+            options: _neutral
+                ? [{ value: "black",  name: "Black" },
+                   { value: "charcoal", name: "Charcoal" },
+                   { value: "graphite", name: "Graphite" }]
+                : [{ value: "deeper", name: "Black" },
+                   { value: "deep",   name: "Charcoal" },
+                   { value: "none",   name: "Graphite" }]
+            // preview Theme.background exactly: the elevated surface read lighter than the applied color
+            colors: _neutral
+                ? [Theme._tones.black.background,
+                   Theme._tones.charcoal.background,
+                   Theme._tones.graphite.background]
+                : [Theme.mix(MatugenTheme.background, "#000000", Theme._depths.deeper),
+                   Theme.mix(MatugenTheme.background, "#000000", Theme._depths.deep),
+                   Theme.mix(MatugenTheme.background, "#000000", Theme._depths.none)]
+            activeIndex: options.findIndex(o => o.value ===
+                (_neutral ? ShellSettings.baseTone : ShellSettings.matugenDepth))
+            ringColor: Theme.accent
+            onPicked: (i) => {
+                if (_neutral) ShellSettings.baseTone = options[i].value
+                else ShellSettings.matugenDepth = options[i].value
             }
         }
 

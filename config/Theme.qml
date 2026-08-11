@@ -157,6 +157,36 @@ Singleton {
                        ch( 0.0557 * X - 0.2040 * Y + 1.0570 * Z), 1.0)
     }
 
+    function lchOf(c: color): var {
+        const l = _labOf(c)
+        return { L: l.L, C: Math.sqrt(l.a * l.a + l.b * l.b),
+                 h: (Math.atan2(l.b, l.a) * 180 / Math.PI + 360) % 360 }
+    }
+
+    // linear rgb in range is equivalent to srgb in range, so test before the transfer curve
+    function _labFits(L: real, a: real, b: real): bool {
+        const fy = (L + 16) / 116, fx = fy + a / 500, fz = fy - b / 200
+        const g = t => { const c = t * t * t; return c > 0.008856 ? c : (t - 16 / 116) / 7.787 }
+        const X = g(fx) * 0.95047, Y = g(fy), Z = g(fz) * 1.08883
+        const ok = v => v >= -0.0005 && v <= 1.0005
+        return ok( 3.2406 * X - 1.5372 * Y - 0.4986 * Z)
+            && ok(-0.9689 * X + 1.8758 * Y + 0.0415 * Z)
+            && ok( 0.0557 * X - 0.2040 * Y + 1.0570 * Z)
+    }
+
+    // hold L* and hue, walk chroma down to the gamut edge: clamping rgb instead would shift the hue
+    function lchColor(L: real, C: real, h: real): color {
+        const r = h * Math.PI / 180, cos = Math.cos(r), sin = Math.sin(r)
+        let lo = 0, hi = Math.max(0, C)
+        if (_labFits(L, hi * cos, hi * sin)) return _labColor(L, hi * cos, hi * sin)
+        for (let i = 0; i < 12; i++) {
+            const mid = (lo + hi) / 2
+            if (_labFits(L, mid * cos, mid * sin)) lo = mid
+            else hi = mid
+        }
+        return _labColor(L, lo * cos, lo * sin)
+    }
+
     // an srgb lerp between distant hues cancels chroma, so put the anchor's chroma back after
     function tintKeepingChroma(anchor: color, tint: color, a: real): color {
         const blended = mix(anchor, tint, a)

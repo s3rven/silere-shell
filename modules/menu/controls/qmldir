@@ -19,7 +19,7 @@ ToggleSwitch    1.0 ToggleSwitch.qml
 
 # colour and content controls
 AccentSwatch    1.0 AccentSwatch.qml
-HueStrip        1.0 HueStrip.qml
+GradientSlider  1.0 GradientSlider.qml
 MediaButton     1.0 MediaButton.qml
 SwatchPickerRow 1.0 SwatchPickerRow.qml
 SwatchRow       1.0 SwatchRow.qml
