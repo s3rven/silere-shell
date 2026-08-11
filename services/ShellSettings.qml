@@ -274,6 +274,7 @@ Singleton {
     property bool   wsScrollSwitch:      false
     property bool   wsShowAppIcons:      false
     property bool   wsNotifPulse:        false
+    property bool   wsUrgentPulse:       true
     property real   wsMarkerOpacity:     1.0
     property real   wsIconOpacity:       0.68
     property bool   wsIconMono:          true
@@ -399,6 +400,7 @@ Singleton {
         { k: "wsScrollSwitch",      t: "bool", sec: "workspaces" },
         { k: "wsShowAppIcons",      t: "bool", sec: "workspaces" },
         { k: "wsNotifPulse",        t: "bool", sec: "workspaces" },
+        { k: "wsUrgentPulse",       t: "bool", sec: "workspaces" },
         { k: "wsMarkerOpacity",     t: "real", min: 0.2, max: 1.0, sec: "workspaces" },
         { k: "wsIconOpacity",       t: "real", min: 0.3, max: 1.0, sec: "workspaces" },
         { k: "wsIconMono",          t: "bool", sec: "workspaces" },

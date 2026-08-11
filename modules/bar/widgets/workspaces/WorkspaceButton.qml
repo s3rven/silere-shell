@@ -199,7 +199,7 @@ Item {
 
     Loader {
         id: _urgentFx
-        active: root.urgent && !root.active
+        active: root.urgent && !root.active && ShellSettings.wsUrgentPulse
         sourceComponent: Component {
             WorkspaceUrgentFx { barActive: root.barActive }
         }
