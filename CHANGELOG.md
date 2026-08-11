@@ -9,7 +9,7 @@ The updater tracks `main`, not tags, so a running install gets changes as they l
 rather than when a version is published here. The settings file has its own
 `__version` and migrates separately.
 
-## [Unreleased]
+## [0.3.0] - 2026-08-11
 
 **Upgrading:** settings carry over. A stored `barCornerStyle` of "flat" becomes a
 Roundness of 0. A custom accent you already set is left exactly as it is. :D
@@ -26,8 +26,9 @@ its slider; both drew the same thing there already, so nothing looks different.
   checkout hides the git-backed update controls instead of failing on them.
 - Edge gap for a floating bar, adjustable from 0 to 24 px.
 - Workspace urgent pulse is its own toggle.
-- Night Light and the daily update check say why a switch flipped back rather than
-  failing silently. `hyprsunset` exiting on its own reports its last output line.
+- Night Light, the daily update check and Power Mode say why a switch flipped back
+  rather than failing silently. `hyprsunset` exiting on its own reports its last
+  output line, and a rejected `powerprofilesctl set` reports its own.
 - Reset backups are stamped with the time, so a second reset no longer overwrites
   the record of the first. The five newest are kept.
 - Hovering a notification stack holds the timer on every card in it. Cards used to
@@ -109,6 +110,9 @@ its slider; both drew the same thing there already, so nothing looks different.
 - Hidden controls stay out of the tab chain, and every control activates from the
   keyboard the same way.
 - A track that reports no length no longer shows one.
+- An app or notification whose name begins with an emoji gets a whole character in
+  its initial badge. Reading the first UTF-16 unit split the pair and drew a blank
+  box instead of a letter.
 - "Always show speed" no longer appears underneath a Network speed row that is
   disabled for want of NetworkManager.
 - The bar underline preview no longer reaches for an effect that is not built yet.
@@ -144,6 +148,14 @@ its slider; both drew the same thing there already, so nothing looks different.
 
 ### Security
 
+- Persisted notification history is closed to other local users. Quickshell owns
+  that state file and creates it with the session umask, commonly leaving
+  notification text world-readable; its directory is now made `0700` and the file
+  `0600`, which also covers a file written after the shell starts. The packaged
+  launcher starts with a private umask as well.
+- Single-line text supplied by clients now drops control and bidirectional
+  override characters before layout and accessibility consume it. Raw network
+  and device identifiers remain untouched for backend actions.
 - The installer creates its config directory as 0700 for the whole path, not only
   the last segment.
 - The updater creates and re-hardens its whole cache path with private permissions.
@@ -267,6 +279,6 @@ differ from.
 - The updater only fast-forwards `main`. It refuses to run on a checkout with
   local changes or a diverged history, and says why instead of fixing it.
 
-[Unreleased]: https://github.com/s3rven/silere-shell/compare/v0.2.0...HEAD
+[0.3.0]: https://github.com/s3rven/silere-shell/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/s3rven/silere-shell/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/s3rven/silere-shell/releases/tag/v0.1.0
