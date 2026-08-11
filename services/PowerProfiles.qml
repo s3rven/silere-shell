@@ -21,6 +21,8 @@ Singleton {
 
     property int _writeGen: 0
     property bool _correctiveRefreshPending: false
+    // a read error is cleared by the next good read; a set error is not, so the two cannot share a string test
+    property bool _readError: false
 
     property int _getRetries: 0
     readonly property int _getRetryMax: 4
@@ -62,6 +64,7 @@ Singleton {
         const order = ["balanced", "performance", "power-saver"]
         const next = order[(order.indexOf(profile) + 1) % order.length]
         profile = next
+        root._readError = false
         root.lastError = ""
         root._writeGen++
         _set.exec(["powerprofilesctl", "set", next])
@@ -85,7 +88,10 @@ Singleton {
         timeoutMs: 8000
         environment: ({ "LC_ALL": "C" })
         stdout: StdioCollector { id: _getOut }
-        onTimeoutReached: root.lastError = "Power mode check timed out"
+        onTimeoutReached: {
+            root._readError = true
+            root.lastError = "Power mode check timed out"
+        }
         onExited: (code) => {
             if (_set.running || _gen !== root._writeGen) return
             if (code === 0) {
@@ -94,9 +100,10 @@ Singleton {
                     root.profile = p
                     root._getRetries = 0
                     root._correctiveRefreshPending = false
-                    if (root.lastError === "Power mode check timed out"
-                            || root.lastError === "Could not verify the power mode")
+                    if (root._readError) {
+                        root._readError = false
                         root.lastError = ""
+                    }
                     return
                 }
             }
@@ -108,8 +115,10 @@ Singleton {
                 _getRetry.restart()
                 return
             }
-            if (shouldRetry && !timedOut)
+            if (shouldRetry && !timedOut) {
+                root._readError = true
                 root.lastError = "Could not verify the power mode"
+            }
         }
     }
     BoundedProcess {
@@ -117,19 +126,24 @@ Singleton {
         timeoutMs: 8000
         environment: ({ "LC_ALL": "C" })
         stderr: StdioCollector { id: _setErr }
-        onTimeoutReached: root.lastError = "Power mode change timed out"
+        onTimeoutReached: {
+            root._readError = false
+            root.lastError = "Power mode change timed out"
+        }
         onExited: (code) => {
             if (timedOut) {
                 root._queueCorrectiveRefresh()
                 return
             }
             if (code === 0) {
+                root._readError = false
                 root.lastError = ""
                 root._queueCorrectiveRefresh()
                 return
             }
             // the row re-reads the daemon, so a swallowed failure just flips the
             // label back with no reason given
+            root._readError = false
             root.lastError = SafeText.boundedText(
                 _setErr.text.trim().split("\n").pop() || "Could not change the power mode", 160)
             root._queueCorrectiveRefresh()
