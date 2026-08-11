@@ -35,7 +35,6 @@ Singleton {
     // a distro package ships no .git, so every git-backed control hides instead of erroring
     property bool   packaged: false
     readonly property bool versionBusy: _versionProc.running
-    property string targetVersion: ""
     property string targetTag: ""
     property var    pendingCommits: []
     property bool   _checkTimedOut: false
@@ -291,16 +290,13 @@ Singleton {
         const n = parseInt((lines[0] || "").trim())
         root.count = isNaN(n) ? 0 : Math.max(0, n)
         let rest = lines.slice(1)
-        let target = ""
         let tag = ""
         // a flag file written before this line existed carries commits here instead
         if ((rest[0] ?? "").startsWith("target ")) {
             const parts = rest[0].slice(7).trim().split(/\s+/)
-            target = parts[0] ?? ""
             tag = parts[1] ?? ""
             rest = rest.slice(1)
         }
-        root.targetVersion = SafeText.boundedText(target, root.maxVersionTextChars)
         root.targetTag = SafeText.boundedText(tag, root.maxVersionTextChars)
         root.summary = rest.slice(0, root.maxCommitDetail).map(function(line) {
             return SafeText.boundedText(line, root.maxCommitSubjectChars + 80)
