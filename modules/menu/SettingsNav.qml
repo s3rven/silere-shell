@@ -722,4 +722,10 @@ Item {
         }
     }
 
+    ListEdgeLines {
+        anchors.fill: _navScroll
+        z: 2
+        list: _navScroll
+        maxOpacity: 0.72
+    }
 }

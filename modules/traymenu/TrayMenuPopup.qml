@@ -449,7 +449,6 @@ PanelWindow {
                     height: Math.max(0, _flyout.height - _flyout.pad * 2)
                     contentWidth: width
                     contentHeight: _subCol.implicitHeight
-                    boundsBehavior: Flickable.StopAtBounds
                     interactive: contentHeight > height
 
                     Column {
@@ -515,7 +514,6 @@ PanelWindow {
             height: Math.max(0, card.height - card.pad * 2)
             contentWidth: width
             contentHeight: _col.implicitHeight
-            boundsBehavior: Flickable.StopAtBounds
             interactive: contentHeight > height
 
             Column {
