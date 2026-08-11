@@ -8,7 +8,7 @@ If you're not sure whether something fits, ask in [Discussions](https://github.c
 
 Nothing lands on `main` on its own. You fork, push a branch, and open a PR; it gets reviewed and merged by hand. CI runs the lint, the Quickshell-module probe, and a headless type-check on every PR, so you don't need to run anything locally — push and let it report back.
 
-If you'd rather not wait on a CI round-trip, `bash scripts/check.sh` runs the full local validation gate and session diagnostics in well under a minute. Neither is required to open a PR.
+If you'd rather not wait on a CI round-trip, `bash scripts/check.sh` runs the full local validation gate and session diagnostics in well under a minute, and `bash scripts/ci-lint.sh` adds the structural lint that CI runs alongside it. Neither is required to open a PR.
 
 Reviews are about whether the change fits the shell, not about style-policing. Expect questions and sometimes a "let's not" — Silere stays deliberately small, so some good ideas still get turned down. That's not a judgment on the idea or the code.
 
