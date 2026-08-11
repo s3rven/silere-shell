@@ -50,15 +50,16 @@ PanelWindow {
         interval: 1
         onTriggered: bar._contentFloorWidth = _barContent.minimumSurfaceWidth
     }
-    // constant 4 keeps the bar edge on the 4px grid so hairlines land on whole physical px
-    readonly property int surfaceInset: ShellSettings.barFloating ? 4 : 0
-    readonly property real visualSurfaceInset: 4 * floatingProgress
+    // stepped in 4s so the bar edge stays on the 4px grid and hairlines land on whole physical px
+    readonly property int surfaceInset: Metrics.barEdgeInset
+    readonly property real visualSurfaceInset: ShellSettings.barGap * floatingProgress
 
     readonly property bool shadowOn: shadowProgress > 0.001 && floatingProgress > 0.001
     readonly property real effectPad: Math.max(
         24 * shadowProgress,
         ShellSettings.underlineGlow ? 8 : 0)
-    readonly property int insetPad: 8
+    // the surface sits barGap from the edge, so the window budgets the gap at both ends or it clips the bar
+    readonly property int insetPad: Math.max(8, Metrics.barEdgeInset * 2)
 
     readonly property bool concealed: OverviewState.active
 

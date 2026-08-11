@@ -26,7 +26,7 @@ Rectangle {
         && !_enterAnimation.running && root.opacity >= 0.999
     readonly property real _originX: Math.max(0, Math.min(targetWidth, anchorX - x))
 
-    property real _barInset: ShellSettings.barFloating ? 4 : 0
+    property real _barInset: Metrics.barEdgeInset
     MotionBehavior on _barInset {
         NumberAnimation { duration: Motion.barMorph; easing.type: Easing.OutCubic }
     }
