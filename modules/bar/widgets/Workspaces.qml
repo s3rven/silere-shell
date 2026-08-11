@@ -101,15 +101,20 @@ Item {
         return ws !== null && ws.urgent
     }
 
-    readonly property int urgentOffPage: {
+    property int urgentOffPage: 0
+
+    function _syncUrgentOffPage(): void {
+        let next = 0
         const vals = Compositor.workspaces
         for (let i = 0; i < vals.length; i++) {
             const ws = vals[i]
             if (ws && ws.output === root.monitorName && ws.urgent && ws.wsId > 0
-                && root.visibleIds.indexOf(ws.wsId) < 0)
-                return ws.wsId
+                    && root.visibleIds.indexOf(ws.wsId) < 0) {
+                next = ws.wsId
+                break
+            }
         }
-        return 0
+        if (root.urgentOffPage !== next) root.urgentOffPage = next
     }
 
     // Window classes are compositor-supplied, so they must not inherit keys
@@ -281,10 +286,18 @@ Item {
     readonly property int activeIndex: visibleIds.indexOf(activeId)
     readonly property int pageKey: visibleIds.length > 0 ? visibleIds[0] : _monitorAnchorId
 
+    onVisibleIdsChanged: root._syncUrgentOffPage()
+    onMonitorNameChanged: root._syncUrgentOffPage()
+    Connections {
+        target: Compositor
+        function onWorkspacesChanged() { root._syncUrgentOffPage() }
+    }
+
     Component.onCompleted: {
         _lastNormalActiveId = activeId
         _prevPageKey = pageKey
         _initialized = monitorReady
+        root._syncUrgentOffPage()
         root._rebuildWsApps()
     }
 

@@ -62,8 +62,7 @@ Item {
         id: _row
         x: root._pillPad
         anchors.verticalCenter: parent.verticalCenter
-        spacing: root.compact ? Math.max(2, ShellSettings.barSpacing - 6)
-                              : Math.max(5, ShellSettings.barSpacing - 4)
+        spacing: Math.max(2, Metrics.widgetGapFor(root.compact) - (root.compact ? 2 : 4))
 
         Repeater {
             id: _items
@@ -169,7 +168,7 @@ Item {
 
                     ShellText {
                         anchors.centerIn: parent
-                        text: _tile.label.length > 0 ? _tile.label.charAt(0).toUpperCase() : "?"
+                        text: SafeText.initial(_tile.label, "?")
                         color: Theme.subtext
                         font.pixelSize: Math.max(9, Math.round(root.iconSize * 0.68))
                     }
@@ -179,7 +178,7 @@ Item {
                     id: _hoverLabel
                     x: root.iconSize + 5
                     color: Theme.subtext
-                    text: _tile.label.length > 22 ? _tile.label.slice(0, 21) + "…" : _tile.label
+                    text: SafeText.boundedText(_tile.label, 22)
                     expanded: ((_tile._dwelled && !root.compact) || _tile.activeFocus)
                         && _tile.label.length > 0 && !TrayMenuState.open
                 }

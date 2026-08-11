@@ -12,7 +12,7 @@ Singleton {
     readonly property int confirmGuardMs: 400
 
     function widgetGapFor(compact: bool): int {
-        return compact ? Math.max(4, Math.round(ShellSettings.barSpacing * 0.5))
+        return compact ? Math.max(3, Math.round(ShellSettings.barSpacing * 0.5))
                        : ShellSettings.barSpacing
     }
 
