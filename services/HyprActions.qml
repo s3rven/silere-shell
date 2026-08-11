@@ -13,7 +13,7 @@ Singleton {
     Process {
         id: _luaCheck
         command: ["bash", Quickshell.shellDir + "/scripts/install.sh", "--hypr-config-kind"]
-        onExited: (code) => { root._luaDetected = (code === 0) }
+        onExited: (code) => { root._luaDetected = (code === 0); HyprDispatch.useLua = root._luaDetected }
         Component.onCompleted: running = Compositor.isHyprland
     }
 
@@ -28,62 +28,13 @@ Singleton {
     readonly property int _parentPidCacheTtlMs: 1500
     readonly property int _parentPidCacheLimit: 128
 
-    function _quote(value): string {
-        return "\"" + String(value).replace(/\\/g, "\\\\").replace(/"/g, "\\\"") + "\""
-    }
 
-    function _value(value): string {
-        const text = String(value)
-        return /^-?\d+$/.test(text) ? text : _quote(text)
-    }
 
-    function _dispatch(dispatcher, args): void {
-        if (!SystemTools.ready || !SystemTools.hasHyprctl) return
-        if (root._useLua && (dispatcher === "focusmonitor" || dispatcher === "workspace"
-            || dispatcher === "movetoworkspacesilent" || dispatcher === "focuswindow")) {
-            root._dispatchLua(dispatcher, args)
-            return
-        }
-        const cmd = ["hyprctl", "dispatch", dispatcher]
-        if (args !== undefined && args !== null && String(args).length > 0)
-            cmd.push(String(args))
-        Quickshell.execDetached(cmd)
-    }
 
-    function _dispatchLua(dispatcher, args): void {
-        const call = root._luaCall(dispatcher, args)
-        if (call.length === 0) return
-        Quickshell.execDetached(["hyprctl", "dispatch", call])
-    }
 
-    function _luaCall(dispatcher, args): string {
-        if (dispatcher === "focusmonitor")
-            return "hl.dsp.focus({ monitor = " + _quote(args) + " })"
-        if (dispatcher === "workspace")
-            return "hl.dsp.focus({ workspace = " + _value(args) + " })"
-        if (dispatcher === "movetoworkspacesilent")
-            return "hl.dsp.window.move({ workspace = " + _value(args) + ", follow = false })"
-        if (dispatcher === "focuswindow")
-            return "hl.dsp.focus({ window = " + _quote(args) + " })"
-        return ""
-    }
 
     // chain in one sh: detached hyprctl processes land out of order, and --batch mangles the quoted lua-framework calls
-    function _dispatchPair(d1, a1, d2, a2): void {
-        if (!SystemTools.ready || !SystemTools.hasHyprctl) return
-        Quickshell.execDetached(["sh", "-c",
-            "hyprctl dispatch \"$1\" >/dev/null && hyprctl dispatch \"$2\"",
-            "sh", root._dispatchText(d1, a1), root._dispatchText(d2, a2)])
-    }
 
-    function _dispatchText(dispatcher, args): string {
-        if (root._useLua) {
-            const call = root._luaCall(dispatcher, args)
-            if (call.length > 0) return call
-        }
-        return (args !== undefined && args !== null && String(args).length > 0)
-            ? dispatcher + " " + String(args) : dispatcher
-    }
 
     function _clients(): var {
         return Compositor.toplevels || []

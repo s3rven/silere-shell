@@ -10,6 +10,7 @@ singleton SysInfo       1.0 SysInfo.qml
 # compositor
 singleton Compositor    1.0 Compositor.qml
 singleton HyprActions   1.0 HyprActions.qml
+singleton HyprDispatch  1.0 HyprDispatch.qml
 singleton IconResolver  1.0 IconResolver.qml
 singleton SafeText      1.0 SafeText.qml
 singleton NightLight    1.0 NightLight.qml

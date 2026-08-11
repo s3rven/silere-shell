@@ -13,7 +13,7 @@ Singleton {
 
     function boundedExternalText(value, limit: int): string {
         const cap = Math.max(1, Math.min(8192, Number(limit) || 1))
-        return IconResolver.singleLineText(value, cap)
+        return SafeText.singleLineText(value, cap)
     }
 
     function _windowIdentity(value): string {
@@ -81,8 +81,8 @@ Singleton {
                 root._niriAction(["focus-workspace", String(wsId)])
             return
         }
-        if (mon.length > 0) HyprActions._dispatchPair("focusmonitor", mon, "workspace", wsId)
-        else HyprActions._dispatch("workspace", wsId)
+        if (mon.length > 0) HyprDispatch.dispatchPair("focusmonitor", mon, "workspace", wsId)
+        else HyprDispatch.dispatch("workspace", wsId)
     }
 
     function moveActiveToWorkspace(wsId): void {
@@ -91,7 +91,7 @@ Singleton {
             root._niriAction(["move-window-to-workspace", "--focus", "false", String(wsId)])
             return
         }
-        HyprActions._dispatch("movetoworkspacesilent", wsId)
+        HyprDispatch.dispatch("movetoworkspacesilent", wsId)
     }
 
     function focusToplevel(c): void {
@@ -103,9 +103,9 @@ Singleton {
         const hasWs = c.wsRef !== undefined && c.wsRef !== null && c.wsRef >= 0
         const addr = c.ref
             ? (String(c.ref).startsWith("address:") ? String(c.ref) : "address:" + c.ref) : ""
-        if (hasWs && addr.length > 0) HyprActions._dispatchPair("workspace", c.wsRef, "focuswindow", addr)
-        else if (hasWs) HyprActions._dispatch("workspace", c.wsRef)
-        else if (addr.length > 0) HyprActions._dispatch("focuswindow", addr)
+        if (hasWs && addr.length > 0) HyprDispatch.dispatchPair("workspace", c.wsRef, "focuswindow", addr)
+        else if (hasWs) HyprDispatch.dispatch("workspace", c.wsRef)
+        else if (addr.length > 0) HyprDispatch.dispatch("focuswindow", addr)
     }
 
     property int _hyprLayoutTick: 0
