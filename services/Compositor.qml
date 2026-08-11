@@ -13,8 +13,7 @@ Singleton {
 
     function boundedExternalText(value, limit: int): string {
         const cap = Math.max(1, Math.min(8192, Number(limit) || 1))
-        const text = String(value ?? "")
-        return text.length <= cap ? text : text.slice(0, cap - 1) + "…"
+        return IconResolver.singleLineText(value, cap)
     }
 
     function _windowIdentity(value): string {

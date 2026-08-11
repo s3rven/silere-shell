@@ -123,7 +123,7 @@ Item {
                     : "Pair"
 
                 glyph: root._devGlyph(modelData.icon)
-                label: modelData.deviceName || modelData.name || modelData.address || "Unknown"
+                label: Bluetooth.deviceLabel(modelData)
                 status: _state
                 selected: modelData.connected
                 warning: _armed || modelData.pairing

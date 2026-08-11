@@ -67,7 +67,8 @@ Singleton {
     readonly property bool hasWifiDevice: _linkState.hasWifi
     readonly property string connectionName: {
         const best = _linkState.best
-        return best && best.network ? (best.network.name || "") : ""
+        return best && best.network
+            ? IconResolver.singleLineText(best.network.name, 128) : ""
     }
     readonly property string deviceName: {
         const best = _linkState.best
@@ -184,6 +185,7 @@ Singleton {
                 }
                 bySsid[ssid] = {
                     ssid: ssid,
+                    label: IconResolver.singleLineText(ssid, 128) || "Unnamed network",
                     signal: signal,
                     secured: network.security !== WifiSecurityType.Open,
                     active: network.connected,
@@ -376,7 +378,8 @@ Singleton {
                 if (fields.length >= 2
                         && (fields[0] === "vpn" || fields[0] === "wireguard" || fields[0] === "tun")) {
                     root._vpnCandidateActive = true
-                    root._vpnCandidateName = fields.slice(1).join(":")
+                    root._vpnCandidateName = IconResolver.singleLineText(
+                        fields.slice(1).join(":"), 128)
                 }
             }
         }

@@ -25,9 +25,15 @@ Singleton {
     readonly property string connectedName: {
         for (let i = 0; i < _devices.length; i++) {
             const d = _devices[i]
-            if (d && d.connected) return d.deviceName || d.name || ""
+            if (d && d.connected) return root.deviceLabel(d)
         }
         return ""
+    }
+
+    function deviceLabel(device): string {
+        if (!device) return "Unknown"
+        return IconResolver.singleLineText(
+            device.deviceName || device.name || device.address || "Unknown", 128) || "Unknown"
     }
 
     // BlueZ can briefly advertise batteryAvailable before the percentage

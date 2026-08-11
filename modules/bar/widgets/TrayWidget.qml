@@ -72,7 +72,7 @@ Item {
             delegate: Item {
                 id: _tile
                 required property var modelData
-                readonly property string label: IconResolver.boundedText(
+                readonly property string label: IconResolver.singleLineText(
                     String(modelData.tooltipTitle || "").length > 0 ? modelData.tooltipTitle
                     : String(modelData.title || "").length > 0 ? modelData.title
                     : modelData.id, 128)
@@ -237,7 +237,7 @@ Item {
 
                 Accessible.role: Accessible.Button
                 Accessible.name: label
-                Accessible.description: IconResolver.boundedText(modelData.tooltipDescription, 512)
+                Accessible.description: IconResolver.singleLineText(modelData.tooltipDescription, 512)
                 Accessible.onPressAction: root._activateItem(_tile.modelData, _tile)
                 activeFocusOnTab: root.show || activeFocus
                 function _keyActivate(event): void {

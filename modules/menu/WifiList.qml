@@ -129,7 +129,7 @@ Item {
                     id: _row
                     width: parent.width
                     glyph: Network.signalGlyph(_entry.modelData.signal)
-                    label: _entry.modelData.ssid
+                    label: _entry.modelData.label
                     status: _entry.modelData.active ? "Connected"
                         : _entry._connecting ? "Connecting…"
                         : _entry._failed ? "Failed"
@@ -208,7 +208,7 @@ Item {
                             clip: true
                             onAccepted: _entry._submitPassword()
                             Accessible.role: Accessible.EditableText
-                            Accessible.name: "Password for " + _entry.modelData.ssid
+                            Accessible.name: "Password for " + _entry.modelData.label
                             Keys.onEscapePressed: event => { root._selected = ""; event.accepted = true }
 
                             ShellText {
@@ -237,7 +237,7 @@ Item {
                             ColorFade on color {}
 
                             Accessible.role: Accessible.Button
-                            Accessible.name: "Connect to " + _entry.modelData.ssid
+                            Accessible.name: "Connect to " + _entry.modelData.label
                             Accessible.onPressAction: _join._activate()
                             function _activate(): void {
                                 if (_join.enabled) _entry._submitPassword()

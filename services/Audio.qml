@@ -61,7 +61,7 @@ Singleton {
 
     function sinkLabel(node): string {
         if (!node) return ""
-        return IconResolver.boundedText(
+        return IconResolver.singleLineText(
             node.description || node.nickname || node.name || "Output", 256)
     }
 
