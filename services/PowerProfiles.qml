@@ -10,6 +10,7 @@ Singleton {
     readonly property bool available: SystemTools.hasPowerProfilesCtl
     readonly property bool syncing: _get.running || _set.running || _getRetry.running
     property string profile: ""
+    property string lastError: ""
 
     readonly property string label: profile === "performance" ? "Performance"
                                   : profile === "power-saver" ? "Power Saver"
@@ -48,6 +49,7 @@ Singleton {
         const order = ["balanced", "performance", "power-saver"]
         const next = order[(order.indexOf(profile) + 1) % order.length]
         profile = next
+        root.lastError = ""
         root._writeGen++
         _set.exec(["powerprofilesctl", "set", next])
     }
@@ -82,8 +84,14 @@ Singleton {
     }
     Process {
         id: _set
+        environment: ({ "LC_ALL": "C" })
+        stderr: StdioCollector { id: _setErr }
         onExited: (code) => {
-            if (code === 0) return
+            if (code === 0) { root.lastError = ""; return }
+            // the row re-reads the daemon, so a swallowed failure just flips the
+            // label back with no reason given
+            root.lastError = IconResolver.boundedText(
+                _setErr.text.trim().split("\n").pop() || "Could not change the power mode", 160)
             root._correctiveRefreshPending = true
             root._getRetries = 0
             _getRetry.restart()

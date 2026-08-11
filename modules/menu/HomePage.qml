@@ -389,6 +389,8 @@ PageShell {
                 valueText: PowerProfiles.profile !== "" ? PowerProfiles.label
                          : PowerProfiles.syncing ? "Checking…"
                          : "Unavailable"
+                status: PowerProfiles.lastError
+                accentColor: PowerProfiles.lastError.length > 0 ? Theme.error : Theme.accent
                 onActivated: PowerProfiles.cycle()
             }
 
