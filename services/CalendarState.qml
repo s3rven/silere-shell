@@ -33,6 +33,7 @@ Singleton {
 
     property var marks: ({})
     property bool _saveDirty: false
+    property string persistenceError: ""
 
     function markKey(y: int, m: int, d: int): string { return y + "-" + (m + 1) + "-" + d }
     function _validMarkKey(value): bool {
@@ -79,15 +80,28 @@ Singleton {
                     for (let i = 0; i < j.marks.length; i++)
                         if (root._validMarkKey(j.marks[i])) next[j.marks[i]] = true
                 root.marks = next
+                _store.writeAllowed = true
                 _store.lastSavedText = trimmed
+                root.persistenceError = ""
             } catch (e) {
                 // a file we could not read may still hold marks; writing this session's set over it loses them
                 _store.writeAllowed = false
+                root.persistenceError = "Could not read calendar marks. The existing file was left untouched."
                 console.warn("silere-shell: bad calendar-marks.json, ignoring:", String(e))
             }
         }
-        onLoadFailed: error => _store.writeAllowed = error === FileViewError.FileNotFound
-        onSaved: root._saveDirty = false
-        onSaveFailed: error => console.warn("silere-shell: failed to save calendar marks:", error)
+        onLoadFailed: error => {
+            _store.writeAllowed = error === FileViewError.FileNotFound
+            root.persistenceError = _store.writeAllowed ? ""
+                : "Could not read calendar marks. The existing file was left untouched."
+        }
+        onSaved: {
+            root._saveDirty = false
+            root.persistenceError = ""
+        }
+        onSaveFailed: error => {
+            root.persistenceError = "Could not save calendar marks. Your latest change may be lost."
+            console.warn("silere-shell: failed to save calendar marks:", error)
+        }
     }
 }

@@ -267,6 +267,38 @@ PanelWindow {
                 }
             }
 
+            Rectangle {
+                id: _persistenceError
+                visible: CalendarState.persistenceError.length > 0
+                width: parent.width
+                height: visible ? Math.max(34, _persistenceErrorText.implicitHeight + 14) : 0
+                radius: Theme.radiusControl
+                antialiasing: true
+                color: Theme.withAlpha(Theme.warning, 0.10)
+                border.width: 1
+                border.color: Theme.withAlpha(Theme.warning, 0.34)
+
+                Accessible.role: Accessible.StaticText
+                Accessible.name: CalendarState.persistenceError
+
+                ShellText {
+                    id: _persistenceErrorText
+                    anchors.left: parent.left
+                    anchors.leftMargin: 10
+                    anchors.right: parent.right
+                    anchors.rightMargin: 10
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: CalendarState.persistenceError
+                    color: Theme.warning
+                    font.pixelSize: Settings.fontCaption
+                    wrapMode: Text.WordWrap
+                }
+
+                MotionBehavior on height {
+                    NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
+                }
+            }
+
             Hairline {
                 width: parent.width
                 color: Theme.withAlpha(Theme.subtext, Theme.lineAlpha(0.13))
