@@ -138,6 +138,22 @@ ShellRoot {
         root._check(parsedCommits[0].subject.length === ShellUpdate.maxCommitSubjectChars,
             "shell update bounds commit subjects")
 
+        const spacing = ShellSettings.schemaFor("barSpacing")
+        root._check(spacing !== null && spacing.t === "int"
+                && spacing.min === 4 && spacing.max === 24,
+            "settings expose a row's schema by key")
+        root._check(ShellSettings.schemaFor("noSuchSetting") === null,
+            "settings reject an unknown schema key")
+        const spacingWas = ShellSettings.barSpacing
+        ShellSettings.setValue("barSpacing", 999)
+        root._check(ShellSettings.barSpacing === 24,
+            "a key-bound row clamps to the schema maximum")
+        ShellSettings.setValue("barSpacing", -5)
+        root._check(ShellSettings.barSpacing === 4,
+            "a key-bound row clamps to the schema minimum")
+        ShellSettings.setValue("noSuchSetting", 1)
+        ShellSettings.barSpacing = spacingWas
+
         const originalLimit = ShellSettings.notifHistoryLimit
         ShellSettings._coerce({ k: "notifHistoryLimit", t: "int", min: 5, max: 100 }, 999)
         root._check(ShellSettings.notifHistoryLimit === 100,
