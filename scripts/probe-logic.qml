@@ -276,6 +276,29 @@ ShellRoot {
         root._check(ShellSettings.barSpacing === 4,
             "a key-bound row clamps to the schema minimum")
         ShellSettings.setValue("noSuchSetting", 1)
+
+        // the tray gap once grew wider than the widget gap it sits inside, at both
+        // ends of the range; each formula was fine alone, only the ordering broke
+        let gapOrderHolds = true
+        let gapSaturates = true
+        let lastCompactGap = -1
+        for (let s = spacing.min; s <= spacing.max; s++) {
+            ShellSettings.setValue("barSpacing", s)
+            for (let ci = 0; ci < 2; ci++) {
+                const compact = ci === 0
+                const gap = Metrics.widgetGapFor(compact)
+                if (!(gap <= Metrics.titleGapFor(compact)
+                        && Metrics.titleGapFor(compact) <= Metrics.dividerSpanFor(compact)))
+                    gapOrderHolds = false
+            }
+            const compactGap = Metrics.widgetGapFor(true)
+            if (compactGap < lastCompactGap) gapSaturates = false
+            lastCompactGap = compactGap
+        }
+        root._check(gapOrderHolds,
+            "bar spacing keeps widget gap <= title gap <= divider span at every setting")
+        root._check(gapSaturates && Metrics.widgetGapFor(true) > 0,
+            "compact widget gap never decreases as spacing increases")
         ShellSettings.barSpacing = spacingWas
 
         const originalLimit = ShellSettings.notifHistoryLimit

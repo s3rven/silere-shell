@@ -702,6 +702,45 @@ fi
 [ "$release_archive_failed" -ne 0 ] \
   || ok "release notes" "$release_count indexed archives are publishable"
 
+section "high-contrast alpha coverage"
+# every other Theme token re-bases onto white text under high contrast. An alpha that
+# ignores _hc silently keeps its normal-mode weight there, which is how the focus ring
+# ended up as the one affordance high contrast did not touch.
+flat_alphas="$(grep -nE '^[[:space:]]*readonly property real [a-zA-Z]*Alpha:' config/Theme.qml \
+  | grep -v '_hc' || true)"
+if [ -n "$flat_alphas" ]; then
+  fail "Theme alpha tokens must branch on _hc:"
+  printf '%s\n' "$flat_alphas"
+else
+  ok "contrast" "every Theme alpha token participates in high contrast"
+fi
+
+section "capability reporting coverage"
+# a capability gating a *send* path leaves its settings page visible and settable, so the
+# health card is the only surface that can report the feature is inert without it
+missing_caps=""
+for cap in $(grep -oE 'SystemTools\.has[A-Za-z]+' services/SystemAlerts.qml | sort -u); do
+  flag="${cap#SystemTools.}"
+  grep -qF "$flag" modules/menu/settings/SettingsMaintenanceSection.qml \
+    || missing_caps="$missing_caps $flag"
+done
+if [ -n "$missing_caps" ]; then
+  fail "health card must report capabilities that gate alert delivery:$missing_caps"
+else
+  ok "health" "alert-delivery capabilities are reported when missing"
+fi
+
+section "shared spacing derivation"
+# two independent formulas over one setting drift apart: the tray gap grew wider than the
+# widget gap it sits inside, at both ends of the range, while each formula was fine alone
+if grep -qE 'spacing:.*ShellSettings\.barSpacing' modules/bar/widgets/TrayWidget.qml; then
+  fail "tray spacing must derive from Metrics.widgetGapFor, not re-derive from barSpacing"
+elif ! grep -qF 'Metrics.widgetGapFor' modules/bar/widgets/TrayWidget.qml; then
+  fail "tray spacing must derive from Metrics.widgetGapFor"
+else
+  ok "spacing" "tray gap derives from the shared widget gap"
+fi
+
 section "portability regressions"
 if bash scripts/test-portability.sh; then
   ok "portability"
