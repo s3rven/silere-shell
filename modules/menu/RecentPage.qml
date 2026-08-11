@@ -232,6 +232,7 @@ PageShell {
             visible: !Notifications.hasHistory
             Accessible.role: Accessible.StaticText
             Accessible.name: "No notifications"
+            Accessible.description: "New notifications will appear here"
 
             Column {
                 anchors.centerIn: parent
@@ -252,6 +253,7 @@ PageShell {
 
                     ShellText {
                         anchors.centerIn: parent
+                        Accessible.ignored: true
                         text: "󰂛"
                         color: Theme.withAlpha(Theme.subtext, 0.34)
                         font.pixelSize: 24
@@ -262,10 +264,20 @@ PageShell {
 
                 ShellText {
                     anchors.horizontalCenter: parent.horizontalCenter
+                    Accessible.ignored: true
                     text: "All caught up"
                     color: Theme.withAlpha(Theme.text, 0.78)
                     font.pixelSize: Settings.fontSize + 1
                     font.weight: Font.Medium
+                }
+
+                ShellText {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    Accessible.ignored: true
+                    text: "New notifications will appear here"
+                    color: Theme.withAlpha(Theme.subtext,
+                        ShellSettings.highContrast ? 0.72 : 0.52)
+                    font.pixelSize: Settings.fontCaption
                 }
             }
         }
@@ -459,16 +471,35 @@ PageShell {
                                 width: parent.width
                                 spacing: 7
 
-                                IconImage {
-                                    id: _appIcon
+                                Item {
+                                    id: _appIconSlot
                                     anchors.verticalCenter: parent.verticalCenter
-                                    visible: _entry._appIconSource.length > 0
-                                    width: visible ? 16 : 0
+                                    width: 16
                                     height: 16
-                                    // without this the themed icon decodes at its native size (often 256px+) to paint 16px
-                                    implicitSize: 16
-                                    source: _entry._appIconSource
-                                    asynchronous: true
+
+                                    readonly property string _fallbackSource: String(
+                                        _entry.modelData.appName || _entry.modelData.summary || "N").trim()
+
+                                    ShellText {
+                                        anchors.centerIn: parent
+                                        visible: _recentAppIcon.status !== Image.Ready
+                                        Accessible.ignored: true
+                                        text: _appIconSlot._fallbackSource.length > 0
+                                            ? _appIconSlot._fallbackSource.charAt(0).toUpperCase() : "N"
+                                        color: Theme.withAlpha(Theme.subtext, 0.70)
+                                        font.pixelSize: Settings.fontMicro
+                                        font.weight: Font.DemiBold
+                                    }
+
+                                    IconImage {
+                                        id: _recentAppIcon
+                                        anchors.fill: parent
+                                        visible: status === Image.Ready
+                                        // without this the themed icon decodes at its native size (often 256px+) to paint 16px
+                                        implicitSize: 16
+                                        source: _entry._appIconSource
+                                        asynchronous: true
+                                    }
                                 }
 
                                 ShellText {
@@ -476,7 +507,7 @@ PageShell {
                                     anchors.verticalCenter: parent.verticalCenter
                                     width: Math.max(0, parent.width - _entryTime.implicitWidth
                                         - parent.spacing - 28
-                                        - (_appIcon.visible ? _appIcon.width + parent.spacing : 0))
+                                        - _appIconSlot.width - parent.spacing)
                                     text: _entry.modelData.appName || "Notification"
                                     color: _entry._critical ? Theme.error : Theme.withAlpha(Theme.subtext, 0.70)
                                     font.pixelSize: Settings.fontCaption

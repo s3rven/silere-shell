@@ -71,12 +71,17 @@ Item {
         && _previewImg.implicitWidth !== _previewImg.implicitHeight
     readonly property bool _previewSettled: !hasContentImage
         || _previewImg.status === Image.Ready || _previewImg.status === Image.Error
-    readonly property bool showIconSlot: _previewSettled && (hasAppIcon
-        || (hasNotificationImage && _previewImg.status === Image.Ready && !showContentImage))
+    // Keep every header on the same text grid. Invalid or absent app icons get
+    // an initial instead of collapsing the slot and shifting the whole card.
+    readonly property bool showIconSlot: _previewSettled
 
     readonly property string summaryText: Notifications.plainText(notification.summary, 2048)
     readonly property string bodyText:    Notifications.plainText(notification.body)
     readonly property string appNameText: Notifications.identityText(notification.appName)
+    readonly property string fallbackInitial: {
+        const source = (card.appNameText || card.summaryText || "N").trim()
+        return source.length > 0 ? source.charAt(0).toUpperCase() : "N"
+    }
     readonly property bool hasBody:       bodyText.length > 0
     readonly property bool isCritical: notification.urgency === NotificationUrgency.Critical
 
@@ -303,7 +308,19 @@ Item {
             anchors.left:       parent.left
             anchors.topMargin:  13
             anchors.leftMargin: 14
+
+            ShellText {
+                anchors.centerIn: parent
+                visible: _headerIcon.status !== Image.Ready
+                Accessible.ignored: true
+                text: card.fallbackInitial
+                color: Theme.withAlpha(Theme.subtext, 0.70)
+                font.pixelSize: Settings.fontCaption
+                font.weight: Font.DemiBold
+            }
+
             IconImage {
+                id: _headerIcon
                 anchors.fill: parent
                 source: card.hasNotificationImage && !card.showContentImage
                     && _previewImg.status === Image.Ready
@@ -534,13 +551,13 @@ Item {
             anchors.right:       parent.right
             anchors.topMargin:   7
             anchors.rightMargin: 7
-            width: 22; height: 22; radius: 11
+            width: 24; height: 24; radius: 12
             antialiasing: true
             color:        _closeHover.hovered ? Theme.withAlpha(Theme.error, 0.18) : Theme.menuControl
             opacity: _cardHover.hovered ? 1.0 : 0.48
 
             OutlineBorder {
-                radius: 11
+                radius: 12
                 outlineColor: _closeHover.hovered ? Theme.withAlpha(Theme.error, 0.32) : Theme.menuControlLine
                 ColorFade on outlineColor {}
             }
