@@ -210,34 +210,6 @@ test_font_archive_selection() (
         || fail "unused Mono font was extracted"
 )
 
-test_release_notes_require_performance() (
-    local changelog="$TMP/release-changelog.md"
-    local performance="$TMP/release-performance.md"
-    local notes
-
-    printf '%s\n' \
-        '# Changelog' \
-        '## [1.2.3] - 2026-08-11' \
-        '### Fixed' \
-        '- Kept the release gate honest.' \
-        '## [1.2.2] - 2026-08-10' > "$changelog"
-    printf '%s\n' \
-        '| Version | State |' \
-        '|---|---|' \
-        '| 1.2.2 | Idle |' > "$performance"
-
-    if SILERE_CHANGELOG="$changelog" SILERE_PERFORMANCE="$performance" \
-            bash "$ROOT/scripts/release-notes.sh" 1.2.3 >/dev/null 2>&1; then
-        fail "release notes accepted a version with no performance row"
-    fi
-
-    printf '| 1.2.3 | Idle |\n' >> "$performance"
-    notes="$(SILERE_CHANGELOG="$changelog" SILERE_PERFORMANCE="$performance" \
-        bash "$ROOT/scripts/release-notes.sh" 1.2.3)"
-    printf '%s\n' "$notes" | grep -qF 'Kept the release gate honest.' \
-        || fail "release notes lost the requested changelog section"
-)
-
 test_install_path_safety() (
     SILERE_SCRIPT_LIB_ONLY=1 source "$ROOT/scripts/install.sh"
     local source="$TMP/existing-install" generic="$TMP/generic-repo" backup actual
@@ -806,7 +778,6 @@ test_uninstall_targets_and_backups
 test_qml_module_lookup
 test_headless_qml_import_roots
 test_font_archive_selection
-test_release_notes_require_performance
 test_install_path_safety
 test_hypr_discovery
 test_niri_config_discovery

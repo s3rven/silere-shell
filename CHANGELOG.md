@@ -45,8 +45,6 @@ its slider; both drew the same thing there already, so nothing looks different.
 - A notification whose app icon is missing or fails to load shows the app's initial,
   in the popup and in the history list. The icon slot also keeps its width either
   way, so a notification with no icon no longer shifts its own header text.
-- Release resource use now has a versioned performance table. Publishing a tag
-  fails if its release has no matching entry.
 
 ### Changed
 

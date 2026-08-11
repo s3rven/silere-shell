@@ -37,8 +37,6 @@ CPU sits near zero when nothing is happening and rises with what is on screen: a
 
 Results vary with hardware, drivers, and which widgets you enable. Measure your own checkout with `bash scripts/bench.sh 5`. The report tracks open file descriptors too, so a leak shows up as a climbing number while everything else stays flat.
 
-Release-by-release measurements live in [PERFORMANCE.md](PERFORMANCE.md).
-
 Cava is the main optional CPU cost, and only while the visualizer is on screen.
 
 ## Install

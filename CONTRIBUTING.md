@@ -49,13 +49,6 @@ For anything visual, it helps to check keyboard focus, reduced motion, a narrow 
 
 Don't commit generated or personal files: `config/MatugenTheme.qml`, `settings.json`, `calendar-marks.json`.
 
-## Cutting a release
-
-Every tagged release carries a resource snapshot so memory or CPU regressions remain
-visible over time. Run `bash scripts/bench.sh 30`, then add its idle figures to
-[PERFORMANCE.md](PERFORMANCE.md). The release-notes script rejects a version with no
-matching table row.
-
 ## One last thing
 
 Your branch doesn't have to be finished to start a conversation. If the problem and the rough shape of the fix are clear, that's plenty.
