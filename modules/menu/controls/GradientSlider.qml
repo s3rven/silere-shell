@@ -59,10 +59,34 @@ Item {
         const next = root.position + dir * root.stepSize * mult / root.displayScale
         root.picked(root.wraps ? root._wrapped(next) : root._clamped(next))
     }
+    function _setEndpoint(end: bool): void {
+        if (!root.enabled || !root.interactive) return
+        root.picked(end ? root._clamped(1) : 0)
+    }
+    function _handleKey(event): void {
+        const shifted = (event.modifiers & Qt.ShiftModifier) ? 5 : 1
+        switch (event.key) {
+        case Qt.Key_Left:
+        case Qt.Key_Down:
+            root._nudge(-1, shifted); event.accepted = true; return
+        case Qt.Key_Right:
+        case Qt.Key_Up:
+            root._nudge(1, shifted); event.accepted = true; return
+        case Qt.Key_Home:
+            root._setEndpoint(false); event.accepted = true; return
+        case Qt.Key_End:
+            root._setEndpoint(true); event.accepted = true; return
+        case Qt.Key_PageDown:
+            root._nudge(-1, 10); event.accepted = true; return
+        case Qt.Key_PageUp:
+            root._nudge(1, 10); event.accepted = true; return
+        }
+    }
 
-    Keys.onLeftPressed: event => { _focusVisual.noteKeyboardInput(); root._nudge(-1, (event.modifiers & Qt.ShiftModifier) ? 5 : 1); event.accepted = true }
-    Keys.onRightPressed: event => { _focusVisual.noteKeyboardInput(); root._nudge(1, (event.modifiers & Qt.ShiftModifier) ? 5 : 1); event.accepted = true }
-    Keys.onPressed: _focusVisual.noteKeyboardInput()
+    Keys.onPressed: event => {
+        _focusVisual.noteKeyboardInput()
+        root._handleKey(event)
+    }
 
     MotionBehavior on opacity {
         NumberAnimation { duration: Motion.fast }
@@ -90,46 +114,30 @@ Item {
 
     Rectangle {
         id: _track
-        x: 6
+        x: _thumb.width / 2
         anchors.verticalCenter: parent.verticalCenter
-        width: Math.max(1, parent.width - 12)
+        width: Math.max(1, parent.width - _thumb.width)
         height: 8
-        radius: 4
+        radius: 2
         antialiasing: true
         gradient: root.trackGradient
     }
 
-    Item {
+    SliderHandle {
         id: _thumb
-        width: 18
+        width: 12
         height: 18
         y: (parent.height - height) / 2
         x: Math.round(_track.x + root._clamped(root.position) * _track.width
             - width / 2)
-        scale: _mouse.pressed ? 0.92 : (_mouse.containsMouse || _focusVisual.active ? 1.04 : 1.0)
-        transformOrigin: Item.Center
+        fillColor: root.thumbColor
+        // the fill is the picked hue, so an accent ring can vanish into it
+        focusRingColor: Theme.withAlpha(Theme.text, 0.88)
+        focused: _focusVisual.active
+        hovered: _mouse.containsMouse
+        pressed: _mouse.pressed
 
         MotionBehavior on x { gate: !_mouse.pressed; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-        MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-
-        Rectangle {
-            anchors.fill: parent
-            radius: 9
-            antialiasing: true
-            color: Theme.menuPane
-            border.width: 1
-            border.color: Theme.withAlpha(Theme.text, 0.52)
-        }
-
-        Rectangle {
-            anchors.fill: parent
-            anchors.margins: 3
-            radius: 6
-            antialiasing: true
-            color: root.thumbColor
-            // a drag must track the finger; only a jump from elsewhere crossfades
-            ColorFade on color { gate: !_mouse.pressed }
-        }
     }
 
     MouseArea {

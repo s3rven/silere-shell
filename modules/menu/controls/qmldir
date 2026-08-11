@@ -13,6 +13,7 @@ MenuRow         1.0 MenuRow.qml
 QuickSlider     1.0 QuickSlider.qml
 SelectRow       1.0 SelectRow.qml
 SliderRow       1.0 SliderRow.qml
+SliderHandle    1.0 SliderHandle.qml
 SliderTrack     1.0 SliderTrack.qml
 ToggleRow       1.0 ToggleRow.qml
 ToggleSwitch    1.0 ToggleSwitch.qml

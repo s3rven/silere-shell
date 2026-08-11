@@ -102,8 +102,9 @@ Singleton {
     readonly property color menuTextFaint:   mix(subtext, text, _hc ? 0.25 : (_n ? 0.15 : 0.10))
 
     // shared focus-ring weight: button-family controls (2px) vs embedded row/track indicators (1px)
-    readonly property real focusRingAlpha:     0.72
-    readonly property real focusRingSoftAlpha: 0.42
+    // high contrast re-bases every other line onto white text; the ring keeps its accent, so it buys the contrast in alpha
+    readonly property real focusRingAlpha:     _hc ? 0.92 : 0.72
+    readonly property real focusRingSoftAlpha: _hc ? 0.72 : 0.42
 
     readonly property int radiusPanel:   14
     readonly property int radiusCard:    12

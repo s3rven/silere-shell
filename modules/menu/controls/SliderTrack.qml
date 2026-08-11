@@ -19,6 +19,11 @@ Item {
     property color trackColor: Theme.menuTrack
     property real hitPad: 10
 
+    readonly property real thumbWidth: 10
+    readonly property real thumbHeight: 16
+    readonly property real _railInset: root.showThumb ? root.thumbWidth / 2 : 0
+    readonly property real _railWidth: Math.max(1, root.width - root._railInset * 2)
+
     implicitHeight: 16
 
     readonly property real shownValue: _shownValue
@@ -33,11 +38,15 @@ Item {
     readonly property real _ratio: max > min
         ? Math.max(0, Math.min(1, (_shownValue - min) / (max - min))) : 0
 
-    function _clamp(v: real): real { return Math.max(min, Math.min(max, v)) }
+    function _clamp(v: real): real {
+        const number = Number(v)
+        return isFinite(number) ? Math.max(min, Math.min(max, number)) : min
+    }
     function _snap(v: real): real  { return step > 0 ? min + Math.round((v - min) / step) * step : v }
     function _posToVal(px: real): real {
         if (width <= 0) return min
-        const ratio = Math.max(0, Math.min(1, px / width))
+        const ratio = Math.max(0, Math.min(1,
+            (px - root._railInset) / root._railWidth))
         return _clamp(_snap(min + ratio * (max - min)))
     }
     function _setFromUser(v: real, snap: bool): void {
@@ -47,6 +56,7 @@ Item {
         if (!(commitOnRelease && _ma.pressed)) changed(next)
     }
     function nudge(dir: int, mult: int): void {
+        if (!root.interactive) return
         const baseStep = step > 0 ? step : Math.max(0.01, (max - min) / 100)
         _setFromUser(_shownValue + dir * baseStep * mult)
     }
@@ -60,21 +70,25 @@ Item {
         case Qt.Key_Right:
         case Qt.Key_Up:
             nudge(1, big); event.accepted = true; return
+        case Qt.Key_Home:
+            _setFromUser(min); event.accepted = true; return
+        case Qt.Key_End:
+            _setFromUser(max); event.accepted = true; return
+        case Qt.Key_PageDown:
+            nudge(-1, 10); event.accepted = true; return
+        case Qt.Key_PageUp:
+            nudge(1, 10); event.accepted = true; return
         }
     }
 
     Rectangle {
+        x: root._railInset
         anchors.verticalCenter: parent.verticalCenter
-        width: parent.width
-        // even heights only: the track centers in the row, so an odd height puts both edges on half physical px
-        height: root.interactive && (_ma.containsMouse || _ma.pressed) ? 6 : 4
-        radius: height / 2; antialiasing: true
+        width: root._railWidth
+        height: 4
+        radius: Math.min(2, height / 2); antialiasing: true
         color: root.trackColor
         clip: true
-        MotionBehavior on height {
-            gate: root.animate
-            NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
-        }
 
         Rectangle {
             width: parent.width * root._ratio
@@ -90,33 +104,23 @@ Item {
         }
     }
 
-    Item {
+    SliderHandle {
         visible: root.showThumb
-        width: 14; height: 14
+        width: root.thumbWidth; height: root.thumbHeight
         anchors.verticalCenter: parent.verticalCenter
-        x: root.width * root._ratio - width / 2
+        x: Math.round(root._railInset + root._railWidth * root._ratio - width / 2)
+        focused: root.focused
+        hovered: _ma.containsMouse
+        pressed: _ma.pressed
+        hoverGrow: root.hoverGrow
+        animate: root.animate
+        fillColor: (root.hoverGrow && _ma.pressed) || root.focused
+            ? Theme.accent
+            : Theme.mix(Theme.text, Theme.accent,
+                        root.hoverGrow && _ma.containsMouse ? 0.30 : 0.12)
         MotionBehavior on x {
             gate: root.animate && !_ma.pressed
             NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
-        }
-
-        Rectangle {
-            anchors.centerIn: parent
-            width: 14; height: 14; radius: 7
-            antialiasing: true
-            // grow via scale, not width: a re-layouted odd width lands the centre on a half-pixel and the dot visibly shifts under fractional scaling
-            scale: !root.hoverGrow ? 12 / 14
-                 : _ma.pressed ? 1.0
-                 : (_ma.containsMouse || root.focused) ? 13 / 14 : 12 / 14
-            transformOrigin: Item.Center
-            color: (root.hoverGrow && _ma.pressed) || root.focused
-                ? Theme.accent
-                : Theme.mix(Theme.text, Theme.accent,
-                            root.hoverGrow && _ma.containsMouse ? 0.30 : 0.12)
-            border.width: root.focused ? 1 : 0
-            border.color: Theme.withAlpha(Theme.accent, Theme.focusRingSoftAlpha)
-            MotionBehavior on scale { gate: root.animate; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-            MotionBehavior on color { gate: root.animate; ColorAnimation  { duration: Motion.fast } }
         }
     }
 
