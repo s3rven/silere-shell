@@ -484,8 +484,7 @@ PageShell {
                                         anchors.centerIn: parent
                                         visible: _recentAppIcon.status !== Image.Ready
                                         Accessible.ignored: true
-                                        text: _appIconSlot._fallbackSource.length > 0
-                                            ? _appIconSlot._fallbackSource.charAt(0).toUpperCase() : "N"
+                                        text: IconResolver.initial(_appIconSlot._fallbackSource, "N")
                                         color: Theme.withAlpha(Theme.subtext, 0.70)
                                         font.pixelSize: Settings.fontMicro
                                         font.weight: Font.DemiBold

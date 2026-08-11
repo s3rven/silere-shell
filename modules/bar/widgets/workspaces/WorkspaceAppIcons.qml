@@ -79,6 +79,7 @@ Row {
 
                 ShellText {
                     anchors.centerIn: parent
+                    Accessible.ignored: true
                     text: appIcon.modelData.fallback || "?"
                     color: Theme.subtext
                     font.pixelSize: Math.max(9, Math.round(root.iconSize * 0.68))
