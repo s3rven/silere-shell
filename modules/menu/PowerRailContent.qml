@@ -74,6 +74,11 @@ Item {
         return rows[(idx + dir + rows.length) % rows.length]
     }
 
+    function _runAction(command, title: string): void {
+        MenuState.close()
+        SystemTools.runOrNotify(command, title)
+    }
+
     function focusFirstAction(): void {
         const item = _firstAction()
         if (item) item.forceActiveFocus()
@@ -164,10 +169,7 @@ Item {
                 enabled: SystemTools.commandAvailable(Settings.lockCommand)
                 KeyNavigation.up: root._rowAfter(_powLock, -1)
                 KeyNavigation.down: root._rowAfter(_powLock, 1)
-                onTriggered: {
-                    MenuState.close()
-                    SystemTools.runOrNotify(Settings.lockCommand, "Lock failed")
-                }
+                onTriggered: root._runAction(Settings.lockCommand, "Lock failed")
             }
 
             PowerRailRow {
@@ -178,10 +180,7 @@ Item {
                 enabled: SystemTools.commandAvailable(Settings.suspendCommand)
                 KeyNavigation.up: root._rowAfter(_powSusp, -1)
                 KeyNavigation.down: root._rowAfter(_powSusp, 1)
-                onTriggered: {
-                    MenuState.close()
-                    SystemTools.runOrNotify(Settings.suspendCommand, "Suspend failed")
-                }
+                onTriggered: root._runAction(Settings.suspendCommand, "Suspend failed")
             }
 
             PowerRailRow {
@@ -195,10 +194,7 @@ Item {
                 KeyNavigation.up: root._rowAfter(_powReb, -1)
                 KeyNavigation.down: root._rowAfter(_powReb, 1)
                 onArmedChanged: if (armed) _powOff.disarm()
-                onTriggered: {
-                    MenuState.close()
-                    SystemTools.runOrNotify(Settings.rebootCommand, "Reboot failed")
-                }
+                onTriggered: root._runAction(Settings.rebootCommand, "Reboot failed")
             }
 
             PowerRailRow {
@@ -212,10 +208,7 @@ Item {
                 KeyNavigation.up: root._rowAfter(_powOff, -1)
                 KeyNavigation.down: root._rowAfter(_powOff, 1)
                 onArmedChanged: if (armed) _powReb.disarm()
-                onTriggered: {
-                    MenuState.close()
-                    SystemTools.runOrNotify(Settings.poweroffCommand, "Shut down failed")
-                }
+                onTriggered: root._runAction(Settings.poweroffCommand, "Shut down failed")
             }
         }
     }

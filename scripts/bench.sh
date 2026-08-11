@@ -58,9 +58,11 @@ rollup_kb() {
     printf '%s\n' "${value:-0}"
 }
 
-cpu_ticks() {
+# include reaped-child ticks so an exiting helper cannot make the tree total go backwards
+accounted_cpu_ticks() {
     local target="$1"
-    awk '{print ($14 + $15)}' "/proc/$target/stat" 2>/dev/null || printf '0\n'
+    awk '{print ($14 + $15 + $16 + $17)}' "/proc/$target/stat" 2>/dev/null \
+        || printf '0\n'
 }
 
 # A shell that leaks descriptors climbs here while everything else looks flat.
@@ -72,10 +74,10 @@ fd_count() {
 
 tree_cpu_ticks() {
     local total member
-    total="$(cpu_ticks "$pid")"
+    total="$(accounted_cpu_ticks "$pid")"
     while IFS= read -r member; do
         [ -n "$member" ] || continue
-        total=$((total + $(cpu_ticks "$member")))
+        total=$((total + $(accounted_cpu_ticks "$member")))
     done < <(descendants "$pid")
     printf '%s\n' "$total"
 }

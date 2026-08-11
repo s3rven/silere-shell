@@ -50,11 +50,19 @@ Singleton {
         _correctiveRefreshPending = false
         _get._gen = root._writeGen
         _get.exec(["powerprofilesctl", "get"])
-        root._refreshDegraded()
     }
 
     function _refreshDegraded(): void {
-        if (!SystemTools.hasBusctl || _degradedProc.running) return
+        if (root.profile !== "performance") {
+            if (_degradedProc.running) _degradedProc.running = false
+            root._degradedReason = ""
+            return
+        }
+        if (!SystemTools.hasBusctl) {
+            root._degradedReason = ""
+            return
+        }
+        if (_degradedProc.running) return
         // the daemon owns both names; the newer one first, the pre-0.20 name as fallback
         _degradedProc.exec(["bash", "-c",
             "busctl get-property org.freedesktop.UPower.PowerProfiles" +
@@ -123,6 +131,7 @@ Singleton {
                 const p = root._parseProfile(_getOut.text)
                 if (p.length > 0) {
                     root.profile = p
+                    root._refreshDegraded()
                     root._getRetries = 0
                     root._correctiveRefreshPending = false
                     if (root._readError) {
@@ -153,7 +162,7 @@ Singleton {
         stdout: StdioCollector { id: _degradedOut }
         onTimeoutReached: root._degradedReason = ""
         onExited: (code) => {
-            root._degradedReason = (code === 0 && !timedOut)
+            root._degradedReason = (root.profile === "performance" && code === 0 && !timedOut)
                 ? root._parseDegraded(_degradedOut.text) : ""
         }
     }

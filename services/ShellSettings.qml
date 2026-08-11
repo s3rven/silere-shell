@@ -131,23 +131,16 @@ Singleton {
         for (let i = 0; i < all.length; i++) valid[all[i]] = true
         const seen = {}
         const left = [], center = [], right = []
-        const leftRaw = root._widgetKeyList(leftValue)
-        for (let i = 0; i < leftRaw.length; i++) {
-            const k = leftRaw[i]
-            if (seen[k] || valid[k] !== true) continue
-            seen[k] = true; left.push(k)
-        }
-        const centerRaw = root._widgetKeyList(centerValue)
-        for (let i = 0; i < centerRaw.length; i++) {
-            const k = centerRaw[i]
-            if (seen[k] || valid[k] !== true) continue
-            seen[k] = true; center.push(k)
-        }
-        const rightRaw = root._widgetKeyList(rightValue)
-        for (let i = 0; i < rightRaw.length; i++) {
-            const k = rightRaw[i]
-            if (seen[k] || valid[k] !== true) continue
-            seen[k] = true; right.push(k)
+        const zones = [left, center, right]
+        const values = [leftValue, centerValue, rightValue]
+        for (let zone = 0; zone < zones.length; zone++) {
+            const keys = root._widgetKeyList(values[zone])
+            for (let i = 0; i < keys.length; i++) {
+                const key = keys[i]
+                if (seen[key] || valid[key] !== true) continue
+                seen[key] = true
+                zones[zone].push(key)
+            }
         }
         for (let i = 0; i < all.length; i++) {
             const k = all[i]
@@ -155,9 +148,10 @@ Singleton {
             if (k === "workspaces") left.push(k); else right.push(k)
         }
         const loc = {}
-        for (let i = 0; i < left.length; i++) loc[left[i]] = { zone: "left", index: i }
-        for (let i = 0; i < center.length; i++) loc[center[i]] = { zone: "center", index: i }
-        for (let i = 0; i < right.length; i++) loc[right[i]] = { zone: "right", index: i }
+        const names = ["left", "center", "right"]
+        for (let zone = 0; zone < zones.length; zone++)
+            for (let i = 0; i < zones[zone].length; i++)
+                loc[zones[zone][i]] = { zone: names[zone], index: i }
         return { left: left, center: center, right: right, loc: loc }
     }
     readonly property var _zoneKeys: root._normaliseBarWidgetLayout(
