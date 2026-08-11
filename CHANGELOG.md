@@ -13,44 +13,9 @@ This file stays focused on work since the latest release. Completed notes move t
 
 ## [Unreleased]
 
-### Changed
-
-- Shell updates now require a stable release tag signed by Silere's trusted
-  release key. The bar opens a review page instead of installing directly, and
-  installation requires an explicit second confirmation.
-- Power Mode says when the daemon is not actually delivering the profile it
-  reports. A performance profile the hardware has throttled, for lap detection
-  or heat, now reads "Performance · throttled" instead of claiming full speed.
-- Session-bus helper commands now have hard time limits, so a stalled power,
-  battery, notification, location or update-timer backend cannot leave its
-  shell control busy forever.
-- The media visualizer now paints its small canvas immediately instead of
-  handing CPU images through a dedicated render thread. Measured on the
-  reference session, this cuts visualizer CPU by about a fifth without
-  changing its look.
-- Slider handles now use Silere's narrow rectangular control shape instead of
-  circular knobs. Their rails have squarer ends, clearer hover/focus contrast,
-  and inset endpoints that keep handles out of adjacent labels. The rail no
-  longer changes thickness on hover, and Home, End, Page Up and Page Down work
-  consistently on both regular and colour sliders.
-- Compact widget and tray spacing is slightly tighter, and high-contrast focus
-  rings are stronger against the rest of the high-contrast palette.
-
-### Fixed
-
-- Power Mode now confirms successful changes against the daemon and keeps
-  retrying a failed corrective read, rather than leaving its optimistic label
-  stale after a transient backend failure.
-- Truncated client labels no longer split emoji, combining marks, flags or joined
-  emoji sequences, and a tray icon with no usable image now uses a complete
-  grapheme for its fallback badge.
-- An urgent workspace outside the visible page no longer risks a transient QML
-  binding loop while the bar is laying itself out.
-- System maintenance now reports a missing `libnotify` dependency when battery
-  and temperature alerts are configured but cannot be sent.
-
 ## Releases
 
+- [0.4.0](docs/releases/0.4.0.md) — 2026-08-12
 - [0.3.0](docs/releases/0.3.0.md) — 2026-08-11
 - [0.2.0](docs/releases/0.2.0.md) — 2026-08-10
 - [0.1.0](docs/releases/0.1.0.md) — 2026-08-08
