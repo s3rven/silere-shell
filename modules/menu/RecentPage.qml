@@ -283,6 +283,17 @@ PageShell {
             cacheBuffer: 120
             model: Notifications.historyModel
 
+            // clearAll runs its own fade over the whole list, so per-row motion there
+            // would animate every delegate at once behind an already-invisible list
+            displaced: Transition {
+                enabled: !root._clearing
+                NumberAnimation { property: "y"; duration: Motion.normal; easing.type: Easing.OutCubic }
+            }
+            add: Transition {
+                enabled: !root._clearing
+                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Motion.fast }
+            }
+
             function revealIndex(rowIndex: int): void {
                 if (rowIndex < 0 || rowIndex >= count) return
                 currentIndex = rowIndex
@@ -315,6 +326,17 @@ PageShell {
                     width: _historyList.width
                     height: _fullHeight
                     clip: true
+
+                    // text lays out a frame after the delegate completes, so an ungated
+                    // behaviour animates every row as it scrolls into view
+                    property bool _heightReady: false
+                    Timer { id: _heightArm; interval: 0; onTriggered: _entry._heightReady = true }
+                    Component.onCompleted: _heightArm.start()
+                    Component.onDestruction: _heightArm.stop()
+                    MotionBehavior on height {
+                        gate: _entry._heightReady
+                        NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
+                    }
 
                     function removeSelf(): void {
                         if (_removing || root._clearing) return
