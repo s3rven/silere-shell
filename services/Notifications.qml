@@ -30,13 +30,9 @@ Singleton {
     readonly property int historyCount: _history.count
     readonly property bool hasHistory: _history.count > 0
 
-    function _bounded(value, limit: int): string {
-        const text = String(value ?? "")
-        return text.length <= limit ? text : text.slice(0, Math.max(0, limit - 1)) + "…"
-    }
 
     function identityText(value): string {
-        return IconResolver.singleLineText(value, root._maxIdentityChars)
+        return SafeText.singleLineText(value, root._maxIdentityChars)
     }
 
     // roles are fixed by the first insert, so every entry (incl. one revived from JSON) needs the full shape
@@ -45,7 +41,7 @@ Singleton {
         return {
             id:           Number(e.id ?? -1),
             appName:      root.identityText(e.appName),
-            appIcon:      root._bounded(e.appIcon, root._maxSourceChars),
+            appIcon:      SafeText.boundedText(e.appIcon, root._maxSourceChars),
             desktopEntry: root.identityText(e.desktopEntry),
             summary:      root.plainText(e.summary, root._maxSummaryChars),
             body:         root.plainText(e.body, root._maxBodyChars),
@@ -247,7 +243,7 @@ Singleton {
         return {
             id:      id,
             appName: root.identityText(notification.appName),
-            appIcon: root._bounded(notification.appIcon, root._maxSourceChars),
+            appIcon: SafeText.boundedText(notification.appIcon, root._maxSourceChars),
             desktopEntry: root.identityText(notification.desktopEntry),
             summary: root.plainText(notification.summary, root._maxSummaryChars),
             body:    root.plainText(notification.body),
@@ -314,7 +310,7 @@ Singleton {
         const requested = Number(maxChars)
         const limit = isFinite(requested) && requested > 0
             ? Math.min(root._maxBodyChars, Math.floor(requested)) : root._maxBodyChars
-        const source = root._bounded(s, limit * 2)
+        const source = SafeText.boundedText(s, limit * 2)
         const plain = source
             .replace(/<\/?(b|i|u|a|span|small|big|tt|markup|sub|sup|s)\b[^>]*>/gi, "")
             .replace(/<br\s*\/?>/gi, " ")
@@ -323,7 +319,7 @@ Singleton {
             .replace(/&nbsp;/g, " ").replace(/&hellip;/g, "…")
             .replace(/&amp;/g, "&")
             .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u202A-\u202E\u2066-\u2069]/g, "")
-        return root._bounded(plain, limit)
+        return SafeText.boundedText(plain, limit)
     }
 
     // bare absolute paths resolve against the qml context (qrc:/...) and fail to load

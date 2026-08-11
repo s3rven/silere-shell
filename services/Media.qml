@@ -15,7 +15,7 @@ Singleton {
 
     function boundedMetadataText(value, limit: int): string {
         const cap = Math.max(1, Math.min(root.maxMetadataChars, Number(limit) || 1))
-        return IconResolver.singleLineText(value, cap)
+        return SafeText.singleLineText(value, cap)
     }
 
     function finiteNonnegative(value): real {

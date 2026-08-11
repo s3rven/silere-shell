@@ -12,11 +12,6 @@ Singleton {
     readonly property int maxStatusTextChars: 512
     readonly property int maxVersionTextChars: 128
 
-    function boundedText(value, limit: int): string {
-        const cap = Math.max(1, Math.min(2048, Number(limit) || 1))
-        const text = String(value ?? "")
-        return text.length <= cap ? text : text.slice(0, cap - 1) + "…"
-    }
 
     property int    count: 0
     property string summary: ""
@@ -245,8 +240,8 @@ Singleton {
                 return
             }
             root.packaged = false
-            const sha = root.boundedText(kv.sha, root.maxVersionTextChars)
-            const branch = root.boundedText(kv.branch, root.maxVersionTextChars)
+            const sha = SafeText.boundedText(kv.sha, root.maxVersionTextChars)
+            const branch = SafeText.boundedText(kv.branch, root.maxVersionTextChars)
             const dirty = kv.dirty ?? ""
             if (sha.length === 0 || branch.length === 0
                     || (dirty !== "0" && dirty !== "1")) {
@@ -255,8 +250,8 @@ Singleton {
                 return
             }
             root.currentVersion = sha
-            root.buildDate = root.boundedText(kv.date, root.maxVersionTextChars)
-            root.versionTag = root.boundedText(kv.tag, root.maxVersionTextChars)
+            root.buildDate = SafeText.boundedText(kv.date, root.maxVersionTextChars)
+            root.versionTag = SafeText.boundedText(kv.tag, root.maxVersionTextChars)
             const ahead = parseInt(kv.ahead ?? "0")
             root.versionAhead = isNaN(ahead) ? 0 : ahead
             root.branch = branch
@@ -305,10 +300,10 @@ Singleton {
             tag = parts[1] ?? ""
             rest = rest.slice(1)
         }
-        root.targetVersion = root.boundedText(target, root.maxVersionTextChars)
-        root.targetTag = root.boundedText(tag, root.maxVersionTextChars)
+        root.targetVersion = SafeText.boundedText(target, root.maxVersionTextChars)
+        root.targetTag = SafeText.boundedText(tag, root.maxVersionTextChars)
         root.summary = rest.slice(0, root.maxCommitDetail).map(function(line) {
-            return root.boundedText(line, root.maxCommitSubjectChars + 80)
+            return SafeText.boundedText(line, root.maxCommitSubjectChars + 80)
         }).join("\n").trim()
         root.pendingCommits = root._parseCommits(root.summary)
     }
@@ -321,12 +316,12 @@ Singleton {
             if (line.length === 0) continue
             const at = line.indexOf(" ")
             if (at > 0) out.push({
-                hash: root.boundedText(line.slice(0, at), 64),
-                subject: root.boundedText(line.slice(at + 1).trim(), root.maxCommitSubjectChars)
+                hash: SafeText.boundedText(line.slice(0, at), 64),
+                subject: SafeText.boundedText(line.slice(at + 1).trim(), root.maxCommitSubjectChars)
             })
             else out.push({
                 hash: "",
-                subject: root.boundedText(line, root.maxCommitSubjectChars)
+                subject: SafeText.boundedText(line, root.maxCommitSubjectChars)
             })
         }
         return out
@@ -335,7 +330,7 @@ Singleton {
     function _lastOutputLine(out: string, err: string, fallback: string): string {
         const text = ((out || "") + "\n" + (err || "")).trim()
         const line = text.split(/\r?\n/).filter(function(s) { return s.length > 0 }).pop() || fallback
-        return root.boundedText(line.replace(/^silere-update:\s*/, ""),
+        return SafeText.boundedText(line.replace(/^silere-update:\s*/, ""),
             root.maxStatusTextChars)
     }
 
@@ -407,7 +402,7 @@ Singleton {
             // the switch is bound to the unit's real state, so a swallowed failure just
             // flips it back with no reason given
             root.timerError = code === 0 ? ""
-                : root.boundedText(
+                : SafeText.boundedText(
                     _timerSetErr.text.trim().split("\n").pop()
                         || "Could not change the update timer",
                     root.maxStatusTextChars)

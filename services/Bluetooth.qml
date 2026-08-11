@@ -32,7 +32,7 @@ Singleton {
 
     function deviceLabel(device): string {
         if (!device) return "Unknown"
-        return IconResolver.singleLineText(
+        return SafeText.singleLineText(
             device.deviceName || device.name || device.address || "Unknown", 128) || "Unknown"
     }
 

@@ -78,7 +78,7 @@ Item {
     readonly property string summaryText: Notifications.plainText(notification.summary, 2048)
     readonly property string bodyText:    Notifications.plainText(notification.body)
     readonly property string appNameText: Notifications.identityText(notification.appName)
-    readonly property string fallbackInitial: IconResolver.initial(
+    readonly property string fallbackInitial: SafeText.initial(
         card.appNameText || card.summaryText, "N")
     readonly property bool hasBody:       bodyText.length > 0
     readonly property bool isCritical: notification.urgency === NotificationUrgency.Critical

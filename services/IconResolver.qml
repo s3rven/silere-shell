@@ -10,40 +10,6 @@ Singleton {
     readonly property int maxSourceChars: 4096
     readonly property var _scheme: /^([a-z][a-z0-9+.-]*):/i
 
-    function boundedText(value, limit): string {
-        const requested = Number(limit)
-        const cap = isFinite(requested) && requested > 0
-            ? Math.min(root.maxIdentityChars, Math.floor(requested))
-            : root.maxIdentityChars
-        const text = String(value ?? "")
-        return text.length <= cap ? text : text.slice(0, Math.max(0, cap - 1)) + "…"
-    }
-
-    // Labels supplied by other processes belong on one visual/accessibility
-    // line. C0/C1 controls can break layout, while bidi embedding/override
-    // controls can make a title appear to say something other than its value.
-    // Natural RTL text still works without those explicit formatting controls.
-    function singleLineText(value, limit): string {
-        const requested = Number(limit)
-        const cap = isFinite(requested) && requested > 0
-            ? Math.min(root.maxSourceChars, Math.floor(requested))
-            : root.maxIdentityChars
-        const text = String(value ?? "")
-            .replace(/[\u0000-\u001F\u007F-\u009F\u202A-\u202E\u2066-\u2069]/g, " ")
-            .replace(/\s+/g, " ")
-            .trim()
-        return text.length <= cap ? text
-            : text.slice(0, Math.max(0, cap - 1)) + "…"
-    }
-
-    // charAt() hands back half a surrogate pair, so a name starting with an emoji
-    // renders as tofu; codePointAt is the only unicode-aware read in this engine
-    function initial(value, fallback: string): string {
-        const text = root.singleLineText(value, 128)
-        if (text.length === 0) return fallback
-        return String.fromCodePoint(text.codePointAt(0)).toUpperCase()
-    }
-
     function _fileUrl(value: string): string {
         return "file://" + value.split("/").map(function(part) {
             return encodeURIComponent(part)
@@ -81,7 +47,7 @@ Singleton {
     }
 
     function appMeta(identity): var {
-        const original = root.boundedText(identity, root.maxIdentityChars).trim()
+        const original = SafeText.boundedText(identity, root.maxIdentityChars).trim()
         if (original.length === 0) return null
 
         const noDesktop = original.toLowerCase().endsWith(".desktop")
@@ -101,7 +67,7 @@ Singleton {
         for (let i = 0; i < candidates.length && icon.length === 0; i++)
             if (candidates[i]) icon = root.iconSource(candidates[i])
 
-        const name = root.singleLineText((entry && entry.name) || tail || noDesktop, 128)
-        return { icon: icon, name: name, fallback: root.initial(name, "?") }
+        const name = SafeText.singleLineText((entry && entry.name) || tail || noDesktop, 128)
+        return { icon: icon, name: name, fallback: SafeText.initial(name, "?") }
     }
 }
