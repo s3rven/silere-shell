@@ -81,9 +81,19 @@ ShellRoot {
         root._check(IconResolver.localSource("/tmp/icon #?.png")
                 === "file:///tmp/icon%20%23%3F.png",
             "icon resolver encodes local file paths")
+        root._check(IconResolver.initial("firefox", "?") === "F",
+            "icon resolver reads a plain initial")
+        root._check(IconResolver.initial("  ", "N") === "N",
+            "icon resolver falls back on blank names")
+        const emojiInitial = IconResolver.initial("🦊 Firefox", "?")
+        root._check(emojiInitial.codePointAt(0) === 0x1F98A && emojiInitial.length === 2,
+            "icon resolver keeps a surrogate pair whole")
+
         const bounded = IconResolver.boundedText("abcdef", 4)
         root._check(bounded === "abc…" && bounded.length === 4,
             "icon resolver bounds external labels")
+        root._check(IconResolver.singleLineText("  alpha\nbeta\u202E  ", 32) === "alpha beta",
+            "icon resolver flattens controls in external labels")
 
         const longWindowText = "x".repeat(Compositor.maxWindowTitleChars + 20)
         const boundedWindowText = Compositor.boundedExternalText(
@@ -91,6 +101,9 @@ ShellRoot {
         root._check(boundedWindowText.length === Compositor.maxWindowTitleChars
                 && boundedWindowText.endsWith("…"),
             "compositor bounds client-controlled window text")
+        root._check(Compositor.boundedExternalText("Editor\nspoof\u202E", 64)
+                === "Editor spoof",
+            "compositor sanitizes client-controlled window text")
 
         const longMediaText = "m".repeat(Media.maxMetadataChars + 20)
         root._check(Media.boundedMetadataText(longMediaText, Media.maxMetadataChars).length
