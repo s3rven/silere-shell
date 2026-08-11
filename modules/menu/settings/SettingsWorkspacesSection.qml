@@ -16,25 +16,6 @@ Column {
             displayValue: ShellSettings.wsMinVisible
             onChanged: (v) => ShellSettings.wsMinVisible = v
         }
-        ToggleRow {
-            glyph: "󰗘"; label: "Switch animation"
-            checked: ShellSettings.workspaceShift
-            onToggled: nextChecked => ShellSettings.workspaceShift = nextChecked
-        }
-        ToggleRow {
-            glyph: "󱕒"; label: "Scroll to switch"
-            checked: ShellSettings.wsScrollSwitch
-            onToggled: nextChecked => ShellSettings.wsScrollSwitch = nextChecked
-        }
-        ToggleRow {
-            glyph: "󰂟"; label: "Notification pulse"
-            checked: ShellSettings.wsNotifPulse
-            onToggled: nextChecked => ShellSettings.wsNotifPulse = nextChecked
-        }
-    }
-
-    SectionLabel { label: "CONTENT" }
-    SettingsCard {
         ChoiceChipRow {
             glyph: ShellSettings.wsActiveMarker === "bar" ? "━"
                 : ShellSettings.wsActiveMarker === "dot" ? "●" : "◆"
@@ -47,6 +28,10 @@ Column {
             ]
             onChosen: (v) => ShellSettings.wsActiveMarker = v
         }
+    }
+
+    SectionLabel { label: "CONTENT" }
+    SettingsCard {
         ToggleRow {
             glyph: "󰎠"; label: "Numbers"
             checked: ShellSettings.wsShowNumbers
@@ -55,7 +40,7 @@ Column {
         SliderRow {
             glyph: ShellSettings.wsShowNumbers ? "1" : "•"
             glyphColor: Theme.withAlpha(Theme.text, Math.max(0.35, ShellSettings.wsMarkerOpacity))
-            label: "Marker opacity"
+            label: ShellSettings.wsShowNumbers ? "Number opacity" : "Dot opacity"
             value: ShellSettings.wsMarkerOpacity
             min: 0.2; max: 1.0; step: 0.05
             displayValue: Math.round(ShellSettings.wsMarkerOpacity * 100) + "%"
@@ -81,6 +66,31 @@ Column {
                 displayValue: Math.round(ShellSettings.wsIconOpacity * 100) + "%"
                 onChanged: (v) => ShellSettings.wsIconOpacity = v
             }
+        }
+    }
+
+    SectionLabel { label: "BEHAVIOR" }
+    SettingsCard {
+        ToggleRow {
+            glyph: "󱕒"; label: "Scroll to switch"
+            checked: ShellSettings.wsScrollSwitch
+            onToggled: nextChecked => ShellSettings.wsScrollSwitch = nextChecked
+        }
+        ToggleRow {
+            glyph: "󰗘"; label: "Switch animation"
+            checked: ShellSettings.workspaceShift
+            onToggled: nextChecked => ShellSettings.workspaceShift = nextChecked
+        }
+        ToggleRow {
+            glyph: "󰂟"; label: "Notification pulse"
+            checked: ShellSettings.wsNotifPulse
+            onToggled: nextChecked => ShellSettings.wsNotifPulse = nextChecked
+        }
+        ToggleRow {
+            glyph: "󰕦"; label: "Urgent window pulse"
+            description: "Animate a workspace demanding attention"
+            checked: ShellSettings.wsUrgentPulse
+            onToggled: nextChecked => ShellSettings.wsUrgentPulse = nextChecked
         }
     }
 }

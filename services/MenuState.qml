@@ -37,6 +37,8 @@ Singleton {
               description: "Gaps and dividers" }
         ]},
         { glyph: "󰀻", label: "Widgets", children: [
+            { glyph: "󰀻", label: "Order & visibility", section: "widgets",
+              description: "Choose and reorder bar widgets" },
             { glyph: "󰕰", label: "Workspaces", section: "workspaces",
               description: "Markers, labels, and app icons" },
             { glyph: "󰅐", label: "Clock",      section: "clock",
@@ -44,9 +46,7 @@ Singleton {
             { glyph: "󰝚", label: "Media",      section: "media",
               description: "Track details and visualizer" },
             { glyph: "󰈈", label: "Indicators", section: "indicators",
-              description: "Titles, status, and hover" },
-            { glyph: "󰀻", label: "Order & visibility", section: "widgets",
-              description: "Choose and reorder bar widgets" }
+              description: "Titles, status, and hover" }
         ]},
         { glyph: "󰂚", label: "Feedback", children: [
             { glyph: "󰂚", label: "Notifications", section: "popups",

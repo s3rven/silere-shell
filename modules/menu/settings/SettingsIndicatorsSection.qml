@@ -51,13 +51,12 @@ Column {
         }
     }
 
-    SectionLabel { label: "BATTERY" }
+    SectionLabel { label: "BATTERY"; visible: Battery.available }
     SettingsCard {
+        visible: Battery.available
         ToggleRow {
             glyph: "󰂃"; label: "Hide charged battery"
             checked: ShellSettings.batteryAutoHide
-            available: Battery.available
-            dependsNote: "No battery"
             onToggled: nextChecked => ShellSettings.batteryAutoHide = nextChecked
         }
     }
