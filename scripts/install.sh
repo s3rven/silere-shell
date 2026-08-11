@@ -858,4 +858,6 @@ else
     printf "  add the line above to your Hyprland or niri config, or run it now:\n"
     printf "    ${DIM}qs -p %s/shell.qml${R}\n" "$ROOT"
 fi
+printf "  click the active workspace diamond to open the menu and settings\n"
+printf "  or bind it: ${DIM}qs ipc -p %s/shell.qml call menu toggle${R}\n" "$ROOT"
 printf "  to uninstall: ${DIM}%s/scripts/uninstall.sh${R}\n\n" "$ROOT"

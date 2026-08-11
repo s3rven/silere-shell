@@ -30,180 +30,199 @@ Column {
     width: parent ? parent.width : 0
     spacing: 0
 
+    CollapsibleSection {
+        expanded: !ShellUpdate.packaged
+
+        SectionLabel { label: "SILERE SHELL"; first: true }
+        SettingsCard {
+            UpdateStatusCard {
+                animationActive: root.animationActive
+                glyph: ShellUpdate.checking || ShellUpdate.applying ? "󰓦"
+                    : ShellUpdate.lastCheckError.length > 0 || ShellUpdate.lastApplyError.length > 0 ? "󰀦"
+                    : ShellUpdate.pending ? "󰚰" : "󰄬"
+                title: "Silere Shell"
+                status: ShellUpdate.statusDetail
+                meta: ShellUpdate.versionLabel
+                detail: ShellUpdate.lastApplyError.length > 0 ? ShellUpdate.lastApplyError
+                    : ShellUpdate.lastCheckError.length > 0 ? ShellUpdate.lastCheckError
+                    : ShellUpdate.pending && ShellUpdate.blockedReason.length > 0
+                        ? ShellUpdate.blockedReason + " — installing will not run until that is resolved"
+                    : ShellUpdate.versionDetail
+                detailError: ShellUpdate.lastApplyError.length > 0 || ShellUpdate.lastCheckError.length > 0
+                    || (ShellUpdate.pending && ShellUpdate.blockedReason.length > 0)
+                statusColor: ShellUpdate.lastCheckError.length > 0 || ShellUpdate.lastApplyError.length > 0
+                    ? Theme.warning : ShellUpdate.checking || ShellUpdate.applying || ShellUpdate.pending
+                        ? Theme.accent : Theme.success
+                busy: ShellUpdate.checking || ShellUpdate.applying
+
+                primaryLabel: ShellUpdate.pending || ShellUpdate.applying ? "Install" : "Check"
+                primaryGlyph: ShellUpdate.pending ? "󰅢" : "󰓦"
+                primaryEnabled: !ShellUpdate.checking && !ShellUpdate.applying
+                    && (!ShellUpdate.pending || ShellUpdate.blockedReason.length === 0)
+                primaryEmphasis: ShellUpdate.pending
+                onPrimaryTriggered: {
+                    if (ShellUpdate.pending) ShellUpdate.apply()
+                    else ShellUpdate.check()
+                }
+
+                secondaryShown: ShellUpdate.pending && !ShellUpdate.applying
+                secondaryGlyph: "󰑐"
+                secondaryEnabled: !ShellUpdate.checking && !ShellUpdate.applying
+                onSecondaryTriggered: ShellUpdate.check()
+            }
+
+            ControlRow {
+                glyph: "󰜘"
+                title: "Pending changes"
+                status: ShellUpdate.targetLabel.length > 0
+                    ? "Moves to " + ShellUpdate.targetLabel : ""
+                valueText: ShellUpdate.pendingCommits.length < ShellUpdate.count
+                    ? ShellUpdate.pendingCommits.length + " of " + ShellUpdate.count
+                    : String(ShellUpdate.count)
+                visible: root._changesAvailable
+                expandable: true
+                chevronTabFocusable: false
+                expanded: root._changesOpen && root._changesAvailable
+                onExpandToggled: root._changesOpen = !root._changesOpen
+                onActivated: root._changesOpen = !root._changesOpen
+            }
+            CollapsibleSection {
+                expanded: root._changesOpen && root._changesAvailable
+                Item {
+                    width: parent ? parent.width : 0
+                    height: Math.min(_commits.contentHeight, 240)
+
+                    ShellListView {
+                        id: _commits
+                        anchors.fill: parent
+                        interactive: contentHeight > height
+                        boundsMovement: Flickable.StopAtBounds
+                        spacing: 0
+                        model: root._changesOpen && root._changesAvailable
+                            ? ShellUpdate.pendingCommits : []
+
+                        Accessible.role: Accessible.List
+                        Accessible.name: "Pending shell changes"
+
+                        delegate: Item {
+                            id: _commit
+                            required property var modelData
+                            width: parent ? parent.width : 0
+                            height: Math.max(22, Settings.capHeight + 8)
+                            Accessible.role: Accessible.ListItem
+                            Accessible.name: _commit.modelData.subject
+                                + ", " + _commit.modelData.hash
+                            ShellText {
+                                anchors.left: parent.left
+                                anchors.leftMargin: 42
+                                anchors.right: _hash.left
+                                anchors.rightMargin: 8
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: _commit.modelData.subject
+                                elide: Text.ElideRight
+                                color: Theme.withAlpha(Theme.text, 0.80)
+                                font.pixelSize: Settings.fontLabel
+                            }
+                            ShellText {
+                                id: _hash
+                                anchors.right: parent.right
+                                anchors.rightMargin: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: _commit.modelData.hash
+                                color: Theme.withAlpha(Theme.subtext, 0.55)
+                                font.pixelSize: Settings.fontCaption
+                            }
+                        }
+                    }
+
+                    ListEdgeLines {
+                        anchors.fill: parent
+                        list: _commits
+                    }
+                }
+            }
+
+            ControlRow {
+                glyph: "󰄉"
+                title: "Recent changes"
+                status: ShellUpdate.recentBusy ? "Reading history" : ""
+                valueText: ShellUpdate.recentReady
+                    ? String(ShellUpdate.recentCommits.length) : ""
+                expandable: true
+                chevronTabFocusable: false
+                expanded: root._recentOpen
+                onExpandToggled: root._toggleRecent()
+                onActivated: root._toggleRecent()
+            }
+            CollapsibleSection {
+                expanded: root._recentOpen
+                Item {
+                    width: parent ? parent.width : 0
+                    height: Math.min(_recent.contentHeight, 240)
+
+                    ShellListView {
+                        id: _recent
+                        anchors.fill: parent
+                        interactive: contentHeight > height
+                        boundsMovement: Flickable.StopAtBounds
+                        spacing: 0
+                        model: root._recentOpen ? ShellUpdate.recentCommits : []
+
+                        Accessible.role: Accessible.List
+                        Accessible.name: "Recent shell changes"
+
+                        delegate: Item {
+                            id: _rc
+                            required property var modelData
+                            width: parent ? parent.width : 0
+                            height: Math.max(22, Settings.capHeight + 8)
+                            Accessible.role: Accessible.ListItem
+                            Accessible.name: _rc.modelData.subject + ", " + _rc.modelData.hash
+                            ShellText {
+                                anchors.left: parent.left
+                                anchors.leftMargin: 42
+                                anchors.right: _rcHash.left
+                                anchors.rightMargin: 8
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: _rc.modelData.subject
+                                elide: Text.ElideRight
+                                color: Theme.withAlpha(Theme.text, 0.80)
+                                font.pixelSize: Settings.fontLabel
+                            }
+                            ShellText {
+                                id: _rcHash
+                                anchors.right: parent.right
+                                anchors.rightMargin: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: _rc.modelData.hash
+                                color: Theme.withAlpha(Theme.subtext, 0.55)
+                                font.pixelSize: Settings.fontCaption
+                            }
+                        }
+                    }
+
+                    ListEdgeLines {
+                        anchors.fill: parent
+                        list: _recent
+                    }
+                }
+            }
+
+            ToggleRow {
+                glyph: "󰥔"; label: "Daily shell update check"
+                description: ShellUpdate.timerError.length > 0
+                    ? ShellUpdate.timerError : ShellUpdate.nextCheckText
+                checked: ShellUpdate.timerEnabled
+                enabled: !ShellUpdate.timerBusy
+                available: ShellUpdate.timerSupported
+                dependsNote: ShellUpdate.timerBusy ? "Working" : (!SystemTools.ready ? "Checking" : "No systemd")
+                onToggled: nextChecked => ShellUpdate.setTimerEnabled(nextChecked)
+            }
+        }
+    }
+
+    SectionLabel { label: "SYSTEM PACKAGES"; first: ShellUpdate.packaged }
     SettingsCard {
-        UpdateStatusCard {
-            animationActive: root.animationActive
-            glyph: ShellUpdate.checking || ShellUpdate.applying ? "󰓦"
-                : ShellUpdate.lastCheckError.length > 0 || ShellUpdate.lastApplyError.length > 0 ? "󰀦"
-                : ShellUpdate.pending ? "󰚰" : "󰄬"
-            title: "Silere Shell"
-            status: ShellUpdate.statusDetail
-            meta: ShellUpdate.versionLabel
-            detail: ShellUpdate.lastApplyError.length > 0 ? ShellUpdate.lastApplyError
-                : ShellUpdate.lastCheckError.length > 0 ? ShellUpdate.lastCheckError
-                : ShellUpdate.pending && ShellUpdate.blockedReason.length > 0
-                    ? ShellUpdate.blockedReason + " — installing will not run until that is resolved"
-                : ShellUpdate.versionDetail
-            detailError: ShellUpdate.lastApplyError.length > 0 || ShellUpdate.lastCheckError.length > 0
-                || (ShellUpdate.pending && ShellUpdate.blockedReason.length > 0)
-            statusColor: ShellUpdate.lastCheckError.length > 0 || ShellUpdate.lastApplyError.length > 0
-                ? Theme.warning : ShellUpdate.checking || ShellUpdate.applying || ShellUpdate.pending
-                    ? Theme.accent : Theme.success
-            busy: ShellUpdate.checking || ShellUpdate.applying
-
-            primaryLabel: ShellUpdate.pending || ShellUpdate.applying ? "Install" : "Check"
-            primaryGlyph: ShellUpdate.pending ? "󰅢" : "󰓦"
-            primaryEnabled: !ShellUpdate.checking && !ShellUpdate.applying
-                && (!ShellUpdate.pending || ShellUpdate.blockedReason.length === 0)
-            primaryEmphasis: ShellUpdate.pending
-            onPrimaryTriggered: {
-                if (ShellUpdate.pending) ShellUpdate.apply()
-                else ShellUpdate.check()
-            }
-
-            secondaryShown: ShellUpdate.pending && !ShellUpdate.applying
-            secondaryGlyph: "󰑐"
-            secondaryEnabled: !ShellUpdate.checking && !ShellUpdate.applying
-            onSecondaryTriggered: ShellUpdate.check()
-        }
-
-        ControlRow {
-            glyph: "󰜘"
-            title: "Pending changes"
-            status: ShellUpdate.targetLabel.length > 0
-                ? "Moves to " + ShellUpdate.targetLabel : ""
-            valueText: ShellUpdate.pendingCommits.length < ShellUpdate.count
-                ? ShellUpdate.pendingCommits.length + " of " + ShellUpdate.count
-                : String(ShellUpdate.count)
-            visible: root._changesAvailable
-            expandable: true
-            chevronTabFocusable: false
-            expanded: root._changesOpen && root._changesAvailable
-            onExpandToggled: root._changesOpen = !root._changesOpen
-            onActivated: root._changesOpen = !root._changesOpen
-        }
-        CollapsibleSection {
-            expanded: root._changesOpen && root._changesAvailable
-            Item {
-                width: parent ? parent.width : 0
-                height: Math.min(_commits.contentHeight, 240)
-
-                ShellListView {
-                    id: _commits
-                    anchors.fill: parent
-                    interactive: contentHeight > height
-                    boundsMovement: Flickable.StopAtBounds
-                    spacing: 0
-                    model: root._changesOpen && root._changesAvailable
-                        ? ShellUpdate.pendingCommits : []
-
-                    Accessible.role: Accessible.List
-                    Accessible.name: "Pending shell changes"
-
-                    delegate: Item {
-                        id: _commit
-                        required property var modelData
-                        width: parent ? parent.width : 0
-                        height: Math.max(22, Settings.capHeight + 8)
-                        Accessible.role: Accessible.ListItem
-                        Accessible.name: _commit.modelData.subject
-                            + ", " + _commit.modelData.hash
-                        ShellText {
-                            anchors.left: parent.left
-                            anchors.leftMargin: 42
-                            anchors.right: _hash.left
-                            anchors.rightMargin: 8
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: _commit.modelData.subject
-                            elide: Text.ElideRight
-                            color: Theme.withAlpha(Theme.text, 0.80)
-                            font.pixelSize: Settings.fontLabel
-                        }
-                        ShellText {
-                            id: _hash
-                            anchors.right: parent.right
-                            anchors.rightMargin: 12
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: _commit.modelData.hash
-                            color: Theme.withAlpha(Theme.subtext, 0.55)
-                            font.pixelSize: Settings.fontCaption
-                        }
-                    }
-                }
-
-                ListEdgeLines {
-                    anchors.fill: parent
-                    list: _commits
-                }
-            }
-        }
-
-        ControlRow {
-            glyph: "󰄉"
-            title: "Recent changes"
-            status: ShellUpdate.recentBusy ? "Reading history" : ""
-            valueText: ShellUpdate.recentReady
-                ? String(ShellUpdate.recentCommits.length) : ""
-            expandable: true
-            chevronTabFocusable: false
-            expanded: root._recentOpen
-            onExpandToggled: root._toggleRecent()
-            onActivated: root._toggleRecent()
-        }
-        CollapsibleSection {
-            expanded: root._recentOpen
-            Item {
-                width: parent ? parent.width : 0
-                height: Math.min(_recent.contentHeight, 240)
-
-                ShellListView {
-                    id: _recent
-                    anchors.fill: parent
-                    interactive: contentHeight > height
-                    boundsMovement: Flickable.StopAtBounds
-                    spacing: 0
-                    model: root._recentOpen ? ShellUpdate.recentCommits : []
-
-                    Accessible.role: Accessible.List
-                    Accessible.name: "Recent shell changes"
-
-                    delegate: Item {
-                        id: _rc
-                        required property var modelData
-                        width: parent ? parent.width : 0
-                        height: Math.max(22, Settings.capHeight + 8)
-                        Accessible.role: Accessible.ListItem
-                        Accessible.name: _rc.modelData.subject + ", " + _rc.modelData.hash
-                        ShellText {
-                            anchors.left: parent.left
-                            anchors.leftMargin: 42
-                            anchors.right: _rcHash.left
-                            anchors.rightMargin: 8
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: _rc.modelData.subject
-                            elide: Text.ElideRight
-                            color: Theme.withAlpha(Theme.text, 0.80)
-                            font.pixelSize: Settings.fontLabel
-                        }
-                        ShellText {
-                            id: _rcHash
-                            anchors.right: parent.right
-                            anchors.rightMargin: 12
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: _rc.modelData.hash
-                            color: Theme.withAlpha(Theme.subtext, 0.55)
-                            font.pixelSize: Settings.fontCaption
-                        }
-                    }
-                }
-
-                ListEdgeLines {
-                    anchors.fill: parent
-                    list: _recent
-                }
-            }
-        }
-
         UpdateStatusCard {
             animationActive: root.animationActive
             glyph: Updates.isChecking ? "󰓦" : Updates.lastFailed ? "󰀦" : Updates.icon
@@ -306,16 +325,6 @@ Column {
             onToggled: nextChecked => ShellSettings.updatesWidget = nextChecked
             available: !SystemTools.ready || Updates.supported
             dependsNote: "No package manager"
-        }
-        ToggleRow {
-            glyph: "󰥔"; label: "Daily shell update check"
-            description: ShellUpdate.timerError.length > 0
-                ? ShellUpdate.timerError : ShellUpdate.nextCheckText
-            checked: ShellUpdate.timerEnabled
-            enabled: !ShellUpdate.timerBusy
-            available: ShellUpdate.timerSupported
-            dependsNote: ShellUpdate.timerBusy ? "Working" : (!SystemTools.ready ? "Checking" : "No systemd")
-            onToggled: nextChecked => ShellUpdate.setTimerEnabled(nextChecked)
         }
         HintText { text: "Checks never install updates." }
     }

@@ -26,6 +26,8 @@ Singleton {
     property bool   localChanges: false
     property bool   versionReady: false
     property string versionError: ""
+    // a distro package ships no .git, so every git-backed control hides instead of erroring
+    property bool   packaged: false
     readonly property bool versionBusy: _versionProc.running
     property string targetVersion: ""
     property string targetTag: ""
@@ -112,7 +114,7 @@ Singleton {
     readonly property string _script: Quickshell.shellDir + "/scripts/update.sh"
 
     function check(): void {
-        if (checking || applying) return
+        if (checking || applying || packaged) return
         lastCheckError = ""
         _checkTimedOut = false
         _checkTimeout.restart()
@@ -132,7 +134,7 @@ Singleton {
     }
 
     function refreshTimer(): void {
-        if (!SystemTools.ready || _timerStatus.running || _timerSet.running) return
+        if (!SystemTools.ready || packaged || _timerStatus.running || _timerSet.running) return
         _timerStatus.exec(["bash", root._script, "--timer-status"])
     }
 
@@ -225,6 +227,13 @@ Singleton {
                 return
             }
             const kv = root._parseKv(_versionOut.text)
+            if ((kv.packaged ?? "") === "1") {
+                root.packaged = true
+                root.versionReady = false
+                root.versionError = ""
+                return
+            }
+            root.packaged = false
             const sha = kv.sha ?? ""
             const branch = kv.branch ?? ""
             const dirty = kv.dirty ?? ""

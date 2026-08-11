@@ -269,7 +269,15 @@ if [ "${SILERE_SCRIPT_LIB_ONLY:-0}" = "1" ]; then
     return 0 2>/dev/null || exit 0
 fi
 
-git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1 || _fail "not a git repo: $ROOT"
+# a distro package ships no .git, which is a supported install shape and not a
+# failure — answer the read-only queries and never raise a critical popup for it
+if ! git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+    case "${1:-}" in
+        --version)               printf 'packaged=1\n'; exit 0 ;;
+        --recent|--timer-status) exit 0 ;;
+    esac
+    _quiet_fail "$ROOT is not a git checkout — update it through your package manager"
+fi
 
 case "${1:-}" in
     --version)

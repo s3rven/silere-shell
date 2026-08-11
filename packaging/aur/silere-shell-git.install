@@ -1,0 +1,31 @@
+post_install() {
+    cat <<'EOF'
+
+  silere is installed at /usr/share/silere-shell
+
+  start it:      silere-shell
+  autostart:     add `exec-once = silere-shell` to your Hyprland config,
+                 or `spawn-at-startup "silere-shell"` to your niri config
+
+  click the active workspace diamond to open the menu and settings,
+  or bind it: qs ipc -p /usr/share/silere-shell/shell.qml call menu toggle
+
+  wallpaper colours need a matugen template. copy
+  /usr/share/silere-shell/assets/matugen-theme.qml into your matugen
+  templates and point config.toml at it — see the README. without it
+  silere uses its bundled palette and everything else still works.
+
+  updates come from pacman; the in-shell updater stays out of the way.
+
+EOF
+}
+
+post_upgrade() {
+    cat <<'EOF'
+
+  silere was updated. restart it to pick up the new version:
+    systemctl --user restart silere-shell.service   # if you run it as a unit
+    or restart your compositor
+
+EOF
+}
