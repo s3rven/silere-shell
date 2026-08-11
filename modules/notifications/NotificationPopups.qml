@@ -25,8 +25,8 @@ PanelWindow {
         ? 4 * Math.round(targetScreen.width * (1.0 - ShellSettings.barWidth) / 8)
         : 0
     readonly property real _edgeMargin: ShellSettings.barFloating ? Math.max(0, _barSideGap) : 10
-    readonly property int _barClearance: (ShellSettings.barFloating ? 4 : 0)
-        + ShellSettings.barHeight + 6
+    readonly property int _barInset: Metrics.barEdgeInset
+    readonly property int _barClearance: _barInset + ShellSettings.barHeight + 6
     readonly property int _availableH: targetScreen
         ? Math.max(64, Math.floor(targetScreen.height - _barClearance - 12)) : 640
     readonly property int _availableContentH: Math.max(48,
@@ -155,10 +155,8 @@ PanelWindow {
     }
 
     margins {
-        top:    win._barBottom ? 6
-            : (ShellSettings.barFloating ? 4 : 0) + ShellSettings.barHeight + 2
-        bottom: win._barBottom
-            ? (ShellSettings.barFloating ? 4 : 0) + ShellSettings.barHeight + 2 : 0
+        top:    win._barBottom ? 6 : win._barInset + ShellSettings.barHeight + 2
+        bottom: win._barBottom ? win._barInset + ShellSettings.barHeight + 2 : 0
         right: win._pos === "top-right" ? Math.max(0, win._edgeMargin - win._shadowPad) : 0
         left:  win._left              ? Math.max(0, win._edgeMargin - win._shadowPad) : 0
     }
@@ -320,12 +318,13 @@ PanelWindow {
                 win._availableContentH - _clearChip.height - _moreChip.height
                 - outerCol.spacing * 2))
 
+            HoverHandler { id: _stackHover }
+
             ShellFlickable {
                 id: _cardScroll
                 anchors.fill: parent
                 contentWidth: width
                 contentHeight: cardCol.implicitHeight
-                boundsBehavior: Flickable.StopAtBounds
                 interactive: contentHeight > height + 1
 
                 Column {
@@ -388,6 +387,7 @@ PanelWindow {
                                     slideDir: win._slideDir
                                     quietPaint: win._quietPaint
                                     stackSize: win._visibleCards
+                                    stackHovered: _stackHover.hovered
 
                                     onLeaving: win._noteLeaving()
 

@@ -205,8 +205,8 @@ Singleton {
         return from < to ? (h >= from && h < to) : (h >= from || h < to)
     }
     readonly property bool effectiveDnd: dnd || _quietActive
-    readonly property bool _silencingActive: effectiveDnd || fullscreenSilenced
-    on_SilencingActiveChanged: { if (!_silencingActive && missedCount !== 0) missedCount = 0 }
+    readonly property bool silencingActive: effectiveDnd || fullscreenSilenced
+    onSilencingActiveChanged: { if (!silencingActive && missedCount !== 0) missedCount = 0 }
     function markSeen(id: int): void {
         root._ensurePersistentState()
         const key = String(id)

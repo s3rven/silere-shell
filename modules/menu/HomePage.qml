@@ -368,13 +368,13 @@ PageShell {
             ControlRow {
                 id: _dndRow
                 active: Notifications.dnd
-                glyph: Notifications.effectiveDnd || Notifications.fullscreenSilenced ? "󰂛" : "󰂚"
+                glyph: Notifications.silencingActive ? "󰂛" : "󰂚"
                 title: "Do Not Disturb"
                 status: Notifications.effectiveDnd && !Notifications.dnd ? "Quiet hours"
                     : Notifications.fullscreenSilenced ? "Fullscreen"
                     : ""
                 showSwitch: true
-                badgeCount: Notifications.effectiveDnd || Notifications.fullscreenSilenced ? Notifications.missedCount : 0
+                badgeCount: Notifications.silencingActive ? Notifications.missedCount : 0
                 onActivated: Notifications.toggleDnd()
                 onBadgeActivated: MenuState.showTab(MenuState.recentTab)
             }

@@ -27,7 +27,6 @@ Item {
     readonly property bool _bar: style === "bar"
 
     readonly property real centerX: x + width / 2
-    readonly property real centerY: y + height / 2
     readonly property color tint: root.urgent ? Theme.warning : Theme.accent
 
     function pulse(): void {
@@ -252,7 +251,7 @@ Item {
     }
 
     Rectangle {
-        readonly property bool _show: Notifications.effectiveDnd && Notifications.missedCount > 0
+        readonly property bool _show: Notifications.silencingActive && Notifications.missedCount > 0
         // placed, not anchored: the underline needs it at the line's tip and a conditional anchor leaves the stale edge set
         x: root._bar ? root.width - width + 2 : (root.width - width) / 2
         y: -1

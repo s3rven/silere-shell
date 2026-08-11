@@ -174,8 +174,21 @@ Item {
     readonly property real _enterX:  slideDir * 44
     readonly property real _hiddenX: slideDir * (implicitWidth + 16)
 
+    // reading one card holds the whole stack: cards expiring out from under the pointer reflow what is being read
+    property bool stackHovered: false
+    readonly property bool _paused: _cardHover.hovered || card.stackHovered
+
     property real _hoverPausedMs: 0
     property real _hoverStartMs:  0
+
+    on_PausedChanged: {
+        if (card._paused) {
+            card._hoverStartMs = Date.now()
+        } else if (card._hoverStartMs > 0) {
+            card._hoverPausedMs += Date.now() - card._hoverStartMs
+            card._hoverStartMs = 0
+        }
+    }
 
     Timer {
         id: _autoClose
@@ -187,7 +200,7 @@ Item {
             return (t > 0 && t < 30000) ? t : ShellSettings.notifDefaultTimeout
         }
         interval: Math.max(400, fullInterval - (Date.now() - card.timeoutStartedAt) + card._hoverPausedMs)
-        running:  shouldRun && !_cardHover.hovered
+        running:  shouldRun && !card._paused
         onTriggered: card.dismiss(true)
     }
 
@@ -208,34 +221,24 @@ Item {
         id: _countdownTick
         interval: card._ringTickMs
         repeat:  true
-        running: card._showCountdown && !_cardHover.hovered && !card.quietPaint
+        running: card._showCountdown && !card._paused && !card.quietPaint
         triggeredOnStart: true
         onTriggered: card._syncCountdown()
     }
 
     PulseLoop {
         active: card._showCountdown && card._timeoutProgress < 0.18
-            && !_cardHover.hovered && !card.quietPaint
+            && !card._paused && !card.quietPaint
         target: card; targetProperty: "_countdownPulse"
         peak: 0.5; floor: 1.0; restValue: 1.0
         duration: Motion.ms(420)
     }
 
-    HoverHandler {
-        id: _cardHover
-        onHoveredChanged: {
-            if (hovered) {
-                card._hoverStartMs = Date.now()
-            } else if (card._hoverStartMs > 0) {
-                card._hoverPausedMs += Date.now() - card._hoverStartMs
-                card._hoverStartMs = 0
-            }
-        }
-    }
+    HoverHandler { id: _cardHover }
 
     onTimeoutStartedAtChanged: {
         card._hoverPausedMs = 0
-        card._hoverStartMs = _cardHover.hovered ? Date.now() : 0
+        card._hoverStartMs = card._paused ? Date.now() : 0
         card._syncCountdown()
     }
 
