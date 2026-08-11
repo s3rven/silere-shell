@@ -8,6 +8,23 @@ import Quickshell.Hyprland
 Singleton {
     id: root
 
+    readonly property int maxWindowIdentityChars: 512
+    readonly property int maxWindowTitleChars: 2048
+
+    function boundedExternalText(value, limit: int): string {
+        const cap = Math.max(1, Math.min(8192, Number(limit) || 1))
+        const text = String(value ?? "")
+        return text.length <= cap ? text : text.slice(0, cap - 1) + "…"
+    }
+
+    function _windowIdentity(value): string {
+        return root.boundedExternalText(value, root.maxWindowIdentityChars)
+    }
+
+    function _windowTitle(value): string {
+        return root.boundedExternalText(value, root.maxWindowTitleChars)
+    }
+
     readonly property string _niriSock: String(Quickshell.env("NIRI_SOCKET") || "")
     readonly property bool isNiri:     _niriSock.length > 0
     readonly property bool isHyprland: !isNiri
@@ -116,7 +133,7 @@ Singleton {
             const t = tops[i]
             const c = t ? t.lastIpcObject : null
             if (!c || !c.address) continue
-            next[c.address] = t.title || c.title || ""
+            next[c.address] = root._windowTitle(t.title || c.title)
         }
 
         const oldKeys = Object.keys(root._hyprLiveTitles)
@@ -239,9 +256,11 @@ Singleton {
             if (!c || !c.address) continue
             const wsId = c.workspace ? (c.workspace.id ?? -1) : -1
             out.push({
-                appId: (t.wayland && t.wayland.appId) || c.class || c.initialClass || "",
-                title: c.title || "",
-                cls: c.class ?? "", initialClass: c.initialClass ?? "",
+                appId: root._windowIdentity((t.wayland && t.wayland.appId)
+                    || c.class || c.initialClass),
+                title: root._windowTitle(c.title),
+                cls: root._windowIdentity(c.class),
+                initialClass: root._windowIdentity(c.initialClass),
                 pid: c.pid ?? -1, ref: c.address,
                 wsRef: wsId, wsId: wsId, output: wsOut[wsId] ?? "",
                 focused: !!(Hyprland.activeToplevel && Hyprland.activeToplevel === t),
@@ -377,7 +396,7 @@ Singleton {
             if (!w) continue
             const home = byId[w.workspace_id] || null
             out.push({
-                appId: w.app_id ?? "",
+                appId: root._windowIdentity(w.app_id),
                 wsId: home ? home.idx : -1,
                 output: home ? (home.output ?? "") : ""
             })
@@ -396,9 +415,9 @@ Singleton {
             const w = wins[i]
             if (!w) continue
             const home = byId[w.workspace_id] || null
-            const app = w.app_id ?? ""
+            const app = root._windowIdentity(w.app_id)
             out.push({
-                appId: app, title: w.title ?? "",
+                appId: app, title: root._windowTitle(w.title),
                 cls: app, initialClass: app,
                 pid: w.pid ?? -1, ref: w.id,
                 wsRef: w.workspace_id, wsId: home ? home.idx : -1,
@@ -441,6 +460,24 @@ Singleton {
             || previous.is_fullscreen !== next.is_fullscreen
             || oldStamp.secs !== newStamp.secs
             || oldStamp.nanos !== newStamp.nanos
+    }
+
+    function _boundedNiriWindow(raw): var {
+        if (!raw || typeof raw !== "object") return null
+        const stamp = raw.focus_timestamp || {}
+        return {
+            id: raw.id,
+            app_id: root._windowIdentity(raw.app_id),
+            title: root._windowTitle(raw.title),
+            pid: raw.pid ?? -1,
+            workspace_id: raw.workspace_id,
+            is_focused: !!raw.is_focused,
+            is_fullscreen: !!raw.is_fullscreen,
+            focus_timestamp: raw.focus_timestamp ? {
+                secs: Number(stamp.secs ?? 0),
+                nanos: Number(stamp.nanos ?? 0)
+            } : null
+        }
     }
 
     function _onNiriLine(line): void {
@@ -494,11 +531,18 @@ Singleton {
             return
         }
         if (ev.WindowsChanged) {
-            root._niriWinRaw = ev.WindowsChanged.windows || []
+            const incoming = Array.isArray(ev.WindowsChanged.windows)
+                ? ev.WindowsChanged.windows : []
+            const wins = []
+            for (let i = 0; i < incoming.length; i++) {
+                const bounded = root._boundedNiriWindow(incoming[i])
+                if (bounded) wins.push(bounded)
+            }
+            root._niriWinRaw = wins
             return
         }
         if (ev.WindowOpenedOrChanged) {
-            const w = ev.WindowOpenedOrChanged.window
+            const w = root._boundedNiriWindow(ev.WindowOpenedOrChanged.window)
             if (!w) return
             const current = root._niriWinRaw
             let foundAt = -1

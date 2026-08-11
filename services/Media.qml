@@ -9,6 +9,30 @@ import "../config"
 Singleton {
     id: root
 
+    readonly property int maxIdentityChars: 512
+    readonly property int maxMetadataChars: 2048
+    readonly property int maxArtSourceChars: 4096
+
+    function boundedMetadataText(value, limit: int): string {
+        const cap = Math.max(1, Math.min(root.maxMetadataChars, Number(limit) || 1))
+        const text = String(value ?? "")
+        return text.length <= cap ? text : text.slice(0, cap - 1) + "…"
+    }
+
+    function finiteNonnegative(value): real {
+        const number = Number(value)
+        return isFinite(number) && number > 0 ? number : 0
+    }
+
+    function artSource(raw): string {
+        const value = String(raw ?? "").trim()
+        if (value.length === 0 || value.length > root.maxArtSourceChars) return ""
+        if (/[\u0000-\u001F\u007F]/.test(value)) return ""
+        if (value.startsWith("/")) return IconResolver.localSource(value)
+        if (/^https?:\/\//i.test(value)) return value
+        return IconResolver.localSource(value)
+    }
+
     // ephemeral by design: players come and go, so a pinned choice is dropped the moment its player leaves the bus
     property string preferredPlayer: ""
 
@@ -87,7 +111,8 @@ Singleton {
 
     // MPRIS reports 2^63-1 microseconds for anything with no end, which every live
     // stream is; a real track is never a day long, so past the cap it means unknown
-    readonly property real _rawLength:  (player && player.lengthSupported) ? Math.max(0, player.length) : 0
+    readonly property real _rawLength:  (player && player.lengthSupported)
+        ? root.finiteNonnegative(player.length) : 0
     readonly property bool lengthKnown: _rawLength > 0 && _rawLength <= 86400
     readonly property real length:      lengthKnown ? _rawLength : 0
     readonly property bool canSeek:     player ? player.canSeek : false
@@ -102,7 +127,8 @@ Singleton {
         || (ShellSettings.barShowMedia && root.shown && ShellSettings.mediaWidgetHelper)
 
     function _reanchor(): void {
-        root._anchorPos = (player && player.positionSupported) ? Math.max(0, player.position) : 0
+        root._anchorPos = (player && player.positionSupported)
+            ? root.finiteNonnegative(player.position) : 0
         root._anchorMs  = Date.now()
         _recompute()
     }
@@ -114,7 +140,9 @@ Singleton {
     }
     function seekToRatio(r: real): void {
         if (!player || !canSeek || length <= 0) return
-        const target = Math.max(0, Math.min(1, r)) * length
+        const ratio = Number(r)
+        if (!isFinite(ratio)) return
+        const target = Math.max(0, Math.min(1, ratio)) * length
         player.position = target
         root._anchorPos = target
         root._anchorMs  = Date.now()
@@ -142,23 +170,42 @@ Singleton {
     }
 
     onPlayerChanged: _reanchor()
-    readonly property string artist: player ? player.trackArtist : ""
-    readonly property string title: player ? player.trackTitle : ""
-    readonly property string identity: player ? player.identity : ""
-    readonly property string desktopEntry: player ? player.desktopEntry : ""
+    readonly property string artist: root.boundedMetadataText(
+        player ? player.trackArtist : "", root.maxMetadataChars)
+    readonly property string title: root.boundedMetadataText(
+        player ? player.trackTitle : "", root.maxMetadataChars)
+    readonly property string identity: root.boundedMetadataText(
+        player ? player.identity : "", root.maxIdentityChars)
+    readonly property string desktopEntry: root.boundedMetadataText(
+        player ? player.desktopEntry : "", root.maxIdentityChars)
 
     readonly property string artUrl: {
         if (!player) return ""
         // remote art is allowed on purpose where notification icons are denied: mpris art genuinely is a url
         // Spotify's Linux client reports an open.spotify.com/image link that 404s
-        return (player.trackArtUrl || "")
+        const value = String(player.trackArtUrl || "")
             .replace("https://open.spotify.com/image/", "https://i.scdn.co/image/")
+        return root.artSource(value)
     }
 
     property string stableArtUrl: ""
     function _syncStableArt(): void {
-        if (root.artUrl.length > 0) root.stableArtUrl = root.artUrl
-        else if (!root.available)   root.stableArtUrl = ""
+        if (root.artUrl.length > 0) {
+            _staleArtClear.stop()
+            root.stableArtUrl = root.artUrl
+        } else if (!root.available) {
+            _staleArtClear.stop()
+            root.stableArtUrl = ""
+        } else if (root.stableArtUrl.length > 0) {
+            // MPRIS properties often arrive in separate D-Bus updates. Keep the
+            // old cover briefly, but do not show it forever for a track with no art.
+            _staleArtClear.restart()
+        }
+    }
+    Timer {
+        id: _staleArtClear
+        interval: 750
+        onTriggered: if (root.artUrl.length === 0) root.stableArtUrl = ""
     }
     onArtUrlChanged: _syncStableArt()
     onTitleChanged: { _reanchor(); _syncStableArt() }
@@ -167,11 +214,11 @@ Singleton {
         !player              ? "" :
         desktopEntry.length > 0 ? desktopEntry :
         identity.length > 0     ? identity :
-        player.dbusName || ""
+        root.boundedMetadataText(player.dbusName, root.maxIdentityChars)
 
     readonly property string label: {
         if (ShellSettings.mediaWidgetFormat === "artist-title" && artist.length > 0 && title.length > 0)
-            return artist + " - " + title
+            return root.boundedMetadataText(artist + " - " + title, root.maxMetadataChars)
         if (title.length > 0) return title
         if (artist.length > 0) return artist
         if (identity.length > 0) return identity

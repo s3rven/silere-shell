@@ -14,12 +14,12 @@ Singleton {
     readonly property PwNodeAudio audio: sink ? sink.audio : null
     readonly property bool ready: Pipewire.ready && sink !== null && sink.ready && audio !== null
 
-    property real targetVolume: ready ? audio.volume : 0
+    property real targetVolume: ready ? root._clampVolume(audio.volume) : 0
     property bool pendingApply: false
     property bool _componentReady: false
 
-    readonly property real effectiveVolume: Math.max(0, Math.min(1.0,
-        pendingApply ? targetVolume : (ready ? audio.volume : 0)))
+    readonly property real effectiveVolume: root._clampVolume(
+        pendingApply ? targetVolume : (ready ? audio.volume : 0))
     property bool _pendingMuted: false
     property bool _desiredMuted: false
     property bool _muteWritePending: false
@@ -29,7 +29,7 @@ Singleton {
     property int _volRetries: 0
     property int _muteRetries: 0
     readonly property bool muted: ready ? _pendingMuted : false
-    readonly property real uiVolume: Math.max(0, Math.min(1, muted ? 0 : effectiveVolume))
+    readonly property real uiVolume: root._clampVolume(muted ? 0 : effectiveVolume)
 
     readonly property string icon:
         !ready                   ? "󰖁" :
@@ -37,7 +37,7 @@ Singleton {
         uiVolume < 0.33          ? "󰕿" :
         uiVolume < 0.66          ? "󰖀" : "󰕾"
     readonly property string label: ready ? `${Math.round(uiVolume * 100)}%` : "--%"
-    readonly property string sinkName: sink ? (sink.description || "") : ""
+    readonly property string sinkName: root.sinkLabel(sink)
 
     readonly property var sinks: {
         const out = []
@@ -61,7 +61,8 @@ Singleton {
 
     function sinkLabel(node): string {
         if (!node) return ""
-        return node.description || node.nickname || node.name || "Output"
+        return IconResolver.boundedText(
+            node.description || node.nickname || node.name || "Output", 256)
     }
 
     function _clampVolume(v: real): real {

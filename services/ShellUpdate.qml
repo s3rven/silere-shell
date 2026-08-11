@@ -7,6 +7,17 @@ import Quickshell.Io
 Singleton {
     id: root
 
+    readonly property int maxCommitDetail: 80
+    readonly property int maxCommitSubjectChars: 512
+    readonly property int maxStatusTextChars: 512
+    readonly property int maxVersionTextChars: 128
+
+    function boundedText(value, limit: int): string {
+        const cap = Math.max(1, Math.min(2048, Number(limit) || 1))
+        const text = String(value ?? "")
+        return text.length <= cap ? text : text.slice(0, cap - 1) + "…"
+    }
+
     property int    count: 0
     property string summary: ""
     property bool   applying: false
@@ -234,8 +245,8 @@ Singleton {
                 return
             }
             root.packaged = false
-            const sha = kv.sha ?? ""
-            const branch = kv.branch ?? ""
+            const sha = root.boundedText(kv.sha, root.maxVersionTextChars)
+            const branch = root.boundedText(kv.branch, root.maxVersionTextChars)
             const dirty = kv.dirty ?? ""
             if (sha.length === 0 || branch.length === 0
                     || (dirty !== "0" && dirty !== "1")) {
@@ -244,8 +255,8 @@ Singleton {
                 return
             }
             root.currentVersion = sha
-            root.buildDate = kv.date ?? ""
-            root.versionTag = kv.tag ?? ""
+            root.buildDate = root.boundedText(kv.date, root.maxVersionTextChars)
+            root.versionTag = root.boundedText(kv.tag, root.maxVersionTextChars)
             const ahead = parseInt(kv.ahead ?? "0")
             root.versionAhead = isNaN(ahead) ? 0 : ahead
             root.branch = branch
@@ -283,7 +294,7 @@ Singleton {
     function _parse(t: string): void {
         const lines = (t || "").split(/\r?\n/)
         const n = parseInt((lines[0] || "").trim())
-        root.count = isNaN(n) ? 0 : n
+        root.count = isNaN(n) ? 0 : Math.max(0, n)
         let rest = lines.slice(1)
         let target = ""
         let tag = ""
@@ -294,21 +305,29 @@ Singleton {
             tag = parts[1] ?? ""
             rest = rest.slice(1)
         }
-        root.targetVersion = target
-        root.targetTag = tag
-        root.summary = rest.join("\n").trim()
+        root.targetVersion = root.boundedText(target, root.maxVersionTextChars)
+        root.targetTag = root.boundedText(tag, root.maxVersionTextChars)
+        root.summary = rest.slice(0, root.maxCommitDetail).map(function(line) {
+            return root.boundedText(line, root.maxCommitSubjectChars + 80)
+        }).join("\n").trim()
         root.pendingCommits = root._parseCommits(root.summary)
     }
 
     function _parseCommits(t: string): var {
         const out = []
         const lines = (t || "").split(/\r?\n/)
-        for (let i = 0; i < lines.length; i++) {
+        for (let i = 0; i < lines.length && out.length < root.maxCommitDetail; i++) {
             const line = lines[i].trim()
             if (line.length === 0) continue
             const at = line.indexOf(" ")
-            if (at > 0) out.push({ hash: line.slice(0, at), subject: line.slice(at + 1).trim() })
-            else out.push({ hash: "", subject: line })
+            if (at > 0) out.push({
+                hash: root.boundedText(line.slice(0, at), 64),
+                subject: root.boundedText(line.slice(at + 1).trim(), root.maxCommitSubjectChars)
+            })
+            else out.push({
+                hash: "",
+                subject: root.boundedText(line, root.maxCommitSubjectChars)
+            })
         }
         return out
     }
@@ -316,7 +335,8 @@ Singleton {
     function _lastOutputLine(out: string, err: string, fallback: string): string {
         const text = ((out || "") + "\n" + (err || "")).trim()
         const line = text.split(/\r?\n/).filter(function(s) { return s.length > 0 }).pop() || fallback
-        return line.replace(/^silere-update:\s*/, "")
+        return root.boundedText(line.replace(/^silere-update:\s*/, ""),
+            root.maxStatusTextChars)
     }
 
     Process {
@@ -387,7 +407,10 @@ Singleton {
             // the switch is bound to the unit's real state, so a swallowed failure just
             // flips it back with no reason given
             root.timerError = code === 0 ? ""
-                : (_timerSetErr.text.trim().split("\n").pop() || "Could not change the update timer")
+                : root.boundedText(
+                    _timerSetErr.text.trim().split("\n").pop()
+                        || "Could not change the update timer",
+                    root.maxStatusTextChars)
             root.refreshTimer()
         }
     }
