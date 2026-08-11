@@ -194,7 +194,8 @@ Singleton {
     function show(kind: string, icon: string, value: real, label: string, muted: bool): void {
         if (!_armed) return
         if (!ShellSettings.osdEnabled) return
-        if (MenuState.open) return
+        // only the home page carries the volume/brightness rows; elsewhere the menu replaces nothing
+        if (MenuState.homeActive) return
         if (ShellSettings.osdKindFilter === "volume"     && kind !== "volume")     return
         if (ShellSettings.osdKindFilter === "brightness" && kind !== "brightness") return
 
