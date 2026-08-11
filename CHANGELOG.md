@@ -13,6 +13,8 @@ rather than when a version is published here. The settings file has its own
 
 **Upgrading:** settings carry over. A stored `barCornerStyle` of "flat" becomes a
 Roundness of 0. A custom accent you already set is left exactly as it is. :D
+A shadow depth above 160% or a dot opacity below 10% settles onto the new end of
+its slider; both drew the same thing there already, so nothing looks different.
 
 ### Added
 
@@ -36,6 +38,9 @@ Roundness of 0. A custom accent you already set is left exactly as it is. :D
   body eases the row open.
 - Notification history has privacy controls: its size is adjustable, and saved
   notification text can be cleared and kept only for the current session.
+- A workspace app icon falls back to a lettered badge when the application ships no
+  icon at all. Those windows used to be dropped from the row, so a workspace holding
+  only unpackaged apps looked empty.
 
 ### Changed
 
@@ -73,6 +78,14 @@ Roundness of 0. A custom accent you already set is left exactly as it is. :D
   destroyed in the same frame the fade began, so the fade played against nothing.
 - README resource figures re-measured, separating Silere's own memory from the Qt
   and GPU driver floor.
+- Popups stay attached to the widget that opened them. The menu, calendar, quick
+  actions and a tray menu re-anchor when the bar reflows underneath them, and close
+  if that widget goes away, rather than hanging off the position it had at open.
+- Clicking a tray icon whose menu is already open closes it. It used to reopen the
+  same menu in place, so the icon had no way to put it away.
+- Every settings slider covers exactly the range its setting accepts, and a lint
+  keeps the two from drifting again. The temperature warning slider was missing its
+  bottom 20°, and the top fifth of the shadow depth slider rendered identically.
 
 ### Fixed
 
@@ -110,6 +123,17 @@ Roundness of 0. A custom accent you already set is left exactly as it is. :D
   malformed marks file re-enables writes without restarting the shell.
 - The bundled AUR metadata reports a real VCS version and enforces the same
   Quickshell 0.3 minimum as the installer documentation.
+- A track whose cover art goes away stops showing the previous track's cover. MPRIS
+  sends metadata in separate updates, so the old art is held briefly to cover the
+  gap, then dropped rather than kept forever.
+- A tray menu that nests deeper than eight levels stops building submenus instead of
+  descending without end, and an entry whose signal raises is reported rather than
+  taking the whole menu down.
+- The output device falls back to its nickname or node name when PipeWire reports no
+  description. That row was simply blank before.
+- A volume, track length or playback position that arrives as NaN or infinity is
+  normalised at the service instead of reaching a label, an icon threshold or a
+  progress bar.
 
 ### Removed
 
@@ -120,6 +144,19 @@ Roundness of 0. A custom accent you already set is left exactly as it is. :D
 - The installer creates its config directory as 0700 for the whole path, not only
   the last segment.
 - The updater creates and re-hardens its whole cache path with private permissions.
+- Text that arrives from another program is length-bounded before anything binds to
+  it: window titles and app ids, player metadata, tray labels and tooltips, audio
+  device names, and updater output. A single enormous string could previously ask
+  the shell to lay out a label as long as the string.
+- Icon and image sources are matched against an allowlist — local files and Qt's own
+  image providers — instead of a list of known-remote schemes. A sender can no
+  longer hand the shell an unusual URL and make it fetch over the network. Media
+  cover art keeps its deliberate exception, because MPRIS art genuinely is a URL.
+- The update card bounds what it will render from `git log`: how many commits, and
+  how long each subject may be.
+- Every lookup keyed by a compositor-supplied window class is prototype-free, so a
+  window named `constructor` cannot be mistaken for a cache hit, and the workspace
+  icon cache has an upper bound.
 
 ## [0.2.0] - 2026-08-10
 
