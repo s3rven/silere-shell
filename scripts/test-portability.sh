@@ -54,7 +54,8 @@ test_fresh_install_permissions() (
     HOME="$home" XDG_CONFIG_HOME=relative SILERE_SCRIPT_LIB_ONLY=1 \
         source "$ROOT/scripts/install.sh"
 
-    mkdir -m 0755 -p "$DEFAULT_DIR" "$custom"
+    mkdir -p "$DEFAULT_DIR" "$custom"
+    chmod 0755 "$DEFAULT_DIR" "$custom"
     _secure_fresh_default_install "$DEFAULT_DIR"
     assert_eq "700" "$(stat -c '%a' "$DEFAULT_DIR")" "fresh default install mode"
 
@@ -129,8 +130,8 @@ test_qml_module_lookup() (
 
     # Import roots are resolved once at source time (not per call), so the
     # fake root must be in place before install.sh sources the QML-modules lib.
-    QML2_IMPORT_PATH="$imports"
-    QML_IMPORT_PATH=""
+    export QML2_IMPORT_PATH="$imports"
+    export QML_IMPORT_PATH=""
     SILERE_SCRIPT_LIB_ONLY=1 source "$ROOT/scripts/install.sh"
 
     _qml_module_available Silere.TestModule \
@@ -399,7 +400,11 @@ test_atomic_update_cache() (
 
     umask 022
     _write_cache_file "$FLAG" "seed" || fail "update cache directory creation failed"
+    assert_eq "700" "$(stat -c '%a' "$test_home/cache")" "fresh update cache parent mode"
     assert_eq "700" "$(stat -c '%a' "$CACHE_DIR")" "fresh update cache mode"
+    chmod 0755 "$CACHE_DIR"
+    _write_cache_file "$FLAG" "seed-again" || fail "update cache directory reharden failed"
+    assert_eq "700" "$(stat -c '%a' "$CACHE_DIR")" "existing update cache mode"
     rm -f "$FLAG"
     printf 'do not replace\n' > "$victim"
     ln -s "$victim" "$FLAG"

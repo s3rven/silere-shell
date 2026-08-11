@@ -2,13 +2,13 @@
 
 pkgname=silere-shell-git
 _pkgname=silere-shell
-pkgver=0.2.0.r0.g0000000
+pkgver=0.2.0.r22.g123d5d8
 pkgrel=1
 pkgdesc="Quiet by default, yours by choice. A Quickshell bar for Hyprland and niri with nothing running behind your back"
 arch=('any')
 url="https://github.com/s3rven/silere-shell"
 license=('MIT')
-depends=('quickshell')
+depends=('quickshell>=0.3')
 makedepends=('git')
 optdepends=(
     'hyprland: compositor support'

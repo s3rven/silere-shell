@@ -346,10 +346,33 @@ fi
 
 section "shellcheck"
 if command -v shellcheck >/dev/null 2>&1; then
-  # error severity only — real bugs gate the build, style nits don't
-  if shellcheck --severity=error "${script_files[@]}"; then ok "shellcheck"; else fail "shellcheck reported errors"; fi
+  # Warnings include mode/word-splitting mistakes that are real portability or
+  # permission bugs. Intentional sourced-library false positives are suppressed
+  # at their declaration so a new warning cannot disappear in the noise.
+  if shellcheck --severity=warning "${script_files[@]}"; then ok "shellcheck"; else fail "shellcheck reported warnings"; fi
 else
   skip "shellcheck" "not installed"
+fi
+
+section "aur metadata"
+aur_dir="packaging/aur"
+if [ ! -f "$aur_dir/PKGBUILD" ] || [ ! -f "$aur_dir/.SRCINFO" ]; then
+  fail "AUR packaging must include PKGBUILD and .SRCINFO"
+elif ! grep -qF "depends=('quickshell>=0.3')" "$aur_dir/PKGBUILD" \
+    || ! grep -qF $'\tdepends = quickshell>=0.3' "$aur_dir/.SRCINFO"; then
+  fail "AUR package must enforce the documented Quickshell 0.3 minimum"
+elif command -v makepkg >/dev/null 2>&1; then
+  aur_srcinfo="$(mktemp "${TMPDIR:-/tmp}/silere-srcinfo.XXXXXX")"
+  if (cd "$aur_dir" && makepkg --printsrcinfo -p PKGBUILD) >"$aur_srcinfo" \
+      && cmp -s "$aur_srcinfo" "$aur_dir/.SRCINFO"; then
+    ok "AUR" ".SRCINFO matches PKGBUILD"
+  else
+    fail "packaging/aur/.SRCINFO is stale; regenerate it with makepkg --printsrcinfo"
+    diff -u "$aur_dir/.SRCINFO" "$aur_srcinfo" || true
+  fi
+  rm -f "$aur_srcinfo"
+else
+  skip "AUR" "makepkg unavailable; dependency floor still checked"
 fi
 
 section "qmldir integrity"

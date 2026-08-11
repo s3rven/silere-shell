@@ -4,6 +4,9 @@
 # service plugins even when the `qs` binary exists, so check actual QML
 # import paths rather than assuming one distro layout.
 
+# The array is consumed by the scripts that source this library; checking this
+# file by itself cannot see those references.
+# shellcheck disable=SC2034
 SILERE_REQUIRED_QML_MODULES=(
     QtQuick
     QtQuick.Effects

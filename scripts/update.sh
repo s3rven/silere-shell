@@ -46,10 +46,15 @@ _clear_flag() {
     rm -f "$FLAG" "$NOTIFIED"
 }
 
+_ensure_cache_dir() {
+    (umask 077 && mkdir -p "$CACHE_DIR") || return 1
+    chmod 0700 "$CACHE_DIR"
+}
+
 _write_cache_file() {
     local target="$1" tmp
     shift
-    mkdir -m 0700 -p "$CACHE_DIR" || return 1
+    _ensure_cache_dir || return 1
     tmp="$(mktemp "$CACHE_DIR/.${target##*/}.XXXXXX")" || return 1
     if ! printf '%s\n' "$@" > "$tmp" || ! mv -- "$tmp" "$target"; then
         rm -f -- "$tmp"
@@ -139,7 +144,7 @@ _acquire_update_lock() {
     # on unusually minimal systems, but serialize check/apply whenever flock is
     # available so a timer run cannot race a manual install over refs/cache.
     command -v flock >/dev/null 2>&1 || return 0
-    mkdir -m 0700 -p "$CACHE_DIR" \
+    _ensure_cache_dir \
         || _quiet_fail "could not create the update cache directory"
     exec 9>>"$CACHE_DIR/update.lock" \
         || _quiet_fail "could not open the update lock"
