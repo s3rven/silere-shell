@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Print the CHANGELOG section for one released version.
+# Print the archived notes for one released version.
 #
 # Usage: release-notes.sh 0.1.0      (a leading "v" is accepted and stripped)
 #
@@ -9,6 +9,7 @@ set -euo pipefail
 
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 CHANGELOG="${SILERE_CHANGELOG:-$ROOT/CHANGELOG.md}"
+RELEASE_DIR="${SILERE_RELEASE_DIR:-$ROOT/docs/releases}"
 
 version="${1-}"
 if [ -z "$version" ]; then
@@ -27,9 +28,8 @@ if [ "$version" = "Unreleased" ] || [ "$version" = "unreleased" ]; then
     exit 1
 fi
 
-# Keep a Changelog headings look like "## [0.1.0] - 2026-08-08"; take everything
-# up to the next "## " heading, which is the previous release or Unreleased.
-section="$(awk -v want="$version" '
+extract_section() {
+    awk -v want="$version" '
     /^## / {
         if (taking) exit
         line = $0
@@ -40,15 +40,27 @@ section="$(awk -v want="$version" '
         next
     }
     taking { print }
-' "$CHANGELOG")"
+' "$1"
+}
+
+section="$(extract_section "$CHANGELOG")"
+
+archive="$RELEASE_DIR/$version.md"
+if [ -z "$section" ] && [ -f "$archive" ]; then
+    section="$(awk '
+        NR == 1 && /^# / { next }
+        !started && /^Released [0-9]{4}-[0-9]{2}-[0-9]{2}\.$/ { next }
+        { print; if ($0 ~ /[^[:space:]]/) started=1 }
+    ' "$archive")"
+fi
 
 # strip leading and trailing blank lines without collapsing the body
 section="$(printf '%s\n' "$section" | sed -e '/./,$!d')"
 section="$(printf '%s\n' "$section" | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}')"
 
 if [ -z "$section" ]; then
-    echo "release-notes: CHANGELOG.md has no entry for $version" >&2
-    echo "release-notes: add a '## [$version] - <date>' section before tagging" >&2
+    echo "release-notes: no notes found for $version" >&2
+    echo "release-notes: add $RELEASE_DIR/$version.md before tagging" >&2
     exit 1
 fi
 

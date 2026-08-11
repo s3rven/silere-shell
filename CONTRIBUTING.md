@@ -49,6 +49,17 @@ For anything visual, it helps to check keyboard focus, reduced motion, a narrow 
 
 Don't commit generated or personal files: `config/MatugenTheme.qml`, `settings.json`, `calendar-marks.json`.
 
+## Changelog
+
+Add notable user-facing or operational changes to `CHANGELOG.md` under
+Unreleased. Routine refactors, tests and formatting do not need an entry unless
+they change behaviour someone running Silere will notice.
+
+When tagging a release, move its completed notes to
+`docs/releases/<version>.md` and add the version and date to the release index in
+`CHANGELOG.md`. The release workflow publishes that archived body, and lint
+rejects missing, unlinked or empty archives.
+
 ## One last thing
 
 Your branch doesn't have to be finished to start a conversation. If the problem and the rough shape of the fix are clear, that's plenty.

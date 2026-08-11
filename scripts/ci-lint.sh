@@ -660,6 +660,48 @@ else
   fail "neutralAccent default $accent_default has no swatch in $accent_section"
 fi
 
+section "release note archive"
+release_count=0
+release_archive_failed=0
+indexed_release_paths="$(sed -nE \
+  's#^- \[([0-9]+\.[0-9]+\.[0-9]+)\]\((docs/releases/[^)]+)\).*#\2#p' \
+  CHANGELOG.md | sort -u)"
+while IFS='|' read -r version archive; do
+  [ -n "$version" ] || continue
+  release_count=$((release_count + 1))
+  if [ ! -f "$archive" ]; then
+    fail "CHANGELOG.md links missing release notes: $archive"
+    release_archive_failed=1
+  elif [ "$(sed -n '1p' "$archive")" != "# Silere Shell $version" ]; then
+    fail "$archive has the wrong release heading"
+    release_archive_failed=1
+  elif ! notes="$(bash scripts/release-notes.sh "$version")" || [ -z "$notes" ]; then
+    fail "$archive cannot produce publishable release notes"
+    release_archive_failed=1
+  fi
+done < <(sed -nE \
+  's#^- \[([0-9]+\.[0-9]+\.[0-9]+)\]\((docs/releases/[^)]+)\).*#\1|\2#p' \
+  CHANGELOG.md)
+
+archive_paths="$(find docs/releases -maxdepth 1 -type f -name '*.md' | sort)"
+orphaned_release_paths="$(comm -13 \
+  <(printf '%s\n' "$indexed_release_paths") \
+  <(printf '%s\n' "$archive_paths"))"
+if [ "$release_count" -eq 0 ]; then
+  fail "CHANGELOG.md has no archived releases"
+  release_archive_failed=1
+elif [ -n "$orphaned_release_paths" ]; then
+  fail "release notes missing from CHANGELOG.md: $orphaned_release_paths"
+  release_archive_failed=1
+fi
+if bash scripts/release-notes.sh Unreleased >/dev/null 2>&1 \
+    || bash scripts/release-notes.sh 999.999.999 >/dev/null 2>&1; then
+  fail "release notes must reject Unreleased and unknown versions"
+  release_archive_failed=1
+fi
+[ "$release_archive_failed" -ne 0 ] \
+  || ok "release notes" "$release_count indexed archives are publishable"
+
 section "portability regressions"
 if bash scripts/test-portability.sh; then
   ok "portability"
