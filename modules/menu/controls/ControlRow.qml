@@ -2,10 +2,9 @@ import QtQuick
 import "../../../config"
 import "../../common"
 
-Item {
+MenuRow {
     id: root
 
-    property string glyph:       ""
     property string title:       ""
     property string status:      ""
     property string valueText:   ""
@@ -19,10 +18,9 @@ Item {
     property bool   chevronTabFocusable: true
     property int    badgeCount:   0
 
-    property real topRadius:    0
-    property real bottomRadius: 0
-    property real cardInset:    1
-    property real cardLeftBleed: 0
+    rowHovered:     _hover.hovered
+    rowFocused:     _focusVisual.active
+    rowInteractive: root._canTap
 
     signal activated()
     signal expandToggled()
@@ -79,9 +77,7 @@ Item {
             && mapped.y >= -4 && mapped.y <= _badge.height + 4
     }
 
-    width:          parent ? parent.width : 0
     height:         Metrics.rowHeightFor(48)
-    implicitHeight: height
 
     opacity: root.passive ? 1.0 : (_canTap ? 1.0 : 0.45)
     MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
@@ -126,16 +122,6 @@ Item {
                 root._activate()
             }
         }
-    }
-
-    RowHoverBg {
-        anchors.fill: parent
-        topRadius:    root.topRadius
-        bottomRadius: root.bottomRadius
-        cardInset:    root.cardInset
-        leftBleed:    root.cardLeftBleed
-        active:       (_hover.hovered || _focusVisual.active) && root._canTap
-        focusActive:  _focusVisual.active && root._canTap
     }
 
     Item {

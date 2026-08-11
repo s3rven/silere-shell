@@ -9,6 +9,7 @@ SettingsCard       1.0 SettingsCard.qml
 ChoiceChipRow   1.0 ChoiceChipRow.qml
 ControlRow      1.0 ControlRow.qml
 InlineOptionRow 1.0 InlineOptionRow.qml
+MenuRow         1.0 MenuRow.qml
 QuickSlider     1.0 QuickSlider.qml
 SelectRow       1.0 SelectRow.qml
 SliderRow       1.0 SliderRow.qml

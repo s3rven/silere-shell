@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import "../../../config"
+import "../../../services"
 import "../../common"
 
 Item {
@@ -12,6 +13,7 @@ Item {
     property string description: ""
     property var    model:       []
     property var    currentValue
+    property color  accentColor: Theme.accent
     // one component serves the header and every option; each reads its subject off its own Loader
     property Component optionPreview: null
     property string fallbackLabel: currentValue === undefined || currentValue === null
@@ -72,7 +74,7 @@ Item {
     }
 
     function _setOpen(next: bool, fromPointer: bool): void {
-        if (next && !root.enabled) return
+        if (next && (!root.enabled || root._optionCount <= 0)) return
         if (_open === next) {
             if (_open) {
                 root._deferredPointerFocus = fromPointer
@@ -111,7 +113,10 @@ Item {
         }
     }
 
-    readonly property int _activeIndex: model.findIndex(o => o.value === currentValue)
+    readonly property int _optionCount: model && model.length !== undefined
+        ? model.length : 0
+    readonly property int _activeIndex: model && model.findIndex
+        ? model.findIndex(o => o.value === currentValue) : -1
     readonly property string _activeLabel: _activeIndex >= 0
         ? model[_activeIndex].label : fallbackLabel
     readonly property string _activeFont: {
@@ -242,13 +247,26 @@ Item {
             radius: Theme.radiusField
             antialiasing: true
             color: root._open
-                ? Theme.withAlpha(Theme.accent, 0.075)
+                ? Theme.withAlpha(root.accentColor, 0.055)
                 : _headerTap.pressed
-                    ? Theme.withAlpha(Theme.text, 0.075)
+                    ? Theme.withAlpha(Theme.text, 0.065)
                     : _hov.hovered || _focusVisual.active
-                        ? Theme.withAlpha(Theme.text, 0.040)
+                        ? Theme.withAlpha(Theme.text, 0.030)
                         : "transparent"
             ColorFade on color {}
+
+            OutlineBorder {
+                radius: _chevronFill.radius
+                outlineWidth: _focusVisual.active ? 2 : 1
+                outlineColor: _focusVisual.active
+                    ? Theme.withAlpha(root.accentColor, Theme.focusRingAlpha)
+                    : root._open
+                        ? Theme.controlLineActive(root.accentColor)
+                        : _hov.hovered
+                            ? Theme.menuControlLineHot
+                            : Theme.menuControlLine
+                ColorFade on outlineColor {}
+            }
         }
 
         ShellText {
@@ -260,7 +278,8 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             text:           root._activeLabel
             elide:          Text.ElideRight
-            color: root._open ? Theme.text
+            color: root._open ? Theme.mix(Theme.text, root.accentColor,
+                    ShellSettings.highContrast ? 0 : 0.10)
                 : Theme.withAlpha(Theme.text, _hov.hovered ? 0.90 : 0.78)
             font.family:    root._activeFont
             font.pixelSize: Settings.fontLabel
@@ -274,7 +293,7 @@ Item {
             text:    "󰅀"
             rotation: root._open ? 180 : 0
             transformOrigin: Item.Center
-            color: root._open ? Theme.accent
+            color: root._open ? root.accentColor
                 : Theme.withAlpha(Theme.subtext, _hov.hovered ? 0.86 : 0.66)
             font.pixelSize: Settings.fontSize
             MotionBehavior on rotation {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
@@ -339,6 +358,8 @@ Item {
                     preview: root.optionPreview
                     previewValue: modelData.value
                     selected: active
+                    ghost: true
+                    accentColor: root.accentColor
                     activeFocusOnTab: root.enabled && root._open
                         && _opt.index === root._focusIndex
                     accessibleRole: Accessible.RadioButton

@@ -5,19 +5,17 @@ import "../../../config"
 import "../../../services"
 import "../../common"
 
-Item {
+MenuRow {
     id: root
 
-    property string glyph: ""
     property string label: ""
     property var    model: []
     property var    currentValue
     property color  accentColor: Theme.accent
 
-    property real topRadius:    0
-    property real bottomRadius: 0
-    property real cardInset:    1
-    property real cardLeftBleed: 0
+    rowHovered:     _rowHover.hovered
+    rowFocused:     root.activeFocus
+    rowInteractive: root.enabled
 
     signal chosen(var value)
 
@@ -79,9 +77,7 @@ Item {
             root.chosen(item.modelData.value)
     }
 
-    width: parent ? parent.width : 0
     height: root._stacked ? root._stackedH : root._inlineH
-    implicitHeight: height
     // the settings pane width animates when the nav rail expands, and crossing the
     // stacking threshold mid-glide would pop this row 20px while everything else eases
     MotionBehavior on height {
@@ -101,15 +97,6 @@ Item {
     }
 
     HoverHandler { id: _rowHover; enabled: root.enabled }
-    RowHoverBg {
-        anchors.fill: parent
-        topRadius:    root.topRadius
-        bottomRadius: root.bottomRadius
-        cardInset:    root.cardInset
-        leftBleed:    root.cardLeftBleed
-        active:       (_rowHover.hovered || root.activeFocus) && root.enabled
-        focusActive:  root.activeFocus && root.enabled
-    }
 
     Item {
         id: _labelRow

@@ -2,10 +2,9 @@ import QtQuick
 import "../../../config"
 import "../../common"
 
-Item {
+MenuRow {
     id: root
 
-    property string glyph:     ""
     property real   value:     0
     // Names consumed by Qt's QAccessibleValueInterface.
     readonly property real minimumValue: 0
@@ -24,10 +23,10 @@ Item {
     property bool   reserveExpandSlot: false
     property bool   lastExpandFromPointer: false
     readonly property bool _hasChevSlot: root.expandable || root.reserveExpandSlot
-    property real   topRadius:    0
-    property real   bottomRadius: 0
-    property real   cardInset:    1
-    property real   cardLeftBleed: 0
+
+    rowHovered:     _rowHover.hovered
+    rowFocused:     _focusVisual.active
+    rowInteractive: root.enabled
 
     signal moved(real value)
     signal glyphClicked()
@@ -49,10 +48,8 @@ Item {
         root.expandToggled()
     }
 
-    width:  parent ? parent.width : 0
     // matches ControlRow: the Home page reads as one row rhythm, not two
-    implicitHeight: Metrics.rowHeightFor(48)
-    height: implicitHeight
+    height: Metrics.rowHeightFor(48)
 
     function _handleKey(event): void {
         _focusVisual.noteKeyboardInput()
@@ -88,15 +85,6 @@ Item {
     Keys.onPressed: event => root._handleKey(event)
 
     HoverHandler { id: _rowHover; enabled: root.enabled }
-    RowHoverBg {
-        anchors.fill: parent
-        topRadius:    root.topRadius
-        bottomRadius: root.bottomRadius
-        cardInset:    root.cardInset
-        leftBleed:    root.cardLeftBleed
-        active:       (_rowHover.hovered || _focusVisual.active) && root.enabled
-        focusActive:  _focusVisual.active && root.enabled
-    }
 
     Item {
         id: _g

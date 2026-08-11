@@ -2,19 +2,18 @@ import QtQuick
 import "../../../config"
 import "../../common"
 
-Item {
+MenuRow {
     id: root
 
-    property string glyph:        ""
     property string label:        ""
     property string description:  ""
     property bool   checked:      false
-    property real   topRadius:    0
-    property real   bottomRadius: 0
     property bool   available:    true
     property string dependsNote:  ""
-    property real   cardInset:    1
-    property real   cardLeftBleed: 0
+
+    rowHovered:     _hover.hovered
+    rowFocused:     _focusVisual.active
+    rowInteractive: root._canToggle
 
     signal toggled(bool nextChecked)
 
@@ -48,10 +47,8 @@ Item {
 
     // a description grows the row to fit its wrapping subtitle, still on the shared grid
     readonly property int _descPadV: 11
-    width:          parent ? parent.width : 0
     height:         _hasDetail ? 4 * Math.ceil((_descPadV * 2 + _textCol.implicitHeight) / 4)
                                : Metrics.rowHeightFor(44)
-    implicitHeight: height
     // a live dependsNote lengthens the detail text mid-interaction (toggling the update
     // timer appends "Working"), which can rewrap and change this height under the cursor
     MotionBehavior on height {
@@ -81,16 +78,6 @@ Item {
             _focusVisual.takePointerFocus()
             root._activate()
         }
-    }
-
-    RowHoverBg {
-        anchors.fill: parent
-        topRadius:    root.topRadius
-        bottomRadius: root.bottomRadius
-        cardInset:    root.cardInset
-        leftBleed:    root.cardLeftBleed
-        active:       (_hover.hovered || _focusVisual.active) && root._canToggle
-        focusActive:  _focusVisual.active && root._canToggle
     }
 
     ShellText {

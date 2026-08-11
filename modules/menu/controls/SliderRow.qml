@@ -2,10 +2,9 @@ import QtQuick
 import "../../../config"
 import "../../common"
 
-Item {
+MenuRow {
     id: root
 
-    property string glyph:        ""
     property string label:        ""
     property string displayValue: {
         const range = max - min
@@ -21,20 +20,18 @@ Item {
     readonly property real minimumValue: root.min
     readonly property real maximumValue: root.max
     readonly property real stepSize: root.step
-    property real   topRadius:    0
-    property real   bottomRadius: 0
-    property real   cardInset:    1
-    property real   cardLeftBleed: 0
     property color  glyphColor:   Theme.withAlpha(Theme.subtext, 0.85)
 
     FocusVisual { id: _focusVisual; target: root }
 
+    rowHovered:     _rowHover.hovered
+    rowFocused:     _focusVisual.active
+    rowInteractive: root.enabled
+
     signal changed(real value)
 
     // 4px multiple so row.y inside SettingsCard lands on whole physical px and every divider renders one thickness
-    width:          parent ? parent.width : 0
     height:         Metrics.rowHeightFor(56)
-    implicitHeight: height
     opacity: root.enabled ? 1.0 : 0.45
     MotionBehavior on opacity {
         NumberAnimation { duration: Motion.medium }
@@ -53,15 +50,6 @@ Item {
     }
 
     HoverHandler { id: _rowHover; enabled: root.enabled }
-    RowHoverBg {
-        anchors.fill: parent
-        topRadius:    root.topRadius
-        bottomRadius: root.bottomRadius
-        cardInset:    root.cardInset
-        leftBleed:    root.cardLeftBleed
-        active:       (_rowHover.hovered || _focusVisual.active) && root.enabled
-        focusActive:  _focusVisual.active && root.enabled
-    }
 
     Item {
         id: _head
