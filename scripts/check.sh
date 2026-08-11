@@ -316,14 +316,12 @@ if command -v qs >/dev/null 2>&1; then
     warn "startup" "timeout command unavailable; runtime smoke test skipped"
   else
     # The shell needs config/MatugenTheme.qml to exist. If it's missing (bare clone),
-    # seed it from the default for the smoke test. One cleanup removes both the
-    # seeded theme and the temp log, on interrupt as well as normal exit.
-    _seeded_theme=false
+    # seed it from the default and leave it: the file is gitignored, and a live shell
+    # reloads from this checkout, so deleting it on exit takes that shell down.
     smoke_log=""
     cov_log=""
     cov_cfg=""
     _smoke_cleanup() {
-      if [ "$_seeded_theme" = true ]; then rm -f config/MatugenTheme.qml; fi
       if [ -n "$smoke_log" ]; then rm -f "$smoke_log"; fi
       if [ -n "$cov_log" ]; then rm -f "$cov_log"; fi
       if [ -n "$cov_cfg" ]; then rm -rf "$cov_cfg"; fi
@@ -333,7 +331,6 @@ if command -v qs >/dev/null 2>&1; then
 
     if [ ! -f config/MatugenTheme.qml ] && [ -f config/MatugenTheme.default.qml ]; then
       cp config/MatugenTheme.default.qml config/MatugenTheme.qml
-      _seeded_theme=true
     fi
     code=0
     smoke_log="$(mktemp "${TMPDIR:-/tmp}/silere-qs-smoke.XXXXXX.log")"

@@ -30,11 +30,11 @@ if ! command -v qs >/dev/null 2>&1; then
 fi
 # No display check on purpose: the offscreen QPA plugin needs neither Wayland
 # nor X, which is what lets this run in a CI container.
-seeded_theme=false
+# Seeded and then left in place: the file is gitignored, and a live shell reloads from
+# this checkout, so removing it on exit takes that shell down until matugen runs again.
 if [ ! -f config/MatugenTheme.qml ]; then
     if [ -f config/MatugenTheme.default.qml ]; then
         cp config/MatugenTheme.default.qml config/MatugenTheme.qml
-        seeded_theme=true
     else
         echo "SKIP: no config/MatugenTheme.qml and no bundled default to seed from" >&2
         exit 0
@@ -74,6 +74,7 @@ log="$(mktemp "${TMPDIR:-/tmp}/silere-surfaces.XXXXXX.log")"
 default_cfg="$(mktemp -d "${TMPDIR:-/tmp}/silere-surfaces-cfg.XXXXXX")"
 a11y_cfg="$(mktemp -d "${TMPDIR:-/tmp}/silere-surfaces-cfg.XXXXXX")"
 allon_cfg="$(mktemp -d "${TMPDIR:-/tmp}/silere-surfaces-cfg.XXXXXX")"
+scale_cfg="$(mktemp -d "${TMPDIR:-/tmp}/silere-surfaces-cfg.XXXXXX")"
 probe_pid=""
 cleanup() {
     if [ -n "${probe_pid:-}" ] && kill -0 "$probe_pid" 2>/dev/null; then
@@ -81,8 +82,7 @@ cleanup() {
         wait "$probe_pid" 2>/dev/null || true
     fi
     rm -f "$log"
-    rm -rf "$default_cfg" "$a11y_cfg" "$allon_cfg"
-    if [ "$seeded_theme" = true ]; then rm -f config/MatugenTheme.qml; fi
+    rm -rf "$default_cfg" "$a11y_cfg" "$allon_cfg" "$scale_cfg"
 }
 trap cleanup EXIT
 
@@ -116,6 +116,14 @@ if [ -n "$allon_keys" ]; then
 else
     printf '{"__version":1}\n' > "$allon_cfg/silere-shell/settings.json"
 fi
+
+# Every pass above leaves uiScale at 1.0, because the all-on keys are derived from
+# bool properties only. Row heights, icon cells and every wrapping label are computed
+# from font metrics, so the largest type is a distinct layout with its own failures.
+mkdir -p "$scale_cfg/silere-shell"
+ui_max="$(sed -n 's/.*k: "uiScale".*max: \([0-9.]*\).*/\1/p' services/ShellSettings.qml | head -1)"
+[ -n "$ui_max" ] || { echo "test-surfaces: cannot read the uiScale max from the schema" >&2; exit 1; }
+printf '{"__version":1,"uiScale":%s}\n' "$ui_max" > "$scale_cfg/silere-shell/settings.json"
 
 # Neither Qt.exit() nor Quickshell.exit() ends a Quickshell process, so the probe
 # cannot quit itself: run it in the background, wait for its sentinel line, then
@@ -169,4 +177,5 @@ printf 'building %s surfaces standalone\n' "$count"
 run_probe "default" "$default_cfg"
 run_probe "a11y" "$a11y_cfg"
 run_probe "all-on" "$allon_cfg"
-echo "surface probe passed (default + reduce-motion/high-contrast + every option on)"
+run_probe "max-scale" "$scale_cfg"
+echo "surface probe passed (default + reduce-motion/high-contrast + every option on + largest type)"
