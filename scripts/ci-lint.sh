@@ -445,6 +445,51 @@ else
     skip "settings" "ShellSettings.qml not found"
 fi
 
+section "slider range coverage"
+# A slider narrower than its schema entry hides part of the range from the UI;
+# a wider one lets the row show values the setting clamps straight back off.
+mapfile -t slider_files < <(find modules -name '*.qml' | sort)
+slider_drift=$(awk '
+function braces(s, c,   n, i) {
+    n = 0
+    for (i = 1; i <= length(s); i++) if (substr(s, i, 1) == c) n++
+    return n
+}
+FILENAME ~ /ShellSettings\.qml$/ {
+    if (!match($0, /k: "[A-Za-z0-9_]+"/)) next
+    key = substr($0, RSTART + 4, RLENGTH - 5)
+    if (!match($0, /min: *[-0-9.]+/)) next
+    lo = substr($0, RSTART + 4, RLENGTH - 4) + 0
+    if (!match($0, /max: *[-0-9.]+/)) next
+    smin[key] = lo
+    smax[key] = substr($0, RSTART + 4, RLENGTH - 4) + 0
+    next
+}
+!inrow && /SliderRow[ \t]*\{/ {
+    inrow = 1; depth = 1; key = ""; rmin = ""; rmax = ""
+    next
+}
+inrow {
+    depth += braces($0, "{") - braces($0, "}")
+    if (key == "" && $0 ~ /value:/ && match($0, /ShellSettings\.[A-Za-z0-9_]+/))
+        key = substr($0, RSTART + 14, RLENGTH - 14)
+    if (match($0, /min: *[-0-9.]+/)) rmin = substr($0, RSTART + 4, RLENGTH - 4) + 0
+    if (match($0, /max: *[-0-9.]+/)) rmax = substr($0, RSTART + 4, RLENGTH - 4) + 0
+    if (depth > 0) next
+    inrow = 0
+    if (key == "" || rmin == "" || rmax == "" || !(key in smin)) next
+    if (smin[key] != rmin || smax[key] != rmax)
+        printf "  %s: row %s..%s, schema %s..%s (%s)\n",
+            key, rmin, rmax, smin[key], smax[key], FILENAME
+}
+' services/ShellSettings.qml "${slider_files[@]}")
+if [ -n "$slider_drift" ]; then
+    fail "slider ranges do not match their settings schema:"
+    printf '%s\n' "$slider_drift"
+else
+    ok "settings" "slider ranges match the schema"
+fi
+
 section "bar widget layout API"
 # The settings key list, settings metadata, and runtime component registry are
 # three views of one widget catalog. A widget is incomplete if any view drifts.
