@@ -319,19 +319,22 @@ Item {
         let target = root.activeId
         const direction = delta > 0 ? -1 : 1
         const steps = Math.abs(delta)
+        const cap = root._idCap
         for (let step = 0; step < steps; step++) {
             let candidate = target + direction
             while (candidate > 0 && root._knownOnOtherMonitor(candidate))
                 candidate += direction
             if (candidate < 1) break
+            if (cap > 0 && candidate > cap) break
             target = candidate
         }
         return target
     }
 
     function _focusWsIndex(index: int): void {
-        if (_wsRepeater.count <= 0) return
-        const i = Math.max(0, Math.min(_wsRepeater.count - 1, index))
+        const n = _wsRepeater.count
+        if (n <= 0) return
+        const i = ((index % n) + n) % n
         const item = _wsRepeater.itemAt(i)
         if (item) item.forceActiveFocus()
     }
