@@ -94,10 +94,20 @@ Item {
         // snapped to an 8px grid: the Canvas backing this width drops and reallocates its texture on
         // every resize, and parent.width tracks root.implicitWidth's own MotionBehavior every frame
         width: 8 * Math.round(parent.width / 8)
-        active: root._visualizerActive
+        // unloading in the same frame the opacity drops leaves the fade animating an empty Loader
+        readonly property bool _wanted: root._visualizerActive
+        active: _wanted || _vizHold.running
+        on_WantedChanged: if (_wanted) _vizHold.stop(); else _vizHold.restart()
+        Timer { id: _vizHold; interval: Motion.fast + 60 }
+        opacity: _wanted ? 1.0 : 0.0
+        visible: opacity > 0.001
+        MotionBehavior on opacity {
+            NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
+        }
         sourceComponent: Component {
             MediaVisualizer {
                 screen: root.screen
+                holdFrame: true
                 lowPower: root.compact
             }
         }

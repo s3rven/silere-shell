@@ -14,16 +14,20 @@ Canvas {
     property bool _registered: false
     property bool _registeredLowPower: false
 
-    visible: presentationActive && ShellSettings.mediaProgress
+    // a parent that fades us out needs the last frame to survive the fade; painting and the cava client still stop at once
+    property bool holdFrame: false
+    readonly property bool _live: presentationActive && ShellSettings.mediaProgress
         && !ShellSettings.reduceMotion && !Idle.isIdle
         && Media.shown && Media.playing && Media.cavaReady && _onActiveBar
         && width > 0 && height > 0
+
+    visible: _live || (holdFrame && width > 0 && height > 0)
     renderTarget:   Canvas.Image
     // frozen once the context exists; binding it only logs "not changeable" and silently keeps the construction-time value
     renderStrategy: Canvas.Threaded
 
     property var waveData: Media.barHeights
-    readonly property bool _paintable: visible && width > 0 && height > 0
+    readonly property bool _paintable: _live
     onWaveDataChanged:  if (_paintable) requestPaint()
     onWidthChanged:     if (_paintable) requestPaint()
     onHeightChanged:    if (_paintable) requestPaint()
@@ -36,7 +40,7 @@ Canvas {
 
     Connections {
         target: ShellSettings
-        function onMediaVisualizerStyleChanged() { if (_viz.visible) _viz.requestPaint() }
+        function onMediaVisualizerStyleChanged() { if (_viz._paintable) _viz.requestPaint() }
     }
 
     property var   _fill:   null

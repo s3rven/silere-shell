@@ -47,9 +47,17 @@ Item {
     }
 
     readonly property bool _compact: effectiveCompact
+    // window state, not layout: titleHasRoom would bind into the width loop the comment below describes,
+    // but "is there a client to title at all" is independent of every zone width
+    readonly property bool _titleHasClient: {
+        const t = Compositor.activeToplevel
+        return !!t && t.output === Compositor.monitorName(root.screen)
+    }
+    on_TitleHasClientChanged: _queueAutoCompact()
+
     readonly property int mediaTextBudget: {
         const base = _compact ? 120 : Metrics.mediaTrackWidth
-        if (!ShellSettings.showWindowTitle || centerHasWidgets) return base
+        if (!ShellSettings.showWindowTitle || centerHasWidgets || !_titleHasClient) return base
         // a share of the whole bar, not of titleAvailableWidth: the media widget sits inside a zone
         // that feeds titleFreeLeft/Right, so measuring the free gap here would bind into a loop
         return Math.max(76, Math.min(base, Math.round(width * 0.065)))
@@ -71,7 +79,7 @@ Item {
         const layoutW = centerHasWidgets
             ? _widgetLayoutWidth
             : leftZone.implicitWidth + rightZone.implicitWidth
-                + (ShellSettings.showWindowTitle ? 116 : 52)
+                + (ShellSettings.showWindowTitle && _titleHasClient ? 116 : 52)
         const capacity = fitWidth > 0 ? Math.min(fitWidth, width) : width
 
         if (!_autoCompact) {
@@ -256,11 +264,16 @@ Item {
         x: root._centerVizX
         width: root._centerVizWidth
         height: parent.height
-        active: root._centerVizWanted && root._centerVizHasRoom
+        // unloading in the same frame the opacity drops leaves the fade animating an empty Loader
+        readonly property bool _wanted: root._centerVizWanted && root._centerVizHasRoom
+        active: _wanted || _vizHold.running
+        on_WantedChanged: if (_wanted) _vizHold.stop(); else _vizHold.restart()
+        Timer { id: _vizHold; interval: Motion.fast + 60 }
         sourceComponent: Component {
             MediaVisualizer {
                 screen: root.screen
                 presentationActive: root._centerVizShowing
+                holdFrame: true
                 // dimmed behind the title/widgets: full rate and bar count buy detail nobody can see
                 lowPower: root.effectiveCompact || root._centerVizWidth < 260
                     || root._centerVizBehind
