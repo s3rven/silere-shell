@@ -124,7 +124,7 @@ Item {
     }
 
     function _appMeta(cls: string): var {
-        const raw = Compositor.boundedExternalText(
+        const raw = SafeText.singleLineText(
             cls, Compositor.maxWindowIdentityChars).trim()
         const key = raw.toLowerCase()
         if (!key) return null
@@ -173,7 +173,7 @@ Item {
         for (let i = 0; i < tops.length; i++) {
             const t = tops[i]
             if (!t || t.output !== root.monitorName) continue
-            parts.push((t.wsId ?? 0) + ":" + Compositor.boundedExternalText(
+            parts.push((t.wsId ?? 0) + ":" + SafeText.singleLineText(
                 t.appId, Compositor.maxWindowIdentityChars))
         }
         return parts.join("|")
@@ -194,7 +194,7 @@ Item {
             if (!t || t.output !== root.monitorName) continue
             const wid = t.wsId ?? 0
             if (shown[wid] !== true) continue
-            const rawCls = Compositor.boundedExternalText(
+            const rawCls = SafeText.singleLineText(
                 t.appId, Compositor.maxWindowIdentityChars)
             const cls = rawCls.toLowerCase()
             if (!cls) continue

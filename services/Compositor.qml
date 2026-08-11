@@ -11,17 +11,12 @@ Singleton {
     readonly property int maxWindowIdentityChars: 512
     readonly property int maxWindowTitleChars: 2048
 
-    function boundedExternalText(value, limit: int): string {
-        const cap = Math.max(1, Math.min(8192, Number(limit) || 1))
-        return SafeText.singleLineText(value, cap)
-    }
-
     function _windowIdentity(value): string {
-        return root.boundedExternalText(value, root.maxWindowIdentityChars)
+        return SafeText.singleLineText(value, root.maxWindowIdentityChars)
     }
 
     function _windowTitle(value): string {
-        return root.boundedExternalText(value, root.maxWindowTitleChars)
+        return SafeText.singleLineText(value, root.maxWindowTitleChars)
     }
 
     readonly property string _niriSock: String(Quickshell.env("NIRI_SOCKET") || "")
@@ -49,7 +44,6 @@ Singleton {
     readonly property bool overviewActive:   isNiri ? _niriOverview : _hyprOverview
     readonly property bool activeFullscreen:  !!(activeToplevel && activeToplevel.fullscreen)
     readonly property string specialOutput:  isNiri ? "" : _hyprSpecial
-    readonly property bool ready: isNiri ? _niriReady : (workspaces.length > 0)
 
     signal workspaceActivated(string output)
     signal overviewRaw(bool open)

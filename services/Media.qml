@@ -13,11 +13,6 @@ Singleton {
     readonly property int maxMetadataChars: 2048
     readonly property int maxArtSourceChars: 4096
 
-    function boundedMetadataText(value, limit: int): string {
-        const cap = Math.max(1, Math.min(root.maxMetadataChars, Number(limit) || 1))
-        return SafeText.singleLineText(value, cap)
-    }
-
     function finiteNonnegative(value): real {
         const number = Number(value)
         return isFinite(number) && number > 0 ? number : 0
@@ -169,13 +164,13 @@ Singleton {
     }
 
     onPlayerChanged: _reanchor()
-    readonly property string artist: root.boundedMetadataText(
+    readonly property string artist: SafeText.singleLineText(
         player ? player.trackArtist : "", root.maxMetadataChars)
-    readonly property string title: root.boundedMetadataText(
+    readonly property string title: SafeText.singleLineText(
         player ? player.trackTitle : "", root.maxMetadataChars)
-    readonly property string identity: root.boundedMetadataText(
+    readonly property string identity: SafeText.singleLineText(
         player ? player.identity : "", root.maxIdentityChars)
-    readonly property string desktopEntry: root.boundedMetadataText(
+    readonly property string desktopEntry: SafeText.singleLineText(
         player ? player.desktopEntry : "", root.maxIdentityChars)
 
     readonly property string artUrl: {
@@ -213,11 +208,11 @@ Singleton {
         !player              ? "" :
         desktopEntry.length > 0 ? desktopEntry :
         identity.length > 0     ? identity :
-        root.boundedMetadataText(player.dbusName, root.maxIdentityChars)
+        SafeText.singleLineText(player.dbusName, root.maxIdentityChars)
 
     readonly property string label: {
         if (ShellSettings.mediaWidgetFormat === "artist-title" && artist.length > 0 && title.length > 0)
-            return root.boundedMetadataText(artist + " - " + title, root.maxMetadataChars)
+            return SafeText.singleLineText(artist + " - " + title, root.maxMetadataChars)
         if (title.length > 0) return title
         if (artist.length > 0) return artist
         if (identity.length > 0) return identity

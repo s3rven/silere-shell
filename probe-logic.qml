@@ -96,17 +96,17 @@ ShellRoot {
             "icon resolver flattens controls in external labels")
 
         const longWindowText = "x".repeat(Compositor.maxWindowTitleChars + 20)
-        const boundedWindowText = Compositor.boundedExternalText(
+        const boundedWindowText = SafeText.singleLineText(
             longWindowText, Compositor.maxWindowTitleChars)
         root._check(boundedWindowText.length === Compositor.maxWindowTitleChars
                 && boundedWindowText.endsWith("…"),
             "compositor bounds client-controlled window text")
-        root._check(Compositor.boundedExternalText("Editor\nspoof\u202E", 64)
+        root._check(SafeText.singleLineText("Editor\nspoof\u202E", 64)
                 === "Editor spoof",
             "compositor sanitizes client-controlled window text")
 
         const longMediaText = "m".repeat(Media.maxMetadataChars + 20)
-        root._check(Media.boundedMetadataText(longMediaText, Media.maxMetadataChars).length
+        root._check(SafeText.singleLineText(longMediaText, Media.maxMetadataChars).length
                 === Media.maxMetadataChars,
             "media service bounds player metadata")
         root._check(Media.artSource("data:image/png;base64,AAAA") === "",
