@@ -81,7 +81,7 @@ Column {
             SliderRow {
                 glyph: "󰔏"; label: "Alert above"
                 value: ShellSettings.tempHotThreshold
-                min: 70; max: 105; step: 5
+                min: 50; max: 105; step: 5
                 displayValue: ShellSettings.tempHotThreshold + "°"
                 onChanged: (v) => ShellSettings.tempHotThreshold = v
                 glyphColor: CpuTemp.critical ? Theme.error : (CpuTemp.hot ? Theme.warning : Theme.withAlpha(Theme.subtext, 0.85))

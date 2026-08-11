@@ -87,7 +87,7 @@ Column {
             SliderRow {
                 glyph: "󰘷"; label: "Shadow depth"
                 value: ShellSettings.barShadowStrength
-                min: 0.3; max: 2.0; step: 0.1
+                min: 0.3; max: 1.6; step: 0.1
                 displayValue: Math.round(ShellSettings.barShadowStrength * 100) + "%"
                 onChanged: (v) => ShellSettings.barShadowStrength = v
             }
