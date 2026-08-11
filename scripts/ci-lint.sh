@@ -361,6 +361,9 @@ if [ ! -f "$aur_dir/PKGBUILD" ] || [ ! -f "$aur_dir/.SRCINFO" ]; then
 elif ! grep -qF "depends=('quickshell>=0.3')" "$aur_dir/PKGBUILD" \
     || ! grep -qF $'\tdepends = quickshell>=0.3' "$aur_dir/.SRCINFO"; then
   fail "AUR package must enforce the documented Quickshell 0.3 minimum"
+elif ! awk '/^#!\/bin\/sh$/ { wrapper=1; next } wrapper && /^umask 077$/ { private=1 } END { exit !private }' \
+    "$aur_dir/PKGBUILD"; then
+  fail "AUR launcher must use a private umask for Quickshell state"
 elif command -v makepkg >/dev/null 2>&1; then
   aur_srcinfo="$(mktemp "${TMPDIR:-/tmp}/silere-srcinfo.XXXXXX")"
   # makepkg refuses to run as root, which is exactly how a container CI runs it;

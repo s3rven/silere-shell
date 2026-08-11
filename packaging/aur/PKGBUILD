@@ -57,6 +57,7 @@ package() {
 
     install -Dm755 /dev/stdin "$pkgdir/usr/bin/$_pkgname" <<EOF
 #!/bin/sh
+umask 077
 exec qs -p /usr/share/$_pkgname/shell.qml "\$@"
 EOF
 

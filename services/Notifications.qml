@@ -36,7 +36,7 @@ Singleton {
     }
 
     function identityText(value): string {
-        return root._bounded(value, root._maxIdentityChars)
+        return IconResolver.singleLineText(value, root._maxIdentityChars)
     }
 
     // roles are fixed by the first insert, so every entry (incl. one revived from JSON) needs the full shape
@@ -47,8 +47,8 @@ Singleton {
             appName:      root.identityText(e.appName),
             appIcon:      root._bounded(e.appIcon, root._maxSourceChars),
             desktopEntry: root.identityText(e.desktopEntry),
-            summary:      root._bounded(e.summary, root._maxSummaryChars),
-            body:         root._bounded(e.body, root._maxBodyChars),
+            summary:      root.plainText(e.summary, root._maxSummaryChars),
+            body:         root.plainText(e.body, root._maxBodyChars),
             urgency:      Number(e.urgency ?? 1),
             time:         Number(e.time ?? 0)
         }
@@ -322,6 +322,7 @@ Singleton {
             .replace(/&quot;/g, "\"").replace(/&apos;/g, "'").replace(/&#39;/g, "'")
             .replace(/&nbsp;/g, " ").replace(/&hellip;/g, "…")
             .replace(/&amp;/g, "&")
+            .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u202A-\u202E\u2066-\u2069]/g, "")
         return root._bounded(plain, limit)
     }
 
@@ -377,6 +378,7 @@ Singleton {
     }
 
     Component.onCompleted: {
+        ConfigStore.hardenQuickshellState()
         root._restorePersistentState()
         root._ensurePersistentState()
         const vals = notifServer.trackedNotifications.values ?? []
