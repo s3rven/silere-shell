@@ -25,8 +25,7 @@ PanelWindow {
         ? 4 * Math.round(targetScreen.width * (1.0 - ShellSettings.barWidth) / 8)
         : 0
     readonly property real _edgeMargin: ShellSettings.barFloating ? Math.max(0, _barSideGap) : 10
-    readonly property int _barInset: Metrics.barEdgeInset
-    readonly property int _barClearance: _barInset + ShellSettings.barHeight + 6
+    readonly property int _barClearance: Metrics.popupClearance(6)
     readonly property int _availableH: targetScreen
         ? Math.max(64, Math.floor(targetScreen.height - _barClearance - 12)) : 640
     readonly property int _availableContentH: Math.max(48,
@@ -155,8 +154,8 @@ PanelWindow {
     }
 
     margins {
-        top:    win._barBottom ? 6 : win._barInset + ShellSettings.barHeight + 2
-        bottom: win._barBottom ? win._barInset + ShellSettings.barHeight + 2 : 0
+        top:    win._barBottom ? 6 : Metrics.popupClearance(2)
+        bottom: win._barBottom ? Metrics.popupClearance(2) : 0
         right: win._pos === "top-right" ? Math.max(0, win._edgeMargin - win._shadowPad) : 0
         left:  win._left              ? Math.max(0, win._edgeMargin - win._shadowPad) : 0
     }

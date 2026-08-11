@@ -30,7 +30,7 @@ Rectangle {
     MotionBehavior on _barInset {
         NumberAnimation { duration: Motion.barMorph; easing.type: Easing.OutCubic }
     }
-    readonly property int  _edgeY: _barInset + ShellSettings.barHeight + 8
+    readonly property real _edgeY: _barInset + ShellSettings.barHeight + 8
     readonly property real _minX: radius + 4
     readonly property real _maxX: Math.max(_minX, win.width - targetWidth - _minX)
 
@@ -129,7 +129,7 @@ Rectangle {
     onBarBottomChanged: if (!root.open && !_exitAnimation.running)
         root.edgeOffset = root._hiddenEdge()
 
-    y: Math.round(barBottom ? (win.height - _edgeY - height) : _edgeY)
+    y: Metrics.popupY(win.height, height, barBottom, _edgeY)
     radius: Theme.surfaceRadius
     antialiasing: true
     color: Theme.popup

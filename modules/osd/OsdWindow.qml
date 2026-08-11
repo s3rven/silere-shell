@@ -20,8 +20,8 @@ PanelWindow {
 
     implicitHeight: Math.max(150, Math.ceil((stack.implicitHeight + 24) / 64) * 64)
 
-    readonly property bool _bottom: ShellSettings.barPosition === "bottom"
-    readonly property int _edgeY: Metrics.barEdgeInset + ShellSettings.barHeight + 2
+    readonly property bool _bottom: Metrics.barAtBottom
+    readonly property real _edgeY: Metrics.popupClearance(2)
     readonly property bool _active: !ShellSettings.osdBarIntegrated || OsdBarState.barConcealed
 
     anchors {

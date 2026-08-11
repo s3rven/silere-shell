@@ -5,6 +5,8 @@ import Quickshell
 import "../services"
 
 Singleton {
+    id: root
+
     // an arm-then-confirm row must reject the second half of a double-click; not a Motion
     // token because every one of those returns 0 under reduce motion, which would re-arm the trap
     readonly property int confirmGuardMs: 400
@@ -50,6 +52,16 @@ Singleton {
     // how far the bar surface sits from the screen edge; every surface that hugs the bar derives from this,
     // so bar geometry has one definition instead of a copy per popup
     readonly property int barEdgeInset: ShellSettings.barFloating ? ShellSettings.barGap : 0
+    readonly property bool barAtBottom: ShellSettings.barPosition === "bottom"
+
+    function popupClearance(extraGap: real): real {
+        return root.barEdgeInset + ShellSettings.barHeight + Math.max(0, extraGap)
+    }
+
+    // takes the clearance, not the gap: a surface that animates its own inset must pass the live value
+    function popupY(windowHeight: real, popupHeight: real, atBottom: bool, edge: real): real {
+        return Math.round(atBottom ? windowHeight - edge - popupHeight : edge)
+    }
 
     // the track title sizes to its text and marquees past this; a reserved slot left the pill
     // padded out on short titles and dragged the visualiser along with it
