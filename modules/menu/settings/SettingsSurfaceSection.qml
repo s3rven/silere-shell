@@ -52,6 +52,14 @@ Column {
                 displayValue: Math.round(ShellSettings.barWidth * 100) + "%"
                 onChanged: (v) => ShellSettings.barWidth = v
             }
+            // stepped in 4s: the bar edge has to stay on the 4px grid or hairlines straddle a physical pixel
+            SliderRow {
+                glyph: "󰡏"; label: "Edge gap"
+                value: ShellSettings.barGap
+                min: 0; max: 24; step: 4
+                displayValue: ShellSettings.barGap === 0 ? "None" : ShellSettings.barGap + "px"
+                onChanged: (v) => ShellSettings.barGap = Math.round(v)
+            }
         }
         // only the floating bar paints its own corners; docked multiplies the radius by 0
         CollapsibleSection {

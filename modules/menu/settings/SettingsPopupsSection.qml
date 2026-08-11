@@ -28,17 +28,12 @@ Column {
 
         SectionLabel { label: "DISPLAY" }
         SettingsCard {
-            SelectRow {
+            SliderRow {
                 glyph: "󰔛"; label: "Dismiss after"
-                currentValue: ShellSettings.notifDefaultTimeout
-                fallbackLabel: (ShellSettings.notifDefaultTimeout / 1000) + "s"
-                model: [
-                    { value: 3000,  label: "3s"  },
-                    { value: 5000,  label: "5s"  },
-                    { value: 10000, label: "10s" },
-                    { value: 15000, label: "15s" }
-                ]
-                onChosen: (v) => ShellSettings.notifDefaultTimeout = v
+                displayValue: (ShellSettings.notifDefaultTimeout / 1000) + "s"
+                value: ShellSettings.notifDefaultTimeout
+                min: 1000; max: 30000; step: 1000
+                onChanged: (v) => ShellSettings.notifDefaultTimeout = v
             }
             ChoiceChipRow {
                 glyph: "󰍹"; label: "Position"
