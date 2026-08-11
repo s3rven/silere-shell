@@ -138,6 +138,23 @@ ShellRoot {
         root._check(parsedCommits[0].subject.length === ShellUpdate.maxCommitSubjectChars,
             "shell update bounds commit subjects")
 
+        // the lua config framework replaces the plain dispatchers, so the two
+        // dispatch forms are the difference between switching and doing nothing
+        const luaWas = HyprDispatch.useLua
+        HyprDispatch.useLua = false
+        root._check(HyprDispatch._text("workspace", 3) === "workspace 3",
+            "dispatch builds the plain hyprland form")
+        HyprDispatch.useLua = true
+        root._check(HyprDispatch._text("workspace", 3)
+                === "hl.dsp.focus({ workspace = 3 })",
+            "dispatch builds the lua form for a workspace switch")
+        root._check(HyprDispatch._text("focusmonitor", "DP-3")
+                === "hl.dsp.focus({ monitor = \"DP-3\" })",
+            "dispatch quotes a monitor name in the lua form")
+        root._check(HyprDispatch._text("togglefloating", "") === "togglefloating",
+            "dispatch passes an unmapped dispatcher through untouched")
+        HyprDispatch.useLua = luaWas
+
         const spacing = ShellSettings.schemaFor("barSpacing")
         root._check(spacing !== null && spacing.t === "int"
                 && spacing.min === 4 && spacing.max === 24,
