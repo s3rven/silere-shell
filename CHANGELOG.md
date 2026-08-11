@@ -45,8 +45,24 @@ its slider; both drew the same thing there already, so nothing looks different.
 - A notification whose app icon is missing or fails to load shows the app's initial,
   in the popup and in the history list. The icon slot also keeps its width either
   way, so a notification with no icon no longer shifts its own header text.
+- Release resource use now has a versioned performance table. Publishing a tag
+  fails if its release has no matching entry.
 
 ### Changed
+
+- The media visualizer now paints its small canvas immediately instead of
+  handing CPU images through a dedicated render thread. Measured on the
+  reference session, this cuts visualizer CPU by about a fifth without
+  changing its look.
+
+- Slider handles now use Silere's narrow rectangular control shape instead of
+  circular knobs. Their rails have squarer ends, clearer hover/focus contrast,
+  and inset endpoints that keep handles out of adjacent labels. The rail no
+  longer changes thickness on hover, and Home, End, Page Up and Page Down work
+  consistently on both regular and colour sliders.
+
+- Compact widget and tray spacing is slightly tighter, and high-contrast focus
+  rings are stronger against the rest of the high-contrast palette.
 
 - Accent colours are mixed in LCh at a fixed lightness. In HSL, sweeping the hue
   swung lightness across 34 points of L\* while the built-in presets span 5, so a
@@ -93,6 +109,13 @@ its slider; both drew the same thing there already, so nothing looks different.
 
 ### Fixed
 
+- Truncated client labels no longer split emoji, combining marks, flags or joined
+  emoji sequences, and a tray icon with no usable image now uses a complete
+  grapheme for its fallback badge.
+- An urgent workspace outside the visible page no longer risks a transient QML
+  binding loop while the bar is laying itself out.
+- System maintenance now reports a missing `libnotify` dependency when battery
+  and temperature alerts are configured but cannot be sent.
 - Moving one accent strip no longer nudges the other. Both axes were read back out
   of the stored colour, so each one inherited the other's rounding, and the strip
   you were not touching animated the drift.

@@ -9,6 +9,7 @@ set -euo pipefail
 
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 CHANGELOG="${SILERE_CHANGELOG:-$ROOT/CHANGELOG.md}"
+PERFORMANCE="${SILERE_PERFORMANCE:-$ROOT/PERFORMANCE.md}"
 
 version="${1-}"
 if [ -z "$version" ]; then
@@ -22,8 +23,20 @@ if [ ! -f "$CHANGELOG" ]; then
     exit 1
 fi
 
+if [ ! -f "$PERFORMANCE" ]; then
+    echo "release-notes: no performance history at $PERFORMANCE" >&2
+    exit 1
+fi
+
 if [ "$version" = "Unreleased" ] || [ "$version" = "unreleased" ]; then
     echo "release-notes: refusing to publish the Unreleased section" >&2
+    exit 1
+fi
+
+# the bench stays manual: a headless CI runner cannot reproduce the reference session
+if ! grep -qF "| $version |" "$PERFORMANCE"; then
+    echo "release-notes: PERFORMANCE.md has no entry for $version" >&2
+    echo "release-notes: measure the release candidate and add a $version table row before tagging" >&2
     exit 1
 fi
 

@@ -8,6 +8,8 @@ If you're not sure whether something fits, ask in [Discussions](https://github.c
 
 Nothing lands on `main` on its own. You fork, push a branch, and open a PR; it gets reviewed and merged by hand. CI runs the lint, the Quickshell-module probe, and a headless type-check on every PR, so you don't need to run anything locally — push and let it report back.
 
+If you'd rather not wait on a CI round-trip, `bash scripts/check.sh` runs the full local validation gate and session diagnostics in well under a minute. Neither is required to open a PR.
+
 Reviews are about whether the change fits the shell, not about style-policing. Expect questions and sometimes a "let's not" — Silere stays deliberately small, so some good ideas still get turned down. That's not a judgment on the idea or the code.
 
 ## Bug reports
@@ -46,6 +48,13 @@ Not rules so much as the patterns you'll see everywhere — matching them keeps 
 For anything visual, it helps to check keyboard focus, reduced motion, a narrow bar, and what happens when an optional tool is missing. A before/after screenshot is worth a lot when the diff doesn't show it.
 
 Don't commit generated or personal files: `config/MatugenTheme.qml`, `settings.json`, `calendar-marks.json`.
+
+## Cutting a release
+
+Every tagged release carries a resource snapshot so memory or CPU regressions remain
+visible over time. Run `bash scripts/bench.sh 30`, then add its idle figures to
+[PERFORMANCE.md](PERFORMANCE.md). The release-notes script rejects a version with no
+matching table row.
 
 ## One last thing
 
