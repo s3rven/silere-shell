@@ -21,6 +21,9 @@ ShellRoot {
 
     Component { id: sliderTrackFactory; SliderTrack {} }
     Component { id: gradientSliderFactory; GradientSlider {} }
+    Component { id: boundedProcessFactory; BoundedProcess {} }
+
+    property var _timeoutProbe: null
 
     function _check(condition: bool, label: string): void {
         root._checks++
@@ -225,6 +228,14 @@ ShellRoot {
             "shell update caps commit detail models")
         root._check(parsedCommits[0].subject.length === ShellUpdate.maxCommitSubjectChars,
             "shell update bounds commit subjects")
+        const parsedKv = ShellUpdate._parseKv("__proto__=spoof\nsupported=1")
+        root._check(Object.getPrototypeOf(parsedKv) === null && parsedKv.supported === "1",
+            "shell update parses status into a prototype-safe map")
+
+        root._check(PowerProfiles._parseProfile("balanced\n") === "balanced",
+            "power mode accepts a known daemon profile")
+        root._check(PowerProfiles._parseProfile("balanced\nspoof") === "",
+            "power mode rejects malformed daemon output")
 
         // the lua config framework replaces the plain dispatchers, so the two
         // dispatch forms are the difference between switching and doing nothing
@@ -283,6 +294,28 @@ ShellRoot {
                 "LCh gamut mapping preserves hue " + expected)
         }
 
+        root._timeoutProbe = boundedProcessFactory.createObject(root, {
+            command: ["bash", "-c", "sleep 5"],
+            timeoutMs: 80
+        })
+        let timeoutSeen = false
+        root._timeoutProbe.timeoutReached.connect(function() {
+            root._check(root._timeoutProbe.timedOut,
+                "bounded process records its timeout")
+            timeoutSeen = true
+        })
+        root._timeoutProbe.exited.connect(function() {
+            if (!timeoutSeen) return
+            root._check(!root._timeoutProbe.running,
+                "bounded process stops a wedged helper")
+            root._timeoutProbe.destroy()
+            root._timeoutProbe = null
+            Qt.callLater(root._finish)
+        })
+        root._timeoutProbe.running = true
+    }
+
+    function _finish(): void {
         if (root._failures === 0)
             console.warn("PROBE-LOGIC passed " + root._checks + " checks")
         else

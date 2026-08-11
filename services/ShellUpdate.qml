@@ -22,6 +22,7 @@ Singleton {
     property string lastCheckError: ""
     property string lastApplyError: ""
     property string timerError: ""
+    property bool   _timerStatusError: false
     property bool   timerSupported: false
     property bool   timerEnabled: false
     readonly property bool timerBusy: _timerStatus.running || _timerSet.running
@@ -145,6 +146,7 @@ Singleton {
 
     function setTimerEnabled(enabled: bool): void {
         if (timerBusy || !timerSupported) return
+        root._timerStatusError = false
         root.timerError = ""
         _timerSet.exec(["bash", root._script, enabled ? "--timer-enable" : "--timer-disable"])
     }
@@ -183,7 +185,7 @@ Singleton {
     }
 
     function _parseKv(t: string): var {
-        const out = ({})
+        const out = Object.create(null)
         const lines = (t || "").split(/\r?\n/)
         for (let i = 0; i < lines.length; i++) {
             const at = lines[i].indexOf("=")
@@ -377,24 +379,45 @@ Singleton {
         }
     }
 
-    Process {
+    BoundedProcess {
         id: _timerStatus
+        timeoutMs: 10000
         stdout: StdioCollector { id: _timerStatusOut }
+        stderr: StdioCollector { id: _timerStatusErr }
+        onTimeoutReached: {
+            root._timerStatusError = true
+            root.timerError = "Update timer check timed out"
+        }
         onExited: (code) => {
-            if (code !== 0) return
+            if (timedOut) return
+            if (code !== 0) {
+                root._timerStatusError = true
+                root.timerError = root._lastOutputLine(
+                    _timerStatusOut.text, _timerStatusErr.text,
+                    "Could not check the update timer")
+                return
+            }
             const kv = root._parseKv(_timerStatusOut.text)
             root.timerSupported = kv.supported === "1"
             root.timerEnabled = kv.enabled === "1"
             const next = parseInt(kv.next ?? "0")
             root.nextCheckMs = isNaN(next) || next <= 0 ? 0 : next * 1000
+            if (root._timerStatusError) root.timerError = ""
+            root._timerStatusError = false
             root._touchNow()
         }
     }
 
-    Process {
+    BoundedProcess {
         id: _timerSet
+        timeoutMs: 15000
         stderr: StdioCollector { id: _timerSetErr }
+        onTimeoutReached: root.timerError = "Update timer change timed out"
         onExited: (code) => {
+            if (timedOut) {
+                root.refreshTimer()
+                return
+            }
             // the switch is bound to the unit's real state, so a swallowed failure just
             // flips it back with no reason given
             root.timerError = code === 0 ? ""

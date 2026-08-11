@@ -31,9 +31,10 @@ Singleton {
         onTriggered: _proc.running = true
     }
 
-    Process {
+    BoundedProcess {
         id: _proc
         running: false
+        timeoutMs: 5000
         // Ignore only this process. Another Quickshell instance can own the
         // notification name too, and is still a real conflict worth showing.
         command: ["bash", "-c",

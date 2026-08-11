@@ -85,9 +85,10 @@ Singleton {
         }
     }
 
-    Process {
+    BoundedProcess {
         id: _percentProbe
         running: false
+        timeoutMs: 5000
         environment: ({ "LC_ALL": "C" })
         command: ["bash", "-c",
             "command -v upower >/dev/null 2>&1 || exit 0; " +

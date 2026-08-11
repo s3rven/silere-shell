@@ -13,6 +13,9 @@ rather than when a version is published here. The settings file has its own
 
 ### Changed
 
+- Session-bus helper commands now have hard time limits, so a stalled power,
+  battery, notification, location or update-timer backend cannot leave its
+  shell control busy forever.
 - The media visualizer now paints its small canvas immediately instead of
   handing CPU images through a dedicated render thread. Measured on the
   reference session, this cuts visualizer CPU by about a fifth without
@@ -27,6 +30,9 @@ rather than when a version is published here. The settings file has its own
 
 ### Fixed
 
+- Power Mode now confirms successful changes against the daemon and keeps
+  retrying a failed corrective read, rather than leaving its optimistic label
+  stale after a transient backend failure.
 - Truncated client labels no longer split emoji, combining marks, flags or joined
   emoji sequences, and a tray icon with no usable image now uses a complete
   grapheme for its fallback badge.

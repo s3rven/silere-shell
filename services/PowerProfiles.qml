@@ -24,6 +24,7 @@ Singleton {
 
     property int _getRetries: 0
     readonly property int _getRetryMax: 4
+    readonly property var _knownProfiles: ["balanced", "performance", "power-saver"]
     Timer {
         id: _getRetry
         interval: 600
@@ -38,9 +39,21 @@ Singleton {
 
     function refresh(): void {
         if (!available || _get.running || _set.running) return
+        _get._corrective = root._correctiveRefreshPending
         _correctiveRefreshPending = false
         _get._gen = root._writeGen
         _get.exec(["powerprofilesctl", "get"])
+    }
+
+    function _queueCorrectiveRefresh(): void {
+        root._correctiveRefreshPending = true
+        root._getRetries = 0
+        _getRetry.restart()
+    }
+
+    function _parseProfile(value): string {
+        const profile = SafeText.singleLineText(value, 64)
+        return root._knownProfiles.indexOf(profile) >= 0 ? profile : ""
     }
 
     function cycle(): void {
@@ -65,36 +78,61 @@ Singleton {
         target: SystemTools
         function onReadyChanged() { if (SystemTools.ready && MenuState.open) root.refresh() }
     }
-    Process {
+    BoundedProcess {
         id: _get
         property int _gen: 0
+        property bool _corrective: false
+        timeoutMs: 8000
         environment: ({ "LC_ALL": "C" })
         stdout: StdioCollector { id: _getOut }
+        onTimeoutReached: root.lastError = "Power mode check timed out"
         onExited: (code) => {
             if (_set.running || _gen !== root._writeGen) return
             if (code === 0) {
-                const p = (_getOut.text || "").trim()
-                if (p.length > 0) { root.profile = p; root._getRetries = 0; return }
+                const p = root._parseProfile(_getOut.text)
+                if (p.length > 0) {
+                    root.profile = p
+                    root._getRetries = 0
+                    root._correctiveRefreshPending = false
+                    if (root.lastError === "Power mode check timed out"
+                            || root.lastError === "Could not verify the power mode")
+                        root.lastError = ""
+                    return
+                }
             }
-            if (root.profile === "" && root.available && MenuState.open && root._getRetries < root._getRetryMax) {
+            const shouldRetry = root.profile === "" || _corrective
+            if (shouldRetry && root.available && (MenuState.open || _corrective)
+                    && root._getRetries < root._getRetryMax) {
                 root._getRetries++
+                root._correctiveRefreshPending = _corrective
                 _getRetry.restart()
+                return
             }
+            if (shouldRetry && !timedOut)
+                root.lastError = "Could not verify the power mode"
         }
     }
-    Process {
+    BoundedProcess {
         id: _set
+        timeoutMs: 8000
         environment: ({ "LC_ALL": "C" })
         stderr: StdioCollector { id: _setErr }
+        onTimeoutReached: root.lastError = "Power mode change timed out"
         onExited: (code) => {
-            if (code === 0) { root.lastError = ""; return }
+            if (timedOut) {
+                root._queueCorrectiveRefresh()
+                return
+            }
+            if (code === 0) {
+                root.lastError = ""
+                root._queueCorrectiveRefresh()
+                return
+            }
             // the row re-reads the daemon, so a swallowed failure just flips the
             // label back with no reason given
             root.lastError = SafeText.boundedText(
                 _setErr.text.trim().split("\n").pop() || "Could not change the power mode", 160)
-            root._correctiveRefreshPending = true
-            root._getRetries = 0
-            _getRetry.restart()
+            root._queueCorrectiveRefresh()
         }
     }
 }

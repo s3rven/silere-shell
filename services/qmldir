@@ -18,6 +18,7 @@ singleton OverviewState 1.0 OverviewState.qml
 singleton Screenshot    1.0 Screenshot.qml
 
 # shell
+BoundedProcess          1.0 BoundedProcess.qml
 singleton CalendarState 1.0 CalendarState.qml
 singleton ConfigStore    1.0 ConfigStore.qml
 singleton DateTime      1.0 DateTime.qml

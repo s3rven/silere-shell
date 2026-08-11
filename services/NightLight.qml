@@ -110,9 +110,10 @@ Singleton {
         root._geoResolved = true
     }
 
-    Process {
+    BoundedProcess {
         id: _geoProc
         running: false
+        timeoutMs: 5000
         command: ["bash", "-c",
             "tz=\"$(timedatectl show -p Timezone --value 2>/dev/null)\"; " +
             "[ -z \"$tz\" ] && tz=\"$(readlink -f /etc/localtime 2>/dev/null | sed -n 's#.*/zoneinfo/##p')\"; " +
@@ -234,8 +235,9 @@ Singleton {
         function onOpenChanged() { root._startGeo() }
     }
 
-    Process {
+    BoundedProcess {
         id: _checkProc
+        timeoutMs: 5000
         stdout: SplitParser { onRead: root.enabled = true }
     }
 
