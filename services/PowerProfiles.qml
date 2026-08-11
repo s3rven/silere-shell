@@ -12,6 +12,11 @@ Singleton {
     property string profile: ""
     property string lastError: ""
 
+    // the daemon reports an active profile it is not actually delivering (lap mode, thermals);
+    // the reason string is empty whenever it is delivering, so absence fails closed to "fine"
+    property string _degradedReason: ""
+    readonly property bool degraded: profile === "performance" && _degradedReason.length > 0
+
     readonly property string label: profile === "performance" ? "Performance"
                                   : profile === "power-saver" ? "Power Saver"
                                   : profile === "balanced"    ? "Balanced"
@@ -45,6 +50,19 @@ Singleton {
         _correctiveRefreshPending = false
         _get._gen = root._writeGen
         _get.exec(["powerprofilesctl", "get"])
+        root._refreshDegraded()
+    }
+
+    function _refreshDegraded(): void {
+        if (!SystemTools.hasBusctl || _degradedProc.running) return
+        // the daemon owns both names; the newer one first, the pre-0.20 name as fallback
+        _degradedProc.exec(["bash", "-c",
+            "busctl get-property org.freedesktop.UPower.PowerProfiles" +
+            " /org/freedesktop/UPower/PowerProfiles" +
+            " org.freedesktop.UPower.PowerProfiles PerformanceDegraded 2>/dev/null" +
+            " || busctl get-property net.hadess.PowerProfiles" +
+            " /net/hadess/PowerProfiles" +
+            " net.hadess.PowerProfiles PerformanceDegraded 2>/dev/null"])
     }
 
     function _queueCorrectiveRefresh(): void {
@@ -56,6 +74,13 @@ Singleton {
     function _parseProfile(value): string {
         const profile = SafeText.singleLineText(value, 64)
         return root._knownProfiles.indexOf(profile) >= 0 ? profile : ""
+    }
+
+    // busctl prints a typed property as: s "reason"
+    function _parseDegraded(value): string {
+        const line = SafeText.singleLineText(value, 160)
+        const m = /^s\s+"(.*)"$/.exec(line)
+        return m ? SafeText.singleLineText(m[1], 64) : ""
     }
 
     function cycle(): void {
@@ -119,6 +144,17 @@ Singleton {
                 root._readError = true
                 root.lastError = "Could not verify the power mode"
             }
+        }
+    }
+    BoundedProcess {
+        id: _degradedProc
+        timeoutMs: 5000
+        environment: ({ "LC_ALL": "C" })
+        stdout: StdioCollector { id: _degradedOut }
+        onTimeoutReached: root._degradedReason = ""
+        onExited: (code) => {
+            root._degradedReason = (code === 0 && !timedOut)
+                ? root._parseDegraded(_degradedOut.text) : ""
         }
     }
     BoundedProcess {

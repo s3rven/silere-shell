@@ -23,7 +23,8 @@ Item {
         : Battery.charging ? "AC"
         : "Battery"
     readonly property string _batteryValue: Battery.label
-    readonly property string _profileValue: PowerProfiles.profile !== "" ? PowerProfiles.label
+    readonly property string _profileValue: PowerProfiles.profile !== ""
+        ? PowerProfiles.label + (PowerProfiles.degraded ? " · throttled" : "")
         : PowerProfiles.syncing ? "..."
         : ""
 

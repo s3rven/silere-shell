@@ -237,6 +237,14 @@ ShellRoot {
         root._check(PowerProfiles._parseProfile("balanced\nspoof") === "",
             "power mode rejects malformed daemon output")
 
+        root._check(PowerProfiles._parseDegraded('s ""\n') === "",
+            "power mode reads an undegraded profile as not throttled")
+        root._check(PowerProfiles._parseDegraded('s "lap-detected"\n') === "lap-detected",
+            "power mode reads the throttle reason the daemon reports")
+        root._check(PowerProfiles._parseDegraded("") === ""
+                && PowerProfiles._parseDegraded("Failed to get property") === "",
+            "power mode fails closed to not throttled on unreadable output")
+
         // the lua config framework replaces the plain dispatchers, so the two
         // dispatch forms are the difference between switching and doing nothing
         const luaWas = HyprDispatch.useLua

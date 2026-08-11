@@ -16,6 +16,9 @@ This file stays focused on work since the latest release. Completed notes move t
 
 ### Changed
 
+- Power Mode says when the daemon is not actually delivering the profile it
+  reports. A performance profile the hardware has throttled, for lap detection
+  or heat, now reads "Performance · throttled" instead of claiming full speed.
 - Session-bus helper commands now have hard time limits, so a stalled power,
   battery, notification, location or update-timer backend cannot leave its
   shell control busy forever.
