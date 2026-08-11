@@ -15,6 +15,23 @@ assert_eq() {
     [ "$actual" = "$expected" ] || fail "$label (expected '$expected', got '$actual')"
 }
 
+_prepare_release_signer() {
+    local repo="$1" key="$TMP/release-signing-key"
+    if [ ! -f "$key" ]; then
+        ssh-keygen -q -t ed25519 -N '' -C silere-test -f "$key" >/dev/null
+    fi
+    git -C "$repo" config gpg.format ssh
+    git -C "$repo" config user.signingkey "$key"
+    mkdir -p "$repo/security"
+    printf 'silere-test namespaces="git" %s\n' "$(<"$key.pub")" \
+        > "$repo/security/update-signers"
+}
+
+_sign_release() {
+    local repo="$1" tag="$2"
+    git -C "$repo" tag -s -m "$tag" "$tag"
+}
+
 test_xdg_paths_and_timer_default() (
     local home="$TMP/xdg-home" actual
     mkdir -p "$home"
@@ -436,28 +453,31 @@ test_update_refuses_dirty_apply() (
     git init -q "$seed"
     git -C "$seed" config user.name "Silere test"
     git -C "$seed" config user.email "test@example.invalid"
+    _prepare_release_signer "$seed"
     mkdir -p "$seed/scripts/lib"
     cp "$ROOT/scripts/update.sh" "$seed/scripts/update.sh"
     cp "$ROOT/scripts/lib/xdg.sh" "$seed/scripts/lib/xdg.sh"
     printf 'upstream v1\n' > "$seed/tracked.qml"
-    git -C "$seed" add scripts tracked.qml
+    git -C "$seed" add scripts security tracked.qml
     git -C "$seed" commit -qm "initial"
     git -C "$seed" branch -M main
+    _sign_release "$seed" v1.0.0
     git -C "$seed" remote add origin "$remote"
-    git -C "$seed" push -q -u origin main
+    git -C "$seed" push -q -u origin main --tags
 
     git clone -q "$remote" "$client"
     git -C "$client" config user.name "Silere test"
     git -C "$client" config user.email "test@example.invalid"
     version_out="$(HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" \
         bash "$client/scripts/update.sh" --version)"
-    assert_eq "tag=" "$(printf '%s\n' "$version_out" | grep '^tag=')" \
-        "--version no-tag fallback"
+    assert_eq "tag=v1.0.0" "$(printf '%s\n' "$version_out" | grep '^tag=')" \
+        "--version release tag"
     assert_eq "ahead=0" "$(printf '%s\n' "$version_out" | grep '^ahead=')" \
         "--version no-tag commit count"
     printf 'upstream v2\n' > "$seed/tracked.qml"
     git -C "$seed" commit -qam "upstream update"
-    git -C "$seed" push -q
+    _sign_release "$seed" v1.0.1
+    git -C "$seed" push -q origin main --tags
 
     mkdir -p "$test_home" "$stub_dir" "$lock_stub_dir"
     printf '#!/bin/sh\nexit 1\n' > "$stub_dir/systemctl"
@@ -561,14 +581,15 @@ test_update_reporting() (
     git init -q "$seed"
     git -C "$seed" config user.name "Silere test"
     git -C "$seed" config user.email "test@example.invalid"
+    _prepare_release_signer "$seed"
     mkdir -p "$seed/scripts/lib"
     cp "$ROOT/scripts/update.sh" "$seed/scripts/update.sh"
     cp "$ROOT/scripts/lib/xdg.sh" "$seed/scripts/lib/xdg.sh"
     printf 'v1\n' > "$seed/tracked.qml"
-    git -C "$seed" add scripts tracked.qml
+    git -C "$seed" add scripts security tracked.qml
     git -C "$seed" commit -qm "initial"
     git -C "$seed" branch -M main
-    git -C "$seed" tag v9.9.0
+    _sign_release "$seed" v9.9.0
     git -C "$seed" remote add origin "$remote"
     git -C "$seed" push -q -u origin main --tags
 
@@ -582,7 +603,7 @@ test_update_reporting() (
         "reporting fixture starts shallow"
     printf 'v2\n' > "$seed/tracked.qml"
     git -C "$seed" commit -qam "upstream update"
-    git -C "$seed" tag v9.9.1
+    _sign_release "$seed" v9.9.1
     git -C "$seed" push -q --tags origin main
 
     mkdir -p "$test_home" "$stub_dir"
@@ -633,7 +654,7 @@ test_update_reporting() (
         || fail "update check did not record a usable timestamp"
     assert_eq "1" "$(sed -n '1p' "$cache/update-pending")" "pending update count"
     target="$(sed -n '2p' "$cache/update-pending")"
-    printf '%s' "$target" | grep -qE '^target [0-9a-f]{7,} v9\.9\.1$' \
+    printf '%s' "$target" | grep -qE '^target [0-9a-f]{7,} v9\.9\.1 verified$' \
         || fail "pending update flag has no resolvable target revision: $target"
     assert_eq "upstream update" "$(sed -n '3p' "$cache/update-pending" | cut -d' ' -f2-)" \
         "pending update summary"
@@ -650,6 +671,20 @@ test_update_reporting() (
         || fail "already-current check did not clear a stale pending flag"
     [ "$(cat "$cache/update-checked")" -gt 1 ] \
         || fail "already-current check did not refresh its timestamp"
+
+    printf 'untrusted v3\n' > "$seed/tracked.qml"
+    git -C "$seed" commit -qam "untrusted upstream"
+    git -C "$seed" tag -a -m "unsigned release" v9.9.2
+    git -C "$seed" push -q --tags origin main
+    if _run >/dev/null 2>&1; then
+        fail "update check accepted an unsigned release"
+    fi
+    if _run --apply >/dev/null 2>&1; then
+        fail "update apply accepted an unsigned release"
+    fi
+    assert_eq "v2" "$(<"$client/tracked.qml")" "unsigned release worktree"
+    [ ! -e "$cache/update-pending" ] \
+        || fail "unsigned release left an installable update flag"
 
     printf '4242\n' > "$cache/update-checked"
     git -C "$client" remote set-url origin "$TMP/unavailable-report-origin.git"
@@ -715,6 +750,7 @@ test_update_rolls_back_broken_merge() (
     git init -q "$seed"
     git -C "$seed" config user.name "Silere test"
     git -C "$seed" config user.email "test@example.invalid"
+    _prepare_release_signer "$seed"
     mkdir -p "$seed/scripts/lib"
     cp "$ROOT/scripts/update.sh" "$seed/scripts/update.sh"
     cp "$ROOT/scripts/lib/xdg.sh" "$seed/scripts/lib/xdg.sh"
@@ -723,11 +759,12 @@ test_update_rolls_back_broken_merge() (
     # it is mid-execution when the merge rewrites the worktree.
     printf '#!/bin/sh\nexit 0\n' > "$seed/scripts/test-qml-headless.sh"
     printf 'upstream v1\n' > "$seed/tracked.qml"
-    git -C "$seed" add scripts tracked.qml
+    git -C "$seed" add scripts security tracked.qml
     git -C "$seed" commit -qm "initial"
     git -C "$seed" branch -M main
+    _sign_release "$seed" v1.0.0
     git -C "$seed" remote add origin "$remote"
-    git -C "$seed" push -q -u origin main
+    git -C "$seed" push -q -u origin main --tags
 
     git clone -q "$remote" "$client"
     git -C "$client" config user.name "Silere test"
@@ -745,7 +782,8 @@ test_update_rolls_back_broken_merge() (
     printf 'upstream v2\n' > "$seed/tracked.qml"
     printf '#!/bin/sh\nexit 1\n' > "$seed/scripts/test-qml-headless.sh"
     git -C "$seed" commit -qam "broken upstream"
-    git -C "$seed" push -q
+    _sign_release "$seed" v1.0.1
+    git -C "$seed" push -q origin main --tags
 
     HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" \
         bash "$client/scripts/update.sh" >/dev/null
@@ -763,7 +801,8 @@ test_update_rolls_back_broken_merge() (
     printf '#!/bin/sh\nexit 0\n' > "$seed/scripts/test-qml-headless.sh"
     printf 'upstream v3\n' > "$seed/tracked.qml"
     git -C "$seed" commit -qam "working upstream"
-    git -C "$seed" push -q
+    _sign_release "$seed" v1.0.2
+    git -C "$seed" push -q origin main --tags
     HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" \
         bash "$client/scripts/update.sh" >/dev/null
     HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" \
@@ -785,16 +824,16 @@ test_atomic_units
 test_atomic_update_cache
 # These workflows build git fixtures. Local minimal environments may skip them;
 # CI opts into making an accidental missing dependency a hard failure.
-if command -v git >/dev/null 2>&1; then
+if command -v git >/dev/null 2>&1 && command -v ssh-keygen >/dev/null 2>&1; then
     test_update_refuses_dirty_apply
     test_update_rolls_back_broken_merge
     test_update_reporting
     test_repair_workflow
 else
     if [ "${SILERE_REQUIRE_GIT_TESTS:-0}" = 1 ]; then
-        fail "git is required for updater and repair workflow tests"
+        fail "git and ssh-keygen are required for updater and repair workflow tests"
     fi
-    printf 'SKIP: updater and repair workflows (git unavailable)\n'
+    printf 'SKIP: updater and repair workflows (git or ssh-keygen unavailable)\n'
 fi
 
 printf 'portability regression tests passed\n'

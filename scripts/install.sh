@@ -452,6 +452,7 @@ _optdep hyprlock      "lock screen"
 _optdep_any "power actions" "suspend / reboot / shutdown" systemctl loginctl
 _optdep notify-send   "low-battery + hot-CPU alerts"
 _optdep timeout       "bounded update checks"
+_optdep ssh-keygen    "signed shell updates"
 
 # ── font ─────────────────────────────────────────────────────────────────────────
 _section "JetBrainsMono Nerd Font"
@@ -553,14 +554,15 @@ if [ -d "$INSTALL_DIR/.git" ]; then
         [ -x "$INSTALL_DIR/scripts/repair.sh" ] \
             && _warn "preview a safe restore with: bash $INSTALL_DIR/scripts/repair.sh"
     fi
-    if _ask "Pull latest changes?"; then
-        spin_start "pulling..."
-        if ! GIT_TERMINAL_PROMPT=0 git -C "$INSTALL_DIR" pull --ff-only --quiet; then
+    if _ask "Install the latest signed release?"; then
+        spin_start "checking release..."
+        if ! GIT_TERMINAL_PROMPT=0 bash "$INSTALL_DIR/scripts/update.sh" >/dev/null \
+                || ! GIT_TERMINAL_PROMPT=0 bash "$INSTALL_DIR/scripts/update.sh" --apply >/dev/null; then
             spin_stop
             if $install_has_changes; then
-                _die "git pull could not preserve the local edits — repair or stash them, then retry"
+                _die "the signed update could not preserve the local edits — repair or stash them, then retry"
             fi
-            _die "git pull failed — check the connection or update manually"
+            _die "signed release update failed — check the connection or update manually"
         fi
         spin_stop; _ok "up to date"
     else

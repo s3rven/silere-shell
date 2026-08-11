@@ -21,6 +21,7 @@ CHECKED="$CACHE_DIR/update-checked"
 TIMER_UNIT="silere-update.timer"
 SERVICE_UNIT="silere-update.service"
 SYSTEMD_USER_DIR="$CONFIG_HOME/systemd/user"
+TRUSTED_SIGNERS="$ROOT/security/update-signers"
 
 _notify() {
     command -v notify-send >/dev/null 2>&1 || return 0
@@ -88,6 +89,47 @@ _fetch_main() {
     else
         _git_fetch --tags origin main
     fi
+}
+
+_latest_release_tag() {
+    local tag
+    while IFS= read -r tag; do
+        if [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            printf '%s\n' "$tag"
+            return 0
+        fi
+    done < <(git -C "$ROOT" tag --merged origin/main --list 'v*' --sort=-v:refname)
+    return 1
+}
+
+_release_fail() {
+    local mode="$1" message="$2"
+    if [ "$mode" = apply ]; then _fail "$message"; fi
+    _clear_flag
+    _quiet_fail "$message"
+}
+
+# Verification uses the key shipped by the already-installed revision. The
+# fetched tree cannot replace this trust root before its tag has been checked.
+_resolve_trusted_release() {
+    local mode="$1" kind
+    release_tag="$(_latest_release_tag)" \
+        || _release_fail "$mode" "origin/main has no stable Silere release"
+    kind="$(git -C "$ROOT" cat-file -t "$release_tag" 2>/dev/null || true)"
+    [ "$kind" = tag ] \
+        || _release_fail "$mode" "$release_tag is not an annotated release tag"
+    [ -r "$TRUSTED_SIGNERS" ] \
+        || _release_fail "$mode" "the Silere release trust key is missing"
+    command -v ssh-keygen >/dev/null 2>&1 \
+        || _release_fail "$mode" "ssh-keygen is required to verify Silere releases"
+    git -C "$ROOT" -c gpg.format=ssh \
+        -c gpg.ssh.allowedSignersFile="$TRUSTED_SIGNERS" \
+        verify-tag "$release_tag" >/dev/null 2>&1 \
+        || _release_fail "$mode" "$release_tag is not signed by the trusted Silere release key"
+    release_rev="$(git -C "$ROOT" rev-parse "$release_tag^{}" 2>/dev/null)" \
+        || _release_fail "$mode" "could not resolve $release_tag"
+    git -C "$ROOT" merge-base --is-ancestor "$release_rev" origin/main \
+        || _release_fail "$mode" "$release_tag is not part of origin/main"
 }
 
 # A failed load makes qs exit non-zero at once, and the service restarts it every
@@ -310,8 +352,8 @@ esac
 
 _acquire_update_lock
 
-# --apply: fast-forward to the already-fetched origin/main and restart the shell.
-# The flag carries the pending commit summary written by the check pass.
+# --apply: fast-forward to the already-fetched, signed release and restart the
+# shell. The trust check runs again so the cache flag is never authoritative.
 if [ "${1:-}" = "--apply" ]; then
     apply_branch="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
     [ -n "$apply_branch" ] \
@@ -319,8 +361,10 @@ if [ "${1:-}" = "--apply" ]; then
     [ "$apply_branch" = main ] \
         || _fail "checkout is on branch $apply_branch — switch to main before applying"
     local_rev="$(git rev-parse HEAD)"
-    remote_rev="$(git rev-parse origin/main 2>/dev/null)" \
+    git rev-parse origin/main >/dev/null 2>&1 \
         || _fail "origin/main is unavailable — check for updates again"
+    _resolve_trusted_release apply
+    remote_rev="$release_rev"
     _exit_if_not_behind "$local_rev" "$remote_rev" 0
     if _has_local_changes; then
         _fail "local changes detected — commit or stash them before applying the update"
@@ -354,19 +398,21 @@ _fetch_main || _quiet_fail "git fetch failed (check network / connectivity)"
 
 # Records a successful check whatever its outcome, so the shell can report when
 # it last reached origin even after a restart or an unattended timer run.
+local_rev="$(git rev-parse HEAD)"
+_resolve_trusted_release check
+remote_rev="$release_rev"
+
 _write_cache_file "$CHECKED" "$(date +%s)" \
     || echo "silere-update: could not record the update check time" >&2
 
-local_rev="$(git rev-parse HEAD)"
-remote_rev="$(git rev-parse origin/main)"
 _exit_if_not_behind "$local_rev" "$remote_rev" 1
 
 count="$(git rev-list --count "${local_rev}..${remote_rev}")"
 summary="$(git log -5 --oneline --no-decorate "${local_rev}..${remote_rev}")"
-target_tag="$(git describe --tags --abbrev=0 --match 'v[0-9]*' "$remote_rev" 2>/dev/null || true)"
+target_tag="$release_tag"
 
 _write_cache_file "$FLAG" "$count" \
-    "target $(git rev-parse --short "$remote_rev") $target_tag" "$summary" \
+    "target $(git rev-parse --short "$remote_rev") $target_tag verified" "$summary" \
     || _quiet_fail "failed to write update status"
 
 # The badge is the persistent reminder. Notify once per pending revision, or a

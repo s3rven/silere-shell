@@ -13,6 +13,34 @@ Column {
     property bool _listOpen: false
     property bool _changesOpen: false
     property bool _recentOpen: false
+    property bool _installArmed: false
+
+    function _disarmInstall(): void {
+        root._installArmed = false
+        _installConfirm.stop()
+    }
+
+    function _triggerShellAction(): void {
+        if (!ShellUpdate.pending) {
+            root._disarmInstall()
+            ShellUpdate.check()
+            return
+        }
+        if (!root._installArmed) {
+            root._installArmed = true
+            root._changesOpen = true
+            _installConfirm.restart()
+            return
+        }
+        root._disarmInstall()
+        ShellUpdate.apply()
+    }
+
+    Timer {
+        id: _installConfirm
+        interval: 10000
+        onTriggered: root._installArmed = false
+    }
 
     // git only runs when the row is opened, never on the page building
     function _toggleRecent(): void {
@@ -24,8 +52,24 @@ Column {
     readonly property bool _packagesAvailable: Updates.count > 0
         && !Updates.lastFailed && Updates.packages.length > 0
 
-    on_ChangesAvailableChanged: if (!_changesAvailable) _changesOpen = false
+    on_ChangesAvailableChanged: if (!_changesAvailable) {
+        _changesOpen = false
+        _disarmInstall()
+    }
     on_PackagesAvailableChanged: if (!_packagesAvailable) _listOpen = false
+
+    Connections {
+        target: MenuState
+        function onOpenChanged() { if (!MenuState.open) root._disarmInstall() }
+    }
+    Connections {
+        target: ShellUpdate
+        function onCountChanged() { root._disarmInstall() }
+        function onTargetTagChanged() { root._disarmInstall() }
+        function onTargetVerifiedChanged() { root._disarmInstall() }
+        function onCheckingChanged() { if (ShellUpdate.checking) root._disarmInstall() }
+        function onApplyingChanged() { if (ShellUpdate.applying) root._disarmInstall() }
+    }
 
     width: parent ? parent.width : 0
     spacing: 0
@@ -47,6 +91,9 @@ Column {
                     : ShellUpdate.lastCheckError.length > 0 ? ShellUpdate.lastCheckError
                     : ShellUpdate.pending && ShellUpdate.blockedReason.length > 0
                         ? ShellUpdate.blockedReason + " — installing will not run until that is resolved"
+                    : root._installArmed
+                        ? ShellUpdate.verificationDetail + " · confirm installation within 10 seconds"
+                    : ShellUpdate.pending ? ShellUpdate.verificationDetail
                     : ShellUpdate.versionDetail
                 detailError: ShellUpdate.lastApplyError.length > 0 || ShellUpdate.lastCheckError.length > 0
                     || (ShellUpdate.pending && ShellUpdate.blockedReason.length > 0)
@@ -55,15 +102,15 @@ Column {
                         ? Theme.accent : Theme.success
                 busy: ShellUpdate.checking || ShellUpdate.applying
 
-                primaryLabel: ShellUpdate.pending || ShellUpdate.applying ? "Install" : "Check"
-                primaryGlyph: ShellUpdate.pending ? "󰅢" : "󰓦"
+                primaryLabel: ShellUpdate.applying ? "Installing…"
+                    : root._installArmed ? "Confirm" : ShellUpdate.pending ? "Install" : "Check"
+                primaryGlyph: root._installArmed ? "󰌾" : ShellUpdate.pending ? "󰅢" : "󰓦"
                 primaryEnabled: !ShellUpdate.checking && !ShellUpdate.applying
-                    && (!ShellUpdate.pending || ShellUpdate.blockedReason.length === 0)
+                    && (!ShellUpdate.pending || (ShellUpdate.targetVerified
+                        && ShellUpdate.blockedReason.length === 0))
                 primaryEmphasis: ShellUpdate.pending
-                onPrimaryTriggered: {
-                    if (ShellUpdate.pending) ShellUpdate.apply()
-                    else ShellUpdate.check()
-                }
+                primaryColor: root._installArmed ? Theme.warning : Theme.accent
+                onPrimaryTriggered: root._triggerShellAction()
 
                 secondaryShown: ShellUpdate.pending && !ShellUpdate.applying
                 secondaryGlyph: "󰑐"

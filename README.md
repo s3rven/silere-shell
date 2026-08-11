@@ -80,6 +80,7 @@ Installing one turns on the matching feature. Skipping it hides that widget or m
 | `hyprlock` | lock action |
 | `systemctl` / `loginctl` | suspend, reboot, and shutdown actions |
 | `notify-send` | battery, temperature, and update notifications |
+| `ssh-keygen` | cryptographic verification of Silere release tags |
 
 The installer also reports on `busctl`, `pgrep`, `pkill` and `timeout`. Those ship with systemd, procps and coreutils, so they are listed only so a minimal system can see what is missing.
 
@@ -116,7 +117,13 @@ When a release changes the settings format, the old file is copied to `settings.
 | menu | Escape steps back, then closes. Click anywhere outside to close. |
 | history | click an entry to read it in full. |
 
-Shell and package updates never install on their own. Checks only update the badge; installing always takes a click.
+Shell and package updates never install on their own. Shell checks follow stable
+version tags, accept only releases signed by Silere's bundled public verification
+key, and show the pending commits before a two-step installation confirmation.
+Signature verification proves where a release came from; it is not a claim that
+the code is harmless. It protects continuity after the initial clone, which remains
+the user's first trust decision. Package checks only update the badge and never
+install packages.
 
 ## Keybinds and scripts
 

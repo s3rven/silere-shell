@@ -5,8 +5,7 @@ Notable changes to Silere Shell. The active section follows
 [Semantic Versioning](https://semver.org/) loosely while in `0.x`: minor versions
 change features, patch versions fix them.
 
-The updater tracks `main`, not tags, so a running install gets changes as they land
-rather than when a version is published here. The settings file has its own
+The updater follows signed stable version tags. The settings file has its own
 `__version` and migrates separately.
 
 This file stays focused on work since the latest release. Completed notes move to
@@ -16,6 +15,9 @@ This file stays focused on work since the latest release. Completed notes move t
 
 ### Changed
 
+- Shell updates now require a stable release tag signed by Silere's trusted
+  release key. The bar opens a review page instead of installing directly, and
+  installation requires an explicit second confirmation.
 - Power Mode says when the daemon is not actually delivering the profile it
   reports. A performance profile the hardware has throttled, for lap detection
   or heat, now reads "Performance · throttled" instead of claiming full speed.

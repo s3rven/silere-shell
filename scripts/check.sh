@@ -115,6 +115,7 @@ optional_any_tool "power actions" "power menu actions" systemctl loginctl
 optional_tool notify-send "system alert notifications"
 optional_tool busctl "notification daemon conflict check"
 optional_tool timeout "bounded update checks and smoke launch"
+optional_tool ssh-keygen "signed shell release verification"
 optional_tool fc-list "font detection"
 optional_tool fc-cache "font install refresh"
 

@@ -37,6 +37,7 @@ Singleton {
     property bool   packaged: false
     readonly property bool versionBusy: _versionProc.running
     property string targetTag: ""
+    property bool   targetVerified: false
     property var    pendingCommits: []
     property bool   _checkTimedOut: false
     property bool   _applyTimedOut: false
@@ -78,11 +79,17 @@ Singleton {
             ? "Checking checkout state"
             : root.versionError.length > 0 ? root.versionError
             : "The checkout state has not been verified"
+        if (root.pending && !root.targetVerified) return "The release signature has not been verified"
         if (root.branch === "HEAD") return "The checkout is on a detached HEAD"
         if (root.branch.length > 0 && root.branch !== "main") return "The checkout is on branch " + root.branch
         if (root.localChanges) return "The checkout has uncommitted local changes"
         return ""
     }
+
+    readonly property string verificationDetail: !root.pending ? ""
+        : root.targetVerified
+            ? "Signature verified for " + (root.targetTag.length > 0 ? root.targetTag : "this release")
+            : "Signature not verified"
 
     readonly property string lastCheckedText: {
         if (root.lastCheckMs <= 0) return ""
@@ -130,7 +137,7 @@ Singleton {
     function apply(): void {
         // Keep fetch/check and merge/apply out of the same checkout at the same
         // time even when this API is called outside the guarded settings UI.
-        if (checking || applying || _applyProc.running || !pending
+        if (checking || applying || _applyProc.running || !pending || !targetVerified
                 || !versionReady || versionBusy) return
         applying = true
         lastApplyError = ""
@@ -293,13 +300,16 @@ Singleton {
         root.count = isNaN(n) ? 0 : Math.max(0, n)
         let rest = lines.slice(1)
         let tag = ""
+        let verified = false
         // a flag file written before this line existed carries commits here instead
         if ((rest[0] ?? "").startsWith("target ")) {
             const parts = rest[0].slice(7).trim().split(/\s+/)
             tag = parts[1] ?? ""
+            verified = parts[2] === "verified"
             rest = rest.slice(1)
         }
         root.targetTag = SafeText.boundedText(tag, root.maxVersionTextChars)
+        root.targetVerified = verified
         root.summary = rest.slice(0, root.maxCommitDetail).map(function(line) {
             return SafeText.boundedText(line, root.maxCommitSubjectChars + 80)
         }).join("\n").trim()

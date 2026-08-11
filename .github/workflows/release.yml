@@ -20,12 +20,18 @@ jobs:
 
     steps:
       - name: Install validation dependencies
-        run: pacman -Syu --noconfirm git shellcheck quickshell
+        run: pacman -Syu --noconfirm git openssh shellcheck quickshell
 
       # pinned to an immutable sha so a moved tag cannot run unreviewed code
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           persist-credentials: false
+
+      - name: Verify signed release tag
+        run: >-
+          git -c gpg.format=ssh
+          -c gpg.ssh.allowedSignersFile="$PWD/security/update-signers"
+          verify-tag "$GITHUB_REF_NAME"
 
       - name: Structural and portability validation
         run: SILERE_REQUIRE_GIT_TESTS=1 bash scripts/ci-lint.sh

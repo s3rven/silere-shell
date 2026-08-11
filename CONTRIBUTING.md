@@ -60,6 +60,14 @@ When tagging a release, move its completed notes to
 `CHANGELOG.md`. The release workflow publishes that archived body, and lint
 rejects missing, unlinked or empty archives.
 
+Release tags must be annotated `vMAJOR.MINOR.PATCH` tags signed by a key in
+`security/update-signers`; both the release workflow and installed updater reject
+anything else. For key rotation, first ship the new public key in a release signed
+by the existing key. Remove an old key only after supported installations have had
+time to receive that transition release. Repository rules should also restrict
+creation and deletion of matching `v*` tags; signature checks complement access
+control rather than replacing it.
+
 ## One last thing
 
 Your branch doesn't have to be finished to start a conversation. If the problem and the rough shape of the fix are clear, that's plenty.
