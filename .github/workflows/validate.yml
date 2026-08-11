@@ -23,7 +23,7 @@ jobs:
 
     steps:
       - name: Install validation dependencies
-        run: pacman -Syu --noconfirm git shellcheck quickshell
+        run: pacman -Syu --noconfirm git openssh shellcheck quickshell
 
       # pinned to an immutable sha so a moved tag cannot run unreviewed code
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
