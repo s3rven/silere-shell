@@ -27,13 +27,27 @@ Item {
 
     MotionBehavior on _showProgress {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
 
+    function _syncMenuAnchors(): void {
+        for (let i = 0; i < _items.count; i++) {
+            const tile = _items.itemAt(i)
+            if (tile) tile.syncMenuAnchor()
+        }
+    }
+
+    onXChanged: root._syncMenuAnchors()
+    onYChanged: root._syncMenuAnchors()
+    onImplicitWidthChanged: root._syncMenuAnchors()
+
     function _openMenu(item, tile): void {
         if (!item.hasMenu) return
-        TrayMenuState.openAt(
-            tile.mapToItem(null, tile.width / 2, 0).x,
+        tile.syncMenuAnchor()
+        TrayMenuState.toggleAt(
+            tile.menuAnchorX,
             root.screen,
             item.menu,
-            ShellSettings.barPosition === "bottom"
+            Metrics.barAtBottom,
+            tile,
+            item
         )
     }
 
@@ -58,11 +72,14 @@ Item {
             delegate: Item {
                 id: _tile
                 required property var modelData
-                readonly property string label: modelData.tooltipTitle.length > 0 ? modelData.tooltipTitle
-                    : modelData.title.length > 0 ? modelData.title
-                    : modelData.id
+                readonly property string label: IconResolver.boundedText(
+                    String(modelData.tooltipTitle || "").length > 0 ? modelData.tooltipTitle
+                    : String(modelData.title || "").length > 0 ? modelData.title
+                    : modelData.id, 128)
+                readonly property string iconSource: IconResolver.iconSource(modelData.icon)
                 readonly property bool passive: modelData.status === Status.Passive
                 readonly property bool needsAttention: modelData.status === Status.NeedsAttention
+                property real menuAnchorX: 0
                 property real attnPulse: 1.0
                 property bool _attentionSettled: false
                 property bool _dwelled: false
@@ -73,6 +90,17 @@ Item {
                 height: root.iconSize
                 opacity: passive ? 0.78 : 1.0
                 anchors.verticalCenter: parent.verticalCenter
+
+                function syncMenuAnchor(): void {
+                    // Labels grow to the right on hover; the popup belongs to the
+                    // icon, so its anchor must not wander with the label width.
+                    const pt = _tile.mapToItem(null, root.iconSize / 2, 0)
+                    if (isFinite(pt.x)) _tile.menuAnchorX = pt.x
+                }
+
+                Component.onCompleted: _tile.syncMenuAnchor()
+                onXChanged: _tile.syncMenuAnchor()
+                onYChanged: _tile.syncMenuAnchor()
 
                 MotionBehavior on opacity {NumberAnimation { duration: Motion.color } }
 
@@ -162,7 +190,7 @@ Item {
                     width: root.iconSize
                     height: root.iconSize
                     anchors.verticalCenter: parent.verticalCenter
-                    source: _tile.modelData.icon
+                    source: _tile.iconSource
                     implicitSize: root.iconSize
                     backer.sourceSize.width:  64
                     backer.sourceSize.height: 64
@@ -209,7 +237,7 @@ Item {
 
                 Accessible.role: Accessible.Button
                 Accessible.name: label
-                Accessible.description: modelData.tooltipDescription
+                Accessible.description: IconResolver.boundedText(modelData.tooltipDescription, 512)
                 Accessible.onPressAction: root._activateItem(_tile.modelData, _tile)
                 activeFocusOnTab: root.show || activeFocus
                 function _keyActivate(event): void {

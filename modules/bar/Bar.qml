@@ -14,7 +14,7 @@ PanelWindow {
 
     WlrLayershell.namespace: "silere-bar"
 
-    readonly property bool atBottom: ShellSettings.barPosition === "bottom"
+    readonly property bool atBottom: Metrics.barAtBottom
     property real floatingProgress: ShellSettings.barFloating ? 1.0 : 0.0
     MotionBehavior on floatingProgress {
         NumberAnimation { duration: Motion.barMorph; easing.type: Easing.OutCubic }

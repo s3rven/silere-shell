@@ -203,7 +203,7 @@ PanelWindow {
         id: card
         win: win
         open: QuickActionsState.open
-        anchorX: QuickActionsState.anchorX
+        anchorX: QuickActionsState.effectiveAnchorX
         barBottom: QuickActionsState.barBottom
 
         readonly property int pad: 6

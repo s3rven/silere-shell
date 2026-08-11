@@ -94,8 +94,8 @@ PanelWindow {
 
         win: win
         open: MenuState.open
-        anchorX: MenuState.anchorX
-        barBottom: ShellSettings.barPosition === "bottom"
+        anchorX: MenuState.effectiveAnchorX
+        barBottom: Metrics.barAtBottom
         targetWidth: placementW
         animateScale: false
         animatePlacement: false

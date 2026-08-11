@@ -59,8 +59,8 @@ PanelWindow {
         id: card
         win: win
         open: CalendarState.open
-        anchorX: CalendarState.anchorX
-        barBottom: ShellSettings.barPosition === "bottom"
+        anchorX: CalendarState.effectiveAnchorX
+        barBottom: Metrics.barAtBottom
 
         readonly property int  cell:     34
         readonly property int  pad:      14

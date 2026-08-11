@@ -8,7 +8,13 @@ Singleton {
     id: root
     property bool open:    false
     property real anchorX: 10
+    property QtObject anchorSource: null
     property ShellScreen triggerScreen: null
+    readonly property real effectiveAnchorX: {
+        const live = Number(root.anchorSource?.menuAnchorX)
+        return isFinite(live) ? live : root.anchorX
+    }
+    onAnchorSourceChanged: if (open && anchorSource === null) close()
     readonly property int homeTab: 0
     readonly property int settingsTab: 1
     readonly property int recentTab: 2
@@ -91,19 +97,22 @@ Singleton {
         return tab
     }
 
-    function toggleAt(x: real, screen): void {
+    function toggleAt(x: real, screen, source): void {
         if (open) {
             close()
             return
         }
         anchorX = x
+        anchorSource = source ?? null
         triggerScreen = screen ?? null
         _activeTab = homeTab
         open = true
     }
     function close(): void {
-        triggerScreen = null
+        // open first: clearing anchorSource while open re-enters close() through its handler
         if (open) open = false
+        triggerScreen = null
+        anchorSource = null
     }
     function showTab(index: int): void {
         const tab = selectTab(index)
@@ -118,6 +127,7 @@ Singleton {
         function toggle(): void {
             if (root.open) { root.close(); return }
             root.triggerScreen = null
+            root.anchorSource = null
             root._activeTab = root.homeTab
             root.open = true
         }
@@ -126,6 +136,7 @@ Singleton {
             if (index < root.homeTab || index > root.recentTab)
                 return "unknown menu tab " + index + "; valid: 0 (home), 1 (settings), 2 (recent)"
             root.triggerScreen = null
+            root.anchorSource = null
             root.showTab(index)
             return "ok"
         }
@@ -134,6 +145,7 @@ Singleton {
             if (root._flatSections.indexOf(name) < 0)
                 return "unknown settings page '" + name + "'; valid: " + root._flatSections.join(", ")
             root.triggerScreen = null
+            root.anchorSource = null
             root.setSettingsSection(name)
             root.showTab(root.settingsTab)
             return "ok"

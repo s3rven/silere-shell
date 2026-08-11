@@ -11,6 +11,17 @@ Row {
 
     property var screen: null
     property bool compact: ShellSettings.barCompact
+    property real menuAnchorX: 0
+
+    function _syncMenuAnchor(): void {
+        const pt = root.mapToItem(null, root.width / 2, 0)
+        if (isFinite(pt.x)) root.menuAnchorX = pt.x
+    }
+
+    onXChanged: root._syncMenuAnchor()
+    onYChanged: root._syncMenuAnchor()
+    onWidthChanged: root._syncMenuAnchor()
+    Component.onCompleted: root._syncMenuAnchor()
 
     readonly property bool mirrored: ShellSettings.barWidgetOrderLeftKeys.indexOf("clock") !== -1
     layoutDirection: mirrored ? Qt.RightToLeft : Qt.LeftToRight
@@ -40,7 +51,8 @@ Row {
     Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) root._openCalendar(); event.accepted = true }
 
     function _openCalendar(): void {
-        CalendarState.toggleAt(root.mapToItem(null, root.width / 2, 0).x, root.screen)
+        root._syncMenuAnchor()
+        CalendarState.toggleAt(root.menuAnchorX, root.screen, root)
     }
 
     scale: _calTap.pressed ? 0.95 : 1.0
