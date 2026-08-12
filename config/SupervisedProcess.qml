@@ -14,6 +14,13 @@ Process {
     property bool _cooldown: false
     property bool _gaveUp: false
     property int _restartCount: 0
+    property int _lastExitCode: 0
+    property bool _hasExited: false
+    readonly property bool retrying: _cooldown
+    readonly property bool gaveUp: _gaveUp
+    readonly property int restartCount: _restartCount
+    readonly property int lastExitCode: _lastExitCode
+    readonly property bool hasExited: _hasExited
     readonly property int _effectiveRestartDelay: Math.min(maxRestartDelay,
         restartDelay * Math.pow(2, Math.max(0, _restartCount - 1)))
     // no declarative running binding: a hot reload detaches bindings and assigns undefined to the bool
@@ -28,6 +35,8 @@ Process {
 
     onExited: code => {
         _stableTimer.stop()
+        proc._lastExitCode = code
+        proc._hasExited = true
         if (!superviseWhen) return
 
         if (giveUpCodes.indexOf(code) >= 0 || (cleanExitOnly && code !== 0 && code !== 2 && code !== 130 && code !== 143)) {
@@ -48,6 +57,8 @@ Process {
             _cooldown = false
             _gaveUp = false
             _restartCount = 0
+            _lastExitCode = 0
+            _hasExited = false
         }
         _syncRunning()
     }

@@ -27,11 +27,12 @@ Column {
             glyph: "󰱐"; label: "Audio visualizer"
             description: "Active during playback"
             key: "mediaProgress"
-            available: !SystemTools.ready || SystemTools.hasCava
-            dependsNote: SystemTools.ready ? "No cava" : "Checking"
+            available: !SystemTools.ready || Media.cavaAvailable
+            dependsNote: !SystemTools.ready ? "Checking"
+                : !SystemTools.hasCava ? "No cava" : "Runtime unavailable"
         }
         CollapsibleSection {
-            expanded: ShellSettings.mediaProgress && SystemTools.hasCava
+            expanded: ShellSettings.mediaProgress && Media.cavaAvailable
             ChoiceChipRow {
                 glyph: "󰍹"; label: "Position"
                 currentValue: ShellSettings.mediaVisualizerPosition
