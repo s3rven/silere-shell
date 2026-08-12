@@ -12,6 +12,8 @@ Process {
 
     property bool _cooldown: false
     property bool _gaveUp: false
+    // consumers gate their own "this feature is off for good" copy on it
+    readonly property bool gaveUp: _gaveUp
     property int _restartCount: 0
     readonly property int _effectiveRestartDelay: Math.min(maxRestartDelay,
         restartDelay * Math.pow(2, Math.max(0, _restartCount - 1)))
@@ -25,11 +27,15 @@ Process {
     on_CooldownChanged: _syncRunning()
     on_GaveUpChanged: _syncRunning()
 
-    onExited: code => {
+    onExited: (code, status) => {
         _stableTimer.stop()
         if (!superviseWhen) return
 
-        if (giveUpCodes.indexOf(code) >= 0) {
+        // status 0 is QProcess.NormalExit, which QML sees as a plain number because the
+        // enum is not registered. A crash reports its signal number in code, so matching
+        // giveUpCodes without this retires the process on a signal that shares a number
+        // with a real exit code.
+        if (status === 0 && giveUpCodes.indexOf(code) >= 0) {
             proc._gaveUp = true
             return
         }
