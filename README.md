@@ -186,23 +186,7 @@ To inspect startup errors directly, run `qs -p shell.qml`.
 
 <br>
 
-**It installed but nothing appears.** Silere runs on Hyprland and niri only — it will not work on GNOME, KDE, sway or anything else, and the installer now says so before it writes. On a supported compositor this is almost always the autostart line: the files are in place but nothing launches them. Check by running it directly, using the path the installer printed at the end:
-
-```bash
-qs -p ~/.config/silere-shell/shell.qml
-```
-
-If the bar comes up, the install is fine and only autostart is missing. Add one line to your compositor config:
-
-```bash
-# Hyprland (hyprland.conf)
-exec-once = sh -c "sleep 1; qs -p ~/.config/silere-shell/shell.qml"
-
-# niri (config.kdl)
-spawn-at-startup "sh" "-c" "sleep 1; qs -p ~/.config/silere-shell/shell.qml"
-```
-
-On a Hyprland Lua config, put `hl.exec_cmd(...)` inside an `hl.on("hyprland.start", ...)` block in your `execs.lua` — the installer looks for it under `custom/`, `hyprland/` or the config directory itself. Then restart your compositor.
+**It installed but nothing appears.** Silere runs on Hyprland and niri only. On either of those it is nearly always the autostart line — run `qs -p ~/.config/silere-shell/shell.qml` to check. If the bar comes up, add that command to your compositor's startup (`exec-once` on Hyprland, `spawn-at-startup` on niri) and restart it.
 
 **Notifications never appear.** Another daemon already owns `org.freedesktop.Notifications`. Silere works out which one and says so in an alert naming the process, a few seconds after start.
 
