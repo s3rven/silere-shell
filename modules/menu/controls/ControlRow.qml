@@ -248,9 +248,17 @@ MenuRow {
         anchors.rightMargin:    12
         anchors.verticalCenter: parent.verticalCenter
         height: root.height
+        readonly property real _chevronW: _chevron.visible ? _chevron.width + 8 : 0
+        readonly property real _valNatural: Math.ceil(_valMetrics.advanceWidth)
+        // the title names the setting and the value only qualifies it, so a long value
+        // gives way first: 42 of label inset + 22 of margins + the same 96 label floor
+        // SelectRow reserves. Uncapped, the value took its full width and elided the title.
+        readonly property real _valMax: Math.max(0, root.width - 160 - _chevronW)
         readonly property real _ctrlW: root.showSwitch ? 36
-                                     : (root.valueText.length > 0 ? Math.ceil(_valMetrics.advanceWidth) : 0)
-        width: (_chevron.visible ? _chevron.width + 8 : 0) + _ctrlW
+            : root.valueText.length === 0 ? 0
+            : root.width <= 0 ? _valNatural
+            : Math.min(_valNatural, _valMax)
+        width: _chevronW + _ctrlW
 
         TextMetrics { id: _valMetrics; font.family: Settings.font; font.pixelSize: Settings.fontLabel; text: root.valueText }
 
@@ -270,6 +278,9 @@ MenuRow {
             visible: !root.showSwitch && root.valueText.length > 0
             anchors.right:          parent.right
             anchors.verticalCenter: parent.verticalCenter
+            width:          _rightSlot._ctrlW
+            horizontalAlignment: Text.AlignRight
+            elide:          Text.ElideRight
             text:           root.valueText
             color:          root.active ? Theme.mix(root.accentColor, Theme.text, 0.18)
                                         : Theme.withAlpha(Theme.text, 0.60)
