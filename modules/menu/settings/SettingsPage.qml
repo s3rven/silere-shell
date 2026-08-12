@@ -21,12 +21,17 @@ PageShell {
     property bool _awaitingSectionEnter: false
     signal sectionSwapped()
 
+    function _holdBodyHeight(): void {
+        _detailBody._heldH = _detailBody.height
+    }
+
     function _settleSection(): void {
         _detailSwap.stop()
         _detailEnter.stop()
         _sectionEnterDefer.stop()
         root._awaitingSectionEnter = false
         const changed = root._shownSection !== MenuState.settingsSection
+        if (changed) root._holdBodyHeight()
         root._shownSection = MenuState.settingsSection
         _detail.opacity = 1
         _detail._shift = 0
@@ -119,6 +124,7 @@ PageShell {
             ScriptAction {
                 script: {
                     root._awaitingSectionEnter = true
+                    root._holdBodyHeight()
                     root._shownSection = MenuState.settingsSection
                     _detail._shift = Motion.pageOffset
                     root.sectionSwapped()
@@ -224,9 +230,15 @@ PageShell {
 
         Loader {
             id: _detailBody
+            property real _heldH: 0
             y:      _detailHeader.height + _detail._bodyGap
             width:  parent.width
-            height: item ? item.implicitHeight : 0
+            // the first section built in a session costs ~47ms of shared-control
+            // compilation; hold the outgoing height so the pane cannot collapse to 0
+            // while the replacement incubates
+            height: item ? item.implicitHeight : _heldH
+            // no animation covers the incubation under reduce motion, so stay synchronous there
+            asynchronous: !ShellSettings.reduceMotion
             sourceComponent: root._sectionComponents[root._shownSection] ?? _secTheme
         }
 
