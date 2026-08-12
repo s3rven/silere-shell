@@ -133,9 +133,7 @@ When a release changes the settings format, the old file is copied to `settings.
 | menu | Escape steps back, then closes. Click anywhere outside to close. |
 | history | click an entry to read it in full. |
 
-Silere is pointer-driven. There is no tab order or arrow-key navigation, and the
-shell publishes no accessibility metadata, so screen readers cannot describe it.
-Escape and the Wi-Fi password field are the only keyboard paths.
+Silere is pointer-driven: Escape and the Wi-Fi password field are the only keyboard paths.
 
 Shell and package updates never install on their own. Shell checks follow stable
 version tags, accept only releases signed by Silere's bundled public verification
