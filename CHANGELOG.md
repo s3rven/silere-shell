@@ -54,6 +54,14 @@ pair, then re-run.
 
 ### Fixed
 
+- The installer refused nothing on an unsupported session: a GNOME, KDE or sway
+  user could install every file successfully and only find out at the autostart
+  step, worded as a missing Hyprland config. It now names the compositor it found
+  and asks before writing. A Hyprland or niri config on disk still counts, so
+  installing before the compositor is up keeps working.
+- `scripts/install.sh` ignored unrecognised arguments and started a real install,
+  so `--help` installed instead of explaining. It now prints usage, and an unknown
+  option exits 2 without writing anything.
 - The media visualizer and track marquee froze on the only visible bar whenever
   focus moved to a monitor with the bar disabled.
 - The screenshot watcher respawned every 60 seconds forever when no screenshot
