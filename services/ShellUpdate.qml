@@ -39,8 +39,6 @@ Singleton {
     property string targetTag: ""
     property bool   targetVerified: false
     property var    pendingCommits: []
-    property bool   _checkTimedOut: false
-    property bool   _applyTimedOut: false
     // relative times are recomputed from this, refreshed on the events that can reveal them
     property real   _nowMs: 0
 
@@ -129,8 +127,6 @@ Singleton {
     function check(): void {
         if (checking || applying || packaged) return
         lastCheckError = ""
-        _checkTimedOut = false
-        _checkTimeout.restart()
         _checkProc.exec(["bash", root._script])
     }
 
@@ -141,8 +137,6 @@ Singleton {
                 || !versionReady || versionBusy) return
         applying = true
         lastApplyError = ""
-        _applyTimedOut = false
-        _applyTimeout.restart()
         _applyProc.exec(["bash", root._script, "--apply"])
     }
 
@@ -156,29 +150,6 @@ Singleton {
         root._timerStatusError = false
         root.timerError = ""
         _timerSet.exec(["bash", root._script, enabled ? "--timer-enable" : "--timer-disable"])
-    }
-
-    Timer {
-        id: _checkTimeout
-        interval: 120000
-        onTriggered: {
-            if (!_checkProc.running) return
-            root._checkTimedOut = true
-            root.lastCheckError = "Update check timed out"
-            _checkProc.running = false
-        }
-    }
-
-    Timer {
-        id: _applyTimeout
-        interval: 180000
-        onTriggered: {
-            if (!_applyProc.running) return
-            root._applyTimedOut = true
-            root.applying = false
-            root.lastApplyError = "Update install timed out"
-            _applyProc.running = false
-        }
     }
 
     function _touchNow(): void { root._nowMs = Date.now() }
@@ -342,14 +313,14 @@ Singleton {
             root.maxStatusTextChars)
     }
 
-    Process {
+    BoundedProcess {
         id: _checkProc
+        timeoutMs: 120000
         stdout: StdioCollector { id: _checkOut }
         stderr: StdioCollector { id: _checkErr }
+        onTimeoutReached: root.lastCheckError = "Update check timed out"
         onExited: (code) => {
-            _checkTimeout.stop()
-            if (root._checkTimedOut) {
-                root._checkTimedOut = false
+            if (_checkProc.timedOut) {
                 _flag.reload()
                 return
             }
@@ -365,17 +336,15 @@ Singleton {
         }
     }
 
-    Process {
+    BoundedProcess {
         id: _applyProc
+        timeoutMs: 180000
         stdout: StdioCollector { id: _applyOut }
         stderr: StdioCollector { id: _applyErr }
+        onTimeoutReached: root.lastApplyError = "Update install timed out"
         onExited: (code) => {
-            _applyTimeout.stop()
             root.applying = false
-            if (root._applyTimedOut) {
-                root._applyTimedOut = false
-                return
-            }
+            if (_applyProc.timedOut) return
             if (code === 0) {
                 root.lastApplyError = ""
                 _flag.reload()

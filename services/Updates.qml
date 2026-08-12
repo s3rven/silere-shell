@@ -17,7 +17,6 @@ Singleton {
     property bool lastFailed: false
     property string lastError: ""
     property real lastCheckMs: 0
-    property bool _timedOut: false
     property bool _discardResult: false
 
     readonly property bool enabled: ShellSettings.updatesWidget
@@ -219,7 +218,6 @@ Singleton {
         // armed makes a successful check run again a few seconds/minutes later.
         _retry.stop()
         _reconnect.stop()
-        root._timedOut = false
         _proc.exec(["bash", "-c", root._cmd()])
     }
 
@@ -255,12 +253,20 @@ Singleton {
         if (!wasRunning) _sourceRefresh.restart()
     }
 
-    Process {
+    BoundedProcess {
         id: _proc
+        timeoutMs: 180000
         environment: ({ "LC_ALL": "C" })
         stdout: StdioCollector { id: _out }
+        onTimeoutReached: {
+            root.lastCheckMs = Date.now()
+            root.lastFailed = true
+            root.lastError = "Package check timed out"
+            root.ready = true
+            _retry.restart()
+        }
         onExited: {
-            if (root._timedOut) return
+            if (_proc.timedOut) return
             if (root._discardResult) {
                 root._discardResult = false
                 _sourceRefresh.restart()
@@ -288,20 +294,6 @@ Singleton {
                 _retry.restart()
             }
             root.ready = true
-        }
-    }
-
-    Timer {
-        interval: 180000
-        running: _proc.running
-        onTriggered: {
-            root._timedOut = true
-            root.lastCheckMs = Date.now()
-            root.lastFailed = true
-            root.lastError = "Package check timed out"
-            root.ready = true
-            _retry.restart()
-            _proc.running = false
         }
     }
 

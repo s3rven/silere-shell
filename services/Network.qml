@@ -363,8 +363,9 @@ Singleton {
         onTriggered: _vpnProc.running = true
     }
 
-    Process {
+    BoundedProcess {
         id: _vpnProc
+        timeoutMs: 15000
         environment: ({ "LC_ALL": "C" })
         command: ["nmcli", "-t", "-f", "TYPE,NAME", "connection", "show", "--active"]
         onRunningChanged: if (running) {
@@ -396,12 +397,6 @@ Singleton {
             root._vpnRefreshPending = false
             if (refreshAgain) _vpnRefresh.restart()
         }
-    }
-
-    Timer {
-        interval: 15000
-        running: _vpnProc.running
-        onTriggered: _vpnProc.running = false
     }
 
     Timer {

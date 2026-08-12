@@ -782,6 +782,18 @@ else
   ok "spacing" "tray gap derives from the shared widget gap"
 fi
 
+section "process timeout derivation"
+# A Timer gated on a Process's own running flag is a hand-rolled BoundedProcess: it has
+# to reset its flag, stop itself on exit and kill the process by hand, and three copies
+# had drifted into three different shapes.
+hand_rolled="$(grep -rln 'running: _[A-Za-z0-9_]*\.running' --include='*.qml' services || true)"
+if [ -n "$hand_rolled" ]; then
+  fail "process timeouts belong to BoundedProcess.timeoutMs, not a Timer on Process.running:"
+  while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$hand_rolled"
+else
+  ok "process" "every process timeout derives from BoundedProcess"
+fi
+
 section "shared scroll feel"
 # ShellListView and ShellFlickable already set this. Ten consumers restated it, so the
 # primitives' own value was the one thing a scroll-feel change could not reach.
