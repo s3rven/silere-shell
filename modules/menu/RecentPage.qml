@@ -510,7 +510,7 @@ PageShell {
                                 ? Theme.withAlpha(Theme.error, 0.24)
                                 : _removeHover.hovered ? Theme.withAlpha(Theme.error, 0.17) : Theme.withAlpha(Theme.subtext, 0.08)
                             opacity: _entryHover.hovered ? 1.0 : 0.62
-                            scale: _entryHover.hovered ? 1.0 : 0.94
+                            scale: _removeTap.pressed ? 0.94 : 1.0
 
                             ColorFade on color {}
                             MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }

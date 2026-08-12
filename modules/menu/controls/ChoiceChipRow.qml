@@ -207,60 +207,60 @@ MenuRow {
                                         : Theme.menuControlLine
                             ColorFade on outlineColor {}
                         }
+                    }
 
-                        Row {
-                            id: _content
-                            anchors.centerIn: parent
-                            spacing: 4
-                            scale: _tap.pressed ? 0.97
-                                : _option.active ? 1.0 : 0.985
-                            transformOrigin: Item.Center
+                    Row {
+                        id: _content
+                        anchors.centerIn: parent
+                        spacing: 4
+                        // pressed only: a resting fractional scale resamples the glyphs for good, and
+                        // NativeRendering rasterises them to the pixel grid before the transform
+                        scale: _tap.pressed ? 0.97 : 1.0
+                        transformOrigin: Item.Center
 
-                            MotionBehavior on scale {
-                                NumberAnimation {
-                                    duration: _tap.pressed ? Motion.press
-                                        : Motion.hoverIn
-                                    easing.type: Easing.OutCubic
-                                }
-                            }
-
-                            ShellText {
-                                anchors.verticalCenter: parent.verticalCenter
-                                visible: _option.optionGlyph.length > 0
-                                text: _option.optionGlyph
-                                color: _option.active
-                                    ? Theme.mix(Theme.text, root.accentColor, 0.24)
-                                    : Theme.withAlpha(Theme.subtext,
-                                        _hover.hovered ? 0.88 : 0.68)
-                                font.pixelSize: Settings.fontLabel
-                                font.weight: Font.Medium
-                                ColorFade on color {}
-                            }
-
-                            ShellText {
-                                anchors.verticalCenter: parent.verticalCenter
-                                visible: _option.optionLabel.length > 0
-                                width: Math.min(implicitWidth, Math.max(10,
-                                    _option.width - 14
-                                        - (_option.optionGlyph.length > 0 ? 18 : 0)))
-                                verticalAlignment: Text.AlignVCenter
-                                horizontalAlignment: Text.AlignHCenter
-                                text: _option.optionLabel
-                                elide: Text.ElideRight
-                                color: _option.active
-                                    ? Theme.mix(Theme.text, root.accentColor,
-                                        ShellSettings.highContrast ? 0 : 0.22)
-                                    : Theme.withAlpha(Theme.subtext,
-                                        _hover.hovered ? 0.90 : 0.72)
-                                font.pixelSize: Settings.fontLabel
-                                fontSizeMode: Text.HorizontalFit
-                                minimumPixelSize: Settings.fontCaption
-                                font.weight: _option.active
-                                    ? Font.DemiBold : Font.Medium
-                                ColorFade on color {}
+                        MotionBehavior on scale {
+                            NumberAnimation {
+                                duration: _tap.pressed ? Motion.press
+                                    : Motion.hoverIn
+                                easing.type: Easing.OutCubic
                             }
                         }
 
+                        ShellText {
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: _option.optionGlyph.length > 0
+                            text: _option.optionGlyph
+                            color: _option.active
+                                ? Theme.mix(Theme.text, root.accentColor, 0.24)
+                                : Theme.withAlpha(Theme.subtext,
+                                    _hover.hovered ? 0.88 : 0.68)
+                            font.pixelSize: Settings.fontLabel
+                            font.weight: Font.Medium
+                            ColorFade on color {}
+                        }
+
+                        ShellText {
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: _option.optionLabel.length > 0
+                            width: Math.min(implicitWidth, Math.max(10,
+                                _option.width - 14
+                                    - (_option.optionGlyph.length > 0 ? 18 : 0)))
+                            verticalAlignment: Text.AlignVCenter
+                            horizontalAlignment: Text.AlignHCenter
+                            text: _option.optionLabel
+                            elide: Text.ElideRight
+                            color: _option.active
+                                ? Theme.mix(Theme.text, root.accentColor,
+                                    ShellSettings.highContrast ? 0 : 0.22)
+                                : Theme.withAlpha(Theme.subtext,
+                                    _hover.hovered ? 0.90 : 0.72)
+                            font.pixelSize: Settings.fontLabel
+                            fontSizeMode: Text.HorizontalFit
+                            minimumPixelSize: Settings.fontCaption
+                            font.weight: _option.active
+                                ? Font.DemiBold : Font.Medium
+                            ColorFade on color {}
+                        }
                     }
 
                 }

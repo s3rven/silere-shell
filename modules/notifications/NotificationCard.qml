@@ -550,7 +550,7 @@ Item {
                 outlineColor: _closeHover.hovered ? Theme.withAlpha(Theme.error, 0.32) : Theme.menuControlLine
                 ColorFade on outlineColor {}
             }
-            scale:   _cardHover.hovered ? 1.0 : 0.90
+            scale:   1.0
             transformOrigin: Item.Center
             z: 2
             MotionBehavior on opacity      {NumberAnimation { duration: Motion.fast } }
