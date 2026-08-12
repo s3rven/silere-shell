@@ -23,9 +23,6 @@ Item {
     readonly property real value: root.wraps
         ? Math.round(_wrapped(position) * displayScale) % displayScale
         : Math.round(_clamped(position) * displayScale)
-    // Names consumed by Qt's QAccessibleValueInterface.
-    readonly property real minimumValue: 0
-    readonly property real maximumValue: root.wraps ? displayScale - 1 : displayScale
     readonly property real stepSize: 1
 
     FocusVisual { id: _focusVisual; target: root }

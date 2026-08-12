@@ -6,10 +6,6 @@ MenuRow {
     id: root
 
     property real   value:     0
-    // Names consumed by Qt's QAccessibleValueInterface.
-    readonly property real minimumValue: 0
-    readonly property real maximumValue: 1
-    readonly property real stepSize: 0.05
     property string valueText: ""
     property string valueWidthText: "100%"
     property string wheelKey:  "quickslider"

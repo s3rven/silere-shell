@@ -19,10 +19,6 @@ MenuRow {
     property real   min:          root._schema ? Number(root._schema.min) : 0.0
     property real   max:          root._schema ? Number(root._schema.max) : 1.0
     property real   step:         root._schema && root._schema.t === "int" ? 1 : 0.05
-    // Names consumed by Qt's QAccessibleValueInterface.
-    readonly property real minimumValue: root.min
-    readonly property real maximumValue: root.max
-    readonly property real stepSize: root.step
     property color  glyphColor:   Theme.withAlpha(Theme.subtext, 0.85)
 
     FocusVisual { id: _focusVisual; target: root }

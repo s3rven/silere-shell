@@ -49,8 +49,8 @@ Item {
             (px - root._railInset) / root._railWidth))
         return _clamp(_snap(min + ratio * (max - min)))
     }
-    function _setFromUser(v: real, snap: bool): void {
-        const next = _clamp(snap === false ? v : _snap(v))
+    function _setFromUser(v: real): void {
+        const next = _clamp(_snap(v))
         if (Math.abs(next - _shownValue) < 0.000001) return
         _shownValue = next
         if (!(commitOnRelease && _ma.pressed)) changed(next)

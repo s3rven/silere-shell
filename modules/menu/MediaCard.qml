@@ -333,10 +333,6 @@ ClippingRectangle {
         height: visible ? 14 : 0
 
         activeFocusOnTab: (Media.canSeek && Media.lengthKnown) || activeFocus
-        readonly property real value: Media.positionRatio
-        readonly property real minimumValue: 0
-        readonly property real maximumValue: 1
-        readonly property real stepSize: _seekTrack.step
         Accessible.role: Accessible.Slider
         Accessible.name: "Seek"
         Accessible.description: Media.lengthKnown
