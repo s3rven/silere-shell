@@ -628,11 +628,14 @@ PanelWindow {
 
             Item {
                 id: _railPowerSlot
+                readonly property int gap: 10
                 anchors.bottom: parent.bottom
                 anchors.bottomMargin: 10
                 anchors.left: parent.left
                 width: panel.railCollapsedW
-                height: 1 + 10 + 34
+                // derived, not summed: RailNavItem is rowHeightFor(34), which grows with the
+                // font, so a hardcoded total drops the icon below its own inset at larger type
+                height: _railDivider.height + _railPowerSlot.gap + _railPower.height
                 z: 9
 
                 Hairline {
@@ -647,7 +650,7 @@ PanelWindow {
                     id: _railPower
                     labels: _railLabels
                     anchors.top: _railDivider.bottom
-                    anchors.topMargin: 10
+                    anchors.topMargin: _railPowerSlot.gap
                     anchors.horizontalCenter: parent.horizontalCenter
                     railW: panel.railCollapsedW
                     glyph: "󰐥"

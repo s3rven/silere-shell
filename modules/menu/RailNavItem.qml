@@ -102,9 +102,11 @@ Item {
 
     ShellText {
         id: _iconText
-        anchors.centerIn: parent
-        anchors.horizontalCenterOffset:
-            _iconText.implicitWidth / 2 - (_ink.tightBoundingRect.x + _ink.tightBoundingRect.width / 2)
+        // NativeRendering blurs on a fractional origin, so solve for the ink centre and snap
+        // the result: centreIn plus a float offset lands the glyph on a sub-pixel x every time
+        x: Math.round(parent.width / 2
+            - (_ink.tightBoundingRect.x + _ink.tightBoundingRect.width / 2))
+        y: Math.round((parent.height - _iconText.height) / 2)
         text: root.glyph
         color: root.active
             ? Theme.mix(root.accentColor, Theme.text, 0.10)
