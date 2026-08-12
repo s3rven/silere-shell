@@ -483,12 +483,39 @@ fi
 section "slider range coverage"
 # A slider narrower than its schema entry hides part of the range from the UI;
 # a wider one lets the row show values the setting clamps straight back off.
+# Bounds are compared as sets, because the strength row drives two different keys
+# off one slider and swaps its own max between their two schema maxima. Matching
+# only the first key seen would skip that row entirely, which is the one row
+# where the bounds are written out by hand twice and can drift apart.
 mapfile -t slider_files < <(find modules -name '*.qml' | sort)
 slider_drift=$(awk '
 function braces(s, c,   n, i) {
     n = 0
     for (i = 1; i <= length(s); i++) if (substr(s, i, 1) == c) n++
     return n
+}
+function canon(v) { return sprintf("%.6g", v + 0) }
+# numeric literals of one field, cut at the statement separator so a trailing
+# step: on the same line is not read as part of the bound
+function bounds(line, name, out,   seg, v) {
+    if (!match(line, name ": *")) return
+    seg = substr(line, RSTART + RLENGTH)
+    if (index(seg, ";") > 0) seg = substr(seg, 1, index(seg, ";") - 1)
+    gsub(/[A-Za-z_][A-Za-z0-9_.]*/, " ", seg)
+    while (match(seg, /-?[0-9]+(\.[0-9]+)?/)) {
+        v = substr(seg, RSTART, RLENGTH)
+        out[canon(v)] = 1
+        seg = substr(seg, RSTART + RLENGTH)
+    }
+}
+function join(set,   k, s) {
+    for (k in set) s = s == "" ? k : s "/" k
+    return s == "" ? "-" : s
+}
+function mismatch(rowset, schemaset,   k) {
+    for (k in rowset)    if (!(k in schemaset)) return 1
+    for (k in schemaset) if (!(k in rowset))    return 1
+    return 0
 }
 FILENAME ~ /ShellSettings\.qml$/ {
     if (!match($0, /k: "[A-Za-z0-9_]+"/)) next
@@ -501,21 +528,40 @@ FILENAME ~ /ShellSettings\.qml$/ {
     next
 }
 !inrow && /SliderRow[ \t]*\{/ {
-    inrow = 1; depth = 1; key = ""; rmin = ""; rmax = ""
+    inrow = 1; depth = 1
+    delete keys; delete rmin; delete rmax
     next
 }
 inrow {
     depth += braces($0, "{") - braces($0, "}")
-    if (key == "" && $0 ~ /value:/ && match($0, /ShellSettings\.[A-Za-z0-9_]+/))
-        key = substr($0, RSTART + 14, RLENGTH - 14)
-    if (match($0, /min: *[-0-9.]+/)) rmin = substr($0, RSTART + 4, RLENGTH - 4) + 0
-    if (match($0, /max: *[-0-9.]+/)) rmax = substr($0, RSTART + 4, RLENGTH - 4) + 0
+    if (match($0, /key: *"[A-Za-z0-9_]+"/)) {
+        k = substr($0, RSTART + 6, RLENGTH - 7)
+        if (k in smin) keys[k] = 1
+    }
+    line = $0
+    while (match(line, /ShellSettings\.[A-Za-z0-9_]+/)) {
+        k = substr(line, RSTART + 14, RLENGTH - 14)
+        if (k in smin) keys[k] = 1
+        line = substr(line, RSTART + RLENGTH)
+    }
+    bounds($0, "min", rmin)
+    bounds($0, "max", rmax)
     if (depth > 0) next
     inrow = 0
-    if (key == "" || rmin == "" || rmax == "" || !(key in smin)) next
-    if (smin[key] != rmin || smax[key] != rmax)
+    n = 0
+    for (k in rmin) n++
+    for (k in rmax) n++
+    if (n == 0) next
+    nk = 0
+    for (k in keys) { nk++; wmin[canon(smin[k])] = 1; wmax[canon(smax[k])] = 1 }
+    if (nk == 0) {
+        printf "  row with hand-written bounds %s..%s matches no schema key (%s)\n",
+            join(rmin), join(rmax), FILENAME
+    } else if (mismatch(rmin, wmin) || mismatch(rmax, wmax)) {
         printf "  %s: row %s..%s, schema %s..%s (%s)\n",
-            key, rmin, rmax, smin[key], smax[key], FILENAME
+            join(keys), join(rmin), join(rmax), join(wmin), join(wmax), FILENAME
+    }
+    delete wmin; delete wmax
 }
 ' services/ShellSettings.qml "${slider_files[@]}")
 if [ -n "$slider_drift" ]; then
