@@ -13,6 +13,7 @@ Item {
     readonly property bool compact: width < 132
 
     signal currentPageRetapped()
+    signal groupToggled()
 
     // pinned mode never assigns _expandedGroup, so it stays bound to the selected section's group
     property int _expandedGroup: _groupIndexForSection(MenuState.settingsSection)
@@ -185,6 +186,9 @@ Item {
     function _settleTo(index: int): void {
         root._settleGroup = index
         _disclosureSettle.restart()
+        // implicitHeight is the final math height, so the panel's floor steps
+        // instantly while the disclosure animates — the panel needs its own easing
+        root.groupToggled()
     }
 
     function _toggleGroup(index: int): void {

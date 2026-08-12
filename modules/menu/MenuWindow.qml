@@ -386,9 +386,9 @@ PanelWindow {
         // duration caps the velocity: without it a tall page swap crawls for ~700ms while the
         // width beside it lands in _railMotionMs, and every scroll-affordance settle times out early
         MotionBehavior on height {
-            // Inner disclosures already animate their own height. Let the card
-            // follow those values directly; reserve this outer easing for page
-            // and settings-section swaps, where the content height jumps.
+            // inner disclosures animate their own height, so the card follows those
+            // values directly; this outer easing is only for the jumps — page swaps,
+            // section swaps, and the nav accordion's stepped floor
             gate: panel._geometryReady && panel.open && panel._outerHeightMotion
             SmoothedAnimation {
                 velocity: Motion.panelVelocity
@@ -487,6 +487,7 @@ PanelWindow {
                             SettingsNav {
                                 powerOpen: panel.powerOpen
                                 onCurrentPageRetapped: contentFlick.contentY = 0
+                                onGroupToggled: panel._armOuterHeightMotion()
                             }
                         }
                     }
