@@ -19,14 +19,22 @@ This file stays focused on work since the latest release. Completed notes move t
   failed visualizer starts can be diagnosed without affecting the rest of the shell.
 - Fixed the generated Cava profile's smoothing range and documented its
   runtime-only configuration lifecycle.
-- Made Matugen palettes live-reload from a user-writable JSON file, including
-  installer migration and working support for read-only packaged installs.
+- Made Matugen palettes live-reload from a user-writable JSON file, which also
+  makes read-only packaged installs work. **Re-run the installer after updating**:
+  Matugen now writes `$XDG_CONFIG_HOME/matugen/silere-shell.json` instead of a file
+  inside the checkout, and until its config points there, wallpaper colours stop
+  changing and the shell falls back to its bundled palette. If your `config.toml`
+  has an unpaired `# silere-shell` marker the installer will decline to touch it and
+  say so — repair the pair, then re-run.
 - Added AUR packages to the update count through paru or yay when one is
   installed, with a new **Include AUR packages** toggle under Settings › System ›
   Updates. It is on by default, so an existing install with an AUR helper will
   start counting those updates. Checks stay read-only and never install anything.
-- Gave buttons, pills, chips, toggles and media controls one consistent hover and
-  press response, quicker on the way in than on the way back out.
+- Gave buttons, pills, chips, toggles, media controls and slider handles one
+  consistent hover and press response, quicker on the way in than on the way back
+  out.
+- Removed the stutter on the first settings section opened in a session, which had
+  to compile every shared control before it could draw.
 - Renamed the theme Source option from Neutral to Custom, and the accent picker's
   own custom swatch to Mix, so the two no longer share one name.
 - Fixed the settings panel snapping to its new height when a category collapses
