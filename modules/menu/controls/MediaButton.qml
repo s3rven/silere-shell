@@ -46,21 +46,39 @@ Item {
         }
     }
 
-    scale: _tap.pressed ? 0.86 : 1.0; transformOrigin: Item.Center
-    MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+    scale: _tap.pressed ? 0.90
+        : _hover.hovered ? Motion.hoverScale : 1.0
+    transformOrigin: Item.Center
+    MotionBehavior on scale {
+        NumberAnimation {
+            duration: _tap.pressed ? Motion.press
+                : _hover.hovered ? Motion.hoverIn : Motion.hoverOut
+            easing.type: Easing.OutCubic
+        }
+    }
 
     Rectangle {
         id: _fill
         anchors.centerIn: parent
         width: 34; height: 34; radius: Theme.radiusControl
         antialiasing: true
-        color: Theme.withAlpha(Theme.text, _tap.pressed ? 0.10 : 0.06)
+        color: _tap.pressed
+            ? Theme.withAlpha(Theme.accent, 0.13)
+            : _hover.hovered
+                ? Theme.withAlpha(
+                    Theme.mix(Theme.text, Theme.accent, 0.24), 0.075)
+                : Theme.withAlpha(Theme.text, 0.05)
         opacity: (_hover.hovered || _tap.pressed || _focusVisual.active) ? 1.0 : 0.0
 
         OutlineBorder {
             radius: _fill.radius
-            outlineWidth: 2
-            outlineColor: _focusVisual.active ? Theme.withAlpha(Theme.accent, Theme.focusRingAlpha) : "transparent"
+            outlineWidth: _focusVisual.active ? 2 : 1
+            outlineColor: _focusVisual.active
+                ? Theme.withAlpha(Theme.accent, Theme.focusRingAlpha)
+                : _hover.hovered
+                    ? Theme.withAlpha(Theme.accent, 0.22)
+                    : "transparent"
+            ColorFade on outlineColor {}
         }
 
         MotionBehavior on opacity {

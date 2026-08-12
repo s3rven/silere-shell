@@ -66,21 +66,37 @@ Item {
         anchors.fill: parent
         radius: width / 2
         antialiasing: true
+        scale: root.pressed ? Motion.pressScale
+            : _hover.hovered ? Motion.hoverScale : 1.0
+        transformOrigin: Item.Center
         color: root.pressed
             ? Theme.withAlpha(root.accentColor, 0.20)
             : _focusVisual.active
                 ? Theme.withAlpha(root.accentColor, 0.13)
                 : _hover.hovered
-                    ? Theme.withAlpha(Theme.subtext, 0.12)
+                    ? Theme.withAlpha(
+                        Theme.mix(Theme.subtext, root.accentColor, 0.28), 0.13)
                     : "transparent"
 
         OutlineBorder {
             radius: width / 2
             outlineWidth: _focusVisual.active ? 2 : 1
-            outlineColor: _focusVisual.active ? Theme.withAlpha(root.accentColor, Theme.focusRingAlpha) : "transparent"
+            outlineColor: _focusVisual.active
+                ? Theme.withAlpha(root.accentColor, Theme.focusRingAlpha)
+                : _hover.hovered
+                    ? Theme.withAlpha(root.accentColor, 0.22)
+                    : "transparent"
+            ColorFade on outlineColor {}
         }
 
         ColorFade on color {}
+        MotionBehavior on scale {
+            NumberAnimation {
+                duration: root.pressed ? Motion.press
+                    : _hover.hovered ? Motion.hoverIn : Motion.hoverOut
+                easing.type: Easing.OutCubic
+            }
+        }
     }
 
     ShellText {
@@ -89,12 +105,16 @@ Item {
         color: _focusVisual.active || _hover.hovered || root.pressed
             ? Theme.text : Theme.withAlpha(Theme.subtext, 0.72)
         font.pixelSize: root.glyphPixelSize
-        scale: root.pressed ? 0.90 : 1.0
+        scale: root.pressed ? 0.90 : _hover.hovered ? 1.04 : 1.0
         transformOrigin: Item.Center
 
         ColorFade on color {}
         MotionBehavior on scale {
-            NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
+            NumberAnimation {
+                duration: root.pressed ? Motion.press
+                    : _hover.hovered ? Motion.hoverIn : Motion.hoverOut
+                easing.type: Easing.OutCubic
+            }
         }
     }
 }

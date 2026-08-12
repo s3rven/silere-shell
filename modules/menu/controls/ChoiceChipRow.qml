@@ -228,20 +228,30 @@ MenuRow {
                         anchors.fill: parent
                         radius: Theme.radiusField
                         antialiasing: true
+                        scale: _tap.pressed ? Motion.pressScale
+                            : _hover.hovered ? Motion.hoverScale : 1.0
+                        transformOrigin: Item.Center
                         // ghost: the selected chip carries only its accent outline, so the
                         // resting fill belongs to the unselected ones
                         color: _option.active
                             ? (_tap.pressed
-                                ? Theme.withAlpha(root.accentColor, 0.10)
+                                ? Theme.withAlpha(root.accentColor, 0.13)
                                 : _hover.hovered
-                                    ? Theme.withAlpha(root.accentColor, 0.07)
-                                    : "transparent")
+                                    ? Theme.withAlpha(root.accentColor, 0.09)
+                                    : Theme.withAlpha(root.accentColor, 0.055))
                             : _tap.pressed
                                 ? Theme.withAlpha(Theme.text, 0.09)
                                 : _hover.hovered
                                     ? Theme.withAlpha(Theme.text, 0.055)
                                     : Theme.withAlpha(Theme.text, 0.028)
                         ColorFade on color {}
+                        MotionBehavior on scale {
+                            NumberAnimation {
+                                duration: _tap.pressed ? Motion.press
+                                    : _hover.hovered ? Motion.hoverIn : Motion.hoverOut
+                                easing.type: Easing.OutCubic
+                            }
+                        }
 
                         OutlineBorder {
                             radius: _surface.radius
@@ -251,7 +261,8 @@ MenuRow {
                                 : _option.active
                                     ? Theme.controlLineActive(root.accentColor)
                                     : _hover.hovered
-                                        ? Theme.menuControlLineHot
+                                        ? Theme.withAlpha(root.accentColor,
+                                            ShellSettings.highContrast ? 0.38 : 0.22)
                                         : Theme.menuControlLine
                             ColorFade on outlineColor {}
                         }
@@ -260,6 +271,17 @@ MenuRow {
                             id: _content
                             anchors.centerIn: parent
                             spacing: 4
+                            scale: _tap.pressed ? 0.97
+                                : _option.active ? 1.0 : 0.985
+                            transformOrigin: Item.Center
+
+                            MotionBehavior on scale {
+                                NumberAnimation {
+                                    duration: _tap.pressed ? Motion.press
+                                        : Motion.hoverIn
+                                    easing.type: Easing.OutCubic
+                                }
+                            }
 
                             ShellText {
                                 anchors.verticalCenter: parent.verticalCenter

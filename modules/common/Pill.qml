@@ -168,6 +168,9 @@ Item {
              : _focus ? Theme.withAlpha(Theme.accent, 0.14)
              : Theme.withAlpha(Theme.mix(Theme.text, Theme.accent, 0.30), 0.07)
         opacity: (_hover || _focus || root.visualPressed) ? 1.0 : 0.0
+        scale: root.visualPressed ? 0.985
+             : (_hover || _focus) ? 1.0 : 0.96
+        transformOrigin: Item.Center
         visible: opacity > 0.001
         OutlineBorder {
             radius: _hoverCap.radius
@@ -175,7 +178,19 @@ Item {
             outlineColor: _hoverCap._focus ? Theme.withAlpha(Theme.accent, Theme.focusRingAlpha) : "transparent"
         }
         MotionBehavior on opacity {
-            NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
+            NumberAnimation {
+                duration: (_hoverCap._hover || _hoverCap._focus || root.visualPressed)
+                    ? Motion.hoverIn : Motion.hoverOut
+                easing.type: Easing.OutCubic
+            }
+        }
+        MotionBehavior on scale {
+            NumberAnimation {
+                duration: root.visualPressed ? Motion.press
+                    : (_hoverCap._hover || _hoverCap._focus)
+                        ? Motion.hoverIn : Motion.hoverOut
+                easing.type: Easing.OutCubic
+            }
         }
         ColorFade on color {}
     }
@@ -226,11 +241,17 @@ Item {
         x: Math.round((parent.width - width) / 2)
         y: Math.round((parent.height - height) / 2)
         spacing: Metrics.pillGapFor(root.compact)
-        scale: root.visualPressed ? 0.94 : 1.0
+        scale: root.visualPressed ? Motion.pressScale
+            : (_pillHover.hovered && ShellSettings.barHoverHighlight)
+                ? Motion.hoverScale : 1.0
         transformOrigin: Item.Center
 
         MotionBehavior on scale {
-            NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
+            NumberAnimation {
+                duration: root.visualPressed ? Motion.press
+                    : _pillHover.hovered ? Motion.hoverIn : Motion.hoverOut
+                easing.type: Easing.OutCubic
+            }
         }
 
         Item {
