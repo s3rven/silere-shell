@@ -11,9 +11,12 @@
   <img src="https://img.shields.io/badge/runs%20on-Hyprland%20%C2%B7%20niri-747a98?style=flat-square&labelColor=17181d" alt="runs on Hyprland and niri"/>
 </p>
 
-A quiet Quickshell desktop shell for Hyprland and niri. A configurable bar, a control menu, notifications, and colors taken from your wallpaper or picked by hand.
+**Quiet by default.** A demand-driven Quickshell desktop shell for Hyprland and niri.
+Nothing runs without a reason.
 
-No plugin layer. No extra daemon. Background features stay off until you turn them on, and when a tool it relies on is missing, that one widget disappears while the rest keeps working.
+- **Demand-driven** — background work only runs when it has something to do.
+- **Defensive** — broken backends, malformed input, and missing tools stay contained instead of taking the shell down.
+- **Verified updates** — signed releases, pre-install validation, startup smoke tests, and rollback.
 
 <p align="center">
   <img src="assets/shot-desktop.webp" alt="The Silere bar with the menu panel open" width="900"/>
@@ -23,13 +26,13 @@ No plugin layer. No extra daemon. Background features stay off until you turn th
 
 - **Bar**: workspaces, media, network, volume, brightness, battery, clock, tray, updates. Drag them between left, centre and right; per-monitor, with the window title in the middle.
 - **Menu**: one panel of live controls, settings, notification history.
-- **Notifications**: actions and images, do not disturb with quiet hours, silence while fullscreen.
+- **Notifications**: actions, images, history, quiet hours and source-window jumping.
 - **Theming**: matugen from your wallpaper or a hand-picked accent, over three dark base tones.
 - **Calendar** from the clock, **OSD** for volume and brightness, **quick actions** for night light, power profiles and airplane mode.
 
 The menu, the calendar and the screenshot flash are scriptable over IPC.
 
-## Resource use
+## Designed to stay idle
 
 Idle use on a reference session measured **under 1% of one CPU core** and **95-110 MB PSS** shortly after start, settling near **120 MB** after an hour and staying there. An empty Quickshell panel doing nothing measured about **57 MB PSS** on the same machine, so much of that is the Qt and GPU driver floor rather than Silere.
 
