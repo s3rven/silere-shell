@@ -228,12 +228,12 @@ Rectangle {
         spacing: 5
         ShellText {
             text: "󰖜"; color: Theme.withAlpha(Theme.subtext, 0.8)
-            font.family: Settings.font; font.pixelSize: Settings.fontSize
+            font.pixelSize: Settings.fontSize
             anchors.verticalCenter: parent.verticalCenter
         }
         ShellText {
             text: NightLight.sunriseLabel; color: Theme.subtext
-            font.family: Settings.font; font.pixelSize: Settings.fontLabel
+            font.pixelSize: Settings.fontLabel
             anchors.verticalCenter: parent.verticalCenter
         }
     }
@@ -243,12 +243,12 @@ Rectangle {
         spacing: 5
         ShellText {
             text: NightLight.sunsetLabel; color: Theme.subtext
-            font.family: Settings.font; font.pixelSize: Settings.fontLabel
+            font.pixelSize: Settings.fontLabel
             anchors.verticalCenter: parent.verticalCenter
         }
         ShellText {
             text: "󰖛"; color: Theme.withAlpha(Theme.subtext, 0.8)
-            font.family: Settings.font; font.pixelSize: Settings.fontSize
+            font.pixelSize: Settings.fontSize
             anchors.verticalCenter: parent.verticalCenter
         }
     }

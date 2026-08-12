@@ -246,7 +246,7 @@ PanelWindow {
                         anchors.verticalCenter: parent.verticalCenter
                         text: card._todayD < 0 ? "" : card._todayD
                         color: Theme.accent
-                        font.family: Settings.font; font.pixelSize: Settings.fontSize + 15; font.weight: Font.DemiBold
+                        font.pixelSize: Settings.fontSize + 15; font.weight: Font.DemiBold
                     }
                     Column {
                         anchors.verticalCenter: parent.verticalCenter
@@ -254,14 +254,14 @@ PanelWindow {
                         ShellText {
                             text: card.todayWeekday
                             color: (_todayH.hovered || _todayButton.activeFocus) ? Theme.text : Theme.withAlpha(Theme.text, 0.9)
-                            font.family: Settings.font; font.pixelSize: Settings.fontSize + 1; font.weight: Font.DemiBold
+                            font.pixelSize: Settings.fontSize + 1; font.weight: Font.DemiBold
                             ColorFade on color {}
                         }
                         ShellText {
                             visible: card._todayWeek > 0
                             text: "Week " + card._todayWeek
                             color: Theme.withAlpha(Theme.subtext, 0.45)
-                            font.family: Settings.font; font.pixelSize: Settings.fontCaption
+                            font.pixelSize: Settings.fontCaption
                         }
                     }
                 }
@@ -354,7 +354,7 @@ PanelWindow {
                         anchors.centerIn: parent
                         text: card.monthLabel
                         color: (_mH.hovered || _monthButton.activeFocus) ? Theme.text : Theme.withAlpha(Theme.text, 0.9)
-                        font.family: Settings.font; font.pixelSize: Settings.fontSize + 1; font.weight: Font.DemiBold
+                        font.pixelSize: Settings.fontSize + 1; font.weight: Font.DemiBold
                         ColorFade on color {}
                     }
                 }
@@ -378,7 +378,7 @@ PanelWindow {
                         anchors.centerIn: parent
                         text: "Wk"
                         color: Theme.withAlpha(Theme.subtext, 0.30)
-                        font.family: Settings.font; font.pixelSize: Settings.fontTiny
+                        font.pixelSize: Settings.fontTiny
                         font.weight: Font.Medium; font.capitalization: Font.AllUppercase
                     }
                 }
@@ -393,7 +393,7 @@ PanelWindow {
                             anchors.centerIn: parent
                             text: dayHdr.modelData
                             color: Theme.withAlpha(Theme.subtext, dayHdr.index >= 5 ? 0.4 : 0.6)
-                            font.family: Settings.font; font.pixelSize: Settings.fontMicro
+                            font.pixelSize: Settings.fontMicro
                             font.weight: Font.Medium; font.capitalization: Font.AllUppercase
                         }
                     }

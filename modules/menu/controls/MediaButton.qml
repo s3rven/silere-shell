@@ -90,7 +90,7 @@ Item {
         anchors.centerIn: parent
         text: root.glyph
         color: _hover.hovered ? Theme.withAlpha(Theme.text, 0.85) : Theme.withAlpha(Theme.text, 0.45)
-        font.family: Settings.font; font.pixelSize: Settings.fontSize + 8
+        font.pixelSize: Settings.fontSize + 8
         ColorFade on color {}
     }
 }

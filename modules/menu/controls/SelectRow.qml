@@ -24,10 +24,8 @@ Item {
     property real   cardLeftBleed: 0
     readonly property bool _hasDesc: description.length > 0
     readonly property bool _hasLead: glyph.length > 0 || optionPreview !== null
-    readonly property int _controlH: 4 * Math.ceil(
-        Math.max(28, Settings.capHeight + 12) / 4)
-    readonly property int _optionH: 4 * Math.ceil(
-        Math.max(32, Settings.capHeight + 12) / 4)
+    readonly property int _controlH: Metrics.rowHeightFor(28)
+    readonly property int _optionH: Metrics.rowHeightFor(32)
     readonly property int _optionsCapH: Math.min(224, root._optionH * 7)
     // 44/56 are the shared single-line and two-line row heights; a select row that
     // sits between toggles must not be the one that breaks the rhythm
@@ -312,7 +310,6 @@ Item {
             : 0
         contentWidth: width
         contentHeight: _optCol.implicitHeight
-        boundsMovement: Flickable.StopAtBounds
         interactive: contentHeight > height + 1
         visible: height > 0.5
 

@@ -15,6 +15,10 @@ Column {
     property bool _recentOpen: false
     property bool _installArmed: false
 
+    // commit and package entries scroll inside a capped list with no dividers, so they
+    // track the text rather than the row grid every other settings row snaps to
+    readonly property int _entryH: Math.max(22, Settings.capHeight + 8)
+
     function _disarmInstall(): void {
         root._installArmed = false
         _installConfirm.stop()
@@ -143,7 +147,6 @@ Column {
                         id: _commits
                         anchors.fill: parent
                         interactive: contentHeight > height
-                        boundsMovement: Flickable.StopAtBounds
                         spacing: 0
                         model: root._changesOpen && root._changesAvailable
                             ? ShellUpdate.pendingCommits : []
@@ -155,7 +158,7 @@ Column {
                             id: _commit
                             required property var modelData
                             width: parent ? parent.width : 0
-                            height: Math.max(22, Settings.capHeight + 8)
+                            height: root._entryH
                             Accessible.role: Accessible.ListItem
                             Accessible.name: _commit.modelData.subject
                                 + ", " + _commit.modelData.hash
@@ -211,7 +214,6 @@ Column {
                         id: _recent
                         anchors.fill: parent
                         interactive: contentHeight > height
-                        boundsMovement: Flickable.StopAtBounds
                         spacing: 0
                         model: root._recentOpen ? ShellUpdate.recentCommits : []
 
@@ -222,7 +224,7 @@ Column {
                             id: _rc
                             required property var modelData
                             width: parent ? parent.width : 0
-                            height: Math.max(22, Settings.capHeight + 8)
+                            height: root._entryH
                             Accessible.role: Accessible.ListItem
                             Accessible.name: _rc.modelData.subject + ", " + _rc.modelData.hash
                             ShellText {
@@ -319,7 +321,6 @@ Column {
                     id: _packages
                     anchors.fill: parent
                     interactive: contentHeight > height
-                    boundsMovement: Flickable.StopAtBounds
                     spacing: 0
                     model: root._listOpen && root._packagesAvailable
                         ? Updates.packages : []
@@ -331,7 +332,7 @@ Column {
                         id: _pkg
                         required property var modelData
                         width: parent ? parent.width : 0
-                        height: Math.max(22, Settings.capHeight + 8)
+                        height: root._entryH
                         Accessible.role: Accessible.ListItem
                         Accessible.name: _pkg.modelData.name + ", version "
                             + _pkg.modelData.to

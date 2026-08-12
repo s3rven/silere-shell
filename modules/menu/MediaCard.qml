@@ -451,7 +451,7 @@ ClippingRectangle {
                 property bool _ready: false
                 text: shown
                 color: _playH.hovered ? Theme.text : Theme.withAlpha(Theme.text, 0.8)
-                font.family: Settings.font; font.pixelSize: Settings.fontSize + 10
+                font.pixelSize: Settings.fontSize + 10
                 transformOrigin: Item.Center
                 ColorFade on color {}
 

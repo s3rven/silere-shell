@@ -73,7 +73,7 @@ Item {
         ShellText {
             visible: root.open && (!Bluetooth.available || !Bluetooth.enabled || Bluetooth.devices.length === 0)
             width: parent.width
-            height: 4 * Math.ceil(Math.max(32, Settings.capHeight + 12) / 4)
+            height: Metrics.rowHeightFor(32)
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             text: !Bluetooth.available ? "Bluetooth unavailable"
@@ -81,7 +81,7 @@ Item {
                 : root._searchLapsed   ? "No devices found"
                 :                        "Searching for devices…"
             color: Theme.withAlpha(Theme.subtext, 0.5)
-            font.family: Settings.font; font.pixelSize: Settings.fontLabel
+            font.pixelSize: Settings.fontLabel
         }
 
         ShellListView {
@@ -90,20 +90,8 @@ Item {
             height: Math.min(contentHeight, 240)
             visible: root.open && Bluetooth.available && Bluetooth.enabled && Bluetooth.devices.length > 0
             interactive: contentHeight > height
-            boundsMovement: Flickable.StopAtBounds
             spacing: 0
             model: root.open ? Bluetooth.devices : []
-
-            function _focusIndex(index: int): void {
-                if (count <= 0) return
-                const i = Math.max(0, Math.min(count - 1, index))
-                currentIndex = i
-                positionViewAtIndex(i, ListView.Contain)
-                Qt.callLater(function() {
-                    const item = _list.itemAtIndex(i)
-                    if (item) item.forceActiveFocus()
-                })
-            }
 
             delegate: InlineOptionRow {
                 id: _row
@@ -149,8 +137,8 @@ Item {
                     }
                 }
                 onTriggered: _activate()
-                Keys.onUpPressed:     event => { _list._focusIndex(_row.index - 1); event.accepted = true }
-                Keys.onDownPressed:   event => { _list._focusIndex(_row.index + 1); event.accepted = true }
+                Keys.onUpPressed:     event => { _list.focusIndex(_row.index - 1); event.accepted = true }
+                Keys.onDownPressed:   event => { _list.focusIndex(_row.index + 1); event.accepted = true }
             }
         }
     }

@@ -325,7 +325,7 @@ PanelWindow {
                         visible: _entry.btnType === 1 && _entry.checked
                         text: "󰄬"
                         color: Theme.accent
-                        font.family: Settings.font; font.pixelSize: Settings.fontSize
+                        font.pixelSize: Settings.fontSize
                     }
                     Rectangle {
                         anchors.centerIn: parent
@@ -356,7 +356,7 @@ PanelWindow {
                     anchors.verticalCenter: parent.verticalCenter
                     text: _entry.label
                     color: Theme.text
-                    font.family: Settings.font; font.pixelSize: Settings.fontSize
+                    font.pixelSize: Settings.fontSize
                     elide: Text.ElideRight
                 }
 
@@ -368,7 +368,7 @@ PanelWindow {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "󰅂"
                     color: Theme.withAlpha(Theme.subtext, 0.7)
-                    font.family: Settings.font; font.pixelSize: Settings.fontSize
+                    font.pixelSize: Settings.fontSize
                 }
             }
 

@@ -20,8 +20,7 @@ MenuRow {
     signal chosen(var value)
 
     readonly property int _optionCount: Math.max(1, root.model.length)
-    readonly property int _controlH: 4 * Math.ceil(
-        Math.max(28, Settings.capHeight + 12) / 4)
+    readonly property int _controlH: Metrics.rowHeightFor(28)
     // floor matches ToggleRow: every single-line settings row shares one height,
     // and the two-line rows (slider with a track, toggle with a description) share 56
     readonly property int _inlineH: 4 * Math.ceil(Math.max(44,

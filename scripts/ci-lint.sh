@@ -413,6 +413,23 @@ else
   ok "qmldir" "all referenced files exist"
 fi
 
+# The other direction, which only fails at runtime as "X is not a type": a component
+# that exists but is not packaged. Tracked files only — Matugen's legacy generated
+# theme still sits untracked in config/ on upgraded checkouts.
+unpackaged=""
+while IFS= read -r f; do
+  dir="$(dirname "$f")"
+  case "$dir" in .|./scripts|scripts) continue ;; esac
+  [ -f "$dir/qmldir" ] || { unpackaged="$unpackaged $f(no-qmldir)"; continue; }
+  grep -qF "$(basename "$f")" "$dir/qmldir" || unpackaged="$unpackaged $f"
+done < <(git ls-files '*.qml' 2>/dev/null)
+if [ -n "$unpackaged" ]; then
+  fail "these components are not packaged in their qmldir, so they resolve only at runtime:"
+  for m in $unpackaged; do printf '  %s\n' "$m"; done
+else
+  ok "qmldir" "every tracked component is packaged"
+fi
+
 section "menu module boundaries"
 menu_root_public="$(awk 'NF && $1 !~ /^#/ && $1 != "internal" {print $1}' modules/menu/qmldir)"
 settings_public="$(awk 'NF && $1 !~ /^#/ && $1 != "internal" {print $1}' modules/menu/settings/qmldir)"
@@ -763,6 +780,30 @@ elif ! grep -qF 'Metrics.widgetGapFor' modules/bar/widgets/TrayWidget.qml; then
   fail "tray spacing must derive from Metrics.widgetGapFor"
 else
   ok "spacing" "tray gap derives from the shared widget gap"
+fi
+
+section "shared scroll feel"
+# ShellListView and ShellFlickable already set this. Ten consumers restated it, so the
+# primitives' own value was the one thing a scroll-feel change could not reach.
+scroll_restated="$(grep -rln 'boundsMovement:' --include='*.qml' modules \
+  | grep -vE 'modules/common/Shell(ListView|Flickable)\.qml$' || true)"
+if [ -n "$scroll_restated" ]; then
+  fail "scroll bounds belong to ShellListView/ShellFlickable, not their consumers:"
+  while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$scroll_restated"
+else
+  ok "scroll" "every list and flickable inherits one scroll feel"
+fi
+
+section "row height derivation"
+# Metrics.rowHeightFor already snaps a design height to the 4px grid using the measured
+# base cap height. Hand-rolled "capHeight + 12" hardcodes a base of 20; the real one is
+# 16, so every copy came out 4px short of its neighbours above uiScale 1.0.
+row_formulas="$(grep -rln 'capHeight + 12' --include='*.qml' . || true)"
+if [ -n "$row_formulas" ]; then
+  fail "row heights must come from Metrics.rowHeightFor(design), not a hand-rolled cap height:"
+  while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$row_formulas"
+else
+  ok "row height" "every design row height derives from the shared grid"
 fi
 
 section "portability regressions"

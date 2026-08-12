@@ -186,7 +186,6 @@ Column {
                     contentWidth: _swatchRow.width
                     contentHeight: height
                     flickableDirection: Flickable.HorizontalFlick
-                    boundsMovement: Flickable.StopAtBounds
                     interactive: contentWidth > width + 1
 
                     function revealIndex(index: int): void {

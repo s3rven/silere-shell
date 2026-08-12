@@ -291,7 +291,6 @@ PageShell {
             width: parent.width
             spacing: 8
             visible: Notifications.hasHistory
-            boundsMovement: Flickable.StopAtBounds
             cacheBuffer: 120
             model: Notifications.historyModel
 

@@ -70,7 +70,7 @@ Item {
         ShellText {
             visible: root.open && Network.wifiNetworks.length === 0
             width: parent.width
-            height: 4 * Math.ceil(Math.max(32, Settings.capHeight + 12) / 4)
+            height: Metrics.rowHeightFor(32)
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             text: !Network.toolAvailable ? "Wi-Fi unavailable"
@@ -78,7 +78,7 @@ Item {
                 : Network.wifiScanning   ? "Searching for networks…"
                 :                          "No networks found"
             color: Theme.withAlpha(Theme.subtext, 0.5)
-            font.family: Settings.font; font.pixelSize: Settings.fontLabel
+            font.pixelSize: Settings.fontLabel
         }
 
         ShellListView {
@@ -87,20 +87,8 @@ Item {
             height: Math.min(contentHeight, 240)
             visible: root.open && Network.wifiNetworks.length > 0
             interactive: contentHeight > height
-            boundsMovement: Flickable.StopAtBounds
             spacing: 0
             model: root.open ? Network.wifiNetworks : []
-
-            function _focusIndex(index: int): void {
-                if (count <= 0) return
-                const i = Math.max(0, Math.min(count - 1, index))
-                currentIndex = i
-                positionViewAtIndex(i, ListView.Contain)
-                Qt.callLater(function() {
-                    const item = _list.itemAtIndex(i)
-                    if (item && item.focusRow) item.focusRow()
-                })
-            }
 
             delegate: Column {
                 id: _entry
@@ -157,8 +145,8 @@ Item {
                         }
                     }
                     onTriggered: _activate()
-                    Keys.onUpPressed:     event => { _list._focusIndex(_entry.index - 1); event.accepted = true }
-                    Keys.onDownPressed:   event => { _list._focusIndex(_entry.index + 1); event.accepted = true }
+                    Keys.onUpPressed:     event => { _list.focusIndex(_entry.index - 1); event.accepted = true }
+                    Keys.onDownPressed:   event => { _list.focusIndex(_entry.index + 1); event.accepted = true }
                 }
 
                 Item {
@@ -222,7 +210,7 @@ Item {
                                 text: _entry._failed ? "Connection failed" : "Password"
                                 color: _entry._failed ? Theme.withAlpha(Theme.error, 0.7)
                                                       : Theme.withAlpha(Theme.subtext, 0.45)
-                                font.family: Settings.font; font.pixelSize: Settings.fontSize
+                                font.pixelSize: Settings.fontSize
                             }
                         }
 
@@ -257,7 +245,7 @@ Item {
                                 anchors.centerIn: parent
                                 text: "󰌑"
                                 color: Theme.accent
-                                font.family: Settings.font; font.pixelSize: Settings.fontSize + 1
+                                font.pixelSize: Settings.fontSize + 1
                             }
                         }
                     }

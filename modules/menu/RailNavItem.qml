@@ -159,7 +159,7 @@ Item {
             anchors.centerIn: parent
             text: root.label
             color: Theme.withAlpha(Theme.text, 0.78)
-            font.family: Settings.font; font.pixelSize: Settings.fontLabel
+            font.pixelSize: Settings.fontLabel
         }
     }
 }

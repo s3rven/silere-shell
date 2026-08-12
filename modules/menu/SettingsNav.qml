@@ -332,7 +332,6 @@ Item {
         anchors.fill: parent
         contentWidth: width
         contentHeight: _content.height
-        boundsMovement: Flickable.StopAtBounds
         interactive: contentHeight > height + 1
 
         onHeightChanged: if (root.active) _resizeSettle.restart()
