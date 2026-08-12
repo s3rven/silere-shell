@@ -279,7 +279,8 @@ Column {
             detail: Updates.lastFailed ? Updates.lastError
                 : Updates.aurCount > 0
                     ? Updates.repoCount + " from repos, " + Updates.aurCount + " from the AUR"
-                    : ""
+                        + (Updates.lastCheckLabel.length > 0 ? " · " + Updates.lastCheckLabel : "")
+                    : Updates.lastCheckLabel
             detailError: Updates.lastFailed
             statusColor: Updates.lastFailed ? Theme.warning
                 : Updates.isChecking ? Theme.accent
@@ -334,6 +335,8 @@ Column {
                         Accessible.role: Accessible.ListItem
                         Accessible.name: _pkg.modelData.name + ", version "
                             + _pkg.modelData.to
+                            + (_pkg.modelData.from.length > 0
+                                ? ", from " + _pkg.modelData.from : "")
                             + (_pkg.modelData.aur ? ", AUR" : "")
                         ShellText {
                             anchors.left: parent.left
@@ -372,6 +375,15 @@ Column {
             available: !SystemTools.ready || Updates.supported
             dependsNote: "No package manager"
         }
-        HintText { text: "Checks never install updates." }
+        ToggleRow {
+            visible: SystemTools.packageFamily === "pacman"
+                && Updates.aurHelperAvailable
+            glyph: "󰮯"; label: "Include AUR packages"
+            description: "Query "
+                + (SystemTools.hasParu ? "paru" : "yay")
+                + " for foreign package updates"
+            key: "updatesIncludeAur"
+        }
+        HintText { text: "Checks are read-only and never install updates." }
     }
 }

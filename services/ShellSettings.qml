@@ -32,6 +32,7 @@ Singleton {
     property bool   showWindowTitleApp:  false
     property bool   windowTitleCenterGap: true
     property bool   updatesWidget:       false
+    property bool   updatesIncludeAur:   true
     property bool   trayWidget:          false
     property bool   valuesOnHover:       true
     property bool   hoverLevelBar:       false
@@ -315,6 +316,7 @@ Singleton {
         { k: "showWindowTitleApp",  t: "bool", sec: "indicators" },
         { k: "windowTitleCenterGap", t: "bool", sec: "indicators" },
         { k: "updatesWidget",       t: "bool", sec: "widgets" },
+        { k: "updatesIncludeAur",   t: "bool", sec: "updates" },
         { k: "trayWidget",          t: "bool", sec: "widgets" },
         { k: "valuesOnHover",       t: "bool", sec: "indicators" },
         { k: "hoverLevelBar",       t: "bool", sec: "indicators" },
