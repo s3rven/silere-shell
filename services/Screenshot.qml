@@ -39,6 +39,8 @@ Singleton {
         superviseWhen: SystemTools.ready && SystemTools.hasInotifywait
             && ShellSettings.underlineGlow && ShellSettings.underlineScreenshotGlow
         restartDelay: 60000
+        // exit 3 means no screenshot directory exists at all; respawning cannot fix that
+        giveUpCodes: [3]
         command: ["bash", "-c",
             "dirs=(); " +
             "add_dir() { local d=\"$1\" e; [ -n \"$d\" ] && [ -d \"$d\" ] || return; " +
