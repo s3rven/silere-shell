@@ -44,10 +44,6 @@ Row {
         CalendarState.toggleAt(root.menuAnchorX, root.screen, root)
     }
 
-    scale: _calTap.pressed ? 0.95 : 1.0
-    transformOrigin: Item.Center
-    MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-
     Item {
         id: _dateSectionClip
         anchors.verticalCenter: parent.verticalCenter

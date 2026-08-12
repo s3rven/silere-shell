@@ -78,7 +78,6 @@ Item {
         color: _hover.hovered || root.pressed
             ? Theme.text : Theme.withAlpha(Theme.subtext, 0.72)
         font.pixelSize: root.glyphPixelSize
-        scale: root.pressed ? 0.90 : _hover.hovered ? 1.04 : 1.0
         transformOrigin: Item.Center
 
         ColorFade on color {}

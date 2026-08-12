@@ -140,7 +140,6 @@ ClippingRectangle {
             sourceSize.height: 512
             opacity: 0
             visible: opacity > 0.01
-            transformOrigin: Item.Center
             onStatusChanged: status === Image.Error ? _art._failed(_artA) : _art._promote(_artA, true)
         }
         Image {
@@ -153,7 +152,6 @@ ClippingRectangle {
             sourceSize.height: 512
             opacity: 0
             visible: opacity > 0.01
-            transformOrigin: Item.Center
             onStatusChanged: status === Image.Error ? _art._failed(_artB) : _art._promote(_artB, false)
         }
 
@@ -369,12 +367,9 @@ ClippingRectangle {
             width: 56; height: 40
             anchors.verticalCenter: parent.verticalCenter
             opacity: _playBtn._on ? 1.0 : 0.25
-            scale: _playT.pressed ? 0.94 : 1.0
-            transformOrigin: Item.Center
             MotionBehavior on opacity {
                 NumberAnimation { duration: Motion.fast }
             }
-            MotionBehavior on scale   {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
             HoverHandler { id: _playH; enabled: _playBtn._on; cursorShape: Qt.PointingHandCursor }
             TapHandler   { id: _playT; enabled: _playBtn._on; onTapped: Media.togglePlay() }
@@ -405,7 +400,6 @@ ClippingRectangle {
                 text: shown
                 color: _playH.hovered ? Theme.text : Theme.withAlpha(Theme.text, 0.8)
                 font.pixelSize: Settings.fontSize + 10
-                transformOrigin: Item.Center
                 ColorFade on color {}
 
                 Component.onCompleted: { shown = target; _ready = true }

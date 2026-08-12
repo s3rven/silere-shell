@@ -212,18 +212,6 @@ Item {
         x: Math.round((parent.width - width) / 2)
         y: Math.round((parent.height - height) / 2)
         spacing: Metrics.pillGapFor(root.compact)
-        scale: root.visualPressed ? Motion.pressScale
-            : (_pillHover.hovered && ShellSettings.barHoverHighlight)
-                ? Motion.hoverScale : 1.0
-        transformOrigin: Item.Center
-
-        MotionBehavior on scale {
-            NumberAnimation {
-                duration: root.visualPressed ? Motion.press
-                    : _pillHover.hovered ? Motion.hoverIn : Motion.hoverOut
-                easing.type: Easing.OutCubic
-            }
-        }
 
         Item {
             id: _glyphBox

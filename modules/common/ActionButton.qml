@@ -21,21 +21,12 @@ Item {
     implicitHeight: Metrics.rowHeightFor(32)
     width: implicitWidth
     height: implicitHeight
-    scale: root.pressed ? Motion.pressScale
-        : _hover.hovered ? Motion.hoverScale : 1.0
-    transformOrigin: Item.Center
+    // no scale anywhere: the surface already nudges a whole pixel on press and lifts one
+    // on hover, and scaling text resamples every glyph for as long as it lasts
     opacity: root.enabled ? 1.0 : 0.42
     MotionBehavior on opacity {
         NumberAnimation { duration: Motion.fast }
     }
-    MotionBehavior on scale {
-        NumberAnimation {
-            duration: root.pressed ? Motion.press
-                : _hover.hovered ? Motion.hoverIn : Motion.hoverOut
-            easing.type: Easing.OutCubic
-        }
-    }
-
     function activate(): void {
         if (root.enabled) root.triggered()
     }
@@ -96,13 +87,6 @@ Item {
             id: _row
             anchors.centerIn: parent
             spacing: root.glyph.length > 0 && root.label.length > 0 ? 7 : 0
-            scale: root.pressed ? 0.985 : 1.0
-            transformOrigin: Item.Center
-
-            MotionBehavior on scale {
-                NumberAnimation { duration: Motion.press; easing.type: Easing.OutCubic }
-            }
-
             ShellText {
                 visible: root.glyph.length > 0
                 anchors.verticalCenter: parent.verticalCenter

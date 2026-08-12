@@ -213,19 +213,6 @@ MenuRow {
                         id: _content
                         anchors.centerIn: parent
                         spacing: 4
-                        // pressed only: a resting fractional scale resamples the glyphs for good, and
-                        // NativeRendering rasterises them to the pixel grid before the transform
-                        scale: _tap.pressed ? 0.97 : 1.0
-                        transformOrigin: Item.Center
-
-                        MotionBehavior on scale {
-                            NumberAnimation {
-                                duration: _tap.pressed ? Motion.press
-                                    : Motion.hoverIn
-                                easing.type: Easing.OutCubic
-                            }
-                        }
-
                         ShellText {
                             anchors.verticalCenter: parent.verticalCenter
                             visible: _option.optionGlyph.length > 0

@@ -806,6 +806,23 @@ else
   ok "scroll" "every list and flickable inherits one scroll feel"
 fi
 
+section "static text"
+# Transforms apply to surfaces, never to text. A scaled Text node is rasterised at its
+# own size and then resampled, so a hover scale softens a label for as long as the
+# pointer rests on it and a fractional resting scale softens it permanently. These
+# outputs already resample every buffer once on the way to a fractional scale; a second
+# pass on top of that is what made button labels look wrong.
+if command -v python3 >/dev/null 2>&1 && [ -f scripts/check-text-scale.py ]; then
+  if text_scaled="$(python3 scripts/check-text-scale.py)"; then
+    ok "static text" "no visible text sits inside a scale transform"
+  else
+    fail "these transforms resample text; scale the surface instead:"
+    printf '%s\n' "$text_scaled"
+  fi
+else
+  warn "static text" "python3 or scripts/check-text-scale.py missing; text scale check skipped"
+fi
+
 section "inert compositor events"
 # Every Hyprland event that is not denylisted bumps the layout tick, which rebuilds the
 # workspace and toplevel models. The list is load-bearing for idle CPU and its entries

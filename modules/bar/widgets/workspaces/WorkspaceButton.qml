@@ -39,7 +39,6 @@ Item {
 
     width:  cellWidth
     height: rowHeight
-    scale:  1.0
 
     MotionBehavior on width {
         NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }

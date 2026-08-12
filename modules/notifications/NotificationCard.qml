@@ -550,11 +550,8 @@ Item {
                 outlineColor: _closeHover.hovered ? Theme.withAlpha(Theme.error, 0.32) : Theme.menuControlLine
                 ColorFade on outlineColor {}
             }
-            scale:   1.0
-            transformOrigin: Item.Center
             z: 2
             MotionBehavior on opacity      {NumberAnimation { duration: Motion.fast } }
-            MotionBehavior on scale        {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
             ColorFade on color {}
             HoverHandler { id: _closeHover; cursorShape: Qt.PointingHandCursor }
             TapHandler   { onTapped: card.dismiss() }

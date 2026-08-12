@@ -84,10 +84,8 @@ PanelWindow {
             // the popup window is transparent, so an alpha tint would let the desktop through - blend into the base
             color: chip.pressed ? Theme.mix(Theme.menuControl, chip.tint, 0.26)
                 : _hover.hovered ? Theme.mix(Theme.menuControl, chip.tint, 0.15) : Theme.menuControl
-            scale: chip.pressed ? 0.97 : 1
 
             ColorFade on color {}
-            MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
             OutlineBorder {
                 radius: _surface.radius

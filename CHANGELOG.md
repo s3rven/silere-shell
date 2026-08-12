@@ -13,6 +13,14 @@ This file stays focused on work since the latest release. Completed notes move t
 
 ## [Unreleased]
 
+- Stopped animating text. Button labels, bar glyphs, chip labels and notification actions
+  no longer scale on hover or press: a scaled glyph is drawn at one size and resampled to
+  another, which on a fractionally scaled output softened labels for as long as the
+  pointer rested on them — and permanently wherever a control sat at a fractional resting
+  scale. Surfaces still react; the text underneath them stays put. Text also renders with
+  distance fields now rather than snapping to a device pixel grid that fractional scaling
+  has already resampled away.
+
 - Removed keyboard navigation and the accessibility metadata that went with it. Tab
   order, arrow-key stepping, focus rings, the settings sidebar's keyboard cursor and
   every `Accessible` role, name and description are gone; the shell is pointer-driven.

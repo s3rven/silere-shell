@@ -32,11 +32,6 @@ Row {
             required property var modelData
             width: root.iconSize
             height: root.iconSize
-            scale: root.hoverFx ? 1.08 : 1.0
-
-            MotionBehavior on scale {
-                NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
-            }
 
             Image {
                 id: _iconSrc

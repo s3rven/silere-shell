@@ -31,22 +31,25 @@ Item {
         }
     }
 
-    scale: _tap.pressed ? 0.90
+    // the fill reacts, the glyph does not: a transformed glyph is resampled, and the
+    // outputs already resample every buffer once on their way to a fractional scale
+    readonly property real _surfaceScale: _tap.pressed ? 0.90
         : _hover.hovered ? Motion.hoverScale : 1.0
-    transformOrigin: Item.Center
-    MotionBehavior on scale {
-        NumberAnimation {
-            duration: _tap.pressed ? Motion.press
-                : _hover.hovered ? Motion.hoverIn : Motion.hoverOut
-            easing.type: Easing.OutCubic
-        }
-    }
 
     Rectangle {
         id: _fill
         anchors.centerIn: parent
         width: 34; height: 34; radius: Theme.radiusControl
         antialiasing: true
+        scale: root._surfaceScale
+        transformOrigin: Item.Center
+        MotionBehavior on scale {
+            NumberAnimation {
+                duration: _tap.pressed ? Motion.press
+                    : _hover.hovered ? Motion.hoverIn : Motion.hoverOut
+                easing.type: Easing.OutCubic
+            }
+        }
         color: _tap.pressed
             ? Theme.withAlpha(Theme.accent, 0.13)
             : _hover.hovered
