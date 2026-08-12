@@ -8,13 +8,18 @@ Singleton {
     id: root
 
     property bool ready: false
+    property bool checking: false
+    property string lastError: ""
     property var _tools: ({})
     property string packageFamily: ""
+
+    readonly property bool probeFailed: ready && lastError.length > 0
 
     readonly property bool hasBrightnessctl: _tools.brightnessctl ?? false
     readonly property bool hasInotifywait:   _tools.inotifywait ?? false
     readonly property bool hasNmcli:         _tools.nmcli ?? false
     readonly property bool hasCava:          _tools.cava ?? false
+    readonly property bool hasMatugen:       _tools.matugen ?? false
     readonly property bool hasHyprsunset:    _tools.hyprsunset ?? false
     readonly property bool hasHyprlock:      _tools.hyprlock ?? false
     readonly property bool hasSystemctl:     _tools.systemctl ?? false
@@ -65,7 +70,10 @@ Singleton {
 
     function refresh(): void {
         if (_checkProc.running) return
-        ready = false
+        // Keep the last confirmed capability set while refreshing. Features no
+        // longer disappear briefly when Settings triggers a fresh probe.
+        checking = true
+        lastError = ""
         _checkProc.exec(["bash", "-c",
             "family=; if [ -r /etc/os-release ]; then " +
             "  . /etc/os-release; for id in ${ID:-} ${ID_LIKE:-}; do " +
@@ -78,7 +86,7 @@ Singleton {
             "    esac; [ -n \"$family\" ] && break; " +
             "  done; " +
             "fi; [ -n \"$family\" ] && echo \"@family=$family\"; " +
-            "for t in brightnessctl inotifywait nmcli cava hyprsunset hyprlock systemctl loginctl hyprctl pgrep pkill notify-send " +
+            "for t in brightnessctl inotifywait nmcli cava matugen hyprsunset hyprlock systemctl loginctl hyprctl pgrep pkill notify-send " +
             "busctl checkupdates paru yay timeout apt dnf zypper xbps-install powerprofilesctl fc-list; do " +
             "  command -v \"$t\" >/dev/null 2>&1 && echo \"$t\"; " +
             // The last lookup is optional; do not inherit its `command -v`
@@ -96,7 +104,9 @@ Singleton {
                 // A refresh must not leave removed tools advertised forever.
                 root._tools = ({})
                 root.packageFamily = ""
+                root.lastError = "Optional tool scan failed (exit " + code + ")"
                 root.ready = true
+                root.checking = false
                 return
             }
             const found = {}
@@ -109,7 +119,9 @@ Singleton {
             }
             root._tools = found
             root.packageFamily = family
+            root.lastError = ""
             root.ready = true
+            root.checking = false
         }
     }
 }

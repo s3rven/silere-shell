@@ -11,6 +11,10 @@ Column {
     property bool _armed: false
     property real _armedAtMs: 0
 
+    // Reopening Maintenance re-detects tools installed or removed while the
+    // shell is running. FontScan follows the completed tool refresh itself.
+    Component.onCompleted: SystemTools.refresh()
+
     function _disarm(): void {
         root._armed = false
         _armTimer.stop()
@@ -59,15 +63,18 @@ Column {
         }
     }
 
-    // reads flags SystemTools and FontScan already probed once at startup: no new spawn, no
-    // polling, and the whole section only instantiates while it is the open page
+    // The whole section only instantiates while it is the open page; the probe
+    // runs once on entry and never polls in the background.
     readonly property var _issues: {
         const out = []
         if (!SystemTools.ready) return out
+        if (SystemTools.probeFailed) return out
 
         // a dead font tofus the bar AND the menu that would fix it, so it leads
         if (!SystemTools.hasFcList)
             out.push({ g: "󰈵", n: "Font check", s: "Cannot verify the interface font", v: "fontconfig" })
+        else if (FontScan.lastError.length > 0)
+            out.push({ g: "󰈵", n: "Font check", s: FontScan.lastError, v: "fc-list" })
         else if (FontScan.scanned && FontScan.families.length === 0)
             out.push({ g: "󰈵", n: "Icon font", s: "No Nerd Font installed — bar icons cannot render", v: "nerd-fonts" })
         else if (FontScan.scanned && ShellSettings.fontFamily.length > 0
@@ -92,16 +99,24 @@ Column {
     SectionLabel { label: "HEALTH" }
     SettingsCard {
         ControlRow {
-            visible: SystemTools.ready && root._issues.length === 0
+            visible: SystemTools.ready && !SystemTools.checking
+                && !SystemTools.probeFailed && root._issues.length === 0
             glyph: "󰗠"
             title: "All optional tools found"
             status: "No features are hidden"
             passive: true
         }
         ControlRow {
-            visible: !SystemTools.ready
+            visible: !SystemTools.ready || SystemTools.checking
             glyph: "󰋼"
             title: "Checking optional tools…"
+            passive: true
+        }
+        ControlRow {
+            visible: !SystemTools.checking && SystemTools.probeFailed
+            glyph: "󰀦"
+            title: "Optional tool check failed"
+            status: SystemTools.lastError
             passive: true
         }
         Repeater {

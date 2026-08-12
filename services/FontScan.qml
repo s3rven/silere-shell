@@ -10,19 +10,38 @@ Singleton {
     property list<string> families: []
     // true only after fc-list has exited cleanly, so "no families" can be told apart from "not asked yet"
     property bool scanned: false
+    property bool scanning: false
+    property string lastError: ""
     property bool _scanned: false
 
-    function scan(): void {
-        if (_scanned || !SystemTools.hasFcList || _proc.running) return
+    function scan(force: bool): void {
+        if ((!force && _scanned) || !SystemTools.hasFcList || _proc.running) return
         _scanned = true
+        scanning = true
+        lastError = ""
         _proc.running = true
     }
 
+    function refresh(): void { scan(true) }
+
     // singletons are lazy: creation means the picker is on screen, and a menu-open signal would have fired before this object existed
-    Component.onCompleted: scan()
+    Component.onCompleted: scan(false)
     Connections {
         target: SystemTools
-        function onReadyChanged() { if (SystemTools.ready) root.scan() }
+        function onReadyChanged() { if (SystemTools.ready) root.scan(false) }
+        function onCheckingChanged() {
+            if (!SystemTools.checking && SystemTools.ready) root.refresh()
+        }
+        function onHasFcListChanged() {
+            if (SystemTools.hasFcList) {
+                if (SystemTools.ready) root.scan(false)
+            } else if (SystemTools.ready) {
+                root._scanned = false
+                root.scanned = false
+                root.scanning = false
+                root.families = []
+            }
+        }
     }
 
     Process {
@@ -31,7 +50,12 @@ Singleton {
         command: ["fc-list", "--format", "%{family}\n"]
         stdout: StdioCollector { id: _out }
         onExited: (code) => {
-            if (code !== 0) { root._scanned = false; return }
+            root.scanning = false
+            if (code !== 0) {
+                root._scanned = false
+                root.lastError = "Font scan failed (exit " + code + ")"
+                return
+            }
             // Font family aliases are external input; a null-prototype table
             // keeps names such as "constructor" from colliding with JS built-ins.
             const variants = Object.create(null)
@@ -57,6 +81,7 @@ Singleton {
             out.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }))
             root.families = out
             root.scanned = true
+            root.lastError = ""
         }
     }
 }
