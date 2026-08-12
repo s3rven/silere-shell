@@ -10,6 +10,13 @@ Column {
     width: parent ? parent.width : 0
     spacing: 0
 
+    readonly property string _paletteNote: !SystemTools.ready ? ""
+        : !SystemTools.hasMatugen
+            ? "Wallpaper theming needs matugen installed. These are Silere's bundled colors."
+            : MatugenTheme.usingFallback
+                ? "Matugen has not written a palette yet, so these are Silere's bundled colors. Re-run the installer, then set a wallpaper."
+                : ""
+
     function _hex2(v): string {
         const s = Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16)
         return s.length < 2 ? "0" + s : s
@@ -314,6 +321,10 @@ Column {
                 onPicked: (i) => ShellSettings.matugenAccentRole = options[i].value
             }
 
+            HintText {
+                visible: root._paletteNote.length > 0
+                text: root._paletteNote
+            }
         }
 
         // one row for both sources: each depth was solved to land on the matching neutral

@@ -81,6 +81,13 @@ Column {
                  && FontScan.families.indexOf(ShellSettings.fontFamily) < 0)
             out.push({ g: "󰈵", n: "Chosen font", s: "“" + ShellSettings.fontFamily + "” is gone; using " + Settings.font, v: "fallback" })
 
+        // wallpaper theming degrades instead of hiding, so it reads as working while
+        // the palette silently stays bundled — both causes need naming
+        if (!SystemTools.hasMatugen)
+            out.push({ g: "󰉦", n: "Wallpaper theming", s: "Colors stay at Silere's bundled palette", v: "matugen" })
+        else if (MatugenTheme.usingFallback)
+            out.push({ g: "󰉦", n: "Wallpaper palette", s: "None written yet — re-run the installer", v: "install.sh" })
+
         const tool = (g, n, v) => out.push({ g: g, n: n, s: "Hidden until this is installed", v: v })
         if (!SystemTools.hasBrightnessctl)     tool("󰃟", "Brightness control", "brightnessctl")
         if (!SystemTools.hasHyprsunset)        tool("󰖙", "Night light", "hyprsunset")

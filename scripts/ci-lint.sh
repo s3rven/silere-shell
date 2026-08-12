@@ -633,9 +633,9 @@ section "theme palette coverage"
 theme_tmpl="assets/matugen-theme.json"
 theme_loader="config/MatugenPalette.qml"
 if [ -f "$theme_tmpl" ] && [ -f "$theme_loader" ]; then
-    # Palette roles the shell actually reads.
+    # Palette roles the shell actually reads. usingFallback is load state, not a colour.
     used=$(grep -rhoE 'MatugenTheme\.[a-zA-Z_][a-zA-Z0-9_]*' --include='*.qml' . \
-           | sed 's/^MatugenTheme\.//' | grep -vE '^(_|qml$)' | sort -u)
+           | sed 's/^MatugenTheme\.//' | grep -vE '^(_|qml$|usingFallback$)' | sort -u)
     theme_gap=0
     for f in "$theme_tmpl" "$theme_loader"; do
         declared=$(grep -oE '^[[:space:]]+[a-zA-Z]+:[[:space:]]+"?#[0-9a-fA-F{]' "$f" \
@@ -670,6 +670,18 @@ elif grep -qiF "\"$accent_default\"" "$accent_section"; then
   ok "accent" "default $accent_default has a preset swatch"
 else
   fail "neutralAccent default $accent_default has no swatch in $accent_section"
+fi
+
+# With no palette written, the fallback accent is what the shell actually paints,
+# so it has to be the colour a fresh install already shows.
+fallback_accent="$(sed -n 's/^[[:space:]]*accent:[[:space:]]*"\(#[0-9a-fA-F]\{3,8\}\)".*/\1/p' config/MatugenPalette.qml)"
+if [ -z "$fallback_accent" ]; then
+  fail "could not read the fallback accent from config/MatugenPalette.qml"
+elif [ "$(printf '%s' "$fallback_accent" | tr 'A-F' 'a-f')" \
+     != "$(printf '%s' "$accent_default" | tr 'A-F' 'a-f')" ]; then
+  fail "palette fallback accent $fallback_accent differs from the neutralAccent default $accent_default"
+else
+  ok "accent" "palette fallback matches the default accent"
 fi
 
 section "release note archive"

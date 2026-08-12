@@ -17,12 +17,14 @@ Singleton {
     }
 
     property var _palette: ({})
+    property bool _everLoaded: false
+    readonly property bool usingFallback: !root._everLoaded
     readonly property var _fallback: ({
         background: "#101116",
         surface:    "#1d1f26",
         text:       "#e9eaf0",
         subtext:    "#a0a4b0",
-        accent:     "#ffffff",
+        accent:     "#b8bdd8",
         error:      "#dd92a2",
         warning:    "#d4ad77",
         success:    "#94bd8b"
@@ -65,7 +67,9 @@ Singleton {
         const parsed = root._parsePalette(raw)
         // Keep the last valid palette during an editor save or atomic replace;
         // a malformed external file must never partially recolor the shell.
-        if (parsed !== null) root._palette = parsed
+        if (parsed === null) return
+        root._palette = parsed
+        root._everLoaded = true
     }
 
     FileView {
