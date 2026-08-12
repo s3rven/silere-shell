@@ -86,7 +86,7 @@ Column {
         if (!SystemTools.hasMatugen)
             out.push({ g: "󰉦", n: "Wallpaper theming", s: "Colors stay at Silere's bundled palette", v: "matugen" })
         else if (MatugenTheme.usingFallback)
-            out.push({ g: "󰉦", n: "Wallpaper palette", s: "None written yet — re-run the installer", v: "install.sh" })
+            out.push({ g: "󰉦", n: "Wallpaper palette", s: "Matugen has not written one yet", v: "install.sh" })
 
         const tool = (g, n, v) => out.push({ g: g, n: n, s: "Hidden until this is installed", v: v })
         if (!SystemTools.hasBrightnessctl)     tool("󰃟", "Brightness control", "brightnessctl")
