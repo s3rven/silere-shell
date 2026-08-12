@@ -16,10 +16,10 @@ Column {
                 { value: "normal",  label: "Normal"  },
                 { value: "compact", label: "Compact" }
             ]
-            onChosen: (v) => {
+            onChosen: (v) => ShellSettings.batch(() => {
                 ShellSettings.clockShowDate = v !== "off"
                 ShellSettings.compactDate = v === "compact"
-            }
+            })
         }
         ChoiceChipRow {
             glyph: "󰔟"; label: "Time"

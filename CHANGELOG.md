@@ -20,7 +20,6 @@ This file stays focused on work since the latest release. Completed notes move t
   scale. Surfaces still react; the text underneath them stays put. Text also renders with
   distance fields now rather than snapping to a device pixel grid that fractional scaling
   has already resampled away.
-
 - Removed keyboard navigation and the accessibility metadata that went with it. Tab
   order, arrow-key stepping, focus rings, the settings sidebar's keyboard cursor and
   every `Accessible` role, name and description are gone; the shell is pointer-driven.
@@ -33,7 +32,11 @@ This file stays focused on work since the latest release. Completed notes move t
   allow key handlers only in a file that hosts a text field.
 - Trimmed nine configuration knobs off shared components that no caller ever set, so a
   primitive's real geometry reads at the point of use instead of behind a name.
-
+- Stopped rebuilding the workspace and window models for a compositor event that carries
+  nothing they read; it fired 420 times in two hours of ordinary use. The event denylist
+  is pinned by a check so a refactor cannot quietly drop an entry.
+- Cut the settings file down to one write where changing the clock's date style, or
+  middle-clicking the clock, previously wrote it twice in a row.
 - Made optional-tool and font detection refresh cleanly at runtime, with stable
   capability state and explicit backend failure tracking.
 - Added reusable process retry/exit health and Cava runtime/config status so
@@ -83,9 +86,9 @@ This file stays focused on work since the latest release. Completed notes move t
 - Routed every process timeout through the shared bounded-process primitive, so a
   hung update check, package check or VPN lookup recovers the same way instead of
   through three separately hand-rolled timers.
-- Gave scroll behaviour, list keyboard stepping, row heights and the interface font
-  one definition each rather than a copy per call site, and made the checks fail on a
-  new copy instead of letting it drift in.
+- Gave scroll behaviour, row heights and the interface font one definition each rather
+  than a copy per call site, and made the checks fail on a new copy instead of letting it
+  drift in.
 - Added a check that every settings label still fits the panel width it ships at,
   across the whole interface-scale range, so an over-long one cannot quietly elide
   itself in a release.

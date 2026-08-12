@@ -108,13 +108,13 @@ Row {
 
     TapHandler {
         acceptedButtons: Qt.MiddleButton
-        onTapped: {
+        onTapped: ShellSettings.batch(() => {
             const s = ShellSettings.showSeconds
             const d = ShellSettings.clockShowDate
             if (!s && !d)     { ShellSettings.showSeconds = true }
             else if (s && !d) { ShellSettings.showSeconds = false; ShellSettings.clockShowDate = true }
             else if (!s && d) { ShellSettings.showSeconds = true }
             else              { ShellSettings.showSeconds = false; ShellSettings.clockShowDate = false }
-        }
+        })
     }
 }
