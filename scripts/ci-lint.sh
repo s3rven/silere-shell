@@ -284,15 +284,11 @@ fi
 
 # A held activation key produces auto-repeat release events on Qt. Triggering
 # from those releases activates early (and can repeat) instead of waiting for
-# the user's real key-up event. KeyActivation owns that rule; a handler that
-# delegates to it inherits the guard, anything else must spell it out again.
-# The delegating form must be matched on the handler's OWN line: scanning the
-# 15-line window for it lets a neighbouring delegated handler excuse a
-# hand-rolled one that never checks isAutoRepeat.
+# the user's real key-up event. The shared helper that used to own the guard was
+# removed with the keyboard layer, so every handler now has to spell it out.
 release_without_repeat=""
-while IFS=: read -r file line text; do
+while IFS=: read -r file line _; do
   [ -n "$file" ] || continue
-  printf '%s' "$text" | grep -qE '\.release\(' && continue
   end=$((line + 14))
   sed -n "${line},${end}p" "$file" | grep -q 'isAutoRepeat' && continue
   release_without_repeat="${release_without_repeat}${file}:${line}"$'\n'
@@ -887,17 +883,30 @@ else
 fi
 
 section "pointer-only interaction"
-# Silere is pointer-driven by decision: keyboard navigation and the accessibility
-# metadata that described it were removed wholesale. These creep back one property at a
-# time, and a single re-added Accessible role or tab stop reads as an oversight rather
-# than a choice, so the rule is enforced instead of remembered.
-readded="$(grep -rlnE '(^|[^A-Za-z])(Accessible\.|activeFocusOnTab|KeyNavigation\.)' \
+# Silere is pointer-driven by decision: app-wide keyboard navigation was removed
+# wholesale. Keep this invariant about that interaction model, not accessibility
+# metadata: Accessible.* may return as part of coherent screen-reader support without
+# reviving tab traversal or the old focus machinery.
+readded_navigation="$(grep -rlnE '(^|[^A-Za-z])(activeFocusOnTab|KeyNavigation\.)' \
   --include='*.qml' modules config services || true)"
-if [ -n "$readded" ]; then
-  fail "accessibility metadata and tab stops were removed on purpose:"
-  while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$readded"
+if [ -n "$readded_navigation" ]; then
+  fail "tab stops and key navigation were removed on purpose:"
+  while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$readded_navigation"
 else
-  ok "pointer only" "no accessibility metadata or tab stops"
+  ok "pointer only" "no tab stops or key-navigation attachments"
+fi
+
+# These types were the support layer for the removed navigation model. Check both their
+# definitions and call sites so restoring an old file under another directory cannot
+# quietly bring the parallel focus system back.
+legacy_focus_helpers="$(find modules config services -type f -name '*.qml' -print0 \
+  | xargs -0 -r grep -lE '(^|[^A-Za-z])(FocusVisual|KeyActivation|WorkspaceFocusRing)([^A-Za-z]|$)' \
+  || true)"
+if [ -n "$legacy_focus_helpers" ]; then
+  fail "retired keyboard focus helpers must stay removed:"
+  while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$legacy_focus_helpers"
+else
+  ok "pointer only" "retired focus and key-activation helpers stay removed"
 fi
 
 # Typed text is the one thing that legitimately needs keys, so a Keys handler is allowed
