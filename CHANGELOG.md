@@ -47,6 +47,12 @@ This file stays focused on work since the latest release. Completed notes move t
 - Marked the Wi-Fi password field as sensitive to input methods, so an IME or
   on-screen keyboard no longer capitalises the first character of a case-sensitive
   key or keeps it in predictive-text history.
+- Fixed notification history mislabelling days on the day after a daylight-saving
+  change, where a 23-hour day put every entry one bucket early — the day before
+  yesterday read as **Yesterday**, under a second heading of the same name.
+- Gave a settings row's name priority over its value when space runs short. A long
+  value used to take its full width and squeeze the name to nothing; now the value
+  shortens first and the name keeps a readable floor.
 - Renamed the theme Source option from Neutral to Custom, and the accent picker's
   own custom swatch to Mix, so the two no longer share one name.
 - Fixed the settings panel snapping to its new height when a category collapses
@@ -59,6 +65,9 @@ This file stays focused on work since the latest release. Completed notes move t
 - Gave scroll behaviour, list keyboard stepping, row heights and the interface font
   one definition each rather than a copy per call site, and made the checks fail on a
   new copy instead of letting it drift in.
+- Added a check that every settings label still fits the panel width it ships at,
+  across the whole interface-scale range, so an over-long one cannot quietly elide
+  itself in a release.
 
 ## Releases
 
