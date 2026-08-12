@@ -515,6 +515,38 @@ _optdep notify-send   "low-battery + hot-CPU alerts"
 _optdep timeout       "bounded update checks"
 _optdep ssh-keygen    "signed shell updates"
 
+# ── compositor ───────────────────────────────────────────────────────────────────
+# The whole install can succeed on a session Silere cannot run on: every step
+# writes its own files, and only the autostart step notices, where it reads as a
+# missing Hyprland config rather than an unsupported compositor. A config on disk
+# counts, so installing from a TTY or over SSH before the compositor is up works.
+_section "compositor"
+
+_supported_compositor() {
+    [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && return 0
+    [ -n "${NIRI_SOCKET:-}" ] && return 0
+    _find_compositor_pid Hyprland >/dev/null 2>&1 && return 0
+    _find_compositor_pid niri >/dev/null 2>&1 && return 0
+    [ -n "$(_hypr_config_path)" ] && return 0
+    [ -f "$(_niri_config_path)" ] && return 0
+    return 1
+}
+
+if _supported_compositor; then
+    _ok "Hyprland or niri found"
+else
+    _session="${XDG_CURRENT_DESKTOP:-${DESKTOP_SESSION:-unknown}}"
+    _warn "no Hyprland or niri found — this session reports \"$_session\""
+    _warn "Silere runs on Hyprland and niri only. It will install here, but the"
+    _warn "bar will not start and the menu will not open."
+    if ! _ask_no "Install anyway?"; then
+        printf "\n  nothing was written\n"
+        printf "  to install for a compositor you have not started yet, point the\n"
+        printf "  installer at its config: ${DIM}SILERE_HYPR_CONFIG=... scripts/install.sh${R}\n\n"
+        exit 0
+    fi
+fi
+
 # ── font ─────────────────────────────────────────────────────────────────────────
 _section "JetBrainsMono Nerd Font"
 
