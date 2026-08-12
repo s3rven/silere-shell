@@ -24,7 +24,7 @@ Nothing runs without a reason.
 
 ## What you get
 
-- **Bar**: workspaces, media, network, volume, brightness, battery, clock, tray, updates. Drag them between left, centre and right; per-monitor, with the window title in the middle.
+- **Bar**: workspaces, media, network, volume, brightness, battery, clock, tray, updates. Drag them between left, centre and right; per-monitor. The centred window title is off until you turn it on under Settings › Widgets › Indicators.
 - **Menu**: one panel of live controls, settings, notification history.
 - **Notifications**: actions, images, history, quiet hours and source-window jumping.
 - **Theming**: matugen from your wallpaper or a hand-picked accent, over three dark base tones.
