@@ -147,6 +147,10 @@ Column {
                             text: "Screenshot feedback needs inotify-tools."
                         }
                         HintText {
+                            visible: SystemTools.hasInotifywait && Screenshot.watcherRetired
+                            text: "No screenshot folder to watch; feedback stops until one exists."
+                        }
+                        HintText {
                             // reactive mode drops the static line, so with no source at all the bar shows nothing
                             visible: !ShellSettings.underlineIdleGlow
                                 && !ShellSettings.underlineNotifGlow

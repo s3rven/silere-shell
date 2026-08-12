@@ -35,7 +35,11 @@ Singleton {
         root.flash()
     }
 
+    // no screenshot directory exists, so the watcher retired and the glow cannot fire
+    readonly property bool watcherRetired: _watcher.gaveUp
+
     SupervisedProcess {
+        id: _watcher
         superviseWhen: SystemTools.ready && SystemTools.hasInotifywait
             && ShellSettings.underlineGlow && ShellSettings.underlineScreenshotGlow
         restartDelay: 60000
