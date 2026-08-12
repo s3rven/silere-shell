@@ -118,19 +118,12 @@ Item {
                     radius: Metrics.hoverRadiusFor(height)
                     color: _tile.needsAttention ? Theme.withAlpha(Theme.accent, 0.20)
                          : _ma.pressed           ? Theme.withAlpha(Theme.accent, 0.18)
-                         : _tile.activeFocus     ? Theme.withAlpha(Theme.accent, 0.14)
                          : Theme.withAlpha(Theme.mix(Theme.text, Theme.accent, 0.30), 0.07)
                     opacity: _tile.needsAttention ? _tile.attnPulse
                            : _ma.pressed          ? 1.0
                            : (_iconHover.hovered && ShellSettings.barHoverHighlight) ? 1.0
-                           : _tile.activeFocus    ? 1.0
                            : 0.0
                     visible: opacity > 0.001
-
-                    OutlineBorder {
-                        radius: _hoverCap.radius
-                        outlineColor: _tile.activeFocus ? Theme.withAlpha(Theme.accent, Theme.focusRingAlpha) : "transparent"
-                    }
 
                     MotionBehavior on opacity {NumberAnimation { duration: Motion.color } }
                     ColorFade on color {}
@@ -179,7 +172,7 @@ Item {
                     x: root.iconSize + 5
                     color: Theme.subtext
                     text: SafeText.boundedText(_tile.label, 22)
-                    expanded: ((_tile._dwelled && !root.compact) || _tile.activeFocus)
+                    expanded: ((_tile._dwelled && !root.compact))
                         && _tile.label.length > 0 && !TrayMenuState.open
                 }
 
@@ -234,24 +227,6 @@ Item {
                     }
                 }
 
-                Accessible.role: Accessible.Button
-                Accessible.name: label
-                Accessible.description: SafeText.singleLineText(modelData.tooltipDescription, 512)
-                Accessible.onPressAction: root._activateItem(_tile.modelData, _tile)
-                activeFocusOnTab: root.show || activeFocus
-                function _keyActivate(event): void {
-                    if (event.isAutoRepeat) { event.accepted = true; return }
-                    if (event.modifiers & Qt.ShiftModifier) root._openMenu(_tile.modelData, _tile)
-                    else root._activateItem(_tile.modelData, _tile)
-                    event.accepted = true
-                }
-                Keys.onSpacePressed:  event => _tile._keyActivate(event)
-                Keys.onReturnPressed: event => _tile._keyActivate(event)
-                Keys.onEnterPressed:  event => _tile._keyActivate(event)
-                Keys.onMenuPressed:   event => {
-                    if (!event.isAutoRepeat) root._openMenu(_tile.modelData, _tile)
-                    event.accepted = true
-                }
             }
         }
     }

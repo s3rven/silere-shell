@@ -61,18 +61,10 @@ Pill {
     maxTextWidth:   compact ? 150 : 260
     // above the 2s traffic-stats poll: shrinkDelay:0 re-animated the pill's width on every single tick
     shrinkDelay:    2400
-    activeFocusOnTab: show || activeFocus
-    Accessible.focusable: true
 
     MotionBehavior on opacity { gate: !root._isPulsing; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
     glyphColor:  canRead && Network.connected ? Theme.text : Theme.subtext
     textColor:   Theme.subtext
-    accessibleName: !canRead ? "Network backend unavailable"
-        : !Network.available ? "Network unavailable"
-        : !Network.connected ? "Network disconnected"
-        : Network.hasVpn
-            ? `VPN ${Network.vpnName || "active"}, over ${root._physical}${Network.isWifi && Network.signalStrength > 0 ? `, ${Network.signalStrength} percent signal` : ""}`
-            : `Network connected, ${root._physical}${Network.isWifi && Network.signalStrength > 0 ? `, ${Network.signalStrength} percent signal` : ""}`
 
     animateText: false
 

@@ -6,13 +6,10 @@ Item {
     id: root
 
     property string glyph:     ""
-    property string accessibleName: "Media control"
     property bool   available: false
     readonly property bool interactive: root.enabled && root.available
 
     signal triggered()
-
-    FocusVisual { id: _focusVisual; target: root }
 
     implicitWidth: 32
     implicitHeight: 44
@@ -25,23 +22,11 @@ Item {
         NumberAnimation { duration: Motion.fast }
     }
 
-    activeFocusOnTab: root.interactive
-    Accessible.role: Accessible.Button
-    Accessible.name: root.accessibleName
-    Accessible.focusable: root.interactive
-    Accessible.pressed: _tap.pressed
-    Accessible.onPressAction: if (root.interactive) root.triggered()
-    Keys.onPressed: _focusVisual.noteKeyboardInput()
-    Keys.onSpacePressed: event => { if (!event.isAutoRepeat && root.interactive) root.triggered(); event.accepted = true }
-    Keys.onReturnPressed: event => { if (!event.isAutoRepeat && root.interactive) root.triggered(); event.accepted = true }
-    Keys.onEnterPressed: event => { if (!event.isAutoRepeat && root.interactive) root.triggered(); event.accepted = true }
-
     HoverHandler { id: _hover; enabled: root.interactive; cursorShape: Qt.PointingHandCursor }
     TapHandler {
         id: _tap
         enabled: root.interactive
         onTapped: {
-            _focusVisual.takePointerFocus()
             root.triggered()
         }
     }
@@ -68,14 +53,12 @@ Item {
                 ? Theme.withAlpha(
                     Theme.mix(Theme.text, Theme.accent, 0.24), 0.075)
                 : Theme.withAlpha(Theme.text, 0.05)
-        opacity: (_hover.hovered || _tap.pressed || _focusVisual.active) ? 1.0 : 0.0
+        opacity: (_hover.hovered || _tap.pressed) ? 1.0 : 0.0
 
         OutlineBorder {
             radius: _fill.radius
-            outlineWidth: _focusVisual.active ? 2 : 1
-            outlineColor: _focusVisual.active
-                ? Theme.withAlpha(Theme.accent, Theme.focusRingAlpha)
-                : _hover.hovered
+            outlineWidth: 1
+            outlineColor: _hover.hovered
                     ? Theme.withAlpha(Theme.accent, 0.22)
                     : "transparent"
             ColorFade on outlineColor {}

@@ -44,26 +44,12 @@ PanelWindow {
         enabled:  MenuState.open
         onActivated: {
             if (panel.powerOpen) {
-                panel.closePowerAndRestoreFocus()
+                panel.powerOpen = false
             } else if (panel.activeTab === 0 && homeLoader.item && homeLoader.item.dismissInline()) {
             } else {
                 MenuState.close()
             }
         }
-    }
-
-    // Ctrl (not bare Tab) so it can't hijack the wifi password field
-    Shortcut {
-        sequences: ["Ctrl+Tab", "Ctrl+PgDown"]
-        context:  Qt.ApplicationShortcut
-        enabled:  MenuState.open && !panel.powerOpen
-        onActivated: panel._cycleTab(1)
-    }
-    Shortcut {
-        sequences: ["Ctrl+Shift+Tab", "Ctrl+PgUp"]
-        context:  Qt.ApplicationShortcut
-        enabled:  MenuState.open && !panel.powerOpen
-        onActivated: panel._cycleTab(-1)
     }
 
     OutsideTapGuard {
@@ -161,7 +147,6 @@ PanelWindow {
             Math.min(contentPane.targetH, _availablePanelH))
 
         readonly property int activeTab: MenuState.activeTab
-        readonly property var _focusWindow: panel.Window.window
 
         property bool powerOpen: false
         property bool _loadedDeferred: false
@@ -223,19 +208,11 @@ PanelWindow {
         onCloseFinished: {
             if (open) return
             _settlePageVisuals()
-            if (powerOpen) _railPower.forceActiveFocus()
             powerOpen = false
         }
 
         function switchTab(idx: int): void {
             const tab = Math.max(0, Math.min(2, idx))
-            const focusedItem = _focusWindow ? _focusWindow.activeFocusItem : null
-            const focusNeedsReset = focusedItem && (
-                ItemTree.isInside(focusedItem, tabContent)
-                || ItemTree.isInside(focusedItem, _settingsNavLoader.item)
-                || ItemTree.isInside(focusedItem, _powerRailLoader.item))
-            // move focus first: the tab change disables the page controls holding it
-            if (focusNeedsReset) panel.forceActiveFocus()
             if (powerOpen) powerOpen = false
             if (tab !== activeTab) panel._armOuterHeightMotion()
             MenuState.selectTab(tab)
@@ -246,37 +223,6 @@ PanelWindow {
             if (!panel.open || ShellSettings.reduceMotion) return
             panel._outerHeightMotion = true
             _outerHeightMotionHold.restart()
-        }
-
-        function closePowerAndRestoreFocus(): void {
-            if (!powerOpen) return
-            // hand focus over first or Qt rejects the activeFocusOnTab change
-            _railPower.forceActiveFocus()
-            powerOpen = false
-            _powerFocusRestore.restart()
-        }
-
-        function _revealFocusedControl(): void {
-            if (powerOpen || activeTab === 2 || !MenuState.open) return
-            const item = _focusWindow ? _focusWindow.activeFocusItem : null
-            if (!item || !ItemTree.isInside(item, tabContent)) return
-
-            const p = item.mapToItem(contentFlick.contentItem, 0, 0)
-            const margin = 12
-            const top = p.y
-            const bottom = top + Math.max(1, Number(item.height) || 1)
-            const maxY = Math.max(0, contentFlick.contentHeight - contentFlick.height)
-            let target = contentFlick.contentY
-            if (top - margin < target) target = top - margin
-            else if (bottom + margin > target + contentFlick.height)
-                target = bottom + margin - contentFlick.height
-            contentFlick.contentY = Math.max(0, Math.min(maxY, target))
-        }
-
-        readonly property var _tabOrder: [0, 2, 1]
-        function _cycleTab(dir: int): void {
-            const i = Math.max(0, _tabOrder.indexOf(activeTab))
-            switchTab(_tabOrder[(i + dir + _tabOrder.length) % _tabOrder.length])
         }
 
         Connections {
@@ -303,7 +249,6 @@ PanelWindow {
                     panel._outerHeightMotion = false
                     _outerHeightMotionHold.stop()
                     contentFlick.contentY = 0
-                    panel.forceActiveFocus()
                 } else {
                     _closedUnload.restart()
                 }
@@ -348,28 +293,9 @@ PanelWindow {
         }
 
         Timer {
-            id: _focusReveal
-            interval: 0
-            onTriggered: panel._revealFocusedControl()
-        }
-
-        Timer {
-            id: _powerFocusRestore
-            interval: 0
-            onTriggered: if (MenuState.open && !panel.powerOpen) _railPower.forceActiveFocus()
-        }
-
-        Timer {
             id: _outerHeightMotionHold
             interval: Motion.pageOut + Motion.panelResize + Motion.ms(60)
             onTriggered: panel._outerHeightMotion = false
-        }
-
-        Connections {
-            target: panel._focusWindow
-            function onActiveFocusItemChanged() {
-                if (MenuState.open) _focusReveal.restart()
-            }
         }
 
         width:  panelW
@@ -554,8 +480,6 @@ PanelWindow {
                     labelPillEnabled: !panel._railExpanded
                         || panel.navW < panel._navMinW
                     active: panel.activeTab === 0
-                    KeyNavigation.up: _railPower
-                    KeyNavigation.down: _railRecent
                     onTapped: panel.switchTab(0)
                 }
 
@@ -567,11 +491,7 @@ PanelWindow {
                     label: "Notifications"
                     labelPillEnabled: !panel._railExpanded
                         || panel.navW < panel._navMinW
-                    accessibleDescription: Notifications.hasHistory
-                        ? Notifications.historyCount + " notifications" : "No notifications"
                     active: panel.activeTab === 2
-                    KeyNavigation.up: _railHome
-                    KeyNavigation.down: _railSettings
                     onTapped: panel.switchTab(2)
 
                     Rectangle {
@@ -612,17 +532,8 @@ PanelWindow {
                     label: "Settings"
                     labelPillEnabled: !panel._railExpanded
                         || panel.navW < panel._navMinW
-                    accessibleDescription: panel.activeTab === 1
-                        ? "Focus Settings categories" : "Open Settings"
                     active: panel.activeTab === 1
-                    KeyNavigation.up: _railRecent
-                    KeyNavigation.down: _railPower
-                    onTapped: {
-                        if (panel.activeTab === 1)
-                            _settingsNavLoader.item?.focusNavigation()
-                        else
-                            panel.switchTab(1)
-                    }
+                    onTapped: panel.switchTab(1)
                 }
             }
 
@@ -659,15 +570,7 @@ PanelWindow {
                         || panel.navW < panel._navMinW
                     accentColor: Theme.error
                     active: panel.powerOpen
-                    KeyNavigation.up: _railSettings
-                    KeyNavigation.down: _railHome
-                    onTapped: {
-                        if (panel.powerOpen) panel.closePowerAndRestoreFocus()
-                        else {
-                            _railPower.forceActiveFocus()
-                            panel.powerOpen = true
-                        }
-                    }
+                    onTapped: panel.powerOpen = !panel.powerOpen
                 }
             }
         }
@@ -704,7 +607,7 @@ PanelWindow {
 
             TapHandler {
                 enabled: panel.powerOpen
-                onTapped: panel.closePowerAndRestoreFocus()
+                onTapped: panel.powerOpen = false
             }
 
             ShellFlickable {

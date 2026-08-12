@@ -6,12 +6,10 @@ Rectangle {
     id: root
 
     property color fillColor: Theme.accent
-    property bool focused: false
     property bool hovered: false
     property bool pressed: false
     property bool hoverGrow: true
     property bool animate: true
-    property color focusRingColor: Theme.withAlpha(Theme.accent, Theme.focusRingSoftAlpha)
 
     radius: 3
     antialiasing: true
@@ -19,12 +17,11 @@ Rectangle {
     // grow via scale, not width: a re-layouted odd width lands the centre on a half-pixel and the handle visibly shifts under fractional scaling
     scale: !root.hoverGrow ? 0.90
          : root.pressed ? 0.92
-         : (root.hovered || root.focused) ? 1.05 : 1.0
+         : root.hovered ? 1.05 : 1.0
     transformOrigin: Item.Center
 
-    border.width: root.focused ? 2 : 1
-    border.color: root.focused ? root.focusRingColor
-        : Theme.withAlpha(Theme.text,
+    border.width: 1
+    border.color: Theme.withAlpha(Theme.text,
             ShellSettings.highContrast ? 0.72
             : root.hovered || root.pressed ? 0.52 : 0.30)
 
@@ -33,14 +30,14 @@ Rectangle {
         gate: root.animate
         NumberAnimation {
             duration: root.pressed ? Motion.press
-                : (root.hovered || root.focused) ? Motion.hoverIn : Motion.hoverOut
+                : root.hovered ? Motion.hoverIn : Motion.hoverOut
             easing.type: Easing.OutCubic
         }
     }
     MotionBehavior on border.color {
         gate: root.animate
         ColorAnimation {
-            duration: (root.hovered || root.focused || root.pressed)
+            duration: (root.hovered || root.pressed)
                 ? Motion.hoverIn : Motion.hoverOut
         }
     }

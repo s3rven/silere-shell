@@ -115,7 +115,6 @@ Item {
                 status: _state
                 selected: modelData.connected
                 warning: _armed || modelData.pairing
-                accessibleDescription: _state
 
                 function _activate(): void {
                     const addr = modelData.address
@@ -137,8 +136,6 @@ Item {
                     }
                 }
                 onTriggered: _activate()
-                Keys.onUpPressed:     event => { _list.focusIndex(_row.index - 1); event.accepted = true }
-                Keys.onDownPressed:   event => { _list.focusIndex(_row.index + 1); event.accepted = true }
             }
         }
     }

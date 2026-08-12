@@ -31,11 +31,6 @@ Item {
     // dismiss-all clears this: every card is leaving, so collapsing heights only drags the lower ones through their own exit
     property bool collapseOnDismiss: true
 
-    Accessible.role: Accessible.AlertMessage
-    Accessible.name: appNameText
-    Accessible.description: hasBody ? summaryText + ": " + bodyText : summaryText
-    Accessible.onPressAction: card.activatePrimary()
-
     readonly property var _defaultAction: {
         const acts = notification.actions ?? []
         for (let i = 0; i < acts.length && i < 64; i++)
@@ -58,7 +53,6 @@ Item {
     readonly property string appIconSource: Notifications.appIconSource(
         notification.appIcon, notification.desktopEntry, card.appNameText)
     readonly property string notificationImageSource: Notifications.fileUrl(notification.image)
-    readonly property bool hasAppIcon: appIconSource.length > 0
     readonly property bool hasNotificationImage: notificationImageSource.length > 0
 
     readonly property string contentImageSource: notificationImageSource
@@ -310,7 +304,6 @@ Item {
             ShellText {
                 anchors.centerIn: parent
                 visible: _headerIcon.status !== Image.Ready
-                Accessible.ignored: true
                 text: card.fallbackInitial
                 color: Theme.withAlpha(Theme.subtext, 0.70)
                 font.pixelSize: Settings.fontCaption
@@ -468,10 +461,6 @@ Item {
                             ColorFade on outlineColor {}
                         }
 
-                        Accessible.role: Accessible.Button
-                        Accessible.name: card._actionText(_actBtn.modelData)
-                        Accessible.onPressAction: card.invokeAction(_actBtn.modelData)
-
                         ShellText {
                             anchors.centerIn: parent
                             width: Math.min(implicitWidth, _actBtn.width - 16)
@@ -567,9 +556,6 @@ Item {
             MotionBehavior on opacity      {NumberAnimation { duration: Motion.fast } }
             MotionBehavior on scale        {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
             ColorFade on color {}
-            Accessible.role: Accessible.Button
-            Accessible.name: "Dismiss notification"
-            Accessible.onPressAction: card.dismiss()
             HoverHandler { id: _closeHover; cursorShape: Qt.PointingHandCursor }
             TapHandler   { onTapped: card.dismiss() }
             ShellText {

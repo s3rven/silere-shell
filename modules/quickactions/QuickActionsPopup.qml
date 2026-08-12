@@ -70,50 +70,16 @@ PanelWindow {
         property string stateText: ""
         property bool   active: false
         property bool   checkable: true
-        readonly property bool isMenuRow: true
-        readonly property bool _pressed: _rowTap.pressed || _keys.pressed
+        readonly property bool _pressed: _rowTap.pressed
 
         signal triggered()
 
-        KeyActivation {
-            id: _keys
-            onActivated: _row._activate()
-        }
-
-        function _menuRows(): var {
-            const sibs = _row.parent ? _row.parent.children : []
-            const rows = []
-            for (let k = 0; k < sibs.length; k++) {
-                const c = sibs[k]
-                if (c && c.isMenuRow === true && c.visible) rows.push(c)
-            }
-            return rows
-        }
-        function _moveFocus(dir: int): void {
-            const rows = _menuRows()
-            const i = rows.indexOf(_row)
-            if (i >= 0 && rows.length > 0)
-                rows[(i + dir + rows.length) % rows.length].forceActiveFocus()
-        }
         function _activate(): void {
             if (_row.visible) _row.triggered()
         }
 
         width: parent ? parent.width : 0
         height: Metrics.rowHeightFor(38)
-
-        activeFocusOnTab: visible
-        Accessible.role: _row.checkable ? Accessible.CheckBox : Accessible.Button
-        Accessible.name: _row.label
-        Accessible.description: _row.stateText
-        Accessible.checked: _row.checkable && _row.active
-        Accessible.focusable: _row.visible
-        Accessible.onPressAction: _row._activate()
-        onActiveFocusChanged: if (!activeFocus) _keys.cancel()
-        Keys.onUpPressed:     e => { _row._moveFocus(-1); e.accepted = true }
-        Keys.onDownPressed:   e => { _row._moveFocus(1);  e.accepted = true }
-        Keys.onPressed:  e => _keys.press(e)
-        Keys.onReleased: e => _keys.release(e)
 
         HoverHandler { id: _rowHover; cursorShape: Qt.PointingHandCursor }
         TapHandler   { id: _rowTap; onTapped: _row._activate() }
@@ -124,7 +90,7 @@ PanelWindow {
             antialiasing: true
             color: _row._pressed
                 ? Theme.withAlpha(Theme.accent, 0.14)
-                : (_rowHover.hovered || _row.activeFocus)
+                : (_rowHover.hovered)
                     ? Theme.withAlpha(Theme.menuHover, 0.08) : "transparent"
             ColorFade on color {}
         }
@@ -211,15 +177,6 @@ PanelWindow {
         width: contentW + pad * 2
         height: _rows.implicitHeight + pad * 2
 
-        function _focusFirstRow(): void {
-            const sibs = _rows.children
-            for (let k = 0; k < sibs.length; k++) {
-                const c = sibs[k]
-                if (c && c.isMenuRow === true && c.visible) { c.forceActiveFocus(); return }
-            }
-        }
-        Keys.onDownPressed: e => { card._focusFirstRow(); e.accepted = true }
-        Keys.onUpPressed:   e => { card._focusFirstRow(); e.accepted = true }
         Component.onCompleted: if (QuickActionsState.open) card.forceActiveFocus()
 
         Column {

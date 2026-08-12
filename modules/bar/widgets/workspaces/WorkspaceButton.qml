@@ -29,7 +29,6 @@ Item {
     signal anchorMenuRequested()
     signal quickActionsRequested()
     signal markerPulseRequested()
-    signal focusSiblingRequested(int index)
     signal hoverReported(int wsId, bool on)
 
     readonly property bool hovered: _hover.hovered
@@ -45,8 +44,6 @@ Item {
     MotionBehavior on width {
         NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
     }
-
-    activeFocusOnTab: monitorReady || activeFocus
 
     Component.onCompleted: {
         _dotFade = _blanked ? 0 : 1
@@ -67,24 +64,6 @@ Item {
         NumberAnimation { target: root; property: "scale"; to: 1.0;  duration: Motion.ms(145); easing.type: Easing.OutCubic }
     }
 
-    function _appSummary(): string {
-        const names = []
-        for (let i = 0; i < root.apps.length; i++)
-            names.push(root.apps[i].count > 1 ? root.apps[i].name + " ×" + root.apps[i].count : root.apps[i].name)
-        return names.join(", ")
-    }
-
-    Accessible.role: Accessible.Button
-    Accessible.name: "Workspace " + wsId
-    Accessible.description: active ? "Current workspace"
-        : urgent ? "Urgent workspace"
-        : occupied ? (apps.length > 0
-            ? "Occupied workspace: " + root._appSummary()
-            : "Occupied workspace")
-        : "Empty workspace"
-    Accessible.focusable: monitorReady
-    Accessible.onPressAction: root._activate()
-
     function _activate(): void {
         if (!root.monitorReady) return
         if (root.active) {
@@ -95,28 +74,8 @@ Item {
         }
     }
 
-    Keys.onSpacePressed: event => {
-        if (!event.isAutoRepeat) root._activate()
-        event.accepted = true
-    }
-    Keys.onReturnPressed: event => {
-        if (!event.isAutoRepeat) root._activate()
-        event.accepted = true
-    }
-    Keys.onEnterPressed: event => {
-        if (!event.isAutoRepeat) root._activate()
-        event.accepted = true
-    }
-    Keys.onLeftPressed:  event => { root.focusSiblingRequested(root.index - 1); event.accepted = true }
-    Keys.onRightPressed: event => { root.focusSiblingRequested(root.index + 1); event.accepted = true }
-
     HoverHandler { id: _hover; cursorShape: Qt.PointingHandCursor }
     onHoveredChanged: root.hoverReported(root.wsId, root.hovered)
-
-    WorkspaceFocusRing {
-        rowHeight: root.rowHeight
-        shown: root.activeFocus
-    }
 
     TapHandler {
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton

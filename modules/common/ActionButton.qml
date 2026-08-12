@@ -7,7 +7,6 @@ Item {
 
     property string label: ""
     property string glyph: ""
-    property string accessibleName: label
     property bool emphasis: false
     property color accentColor: Theme.accent
     property real radius: Theme.radiusField
@@ -16,15 +15,7 @@ Item {
 
     // ceil: a fractional width lands the outline stroke off-pixel under fractional scaling
     readonly property real contentWidth: implicitWidth
-    readonly property bool pressed: _tap.pressed || _keys.pressed
-
-    FocusVisual { id: _focusVisual; target: root }
-    KeyActivation {
-        id: _keys
-        enabled: root.enabled
-        focusVisual: _focusVisual
-        onActivated: root.activate()
-    }
+    readonly property bool pressed: _tap.pressed
 
     implicitWidth: Math.ceil(_row.implicitWidth) + 20
     implicitHeight: Metrics.rowHeightFor(32)
@@ -49,17 +40,6 @@ Item {
         if (root.enabled) root.triggered()
     }
 
-    onEnabledChanged: if (!root.enabled) _keys.cancel()
-    onActiveFocusChanged: if (!activeFocus) _keys.cancel()
-
-    activeFocusOnTab: root.enabled || root.activeFocus
-    Accessible.role: Accessible.Button
-    Accessible.name: root.accessibleName
-    Accessible.focusable: root.enabled
-    Accessible.pressed: root.pressed
-    Accessible.onPressAction: root.activate()
-    Keys.onPressed:  event => _keys.press(event)
-    Keys.onReleased: event => _keys.release(event)
     HoverHandler {
         id: _hover
         enabled: root.enabled
@@ -69,7 +49,6 @@ Item {
         id: _tap
         enabled: root.enabled
         onTapped: {
-            _focusVisual.takePointerFocus()
             root.activate()
         }
     }
@@ -103,10 +82,8 @@ Item {
 
         OutlineBorder {
             radius: _surface.radius
-            outlineWidth: _focusVisual.active ? 2 : 1
-            outlineColor: _focusVisual.active
-                ? Theme.withAlpha(root.accentColor, Theme.focusRingAlpha)
-                : root.emphasis ? "transparent"
+            outlineWidth: 1
+            outlineColor: root.emphasis ? "transparent"
                     : _hover.hovered
                         ? Theme.withAlpha(root.accentColor,
                             ShellSettings.highContrast ? 0.38 : 0.24)

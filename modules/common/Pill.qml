@@ -12,8 +12,6 @@ Item {
     property color  glyphColor: Theme.text
     property color  textColor:  Theme.subtext
     property bool   interactive: false
-    property string accessibleName: ""
-    property string accessibleDescription: ""
     property int    maxTextWidth: 150
     property bool   compact: ShellSettings.barCompact
     property int    horizontalPadding: Metrics.pillPadFor(compact)
@@ -33,18 +31,12 @@ Item {
     property int    hoverRevealDelay: 80
     property bool   hoverActive: false
     readonly property bool hovered: _pillHover.hovered
-    readonly property bool expanded: hoverActive || activeFocus
+    readonly property bool expanded: hoverActive
 
     property bool   pressed: false
-    readonly property bool visualPressed: pressed || _keys.pressed
+    readonly property bool visualPressed: pressed
 
     signal activated()
-
-    KeyActivation {
-        id: _keys
-        enabled: root.enabled && root.interactive
-        onActivated: root.activated()
-    }
 
     readonly property int  pillH:   Metrics.barRowHeight
     readonly property bool hasText: text.length > 0
@@ -73,9 +65,6 @@ Item {
         hoverActive = false
         if (_ready) _settleAnimatedContent()
     }
-    onInteractiveChanged: if (!interactive) _keys.cancel()
-    onEnabledChanged: if (!enabled) _keys.cancel()
-
     Timer {
         id: _shrinkDelay
         interval: root.shrinkDelay
@@ -140,19 +129,6 @@ Item {
     implicitHeight: Math.max(pillH, parent ? parent.height : 0)
     // only while it eases open into wider text, or the scan sweeps in from off-pill; a standing clip node breaks batching
     clip: _contentScan.active || row.width > width
-    // Qt refuses to clear activeFocusOnTab on the focused item and never retries, which
-    // would strand a hidden pill in the tab chain; holding it true re-evaluates on blur
-    activeFocusOnTab: (root.enabled && interactive) || root.activeFocus
-
-    Accessible.role: interactive ? Accessible.Button : Accessible.StaticText
-    Accessible.name: accessibleName.length > 0
-        ? accessibleName : (text.length > 0 ? text : glyph)
-    Accessible.description: accessibleDescription
-    Accessible.focusable: root.enabled && interactive
-    Accessible.onPressAction: if (root.enabled && root.interactive) root.activated()
-
-    Keys.onPressed:  event => _keys.press(event)
-    Keys.onReleased: event => _keys.release(event)
 
     Rectangle {
         id: _hoverCap
@@ -161,25 +137,21 @@ Item {
         width: parent.width
         height: root.pillH
         radius: Metrics.hoverRadiusFor(height)
-        readonly property bool _focus: root.activeFocusOnTab && root.activeFocus
         readonly property bool _hover: _pillHover.hovered
             && ShellSettings.barHoverHighlight
         color: root.visualPressed ? Theme.withAlpha(Theme.accent, 0.18)
-             : _focus ? Theme.withAlpha(Theme.accent, 0.14)
              : Theme.withAlpha(Theme.mix(Theme.text, Theme.accent, 0.30), 0.07)
-        opacity: (_hover || _focus || root.visualPressed) ? 1.0 : 0.0
+        opacity: (_hover || root.visualPressed) ? 1.0 : 0.0
         scale: root.visualPressed ? 0.985
-             : (_hover || _focus) ? 1.0 : 0.96
+             : _hover ? 1.0 : 0.96
         transformOrigin: Item.Center
         visible: opacity > 0.001
         OutlineBorder {
             radius: _hoverCap.radius
-            outlineWidth: _hoverCap._focus ? 2 : 1
-            outlineColor: _hoverCap._focus ? Theme.withAlpha(Theme.accent, Theme.focusRingAlpha) : "transparent"
         }
         MotionBehavior on opacity {
             NumberAnimation {
-                duration: (_hoverCap._hover || _hoverCap._focus || root.visualPressed)
+                duration: (_hoverCap._hover || root.visualPressed)
                     ? Motion.hoverIn : Motion.hoverOut
                 easing.type: Easing.OutCubic
             }
@@ -187,7 +159,7 @@ Item {
         MotionBehavior on scale {
             NumberAnimation {
                 duration: root.visualPressed ? Motion.press
-                    : (_hoverCap._hover || _hoverCap._focus)
+                    : _hoverCap._hover
                         ? Motion.hoverIn : Motion.hoverOut
                 easing.type: Easing.OutCubic
             }
@@ -230,7 +202,7 @@ Item {
 
     readonly property bool _contentHot: (_pillHover.hovered
         && ShellSettings.barHoverHighlight)
-        || root.visualPressed || activeFocus
+        || root.visualPressed
     readonly property color _hoverGlyphColor: _contentHot
         ? Theme.mix(glyphColor, Theme.accent, 0.20) : glyphColor
     readonly property color _hoverTextColor: _contentHot
@@ -394,10 +366,4 @@ Item {
         }
     }
 
-    onActiveFocusChanged: {
-        if (!activeFocus && !hovered) {
-            _keys.cancel()
-            hoverActive = false
-        }
-    }
 }

@@ -16,8 +16,6 @@ Pill {
     glyphPixelSize: Settings.iconSize + 3
     glyphColor:     Battery.iconColor
     textColor:      Battery.iconColor
-    accessibleName: !show ? "Battery unavailable"
-        : `Battery ${Battery.label}${Battery.statusLabel.length > 0 ? `, ${Battery.statusLabel}` : ""}${Battery.timeLabel.length > 0 ? `, ${Battery.timeLabel}` : ""}`
     animateGlyph:   false
     shrinkDelay:    0
     reserveText:    "100%"
@@ -25,8 +23,6 @@ Pill {
     levelVisible:   Battery.pct > 0 && ShellSettings.valuesOnHover
                     && ShellSettings.hoverLevelBar && !expanded
     levelColor:     Battery.iconColor
-    activeFocusOnTab: show || activeFocus
-    Accessible.focusable: true
     opacity: _baseOpacity * (Battery.critical ? 1.0 - Battery.alertPulse * 0.60
                            : (Battery.low     ? 1.0 - Battery.alertPulse * 0.18 : 1.0))
     visible: layoutVisible

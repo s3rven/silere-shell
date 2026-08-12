@@ -167,24 +167,18 @@ ShellRoot {
         })
         let trackChanged = -1
         track.changed.connect(value => trackChanged = value)
-        let keyEvent = { key: Qt.Key_Home, modifiers: 0, accepted: false }
-        track.handleKey(keyEvent)
-        root._check(track.shownValue === 0 && trackChanged === 0 && keyEvent.accepted,
-            "slider Home reaches the minimum")
-        keyEvent = { key: Qt.Key_End, modifiers: 0, accepted: false }
-        track.handleKey(keyEvent)
-        root._check(track.shownValue === 1 && trackChanged === 1 && keyEvent.accepted,
-            "slider End reaches the maximum")
-        keyEvent = { key: Qt.Key_PageDown, modifiers: 0, accepted: false }
-        track.handleKey(keyEvent)
-        root._check(track.shownValue === 0 && trackChanged === 0 && keyEvent.accepted,
-            "slider Page Down applies ten steps")
+        track.nudge(1, 10)
+        root._check(track.shownValue === 1 && trackChanged === 1,
+            "slider scroll steps stop at the maximum")
+        track.nudge(-1, 10)
+        root._check(track.shownValue === 0 && trackChanged === 0,
+            "slider scroll steps stop at the minimum")
         root._check(track._posToVal(0) === 0 && track._posToVal(100) === 1,
             "slider inset endpoints preserve the full range")
         track.interactive = false
         track.nudge(1, 1)
         root._check(track.shownValue === 0,
-            "non-interactive slider ignores keyboard nudges")
+            "non-interactive slider ignores scroll steps")
         track.destroy()
 
         const gradient = gradientSliderFactory.createObject(root, {
@@ -192,19 +186,17 @@ ShellRoot {
         })
         let picked = -1
         gradient.picked.connect(value => picked = value)
-        keyEvent = { key: Qt.Key_Home, modifiers: 0, accepted: false }
-        gradient._handleKey(keyEvent)
-        root._check(picked === 0 && keyEvent.accepted,
-            "colour slider Home reaches the minimum")
-        keyEvent = { key: Qt.Key_End, modifiers: 0, accepted: false }
-        gradient._handleKey(keyEvent)
-        root._check(Math.abs(picked - 359 / 360) < 0.000001 && keyEvent.accepted,
-            "wrapping colour slider End reaches its last distinct value")
+        root._check(gradient._wrapped(1.0) === 0
+                && Math.abs(gradient._wrapped(-0.25) - 0.75) < 0.000001,
+            "wrapping colour slider folds a step past either end")
+        root._check(Math.abs(gradient._clamped(2) - 359 / 360) < 0.000001
+                && gradient._clamped(-1) === 0,
+            "wrapping colour slider clamps to its last distinct value")
         gradient.interactive = false
         picked = -1
         gradient._nudge(1, 1)
         root._check(picked === -1,
-            "non-interactive colour slider ignores keyboard nudges")
+            "non-interactive colour slider ignores scroll steps")
         gradient.destroy()
 
         const toolsWas = SystemTools._tools

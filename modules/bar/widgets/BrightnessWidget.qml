@@ -24,21 +24,8 @@ Pill {
     levelValue: canControl ? Brightness.pct : -1
     levelVisible: canControl && ShellSettings.valuesOnHover && ShellSettings.hoverLevelBar && !expanded
     levelColor: Theme.accent
-    accessibleName: canControl ? `Brightness ${Brightness.percent} percent` : "Brightness unavailable"
-    accessibleDescription: "Scroll to adjust brightness."
-
-    activeFocusOnTab: canControl || activeFocus
-    Accessible.role: Accessible.Slider
-    Accessible.focusable: canControl
-    Accessible.onIncreaseAction: if (root.canControl) Brightness.bumpBy(Brightness.stepPct)
-    Accessible.onDecreaseAction: if (root.canControl) Brightness.bumpBy(-Brightness.stepPct)
 
     MotionBehavior on _baseOpacity {NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
-
-    Keys.onLeftPressed:  event => { if (canControl) { Brightness.bumpBy(-Brightness.stepPct); event.accepted = true } else event.accepted = false }
-    Keys.onDownPressed:  event => { if (canControl) { Brightness.bumpBy(-Brightness.stepPct); event.accepted = true } else event.accepted = false }
-    Keys.onRightPressed: event => { if (canControl) { Brightness.bumpBy(Brightness.stepPct);  event.accepted = true } else event.accepted = false }
-    Keys.onUpPressed:    event => { if (canControl) { Brightness.bumpBy(Brightness.stepPct);  event.accepted = true } else event.accepted = false }
 
     WheelHandler {
         enabled: root.canControl

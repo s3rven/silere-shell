@@ -198,9 +198,6 @@ PageShell {
                     font.pixelSize: Settings.fontSize + 3
                     font.weight: Font.DemiBold
                     elide: Text.ElideRight
-                    Accessible.role: Accessible.Heading
-                    Accessible.name: text
-                    Accessible.description: _detailHeader._meta.description
                 }
 
                 ShellText {
@@ -223,8 +220,6 @@ PageShell {
                 color: Theme.warning
                 font.pixelSize: Settings.fontMicro
                 elide: Text.ElideRight
-                Accessible.role: Accessible.StaticText
-                Accessible.name: "Configuration warning: " + text
             }
         }
 

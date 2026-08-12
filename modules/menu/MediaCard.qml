@@ -35,9 +35,8 @@ ClippingRectangle {
         // above the album art and its scrim: both fill the card and are declared later
         z: 1
         radius: root.radius
-        outlineWidth: _playerTarget.activeFocus ? 2 : 1
-        outlineColor: _playerTarget.activeFocus
-            ? Theme.withAlpha(Theme.accent, Theme.focusRingAlpha) : Theme.menuCardBorder
+        outlineWidth: 1
+        outlineColor: Theme.menuCardBorder
     }
 
     // fade only: a scale leg ran as a third competing animation and resampled NativeRendering text off-pixel
@@ -183,15 +182,6 @@ ClippingRectangle {
         anchors.right: parent.right
         anchors.bottom: _seek.top
         cursorShape: Qt.PointingHandCursor
-        activeFocusOnTab: Media.available || activeFocus
-        Accessible.role: Accessible.Button
-        Accessible.name: Media.label.length > 0
-            ? "Focus media player for " + Media.label : "Focus media player"
-        Accessible.focusable: true
-        Accessible.onPressAction: root._focusPlayer()
-        Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root._focusPlayer(); event.accepted = true }
-        Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._focusPlayer(); event.accepted = true }
-        Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root._focusPlayer(); event.accepted = true }
         onClicked: root._focusPlayer()
     }
 
@@ -255,7 +245,7 @@ ClippingRectangle {
             id: _identityText
             readonly property bool _switchable: Media.playerCount > 1
             readonly property bool _switchHover: _switchable && _identitySwitch.containsMouse
-            readonly property bool _switchFocused: _switchable && _identityText.activeFocus
+            readonly property bool _switchFocused: _switchable
 
             width: parent.width
             visible: _mediaCol._shownIdentity.length > 0
@@ -269,16 +259,6 @@ ClippingRectangle {
             font.letterSpacing: 1.2
             elide: Text.ElideRight
             ColorFade on color {}
-
-            activeFocusOnTab: _switchable || activeFocus
-            Accessible.role: Accessible.Button
-            Accessible.name: "Switch media player"
-            Accessible.description: Media.identity
-            Accessible.focusable: _switchable
-            Accessible.onPressAction: Media.cyclePlayer()
-            Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) Media.cyclePlayer(); event.accepted = true }
-            Keys.onReturnPressed: event => { if (!event.isAutoRepeat) Media.cyclePlayer(); event.accepted = true }
-            Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) Media.cyclePlayer(); event.accepted = true }
 
             MouseArea {
                 id: _identitySwitch
@@ -322,7 +302,6 @@ ClippingRectangle {
 
     Item {
         id: _seek
-        FocusVisual { id: _seekFocusVisual; target: _seek }
         visible: Media.hasPosition
         anchors {
             left:  parent.left;  leftMargin:  16
@@ -331,20 +310,6 @@ ClippingRectangle {
             bottomMargin: visible ? 12 : 0
         }
         height: visible ? 14 : 0
-
-        activeFocusOnTab: (Media.canSeek && Media.lengthKnown) || activeFocus
-        Accessible.role: Accessible.Slider
-        Accessible.name: "Seek"
-        Accessible.description: Media.lengthKnown
-            ? Media.formatTime(Media.positionNow) + " of " + Media.formatTime(Media.length)
-            : "Live, " + Media.formatTime(Media.positionNow) + " elapsed"
-        Accessible.focusable: Media.canSeek && Media.lengthKnown
-        Accessible.onIncreaseAction: if (Media.canSeek && Media.lengthKnown) _seekTrack.nudge(1, 1)
-        Accessible.onDecreaseAction: if (Media.canSeek && Media.lengthKnown) _seekTrack.nudge(-1, 1)
-        Keys.onPressed: event => {
-            _seekFocusVisual.noteKeyboardInput()
-            _seekTrack.handleKey(event)
-        }
 
         ShellText {
             id: _elapsedLabel
@@ -374,14 +339,12 @@ ClippingRectangle {
             height: 12
 
             interactive: Media.canSeek && Media.lengthKnown
-            focused:     _seekFocusVisual.active
             showThumb:   Media.canSeek && Media.lengthKnown
             hoverGrow:   false
             animate:     false
             commitOnRelease: true
             trackColor:  Theme.withAlpha(Theme.text, 0.20)
             value: Media.positionRatio
-            onInteractionStarted: _seekFocusVisual.takePointerFocus()
             onChanged: value => { if (Media.canSeek) Media.seekToRatio(value) }
         }
     }
@@ -396,7 +359,6 @@ ClippingRectangle {
 
         MediaButton {
             glyph: "󰒮"
-            accessibleName: "Previous track"
             available: Media.canGoPrevious
             onTriggered: Media.previous()
         }
@@ -414,14 +376,6 @@ ClippingRectangle {
             }
             MotionBehavior on scale   {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
-            activeFocusOnTab: _playBtn._on || activeFocus
-            Accessible.role: Accessible.Button
-            Accessible.name: Media.playing ? "Pause" : "Play"
-            Accessible.onPressAction: if (_playBtn._on) Media.togglePlay()
-            Keys.onSpacePressed:  event => { if (!event.isAutoRepeat && _playBtn._on) Media.togglePlay(); event.accepted = true }
-            Keys.onReturnPressed: event => { if (!event.isAutoRepeat && _playBtn._on) Media.togglePlay(); event.accepted = true }
-            Keys.onEnterPressed:  event => { if (!event.isAutoRepeat && _playBtn._on) Media.togglePlay(); event.accepted = true }
-
             HoverHandler { id: _playH; enabled: _playBtn._on; cursorShape: Qt.PointingHandCursor }
             TapHandler   { id: _playT; enabled: _playBtn._on; onTapped: Media.togglePlay() }
 
@@ -437,9 +391,8 @@ ClippingRectangle {
 
                 OutlineBorder {
                     radius: _playFill.radius
-                    outlineWidth: _playBtn.activeFocus ? 2 : 1
-                    outlineColor: _playBtn.activeFocus ? Theme.withAlpha(Theme.accent, Theme.focusRingAlpha)
-                        : Theme.menuControlLine
+                    outlineWidth: 1
+                    outlineColor: Theme.menuControlLine
                     ColorFade on outlineColor {}
                 }
             }
@@ -471,7 +424,6 @@ ClippingRectangle {
 
         MediaButton {
             glyph: "󰒭"
-            accessibleName: "Next track"
             available: Media.canGoNext
             onTriggered: Media.next()
         }

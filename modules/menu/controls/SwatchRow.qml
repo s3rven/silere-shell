@@ -18,7 +18,6 @@ Item {
     property string groupLabel: ""
 
     signal picked(int index)
-    signal focusMoved(int index)
 
     implicitHeight: Metrics.rowHeightFor(32)
     implicitWidth: edgePadding * 2 + options.length * 26
@@ -38,21 +37,6 @@ Item {
         root._rev
         const item = i >= 0 && i < _rep.count ? _rep.itemAt(i) : null
         return item ? _chipRow.x + item.x + item.width : 0
-    }
-
-    // no clamping: an arrow key past the edge must not pick, or a row with index -1 selects on the first keypress
-    // picking repaints the whole accent palette, so a held arrow must not walk the row
-    function _step(event, index: int): void {
-        if (!event.isAutoRepeat) root.focusAndPick(index)
-        event.accepted = true
-    }
-
-    function focusAndPick(index: int): void {
-        if (index < 0 || index >= _rep.count) return
-        const item = _rep.itemAt(index)
-        if (!item) return
-        item.forceActiveFocus()
-        if (index !== root.activeIndex) root.picked(index)
     }
 
     // itemAt() is null while the repeater populates; the bump forces a re-eval
@@ -81,15 +65,11 @@ Item {
                 name:      modelData.name ?? ""
                 groupLabel: root.groupLabel
                 active:    index === root.activeIndex
-                tabFocusable: index === Math.max(0, root.activeIndex)
                 onPicked:  root.picked(index)
                 onHoverChanged: (n, h) => {
                     if (h) root.hoveredIndex = index
                     else if (root.hoveredIndex === index) root.hoveredIndex = -1
                 }
-                onActiveFocusChanged: if (activeFocus) root.focusMoved(index)
-                Keys.onLeftPressed:  event => root._step(event, _sw.index - 1)
-                Keys.onRightPressed: event => root._step(event, _sw.index + 1)
 
                 Grid {
                     anchors.centerIn: parent

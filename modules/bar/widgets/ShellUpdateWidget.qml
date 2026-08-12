@@ -10,10 +10,6 @@ StatusActionPill {
 
     glyph: "󰚰"
     text:  expanded ? ShellUpdate.statusText : ""
-    accessibleName: `Shell update, ${ShellUpdate.statusText}`
-    accessibleDescription: ShellUpdate.pending
-        ? "Activate to review the signed shell release."
-        : "Activate to check for a signed shell release."
 
     onActivated: {
         if (!ShellUpdate.pending) {

@@ -43,10 +43,6 @@ Rectangle {
 
         height: Metrics.rowHeightFor(70)
 
-        Accessible.role: Accessible.StaticText
-        Accessible.name: tile.label
-        Accessible.description: tile.value + (tile.sub !== "" ? ", " + tile.sub : "")
-
         readonly property real _p: Math.max(0, Math.min(1, progress))
         property real _disp: _p
         MotionBehavior on _disp {

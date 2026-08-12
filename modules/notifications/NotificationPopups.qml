@@ -58,33 +58,16 @@ PanelWindow {
         property bool alignCenter: false
         property string glyph: ""
         property string label: ""
-        property string accessibleName: ""
         property color tint: Theme.accent
-        readonly property bool pressed: _tap.pressed || _keys.pressed
+        readonly property bool pressed: _tap.pressed
 
         signal triggered()
-
-        KeyActivation {
-            id: _keys
-            onActivated: chip.triggered()
-        }
 
         width:   parent ? parent.width : 0
         height:  shown ? 30 : 0
         clip:    true
         enabled: shown
         visible: height > 0.5
-        activeFocusOnTab: shown || activeFocus
-
-        Accessible.role: Accessible.Button
-        Accessible.name: chip.accessibleName
-        Accessible.onPressAction: chip.triggered()
-
-        onActiveFocusChanged: if (!activeFocus) _keys.cancel()
-        onShownChanged: if (!shown) _keys.cancel()
-
-        Keys.onPressed:  event => _keys.press(event)
-        Keys.onReleased: event => _keys.release(event)
 
         Disclosure on height { expanded: chip.shown }
 
@@ -108,10 +91,8 @@ PanelWindow {
 
             OutlineBorder {
                 radius: _surface.radius
-                outlineWidth: chip.activeFocus ? 2 : 1
-                outlineColor: chip.activeFocus
-                    ? Theme.withAlpha(chip.tint, 0.72)
-                    : _hover.hovered
+                outlineWidth: 1
+                outlineColor: _hover.hovered
                     ? Theme.withAlpha(chip.tint, 0.42) : Theme.menuControlLine
                 ColorFade on outlineColor {}
             }
@@ -305,7 +286,6 @@ PanelWindow {
             glyph:          "󰆴"
             label:          "Clear all"
             tint:           Theme.error
-            accessibleName: "Dismiss all notifications"
             onTriggered:    win.dismissAll()
         }
 
@@ -421,7 +401,6 @@ PanelWindow {
             alignCenter:    win._center
             glyph:          "󰂚"
             label:          "Show " + _extra + " more"
-            accessibleName: "Show " + _extra + " more notifications"
             onTriggered:    win.revealAll()
         }
     }

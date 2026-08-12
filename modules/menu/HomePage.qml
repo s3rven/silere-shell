@@ -43,38 +43,16 @@ PageShell {
             root._closePicker()
             return
         }
-        const pickerMoved = root._closePicker()
-        const volumeMoved = _volumeRow.closeInline()
-        const brightnessMoved = _brightnessRow.closeInline()
+        root._closePicker()
+        _volumeRow.closeInline()
+        _brightnessRow.closeInline()
         _picker = which
-        if (pickerMoved || volumeMoved || brightnessMoved) {
-            const fromPointer = which === "wifi" ? _wifiRow.pointerFocusActive
-                : which === "bt" ? _btRow.pointerFocusActive
-                : _nightRow.pointerFocusActive
-            root._focusPickerTrigger(which, fromPointer)
-        }
-    }
-
-    function _focusPickerTrigger(which: string, fromPointer): void {
-        const trigger = which === "wifi" ? _wifiRow
-            : which === "bt" ? _btRow : _nightRow
-        if (!trigger) return
-        if (fromPointer === true) trigger.focusFromPointer()
-        else trigger.focusFromKeyboard()
     }
 
     function _closePicker(): bool {
-        const which = root._picker
-        if (which === "") return false
-        const focusWindow = root.Window.window
-        const focusedItem = focusWindow ? focusWindow.activeFocusItem : null
-        const ownsFocus = which === "wifi" ? ItemTree.isInside(focusedItem, _wifiPicker)
-            : which === "bt" ? ItemTree.isInside(focusedItem, _btPicker)
-            : ItemTree.isInside(focusedItem, _nightPicker)
-        if (ownsFocus) root._focusPickerTrigger(which,
-            focusedItem && focusedItem.pointerFocusActive === true)
+        if (root._picker === "") return false
         root._picker = ""
-        return ownsFocus
+        return true
     }
 
     function dismissInline(): bool {

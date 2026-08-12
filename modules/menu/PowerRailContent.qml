@@ -13,7 +13,6 @@ Item {
     implicitHeight: _body.implicitHeight
     enabled: active
     focus: active
-    activeFocusOnTab: active
 
     readonly property bool _statusVisible: PowerProfiles.available || Battery.available
     readonly property string _batterySource: !Battery.available ? ""
@@ -31,68 +30,16 @@ Item {
     onActiveChanged: {
         if (active) {
             if (PowerProfiles.available) PowerProfiles.refresh()
-            Qt.callLater(function() {
-                if (root.active) root.forceActiveFocus()
-            })
         } else {
             _powReb.disarm()
             _powOff.disarm()
         }
     }
 
-    function _firstAction(): var {
-        if (_powLock.enabled) return _powLock
-        if (_powSusp.enabled) return _powSusp
-        if (_powReb.enabled)  return _powReb
-        if (_powOff.enabled)  return _powOff
-        return null
-    }
-
-    function _lastAction(): var {
-        if (_powOff.enabled)  return _powOff
-        if (_powReb.enabled)  return _powReb
-        if (_powSusp.enabled) return _powSusp
-        if (_powLock.enabled) return _powLock
-        return null
-    }
-
-    function _navRows(): var {
-        const rows = []
-        if (_powMode.visible && _powMode.enabled) rows.push(_powMode)
-        if (_powLock.enabled) rows.push(_powLock)
-        if (_powSusp.enabled) rows.push(_powSusp)
-        if (_powReb.enabled)  rows.push(_powReb)
-        if (_powOff.enabled)  rows.push(_powOff)
-        return rows
-    }
-
-    function _rowAfter(row, dir: int): var {
-        const rows = _navRows()
-        if (rows.length === 0) return row
-        const idx = rows.indexOf(row)
-        if (idx < 0) return dir > 0 ? rows[0] : rows[rows.length - 1]
-        return rows[(idx + dir + rows.length) % rows.length]
-    }
-
     function _runAction(command, title: string): void {
         MenuState.close()
         SystemTools.runOrNotify(command, title)
     }
-
-    function focusFirstAction(): void {
-        const item = _firstAction()
-        if (item) item.forceActiveFocus()
-    }
-
-    function focusLastAction(): void {
-        const item = _lastAction()
-        if (item) item.forceActiveFocus()
-    }
-
-    Keys.onDownPressed: event => { root.focusFirstAction(); event.accepted = true }
-    Keys.onRightPressed: event => { root.focusFirstAction(); event.accepted = true }
-    Keys.onUpPressed: event => { root.focusLastAction(); event.accepted = true }
-    Keys.onLeftPressed: event => { root.focusLastAction(); event.accepted = true }
 
     Column {
         id: _body
@@ -112,8 +59,6 @@ Item {
                 value: root._profileValue
                 glyph: PowerProfiles.glyph
                 enabled: PowerProfiles.available && PowerProfiles.profile !== ""
-                KeyNavigation.down: root._rowAfter(_powMode, 1)
-                KeyNavigation.up: root._rowAfter(_powMode, -1)
                 onTriggered: PowerProfiles.cycle()
             }
 
@@ -167,8 +112,6 @@ Item {
                 label: "Lock"
                 glyph: "󰍁"
                 enabled: SystemTools.commandAvailable(Settings.lockCommand)
-                KeyNavigation.up: root._rowAfter(_powLock, -1)
-                KeyNavigation.down: root._rowAfter(_powLock, 1)
                 onTriggered: root._runAction(Settings.lockCommand, "Lock failed")
             }
 
@@ -178,8 +121,6 @@ Item {
                 label: "Sleep"
                 glyph: "󰒲"
                 enabled: SystemTools.commandAvailable(Settings.suspendCommand)
-                KeyNavigation.up: root._rowAfter(_powSusp, -1)
-                KeyNavigation.down: root._rowAfter(_powSusp, 1)
                 onTriggered: root._runAction(Settings.suspendCommand, "Suspend failed")
             }
 
@@ -191,8 +132,6 @@ Item {
                 enabled: SystemTools.commandAvailable(Settings.rebootCommand)
                 confirm: true
                 dangerous: true
-                KeyNavigation.up: root._rowAfter(_powReb, -1)
-                KeyNavigation.down: root._rowAfter(_powReb, 1)
                 onArmedChanged: if (armed) _powOff.disarm()
                 onTriggered: root._runAction(Settings.rebootCommand, "Reboot failed")
             }
@@ -205,8 +144,6 @@ Item {
                 enabled: SystemTools.commandAvailable(Settings.poweroffCommand)
                 confirm: true
                 dangerous: true
-                KeyNavigation.up: root._rowAfter(_powOff, -1)
-                KeyNavigation.down: root._rowAfter(_powOff, 1)
                 onArmedChanged: if (armed) _powReb.disarm()
                 onTriggered: root._runAction(Settings.poweroffCommand, "Shut down failed")
             }

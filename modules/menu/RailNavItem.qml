@@ -7,7 +7,6 @@ Item {
 
     property string glyph: ""
     property string label: ""
-    property string accessibleDescription: ""
     property bool active: false
     property color accentColor: Theme.accent
     property int railW: 44
@@ -17,24 +16,12 @@ Item {
     property RailLabelGroup labels: null
     property bool _hoverReady: false
 
-    FocusVisual { id: _focusVisual; target: root }
-
-    readonly property bool _hot: _hover.hovered || _focusVisual.active
+    readonly property bool _hot: _hover.hovered
 
     signal tapped()
 
     width: railW
     height: Metrics.rowHeightFor(34)
-    activeFocusOnTab: true
-    Accessible.role: Accessible.Button
-    Accessible.name: root.label
-    Accessible.description: root.accessibleDescription.length > 0
-        ? root.accessibleDescription
-        : (root.active ? "Current page" : "Open " + root.label)
-    Accessible.selectable: true
-    Accessible.selected: root.active
-    Accessible.pressed: _tap.pressed
-    Accessible.onPressAction: root.tapped()
 
     Timer {
         id: _labelDelay
@@ -60,14 +47,9 @@ Item {
     TapHandler {
         id: _tap
         onTapped: {
-            _focusVisual.takePointerFocus()
             root.tapped()
         }
     }
-    Keys.onPressed: _focusVisual.noteKeyboardInput()
-    Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root.tapped(); event.accepted = true }
-    Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root.tapped(); event.accepted = true }
-    Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root.tapped(); event.accepted = true }
 
     // Nerd Font glyphs have uneven bearings; measure ink to centre the icon in the pill
     TextMetrics {
@@ -93,7 +75,7 @@ Item {
 
         OutlineBorder {
             radius: _activeBg.radius
-            outlineColor: (root.active || _hover.hovered || _focusVisual.active)
+            outlineColor: (root.active || _hover.hovered)
                 ? (root.active ? Theme.menuControlLine : Theme.menuControlLineHot)
                 : "transparent"
             ColorFade on outlineColor {}
@@ -110,8 +92,8 @@ Item {
         text: root.glyph
         color: root.active
             ? Theme.mix(root.accentColor, Theme.text, 0.10)
-            : Theme.withAlpha(Theme.mix(Theme.subtext, root.accentColor, _hover.hovered || _focusVisual.active ? 0.24 : 0),
-                               _hover.hovered || _focusVisual.active ? 0.78 : 0.50)
+            : Theme.withAlpha(Theme.mix(Theme.subtext, root.accentColor, _hover.hovered ? 0.24 : 0),
+                               _hover.hovered ? 0.78 : 0.50)
         font.pixelSize: Settings.iconSize + 2
         scale: _tap.pressed ? 0.92 : (root.active ? 1.015 : 1.0)
         transformOrigin: Item.Center
@@ -123,8 +105,7 @@ Item {
         id: _pill
         // not focus alone: tapping Power force-focuses it and would pin the label open while the rail stays open
         readonly property bool _show: root.labelPillEnabled
-            && ((_hover.hovered && root._hoverReady)
-                || (_focusVisual.active && !root.active))
+            && _hover.hovered && root._hoverReady
         on_ShowChanged: if (_show && root.labels) root.labels.engage()
 
         x: root.railW + 7

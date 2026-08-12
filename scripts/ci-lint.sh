@@ -806,6 +806,36 @@ else
   ok "scroll" "every list and flickable inherits one scroll feel"
 fi
 
+section "pointer-only interaction"
+# Silere is pointer-driven by decision: keyboard navigation and the accessibility
+# metadata that described it were removed wholesale. These creep back one property at a
+# time, and a single re-added Accessible role or tab stop reads as an oversight rather
+# than a choice, so the rule is enforced instead of remembered.
+readded="$(grep -rlnE '(^|[^A-Za-z])(Accessible\.|activeFocusOnTab|KeyNavigation\.)' \
+  --include='*.qml' modules config services || true)"
+if [ -n "$readded" ]; then
+  fail "accessibility metadata and tab stops were removed on purpose:"
+  while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$readded"
+else
+  ok "pointer only" "no accessibility metadata or tab stops"
+fi
+
+# Typed text is the one thing that legitimately needs keys, so a Keys handler is allowed
+# only in a file that actually hosts a text field. Everything else is navigation.
+key_handlers="$(grep -rln 'Keys\.on' --include='*.qml' modules config services || true)"
+key_offenders=""
+while IFS= read -r m; do
+  [ -n "$m" ] || continue
+  grep -q 'TextInput' "$m" || key_offenders="$key_offenders$m"$'\n'
+done <<< "$key_handlers"
+key_offenders="$(printf '%s' "$key_offenders" | grep -c . >/dev/null 2>&1 && printf '%s' "$key_offenders" || true)"
+if [ -n "$(printf '%s' "$key_offenders" | grep . || true)" ]; then
+  fail "key handlers belong to text entry only; navigation keys were removed:"
+  while IFS= read -r m; do [ -n "$m" ] && printf '  %s\n' "$m"; done <<< "$key_offenders"
+else
+  ok "key handlers" "only text entry handles keys"
+fi
+
 section "row height derivation"
 # Metrics.rowHeightFor already snaps a design height to the 4px grid using the measured
 # base cap height. Hand-rolled "capHeight + 12" hardcodes a base of 20; the real one is

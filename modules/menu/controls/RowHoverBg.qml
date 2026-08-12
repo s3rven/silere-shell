@@ -9,10 +9,8 @@ Item {
     property real  cardInset:    1
     property real  leftBleed:    0
     property bool  active:       false
-    property bool  focusActive:  false
-    property real  fillOpacity:  focusActive ? 0.13 : 0.08
+    property real  fillOpacity:  0.08
     property color fillColor:    Theme.menuHover
-    property color focusColor:   Theme.accent
 
     Rectangle {
         readonly property real _topR: Math.max(0, root.topRadius    - root.cardInset)
@@ -33,8 +31,6 @@ Item {
 
         color: Theme.withAlpha(root.fillColor,
             root.active ? root.fillOpacity : 0)
-        border.width: root.focusActive ? 1 : 0
-        border.color: Theme.withAlpha(root.focusColor, Theme.focusRingSoftAlpha)
         ColorFade on color {}
     }
 }

@@ -17,12 +17,8 @@ Item {
     implicitHeight: 4 * Math.ceil((_text.implicitHeight + _topPad + _bottomPad) / 4)
     clip: true
 
-    Accessible.role: Accessible.StaticText
-    Accessible.name: root.text
-
     ShellText {
         id: _text
-        Accessible.ignored: true
         x: root._hPad
         y: root._topPad
         width: Math.max(0, parent.width - root._hPad * 2)

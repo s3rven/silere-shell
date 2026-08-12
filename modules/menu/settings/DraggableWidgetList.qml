@@ -23,7 +23,6 @@ Item {
     property var _previewLayout: ({ left: [], center: [], right: [], loc: ({}) })
     property string _draggingKey: ""
     property real _dragY: 0
-    property string _pendingFocusKey: ""
     property bool _resetArmed: false
 
     readonly property var _leftKeys: _draggingKey.length > 0
@@ -197,45 +196,6 @@ Item {
         root._previewLayout = ({ left: [], center: [], right: [], loc: ({}) })
     }
 
-    function _moveToZone(key: string, targetZone: string): void {
-        const loc = ShellSettings.barWidgetLocate(key)
-        if (loc.index < 0 || loc.zone === targetZone) return
-        const target = targetZone === "left" ? ShellSettings.barWidgetOrderLeftKeys
-            : targetZone === "center" ? ShellSettings.barWidgetOrderCenterKeys
-            : ShellSettings.barWidgetOrderRightKeys
-        ShellSettings.setBarWidgetZone(key, targetZone,
-            Math.min(loc.index, target.length))
-        root._queueFocus(key)
-    }
-
-    function _focusKey(key: string): void {
-        const modelIndex = root._allKeys.indexOf(key)
-        const item = modelIndex >= 0 ? _rows.itemAt(modelIndex) : null
-        if (item) item.focusRow()
-    }
-
-    function _focusRelative(key: string, delta: int): void {
-        const ordered = root._leftKeys.concat(root._centerKeys, root._rightKeys)
-        const i = ordered.indexOf(key)
-        if (i < 0) return
-        root._focusKey(ordered[Math.max(0, Math.min(ordered.length - 1, i + delta))])
-    }
-
-    function _queueFocus(key: string): void {
-        root._pendingFocusKey = key
-        _focusDefer.restart()
-    }
-
-    Timer {
-        id: _focusDefer
-        interval: 0
-        onTriggered: {
-            const key = root._pendingFocusKey
-            root._pendingFocusKey = ""
-            if (key.length > 0) root._focusKey(key)
-        }
-    }
-
     Timer {
         id: _resetArmTimeout
         interval: 3000
@@ -279,8 +239,6 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             height: Metrics.rowHeightFor(24)
             label: root._resetArmed ? "Confirm" : "Reset"
-            accessibleName: root._resetArmed
-                ? "Confirm resetting bar widgets" : "Reset bar widgets"
             emphasis: root._resetArmed
             accentColor: root._resetArmed ? Theme.warning : Theme.accent
             visible: ShellSettings.barWidgetsModified
@@ -297,8 +255,6 @@ Item {
                 }
                 _resetArmTimeout.stop()
                 root._resetArmed = false
-                const ordered = root._leftKeys.concat(root._centerKeys, root._rightKeys)
-                if (ordered.length > 0) root._focusKey(ordered[0])
                 ShellSettings.resetBarWidgets()
             }
         }
@@ -392,10 +348,6 @@ Item {
             z: dragging ? 20 : 1
             y: dragging ? root._dragY : root._yForSlot(combinedSlot)
 
-            function focusRow(): void { _keyFocus.forceActiveFocus() }
-
-            FocusVisual { id: _rowFocusVisual; target: _keyFocus }
-
             MotionBehavior on y {
                 gate: !_row.dragging
                 NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
@@ -405,11 +357,9 @@ Item {
                 cardInset: 0
                 topRadius: Theme.radiusControl
                 bottomRadius: Theme.radiusControl
-                active: _row.dragging || _rowHover.hovered || _rowFocusVisual.active
-                focusActive: _rowFocusVisual.active
+                active: _row.dragging || _rowHover.hovered
                 fillColor: _row.dragging ? Theme.accent : Theme.text
-                fillOpacity: _row.dragging ? 0.11
-                    : (_rowFocusVisual.active ? 0.07 : 0.04)
+                fillOpacity: _row.dragging ? 0.11 : 0.04
             }
 
             HoverHandler {
@@ -424,7 +374,6 @@ Item {
 
                 onActiveChanged: {
                     if (active) {
-                        _rowFocusVisual.takePointerFocus()
                         root._beginDrag(_row.key)
                         startY = root._dragY
                     } else {
@@ -496,7 +445,6 @@ Item {
                 TapHandler {
                     id: _toggleTap
                     onTapped: {
-                        _rowFocusVisual.takePointerFocus()
                         _toggle.armFlipAnimation()
                         ShellSettings.setBarWidgetConfiguredVisible(
                             _row.key, !_row.checked)
@@ -508,66 +456,10 @@ Item {
                     anchors.centerIn: parent
                     checked: _row.checked
                     highlighted: _toggleHover.hovered
-                    focused: _rowFocusVisual.active
                     pressed: _toggleTap.pressed
                 }
             }
 
-            FocusScope {
-                id: _keyFocus
-                anchors.fill: parent
-                activeFocusOnTab: true
-
-                Accessible.role: _row.hasToggle
-                    ? Accessible.Switch : Accessible.ListItem
-                Accessible.name: _row.meta.label
-                Accessible.checked: _row.checked
-                Accessible.description: (_row.zone === "left" ? "Left"
-                    : _row.zone === "center" ? "Center" : "Right")
-                    + " zone. Drag to move; arrow keys navigate; Left and Right change zones; Control Up and Down reorder."
-                Accessible.onPressAction: activateToggle()
-                Accessible.onToggleAction: activateToggle()
-
-                Keys.onPressed: _rowFocusVisual.noteKeyboardInput()
-
-                function activateToggle(): bool {
-                    if (!_row.hasToggle) return false
-                    _toggle.armFlipAnimation()
-                    ShellSettings.setBarWidgetConfiguredVisible(
-                        _row.key, !_row.checked)
-                    return true
-                }
-
-                function toggle(event): void {
-                    event.accepted = !event.isAutoRepeat && activateToggle()
-                }
-
-                function changeZone(delta: int, event): void {
-                    const current = root._zones.indexOf(_row.zone)
-                    const next = Math.max(0, Math.min(root._zones.length - 1,
-                        current + delta))
-                    if (next !== current) root._moveToZone(_row.key, root._zones[next])
-                    event.accepted = true
-                }
-
-                function move(delta: int, event): void {
-                    if (event.modifiers & Qt.ControlModifier) {
-                        ShellSettings.moveBarWidget(_row.key, delta)
-                        root._queueFocus(_row.key)
-                    } else {
-                        root._focusRelative(_row.key, delta)
-                    }
-                    event.accepted = true
-                }
-
-                Keys.onSpacePressed: event => toggle(event)
-                Keys.onReturnPressed: event => toggle(event)
-                Keys.onEnterPressed: event => toggle(event)
-                Keys.onLeftPressed: event => changeZone(-1, event)
-                Keys.onRightPressed: event => changeZone(1, event)
-                Keys.onUpPressed: event => move(-1, event)
-                Keys.onDownPressed: event => move(1, event)
-            }
         }
     }
 

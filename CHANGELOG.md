@@ -13,6 +13,17 @@ This file stays focused on work since the latest release. Completed notes move t
 
 ## [Unreleased]
 
+- Removed keyboard navigation and the accessibility metadata that went with it. Tab
+  order, arrow-key stepping, focus rings, the settings sidebar's keyboard cursor and
+  every `Accessible` role, name and description are gone; the shell is pointer-driven.
+  Escape still steps back and closes, scroll wheels still work everywhere they did, and
+  the Wi-Fi password field still takes typed input. Screen readers can no longer
+  describe the shell.
+- Removed the code the keyboard layer was the last caller of: the item-tree, focus-visual
+  and key-activation primitives, the workspace focus ring, and nine now-unreachable
+  helpers. The checks now reject a re-added tab stop or accessibility role outright, and
+  allow key handlers only in a file that hosts a text field.
+
 - Made optional-tool and font detection refresh cleanly at runtime, with stable
   capability state and explicit backend failure tracking.
 - Added reusable process retry/exit health and Cava runtime/config status so

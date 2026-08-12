@@ -82,9 +82,6 @@ PageShell {
 
     function clearAll(): void {
         if (_clearing || Notifications.historyCount === 0) return
-        // A pointer tap does not focus the Clear button, so a notification delegate
-        // may still own focus. Release it before clearHistory destroys every delegate.
-        root.forceActiveFocus()
         if (ShellSettings.reduceMotion) {
             Notifications.clearHistory()
             return
@@ -166,9 +163,7 @@ PageShell {
                 height: Metrics.rowHeightFor(30)
                 radius: Theme.radiusControl
                 antialiasing: true
-                activeFocusOnTab: visible
                 onVisibleChanged:     if (!visible) root._clearArmed = false
-                onActiveFocusChanged: if (!activeFocus) root._clearArmed = false
 
                 color: root._clearArmed
                     ? Theme.withAlpha(Theme.error, _clearTap.pressed ? 0.28 : 0.16)
@@ -178,22 +173,12 @@ PageShell {
 
                 OutlineBorder {
                     radius: _clearButton.radius
-                    outlineWidth: (_clearButton.activeFocus || root._clearArmed) ? 2 : 1
+                    outlineWidth: (root._clearArmed) ? 2 : 1
                     outlineColor: root._clearArmed
                         ? Theme.withAlpha(Theme.error, Theme.focusRingAlpha)
-                        : _clearButton.activeFocus ? Theme.withAlpha(Theme.error, Theme.focusRingAlpha)
                         : _clearHover.hovered ? Theme.menuControlLineHot : Theme.menuControlLine
                     ColorFade on outlineColor {}
                 }
-
-                Accessible.role: Accessible.Button
-                Accessible.name: "Clear all notifications"
-                Accessible.description: root._clearArmed ? "Activate again to confirm" : ""
-                Accessible.onPressAction: root.requestClearAll()
-                Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root.requestClearAll(); event.accepted = true }
-                Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root.requestClearAll(); event.accepted = true }
-                Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root.requestClearAll(); event.accepted = true }
-                Keys.onEscapePressed: event => { if (root._clearArmed) { root._clearArmed = false; event.accepted = true } else event.accepted = false }
 
                 MotionBehavior on width {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
                 ColorFade on color {}
@@ -232,9 +217,6 @@ PageShell {
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 10
             visible: !Notifications.hasHistory
-            Accessible.role: Accessible.StaticText
-            Accessible.name: "No notifications"
-            Accessible.description: "New notifications will appear here"
 
             Column {
                 anchors.centerIn: parent
@@ -255,7 +237,6 @@ PageShell {
 
                     ShellText {
                         anchors.centerIn: parent
-                        Accessible.ignored: true
                         text: "󰂛"
                         color: Theme.withAlpha(Theme.subtext, 0.34)
                         font.pixelSize: 24
@@ -266,7 +247,6 @@ PageShell {
 
                 ShellText {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    Accessible.ignored: true
                     text: "All caught up"
                     color: Theme.withAlpha(Theme.text, 0.78)
                     font.pixelSize: Settings.fontSize + 1
@@ -275,7 +255,6 @@ PageShell {
 
                 ShellText {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    Accessible.ignored: true
                     text: "New notifications will appear here"
                     color: Theme.withAlpha(Theme.subtext,
                         ShellSettings.highContrast ? 0.72 : 0.52)
@@ -305,12 +284,6 @@ PageShell {
             add: Transition {
                 enabled: !root._clearing
                 NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Motion.fast }
-            }
-
-            function revealIndex(rowIndex: int): void {
-                if (rowIndex < 0 || rowIndex >= count) return
-                currentIndex = rowIndex
-                positionViewAtIndex(rowIndex, ListView.Contain)
             }
 
             delegate: Item {
@@ -354,21 +327,11 @@ PageShell {
                     function removeSelf(): void {
                         if (_removing || root._clearing) return
                         const rowIndex = index
-                        if (_removeButton.activeFocus || _card.activeFocus) {
-                            let nextItem = rowIndex + 1 < Notifications.historyModel.count
-                                ? _historyList.itemAtIndex(rowIndex + 1) : null
-                            if (!nextItem && rowIndex > 0)
-                                nextItem = _historyList.itemAtIndex(rowIndex - 1)
-                            if (nextItem) nextItem.focusRemoveButton()
-                            else root.forceActiveFocus()
-                        }
                         // Persist immediately. A delegate-owned delay is lost if
                         // the user changes pages before its timer fires.
                         _removing = true
                         Notifications.removeFromHistory(rowIndex)
                     }
-
-                    function focusRemoveButton(): void { _removeButton.forceActiveFocus() }
 
                     Item {
                         visible: _entry._showSection
@@ -412,10 +375,8 @@ PageShell {
 
                         OutlineBorder {
                             radius: _card.radius
-                            outlineWidth: _card.activeFocus ? 2 : 1
-                            outlineColor: _card.activeFocus
-                                ? Theme.withAlpha(_entry._critical ? Theme.error : Theme.accent, Theme.focusRingAlpha)
-                                : _entry._critical ? Theme.withAlpha(Theme.error, 0.50)
+                            outlineWidth: 1
+                            outlineColor: _entry._critical ? Theme.withAlpha(Theme.error, 0.50)
                                 : Theme.menuCardBorder
                             ColorFade on outlineColor {}
                         }
@@ -434,19 +395,6 @@ PageShell {
                                 _entry._toggleExpand()
                             }
                         }
-
-                        activeFocusOnTab: _body.truncated || _entry._expanded
-                        onActiveFocusChanged: {
-                            if (activeFocus) _historyList.revealIndex(_entry.index)
-                        }
-                        Accessible.role: activeFocusOnTab ? Accessible.Button : Accessible.StaticText
-                        Accessible.name: String(_entry.modelData.summary || "Notification")
-                        Accessible.description: activeFocusOnTab
-                            ? (_entry._expanded ? "Activate to collapse" : "Activate to expand") : ""
-                        Accessible.onPressAction: _entry._toggleExpand()
-                        Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) _entry._toggleExpand(); event.accepted = true }
-                        Keys.onReturnPressed: event => { if (!event.isAutoRepeat) _entry._toggleExpand(); event.accepted = true }
-                        Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) _entry._toggleExpand(); event.accepted = true }
 
                         Rectangle {
                             anchors.left: parent.left
@@ -484,7 +432,6 @@ PageShell {
                                     ShellText {
                                         anchors.centerIn: parent
                                         visible: _recentAppIcon.status !== Image.Ready
-                                        Accessible.ignored: true
                                         text: SafeText.initial(_appIconSlot._fallbackSource, "N")
                                         color: Theme.withAlpha(Theme.subtext, 0.70)
                                         font.pixelSize: Settings.fontMicro
@@ -557,34 +504,21 @@ PageShell {
                             height: 24
                             radius: 12
                             antialiasing: true
-                            activeFocusOnTab: !_entry._removing || activeFocus
-                            onActiveFocusChanged: {
-                                if (activeFocus) _historyList.revealIndex(_entry.index)
-                            }
                             z: 2
 
                             color: _removeTap.pressed
                                 ? Theme.withAlpha(Theme.error, 0.24)
                                 : _removeHover.hovered ? Theme.withAlpha(Theme.error, 0.17) : Theme.withAlpha(Theme.subtext, 0.08)
-                            opacity: _entryHover.hovered || activeFocus ? 1.0 : 0.62
-                            scale: _entryHover.hovered || activeFocus ? 1.0 : 0.94
-
-                            Accessible.role: Accessible.Button
-                            Accessible.name: "Remove " + String(_entry.modelData.summary || "notification")
-                            Accessible.onPressAction: _entry.removeSelf()
-                            Keys.onSpacePressed: event => { if (!event.isAutoRepeat) _entry.removeSelf(); event.accepted = true }
-                            Keys.onReturnPressed: event => { if (!event.isAutoRepeat) _entry.removeSelf(); event.accepted = true }
-                            Keys.onEnterPressed: event => { if (!event.isAutoRepeat) _entry.removeSelf(); event.accepted = true }
+                            opacity: _entryHover.hovered ? 1.0 : 0.62
+                            scale: _entryHover.hovered ? 1.0 : 0.94
 
                             ColorFade on color {}
                             MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
 
                             OutlineBorder {
                                 radius: _removeButton.radius
-                                outlineWidth: _removeButton.activeFocus ? 2 : 1
-                                outlineColor: _removeButton.activeFocus
-                                    ? Theme.withAlpha(Theme.error, Theme.focusRingAlpha)
-                                    : _removeHover.hovered ? Theme.withAlpha(Theme.error, 0.36) : Theme.menuControlLine
+                                outlineWidth: 1
+                                outlineColor: _removeHover.hovered ? Theme.withAlpha(Theme.error, 0.36) : Theme.menuControlLine
                                 ColorFade on outlineColor {}
                             }
                             MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }

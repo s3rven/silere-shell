@@ -371,14 +371,6 @@ Item {
         return target
     }
 
-    function _focusWsIndex(index: int): void {
-        const n = _wsRepeater.count
-        if (n <= 0) return
-        const i = ((index % n) + n) % n
-        const item = _wsRepeater.itemAt(i)
-        if (item) item.forceActiveFocus()
-    }
-
     function openAnchorMenu(): void {
         root._syncMenuAnchor()
         MenuState.toggleAt(root.menuAnchorX, root.screen, root)
@@ -465,7 +457,6 @@ Item {
                 onAnchorMenuRequested:     root.openAnchorMenu()
                 onQuickActionsRequested:   root.openQuickActions()
                 onMarkerPulseRequested:    marker.pulse()
-                onFocusSiblingRequested:   i => root._focusWsIndex(i)
                 onHoverReported:           (id, on) => {
                     if (on) root._hoveredWsId = id
                     else if (root._hoveredWsId === id) root._hoveredWsId = 0

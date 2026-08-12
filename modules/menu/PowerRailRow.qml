@@ -22,7 +22,7 @@ Rectangle {
 
     signal triggered()
 
-    readonly property bool _hot: root.enabled && root.interactive && (_hover.hovered || root.activeFocus)
+    readonly property bool _hot: root.enabled && root.interactive && (_hover.hovered)
     readonly property bool _showValue: root.value.length > 0 && !root.armed
     readonly property int _valueMaxW: Math.max(42, Math.min(86, Math.round(root.width * 0.52)))
     property real _shift: root._hot || root.armed ? 0.5 : 0.0
@@ -48,21 +48,13 @@ Rectangle {
     color: root.armed
         ? Theme.withAlpha(Theme.error, 0.105)
         : root._hot ? Theme.withAlpha(Theme.text, 0.045) : "transparent"
-    activeFocusOnTab: root.enabled && root.interactive
 
     OutlineBorder {
         radius: root.radius
         outlineWidth: 2
-        outlineColor: root.activeFocus && !root.armed
-            ? (root.dangerous ? Theme.withAlpha(Theme.error, 0.34) : Theme.menuControlLineHot)
-            : "transparent"
+        outlineColor: "transparent"
         ColorFade on outlineColor {}
     }
-
-    Accessible.role: root.interactive ? Accessible.Button : Accessible.StaticText
-    Accessible.name: root.armed ? root.label + ", press again to confirm" : root.label
-    Accessible.description: root.value
-    Accessible.onPressAction: root.activate()
 
     function disarm(): void {
         root.armed = false
@@ -132,14 +124,6 @@ Rectangle {
     TapHandler {
         enabled: root.enabled && root.interactive
         onTapped: root.activate()
-    }
-
-    Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root.activate(); event.accepted = true }
-    Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root.activate(); event.accepted = true }
-    Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root.activate(); event.accepted = true }
-    Keys.onEscapePressed: event => {
-        if (root.armed) { root.disarm(); event.accepted = true }
-        else event.accepted = false
     }
 
     ColorFade on color {}

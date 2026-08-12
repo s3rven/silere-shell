@@ -124,11 +124,11 @@ When a release changes the settings format, the old file is copied to `settings.
 |---|---|
 | workspaces | click switches. On the active diamond, click opens the menu and right-click opens quick actions. Middle-click sends the focused window to that workspace. Scroll switches too, once you turn it on under Settings › Workspaces. |
 | clock | click opens the calendar. Middle-click cycles seconds and date. |
-| calendar | scroll or arrow keys change the month. Page Up and Page Down step a month, Home jumps to today, and holding Shift moves a whole year instead. Click the header to jump back to today. |
+| calendar | scroll changes the month. Click the header to jump back to today. |
 | media | click plays or pauses. Scroll changes track. Middle-click jumps to the player. |
-| volume | scroll or arrow keys change volume. Click mutes. |
-| brightness | scroll or arrow keys change brightness. |
-| tray | click jumps to the app. Right-click opens its menu, and Shift with Enter or Space opens it from the keyboard. Middle-click runs the app's secondary action, and scrolling is passed through to the app. |
+| volume | scroll changes volume. Click mutes. |
+| brightness | scroll changes brightness. |
+| tray | click jumps to the app. Right-click opens its menu. Middle-click runs the app's secondary action, and scrolling is passed through to the app. |
 | notifications | click runs the default action. Right-click dismisses. Middle-click jumps to the app that sent it. |
 | menu | Escape steps back, then closes. Click anywhere outside to close. |
 | history | click an entry to read it in full. |

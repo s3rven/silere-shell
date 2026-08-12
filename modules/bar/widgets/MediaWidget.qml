@@ -172,7 +172,7 @@ Item {
                 text:           textClip._shown
                 readonly property color _base: Media.playing ? Theme.text
                                                               : Theme.mix(Theme.text, Theme.subtext, 0.55)
-                color:          ((_rootHover.hovered && ShellSettings.barHoverHighlight) || root.activeFocus) ? Theme.mix(_base, Theme.accent, 0.30) : _base
+                color:          ((_rootHover.hovered && ShellSettings.barHoverHighlight)) ? Theme.mix(_base, Theme.accent, 0.30) : _base
                 ColorFade on color {}
                 font.pixelSize: Settings.fontSize
                 width: ShellSettings.reduceMotion ? textClip.maxW : implicitWidth
@@ -227,20 +227,6 @@ Item {
     }
 
     HoverHandler { id: _rootHover; cursorShape: Qt.PointingHandCursor }
-
-    activeFocusOnTab: root.show || root.activeFocus
-    Accessible.role: Accessible.Button
-    Accessible.name: Media.label.length > 0 ? "Now playing: " + Media.label : "Media"
-    Accessible.description: (Media.lengthKnown
-        ? Media.formatTime(Media.positionNow) + " of " + Media.formatTime(Media.length) + ". "
-        : "") + "Activate to toggle playback. Scroll to skip tracks."
-    Accessible.onPressAction: Media.togglePlay()
-
-    Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) Media.togglePlay(); event.accepted = true }
-    Keys.onReturnPressed: event => { if (!event.isAutoRepeat) Media.togglePlay(); event.accepted = true }
-    Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) Media.togglePlay(); event.accepted = true }
-    Keys.onLeftPressed:   event => { if (!event.isAutoRepeat) Media.previous();   event.accepted = true }
-    Keys.onRightPressed:  event => { if (!event.isAutoRepeat) Media.next();       event.accepted = true }
 
     TapHandler {
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton

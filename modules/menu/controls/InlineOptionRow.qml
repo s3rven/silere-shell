@@ -20,32 +20,14 @@ Item {
     property string labelFontFamily: Settings.font
     property Component preview: null
     property var previewValue
-    property int accessibleRole: Accessible.ListItem
-    property string accessibleName: label
-    property string accessibleDescription: status
-    property bool lastTriggerFromPointer: false
-    readonly property bool pointerFocusActive:
-        root.activeFocus && _focusVisual.pointerOwned
 
     signal triggered()
 
-    FocusVisual { id: _focusVisual; target: root }
-
     readonly property int rowHeight: Metrics.rowHeightFor(32)
-    readonly property bool _hot: _hover.hovered || _tap.pressed || _focusVisual.active
+    readonly property bool _hot: _hover.hovered || _tap.pressed
     readonly property int _surfaceInset: root.ghost ? 5 : 0
 
-    function focusFromPointer(): void {
-        _focusVisual.takePointerFocus()
-    }
-
-    function focusFromKeyboard(): void {
-        _focusVisual.noteKeyboardInput()
-        root.forceActiveFocus()
-    }
-
-    function trigger(fromPointer): void {
-        root.lastTriggerFromPointer = fromPointer === true
+    function trigger(): void {
         if (root.enabled && root.interactive) root.triggered()
     }
 
@@ -54,32 +36,6 @@ Item {
     height: implicitHeight
     opacity: root.enabled && root.interactive ? 1.0 : 0.48
     MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
-    activeFocusOnTab: root.enabled && root.interactive
-
-    Accessible.role: root.accessibleRole
-    Accessible.name: root.accessibleName
-    Accessible.description: root.accessibleDescription
-    Accessible.focusable: root.enabled && root.interactive
-    Accessible.selectable: true
-    Accessible.selected: root.selected
-    Accessible.checkable: root.accessibleRole === Accessible.RadioButton
-    Accessible.checked: root.accessibleRole === Accessible.RadioButton && root.selected
-    Accessible.pressed: _tap.pressed
-    Accessible.onPressAction: root.trigger(false)
-    Keys.onPressed: _focusVisual.noteKeyboardInput()
-
-    Keys.onSpacePressed: event => {
-        if (!event.isAutoRepeat) root.trigger(false)
-        event.accepted = true
-    }
-    Keys.onReturnPressed: event => {
-        if (!event.isAutoRepeat) root.trigger(false)
-        event.accepted = true
-    }
-    Keys.onEnterPressed: event => {
-        if (!event.isAutoRepeat) root.trigger(false)
-        event.accepted = true
-    }
 
     HoverHandler {
         id: _hover
@@ -90,8 +46,7 @@ Item {
         id: _tap
         enabled: root.enabled && root.interactive
         onTapped: {
-            root.focusFromPointer()
-            root.trigger(true)
+            root.trigger()
         }
     }
 
@@ -110,7 +65,7 @@ Item {
                 ? root.ghost
                     ? (_tap.pressed
                         ? Theme.withAlpha(root.accentColor, 0.10)
-                        : _hover.hovered || _focusVisual.active
+                        : _hover.hovered
                             ? Theme.withAlpha(root.accentColor, 0.065)
                             : "transparent")
                     : Theme.withAlpha(root.accentColor,
@@ -119,9 +74,6 @@ Item {
                             : ShellSettings.neutralTheme ? 0.065 : 0.085)
                 : root.highlighted
                     ? Theme.withAlpha(root.accentColor, root._hot ? 0.075 : 0.050)
-                    : _focusVisual.active
-                        ? Theme.withAlpha(root.accentColor,
-                            ShellSettings.highContrast ? 0.12 : 0.055)
                     : _tap.pressed ? Theme.withAlpha(Theme.text, 0.055)
                         : _hover.hovered ? Theme.withAlpha(Theme.text, 0.030)
                             : "transparent"
@@ -129,10 +81,8 @@ Item {
 
         OutlineBorder {
             radius: _fill.radius
-            outlineWidth: _focusVisual.active ? 2 : 1
+            outlineWidth: 1
             outlineColor: !root.ghost ? "transparent"
-                : _focusVisual.active
-                    ? Theme.withAlpha(root.accentColor, Theme.focusRingAlpha)
                     : root.selected
                         ? Theme.controlLineActive(root.accentColor)
                         : _hover.hovered

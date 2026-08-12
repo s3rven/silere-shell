@@ -121,10 +121,6 @@ PanelWindow {
             if (tgt === cur) return
             _go(t.getFullYear(), t.getMonth(), tgt > cur ? 1 : -1)
         }
-        function _activateToday(event): void {
-            if (!event.isAutoRepeat) card._goToday()
-            event.accepted = true
-        }
         Connections {
             target: CalendarState
             function onOpenChanged() {
@@ -167,26 +163,7 @@ PanelWindow {
 
         width:  panelW
         height: 4 * Math.ceil((_col.implicitHeight + pad * 2) / 4)
-        activeFocusOnTab: true
-        Accessible.role: Accessible.Pane
-        Accessible.name: "Calendar"
 
-        function _span(event): int { return (event.modifiers & Qt.ShiftModifier) ? 12 : 1 }
-
-        Keys.onLeftPressed:  event => { card._step(-card._span(event)); event.accepted = true }
-        Keys.onRightPressed: event => { card._step(card._span(event));  event.accepted = true }
-        Keys.onPressed: event => {
-            if (event.key === Qt.Key_PageUp) {
-                card._step(-card._span(event))
-                event.accepted = true
-            } else if (event.key === Qt.Key_PageDown) {
-                card._step(card._span(event))
-                event.accepted = true
-            } else if (event.key === Qt.Key_Home) {
-                card._goToday()
-                event.accepted = true
-            }
-        }
 
         WheelHandler {
             acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
@@ -207,14 +184,6 @@ PanelWindow {
                 // the pill, not the row: a full-width hit area lights the narrow fill from 200px away
                 width: _todayRow.width + 20
                 height: 40
-                activeFocusOnTab: true
-
-                Accessible.role: Accessible.Button
-                Accessible.name: "Jump to today"
-                Accessible.onPressAction: card._goToday()
-                Keys.onSpacePressed:  event => card._activateToday(event)
-                Keys.onReturnPressed: event => card._activateToday(event)
-                Keys.onEnterPressed:  event => card._activateToday(event)
 
                 HoverHandler { id: _todayH; cursorShape: Qt.PointingHandCursor }
                 TapHandler   { onTapped: card._goToday() }
@@ -224,16 +193,8 @@ PanelWindow {
                     anchors.fill: parent
                     radius: Theme.radiusControl
                     antialiasing: true
-                    color: _todayButton.activeFocus
-                        ? Theme.withAlpha(Theme.accent, 0.13)
-                        : _todayH.hovered ? Theme.withAlpha(Theme.subtext, 0.12) : "transparent"
+                    color: _todayH.hovered ? Theme.withAlpha(Theme.subtext, 0.12) : "transparent"
                     ColorFade on color {}
-
-                    OutlineBorder {
-                        radius: _todayFill.radius
-                        outlineColor: _todayButton.activeFocus
-                            ? Theme.withAlpha(Theme.accent, Theme.focusRingAlpha) : "transparent"
-                    }
                 }
 
                 Row {
@@ -253,7 +214,7 @@ PanelWindow {
                         spacing: 1
                         ShellText {
                             text: card.todayWeekday
-                            color: (_todayH.hovered || _todayButton.activeFocus) ? Theme.text : Theme.withAlpha(Theme.text, 0.9)
+                            color: (_todayH.hovered) ? Theme.text : Theme.withAlpha(Theme.text, 0.9)
                             font.pixelSize: Settings.fontSize + 1; font.weight: Font.DemiBold
                             ColorFade on color {}
                         }
@@ -277,9 +238,6 @@ PanelWindow {
                 color: Theme.withAlpha(Theme.warning, 0.10)
                 border.width: 1
                 border.color: Theme.withAlpha(Theme.warning, 0.34)
-
-                Accessible.role: Accessible.StaticText
-                Accessible.name: CalendarState.persistenceError
 
                 ShellText {
                     id: _persistenceErrorText
@@ -314,7 +272,6 @@ PanelWindow {
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
                     glyph: "󰅁"
-                    accessibleName: "Previous month"
                     onTriggered: card._step(-1)
                 }
 
@@ -322,14 +279,7 @@ PanelWindow {
                     id: _monthButton
                     anchors.centerIn: parent
                     width: _mLabel.implicitWidth + 16; height: 26
-                    activeFocusOnTab: true
-                    Accessible.role: Accessible.Button
                     // distinct from the today pill's: two controls reading "Jump to today" are indistinguishable by voice
-                    Accessible.name: card.monthLabel + ", jump to today"
-                    Accessible.onPressAction: card._goToday()
-                    Keys.onSpacePressed:  event => card._activateToday(event)
-                    Keys.onReturnPressed: event => card._activateToday(event)
-                    Keys.onEnterPressed:  event => card._activateToday(event)
                     HoverHandler { id: _mH; cursorShape: Qt.PointingHandCursor }
                     TapHandler   { onTapped: card._goToday() }
 
@@ -338,22 +288,14 @@ PanelWindow {
                         anchors.fill: parent
                         radius: Theme.radiusControl
                         antialiasing: true
-                        color: _monthButton.activeFocus
-                            ? Theme.withAlpha(Theme.accent, 0.13)
-                            : _mH.hovered ? Theme.withAlpha(Theme.subtext, 0.12) : "transparent"
+                        color: _mH.hovered ? Theme.withAlpha(Theme.subtext, 0.12) : "transparent"
                         ColorFade on color {}
-
-                        OutlineBorder {
-                            radius: _monthFill.radius
-                            outlineColor: _monthButton.activeFocus
-                                ? Theme.withAlpha(Theme.accent, Theme.focusRingAlpha) : "transparent"
-                        }
                     }
                     ShellText {
                         id: _mLabel
                         anchors.centerIn: parent
                         text: card.monthLabel
-                        color: (_mH.hovered || _monthButton.activeFocus) ? Theme.text : Theme.withAlpha(Theme.text, 0.9)
+                        color: (_mH.hovered) ? Theme.text : Theme.withAlpha(Theme.text, 0.9)
                         font.pixelSize: Settings.fontSize + 1; font.weight: Font.DemiBold
                         ColorFade on color {}
                     }
@@ -365,7 +307,6 @@ PanelWindow {
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     glyph: "󰅂"
-                    accessibleName: "Next month"
                     onTriggered: card._step(1)
                 }
             }
@@ -408,44 +349,6 @@ PanelWindow {
                 MotionBehavior on height {
                     NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
                 }
-
-                property int kbdIndex: -1
-                readonly property int _kbdDay: kbdIndex - card._lead + 1
-                readonly property bool _kbdValid: kbdIndex >= card._lead && _kbdDay <= card._daysThis
-                activeFocusOnTab: true
-                Accessible.role: Accessible.List
-                Accessible.name: activeFocus && kbdIndex >= 0
-                    ? Qt.formatDate(new Date(card.shownYear, card.shownMonth, _kbdDay), "d MMMM yyyy")
-                    : "Calendar days"
-                Accessible.description: !_kbdValid ? "Use arrow keys to choose a day"
-                    : CalendarState.marks[CalendarState.markKey(card.shownYear, card.shownMonth, _kbdDay)] === true
-                        ? "Marked" : "Not marked"
-                Accessible.focusable: true
-                Accessible.onPressAction: _gridWrap._toggleSelected()
-                onActiveFocusChanged: if (activeFocus) kbdIndex = card._todayCell >= 0 ? card._todayCell : card._lead
-                function _move(d: int): void {
-                    kbdIndex = Math.max(card._lead, Math.min(card._lead + card._daysThis - 1, kbdIndex + d))
-                }
-                Connections {
-                    target: card
-                    function onShownMonthChanged() { if (_gridWrap.kbdIndex >= 0) _gridWrap._move(0) }
-                    function onShownYearChanged()  { if (_gridWrap.kbdIndex >= 0) _gridWrap._move(0) }
-                }
-                function _toggleSelected(): void {
-                    if (_kbdValid)
-                        CalendarState.toggleMark(card.shownYear, card.shownMonth, _kbdDay)
-                }
-                function _toggle(event: var): void {
-                    if (!event.isAutoRepeat) _toggleSelected()
-                    event.accepted = true
-                }
-                Keys.onLeftPressed:   e => { _gridWrap._move(-1); e.accepted = true }
-                Keys.onRightPressed:  e => { _gridWrap._move(1);  e.accepted = true }
-                Keys.onUpPressed:     e => { _gridWrap._move(-7); e.accepted = true }
-                Keys.onDownPressed:   e => { _gridWrap._move(7);  e.accepted = true }
-                Keys.onSpacePressed:  e => _gridWrap._toggle(e)
-                Keys.onReturnPressed: e => _gridWrap._toggle(e)
-                Keys.onEnterPressed:  e => _gridWrap._toggle(e)
 
                 Column {
                     id: _weekAxis
@@ -541,19 +444,6 @@ PanelWindow {
                                     MotionBehavior on scale   {NumberAnimation { duration: Motion.ms(125); easing.type: Easing.OutCubic } }
                                 }
 
-                                Rectangle {
-                                    anchors.centerIn: parent
-                                    width: 30; height: 30; radius: 15
-                                    antialiasing: true
-                                    color: "transparent"
-                                    visible: _gridWrap.activeFocus && _dayCell.index === _gridWrap.kbdIndex
-
-                                    OutlineBorder {
-                                        radius: 15
-                                        outlineWidth: 2
-                                        outlineColor: Theme.withAlpha(Theme.accent, Theme.focusRingAlpha)
-                                    }
-                                }
                             }
                         }
                     }

@@ -10,13 +10,10 @@ FloatingShadow 1.0 FloatingShadow.qml
 FloatingPopupCard 1.0 FloatingPopupCard.qml
 PopupShadow 1.0 PopupShadow.qml
 IconButton 1.0 IconButton.qml
-KeyActivation 1.0 KeyActivation.qml
 OutlineBorder 1.0 OutlineBorder.qml
 FadingRim 1.0 FadingRim.qml
 PerimeterProgress 1.0 PerimeterProgress.qml
 ActionButton 1.0 ActionButton.qml
 ShellText 1.0 ShellText.qml
-FocusVisual 1.0 FocusVisual.qml
 ShellFlickable 1.0 ShellFlickable.qml
 ShellListView 1.0 ShellListView.qml
-singleton ItemTree 1.0 ItemTree.qml

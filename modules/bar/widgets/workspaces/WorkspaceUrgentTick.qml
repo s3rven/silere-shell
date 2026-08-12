@@ -28,24 +28,10 @@ Item {
     visible: opacity > 0.01
     MotionBehavior on opacity {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
 
-    activeFocusOnTab: shown || activeFocus
-    Accessible.role: Accessible.Button
-    Accessible.name: "Urgent workspace " + targetWs
-    Accessible.description: "Activate to jump to it."
-    Accessible.onPressAction: root._jump()
-
     function _jump(): void { if (shown) root.jumpRequested(targetWs) }
-    Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) root._jump(); event.accepted = true }
-    Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._jump(); event.accepted = true }
-    Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) root._jump(); event.accepted = true }
 
     HoverHandler { id: _tickHover; enabled: root.shown; cursorShape: Qt.PointingHandCursor }
     TapHandler   { enabled: root.shown; onTapped: root._jump() }
-
-    WorkspaceFocusRing {
-        rowHeight: root.rowHeight
-        shown: root.activeFocus
-    }
 
     property real _pulse: 1.0
     property bool _pulseSettled: false
@@ -71,8 +57,8 @@ Item {
         radius: 2.5
         antialiasing: true
         color: Theme.warning
-        opacity: root._pulse * ((_tickHover.hovered || root.activeFocus) ? 1.0 : 0.9)
-        scale: (_tickHover.hovered && ShellSettings.barHoverHighlight) || root.activeFocus ? 1.25 : 1.0
+        opacity: root._pulse * ((_tickHover.hovered) ? 1.0 : 0.9)
+        scale: (_tickHover.hovered && ShellSettings.barHoverHighlight) ? 1.25 : 1.0
         MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
     }
 }

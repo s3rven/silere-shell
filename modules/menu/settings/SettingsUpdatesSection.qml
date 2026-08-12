@@ -132,7 +132,6 @@ Column {
                     : String(ShellUpdate.count)
                 visible: root._changesAvailable
                 expandable: true
-                chevronTabFocusable: false
                 expanded: root._changesOpen && root._changesAvailable
                 onExpandToggled: root._changesOpen = !root._changesOpen
                 onActivated: root._changesOpen = !root._changesOpen
@@ -151,17 +150,11 @@ Column {
                         model: root._changesOpen && root._changesAvailable
                             ? ShellUpdate.pendingCommits : []
 
-                        Accessible.role: Accessible.List
-                        Accessible.name: "Pending shell changes"
-
                         delegate: Item {
                             id: _commit
                             required property var modelData
                             width: parent ? parent.width : 0
                             height: root._entryH
-                            Accessible.role: Accessible.ListItem
-                            Accessible.name: _commit.modelData.subject
-                                + ", " + _commit.modelData.hash
                             ShellText {
                                 anchors.left: parent.left
                                 anchors.leftMargin: 42
@@ -199,7 +192,6 @@ Column {
                 valueText: ShellUpdate.recentReady
                     ? String(ShellUpdate.recentCommits.length) : ""
                 expandable: true
-                chevronTabFocusable: false
                 expanded: root._recentOpen
                 onExpandToggled: root._toggleRecent()
                 onActivated: root._toggleRecent()
@@ -217,16 +209,11 @@ Column {
                         spacing: 0
                         model: root._recentOpen ? ShellUpdate.recentCommits : []
 
-                        Accessible.role: Accessible.List
-                        Accessible.name: "Recent shell changes"
-
                         delegate: Item {
                             id: _rc
                             required property var modelData
                             width: parent ? parent.width : 0
                             height: root._entryH
-                            Accessible.role: Accessible.ListItem
-                            Accessible.name: _rc.modelData.subject + ", " + _rc.modelData.hash
                             ShellText {
                                 anchors.left: parent.left
                                 anchors.leftMargin: 42
@@ -306,7 +293,6 @@ Column {
                 ? Updates.packages.length + " of " + Updates.count : String(Updates.count)
             visible: root._packagesAvailable
             expandable: true
-            chevronTabFocusable: false
             expanded: root._listOpen && root._packagesAvailable
             onExpandToggled: root._listOpen = !root._listOpen
             onActivated: root._listOpen = !root._listOpen
@@ -325,20 +311,11 @@ Column {
                     model: root._listOpen && root._packagesAvailable
                         ? Updates.packages : []
 
-                    Accessible.role: Accessible.List
-                    Accessible.name: "Pending system packages"
-
                     delegate: Item {
                         id: _pkg
                         required property var modelData
                         width: parent ? parent.width : 0
                         height: root._entryH
-                        Accessible.role: Accessible.ListItem
-                        Accessible.name: _pkg.modelData.name + ", version "
-                            + _pkg.modelData.to
-                            + (_pkg.modelData.from.length > 0
-                                ? ", from " + _pkg.modelData.from : "")
-                            + (_pkg.modelData.aur ? ", AUR" : "")
                         ShellText {
                             anchors.left: parent.left
                             anchors.leftMargin: 42

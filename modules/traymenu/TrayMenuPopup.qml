@@ -172,39 +172,10 @@ PanelWindow {
             readonly property bool checked:   (modelData?.checkState ?? Qt.Unchecked) === Qt.Checked
             readonly property string label: SafeText.singleLineText(modelData?.text, 256)
             readonly property string iconSrc: IconResolver.iconSource(modelData?.icon)
-            readonly property bool isMenuRow: !sep
 
             width: win.menuWidth
             height: sep ? 11 : 32
 
-            function _moveFocus(dir: int): void {
-                const sibs = _entry.parent ? _entry.parent.children : []
-                let i = -1
-                for (let k = 0; k < sibs.length; k++) if (sibs[k] === _entry) { i = k; break }
-                if (i < 0) return
-                for (let k = i + dir; k >= 0 && k < sibs.length; k += dir) {
-                    const c = sibs[k]
-                    if (c && c.isMenuRow === true && c.on) { c.forceActiveFocus(); return }
-                }
-            }
-            function _revealInOwner(): void {
-                const scroll = _entry.ownerScroll
-                if (!scroll || scroll.height <= 0) return
-                const pos = _entry.mapToItem(scroll.contentItem, 0, 0)
-                const top = pos.y
-                const bottom = top + _entry.height
-                const maxY = Math.max(0, scroll.contentHeight - scroll.height)
-                if (top < scroll.contentY) scroll.contentY = Math.max(0, top)
-                else if (bottom > scroll.contentY + scroll.height)
-                    scroll.contentY = Math.min(maxY, bottom - scroll.height)
-            }
-            function _focusFirstSub(): void {
-                const subs = _subCol.children
-                for (let k = 0; k < subs.length; k++) {
-                    const c = subs[k]
-                    if (c && c.isMenuRow === true && c.on) { c.forceActiveFocus(); return }
-                }
-            }
             function closeFlyout(): void {
                 if (_flyout.opened) _flyout.opened = false
             }
@@ -223,45 +194,6 @@ PanelWindow {
                 if (_flyout.opened) _entry.closeFlyout()
                 else _entry._openFlyout()
             }
-            function _activate(): void {
-                if (!_entry.on) return
-                if (_entry.sub) {
-                    _entry._toggleFlyout()
-                    if (_flyout.opened) Qt.callLater(_entry._focusFirstSub)
-                } else {
-                    win._emitMenuSignal(_entry.modelData, "triggered", "sendTriggered")
-                    TrayMenuState.close()
-                }
-            }
-
-            activeFocusOnTab: _entry.on || activeFocus
-            Accessible.role: _entry.sep ? Accessible.Separator : Accessible.MenuItem
-            Accessible.name: _entry.label
-            Accessible.focusable: _entry.on
-            Accessible.checkable: _entry.checkable
-            Accessible.checked: _entry.checked
-            Accessible.onPressAction: _entry._activate()
-            onActiveFocusChanged: if (activeFocus) _entry._revealInOwner()
-            Keys.onUpPressed:     e => { _entry._moveFocus(-1); e.accepted = true }
-            Keys.onDownPressed:   e => { _entry._moveFocus(1);  e.accepted = true }
-            Keys.onSpacePressed:  e => { if (!e.isAutoRepeat) _entry._activate(); e.accepted = true }
-            Keys.onReturnPressed: e => { if (!e.isAutoRepeat) _entry._activate(); e.accepted = true }
-            Keys.onEnterPressed:  e => { if (!e.isAutoRepeat) _entry._activate(); e.accepted = true }
-            Keys.onRightPressed:  e => {
-                if (_entry.sub) {
-                    _entry._openFlyout()
-                    Qt.callLater(_entry._focusFirstSub)
-                    e.accepted = true
-                } else {
-                    e.accepted = false
-                }
-            }
-            Keys.onLeftPressed: e => {
-                if (_entry.sub && _flyout.opened) { _entry.closeFlyout(); e.accepted = true }
-                else if (_entry.ownerFlyout) { _entry.ownerFlyout.opened = false; e.accepted = true }
-                else e.accepted = false
-            }
-
             QsMenuOpener {
                 id: _subOpener
                 menu: _entry.sub ? _entry.modelData : null
@@ -282,7 +214,7 @@ PanelWindow {
                 anchors.fill: parent
                 radius: Theme.radiusControl
                 antialiasing: true
-                color: (_entry.on && (_rowHover.hovered || _flyout.opened || _entry.activeFocus))
+                color: (_entry.on && (_rowHover.hovered || _flyout.opened))
                     ? Theme.withAlpha(Theme.menuHover, 0.08) : "transparent"
                 ColorFade on color {}
             }
@@ -394,12 +326,6 @@ PanelWindow {
                 function _syncOrigin(): void {
                     _flyout._origin = _entry.mapToItem(null, 0, 0)
                 }
-                function _holdsFocus(): bool {
-                    let it = _flyout.Window.activeFocusItem
-                    if (!it || it === win.contentItem) return true
-                    for (; it; it = it.parent) if (it === _flyout) return true
-                    return false
-                }
                 readonly property bool  _flip: _origin.x + _entry.width + 4 + _w > win.width
                 readonly property real _panelH: Math.min(_subCol.implicitHeight + pad * 2, Math.max(48, win.height - 8))
                 readonly property real _targetY: Math.max(4 - _origin.y, Math.min(-pad, win.height - 4 - _origin.y - _panelH))
@@ -427,8 +353,6 @@ PanelWindow {
                         win._emitMenuSignal(_entry.modelData, "opened", "sendOpened")
                     } else {
                         win._emitMenuSignal(_entry.modelData, "closed", "sendClosed")
-                        // disabling the flyout strands focus at the window root; reclaiming it unconditionally would steal it on every hover-out
-                        if (_flyout._holdsFocus()) _entry.forceActiveFocus()
                     }
                 }
                 Component.onDestruction: if (_entry.sub && _flyout.opened) win._emitMenuSignal(_entry.modelData, "closed", "sendClosed")
@@ -500,15 +424,6 @@ PanelWindow {
         width:  win.menuWidth + pad * 2
         height: Math.min(_col.implicitHeight, _maxContentH) + pad * 2
 
-        function _focusFirstRow(): void {
-            const sibs = _col.children
-            for (let k = 0; k < sibs.length; k++) {
-                const c = sibs[k]
-                if (c && c.isMenuRow === true && c.on) { c.forceActiveFocus(); return }
-            }
-        }
-        Keys.onDownPressed: e => { card._focusFirstRow(); e.accepted = true }
-        Keys.onUpPressed:   e => { card._focusFirstRow(); e.accepted = true }
         Connections {
             target: TrayMenuState
             function onOpenChanged() { if (TrayMenuState.open) card.forceActiveFocus() }

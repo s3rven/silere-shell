@@ -22,20 +22,11 @@ Rectangle {
     property bool primaryEmphasis: false
     property color primaryColor: Theme.accent
     property string secondaryGlyph: "󰑐"
-    property string secondaryAccessibleName: "Refresh"
     property bool secondaryEnabled: true
     property bool secondaryShown: false
     readonly property bool layoutPresent: visible
 
     readonly property bool _compactActions: width < 300
-    readonly property string _accessibleDescription: {
-        const parts = []
-        if (root.status.length > 0) parts.push(root.status)
-        if (root.meta.length > 0) parts.push(root.meta)
-        if (root.busy) parts.push("In progress")
-        if (root.detail.length > 0) parts.push(root.detail)
-        return parts.join(". ")
-    }
 
     signal primaryTriggered()
     signal secondaryTriggered()
@@ -47,10 +38,6 @@ Rectangle {
     antialiasing: true
     clip: true
     color: "transparent"
-
-    Accessible.role: Accessible.Grouping
-    Accessible.name: root.title
-    Accessible.description: root._accessibleDescription
 
     Column {
         id: _col
@@ -159,7 +146,6 @@ Rectangle {
                     visible: root.secondaryShown
                     height: 28
                     glyph: root.secondaryGlyph
-                    accessibleName: root.secondaryAccessibleName
                     enabled: root.secondaryEnabled
                     onTriggered: root.secondaryTriggered()
                 }
@@ -168,7 +154,6 @@ Rectangle {
                     height: 28
                     label: root._compactActions ? "" : root.primaryLabel
                     glyph: root.primaryGlyph
-                    accessibleName: root.primaryLabel
                     enabled: root.primaryEnabled
                     emphasis: root.primaryEmphasis
                     accentColor: root.primaryColor

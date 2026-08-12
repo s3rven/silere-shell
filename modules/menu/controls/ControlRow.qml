@@ -15,11 +15,9 @@ MenuRow {
     property bool   expandable:   false
     property bool   expanded:     false
     property bool   passive:      false
-    property bool   chevronTabFocusable: true
     property int    badgeCount:   0
 
     rowHovered:     _hover.hovered
-    rowFocused:     _focusVisual.active
     rowInteractive: root._canTap
 
     signal activated()
@@ -27,27 +25,6 @@ MenuRow {
     signal badgeActivated()
 
     readonly property bool _canTap: !root.passive && root.enabled && root.available
-    readonly property string _accessibleDetail: {
-        const parts = []
-        if (root.status.length > 0) parts.push(root.status)
-        if (root.valueText.length > 0) parts.push(root.valueText)
-        if (root.expandable) parts.push(root.expanded ? "Expanded" : "Collapsed")
-        return parts.join(", ")
-    }
-
-    FocusVisual { id: _focusVisual; target: root }
-    readonly property bool pointerFocusActive:
-        root.activeFocus && _focusVisual.pointerOwned
-
-    function focusFromPointer(): void {
-        _focusVisual.takePointerFocus()
-    }
-
-    function focusFromKeyboard(): void {
-        _focusVisual.noteKeyboardInput()
-        root.forceActiveFocus()
-    }
-
     function _activate(): void {
         if (!_canTap) return
         // animate the knob only on a real user flip, not section-driven re-checks
@@ -82,43 +59,12 @@ MenuRow {
     opacity: root.passive ? 1.0 : (_canTap ? 1.0 : 0.45)
     MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
 
-    activeFocusOnTab: _canTap || root.activeFocus
-    Accessible.role: root.passive ? Accessible.StaticText
-        : root.showSwitch ? Accessible.Switch : Accessible.Button
-    Accessible.name: root.title
-    Accessible.description: root._accessibleDetail
-    Accessible.focusable: root._canTap
-    Accessible.checkable: !root.passive && root.showSwitch
-    Accessible.checked: !root.passive && root.showSwitch && root.active
-    Accessible.onPressAction: if (!root.passive) root._activate()
-    Keys.onPressed: _focusVisual.noteKeyboardInput()
-    Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
-    Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
-    Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
-    Keys.onRightPressed: event => {
-        if (root._canTap && root.expandable && !root.expanded) {
-            root.expandToggled()
-            event.accepted = true
-        } else {
-            event.accepted = false
-        }
-    }
-    Keys.onLeftPressed: event => {
-        if (root._canTap && root.expandable && root.expanded) {
-            root.expandToggled()
-            event.accepted = true
-        } else {
-            event.accepted = false
-        }
-    }
-
     HoverHandler { id: _hover; cursorShape: root._canTap ? Qt.PointingHandCursor : Qt.ArrowCursor }
     TapHandler {
         id: _tap
         enabled: root._canTap
         onTapped: (eventPoint) => {
             if (!root._insideChevron(eventPoint.position) && !root._insideBadge(eventPoint.position)) {
-                root.focusFromPointer()
                 root._activate()
             }
         }
@@ -143,7 +89,6 @@ MenuRow {
 
         Rectangle {
             id: _badge
-            FocusVisual { id: _badgeFocusVisual; target: _badge }
             opacity: root.badgeCount > 0 ? 1.0 : 0.0
             scale:   root.badgeCount > 0 ? 1.0 : 0.5
             visible: opacity > 0.01
@@ -159,29 +104,16 @@ MenuRow {
             radius: 7.5
             antialiasing: true
             z: 2
-            activeFocusOnTab: root.badgeCount > 0 || activeFocus
-            Accessible.role: Accessible.Button
-            Accessible.name: "Open missed notifications"
-            Accessible.description: root.badgeCount + (root.badgeCount === 1 ? " missed notification" : " missed notifications")
-            Accessible.onPressAction: root._activateBadge()
 
-            Keys.onPressed: _badgeFocusVisual.noteKeyboardInput()
-
-            Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) root._activateBadge(); event.accepted = true }
-            Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._activateBadge(); event.accepted = true }
-            Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) root._activateBadge(); event.accepted = true }
-
-            color: (_badgeMouse.containsMouse || _badgeFocusVisual.active)
+            color: (_badgeMouse.containsMouse)
                 ? Theme.mix(root.accentColor, Theme.text, 0.10)
                 : root.accentColor
             ColorFade on color {}
 
             OutlineBorder {
                 radius: _badge.radius
-                outlineWidth: _badgeFocusVisual.active ? 2 : 1
-                outlineColor: _badgeFocusVisual.active
-                    ? Theme.withAlpha(Theme.text, 0.66)
-                    : Theme.mix(Theme.menuCard, root.accentColor, _badgeMouse.containsMouse ? 0.42 : 0.55)
+                outlineWidth: 1
+                outlineColor: Theme.mix(Theme.menuCard, root.accentColor, _badgeMouse.containsMouse ? 0.42 : 0.55)
                 ColorFade on outlineColor {}
             }
 
@@ -201,7 +133,6 @@ MenuRow {
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
-                    _badgeFocusVisual.takePointerFocus()
                     root._activateBadge()
                 }
             }
@@ -269,7 +200,6 @@ MenuRow {
             anchors.verticalCenter: parent.verticalCenter
             checked:     root.active
             highlighted: _hover.hovered && root._canTap
-            focused: _focusVisual.active && root._canTap
             pressed: _tap.pressed
             accentColor: root.accentColor
         }
@@ -292,7 +222,6 @@ MenuRow {
         // MouseArea (not TapHandler) so it doesn't fire the row body tap too
         Item {
             id: _chevron
-            FocusVisual { id: _chevronFocusVisual; target: _chevron }
             visible: root.expandable
             width:  visible ? 24 : 0
             height: parent.height
@@ -300,33 +229,11 @@ MenuRow {
             x: (root.showSwitch || root.valueText.length > 0)
                 ? parent.width - _rightSlot._ctrlW - 8 - width
                 : 0
-            activeFocusOnTab: root._canTap && root.expandable
-                && root.chevronTabFocusable
-
-            Accessible.role: Accessible.Button
-            Accessible.ignored: !root.chevronTabFocusable
-            Accessible.name: root.title + " details"
-            Accessible.description: root.expanded ? "Expanded" : "Collapsed"
-            Accessible.onPressAction: root._toggleExpanded()
-
-            Keys.onPressed: _chevronFocusVisual.noteKeyboardInput()
-
-            Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) root._toggleExpanded(); event.accepted = true }
-            Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._toggleExpanded(); event.accepted = true }
-            Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) root._toggleExpanded(); event.accepted = true }
-            Keys.onEscapePressed: event => {
-                if (root.expanded) {
-                    root._toggleExpanded()
-                    event.accepted = true
-                } else {
-                    event.accepted = false
-                }
-            }
 
             ShellText {
                 anchors.centerIn: parent
                 text: "󰅀"
-                color: (_chevHover.hovered || _chevronFocusVisual.active) ? Theme.text
+                color: (_chevHover.hovered) ? Theme.text
                      : Theme.withAlpha(Theme.subtext, root.expanded ? 0.85 : 0.55)
                 font.pixelSize: Settings.fontSize
                 rotation: root.expanded ? 180 : 0
@@ -343,7 +250,6 @@ MenuRow {
                 enabled: root.expandable
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
-                    _chevronFocusVisual.takePointerFocus()
                     root._toggleExpanded()
                 }
             }

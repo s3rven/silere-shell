@@ -14,7 +14,6 @@ MenuRow {
     property string dependsNote:  ""
 
     rowHovered:     _hover.hovered
-    rowFocused:     _focusVisual.active
     rowInteractive: root._canToggle
 
     signal toggled(bool nextChecked)
@@ -38,16 +37,6 @@ MenuRow {
         if (root.description.length === 0) return root.dependsNote
         return root.description + " · " + root.dependsNote
     }
-    readonly property string _accessibleDescription: {
-        const parts = []
-        if (root.description.length > 0) parts.push(root.description)
-        if (root._showDependsNote) parts.push(root.dependsNote)
-        return parts.join(". ")
-    }
-
-    FocusVisual { id: _focusVisual; target: root }
-    readonly property bool pointerFocusActive:
-        root.activeFocus && _focusVisual.pointerOwned
 
     function _activate(): void {
         if (!_canToggle) return
@@ -69,24 +58,11 @@ MenuRow {
     opacity: root.enabled && root.available ? 1.0 : (_canToggle ? 0.72 : 0.52)
     MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
 
-    activeFocusOnTab: _canToggle || root.activeFocus
-    Accessible.role: Accessible.Switch
-    Accessible.name: root.label
-    Accessible.description: root._accessibleDescription
-    Accessible.checked: root.checked
-    Accessible.onPressAction: root._activate()
-    Accessible.onToggleAction: root._activate()
-    Keys.onPressed: _focusVisual.noteKeyboardInput()
-    Keys.onSpacePressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
-    Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
-    Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root._activate(); event.accepted = true }
-
     HoverHandler { id: _hover; cursorShape: root._canToggle ? Qt.PointingHandCursor : Qt.ArrowCursor }
     TapHandler {
         id: _tap
         enabled: root._canToggle
         onTapped: {
-            _focusVisual.takePointerFocus()
             root._activate()
         }
     }
@@ -159,7 +135,6 @@ MenuRow {
             height: 20
             checked: root.checked
             highlighted: _hover.hovered && root._canToggle
-            focused: _focusVisual.active && root._canToggle
             pressed: _tap.pressed
         }
     }

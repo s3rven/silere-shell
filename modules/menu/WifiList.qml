@@ -101,10 +101,6 @@ Item {
                 readonly property bool _connecting: Network.wifiConnecting === modelData.ssid
                 readonly property bool _failed:     Network.wifiError === modelData.ssid
 
-                function focusRow(): void {
-                    _row.forceActiveFocus()
-                }
-
                 function _submitPassword(): void {
                     const secret = _pw.text
                     _pw.text = ""
@@ -127,11 +123,6 @@ Item {
                     selected: _entry.modelData.active
                     highlighted: _entry._sel
                     warning: _entry._failed
-                    accessibleDescription: _entry.modelData.active ? "Connected"
-                        : _entry._connecting ? "Connecting"
-                        : _entry._failed ? "Connection failed"
-                        : _entry.modelData.secured ? "Secured network"
-                        : "Open network"
 
                     function _activate(): void {
                         if (_entry.modelData.active) { Network.disconnectWifi(); return }
@@ -145,8 +136,6 @@ Item {
                         }
                     }
                     onTriggered: _activate()
-                    Keys.onUpPressed:     event => { _list.focusIndex(_entry.index - 1); event.accepted = true }
-                    Keys.onDownPressed:   event => { _list.focusIndex(_entry.index + 1); event.accepted = true }
                 }
 
                 Item {
@@ -199,8 +188,6 @@ Item {
                             renderType: Text.NativeRendering
                             clip: true
                             onAccepted: _entry._submitPassword()
-                            Accessible.role: Accessible.EditableText
-                            Accessible.name: "Password for " + _entry.modelData.label
                             Keys.onEscapePressed: event => { root._selected = ""; event.accepted = true }
 
                             ShellText {
@@ -221,23 +208,15 @@ Item {
                             width: 30; height: 28; radius: Theme.radiusField
                             antialiasing: true
                             enabled: _pw.text.length > 0 && !_entry._connecting
-                            activeFocusOnTab: enabled || activeFocus
                             opacity: enabled ? 1.0 : 0.4
                             MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
-                            color: (_joinHover.hovered || activeFocus) ? Theme.withAlpha(Theme.accent, 0.30)
+                            color: (_joinHover.hovered) ? Theme.withAlpha(Theme.accent, 0.30)
                                                                         : Theme.withAlpha(Theme.accent, 0.18)
                             ColorFade on color {}
 
-                            Accessible.role: Accessible.Button
-                            Accessible.name: "Connect to " + _entry.modelData.label
-                            Accessible.onPressAction: _join._activate()
                             function _activate(): void {
                                 if (_join.enabled) _entry._submitPassword()
                             }
-                            Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) _join._activate(); event.accepted = true }
-                            Keys.onReturnPressed: event => { if (!event.isAutoRepeat) _join._activate(); event.accepted = true }
-                            Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) _join._activate(); event.accepted = true }
-                            Keys.onEscapePressed: event => { root._selected = ""; _row.forceActiveFocus(); event.accepted = true }
 
                             HoverHandler { id: _joinHover; enabled: _join.enabled; cursorShape: Qt.PointingHandCursor }
                             TapHandler   { enabled: _join.enabled; onTapped: _join._activate() }

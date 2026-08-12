@@ -14,7 +14,6 @@ MenuRow {
     property color  accentColor: Theme.accent
 
     rowHovered:     _rowHover.hovered
-    rowFocused:     root.activeFocus
     rowInteractive: root.enabled
 
     signal chosen(var value)
@@ -58,24 +57,6 @@ MenuRow {
 
     readonly property int _activeIndex: root.model.findIndex(o => o.value === root.currentValue)
 
-    // arrow keys select as they move, and an enum write flushes to disk immediately,
-    // so an auto-repeating arrow would apply every option in the row at the repeat rate
-    function _step(event, index: int): void {
-        if (!event.isAutoRepeat) root._focusOption(index, true)
-        event.accepted = true
-    }
-
-    function _focusOption(index: int, choose: bool): void {
-        const count = _optionRepeater.count
-        if (count <= 0) return
-        const wrapped = ((index % count) + count) % count
-        const item = _optionRepeater.itemAt(wrapped)
-        if (!item) return
-        item.forceActiveFocus()
-        if (choose && root.enabled && wrapped !== root._activeIndex)
-            root.chosen(item.modelData.value)
-    }
-
     height: root._stacked ? root._stackedH : root._inlineH
     // the settings pane width animates when the nav rail expands, and crossing the
     // stacking threshold mid-glide would pop this row 20px while everything else eases
@@ -86,13 +67,6 @@ MenuRow {
 
     MotionBehavior on opacity {
         NumberAnimation { duration: Motion.medium }
-    }
-
-    activeFocusOnTab: root.enabled
-    onActiveFocusChanged: {
-        if (!activeFocus || _optionRepeater.count <= 0) return
-        const item = _optionRepeater.itemAt(Math.max(0, root._activeIndex))
-        if (item) item.forceActiveFocus()
     }
 
     HoverHandler { id: _rowHover; enabled: root.enabled }
@@ -174,39 +148,10 @@ MenuRow {
                         modelData.glyph === undefined || modelData.glyph === null
                             ? "" : String(modelData.glyph)
 
-                    FocusVisual { id: _optionFocusVisual; target: _option }
-
                     width: _choiceGroup.cellW
                         + (index < _choiceGroup.cellRemainder ? 1 : 0)
                     height: _choiceGroup.height
 
-                    Accessible.role: Accessible.RadioButton
-                    Accessible.name: root.label + ": " + optionLabel
-                    Accessible.checked: active
-                    Accessible.onPressAction: {
-                        if (root.enabled) root.chosen(modelData.value)
-                    }
-                    Keys.onPressed: _optionFocusVisual.noteKeyboardInput()
-
-                    Keys.onSpacePressed: event => {
-                        if (!event.isAutoRepeat && root.enabled)
-                            root.chosen(modelData.value)
-                        event.accepted = true
-                    }
-                    Keys.onReturnPressed: event => {
-                        if (!event.isAutoRepeat && root.enabled)
-                            root.chosen(modelData.value)
-                        event.accepted = true
-                    }
-                    Keys.onEnterPressed: event => {
-                        if (!event.isAutoRepeat && root.enabled)
-                            root.chosen(modelData.value)
-                        event.accepted = true
-                    }
-                    Keys.onLeftPressed:  event => root._step(event, _option.index - 1)
-                    Keys.onRightPressed: event => root._step(event, _option.index + 1)
-                    Keys.onUpPressed:    event => root._step(event, _option.index - 1)
-                    Keys.onDownPressed:  event => root._step(event, _option.index + 1)
                     HoverHandler {
                         id: _hover
                         enabled: root.enabled
@@ -217,7 +162,6 @@ MenuRow {
                         id: _tap
                         enabled: root.enabled
                         onTapped: {
-                            _optionFocusVisual.takePointerFocus()
                             root.chosen(_option.modelData.value)
                         }
                     }
@@ -254,10 +198,8 @@ MenuRow {
 
                         OutlineBorder {
                             radius: _surface.radius
-                            outlineWidth: _optionFocusVisual.active ? 2 : 1
-                            outlineColor: _optionFocusVisual.active
-                                ? Theme.withAlpha(root.accentColor, Theme.focusRingAlpha)
-                                : _option.active
+                            outlineWidth: 1
+                            outlineColor: _option.active
                                     ? Theme.controlLineActive(root.accentColor)
                                     : _hover.hovered
                                         ? Theme.withAlpha(root.accentColor,

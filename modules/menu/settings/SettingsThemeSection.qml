@@ -213,7 +213,6 @@ Column {
                             interval: 0
                             onTriggered: _swatchViewport.revealIndex(_swatchRow.activeIndex)
                         }
-                        onFocusMoved: (i) => _swatchViewport.revealIndex(i)
                         onPicked: (i) => {
                             const opt = _accentPicker._options[i]
                             _accentPicker._customPinned = !!opt.custom
@@ -262,8 +261,6 @@ Column {
                             height: 24
                             position: _accentPicker._curHue
                             thumbColor: _accentPicker._curColor
-                            accessibleName: "Accent hue"
-                            accessibleDescription: _accentPicker._shownName
                             trackGradient: Gradient {
                                 orientation: Gradient.Horizontal
                                 GradientStop { position: 0.000; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC,   0) }
@@ -288,8 +285,6 @@ Column {
                             displayScale: 100
                             valueUnit: "percent"
                             wheelKey: "accent-chroma"
-                            accessibleName: "Accent intensity"
-                            accessibleDescription: _accentPicker._shownName
                             trackGradient: Gradient {
                                 orientation: Gradient.Horizontal
                                 GradientStop { position: 0.0; color: Theme.lchColor(_accentPicker._accentL, 0, _accentPicker._curHue * 360) }

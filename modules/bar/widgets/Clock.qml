@@ -29,7 +29,7 @@ Row {
     readonly property bool show: ShellSettings.barShowClock
     visible: show
 
-    readonly property bool  _hov:    (_hover.hovered && ShellSettings.barHoverHighlight) || activeFocus
+    readonly property bool  _hov:    (_hover.hovered && ShellSettings.barHoverHighlight)
     readonly property color _cSub:   _hov ? Theme.mix(Theme.subtext, Theme.accent, 0.30) : Theme.subtext
     readonly property color _cText:  _hov ? Theme.mix(Theme.text,    Theme.accent, 0.30) : Theme.text
     readonly property color _cFaint: _hov ? Theme.mix(Theme.withAlpha(Theme.text, 0.65), Theme.accent, 0.30)
@@ -38,17 +38,6 @@ Row {
                                           : Theme.withAlpha(Theme.accent, 0.82)
 
     HoverHandler { id: _hover; cursorShape: Qt.PointingHandCursor }
-
-    activeFocusOnTab: true
-    Accessible.role: Accessible.Button
-    Accessible.name: "Clock, " + DateTime.cachedHour + ":" + DateTime.cachedMinute
-        + DateTime.cachedSeconds + (DateTime.cachedAmPm ? " " + DateTime.cachedAmPm : "")
-        + (ShellSettings.clockShowDate ? ", " + DateTime.cachedLongDate : "")
-    Accessible.description: "Activate to open calendar. Middle-click cycles seconds and date."
-    Accessible.onPressAction: root._openCalendar()
-    Keys.onSpacePressed:  event => { if (!event.isAutoRepeat) root._openCalendar(); event.accepted = true }
-    Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root._openCalendar(); event.accepted = true }
-    Keys.onEnterPressed:  event => { if (!event.isAutoRepeat) root._openCalendar(); event.accepted = true }
 
     function _openCalendar(): void {
         root._syncMenuAnchor()

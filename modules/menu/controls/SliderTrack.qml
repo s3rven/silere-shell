@@ -11,7 +11,6 @@ Item {
     property real step:  0.05
     property string wheelKey: ""
     property bool commitOnRelease: false
-    property bool focused: false
     property bool interactive: true
     property bool showThumb: true
     property bool hoverGrow: true
@@ -60,26 +59,6 @@ Item {
         const baseStep = step > 0 ? step : Math.max(0.01, (max - min) / 100)
         _setFromUser(_shownValue + dir * baseStep * mult)
     }
-    function handleKey(event): void {
-        if (!root.interactive) return
-        const big = (event.modifiers & Qt.ShiftModifier) ? 10 : 1
-        switch (event.key) {
-        case Qt.Key_Left:
-        case Qt.Key_Down:
-            nudge(-1, big); event.accepted = true; return
-        case Qt.Key_Right:
-        case Qt.Key_Up:
-            nudge(1, big); event.accepted = true; return
-        case Qt.Key_Home:
-            _setFromUser(min); event.accepted = true; return
-        case Qt.Key_End:
-            _setFromUser(max); event.accepted = true; return
-        case Qt.Key_PageDown:
-            nudge(-1, 10); event.accepted = true; return
-        case Qt.Key_PageUp:
-            nudge(1, 10); event.accepted = true; return
-        }
-    }
 
     Rectangle {
         x: root._railInset
@@ -109,12 +88,11 @@ Item {
         width: root.thumbWidth; height: root.thumbHeight
         anchors.verticalCenter: parent.verticalCenter
         x: Math.round(root._railInset + root._railWidth * root._ratio - width / 2)
-        focused: root.focused
         hovered: _ma.containsMouse
         pressed: _ma.pressed
         hoverGrow: root.hoverGrow
         animate: root.animate
-        fillColor: (root.hoverGrow && _ma.pressed) || root.focused
+        fillColor: (root.hoverGrow && _ma.pressed)
             ? Theme.accent
             : Theme.mix(Theme.text, Theme.accent,
                         root.hoverGrow && _ma.containsMouse ? 0.30 : 0.12)

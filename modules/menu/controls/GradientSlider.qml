@@ -10,8 +10,6 @@ Item {
     property color thumbColor: Theme.accent
     property bool interactive: true
     property bool dimmed: false
-    property string accessibleName: "Hue"
-    property string accessibleDescription: ""
     property string valueUnit: "degrees"
     property real displayScale: 360
     // hue is a circle, saturation is not: one wraps past the end, the other stops
@@ -25,24 +23,12 @@ Item {
         : Math.round(_clamped(position) * displayScale)
     readonly property real stepSize: 1
 
-    FocusVisual { id: _focusVisual; target: root }
-
     signal picked(real position)
 
     width: parent ? parent.width : 0
     implicitHeight: Metrics.rowHeightFor(24)
     height: implicitHeight
     opacity: root.enabled && root.interactive ? (root.dimmed ? 0.72 : 1.0) : 0.45
-
-    activeFocusOnTab: root.enabled && root.interactive
-    Accessible.role: Accessible.Slider
-    Accessible.name: root.accessibleName
-    Accessible.description: (root.accessibleDescription.length > 0
-        ? root.accessibleDescription + ". " : "")
-        + root.value + " " + root.valueUnit
-    Accessible.focusable: root.activeFocusOnTab
-    Accessible.onIncreaseAction: if (root.enabled && root.interactive) root._nudge(1, 1)
-    Accessible.onDecreaseAction: if (root.enabled && root.interactive) root._nudge(-1, 1)
 
     function _wrapped(p: real): real {
         return ((p % 1) + 1) % 1
@@ -56,35 +42,6 @@ Item {
         const next = root.position + dir * root.stepSize * mult / root.displayScale
         root.picked(root.wraps ? root._wrapped(next) : root._clamped(next))
     }
-    function _setEndpoint(end: bool): void {
-        if (!root.enabled || !root.interactive) return
-        root.picked(end ? root._clamped(1) : 0)
-    }
-    function _handleKey(event): void {
-        const shifted = (event.modifiers & Qt.ShiftModifier) ? 5 : 1
-        switch (event.key) {
-        case Qt.Key_Left:
-        case Qt.Key_Down:
-            root._nudge(-1, shifted); event.accepted = true; return
-        case Qt.Key_Right:
-        case Qt.Key_Up:
-            root._nudge(1, shifted); event.accepted = true; return
-        case Qt.Key_Home:
-            root._setEndpoint(false); event.accepted = true; return
-        case Qt.Key_End:
-            root._setEndpoint(true); event.accepted = true; return
-        case Qt.Key_PageDown:
-            root._nudge(-1, 10); event.accepted = true; return
-        case Qt.Key_PageUp:
-            root._nudge(1, 10); event.accepted = true; return
-        }
-    }
-
-    Keys.onPressed: event => {
-        _focusVisual.noteKeyboardInput()
-        root._handleKey(event)
-    }
-
     MotionBehavior on opacity {
         NumberAnimation { duration: Motion.fast }
     }
@@ -94,17 +51,15 @@ Item {
         anchors.fill: parent
         radius: Theme.radiusInline
         antialiasing: true
-        color: _mouse.containsMouse || _focusVisual.active
+        color: _mouse.containsMouse
             ? Theme.mix(Theme.menuControl, Theme.accent, 0.055)
             : Theme.menuControl
         ColorFade on color {}
 
         OutlineBorder {
             radius: _well.radius
-            outlineWidth: _focusVisual.active ? 2 : 1
-            outlineColor: _focusVisual.active
-                ? Theme.withAlpha(Theme.accent, Theme.focusRingAlpha)
-                : _mouse.containsMouse ? Theme.menuControlLineHot : Theme.menuControlLine
+            outlineWidth: 1
+            outlineColor: _mouse.containsMouse ? Theme.menuControlLineHot : Theme.menuControlLine
             ColorFade on outlineColor {}
         }
     }
@@ -129,8 +84,6 @@ Item {
             - width / 2)
         fillColor: root.thumbColor
         // the fill is the picked hue, so an accent ring can vanish into it
-        focusRingColor: Theme.withAlpha(Theme.text, 0.88)
-        focused: _focusVisual.active
         hovered: _mouse.containsMouse
         pressed: _mouse.pressed
 
@@ -151,7 +104,6 @@ Item {
         }
 
         onPressed: mouse => {
-            _focusVisual.takePointerFocus()
             _set(mouse.x)
         }
         onPositionChanged: mouse => { if (pressed) _set(mouse.x) }

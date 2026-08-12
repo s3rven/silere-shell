@@ -9,7 +9,6 @@ Item {
 
     property bool checked: false
     property bool highlighted: false
-    property bool focused: false
     property bool pressed: false
     property color accentColor: Theme.accent
     implicitWidth:  36
@@ -48,10 +47,8 @@ Item {
 
         OutlineBorder {
             radius: _track.radius
-            outlineWidth: root.focused ? 2 : 1
-            outlineColor: root.focused
-                ? Theme.withAlpha(root.accentColor, Theme.focusRingAlpha)
-                : root.checked
+            outlineWidth: 1
+            outlineColor: root.checked
                     ? (root.highlighted
                         ? Theme.withAlpha(root.accentColor, 0.48)
                         : "transparent")
