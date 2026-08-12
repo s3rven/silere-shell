@@ -318,9 +318,12 @@ Singleton {
                 return
             }
             // the shell's own popups, OSD and notifications each fire openlayer/closelayer, and
-            // none of these touch the workspace, monitor or toplevel lists the models read
+            // none of these touch the workspace, monitor or toplevel lists the models read.
+            // changefloatingmode is inert for the same reason: the toplevel model carries no
+            // floating state, and it fired 420 times in two hours of ordinary use
             if (n === "openlayer" || n === "closelayer" || n === "submap"
-                    || n === "activelayout" || n === "screencast")
+                    || n === "activelayout" || n === "screencast"
+                    || n === "changefloatingmode")
                 return
             // activewindow refires per title frame; only v2's address distinguishes a real focus change
             if (n === "activewindowv2") {
