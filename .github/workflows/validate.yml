@@ -57,3 +57,7 @@ jobs:
         # offscreen QPA needs no display; catches runtime-only errors in the
         # lazily-loaded settings pages that qmlcachegen and qmllint cannot see
         run: bash scripts/test-surfaces.sh
+
+      - name: Settings layout fit probe
+        # a section can build and still lose its labels; Qt elides and reports success
+        run: bash scripts/test-layout-fit.sh

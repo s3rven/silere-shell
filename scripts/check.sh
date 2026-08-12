@@ -448,6 +448,24 @@ else
   warn "surfaces" "scripts/test-surfaces.sh missing; section build check skipped"
 fi
 
+section "layout fit"
+# Building a section says nothing about whether its labels survive the width they
+# ship at; Qt elides them and reports success either way.
+if [ -f scripts/test-layout-fit.sh ]; then
+  fit_code=0
+  fit_out="$(bash scripts/test-layout-fit.sh 2>&1)" || fit_code=$?
+  if [ "$fit_code" -ne 0 ]; then
+    printf '%s\n' "$fit_out" | sed 's/^/       /'
+    fail "layout" "settings text is truncated at the shipped panel width"
+  elif printf '%s' "$fit_out" | grep -q '^SKIP'; then
+    warn "layout" "$(printf '%s' "$fit_out" | sed -n 's/^SKIP: //p' | head -1)"
+  else
+    ok "layout" "$(printf '%s' "$fit_out" | tail -1)"
+  fi
+else
+  warn "layout" "scripts/test-layout-fit.sh missing; label fit check skipped"
+fi
+
 if [ "$status" -eq 0 ]; then
   printf '\nchecks passed (%d warning(s))\n' "$warnings"
 else
