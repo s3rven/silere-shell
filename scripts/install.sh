@@ -305,6 +305,34 @@ if [ "${SILERE_SCRIPT_LIB_ONLY:-0}" = "1" ]; then
     return 0 2>/dev/null || exit 0
 fi
 
+_usage() {
+    cat <<'EOF'
+Usage:
+  bash scripts/install.sh        Install Silere Shell (interactive)
+  bash scripts/install.sh --help Show this message
+
+Silere runs on Hyprland and niri only. The installer asks before it writes
+anything and backs up every file it edits.
+
+Environment:
+  SILERE_HYPR_CONFIG   Hyprland config to wire autostart into
+  SILERE_NIRI_CONFIG   niri config to wire autostart into
+EOF
+}
+
+# Anything the helper case above recognises has already exited, so a surviving
+# argument is a typo. Left unhandled it used to start a real install, and
+# --help is the first thing a careful reader types before running a script.
+case "${1:-}" in
+    "") ;;
+    -h|--help) _usage; exit 0 ;;
+    *)
+        _err "unknown option: $1"
+        _usage >&2
+        exit 2
+        ;;
+esac
+
 # Always read from /dev/tty so curl | bash works
 _ask() {
     local reply
