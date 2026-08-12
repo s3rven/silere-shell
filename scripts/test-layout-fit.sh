@@ -27,6 +27,22 @@ if ! command -v qs >/dev/null 2>&1; then
 fi
 [ -f "$PROBE" ] || { echo "FAIL: $PROBE missing" >&2; exit 1; }
 
+# Every width here is a text measurement, so it is only meaningful against the font
+# the shell actually ships with. Without it Settings.font falls back to whatever
+# exists and a substitute's advance widths condemn labels that fit fine in practice —
+# a bare CI container measured "Hidden until this is installed" at twice its real
+# width. fc-match always answers, so the returned family has to be compared.
+WANT_FONT="${FIT_FONT:-JetBrainsMono Nerd Font}"
+if ! command -v fc-match >/dev/null 2>&1; then
+    echo "SKIP: fontconfig missing, cannot confirm the shipped font" >&2
+    exit 0
+fi
+have_font="$(fc-match -f '%{family[0]}' "$WANT_FONT" 2>/dev/null || true)"
+if [ "$have_font" != "$WANT_FONT" ]; then
+    echo "SKIP: $WANT_FONT not installed (got \"${have_font:-none}\"); text metrics would measure a substitute" >&2
+    exit 0
+fi
+
 list="$(find modules/menu/settings -name 'Settings*Section.qml' | sort)"
 [ -n "$list" ] || { echo "FAIL: no settings sections found" >&2; exit 1; }
 
