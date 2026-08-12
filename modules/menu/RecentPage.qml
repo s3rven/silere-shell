@@ -43,10 +43,12 @@ PageShell {
         const now = new Date()
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
         const day = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
-        const age = today - day
-        if (age <= 0 && diff < 86400000) return Math.floor(diff / 3600000) + "h"
-        if (age < 172800000) return "Yesterday"
-        if (age < 604800000) return Qt.formatDateTime(d, "ddd")
+        // whole days, not milliseconds: a DST day is 23 or 25 hours long, and the raw
+        // gap then lands one bucket early — two sections both headed Yesterday
+        const days = Math.round((today - day) / 86400000)
+        if (days <= 0 && diff < 86400000) return Math.floor(diff / 3600000) + "h"
+        if (days === 1) return "Yesterday"
+        if (days < 7) return Qt.formatDateTime(d, "ddd")
         return Qt.formatDateTime(d, "MMM d")
     }
 
@@ -61,10 +63,10 @@ PageShell {
         const now = new Date()
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
         const day = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
-        const age = today - day
-        if (age <= 0) return "Today"
-        if (age < 172800000) return "Yesterday"
-        if (age < 604800000) return Qt.formatDateTime(d, "dddd")
+        const days = Math.round((today - day) / 86400000)
+        if (days <= 0) return "Today"
+        if (days === 1) return "Yesterday"
+        if (days < 7) return Qt.formatDateTime(d, "dddd")
         return Qt.formatDateTime(d, "MMM d, yyyy")
     }
 
