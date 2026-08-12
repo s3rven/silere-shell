@@ -806,6 +806,23 @@ else
   ok "scroll" "every list and flickable inherits one scroll feel"
 fi
 
+section "inert compositor events"
+# Every Hyprland event that is not denylisted bumps the layout tick, which rebuilds the
+# workspace and toplevel models. The list is load-bearing for idle CPU and its entries
+# are each backed by a measurement, so losing one to a refactor is an invisible
+# regression: openlayer/closelayer fire from the shell's own popups, and
+# changefloatingmode fired 420 times in two hours while carrying nothing the models read.
+inert_events="openlayer closelayer submap activelayout screencast changefloatingmode"
+missing_inert=""
+for ev in $inert_events; do
+  grep -q "\"$ev\"" services/Compositor.qml || missing_inert="$missing_inert $ev"
+done
+if [ -n "$missing_inert" ]; then
+  fail "these compositor events must stay denylisted in Compositor.qml:$missing_inert"
+else
+  ok "inert events" "the event denylist still covers every measured no-op"
+fi
+
 section "pointer-only interaction"
 # Silere is pointer-driven by decision: keyboard navigation and the accessibility
 # metadata that described it were removed wholesale. These creep back one property at a
