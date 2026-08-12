@@ -11,6 +11,15 @@ Only work since the latest release is listed here. Completed notes move to
 
 ## [Unreleased]
 
+### Added
+
+- **Repair** action on the Matugen row in Settings › System › Maintenance, and a
+  matching `scripts/install.sh --repair-matugen`. Upgrading to 0.5.0 leaves
+  Matugen writing to the old in-checkout path until the installer is re-run, and
+  the health card could name that but not fix it. The repair rewrites only
+  Silere's own template and its marked block in `config.toml`, backs up what it
+  touches, and refuses a `[templates.silere-shell]` entry it does not own.
+
 ## Releases
 
 - [0.5.0](docs/releases/0.5.0.md) — 2026-08-13
