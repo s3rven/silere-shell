@@ -1,97 +1,88 @@
 # Changelog
 
-Notable changes to Silere Shell. The active section follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
+Notable changes to Silere Shell, following
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follow
 [Semantic Versioning](https://semver.org/) loosely while in `0.x`: minor versions
-change features, patch versions fix them.
+change features, patch versions fix them. The updater follows signed stable tags;
+the settings file carries its own `__version` and migrates separately.
 
-The updater follows signed stable version tags. The settings file has its own
-`__version` and migrates separately.
-
-This file stays focused on work since the latest release. Completed notes move to
-[`docs/releases`](docs/releases/) and remain linked below.
+Only work since the latest release is listed here. Completed notes move to
+[`docs/releases`](docs/releases/) and stay linked below.
 
 ## [Unreleased]
 
-- Stopped animating text. Button labels, bar glyphs, chip labels and notification actions
-  no longer scale on hover or press: a scaled glyph is drawn at one size and resampled to
-  another, which on a fractionally scaled output softened labels for as long as the
-  pointer rested on them — and permanently wherever a control sat at a fractional resting
-  scale. Surfaces still react; the text underneath them stays put. Text also renders with
-  distance fields now rather than snapping to a device pixel grid that fractional scaling
-  has already resampled away.
-- Removed keyboard navigation and the accessibility metadata that went with it. Tab
-  order, arrow-key stepping, focus rings, the settings sidebar's keyboard cursor and
-  every `Accessible` role, name and description are gone; the shell is pointer-driven.
-  Escape still steps back and closes, scroll wheels still work everywhere they did, and
-  the Wi-Fi password field still takes typed input. Screen readers can no longer
-  describe the shell.
-- Removed the code the keyboard layer was the last caller of: the item-tree, focus-visual
-  and key-activation primitives, the workspace focus ring, and nine now-unreachable
-  helpers. The checks now reject a re-added tab stop or accessibility role outright, and
-  allow key handlers only in a file that hosts a text field.
-- Trimmed nine configuration knobs off shared components that no caller ever set, so a
-  primitive's real geometry reads at the point of use instead of behind a name.
-- Stopped rebuilding the workspace and window models for a compositor event that carries
-  nothing they read; it fired 420 times in two hours of ordinary use. The event denylist
-  is pinned by a check so a refactor cannot quietly drop an entry.
-- Cut the settings file down to one write where changing the clock's date style, or
-  middle-clicking the clock, previously wrote it twice in a row.
-- Made optional-tool and font detection refresh cleanly at runtime, with stable
-  capability state and explicit backend failure tracking.
-- Added reusable process retry/exit health and Cava runtime/config status so
-  failed visualizer starts can be diagnosed without affecting the rest of the shell.
-- Fixed the generated Cava profile's smoothing range and documented its
-  runtime-only configuration lifecycle.
-- Made Matugen palettes live-reload from a user-writable JSON file, which also
-  makes read-only packaged installs work. **Re-run the installer after updating**:
-  Matugen now writes `$XDG_CONFIG_HOME/matugen/silere-shell.json` instead of a file
-  inside the checkout, and until its config points there, wallpaper colours stop
-  changing and the shell falls back to its bundled palette. If your `config.toml`
-  has an unpaired `# silere-shell` marker the installer will decline to touch it and
-  say so — repair the pair, then re-run.
-- Said so when wallpaper theming has nothing to work with: Settings › Theme and
-  Settings › System › Maintenance now name whether Matugen is missing or has simply
-  not written a palette yet, instead of presenting the bundled colors as if they came
-  from the wallpaper.
-- Changed the bundled fallback accent from white to Silere's own default accent, so a
-  system without Matugen looks like a fresh install rather than a stark one.
-- Added AUR packages to the update count through paru or yay when one is
-  installed, with a new **Include AUR packages** toggle under Settings › System ›
-  Updates. It is on by default, so an existing install with an AUR helper will
-  start counting those updates. Checks stay read-only and never install anything.
-- Gave buttons, pills, chips, toggles, media controls and slider handles one
-  consistent hover and press response, quicker on the way in than on the way back
-  out.
-- Removed the stutter on the first settings section opened in a session, which had
-  to compile every shared control before it could draw.
-- Fixed dropdown options and the Wi-Fi and Bluetooth list placeholders sitting 4px
-  shorter than every neighbouring row at any interface scale above 100%, which put
-  their dividers off the shared rhythm.
-- Marked the Wi-Fi password field as sensitive to input methods, so an IME or
+**Upgrading:** re-run the installer. Matugen now writes
+`$XDG_CONFIG_HOME/matugen/silere-shell.json` instead of a file inside the checkout,
+and until your `config.toml` points there, wallpaper colours stop changing and the
+shell falls back to its bundled palette. If that file has an unpaired
+`# silere-shell` marker the installer declines to touch it and says so; repair the
+pair, then re-run.
+
+### Added
+
+- **Include AUR packages** toggle under Settings › System › Updates, counting
+  updates through paru or yay when one is installed. On by default. Checks stay
+  read-only and never install anything.
+- Settings › Theme and Settings › System › Maintenance now name whether Matugen is
+  missing or has simply not written a palette yet, instead of presenting the
+  bundled colours as if they came from the wallpaper.
+
+### Changed
+
+- Matugen palettes live-reload from a user-writable JSON file, which also makes
+  read-only packaged installs work.
+- Text no longer scales on hover or press. A scaled glyph is drawn at one size and
+  resampled to another, which softened labels on fractionally scaled outputs.
+  Surfaces still react; the text on them stays put.
+- Text renders with distance fields rather than snapping to a device pixel grid
+  that fractional scaling has already resampled away.
+- Buttons, pills, chips, toggles, media controls and slider handles share one hover
+  and press response, quicker in than out.
+- The bundled fallback accent is Silere's own default accent rather than white, so
+  a system without Matugen looks like a fresh install rather than a stark one.
+- Renamed the theme Source option from Neutral to Custom, and the accent picker's
+  custom swatch to Mix, so the two no longer share a name.
+
+### Removed
+
+- Keyboard navigation and its accessibility metadata. Tab order, arrow-key
+  stepping, focus rings, the settings sidebar's keyboard cursor and every
+  `Accessible` role, name and description are gone; the shell is pointer-driven.
+  Escape still steps back and closes, scrolling works everywhere it did, and the
+  Wi-Fi password field still takes typed input. **Screen readers can no longer
+  describe the shell.**
+
+### Fixed
+
+- The media visualizer and track marquee froze on the only visible bar whenever
+  focus moved to a monitor with the bar disabled.
+- The screenshot watcher respawned every 60 seconds forever when no screenshot
+  directory existed, instead of giving up on a failure restarting cannot fix.
+- Notification history mislabelled days after a daylight-saving change, where a
+  23-hour day put every entry one bucket early and produced two **Yesterday**
+  headings.
+- A hung update check, package check or VPN lookup now recovers through one shared
+  bounded-process timeout instead of three hand-rolled timers.
+- Optional-tool and font detection refresh cleanly at runtime.
+- The workspace and window models no longer rebuild for a compositor event
+  carrying nothing they read; it fired 420 times in two hours of ordinary use.
+- Changing the clock's date style, or middle-clicking the clock, wrote the settings
+  file twice in a row.
+- The first settings section opened in a session no longer stutters compiling every
+  shared control before it can draw.
+- Settings row names keep a readable floor when space runs short; the value
+  shortens first.
+- Dropdown options and the Wi-Fi and Bluetooth list placeholders sat 4px shorter
+  than neighbouring rows above 100% interface scale, putting dividers off the
+  shared rhythm.
+- The Wi-Fi password field is marked sensitive to input methods, so an IME or
   on-screen keyboard no longer capitalises the first character of a case-sensitive
   key or keeps it in predictive-text history.
-- Fixed notification history mislabelling days on the day after a daylight-saving
-  change, where a 23-hour day put every entry one bucket early — the day before
-  yesterday read as **Yesterday**, under a second heading of the same name.
-- Gave a settings row's name priority over its value when space runs short. A long
-  value used to take its full width and squeeze the name to nothing; now the value
-  shortens first and the name keeps a readable floor.
-- Renamed the theme Source option from Neutral to Custom, and the accent picker's
-  own custom swatch to Mix, so the two no longer share one name.
-- Fixed the settings panel snapping to its new height when a category collapses
-  instead of easing with it.
-- Fixed the palette card bulging outward while switching theme Source between
-  Custom and Wallpaper.
-- Routed every process timeout through the shared bounded-process primitive, so a
-  hung update check, package check or VPN lookup recovers the same way instead of
-  through three separately hand-rolled timers.
-- Gave scroll behaviour, row heights and the interface font one definition each rather
-  than a copy per call site, and made the checks fail on a new copy instead of letting it
-  drift in.
-- Added a check that every settings label still fits the panel width it ships at,
-  across the whole interface-scale range, so an over-long one cannot quietly elide
-  itself in a release.
+- The settings panel eases to its new height when a category collapses instead of
+  snapping.
+- The palette card no longer bulges while switching theme Source between Custom and
+  Wallpaper.
+- Corrected the generated Cava profile's smoothing range.
 
 ## Releases
 
