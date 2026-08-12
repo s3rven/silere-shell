@@ -692,9 +692,11 @@ section "theme palette coverage"
 theme_tmpl="assets/matugen-theme.json"
 theme_loader="config/MatugenPalette.qml"
 if [ -f "$theme_tmpl" ] && [ -f "$theme_loader" ]; then
-    # Palette roles the shell actually reads. usingFallback is load state, not a colour.
+    # Palette roles the shell actually reads. usingFallback and paletteStale describe
+    # load state, not colours, so they have no template key to cover.
     used=$(grep -rhoE 'MatugenTheme\.[a-zA-Z_][a-zA-Z0-9_]*' --include='*.qml' . \
-           | sed 's/^MatugenTheme\.//' | grep -vE '^(_|qml$|usingFallback$)' | sort -u)
+           | sed 's/^MatugenTheme\.//' \
+           | grep -vE '^(_|qml$|usingFallback$|paletteStale$)' | sort -u)
     theme_gap=0
     for f in "$theme_tmpl" "$theme_loader"; do
         declared=$(grep -oE '^[[:space:]]+[a-zA-Z]+:[[:space:]]+"?#[0-9a-fA-F{]' "$f" \

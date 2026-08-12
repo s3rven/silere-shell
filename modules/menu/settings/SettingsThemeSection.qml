@@ -15,7 +15,9 @@ Column {
             ? "Wallpaper theming needs matugen installed. These are Silere's bundled colors."
             : MatugenTheme.usingFallback
                 ? "Matugen has not written a palette yet, so these are Silere's bundled colors. Re-run the installer, then set a wallpaper."
-                : ""
+                : MatugenTheme.paletteStale
+                    ? "The palette file could not be read, so these are the last colors that loaded. Check your matugen template."
+                    : ""
 
     function _hex2(v): string {
         const s = Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16)

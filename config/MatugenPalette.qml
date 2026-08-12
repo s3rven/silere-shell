@@ -19,6 +19,9 @@ Singleton {
     property var _palette: ({})
     property bool _everLoaded: false
     readonly property bool usingFallback: !root._everLoaded
+    // a later bad write keeps the last good colors, which is right, but then nothing
+    // moves on screen and usingFallback stays false — the shell has to say why
+    property bool paletteStale: false
     readonly property var _fallback: ({
         background: "#101116",
         surface:    "#1d1f26",
@@ -67,9 +70,13 @@ Singleton {
         const parsed = root._parsePalette(raw)
         // Keep the last valid palette during an editor save or atomic replace;
         // a malformed external file must never partially recolor the shell.
-        if (parsed === null) return
+        if (parsed === null) {
+            root.paletteStale = root._everLoaded
+            return
+        }
         root._palette = parsed
         root._everLoaded = true
+        root.paletteStale = false
     }
 
     FileView {

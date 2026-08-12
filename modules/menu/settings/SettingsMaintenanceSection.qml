@@ -105,6 +105,8 @@ Column {
         // the palette silently stays bundled — both causes need naming
         if (!SystemTools.hasMatugen)
             out.push({ g: "󰉦", n: "Wallpaper theming", s: "Colors stay at Silere's bundled palette", v: "matugen" })
+        else if (MatugenTheme.paletteStale)
+            out.push({ g: "󰉦", n: "Wallpaper palette", s: "Unreadable; showing the last colors that loaded", v: "template" })
         else if (MatugenTheme.usingFallback)
             out.push({ g: "󰉦", n: "Wallpaper palette",
                 s: root._repairState === "working" ? "Rewiring Matugen…"
