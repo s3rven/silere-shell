@@ -13,6 +13,19 @@ Only work since the latest release is listed here. Completed notes move to
 
 ### Fixed
 
+- Wi-Fi and Airplane Mode kept offering toggles that a hardware rfkill switch
+  refuses, so every tap was a silent no-op. The Wi-Fi row now says it is blocked
+  by the hardware switch, and Airplane Mode leaves out a radio it cannot reach.
+- A palette file that stopped being readable was invisible: the shell kept the
+  last good colors, which is right, but nothing said why new colors never
+  arrived. Theme and Maintenance now say the file could not be read.
+- Brightness writes were unbounded and their result discarded. A write that
+  `brightnessctl` cannot perform now says so instead of letting the value snap
+  back unexplained, and one that hangs can no longer wedge brightness for the
+  rest of the session.
+- Quick actions showed Power Mode as live when no daemon answers, where every tap
+  did nothing, and reported a failed Night Light toggle as simply off.
+
 - Acting on a notification lost it from history. Clicking an action told the
   sender, which closed the notification before the card's exit animation reached
   the archive step, so it was dropped — while dismissing the same notification
