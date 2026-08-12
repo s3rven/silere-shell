@@ -223,9 +223,6 @@ Singleton {
     property var barHeights: []
     readonly property bool cavaAvailable: SystemTools.hasCava && _cavaConfigPath.length > 0
     readonly property bool cavaReady: cavaAvailable && ShellSettings.mediaProgress
-    readonly property bool cavaConfigFailed: _cavaConfigFailed
-    readonly property bool cavaRetrying: _cavaProc.retrying
-    readonly property int cavaLastExitCode: _cavaProc.lastExitCode
     property int _visualizerClients: 0
     property int _visualizerDemand: 0
     readonly property bool _visualizerLowPowerOnly: _visualizerClients > 0 && _visualizerDemand <= _visualizerClients
@@ -333,7 +330,6 @@ Singleton {
             : ""
     }
     property bool _cavaConfigReady: false
-    property bool _cavaConfigFailed: false
     property string _writtenCavaProfileKey: ""
     readonly property int _cavaReloadSignal: 10
 
@@ -341,7 +337,6 @@ Singleton {
     function _writeCavaConfig(): void {
         if (root._cavaConfigPath.length === 0) {
             root._cavaConfigReady = false
-            root._cavaConfigFailed = true
             return
         }
         _cavaConfigSync.stop()
@@ -350,7 +345,6 @@ Singleton {
             && root._writtenCavaProfileKey.length > 0
             && root._writtenCavaProfileKey !== nextProfile
         root._cavaConfigReady = true
-        root._cavaConfigFailed = false
         _cavaConfig.setText(root._cavaConfigText)
         if (!root._cavaConfigReady) return
         root._writtenCavaProfileKey = nextProfile
@@ -373,7 +367,6 @@ Singleton {
         printErrors: false
         onSaveFailed: {
             root._cavaConfigReady = false
-            root._cavaConfigFailed = true
             root._writtenCavaProfileKey = ""
         }
     }
