@@ -13,6 +13,13 @@ This file stays focused on work since the latest release. Completed notes move t
 
 ## [Unreleased]
 
+- Renamed the theme Source option from Neutral to Custom, and the accent picker's
+  own custom swatch to Mix, so the two no longer share one name.
+- Fixed the settings panel snapping to its new height when a category collapses
+  instead of easing with it.
+- Fixed the palette card bulging outward while switching theme Source between
+  Custom and Wallpaper.
+
 ## Releases
 
 - [0.4.0](docs/releases/0.4.0.md) — 2026-08-12
