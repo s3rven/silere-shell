@@ -8,8 +8,6 @@ Item {
     required property bool active
     required property bool powerOpen
 
-    property real enterShift: Motion.pageOffset
-    property real exitShift: -Motion.pageOffset * 0.75
     property bool animateOnCreate: false
 
     signal pageShown()
@@ -56,7 +54,7 @@ Item {
         const enterNow = root.active && root.animateOnCreate
             && MenuState.open && !ShellSettings.reduceMotion
         root.opacity = root.active && !enterNow ? 1.0 : 0.0
-        root._pageShift = enterNow ? root.enterShift : 0
+        root._pageShift = enterNow ? Motion.pageOffset : 0
         if (MenuState.open) Qt.callLater(() => root._menuOpenSettled = true)
         if (enterNow) Qt.callLater(function() {
             if (root.active) _enter.restart()
@@ -68,7 +66,7 @@ Item {
         if (root.active) {
             _exit.stop()
             if (!root._menuOpenSettled) { root.opacity = 1.0; root._announceShown(); return }
-            if (root.opacity < 0.01) root._pageShift = root.enterShift
+            if (root.opacity < 0.01) root._pageShift = Motion.pageOffset
             _enter.restart()
             root._announceShown()
         } else {
@@ -103,6 +101,6 @@ Item {
     ParallelAnimation {
         id: _exit
         NumberAnimation { target: root; property: "opacity"; to: 0.0; duration: Motion.pageOut; easing.type: Easing.InCubic }
-        NumberAnimation { target: root; property: "_pageShift"; to: root.exitShift; duration: Motion.pageOut; easing.type: Easing.InCubic }
+        NumberAnimation { target: root; property: "_pageShift"; to: -Motion.pageOffset * 0.75; duration: Motion.pageOut; easing.type: Easing.InCubic }
     }
 }

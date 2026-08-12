@@ -9,7 +9,6 @@ Repeater {
 
     required property Item column
     property color lineColor: Theme.menuDivider
-    property int horizontalInset: 14
     readonly property real _dpr: Math.max(1, Screen.devicePixelRatio)
     readonly property real _hairline: 1 / _dpr
 
@@ -46,12 +45,12 @@ Repeater {
 
         visible: row !== null && (row.layoutPresent ?? row.visible) && hasRowAbove
               && !(row.suppressDividerAbove ?? false) && opacity > 0.01
-        x: (root.column ? root.column.x : 0) + root.horizontalInset
+        x: (root.column ? root.column.x : 0) + 14
         // snap the leftover local offset so every divider lands on the same physical pixel at fractional scales
         y: Math.round(((root.column ? root.column.y : 0)
             + (row ? row.y : 0)) * root._dpr) / root._dpr
         width: root.column
-            ? Math.max(0, root.column.width - root.horizontalInset * 2)
+            ? Math.max(0, root.column.width - 28)
             : 0
         height: root._hairline
         opacity: row

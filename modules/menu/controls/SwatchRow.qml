@@ -11,7 +11,6 @@ Item {
     property var colors: []
     property int activeIndex: -1
     property bool spread: false
-    property real packSpacing: 6
     property int edgePadding: 4
     property color ringColor: "transparent"
     property int hoveredIndex: -1
@@ -21,7 +20,7 @@ Item {
 
     implicitHeight: Metrics.rowHeightFor(32)
     implicitWidth: edgePadding * 2 + options.length * 26
-        + Math.max(0, options.length - 1) * packSpacing
+        + Math.max(0, options.length - 1) * 6
 
     function colorAt(i: int): color {
         return (colors && i >= 0 && i < colors.length) ? colors[i] : Theme.accent
@@ -48,7 +47,7 @@ Item {
         height: parent.height
         spacing: root.spread
             ? Math.max(4, (width - root.options.length * 26) / Math.max(1, root.options.length - 1))
-            : root.packSpacing
+            : 6
 
         Repeater {
             id: _rep

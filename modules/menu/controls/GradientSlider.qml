@@ -9,7 +9,6 @@ Item {
     property real position: 0
     property color thumbColor: Theme.accent
     property bool interactive: true
-    property bool dimmed: false
     property string valueUnit: "degrees"
     property real displayScale: 360
     // hue is a circle, saturation is not: one wraps past the end, the other stops
@@ -28,7 +27,7 @@ Item {
     width: parent ? parent.width : 0
     implicitHeight: Metrics.rowHeightFor(24)
     height: implicitHeight
-    opacity: root.enabled && root.interactive ? (root.dimmed ? 0.72 : 1.0) : 0.45
+    opacity: root.enabled && root.interactive ? 1.0 : 0.45
 
     function _wrapped(p: real): real {
         return ((p % 1) + 1) % 1

@@ -7,7 +7,6 @@ MenuRow {
 
     property real   value:     0
     property string valueText: ""
-    property string valueWidthText: "100%"
     property string wheelKey:  "quickslider"
     property bool   glyphClickable: false
     property bool   expandable: false
@@ -59,7 +58,7 @@ MenuRow {
         }
     }
 
-    TextMetrics { id: _vm; font.family: Settings.font; font.pixelSize: Settings.fontLabel; text: root.valueWidthText }
+    TextMetrics { id: _vm; font.family: Settings.font; font.pixelSize: Settings.fontLabel; text: "100%" }
     ShellText {
         id: _v
         anchors.right: parent.right; anchors.rightMargin: 12

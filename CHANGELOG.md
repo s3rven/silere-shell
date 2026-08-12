@@ -23,6 +23,8 @@ This file stays focused on work since the latest release. Completed notes move t
   and key-activation primitives, the workspace focus ring, and nine now-unreachable
   helpers. The checks now reject a re-added tab stop or accessibility role outright, and
   allow key handlers only in a file that hosts a text field.
+- Trimmed nine configuration knobs off shared components that no caller ever set, so a
+  primitive's real geometry reads at the point of use instead of behind a name.
 
 - Made optional-tool and font detection refresh cleanly at runtime, with stable
   capability state and explicit backend failure tracking.

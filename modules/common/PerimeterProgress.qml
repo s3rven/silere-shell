@@ -9,8 +9,6 @@ Shape {
     property real  cornerRadius: 8
     property color trackColor: "transparent"
     property color arcColor: "transparent"
-    property real  trackWidth: 1
-    property real  arcWidth: 1.5
     property bool  paused: false
 
     property real _shownProgress: 0
@@ -36,7 +34,7 @@ Shape {
 
     // one Shape keeps the static track cached and never re-uploads a texture per countdown tick, unlike Canvas
     ShapePath {
-        strokeWidth: root.trackWidth
+        strokeWidth: 1
         strokeColor: root.trackColor
         fillColor: "transparent"
 
@@ -52,7 +50,7 @@ Shape {
     ShapePath {
         readonly property real _dashUnits: root._perimeter / Math.max(0.01, strokeWidth)
 
-        strokeWidth: root.arcWidth
+        strokeWidth: 1.5
         strokeColor: root._shownProgress <= 0.002 ? "transparent" : root.arcColor
         strokeStyle: root._shownProgress >= 0.998
             ? ShapePath.SolidLine : ShapePath.DashLine

@@ -14,7 +14,7 @@ Item {
     property bool   interactive: false
     property int    maxTextWidth: 150
     property bool   compact: ShellSettings.barCompact
-    property int    horizontalPadding: Metrics.pillPadFor(compact)
+    readonly property int horizontalPadding: Metrics.pillPadFor(compact)
     property bool   animateGlyph: true
     property bool   animateText: false
     property int    glyphPixelSize: Settings.iconSize + 2
@@ -28,7 +28,6 @@ Item {
     property bool   levelVisible: false
     property color  levelColor: Theme.accent
 
-    property int    hoverRevealDelay: 80
     property bool   hoverActive: false
     readonly property bool hovered: _pillHover.hovered
     readonly property bool expanded: hoverActive
@@ -354,7 +353,7 @@ Item {
 
     Timer {
         id: _hoverRevealTimer
-        interval: root.hoverRevealDelay
+        interval: 80
         onTriggered: root.hoverActive = true
     }
 
