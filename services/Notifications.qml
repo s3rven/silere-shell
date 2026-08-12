@@ -368,8 +368,17 @@ Singleton {
         root._forget(notifId)
     }
 
+    // Closed by someone else: the sender withdrew it, or it answered our own
+    // action.invoke() before the card's exit animation reached dismissObject.
+    // Without archiving here the entry is dropped, so acting on a notification
+    // loses it from history while dismissing one keeps it.
     function _onClosed(id: int, notification): void {
         if (root._consumeClosing(id, notification)) return
+        const n = root.list.find(e => e.id === id && e.notification === notification)
+        if (n) {
+            const entry = root._historyEntry(n)
+            if (entry) { root._prependHistory(entry); root._saveHistory() }
+        }
         root._forget(id)
     }
 
