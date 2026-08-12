@@ -10,10 +10,21 @@ post_install() {
   click the active workspace diamond to open the menu and settings,
   or bind it: qs ipc -p /usr/share/silere-shell/shell.qml call menu toggle
 
-  wallpaper colours need a matugen template. copy
-  /usr/share/silere-shell/assets/matugen-theme.qml into your matugen
-  templates and point config.toml at it — see the README. without it
-  silere uses its bundled palette and everything else still works.
+  wallpaper colours need a one-time matugen setup:
+    mkdir -p ~/.config/matugen/templates/silere-shell
+    cp /usr/share/silere-shell/assets/matugen-theme.json \
+       ~/.config/matugen/templates/silere-shell/Theme.json
+
+  then add this to ~/.config/matugen/config.toml:
+    [templates.silere-shell]
+    input_path = '~/.config/matugen/templates/silere-shell/Theme.json'
+    output_path = '~/.config/matugen/silere-shell.json'
+
+  run matugen once after that. the palette is user-writable and reloads live;
+  without it Silere uses its bundled fallback.
+
+  cava needs no setup: Silere supplies a temporary profile while its audio
+  visualizer is visible and never changes your personal cava config.
 
   updates come from pacman; the in-shell updater stays out of the way.
 

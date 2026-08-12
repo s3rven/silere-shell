@@ -105,14 +105,6 @@ CHECK_ROOT="$tmp/source"
 mkdir -p "$CHECK_ROOT"
 cp -R "$ROOT/assets" "$ROOT/config" "$ROOT/modules" "$ROOT/services" "$CHECK_ROOT/"
 cp "$ROOT/shell.qml" "$CHECK_ROOT/shell.qml"
-if [ ! -f "$CHECK_ROOT/config/MatugenTheme.qml" ]; then
-    if [ ! -f "$CHECK_ROOT/config/MatugenTheme.default.qml" ]; then
-        echo "FAIL: config/MatugenTheme.default.qml is missing" >&2
-        exit 1
-    fi
-    cp "$CHECK_ROOT/config/MatugenTheme.default.qml" "$CHECK_ROOT/config/MatugenTheme.qml"
-fi
-
 had_failure=0
 jobs_n="$(nproc 2>/dev/null || echo 4)"
 

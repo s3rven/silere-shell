@@ -38,6 +38,16 @@ ShellRoot {
     }
 
     function _run(): void {
+        const palette = MatugenTheme._parsePalette(
+            "{\"background\":\"#101116\",\"surface\":\"#1d1f26\","
+            + "\"text\":\"#e9eaf0\",\"subtext\":\"#a0a4b0\","
+            + "\"accent\":\"#ffffff\",\"error\":\"#dd92a2\","
+            + "\"warning\":\"#d4ad77\",\"success\":\"#94bd8b\"}")
+        root._check(palette !== null && palette.accent === "#ffffff"
+                && MatugenTheme._parsePalette("{\"accent\":\"#ffffff\"}") === null
+                && MatugenTheme._parsePalette("{\"accent\":\"red\"}") === null,
+            "matugen palette accepts only complete six-digit hex role sets")
+
         const layout = ShellSettings._normaliseBarWidgetLayout(
             ["media", "media", "unknown"], ["clock"], ["workspaces"])
         const combined = layout.left.concat(layout.center, layout.right)
@@ -134,6 +144,13 @@ ShellRoot {
             "media service rejects remote file artwork")
         root._check(Media.artSource("https://example.invalid/bad\ncover.jpg") === "",
             "media service rejects control characters in artwork URLs")
+        root._check(Media._cavaNoiseReduction >= 0
+                && Media._cavaNoiseReduction <= 1
+                && Media._cavaConfigText.includes("method = pipewire")
+                && Media._cavaConfigText.includes("method = raw")
+                && Media._cavaConfigText.includes("data_format = ascii")
+                && Media._cavaConfigText.includes("ascii_max_range = 12"),
+            "media service emits a valid bounded Cava raw-output profile")
         root._check(Media.finiteNonnegative(NaN) === 0
                 && Media.finiteNonnegative(Infinity) === 0
                 && Media.finiteNonnegative(12.5) === 12.5,
@@ -193,6 +210,8 @@ ShellRoot {
         const toolsWas = SystemTools._tools
         const familyWas = SystemTools.packageFamily
         const readyWas = SystemTools.ready
+        const includeAurWas = ShellSettings.updatesIncludeAur
+        ShellSettings.updatesIncludeAur = true
         const updateCommand = function(family, tools) {
             SystemTools.packageFamily = family
             SystemTools._tools = tools
@@ -211,14 +230,61 @@ ShellRoot {
             "package updates build the zypper command")
         root._check(updateCommand("xbps", { "xbps-install": true }).includes("xbps-install -Mun"),
             "package updates build the XBPS command")
+        root._check(Updates._countFrom("42\npackage") === 42
+                && Updates._countFrom("42oops") === -1
+                && Updates._countFrom("-1") === -1
+                && Updates._countFrom("999999") === -1,
+            "package updates reject malformed or implausible counts")
+        SystemTools.packageFamily = "pacman"
+        SystemTools._tools = { checkupdates: true, paru: true }
+        ShellSettings.updatesIncludeAur = false
+        root._check(!Updates._cmd().includes("paru -Qua")
+                && Updates.managerLabel === "pacman",
+            "package updates honor the disabled AUR source")
+        ShellSettings.updatesIncludeAur = true
         Updates.count = 3
         Updates._parseDetail("3\nSPLIT 2 1\none 1 -> 2\ntwo 2 -> 3\naur 4 -> 5")
         root._check(Updates.repoCount === 2 && Updates.aurCount === 1
                 && Updates.packages.length === 3 && Updates.packages[2].aur,
             "package updates split repository and AUR details")
+        SystemTools.packageFamily = "apt"
+        SystemTools._tools = { apt: true }
+        Updates.count = 2
+        Updates._parseDetail("2\nListing...\nlibalpha/stable 2.0 amd64 [upgradable from: 1.0]\nbeta/stable 3.1 all [upgradable from: 3.0]")
+        root._check(Updates.packages.length === 2
+                && Updates.packages[0].name === "libalpha"
+                && Updates.packages[0].from === "1.0"
+                && Updates.packages[0].to === "2.0",
+            "package updates parse apt details")
+        SystemTools.packageFamily = "dnf"
+        SystemTools._tools = { dnf: true }
+        Updates.count = 1
+        Updates._parseDetail("1\nalpha.x86_64 2.4-1 updates")
+        root._check(Updates.packages.length === 1
+                && Updates.packages[0].name === "alpha"
+                && Updates.packages[0].to === "2.4-1",
+            "package updates parse dnf details")
+        SystemTools.packageFamily = "zypper"
+        SystemTools._tools = { zypper: true }
+        Updates.count = 1
+        Updates._parseDetail("1\nv | repo | alpha | 1.0 | 2.0 | x86_64")
+        root._check(Updates.packages.length === 1
+                && Updates.packages[0].from === "1.0"
+                && Updates.packages[0].to === "2.0",
+            "package updates parse zypper details")
+        SystemTools.packageFamily = "xbps"
+        SystemTools._tools = { "xbps-install": true }
+        Updates.count = 1
+        Updates._parseDetail("1\nalpha-1.0_1 update alpha-2.0_1")
+        root._check(Updates.packages.length === 1
+                && Updates.packages[0].name === "alpha"
+                && Updates.packages[0].from === "1.0_1"
+                && Updates.packages[0].to === "2.0_1",
+            "package updates parse XBPS details")
         SystemTools._tools = toolsWas
         SystemTools.packageFamily = familyWas
         SystemTools.ready = readyWas
+        ShellSettings.updatesIncludeAur = includeAurWas
 
         const commitLines = []
         for (let i = 0; i < ShellUpdate.maxCommitDetail + 20; i++)

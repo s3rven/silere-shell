@@ -263,42 +263,68 @@ elif command -v hyprctl >/dev/null 2>&1; then
 fi
 
 if command -v matugen >/dev/null 2>&1; then
-  if [ -f config/MatugenTheme.qml ]; then
-    ok "theme" "config/MatugenTheme.qml"
-  elif [ -f config/MatugenTheme.default.qml ]; then
-    warn "theme" "generated theme absent; default will be seeded for smoke test"
-  else
-    fail "theme" "config/MatugenTheme.default.qml missing"
-  fi
-  _tmpl="$_cfg_home/matugen/templates/silere-shell/Theme.qml"
+  [ -f config/MatugenPalette.qml ] \
+    && ok "theme" "bundled fallback + live palette loader" \
+    || fail "theme" "config/MatugenPalette.qml missing"
+  _tmpl="$_cfg_home/matugen/templates/silere-shell/Theme.json"
   if [ -f "$_tmpl" ]; then
     ok "matugen tmpl" "$_tmpl"
-    # an installed template predating a new palette role regenerates a Theme.qml missing it,
+    # An installed template predating a new palette role can regenerate incomplete JSON,
     # which surfaces as silently wrong colours rather than a load error
     _missing=""
     for _role in $(grep -rhoE 'MatugenTheme\.[a-zA-Z_][a-zA-Z0-9_]*' --include='*.qml' . \
-      | sed 's/^MatugenTheme\.//' | grep -vx qml | sort -u); do
-      grep -qE "property[[:space:]]+[a-zA-Z]+[[:space:]]+$_role\b" "$_tmpl" \
+      | sed 's/^MatugenTheme\.//' | grep -vE '^(_|qml$)' | sort -u); do
+      grep -qE "\"$_role\"[[:space:]]*:" "$_tmpl" \
         || _missing="$_missing $_role"
     done
     if [ -n "$_missing" ]; then
-      warn "matugen roles" "template lacks:$_missing — reinstall or: cp assets/matugen-theme.qml $_tmpl"
+      warn "matugen roles" "template lacks:$_missing — reinstall or: cp assets/matugen-theme.json $_tmpl"
     else
       ok "matugen roles" "template provides every palette role the shell reads"
     fi
   else
-    warn "matugen tmpl" "template missing — run installer or: cp assets/matugen-theme.qml $_tmpl"
+    warn "matugen tmpl" "template missing — run installer or: cp assets/matugen-theme.json $_tmpl"
   fi
   _matugen_cfg="$_cfg_home/matugen/config.toml"
   if [ -f "$_matugen_cfg" ] && grep -q '# silere-shell begin' "$_matugen_cfg"; then
-    ok "matugen cfg" "silere-shell entry present in config.toml"
+    _managed_block="$(awk '
+      $0 == "# silere-shell begin" { inside = 1 }
+      inside { print }
+      $0 == "# silere-shell end" { inside = 0 }
+    ' "$_matugen_cfg")"
+    if printf '%s\n' "$_managed_block" | grep -qF 'silere-shell.json'; then
+      ok "matugen cfg" "writes the live per-user palette"
+    else
+      warn "matugen cfg" "Silere entry uses the legacy checkout output — rerun installer"
+    fi
   else
     warn "matugen cfg" "silere-shell block missing from $_matugen_cfg — run installer"
+  fi
+  _palette="$_cfg_home/matugen/silere-shell.json"
+  if [ -f "$_palette" ]; then
+    _missing=""
+    for _role in background surface text subtext accent error warning success; do
+      grep -qE "\"$_role\"[[:space:]]*:[[:space:]]*\"#[0-9a-fA-F]{6}\"" "$_palette" \
+        || _missing="$_missing $_role"
+    done
+    if [ -n "$_missing" ]; then
+      warn "matugen output" "$_palette is malformed or lacks:$_missing"
+    else
+      ok "matugen output" "$_palette"
+    fi
+  else
+    warn "matugen output" "palette not generated yet — run matugen once"
   fi
 fi
 
 if command -v cava >/dev/null 2>&1; then
-  ok "visualizer" "cava available; starts while media visualizer is visible"
+  if grep -qE 'case "eco":[[:space:]]+return 0\.[0-9]+' services/Media.qml \
+      && grep -qF '"method = raw\n"' services/Media.qml \
+      && grep -qF '"data_format = ascii\n"' services/Media.qml; then
+    ok "visualizer" "cava available; Silere supplies a bounded temporary raw profile"
+  else
+    fail "visualizer" "generated Cava profile is missing required bounded raw-output settings"
+  fi
 fi
 
 section "headless QML probe"
@@ -330,9 +356,6 @@ if command -v qs >/dev/null 2>&1; then
   elif ! command -v timeout >/dev/null 2>&1; then
     warn "startup" "timeout command unavailable; runtime smoke test skipped"
   else
-    # The shell needs config/MatugenTheme.qml to exist. If it's missing (bare clone),
-    # seed it from the default and leave it: the file is gitignored, and a live shell
-    # reloads from this checkout, so deleting it on exit takes that shell down.
     smoke_log=""
     cov_log=""
     cov_cfg=""
@@ -344,9 +367,6 @@ if command -v qs >/dev/null 2>&1; then
     }
     trap _smoke_cleanup EXIT
 
-    if [ ! -f config/MatugenTheme.qml ] && [ -f config/MatugenTheme.default.qml ]; then
-      cp config/MatugenTheme.default.qml config/MatugenTheme.qml
-    fi
     code=0
     smoke_log="$(mktemp "${TMPDIR:-/tmp}/silere-qs-smoke.XXXXXX.log")"
     timeout 5s qs -p shell.qml --no-color >"$smoke_log" 2>&1 || code=$?

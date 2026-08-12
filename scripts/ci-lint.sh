@@ -65,11 +65,11 @@ check_service_module Network Quickshell.Networking
 
 section "external QML module inventory"
 imported_modules="$(
-  # MatugenTheme.qml is a local generated file; inventory the shipped template
-  # instead so personal output cannot change validation results.
-  grep -RhE --include='*.qml' --exclude='MatugenTheme.qml' \
+  # Matugen output is JSON outside the source tree, so only shipped QML belongs
+  # in the unconditional module inventory.
+  grep -RhE --include='*.qml' \
     '^[[:space:]]*import[[:space:]]+[A-Za-z][A-Za-z0-9_.]*([[:space:]]|$)' \
-    shell.qml modules config services assets/matugen-theme.qml \
+    shell.qml modules config services \
     | awk '$1 == "import" { print $2 }' | sort -u
 )"
 required_modules="$(printf '%s\n' "${SILERE_REQUIRED_QML_MODULES[@]}" | sort -u)"
@@ -403,10 +403,6 @@ while IFS= read -r qd; do
   dir="$(dirname "$qd")"
   while read -r f; do
     [ -f "$dir/$f" ] && continue
-    # generated files (e.g. matugen's MatugenTheme.qml) ship as a tracked
-    # *.default.qml and are copied into place on install — absent on a fresh
-    # checkout, which is expected. (No git here: CI may have no .git.)
-    [ -f "$dir/${f%.qml}.default.qml" ] && continue
     missing="$missing $dir/$f"
   done < <(awk 'NF>=2 && $NF ~ /\.qml$/ {print $NF}' "$qd")
 done < <(find . -path './.git' -prune -o -name qmldir -print)
@@ -634,19 +630,21 @@ else
 fi
 
 section "theme palette coverage"
-theme_tmpl="assets/matugen-theme.qml"
-theme_default="config/MatugenTheme.default.qml"
-if [ -f "$theme_tmpl" ] && [ -f "$theme_default" ]; then
-    # roles the shell actually reads; the MatugenTheme.qml/.default.qml filename
-    # mentions in comments collapse to a bare "qml", so drop it
+theme_tmpl="assets/matugen-theme.json"
+theme_loader="config/MatugenPalette.qml"
+if [ -f "$theme_tmpl" ] && [ -f "$theme_loader" ]; then
+    # Palette roles the shell actually reads.
     used=$(grep -rhoE 'MatugenTheme\.[a-zA-Z_][a-zA-Z0-9_]*' --include='*.qml' . \
-           | sed 's/^MatugenTheme\.//' | grep -vx qml | sort -u)
-    declared_roles() {
-        grep -oE 'property +[a-zA-Z]+ +[a-zA-Z][a-zA-Z0-9]*' "$1" | awk '{print $NF}' | sort -u
-    }
+           | sed 's/^MatugenTheme\.//' | grep -vE '^(_|qml$)' | sort -u)
     theme_gap=0
-    for f in "$theme_tmpl" "$theme_default"; do
-        gap=$(comm -23 <(printf '%s\n' "$used") <(declared_roles "$f"))
+    for f in "$theme_tmpl" "$theme_loader"; do
+        declared=$(grep -oE '^[[:space:]]+[a-zA-Z]+:[[:space:]]+"?#[0-9a-fA-F{]' "$f" \
+            | sed -E 's/^[[:space:]]*([a-zA-Z]+):.*/\1/' | sort -u)
+        # The generated JSON template quotes keys; include those as well.
+        quoted=$(grep -oE '"[a-zA-Z]+"[[:space:]]*:' "$f" \
+            | tr -d '": ' | sort -u)
+        gap=$(comm -23 <(printf '%s\n' "$used") \
+            <(printf '%s\n%s\n' "$declared" "$quoted" | grep -v '^$' | sort -u))
         if [ -n "$gap" ]; then
             theme_gap=1
             fail "$f is missing palette roles the shell reads:"
@@ -654,10 +652,10 @@ if [ -f "$theme_tmpl" ] && [ -f "$theme_default" ]; then
         fi
     done
     if [ "$theme_gap" -eq 0 ]; then
-        ok "theme" "matugen template and bundled default cover every role read"
+        ok "theme" "matugen template and fallback loader cover every palette role"
     fi
 else
-    skip "theme" "matugen template or bundled default not found"
+    skip "theme" "matugen template or palette loader not found"
 fi
 
 # The accent picker marks a swatch active by string-matching neutralAccent against

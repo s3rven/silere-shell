@@ -158,7 +158,7 @@ _merged_tree_starts() {
     command -v timeout >/dev/null 2>&1 || return 0
     [ -n "${WAYLAND_DISPLAY:-}" ] || return 0
     [ -n "${XDG_RUNTIME_DIR:-}" ] && [ -d "$XDG_RUNTIME_DIR" ] || return 0
-    [ -f "$ROOT/config/MatugenTheme.qml" ] || return 0
+    [ -f "$ROOT/config/MatugenPalette.qml" ] || return 0
     local log code=0 verdict=0
     log="$(mktemp "${TMPDIR:-/tmp}/silere-update-smoke.XXXXXX.log")" || return 0
     timeout 5s qs -p "$ROOT/shell.qml" --no-color >"$log" 2>&1 || code=$?

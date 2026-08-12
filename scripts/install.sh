@@ -268,6 +268,39 @@ _answered_yes() {
     [[ "$1" =~ ^[Yy] ]]
 }
 
+_replace_matugen_block() {
+    local file="$1" input="$2" output="$3" target tmp
+    [ -f "$file" ] || return 1
+    target="$file"
+    if [ -L "$file" ]; then
+        target="$(readlink -f -- "$file" 2>/dev/null)" || return 1
+    fi
+    if ! awk '
+        $0 == "# silere-shell begin" { begins++; begin_line = NR }
+        $0 == "# silere-shell end"   { ends++; end_line = NR }
+        END { exit !(begins == 1 && ends == 1 && begin_line < end_line) }
+    ' "$target"; then
+        _warn "silere-shell markers are malformed or ambiguous — left config.toml unchanged"
+        return 1
+    fi
+    tmp="$(mktemp "$(dirname -- "$target")/.silere-matugen.XXXXXX")" || return 1
+    if ! awk '
+        $0 == "# silere-shell begin" { removing = 1; next }
+        $0 == "# silere-shell end"   { removing = 0; next }
+        !removing
+    ' "$target" > "$tmp"; then
+        rm -f "$tmp"
+        return 1
+    fi
+    printf '\n# silere-shell begin\n[templates.silere-shell]\ninput_path  = %s\noutput_path = %s\n# silere-shell end\n' \
+        "$input" "$output" >> "$tmp"
+    chmod --reference="$target" "$tmp" 2>/dev/null || true
+    if ! mv -- "$tmp" "$target"; then
+        rm -f "$tmp"
+        return 1
+    fi
+}
+
 if [ "${SILERE_SCRIPT_LIB_ONLY:-0}" = "1" ]; then
     return 0 2>/dev/null || exit 0
 fi
@@ -439,7 +472,7 @@ fi
 _optdep brightnessctl "brightness control + popup"
 _optdep inotifywait   "screenshot flash"
 _optdep nmcli         "VPN name fallback"
-_optdep cava          "audio visualizer"
+_optdep cava          "audio visualizer (auto-configured at runtime)"
 _optdep_any updates   "update count" checkupdates apt dnf zypper xbps-install
 _optdep_any "AUR helper" "AUR update count" paru yay
 _optdep busctl        "notification daemon check"
@@ -606,19 +639,13 @@ ROOT="$INSTALL_DIR"
 did_tmpl=false did_toml=false did_autostart=false did_update=false
 autostart_ready=false
 ROOT_PRINTF_BYTES="$(_shell_quote "$(_shell_printf_bytes "$ROOT")")"
-MATUGEN_OUTPUT_TOML="$(_toml_basic_string "$ROOT/config/MatugenTheme.qml")"
-MATUGEN_INPUT_TOML="$(_toml_basic_string "$CONFIG_HOME/matugen/templates/silere-shell/Theme.qml")"
-
-# Seed the generated theme from the bundled default so the shell themes
-# correctly before matugen has run. matugen later overwrites this file.
-if [ ! -f "$ROOT/config/MatugenTheme.qml" ] && [ -f "$ROOT/config/MatugenTheme.default.qml" ]; then
-    cp "$ROOT/config/MatugenTheme.default.qml" "$ROOT/config/MatugenTheme.qml"
-fi
+MATUGEN_OUTPUT_TOML="$(_toml_basic_string "$CONFIG_HOME/matugen/silere-shell.json")"
+MATUGEN_INPUT_TOML="$(_toml_basic_string "$CONFIG_HOME/matugen/templates/silere-shell/Theme.json")"
 
 # ── matugen template ─────────────────────────────────────────────────────────────
 _section "matugen template"
-TMPL_SRC="$ROOT/assets/matugen-theme.qml"
-TMPL_DST="$CONFIG_HOME/matugen/templates/silere-shell/Theme.qml"
+TMPL_SRC="$ROOT/assets/matugen-theme.json"
+TMPL_DST="$CONFIG_HOME/matugen/templates/silere-shell/Theme.json"
 if ! $has_matugen; then
     _skip "matugen not installed"
 elif _install_file "matugen template" "$TMPL_SRC" "$TMPL_DST"; then
@@ -632,7 +659,19 @@ MATUGEN_CFG="$CONFIG_HOME/matugen/config.toml"
 if ! $has_matugen; then
     _skip "matugen not installed"
 elif [ -f "$MATUGEN_CFG" ] && grep -q '# silere-shell begin' "$MATUGEN_CFG"; then
-    _ok "entry already present"
+    if grep -qF "input_path  = $MATUGEN_INPUT_TOML" "$MATUGEN_CFG" \
+            && grep -qF "output_path = $MATUGEN_OUTPUT_TOML" "$MATUGEN_CFG"; then
+        _ok "entry already present"
+    elif _ask "Update the existing Silere entry for this install?"; then
+        _backup "$MATUGEN_CFG"
+        if _replace_matugen_block "$MATUGEN_CFG" "$MATUGEN_INPUT_TOML" "$MATUGEN_OUTPUT_TOML"; then
+            _ok "entry updated"; did_toml=true
+        else
+            _warn "could not update $MATUGEN_CFG"
+        fi
+    else
+        _skip "existing entry left unchanged"
+    fi
 elif _matugen_table_present "$MATUGEN_CFG"; then
     _warn "an unmanaged [templates.silere-shell] entry already exists"
     _skip "left $MATUGEN_CFG unchanged"

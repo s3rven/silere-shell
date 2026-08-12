@@ -10,15 +10,6 @@ if ! command -v qs >/dev/null 2>&1; then
     exit 0
 fi
 
-if [ ! -f config/MatugenTheme.qml ]; then
-    if [ -f config/MatugenTheme.default.qml ]; then
-        cp config/MatugenTheme.default.qml config/MatugenTheme.qml
-    else
-        echo "FAIL: config/MatugenTheme.default.qml is missing" >&2
-        exit 1
-    fi
-fi
-
 log="$(mktemp "${TMPDIR:-/tmp}/silere-logic.XXXXXX.log")"
 cfg="$(mktemp -d "${TMPDIR:-/tmp}/silere-logic-cfg.XXXXXX")"
 runtime="$(mktemp -d "${TMPDIR:-/tmp}/silere-logic-runtime.XXXXXX")"

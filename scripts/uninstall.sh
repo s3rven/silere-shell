@@ -123,12 +123,37 @@ fi
 
 # ── matugen template ─────────────────────────────────────────────────────────────
 _section "matugen template"
-TMPL_DST="$CONFIG_HOME/matugen/templates/silere-shell/Theme.qml"
+TMPL_DST="$CONFIG_HOME/matugen/templates/silere-shell/Theme.json"
+LEGACY_TMPL_DST="$CONFIG_HOME/matugen/templates/silere-shell/Theme.qml"
 
 if [ -f "$TMPL_DST" ] || [ -f "${TMPL_DST}.bak" ]; then
     if _ask "Remove $TMPL_DST?"; then
         _restore_or_remove "$TMPL_DST"
         rmdir "$(dirname "$TMPL_DST")" 2>/dev/null || true
+    else
+        _skip "kept"
+    fi
+else
+    _skip "not found"
+fi
+
+if [ -f "$LEGACY_TMPL_DST" ] || [ -f "${LEGACY_TMPL_DST}.bak" ]; then
+    if _ask "Remove legacy $LEGACY_TMPL_DST?"; then
+        _restore_or_remove "$LEGACY_TMPL_DST"
+        rmdir "$(dirname "$LEGACY_TMPL_DST")" 2>/dev/null || true
+    else
+        _skip "legacy template kept"
+    fi
+fi
+
+# ── generated matugen palette ────────────────────────────────────────────────────
+_section "matugen palette"
+MATUGEN_PALETTE="$CONFIG_HOME/matugen/silere-shell.json"
+
+if [ -f "$MATUGEN_PALETTE" ]; then
+    if _ask "Remove $MATUGEN_PALETTE?"; then
+        rm -f -- "$MATUGEN_PALETTE"
+        _ok "removed"
     else
         _skip "kept"
     fi

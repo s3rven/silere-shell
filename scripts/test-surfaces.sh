@@ -30,17 +30,6 @@ if ! command -v qs >/dev/null 2>&1; then
 fi
 # No display check on purpose: the offscreen QPA plugin needs neither Wayland
 # nor X, which is what lets this run in a CI container.
-# Seeded and then left in place: the file is gitignored, and a live shell reloads from
-# this checkout, so removing it on exit takes that shell down until matugen runs again.
-if [ ! -f config/MatugenTheme.qml ]; then
-    if [ -f config/MatugenTheme.default.qml ]; then
-        cp config/MatugenTheme.default.qml config/MatugenTheme.qml
-    else
-        echo "SKIP: no config/MatugenTheme.qml and no bundled default to seed from" >&2
-        exit 0
-    fi
-fi
-
 if [ "$#" -gt 0 ]; then
     list="$(printf '%s\n' "$@")"
 else

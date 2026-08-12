@@ -2,7 +2,7 @@
 
 pkgname=silere-shell-git
 _pkgname=silere-shell
-pkgver=0.2.0.r22.g123d5d8
+pkgver=0.4.0.r2.gde75dcc
 pkgrel=1
 pkgdesc="Quiet by default, yours by choice. A Quickshell bar for Hyprland and niri with nothing running behind your back"
 arch=('any')
@@ -27,6 +27,8 @@ optdepends=(
     'networkmanager: VPN name fallback'
     'inotify-tools: screenshot-file watcher for underline feedback'
     'pacman-contrib: package update badge'
+    'paru: AUR update count'
+    'yay: AUR update count'
 )
 provides=("$_pkgname")
 conflicts=("$_pkgname")

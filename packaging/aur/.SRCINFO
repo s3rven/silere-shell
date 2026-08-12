@@ -1,6 +1,6 @@
 pkgbase = silere-shell-git
 	pkgdesc = Quiet by default, yours by choice. A Quickshell bar for Hyprland and niri with nothing running behind your back
-	pkgver = 0.2.0.r22.g123d5d8
+	pkgver = 0.4.0.r2.gde75dcc
 	pkgrel = 1
 	url = https://github.com/s3rven/silere-shell
 	install = silere-shell-git.install
@@ -24,6 +24,8 @@ pkgbase = silere-shell-git
 	optdepends = networkmanager: VPN name fallback
 	optdepends = inotify-tools: screenshot-file watcher for underline feedback
 	optdepends = pacman-contrib: package update badge
+	optdepends = paru: AUR update count
+	optdepends = yay: AUR update count
 	provides = silere-shell
 	conflicts = silere-shell
 	source = silere-shell::git+https://github.com/s3rven/silere-shell.git

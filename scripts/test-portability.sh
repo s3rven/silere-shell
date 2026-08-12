@@ -258,6 +258,20 @@ test_install_path_safety() (
     printf '%s\n' '[templates.silere-shell]' > "$generic/matugen.toml"
     _matugen_table_present "$generic/matugen.toml" \
         || fail "unmanaged Matugen table was not detected"
+
+    printf '%s\n' before '# silere-shell begin' \
+        '[templates.silere-shell]' 'output_path = "legacy.qml"' \
+        '# silere-shell end' after > "$generic/managed-matugen.toml"
+    _replace_matugen_block "$generic/managed-matugen.toml" \
+        '"template.qml"' '"palette.json"' \
+        || fail "managed Matugen block could not be migrated"
+    grep -qF 'input_path  = "template.qml"' "$generic/managed-matugen.toml" \
+        || fail "managed Matugen input path was not refreshed"
+    grep -qF 'output_path = "palette.json"' "$generic/managed-matugen.toml" \
+        || fail "managed Matugen output path was not refreshed"
+    grep -qFx before "$generic/managed-matugen.toml" \
+        && grep -qFx after "$generic/managed-matugen.toml" \
+        || fail "managed Matugen migration lost surrounding config"
 )
 
 make_proc() {
