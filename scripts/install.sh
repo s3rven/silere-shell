@@ -311,6 +311,11 @@ Usage:
   bash scripts/install.sh        Install Silere Shell (interactive)
   bash scripts/install.sh --help Show this message
 
+  bash scripts/install.sh --repair-matugen
+        Rewire Matugen without reinstalling. Writes only Silere's own template
+        and its marked block in config.toml, and refuses an entry it does not
+        own. This is what Settings > Maintenance runs.
+
 Silere runs on Hyprland and niri only. The installer asks before it writes
 anything and backs up every file it edits.
 
@@ -323,9 +328,11 @@ EOF
 # Anything the helper case above recognises has already exited, so a surviving
 # argument is a typo. Left unhandled it used to start a real install, and
 # --help is the first thing a careful reader types before running a script.
+_repair_matugen=0
 case "${1:-}" in
     "") ;;
     -h|--help) _usage; exit 0 ;;
+    --repair-matugen) _repair_matugen=1 ;;
     *)
         _err "unknown option: $1"
         _usage >&2
@@ -391,6 +398,59 @@ _install_file() {
         _ok "installed"
     fi
 }
+
+# ── matugen repair ───────────────────────────────────────────────────────────────
+# Reached from the shell's health card, so it cannot prompt. It takes only the
+# steps the installer would take unprompted and refuses the same configs the
+# installer refuses, which keeps one set of rules for one job.
+if [ "$_repair_matugen" = "1" ]; then
+    command -v matugen >/dev/null 2>&1 || _die "matugen is not installed"
+    ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
+    MATUGEN_CFG="$CONFIG_HOME/matugen/config.toml"
+    MATUGEN_OUTPUT_TOML="$(_toml_basic_string "$CONFIG_HOME/matugen/silere-shell.json")"
+    MATUGEN_INPUT_TOML="$(_toml_basic_string "$CONFIG_HOME/matugen/templates/silere-shell/Theme.json")"
+    TMPL_SRC="$ROOT/assets/matugen-theme.json"
+    TMPL_DST="$CONFIG_HOME/matugen/templates/silere-shell/Theme.json"
+
+    [ -r "$TMPL_SRC" ] || _die "template missing at $TMPL_SRC"
+    mkdir -p "${TMPL_DST%/*}" || _die "could not create ${TMPL_DST%/*}"
+    _backup "$TMPL_DST"
+    cp "$TMPL_SRC" "$TMPL_DST" || _die "could not write $TMPL_DST"
+    _ok "template written"
+
+    if [ -f "$MATUGEN_CFG" ] && grep -q '# silere-shell begin' "$MATUGEN_CFG"; then
+        if grep -qF "input_path  = $MATUGEN_INPUT_TOML" "$MATUGEN_CFG" \
+                && grep -qF "output_path = $MATUGEN_OUTPUT_TOML" "$MATUGEN_CFG"; then
+            _ok "entry already correct"
+        else
+            _backup "$MATUGEN_CFG"
+            _replace_matugen_block "$MATUGEN_CFG" "$MATUGEN_INPUT_TOML" "$MATUGEN_OUTPUT_TOML" \
+                || _die "could not update $MATUGEN_CFG"
+            _ok "entry updated"
+        fi
+    elif _matugen_table_present "$MATUGEN_CFG"; then
+        _die "an unmanaged [templates.silere-shell] entry exists; edit $MATUGEN_CFG by hand"
+    else
+        mkdir -p "${MATUGEN_CFG%/*}" || _die "could not create ${MATUGEN_CFG%/*}"
+        if [ -f "$MATUGEN_CFG" ]; then
+            _backup "$MATUGEN_CFG"
+        else
+            printf '[config]\nversion_check = false\n' > "$MATUGEN_CFG"
+        fi
+        cat >> "$MATUGEN_CFG" <<EOF
+
+# silere-shell begin
+[templates.silere-shell]
+input_path  = $MATUGEN_INPUT_TOML
+output_path = $MATUGEN_OUTPUT_TOML
+# silere-shell end
+EOF
+        _ok "entry added"
+    fi
+    # matugen writes the palette on its next run, so colours follow the next wallpaper change
+    printf 'repaired\n'
+    exit 0
+fi
 
 # ── spinner ──────────────────────────────────────────────────────────────────────
 _spin_pid=""
