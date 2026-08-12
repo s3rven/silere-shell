@@ -115,6 +115,11 @@ Singleton {
     property bool _scannerWanted: false
     property string wifiConnecting: ""
     property string wifiError: ""
+    property int wifiErrorReason: ConnectionFailReason.Unknown
+    // the saved profile's key is the thing that is wrong, so the row has to offer a retype
+    readonly property bool wifiErrorNeedsSecret: wifiError.length > 0
+        && (wifiErrorReason === ConnectionFailReason.NoSecrets
+            || wifiErrorReason === ConnectionFailReason.WifiAuthTimeout)
     property var _pendingNetwork: null
     readonly property bool wifiScanning: _scanWarmup.running
 
@@ -150,10 +155,12 @@ Singleton {
         _scanWarmup.stop()
         _setScannerEnabled(false)
         wifiError = ""
+        wifiErrorReason = ConnectionFailReason.Unknown
     }
 
     function clearWifiError(): void {
         if (wifiError.length > 0) wifiError = ""
+        wifiErrorReason = ConnectionFailReason.Unknown
     }
 
     function _wifiList(): var {
@@ -223,10 +230,15 @@ Singleton {
         return best
     }
 
-    function _finishWifi(success: bool): void {
+    function _finishWifi(success: bool, reason: int): void {
         _connectTimeout.stop()
-        if (!success && wifiConnecting.length > 0) wifiError = wifiConnecting
-        else if (success) wifiError = ""
+        if (!success && wifiConnecting.length > 0) {
+            wifiError = wifiConnecting
+            wifiErrorReason = reason
+        } else if (success) {
+            wifiError = ""
+            wifiErrorReason = ConnectionFailReason.Unknown
+        }
         wifiConnecting = ""
         _pendingNetwork = null
     }
@@ -237,6 +249,7 @@ Singleton {
     function _cancelWifiConnect(): void {
         _connectTimeout.stop()
         wifiConnecting = ""
+        wifiErrorReason = ConnectionFailReason.Unknown
         _pendingNetwork = null
     }
 
@@ -249,6 +262,7 @@ Singleton {
         }
 
         wifiError = ""
+        wifiErrorReason = ConnectionFailReason.Unknown
         wifiConnecting = ssid
         _pendingNetwork = network
         _connectTimeout.restart()
@@ -268,9 +282,9 @@ Singleton {
         ignoreUnknownSignals: true
         function onConnectedChanged() {
             if (root._pendingNetwork && root._pendingNetwork.connected)
-                root._finishWifi(true)
+                root._finishWifi(true, ConnectionFailReason.Unknown)
         }
-        function onConnectionFailed() { root._finishWifi(false) }
+        function onConnectionFailed(reason) { root._finishWifi(false, reason) }
     }
 
     Connections {
@@ -296,7 +310,7 @@ Singleton {
     Timer {
         id: _connectTimeout
         interval: 20000
-        onTriggered: root._finishWifi(false)
+        onTriggered: root._finishWifi(false, ConnectionFailReason.Unknown)
     }
 
     function _splitNmcliLine(line: string): var {

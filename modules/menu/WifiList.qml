@@ -116,7 +116,7 @@ Item {
                     label: _entry.modelData.label
                     status: _entry.modelData.active ? "Connected"
                         : _entry._connecting ? "Connecting…"
-                        : _entry._failed ? "Failed"
+                        : _entry._failed ? (Network.wifiErrorNeedsSecret ? "Wrong password" : "Failed")
                         : _entry._sel ? "Password"
                         : _entry.modelData.secured ? "Secured"
                         : "Open"
@@ -126,7 +126,11 @@ Item {
 
                     function _activate(): void {
                         if (_entry.modelData.active) { Network.disconnectWifi(); return }
-                        if (_entry.modelData.secured && !_entry.modelData.known) {
+                        // a known network reconnects from its stored key; once that key is
+                        // refused, repeating it can only fail again, so take a new one
+                        const needsSecret = !_entry.modelData.known
+                            || (_entry._failed && Network.wifiErrorNeedsSecret)
+                        if (_entry.modelData.secured && needsSecret) {
                             const wasSel = _entry._sel
                             root._selected = wasSel ? "" : _entry.modelData.ssid
                             Network.clearWifiError()
@@ -194,7 +198,8 @@ Item {
                                 anchors.fill: parent
                                 verticalAlignment: Text.AlignVCenter
                                 visible: _pw.text.length === 0
-                                text: _entry._failed ? "Connection failed" : "Password"
+                                text: !_entry._failed ? "Password"
+                                    : Network.wifiErrorNeedsSecret ? "Wrong password" : "Connection failed"
                                 color: _entry._failed ? Theme.withAlpha(Theme.error, 0.7)
                                                       : Theme.withAlpha(Theme.subtext, 0.45)
                                 font.pixelSize: Settings.fontSize
