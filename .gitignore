@@ -4,5 +4,5 @@
 settings.json
 calendar-marks.json
 
-# matugen-generated theme (copied from MatugenTheme.default.qml on install)
+# legacy pre-0.5 generated theme; current Matugen output is per-user JSON
 config/MatugenTheme.qml

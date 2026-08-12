@@ -1,0 +1,10 @@
+{
+  "background": "{{colors.background.default.hex}}",
+  "surface": "{{colors.surface_container.default.hex}}",
+  "text": "{{colors.on_surface.default.hex}}",
+  "subtext": "{{colors.on_surface_variant.default.hex}}",
+  "accent": "{{colors.primary.default.hex}}",
+  "error": "{{colors.error.default.hex}}",
+  "warning": "{{colors.tertiary.default.hex}}",
+  "success": "{{colors.secondary.default.hex}}"
+}
