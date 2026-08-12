@@ -197,11 +197,12 @@ PanelWindow {
                 glyph: "󰖔"
                 label: "Night Light"
                 active: NightLight.enabled
-                stateText: NightLight.enabled ? "On" : "Off"
+                stateText: NightLight.lastError.length > 0 ? "Failed"
+                    : NightLight.enabled ? "On" : "Off"
                 onTriggered: NightLight.toggle()
             }
             QuickActionRow {
-                visible: PowerProfiles.available
+                visible: PowerProfiles.available && PowerProfiles.profile.length > 0
                 checkable: false
                 glyph: PowerProfiles.glyph.length > 0 ? PowerProfiles.glyph : "󰾅"
                 label: "Power Mode"
@@ -210,7 +211,10 @@ PanelWindow {
                 onTriggered: PowerProfiles.cycle()
             }
             QuickActionRow {
+                // a hard-blocked radio refuses every write, so leaving it in would make
+                // the row re-issue two doomed requests on each tap and never change
                 readonly property bool _wifiCtl: Network.toolAvailable && Network.hasWifiDevice
+                    && !Network.wifiHardBlocked
                 readonly property bool _btCtl:   Bluetooth.available
                 readonly property bool _anyOn:   (_wifiCtl && Network.wifiEnabled) || (_btCtl && Bluetooth.enabled)
                 visible: _wifiCtl || _btCtl

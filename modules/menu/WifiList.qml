@@ -74,6 +74,7 @@ Item {
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             text: !Network.toolAvailable ? "Wi-Fi unavailable"
+                : Network.wifiHardBlocked ? "Blocked by the hardware switch"
                 : !Network.wifiEnabled   ? "Wi-Fi is off"
                 : Network.wifiScanning   ? "Searching for networks…"
                 :                          "No networks found"

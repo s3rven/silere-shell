@@ -239,8 +239,10 @@ PageShell {
                       : Network.wifiError.length > 0 ? "Couldn't connect to " + Network.wifiError
                       : _ethActive ? "Ethernet active"
                       : Network.wifiEnabled ? "Not connected"
+                      : Network.wifiHardBlocked ? "Blocked by the hardware switch"
                       : "Off"
                 showSwitch: true
+                available: !Network.wifiHardBlocked
                 expandable: Network.wifiEnabled
                 expanded: root._wifiPickerOpen
                 onActivated: Network.toggleWifi()

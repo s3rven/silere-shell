@@ -76,6 +76,10 @@ Singleton {
     }
     readonly property string deviceType: connected ? (isWifi ? "wifi" : "ethernet") : ""
     readonly property bool wifiEnabled: Networking.wifiEnabled
+    // rfkill's hard block: the radio cannot come back until the hardware switch does,
+    // so writing wifiEnabled is refused and every retry looks like nothing happening
+    readonly property bool wifiHardBlocked: toolAvailable && hasWifiDevice
+        && !Networking.wifiHardwareEnabled
     readonly property int signalStrength: {
         const best = _linkState.best
         if (!best || !best.wifi || !best.network) return 0
@@ -108,7 +112,7 @@ Singleton {
     }
 
     function toggleWifi(): void {
-        if (!toolAvailable || !hasWifiDevice) return
+        if (!toolAvailable || !hasWifiDevice || wifiHardBlocked) return
         Networking.wifiEnabled = !Networking.wifiEnabled
     }
 
