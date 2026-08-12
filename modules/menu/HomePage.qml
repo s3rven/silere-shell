@@ -217,6 +217,10 @@ PageShell {
                     if (pickerMoved || volumeMoved) _brightnessRow.focusPrimary()
                 }
             }
+            HintText {
+                visible: root._brightnessAvailable && Brightness.lastError.length > 0
+                text: Brightness.lastError
+            }
         }
         SectionLabel {
             label: "Connectivity"

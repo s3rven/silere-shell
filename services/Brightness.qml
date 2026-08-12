@@ -14,6 +14,9 @@ Singleton {
     property bool ready:            false
     readonly property bool toolAvailable:  SystemTools.hasBrightnessctl
     readonly property bool controllable: toolAvailable && ready
+    // brightnessctl needs its udev rule or video-group membership to write sysfs; without
+    // it the write fails, refresh() snaps the value back, and nothing else says why
+    property string lastError: ""
         && maxBrightness > 0 && _device.length > 0
     property bool _listed: false
     property bool _currentValid: false
@@ -260,15 +263,25 @@ Singleton {
         }
     }
 
-    Process {
+    // bounded: a DDC/CI backlight writes over i2c and can block on a sleeping monitor,
+    // and onExited is the only thing that clears _applyQueued
+    BoundedProcess {
         id: _setProc
-        onExited: {
+        timeoutMs: 5000
+        stderr: StdioCollector { id: _setErr }
+        onExited: code => {
+            root.lastError = code === 0 ? ""
+                : (_setErr.text || "").trim().split("\n").pop() || "Could not set brightness"
             if (root._applyQueued) {
                 root._applyQueued = false
                 if (!_applyDebounce.running) _applyDebounce.restart()
             } else if (!_applyDebounce.running) {
                 Qt.callLater(root.refresh)
             }
+        }
+        onTimeoutReached: {
+            root._applyQueued = false
+            root.lastError = "Brightness write timed out"
         }
     }
 }
