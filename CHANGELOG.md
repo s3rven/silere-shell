@@ -13,6 +13,14 @@ This file stays focused on work since the latest release. Completed notes move t
 
 ## [Unreleased]
 
+- Made optional-tool and font detection refresh cleanly at runtime, with stable
+  capability state and explicit backend failure tracking.
+- Added reusable process retry/exit health and Cava runtime/config status so
+  failed visualizer starts can be diagnosed without affecting the rest of the shell.
+- Fixed the generated Cava profile's smoothing range and documented its
+  runtime-only configuration lifecycle.
+- Made Matugen palettes live-reload from a user-writable JSON file, including
+  installer migration and working support for read-only packaged installs.
 - Added AUR packages to the update count through paru or yay when one is
   installed, with a new **Include AUR packages** toggle under Settings › System ›
   Updates. It is on by default, so an existing install with an AUR helper will

@@ -38,9 +38,11 @@ Idle use on a reference session measured **under 1% of one CPU core** and **95-1
 
 CPU sits near zero when nothing is happening and rises with what is on screen: a playing track costs about four times idle, and the media visualizer costs more than everything else combined. Once the session goes idle, or the bar steps aside for the compositor overview, every animation stops on its own until you come back.
 
-Results vary with hardware, drivers, and which widgets you enable. Measure your own checkout with `bash scripts/bench.sh 5`. The report tracks open file descriptors too, so a leak shows up as a climbing number while everything else stays flat.
+Results vary with hardware, drivers, and which widgets you enable. Measure your own checkout with `bash scripts/bench.sh 30`, where the number is how many seconds to sample. The report tracks open file descriptors too, so a leak shows up as a climbing number while everything else stays flat.
 
 Cava is the main optional CPU cost, and only while the visualizer is on screen.
+Silere creates its own temporary Cava profile at runtime, so it does not alter or
+depend on your personal Cava configuration.
 
 ## Install
 
@@ -88,6 +90,17 @@ Installing one turns on the matching feature. Skipping it hides that widget or m
 The installer also reports on `busctl`, `pgrep`, `pkill` and `timeout`. Those ship with systemd, procps and coreutils, so they are listed only so a minimal system can see what is missing.
 
 </details>
+
+The interactive installer configures Matugen when it is installed. It copies
+Silere's template into Matugen's template directory and makes Matugen write
+`$XDG_CONFIG_HOME/matugen/silere-shell.json`; the shell watches that user-writable
+palette and reloads colors live. This works for both a Git checkout and a
+read-only package under `/usr/share`. Packaged installs print the equivalent
+one-time setup after installation.
+
+Cava needs no configuration step. Silere writes a private temporary raw-output
+profile under `$XDG_RUNTIME_DIR`, starts Cava only while the visualizer is
+actually needed, and leaves `~/.config/cava` untouched.
 
 ## Configuration
 
@@ -182,6 +195,9 @@ To inspect startup errors directly, run `qs -p shell.qml`.
 ## Contributing
 
 Ideas, fixes, and new features are all welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
+
+Forking or making it your own? [`docs/forking.md`](docs/forking.md) maps the tree, lists what a
+change actually touches, and names the few things a rename has to get right.
 
 ## License
 
