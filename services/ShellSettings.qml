@@ -167,23 +167,6 @@ Singleton {
         return root._barWidgetLocations[key] || root._missingBarWidgetLocation
     }
 
-    function moveBarWidget(key: string, delta: int): void {
-        const loc = root.barWidgetLocate(key)
-        if (loc.index < 0) return
-        const arr = (loc.zone === "left" ? root.barWidgetOrderLeftKeys
-            : loc.zone === "center" ? root.barWidgetOrderCenterKeys
-            : root.barWidgetOrderRightKeys).slice()
-        const j = loc.index + delta
-        if (j < 0 || j >= arr.length) return
-        const t = arr[loc.index]; arr[loc.index] = arr[j]; arr[j] = t
-        if (loc.zone === "left")
-            root.setBarWidgetLayout(arr, root.barWidgetOrderCenterKeys, root.barWidgetOrderRightKeys)
-        else if (loc.zone === "center")
-            root.setBarWidgetLayout(root.barWidgetOrderLeftKeys, arr, root.barWidgetOrderRightKeys)
-        else
-            root.setBarWidgetLayout(root.barWidgetOrderLeftKeys, root.barWidgetOrderCenterKeys, arr)
-    }
-
     function setBarWidgetLayout(leftKeys, centerKeys, rightKeys): void {
         const layout = root._normaliseBarWidgetLayout(leftKeys, centerKeys, rightKeys)
         const left = layout.left.join(",")
@@ -192,20 +175,6 @@ Singleton {
         if (root.barWidgetOrderLeft !== left) root.barWidgetOrderLeft = left
         if (root.barWidgetOrderCenter !== center) root.barWidgetOrderCenter = center
         if (root.barWidgetOrderRight !== right) root.barWidgetOrderRight = right
-    }
-
-    function setBarWidgetZone(key: string, zone: string, atIndex: int): void {
-        if (root.barWidgetKeys.indexOf(key) < 0
-                || (zone !== "left" && zone !== "center" && zone !== "right"))
-            return
-        const left  = root.barWidgetOrderLeftKeys.filter(k => k !== key)
-        const center = root.barWidgetOrderCenterKeys.filter(k => k !== key)
-        const right = root.barWidgetOrderRightKeys.filter(k => k !== key)
-        const target = zone === "left" ? left : zone === "center" ? center : right
-        const rawIndex = Number(atIndex)
-        const clamped = isNaN(rawIndex) ? target.length : Math.max(0, Math.min(target.length, Math.round(rawIndex)))
-        target.splice(clamped, 0, key)
-        root.setBarWidgetLayout(left, center, right)
     }
 
     function resetBarWidgets(): void {
