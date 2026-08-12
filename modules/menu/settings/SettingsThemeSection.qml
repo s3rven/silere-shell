@@ -21,7 +21,7 @@ Column {
             glyph: "󰉦"; label: "Source"
             currentValue: ShellSettings.neutralTheme ? "neutral" : "wallpaper"
             model: [
-                { value: "neutral",   label: "Neutral"   },
+                { value: "neutral",   label: "Custom"    },
                 { value: "wallpaper", label: "Wallpaper" }
             ]
             onChosen: (v) => ShellSettings.neutralTheme = (v === "neutral")
@@ -32,6 +32,7 @@ Column {
     SettingsCard {
         CollapsibleSection {
             expanded: ShellSettings.neutralTheme
+            symmetric: true
 
             Item {
                 id: _accentPicker
@@ -97,7 +98,7 @@ Column {
                     { auto: false, custom: false, color: "#94bd8b", name: "Green"  },
                     { auto: false, custom: false, color: "#dd92a2", name: "Rose"   },
                     { auto: false, custom: false, color: "#d4ad77", name: "Amber"  },
-                    { auto: false, custom: true,  color: "",        name: "Custom" }
+                    { auto: false, custom: true,  color: "",        name: "Mix"    }
                 ]
                 readonly property int _customIndex: _options.length - 1
                 readonly property int _presetIndex: {
@@ -298,6 +299,7 @@ Column {
 
         CollapsibleSection {
             expanded: !ShellSettings.neutralTheme
+            symmetric: true
 
             SwatchPickerRow {
                 glyph: "󰔎"; label: "Accent"

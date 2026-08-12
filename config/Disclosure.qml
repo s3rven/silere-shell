@@ -5,6 +5,10 @@ MotionBehavior {
 
     property bool expanded: true
     property int enterEasing: Easing.OutQuart
+    // a mutually-exclusive pair must share one curve in both directions, or the
+    // expanding sibling outruns the collapsing one and their summed height bulges
+    property bool symmetric: false
+    readonly property bool _enter: root.expanded || root.symmetric
     property bool _geometryReady: false
     property Timer _geometrySettle: Timer {
         interval: 0
@@ -17,7 +21,7 @@ MotionBehavior {
     Component.onDestruction: root._geometrySettle.stop()
 
     NumberAnimation {
-        duration: root.expanded ? Motion.medium : Motion.fast
-        easing.type: root.expanded ? root.enterEasing : Easing.InCubic
+        duration: root._enter ? Motion.medium : Motion.fast
+        easing.type: root._enter ? root.enterEasing : Easing.InCubic
     }
 }
