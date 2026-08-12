@@ -28,13 +28,21 @@ Rectangle {
             ShellSettings.highContrast ? 0.72
             : root.hovered || root.pressed ? 0.52 : 0.30)
 
+    // scale magnitudes stay larger than Motion.hoverScale: on a 10px handle 1.8% is a sub-pixel no-op
     MotionBehavior on scale {
         gate: root.animate
-        NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
+        NumberAnimation {
+            duration: root.pressed ? Motion.press
+                : (root.hovered || root.focused) ? Motion.hoverIn : Motion.hoverOut
+            easing.type: Easing.OutCubic
+        }
     }
     MotionBehavior on border.color {
         gate: root.animate
-        ColorAnimation { duration: Motion.fast }
+        ColorAnimation {
+            duration: (root.hovered || root.focused || root.pressed)
+                ? Motion.hoverIn : Motion.hoverOut
+        }
     }
     ColorFade on color { gate: root.animate && !root.pressed }
 }
