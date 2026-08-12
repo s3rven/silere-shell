@@ -26,8 +26,10 @@ Singleton {
 
     readonly property string activeName: overlayScreen ? overlayScreen.name : ""
 
+    // bar content only, so this resolves against the bar-hosting screen: the overlay screen
+    // can be one with no bar, and that must not freeze the sole bar the user is looking at
     function isActive(screen): bool {
-        return !screen || activeName === screen.name
+        return !screen || overlayBarName === screen.name
     }
 
     function _configuredBarEnabled(screen): bool {
