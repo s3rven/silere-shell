@@ -13,6 +13,12 @@ This file stays focused on work since the latest release. Completed notes move t
 
 ## [Unreleased]
 
+- Added AUR packages to the update count through paru or yay when one is
+  installed, with a new **Include AUR packages** toggle under Settings › System ›
+  Updates. It is on by default, so an existing install with an AUR helper will
+  start counting those updates. Checks stay read-only and never install anything.
+- Gave buttons, pills, chips, toggles and media controls one consistent hover and
+  press response, quicker on the way in than on the way back out.
 - Renamed the theme Source option from Neutral to Custom, and the accent picker's
   own custom swatch to Mix, so the two no longer share one name.
 - Fixed the settings panel snapping to its new height when a category collapses
