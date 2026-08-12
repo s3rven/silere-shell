@@ -54,6 +54,11 @@ pair, then re-run.
 
 ### Fixed
 
+- A saved Wi-Fi network whose password had changed could not be reconnected. The
+  row reconnected from the stored key, and once that key was refused, tapping again
+  only repeated it — there was no way to enter a new one. A refused key now offers
+  a retype, and the reason NetworkManager gave is no longer discarded, so a wrong
+  key reads as **Wrong password** instead of **Failed**.
 - The installer refused nothing on an unsupported session: a GNOME, KDE or sway
   user could install every file successfully and only find out at the autostart
   step, worded as a missing Hyprland config. It now names the compositor it found
