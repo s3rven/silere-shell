@@ -13,6 +13,10 @@ Only work since the latest release is listed here. Completed notes move to
 
 ### Fixed
 
+- `qs ipc call menu settings <name>` did nothing at all when the name was one a
+  release had since renamed, so a keybind written against an older version stopped
+  opening Settings without saying so. It now opens Settings on Theme, as the README
+  already described, and still reports the unknown name and the valid ones.
 - With Ethernet and Wi-Fi both connected, the network widget named the Wi-Fi
   network and sampled it for the traffic readout, while the machine was routing
   over the wired link — so a docked laptop reported an SSID and near-zero speeds
