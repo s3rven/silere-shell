@@ -87,6 +87,41 @@ ShellRoot {
         root._checkCoerce("fontFamily", "A\u0007B", "", "a control character in a font name is refused")
         root._checkCoerce("notifHistoryLimit", -1, 5, "a negative history limit clamps up")
 
+        // "settings written by a newer version than you run keep their unknown values
+        // instead of being stripped" — a downgrade silently losing config is invisible
+        // until the user upgrades again, so pin the round trip rather than the wording
+        const savedVersion = ShellSettings._loadedVersion
+        const savedFuture = ShellSettings._futureSettings
+        const savedHeight = ShellSettings.barHeight
+        ShellSettings._loadedVersion = 999
+        ShellSettings._futureSettings = ({
+            __version: 999, unknownFutureKey: "keep", barHeight: 40
+        })
+        ShellSettings.barHeight = 42
+        const future = JSON.parse(ShellSettings._serialize())
+        root._check(future.unknownFutureKey === "keep",
+            "a key from a newer settings file survives a write by this version")
+        root._check(future.__version === 999,
+            "a newer settings version is not downgraded on write")
+        root._check(future.barHeight === 42,
+            "a value changed by this version still lands beside the unknown keys")
+
+        ShellSettings._loadedVersion = savedVersion
+        ShellSettings._futureSettings = savedFuture
+        ShellSettings.barHeight = savedHeight
+        const clean = JSON.parse(ShellSettings._serialize())
+        root._check(Object.keys(clean).length === 1 && clean.__version === 1,
+            "an unmodified settings file serializes to nothing but its version")
+
+        const savedSection = MenuState.settingsSection
+        MenuState.setSettingsSection("popups")
+        root._check(MenuState.settingsSection === "popups",
+            "a known settings page is selected by name")
+        MenuState.setSettingsSection("notifications")
+        root._check(MenuState.settingsSection === "theme",
+            "a settings page renamed since a keybind was written falls back to theme")
+        MenuState.setSettingsSection(savedSection)
+
         root._check(CalendarState._validMarkKey("2024-2-29"),
             "calendar accepts leap day")
         root._check(!CalendarState._validMarkKey("2023-2-29"),

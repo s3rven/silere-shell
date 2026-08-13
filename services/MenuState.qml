@@ -142,13 +142,16 @@ Singleton {
         }
         // keep `section: "` out of any literal below: ci-lint harvests nav entries by that pattern
         function settings(name: string): string {
-            if (root._flatSections.indexOf(name) < 0)
-                return "unknown settings page '" + name + "'; valid: " + root._flatSections.join(", ")
+            const known = root._flatSections.indexOf(name) >= 0
             root.triggerScreen = null
             root.anchorSource = null
             root.setSettingsSection(name)
             root.showTab(root.settingsTab)
-            return "ok"
+            if (known) return "ok"
+            // pages get renamed; a keybind carrying an old name still opens Settings
+            // rather than doing nothing, and says why it landed somewhere else
+            return "unknown settings page '" + name + "'; opened theme instead. valid: "
+                + root._flatSections.join(", ")
         }
     }
 }
