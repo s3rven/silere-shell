@@ -37,7 +37,7 @@ Singleton {
 
     function clockDateGapFor(compact: bool): int { return compact ? 4 : 8 }
 
-    // 4px multiples keep dividers on whole physical px under fractional scaling; grows only with the font
+    // 4px multiples land on whole physical px at 1.25/1.5/1.75/2, not at 1.6; grows only with the font
     function rowHeightFor(design: real): int {
         return 4 * Math.ceil((design
             + Math.max(0, Settings.capHeight - Settings.capHeightBase)) / 4)
