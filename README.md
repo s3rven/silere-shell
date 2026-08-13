@@ -203,6 +203,15 @@ Ideas, fixes, and new features are all welcome. See [CONTRIBUTING.md](CONTRIBUTI
 Forking or making it your own? [`docs/forking.md`](docs/forking.md) maps the tree, lists what a
 change actually touches, and names the few things a rename has to get right.
 
+## On AI assistance
+
+I build Silere with AI tools, and I think the project is better for it: a one-person shell
+ships fixes the day they are found and gets maintained daily rather than in bursts. The
+design and the decisions are mine, I review every change, and all of it runs on my
+machine — the only desktop UI I use — before it ships.
+
+AI-assisted contributions are welcome on the same terms; see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## License
 
 MIT (c) s3rven
