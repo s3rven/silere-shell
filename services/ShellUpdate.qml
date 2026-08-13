@@ -80,7 +80,7 @@ Singleton {
         if (root.pending && !root.targetVerified) return "The release signature has not been verified"
         if (root.branch === "HEAD") return "The checkout is on a detached HEAD"
         if (root.branch.length > 0 && root.branch !== "main") return "The checkout is on branch " + root.branch
-        if (root.localChanges) return "The checkout has uncommitted local changes"
+        if (root.localChanges) return "The checkout has local changes; scripts/repair.sh --apply clears them"
         return ""
     }
 
@@ -134,7 +134,7 @@ Singleton {
         // Keep fetch/check and merge/apply out of the same checkout at the same
         // time even when this API is called outside the guarded settings UI.
         if (checking || applying || _applyProc.running || !pending || !targetVerified
-                || !versionReady || versionBusy) return
+                || !versionReady || versionBusy || root.blockedReason.length > 0) return
         applying = true
         lastApplyError = ""
         _applyProc.exec(["bash", root._script, "--apply"])
