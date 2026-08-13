@@ -13,6 +13,12 @@ Only work since the latest release is listed here. Completed notes move to
 
 ### Fixed
 
+- The settings rail cut **Order & visibility** down to "Order & visib…". It is now
+  **Show & order**, which fits, and a check keeps any future nav label inside the
+  width the rail actually has.
+- The Wi-Fi row could not say it was blocked by a hardware switch while Ethernet was
+  connected, because the Ethernet note was checked first. The switch was disabled with
+  nothing explaining why. The block now outranks a note about a different interface.
 - `qs ipc call menu settings <name>` did nothing at all when the name was one a
   release had since renamed, so a keybind written against an older version stopped
   opening Settings without saying so. It now opens Settings on Theme, as the README
