@@ -18,14 +18,6 @@ Singleton {
     readonly property int _parentPidCacheTtlMs: 1500
     readonly property int _parentPidCacheLimit: 128
 
-
-
-
-
-
-    // chain in one sh: detached hyprctl processes land out of order, and --batch mangles the quoted lua-framework calls
-
-
     function _clients(): var {
         return Compositor.toplevels || []
     }
