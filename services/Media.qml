@@ -327,6 +327,21 @@ Singleton {
     property bool _cavaConfigReady: false
     property string _writtenCavaProfileKey: ""
     readonly property int _cavaReloadSignal: 10
+    property bool _sweptStaleProfiles: false
+
+    // quickshell exits hard on SIGTERM, so the profile outlives the process that wrote it
+    function _sweepStaleCavaProfiles(): void {
+        const runtime = String(Quickshell.env("XDG_RUNTIME_DIR") || "").trim()
+        if (root._sweptStaleProfiles || !runtime.startsWith("/")) return
+        root._sweptStaleProfiles = true
+        Quickshell.execDetached(["bash", "-c",
+            'for f in "$1"/silere-shell-cava-*.conf; do ' +
+            '[ -e "$f" ] || continue; p=${f##*-}; p=${p%.conf}; ' +
+            'case $p in ""|*[!0-9]*) continue;; esac; ' +
+            '[ "$p" = "$2" ] && continue; ' +
+            'kill -0 "$p" 2>/dev/null || rm -f -- "$f"; done',
+            "bash", runtime, String(Quickshell.processId)])
+    }
 
     // blocking writes let save failure veto readiness before cava starts
     function _writeCavaConfig(): void {
@@ -334,6 +349,7 @@ Singleton {
             root._cavaConfigReady = false
             return
         }
+        root._sweepStaleCavaProfiles()
         _cavaConfigSync.stop()
         const nextProfile = root._cavaProfileKey
         const reloadRunning = _cavaProc.running
