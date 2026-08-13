@@ -238,12 +238,14 @@ PageShell {
                     ? (Network.isWifi && Network.connected ? Network.signalGlyph(Network.signalStrength) : "󰤨")
                     : "󰤭"
                 title: "Wi-Fi"
+                // the hardware block is why the switch is dead, so it outranks a note about
+                // a different interface: with Ethernet up it was the one thing never shown
                 status: Network.wifiEnabled && Network.isWifi && Network.connected ? Network.connectionName
                       : Network.wifiConnecting.length > 0 ? "Connecting to " + Network.wifiConnecting
                       : Network.wifiError.length > 0 ? "Couldn't connect to " + Network.wifiError
+                      : Network.wifiHardBlocked ? "Blocked by the hardware switch"
                       : _ethActive ? "Ethernet active"
                       : Network.wifiEnabled ? "Not connected"
-                      : Network.wifiHardBlocked ? "Blocked by the hardware switch"
                       : "Off"
                 showSwitch: true
                 available: !Network.wifiHardBlocked
