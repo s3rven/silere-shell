@@ -41,6 +41,12 @@ Column {
             }
             onChosen: (v) => ShellSettings.fontFamily = v
         }
+        // the list is a small slice of what fc-list reports, and an installed font missing
+        // from it reads as a broken scan rather than a deliberate filter
+        HintText {
+            visible: FontScan.scanned && FontScan.families.length > 0
+            text: "Nerd Fonts only — the shell draws its icons as glyphs, so other fonts show boxes."
+        }
         HintText {
             visible: FontScan.scanned && FontScan.families.length === 0
             text: "No Nerd Font found; shell icons render as boxes until one is installed."
@@ -63,14 +69,18 @@ Column {
             key: "highContrast"
         }
         ToggleRow {
-            glyph: "󱂪"; label: "Keep groups open"
-            description: "Show multiple category groups"
-            key: "settingsNavPinned"
-        }
-        ToggleRow {
             glyph: "󱖳"; label: "Reduce motion"
             description: "Disable transitions"
             key: "reduceMotion"
+        }
+    }
+
+    SectionLabel { label: "MENU" }
+    SettingsCard {
+        ToggleRow {
+            glyph: "󱂪"; label: "Keep groups open"
+            description: "Show multiple category groups"
+            key: "settingsNavPinned"
         }
     }
 
