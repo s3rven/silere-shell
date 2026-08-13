@@ -13,6 +13,16 @@ Only work since the latest release is listed here. Completed notes move to
 
 ### Fixed
 
+- With Ethernet and Wi-Fi both connected, the network widget named the Wi-Fi
+  network and sampled it for the traffic readout, while the machine was routing
+  over the wired link — so a docked laptop reported an SSID and near-zero speeds
+  during a download. The live wired link now wins, a wired device with no carrier
+  loses to Wi-Fi, and disconnecting from the Wi-Fi list acts on the Wi-Fi radio
+  rather than on whichever link is currently in front.
+- A failed Night Light check left an already-running `hyprsunset` unnoticed, so
+  the toggle read as off and turning it on would have started a second one. Night
+  Light now says when it could not check, and adopts a running one on the exit
+  code rather than only on what the check printed.
 - Wi-Fi and Airplane Mode kept offering toggles that a hardware rfkill switch
   refuses, so every tap was a silent no-op. The Wi-Fi row now says it is blocked
   by the hardware switch, and Airplane Mode leaves out a radio it cannot reach.
@@ -25,7 +35,6 @@ Only work since the latest release is listed here. Completed notes move to
   rest of the session.
 - Quick actions showed Power Mode as live when no daemon answers, where every tap
   did nothing, and reported a failed Night Light toggle as simply off.
-
 - Acting on a notification lost it from history. Clicking an action told the
   sender, which closed the notification before the card's exit animation reached
   the archive step, so it was dropped — while dismissing the same notification
