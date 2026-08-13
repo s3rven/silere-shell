@@ -226,7 +226,8 @@ Item {
             anchors.right: _reset.left
             anchors.rightMargin: 8
             anchors.verticalCenter: parent.verticalCenter
-            text: "Drag to reorder · arrow keys move between lanes"
+            // the shell is pointer-only; this used to promise arrow keys that no longer move anything
+            text: "Drag to reorder · toggle to show or hide"
             elide: Text.ElideRight
             color: Theme.withAlpha(Theme.subtext, 0.58)
             font.pixelSize: Settings.fontCaption
