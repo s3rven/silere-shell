@@ -14,10 +14,10 @@ Singleton {
     property bool ready:            false
     readonly property bool toolAvailable:  SystemTools.hasBrightnessctl
     readonly property bool controllable: toolAvailable && ready
+        && maxBrightness > 0 && _device.length > 0
     // brightnessctl needs its udev rule or video-group membership to write sysfs; without
     // it the write fails, refresh() snaps the value back, and nothing else says why
     property string lastError: ""
-        && maxBrightness > 0 && _device.length > 0
     property bool _listed: false
     property bool _currentValid: false
     property bool _maxValid: false
