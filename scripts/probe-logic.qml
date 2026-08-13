@@ -113,6 +113,40 @@ ShellRoot {
         root._check(Object.keys(clean).length === 1 && clean.__version === 1,
             "an unmodified settings file serializes to nothing but its version")
 
+        // history is restored from JSON an older release wrote, so entry shape is not given
+        root._check(Notifications._normalizeEntry(null) === null,
+            "a null history entry is dropped")
+        root._check(Notifications._normalizeEntry("nope") === null,
+            "a history entry that is not an object is dropped")
+        // bodies are legitimately multi-line, so plainText keeps newlines on purpose and
+        // only takes out markup and the controls that can misrepresent what a sender wrote
+        root._check(Notifications._normalizeEntry({ summary: "<b>bold</b> &amp; on" }).summary
+                === "bold & on",
+            "history text drops markup and decodes entities")
+        root._check(Notifications._normalizeEntry({ body: "a\u202Eb" }).body === "ab",
+            "history text drops a bidi override a sender embedded")
+        root._check(Notifications._normalizeEntry({ body: "line1\nline2" }).body
+                === "line1\nline2",
+            "history text keeps the newlines a multi-line body needs")
+
+        const savedLimit = ShellSettings.notifHistoryLimit
+        Notifications.clearHistory()
+        ShellSettings.notifHistoryLimit = 5
+        for (let i = 0; i < 12; i++)
+            Notifications._prependHistory({ id: i, appName: "probe", summary: "s" + i, time: 1 })
+        root._check(Notifications.historyCount === 5,
+            "history stops growing at the configured limit")
+        root._check(Notifications.historyModel.get(0).summary === "s11",
+            "the newest history entry is first")
+        ShellSettings.notifHistoryLimit = 20
+        for (let i = 0; i < 15; i++)
+            Notifications._prependHistory({ id: 100 + i, appName: "probe", summary: "t" + i, time: 1 })
+        ShellSettings.notifHistoryLimit = 7
+        root._check(Notifications.historyCount === 7,
+            "lowering the limit trims history that is already stored")
+        Notifications.clearHistory()
+        ShellSettings.notifHistoryLimit = savedLimit
+
         const savedSection = MenuState.settingsSection
         MenuState.setSettingsSection("popups")
         root._check(MenuState.settingsSection === "popups",
