@@ -13,6 +13,15 @@ Only work since the latest release is listed here. Completed notes move to
 
 ### Fixed
 
+- Settings › Widgets › Show & order told you "arrow keys move between lanes". The shell
+  is pointer-driven and that file has no key handling at all, so the arrow keys did
+  nothing. The hint now names what the row actually offers: drag, and the toggle.
+- The font picker lists Nerd Fonts only, and said nothing about it, so a font you had
+  just installed looked like a failed scan. It now says why the list is short.
+- Settings › Interface filed **Keep groups open** under Text & accessibility, where it
+  is neither. It has its own Menu group now.
+- Turning on the floating bar played two separate reveals, because Width, Edge gap and
+  Roundness sat in two disclosures gated on the same switch. They are one group now.
 - The settings rail cut **Order & visibility** down to "Order & visib…". It is now
   **Show & order**, which fits, and a check keeps any future nav label inside the
   width the rail actually has.
