@@ -239,6 +239,14 @@ Singleton {
         id: _checkProc
         timeoutMs: 5000
         stdout: SplitParser { onRead: root.enabled = true }
+        // pgrep answers "no match" with 1, so only 2+ or a timeout means the probe never ran
+        onExited: (code) => {
+            if (_checkProc.timedOut || code > 1) {
+                root.lastError = "could not check for a running hyprsunset"
+                return
+            }
+            if (code === 0) root.enabled = true
+        }
     }
 
     Process {
