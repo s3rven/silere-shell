@@ -32,6 +32,17 @@ ShellRoot {
         console.warn("PROBE-FAIL " + label)
     }
 
+    // setValue is the same coercion the settings file goes through on load
+    function _checkCoerce(key: string, value, expected, label: string): void {
+        const before = ShellSettings[key]
+        ShellSettings.setValue(key, value)
+        const got = ShellSettings[key]
+        ShellSettings[key] = before
+        const same = (typeof expected === "number" && typeof got === "number")
+            ? Math.abs(got - expected) < 0.0001 : got === expected
+        root._check(same, label + " (" + key + " became " + got + ", expected " + expected + ")")
+    }
+
     function _hueDistance(a: real, b: real): real {
         const d = Math.abs(a - b) % 360
         return Math.min(d, 360 - d)
@@ -59,6 +70,22 @@ ShellRoot {
             "widget layout drops unknown keys")
         root._check(layout.loc.media.zone === "left" && layout.loc.clock.zone === "center",
             "widget layout reports normalized locations")
+
+        // the settings file is untrusted input and the README promises it is type-checked
+        // and clamped; a hand-edited or truncated file reaches setValue the same way
+        root._checkCoerce("barHeight", 99999, 60, "an over-range int clamps to its maximum")
+        root._checkCoerce("barHeight", -5, 24, "an under-range int clamps to its minimum")
+        root._checkCoerce("barHeight", "tall", 36, "a non-numeric int is refused")
+        root._checkCoerce("uiScale", 9e99, 1.15, "an over-range real clamps to its maximum")
+        root._checkCoerce("uiScale", null, 1.0, "a null real is refused")
+        root._checkCoerce("barPosition", "sideways", "top", "an unknown enum value is refused")
+        root._checkCoerce("barPosition", "bottom", "bottom", "a known enum value is accepted")
+        root._checkCoerce("osdEnabled", 42, true, "a numeric bool is refused")
+        root._checkCoerce("osdEnabled", "false", false, "a stringified bool is accepted")
+        root._checkCoerce("brightnessDevice", "../../etc/passwd", "",
+            "a path-bearing device name is refused")
+        root._checkCoerce("fontFamily", "A\u0007B", "", "a control character in a font name is refused")
+        root._checkCoerce("notifHistoryLimit", -1, 5, "a negative history limit clamps up")
 
         root._check(CalendarState._validMarkKey("2024-2-29"),
             "calendar accepts leap day")

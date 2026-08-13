@@ -424,6 +424,35 @@ if command -v qs >/dev/null 2>&1; then
           fi
         fi
       fi
+
+      # settings.json is hand-editable and the README says so, so a truncated or
+      # retyped file is a real user state, not a hypothetical. The loader must keep
+      # the shell up and leave a file it could not read alone.
+      bad_cfg="$(mktemp -d "${TMPDIR:-/tmp}/silere-qs-bad.XXXXXX")"
+      bad_log="$(mktemp "${TMPDIR:-/tmp}/silere-qs-bad.XXXXXX.log")"
+      bad_failures=""
+      for _case in '{"barHeight": 3' '[1,2,3]' 'null' '' \
+        '{"barHeight":"tall","osdEnabled":42,"barPosition":"sideways"}' \
+        '{"__version":999,"unknownFutureKey":"keep","barHeight":40}'
+      do
+        mkdir -p "$bad_cfg/silere-shell"
+        printf '%s' "$_case" > "$bad_cfg/silere-shell/settings.json"
+        code=0
+        XDG_CONFIG_HOME="$bad_cfg" timeout 5s qs -p shell.qml --no-color \
+          >"$bad_log" 2>&1 || code=$?
+        if [ "$code" -ne 0 ] && [ "$code" -ne 124 ]; then
+          bad_failures="$bad_failures  exited $code on: ${_case:-<empty>}"$'\n'
+        elif grep -qE 'Failed to load configuration|Type [^ ]+ unavailable|Binding loop detected' "$bad_log"; then
+          bad_failures="$bad_failures  failed to load on: ${_case:-<empty>}"$'\n'
+        fi
+      done
+      if [ -n "$bad_failures" ]; then
+        printf '%s' "$bad_failures"
+        fail "bad settings" "a malformed settings.json took the shell down"
+      else
+        ok "bad settings" "6 malformed settings files each left the shell running"
+      fi
+      rm -rf "$bad_cfg"; rm -f "$bad_log"
     fi
   fi
 else
