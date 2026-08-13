@@ -44,6 +44,25 @@ else
   ok "markers" "none"
 fi
 
+section "invisible characters in source"
+# Silere strips bidi controls out of every string another program hands it. The same
+# characters in Silere's own source are the Trojan Source problem: they reorder how a
+# line renders in a review without changing what the engine runs. The tree accepts
+# outside pull requests, so the source has to hold the rule it applies to everyone else.
+if printf 'a\n' | grep -qP 'a' 2>/dev/null; then
+  bidi_hits="$(grep -rlP '[\x{202A}-\x{202E}\x{2066}-\x{2069}\x{200B}\x{200E}\x{200F}]' \
+    --include='*.qml' --include='*.sh' --include='*.md' --include='*.json' \
+    --include='*.yml' --include='*.toml' --exclude-dir=.git . 2>/dev/null || true)"
+  if [ -n "$bidi_hits" ]; then
+    fail "these files carry bidi or zero-width characters; write them as \\uXXXX escapes:"
+    while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$bidi_hits"
+  else
+    ok "source text" "no bidi or zero-width characters in tracked sources"
+  fi
+else
+  skip "source text" "grep -P unavailable; invisible character scan skipped"
+fi
+
 section "orphaned binding continuations"
 # Inserting a declaration between a binding's first line and its `&&` continuation moves
 # the guard onto the new property, and both halves still compile: `"" && x` is a valid
