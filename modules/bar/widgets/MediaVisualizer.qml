@@ -76,6 +76,25 @@ Canvas {
         return cached
     }
 
+    // playback status gates this; one rect, not a second pass over the path
+    readonly property bool _progressSplit: ShellSettings.mediaWidgetHelper && Media.lengthKnown
+    on_ProgressSplitChanged: if (_paintable) requestPaint()
+
+    function _dimAhead(ctx) {
+        if (!_progressSplit) return
+        var playX = Math.round(width * Math.max(0, Math.min(1, Media.positionRatio)))
+        if (playX >= width - 0.5) return
+        ctx.globalCompositeOperation = "destination-out"
+        ctx.fillStyle = Qt.rgba(0, 0, 0, 0.62)
+        ctx.fillRect(playX, 0, width - playX, height)
+        ctx.globalCompositeOperation = "source-over"
+    }
+
+    function _finish(ctx) {
+        _dimAhead(ctx)
+        _fadeEdges(ctx)
+    }
+
     // destination-out, not destination-in: in erases every pixel the source misses, so it would
     // have to cover the whole canvas to preserve a middle it never actually changes
     function _fadeEdges(ctx) {
@@ -156,7 +175,7 @@ Canvas {
                 ctx.quadraticCurveTo(x, y, x + radius, y)
                 ctx.fill()
             }
-            _fadeEdges(ctx)
+            _finish(ctx)
             return
         }
 
@@ -184,7 +203,7 @@ Canvas {
             ctx.globalAlpha = 0.18 + avg * 0.20
             ctx.fillRect(0, height - glowBucket, width, glowBucket)
             ctx.globalAlpha = 1.0
-            _fadeEdges(ctx)
+            _finish(ctx)
             return
         }
 
@@ -222,6 +241,6 @@ Canvas {
         ctx.fillStyle = _fill
         ctx.fill()
 
-        _fadeEdges(ctx)
+        _finish(ctx)
     }
 }
