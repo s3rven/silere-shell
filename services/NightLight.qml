@@ -94,9 +94,11 @@ Singleton {
 
     readonly property bool recommended: _elevation < 0
     readonly property string recommendLabel: {
+        // this lands in the same row slot as "Not connected" and "Quiet hours", which are
+        // sentence case; phaseLabel is a caption inside the arc and stays lowercase
         if (_halfDay >= 12)  return ""
-        if (recommended)     return "recommended"
-        if (_elevation < 12) return "from " + sunsetLabel
+        if (recommended)     return "Recommended"
+        if (_elevation < 12) return "From " + sunsetLabel
         return ""
     }
 
