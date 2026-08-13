@@ -205,12 +205,14 @@ change actually touches, and names the few things a rename has to get right.
 
 ## On AI assistance
 
-I build Silere with AI tools, and I think the project is better for it: a one-person shell
-ships fixes the day they are found and gets maintained daily rather than in bursts. The
-design and the decisions are mine, I review every change, and all of it runs on my
-machine — the only desktop UI I use — before it ships.
+I use AI tools to build Silere, and I think it makes the project better. It's just me
+working on this. With the help, bugs get fixed the same day I find them instead of
+sitting around for weeks.
 
-AI-assisted contributions are welcome on the same terms; see [CONTRIBUTING.md](CONTRIBUTING.md).
+I still decide what goes in, and I read every change myself. Silere is the only desktop
+I use, so anything broken breaks my own machine first.
+
+AI-assisted pull requests are welcome too. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
