@@ -316,11 +316,14 @@ Column {
                 tintedReadout: true
                 onPicked: (i) => ShellSettings.matugenAccentRole = options[i].value
             }
+        }
 
-            HintText {
-                visible: root._paletteNote.length > 0
-                text: root._paletteNote
-            }
+        // Auto takes its colour from matugen on the custom side too, so a missing or stale
+        // palette has to be said there as well; inside the wallpaper group it never was
+        HintText {
+            visible: root._paletteNote.length > 0
+                && (!ShellSettings.neutralTheme || ShellSettings.neutralAccentAuto)
+            text: root._paletteNote
         }
 
         // one row for both sources: each depth was solved to land on the matching neutral
