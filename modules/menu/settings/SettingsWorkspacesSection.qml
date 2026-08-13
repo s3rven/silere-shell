@@ -10,7 +10,7 @@ Column {
     SectionLabel { label: "LAYOUT"; first: true }
     SettingsCard {
         SliderRow {
-            glyph: "󰕰"; label: "Visible"
+            glyph: "󰕰"; label: "Slots shown"
             key: "wsMinVisible"
             displayValue: ShellSettings.wsMinVisible
         }
@@ -72,6 +72,7 @@ Column {
         }
         ToggleRow {
             glyph: "󰂟"; label: "Notification pulse"
+            description: "Animate the workspace a notification came from"
             key: "wsNotifPulse"
         }
         ToggleRow {
