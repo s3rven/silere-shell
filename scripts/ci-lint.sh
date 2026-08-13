@@ -44,6 +44,19 @@ else
   ok "markers" "none"
 fi
 
+section "settings rail label width"
+# The nav rail is clamped to 160px and the UI font is monospace, so a label is either
+# inside the budget or it elides. test-layout-fit covers the detail pane, not the rail,
+# so "Order & visibility" sat truncated as "Order & visib…" without failing anything.
+# 13 is the longest label observed to fit ("Notifications").
+rail_over="$(grep -oE 'label: "[^"]{14,}"' services/MenuState.qml || true)"
+if [ -n "$rail_over" ]; then
+  fail "these settings nav labels are too long for the rail and will elide:"
+  while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$rail_over"
+else
+  ok "rail labels" "every settings nav label fits the rail without eliding"
+fi
+
 section "invisible characters in source"
 # Silere strips bidi controls out of every string another program hands it. The same
 # characters in Silere's own source are the Trojan Source problem: they reorder how a

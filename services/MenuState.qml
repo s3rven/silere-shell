@@ -43,7 +43,7 @@ Singleton {
               description: "Gaps and dividers" }
         ]},
         { glyph: "󰀻", label: "Widgets", children: [
-            { glyph: "󰀻", label: "Order & visibility", section: "widgets",
+            { glyph: "󰀻", label: "Show & order", section: "widgets",
               description: "Choose and reorder bar widgets" },
             { glyph: "󰕰", label: "Workspaces", section: "workspaces",
               description: "Markers, labels, and app icons" },
