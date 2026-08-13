@@ -390,6 +390,12 @@ ShellRoot {
                 "LCh gamut mapping preserves hue " + expected)
         }
 
+        root._check(Network._linkPriority(true, true) > Network._linkPriority(false, undefined)
+                && Network._linkPriority(true, undefined) > Network._linkPriority(false, undefined),
+            "a wired link outranks Wi-Fi, and an unreported link counts as up")
+        root._check(Network._linkPriority(false, undefined) > Network._linkPriority(true, false),
+            "Wi-Fi outranks a wired device with no carrier")
+
         root._timeoutProbe = boundedProcessFactory.createObject(root, {
             command: ["bash", "-c", "sleep 5"],
             timeoutMs: 80

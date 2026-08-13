@@ -12,6 +12,14 @@ Singleton {
     readonly property bool toolAvailable: Networking.backend !== NetworkBackendType.None
     readonly property var _devices: Networking.devices.values || []
 
+    // NetworkManager routes over a live wired link before Wi-Fi, so ranking Wi-Fi first named
+    // the idle interface on a docked laptop and sampled it for the traffic readout.
+    // hasLink is wired-only and absent on other backends: unknown counts as up.
+    function _linkPriority(wired: bool, hasLink): int {
+        if (!wired) return 2
+        return hasLink === false ? 1 : 3
+    }
+
     readonly property var _linkState: {
         const devices = root._devices
         let best = null
@@ -41,7 +49,7 @@ Singleton {
 
             const connected = device.connected || (network && network.connected)
             if (!connected) continue
-            const priority = wifi ? 2 : 1
+            const priority = root._linkPriority(wired, device.hasLink)
             if (!best || priority > best.priority)
                 best = { device: device, network: network, wifi: wifi, priority: priority }
         }
@@ -274,11 +282,17 @@ Singleton {
         else network.connect()
     }
 
+    // the active link can be the wired one, so this cannot go through _linkState.best
     function disconnectWifi(): void {
-        const best = _linkState.best
-        if (!best) return
-        if (best.network) best.network.disconnect()
-        else if (best.device) best.device.disconnect()
+        const devices = root._devices
+        for (let i = 0; i < devices.length; i++) {
+            const device = devices[i]
+            if (!device || device.type !== DeviceType.Wifi) continue
+            const networks = device.networks ? (device.networks.values || []) : []
+            for (let j = 0; j < networks.length; j++)
+                if (networks[j] && networks[j].connected) { networks[j].disconnect(); return }
+            if (device.connected) { device.disconnect(); return }
+        }
     }
 
     Connections {
