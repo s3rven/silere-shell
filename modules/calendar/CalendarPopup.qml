@@ -183,7 +183,7 @@ PanelWindow {
                 id: _todayButton
                 // the pill, not the row: a full-width hit area lights the narrow fill from 200px away
                 width: _todayRow.width + 20
-                height: 40
+                height: Metrics.rowHeightFor(40)
 
                 HoverHandler { id: _todayH; cursorShape: Qt.PointingHandCursor }
                 TapHandler   { onTapped: card._goToday() }
