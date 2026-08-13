@@ -298,14 +298,15 @@ Item {
                             height: root._groupH
                             radius: Theme.radiusInline
                             antialiasing: true
+                            // the group holding the current page, not every open one
                             color: _headerHover.hovered
                                     ? Theme.withAlpha(Theme.text, 0.035)
+                                    : !_grp.groupActive
+                                        ? "transparent"
                                     : _grp.expanded
                                         ? Theme.withAlpha(Theme.accent, 0.035)
-                                    : (_grp.groupActive && !_grp.expanded)
-                                        ? Theme.mix(Theme.menuControl, Theme.accent,
+                                        : Theme.mix(Theme.menuControl, Theme.accent,
                                             ShellSettings.highContrast ? 0.16 : 0.10)
-                                        : "transparent"
 
                             HoverHandler {
                                 id: _headerHover
@@ -319,36 +320,20 @@ Item {
 
                             ColorFade on color {}
 
+                            // group glyphs repeated their first child's; text headers separate the tiers
                             ShellText {
-                                id: _groupGlyph
-                                visible: !root.compact
                                 anchors.left: parent.left
-                                anchors.leftMargin: 8
-                                anchors.verticalCenter: parent.verticalCenter
-                                width: 18
-                                horizontalAlignment: Text.AlignHCenter
-                                text: _grp.modelData.glyph ?? ""
-                                color: _grp.groupActive && !_grp.expanded
-                                    ? Theme.mix(Theme.accent, Theme.text, 0.08)
-                                    : Theme.withAlpha(Theme.menuTextMuted,
-                                        _headerHover.hovered || _grp.expanded ? 0.84 : 0.64)
-                                font.pixelSize: Settings.fontSize
-                            }
-
-                            ShellText {
-                                anchors.left: _groupGlyph.visible ? _groupGlyph.right : parent.left
-                                anchors.leftMargin: _groupGlyph.visible ? 8 : 10
+                                anchors.leftMargin: 10
                                 anchors.right: _groupChevron.left
                                 anchors.rightMargin: 6
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: _grp.modelData.label
-                                color: _grp.groupActive && !_grp.expanded
+                                color: _grp.groupActive
                                     ? Theme.text
                                     : Theme.withAlpha(Theme.menuTextMuted,
-                                        _headerHover.hovered || _grp.expanded ? 0.94 : 0.80)
+                                        _headerHover.hovered ? 0.94 : 0.80)
                                 font.pixelSize: Settings.fontLabel
-                                font.weight: _grp.groupActive || _grp.expanded
-                                    ? Font.DemiBold : Font.Normal
+                                font.weight: _grp.groupActive ? Font.DemiBold : Font.Normal
                                 elide: Text.ElideRight
                             }
 
