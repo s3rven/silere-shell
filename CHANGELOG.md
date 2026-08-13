@@ -11,8 +11,34 @@ Only work since the latest release is listed here. Completed notes move to
 
 ## [Unreleased]
 
+### Added
+
+- With **Playback status** on, the media visualizer is the progress readout: the part of
+  the spectrum past the playhead is dimmed, so one shape carries both the audio and how
+  far the track has run. The plain progress line was hidden outright while the visualizer
+  ran, which is exactly when a track is worth following.
+
 ### Fixed
 
+- One untracked file anywhere in the checkout blocked every shell update, permanently and
+  without naming it — a generated file left by an older layout, a merge `.orig`, an editor
+  swap. A fast-forward never touches those, so only tracked modifications block now. When
+  an incoming file genuinely would land on an untracked one, git's own reason and the file
+  are reported instead of "local branch diverged".
+- A blocked update said "commit or stash them", which is advice for someone who edited the
+  checkout on purpose. It now names `scripts/repair.sh --apply`, with the full path, in
+  both the notification and the Updates row.
+- Installing from the Updates page could start with the checkout in a state the script
+  refuses, spending a critical notification to repeat what the row already said. The
+  install call now checks the same blocked reasons the button does.
+- Every shell process left its temporary Cava profile behind in `$XDG_RUNTIME_DIR`, so
+  they accumulated for the whole session — 32 stale files after one evening of restarts.
+  A profile whose process is gone is cleared when the next one is written.
+- The settings rail tinted and bolded every group header at once: groups stay open by
+  default and the emphasis keyed on being open rather than on holding the current page.
+  Three of the five groups also repeated their first child's glyph. Group headers are text
+  now, only the group you are in is marked, and children indent clear of it.
+- The calendar's today pill kept a fixed height while the text inside grew with the font.
 - Settings › Widgets › Show & order told you "arrow keys move between lanes". The shell
   is pointer-driven and that file has no key handling at all, so the arrow keys did
   nothing. The hint now names what the row actually offers: drag, and the toggle.
