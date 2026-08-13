@@ -3,6 +3,7 @@
 # Deeper QML type-checking needs Quickshell installed (not feasible on stock
 # CI runners), so this catches the common, cheap-to-detect breakages:
 #   - merge conflict markers left in code
+#   - a declaration inserted into the middle of a multi-line binding
 #   - broken shell scripts
 #   - qmldir entries pointing at files that don't exist
 #   - required Quickshell service imports and local module packaging
@@ -41,6 +42,55 @@ if grep -rn -I -E '^(<<<<<<< |=======$|>>>>>>> )' --exclude-dir=.git . ; then
   fail "conflict markers found"
 else
   ok "markers" "none"
+fi
+
+section "orphaned binding continuations"
+# Inserting a declaration between a binding's first line and its `&&` continuation moves
+# the guard onto the new property, and both halves still compile: `"" && x` is a valid
+# expression that yields "". This shipped once, silently dropping brightness's device and
+# range guards onto an unrelated error string.
+orphans="$(find config modules services -name '*.qml' -print0 \
+  | xargs -0 -r awk '
+  FNR == 1 { prev = "" }
+  {
+    line = $0
+    sub(/^[ \t]+/, "", line)
+    sub(/[ \t]+$/, "", line)
+    if (line == "" || line ~ /^\/\//) next
+    if (prev != "" && line ~ /^(&&|\|\|)/)
+      printf "  %s:%d: %s\n", FILENAME, FNR, line
+    prev = (line ~ /:[ \t]*(""|'"''"'|true|false|null|\[\]|-?[0-9]+(\.[0-9]+)?)$/) ? line : ""
+  }
+' || true)"
+if [ -n "$orphans" ]; then
+  fail "these lines continue a binding that already ended on the line above:"
+  printf '%s\n' "$orphans"
+else
+  ok "bindings" "no declaration splits a multi-line binding"
+fi
+
+section "singleton name shadowing"
+# A Quickshell module import outranks the services directory, so a file that imports both
+# gets the external type under the local singleton's name. Nothing errors: every read comes
+# back undefined and the widget just renders empty. services/Network.qml is the one name
+# that collides today — it imports Quickshell.Networking itself and stays safe by going
+# through `root.`. Add a pair here when a new singleton takes an external type's name.
+shadow_pairs="Network:Quickshell.Networking"
+shadowed=""
+for pair in $shadow_pairs; do
+  local_name="${pair%%:*}"
+  module="${pair#*:}"
+  while IFS= read -r f; do
+    [ "$f" = "./services/$local_name.qml" ] && continue
+    grep -qE '^import "(\.\./)*services"' "$f" \
+      && shadowed="$shadowed  $f imports $module beside the services directory, shadowing $local_name"$'\n'
+  done < <(grep -rlF "import $module" --include='*.qml' . || true)
+done
+if [ -n "$shadowed" ]; then
+  fail "an external type would take a local singleton's name:"
+  printf '%s' "$shadowed"
+else
+  ok "singletons" "no external import shadows a local singleton"
 fi
 
 section "required service modules"
