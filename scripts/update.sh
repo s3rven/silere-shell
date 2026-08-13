@@ -64,7 +64,8 @@ _write_cache_file() {
 }
 
 _has_local_changes() {
-    [ -n "$(git -C "$ROOT" status --porcelain --untracked-files=normal)" ]
+    # tracked only: an untracked file cannot block a fast-forward, and git refuses collisions itself
+    [ -n "$(git -C "$ROOT" status --porcelain --untracked-files=no)" ]
 }
 
 # A blackholed network keeps a fetch running past the shell's own check timeout,
@@ -367,10 +368,17 @@ if [ "${1:-}" = "--apply" ]; then
     remote_rev="$release_rev"
     _exit_if_not_behind "$local_rev" "$remote_rev" 0
     if _has_local_changes; then
-        _fail "local changes detected — commit or stash them before applying the update"
+        _fail "local changes block the update — run: bash $ROOT/scripts/repair.sh --apply"
     fi
-    if ! git -C "$ROOT" merge --ff-only --quiet "$remote_rev"; then
-        _fail "fast-forward merge failed — local branch diverged"
+    # git names the real reason here; "diverged" would point at the wrong thing
+    if ! merge_err="$(git -C "$ROOT" merge --ff-only "$remote_rev" 2>&1)"; then
+        merge_line="$(printf '%s\n' "$merge_err" \
+            | sed -n 's/^error: //p; s/^fatal: //p' | head -n1)"
+        [ -z "$merge_line" ] \
+            && _fail "fast-forward merge failed — local branch diverged"
+        # git lists offending paths tab-indented on the next lines
+        merge_file="$(printf '%s\n' "$merge_err" | sed -n 's/^\t//p' | head -n1)"
+        _fail "$merge_line${merge_file:+ $merge_file} — bash $ROOT/scripts/repair.sh --apply clears blocking files"
     fi
     if ! _merged_tree_loads; then
         git -C "$ROOT" reset --hard --quiet "$local_rev" \
