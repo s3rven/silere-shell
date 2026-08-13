@@ -13,82 +13,43 @@ Only work since the latest release is listed here. Completed notes move to
 
 ### Added
 
-- With **Playback status** on, the media visualizer is the progress readout: the part of
-  the spectrum past the playhead is dimmed, so one shape carries both the audio and how
-  far the track has run. The plain progress line was hidden outright while the visualizer
-  ran, which is exactly when a track is worth following.
+- With **Playback status** on, the media visualizer doubles as the progress readout:
+  the spectrum past the playhead is dimmed.
 
 ### Fixed
 
-- One untracked file anywhere in the checkout blocked every shell update, permanently and
-  without naming it — a generated file left by an older layout, a merge `.orig`, an editor
-  swap. A fast-forward never touches those, so only tracked modifications block now. When
-  an incoming file genuinely would land on an untracked one, git's own reason and the file
-  are reported instead of "local branch diverged".
-- A blocked update said "commit or stash them", which is advice for someone who edited the
-  checkout on purpose. It now names `scripts/repair.sh --apply`, with the full path, in
-  both the notification and the Updates row.
-- Installing from the Updates page could start with the checkout in a state the script
-  refuses, spending a critical notification to repeat what the row already said. The
-  install call now checks the same blocked reasons the button does.
-- Every shell process left its temporary Cava profile behind in `$XDG_RUNTIME_DIR`, so
-  they accumulated for the whole session — 32 stale files after one evening of restarts.
-  A profile whose process is gone is cleared when the next one is written.
-- The settings rail tinted and bolded every group header at once: groups stay open by
-  default and the emphasis keyed on being open rather than on holding the current page.
-  Three of the five groups also repeated their first child's glyph. Group headers are text
-  now, only the group you are in is marked, and children indent clear of it.
-- The calendar's today pill kept a fixed height while the text inside grew with the font.
-- Settings › Widgets › Show & order told you "arrow keys move between lanes". The shell
-  is pointer-driven and that file has no key handling at all, so the arrow keys did
-  nothing. The hint now names what the row actually offers: drag, and the toggle.
-- The font picker lists Nerd Fonts only, and said nothing about it, so a font you had
-  just installed looked like a failed scan. It now says why the list is short.
-- Settings › Interface filed **Keep groups open** under Text & accessibility, where it
-  is neither. It has its own Menu group now.
-- Turning on the floating bar played two separate reveals, because Width, Edge gap and
-  Roundness sat in two disclosures gated on the same switch. They are one group now.
-- The settings rail cut **Order & visibility** down to "Order & visib…". It is now
-  **Show & order**, which fits, and a check keeps any future nav label inside the
-  width the rail actually has.
-- The Wi-Fi row could not say it was blocked by a hardware switch while Ethernet was
-  connected, because the Ethernet note was checked first. The switch was disabled with
-  nothing explaining why. The block now outranks a note about a different interface.
-- `qs ipc call menu settings <name>` did nothing at all when the name was one a
-  release had since renamed, so a keybind written against an older version stopped
-  opening Settings without saying so. It now opens Settings on Theme, as the README
-  already described, and still reports the unknown name and the valid ones.
-- With Ethernet and Wi-Fi both connected, the network widget named the Wi-Fi
-  network and sampled it for the traffic readout, while the machine was routing
-  over the wired link — so a docked laptop reported an SSID and near-zero speeds
-  during a download. The live wired link now wins, a wired device with no carrier
-  loses to Wi-Fi, and disconnecting from the Wi-Fi list acts on the Wi-Fi radio
-  rather than on whichever link is currently in front.
-- A failed Night Light check left an already-running `hyprsunset` unnoticed, so
-  the toggle read as off and turning it on would have started a second one. Night
-  Light now says when it could not check, and adopts a running one on the exit
-  code rather than only on what the check printed.
-- Wi-Fi and Airplane Mode kept offering toggles that a hardware rfkill switch
-  refuses, so every tap was a silent no-op. The Wi-Fi row now says it is blocked
-  by the hardware switch, and Airplane Mode leaves out a radio it cannot reach.
-- A palette file that stopped being readable was invisible: the shell kept the
-  last good colors, which is right, but nothing said why new colors never
-  arrived. Theme and Maintenance now say the file could not be read.
-- Brightness writes were unbounded and their result discarded. A write that
-  `brightnessctl` cannot perform now says so instead of letting the value snap
-  back unexplained, and one that hangs can no longer wedge brightness for the
-  rest of the session.
-- Quick actions showed Power Mode as live when no daemon answers, where every tap
-  did nothing, and reported a failed Night Light toggle as simply off.
-- Acting on a notification lost it from history. Clicking an action told the
-  sender, which closed the notification before the card's exit animation reached
-  the archive step, so it was dropped — while dismissing the same notification
-  kept it. Notifications a sender withdraws on its own are now kept too.
-- A supervised process could retire on a signal that happened to share a number
-  with an exit code it was told to give up on, because the crash/normal status
-  beside the exit code was discarded.
-- Settings › Bar › Underline says when screenshot feedback has stopped because
-  there is no screenshot folder to watch, instead of showing the control as live.
+- Untracked files no longer block shell updates. When an incoming file genuinely
+  lands on one, git's reason and the filename are reported.
+- A blocked update points at `scripts/repair.sh --apply` instead of suggesting
+  commit or stash.
+- Installing from the Updates page checks the same blocked reasons the button does.
+- Temporary Cava profiles left in `$XDG_RUNTIME_DIR` by dead processes are cleared.
+- Settings rail: group headers are plain text, only the current group is marked, and
+  children indent clear of it.
+- The calendar's today pill grows with the font.
+- Settings › Widgets › Show & order no longer claims arrow keys move between lanes.
+- The font picker says it lists Nerd Fonts only.
+- **Keep groups open** moved out of Text & accessibility into its own Menu group.
+- Floating bar Width, Edge gap and Roundness share one disclosure, so turning it on
+  plays a single reveal.
+- **Order & visibility** is now **Show & order**, which fits the rail. A check keeps
+  future nav labels inside the width.
+- The Wi-Fi row reports a hardware rfkill block ahead of a note about Ethernet.
+- `qs ipc call menu settings <name>` falls back to Theme for a renamed section, as
+  documented, and still reports the unknown name.
+- The network widget follows the live wired link when Ethernet and Wi-Fi are both
+  connected. Disconnecting from the Wi-Fi list acts on the Wi-Fi radio.
+- Night Light adopts an already-running `hyprsunset`, and says when it could not check.
+- Brightness writes are bounded and report failure instead of snapping back.
+- Wi-Fi and Airplane Mode no longer offer toggles a hardware rfkill switch refuses.
+- Theme and Maintenance report a palette file that could not be read.
+- Quick actions no longer show Power Mode as live when no daemon answers.
+- Acting on a notification keeps it in history, as dismissing already did. Notifications
+  a sender withdraws are kept too.
+- A supervised process no longer retires on a signal sharing a number with a give-up
+  exit code.
+- Settings › Bar › Underline reports a missing screenshot folder instead of showing the
+  control as live.
 
 ## Releases
 
