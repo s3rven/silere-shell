@@ -41,6 +41,7 @@ Column {
             glyph: "󰖲"; label: "Floating bar"
             key: "barFloating"
         }
+        // one disclosure for one toggle: two gated on the same flag played two reveals
         CollapsibleSection {
             expanded: ShellSettings.barFloating
             SliderRow {
@@ -56,10 +57,7 @@ Column {
                 step: 4
                 displayValue: ShellSettings.barGap === 0 ? "None" : ShellSettings.barGap + "px"
             }
-        }
-        // only the floating bar paints its own corners; docked multiplies the radius by 0
-        CollapsibleSection {
-            expanded: ShellSettings.barFloating
+            // only the floating bar paints its own corners; docked multiplies the radius by 0
             SliderRow {
                 glyph: "󱓻"; label: "Roundness"
                 key: "barRadius"
@@ -78,7 +76,7 @@ Column {
         CollapsibleSection {
             expanded: ShellSettings.barShadow
             SliderRow {
-                glyph: "󰘷"; label: "Shadow depth"
+                glyph: "󰘷"; label: "Depth"
                 key: "barShadowStrength"
                 step: 0.1
                 displayValue: Math.round(ShellSettings.barShadowStrength * 100) + "%"
