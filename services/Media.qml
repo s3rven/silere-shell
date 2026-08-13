@@ -255,39 +255,34 @@ Singleton {
 
     Timer { id: _visualizerStopGrace; interval: 150 }
 
-    readonly property int _cavaBars: {
-        if (_visualizerLowPowerOnly)
-            return ShellSettings.mediaVisualizerPreset === "smooth" ? 10
-                 : ShellSettings.mediaVisualizerPreset === "eco"    ? 6
-                 :                                                     8
-        if (ShellSettings.mediaVisualizerStyle === "pulse")
-            return ShellSettings.mediaVisualizerPreset === "smooth" ? 14
-                 : ShellSettings.mediaVisualizerPreset === "eco"    ? 8
-                 :                                                     10
-        if (ShellSettings.mediaVisualizerStyle === "bars")
-            return ShellSettings.mediaVisualizerPreset === "smooth" ? 18
-                 : ShellSettings.mediaVisualizerPreset === "eco"    ? 10
-                 :                                                     14
-        switch (ShellSettings.mediaVisualizerPreset) {
-        case "eco":    return 10
-        case "smooth": return 22
-        default:       return 16
-        }
+    // One table per style, plus the low-power row a visualizer on an inactive bar drops to.
+    // Denser shapes get fewer bars and a lower frame rate: a wave reads as a curve through
+    // its points, bars and pulse resolve detail the eye cannot use at the same rate.
+    // Written out rather than derived — the earlier trim-and-floor form never once clamped.
+    readonly property var _vizProfiles: ({
+        wave:     { eco: { bars: 10, fps: 26 }, balanced: { bars: 16, fps: 38 }, smooth: { bars: 22, fps: 50 } },
+        bars:     { eco: { bars: 10, fps: 23 }, balanced: { bars: 14, fps: 35 }, smooth: { bars: 18, fps: 47 } },
+        pulse:    { eco: { bars:  8, fps: 20 }, balanced: { bars: 10, fps: 32 }, smooth: { bars: 14, fps: 44 } },
+        lowPower: { eco: { bars:  6, fps: 18 }, balanced: { bars:  8, fps: 26 }, smooth: { bars: 10, fps: 34 } }
+    })
+
+    function vizProfile(style: string, preset: string, lowPower: bool): var {
+        const row = root._vizProfiles[lowPower ? "lowPower" : style] ?? root._vizProfiles.wave
+        return row[preset] ?? row.balanced
     }
-    readonly property int _cavaFps: {
-        if (_visualizerLowPowerOnly)
-            return ShellSettings.mediaVisualizerPreset === "smooth" ? 34
-                 : ShellSettings.mediaVisualizerPreset === "eco"    ? 18
-                 :                                                     26
-        const shapeTrim = ShellSettings.mediaVisualizerStyle === "pulse" ? 6
-                        : ShellSettings.mediaVisualizerStyle === "bars"  ? 3
-                        : 0
-        switch (ShellSettings.mediaVisualizerPreset) {
-        case "eco":    return Math.max(20, 26 - shapeTrim)
-        case "smooth": return Math.max(36, 50 - shapeTrim)
-        default:       return Math.max(28, 38 - shapeTrim)
-        }
+
+    // what the active bar runs at, so the settings hint does not have to restate the table
+    readonly property string visualizerLabel: {
+        const p = root.vizProfile(ShellSettings.mediaVisualizerStyle,
+            ShellSettings.mediaVisualizerPreset, false)
+        return p.bars + " bars at " + p.fps + " fps"
     }
+
+    readonly property var _vizActive: root.vizProfile(
+        ShellSettings.mediaVisualizerStyle, ShellSettings.mediaVisualizerPreset,
+        root._visualizerLowPowerOnly)
+    readonly property int _cavaBars: root._vizActive.bars
+    readonly property int _cavaFps:  root._vizActive.fps
     readonly property real _cavaNoiseReduction: {
         switch (ShellSettings.mediaVisualizerPreset) {
         // Cava accepts a float from 0 (fast/noisy) to 1 (slow/smooth).

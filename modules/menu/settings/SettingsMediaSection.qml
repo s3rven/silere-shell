@@ -62,7 +62,8 @@ Column {
                 ]
                 onChosen: (v) => ShellSettings.mediaVisualizerPreset = v
             }
-            HintText { text: "Eco uses the least CPU." }
+            // the preset names say nothing about what they cost; the shape changes both
+            HintText { text: Media.visualizerLabel + ". Eco uses the least CPU." }
         }
     }
 }
