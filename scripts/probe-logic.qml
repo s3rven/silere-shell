@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import "config"
 import "services"
+import "modules/bar/widgets"
 import "modules/menu/controls"
 
 // Small behavioral assertions for pure logic that a type-check or construction
@@ -195,6 +196,27 @@ ShellRoot {
         root._check(CalendarState.effectiveAnchorX === 73,
             "calendar follows popup anchor movement")
         CalendarState.close()
+
+        // reordering bar widgets hands the zone a new array, so its Repeater destroys and
+        // rebuilds the widget this anchor points at; assigning null here is what that leaves
+        MenuState.toggleAt(probeAnchor.menuAnchorX, null, probeAnchor)
+        root._check(MenuState.open && MenuState.anchorSource === probeAnchor,
+            "menu takes the anchor it was opened from")
+        // a destroyed widget nulls the property with no assignment behind it
+        MenuState.anchorSource = null
+        root._check(MenuState.open && MenuState.anchorSource !== null
+                && !MenuState.anchorLost,
+            "a vacant anchor is claimed by a live widget instead of closing the menu")
+        MenuState.adoptAnchor(probeAnchor)
+        root._check(MenuState.anchorSource !== probeAnchor,
+            "a widget cannot take an anchor another one already holds")
+        MenuState._setAnchor(null)
+        root._check(MenuState.open && MenuState.anchorSource === null
+                && !MenuState.anchorLost,
+            "deliberately clearing the anchor is not reclaimed and arms no close")
+        MenuState.close()
+        root._check(!MenuState.open && !MenuState.anchorLost,
+            "closing the menu leaves no pending anchor close")
 
         const popupEdge = Metrics.popupClearance(8)
         const topPopupY = Metrics.popupY(1000, 200, false, popupEdge)
@@ -517,6 +539,75 @@ ShellRoot {
         root._check(Network._linkPriority(false, undefined) > Network._linkPriority(true, false),
             "Wi-Fi outranks a wired device with no carrier")
 
+        root._startAnchorTeardown()
+    }
+
+    // A zone's Repeater renders a plain JS array, so writing a new order regenerates it:
+    // the replacements are built first and the originals are destroyed on a later turn.
+    // That out-of-order teardown is what closed the menu on a reorder and on a reset,
+    // so drive the real settings writes through a stand-in for the widget holding the anchor.
+    Item {
+        id: anchorZone
+        Repeater {
+            id: anchorSlots
+            model: ShellSettings.barWidgetOrderLeftKeys
+            delegate: Item {
+                required property string modelData
+                property bool keepLoaded: false
+                Component.onCompleted: keepLoaded = true
+                Loader {
+                    active: parent.keepLoaded
+                    sourceComponent: parent.modelData === "workspaces" ? anchorHolder : null
+                }
+            }
+        }
+    }
+
+    // the real widget, not a stand-in: its own reclaim wiring is what the teardown broke
+    Component {
+        id: anchorHolder
+        Workspaces { screen: Quickshell.screens[0] ?? null }
+    }
+
+    function _liveAnchorHolder(): var {
+        for (let i = 0; i < anchorSlots.count; i++) {
+            const slot = anchorSlots.itemAt(i)
+            if (slot && slot.modelData === "workspaces")
+                return slot.children.length > 0 ? slot.children[0].item : null
+        }
+        return null
+    }
+
+    property bool _savedLoadedForTeardown: false
+    function _startAnchorTeardown(): void {
+        root._savedLoadedForTeardown = ShellSettings._loaded
+        ShellSettings._loaded = true
+        MenuState.toggleAt(7, Quickshell.screens[0] ?? null, null)
+        MenuState._setAnchor(root._liveAnchorHolder())
+        root._check(MenuState.open && MenuState.anchorSource !== null,
+            "the anchor stand-in stands in for the widget the menu opened from")
+        ShellSettings.setBarWidgetLayout(["media", "workspaces"],
+            ShellSettings.barWidgetOrderCenterKeys, ShellSettings.barWidgetOrderRightKeys)
+        ShellSettings.resetBarWidgets()
+        _anchorTeardownSettle.restart()
+    }
+
+    Timer {
+        id: _anchorTeardownSettle
+        interval: 300
+        onTriggered: {
+            root._check(MenuState.open,
+                "reordering and resetting bar widgets leaves the menu open")
+            root._check(MenuState.anchorSource === root._liveAnchorHolder(),
+                "the surviving widget, not a discarded rebuild, holds the menu anchor")
+            MenuState.close()
+            ShellSettings.resetBarWidgets()
+            ShellSettings._loaded = root._savedLoadedForTeardown
+            root._runProcessChecks()
+        }
+    }
+
+    function _runProcessChecks(): void {
         root._timeoutProbe = boundedProcessFactory.createObject(root, {
             command: ["bash", "-c", "sleep 5"],
             timeoutMs: 80

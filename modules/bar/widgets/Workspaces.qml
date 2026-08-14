@@ -293,12 +293,25 @@ Item {
         function onWorkspacesChanged() { root._syncUrgentOffPage() }
     }
 
+    // reordering bar widgets rebuilds this instance under the open menu; every live copy
+    // offers itself each time the anchor goes vacant, so a rebuild that outlives its
+    // replacement still ends up held by whichever one survives
+    function _reclaimMenuAnchor(): void {
+        if (MenuState.open && MenuState.anchorSource === null && root._menuTargetsThisBar)
+            MenuState.adoptAnchor(root)
+    }
+    Connections {
+        target: MenuState
+        function onAnchorSourceChanged() { root._reclaimMenuAnchor() }
+    }
+
     Component.onCompleted: {
         _lastNormalActiveId = activeId
         _prevPageKey = pageKey
         _initialized = monitorReady
         root._syncUrgentOffPage()
         root._rebuildWsApps()
+        root._reclaimMenuAnchor()
     }
 
     onRawActiveIdChanged: {

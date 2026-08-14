@@ -14,7 +14,36 @@ Singleton {
         const live = Number(root.anchorSource?.menuAnchorX)
         return isFinite(live) ? live : root.anchorX
     }
-    onAnchorSourceChanged: if (open && anchorSource === null) close()
+    // a destroyed widget nulls this with no assignment behind it. Reordering bar widgets
+    // hands the zone's Repeater a new array, which rebuilds every delegate, so the anchor
+    // drops for a turn and comes straight back; only a bar that really went never returns.
+    property bool _anchorWriting: false
+    readonly property bool anchorLost: _anchorRegrab.running
+    function _setAnchor(source): void {
+        _anchorRegrab.stop()
+        root._anchorWriting = true
+        root.anchorSource = source ?? null
+        root._anchorWriting = false
+    }
+    // claimed by whichever live widget asks first, not by the one being rebuilt: a zone's
+    // Repeater creates the replacements before it destroys the originals, and the
+    // destruction is deferred, so an edge-triggered handover lands on a dying instance
+    function adoptAnchor(source): void {
+        if (!root.open || !source) return
+        if (root._anchorWriting || root.anchorSource !== null) return
+        root._setAnchor(source)
+    }
+    onAnchorSourceChanged: {
+        if (anchorSource !== null) { _anchorRegrab.stop(); return }
+        if (root._anchorWriting || !root.open) return
+        _anchorRegrab.restart()
+    }
+    Timer {
+        id: _anchorRegrab
+        interval: 150
+        onTriggered: if (root.open && root.anchorSource === null) root.close()
+    }
+
     readonly property int homeTab: 0
     readonly property int settingsTab: 1
     readonly property int recentTab: 2
@@ -103,7 +132,7 @@ Singleton {
             return
         }
         anchorX = x
-        anchorSource = source ?? null
+        _setAnchor(source)
         triggerScreen = screen ?? null
         _activeTab = homeTab
         open = true
@@ -112,7 +141,7 @@ Singleton {
         // open first: clearing anchorSource while open re-enters close() through its handler
         if (open) open = false
         triggerScreen = null
-        anchorSource = null
+        _setAnchor(null)
     }
     function showTab(index: int): void {
         const tab = selectTab(index)
@@ -127,7 +156,7 @@ Singleton {
         function toggle(): void {
             if (root.open) { root.close(); return }
             root.triggerScreen = null
-            root.anchorSource = null
+            root._setAnchor(null)
             root._activeTab = root.homeTab
             root.open = true
         }
@@ -136,7 +165,7 @@ Singleton {
             if (index < root.homeTab || index > root.recentTab)
                 return "unknown menu tab " + index + "; valid: 0 (home), 1 (settings), 2 (recent)"
             root.triggerScreen = null
-            root.anchorSource = null
+            root._setAnchor(null)
             root.showTab(index)
             return "ok"
         }
@@ -144,7 +173,7 @@ Singleton {
         function settings(name: string): string {
             const known = root._flatSections.indexOf(name) >= 0
             root.triggerScreen = null
-            root.anchorSource = null
+            root._setAnchor(null)
             root.setSettingsSection(name)
             root.showTab(root.settingsTab)
             if (known) return "ok"
