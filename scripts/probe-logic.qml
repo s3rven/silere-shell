@@ -114,6 +114,38 @@ ShellRoot {
         root._check(Object.keys(clean).length === 1 && clean.__version === 1,
             "an unmodified settings file serializes to nothing but its version")
 
+        // the sec: on every schema entry exists only to light the nav dots, and ci-lint
+        // guards the attribution but not the reader; an unrelated refactor deleted the
+        // reader once and nothing failed, so pin the mapping here.
+        // per-key tracking gates on a completed load, which this offscreen probe never gets
+        root._check(Object.keys(ShellSettings.modifiedSections).length === 0,
+            "an unmodified settings file marks no settings page")
+        const savedLoaded = ShellSettings._loaded
+        ShellSettings._loaded = true
+
+        const savedTone = ShellSettings.baseTone
+        ShellSettings.baseTone = savedTone === "black" ? "graphite" : "black"
+        root._check(ShellSettings.modifiedSections.theme === true,
+            "a changed setting marks the page that owns it")
+        ShellSettings.baseTone = savedTone
+        root._check(ShellSettings.modifiedSections.theme === undefined,
+            "restoring a setting clears its page")
+
+        const savedBattGlow = ShellSettings.underlineBattGlow
+        ShellSettings.underlineBattGlow = !savedBattGlow
+        root._check(ShellSettings.modifiedSections.underline === true
+                && ShellSettings.modifiedSections.warnings === true,
+            "a setting owned by two pages marks both")
+        ShellSettings.underlineBattGlow = savedBattGlow
+
+        const savedNight = ShellSettings.nightLightTemp
+        ShellSettings.nightLightTemp = savedNight === 4000 ? 3500 : 4000
+        root._check(ShellSettings.modifiedCount === 1
+                && Object.keys(ShellSettings.modifiedSections).length === 0,
+            "a setting with no page of its own marks nothing")
+        ShellSettings.nightLightTemp = savedNight
+        ShellSettings._loaded = savedLoaded
+
         // the visualizer table drives a live cava config; a wrong cell is a silent cost change
         const vizExpect = ({
             wave:  { eco: [10, 26], balanced: [16, 38], smooth: [22, 50] },

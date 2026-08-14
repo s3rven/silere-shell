@@ -74,6 +74,14 @@ Item {
         return false
     }
 
+    function _groupModified(it): bool {
+        const leaves = root._leaves(it)
+        for (let i = 0; i < leaves.length; i++) {
+            if (ShellSettings.modifiedSections[leaves[i].section] === true) return true
+        }
+        return false
+    }
+
     function _groupFinalHeight(index: int, it): real {
         if (!root._isExpanded(index)) return root._groupH
         const leaves = root._leaves(it)
@@ -324,7 +332,8 @@ Item {
                             ShellText {
                                 anchors.left: parent.left
                                 anchors.leftMargin: 10
-                                anchors.right: _groupChevron.left
+                                anchors.right: _groupDot.visible
+                                    ? _groupDot.left : _groupChevron.left
                                 anchors.rightMargin: 6
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: _grp.modelData.label
@@ -335,6 +344,19 @@ Item {
                                 font.pixelSize: Settings.fontLabel
                                 font.weight: _grp.groupActive ? Font.DemiBold : Font.Normal
                                 elide: Text.ElideRight
+                            }
+
+                            // only while collapsed: an expanded group shows its leaves' own dots
+                            Rectangle {
+                                id: _groupDot
+                                visible: ShellSettings.settingsNavDots
+                                    && !_grp.expanded && root._groupModified(_grp.modelData)
+                                anchors.right: _groupChevron.left
+                                anchors.rightMargin: 5
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 4; height: 4; radius: 2
+                                antialiasing: true
+                                color: Theme.withAlpha(Theme.accent, 0.72)
                             }
 
                             ShellText {
@@ -397,6 +419,8 @@ Item {
                                         required property var modelData
                                         readonly property bool active: MenuState.settingsSection === modelData.section
                                         readonly property string glyph: modelData.glyph ?? ""
+                                        readonly property bool showDot: ShellSettings.settingsNavDots
+                                            && ShellSettings.modifiedSections[modelData.section] === true
                                         width: _leafColumn.width
                                         height: root._navRowH
                                         radius: Theme.radiusInline
@@ -438,11 +462,26 @@ Item {
                                             ColorFade on color {}
                                         }
 
+                                        // 4px on a 7/5 inset: the rail is a fixed 160 and the dot
+                                        // eats the label's budget, which "Notifications" fills
+                                        Rectangle {
+                                            id: _leafDot
+                                            visible: _leaf.showDot
+                                            anchors.right: parent.right
+                                            anchors.rightMargin: 7
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            width: 4; height: 4; radius: 2
+                                            antialiasing: true
+                                            color: Theme.withAlpha(Theme.accent,
+                                                _leaf.active ? 0.92 : 0.66)
+                                            ColorFade on color {}
+                                        }
+
                                         ShellText {
                                             anchors.left: _leafGlyph.visible ? _leafGlyph.right : parent.left
                                             anchors.leftMargin: _leafGlyph.visible ? 8 : 12
-                                            anchors.right: parent.right
-                                            anchors.rightMargin: 8
+                                            anchors.right: _leafDot.visible ? _leafDot.left : parent.right
+                                            anchors.rightMargin: _leafDot.visible ? 5 : 8
                                             anchors.verticalCenter: parent.verticalCenter
                                             text: _leaf.modelData.label
                                             elide: Text.ElideRight

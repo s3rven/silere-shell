@@ -82,6 +82,11 @@ Column {
             description: "Show multiple category groups"
             key: "settingsNavPinned"
         }
+        ToggleRow {
+            glyph: "󰧞"; label: "Mark changed pages"
+            description: "Dot the categories holding a changed setting"
+            key: "settingsNavDots"
+        }
     }
 
     SectionLabel {

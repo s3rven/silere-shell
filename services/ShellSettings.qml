@@ -56,6 +56,7 @@ Singleton {
     property bool   osdBarIntegrated: false
     property bool   osdMatchBar:      true
     property bool   settingsNavPinned:   true
+    property bool   settingsNavDots:     true
     property bool   reduceMotion:        false
     property bool   highContrast:        false
     property real   outlineStrength:     1.0
@@ -308,6 +309,7 @@ Singleton {
         { k: "osdBarIntegrated",    t: "bool", sec: "osd" },
         { k: "osdMatchBar",         t: "bool", sec: "osd" },
         { k: "settingsNavPinned",   t: "bool", sec: "interface" },
+        { k: "settingsNavDots",     t: "bool", sec: "interface" },
         { k: "reduceMotion",        t: "bool", sec: "interface" },
         { k: "highContrast",        t: "bool", sec: "interface" },
         { k: "outlineStrength",     t: "real", min: 0.5, max: 2.4, sec: "theme" },
@@ -420,6 +422,29 @@ Singleton {
     property bool _bulkAssign: false
     readonly property int modifiedCount: _modifiedCount
 
+    property var _modifiedSections: Object.create(null)
+    readonly property var modifiedSections: _modifiedSections
+
+    readonly property var _sectionOf: {
+        const m = Object.create(null)
+        for (let i = 0; i < _schema.length; i++) m[_schema[i].k] = _schema[i].sec
+        return m
+    }
+
+    // reassigned, never mutated: the nav reads this through a binding, and a mutation
+    // would leave every dot showing whatever the set held when the page was built
+    function _rebuildModifiedSections(): void {
+        const secs = Object.create(null)
+        for (const key in root._modifiedKeys) {
+            // "-" is a key controlled from somewhere other than a settings page
+            const sec = root._sectionOf[key]
+            if (!sec || sec === "-") continue
+            const parts = sec.split(",")
+            for (let i = 0; i < parts.length; i++) secs[parts[i]] = true
+        }
+        root._modifiedSections = secs
+    }
+
     function _recountModified(): void {
         let n = 0
         const keys = Object.create(null)
@@ -431,6 +456,7 @@ Singleton {
         }
         root._modifiedKeys = keys
         root._modifiedCount = n
+        root._rebuildModifiedSections()
     }
 
     function _backupStamp(): string {
@@ -491,6 +517,8 @@ Singleton {
             if (modified) root._modifiedKeys[key] = true
             else delete root._modifiedKeys[key]
             root._modifiedCount += modified ? 1 : -1
+            // only when a key crosses its default, not on every slider tick
+            root._rebuildModifiedSections()
         }
         if (!_store.writeAllowed) return
         if (_loadedVersion > _settingsVersion) _futureTouched[key] = true
@@ -644,6 +672,7 @@ Singleton {
         }
         root._modifiedKeys = modifiedKeys
         root._modifiedCount = changed
+        root._rebuildModifiedSections()
         if (preserveFuture) _futureSettings = out
         return JSON.stringify(out, null, 2)
     }
