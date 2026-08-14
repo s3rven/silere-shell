@@ -15,9 +15,17 @@ Only work since the latest release is listed here. Completed notes move to
 
 - With **Playback status** on, the media visualizer doubles as the progress readout:
   the spectrum past the playhead is dimmed.
+- A dot in the settings rail marks each page holding a value you changed from its
+  default. A collapsed group carries one for the pages inside it.
+- **Mark changed pages** in Settings › Appearance › Interface turns those dots off.
 
 ### Fixed
 
+- Reordering bar widgets no longer closes the menu, and neither does resetting them.
+- The settings rail keeps the current page marked while the pointer is over it.
+- Descriptions and hints across the settings pages are brighter.
+- **Shell shadows** and **Depth** moved to Settings › Appearance › Theme.
+- **Shell shadows** names what it covers while the bar is docked.
 - Untracked files no longer block shell updates. When an incoming file genuinely
   lands on one, git's reason and the filename are reported.
 - A blocked update points at `scripts/repair.sh --apply` instead of suggesting
