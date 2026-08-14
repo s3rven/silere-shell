@@ -650,6 +650,25 @@ else
     ok "settings" "slider ranges match the schema"
 fi
 
+section "glow strength travel"
+# The slider-vs-schema check above compares two declared numbers, so it cannot see a
+# range the renderer clamps away. Every glow layer is Math.min(cap, coef * glowStrength),
+# so the last cap/coef is where the underline stops changing; a schema max above that
+# is slider travel that renders identically. glowStrength sat at 2.0 against 1.75 once.
+glow_sat="$(grep -oE 'Math\.min\(([0-9.]+),[[:space:]]*([0-9.]+) \* ShellSettings\.glowStrength\)' \
+  modules/bar/BarUnderline.qml \
+  | sed -E 's/Math\.min\(([0-9.]+),[[:space:]]*([0-9.]+).*/\1 \2/' \
+  | awk 'NF == 2 && $2 > 0 { r = $1 / $2; if (r > m) m = r } END { if (m) printf "%.4f\n", m }')"
+glow_max="$(grep -oE '\{ k: "glowStrength".*max: [0-9.]+' services/ShellSettings.qml \
+  | grep -oE 'max: [0-9.]+' | awk '{print $2}')"
+if [ -z "$glow_sat" ] || [ -z "$glow_max" ]; then
+  fail "cannot read the glow strength clamps or its schema max"
+elif awk -v a="$glow_max" -v b="$glow_sat" 'BEGIN { exit !(a > b + 0.0001) }'; then
+  fail "glowStrength max $glow_max exceeds the last layer clamp $glow_sat; the travel above it renders identically"
+else
+  ok "glow travel" "glowStrength max $glow_max stops at the last layer clamp $glow_sat"
+fi
+
 section "bar widget layout API"
 # The settings key list, settings metadata, and runtime component registry are
 # three views of one widget catalog. A widget is incomplete if any view drifts.

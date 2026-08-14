@@ -21,6 +21,8 @@ Only work since the latest release is listed here. Completed notes move to
 
 ### Fixed
 
+- **Glow strength** covers only the range that still changes the underline.
+- Settings › Bar › Underline says the line keeps its resting glow when no event is on.
 - Reordering bar widgets no longer closes the menu, and neither does resetting them.
 - The settings rail keeps the current page marked while the pointer is over it.
 - Descriptions and hints across the settings pages are brighter.

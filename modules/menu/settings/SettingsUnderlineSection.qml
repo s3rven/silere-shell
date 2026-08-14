@@ -81,8 +81,9 @@ Column {
                 glyph: "󰃠"
                 label: ShellSettings.underlineGlow ? "Glow strength" : "Line strength"
                 value: ShellSettings.underlineGlow ? ShellSettings.glowStrength : ShellSettings.barLineStrength
-                // the glow layers saturate their own clamps by 1.7; only the static line has room above 2
-                min: 0.5; max: ShellSettings.underlineGlow ? 2.0 : 3.0; step: 0.05
+                // every glow layer is pinned by 1.75 (0.42/0.24 is the last to clamp), so the
+                // travel stops there; the static line's alpha has room to 4.09 and is capped by taste
+                min: 0.5; max: ShellSettings.underlineGlow ? 1.75 : 3.0; step: 0.05
                 displayValue: Math.round((ShellSettings.underlineGlow
                     ? ShellSettings.glowStrength : ShellSettings.barLineStrength) * 100) + "%"
                 onChanged: (v) => {
@@ -151,7 +152,7 @@ Column {
                             text: "No screenshot folder to watch; feedback stops until one exists."
                         }
                         HintText {
-                            // reactive mode drops the static line, so with no source at all the bar shows nothing
+                            // the base glow line is drawn either way; what is missing here is anything to react to
                             visible: !ShellSettings.underlineIdleGlow
                                 && !ShellSettings.underlineNotifGlow
                                 && !ShellSettings.underlineNetGlow
@@ -159,7 +160,7 @@ Column {
                                 && !ShellSettings.underlineTempGlow
                                 && !ShellSettings.underlineScreenshotGlow
                                 && !ShellSettings.mediaProgress
-                            text: "Nothing lights the underline yet; turn on an event above or Ambient glow."
+                            text: "No event will light the underline; it stays at its resting glow."
                         }
                     }
                 }

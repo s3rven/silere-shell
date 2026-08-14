@@ -340,7 +340,7 @@ Singleton {
         { k: "underlineNetGlow",    t: "bool", sec: "underline" },
         { k: "underlineTempGlow",   t: "bool", sec: "underline,warnings" },
         { k: "underlineScreenshotGlow", t: "bool", sec: "underline" },
-        { k: "glowStrength",        t: "real", min: 0.5, max: 2.0, sec: "underline" },
+        { k: "glowStrength",        t: "real", min: 0.5, max: 1.75, sec: "underline" },
         { k: "screenshotGlowSweep", t: "bool", sec: "underline" },
         { k: "dotOpacity",          t: "real", min: 0.1,  max: 1.0, sec: "separators" },
         { k: "dotStyle",            t: "enum", vals: ["·", "•", "◦", "|", "slash", "line", "none"], sec: "separators" },
