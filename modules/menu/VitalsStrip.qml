@@ -166,6 +166,7 @@ Rectangle {
             label: "Mem"
             value: SysInfo.memTotalKb > 0 ? Math.round(SysInfo.memPct * 100) + "%" : "—"
             progress: SysInfo.memPct
+            status: SysInfo.memPct > 0.9 ? 2 : (SysInfo.memPct > 0.75 ? 1 : 0)
         }
 
         Vital {
