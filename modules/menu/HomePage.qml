@@ -202,9 +202,8 @@ PageShell {
                 visible: Audio.ready
                 reserveExpandSlot: _brightnessRow.visible && Brightness.devices.length > 1
                 onOpenChanged: if (open) {
-                    const pickerMoved = root._closePicker()
-                    const brightnessMoved = _brightnessRow.closeInline()
-                    if (pickerMoved || brightnessMoved) _volumeRow.focusPrimary()
+                    root._closePicker()
+                    _brightnessRow.closeInline()
                 }
             }
             BrightnessRow {
@@ -212,9 +211,8 @@ PageShell {
                 visible: root._brightnessAvailable
                 reserveExpandSlot: _volumeRow.visible && Audio.sinkCount > 1
                 onOpenChanged: if (open) {
-                    const pickerMoved = root._closePicker()
-                    const volumeMoved = _volumeRow.closeInline()
-                    if (pickerMoved || volumeMoved) _brightnessRow.focusPrimary()
+                    root._closePicker()
+                    _volumeRow.closeInline()
                 }
             }
             HintText {
