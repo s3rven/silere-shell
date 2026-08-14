@@ -277,6 +277,7 @@ Singleton {
         const network = _findWifiNetwork(ssid)
         if (!network) {
             wifiError = ssid
+            wifiErrorReason = ConnectionFailReason.Unknown
             return
         }
 
@@ -381,7 +382,12 @@ Singleton {
         return parts.join("|")
     }
 
-    on_LinkSignatureChanged: _queueVpnRefresh()
+    on_LinkSignatureChanged: {
+        root._queueVpnRefresh()
+        if (root.wifiError.length === 0) return
+        const network = root._findWifiNetwork(root.wifiError)
+        if (network && network.connected) root.clearWifiError()
+    }
     on_VpnWantedChanged: {
         if (_vpnWanted) _queueVpnRefresh()
         else {

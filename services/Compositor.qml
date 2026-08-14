@@ -355,7 +355,6 @@ Singleton {
     property var _niriWsRaw: []
     property var _niriWinRaw: []
     property bool _niriOverview: false
-    property bool _niriReady: false
     property int _niriTitleTick: 0
 
     // niri sends WindowOpenedOrChanged for title-only updates too: mutate now, publish at most one title list per interval
@@ -484,7 +483,6 @@ Singleton {
 
         if (ev.WorkspacesChanged) {
             root._niriWsRaw = ev.WorkspacesChanged.workspaces || []
-            root._niriReady = true
             root.workspaceActivated(root._niriFocusedMon)
             return
         }
@@ -615,7 +613,6 @@ Singleton {
                 write("\"EventStream\"\n")
                 flush()
             } else {
-                root._niriReady = false
                 _niriReconnect.restart()
             }
         }

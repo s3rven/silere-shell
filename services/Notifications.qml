@@ -38,15 +38,21 @@ Singleton {
     // roles are fixed by the first insert, so every entry (incl. one revived from JSON) needs the full shape
     function _normalizeEntry(e): var {
         if (!e || typeof e !== "object") return null
+        const rawId = Number(e.id ?? -1)
+        const rawUrgency = Number(e.urgency ?? 1)
+        const rawTime = Number(e.time ?? 0)
         return {
-            id:           Number(e.id ?? -1),
+            id:           isFinite(rawId) && rawId >= -1 && rawId <= 2147483647
+                ? Math.trunc(rawId) : -1,
             appName:      root.identityText(e.appName),
             appIcon:      SafeText.boundedText(e.appIcon, root._maxSourceChars),
             desktopEntry: root.identityText(e.desktopEntry),
             summary:      root.plainText(e.summary, root._maxSummaryChars),
             body:         root.plainText(e.body, root._maxBodyChars),
-            urgency:      Number(e.urgency ?? 1),
-            time:         Number(e.time ?? 0)
+            urgency:      isFinite(rawUrgency)
+                ? Math.max(0, Math.min(2, Math.round(rawUrgency))) : 1,
+            time:         isFinite(rawTime) && rawTime >= 0 && rawTime <= 8.64e15
+                ? rawTime : 0
         }
     }
 

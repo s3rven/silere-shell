@@ -176,6 +176,7 @@ Singleton {
             _killProc.exec(["pkill", "-x", "hyprsunset"])
         } else if (!_killProc.running) {
             _pendingEnable = false
+            root.lastError = "Install pkill to change an external night light"
         }
     }
 
@@ -190,6 +191,7 @@ Singleton {
             } else if (SystemTools.hasPkill) {
                 _killProc.exec(["pkill", "-x", "hyprsunset"])
             } else {
+                root.lastError = "Install pkill to stop an external night light"
                 return
             }
             enabled = false
@@ -274,7 +276,14 @@ Singleton {
 
     Process {
         id: _killProc
-        onExited: {
+        onExited: (code) => {
+            if (code !== 0) {
+                root._pendingEnable = false
+                root.lastError = "Could not stop the external night light"
+                root._init()
+                return
+            }
+            root.lastError = ""
             if (root._pendingEnable) {
                 root._pendingEnable = false
                 root._startSunset()

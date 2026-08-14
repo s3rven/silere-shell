@@ -51,8 +51,12 @@ _confirm() {
     [[ "$reply" =~ ^[Yy]$ ]]
 }
 
-[ -d .git ] || _die "not a Git checkout: $ROOT"
+git_root="$(git rev-parse --show-toplevel 2>/dev/null)" \
+    || _die "not a Git checkout: $ROOT"
+git_root="$(cd "$git_root" && pwd -P)"
+[ "$git_root" = "$(pwd -P)" ] || _die "not a Git checkout: $ROOT"
 
+[ "$#" -le 2 ] || { _usage; exit 2; }
 action="${1:---preview}"
 case "${2:-}" in
     "") ;;

@@ -38,6 +38,7 @@ Only work since the latest release is listed here. Completed notes move to
   lands on one, git's reason and the filename are reported.
 - A blocked update points at `scripts/repair.sh --apply` instead of suggesting
   commit or stash.
+- The repair workflow works from linked Git worktrees and rejects extra arguments.
 - Installing from the Updates page checks the same blocked reasons the button does.
 - Temporary Cava profiles left in `$XDG_RUNTIME_DIR` by dead processes are cleared.
 - Settings rail: group headers are plain text, only the current group is marked, and
@@ -54,18 +55,22 @@ Only work since the latest release is listed here. Completed notes move to
 - `qs ipc call menu settings <name>` falls back to Theme for a renamed section, as
   documented, and still reports the unknown name.
 - The network widget follows the live wired link when Ethernet and Wi-Fi are both
-  connected. Disconnecting from the Wi-Fi list acts on the Wi-Fi radio.
-- Night Light adopts an already-running `hyprsunset`, and says when it could not check.
-- Brightness writes are bounded and report failure instead of snapping back.
+  connected. Disconnecting from the Wi-Fi list acts on the Wi-Fi radio, and a late
+  successful connection clears its earlier timeout error.
+- Night Light adopts an already-running `hyprsunset`, says when it could not check,
+  and reports external stop or temperature-change failures.
+- Brightness writes are bounded and keep their timeout error instead of replacing it
+  with a generic process failure.
 - Wi-Fi and Airplane Mode no longer offer toggles a hardware rfkill switch refuses.
 - Theme and Maintenance report a palette file that could not be read.
 - Quick actions no longer show Power Mode as live when no daemon answers.
 - Acting on a notification keeps it in history, as dismissing already did. Notifications
-  a sender withdraws are kept too.
+  a sender withdraws are kept too, and corrupt numeric roles are normalized on restore.
 - A supervised process no longer retires on a signal sharing a number with a give-up
   exit code.
 - Settings › Bar › Underline reports a missing screenshot folder instead of showing the
   control as live.
+- Bundled AUR metadata now reports the current 0.5.1 VCS line.
 
 ## Releases
 

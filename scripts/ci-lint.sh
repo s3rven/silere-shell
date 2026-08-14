@@ -476,6 +476,23 @@ else
   skip "AUR" "makepkg unavailable; dependency floor still checked"
 fi
 
+# PKGBUILD and .SRCINFO can agree while both predate the latest release.
+if [ -f "$aur_dir/PKGBUILD" ] && command -v git >/dev/null 2>&1 \
+    && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  aur_release_tag="$(git tag --merged HEAD --list 'v[0-9]*' --sort=-v:refname 2>/dev/null | head -n 1)"
+  if [ -n "$aur_release_tag" ]; then
+    aur_pkgver="$(sed -n 's/^pkgver=//p' "$aur_dir/PKGBUILD" | head -n 1)"
+    aur_base_version="${aur_pkgver%%.r*}"
+    aur_release_version="${aur_release_tag#v}"
+    aur_oldest="$(printf '%s\n%s\n' "$aur_base_version" "$aur_release_version" | sort -V | head -n 1)"
+    if [ "$aur_oldest" = "$aur_release_version" ]; then
+      ok "AUR" "pkgver covers $aur_release_tag"
+    else
+      fail "AUR pkgver $aur_pkgver predates $aur_release_tag"
+    fi
+  fi
+fi
+
 section "qmldir integrity"
 missing=""
 while IFS= read -r qd; do

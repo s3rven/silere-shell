@@ -1,6 +1,6 @@
 pkgbase = silere-shell-git
 	pkgdesc = Quiet by default, yours by choice. A Quickshell bar for Hyprland and niri with nothing running behind your back
-	pkgver = 0.4.0.r2.gde75dcc
+	pkgver = 0.5.1.r63.g2c1db3c
 	pkgrel = 1
 	url = https://github.com/s3rven/silere-shell
 	install = silere-shell-git.install

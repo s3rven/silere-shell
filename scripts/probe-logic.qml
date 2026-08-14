@@ -186,6 +186,18 @@ ShellRoot {
         root._check(Notifications._normalizeEntry({ body: "line1\nline2" }).body
                 === "line1\nline2",
             "history text keeps the newlines a multi-line body needs")
+        const safeHistoryNumbers = Notifications._normalizeEntry({
+            id: "not-a-number", urgency: Infinity, time: "Infinity"
+        })
+        root._check(safeHistoryNumbers.id === -1 && safeHistoryNumbers.urgency === 1
+                && safeHistoryNumbers.time === 0,
+            "history replaces non-finite numeric roles with safe defaults")
+        const boundedHistoryNumbers = Notifications._normalizeEntry({
+            id: 12.9, urgency: 99, time: -1
+        })
+        root._check(boundedHistoryNumbers.id === 12 && boundedHistoryNumbers.urgency === 2
+                && boundedHistoryNumbers.time === 0,
+            "history bounds numeric roles before inserting them into the model")
 
         const savedLimit = ShellSettings.notifHistoryLimit
         Notifications.clearHistory()

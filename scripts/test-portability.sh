@@ -712,7 +712,7 @@ test_update_reporting() (
 test_repair_workflow() (
     export GIT_CONFIG_GLOBAL=/dev/null
     export GIT_CONFIG_NOSYSTEM=1
-    local repo="$TMP/repair" preview
+    local repo="$TMP/repair" linked="$TMP/repair-linked" preview
     mkdir -p "$repo/scripts"
     cp "$ROOT/scripts/repair.sh" "$repo/scripts/repair.sh"
     cp "$ROOT/.gitignore" "$repo/.gitignore"
@@ -747,6 +747,29 @@ test_repair_workflow() (
     assert_eq "customized" "$(<"$repo/tracked.qml")" "repair undo tracked file"
     assert_eq "new widget" "$(<"$repo/custom.qml")" "repair undo untracked file"
     assert_eq '{"barHeight":40}' "$(<"$repo/settings.json")" "repair undo personal settings"
+
+    git -C "$repo" worktree add -qb repair-linked "$linked"
+    [ -f "$linked/.git" ] || fail "repair fixture did not create a linked worktree"
+    printf 'linked customization\n' > "$linked/tracked.qml"
+    preview="$(bash "$linked/scripts/repair.sh")"
+    printf '%s\n' "$preview" | grep -qF 'Nothing was changed' \
+        || fail "repair preview rejected a linked worktree"
+    bash "$linked/scripts/repair.sh" --apply --yes >/dev/null
+    assert_eq "shipped" "$(<"$linked/tracked.qml")" "linked repair apply tracked file"
+    bash "$linked/scripts/repair.sh" --undo --yes >/dev/null
+    assert_eq "linked customization" "$(<"$linked/tracked.qml")" "linked repair undo tracked file"
+
+    if bash "$linked/scripts/repair.sh" --preview --yes unexpected >/dev/null 2>&1; then
+        fail "repair accepted an unexpected third argument"
+    fi
+
+    mkdir -p "$linked/nested/scripts"
+    cp "$linked/scripts/repair.sh" "$linked/nested/scripts/repair.sh"
+    if bash "$linked/nested/scripts/repair.sh" --apply --yes >/dev/null 2>&1; then
+        fail "repair accepted a directory nested inside another checkout"
+    fi
+    assert_eq "linked customization" "$(<"$linked/tracked.qml")" \
+        "nested repair left its parent worktree untouched"
 )
 
 test_update_rolls_back_broken_merge() (

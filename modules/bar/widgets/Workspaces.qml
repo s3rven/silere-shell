@@ -90,8 +90,8 @@ Item {
         return m
     }
 
-    function wsObjFor(id) { return root._wsMap[id] ?? null }
-    function appsFor(id) { return root._wsApps[id] ?? [] }
+    function wsObjFor(id: int): var { return root._wsMap[id] ?? null }
+    function appsFor(id: int): var { return root._wsApps[id] ?? [] }
     function occupied(id: int): bool {
         const ws = root.wsObjFor(id)
         return (ws !== null && ws.occupied) || root.appsFor(id).length > 0
