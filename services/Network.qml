@@ -103,8 +103,12 @@ Singleton {
     readonly property bool _vpnWanted: !Idle.isIdle && available
         && ShellSettings.barShowNetwork && SystemTools.hasNmcli
 
+    function signalTier(s: int): int {
+        return s > 75 ? 3 : s > 50 ? 2 : s > 25 ? 1 : 0
+    }
+
     function signalGlyph(s: int): string {
-        return s > 75 ? "󰤨" : s > 50 ? "󰤥" : s > 25 ? "󰤢" : "󰤟"
+        return ["󰤟", "󰤢", "󰤥", "󰤨"][signalTier(s)]
     }
 
     readonly property string underlyingIcon: {
@@ -215,11 +219,14 @@ Singleton {
             }
         }
 
+        // by the tier the row draws, not the raw percentage: signal drifts a few points
+        // between scans and neighbouring networks traded places under the pointer
         order.sort((a, b) => {
             const A = bySsid[a]
             const B = bySsid[b]
             if (A.active !== B.active) return A.active ? -1 : 1
-            return B.signal - A.signal
+            const tier = signalTier(B.signal) - signalTier(A.signal)
+            return tier !== 0 ? tier : A.ssid.localeCompare(B.ssid)
         })
         return order.map(ssid => bySsid[ssid])
     }
