@@ -243,15 +243,13 @@ ClippingRectangle {
             id: _identityText
             readonly property bool _switchable: Media.playerCount > 1
             readonly property bool _switchHover: _switchable && _identitySwitch.containsMouse
-            readonly property bool _switchFocused: _switchable
 
             width: parent.width
             visible: _mediaCol._shownIdentity.length > 0
             text: _mediaCol._shownIdentity.toUpperCase()
                 + (_switchable ? "  󰅂" : "")
-            color: _switchFocused ? Theme.accent
-                 : _switchHover   ? Theme.withAlpha(Theme.text, 0.78)
-                                  : Theme.withAlpha(Theme.subtext, 0.62)
+            color: _switchHover ? Theme.withAlpha(Theme.text, 0.78)
+                                : Theme.withAlpha(Theme.subtext, 0.62)
             font.pixelSize: Settings.fontMicro
             font.weight: Font.Medium
             font.letterSpacing: 1.2
