@@ -2,6 +2,8 @@ import QtQuick
 import "../../../services"
 
 StatusActionPill {
+    id: root
+
     property var screen: null
 
     show: ShellSettings.barShowShellUpdate
