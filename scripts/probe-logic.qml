@@ -237,17 +237,17 @@ ShellRoot {
         // a destroyed widget nulls the property with no assignment behind it
         MenuState.anchorSource = null
         root._check(MenuState.open && MenuState.anchorSource !== null
-                && !MenuState.anchorLost,
+                && !MenuState._anchorClosing,
             "a vacant anchor is claimed by a live widget instead of closing the menu")
         MenuState.adoptAnchor(probeAnchor)
         root._check(MenuState.anchorSource !== probeAnchor,
             "a widget cannot take an anchor another one already holds")
         MenuState._setAnchor(null)
         root._check(MenuState.open && MenuState.anchorSource === null
-                && !MenuState.anchorLost,
+                && !MenuState._anchorClosing,
             "deliberately clearing the anchor is not reclaimed and arms no close")
         MenuState.close()
-        root._check(!MenuState.open && !MenuState.anchorLost,
+        root._check(!MenuState.open && !MenuState._anchorClosing,
             "closing the menu leaves no pending anchor close")
 
         const popupEdge = Metrics.popupClearance(8)

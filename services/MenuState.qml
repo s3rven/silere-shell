@@ -18,7 +18,9 @@ Singleton {
     // hands the zone's Repeater a new array, which rebuilds every delegate, so the anchor
     // drops for a turn and comes straight back; only a bar that really went never returns.
     property bool _anchorWriting: false
-    readonly property bool anchorLost: _anchorRegrab.running
+    // internal, and it stays internal: a consumer that reacts to this by taking the anchor
+    // stops the timer it is bound to, which is a binding loop
+    readonly property bool _anchorClosing: _anchorRegrab.running
     function _setAnchor(source): void {
         _anchorRegrab.stop()
         root._anchorWriting = true
