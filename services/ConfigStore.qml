@@ -52,7 +52,7 @@ Singleton {
         if (root.directory.length === 0) return
         Quickshell.execDetached(["bash", "-c",
             "cd -- \"$1\" 2>/dev/null || exit 0; "
-            + "ls -1t settings.pre-reset-*.bak.json 2>/dev/null | tail -n +6 | "
+            + "ls -1t settings.pre-reset*.bak.json 2>/dev/null | tail -n +6 | "
             + "while IFS= read -r f; do [ -L \"$f\" ] || rm -f -- \"$f\"; done",
             "bash", root.directory])
     }
