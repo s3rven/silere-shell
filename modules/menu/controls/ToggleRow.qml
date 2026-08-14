@@ -113,7 +113,7 @@ MenuRow {
             elide:          Text.ElideRight
             color:          root._showDependsNote
                 ? Theme.withAlpha(Theme.mix(Theme.subtext, Theme.warning, 0.30), 0.72)
-                : Theme.withAlpha(Theme.subtext, 0.52)
+                : Theme.menuTextDetail
             font.pixelSize: Settings.fontCaption
             lineHeight:     1.1
         }

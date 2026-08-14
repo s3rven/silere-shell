@@ -204,7 +204,7 @@ PageShell {
                     width: parent.width
                     visible: _detailHeader._meta.description.length > 0
                     text: _detailHeader._meta.description
-                    color: Theme.withAlpha(Theme.subtext, 0.62)
+                    color: Theme.menuTextDetail
                     font.pixelSize: Settings.fontCaption
                     elide: Text.ElideRight
                 }

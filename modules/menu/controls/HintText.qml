@@ -23,7 +23,7 @@ Item {
         y: root._topPad
         width: Math.max(0, parent.width - root._hPad * 2)
         text:        root.text
-        color:       Theme.withAlpha(Theme.subtext, 0.52)
+        color:       Theme.menuTextDetail
         font.pixelSize: root._fontPx
         wrapMode:    Text.WordWrap
     }

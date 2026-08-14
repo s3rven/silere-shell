@@ -184,7 +184,7 @@ Item {
                 wrapMode: Text.WordWrap
                 maximumLineCount: 2
                 elide: Text.ElideRight
-                color: Theme.withAlpha(Theme.subtext, 0.52)
+                color: Theme.menuTextDetail
                 font.pixelSize: Settings.fontCaption
                 lineHeight: 1.1
             }
