@@ -21,6 +21,12 @@ Only work since the latest release is listed here. Completed notes move to
 
 ### Fixed
 
+- The Now page's memory tile turns amber past 75% and red past 90%.
+- Opening Settings from the shell-update pill anchors the panel under it.
+- Settings dropdowns draw their choices like the Now page pickers.
+- Workspaces no longer offers a visibility switch in Settings › Widgets.
+- The Wi-Fi list holds its order between scans.
+- The media card's player name lights up under the pointer.
 - **Glow strength** covers only the range that still changes the underline.
 - Settings › Bar › Underline says the line keeps its resting glow when no event is on.
 - Reordering bar widgets no longer closes the menu, and neither does resetting them.
