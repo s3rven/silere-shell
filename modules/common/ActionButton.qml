@@ -13,10 +13,9 @@ Item {
 
     signal triggered()
 
-    // ceil: a fractional width lands the outline stroke off-pixel under fractional scaling
-    readonly property real contentWidth: implicitWidth
     readonly property bool pressed: _tap.pressed
 
+    // ceil: a fractional width lands the outline stroke off-pixel under fractional scaling
     implicitWidth: Math.ceil(_row.implicitWidth) + 20
     implicitHeight: Metrics.rowHeightFor(32)
     width: implicitWidth
