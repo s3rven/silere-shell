@@ -13,9 +13,6 @@ Item {
     property bool selected: false
     property bool highlighted: false
     property bool warning: false
-    // Dropdown choices use the same outlined, transparent-at-rest language as
-    // ghost buttons. Other list consumers keep their edge-to-edge row surface.
-    property bool ghost: false
     property bool interactive: true
     property string labelFontFamily: Settings.font
     property Component preview: null
@@ -25,7 +22,6 @@ Item {
 
     readonly property int rowHeight: Metrics.rowHeightFor(32)
     readonly property bool _hot: _hover.hovered || _tap.pressed
-    readonly property int _surfaceInset: root.ghost ? 5 : 0
 
     function trigger(): void {
         if (root.enabled && root.interactive) root.triggered()
@@ -52,50 +48,27 @@ Item {
 
     Rectangle {
         id: _fill
-        x: root._surfaceInset
-        y: root.ghost ? 2 : 0
-        width: Math.max(0, parent.width - root._surfaceInset * 2)
-        height: Math.max(0, parent.height - (root.ghost ? 3 : 0))
-        radius: root.ghost ? Theme.radiusField : 0
-        antialiasing: root.ghost
+        anchors.fill: parent
         color: root.warning
             ? Theme.withAlpha(Theme.warning,
                 root._hot ? 0.10 : root.selected ? 0.085 : 0.055)
             : root.selected
-                ? root.ghost
-                    ? (_tap.pressed
-                        ? Theme.withAlpha(root.accentColor, 0.10)
-                        : _hover.hovered
-                            ? Theme.withAlpha(root.accentColor, 0.065)
-                            : "transparent")
-                    : Theme.withAlpha(root.accentColor,
-                        ShellSettings.highContrast ? 0.14
-                            : root._hot ? 0.105
-                            : ShellSettings.neutralTheme ? 0.065 : 0.085)
+                ? Theme.withAlpha(root.accentColor,
+                    ShellSettings.highContrast ? 0.14
+                        : root._hot ? 0.105
+                        : ShellSettings.neutralTheme ? 0.065 : 0.085)
                 : root.highlighted
                     ? Theme.withAlpha(root.accentColor, root._hot ? 0.075 : 0.050)
                     : _tap.pressed ? Theme.withAlpha(Theme.text, 0.055)
                         : _hover.hovered ? Theme.withAlpha(Theme.text, 0.030)
                             : "transparent"
         ColorFade on color {}
-
-        OutlineBorder {
-            radius: _fill.radius
-            outlineWidth: 1
-            outlineColor: !root.ghost ? "transparent"
-                    : root.selected
-                        ? Theme.controlLineActive(root.accentColor)
-                        : _hover.hovered
-                            ? Theme.menuControlLineHot
-                            : Theme.menuControlLine
-            ColorFade on outlineColor {}
-        }
     }
 
     ShellText {
         id: _glyph
         anchors.left: parent.left
-        anchors.leftMargin: 14 + root._surfaceInset
+        anchors.leftMargin: 14
         anchors.verticalCenter: parent.verticalCenter
         width: 18
         visible: root.preview === null
@@ -156,7 +129,7 @@ Item {
     ShellText {
         id: _check
         anchors.right: parent.right
-        anchors.rightMargin: 12 + root._surfaceInset
+        anchors.rightMargin: 12
         anchors.verticalCenter: parent.verticalCenter
         width: root.selected ? 18 : 0
         horizontalAlignment: Text.AlignHCenter

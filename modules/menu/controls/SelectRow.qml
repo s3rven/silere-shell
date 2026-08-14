@@ -311,7 +311,6 @@ Item {
                     preview: root.optionPreview
                     previewValue: modelData.value
                     selected: active
-                    ghost: true
                     accentColor: root.accentColor
 
                     onTriggered: {
