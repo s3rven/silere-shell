@@ -37,7 +37,6 @@ Singleton {
     property bool   valuesOnHover:       true
     property bool   hoverLevelBar:       false
     property bool   batteryAutoHide:     true
-    property bool   barShowWorkspaces:   true
     property bool   barShowBattery:      true
     property bool   barShowNetwork:      true
     property bool   barShowClock:        true
@@ -209,7 +208,8 @@ Singleton {
     readonly property bool barWidgetsModified: root._barWidgetsModified()
 
     readonly property var barWidgetMeta: ({
-        workspaces:  { glyph: "󰊗", label: "Workspaces",      group: "workspaces", setting: "barShowWorkspaces" },
+        // no setting: the diamond is the only way into the menu, so this one cannot be hidden
+        workspaces:  { glyph: "󰊗", label: "Workspaces",      group: "workspaces", setting: "" },
         shellUpdate: { glyph: "󰑐", label: "Shell update",    group: "updates", setting: "barShowShellUpdate" },
         tray:        { glyph: "󰇘", label: "System tray",     group: "tray",    setting: "trayWidget" },
         updates:     { glyph: "󰚰", label: "Package updates", group: "updates", setting: "updatesWidget" },
@@ -291,7 +291,6 @@ Singleton {
         { k: "valuesOnHover",       t: "bool", sec: "indicators" },
         { k: "hoverLevelBar",       t: "bool", sec: "indicators" },
         { k: "batteryAutoHide",     t: "bool", sec: "indicators" },
-        { k: "barShowWorkspaces",   t: "bool", sec: "widgets" },
         { k: "barShowBattery",      t: "bool", sec: "widgets" },
         { k: "barShowNetwork",      t: "bool", sec: "widgets" },
         { k: "barShowClock",        t: "bool", sec: "widgets" },
