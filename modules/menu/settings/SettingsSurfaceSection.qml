@@ -65,22 +65,4 @@ Column {
             }
         }
     }
-
-    SectionLabel { label: "SHADOWS" }
-    SettingsCard {
-        ToggleRow {
-            glyph: "󰘷"; label: "Shell shadows"
-            description: "Popups, notifications, OSD, and floating bar"
-            key: "barShadow"
-        }
-        CollapsibleSection {
-            expanded: ShellSettings.barShadow
-            SliderRow {
-                glyph: "󰘷"; label: "Depth"
-                key: "barShadowStrength"
-                step: 0.1
-                displayValue: Math.round(ShellSettings.barShadowStrength * 100) + "%"
-            }
-        }
-    }
 }

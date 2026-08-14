@@ -361,5 +361,24 @@ Column {
             key: "outlineStrength"
             displayValue: Math.round(ShellSettings.outlineStrength * 100) + "%"
         }
+
+        // shell-wide, not a bar setting: every floating card casts one whether the bar
+        // is docked or not, and only the bar's own shadow needs the floating gate
+        ToggleRow {
+            glyph: "󰘷"; label: "Shell shadows"
+            description: ShellSettings.barFloating
+                ? "Popups, notifications, OSD, and the bar"
+                : "Popups, notifications, and OSD. A docked bar casts none."
+            key: "barShadow"
+        }
+        CollapsibleSection {
+            expanded: ShellSettings.barShadow
+            SliderRow {
+                glyph: "󰘷"; label: "Depth"
+                key: "barShadowStrength"
+                step: 0.1
+                displayValue: Math.round(ShellSettings.barShadowStrength * 100) + "%"
+            }
+        }
     }
 }
