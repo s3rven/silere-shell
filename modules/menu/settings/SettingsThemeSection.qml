@@ -285,7 +285,6 @@ Column {
                             thumbColor: _accentPicker._curColor
                             wraps: false
                             displayScale: 100
-                            valueUnit: "percent"
                             wheelKey: "accent-chroma"
                             trackGradient: Gradient {
                                 orientation: Gradient.Horizontal

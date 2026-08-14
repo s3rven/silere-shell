@@ -48,7 +48,6 @@ Item {
         expandable: Brightness.devices.length > 1
         expanded: root.open
         reserveExpandSlot: root.reserveExpandSlot
-        expandLabel: "brightness device"
         onExpandToggled: root.open = !root.open
         onMoved: value => Brightness.setPercent(Math.round(value * 100))
     }

@@ -11,7 +11,6 @@ MenuRow {
     property bool   glyphClickable: false
     property bool   expandable: false
     property bool   expanded:   false
-    property string expandLabel: "output device"
     // hold the chevron gutter open on a non-expandable row so stacked sliders keep one track length
     property bool   reserveExpandSlot: false
     readonly property bool _hasChevSlot: root.expandable || root.reserveExpandSlot

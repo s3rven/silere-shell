@@ -9,7 +9,6 @@ Item {
     property real position: 0
     property color thumbColor: Theme.accent
     property bool interactive: true
-    property string valueUnit: "degrees"
     property real displayScale: 360
     // hue is a circle, saturation is not: one wraps past the end, the other stops
     property bool wraps: true
