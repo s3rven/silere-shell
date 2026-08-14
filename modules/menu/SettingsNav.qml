@@ -306,15 +306,19 @@ Item {
                             height: root._groupH
                             radius: Theme.radiusInline
                             antialiasing: true
-                            // the group holding the current page, not every open one
-                            color: _headerHover.hovered
-                                    ? Theme.withAlpha(Theme.text, 0.035)
-                                    : !_grp.groupActive
-                                        ? "transparent"
-                                    : _grp.expanded
-                                        ? Theme.withAlpha(Theme.accent, 0.035)
-                                        : Theme.mix(Theme.menuControl, Theme.accent,
-                                            ShellSettings.highContrast ? 0.16 : 0.10)
+                            // the group holding the current page, not every open one.
+                            // hover brightens that marking rather than replacing it, or
+                            // the cursor erases the only sign of where you are
+                            color: !_grp.groupActive
+                                ? (_headerHover.hovered
+                                    ? Theme.withAlpha(Theme.text, 0.035) : "transparent")
+                                : _grp.expanded
+                                    ? Theme.withAlpha(Theme.accent,
+                                        _headerHover.hovered ? 0.075 : 0.035)
+                                    : Theme.mix(Theme.menuControl, Theme.accent,
+                                        ShellSettings.highContrast
+                                            ? (_headerHover.hovered ? 0.24 : 0.16)
+                                            : (_headerHover.hovered ? 0.17 : 0.10))
 
                             HoverHandler {
                                 id: _headerHover
@@ -425,13 +429,14 @@ Item {
                                         height: root._navRowH
                                         radius: Theme.radiusInline
                                         antialiasing: true
-                                        color: _leafHover.hovered
-                                            ? Theme.withAlpha(Theme.text, 0.042)
-                                            : _leaf.active
-                                                ? Theme.withAlpha(Theme.accent,
-                                                    ShellSettings.highContrast ? 0.14 : 0.075)
-                                            : "transparent"
-
+                                        color: _leaf.active
+                                            ? Theme.withAlpha(Theme.accent,
+                                                ShellSettings.highContrast
+                                                    ? (_leafHover.hovered ? 0.20 : 0.14)
+                                                    : (_leafHover.hovered ? 0.115 : 0.075))
+                                            : _leafHover.hovered
+                                                ? Theme.withAlpha(Theme.text, 0.042)
+                                                : "transparent"
 
                                         HoverHandler {
                                             id: _leafHover
