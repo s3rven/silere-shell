@@ -49,7 +49,15 @@ package() {
     local dest="$pkgdir/usr/share/$_pkgname"
     install -dm755 "$dest"
     cp -a --no-preserve=ownership \
-        shell.qml config modules services assets scripts "$dest/"
+        shell.qml config modules services assets "$dest/"
+
+    # only the scripts the shell itself runs; tests, probes and linters are
+    # developer tooling, and uninstall.sh would tear down a pacman-owned install
+    install -dm755 "$dest/scripts"
+    cp -a --no-preserve=ownership \
+        scripts/install.sh scripts/update.sh scripts/repair.sh \
+        scripts/silere-update.service scripts/silere-update.timer \
+        scripts/lib "$dest/scripts/"
 
     # the checkout ships a .git-less copy: the in-shell updater detects that and
     # steps aside so packaged installs update through pacman instead
