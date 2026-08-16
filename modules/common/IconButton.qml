@@ -78,15 +78,7 @@ Item {
         color: _hover.hovered || root.pressed
             ? Theme.text : Theme.withAlpha(Theme.subtext, 0.72)
         font.pixelSize: root.glyphPixelSize
-        transformOrigin: Item.Center
 
         ColorFade on color {}
-        MotionBehavior on scale {
-            NumberAnimation {
-                duration: root.pressed ? Motion.press
-                    : _hover.hovered ? Motion.hoverIn : Motion.hoverOut
-                easing.type: Easing.OutCubic
-            }
-        }
     }
 }
