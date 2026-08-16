@@ -11,6 +11,14 @@ Only work since the latest release is listed here. Completed notes move to
 
 ## [Unreleased]
 
+### Fixed
+
+- Workspace dots hold steady when you switch workspaces.
+- The battery icon draws the charge level it reports.
+- Muted audio draws the crossed-out speaker.
+- The AUR package ships only the Matugen template under `assets/`, not the README images.
+- The installer points to the uninstall script only where one exists.
+
 ## Releases
 
 - [0.6.0](docs/releases/0.6.0.md) — 2026-08-15
