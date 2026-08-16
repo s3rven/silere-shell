@@ -79,15 +79,6 @@ optional_any_tool() {
   fi
 }
 
-check_file() {
-  local label="$1" path="$2" hint="$3"
-  if [ -r "$path" ]; then
-    ok "$label" "$path"
-  else
-    warn "$label" "$hint (optional)"
-  fi
-}
-
 require_tool qs "Quickshell runtime"
 if [ -n "${NIRI_SOCKET:-}" ]; then
   require_tool niri "niri runtime and IPC client"
