@@ -32,8 +32,8 @@ Singleton {
     readonly property real uiVolume: root._clampVolume(muted ? 0 : effectiveVolume)
 
     readonly property string icon:
-        !ready                   ? "󰖁" :
-        muted || uiVolume === 0  ? "󰝟" :
+        !ready                   ? "󰝟" :
+        muted || uiVolume === 0  ? "󰖁" :
         uiVolume < 0.33          ? "󰕿" :
         uiVolume < 0.66          ? "󰖀" : "󰕾"
     readonly property string label: ready ? `${Math.round(uiVolume * 100)}%` : "--%"
