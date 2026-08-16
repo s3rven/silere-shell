@@ -1021,4 +1021,9 @@ else
 fi
 printf "  click the active workspace diamond to open the menu and settings\n"
 printf "  or bind it: ${DIM}qs ipc -p %s/shell.qml call menu toggle${R}\n" "$ROOT"
-printf "  to uninstall: ${DIM}%s/scripts/uninstall.sh${R}\n\n" "$ROOT"
+# a packaged install ships no uninstall.sh: pointing at it there sends the user
+# to a path that does not exist and would fight their package manager if it did
+if [ -f "$ROOT/scripts/uninstall.sh" ]; then
+    printf "  to uninstall: ${DIM}%s/scripts/uninstall.sh${R}\n" "$ROOT"
+fi
+printf "\n"
