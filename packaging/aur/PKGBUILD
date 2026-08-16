@@ -2,7 +2,7 @@
 
 pkgname=silere-shell-git
 _pkgname=silere-shell
-pkgver=0.6.0.r0.g9a9bf6d
+pkgver=0.6.1.r0.g8fa83da
 pkgrel=1
 pkgdesc="Quiet by default, yours by choice. A Quickshell bar for Hyprland and niri with nothing running behind your back"
 arch=('any')
