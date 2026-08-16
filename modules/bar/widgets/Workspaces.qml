@@ -59,7 +59,9 @@ Item {
         const vals = Compositor.workspaces
         for (let i = 0; i < vals.length; i++) {
             const ws = vals[i]
-            if (ws && ws.wsId > 0) owners[ws.wsId] = ws.output
+            // hyprland reports a workspace before its monitor resolves; an empty output is
+            // unknown, not "elsewhere", and recording it drops the id off this bar's page
+            if (ws && ws.wsId > 0 && ws.output.length > 0) owners[ws.wsId] = ws.output
         }
         return owners
     }
