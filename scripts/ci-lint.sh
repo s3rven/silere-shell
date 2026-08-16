@@ -493,6 +493,60 @@ if [ -f "$aur_dir/PKGBUILD" ] && command -v git >/dev/null 2>&1 \
   fi
 fi
 
+section "packaged payload"
+# The package ships a curated subset, so every drift here is invisible in a checkout and
+# only breaks users who installed from the AUR. Both directions have already bitten:
+# package() once copied all of scripts/, shipping ~193 KB of linters and probes plus an
+# uninstall.sh that would tear down a pacman-owned install, and the assets/ trim that
+# followed nearly dropped the one file the packaged installer reads.
+pkgbuild="$aur_dir/PKGBUILD"
+if [ ! -f "$pkgbuild" ]; then
+  skip "package" "no PKGBUILD to check"
+else
+  # comments in package() name the very files these checks look for, so scan the code only
+  pkg_body="$(awk '/^package\(\)/ { inside = 1 } inside' "$pkgbuild" | sed 's/#.*//')"
+
+  # only the invocation form counts: the shell also names repair.sh in guidance strings,
+  # and a mentioned script is not a script the packaged shell has to be able to run
+  payload_missing=""
+  while IFS= read -r invoked; do
+    [ -n "$invoked" ] || continue
+    printf '%s\n' "$pkg_body" | grep -qF "scripts/$invoked" \
+      || payload_missing="$payload_missing $invoked"
+  done <<< "$(grep -rhoE 'shellDir \+ "/scripts/[A-Za-z0-9._-]+"' \
+    --include='*.qml' modules services config shell.qml 2>/dev/null \
+    | sed 's|.*/scripts/||; s|"$||' | sort -u)"
+
+  # anything the shell never runs is developer tooling; uninstall.sh is the one with teeth
+  payload_extra=""
+  for dev in check.sh ci-lint.sh uninstall.sh bench.sh release-notes.sh; do
+    printf '%s\n' "$pkg_body" | grep -qE "scripts/$dev([^A-Za-z0-9._-]|$)" \
+      && payload_extra="$payload_extra $dev"
+  done
+  printf '%s\n' "$pkg_body" | grep -qE 'scripts/(test-|probe-)' \
+    && payload_extra="$payload_extra tests/probes"
+  # the wholesale copy that shipped all of the above in the first place
+  printf '%s\n' "$pkg_body" | grep -qE '(^|[^A-Za-z0-9._/-])scripts([^A-Za-z0-9._/-]|$)' \
+    && payload_extra="$payload_extra scripts/(whole directory)"
+
+  # the packaged installer still reads this one out of the pruned assets/ tree
+  payload_asset=""
+  if grep -qF 'assets/matugen-theme.json' scripts/install.sh \
+    && ! printf '%s\n' "$pkg_body" | grep -qF 'assets/matugen-theme.json'; then
+    payload_asset="assets/matugen-theme.json"
+  fi
+
+  if [ -n "$payload_missing" ]; then
+    fail "the shell runs these scripts but package() does not ship them:$payload_missing"
+  elif [ -n "$payload_extra" ]; then
+    fail "package() ships developer tooling:$payload_extra"
+  elif [ -n "$payload_asset" ]; then
+    fail "package() must ship $payload_asset; the packaged installer reads it"
+  else
+    ok "package" "ships every script the shell runs and no developer tooling"
+  fi
+fi
+
 section "qmldir integrity"
 missing=""
 while IFS= read -r qd; do
