@@ -190,7 +190,6 @@ Item {
                             color: Theme.text
                             selectionColor: Theme.withAlpha(Theme.accent, 0.4)
                             font.family: Settings.font; font.pixelSize: Settings.fontSize
-                            renderType: Text.NativeRendering
                             clip: true
                             onAccepted: _entry._submitPassword()
                             Keys.onEscapePressed: event => { root._selected = ""; event.accepted = true }
