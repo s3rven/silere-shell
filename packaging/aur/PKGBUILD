@@ -49,7 +49,7 @@ package() {
     local dest="$pkgdir/usr/share/$_pkgname"
     install -dm755 "$dest"
     cp -a --no-preserve=ownership \
-        shell.qml config modules services assets "$dest/"
+        shell.qml config modules services "$dest/"
 
     # only the scripts the shell itself runs; tests, probes and linters are
     # developer tooling, and uninstall.sh would tear down a pacman-owned install
@@ -58,6 +58,10 @@ package() {
         scripts/install.sh scripts/update.sh scripts/repair.sh \
         scripts/silere-update.service scripts/silere-update.timer \
         scripts/lib "$dest/scripts/"
+
+    # the shell loads no asset at runtime; only the matugen template is used, and
+    # post_install tells the user to copy it from here
+    install -Dm644 assets/matugen-theme.json "$dest/assets/matugen-theme.json"
 
     # the checkout ships a .git-less copy: the in-shell updater detects that and
     # steps aside so packaged installs update through pacman instead
