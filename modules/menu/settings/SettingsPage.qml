@@ -133,19 +133,32 @@ PageShell {
             }
         }
 
+        function _startSectionEnter(): void {
+            if (!root._awaitingSectionEnter) return
+            root._awaitingSectionEnter = false
+            _sectionEnterDefer.stop()
+            if (!root.active || root.powerOpen || ShellSettings.reduceMotion) {
+                _detail.opacity = 1
+                _detail._shift = 0
+                return
+            }
+            _detailEnter.restart()
+        }
+
+        // the incubating section still reports the outgoing height, so starting the enter
+        // before it is Ready slides content the panel is still resizing under
+        Connections {
+            target: _detailBody
+            function onStatusChanged() {
+                if (_detailBody.status === Loader.Ready) _detail._startSectionEnter()
+            }
+        }
+
+        // a section that resolves to the component already loaded never changes status
         Timer {
             id: _sectionEnterDefer
-            interval: 0
-            onTriggered: {
-                if (!root._awaitingSectionEnter) return
-                root._awaitingSectionEnter = false
-                if (!root.active || root.powerOpen || ShellSettings.reduceMotion) {
-                    _detail.opacity = 1
-                    _detail._shift = 0
-                    return
-                }
-                _detailEnter.restart()
-            }
+            interval: Motion.panelResize
+            onTriggered: _detail._startSectionEnter()
         }
 
         ParallelAnimation {
