@@ -339,7 +339,12 @@ ClippingRectangle {
             hoverGrow:   false
             animate:     false
             commitOnRelease: true
+            // the card is album art under a scrim, so the groove stays translucent and unringed
             trackColor:  Theme.withAlpha(Theme.text, 0.20)
+            trackOutlineColor: "transparent"
+            railHeight:  6
+            thumbWidth:  10
+            thumbHeight: 10
             value: Media.positionRatio
             onChanged: value => { if (Media.canSeek) Media.seekToRatio(value) }
         }

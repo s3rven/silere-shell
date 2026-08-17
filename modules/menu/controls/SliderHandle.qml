@@ -1,31 +1,27 @@
 import QtQuick
 import "../../../config"
-import "../../../services"
+import "../../common"
 
 Rectangle {
     id: root
 
     property color fillColor: Theme.accent
+    property color outlineColor: "transparent"
     property bool hovered: false
     property bool pressed: false
     property bool hoverGrow: true
     property bool animate: true
 
-    radius: 3
+    radius: 4
     antialiasing: true
     color: root.fillColor
     // grow via scale, not width: a re-layouted odd width lands the centre on a half-pixel and the handle visibly shifts under fractional scaling
-    scale: !root.hoverGrow ? 0.90
+    scale: !root.hoverGrow ? 1.0
          : root.pressed ? 0.92
-         : root.hovered ? 1.05 : 1.0
+         : root.hovered ? 1.06 : 1.0
     transformOrigin: Item.Center
 
-    border.width: 1
-    border.color: Theme.withAlpha(Theme.text,
-            ShellSettings.highContrast ? 0.72
-            : root.hovered || root.pressed ? 0.52 : 0.30)
-
-    // scale magnitudes stay larger than Motion.hoverScale: on a 10px handle 1.8% is a sub-pixel no-op
+    // scale magnitudes stay larger than Motion.hoverScale: on a 14px handle 1.8% is a sub-pixel no-op
     MotionBehavior on scale {
         gate: root.animate
         NumberAnimation {
@@ -34,12 +30,13 @@ Rectangle {
             easing.type: Easing.OutCubic
         }
     }
-    MotionBehavior on border.color {
-        gate: root.animate
-        ColorAnimation {
-            duration: (root.hovered || root.pressed)
-                ? Motion.hoverIn : Motion.hoverOut
-        }
-    }
     ColorFade on color { gate: root.animate && !root.pressed }
+
+    // Rectangle.border over-weights the corners and, on a scaled item, smears into a halo
+    OutlineBorder {
+        radius: root.radius
+        outlineWidth: 1
+        outlineColor: root.outlineColor
+        ColorFade on outlineColor { gate: root.animate }
+    }
 }

@@ -1,6 +1,7 @@
 import QtQuick
 import "../../../config"
 import "../../../services"
+import "../../common"
 
 Item {
     id: root
@@ -15,15 +16,20 @@ Item {
     property bool showThumb: true
     property bool hoverGrow: true
     property bool animate: true
-    property color trackColor: Theme.menuTrack
+    property color trackColor: Theme.mix(Theme.menuControl, Theme.text,
+        _ma.pressed ? 0.13 : _ma.containsMouse ? 0.085 : 0.035)
+    property color trackOutlineColor: _ma.containsMouse
+        ? Theme.menuControlLineHot : Theme.menuControlLine
     property real hitPad: 10
 
-    readonly property real thumbWidth: 10
-    readonly property real thumbHeight: 16
+    property real thumbWidth: 14
+    property real thumbHeight: 14
+    property real railHeight: 8
+
     readonly property real _railInset: root.showThumb ? root.thumbWidth / 2 : 0
     readonly property real _railWidth: Math.max(1, root.width - root._railInset * 2)
 
-    implicitHeight: 16
+    implicitHeight: Math.max(root.railHeight, root.thumbHeight)
 
     readonly property real shownValue: _shownValue
     readonly property bool dragging: _ma.pressed
@@ -61,25 +67,37 @@ Item {
     }
 
     Rectangle {
+        id: _rail
         x: root._railInset
         anchors.verticalCenter: parent.verticalCenter
         width: root._railWidth
-        height: 4
-        radius: Math.min(2, height / 2); antialiasing: true
+        height: root.railHeight
+        radius: 3; antialiasing: true
         color: root.trackColor
-        clip: true
+        ColorFade on color { gate: root.animate }
 
         Rectangle {
-            width: parent.width * root._ratio
+            // whole logical px, or the fill edge slides out from under the rounded handle x
+            width: Math.round(parent.width * root._ratio)
             height: parent.height
             radius: parent.radius
             antialiasing: true
-            // full-strength accent glares against the panel; the dark track does the damping
-            color: Theme.withAlpha(Theme.accent, 0.80)
+            color: Theme.mix(Theme.menuControl, Theme.accent,
+                ShellSettings.neutralTheme
+                    ? (_ma.pressed ? 0.78 : _ma.containsMouse ? 0.73 : 0.68)
+                    : (_ma.pressed ? 0.84 : _ma.containsMouse ? 0.79 : 0.74))
+            ColorFade on color { gate: root.animate }
             MotionBehavior on width {
                 gate: root.animate && !_ma.pressed
                 NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
             }
+        }
+
+        OutlineBorder {
+            radius: _rail.radius
+            outlineWidth: 1
+            outlineColor: root.trackOutlineColor
+            ColorFade on outlineColor { gate: root.animate }
         }
     }
 
@@ -92,10 +110,8 @@ Item {
         pressed: _ma.pressed
         hoverGrow: root.hoverGrow
         animate: root.animate
-        fillColor: (root.hoverGrow && _ma.pressed)
-            ? Theme.accent
-            : Theme.mix(Theme.text, Theme.accent,
-                        root.hoverGrow && _ma.containsMouse ? 0.30 : 0.12)
+        fillColor: Theme.mix(Theme.text, Theme.accent,
+            root.hoverGrow && (_ma.containsMouse || _ma.pressed) ? 0.18 : 0.06)
         MotionBehavior on x {
             gate: root.animate && !_ma.pressed
             NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }

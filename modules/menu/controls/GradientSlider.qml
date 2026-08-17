@@ -68,20 +68,23 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         width: Math.max(1, parent.width - _thumb.width)
         height: 8
-        radius: 2
+        radius: 3
         antialiasing: true
         gradient: root.trackGradient
     }
 
     SliderHandle {
         id: _thumb
-        width: 12
-        height: 18
+        width: 14
+        height: 14
         y: (parent.height - height) / 2
         x: Math.round(_track.x + root._clamped(root.position) * _track.width
             - width / 2)
         fillColor: root.thumbColor
-        // the fill is the picked hue, so an accent ring can vanish into it
+        // the fill is the picked hue, so it needs a ring of its own to stay legible on the gradient
+        outlineColor: Theme.withAlpha(Theme.text,
+            ShellSettings.highContrast ? 0.72
+            : _mouse.containsMouse || _mouse.pressed ? 0.52 : 0.30)
         hovered: _mouse.containsMouse
         pressed: _mouse.pressed
 

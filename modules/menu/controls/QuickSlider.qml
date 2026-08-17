@@ -107,7 +107,7 @@ MenuRow {
         anchors.right: root._hasChevSlot ? _chev.left : _v.left
         anchors.rightMargin: 10
         anchors.verticalCenter: parent.verticalCenter
-        height: 16
+        height: 20
 
         interactive: root.enabled
         value: root.value
