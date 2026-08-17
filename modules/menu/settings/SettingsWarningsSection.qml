@@ -113,6 +113,10 @@ Column {
                             onChosen: (v) => ShellSettings.sysAlertTimeout = v
                         }
                         HintText {
+                            visible: SystemTools.ready && !SystemTools.hasNotifySend
+                            text: "Desktop notifications need libnotify."
+                        }
+                        HintText {
                             text: ShellSettings.osdEnabled
                                 ? "Alert also appears in the shell OSD."
                                 : "Enable the global OSD to also show the shell alert."
