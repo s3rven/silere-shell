@@ -849,11 +849,19 @@ HYPR_LUA="$CONFIG_HOME/hypr/hyprland.lua"
 HYPR_CONFIG="$(_hypr_config_path)"
 if [ -n "$HYPR_CONFIG" ]; then
     _reject_unsafe_path "$HYPR_CONFIG"
-    [ -f "$HYPR_CONFIG" ] || _die "Hyprland config not found: $HYPR_CONFIG"
-    case "$HYPR_CONFIG" in
-        *.lua|*.conf) ;;
-        *) _die "Hyprland config must end in .lua or .conf: $HYPR_CONFIG" ;;
-    esac
+    # warn rather than die, the way the niri branch already does: the clone, font and
+    # matugen wiring are done by now, so a bad SILERE_HYPR_CONFIG must drop to the
+    # manual-autostart path instead of aborting on top of a half-finished install
+    if [ ! -f "$HYPR_CONFIG" ]; then
+        _warn "Hyprland config not found: $HYPR_CONFIG"
+        HYPR_CONFIG=""
+    else
+        case "$HYPR_CONFIG" in
+            *.lua|*.conf) ;;
+            *) _warn "Hyprland config must end in .lua or .conf: $HYPR_CONFIG"
+               HYPR_CONFIG="" ;;
+        esac
+    fi
 fi
 # Quickshell links jemalloc, which defaults to 4×nCPU arenas and no purge thread,
 # so memory freed after a spike (menu close, wifi scan, notification burst) is
