@@ -301,6 +301,55 @@ _replace_matugen_block() {
     fi
 }
 
+# Always read from /dev/tty so curl | bash works
+# an assumed yes never overrides a refusal: the [y/N] prompts guard an unsupported
+# compositor and an opt-in timer, so they stay no
+_assume_yes() { [ "${SILERE_ASSUME_YES:-0}" = "1" ]; }
+
+_ask() {
+    local reply
+    if _assume_yes; then
+        printf "  ${CYAN}::${R}  %s ${DIM}[Y/n]${R} yes\n" "$1"
+        return 0
+    fi
+    _need_tty
+    printf "  ${CYAN}::${R}  %s ${DIM}[Y/n]${R} " "$1"
+    read -r reply </dev/tty
+    [[ ! "$reply" =~ ^[Nn] ]]
+}
+
+_ask_no() {
+    local reply
+    if _assume_yes; then
+        printf "  ${CYAN}::${R}  %s ${DIM}[y/N]${R} no\n" "$1"
+        return 1
+    fi
+    _need_tty
+    printf "  ${CYAN}::${R}  %s ${DIM}[y/N]${R} " "$1"
+    read -r reply </dev/tty
+    _answered_yes "$reply"
+}
+
+_ask_path() {
+    local reply
+    if _assume_yes; then
+        printf '%s' "$DEFAULT_DIR"
+        return 0
+    fi
+    _need_tty
+    printf "  ${CYAN}::${R}  Use a different install path? ${DIM}[y/N]${R} " >&2
+    read -r reply </dev/tty
+    if [[ "$reply" =~ ^[Yy] ]]; then
+        printf "  ${CYAN}::${R}  Install to: " >&2
+        read -r reply </dev/tty
+        reply="${reply/#\~/$HOME}"
+        [[ "$reply" =~ ^[[:space:]]*$ ]] && reply=""
+        printf '%s' "${reply:-$DEFAULT_DIR}"
+    else
+        printf '%s' "$DEFAULT_DIR"
+    fi
+}
+
 if [ "${SILERE_SCRIPT_LIB_ONLY:-0}" = "1" ]; then
     return 0 2>/dev/null || exit 0
 fi
@@ -322,6 +371,11 @@ anything and backs up every file it edits.
 Environment:
   SILERE_HYPR_CONFIG   Hyprland config to wire autostart into
   SILERE_NIRI_CONFIG   niri config to wire autostart into
+  SILERE_ASSUME_YES=1  Answer the [Y/n] prompts yes and install to the default
+                       path, for dotfiles bootstraps and containers. Files are
+                       still backed up before editing, and the [y/N] prompts
+                       still answer no, so an unsupported compositor still stops
+                       the install.
 EOF
 }
 
@@ -339,39 +393,6 @@ case "${1:-}" in
         exit 2
         ;;
 esac
-
-# Always read from /dev/tty so curl | bash works
-_ask() {
-    local reply
-    _need_tty
-    printf "  ${CYAN}::${R}  %s ${DIM}[Y/n]${R} " "$1"
-    read -r reply </dev/tty
-    [[ ! "$reply" =~ ^[Nn] ]]
-}
-
-_ask_no() {
-    local reply
-    _need_tty
-    printf "  ${CYAN}::${R}  %s ${DIM}[y/N]${R} " "$1"
-    read -r reply </dev/tty
-    _answered_yes "$reply"
-}
-
-_ask_path() {
-    local reply
-    _need_tty
-    printf "  ${CYAN}::${R}  Use a different install path? ${DIM}[y/N]${R} " >&2
-    read -r reply </dev/tty
-    if [[ "$reply" =~ ^[Yy] ]]; then
-        printf "  ${CYAN}::${R}  Install to: " >&2
-        read -r reply </dev/tty
-        reply="${reply/#\~/$HOME}"
-        [[ "$reply" =~ ^[[:space:]]*$ ]] && reply=""
-        printf '%s' "${reply:-$DEFAULT_DIR}"
-    else
-        printf '%s' "$DEFAULT_DIR"
-    fi
-}
 
 _backup() {
     local file="$1"

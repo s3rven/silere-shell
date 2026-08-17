@@ -58,6 +58,10 @@ The installer checks every QML module Silere imports and names any that are miss
 
 To start it, restart your compositor, or try it right away with `qs -p /that/path/shell.qml`.
 
+Bootstrapping from a dotfiles script or a container? `SILERE_ASSUME_YES=1` answers the
+`[Y/n]` prompts and installs to the default path. It still backs up every file it edits,
+and still stops on a compositor it does not support.
+
 Once it's running, **click the active workspace diamond** to open the menu and settings. That is the way in, so it is worth binding a key to it early — see [Keybinds and scripts](#keybinds-and-scripts).
 
 To remove it, run `bash scripts/uninstall.sh` from the installed checkout. That clears autostart, theme, and update-timer integrations, but keeps the checkout, your settings, and the installed font.
