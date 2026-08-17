@@ -50,14 +50,6 @@ Column {
                 ]
                 onChosen: (v) => ShellSettings.osdKindFilter = v
             }
-            CollapsibleSection {
-                expanded: ShellSettings.osdKindFilter !== "brightness"
-                ToggleRow {
-                    glyph: "󰓎"; label: "Volume emphasis"
-                    description: "Warm tint near maximum"
-                    key: "osdVolumeTint"
-                }
-            }
         }
     }
 }

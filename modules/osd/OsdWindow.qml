@@ -72,7 +72,6 @@ PanelWindow {
                 required property bool closing
                 required property int serial
                 required property var fillColor
-                required property var barColor
 
                 readonly property int pillH: ShellSettings.osdMatchBar ? Math.max(28, ShellSettings.barHeight) : 34
                 readonly property int chromeW: hasBar ? 216 : 70
@@ -231,7 +230,7 @@ PanelWindow {
                                     clip: true
                                     color: card.muted
                                         ? Theme.withAlpha(Theme.subtext, 0.58)
-                                        : Theme.withAlpha(card.barColor, 0.88)
+                                        : Theme.withAlpha(card.fillColor, 0.88)
 
                                     MotionBehavior on width {
                                         gate: !card.closing && !OsdBarState.rapid

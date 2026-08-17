@@ -139,7 +139,7 @@ Item {
                 radius: parent.radius
                 color: OsdBarState.muted
                     ? Theme.withAlpha(Theme.subtext, 0.58)
-                    : Theme.withAlpha(OsdBarState.barColor, 0.88)
+                    : Theme.withAlpha(OsdBarState.fillColor, 0.88)
 
                 MotionBehavior on width {
                     gate: root.state === "visible" && !OsdBarState.rapid

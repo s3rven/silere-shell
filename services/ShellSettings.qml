@@ -50,7 +50,6 @@ Singleton {
     property string osdKindFilter:  "both"
     property bool   osdBatteryWarn: false
     property bool   osdTempWarn:    false
-    property bool   osdVolumeTint:  false
     property bool   osdChargedNotify: false
     property bool   osdBarIntegrated: false
     property bool   osdMatchBar:      true
@@ -305,7 +304,6 @@ Singleton {
         { k: "osdKindFilter",       t: "enum", vals: ["both", "volume", "brightness"], sec: "osd" },
         { k: "osdBatteryWarn",      t: "bool", sec: "warnings" },
         { k: "osdTempWarn",         t: "bool", sec: "warnings" },
-        { k: "osdVolumeTint",       t: "bool", sec: "osd" },
         { k: "osdChargedNotify",    t: "bool", sec: "warnings" },
         { k: "osdBarIntegrated",    t: "bool", sec: "osd" },
         { k: "osdMatchBar",         t: "bool", sec: "osd" },

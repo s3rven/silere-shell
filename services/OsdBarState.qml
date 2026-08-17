@@ -25,8 +25,6 @@ Singleton {
     signal bumped()
     signal entryBumped(string kind)
 
-    readonly property color barColor: _barColor(kind, value, muted, fillColor)
-
     property real _lastUpdateAt: 0
     property bool rapid: false
     Timer { id: _rapidTimer; interval: 180; repeat: false; onTriggered: root.rapid = false }
@@ -66,12 +64,6 @@ Singleton {
 
     function _hasBarKind(kind: string): bool {
         return kind !== "battery" && kind !== "temp" && kind !== "notif"
-    }
-
-    function _barColor(kind: string, value: real, muted: bool, base: color): color {
-        return (kind === "volume" && !muted && value > 0.85 && ShellSettings.osdVolumeTint)
-            ? Theme.mix(base, Theme.warning, Math.min(1, (value - 0.85) / 0.15))
-            : base
     }
 
     function _entryIndex(kind: string): int {
@@ -135,7 +127,6 @@ Singleton {
             fillColor: fillColor,
             hasBar: _hasBarKind(kind),
             clamped: Math.max(0, Math.min(1, value)),
-            barColor: _barColor(kind, value, muted, fillColor),
             closing: false,
             serial: serial,
             sig: sig
