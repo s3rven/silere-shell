@@ -145,9 +145,6 @@ Item {
              : _hover ? 1.0 : 0.96
         transformOrigin: Item.Center
         visible: opacity > 0.001
-        OutlineBorder {
-            radius: _hoverCap.radius
-        }
         MotionBehavior on opacity {
             NumberAnimation {
                 duration: (_hoverCap._hover || root.visualPressed)
