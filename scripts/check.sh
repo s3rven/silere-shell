@@ -345,15 +345,27 @@ fi
 
 section "headless QML probe"
 ok "qml" "checking files; this can take a few seconds"
-if ! bash scripts/test-qml-headless.sh; then
+# teed rather than captured: the probe streams progress over several seconds, and a
+# skip here still exits 0 while CI runs it under SILERE_REQUIRE_QML_TOOLS=1 and fails
+qml_log="$(mktemp "${TMPDIR:-/tmp}/silere-qml.XXXXXX.log")"
+bash scripts/test-qml-headless.sh 2>&1 | tee "$qml_log"
+qml_code=${PIPESTATUS[0]}
+if [ "$qml_code" -ne 0 ]; then
   status=1
+elif grep -q '^SKIP' "$qml_log"; then
+  warn "qml" "$(sed -n 's/^SKIP: //p' "$qml_log" | head -1)"
 fi
+rm -f "$qml_log"
 
 section "behavioral logic"
 if [ -f scripts/test-logic.sh ]; then
   logic_out=""
   if logic_out="$(bash scripts/test-logic.sh 2>&1)"; then
-    ok "logic" "$logic_out"
+    if printf '%s' "$logic_out" | grep -q '^SKIP'; then
+      warn "logic" "$(printf '%s' "$logic_out" | sed -n 's/^SKIP: //p' | head -1)"
+    else
+      ok "logic" "$logic_out"
+    fi
   else
     status=1
     fail "logic" "behavioral probe failed"
