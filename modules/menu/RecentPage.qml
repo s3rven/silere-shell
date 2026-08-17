@@ -396,17 +396,6 @@ PageShell {
                             }
                         }
 
-                        Rectangle {
-                            anchors.left: parent.left
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: _entry._critical ? 3 : 0
-                            // tracks the card less its 20px padding; a fixed height left the mark
-                            // stubby once an expanded entry grew the card
-                            height: Math.max(0, parent.height - 20)
-                            radius: 1.5
-                            color: Theme.error
-                        }
-
                         Column {
                             id: _entryContent
                             anchors.left: parent.left
