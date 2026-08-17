@@ -42,7 +42,7 @@ Singleton {
     readonly property real flickVelocity:     2200
 
     // the largest moving surface in the shell: a pill's duration reads as a snap at this size
-    readonly property int panelResize:   _rm ? 0 : 240
+    readonly property int panelResize:   _rm ? 0 : 200
     readonly property int panelCollapse: _rm ? 0 : 115
     // quiet window a viewport must hold before scroll affordances trust it (see ScrollSettle)
     readonly property int panelSettle:   _rm ? 0 : 150
