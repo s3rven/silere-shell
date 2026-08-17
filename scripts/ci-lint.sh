@@ -1113,11 +1113,17 @@ else
 fi
 
 section "portability regressions"
-if bash scripts/test-portability.sh; then
-  ok "portability"
+portability_log="$(mktemp "${TMPDIR:-/tmp}/silere-portability.XXXXXX.log")"
+if bash scripts/test-portability.sh 2>&1 | tee "$portability_log"; [ "${PIPESTATUS[0]}" -eq 0 ]; then
+  if grep -q '^SKIP' "$portability_log"; then
+    skip "portability" "$(sed -n 's/^SKIP: //p' "$portability_log" | head -1)"
+  else
+    ok "portability"
+  fi
 else
   fail "portability regression tests failed"
 fi
+rm -f "$portability_log"
 
 if [ "$status" -eq 0 ]; then
   printf '\nlint passed\n'
