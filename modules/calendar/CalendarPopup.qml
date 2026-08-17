@@ -236,8 +236,11 @@ PanelWindow {
                 radius: Theme.radiusControl
                 antialiasing: true
                 color: Theme.withAlpha(Theme.warning, 0.10)
-                border.width: 1
-                border.color: Theme.withAlpha(Theme.warning, 0.34)
+
+                OutlineBorder {
+                    radius: _persistenceError.radius
+                    outlineColor: Theme.withAlpha(Theme.warning, 0.34)
+                }
 
                 ShellText {
                     id: _persistenceErrorText
