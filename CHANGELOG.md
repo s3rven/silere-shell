@@ -29,7 +29,7 @@ Only work since the latest release is listed here. Completed notes move to
 ### Removed
 
 - The OSD volume emphasis tint.
-- The red stripe beside critical notifications in history, which keep their outline.
+- The red stripe beside critical notifications in history.
 
 ### Fixed
 
@@ -41,6 +41,7 @@ Only work since the latest release is listed here. Completed notes move to
 - Card dividers hold one weight, including under an open Wi-Fi or Bluetooth list.
 - A settings section fades in already drawn.
 - Keybinds open the menu, calendar, tray and quick actions on a display that has a bar.
+- Quick actions show the power mode on the first open.
 
 ## Releases
 
