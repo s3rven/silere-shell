@@ -2,6 +2,8 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
+import "../config"
 
 Singleton {
     id: root
@@ -29,6 +31,19 @@ Singleton {
         if (open) open = false
         anchorSource = null
         triggerScreen = null
+    }
+
+    IpcHandler {
+        target: "quickActions"
+
+        function toggle(): void {
+            if (root.open) { root.close(); return }
+            root.triggerScreen = null
+            root.anchorSource = null
+            root.barBottom = Metrics.barAtBottom
+            root.open = true
+        }
+        function close(): void { root.close() }
     }
 
     // a hard-blocked radio refuses every write, so a row offering it would re-issue
