@@ -56,10 +56,11 @@ Item {
 
         Rectangle {
             visible: root._isDot
+            // each dot style steps down by one when compact, or · and • land on the same size
             readonly property real diameter: root._roundedSize(
                 root._style === "•" ? (root.compact ? 3 : 4)
                 : root._style === "◦" ? (root.compact ? 4 : 5)
-                : 3)
+                : (root.compact ? 2 : 3))
             anchors.centerIn: parent
             width: diameter
             height: diameter
