@@ -100,6 +100,19 @@ Item {
             if (_netLossFlash.running)                                       return _widgetSweep("network")
             return 0.50
         }
+        // 0.5 pushes the gradient's edge stops onto the clamps, so the lit band reaches
+        // both ends instead of falling off at 0.22/0.78 the way the sweep does
+        readonly property real _renderSpread: ShellSettings.underlineFullWidth
+            ? 0.5 : _sweepSpread
+        readonly property real _renderCenter: ShellSettings.underlineFullWidth
+            ? 0.5 : _sweepCenter
+        // both stops share one rgb and differ only in alpha, so lerp that; mix() would
+        // return alpha 1 and light the ends brighter than the peak
+        readonly property color _renderEdge: ShellSettings.underlineFullWidth
+            ? Theme.withAlpha(_stopColor,
+                _stopColorMid.a + (_stopColor.a - _stopColorMid.a) * 0.55)
+            : _stopColorMid
+
         property real _sweepCenter: _sweepCenterTarget
         MotionBehavior on _sweepCenter {
             // sweep already animates this frame-by-frame, a second Behavior would lag behind it
@@ -405,9 +418,9 @@ Item {
             _lineEffect._combined * ShellSettings.glowStrength)
             * (1.0 - _ul.floatingProgress)
         peak:    _lineEffect._stopColor
-        edge:    _lineEffect._stopColorMid
-        center:  _lineEffect._sweepCenter
-        spread:  _lineEffect._sweepSpread
+        edge:    _lineEffect._renderEdge
+        center:  _lineEffect._renderCenter
+        spread:  _lineEffect._renderSpread
         loClamp: 0.01
         hiClamp: 0.99
     }
@@ -415,6 +428,7 @@ Item {
     FadingRim {
         id: _floatingBaseRim
         radius: _ul.wrapRadius
+        uniform: ShellSettings.underlineFullWidth
         rimColor: Theme.mix(Theme.subtext, _lineEffect._effectColor, 0.18)
         visible: opacity > 0.001
         opacity: Math.min(0.20, 0.12 * ShellSettings.glowStrength)
@@ -442,6 +456,7 @@ Item {
     FadingRim {
         id: _floatingRim
         radius: _ul.wrapRadius
+        uniform: ShellSettings.underlineFullWidth
         rimColor: _lineEffect._effectColor
         visible: opacity > 0.001
         opacity: Math.min(0.42,
@@ -461,9 +476,9 @@ Item {
             (_lineEffect._combined * 0.58 + _lineEffect._bloomBoost * 0.28)
             * ShellSettings.glowStrength) * _ul.floatingProgress
         peak:    _lineEffect._stopColor
-        edge:    _lineEffect._stopColorMid
-        center:  _lineEffect._sweepCenter
-        spread:  Math.max(0.20, _lineEffect._sweepSpread)
+        edge:    _lineEffect._renderEdge
+        center:  _lineEffect._renderCenter
+        spread:  Math.max(0.20, _lineEffect._renderSpread)
         loClamp: 0.08
         hiClamp: 0.92
     }

@@ -7,6 +7,8 @@ Shape {
     property real radius: 0
     property color rimColor: "transparent"
     property real band: 1
+    // flat stops ring the whole bar; the default fade leaves the top edge unlit
+    property bool uniform: false
 
     anchors.fill: parent
     // without it Shape tessellates the corner arcs and a 1px ring facets visibly there —
@@ -19,8 +21,16 @@ Shape {
         fillGradient: LinearGradient {
             x1: 0; y1: 0
             x2: 0; y2: root.height
-            GradientStop { position: 0.0; color: Qt.rgba(root.rimColor.r, root.rimColor.g, root.rimColor.b, 0) }
-            GradientStop { position: 0.6; color: Qt.rgba(root.rimColor.r, root.rimColor.g, root.rimColor.b, root.rimColor.a * 0.4) }
+            GradientStop {
+                position: 0.0
+                color: Qt.rgba(root.rimColor.r, root.rimColor.g, root.rimColor.b,
+                    root.uniform ? root.rimColor.a : 0)
+            }
+            GradientStop {
+                position: 0.6
+                color: Qt.rgba(root.rimColor.r, root.rimColor.g, root.rimColor.b,
+                    root.rimColor.a * (root.uniform ? 1.0 : 0.4))
+            }
             GradientStop { position: 1.0; color: root.rimColor }
         }
         PathRectangle {

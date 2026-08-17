@@ -83,6 +83,7 @@ Singleton {
     property bool   underlineGlow:       false
     property string underlineLastStyle:  "static"
     property bool   underlineIdleGlow:   false
+    property bool   underlineFullWidth:  false
     property bool   underlineNotifGlow:  false
     property bool   underlineBattGlow:   false
     property bool   underlineNetGlow:        false
@@ -335,6 +336,7 @@ Singleton {
         { k: "underlineGlow",       t: "bool", sec: "underline" },
         { k: "underlineLastStyle",  t: "enum", vals: ["static", "glow"], sec: "underline" },
         { k: "underlineIdleGlow",   t: "bool", sec: "underline" },
+        { k: "underlineFullWidth",  t: "bool", sec: "underline" },
         { k: "underlineNotifGlow",  t: "bool", sec: "underline" },
         { k: "underlineBattGlow",   t: "bool", sec: "underline,warnings" },
         { k: "underlineNetGlow",    t: "bool", sec: "underline" },

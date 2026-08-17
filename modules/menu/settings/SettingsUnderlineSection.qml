@@ -97,6 +97,13 @@ Column {
             CollapsibleSection {
                 expanded: ShellSettings.underlineGlow
                 ToggleRow {
+                    glyph: "󱝊"; label: "Full width"
+                    description: ShellSettings.barFloating
+                        ? "Ring the whole bar instead of fading out at the top"
+                        : "Light the whole bar instead of the centre"
+                    key: "underlineFullWidth"
+                }
+                ToggleRow {
                     glyph: "󰊠"; label: "Ambient glow"
                     key: "underlineIdleGlow"
                 }
