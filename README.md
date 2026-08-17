@@ -99,8 +99,8 @@ The interactive installer configures Matugen when it is installed. It copies
 Silere's template into Matugen's template directory and makes Matugen write
 `$XDG_CONFIG_HOME/matugen/silere-shell.json`; the shell watches that user-writable
 palette and reloads colors live. This works for both a Git checkout and a
-read-only package under `/usr/share`. Packaged installs print the equivalent
-one-time setup after installation.
+read-only package under `/usr/share`. Packaged installs print the one-time
+command that does the same thing, `install.sh --repair-matugen`.
 
 Cava needs no configuration step. Silere writes a private temporary raw-output
 profile under `$XDG_RUNTIME_DIR`, starts Cava only while the visualizer is

@@ -11,17 +11,13 @@ post_install() {
   or bind it: qs ipc -p /usr/share/silere-shell/shell.qml call menu toggle
 
   wallpaper colours need a one-time matugen setup:
-    mkdir -p ~/.config/matugen/templates/silere-shell
-    cp /usr/share/silere-shell/assets/matugen-theme.json \
-       ~/.config/matugen/templates/silere-shell/Theme.json
+    bash /usr/share/silere-shell/scripts/install.sh --repair-matugen
 
-  then add this to ~/.config/matugen/config.toml:
-    [templates.silere-shell]
-    input_path = '~/.config/matugen/templates/silere-shell/Theme.json'
-    output_path = '~/.config/matugen/silere-shell.json'
-
-  run matugen once after that. the palette is user-writable and reloads live;
-  without it Silere uses its bundled fallback.
+  it writes only Silere's own template and its marked block in
+  ~/.config/matugen/config.toml, and refuses an entry it does not own.
+  run matugen once after that. the palette is user-writable and reloads
+  live; without it Silere uses its bundled fallback. the same command is
+  behind Settings > System > Maintenance.
 
   cava needs no setup: Silere supplies a temporary profile while its audio
   visualizer is visible and never changes your personal cava config.
