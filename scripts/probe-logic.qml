@@ -583,6 +583,13 @@ ShellRoot {
         root._check(Network._linkPriority(false, undefined) > Network._linkPriority(true, false),
             "Wi-Fi outranks a wired device with no carrier")
 
+        const keptOff = QuickActionsState._airplaneRestore(true, true, false)
+        root._check(keptOff.wifi && !keptOff.bt,
+            "leaving airplane mode restores only the radios that were on")
+        const nothingHeld = QuickActionsState._airplaneRestore(false, false, false)
+        root._check(nothingHeld.wifi && nothingHeld.bt,
+            "leaving airplane mode with nothing latched restores both radios")
+
         root._startAnchorTeardown()
     }
 
