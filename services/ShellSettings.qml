@@ -32,7 +32,7 @@ Singleton {
     property bool   showWindowTitleApp:  false
     property bool   windowTitleCenterGap: true
     property bool   updatesWidget:       false
-    property bool   updatesIncludeAur:   true
+    property bool   updatesIncludeAur:   false
     property bool   trayWidget:          false
     property bool   valuesOnHover:       true
     property bool   hoverLevelBar:       false
