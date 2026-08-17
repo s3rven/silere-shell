@@ -41,7 +41,7 @@ Column {
                 step: 500
             }
             ChoiceChipRow {
-                glyph: "󰒓"; label: "Feedback for"
+                glyph: "󰈶"; label: "Feedback for"
                 currentValue: ShellSettings.osdKindFilter
                 model: [
                     { value: "both",       glyph: "󰓎", label: "Both" },

@@ -29,7 +29,7 @@ Column {
         CollapsibleSection {
             expanded: !ShellSettings.barCompact
             ToggleRow {
-                glyph: "󰁌"; label: "Auto tighten"
+                glyph: "󰡌"; label: "Auto tighten"
                 description: "Tighten when widgets crowd the bar"
                 key: "barAutoCompact"
             }

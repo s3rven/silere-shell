@@ -45,7 +45,7 @@ Column {
         CollapsibleSection {
             expanded: ShellSettings.barFloating
             SliderRow {
-                glyph: "󰁌"; label: "Width"
+                glyph: "󰡎"; label: "Width"
                 key: "barWidth"
                 step: 0.02
                 displayValue: Math.round(ShellSettings.barWidth * 100) + "%"

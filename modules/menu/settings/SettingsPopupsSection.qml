@@ -63,7 +63,7 @@ Column {
             key: "notifHistoryPersistent"
         }
         SliderRow {
-            glyph: "󰒓"; label: "History limit"
+            glyph: "󰆙"; label: "History limit"
             displayValue: ShellSettings.notifHistoryLimit
             key: "notifHistoryLimit"
             step: 5

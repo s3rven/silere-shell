@@ -65,7 +65,7 @@ Column {
             onChosen: (v) => ShellSettings.uiScale = v
         }
         ToggleRow {
-            glyph: "󰹑"; label: "High contrast"
+            glyph: "󰆖"; label: "High contrast"
             key: "highContrast"
         }
         ToggleRow {

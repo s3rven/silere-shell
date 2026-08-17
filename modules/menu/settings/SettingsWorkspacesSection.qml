@@ -49,7 +49,7 @@ Column {
         CollapsibleSection {
             expanded: ShellSettings.wsShowAppIcons
             ToggleRow {
-                glyph: "󰹑"; label: "Monochrome icons"
+                glyph: "󰋰"; label: "Monochrome icons"
                 key: "wsIconMono"
             }
             SliderRow {

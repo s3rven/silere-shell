@@ -42,7 +42,7 @@ Column {
     SettingsCard {
         visible: Battery.available
         ChoiceChipRow {
-            glyph: "󱟢"; label: "Low battery warning"
+            glyph: "󱃍"; label: "Low battery warning"
             currentValue: root._battAlertMode
             model: root._alertChipModel
             onChosen: (v) => root._setAlertMode(v, "osdBatteryWarn", "underlineBattGlow")
@@ -50,7 +50,7 @@ Column {
         CollapsibleSection {
             expanded: root._battAlertMode !== "off"
             SliderRow {
-                glyph: "󱟢"; label: "Alert below"
+                glyph: "󱃍"; label: "Alert below"
                 key: "batteryLowThreshold"
                 step: 5
                 displayValue: ShellSettings.batteryLowThreshold + "%"

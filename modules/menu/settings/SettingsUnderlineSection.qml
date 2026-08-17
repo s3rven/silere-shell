@@ -69,7 +69,7 @@ Column {
         CollapsibleSection {
             expanded: root._enabled
             ChoiceChipRow {
-                glyph: "󰒓"; label: "Mode"
+                glyph: "󰗈"; label: "Mode"
                 currentValue: root._style
                 model: [
                     { value: "static", label: "Line" },

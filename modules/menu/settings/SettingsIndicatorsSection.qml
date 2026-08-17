@@ -19,7 +19,7 @@ Column {
                 key: "showWindowTitleApp"
             }
             ToggleRow {
-                glyph: "󰉞"; label: "Center between widgets"
+                glyph: "󰉠"; label: "Center between widgets"
                 key: "windowTitleCenterGap"
             }
         }
@@ -38,7 +38,7 @@ Column {
         CollapsibleSection {
             expanded: ShellSettings.valuesOnHover
             ToggleRow {
-                glyph: "󰦣"; label: "Compact level bars"
+                glyph: "󰡵"; label: "Compact level bars"
                 checked: ShellSettings.hoverLevelBar
                 description: "Keep levels visible"
                 onToggled: nextChecked => ShellSettings.hoverLevelBar = nextChecked
@@ -50,7 +50,7 @@ Column {
     SettingsCard {
         visible: Battery.available
         ToggleRow {
-            glyph: "󰂃"; label: "Hide charged battery"
+            glyph: "󱟢"; label: "Hide charged battery"
             key: "batteryAutoHide"
         }
     }

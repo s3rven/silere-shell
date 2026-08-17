@@ -237,7 +237,7 @@ PageShell {
 
                     ShellText {
                         anchors.centerIn: parent
-                        text: "󰂛"
+                        text: "󱇦"
                         color: Theme.withAlpha(Theme.subtext, 0.34)
                         font.pixelSize: 24
                     }
