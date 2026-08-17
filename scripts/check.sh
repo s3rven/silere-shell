@@ -18,8 +18,33 @@ section() {
   printf '== %s ==\n' "$1"
 }
 ok() { printf 'ok   %-15s %s\n' "$1" "$2"; }
+info() { printf '     %-15s %s\n' "$1" "$2"; }
 warn() { printf 'warn %-15s %s\n' "$1" "$2"; warnings=$((warnings + 1)); }
 fail() { printf 'fail %-15s %s\n' "$1" "$2" >&2; status=1; }
+
+section "versions"
+# reported, never judged: the dependency section below is what fails on a missing qs
+_first_line() { head -n 1 2>/dev/null || true; }
+
+if silere_ver="$(git describe --tags --always --dirty 2>/dev/null)" && [ -n "$silere_ver" ]; then
+  info "silere" "$silere_ver"
+else
+  info "silere" "unknown (not a git checkout)"
+fi
+
+if command -v qs >/dev/null 2>&1; then
+  info "quickshell" "$(qs --version 2>&1 | _first_line)"
+else
+  info "quickshell" "not in PATH"
+fi
+
+if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && command -v hyprctl >/dev/null 2>&1; then
+  info "compositor" "$(hyprctl version 2>/dev/null | _first_line)"
+elif [ -n "${NIRI_SOCKET:-}" ] && command -v niri >/dev/null 2>&1; then
+  info "compositor" "$(niri --version 2>&1 | _first_line)"
+else
+  info "compositor" "no live Hyprland or niri session (${XDG_CURRENT_DESKTOP:-${DESKTOP_SESSION:-unknown}})"
+fi
 
 section "git diff --check"
 if git diff --check; then

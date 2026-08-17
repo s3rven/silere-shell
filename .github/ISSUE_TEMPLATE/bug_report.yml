@@ -7,6 +7,17 @@ body:
       value: |
         Include enough environment detail to reproduce the problem. Remove usernames, window titles, network names, and other private information from logs.
 
+        From a Silere checkout, `bash scripts/check.sh` prints the three versions below in its first block.
+
+  - type: input
+    id: silere
+    attributes:
+      label: Silere version
+      description: Tag or commit, from `git describe --tags --always --dirty`, or the package version.
+      placeholder: v0.6.1, or v0.6.1-12-gabc1234
+    validations:
+      required: true
+
   - type: input
     id: distro
     attributes:
@@ -21,7 +32,7 @@ body:
     attributes:
       label: Quickshell version
       description: Output from `qs --version` and how Quickshell was installed.
-      placeholder: 0.2.1 from distro package
+      placeholder: 0.3.0 from distro package
     validations:
       required: true
 
