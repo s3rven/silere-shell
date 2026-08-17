@@ -202,12 +202,13 @@ PanelWindow {
                 onTriggered: NightLight.toggle()
             }
             QuickActionRow {
-                visible: PowerProfiles.available && PowerProfiles.profile.length > 0
+                visible: PowerProfiles.available
                 checkable: false
                 glyph: PowerProfiles.glyph.length > 0 ? PowerProfiles.glyph : "󰾅"
                 label: "Power Mode"
                 active: PowerProfiles.profile === "performance"
-                stateText: PowerProfiles.label.length > 0 ? PowerProfiles.label : "…"
+                stateText: PowerProfiles.label.length > 0 ? PowerProfiles.label
+                         : PowerProfiles.syncing ? "Checking…" : "…"
                 onTriggered: PowerProfiles.cycle()
             }
             QuickActionRow {
