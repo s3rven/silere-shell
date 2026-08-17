@@ -16,6 +16,9 @@ ShellRoot {
     id: root
 
     readonly property ShellScreen activeOverlayScreen: Monitors.overlayScreen
+    // bar-anchored popups open with no trigger screen over IPC, and the overlay screen
+    // is whichever one has focus — including one the user turned the bar off on
+    readonly property ShellScreen anchoredPopupScreen: Monitors.overlayBarScreen
 
     function armSystemAlertsIfNeeded(): void {
         if (ShellSettings.osdBatteryWarn || ShellSettings.osdTempWarn)
@@ -146,28 +149,28 @@ ShellRoot {
     PopupLoader {
         id: _menuPopup
         wantOpen: MenuState.open
-        requestedScreen: MenuState.triggerScreen ?? root.activeOverlayScreen
+        requestedScreen: MenuState.triggerScreen ?? root.anchoredPopupScreen
         surface: Component { MenuWindow { targetScreen: _menuPopup.latchedScreen } }
     }
 
     PopupLoader {
         id: _calendarPopup
         wantOpen: CalendarState.open
-        requestedScreen: CalendarState.triggerScreen ?? root.activeOverlayScreen
+        requestedScreen: CalendarState.triggerScreen ?? root.anchoredPopupScreen
         surface: Component { CalendarPopup { targetScreen: _calendarPopup.latchedScreen } }
     }
 
     PopupLoader {
         id: _trayPopup
         wantOpen: TrayMenuState.open
-        requestedScreen: TrayMenuState.triggerScreen ?? root.activeOverlayScreen
+        requestedScreen: TrayMenuState.triggerScreen ?? root.anchoredPopupScreen
         surface: Component { TrayMenuPopup { targetScreen: _trayPopup.latchedScreen } }
     }
 
     PopupLoader {
         id: _quickActionsPopup
         wantOpen: QuickActionsState.open
-        requestedScreen: QuickActionsState.triggerScreen ?? root.activeOverlayScreen
+        requestedScreen: QuickActionsState.triggerScreen ?? root.anchoredPopupScreen
         surface: Component { QuickActionsPopup { targetScreen: _quickActionsPopup.latchedScreen } }
     }
 }
