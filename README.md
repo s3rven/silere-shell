@@ -153,17 +153,20 @@ qs ipc -p "$SILERE_DIR/shell.qml" call menu toggle
 qs ipc -p "$SILERE_DIR/shell.qml" call menu tab 2
 qs ipc -p "$SILERE_DIR/shell.qml" call menu settings updates
 qs ipc -p "$SILERE_DIR/shell.qml" call calendar toggle
+qs ipc -p "$SILERE_DIR/shell.qml" call quickActions toggle
 qs ipc -p "$SILERE_DIR/shell.qml" call screenshot flash
 ```
 
-Menu tabs are `0` (Home), `1` (Settings), and `2` (Recent). `screenshot flash` lets a screenshot tool trigger the underline effect directly, without the optional filesystem watcher.
+Menu tabs are `0` (Home), `1` (Settings), and `2` (Recent). `quickActions` holds Do Not Disturb, night light, power mode and airplane mode. `screenshot flash` lets a screenshot tool trigger the underline effect directly, without the optional filesystem watcher.
+
+`menu`, `calendar` and `quickActions` each take `close` as well as `toggle`, for a keybind that dismisses without opening anything. Run `qs ipc -p "$SILERE_DIR/shell.qml" show` for the current list.
 
 <details>
 <summary>Settings section names for <code>menu settings &lt;name&gt;</code></summary>
 
 <br>
 
-`theme`, `surface`, `separators`, `underline`, `widgets`, `clock`, `workspaces`, `media`, `indicators`, `popups`, `osd`, `warnings`, `interface`, `updates`, `maintenance`
+`theme`, `interface`, `surface`, `underline`, `separators`, `widgets`, `workspaces`, `clock`, `media`, `indicators`, `popups`, `osd`, `warnings`, `updates`, `maintenance`
 
 An unknown name falls back to `theme`, so an out-of-date keybind still opens Settings.
 
