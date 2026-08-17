@@ -18,6 +18,24 @@ reject anything else.
 Repository rules should also restrict creation and deletion of matching `v*`
 tags — signature checks complement access control rather than replacing it.
 
+## AUR
+
+`packaging/aur/` is the source of truth for `silere-shell-git`, and lint keeps
+`.SRCINFO` in step with the `PKGBUILD`. **The package is not on the AUR yet**, so
+these files are ready rather than live, and the README deliberately does not point
+at a package that would fail to install. Publishing needs an AUR account; once one
+exists it is a manual push, and only the first one really matters:
+
+```bash
+git clone ssh://aur@aur.archlinux.org/silere-shell-git.git /tmp/silere-aur
+cp packaging/aur/{PKGBUILD,.SRCINFO,silere-shell-git.install} /tmp/silere-aur/
+cd /tmp/silere-aur && git commit -am "<version>" && git push
+```
+
+Because the package tracks `git`, it rebuilds from `main` on the user's machine
+and does not need a push per release — but the AUR copy still has to exist, and
+the `depends` floor and `.install` message only reach users once it does.
+
 ## Key rotation
 
 Ship the new public key in a release signed by the **existing** key first. Only
