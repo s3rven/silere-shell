@@ -33,6 +33,11 @@ Column {
             step: 0.02
             displayValue: Math.round(ShellSettings.barOpacity * 100) + "%"
         }
+        ToggleRow {
+            glyph: "󱡓"; label: "Match on popups"
+            description: "Notifications, calendar, tray and quick actions"
+            key: "popupMatchBarOpacity"
+        }
     }
 
     SectionLabel { label: "FLOATING" }

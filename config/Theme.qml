@@ -69,7 +69,8 @@ Singleton {
 
     readonly property color panel: withAlpha(background,
         _hc ? Math.max(0.90, ShellSettings.barOpacity) : ShellSettings.barOpacity)
-    readonly property color popup: background
+    // the popup layers carry no compositor blur, so this stays opt-in and off by default
+    readonly property color popup: ShellSettings.popupMatchBarOpacity ? panel : background
 
     readonly property color menuPane:        _n ? mix(background, text, _elevK * (_hc ? 0.050 : 0.030))
                                                 : mix(background, _hc ? text : surface, _elevK * (_hc ? 0.055 : 0.18))

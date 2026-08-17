@@ -285,9 +285,11 @@ Item {
         MotionBehavior on opacity { gate: card.visible && cardRect._behaviorEnabled; NumberAnimation { duration: Motion.ms(200); easing.type: card._leaving ? Easing.InCubic : Easing.OutCubic } }
         MotionBehavior on height  { gate: card.visible && cardRect._behaviorEnabled; NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
 
-        // same opaque chrome tone as the menu/calendar/tray popups, or a standalone card reads as a lighter floating row.
         // urgency rides the outline, glyph and ring only: tinting the whole fill red drowns the text it is warning about
-        color: _cardHover.hovered ? Theme.mix(Theme.popup, Theme.subtext, 0.06) : Theme.popup
+        // mix() returns alpha 1, so a translucent popup would snap opaque under the cursor
+        color: _cardHover.hovered
+            ? Theme.withAlpha(Theme.mix(Theme.popup, Theme.subtext, 0.06), Theme.popup.a)
+            : Theme.popup
 
         ColorFade on color {}
 
