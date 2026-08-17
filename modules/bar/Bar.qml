@@ -55,9 +55,9 @@ PanelWindow {
     readonly property real visualSurfaceInset: ShellSettings.barGap * floatingProgress
 
     readonly property bool shadowOn: shadowProgress > 0.001 && floatingProgress > 0.001
-    readonly property real effectPad: Math.max(
-        24 * shadowProgress,
-        ShellSettings.underlineGlow ? 8 : 0)
+    // constant, not scaled by shadowProgress: this feeds implicitHeight, so animating it
+    // resized the layer-shell window in 4px steps and the bar juddered on every toggle
+    readonly property real effectPad: 24
     // the surface sits barGap from the edge, so the window budgets the gap at both ends or it clips the bar
     readonly property int insetPad: Math.max(8, Metrics.barEdgeInset * 2)
 
