@@ -227,6 +227,41 @@ test_font_archive_selection() (
         || fail "unused Mono font was extracted"
 )
 
+test_assume_yes_prompts() (
+    local home="$TMP/assume-yes-home" expected out
+    local detach=()
+    mkdir -p "$home"
+    expected="$home/.config/silere-shell"
+
+    # setsid takes the controlling terminal away, which is what an automated install lacks
+    if command -v setsid >/dev/null 2>&1; then
+        detach=(setsid)
+    fi
+
+    out="$(HOME="$home" XDG_CONFIG_HOME='' SILERE_ASSUME_YES=1 \
+        "${detach[@]}" bash -c '
+            SILERE_SCRIPT_LIB_ONLY=1 source "$1"
+            _ask "install?"   >/dev/null && printf "ask=yes "   || printf "ask=no "
+            _ask_no "opt in?" >/dev/null && printf "askno=yes " || printf "askno=no "
+            printf "path=%s" "$(_ask_path)"
+        ' _ "$ROOT/scripts/install.sh" </dev/null)" \
+        || fail "assumed-yes prompts failed without a controlling terminal"
+
+    assert_eq "ask=yes askno=no path=$expected" "$out" "assumed-yes prompt answers"
+
+    # without setsid the prompt below would find a real terminal and block on it
+    if [ ${#detach[@]} -eq 0 ]; then
+        printf 'SKIP: setsid unavailable; interactive prompt guard not tested\n'
+        return 0
+    fi
+
+    if HOME="$home" XDG_CONFIG_HOME='' "${detach[@]}" bash -c '
+            SILERE_SCRIPT_LIB_ONLY=1 source "$1"; _ask "install?"
+        ' _ "$ROOT/scripts/install.sh" </dev/null >/dev/null 2>&1; then
+        fail "a prompt answered itself with no controlling terminal and no assumed yes"
+    fi
+)
+
 test_install_path_safety() (
     SILERE_SCRIPT_LIB_ONLY=1 source "$ROOT/scripts/install.sh"
     local source="$TMP/existing-install" generic="$TMP/generic-repo" backup actual
@@ -854,6 +889,7 @@ test_uninstall_targets_and_backups
 test_qml_module_lookup
 test_headless_qml_import_roots
 test_font_archive_selection
+test_assume_yes_prompts
 test_install_path_safety
 test_hypr_discovery
 test_niri_config_discovery
