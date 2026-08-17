@@ -142,7 +142,7 @@ Item {
         rotation: root.gem ? 45 : 0
         antialiasing: true
         color: Theme.withAlpha(root.tint, root.menuTargets && MenuState.open ? 0.50 : 0.30)
-        opacity: root.gem ? 0.55 + root._energy * 0.22 : root._energy * 0.60
+        opacity: root.gem ? 0.28 + root._energy * 0.30 : root._energy * 0.60
         scale: 1.0 + root._energy * (root.gem ? 0.035 : 0.10)
         visible: !root._bar && opacity > 0.01
         MotionBehavior on color   {ColorAnimation { duration: Motion.ms(150) } }
@@ -184,7 +184,7 @@ Item {
         rotation: 45
         antialiasing: true
         color: Qt.rgba(0, 0, 0, 0.32)
-        opacity: 0.14
+        opacity: 0.10
         visible: root.gem
     }
 
@@ -202,8 +202,8 @@ Item {
             antialiasing: true
             visible: root.gem
             gradient: Gradient {
-                GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.20) }
-                GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.20) }
+                GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.10) }
+                GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.12) }
             }
         }
 
@@ -227,17 +227,6 @@ Item {
             }
         }
 
-        Rectangle {
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.top: parent.top
-            width: Math.min(10, Math.max(5, parent.width * 0.34))
-            height: 1
-            radius: height / 2
-            antialiasing: true
-            color: Qt.rgba(1, 1, 1, 0.62)
-            opacity: root._bar ? 0.58 + root._energy * 0.24 : 0
-            visible: root._bar
-        }
     }
 
     Rectangle {
@@ -300,7 +289,6 @@ Item {
         if (Math.abs(targetX - x) < 2) return
         if (!root.shiftEnabled || ShellSettings.reduceMotion) return
         _moveAnim.restart()
-        root.glint()
     }
 
     SequentialAnimation {
