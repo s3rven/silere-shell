@@ -67,8 +67,6 @@ Item {
         id: _col
         width: parent.width
         spacing: 0
-        topPadding: 2
-        bottomPadding: 2
 
         ShellText {
             visible: root.open && (!Bluetooth.available || !Bluetooth.enabled || Bluetooth.devices.length === 0)
@@ -140,9 +138,10 @@ Item {
         }
     }
 
+    // the card's own divider sits in this gutter one px past the list: land the cue on it
     ListEdgeLines {
-        x: 0; y: _col.y + _list.y
-        width: parent.width; height: _list.height
+        x: 14; y: _col.y + _list.y
+        width: Math.max(0, parent.width - 28); height: _list.height + 1
         visible: _list.visible
         list: _list
     }

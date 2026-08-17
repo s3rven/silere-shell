@@ -10,7 +10,6 @@ Repeater {
     required property Item column
     property color lineColor: Theme.menuDivider
     readonly property real _dpr: Math.max(1, Screen.devicePixelRatio)
-    readonly property real _hairline: 1 / _dpr
 
     function _present(item): bool {
         if (!item) return false
@@ -52,7 +51,7 @@ Repeater {
         width: root.column
             ? Math.max(0, root.column.width - 28)
             : 0
-        height: root._hairline
+        height: 1
         opacity: row
             ? Math.min(1, Math.max(0, (row.height - 4) / 20)) * Math.min(1, row.opacity * 2)
             : 0
