@@ -33,7 +33,7 @@ ShellRoot {
     // reading a member instantiates a lazy singleton; these watchers must arm before the user opens a panel
     Component.onCompleted: {
         void NotifWatch.armed
-        // PowerProfiles reads on menu-open: created lazily it misses the first open and the row sits on "Unavailable"
+        // PowerProfiles reads when a panel opens: created lazily it misses the first open and the row sits on "Unavailable"
         void PowerProfiles.available
         // documented as always callable (`ipc call screenshot flash`), so it can't wait on the underline
         void Screenshot.armed

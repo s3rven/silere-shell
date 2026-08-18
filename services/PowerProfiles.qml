@@ -103,16 +103,26 @@ Singleton {
         _set.exec(["powerprofilesctl", "set", next])
     }
 
+    // quick actions carries the same row: gating reads on the menu alone leaves it on "…"
+    readonly property bool _watched: MenuState.open || QuickActionsState.open
+    on_WatchedChanged: if (!root._watched && !root._correctiveRefreshPending) _getRetry.stop()
+
+    function _surfaceOpened(): void {
+        root._getRetries = 0
+        root.refresh()
+    }
+
     Connections {
         target: MenuState
-        function onOpenChanged() {
-            if (MenuState.open) { root._getRetries = 0; root.refresh() }
-            else if (!root._correctiveRefreshPending) _getRetry.stop()
-        }
+        function onOpenChanged() { if (MenuState.open) root._surfaceOpened() }
+    }
+    Connections {
+        target: QuickActionsState
+        function onOpenChanged() { if (QuickActionsState.open) root._surfaceOpened() }
     }
     Connections {
         target: SystemTools
-        function onReadyChanged() { if (SystemTools.ready && MenuState.open) root.refresh() }
+        function onReadyChanged() { if (SystemTools.ready && root._watched) root.refresh() }
     }
     BoundedProcess {
         id: _get
@@ -142,7 +152,7 @@ Singleton {
                 }
             }
             const shouldRetry = root.profile === "" || _corrective
-            if (shouldRetry && root.available && (MenuState.open || _corrective)
+            if (shouldRetry && root.available && (root._watched || _corrective)
                     && root._getRetries < root._getRetryMax) {
                 root._getRetries++
                 root._correctiveRefreshPending = _corrective

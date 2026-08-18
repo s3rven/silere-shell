@@ -18,9 +18,6 @@ Singleton {
         return isFinite(live) ? live : root.anchorX
     }
     onAnchorSourceChanged: if (open && anchorSource === null) close()
-    // nothing else reads the profile until the menu's power rail is built, so a keybind
-    // user who never opens the menu would see the row sit empty all session
-    onOpenChanged: if (open && PowerProfiles.available) PowerProfiles.refresh()
 
     function toggleAt(x: real, screen, bottom: bool, source): void {
         if (open) { close(); return }

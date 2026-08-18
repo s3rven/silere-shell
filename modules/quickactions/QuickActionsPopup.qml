@@ -39,10 +39,7 @@ PanelWindow {
     Connections {
         target: QuickActionsState
         function onOpenChanged() {
-            if (QuickActionsState.open) {
-                PowerProfiles.refresh()
-                card.forceActiveFocus()
-            }
+            if (QuickActionsState.open) card.forceActiveFocus()
         }
     }
 

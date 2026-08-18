@@ -590,6 +590,13 @@ ShellRoot {
         root._check(nothingHeld.wifi && nothingHeld.bt,
             "leaving airplane mode with nothing latched restores both radios")
 
+        QuickActionsState.open = true
+        root._check(PowerProfiles._watched,
+            "quick actions keeps the power profile readable without the menu")
+        QuickActionsState.open = false
+        root._check(!PowerProfiles._watched,
+            "closing every panel releases the power profile read")
+
         root._startAnchorTeardown()
     }
 
