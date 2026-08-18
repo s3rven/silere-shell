@@ -35,7 +35,6 @@ Item {
     readonly property bool dragging: _ma.pressed
     property real _shownValue: value
 
-    signal interactionStarted()
     signal changed(real value)
 
     onValueChanged: if (!_ma.pressed) _shownValue = value
@@ -128,10 +127,7 @@ Item {
         cursorShape: Qt.PointingHandCursor
         // hold the grab or the Flickable steals a quick press and snaps the value to the edge
         preventStealing: true
-        onPressed: (mouse) => {
-            root.interactionStarted()
-            root._setFromUser(root._posToVal(mouse.x))
-        }
+        onPressed: (mouse) => root._setFromUser(root._posToVal(mouse.x))
         onPositionChanged: (mouse) => { if (pressed) root._setFromUser(root._posToVal(mouse.x)) }
         onReleased:        if (root.commitOnRelease) root.changed(root._shownValue)
         onCanceled:        root._shownValue = root.value
