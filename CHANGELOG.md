@@ -41,7 +41,7 @@ Only work since the latest release is listed here. Completed notes move to
 - Card dividers hold one weight, including under an open Wi-Fi or Bluetooth list.
 - A settings section fades in already drawn.
 - Keybinds open the menu, calendar, tray and quick actions on a display that has a bar.
-- Quick actions show the power mode on the first open.
+- Quick actions show the power mode without the settings menu, and retry it after a failed read.
 
 ## Releases
 
