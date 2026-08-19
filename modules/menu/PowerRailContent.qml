@@ -22,8 +22,10 @@ Item {
         : Battery.charging ? "AC"
         : "Battery"
     readonly property string _batteryValue: Battery.label
+    // the rail caps this at 86px and "Performance · throttled" needs 138, so the suffix
+    // could never render; degraded rides the row tint here and the Now page says the word
     readonly property string _profileValue: PowerProfiles.profile !== ""
-        ? PowerProfiles.label + (PowerProfiles.degraded ? " · throttled" : "")
+        ? PowerProfiles.label
         : PowerProfiles.syncing ? "..."
         : ""
 
@@ -58,6 +60,7 @@ Item {
                 label: "Mode"
                 value: root._profileValue
                 glyph: PowerProfiles.glyph
+                dangerous: PowerProfiles.degraded
                 enabled: PowerProfiles.available && PowerProfiles.profile !== ""
                 onTriggered: PowerProfiles.cycle()
             }
