@@ -57,7 +57,51 @@ Singleton {
     }
 
     function _trimHistory(): void {
-        while (_history.count > root._maxHistory) _history.remove(_history.count - 1)
+        const dropped = []
+        while (_history.count > root._maxHistory) {
+            const id = _history.get(_history.count - 1).id
+            if (id !== undefined) dropped.push(String(id))
+            _history.remove(_history.count - 1)
+        }
+        root._forgetTrimmed(dropped)
+    }
+
+    // clearing or restoring history leaves the maps whole; anything history no longer
+    // covers is dead weight that only a restart could clear
+    function _pruneOrphanState(): void {
+        const keep = Object.create(null)
+        for (let i = 0; i < _history.count; i++) keep[String(_history.get(i).id)] = true
+        const seen = Object.keys(root._seen)
+            .concat(Object.keys(root._times), Object.keys(root._updateTimes))
+        const stale = []
+        for (let i = 0; i < seen.length; i++)
+            if (keep[seen[i]] !== true && stale.indexOf(seen[i]) < 0) stale.push(seen[i])
+        root._forgetTrimmed(stale)
+    }
+
+    // history is capped but these maps were not: an id that rolled off kept its seen
+    // flag and timestamps for the life of the process, and every arrival re-serialized them
+    function _forgetTrimmed(keys): void {
+        if (keys.length === 0) return
+        const live = Object.create(null)
+        for (let i = 0; i < root.list.length; i++) live[String(root.list[i].id)] = true
+
+        const seen = root._cloneMap(root._seen)
+        const times = root._cloneMap(root._times)
+        const updates = root._cloneMap(root._updateTimes)
+        let cutSeen = false, cutTimes = false, cutUpdates = false
+
+        for (let i = 0; i < keys.length; i++) {
+            const key = keys[i]
+            if (live[key] === true) continue
+            if (key in seen)    { delete seen[key];    cutSeen = true }
+            if (key in times)   { delete times[key];   cutTimes = true }
+            if (key in updates) { delete updates[key]; cutUpdates = true }
+        }
+
+        if (cutSeen)    root._seen = seen
+        if (cutTimes)   root._times = times
+        if (cutUpdates) root._updateTimes = updates
     }
 
     function _prependHistory(entry): void {
@@ -109,6 +153,7 @@ Singleton {
         root._seen = root._cloneMap(savedSeen)
         root._times = root._cloneMap(savedTimes)
         root._persistentReady = true
+        root._pruneOrphanState()
         root._saveHistory()
     }
 
@@ -121,7 +166,10 @@ Singleton {
         function onNotifHistoryPersistentChanged() {
             // Privacy-first: turning persistence off removes text restored from
             // an earlier session. New entries still form an in-memory history.
-            if (!ShellSettings.notifHistoryPersistent) _history.clear()
+            if (!ShellSettings.notifHistoryPersistent) {
+                _history.clear()
+                root._pruneOrphanState()
+            }
             root._saveHistory()
         }
     }

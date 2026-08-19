@@ -597,6 +597,22 @@ ShellRoot {
         root._check(!PowerProfiles._watched,
             "closing every panel releases the power profile read")
 
+        Notifications._seen  = { "41": true, "42": true }
+        Notifications._times = { "41": 1000, "42": 2000 }
+        Notifications._forgetTrimmed(["41"])
+        root._check(Notifications._seen["41"] === undefined
+                && Notifications._times["41"] === undefined
+                && Notifications._seen["42"] === true
+                && Notifications._times["42"] === 2000,
+            "a notification trimmed out of history drops its seen and time entries")
+
+        Notifications._seen  = { "51": true }
+        Notifications._times = { "51": 1000, "52": 2000 }
+        Notifications._pruneOrphanState()
+        root._check(Object.keys(Notifications._seen).length === 0
+                && Object.keys(Notifications._times).length === 0,
+            "state for ids history no longer holds is pruned")
+
         root._startAnchorTeardown()
     }
 
