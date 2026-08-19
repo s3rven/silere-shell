@@ -28,17 +28,7 @@ Rectangle {
         spacing: 0
     }
 
-    RowDividers { column: col }
-
-    function _present(item): bool {
-        if (!item) return false
-        if (item.layoutPresent !== undefined)
-            return item.layoutPresent === true
-        if (item.topRadius !== undefined
-                || item.suppressDividerAbove !== undefined)
-            return item.visible
-        return item.visible && item.height > 0.5
-    }
+    RowDividers { id: _dividers; column: col }
 
     function _edgeEl(container, first): var {
         const ch = container.children
@@ -46,7 +36,7 @@ Rectangle {
         const step = first ? 1 : -1
         for (let i = first ? 0 : ch.length - 1; i !== end; i += step) {
             const c = ch[i]
-            if (!root._present(c)) continue
+            if (!_dividers.present(c)) continue
             if (c.isRadiusGroup === true && c.radiusColumn) {
                 const inner = root._edgeEl(c.radiusColumn, first)
                 if (inner) return inner
