@@ -99,7 +99,7 @@ Column {
                 ToggleRow {
                     glyph: "󱝊"; label: "Full width"
                     description: ShellSettings.barFloating
-                        ? "Ring the whole bar instead of fading out at the top"
+                        ? "Ring the whole bar instead of fading out"
                         : "Light the whole bar instead of the centre"
                     key: "underlineFullWidth"
                 }
@@ -167,7 +167,7 @@ Column {
                                 && !ShellSettings.underlineTempGlow
                                 && !ShellSettings.underlineScreenshotGlow
                                 && !ShellSettings.mediaProgress
-                            text: "No event will light the underline; it stays at its resting glow."
+                            text: "No event will light the underline."
                         }
                     }
                 }

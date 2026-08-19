@@ -59,7 +59,7 @@ Column {
     SettingsCard {
         ToggleRow {
             glyph: "󰋚"; label: "Keep after restart"
-            description: "Otherwise clear saved text and keep this session only"
+            description: "Off also clears text saved earlier"
             key: "notifHistoryPersistent"
         }
         SliderRow {
