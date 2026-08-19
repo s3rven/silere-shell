@@ -15,6 +15,9 @@ Item {
     implicitHeight: _col.implicitHeight
 
     property string _selected: ""
+    property string _armedSsid: ""
+    property real _armedAtMs: 0
+    Timer { id: _disarmTimer; interval: 3000; onTriggered: root._armedSsid = "" }
 
     function _canScan(): bool {
         return root.open && Network.toolAvailable && Network.wifiEnabled && !Idle.isIdle
@@ -25,13 +28,15 @@ Item {
             Network.scanWifi(true)
         } else if (root.open) {
             _selected = ""
+            _disarmTimer.stop()
+            _armedSsid = ""
             Network.clearWifiScan()
         }
     }
 
     onOpenChanged: {
         if (open) _syncScanState()
-        else      { _selected = ""; Network.clearWifiScan() }
+        else      { _selected = ""; _disarmTimer.stop(); _armedSsid = ""; Network.clearWifiScan() }
     }
     Component.onCompleted: _syncScanState()
     Component.onDestruction: {
@@ -96,6 +101,7 @@ Item {
                 width: _list.width
                 spacing: 0
 
+                readonly property bool _armed:      root._armedSsid === modelData.ssid && modelData.active
                 readonly property bool _sel:        root._selected === modelData.ssid
                 readonly property bool _connecting: Network.wifiConnecting === modelData.ssid
                 readonly property bool _failed:     Network.wifiError === modelData.ssid
@@ -113,7 +119,8 @@ Item {
                     width: parent.width
                     glyph: Network.signalGlyph(_entry.modelData.signal)
                     label: _entry.modelData.label
-                    status: _entry.modelData.active ? "Connected"
+                    status: _entry._armed ? "Disconnect?"
+                        : _entry.modelData.active ? "Connected"
                         : _entry._connecting ? "Connecting…"
                         : _entry._failed ? (Network.wifiErrorNeedsSecret ? "Wrong password" : "Failed")
                         : _entry._sel ? "Password"
@@ -121,10 +128,24 @@ Item {
                         : "Open"
                     selected: _entry.modelData.active
                     highlighted: _entry._sel
-                    warning: _entry._failed
+                    warning: _entry._armed
+                    failed:  _entry._failed
 
                     function _activate(): void {
-                        if (_entry.modelData.active) { Network.disconnectWifi(); return }
+                        if (_entry.modelData.active) {
+                            if (_entry._armed) {
+                                // TapHandler fires once per tap, so a double-click would arm and confirm in one gesture
+                                if (Date.now() - root._armedAtMs < Metrics.confirmGuardMs) return
+                                root._armedSsid = ""
+                                _disarmTimer.stop()
+                                Network.disconnectWifi()
+                            } else {
+                                root._armedSsid = _entry.modelData.ssid
+                                root._armedAtMs = Date.now()
+                                _disarmTimer.restart()
+                            }
+                            return
+                        }
                         // a known network reconnects from its stored key; once that key is
                         // refused, repeating it can only fail again, so take a new one
                         const needsSecret = !_entry.modelData.known
