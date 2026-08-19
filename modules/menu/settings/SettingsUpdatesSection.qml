@@ -232,14 +232,17 @@ Column {
             available: !SystemTools.ready || Updates.supported
             dependsNote: "No package manager"
         }
-        ToggleRow {
-            visible: SystemTools.packageFamily === "pacman"
+        CollapsibleSection {
+            expanded: ShellSettings.updatesWidget
+                && SystemTools.packageFamily === "pacman"
                 && Updates.aurHelperAvailable
-            glyph: "󰮯"; label: "Include AUR packages"
-            description: "Query "
-                + (SystemTools.hasParu ? "paru" : "yay")
-                + " for foreign package updates"
-            key: "updatesIncludeAur"
+            ToggleRow {
+                glyph: "󰮯"; label: "Include AUR packages"
+                description: "Query "
+                    + (SystemTools.hasParu ? "paru" : "yay")
+                    + " for foreign package updates"
+                key: "updatesIncludeAur"
+            }
         }
         HintText { text: "Checks are read-only and never install updates." }
     }
