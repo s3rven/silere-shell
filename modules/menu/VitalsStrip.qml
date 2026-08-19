@@ -82,7 +82,6 @@ Rectangle {
                 font.letterSpacing: 0.4
                 font.weight: Font.DemiBold
                 font.capitalization: Font.AllUppercase
-                font.hintingPreference: Font.PreferFullHinting
             }
         }
 
@@ -104,7 +103,6 @@ Rectangle {
                         : Theme.withAlpha(Theme.text, 0.92)
                 font.pixelSize: Settings.fontSize + 4
                 font.weight: Font.DemiBold
-                font.hintingPreference: Font.PreferFullHinting
             }
             ShellText {
                 visible: tile.sub !== ""
@@ -114,7 +112,6 @@ Rectangle {
                     ? Theme.mix(Theme.menuTextMuted, tile.tint, tile.pulse * 0.6)
                     : Theme.withAlpha(Theme.menuTextMuted, 0.85)
                 font.pixelSize: Settings.fontLabel
-                font.hintingPreference: Font.PreferFullHinting
             }
         }
 

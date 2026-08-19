@@ -154,7 +154,6 @@ MenuRow {
             color:          root.active ? Theme.text : Theme.withAlpha(Theme.text, 0.85)
             font.pixelSize: Settings.fontSize
             font.weight:    Font.DemiBold
-            font.hintingPreference: Font.PreferFullHinting
             elide:          Text.ElideRight
             ColorFade on color {}
         }
@@ -167,7 +166,6 @@ MenuRow {
                                         : Theme.withAlpha(Theme.subtext, 0.62)
             font.pixelSize: Settings.fontCaption
             font.weight:    Font.Medium
-            font.hintingPreference: Font.PreferFullHinting
             elide:          Text.ElideRight
             ColorFade on color {}
         }
