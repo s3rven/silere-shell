@@ -36,7 +36,8 @@ MenuRow {
         font.weight: Font.DemiBold
     }
     readonly property real _widestOptionW: {
-        const dep = _chipFm.font.pixelSize + _chipFm.font.weight
+        // advanceWidth() is a call, so it registers no dependency; reading the font does
+        void _chipFm.font.pixelSize
         let w = 0
         for (let i = 0; i < root.model.length; i++) {
             const o = root.model[i]

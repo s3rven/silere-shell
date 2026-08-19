@@ -390,7 +390,7 @@ PanelWindow {
                     x: card.weekCol + xOff
                     width: card.cell * 7
                     columns: 7
-                    // layer only during the slide so translated NativeRendering text stays crisp
+                    // one texture for the whole grid while it slides, not a re-raster per cell
                     layer.enabled: _gridSwap.running && !ShellSettings.reduceMotion
 
                     Repeater {

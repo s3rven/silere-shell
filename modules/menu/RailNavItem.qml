@@ -84,8 +84,8 @@ Item {
 
     ShellText {
         id: _iconText
-        // NativeRendering blurs on a fractional origin, so solve for the ink centre and snap
-        // the result: centreIn plus a float offset lands the glyph on a sub-pixel x every time
+        // centreIn plus a float offset lands the glyph on a sub-pixel x; solve for the
+        // ink centre and snap the result instead
         x: Math.round(parent.width / 2
             - (_ink.tightBoundingRect.x + _ink.tightBoundingRect.width / 2))
         y: Math.round((parent.height - _iconText.height) / 2)

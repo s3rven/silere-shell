@@ -39,7 +39,7 @@ ClippingRectangle {
         outlineColor: Theme.menuCardBorder
     }
 
-    // fade only: a scale leg ran as a third competing animation and resampled NativeRendering text off-pixel
+    // fade only: a scale leg ran as a third competing animation over the card
     Disclosure on opacity { expanded: Media.shown; enterEasing: Easing.OutCubic }
 
     // on reappear, text may be stranded at opacity 0 by a crossfade interrupted while hidden
