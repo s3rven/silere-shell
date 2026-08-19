@@ -13,9 +13,22 @@ Row {
     property bool compact: ShellSettings.barCompact
     property real menuAnchorX: 0
 
+    // a keybind opens with no trigger widget, so the state's fallback x has to stay fresh
+    readonly property bool _anchorFallbackBar: !!root.screen && root.screen.name === Monitors.overlayBarName
+
     function _syncMenuAnchor(): void {
         const pt = root.mapToItem(null, root.width / 2, 0)
-        if (isFinite(pt.x)) root.menuAnchorX = pt.x
+        if (!isFinite(pt.x)) return
+        root.menuAnchorX = pt.x
+        if (root._anchorFallbackBar) CalendarState.anchorX = pt.x
+    }
+    on_AnchorFallbackBarChanged: root._syncMenuAnchor()
+    Connections {
+        target: CalendarState
+        // mapToItem sees no ancestor geometry, so the cached x is a stale layout pass by now
+        function onOpenChanged() {
+            if (CalendarState.open && CalendarState.anchorSource === null) root._syncMenuAnchor()
+        }
     }
 
     onXChanged: root._syncMenuAnchor()

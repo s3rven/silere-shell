@@ -23,10 +23,21 @@ Item {
     // dependencies to the QML binding engine.
     property real menuAnchorX: 0
 
+    // a keybind opens with no trigger widget, so the states' fallback x has to stay fresh
+    readonly property bool _anchorFallbackBar: !!root.screen && root.screen.name === Monitors.overlayBarName
+
     function _syncMenuAnchor(): void {
         const pt = root.mapToItem(null, marker.centerX, 0)
-        if (isFinite(pt.x)) root.menuAnchorX = pt.x
+        if (!isFinite(pt.x)) return
+        root.menuAnchorX = pt.x
+        root._publishFallbackAnchor()
     }
+    function _publishFallbackAnchor(): void {
+        if (!root._anchorFallbackBar) return
+        MenuState.anchorX = root.menuAnchorX
+        QuickActionsState.anchorX = root.menuAnchorX
+    }
+    on_AnchorFallbackBarChanged: root._syncMenuAnchor()
 
     readonly property bool _menuTargetsThisBar: {
         const self = root.screen
@@ -305,6 +316,16 @@ Item {
     Connections {
         target: MenuState
         function onAnchorSourceChanged() { root._reclaimMenuAnchor() }
+        // mapToItem sees no ancestor geometry, so the cached x is a stale layout pass by now
+        function onOpenChanged() {
+            if (MenuState.open && MenuState.anchorSource === null) root._syncMenuAnchor()
+        }
+    }
+    Connections {
+        target: QuickActionsState
+        function onOpenChanged() {
+            if (QuickActionsState.open && QuickActionsState.anchorSource === null) root._syncMenuAnchor()
+        }
     }
 
     Component.onCompleted: {

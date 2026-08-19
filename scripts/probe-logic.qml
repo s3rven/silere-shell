@@ -597,6 +597,15 @@ ShellRoot {
         root._check(!PowerProfiles._watched,
             "closing every panel releases the power profile read")
 
+        CalendarState.anchorSource = null
+        CalendarState.anchorX = 640
+        root._check(CalendarState.effectiveAnchorX === 640,
+            "an anchorless calendar open falls back to the published anchor x")
+        QuickActionsState.anchorSource = null
+        QuickActionsState.anchorX = 512
+        root._check(QuickActionsState.effectiveAnchorX === 512,
+            "an anchorless quick actions open falls back to the published anchor x")
+
         Notifications._seen  = { "41": true, "42": true }
         Notifications._times = { "41": 1000, "42": 2000 }
         Notifications._forgetTrimmed(["41"])
