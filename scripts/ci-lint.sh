@@ -58,6 +58,38 @@ else
   ok "rail labels" "every settings nav label fits the rail without eliding"
 fi
 
+section "settings row description width"
+# A row description gets 286px next to its control, not the 358px a HintText spans, and
+# the UI font is monospace: past 47 characters it wraps and silently doubles the row's
+# height. No probe catches that, and both offenders found this way were shipped defaults.
+# 47 is the budget at 100%; raising uiScale shrinks it to ~39 and some descriptions do
+# reflow there. That is the accepted cost of larger type, not a second budget to enforce.
+# Every branch of the binding counts, so this scans literals, not just `description: "…"`.
+# A binding continues onto the next line only when that line opens with an operator;
+# anything else ends it, or the scan swallows the `key:` below and reports it as a
+# description.
+desc_over="$(find modules -name '*.qml' -exec awk '
+  function flush(   lit) {
+    while (match(buf, /"[^"]*"/)) {
+      lit = substr(buf, RSTART + 1, RLENGTH - 2)
+      if (length(lit) > 47) printf "  %s:%d  (%d chars) %s\n", file, line, length(lit), lit
+      buf = substr(buf, RSTART + RLENGTH)
+    }
+    buf = ""
+  }
+  FNR == 1 { if (collecting) flush(); collecting = 0 }
+  collecting && $0 ~ /^[[:space:]]*[+?:]/ { buf = buf $0; next }
+  collecting { flush(); collecting = 0 }
+  /description:/ { collecting = 1; buf = $0; line = FNR; file = FILENAME }
+  END { if (collecting) flush() }
+' {} + || true)"
+if [ -n "$desc_over" ]; then
+  fail "these row descriptions exceed the 47-character budget and will wrap:"
+  printf '%s\n' "$desc_over"
+else
+  ok "row descriptions" "every settings row description fits on one line"
+fi
+
 section "invisible characters in source"
 # Silere strips bidi controls out of every string another program hands it. The same
 # characters in Silere's own source are the Trojan Source problem: they reorder how a
