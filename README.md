@@ -197,6 +197,8 @@ To inspect startup errors directly, run `qs -p shell.qml`.
 
 **Icons or text use the wrong font.** Install a Nerd Font such as `ttf-jetbrains-mono-nerd`, then refresh the user font cache.
 
+**Text has coloured fringes on a fractionally scaled display.** Start Silere with `QSG_DISTANCEFIELD_ANTIALIASING=gray` in its environment.
+
 **Brightness controls the wrong screen.** On hybrid laptops with several backlights, pick the right display under Settings › Interface.
 
 **A shell update is blocked by local edits.** Preview them with `bash scripts/repair.sh`. Running it with `--apply` saves the edits in a reversible Git stash and restores the shipped files; `--undo` restores the latest saved repair.
