@@ -58,6 +58,15 @@ Singleton {
         return root.barEdgeInset + ShellSettings.barHeight + Math.max(0, extraGap)
     }
 
+    // nothing to clear on a screen with the bar off; a null screen is still settling, so it keeps the full clearance
+    function barPresent(screen): bool {
+        return !screen || Monitors.barEnabled(screen)
+    }
+
+    function popupClearanceOn(screen, extraGap: real): real {
+        return root.barPresent(screen) ? root.popupClearance(extraGap) : Math.max(6, extraGap)
+    }
+
     // takes the clearance, not the gap: a surface that animates its own inset must pass the live value
     function popupY(windowHeight: real, popupHeight: real, atBottom: bool, edge: real): real {
         return Math.round(atBottom ? windowHeight - edge - popupHeight : edge)

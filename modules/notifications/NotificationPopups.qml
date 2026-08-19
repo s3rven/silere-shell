@@ -21,11 +21,12 @@ PanelWindow {
     readonly property int _shadowPad: ShellSettings.barShadow ? 16 : 0
     readonly property int _cardW: Math.max(180, Math.min(320,
         targetScreen ? targetScreen.width - 24 - _shadowPad : 320))
-    readonly property real _barSideGap: ShellSettings.barFloating && targetScreen
+    readonly property bool _hasBar: Metrics.barPresent(targetScreen)
+    readonly property real _barSideGap: ShellSettings.barFloating && _hasBar && targetScreen
         ? 4 * Math.round(targetScreen.width * (1.0 - ShellSettings.barWidth) / 8)
         : 0
-    readonly property real _edgeMargin: ShellSettings.barFloating ? Math.max(0, _barSideGap) : 10
-    readonly property int _barClearance: Metrics.popupClearance(6)
+    readonly property real _edgeMargin: ShellSettings.barFloating && _hasBar ? Math.max(0, _barSideGap) : 10
+    readonly property int _barClearance: Metrics.popupClearanceOn(targetScreen, 6)
     readonly property int _availableH: targetScreen
         ? Math.max(64, Math.floor(targetScreen.height - _barClearance - 12)) : 640
     readonly property int _availableContentH: Math.max(48,
@@ -133,8 +134,8 @@ PanelWindow {
     }
 
     margins {
-        top:    win._barBottom ? 6 : Metrics.popupClearance(2)
-        bottom: win._barBottom ? Metrics.popupClearance(2) : 0
+        top:    win._barBottom ? 6 : Metrics.popupClearanceOn(win.targetScreen, 2)
+        bottom: win._barBottom ? Metrics.popupClearanceOn(win.targetScreen, 2) : 0
         right: win._pos === "top-right" ? Math.max(0, win._edgeMargin - win._shadowPad) : 0
         left:  win._left              ? Math.max(0, win._edgeMargin - win._shadowPad) : 0
     }
