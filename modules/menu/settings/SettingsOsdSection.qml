@@ -6,7 +6,12 @@ Column {
     width: parent ? parent.width : 0
     spacing: 0
 
-    SectionLabel { label: "GENERAL"; first: true }
+    // pairs with FEEDBACK below: both headings appear together, so a lone card is never labelled
+    CollapsibleSection {
+        expanded: ShellSettings.osdEnabled
+        SectionLabel { label: "GENERAL"; first: true }
+    }
+
     SettingsCard {
         ToggleRow {
             glyph: "󱀅"; label: "On-screen display"
