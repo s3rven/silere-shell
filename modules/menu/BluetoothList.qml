@@ -16,6 +16,7 @@ Item {
     implicitHeight: _col.implicitHeight
 
     property string _armedAddr: ""
+    property real _armedAtMs: 0
     Timer { id: _disarmTimer; interval: 3000; onTriggered: root._armedAddr = "" }
 
     property bool _searchLapsed: false
@@ -127,11 +128,14 @@ Item {
                         Bluetooth.cancelPair(addr)
                     } else if (modelData.connected) {
                         if (root._armedAddr === addr) {
+                            // TapHandler fires once per tap, so a double-click would arm and confirm in one gesture
+                            if (Date.now() - root._armedAtMs < Metrics.confirmGuardMs) return
                             root._armedAddr = ""
                             _disarmTimer.stop()
                             Bluetooth.disconnectDevice(addr)
                         } else {
                             root._armedAddr = addr
+                            root._armedAtMs = Date.now()
                             _disarmTimer.restart()
                         }
                     } else if (modelData.paired) {
