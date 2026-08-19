@@ -66,7 +66,10 @@ Column {
             SliderRow {
                 glyph: "󱓻"; label: "Roundness"
                 key: "barRadius"
-                displayValue: ShellSettings.barRadius === 0 ? "Flat" : ShellSettings.barRadius + "px"
+                // the bar caps its corners at half its height; the raw number overstates past that
+                displayValue: ShellSettings.barRadius === 0 ? "Flat"
+                    : ShellSettings.barRadius >= ShellSettings.barHeight / 2 ? "Round"
+                    : ShellSettings.barRadius + "px"
             }
         }
     }
