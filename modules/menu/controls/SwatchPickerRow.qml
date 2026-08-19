@@ -11,6 +11,7 @@ Item {
     property alias options: _sr.options
     property alias colors: _sr.colors
     property alias activeIndex: _sr.activeIndex
+    property alias outlined: _sr.outlined
     property alias ringColor: _sr.ringColor
     property bool tintedReadout: false
 

@@ -1,5 +1,6 @@
 import QtQuick
 import "../../../config"
+import "../../common"
 
 Item {
     id: root
@@ -7,6 +8,7 @@ Item {
     property color  chipColor: Theme.accent
     property color  ringColor: chipColor
     property bool   active:    false
+    property bool   outlined:  false
     property string name:      ""
     property string groupLabel: ""
     default property alias content: _chip.data
@@ -43,5 +45,12 @@ Item {
         scale: _t.pressed ? 0.90 : _h.hovered ? 1.04 : 1.0
         transformOrigin: Item.Center
         MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+
+        // a circle is all corner, so Rectangle.border over-weights its whole perimeter
+        OutlineBorder {
+            radius: width / 2
+            outlineWidth: 1
+            outlineColor: root.outlined ? Theme.swatchEdge : "transparent"
+        }
     }
 }

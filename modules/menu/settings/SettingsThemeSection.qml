@@ -348,6 +348,7 @@ Column {
                    Theme.mix(MatugenTheme.background, "#000000", Theme._depths.none)]
             activeIndex: options.findIndex(o => o.value ===
                 (_neutral ? ShellSettings.baseTone : ShellSettings.matugenDepth))
+            outlined: true
             ringColor: Theme.accent
             onPicked: (i) => {
                 if (_neutral) ShellSettings.baseTone = options[i].value

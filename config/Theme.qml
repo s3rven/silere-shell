@@ -99,6 +99,9 @@ Singleton {
     readonly property color menuTrack:       _hc ? withAlpha(text, 0.22)
                                                 : _n ? withAlpha(_lineBase, 0.14)
                                                      : withAlpha(_lineBase, 0.16)
+    // not lineAlpha: the base swatches sit within 1 L* of their card, so this edge is what
+    // makes them countable at all and must survive outline strength being turned down
+    readonly property color swatchEdge:      withAlpha(text, _hc ? 0.34 : 0.20)
     readonly property color menuTextMuted:   mix(subtext, text, _hc ? 0.45 : (_n ? 0.30 : 0.24))
     readonly property color menuTextFaint:   mix(subtext, text, _hc ? 0.25 : (_n ? 0.15 : 0.10))
     // row descriptions and hints: 10px type against a near-black card, so the sink that

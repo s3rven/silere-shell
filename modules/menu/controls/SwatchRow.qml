@@ -10,6 +10,7 @@ Item {
     property var options: []
     property var colors: []
     property int activeIndex: -1
+    property bool outlined: false
     property bool spread: false
     property int edgePadding: 4
     property color ringColor: "transparent"
@@ -63,6 +64,7 @@ Item {
                 ringColor: root.ringColor.a > 0 ? root.ringColor : chipColor
                 name:      modelData.name ?? ""
                 groupLabel: root.groupLabel
+                outlined:  root.outlined
                 active:    index === root.activeIndex
                 onPicked:  root.picked(index)
                 onHoverChanged: (n, h) => {
