@@ -1,5 +1,6 @@
 # containers and layout
 CollapsibleSection 1.0 CollapsibleSection.qml
+EntryList          1.0 EntryList.qml
 InlinePicker       1.0 InlinePicker.qml
 PageShell          1.0 PageShell.qml
 RowDividers        1.0 RowDividers.qml

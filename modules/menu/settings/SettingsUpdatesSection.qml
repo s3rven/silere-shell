@@ -3,7 +3,6 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import "../../../config"
 import "../../../services"
-import "../../common"
 import "../controls"
 
 Column {
@@ -14,10 +13,6 @@ Column {
     property bool _changesOpen: false
     property bool _recentOpen: false
     property bool _installArmed: false
-
-    // commit and package entries scroll inside a capped list with no dividers, so they
-    // track the text rather than the row grid every other settings row snaps to
-    readonly property int _entryH: Math.max(22, Settings.capHeight + 8)
 
     function _disarmInstall(): void {
         root._installArmed = false
@@ -138,50 +133,11 @@ Column {
             }
             CollapsibleSection {
                 expanded: root._changesOpen && root._changesAvailable
-                Item {
-                    width: parent ? parent.width : 0
-                    height: Math.min(_commits.contentHeight, 240)
-
-                    ShellListView {
-                        id: _commits
-                        anchors.fill: parent
-                        interactive: contentHeight > height
-                        spacing: 0
-                        model: root._changesOpen && root._changesAvailable
-                            ? ShellUpdate.pendingCommits : []
-
-                        delegate: Item {
-                            id: _commit
-                            required property var modelData
-                            width: parent ? parent.width : 0
-                            height: root._entryH
-                            ShellText {
-                                anchors.left: parent.left
-                                anchors.leftMargin: 42
-                                anchors.right: _hash.left
-                                anchors.rightMargin: 8
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: _commit.modelData.subject
-                                elide: Text.ElideRight
-                                color: Theme.withAlpha(Theme.text, 0.80)
-                                font.pixelSize: Settings.fontLabel
-                            }
-                            ShellText {
-                                id: _hash
-                                anchors.right: parent.right
-                                anchors.rightMargin: 12
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: _commit.modelData.hash
-                                color: Theme.withAlpha(Theme.subtext, 0.55)
-                                font.pixelSize: Settings.fontCaption
-                            }
-                        }
-                    }
-
-                    ListEdgeLines {
-                        anchors.fill: parent
-                        list: _commits
-                    }
+                EntryList {
+                    model: root._changesOpen && root._changesAvailable
+                        ? ShellUpdate.pendingCommits : []
+                    textRole: "subject"
+                    trailingRole: "hash"
                 }
             }
 
@@ -198,49 +154,10 @@ Column {
             }
             CollapsibleSection {
                 expanded: root._recentOpen
-                Item {
-                    width: parent ? parent.width : 0
-                    height: Math.min(_recent.contentHeight, 240)
-
-                    ShellListView {
-                        id: _recent
-                        anchors.fill: parent
-                        interactive: contentHeight > height
-                        spacing: 0
-                        model: root._recentOpen ? ShellUpdate.recentCommits : []
-
-                        delegate: Item {
-                            id: _rc
-                            required property var modelData
-                            width: parent ? parent.width : 0
-                            height: root._entryH
-                            ShellText {
-                                anchors.left: parent.left
-                                anchors.leftMargin: 42
-                                anchors.right: _rcHash.left
-                                anchors.rightMargin: 8
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: _rc.modelData.subject
-                                elide: Text.ElideRight
-                                color: Theme.withAlpha(Theme.text, 0.80)
-                                font.pixelSize: Settings.fontLabel
-                            }
-                            ShellText {
-                                id: _rcHash
-                                anchors.right: parent.right
-                                anchors.rightMargin: 12
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: _rc.modelData.hash
-                                color: Theme.withAlpha(Theme.subtext, 0.55)
-                                font.pixelSize: Settings.fontCaption
-                            }
-                        }
-                    }
-
-                    ListEdgeLines {
-                        anchors.fill: parent
-                        list: _recent
-                    }
+                EntryList {
+                    model: root._recentOpen ? ShellUpdate.recentCommits : []
+                    textRole: "subject"
+                    trailingRole: "hash"
                 }
             }
 
@@ -299,51 +216,13 @@ Column {
         }
         CollapsibleSection {
             expanded: root._listOpen && root._packagesAvailable
-            Item {
-                width: parent ? parent.width : 0
-                height: Math.min(_packages.contentHeight, 240)
-
-                ShellListView {
-                    id: _packages
-                    anchors.fill: parent
-                    interactive: contentHeight > height
-                    spacing: 0
-                    model: root._listOpen && root._packagesAvailable
-                        ? Updates.packages : []
-
-                    delegate: Item {
-                        id: _pkg
-                        required property var modelData
-                        width: parent ? parent.width : 0
-                        height: root._entryH
-                        ShellText {
-                            anchors.left: parent.left
-                            anchors.leftMargin: 42
-                            anchors.right: _ver.left
-                            anchors.rightMargin: 8
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: _pkg.modelData.name
-                            elide: Text.ElideRight
-                            color: Theme.withAlpha(Theme.text, 0.80)
-                            font.pixelSize: Settings.fontLabel
-                        }
-                        ShellText {
-                            id: _ver
-                            anchors.right: parent.right
-                            anchors.rightMargin: 12
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: _pkg.modelData.to + (_pkg.modelData.aur ? "  AUR" : "")
-                            color: Theme.withAlpha(Theme.subtext,
-                                _pkg.modelData.aur ? 0.75 : 0.55)
-                            font.pixelSize: Settings.fontCaption
-                        }
-                    }
-                }
-
-                ListEdgeLines {
-                    anchors.fill: parent
-                    list: _packages
-                }
+            EntryList {
+                model: root._listOpen && root._packagesAvailable
+                    ? Updates.packages : []
+                textRole: "name"
+                trailingRole: "to"
+                emphasisRole: "aur"
+                trailingSuffix: "AUR"
             }
         }
         ToggleRow {
