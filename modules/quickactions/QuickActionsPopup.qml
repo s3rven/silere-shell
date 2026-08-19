@@ -170,7 +170,11 @@ PanelWindow {
         barBottom: QuickActionsState.barBottom
 
         readonly property int pad: 6
-        readonly property int contentW: 236
+        // label and state pill both grow with the font, so a fixed width elides three of the
+        // four rows at raised uiScale. never below 236: the pill's padding and floor do not
+        // shrink with the font, so scaling down costs the label more than it saves
+        readonly property int contentW: Math.max(236,
+            Metrics.snap4(236 * Settings.fontSize / 12))
         width: contentW + pad * 2
         height: _rows.implicitHeight + pad * 2
 

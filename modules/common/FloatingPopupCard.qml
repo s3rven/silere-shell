@@ -31,8 +31,9 @@ Rectangle {
         NumberAnimation { duration: Motion.barMorph; easing.type: Easing.OutCubic }
     }
     readonly property real _edgeY: _barInset + ShellSettings.barHeight + 8
-    readonly property real _minX: radius + 4
-    readonly property real _maxX: Math.max(_minX, win.width - targetWidth - _minX)
+    readonly property real _minX: Metrics.snap4Up(radius + 4)
+    readonly property real _maxX: Math.max(_minX,
+        Metrics.snap4Down(win.width - targetWidth - _minX))
 
     property real scaleAmt: 1
     property real edgeOffset: 0
@@ -89,13 +90,13 @@ Rectangle {
     }
     function _targetX(): real {
         const t = Math.max(0, Math.min(win.width, anchorX))
-        return Math.round(_clampedX(t - targetWidth * t / Math.max(1, win.width)))
+        return Metrics.snap4(_clampedX(t - targetWidth * t / Math.max(1, win.width)))
     }
     function place(): void {
         x = _targetX()
     }
     function reclamp(): void {
-        const nx = Math.round(_clampedX(x))
+        const nx = Metrics.snap4(_clampedX(x))
         if (Math.abs(nx - x) <= 0.5) return
         // Clamp corrections are geometry invariants, not placement motion.
         // Snapping also avoids retargeting x on every radius-animation frame.

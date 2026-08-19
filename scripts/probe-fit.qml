@@ -10,7 +10,7 @@ ShellRoot {
     id: root
 
     property string base: String(Quickshell.env("FIT_ROOT") || "")
-    property int contentWidth: Number(Quickshell.env("FIT_W") || 386)
+    property int contentWidth: Number(Quickshell.env("FIT_W") || 388)
     property var paths: String(Quickshell.env("FIT_LIST") || "")
         .split("\n").filter(p => p.length > 0)
 

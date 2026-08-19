@@ -87,16 +87,18 @@ PanelWindow {
         animatePlacement: false
         clip: true
 
-        readonly property int _compactW: 398
-        readonly property int _powerW: 566
-        readonly property int _settingsW: 630
+        // every panel width stays on the 4px grid, or the outline's right edge lands on a
+        // half output px at fractional scale and rasterizes wider than its left
+        readonly property int _compactW: 400
+        readonly property int _powerW: 568
+        readonly property int _settingsW: 632
         readonly property bool _settingsNavVisible:
             activeTab === 1 && !powerOpen
         readonly property bool _railExpanded: _settingsNavVisible || powerOpen
         readonly property int _targetPanelW: activeTab === 1 ? _settingsW
             : powerOpen ? _powerW : _compactW
         readonly property int _availablePanelW: win.width > 0
-            ? Math.max(1, Math.floor(win.width - _minX * 2))
+            ? Math.max(4, Metrics.snap4Down(win.width - _minX * 2))
             : _settingsW
         readonly property int panelW: Math.max(1,
             Math.min(_targetPanelW, _availablePanelW))
@@ -107,7 +109,7 @@ PanelWindow {
         readonly property int _navMaxW: 160
         readonly property int navW: {
             const available = panelW - railCollapsedW
-            const desired = Math.max(_navMinW, Math.round(panelW * 0.28))
+            const desired = Math.max(_navMinW, Metrics.snap4(panelW * 0.28))
             const detailSafe = Math.max(_navMinW, available - 224)
             const sidebarFit = Math.max(0, available - 96)
             return Math.max(0, Math.min(_navMaxW, desired, detailSafe, sidebarFit))
@@ -130,7 +132,7 @@ PanelWindow {
         readonly property int contentW: Math.max(1, Math.round(width - railW))
         readonly property int contentPad: activeTab === 1
             ? Math.max(12, Math.min(20,
-                Math.round(12 + (width - 398) * 8 / 232)))
+                Metrics.snap4(12 + (width - _compactW) * 8 / (_settingsW - _compactW))))
             : _railExpanded && width >= 460 ? 18 : 12
         readonly property int innerW: Math.max(1, contentW - contentPad * 2)
         readonly property int idealMinH: 360

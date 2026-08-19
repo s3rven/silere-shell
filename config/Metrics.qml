@@ -43,6 +43,12 @@ Singleton {
             + Math.max(0, Settings.capHeight - Settings.capHeightBase)) / 4)
     }
 
+    // same grid, for edges rather than rows: a span off the 4px grid puts its two borders on
+    // opposite sub-pixel phases, and the one that lands on a half output px rasterizes twice as wide
+    function snap4(v: real): int     { return 4 * Math.round(v / 4) }
+    function snap4Up(v: real): int   { return 4 * Math.ceil(v / 4) }
+    function snap4Down(v: real): int { return 4 * Math.floor(v / 4) }
+
     // fixed icon cell: Nerd glyph ink spans 0.64-1.08x the px size, so a natural-width slot shoves the row on every glyph swap
     function iconCellFor(pixelSize: int): int { return Math.ceil(pixelSize * 1.1) }
 

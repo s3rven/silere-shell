@@ -14,11 +14,11 @@ trap on_interrupt INT TERM
 # only proves the section instantiates. This builds each one at the width the
 # detail pane actually ships at and fails if Qt marks any text truncated.
 #
-# 386 is derived, not chosen: the settings panel targets 630, the rail takes 44
+# 388 is derived, not chosen: the settings panel targets 632, the rail takes 44
 # plus a nav column capped at 160, and the pane pads 20 a side — see
 # MenuWindow's panelW/navW/contentPad. Narrower than this only happens on a
 # screen under roughly 700px wide, where status text is expected to elide.
-CONTENT_WIDTH="${FIT_W:-386}"
+CONTENT_WIDTH="${FIT_W:-388}"
 PROBE="scripts/probe-fit.qml"
 
 if ! command -v qs >/dev/null 2>&1; then
