@@ -13,6 +13,9 @@ Item {
     property bool selected: false
     property bool highlighted: false
     property bool warning: false
+    // an arm-to-confirm prompt and a refused connection are both "attention", but one is
+    // asking and the other is reporting; they must not share a colour
+    property bool failed: false
     property bool interactive: true
     property string labelFontFamily: Settings.font
     property Component preview: null
@@ -22,6 +25,8 @@ Item {
 
     readonly property int rowHeight: Metrics.rowHeightFor(32)
     readonly property bool _hot: _hover.hovered || _tap.pressed
+    readonly property bool  _attentive: root.warning || root.failed
+    readonly property color _attention: root.failed ? Theme.error : Theme.warning
 
     function trigger(): void {
         if (root.enabled && root.interactive) root.triggered()
@@ -49,8 +54,8 @@ Item {
     Rectangle {
         id: _fill
         anchors.fill: parent
-        color: root.warning
-            ? Theme.withAlpha(Theme.warning,
+        color: root._attentive
+            ? Theme.withAlpha(root._attention,
                 root._hot ? 0.10 : root.selected ? 0.085 : 0.055)
             : root.selected
                 ? Theme.withAlpha(root.accentColor,
@@ -74,7 +79,7 @@ Item {
         visible: root.preview === null
         horizontalAlignment: Text.AlignHCenter
         text: root.glyph
-        color: root.warning ? Theme.warning
+        color: root._attentive ? root._attention
             : root.selected || root.highlighted ? root.accentColor
             : Theme.withAlpha(Theme.subtext, 0.78)
         font.pixelSize: Settings.iconSize + 1
@@ -118,11 +123,11 @@ Item {
         horizontalAlignment: Text.AlignRight
         text: root.status
         elide: Text.ElideRight
-        color: root.warning ? Theme.warning
+        color: root._attentive ? root._attention
             : root.selected ? Theme.mix(root.accentColor, Theme.text, 0.14)
             : Theme.withAlpha(Theme.subtext, root._hot ? 0.70 : 0.54)
         font.pixelSize: Settings.fontCaption
-        font.weight: root.warning || root.selected ? Font.Medium : Font.Normal
+        font.weight: root._attentive || root.selected ? Font.Medium : Font.Normal
         ColorFade on color {}
     }
 
@@ -134,7 +139,7 @@ Item {
         width: root.selected ? 18 : 0
         horizontalAlignment: Text.AlignHCenter
         text: "󰄬"
-        color: root.warning ? Theme.warning : root.accentColor
+        color: root._attentive ? root._attention : root.accentColor
         font.pixelSize: Settings.fontSize
         opacity: root.selected ? 0.90 : 0.0
         MotionBehavior on width { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
