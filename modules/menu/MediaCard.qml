@@ -309,7 +309,9 @@ ClippingRectangle {
 
         ShellText {
             id: _elapsedLabel
-            width: _totalLabel.implicitWidth
+            // matches the total so the bar sits centred, but never below its own text: an
+            // unknown length pairs a placeholder total with an elapsed time that outgrows it
+            width: Math.max(implicitWidth, _totalLabel.implicitWidth)
             horizontalAlignment: Text.AlignRight
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
@@ -321,7 +323,8 @@ ClippingRectangle {
             id: _totalLabel
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            text:           Media.lengthKnown ? Media.formatTime(Media.length) : "LIVE"
+            text:           Media.lengthKnown ? Media.formatTime(Media.length)
+                            : Media.endless ? "LIVE" : "--:--"
             color:          Theme.withAlpha(Theme.text, 0.55)
             font.pixelSize: Settings.fontMicro
         }

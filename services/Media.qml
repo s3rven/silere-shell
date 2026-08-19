@@ -108,6 +108,10 @@ Singleton {
     readonly property real _rawLength:  (player && player.lengthSupported)
         ? root.finiteNonnegative(player.length) : 0
     readonly property bool lengthKnown: _rawLength > 0 && _rawLength <= 86400
+    // only the sentinel means endless; a browser reports 0 between videos and through an
+    // ad break, and calling that live claims something about the track instead of admitting
+    // the length is not known yet
+    readonly property bool endless:     _rawLength > 86400
     readonly property real length:      lengthKnown ? _rawLength : 0
     readonly property bool canSeek:     player ? player.canSeek : false
     // position still ticks without a length; only the ratio and the seek bar need one
