@@ -89,30 +89,126 @@ Singleton {
         }
     }
 
+    // BlueZ signals a refused connect or pair only by dropping back to idle, so an attempt is tracked until it lands
+    property string errorAddr: ""
+    property string errorKind: ""
+    property string _pendingAddr: ""
+    property string _pendingKind: ""
+    property bool   _pendingStarted: false
+
+    readonly property var _pendingDevice: {
+        if (root._pendingAddr === "") return null
+        for (let i = 0; i < root._devices.length; i++) {
+            const d = root._devices[i]
+            if (d && d.address === root._pendingAddr) return d
+        }
+        return null
+    }
+    readonly property int  _pendingState:     root._pendingDevice ? root._pendingDevice.state : -1
+    readonly property bool _pendingConnected: root._pendingDevice ? !!root._pendingDevice.connected : false
+    readonly property bool _pendingPaired:    root._pendingDevice ? !!root._pendingDevice.paired : false
+    readonly property bool _pendingPairing:   root._pendingDevice ? !!root._pendingDevice.pairing : false
+
+    on_PendingStateChanged:     root._settlePending()
+    on_PendingConnectedChanged: root._settlePending()
+    on_PendingPairedChanged:    root._settlePending()
+    on_PendingPairingChanged:   root._settlePending()
+
+    // started guards the gap before BlueZ moves the device, which would otherwise read as an instant failure
+    function _attemptOutcome(kind: string, started: bool, connected: bool, paired: bool,
+                             pairing: bool, state: int): string {
+        if (kind === "pair") {
+            if (paired) return "ok"
+            if (pairing) return ""
+            return started ? "failed" : ""
+        }
+        if (connected) return "ok"
+        if (state === Bt.BluetoothDeviceState.Connecting) return ""
+        return started ? "failed" : ""
+    }
+
+    function clearError(): void {
+        root.errorAddr = ""
+        root.errorKind = ""
+    }
+
+    // nothing watches an attempt once its list is gone, and the guard would still fire
+    // minutes later and paint a stale failure on the next open
+    function abandonAttempt(): void {
+        root._endAttempt()
+        root.clearError()
+    }
+
+    function _beginAttempt(address: string, kind: string): void {
+        root.clearError()
+        root._pendingAddr = address
+        root._pendingKind = kind
+        root._pendingStarted = false
+        _attemptGuard.restart()
+    }
+
+    function _endAttempt(): void {
+        _attemptGuard.stop()
+        root._pendingAddr = ""
+        root._pendingKind = ""
+        root._pendingStarted = false
+    }
+
+    function _settlePending(): void {
+        if (root._pendingAddr === "") return
+        if (root._pendingKind === "pair") {
+            if (root._pendingPairing) root._pendingStarted = true
+        } else if (root._pendingState === Bt.BluetoothDeviceState.Connecting) {
+            root._pendingStarted = true
+        }
+
+        const outcome = root._attemptOutcome(root._pendingKind, root._pendingStarted,
+            root._pendingConnected, root._pendingPaired, root._pendingPairing, root._pendingState)
+        if (outcome === "") return
+        if (outcome === "failed") {
+            root.errorAddr = root._pendingAddr
+            root.errorKind = root._pendingKind
+        }
+        root._endAttempt()
+    }
+
+    // an attempt that never moves the device would otherwise hold the row on its
+    // in-progress label forever
+    Timer {
+        id: _attemptGuard
+        interval: 20000
+        onTriggered: {
+            if (root._pendingAddr === "") return
+            root.errorAddr = root._pendingAddr
+            root.errorKind = root._pendingKind
+            root._endAttempt()
+        }
+    }
+
     // dispatch by address through the raw _devices array to reach the live C++ object, not a sorted JS copy
     function connectDevice(address: string): void {
         for (let i = 0; i < _devices.length; i++) {
             const d = _devices[i]
-            if (d && d.address === address) { d.connect(); return }
+            if (d && d.address === address) { root._beginAttempt(address, "connect"); d.connect(); return }
         }
     }
     function disconnectDevice(address: string): void {
         for (let i = 0; i < _devices.length; i++) {
             const d = _devices[i]
-            if (d && d.address === address) { d.disconnect(); return }
+            if (d && d.address === address) { root._endAttempt(); root.clearError(); d.disconnect(); return }
         }
     }
     function pairDevice(address: string): void {
         if (adapter) adapter.pairable = true
         for (let i = 0; i < _devices.length; i++) {
             const d = _devices[i]
-            if (d && d.address === address) { d.pair(); return }
+            if (d && d.address === address) { root._beginAttempt(address, "pair"); d.pair(); return }
         }
     }
     function cancelPair(address: string): void {
         for (let i = 0; i < _devices.length; i++) {
             const d = _devices[i]
-            if (d && d.address === address) { d.cancelPair(); return }
+            if (d && d.address === address) { root._endAttempt(); root.clearError(); d.cancelPair(); return }
         }
     }
 }

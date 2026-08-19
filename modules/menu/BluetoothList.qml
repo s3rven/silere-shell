@@ -32,15 +32,19 @@ Item {
         if (!Bluetooth.available || !Bluetooth.enabled) {
             _disarmTimer.stop()
             root._armedAddr = ""
+            Bluetooth.abandonAttempt()
         }
     }
 
     onOpenChanged: {
         _syncScanState()
-        if (!open) { _disarmTimer.stop(); root._armedAddr = "" }
+        if (!open) { _disarmTimer.stop(); root._armedAddr = ""; Bluetooth.abandonAttempt() }
     }
     Component.onCompleted: _syncScanState()
-    Component.onDestruction: Bluetooth.setScan(false)
+    Component.onDestruction: {
+        Bluetooth.setScan(false)
+        Bluetooth.abandonAttempt()
+    }
 
     Connections {
         target: Bluetooth
@@ -98,6 +102,7 @@ Item {
                 width: _list.width
 
                 readonly property bool   _armed: root._armedAddr === modelData.address && modelData.connected
+                readonly property bool   _failed: Bluetooth.errorAddr === modelData.address
                 readonly property int _batt: Bluetooth.batteryPercent(modelData)
                 readonly property string _state:
                     _armed ? "Disconnect?"
@@ -105,6 +110,7 @@ Item {
                     : modelData.state === Bt.BluetoothDeviceState.Connecting    ? "Connecting…"
                     : modelData.state === Bt.BluetoothDeviceState.Disconnecting ? "Disconnecting…"
                     : modelData.connected ? (_batt >= 0 ? _batt + "%" : "Connected")
+                    : _row._failed ? (Bluetooth.errorKind === "pair" ? "Pairing failed" : "Failed")
                     : modelData.paired    ? "Paired"
                     : "Pair"
 
@@ -113,6 +119,7 @@ Item {
                 status: _state
                 selected: modelData.connected
                 warning: _armed || modelData.pairing
+                failed:  _failed
 
                 function _activate(): void {
                     const addr = modelData.address
