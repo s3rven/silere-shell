@@ -27,8 +27,8 @@ Only work since the latest release is listed here. Completed notes move to
 ### Fixed
 
 - A docked bar casts a shadow when Shell shadows is on.
+- Bar Roundness is reachable while the bar is docked, and reads Round once the corners reach half its height.
 - Keybinds open the menu, calendar and quick actions under the widget that opens them, not at the screen edge.
-- Bar Roundness reads Round once the corners reach half the bar's height, instead of a number the bar cannot draw.
 - Notification history no longer holds read-state for notifications it has already dropped.
 - A double-click on a connected Bluetooth device no longer disconnects it in one gesture.
 - Notifications and the OSD sit at the edge of a monitor whose bar is turned off, rather than clearing a bar that is not on it.

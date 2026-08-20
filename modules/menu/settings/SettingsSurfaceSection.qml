@@ -27,6 +27,16 @@ Column {
             ]
             onChosen: (v) => ShellSettings.barHeight = v
         }
+        // not under the floating gate: widget hover capsules and the OSD pill take this
+        // radius while docked, where the bar's own corners are multiplied away
+        SliderRow {
+            glyph: "󱓻"; label: "Roundness"
+            key: "barRadius"
+            // the bar caps its corners at half its height; the raw number overstates past that
+            displayValue: ShellSettings.barRadius === 0 ? "Flat"
+                : ShellSettings.barRadius >= ShellSettings.barHeight / 2 ? "Round"
+                : ShellSettings.barRadius + "px"
+        }
         SliderRow {
             glyph: "󰗌"; label: "Opacity"
             key: "barOpacity"
@@ -61,15 +71,6 @@ Column {
                 key: "barGap"
                 step: 4
                 displayValue: ShellSettings.barGap === 0 ? "None" : ShellSettings.barGap + "px"
-            }
-            // only the floating bar paints its own corners; docked multiplies the radius by 0
-            SliderRow {
-                glyph: "󱓻"; label: "Roundness"
-                key: "barRadius"
-                // the bar caps its corners at half its height; the raw number overstates past that
-                displayValue: ShellSettings.barRadius === 0 ? "Flat"
-                    : ShellSettings.barRadius >= ShellSettings.barHeight / 2 ? "Round"
-                    : ShellSettings.barRadius + "px"
             }
         }
     }
