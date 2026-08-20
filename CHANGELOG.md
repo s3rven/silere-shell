@@ -14,10 +14,15 @@ Only work since the latest release is listed here. Completed notes move to
 ### Added
 
 - A Bluetooth device that refuses to connect or pair now says so on its row.
+- Quick actions carries Wi-Fi and Bluetooth toggles alongside airplane mode.
+- Appearance › Interface sets the size of tray and workspace app icons.
 
 ### Changed
 
 - Disconnecting the current Wi-Fi network takes a second tap to confirm.
+- The Mix accent swatch shows a colour wheel.
+- Notification popups widen with the interface scale.
+- The notification list grows with the history it holds, up to the room the screen has.
 
 ### Fixed
 
@@ -27,6 +32,17 @@ Only work since the latest release is listed here. Completed notes move to
 - A double-click on a connected Bluetooth device no longer disconnects it in one gesture.
 - Notifications and the OSD sit at the edge of a monitor whose bar is turned off, rather than clearing a bar that is not on it.
 - Popup borders draw at the same weight on every side.
+- The Home page's power tile says when the active profile is throttled.
+- The power rail's mode value no longer crowds out its label at larger font sizes.
+- The AUR toggle in Updates settings stays hidden until the updates widget itself is on.
+- OSD settings no longer labels a lone section GENERAL when Feedback isn't shown beside it.
+- A track with an unknown length shows --:-- instead of LIVE.
+- Switching media players skips a browser session that has already stopped.
+- The media card sits evenly in its padding.
+- Small slider handles keep the shell's squared-off shape.
+- Clicking anywhere on the media art jumps to the player.
+- The bar clears the window title on an empty workspace.
+- Leaving a fullscreen window for an empty workspace lets notifications through again.
 
 ## Releases
 
