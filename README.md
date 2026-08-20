@@ -193,6 +193,8 @@ To inspect startup errors directly, run `qs -p shell.qml`.
 
 **It installed but nothing appears.** Silere runs on Hyprland and niri only. On either of those it is nearly always the autostart line — run `qs -p ~/.config/silere-shell/shell.qml` to check. If the bar comes up, add that command to your compositor's startup (`exec-once` on Hyprland, `spawn-at-startup` on niri) and restart it.
 
+**It stopped working after a system update.** A Qt update can leave the installed Quickshell unable to run, because it builds against Qt's private API. Reinstall Quickshell to rebuild it against the new Qt; `bash scripts/check.sh` reports this as its first failure.
+
 **Notifications never appear.** Another daemon already owns `org.freedesktop.Notifications`. Silere works out which one and says so in an alert naming the process, a few seconds after start.
 
 **Icons or text use the wrong font.** Install a Nerd Font such as `ttf-jetbrains-mono-nerd`, then refresh the user font cache.
