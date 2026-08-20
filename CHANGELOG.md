@@ -32,6 +32,7 @@ Only work since the latest release is listed here. Completed notes move to
 - The low-battery and high-temperature thresholds stay reachable with their warnings off.
 - The Opacity slider under Dividers appears while the window title draws a separator.
 - The centre visualiser can be aligned without the window title switched on.
+- The bar Opacity readout matches what high contrast renders.
 - Keybinds open the menu, calendar and quick actions under the widget that opens them, not at the screen edge.
 - Notification history no longer holds read-state for notifications it has already dropped.
 - A double-click on a connected Bluetooth device no longer disconnects it in one gesture.

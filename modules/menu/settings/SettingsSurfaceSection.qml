@@ -1,4 +1,5 @@
 import QtQuick
+import "../../../config"
 import "../../../services"
 import "../controls"
 
@@ -41,7 +42,7 @@ Column {
             glyph: "󰗌"; label: "Opacity"
             key: "barOpacity"
             step: 0.02
-            displayValue: Math.round(ShellSettings.barOpacity * 100) + "%"
+            displayValue: Math.round(Theme.panelOpacity * 100) + "%"
         }
         ToggleRow {
             glyph: "󱡓"; label: "Popups match bar opacity"

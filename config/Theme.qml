@@ -67,8 +67,10 @@ Singleton {
     readonly property color barSeparator: withAlpha(_n ? _lineBase : mix(_lineBase, accent, 0.10),
                                                     ShellSettings.dotOpacity)
 
-    readonly property color panel: withAlpha(background,
-        _hc ? Math.max(0.90, ShellSettings.barOpacity) : ShellSettings.barOpacity)
+    // high contrast floors this, so the readout has to report the effective value, not the setting
+    readonly property real panelOpacity: _hc ? Math.max(0.90, ShellSettings.barOpacity)
+                                             : ShellSettings.barOpacity
+    readonly property color panel: withAlpha(background, panelOpacity)
     // the popup layers carry no compositor blur, so this stays opt-in and off by default
     readonly property color popup: ShellSettings.popupMatchBarOpacity ? panel : background
 
