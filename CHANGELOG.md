@@ -30,6 +30,7 @@ Only work since the latest release is listed here. Completed notes move to
 - A docked bar casts a shadow when Shell shadows is on.
 - Bar Roundness is reachable while the bar is docked, and reads Round once the corners reach half its height.
 - The low-battery and high-temperature thresholds stay reachable with their warnings off.
+- The Opacity slider under Dividers appears while the window title draws a separator.
 - Keybinds open the menu, calendar and quick actions under the widget that opens them, not at the screen edge.
 - Notification history no longer holds read-state for notifications it has already dropped.
 - A double-click on a connected Bluetooth device no longer disconnects it in one gesture.
