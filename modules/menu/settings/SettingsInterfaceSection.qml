@@ -70,6 +70,18 @@ Column {
             ]
             onChosen: (v) => ShellSettings.uiScale = v
         }
+        SelectRow {
+            glyph: "󰀻"; label: "Icon size"
+            description: "Tray and workspace app icons"
+            currentValue: ShellSettings.barIconSize
+            fallbackLabel: ShellSettings.barIconSize + "px"
+            model: [
+                { value: 12, label: "Normal" },
+                { value: 15, label: "Large"  },
+                { value: 18, label: "XL"     }
+            ]
+            onChosen: (v) => ShellSettings.barIconSize = v
+        }
         ToggleRow {
             glyph: "󰆖"; label: "High contrast"
             key: "highContrast"

@@ -114,7 +114,12 @@ fi
 mkdir -p "$scale_cfg/silere-shell"
 ui_max="$(sed -n 's/.*k: "uiScale".*max: \([0-9.]*\).*/\1/p' services/ShellSettings.qml | head -1)"
 [ -n "$ui_max" ] || { echo "test-surfaces: cannot read the uiScale max from the schema" >&2; exit 1; }
-printf '{"__version":1,"uiScale":%s}\n' "$ui_max" > "$scale_cfg/silere-shell/settings.json"
+# icon size is a second size axis and multiplies with uiScale, so the largest pass
+# has to raise both or the widest icon cell never gets built
+icon_max="$(sed -n 's/.*k: "barIconSize".*max: \([0-9]*\).*/\1/p' services/ShellSettings.qml | head -1)"
+[ -n "$icon_max" ] || { echo "test-surfaces: cannot read the barIconSize max from the schema" >&2; exit 1; }
+printf '{"__version":1,"uiScale":%s,"barIconSize":%s}\n' "$ui_max" "$icon_max" \
+    > "$scale_cfg/silere-shell/settings.json"
 
 # Neither Qt.exit() nor Quickshell.exit() ends a Quickshell process, so the probe
 # cannot quit itself: run it in the background, wait for its sentinel line, then

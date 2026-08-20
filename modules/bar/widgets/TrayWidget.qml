@@ -15,7 +15,11 @@ Item {
     property bool barActive: true
     readonly property bool show: ShellSettings.trayWidget && _items.count > 0
     readonly property bool layoutVisible: show || implicitWidth > 0.5
-    readonly property int iconSize: Math.max(14, Math.min(18, Math.round(ShellSettings.barHeight * 0.44)))
+    // the bar height is a ceiling, not the source: the old barHeight*0.44 ignored uiScale
+    // entirely, so tray icons were the one thing that could not follow the interface scale
+    readonly property int iconSize: Math.max(12,
+        Math.min(Math.round(ShellSettings.barHeight * 0.62),
+            Math.round(ShellSettings.barIconSize * ShellSettings.uiScale) + 4))
     readonly property int _pillPad: Metrics.pillPadFor(compact)
 
     // only appearing/leaving eases; hover growth is already eased by the label, and a second ease on top lags the slot behind its own content

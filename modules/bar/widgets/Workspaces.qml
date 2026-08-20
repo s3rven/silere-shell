@@ -17,7 +17,7 @@ Item {
     readonly property int minVisible: ShellSettings.wsMinVisible
     readonly property int btnH:       Metrics.barRowHeight
     readonly property int btnW:       btnH + 2
-    readonly property int _iconSz:    Settings.iconSize + 2
+    readonly property int _iconSz:    Math.round(ShellSettings.barIconSize * ShellSettings.uiScale) + 2
     readonly property int gap:        3
     // Updated imperatively because mapToItem() does not expose ancestor geometry
     // dependencies to the QML binding engine.
