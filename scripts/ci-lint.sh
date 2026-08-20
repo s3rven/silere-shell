@@ -1098,6 +1098,21 @@ else
   ok "inert events" "the event denylist still covers every measured no-op"
 fi
 
+# Quickshell's Hyprland bindings do not always mirror the compositor: hyprland reports
+# unfocus as an empty activewindowv2 address, quickshell's parser bails on it, and
+# Hyprland.activeToplevel then keeps the last focused window forever. Compositor.qml is
+# the only place that compensates, so a direct read from any other file silently gets
+# stale focus back.
+facade_leaks="$(grep -rln 'import Quickshell\.Hyprland' --include='*.qml' \
+  modules config services shell.qml 2>/dev/null \
+  | grep -v '^services/Compositor\.qml$' || true)"
+if [ -n "$facade_leaks" ]; then
+  fail "only services/Compositor.qml may import Quickshell.Hyprland:"
+  while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$facade_leaks"
+else
+  ok "compositor facade" "Quickshell.Hyprland stays behind Compositor.qml"
+fi
+
 section "pointer-only interaction"
 # Silere is pointer-driven by decision: app-wide keyboard navigation was removed
 # wholesale. Keep this invariant about that interaction model, not accessibility
