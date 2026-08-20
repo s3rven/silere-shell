@@ -17,7 +17,7 @@ Item {
     height: implicitHeight
     anchors.verticalCenter: parent ? parent.verticalCenter : undefined
 
-    opacity: root.interactive ? 1.0 : 0.25
+    opacity: root.interactive ? 1.0 : Theme.disabledOpacity
     MotionBehavior on opacity {
         NumberAnimation { duration: Motion.fast }
     }
