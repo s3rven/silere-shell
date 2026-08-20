@@ -106,6 +106,7 @@ Singleton {
     property var _hyprLiveTitles: ({})
     property bool _hyprRefreshAgain: false
     property string _hyprActiveAddr: ""
+    property bool _hyprUnfocused: false
     readonly property bool _liveTitlesWanted: ShellSettings.showWindowTitle
 
     function refreshToplevels(): void {
@@ -256,7 +257,7 @@ Singleton {
                 initialClass: root._windowIdentity(c.initialClass),
                 pid: c.pid ?? -1, ref: c.address,
                 wsRef: wsId, wsId: wsId, output: wsOut[wsId] ?? "",
-                focused: !!(Hyprland.activeToplevel && Hyprland.activeToplevel === t),
+                focused: !root._hyprUnfocused && !!(Hyprland.activeToplevel && Hyprland.activeToplevel === t),
                 focusRank: c.focusHistoryID ?? 9999,
                 fullscreen: !!c.fullscreen
             })
@@ -286,7 +287,10 @@ Singleton {
         return out
     }
 
+    // quickshell never clears activeToplevel: hyprland reports unfocus as an empty
+    // activewindowv2 address and its parser bails out before the assignment
     readonly property var _hyprActive: {
+        if (root._hyprUnfocused) return null
         const t = Hyprland.activeToplevel
         if (!t) return null
         const tops = root._hyprToplevels
@@ -328,6 +332,7 @@ Singleton {
             // activewindow refires per title frame; only v2's address distinguishes a real focus change
             if (n === "activewindowv2") {
                 const addr = String(event.data ?? "")
+                root._hyprUnfocused = addr.length === 0
                 if (addr === root._hyprActiveAddr) {
                     if (root._liveTitlesWanted && !Idle.isIdle && !_hyprTitleSync.running)
                         _hyprTitleSync.start()
