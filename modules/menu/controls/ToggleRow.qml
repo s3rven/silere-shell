@@ -55,7 +55,7 @@ MenuRow {
         NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
     }
 
-    opacity: root.enabled && root.available ? 1.0 : (_canToggle ? 0.72 : 0.52)
+    opacity: root.enabled && root.available ? 1.0 : (_canToggle ? 0.72 : Theme.disabledOpacity)
     MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
 
     HoverHandler { id: _hover; cursorShape: root._canToggle ? Qt.PointingHandCursor : Qt.ArrowCursor }
