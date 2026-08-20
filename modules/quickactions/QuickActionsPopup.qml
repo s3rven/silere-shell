@@ -176,7 +176,7 @@ PanelWindow {
         readonly property int contentW: Math.max(236,
             Metrics.snap4(236 * Settings.fontSize / 12))
         width: contentW + pad * 2
-        height: _rows.implicitHeight + pad * 2
+        height: Metrics.snap4Up(_rows.implicitHeight + pad * 2)
 
         Component.onCompleted: if (QuickActionsState.open) card.forceActiveFocus()
 

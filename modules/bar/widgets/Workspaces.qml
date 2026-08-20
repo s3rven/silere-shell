@@ -46,6 +46,13 @@ Item {
         return target ? target.name === self.name
                       : Monitors.activeName === self.name
     }
+    readonly property bool _quickActionsTargetsThisBar: {
+        const self = root.screen
+        if (!self) return false
+        const target = QuickActionsState.triggerScreen
+        return target ? target.name === self.name
+                      : Monitors.activeName === self.name
+    }
 
     readonly property int effectiveWsCount: Math.max(1, minVisible)
     property int _lastNormalActiveId: 1
@@ -313,6 +320,10 @@ Item {
         if (MenuState.open && MenuState.anchorSource === null && root._menuTargetsThisBar)
             MenuState.adoptAnchor(root)
     }
+    function _reclaimQuickActionsAnchor(): void {
+        if (QuickActionsState.open && QuickActionsState.anchorSource === null && root._quickActionsTargetsThisBar)
+            QuickActionsState.adoptAnchor(root)
+    }
     Connections {
         target: MenuState
         function onAnchorSourceChanged() { root._reclaimMenuAnchor() }
@@ -323,6 +334,7 @@ Item {
     }
     Connections {
         target: QuickActionsState
+        function onAnchorSourceChanged() { root._reclaimQuickActionsAnchor() }
         function onOpenChanged() {
             if (QuickActionsState.open && QuickActionsState.anchorSource === null) root._syncMenuAnchor()
         }
@@ -335,6 +347,7 @@ Item {
         root._syncUrgentOffPage()
         root._rebuildWsApps()
         root._reclaimMenuAnchor()
+        root._reclaimQuickActionsAnchor()
     }
 
     onRawActiveIdChanged: {
