@@ -26,6 +26,7 @@ Only work since the latest release is listed here. Completed notes move to
 
 ### Fixed
 
+- A docked bar casts a shadow when Shell shadows is on.
 - Keybinds open the menu, calendar and quick actions under the widget that opens them, not at the screen edge.
 - Bar Roundness reads Round once the corners reach half the bar's height, instead of a number the bar cannot draw.
 - Notification history no longer holds read-state for notifications it has already dropped.

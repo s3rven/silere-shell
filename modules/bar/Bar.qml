@@ -54,7 +54,7 @@ PanelWindow {
     readonly property int surfaceInset: Metrics.barEdgeInset
     readonly property real visualSurfaceInset: ShellSettings.barGap * floatingProgress
 
-    readonly property bool shadowOn: shadowProgress > 0.001 && floatingProgress > 0.001
+    readonly property bool shadowOn: shadowProgress > 0.001
     // constant, not scaled by shadowProgress: this feeds implicitHeight, so animating it
     // resized the layer-shell window in 4px steps and the bar juddered on every toggle
     readonly property real effectPad: 24
@@ -74,7 +74,7 @@ PanelWindow {
     }
     exclusiveZone: bar.concealed ? 0 : bar._targetCoreHeight
     implicitHeight: 4 * Math.ceil((bar.surfaceHeight
-        + (bar.insetPad + bar.effectPad) * bar.floatingProgress) / 4)
+        + bar.insetPad * bar.floatingProgress + bar.effectPad) / 4)
 
     mask: Region { item: bar.concealed ? null : surface }
 
@@ -104,7 +104,7 @@ PanelWindow {
         Loader {
             anchors.fill: parent
             active: bar.shadowOn
-            opacity: contents.opacity * bar.floatingProgress * bar.shadowProgress
+            opacity: contents.opacity * bar.shadowProgress
             sourceComponent: FloatingShadow {
                 radius: surface.radius
                 atBottom: bar.atBottom

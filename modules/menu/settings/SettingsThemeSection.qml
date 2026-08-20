@@ -365,9 +365,7 @@ Column {
         // is docked or not, and only the bar's own shadow needs the floating gate
         ToggleRow {
             glyph: "󰘷"; label: "Shell shadows"
-            description: ShellSettings.barFloating
-                ? "Popups, notifications, OSD, and the bar"
-                : "Popups, notifications, OSD — bar keeps a line"
+            description: "Popups, notifications, OSD, and the bar"
             key: "barShadow"
         }
         CollapsibleSection {
