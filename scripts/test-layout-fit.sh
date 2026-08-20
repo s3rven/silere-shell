@@ -25,6 +25,11 @@ if ! command -v qs >/dev/null 2>&1; then
     echo "SKIP: quickshell (qs) not installed" >&2
     exit 0
 fi
+# installed but unable to start must not skip: that would pass CI with no coverage
+if ! qs_probe="$(qs --version 2>&1)"; then
+    echo "FAIL: quickshell (qs) will not start: ${qs_probe%%$'\n'*}" >&2
+    exit 1
+fi
 [ -f "$PROBE" ] || { echo "FAIL: $PROBE missing" >&2; exit 1; }
 
 # Every width here is a text measurement, so it is only meaningful against the font

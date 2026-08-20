@@ -104,7 +104,17 @@ optional_any_tool() {
   fi
 }
 
-require_tool qs "Quickshell runtime"
+# a binary that cannot start still satisfies `command -v`; without this every probe below
+# fails describing whatever it was testing instead of the runtime that never ran
+qs_usable=0
+if ! command -v qs >/dev/null 2>&1; then
+  fail qs "Quickshell runtime is required but was not found in PATH"
+elif qs_probe="$(qs --version 2>&1)"; then
+  qs_usable=1
+  ok qs "Quickshell runtime"
+else
+  fail qs "Quickshell is installed but will not start: ${qs_probe%%$'\n'*}"
+fi
 if [ -n "${NIRI_SOCKET:-}" ]; then
   require_tool niri "niri runtime and IPC client"
 elif [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
@@ -159,7 +169,7 @@ _wayland_socket() {
   esac
 }
 
-if command -v qs >/dev/null 2>&1; then
+if [ "$qs_usable" = 1 ]; then
   # Include instances on other displays when this runs from a terminal or CI
   # environment without the active Wayland display variables.
   if qs list --all >/dev/null 2>&1; then
@@ -358,7 +368,9 @@ fi
 rm -f "$qml_log"
 
 section "behavioral logic"
-if [ -f scripts/test-logic.sh ]; then
+if [ "$qs_usable" != 1 ]; then
+  warn "logic" "not run: Quickshell will not start"
+elif [ -f scripts/test-logic.sh ]; then
   logic_out=""
   if logic_out="$(bash scripts/test-logic.sh 2>&1)"; then
     if printf '%s' "$logic_out" | grep -q '^SKIP'; then
@@ -376,7 +388,7 @@ else
 fi
 
 section "quickshell smoke"
-if command -v qs >/dev/null 2>&1; then
+if [ "$qs_usable" = 1 ]; then
   if [ -z "${WAYLAND_DISPLAY:-}" ]; then
     warn "startup" "no Wayland display; runtime smoke test skipped"
   elif [ -z "${XDG_RUNTIME_DIR:-}" ] || [ ! -d "$XDG_RUNTIME_DIR" ]; then
@@ -484,13 +496,15 @@ if command -v qs >/dev/null 2>&1; then
     fi
   fi
 else
-  fail "startup" "Quickshell missing; runtime smoke test could not run"
+  warn "startup" "not run: Quickshell will not start"
 fi
 
 section "surface build"
 # The passes above launch the shell but never open the menu, so no settings
 # section is ever built and a runtime-only error inside one stays invisible.
-if [ -f scripts/test-surfaces.sh ]; then
+if [ "$qs_usable" != 1 ]; then
+  warn "surfaces" "not run: Quickshell will not start"
+elif [ -f scripts/test-surfaces.sh ]; then
   surf_code=0
   surf_out="$(bash scripts/test-surfaces.sh 2>&1)" || surf_code=$?
   if [ "$surf_code" -ne 0 ]; then
@@ -508,7 +522,9 @@ fi
 section "layout fit"
 # Building a section says nothing about whether its labels survive the width they
 # ship at; Qt elides them and reports success either way.
-if [ -f scripts/test-layout-fit.sh ]; then
+if [ "$qs_usable" != 1 ]; then
+  warn "layout" "not run: Quickshell will not start"
+elif [ -f scripts/test-layout-fit.sh ]; then
   fit_code=0
   fit_out="$(bash scripts/test-layout-fit.sh 2>&1)" || fit_code=$?
   if [ "$fit_code" -ne 0 ]; then
