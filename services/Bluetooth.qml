@@ -169,7 +169,9 @@ Singleton {
             root.errorAddr = root._pendingAddr
             root.errorKind = root._pendingKind
         }
-        root._endAttempt()
+        // deferred: clearing _pendingAddr here re-enters _pendingState's own binding
+        // evaluation, since it flows straight back through _pendingDevice
+        Qt.callLater(root._endAttempt)
     }
 
     // an attempt that never moves the device would otherwise hold the row on its
