@@ -66,7 +66,6 @@ PanelWindow {
         property string label: ""
         property string stateText: ""
         property bool   active: false
-        property bool   checkable: true
         readonly property bool _pressed: _rowTap.pressed
 
         signal triggered()
@@ -191,7 +190,6 @@ PanelWindow {
             }
             QuickActionRow {
                 visible: PowerProfiles.available
-                checkable: false
                 glyph: PowerProfiles.glyph.length > 0 ? PowerProfiles.glyph : "󰾅"
                 label: "Power Mode"
                 active: PowerProfiles.profile === "performance"
@@ -204,8 +202,7 @@ PanelWindow {
                 glyph: Network.wifiEnabled ? "󰤨" : "󰤭"
                 label: "Wi-Fi"
                 active: Network.wifiEnabled
-                stateText: Network.wifiHardBlocked ? "Blocked"
-                    : Network.wifiEnabled ? "On" : "Off"
+                stateText: Network.wifiEnabled ? "On" : "Off"
                 onTriggered: Network.toggleWifi()
             }
             QuickActionRow {
