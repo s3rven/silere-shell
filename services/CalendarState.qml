@@ -1,34 +1,15 @@
 pragma Singleton
 
 import QtQuick
-import Quickshell
 import Quickshell.Io
 import "../config"
 
-Singleton {
+AnchoredPopupState {
     id: root
-
-    property bool open: false
-    property real anchorX: 0
-    property QtObject anchorSource: null
-    property ShellScreen triggerScreen: null
-    readonly property real effectiveAnchorX: {
-        const live = Number(root.anchorSource?.menuAnchorX)
-        return isFinite(live) ? live : root.anchorX
-    }
-    onAnchorSourceChanged: if (open && anchorSource === null) close()
 
     function toggleAt(x: real, screen, source): void {
         if (open) { close(); return }
-        anchorX = x
-        anchorSource = source ?? null
-        triggerScreen = screen ?? null
-        open = true
-    }
-    function close(): void {
-        if (open) open = false
-        anchorSource = null
-        triggerScreen = null
+        openAt(x, screen, source)
     }
 
     IpcHandler {
@@ -37,7 +18,7 @@ Singleton {
         function toggle(): void {
             if (root.open) { root.close(); return }
             root.triggerScreen = null
-            root.anchorSource = null
+            root._setAnchor(null)
             root.open = true
         }
         function close(): void { root.close() }

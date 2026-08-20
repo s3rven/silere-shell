@@ -316,17 +316,13 @@ Item {
     // reordering bar widgets rebuilds this instance under the open menu; every live copy
     // offers itself each time the anchor goes vacant, so a rebuild that outlives its
     // replacement still ends up held by whichever one survives
-    function _reclaimMenuAnchor(): void {
-        if (MenuState.open && MenuState.anchorSource === null && root._menuTargetsThisBar)
-            MenuState.adoptAnchor(root)
-    }
-    function _reclaimQuickActionsAnchor(): void {
-        if (QuickActionsState.open && QuickActionsState.anchorSource === null && root._quickActionsTargetsThisBar)
-            QuickActionsState.adoptAnchor(root)
+    function _reclaimPopupAnchors(): void {
+        if (root._menuTargetsThisBar) MenuState.adoptAnchor(root)
+        if (root._quickActionsTargetsThisBar) QuickActionsState.adoptAnchor(root)
     }
     Connections {
         target: MenuState
-        function onAnchorSourceChanged() { root._reclaimMenuAnchor() }
+        function onAnchorSourceChanged() { root._reclaimPopupAnchors() }
         // mapToItem sees no ancestor geometry, so the cached x is a stale layout pass by now
         function onOpenChanged() {
             if (MenuState.open && MenuState.anchorSource === null) root._syncMenuAnchor()
@@ -334,7 +330,7 @@ Item {
     }
     Connections {
         target: QuickActionsState
-        function onAnchorSourceChanged() { root._reclaimQuickActionsAnchor() }
+        function onAnchorSourceChanged() { root._reclaimPopupAnchors() }
         function onOpenChanged() {
             if (QuickActionsState.open && QuickActionsState.anchorSource === null) root._syncMenuAnchor()
         }
@@ -346,8 +342,7 @@ Item {
         _initialized = monitorReady
         root._syncUrgentOffPage()
         root._rebuildWsApps()
-        root._reclaimMenuAnchor()
-        root._reclaimQuickActionsAnchor()
+        root._reclaimPopupAnchors()
     }
 
     onRawActiveIdChanged: {
