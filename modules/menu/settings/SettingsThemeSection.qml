@@ -107,7 +107,7 @@ Column {
                     { auto: false, custom: false, color: "#94bd8b", name: "Green"  },
                     { auto: false, custom: false, color: "#dd92a2", name: "Rose"   },
                     { auto: false, custom: false, color: "#d4ad77", name: "Amber"  },
-                    { auto: false, custom: true,  color: "",        name: "Mix"    }
+                    { auto: false, custom: true,  color: "",        name: "Mix", spectrum: true }
                 ]
                 readonly property int _customIndex: _options.length - 1
                 readonly property int _presetIndex: {
@@ -203,7 +203,6 @@ Column {
                         width: Math.max(_swatchViewport.width, implicitWidth)
                         height: parent.height
                         spread: true
-                        groupLabel: "Accent"
                         options: _accentPicker._options
                         colors:  _accentPicker._swColors
                         activeIndex: _accentPicker._activeIndex

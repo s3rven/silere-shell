@@ -94,7 +94,6 @@ Item {
             : Math.round((root.height - height) / 2)
         width: implicitWidth
         height: implicitHeight
-        groupLabel: root.label
         onPicked: (i) => root.picked(i)
     }
 }
