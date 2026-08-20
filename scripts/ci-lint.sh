@@ -549,17 +549,26 @@ else
     --include='*.qml' modules services config shell.qml 2>/dev/null \
     | sed 's|.*/scripts/||; s|"$||' | sort -u)"
 
-  # anything the shell never runs is developer tooling; uninstall.sh is the one with teeth
+  # allowlist, not a denylist of known dev tools: a new dev script only this check
+  # doesn't yet know the name of must still fail, not pass silently
+  allowed_scripts="install.sh update.sh repair.sh silere-update.service silere-update.timer lib"
   payload_extra=""
-  for dev in check.sh ci-lint.sh uninstall.sh bench.sh release-notes.sh; do
-    printf '%s\n' "$pkg_body" | grep -qE "scripts/$dev([^A-Za-z0-9._-]|$)" \
-      && payload_extra="$payload_extra $dev"
-  done
-  printf '%s\n' "$pkg_body" | grep -qE 'scripts/(test-|probe-)' \
-    && payload_extra="$payload_extra tests/probes"
+  while IFS= read -r ref; do
+    [ -n "$ref" ] || continue
+    case " $allowed_scripts " in
+      *" $ref "*) ;;
+      *) payload_extra="$payload_extra $ref" ;;
+    esac
+  done <<< "$(printf '%s\n' "$pkg_body" | grep -oE 'scripts/[A-Za-z0-9._-]+' \
+    | sed 's|^scripts/||' | sort -u)"
   # the wholesale copy that shipped all of the above in the first place
   printf '%s\n' "$pkg_body" | grep -qE '(^|[^A-Za-z0-9._/-])scripts([^A-Za-z0-9._/-]|$)' \
     && payload_extra="$payload_extra scripts/(whole directory)"
+
+  # scripts/lib is copied wholesale by name, so its own tracked contents are the allowlist
+  lib_extra="$(git ls-files scripts/lib | sed 's|^scripts/lib/||' \
+    | grep -vxE 'xdg\.sh|qml-modules\.sh')"
+  [ -n "$lib_extra" ] && payload_extra="$payload_extra scripts/lib/{$(printf '%s' "$lib_extra" | tr '\n' ',')}"
 
   # the packaged installer still reads this one out of the pruned assets/ tree
   payload_asset=""
