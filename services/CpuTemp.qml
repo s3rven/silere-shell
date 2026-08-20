@@ -12,6 +12,7 @@ Singleton {
     readonly property bool available: temp > 0
     property bool _started: false
     readonly property bool needed: MenuState.homeActive
+        || (MenuState.settingsActive && MenuState.settingsSection === "warnings")
     readonly property bool _persistentNeed: ShellSettings.osdTempWarn
         || (ShellSettings.underlineGlow && ShellSettings.underlineTempGlow)
     readonly property bool _wanted: _started && (_persistentNeed || needed) && !Idle.isIdle
