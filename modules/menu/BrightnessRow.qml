@@ -77,7 +77,6 @@ Item {
                 delegate: InlineOptionRow {
                     id: _option
                     required property var modelData
-                    required property int index
                     readonly property bool active: modelData.value === Brightness.deviceChoice
 
                     width: _optionColumn.width

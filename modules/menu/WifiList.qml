@@ -97,7 +97,6 @@ Item {
             delegate: Column {
                 id: _entry
                 required property var modelData
-                required property int index
                 width: _list.width
                 spacing: 0
 

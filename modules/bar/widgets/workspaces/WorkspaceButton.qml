@@ -9,8 +9,6 @@ Item {
     id: root
 
     required property int wsId
-    required property int index
-    required property int siblingCount
     required property bool monitorReady
     required property bool active
     required property bool occupied

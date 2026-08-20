@@ -79,7 +79,6 @@ Item {
                 delegate: InlineOptionRow {
                     id: _opt
                     required property var modelData
-                    required property int index
                     readonly property bool active: modelData.value === Audio.sink
 
                     width: _optCol.width

@@ -419,7 +419,6 @@ Item {
                                     delegate: Rectangle {
                                         id: _leaf
 
-                                        required property int index
                                         required property var modelData
                                         readonly property bool active: MenuState.settingsSection === modelData.section
                                         readonly property string glyph: modelData.glyph ?? ""

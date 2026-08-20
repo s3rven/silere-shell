@@ -99,7 +99,6 @@ Item {
             delegate: InlineOptionRow {
                 id: _row
                 required property var modelData
-                required property int index
                 width: _list.width
 
                 readonly property bool   _armed: root._armedAddr === modelData.address && modelData.connected

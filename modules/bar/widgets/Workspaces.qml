@@ -482,7 +482,6 @@ Item {
                 required property int modelData
 
                 wsId:         modelData
-                siblingCount: _wsRepeater.count
                 monitorReady: root.monitorReady
                 active:       root.monitorReady && root.activeId === wsId
                 occupied:     root.occupied(wsId)
