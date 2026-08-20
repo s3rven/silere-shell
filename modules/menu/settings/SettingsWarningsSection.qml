@@ -47,17 +47,16 @@ Column {
             model: root._alertChipModel
             onChosen: (v) => root._setAlertMode(v, "osdBatteryWarn", "underlineBattGlow")
         }
-        CollapsibleSection {
-            expanded: root._battAlertMode !== "off"
-            SliderRow {
-                glyph: "󱃍"; label: "Alert below"
-                key: "batteryLowThreshold"
-                step: 5
-                displayValue: ShellSettings.batteryLowThreshold + "%"
-                glyphColor: Battery.critical ? Theme.error : (Battery.low ? Theme.warning : Theme.withAlpha(Theme.subtext, 0.85))
-            }
-            HintText { text: "Escalates to critical at " + Math.max(5, Math.round(ShellSettings.batteryLowThreshold / 2)) + "%." }
+        // ungated: the power rail label, the vitals strip and the battery colour read this
+        // threshold whether or not either warning is switched on
+        SliderRow {
+            glyph: "󱃍"; label: "Low below"
+            key: "batteryLowThreshold"
+            step: 5
+            displayValue: ShellSettings.batteryLowThreshold + "%"
+            glyphColor: Battery.critical ? Theme.error : (Battery.low ? Theme.warning : Theme.withAlpha(Theme.subtext, 0.85))
         }
+        HintText { text: "Escalates to critical at " + Math.max(5, Math.round(ShellSettings.batteryLowThreshold / 2)) + "%." }
         ToggleRow {
             glyph: "󰂄"; label: "Fully charged alert"
             enabled: ShellSettings.osdEnabled
@@ -74,17 +73,14 @@ Column {
             model: root._alertChipModel
             onChosen: (v) => root._setAlertMode(v, "osdTempWarn", "underlineTempGlow")
         }
-        CollapsibleSection {
-            expanded: root._tempAlertMode !== "off"
-            SliderRow {
-                glyph: "󰔏"; label: "Alert above"
-                key: "tempHotThreshold"
-                step: 5
-                displayValue: ShellSettings.tempHotThreshold + "°"
-                glyphColor: CpuTemp.critical ? Theme.error : (CpuTemp.hot ? Theme.warning : Theme.withAlpha(Theme.subtext, 0.85))
-            }
-            HintText { text: "Escalates to critical at " + (ShellSettings.tempHotThreshold + 8) + "°." }
+        SliderRow {
+            glyph: "󰔏"; label: "Hot above"
+            key: "tempHotThreshold"
+            step: 5
+            displayValue: ShellSettings.tempHotThreshold + "°"
+            glyphColor: CpuTemp.critical ? Theme.error : (CpuTemp.hot ? Theme.warning : Theme.withAlpha(Theme.subtext, 0.85))
         }
+        HintText { text: "Escalates to critical at " + (ShellSettings.tempHotThreshold + 8) + "°." }
     }
 
     CollapsibleSection {
