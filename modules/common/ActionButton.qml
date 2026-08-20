@@ -22,7 +22,7 @@ Item {
     height: implicitHeight
     // no scale anywhere: the surface already nudges a whole pixel on press and lifts one
     // on hover, and scaling text resamples every glyph for as long as it lasts
-    opacity: root.enabled ? 1.0 : 0.42
+    opacity: root.enabled ? 1.0 : Theme.disabledOpacity
     MotionBehavior on opacity {
         NumberAnimation { duration: Motion.fast }
     }

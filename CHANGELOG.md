@@ -21,6 +21,7 @@ Only work since the latest release is listed here. Completed notes move to
 
 - Disconnecting the current Wi-Fi network takes a second tap to confirm.
 - The Mix accent swatch shows a colour wheel.
+- Disabled controls dim to one depth, and high contrast lifts them.
 - Notification popups widen with the interface scale.
 - The notification list grows with the history it holds, up to the room the screen has.
 

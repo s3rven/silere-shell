@@ -35,7 +35,7 @@ Item {
     width: parent ? parent.width : 0
     implicitHeight: rowHeight
     height: implicitHeight
-    opacity: root.enabled && root.interactive ? 1.0 : 0.48
+    opacity: root.enabled && root.interactive ? 1.0 : Theme.disabledOpacity
     MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
 
     HoverHandler {

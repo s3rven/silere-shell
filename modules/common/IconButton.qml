@@ -19,7 +19,7 @@ Item {
     implicitHeight: buttonSize
     width: implicitWidth
     height: implicitHeight
-    opacity: enabled ? 1.0 : 0.38
+    opacity: enabled ? 1.0 : Theme.disabledOpacity
     MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
 
     function activate(): void {

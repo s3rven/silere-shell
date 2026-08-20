@@ -36,7 +36,7 @@ Item {
     MotionBehavior on height {
         NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
     }
-    opacity: enabled ? 1.0 : 0.45
+    opacity: enabled ? 1.0 : Theme.disabledOpacity
     MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
 
     readonly property int _shownIdx: _sr.hoveredIndex >= 0 ? _sr.hoveredIndex : _sr.activeIndex

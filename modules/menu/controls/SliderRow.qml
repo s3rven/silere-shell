@@ -35,7 +35,7 @@ MenuRow {
 
     // 4px multiple so row.y inside SettingsCard lands on whole physical px and every divider renders one thickness
     height:         Metrics.rowHeightFor(56)
-    opacity: root.enabled ? 1.0 : 0.45
+    opacity: root.enabled ? 1.0 : Theme.disabledOpacity
     MotionBehavior on opacity {
         NumberAnimation { duration: Motion.medium }
     }

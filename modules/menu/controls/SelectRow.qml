@@ -105,7 +105,7 @@ Item {
     width:  parent ? parent.width : 0
     height: _headerH + _options.height
     implicitHeight: height
-    opacity: enabled ? 1.0 : 0.45
+    opacity: enabled ? 1.0 : Theme.disabledOpacity
     MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
 
     Item {

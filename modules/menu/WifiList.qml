@@ -232,7 +232,7 @@ Item {
                             width: 30; height: 28; radius: Theme.radiusField
                             antialiasing: true
                             enabled: _pw.text.length > 0 && !_entry._connecting
-                            opacity: enabled ? 1.0 : 0.4
+                            opacity: enabled ? 1.0 : Theme.disabledOpacity
                             MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
                             color: (_joinHover.hovered) ? Theme.withAlpha(Theme.accent, 0.30)
                                                                         : Theme.withAlpha(Theme.accent, 0.18)

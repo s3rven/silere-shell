@@ -56,7 +56,7 @@ MenuRow {
 
     height:         Metrics.rowHeightFor(48)
 
-    opacity: root.passive ? 1.0 : (_canTap ? 1.0 : 0.45)
+    opacity: root.passive ? 1.0 : (_canTap ? 1.0 : Theme.disabledOpacity)
     MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
 
     HoverHandler { id: _hover; cursorShape: root._canTap ? Qt.PointingHandCursor : Qt.ArrowCursor }

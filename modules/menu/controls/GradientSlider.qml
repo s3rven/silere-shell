@@ -26,7 +26,7 @@ Item {
     width: parent ? parent.width : 0
     implicitHeight: Metrics.rowHeightFor(24)
     height: implicitHeight
-    opacity: root.enabled && root.interactive ? 1.0 : 0.45
+    opacity: root.enabled && root.interactive ? 1.0 : Theme.disabledOpacity
 
     function _wrapped(p: real): real {
         return ((p % 1) + 1) % 1

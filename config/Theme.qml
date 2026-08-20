@@ -113,6 +113,9 @@ Singleton {
     readonly property real focusRingAlpha:     _hc ? 0.92 : 0.72
     readonly property real focusRingSoftAlpha: _hc ? 0.72 : 0.42
 
+    // one disabled depth for every control; high contrast lifts it so a dimmed row stays readable
+    readonly property real disabledOpacity: _hc ? 0.62 : 0.45
+
     readonly property int radiusPanel:   14
     readonly property int radiusCard:    12
     readonly property int radiusControl: 10

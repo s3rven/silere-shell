@@ -64,7 +64,7 @@ MenuRow {
     MotionBehavior on height {
         NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
     }
-    opacity: root.enabled ? 1.0 : 0.45
+    opacity: root.enabled ? 1.0 : Theme.disabledOpacity
 
     MotionBehavior on opacity {
         NumberAnimation { duration: Motion.medium }

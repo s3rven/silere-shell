@@ -55,7 +55,7 @@ Rectangle {
     height: Metrics.rowHeightFor(30)
     radius: Theme.radiusInline
     antialiasing: true
-    opacity: root.enabled ? 1.0 : 0.38
+    opacity: root.enabled ? 1.0 : Theme.disabledOpacity
     MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
     color: root.armed
         ? Theme.withAlpha(Theme.error, 0.105)
