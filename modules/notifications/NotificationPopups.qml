@@ -19,7 +19,9 @@ PanelWindow {
     exclusiveZone:  -1
 
     readonly property int _shadowPad: ShellSettings.barShadow ? 16 : 0
-    readonly property int _cardW: Math.max(180, Math.min(320,
+    // the body wraps at 3 lines collapsed, so a card pinned at 320 elides sooner as type grows
+    readonly property int _cardW: Math.max(180, Math.min(
+        Metrics.snap4(320 * Settings.fontSize / 12),
         targetScreen ? targetScreen.width - 24 - _shadowPad : 320))
     readonly property bool _hasBar: Metrics.barPresent(targetScreen)
     readonly property real _barSideGap: ShellSettings.barFloating && _hasBar && targetScreen

@@ -142,9 +142,16 @@ PanelWindow {
         readonly property int _availablePanelH: win.height > 0
             ? Math.max(1, Math.floor(win.height - _edgeY - _minX))
             : contentPane.targetH
-        readonly property int recentViewportH: Math.max(1,
-            Math.min(idealMinH - pageTopInset - pageBottomInset,
-                _availablePanelH - pageTopInset - pageBottomInset))
+        // grows with what the list actually holds: a flat 360 cap scrolled hard on a tall
+        // output, but sizing off the screen alone left an empty history as a tall blank box.
+        // 70 is NotificationCard's own minimum height, so this under-counts tall cards on purpose
+        readonly property int recentViewportH: {
+            const floorH = panel.idealMinH - panel.pageTopInset - panel.pageBottomInset
+            const availH = panel._availablePanelH - panel.pageTopInset - panel.pageBottomInset
+            const wantH = Metrics.rowHeightFor(38) + 18 + Notifications.historyCount * 70
+            return Math.max(1, Math.min(availH, Math.max(floorH,
+                Math.min(Metrics.snap4(panel._availablePanelH * 0.6), Metrics.snap4(wantH)))))
+        }
         readonly property int targetPanelH: Math.max(1,
             Math.min(contentPane.targetH, _availablePanelH))
 

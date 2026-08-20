@@ -37,7 +37,12 @@ Singleton {
             if (players[i]) out.push(players[i])
         // playerctld only mirrors the real players; keep it solely when nothing else is on the bus
         const real = out.filter(p => (p.dbusName || "").indexOf("playerctld") < 0)
-        return real.length > 0 ? real : out
+        const pool = real.length > 0 ? real : out
+        // browsers leave the MPRIS service registered after the tab goes, stopped and with no
+        // metadata: counting those offers a switcher that cycles onto an empty card. Stopped
+        // only - a paused player is one the user may well want to come back to
+        const live = pool.filter(p => p.playbackState !== MprisPlaybackState.Stopped)
+        return live.length > 0 ? live : pool
     }
     readonly property int playerCount: playerList.length
 

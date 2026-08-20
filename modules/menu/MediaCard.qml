@@ -10,10 +10,16 @@ import "controls"
 ClippingRectangle {
     id: root
     width: parent ? parent.width : 0
-    readonly property int _seekBlock: Media.hasPosition ? 26 : 0
+    // the labels inside are fontMicro, so a fixed row keeps the elapsed/total pair
+    // cramped while every neighbour grows with the type
+    readonly property int _seekH: Math.max(14, Settings.fontMicro + 4)
+    readonly property int _seekBlock: Media.hasPosition ? _seekH + 12 : 0
     // 4px multiple: an odd height lands the bottom border on a half physical pixel and doubles it
-    height: 4 * Math.ceil(Math.max(168,
-        16 + _controlsRow.height + _seekBlock + 12 + _mediaCol.implicitHeight + 26) / 4)
+    // mirrors the anchor chain exactly: 16 top, column, 12, seek block, controls, 16 bottom.
+    // reserving more than the chain spends parks the slack above the text, since every row
+    // in the card hangs off the bottom edge
+    height: 4 * Math.ceil(Math.max(140,
+        16 + _mediaCol.implicitHeight + 12 + _seekBlock + _controlsRow.height + 16) / 4)
     radius: Theme.radiusCard
     color: Theme.menuCard
     opacity: Media.shown ? 1.0 : 0.0
@@ -172,13 +178,11 @@ ClippingRectangle {
         color: Theme.withAlpha(root.color, 0.72)
     }
 
-    // down to the seek row, so the title and artist are part of the jump target
+    // the art is the jump target and it fills the card, so this has to as well. Declared
+    // ahead of the seek row and the controls, which stack above it and take their own clicks
     MouseArea {
         id: _playerTarget
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: _seek.top
+        anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
         onClicked: root._focusPlayer()
     }
@@ -305,7 +309,7 @@ ClippingRectangle {
             bottom: _controlsRow.top
             bottomMargin: visible ? 12 : 0
         }
-        height: visible ? 14 : 0
+        height: visible ? root._seekH : 0
 
         ShellText {
             id: _elapsedLabel
