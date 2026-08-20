@@ -367,7 +367,7 @@ Column {
             glyph: "󰘷"; label: "Shell shadows"
             description: ShellSettings.barFloating
                 ? "Popups, notifications, OSD, and the bar"
-                : "Popups, notifications, OSD — not the bar"
+                : "Popups, notifications, OSD — bar keeps a line"
             key: "barShadow"
         }
         CollapsibleSection {

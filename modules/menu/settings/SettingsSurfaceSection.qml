@@ -34,7 +34,7 @@ Column {
             displayValue: Math.round(ShellSettings.barOpacity * 100) + "%"
         }
         ToggleRow {
-            glyph: "󱡓"; label: "Match on popups"
+            glyph: "󱡓"; label: "Popups match bar opacity"
             description: "Notifications, calendar, tray and quick actions"
             key: "popupMatchBarOpacity"
         }
