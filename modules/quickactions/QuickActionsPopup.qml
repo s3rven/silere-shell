@@ -92,19 +92,6 @@ PanelWindow {
             ColorFade on color {}
         }
 
-        Rectangle {
-            anchors.left: parent.left
-            anchors.leftMargin: 3
-            anchors.verticalCenter: parent.verticalCenter
-            width: 2; height: 14; radius: 1
-            antialiasing: true
-            color: Theme.accent
-            opacity: _row.active ? 0.82 : 0.0
-            scale: _row.active ? 1.0 : 0.5
-            MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
-            MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-        }
-
         ShellText {
             id: _glyph
             anchors.left: parent.left
@@ -211,6 +198,23 @@ PanelWindow {
                 stateText: PowerProfiles.label.length > 0 ? PowerProfiles.label
                          : PowerProfiles.syncing ? "Checking…" : "…"
                 onTriggered: PowerProfiles.cycle()
+            }
+            QuickActionRow {
+                visible: QuickActionsState.wifiControllable
+                glyph: Network.wifiEnabled ? "󰤨" : "󰤭"
+                label: "Wi-Fi"
+                active: Network.wifiEnabled
+                stateText: Network.wifiHardBlocked ? "Blocked"
+                    : Network.wifiEnabled ? "On" : "Off"
+                onTriggered: Network.toggleWifi()
+            }
+            QuickActionRow {
+                visible: QuickActionsState.btControllable
+                glyph: Bluetooth.enabled ? "󰂯" : "󰂲"
+                label: "Bluetooth"
+                active: Bluetooth.enabled
+                stateText: Bluetooth.enabled ? "On" : "Off"
+                onTriggered: Bluetooth.toggle()
             }
             QuickActionRow {
                 visible: QuickActionsState.airplaneAvailable
