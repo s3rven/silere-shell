@@ -110,17 +110,14 @@ AnchoredPopupState {
 
         function toggle(): void {
             if (root.open) { root.close(); return }
-            root.triggerScreen = null
-            root._setAnchor(null)
             root._activeTab = root.homeTab
-            root.open = true
+            root.openUnanchored()
         }
         function close(): void { root.close() }
         function tab(index: int): string {
             if (index < root.homeTab || index > root.recentTab)
                 return "unknown menu tab " + index + "; valid: 0 (home), 1 (settings), 2 (recent)"
-            root.triggerScreen = null
-            root._setAnchor(null)
+            root._unanchor()
             root.showTab(index)
             return "ok"
         }

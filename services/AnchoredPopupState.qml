@@ -45,6 +45,16 @@ Singleton {
         onTriggered: if (root.open && root.anchorSource === null) root.close()
     }
 
+    // keybind and IPC opens have no widget to anchor to; a live one adopts on the next turn
+    function _unanchor(): void {
+        root.triggerScreen = null
+        root._setAnchor(null)
+    }
+    function openUnanchored(): void {
+        root._unanchor()
+        root.open = true
+    }
+
     function openAt(x: real, screen, source): void {
         root.anchorX = x
         root._setAnchor(source)

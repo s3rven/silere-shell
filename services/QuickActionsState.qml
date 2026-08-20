@@ -20,10 +20,8 @@ AnchoredPopupState {
 
         function toggle(): void {
             if (root.open) { root.close(); return }
-            root.triggerScreen = null
-            root._setAnchor(null)
             root.barBottom = Metrics.barAtBottom
-            root.open = true
+            root.openUnanchored()
         }
         function close(): void { root.close() }
     }
