@@ -46,6 +46,7 @@ Only work since the latest release is listed here. Completed notes move to
 - The AUR toggle in Updates settings stays hidden until the updates widget itself is on.
 - OSD settings no longer labels a lone section GENERAL when Feedback isn't shown beside it.
 - A track with an unknown length shows --:-- instead of LIVE.
+- Bluetooth pairing closes the pairable window when the attempt finishes or is cancelled.
 - Switching media players skips a browser session that has already stopped.
 - The media card sits evenly in its padding.
 - Small slider handles keep the shell's squared-off shape.

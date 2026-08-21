@@ -95,6 +95,9 @@ Singleton {
     property string _pendingAddr: ""
     property string _pendingKind: ""
     property bool   _pendingStarted: false
+    // Only undo pairable when this service raised it. An adapter already made
+    // pairable by the user or another tool belongs to that owner.
+    property var    _pairableAdapter: null
 
     readonly property var _pendingDevice: {
         if (root._pendingAddr === "") return null
@@ -109,10 +112,24 @@ Singleton {
     readonly property bool _pendingPaired:    root._pendingDevice ? !!root._pendingDevice.paired : false
     readonly property bool _pendingPairing:   root._pendingDevice ? !!root._pendingDevice.pairing : false
 
-    on_PendingStateChanged:     root._settlePending()
-    on_PendingConnectedChanged: root._settlePending()
-    on_PendingPairedChanged:    root._settlePending()
-    on_PendingPairingChanged:   root._settlePending()
+    on_PendingStateChanged:     root._queueSettle()
+    on_PendingConnectedChanged: root._queueSettle()
+    on_PendingPairedChanged:    root._queueSettle()
+    on_PendingPairingChanged:   root._queueSettle()
+
+    // one BlueZ update moves several of these at once, and settling inside the change pass
+    // re-enters _pendingState's own binding; coalesce to one settle after the pass
+    property bool _settleQueued: false
+    function _queueSettle(): void {
+        if (root._settleQueued) return
+        root._settleQueued = true
+        Qt.callLater(root._settleNow)
+    }
+
+    function _settleNow(): void {
+        root._settleQueued = false
+        root._settlePending()
+    }
 
     // started guards the gap before BlueZ moves the device, which would otherwise read as an instant failure
     function _attemptOutcome(kind: string, started: bool, connected: bool, paired: bool,
@@ -140,6 +157,7 @@ Singleton {
     }
 
     function _beginAttempt(address: string, kind: string): void {
+        root._armPairable(kind === "pair" ? root.adapter : null)
         root.clearError()
         root._pendingAddr = address
         root._pendingKind = kind
@@ -147,11 +165,25 @@ Singleton {
         _attemptGuard.restart()
     }
 
+    function _armPairable(target): void {
+        root._restorePairable()
+        if (!target || target.pairable) return
+        target.pairable = true
+        root._pairableAdapter = target
+    }
+
+    function _restorePairable(): void {
+        const owned = root._pairableAdapter
+        root._pairableAdapter = null
+        if (owned) owned.pairable = false
+    }
+
     function _endAttempt(): void {
         _attemptGuard.stop()
         root._pendingAddr = ""
         root._pendingKind = ""
         root._pendingStarted = false
+        root._restorePairable()
     }
 
     function _settlePending(): void {
@@ -169,9 +201,7 @@ Singleton {
             root.errorAddr = root._pendingAddr
             root.errorKind = root._pendingKind
         }
-        // deferred: clearing _pendingAddr here re-enters _pendingState's own binding
-        // evaluation, since it flows straight back through _pendingDevice
-        Qt.callLater(root._endAttempt)
+        root._endAttempt()
     }
 
     // an attempt that never moves the device would otherwise hold the row on its
@@ -201,7 +231,6 @@ Singleton {
         }
     }
     function pairDevice(address: string): void {
-        if (adapter) adapter.pairable = true
         for (let i = 0; i < _devices.length; i++) {
             const d = _devices[i]
             if (d && d.address === address) { root._beginAttempt(address, "pair"); d.pair(); return }
