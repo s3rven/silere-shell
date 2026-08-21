@@ -60,6 +60,57 @@ ShellRoot {
                 && MatugenTheme._parsePalette("{\"accent\":\"red\"}") === null,
             "matugen palette accepts only complete six-digit hex role sets")
 
+        const buttonIdle = Theme.buttonFill(Theme.accent, false, false)
+        const buttonHover = Theme.buttonFill(Theme.accent, true, false)
+        const buttonPress = Theme.buttonFill(Theme.accent, true, true)
+        root._check(buttonIdle.a < buttonHover.a && buttonHover.a < buttonPress.a,
+            "shared button fills deepen from rest through hover to press")
+        const buttonLineIdle = Theme.buttonLine(Theme.accent, false, false)
+        const buttonLineHover = Theme.buttonLine(Theme.accent, true, false)
+        const buttonLinePress = Theme.buttonLine(Theme.accent, true, true)
+        root._check(buttonLineIdle.a < buttonLineHover.a
+                && buttonLineHover.a < buttonLinePress.a,
+            "shared button outlines strengthen with interaction")
+
+        const grooveIdle = Theme.controlTrackFill(Theme.accent, false, false, false)
+        const grooveHover = Theme.controlTrackFill(Theme.accent, false, true, false)
+        const groovePress = Theme.controlTrackFill(Theme.accent, false, true, true)
+        root._check(Theme.lchOf(grooveIdle).L < Theme.lchOf(grooveHover).L
+                && Theme.lchOf(grooveHover).L < Theme.lchOf(groovePress).L,
+            "toggle and slider grooves brighten from rest through hover to press")
+        const activeTrackIdle = Theme.controlTrackFill(
+            Theme.accent, true, false, false)
+        const activeTrackPress = Theme.controlTrackFill(
+            Theme.accent, true, true, true)
+        root._check(Theme.lchOf(activeTrackIdle).L
+                < Theme.lchOf(activeTrackPress).L,
+            "checked toggles and slider fills deepen on press")
+        const activeLineIdle = Theme.controlTrackLine(
+            Theme.accent, true, false, false)
+        const activeLineHover = Theme.controlTrackLine(
+            Theme.accent, true, true, false)
+        const activeLinePress = Theme.controlTrackLine(
+            Theme.accent, true, true, true)
+        root._check(activeLineIdle.a < activeLineHover.a
+                && activeLineHover.a < activeLinePress.a,
+            "active toggle and slider outlines strengthen with interaction")
+
+        let accentMinL = Infinity
+        let accentMaxL = -Infinity
+        let accentNames = ({})
+        for (let i = 0; i < Theme.neutralAccentPresets.length; i++) {
+            const preset = Theme.neutralAccentPresets[i]
+            const lch = Theme.lchOf(preset.color)
+            accentMinL = Math.min(accentMinL, lch.L)
+            accentMaxL = Math.max(accentMaxL, lch.L)
+            accentNames[preset.name] = true
+        }
+        root._check(Theme.neutralAccentPresets.length === 8
+                && Object.keys(accentNames).length === 8,
+            "neutral accent presets keep eight distinct named choices")
+        root._check(accentMaxL - accentMinL < 0.35,
+            "neutral accent presets carry equal perceived lightness")
+
         const layout = ShellSettings._normaliseBarWidgetLayout(
             ["media", "media", "unknown"], ["clock"], ["workspaces"])
         const combined = layout.left.concat(layout.center, layout.right)
@@ -362,6 +413,12 @@ ShellRoot {
             "slider scroll steps stop at the minimum")
         root._check(track._posToVal(0) === 0 && track._posToVal(100) === 1,
             "slider inset endpoints preserve the full range")
+        track.enabled = false
+        trackChanged = -1
+        track.nudge(1, 1)
+        root._check(track.shownValue === 0 && trackChanged === -1,
+            "disabled slider ignores accessibility and programmatic nudges")
+        track.enabled = true
         track.interactive = false
         track.nudge(1, 1)
         root._check(track.shownValue === 0,
@@ -562,6 +619,50 @@ ShellRoot {
             "settings clamp history limit low")
         ShellSettings.notifHistoryLimit = originalLimit
 
+        // the IPC surface reports failure from the same coercion the file load uses,
+        // so a key added to the schema is scriptable without touching the handler
+        const toneWas = ShellSettings.baseTone
+        const timeoutWas = ShellSettings.osdTimeout
+        root._check(ShellSettings.setValue("osdTimeout", 3000) === true,
+            "a valid write reports that it applied")
+        root._check(ShellSettings.setValue("osdTimeout", 999999) === true
+                && ShellSettings.osdTimeout === 10000,
+            "a clamped write still reports that it applied")
+        root._check(ShellSettings.setValue("osdTimeout", "not a number") === false,
+            "a non-numeric write to an int key reports that it did not apply")
+        root._check(ShellSettings.setValue("baseTone", "banana") === false
+                && ShellSettings.baseTone === toneWas,
+            "an unknown enum value neither applies nor claims to")
+        root._check(ShellSettings.setValue("noSuchSetting", 1) === false,
+            "a write to an unknown key reports that it did not apply")
+        ShellSettings.baseTone = toneWas
+        ShellSettings.osdTimeout = timeoutWas
+
+        root._check(ShellSettings.constraintOf("barShowClock") === "true|false",
+            "a bool key states its constraint")
+        root._check(ShellSettings.constraintOf("barSpacing") === "4..24",
+            "an int key states its range")
+        root._check(ShellSettings.constraintOf("baseTone") === "black|charcoal|graphite",
+            "an enum key states its vocabulary")
+        root._check(ShellSettings.constraintOf("noSuchSetting") === "",
+            "an unknown key states no constraint")
+
+        root._check(Hooks.events.indexOf("theme-changed") >= 0
+                && Hooks.events.indexOf("../../evil") < 0,
+            "hooks run only the event names they publish")
+        root._check(!Hooks.has("theme-changed"),
+            "a hook with no executable file is never reported active")
+        Hooks.fire("theme-changed", ["#000000"])
+        Hooks.fire("no-such-event", [])
+        root._check(Hooks._runTimes.length === 0,
+            "an unset hook spends no run budget rather than spawning")
+        let hookRunsAllowed = 0
+        for (let i = 0; i < Hooks.maxRunsPerSecond + 5; i++)
+            if (Hooks._budgetAllows()) hookRunsAllowed++
+        root._check(hookRunsAllowed === Hooks.maxRunsPerSecond,
+            "an event storm stops at " + Hooks.maxRunsPerSecond + " hook runs a second")
+        Hooks._runTimes = []
+
         const hues = [0, 30, 90, 150, 210, 270, 330]
         for (let i = 0; i < hues.length; i++) {
             const expected = hues[i]
@@ -590,9 +691,12 @@ ShellRoot {
         root._check(nothingHeld.wifi && nothingHeld.bt,
             "leaving airplane mode with nothing latched restores both radios")
 
+        PowerProfiles._getRetries = 3
         QuickActionsState.open = true
         root._check(PowerProfiles._watched,
             "quick actions keeps the power profile readable without the menu")
+        root._check(PowerProfiles._getRetries === 0,
+            "a control surface opening restarts the power profile read")
         QuickActionsState.open = false
         root._check(!PowerProfiles._watched,
             "closing every panel releases the power profile read")
@@ -621,6 +725,46 @@ ShellRoot {
         root._check(Object.keys(Notifications._seen).length === 0
                 && Object.keys(Notifications._times).length === 0,
             "state for ids history no longer holds is pruned")
+
+        const closedAdapter = { pairable: false }
+        Bluetooth._armPairable(closedAdapter)
+        root._check(closedAdapter.pairable,
+            "a pairing attempt opens the adapter pairing window")
+        Bluetooth._restorePairable()
+        root._check(!closedAdapter.pairable,
+            "a completed pairing attempt closes the pairing window it opened")
+        const openAdapter = { pairable: true }
+        Bluetooth._armPairable(openAdapter)
+        Bluetooth._restorePairable()
+        root._check(openAdapter.pairable,
+            "pairing preserves an adapter another owner already made pairable")
+
+        root._check(Bluetooth._attemptOutcome("pair", true, false, true, false, 0) === "ok",
+            "a paired device settles a pair attempt as success")
+        root._check(Bluetooth._attemptOutcome("pair", true, false, false, true, 0) === "",
+            "a pair attempt still pairing stays in progress")
+        root._check(Bluetooth._attemptOutcome("pair", true, false, false, false, 0) === "failed",
+            "a started pair attempt that dropped back to idle reports failure")
+        root._check(Bluetooth._attemptOutcome("pair", false, false, false, false, 0) === "",
+            "a pair attempt BlueZ has not moved yet is not called a failure")
+        root._check(Bluetooth._attemptOutcome("connect", true, true, false, false, 0) === "ok",
+            "a connected device settles a connect attempt as success")
+
+        const retiredNotification = {
+            transient: false, tracked: true,
+            appName: "Probe", appIcon: "", desktopEntry: "",
+            summary: "Retire me", body: "", urgency: 1
+        }
+        Notifications._times = { "61": 3000 }
+        Notifications.list = [{
+            notification: retiredNotification, id: 61, time: 3000
+        }]
+        Notifications._retireActiveNotifications()
+        root._check(Notifications.activeCount === 0 && !retiredNotification.tracked,
+            "disabling popups retires cards instead of leaving timerless notifications")
+        root._check(Notifications.historyCount === 1,
+            "a notification retired with the popup window remains in history")
+        Notifications.clearHistory()
 
         root._startAnchorTeardown()
     }
