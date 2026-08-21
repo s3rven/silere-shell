@@ -14,9 +14,7 @@ Column {
     property bool _armed: false
     property real _armedAtMs: 0
 
-    // "" | working | done | failed. Rewiring Matugen is the one health issue with a
-    // fix Silere owns, so it is the one that gets an action; a missing package is
-    // not ours to install.
+    // "" | working | done | failed
     property string _repairState: ""
 
     function _repairMatugen(): void {
