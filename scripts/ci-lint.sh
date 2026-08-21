@@ -637,6 +637,7 @@ else
   ok "qmldir" "all referenced files exist"
 fi
 
+
 # The other direction, which only fails at runtime as "X is not a type": a component
 # that exists but is not packaged. Tracked files only — Matugen's legacy generated
 # theme still sits untracked in config/ on upgraded checkouts.
@@ -645,7 +646,8 @@ while IFS= read -r f; do
   dir="$(dirname "$f")"
   case "$dir" in .|./scripts|scripts) continue ;; esac
   [ -f "$dir/qmldir" ] || { unpackaged="$unpackaged $f(no-qmldir)"; continue; }
-  grep -qF "$(basename "$f")" "$dir/qmldir" || unpackaged="$unpackaged $f"
+  awk -v n="$(basename "$f")" 'NF>=2 && $NF == n { found=1 } END { exit !found }' \
+    "$dir/qmldir" || unpackaged="$unpackaged $f"
 done < <(git ls-files '*.qml' 2>/dev/null)
 if [ -n "$unpackaged" ]; then
   fail "these components are not packaged in their qmldir, so they resolve only at runtime:"
@@ -825,11 +827,23 @@ widget_meta="$(awk '/barWidgetMeta:[[:space:]]*\(\{/{take=1; next} \
 widget_components="$(awk '/_widgetComponents:[[:space:]]*\(\{/{take=1; next} \
   take && /^[[:space:]]*\}\)/{exit} take{print}' modules/bar/BarContent.qml \
   | grep -oE '[A-Za-z][A-Za-z0-9]*[[:space:]]*:' | tr -d ': ' | sort)"
+# a renamed toggle leaves the row bound to a key the schema no longer has, which reads
+# as a widget that cannot be hidden rather than as an error
+widget_orphan=""
+while IFS= read -r wsetting; do
+  [ -n "$wsetting" ] || continue
+  grep -qE "\{ k: \"$wsetting\"," services/ShellSettings.qml \
+    || widget_orphan="$widget_orphan $wsetting"
+done <<< "$(awk '/barWidgetMeta:[[:space:]]*\(\{/{take=1; next} \
+  take && /^[[:space:]]*\}\)/{exit} take{print}' services/ShellSettings.qml \
+  | sed -nE 's/.*setting: "([A-Za-z][A-Za-z0-9]*)".*/\1/p')"
 if [ -z "$widget_keys" ] || [ "$widget_keys" != "$widget_meta" ] \
         || [ "$widget_keys" != "$widget_components" ]; then
     fail "barWidgetKeys, barWidgetMeta, and _widgetComponents must be nonempty and identical"
     printf 'keys:\n%s\nmeta:\n%s\ncomponents:\n%s\n' \
       "$widget_keys" "$widget_meta" "$widget_components"
+elif [ -n "$widget_orphan" ]; then
+    fail "bar widget metadata names settings the schema does not have:$widget_orphan"
 else
     ok "bar widgets" "keys, metadata, and components agree"
 fi
