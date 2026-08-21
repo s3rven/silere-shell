@@ -58,6 +58,11 @@ jobs:
         # lazily-loaded settings pages that qmlcachegen and qmllint cannot see
         run: bash scripts/test-surfaces.sh
 
+      - name: Live settings change sweep
+        # drives the whole schema against surfaces that already exist; the passes
+        # above only ever fix the settings before a surface is built
+        run: bash scripts/test-mutate.sh
+
       - name: Settings layout fit probe
         # a section can build and still lose its labels; Qt elides and reports success
         run: bash scripts/test-layout-fit.sh
