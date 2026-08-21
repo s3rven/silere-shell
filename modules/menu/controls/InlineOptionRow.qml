@@ -38,6 +38,13 @@ Item {
     opacity: root.enabled && root.interactive ? 1.0 : Theme.disabledOpacity
     MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
 
+    Accessible.role: Accessible.Button
+    Accessible.name: root.label
+    Accessible.description: root.status
+    Accessible.focusable: root.enabled && root.interactive
+    Accessible.selected: root.selected
+    Accessible.onPressAction: root.trigger()
+
     HoverHandler {
         id: _hover
         enabled: root.enabled && root.interactive

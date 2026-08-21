@@ -108,6 +108,14 @@ Item {
     opacity: enabled ? 1.0 : Theme.disabledOpacity
     MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
 
+    Accessible.role: Accessible.ComboBox
+    Accessible.name: root.label
+    Accessible.description: root.description.length > 0
+        ? root.description + " · Current: " + root._activeLabel
+        : "Current: " + root._activeLabel
+    Accessible.focusable: root.enabled && root._optionCount > 0
+    Accessible.onPressAction: root._toggleOpen()
+
     Item {
         id: _headerHitArea
         width: parent.width
@@ -133,6 +141,7 @@ Item {
         cardInset:    root.cardInset
         leftBleed:    root.cardLeftBleed
         active:       (_hov.hovered) && root.enabled
+        pressed:      _headerTap.pressed && root.enabled
     }
 
     ShellText {
@@ -204,11 +213,8 @@ Item {
             antialiasing: true
             color: root._open
                 ? Theme.withAlpha(root.accentColor, 0.055)
-                : _headerTap.pressed
-                    ? Theme.withAlpha(Theme.text, 0.065)
-                    : _hov.hovered
-                        ? Theme.withAlpha(Theme.text, 0.030)
-                        : "transparent"
+                : Theme.buttonFill(root.accentColor,
+                    _hov.hovered, _headerTap.pressed)
             ColorFade on color {}
 
             OutlineBorder {
@@ -216,9 +222,8 @@ Item {
                 outlineWidth: 1
                 outlineColor: root._open
                         ? Theme.controlLineActive(root.accentColor)
-                        : _hov.hovered
-                            ? Theme.menuControlLineHot
-                            : Theme.menuControlLine
+                        : Theme.buttonLine(root.accentColor,
+                            _hov.hovered, _headerTap.pressed)
                 ColorFade on outlineColor {}
             }
         }

@@ -8,6 +8,7 @@ MenuRow {
     property real   value:     0
     property string valueText: ""
     property string wheelKey:  "quickslider"
+    property string accessibleName: ""
     property bool   glyphClickable: false
     property bool   expandable: false
     property bool   expanded:   false
@@ -16,6 +17,7 @@ MenuRow {
     readonly property bool _hasChevSlot: root.expandable || root.reserveExpandSlot
 
     rowHovered:     _rowHover.hovered
+    rowPressed:     _track.dragging
     rowInteractive: root.enabled
 
     signal moved(real value)
@@ -41,20 +43,29 @@ MenuRow {
         ShellText {
             anchors.centerIn: parent
             text: root.glyph
-            color: (root.glyphClickable && _glyphHover.hovered) ? Theme.text
-                 : Theme.withAlpha(Theme.subtext, 0.85)
+            color: root.glyphClickable && (_glyphHover.hovered || _glyphTap.pressed)
+                ? Theme.text : Theme.withAlpha(Theme.subtext, 0.85)
             font.pixelSize: Settings.iconSize + 2
             ColorFade on color {}
         }
 
         HoverHandler { id: _glyphHover; enabled: root.enabled && root.glyphClickable; cursorShape: Qt.PointingHandCursor }
         TapHandler {
+            id: _glyphTap
             enabled: root.enabled && root.glyphClickable
             margin: 6
             onTapped: {
                 root.glyphClicked()
             }
         }
+
+        Accessible.role: root.glyphClickable
+            ? Accessible.Button : Accessible.StaticText
+        Accessible.name: root.glyphClickable
+            ? "Mute " + root.accessibleName.toLowerCase() : ""
+        Accessible.focusable: root.enabled && root.glyphClickable
+        Accessible.onPressAction: if (root.enabled && root.glyphClickable)
+            root.glyphClicked()
     }
 
     TextMetrics { id: _vm; font.family: Settings.font; font.pixelSize: Settings.fontLabel; text: "100%" }
@@ -110,6 +121,8 @@ MenuRow {
         height: 20
 
         interactive: root.enabled
+        accessibleName: root.accessibleName
+        accessibleValueText: root.valueText
         value: root.value
         wheelKey: "qslider:" + root.wheelKey
         onChanged: value => root.moved(value)

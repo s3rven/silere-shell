@@ -16,10 +16,12 @@ Item {
     property bool showThumb: true
     property bool hoverGrow: true
     property bool animate: true
-    property color trackColor: Theme.mix(Theme.menuControl, Theme.text,
-        _ma.pressed ? 0.13 : _ma.containsMouse ? 0.085 : 0.035)
-    property color trackOutlineColor: _ma.containsMouse
-        ? Theme.menuControlLineHot : Theme.menuControlLine
+    property color trackColor: Theme.controlTrackFill(Theme.accent, false,
+        _ma.containsMouse, _ma.pressed)
+    property color trackOutlineColor: Theme.controlTrackLine(Theme.accent, false,
+        _ma.containsMouse, _ma.pressed)
+    property string accessibleName: ""
+    property string accessibleValueText: ""
     property real hitPad: 10
 
     property real thumbWidth: 14
@@ -36,6 +38,13 @@ Item {
     property real _shownValue: value
 
     signal changed(real value)
+
+    Accessible.role: Accessible.Slider
+    Accessible.name: root.accessibleName
+    Accessible.description: root.accessibleValueText
+    Accessible.focusable: root.enabled && root.interactive
+    Accessible.onIncreaseAction: root.nudge(1, 1)
+    Accessible.onDecreaseAction: root.nudge(-1, 1)
 
     onValueChanged: if (!_ma.pressed) _shownValue = value
 
@@ -60,7 +69,7 @@ Item {
         if (!(commitOnRelease && _ma.pressed)) changed(next)
     }
     function nudge(dir: int, mult: int): void {
-        if (!root.interactive) return
+        if (!root.enabled || !root.interactive) return
         const baseStep = step > 0 ? step : Math.max(0.01, (max - min) / 100)
         _setFromUser(_shownValue + dir * baseStep * mult)
     }
@@ -81,10 +90,8 @@ Item {
             height: parent.height
             radius: parent.radius
             antialiasing: true
-            color: Theme.mix(Theme.menuControl, Theme.accent,
-                ShellSettings.neutralTheme
-                    ? (_ma.pressed ? 0.78 : _ma.containsMouse ? 0.73 : 0.68)
-                    : (_ma.pressed ? 0.84 : _ma.containsMouse ? 0.79 : 0.74))
+            color: Theme.controlTrackFill(Theme.accent, true,
+                _ma.containsMouse, _ma.pressed)
             ColorFade on color { gate: root.animate }
             MotionBehavior on width {
                 gate: root.animate && !_ma.pressed
@@ -109,8 +116,8 @@ Item {
         pressed: _ma.pressed
         hoverGrow: root.hoverGrow
         animate: root.animate
-        fillColor: Theme.mix(Theme.text, Theme.accent,
-            root.hoverGrow && (_ma.containsMouse || _ma.pressed) ? 0.18 : 0.06)
+        fillColor: Theme.controlKnobFill(Theme.accent, true,
+            root.hoverGrow && _ma.containsMouse, _ma.pressed)
         MotionBehavior on x {
             gate: root.animate && !_ma.pressed
             NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }

@@ -22,6 +22,13 @@ Item {
     width: implicitWidth
     height: implicitHeight
 
+    Accessible.role: Accessible.RadioButton
+    Accessible.name: root.name
+    Accessible.focusable: root.enabled
+    Accessible.checkable: true
+    Accessible.checked: root.active
+    Accessible.onPressAction: root._activate()
+
     HoverHandler {
         id: _h
         enabled: root.enabled

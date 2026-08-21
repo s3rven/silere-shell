@@ -22,6 +22,7 @@ MenuRow {
     property color  glyphColor:   Theme.withAlpha(Theme.subtext, 0.85)
 
     rowHovered:     _rowHover.hovered
+    rowPressed:     _track.dragging
     rowInteractive: root.enabled
 
     signal changed(real value)
@@ -109,6 +110,8 @@ MenuRow {
         hitPad: 8
 
         interactive: root.enabled
+        accessibleName: root.label
+        accessibleValueText: root.displayValue
         value: root.value
         min:   root.min
         max:   root.max

@@ -1,12 +1,12 @@
 import QtQuick
 import "../../config"
-import "../../services"
 
 Item {
     id: root
 
     property string label: ""
     property string glyph: ""
+    property string accessibleName: label
     property bool emphasis: false
     property color accentColor: Theme.accent
     property real radius: Theme.radiusField
@@ -29,6 +29,11 @@ Item {
     function activate(): void {
         if (root.enabled) root.triggered()
     }
+
+    Accessible.role: Accessible.Button
+    Accessible.name: root.accessibleName
+    Accessible.focusable: root.enabled
+    Accessible.onPressAction: root.activate()
 
     HoverHandler {
         id: _hover
@@ -59,14 +64,8 @@ Item {
         radius: root.radius
         antialiasing: true
         color: root.emphasis
-            ? Theme.mix(Theme.menuControl, root.accentColor,
-                root.pressed ? 0.54 : _hover.hovered ? 0.48 : 0.42)
-            : root.pressed
-                ? Theme.withAlpha(root.accentColor, 0.12)
-                : _hover.hovered
-                    ? Theme.withAlpha(
-                        Theme.mix(Theme.text, root.accentColor, 0.22), 0.075)
-                    : Theme.withAlpha(Theme.text, 0.035)
+            ? Theme.emphasisButtonFill(root.accentColor, _hover.hovered, root.pressed)
+            : Theme.buttonFill(root.accentColor, _hover.hovered, root.pressed)
 
         ColorFade on color {}
 
@@ -74,10 +73,7 @@ Item {
             radius: _surface.radius
             outlineWidth: 1
             outlineColor: root.emphasis ? "transparent"
-                    : _hover.hovered
-                        ? Theme.withAlpha(root.accentColor,
-                            ShellSettings.highContrast ? 0.38 : 0.24)
-                        : Theme.menuControlLine
+                    : Theme.buttonLine(root.accentColor, _hover.hovered, root.pressed)
 
             ColorFade on outlineColor {}
         }

@@ -9,7 +9,9 @@ Item {
     property real  cardInset:    1
     property real  leftBleed:    0
     property bool  active:       false
+    property bool  pressed:      false
     property real  fillOpacity:  0.08
+    property real  pressOpacity: 0.13
     property color fillColor:    Theme.menuHover
 
     Rectangle {
@@ -30,7 +32,8 @@ Item {
         antialiasing:      _topR > 0 || _botR > 0
 
         color: Theme.withAlpha(root.fillColor,
-            root.active ? root.fillOpacity : 0)
+            root.pressed ? Math.max(root.fillOpacity, root.pressOpacity)
+                : root.active ? root.fillOpacity : 0)
         ColorFade on color {}
     }
 }

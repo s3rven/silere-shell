@@ -6,6 +6,7 @@ Item {
     id: root
 
     property string text: ""
+    property color textColor: Theme.menuTextDetail
     readonly property bool suppressDividerAbove: true
     readonly property int _hPad: 14
     readonly property int _topPad: 4
@@ -23,7 +24,8 @@ Item {
         y: root._topPad
         width: Math.max(0, parent.width - root._hPad * 2)
         text:        root.text
-        color:       Theme.menuTextDetail
+        color:       root.textColor
+        ColorFade on color {}
         font.pixelSize: root._fontPx
         wrapMode:    Text.WordWrap
     }

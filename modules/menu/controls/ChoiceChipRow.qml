@@ -153,6 +153,14 @@ MenuRow {
                         + (index < _choiceGroup.cellRemainder ? 1 : 0)
                     height: _choiceGroup.height
 
+                    Accessible.role: Accessible.RadioButton
+                    Accessible.name: _option.optionLabel
+                    Accessible.focusable: root.enabled
+                    Accessible.checkable: true
+                    Accessible.checked: _option.active
+                    Accessible.onPressAction: if (root.enabled)
+                        root.chosen(_option.modelData.value)
+
                     HoverHandler {
                         id: _hover
                         enabled: root.enabled
@@ -183,11 +191,8 @@ MenuRow {
                                 : _hover.hovered
                                     ? Theme.withAlpha(root.accentColor, 0.09)
                                     : Theme.withAlpha(root.accentColor, 0.055))
-                            : _tap.pressed
-                                ? Theme.withAlpha(Theme.text, 0.09)
-                                : _hover.hovered
-                                    ? Theme.withAlpha(Theme.text, 0.055)
-                                    : Theme.withAlpha(Theme.text, 0.028)
+                            : Theme.buttonFill(root.accentColor,
+                                _hover.hovered, _tap.pressed)
                         ColorFade on color {}
                         MotionBehavior on scale {
                             NumberAnimation {
@@ -202,10 +207,8 @@ MenuRow {
                             outlineWidth: 1
                             outlineColor: _option.active
                                     ? Theme.controlLineActive(root.accentColor)
-                                    : _hover.hovered
-                                        ? Theme.withAlpha(root.accentColor,
-                                            ShellSettings.highContrast ? 0.38 : 0.22)
-                                        : Theme.menuControlLine
+                                    : Theme.buttonLine(root.accentColor,
+                                        _hover.hovered, _tap.pressed)
                             ColorFade on outlineColor {}
                         }
                     }

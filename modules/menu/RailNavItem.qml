@@ -23,6 +23,12 @@ Item {
     width: railW
     height: Metrics.rowHeightFor(34)
 
+    Accessible.role: Accessible.PageTab
+    Accessible.name: root.label
+    Accessible.focusable: true
+    Accessible.selected: root.active
+    Accessible.onPressAction: root.tapped()
+
     Timer {
         id: _labelDelay
         interval: 80

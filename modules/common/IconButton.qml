@@ -7,6 +7,7 @@ Item {
     id: root
 
     property string glyph: ""
+    property string accessibleName: ""
     property color accentColor: Theme.accent
     property int buttonSize: Metrics.rowHeightFor(28)
     property int glyphPixelSize: Settings.fontSize + 2
@@ -25,6 +26,11 @@ Item {
     function activate(): void {
         if (root.enabled) root.triggered()
     }
+
+    Accessible.role: Accessible.Button
+    Accessible.name: root.accessibleName
+    Accessible.focusable: root.enabled
+    Accessible.onPressAction: root.activate()
 
     HoverHandler {
         id: _hover
@@ -46,19 +52,13 @@ Item {
         scale: root.pressed ? Motion.pressScale
             : _hover.hovered ? Motion.hoverScale : 1.0
         transformOrigin: Item.Center
-        color: root.pressed
-            ? Theme.withAlpha(root.accentColor, 0.20)
-            : _hover.hovered
-                    ? Theme.withAlpha(
-                        Theme.mix(Theme.subtext, root.accentColor, 0.28), 0.13)
-                    : "transparent"
+        color: Theme.buttonFill(root.accentColor, _hover.hovered, root.pressed)
 
         OutlineBorder {
             radius: width / 2
             outlineWidth: 1
-            outlineColor: _hover.hovered
-                    ? Theme.withAlpha(root.accentColor, 0.22)
-                    : "transparent"
+            outlineColor: Theme.buttonLine(
+                root.accentColor, _hover.hovered, root.pressed)
             ColorFade on outlineColor {}
         }
 

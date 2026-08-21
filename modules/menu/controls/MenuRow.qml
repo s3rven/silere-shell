@@ -11,6 +11,7 @@ Item {
     property real   cardLeftBleed: 0
 
     property bool rowHovered:     false
+    property bool rowPressed:     false
     property bool rowInteractive: true
 
     width:          parent ? parent.width : 0
@@ -23,5 +24,6 @@ Item {
         cardInset:    root.cardInset
         leftBleed:    root.cardLeftBleed
         active:       root.rowHovered && root.rowInteractive
+        pressed:      root.rowPressed && root.rowInteractive
     }
 }

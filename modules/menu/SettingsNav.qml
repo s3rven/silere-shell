@@ -306,25 +306,36 @@ Item {
                             height: root._groupH
                             radius: Theme.radiusInline
                             antialiasing: true
-                            // the group holding the current page, not every open one.
-                            // hover brightens that marking rather than replacing it, or
-                            // the cursor erases the only sign of where you are
+                            // hover brightens the current group's marking instead of replacing it
                             color: !_grp.groupActive
-                                ? (_headerHover.hovered
+                                ? (_headerTap.pressed
+                                    ? Theme.withAlpha(Theme.accent, 0.12)
+                                    : _headerHover.hovered
                                     ? Theme.withAlpha(Theme.text, 0.035) : "transparent")
                                 : _grp.expanded
                                     ? Theme.withAlpha(Theme.accent,
-                                        _headerHover.hovered ? 0.075 : 0.035)
+                                        _headerTap.pressed ? 0.13
+                                            : _headerHover.hovered ? 0.075 : 0.035)
                                     : Theme.mix(Theme.menuControl, Theme.accent,
                                         ShellSettings.highContrast
-                                            ? (_headerHover.hovered ? 0.24 : 0.16)
-                                            : (_headerHover.hovered ? 0.17 : 0.10))
+                                            ? (_headerTap.pressed ? 0.30
+                                                : _headerHover.hovered ? 0.24 : 0.16)
+                                            : (_headerTap.pressed ? 0.22
+                                                : _headerHover.hovered ? 0.17 : 0.10))
+
+                            Accessible.role: Accessible.Button
+                            Accessible.name: _grp.modelData.label
+                            Accessible.description: _grp.expanded ? "Expanded" : "Collapsed"
+                            Accessible.focusable: true
+                            Accessible.selected: _grp.groupActive
+                            Accessible.onPressAction: root._toggleGroup(_grp.index)
 
                             HoverHandler {
                                 id: _headerHover
                                 cursorShape: Qt.PointingHandCursor
                             }
                             TapHandler {
+                                id: _headerTap
                                 onTapped: {
                                     root._toggleGroup(_grp.index)
                                 }
@@ -431,17 +442,29 @@ Item {
                                         color: _leaf.active
                                             ? Theme.withAlpha(Theme.accent,
                                                 ShellSettings.highContrast
-                                                    ? (_leafHover.hovered ? 0.20 : 0.14)
-                                                    : (_leafHover.hovered ? 0.115 : 0.075))
+                                                    ? (_leafTap.pressed ? 0.27
+                                                        : _leafHover.hovered ? 0.20 : 0.14)
+                                                    : (_leafTap.pressed ? 0.16
+                                                        : _leafHover.hovered ? 0.115 : 0.075))
+                                            : _leafTap.pressed
+                                                ? Theme.withAlpha(Theme.accent, 0.12)
                                             : _leafHover.hovered
                                                 ? Theme.withAlpha(Theme.text, 0.042)
                                                 : "transparent"
+
+                                        Accessible.role: Accessible.PageTab
+                                        Accessible.name: _leaf.modelData.label
+                                        Accessible.focusable: true
+                                        Accessible.selected: _leaf.active
+                                        Accessible.onPressAction: root._activateSection(
+                                            _leaf.modelData.section)
 
                                         HoverHandler {
                                             id: _leafHover
                                             cursorShape: Qt.PointingHandCursor
                                         }
                                         TapHandler {
+                                            id: _leafTap
                                             onTapped: {
                                                 root._activateSection(_leaf.modelData.section)
                                             }

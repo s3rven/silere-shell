@@ -1,5 +1,6 @@
 import QtQuick
 import "../../../config"
+import "../../../services"
 import "../../common"
 
 MenuRow {
@@ -9,6 +10,9 @@ MenuRow {
     property string status:      ""
     property string valueText:   ""
     property color  accentColor: Theme.accent
+    // Transparent follows the normal active/inactive hierarchy. A semantic
+    // colour lets a failure remain recognisable even when the control is off.
+    property color  statusColor: "transparent"
     property bool   active:       false
     property bool   available:    true
     property bool   showSwitch:   false
@@ -18,6 +22,7 @@ MenuRow {
     property int    badgeCount:   0
 
     rowHovered:     _hover.hovered
+    rowPressed:     _tap.pressed
     rowInteractive: root._canTap
 
     signal activated()
@@ -58,6 +63,17 @@ MenuRow {
 
     opacity: root.passive ? 1.0 : (_canTap ? 1.0 : Theme.disabledOpacity)
     MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
+
+    Accessible.role: root.showSwitch ? Accessible.CheckBox
+        : root._canTap ? Accessible.Button : Accessible.StaticText
+    Accessible.name: root.title
+    Accessible.description: root.status.length > 0 && root.valueText.length > 0
+        ? root.status + " · " + root.valueText
+        : root.status.length > 0 ? root.status : root.valueText
+    Accessible.focusable: root._canTap
+    Accessible.checkable: root.showSwitch
+    Accessible.checked: root.showSwitch && root.active
+    Accessible.onPressAction: root._activate()
 
     HoverHandler { id: _hover; cursorShape: root._canTap ? Qt.PointingHandCursor : Qt.ArrowCursor }
     TapHandler {
@@ -162,8 +178,11 @@ MenuRow {
             visible:        root.status.length > 0
             width:          parent.width
             text:           root.status
-            color:          root.active ? Theme.mix(root.accentColor, Theme.text, 0.12)
-                                        : Theme.withAlpha(Theme.subtext, 0.62)
+            color:          root.statusColor.a > 0
+                ? Theme.withAlpha(Theme.mix(root.statusColor, Theme.text,
+                    ShellSettings.highContrast ? 0.22 : 0.10), 0.94)
+                : root.active ? Theme.mix(root.accentColor, Theme.text, 0.12)
+                              : Theme.withAlpha(Theme.subtext, 0.62)
             font.pixelSize: Settings.fontCaption
             font.weight:    Font.Medium
             elide:          Text.ElideRight
