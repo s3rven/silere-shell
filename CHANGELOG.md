@@ -61,6 +61,9 @@ Only work since the latest release is listed here. Completed notes move to
 - The bar clears the window title on an empty workspace.
 - Leaving a fullscreen window for an empty workspace lets notifications through again.
 
+- A Wi-Fi password stays in the field while new scan results arrive.
+- The Wi-Fi password field scrolls into view when it opens near the bottom of the list.
+- The Wi-Fi list refills after the adapter drops out and comes back.
 ## Releases
 
 - [0.7.0](docs/releases/0.7.0.md) — 2026-08-18

@@ -16,8 +16,15 @@ Item {
 
     property string _selected: ""
     property string _armedSsid: ""
+    // the model is a held snapshot: any content change in Network.wifiNetworks destroys every
+    // delegate, and with it the password field being typed into
+    property var _networks: []
     property real _armedAtMs: 0
     Timer { id: _disarmTimer; interval: 3000; onTriggered: root._armedSsid = "" }
+
+    function _syncNetworks(): void {
+        if (root._selected === "") root._networks = Network.wifiNetworks
+    }
 
     function _canScan(): bool {
         return root.open && Network.toolAvailable && Network.wifiEnabled && !Idle.isIdle
@@ -34,11 +41,12 @@ Item {
         }
     }
 
+    on_SelectedChanged: _syncNetworks()
     onOpenChanged: {
         if (open) _syncScanState()
         else      { _selected = ""; _disarmTimer.stop(); _armedSsid = ""; Network.clearWifiScan() }
     }
-    Component.onCompleted: _syncScanState()
+    Component.onCompleted: { _syncScanState(); _syncNetworks() }
     Component.onDestruction: {
         if (open) Network.clearWifiScan()
     }
@@ -47,18 +55,20 @@ Item {
         id: _rescan
         interval: 8000
         repeat: true
-        // paused while a password row is open so a scan can't rebuild the field mid-typing
         running: root._canScan() && root._selected === "" && !Idle.isIdle
         onTriggered: Network.scanWifi(false)
     }
 
     Connections {
         target: Network
+        function onWifiNetworksChanged() { root._syncNetworks() }
         function onWifiConnectingChanged() {
             if (Network.wifiConnecting === "" && Network.wifiError === "") root._selected = ""
         }
         function onWifiEnabledChanged() { root._syncScanState() }
         function onToolAvailableChanged() { root._syncScanState() }
+        // a rescan that lands while the device is re-enumerating disarms the scanner for good
+        function onHasWifiDeviceChanged() { root._syncScanState() }
     }
     Connections {
         target: Idle
@@ -71,7 +81,7 @@ Item {
         spacing: 0
 
         ShellText {
-            visible: root.open && Network.wifiNetworks.length === 0
+            visible: root.open && root._networks.length === 0
             width: parent.width
             height: Metrics.rowHeightFor(32)
             horizontalAlignment: Text.AlignHCenter
@@ -89,14 +99,15 @@ Item {
             id: _list
             width: parent.width
             height: Math.min(contentHeight, 240)
-            visible: root.open && Network.wifiNetworks.length > 0
+            visible: root.open && root._networks.length > 0
             interactive: contentHeight > height
             spacing: 0
-            model: root.open ? Network.wifiNetworks : []
+            model: root.open ? root._networks : []
 
             delegate: Column {
                 id: _entry
                 required property var modelData
+                required property int index
                 width: _list.width
                 spacing: 0
 
@@ -113,10 +124,14 @@ Item {
 
                 on_SelChanged: if (!_sel) _pw.text = ""
 
+                function _revealField(): void {
+                    if (_entry._sel) _list.positionViewAtIndex(_entry.index, ListView.Contain)
+                }
+
                 InlineOptionRow {
                     id: _row
                     width: parent.width
-                    glyph: Network.signalGlyph(_entry.modelData.signal)
+                    glyph: _entry.modelData.glyph
                     label: _entry.modelData.label
                     status: _entry._armed ? "Disconnect?"
                         : _entry.modelData.active ? "Connected"
@@ -153,7 +168,7 @@ Item {
                             const wasSel = _entry._sel
                             root._selected = wasSel ? "" : _entry.modelData.ssid
                             Network.clearWifiError()
-                            if (!wasSel) Qt.callLater(function() { _pw.forceActiveFocus() })
+                            if (!wasSel) Qt.callLater(function() { if (_pw) _pw.forceActiveFocus() })
                         } else {
                             Network.connectWifi(_entry.modelData.ssid, "")
                         }
@@ -163,10 +178,12 @@ Item {
 
                 Item {
                     width: parent.width
-                    height: _entry._sel ? 40 : 0
+                    height: _entry._sel ? _pwField.height + 4 : 0
                     clip: true
                     visible: height > 0.5
                     Disclosure on height { expanded: _entry._sel }
+                    // the field opens below its row, which can be past the list's bottom edge
+                    onHeightChanged: Qt.callLater(_entry._revealField)
 
                     Rectangle {
                         id: _pwField
@@ -233,16 +250,21 @@ Item {
                             enabled: _pw.text.length > 0 && !_entry._connecting
                             opacity: enabled ? 1.0 : Theme.disabledOpacity
                             MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
-                            color: (_joinHover.hovered) ? Theme.withAlpha(Theme.accent, 0.30)
-                                                                        : Theme.withAlpha(Theme.accent, 0.18)
+                            color: Theme.emphasisButtonFill(
+                                Theme.accent, _joinHover.hovered, _joinTap.pressed)
                             ColorFade on color {}
+
+                            Accessible.role: Accessible.Button
+                            Accessible.name: "Join " + _entry.modelData.label
+                            Accessible.focusable: _join.enabled
+                            Accessible.onPressAction: _join._activate()
 
                             function _activate(): void {
                                 if (_join.enabled) _entry._submitPassword()
                             }
 
                             HoverHandler { id: _joinHover; enabled: _join.enabled; cursorShape: Qt.PointingHandCursor }
-                            TapHandler   { enabled: _join.enabled; onTapped: _join._activate() }
+                            TapHandler   { id: _joinTap; enabled: _join.enabled; onTapped: _join._activate() }
                             ShellText {
                                 anchors.centerIn: parent
                                 text: "󰌑"
