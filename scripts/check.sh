@@ -519,6 +519,26 @@ else
   warn "surfaces" "scripts/test-surfaces.sh missing; section build check skipped"
 fi
 
+section "live settings changes"
+# Every pass above fixes the settings before the surface exists. A binding that
+# only breaks when the value changes under a built surface survives all of them.
+if [ "$qs_usable" != 1 ]; then
+  warn "mutate" "not run: Quickshell will not start"
+elif [ -f scripts/test-mutate.sh ]; then
+  mut_code=0
+  mut_out="$(bash scripts/test-mutate.sh 2>&1)" || mut_code=$?
+  if [ "$mut_code" -ne 0 ]; then
+    printf '%s\n' "$mut_out" | sed 's/^/       /'
+    fail "mutate" "a live settings change broke a surface"
+  elif printf '%s' "$mut_out" | grep -q '^SKIP'; then
+    warn "mutate" "$(printf '%s' "$mut_out" | sed -n 's/^SKIP: //p' | head -1)"
+  else
+    ok "mutate" "$(printf '%s' "$mut_out" | grep -oE 'swept .*' | tail -1)"
+  fi
+else
+  warn "mutate" "scripts/test-mutate.sh missing; live settings check skipped"
+fi
+
 section "layout fit"
 # Building a section says nothing about whether its labels survive the width they
 # ship at; Qt elides them and reports success either way.
