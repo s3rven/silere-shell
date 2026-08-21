@@ -27,50 +27,50 @@ Only work since the latest release is listed here. Completed notes move to
 - Buttons, toggles, sliders, rows, navigation, chips, and swatches share one visible state hierarchy.
 - Interactive controls expose names, states, and actions to accessibility tools without changing Silere's pointer-driven navigation.
 - Failures and warnings keep their semantic color in Home-page status text instead of looking like normal active states.
+- Both update cards say how long ago they last checked.
 - Disconnecting the current Wi-Fi network takes a second tap to confirm.
 - The Mix accent swatch shows a colour wheel.
-- Both update cards say how long ago they last checked.
 - Disabled controls dim to one depth, and high contrast lifts them.
 - Notification popups widen with the interface scale.
 - The notification list grows with the history it holds, up to the room the screen has.
 
 ### Fixed
 
+- Animations no longer fall back to roughly 60 FPS when a bar and popup are visible together on a high-refresh display.
 - A docked bar casts a shadow when Shell shadows is on.
-- Bar Roundness is reachable while the bar is docked, and reads Round once the corners reach half its height.
+- Bar Roundness is reachable while the bar is docked, named and read out for the widget highlights it shapes there.
 - The low-battery and high-temperature thresholds stay reachable with their warnings off.
 - The Opacity slider under Dividers appears while the window title draws a separator.
 - The centre visualiser can be aligned without the window title switched on.
 - The bar Opacity readout matches what high contrast renders.
 - Keybinds open the menu, calendar and quick actions under the widget that opens them, not at the screen edge.
-- Animations no longer fall back to roughly 60 FPS when a bar and popup are visible together on a high-refresh display.
 - Notification history no longer holds read-state for notifications it has already dropped.
 - A double-click on a connected Bluetooth device no longer disconnects it in one gesture.
+- Bluetooth pairing closes the pairable window when the attempt finishes or is cancelled.
+- Turning notification popups off retires the cards already on screen instead of reviving them later.
 - Notifications and the OSD sit at the edge of a monitor whose bar is turned off, rather than clearing a bar that is not on it.
 - Popup borders draw at the same weight on every side.
 - The Home page's power tile says when the active profile is throttled.
 - The power rail's mode value no longer crowds out its label at larger font sizes.
-- Turning notification popups off retires the cards already on screen instead of reviving them later.
 - The AUR toggle in Updates settings stays hidden until the updates widget itself is on.
 - OSD settings no longer labels a lone section GENERAL when Feedback isn't shown beside it.
 - A track with an unknown length shows --:-- instead of LIVE.
-- Bluetooth pairing closes the pairable window when the attempt finishes or is cancelled.
 - Switching media players skips a browser session that has already stopped.
 - The media card sits evenly in its padding.
 - Small slider handles keep the shell's squared-off shape.
 - Clicking anywhere on the media art jumps to the player.
 - The bar clears the window title on an empty workspace.
 - Leaving a fullscreen window for an empty workspace lets notifications through again.
-
 - A Wi-Fi password stays in the field while new scan results arrive.
 - The Wi-Fi password field scrolls into view when it opens near the bottom of the list.
 - The Wi-Fi list refills after the adapter drops out and comes back.
+- Silere Shell says it has not been checked yet rather than claiming to be up to date.
+- A package check that keeps failing raises a warning in the bar.
+
 ## Releases
 
 - [0.7.0](docs/releases/0.7.0.md) — 2026-08-18
 - [0.6.1](docs/releases/0.6.1.md) — 2026-08-16
-- Silere Shell says it has not been checked yet rather than claiming to be up to date.
-- A package check that keeps failing raises a warning in the bar.
 - [0.6.0](docs/releases/0.6.0.md) — 2026-08-15
 - [0.5.1](docs/releases/0.5.1.md) — 2026-08-13
 - [0.5.0](docs/releases/0.5.0.md) — 2026-08-13

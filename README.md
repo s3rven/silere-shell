@@ -165,6 +165,8 @@ qs ipc -p "$SILERE_DIR/shell.qml" call menu settings updates
 qs ipc -p "$SILERE_DIR/shell.qml" call calendar toggle
 qs ipc -p "$SILERE_DIR/shell.qml" call quickActions toggle
 qs ipc -p "$SILERE_DIR/shell.qml" call screenshot flash
+qs ipc -p "$SILERE_DIR/shell.qml" call settings toggle reduceMotion
+qs ipc -p "$SILERE_DIR/shell.qml" call settings set osdTimeout 3000
 ```
 
 Menu tabs are `0` (Home), `1` (Settings), and `2` (Recent). `quickActions` holds Do Not Disturb, night light, power mode and airplane mode. `screenshot flash` lets a screenshot tool trigger the underline effect directly, without the optional filesystem watcher.
@@ -196,16 +198,20 @@ chmod +x ~/.config/silere-shell/hooks/battery-critical
 
 Hooks are read at startup; `qs ipc -p "$SILERE_DIR/shell.qml" call hooks rescan` picks up a new one without a restart, and `hooks list` shows which are active. An event with no executable file costs nothing.
 
+Hook runs are capped at 20 a second, so a burst of notifications cannot spawn without limit. Anything past the cap is dropped rather than queued.
+
 <details>
 <summary>Settings section names for <code>menu settings &lt;name&gt;</code></summary>
-Hook runs are capped at 20 a second, so a burst of notifications cannot spawn without limit. Anything past the cap is dropped rather than queued.
+
 <br>
 
 `theme`, `interface`, `surface`, `underline`, `separators`, `widgets`, `workspaces`, `clock`, `media`, `indicators`, `popups`, `osd`, `warnings`, `updates`, `maintenance`
 
 An unknown name falls back to `theme`, so an out-of-date keybind still opens Settings.
-## Troubleshooting
+
 </details>
+
+## Troubleshooting
 
 From the Silere checkout, run the dependency and configuration checks first:
 

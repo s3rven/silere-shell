@@ -283,7 +283,7 @@ Item {
             } else {
                 x = 0
                 opacity = 1.0
-                Qt.callLater(() => { cardRect._behaviorEnabled = true })
+                Qt.callLater(() => { if (cardRect) cardRect._behaviorEnabled = true })
             }
         }
 

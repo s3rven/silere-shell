@@ -376,7 +376,7 @@ PageShell {
                         radius: Theme.radiusControl
                         antialiasing: true
                         clip: true
-                        color: Theme.rowFill(_entryHover.hovered)
+                        color: Theme.rowFill(_entryHover.hovered, _entryTap.pressed)
 
                         OutlineBorder {
                             radius: _card.radius
@@ -392,6 +392,7 @@ PageShell {
                             cursorShape: (_body.truncated || _entry._expanded) ? Qt.PointingHandCursor : Qt.ArrowCursor
                         }
                         TapHandler {
+                            id: _entryTap
                             enabled: !root._clearing && !_entry._removing
                             onTapped: eventPoint => {
                                 const p = _removeButton.mapFromItem(_card, eventPoint.position.x, eventPoint.position.y)

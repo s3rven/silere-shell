@@ -59,7 +59,15 @@ Rectangle {
     MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
     color: root.armed
         ? Theme.withAlpha(Theme.error, 0.105)
+        : _tap.pressed
+            ? Theme.withAlpha(root.dangerous ? Theme.error : root.accentColor, 0.13)
         : root._hot ? Theme.withAlpha(Theme.text, 0.045) : "transparent"
+
+    Accessible.role: root.interactive ? Accessible.Button : Accessible.StaticText
+    Accessible.name: root.armed ? root.confirmLabel : root.label
+    Accessible.description: root.value
+    Accessible.focusable: root.enabled && root.interactive
+    Accessible.onPressAction: root.activate()
 
     OutlineBorder {
         radius: root.radius
@@ -134,6 +142,7 @@ Rectangle {
     }
 
     TapHandler {
+        id: _tap
         enabled: root.enabled && root.interactive
         onTapped: root.activate()
     }
