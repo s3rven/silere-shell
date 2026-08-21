@@ -26,6 +26,7 @@ Only work since the latest release is listed here. Completed notes move to
 - The custom accent mixer keeps two full-width, uncluttered color rails.
 - Buttons, toggles, sliders, rows, navigation, chips, and swatches share one visible state hierarchy.
 - Interactive controls expose names, states, and actions to accessibility tools without changing Silere's pointer-driven navigation.
+- Failures and warnings keep their semantic color in Home-page status text instead of looking like normal active states.
 - Disconnecting the current Wi-Fi network takes a second tap to confirm.
 - The Mix accent swatch shows a colour wheel.
 - Both update cards say how long ago they last checked.
