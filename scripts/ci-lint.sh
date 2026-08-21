@@ -307,10 +307,10 @@ if ! awk '
     /write\("\\"EventStream\\"\\n"\)/ { line = NR }
     line && NR <= line + 2 && /flush\(\)/ { flushed = 1 }
     END { exit !flushed }
-' services/Compositor.qml; then
+' services/CompositorNiri.qml; then
   fail "Niri EventStream request must flush the socket write"
-elif ! grep -qF 'id: _niriReconnect' services/Compositor.qml \
-    || ! grep -qF 'running: root.isNiri && !_niriSocket.connected' services/Compositor.qml; then
+elif ! grep -qF 'id: _reconnect' services/CompositorNiri.qml \
+    || ! grep -qF 'running: !_socket.connected' services/CompositorNiri.qml; then
   fail "Niri socket must retry after a dropped connection"
 else
   ok "niri socket" "event stream flushes and reconnects"
@@ -1090,24 +1090,24 @@ section "inert compositor events"
 inert_events="openlayer closelayer submap activelayout screencast changefloatingmode"
 missing_inert=""
 for ev in $inert_events; do
-  grep -q "\"$ev\"" services/Compositor.qml || missing_inert="$missing_inert $ev"
+  grep -q "\"$ev\"" services/CompositorHyprland.qml || missing_inert="$missing_inert $ev"
 done
 if [ -n "$missing_inert" ]; then
-  fail "these compositor events must stay denylisted in Compositor.qml:$missing_inert"
+  fail "these compositor events must stay denylisted in CompositorHyprland.qml:$missing_inert"
 else
   ok "inert events" "the event denylist still covers every measured no-op"
 fi
 
 # Quickshell's Hyprland bindings do not always mirror the compositor: hyprland reports
 # unfocus as an empty activewindowv2 address, quickshell's parser bails on it, and
-# Hyprland.activeToplevel then keeps the last focused window forever. Compositor.qml is
-# the only place that compensates, so a direct read from any other file silently gets
-# stale focus back.
+# Hyprland.activeToplevel then keeps the last focused window forever. The Hyprland
+# adapter is the only place that compensates, so a direct read from any other file
+# silently gets stale focus back.
 facade_leaks="$(grep -rln 'import Quickshell\.Hyprland' --include='*.qml' \
   modules config services shell.qml 2>/dev/null \
-  | grep -v '^services/Compositor\.qml$' || true)"
+  | grep -v '^services/CompositorHyprland\.qml$' || true)"
 if [ -n "$facade_leaks" ]; then
-  fail "only services/Compositor.qml may import Quickshell.Hyprland:"
+  fail "only services/CompositorHyprland.qml may import Quickshell.Hyprland:"
   while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$facade_leaks"
 else
   ok "compositor facade" "Quickshell.Hyprland stays behind Compositor.qml"
