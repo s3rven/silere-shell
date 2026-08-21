@@ -103,8 +103,7 @@ Singleton {
         _set.exec(["powerprofilesctl", "set", next])
     }
 
-    // quick actions carries the same row: gating reads on the menu alone leaves it on "…"
-    readonly property bool _watched: MenuState.open || QuickActionsState.open
+    readonly property bool _watched: ControlSurfaces.anyOpen
     on_WatchedChanged: if (!root._watched && !root._correctiveRefreshPending) _getRetry.stop()
 
     function _surfaceOpened(): void {
@@ -113,12 +112,8 @@ Singleton {
     }
 
     Connections {
-        target: MenuState
-        function onOpenChanged() { if (MenuState.open) root._surfaceOpened() }
-    }
-    Connections {
-        target: QuickActionsState
-        function onOpenChanged() { if (QuickActionsState.open) root._surfaceOpened() }
+        target: ControlSurfaces
+        function onOpened() { root._surfaceOpened() }
     }
     Connections {
         target: SystemTools

@@ -40,6 +40,7 @@ ShellRoot {
         // same trap: nothing else references ShellUpdate until the Updates page builds, after open
         void ShellUpdate.pending
         void OverlayCoordinator.armed
+        void ControlSurfaces.anyOpen
         root.armSystemAlertsIfNeeded()
     }
 

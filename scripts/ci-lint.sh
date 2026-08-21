@@ -1136,7 +1136,33 @@ if [ -n "$facade_leaks" ]; then
   fail "only services/CompositorHyprland.qml may import Quickshell.Hyprland:"
   while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$facade_leaks"
 else
-  ok "compositor facade" "Quickshell.Hyprland stays behind Compositor.qml"
+  ok "compositor facade" "Quickshell.Hyprland stays behind the Hyprland adapter"
+fi
+
+section "control surface gating"
+# The power profile row shipped stuck on "..." inside quick actions because PowerProfiles
+# gated its reads on the menu alone. ControlSurfaces is the one place that enumerates the
+# panels hosting shared rows, so a service naming two of them is that regression returning.
+surface_state_singletons="MenuState QuickActionsState TrayMenuState"
+multi_surface_services=""
+for f in services/*.qml; do
+  case "$f" in
+    services/ControlSurfaces.qml|services/OverlayCoordinator.qml) continue ;;
+  esac
+  surfaces_named=0
+  for st in $surface_state_singletons; do
+    if grep -qE "(^|[^A-Za-z0-9_])${st}\." "$f"; then
+      surfaces_named=$((surfaces_named + 1))
+    fi
+  done
+  if [ "$surfaces_named" -gt 1 ]; then
+    multi_surface_services="$multi_surface_services $(basename "$f")"
+  fi
+done
+if [ -n "$multi_surface_services" ]; then
+  fail "these services enumerate panels instead of gating on ControlSurfaces:$multi_surface_services"
+else
+  ok "surfaces" "no service enumerates panel state singletons"
 fi
 
 section "pointer-only interaction"
