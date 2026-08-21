@@ -121,13 +121,14 @@ PanelWindow {
             gate: panel._geometryReady && panel.open
             NumberAnimation {
                 duration: panel._railMotionMs
-                easing.type: panel._railMotionEasing
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: panel._railMotionCurve
             }
         }
         readonly property int _railMotionMs: _railExpanded
             ? Motion.panelResize : Motion.panelCollapse
-        readonly property int _railMotionEasing: _railExpanded
-            ? Easing.OutQuint : Easing.InOutCubic
+        readonly property var _railMotionCurve: _railExpanded
+            ? Motion.emphasizedDecel : Motion.emphasizedAccel
         // live width, not the target: the page reflows ahead of the outer edge otherwise
         readonly property int contentW: Math.max(1, Math.round(width - railW))
         readonly property int contentPad: activeTab === 1
@@ -315,15 +316,13 @@ PanelWindow {
             gate: panel._geometryReady && panel.open
             NumberAnimation {
                 duration: panel._railMotionMs
-                easing.type: panel._railMotionEasing
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: panel._railMotionCurve
             }
         }
         // duration caps the velocity: without it a tall page swap crawls for ~700ms while the
         // width beside it lands in _railMotionMs, and every scroll-affordance settle times out early
         MotionBehavior on height {
-            // inner disclosures animate their own height, so the card follows those
-            // values directly; this outer easing is only for the jumps — page swaps,
-            // section swaps, and the nav accordion's stepped floor
             gate: panel._geometryReady && panel.open && panel._outerHeightMotion
             SmoothedAnimation {
                 velocity: Motion.panelVelocity
@@ -401,14 +400,16 @@ PanelWindow {
                         NumberAnimation {
                             duration: panel._settingsNavVisible
                                 ? Motion.ms(130) : Motion.ms(90)
-                            easing.type: panel._settingsNavVisible
-                                ? Easing.OutCubic : Easing.InCubic
+                            easing.type: Easing.BezierSpline
+                            easing.bezierCurve: panel._settingsNavVisible
+                                ? Motion.standardDecel : Motion.standardAccel
                         }
                     }
                     MotionBehavior on _slide {
                         NumberAnimation {
                             duration: panel._railMotionMs
-                            easing.type: panel._railMotionEasing
+                            easing.type: Easing.BezierSpline
+                            easing.bezierCurve: panel._railMotionCurve
                         }
                     }
 
@@ -444,13 +445,17 @@ PanelWindow {
                     MotionBehavior on height {
                         NumberAnimation {
                             duration: panel.powerOpen ? Motion.panelResize : Motion.panelCollapse
-                            easing.type: panel.powerOpen ? Easing.OutQuart : Easing.InCubic
+                            easing.type: Easing.BezierSpline
+                            easing.bezierCurve: panel.powerOpen
+                                ? Motion.emphasizedDecel : Motion.emphasizedAccel
                         }
                     }
                     MotionBehavior on opacity {
                         NumberAnimation {
                             duration: Motion.fast
-                            easing.type: panel.powerOpen ? Easing.OutCubic : Easing.InCubic
+                            easing.type: Easing.BezierSpline
+                            easing.bezierCurve: panel.powerOpen
+                                ? Motion.standardDecel : Motion.standardAccel
                         }
                     }
 

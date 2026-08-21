@@ -47,6 +47,7 @@ Only work since the latest release is listed here. Completed notes move to
 - Popup borders draw at the same weight on every side.
 - The Home page's power tile says when the active profile is throttled.
 - The power rail's mode value no longer crowds out its label at larger font sizes.
+- Turning notification popups off retires the cards already on screen instead of reviving them later.
 - The AUR toggle in Updates settings stays hidden until the updates widget itself is on.
 - OSD settings no longer labels a lone section GENERAL when Feedback isn't shown beside it.
 - A track with an unknown length shows --:-- instead of LIVE.

@@ -159,6 +159,10 @@ Singleton {
 
     Connections {
         target: ShellSettings
+        function onNotifPopupEnabledChanged() {
+            if (!ShellSettings.notifPopupEnabled)
+                root._retireActiveNotifications()
+        }
         function onNotifHistoryLimitChanged() {
             root._trimHistory()
             root._saveHistory()
@@ -250,6 +254,7 @@ Singleton {
 
     signal sourcePulse(int wsId, bool critical)
     signal contentUpdated(int notifId)
+    signal notificationShown(string appName, string summary, bool critical)
 
     readonly property bool _fullscreenWatchWanted: ShellSettings.notifFullscreenSilence
         || ShellSettings.mediaProgress
@@ -321,6 +326,29 @@ Singleton {
         root._prependHistory(entry)
         root._saveHistory()
         return !replaced
+    }
+
+    // Unloading the popup window destroys every card timer, but it does not
+    // untrack the notifications held by the server. If popups are enabled
+    // again those timerless cards otherwise return as stale notifications.
+    function _retireActiveNotifications(): void {
+        const active = Array.isArray(root.list) ? root.list.slice() : []
+        if (active.length === 0) return
+
+        // Clear first: changing tracked may synchronously emit closed, and the
+        // close handler must not archive the same object a second time.
+        root.list = []
+        root.lastCritical = false
+        for (let i = 0; i < active.length; i++) {
+            const e = active[i]
+            if (!e) continue
+            if (e.notification) {
+                root._archiveNotification(e.notification, e.id,
+                    root._times[e.id] ?? e.time ?? Date.now())
+                e.notification.tracked = false
+            }
+            root._forgetState(e.id)
+        }
     }
 
     function _markClosing(id: int, notification): void {
@@ -530,6 +558,8 @@ Singleton {
             if (isNewObject) n.closed.connect(() => root._onClosed(n.id, n))
             n.tracked = true
             if (existing >= 0 && !isNewObject) root.contentUpdated(n.id)
+            else root.notificationShown(String(n.appName || ""), String(n.summary || ""),
+                n.urgency === NotificationUrgency.Critical)
 
             if (ShellSettings.wsNotifPulse) {
                 const srcWs = HyprActions.notificationSourceWorkspace(n)
