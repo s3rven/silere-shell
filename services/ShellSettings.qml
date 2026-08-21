@@ -388,29 +388,95 @@ Singleton {
         return null
     }
 
-    function setValue(key: string, value): void {
+    function setValue(key: string, value): bool {
         const entry = root.schemaFor(key)
-        if (entry) root._coerce(entry, value)
+        return entry ? root._coerce(entry, value) : false
     }
 
-    function _coerce(s, v): void {
+    function _coerce(s, v): bool {
         switch (s.t) {
         case "bool":
             if (typeof v === "boolean") root[s.k] = v
             else if (v === "true" || v === "false") root[s.k] = v === "true"
-            break
+            else return false
+            return true
         case "int": {
             const n = (typeof v === "number" || (typeof v === "string" && v.trim().length > 0)) ? Number(v) : NaN
-            if (isFinite(n)) root[s.k] = Math.max(s.min, Math.min(s.max, Math.round(n)))
-            break
+            if (!isFinite(n)) return false
+            root[s.k] = Math.max(s.min, Math.min(s.max, Math.round(n)))
+            return true
         }
         case "real": {
             const n = (typeof v === "number" || (typeof v === "string" && v.trim().length > 0)) ? Number(v) : NaN
-            if (isFinite(n)) root[s.k] = Math.max(s.min, Math.min(s.max, n))
-            break
+            if (!isFinite(n)) return false
+            root[s.k] = Math.max(s.min, Math.min(s.max, n))
+            return true
         }
-        case "enum": if (s.vals.indexOf(v) >= 0) root[s.k] = v; break
-        case "re":   if (typeof v === "string" && s.re.test(v)) root[s.k] = v; break
+        case "enum": if (s.vals.indexOf(v) >= 0) { root[s.k] = v; return true } return false
+        case "re":   if (typeof v === "string" && s.re.test(v)) { root[s.k] = v; return true } return false
+        }
+        return false
+    }
+
+    function constraintOf(key: string): string {
+        const s = root.schemaFor(key)
+        if (!s) return ""
+        switch (s.t) {
+        case "bool": return "true|false"
+        case "int":
+        case "real": return s.min + ".." + s.max
+        case "enum": return s.vals.join("|")
+        case "re":   return String(s.re)
+        }
+        return ""
+    }
+
+    IpcHandler {
+        target: "settings"
+
+        function get(key: string): string {
+            if (!root.schemaFor(key)) return "unknown setting '" + key + "'; try `list`"
+            return String(root[key])
+        }
+
+        function set(key: string, value: string): string {
+            if (!root.schemaFor(key)) return "unknown setting '" + key + "'; try `list`"
+            if (!root.setValue(key, value))
+                return "'" + value + "' is not valid for " + key
+                    + "; expected " + root.constraintOf(key)
+            return String(root[key])
+        }
+
+        function toggle(key: string): string {
+            const s = root.schemaFor(key)
+            if (!s) return "unknown setting '" + key + "'; try `list`"
+            if (s.t !== "bool")
+                return key + " is not a toggle; expected " + root.constraintOf(key)
+            root[key] = !root[key]
+            return String(root[key])
+        }
+
+        function list(filter: string): string {
+            const want = String(filter || "").trim()
+            const out = []
+            for (let i = 0; i < root._schema.length; i++) {
+                const s = root._schema[i]
+                if (want.length > 0 && s.sec.indexOf(want) < 0 && s.k.indexOf(want) < 0)
+                    continue
+                out.push(s.k + "=" + String(root[s.k])
+                    + "  [" + root.constraintOf(s.k) + "]")
+            }
+            if (out.length > 0) return out.join("\n")
+            return "nothing matches '" + want + "'"
+        }
+
+        function modified(): string {
+            const keys = Object.keys(root._modifiedKeys).sort()
+            if (keys.length === 0) return "every setting is at its default"
+            const out = []
+            for (let i = 0; i < keys.length; i++)
+                out.push(keys[i] + "=" + String(root[keys[i]]))
+            return out.join("\n")
         }
     }
 

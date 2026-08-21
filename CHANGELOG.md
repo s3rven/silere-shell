@@ -14,6 +14,7 @@ Only work since the latest release is listed here. Completed notes move to
 ### Added
 
 - Hooks run a command of your own on battery, notification, theme, update and workspace events.
+- Every setting the Settings pages expose can be read and written over IPC.
 - A Bluetooth device that refuses to connect or pair now says so on its row.
 - Quick actions carries Wi-Fi and Bluetooth toggles alongside airplane mode.
 - Appearance › Interface sets the size of tray and workspace app icons.

@@ -165,16 +165,8 @@ Menu tabs are `0` (Home), `1` (Settings), and `2` (Recent). `quickActions` holds
 
 `menu`, `calendar` and `quickActions` each take `close` as well as `toggle`, for a keybind that dismisses without opening anything. Run `qs ipc -p "$SILERE_DIR/shell.qml" show` for the current list.
 
-<details>
-<summary>Settings section names for <code>menu settings &lt;name&gt;</code></summary>
+`settings` reads and writes any setting the Settings pages expose: `get`, `set`, `toggle`, `list [filter]`, and `modified`. A write echoes the value that landed, a rejected one names the values the key accepts, and `list` prints each key with its own range or vocabulary.
 
-<br>
-
-`theme`, `interface`, `surface`, `underline`, `separators`, `widgets`, `workspaces`, `clock`, `media`, `indicators`, `popups`, `osd`, `warnings`, `updates`, `maintenance`
-
-An unknown name falls back to `theme`, so an out-of-date keybind still opens Settings.
-
-</details>
 ## Hooks
 
 Silere runs a command of your own when something happens. Drop an executable file in `~/.config/silere-shell/hooks/`, named for the event:
@@ -198,10 +190,16 @@ chmod +x ~/.config/silere-shell/hooks/battery-critical
 
 Hooks are read at startup; `qs ipc -p "$SILERE_DIR/shell.qml" call hooks rescan` picks up a new one without a restart, and `hooks list` shows which are active. An event with no executable file costs nothing.
 
+<details>
+<summary>Settings section names for <code>menu settings &lt;name&gt;</code></summary>
 Hook runs are capped at 20 a second, so a burst of notifications cannot spawn without limit. Anything past the cap is dropped rather than queued.
+<br>
 
+`theme`, `interface`, `surface`, `underline`, `separators`, `widgets`, `workspaces`, `clock`, `media`, `indicators`, `popups`, `osd`, `warnings`, `updates`, `maintenance`
 
+An unknown name falls back to `theme`, so an out-of-date keybind still opens Settings.
 ## Troubleshooting
+</details>
 
 From the Silere checkout, run the dependency and configuration checks first:
 
