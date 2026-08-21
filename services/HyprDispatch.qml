@@ -4,9 +4,6 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// The mechanism for talking to Hyprland, with no opinion about compositor state.
-// Keeping it separate from HyprActions is what stops Compositor and HyprActions
-// depending on each other.
 Singleton {
     id: root
 

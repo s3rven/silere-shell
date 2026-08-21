@@ -264,10 +264,7 @@ Singleton {
 
     Timer { id: _visualizerStopGrace; interval: 150 }
 
-    // One table per style, plus the low-power row a visualizer on an inactive bar drops to.
-    // Denser shapes get fewer bars and a lower frame rate: a wave reads as a curve through
-    // its points, bars and pulse resolve detail the eye cannot use at the same rate.
-    // Written out rather than derived — the earlier trim-and-floor form never once clamped.
+    // denser shapes get fewer bars and a lower frame rate; the derived form never once clamped
     readonly property var _vizProfiles: ({
         wave:     { eco: { bars: 10, fps: 26 }, balanced: { bars: 16, fps: 38 }, smooth: { bars: 22, fps: 50 } },
         bars:     { eco: { bars: 10, fps: 23 }, balanced: { bars: 14, fps: 35 }, smooth: { bars: 18, fps: 47 } },

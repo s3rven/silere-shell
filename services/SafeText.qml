@@ -3,9 +3,6 @@ pragma Singleton
 import QtQuick
 import Quickshell
 
-// One place for turning text that another program supplied into something safe
-// to lay out. Every service that reads a window title, player tag, device name
-// or process output goes through here rather than truncating on its own.
 Singleton {
     id: root
 
