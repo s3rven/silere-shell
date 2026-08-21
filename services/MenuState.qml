@@ -12,7 +12,13 @@ AnchoredPopupState {
     readonly property int settingsTab: 1
     readonly property int recentTab: 2
     property int _activeTab: homeTab
+    property int _previousTab: homeTab
     readonly property int activeTab: _activeTab
+    readonly property int previousTab: _previousTab
+    readonly property int tabDirection: {
+        const delta = tabPosition(activeTab) - tabPosition(previousTab)
+        return delta === 0 ? 0 : (delta > 0 ? 1 : -1)
+    }
     readonly property bool homeActive: open && activeTab === homeTab
     readonly property bool settingsActive: open && activeTab === settingsTab
 
@@ -84,9 +90,19 @@ AnchoredPopupState {
         return Math.max(homeTab, Math.min(recentTab, index))
     }
 
+    // Match the rail's visual order rather than the internal numeric ids.
+    function tabPosition(index: int): int {
+        if (index === homeTab) return 0
+        if (index === recentTab) return 1
+        return 2
+    }
+
     function selectTab(index: int): int {
         const tab = root._validTab(index)
-        if (root._activeTab !== tab) root._activeTab = tab
+        if (root._activeTab !== tab) {
+            root._previousTab = root._activeTab
+            root._activeTab = tab
+        }
         return tab
     }
 
@@ -95,7 +111,7 @@ AnchoredPopupState {
             close()
             return
         }
-        _activeTab = homeTab
+        selectTab(homeTab)
         openAt(x, screen, source)
     }
     function showTab(index: int): void {
@@ -110,7 +126,7 @@ AnchoredPopupState {
 
         function toggle(): void {
             if (root.open) { root.close(); return }
-            root._activeTab = root.homeTab
+            root.selectTab(root.homeTab)
             root.openUnanchored()
         }
         function close(): void { root.close() }
@@ -124,8 +140,7 @@ AnchoredPopupState {
         // keep `section: "` out of any literal below: ci-lint harvests nav entries by that pattern
         function settings(name: string): string {
             const known = root._flatSections.indexOf(name) >= 0
-            root.triggerScreen = null
-            root._setAnchor(null)
+            root._unanchor()
             root.setSettingsSection(name)
             root.showTab(root.settingsTab)
             if (known) return "ok"
