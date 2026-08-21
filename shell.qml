@@ -41,6 +41,8 @@ ShellRoot {
         void ShellUpdate.pending
         void OverlayCoordinator.armed
         void ControlSurfaces.anyOpen
+        // nothing else references Hooks: unarmed it never scans, and no hook ever fires
+        void Hooks.armed
         root.armSystemAlertsIfNeeded()
     }
 

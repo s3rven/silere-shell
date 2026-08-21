@@ -175,6 +175,31 @@ Menu tabs are `0` (Home), `1` (Settings), and `2` (Recent). `quickActions` holds
 An unknown name falls back to `theme`, so an out-of-date keybind still opens Settings.
 
 </details>
+## Hooks
+
+Silere runs a command of your own when something happens. Drop an executable file in `~/.config/silere-shell/hooks/`, named for the event:
+
+| Hook | Arguments |
+| --- | --- |
+| `battery-critical` | percentage |
+| `notification` | app name, summary, `critical` or `normal` |
+| `theme-changed` | accent colour |
+| `update-available` | count |
+| `workspace-changed` | workspace id |
+
+```bash
+mkdir -p ~/.config/silere-shell/hooks
+cat > ~/.config/silere-shell/hooks/battery-critical <<'EOF'
+#!/bin/sh
+notify-send "Battery at $1%"
+EOF
+chmod +x ~/.config/silere-shell/hooks/battery-critical
+```
+
+Hooks are read at startup; `qs ipc -p "$SILERE_DIR/shell.qml" call hooks rescan` picks up a new one without a restart, and `hooks list` shows which are active. An event with no executable file costs nothing.
+
+Hook runs are capped at 20 a second, so a burst of notifications cannot spawn without limit. Anything past the cap is dropped rather than queued.
+
 
 ## Troubleshooting
 
