@@ -73,7 +73,7 @@ Item {
 
     readonly property var _workspaceOwners: {
         const owners = Object.create(null)
-        if (Compositor.isNiri) return owners
+        if (Compositor.perOutputWorkspaceIds) return owners
         const vals = Compositor.workspaces
         for (let i = 0; i < vals.length; i++) {
             const ws = vals[i]
@@ -259,10 +259,10 @@ Item {
         return acc + (_btnW(activeId) - markerW) / 2
     }
 
-    // niri indices are per-output and dynamic, and it always keeps one trailing empty workspace;
-    // padding past the last one renders slots focus-workspace cannot resolve. 0 = hyprland, no cap
+    // per-output ids are dynamic and always keep one trailing empty workspace;
+    // padding past the last one renders slots focus-workspace cannot resolve. 0 = no cap
     readonly property int _idCap: {
-        if (!Compositor.isNiri) return 0
+        if (!Compositor.perOutputWorkspaceIds) return 0
         let last = 0
         const vals = Compositor.workspaces
         for (let i = 0; i < vals.length; i++) {
