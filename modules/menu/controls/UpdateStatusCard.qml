@@ -22,6 +22,7 @@ Rectangle {
     property bool primaryEmphasis: false
     property color primaryColor: Theme.accent
     property string secondaryGlyph: "󰑐"
+    property string secondaryLabel: "Refresh"
     property bool secondaryEnabled: true
     property bool secondaryShown: false
     readonly property bool layoutPresent: visible
@@ -146,6 +147,7 @@ Rectangle {
                     visible: root.secondaryShown
                     height: 28
                     glyph: root.secondaryGlyph
+                    accessibleName: root.secondaryLabel
                     enabled: root.secondaryEnabled
                     onTriggered: root.secondaryTriggered()
                 }
@@ -153,6 +155,7 @@ Rectangle {
                 ActionButton {
                     height: 28
                     label: root._compactActions ? "" : root.primaryLabel
+                    accessibleName: root.primaryLabel
                     glyph: root.primaryGlyph
                     enabled: root.primaryEnabled
                     emphasis: root.primaryEmphasis

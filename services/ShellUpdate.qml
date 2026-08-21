@@ -45,11 +45,14 @@ Singleton {
     readonly property bool pending: count > 0
     readonly property bool checking: _checkProc.running
     readonly property string label: count + (count === 1 ? " change ready" : " changes ready")
+    // "Up to date" is a claim about origin, so it needs a check to have reached it
+    readonly property bool neverChecked: _checkedLoaded && lastCheckMs <= 0
     readonly property string statusText: applying ? "Installing"
         : checking ? "Checking"
         : lastApplyError.length > 0 ? "Install failed"
         : lastCheckError.length > 0 ? "Check failed"
         : pending ? label
+        : neverChecked ? "Not checked yet"
         : "Up to date"
 
     readonly property bool upToDate: !applying && !checking && !pending
@@ -89,15 +92,7 @@ Singleton {
             ? "Signature verified for " + (root.targetTag.length > 0 ? root.targetTag : "this release")
             : "Signature not verified"
 
-    readonly property string lastCheckedText: {
-        if (root.lastCheckMs <= 0) return ""
-        const secs = Math.max(0, Math.round((root._nowMs - root.lastCheckMs) / 1000))
-        if (secs < 90) return "just now"
-        if (secs < 3600) return Math.floor(secs / 60) + " min ago"
-        if (secs < 86400) return Math.floor(secs / 3600) + " h ago"
-        const days = Math.floor(secs / 86400)
-        return days <= 1 ? "yesterday" : days + " days ago"
-    }
+    readonly property string lastCheckedText: DateTime.agoText(root.lastCheckMs, root._nowMs)
 
     readonly property string nextCheckText: {
         if (!root.timerEnabled || root.nextCheckMs <= 0) return ""
@@ -251,6 +246,9 @@ Singleton {
         onFileChanged: reload()
     }
 
+    // until this has reported, a missing timestamp is unread state, not a missing check
+    property bool _checkedLoaded: false
+
     FileView {
         id: _checked
         path: root._cacheDir.length > 0 ? root._cacheDir + "/update-checked" : ""
@@ -259,9 +257,13 @@ Singleton {
         onLoaded: {
             const secs = parseInt((_checked.text() || "").trim())
             root.lastCheckMs = isNaN(secs) || secs <= 0 ? 0 : secs * 1000
+            root._checkedLoaded = true
             root._touchNow()
         }
-        onLoadFailed: root.lastCheckMs = 0
+        onLoadFailed: {
+            root.lastCheckMs = 0
+            root._checkedLoaded = true
+        }
         onFileChanged: reload()
     }
 

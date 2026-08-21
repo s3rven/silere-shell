@@ -27,6 +27,7 @@ Only work since the latest release is listed here. Completed notes move to
 - Buttons, toggles, sliders, rows, navigation, chips, and swatches share one visible state hierarchy.
 - Disconnecting the current Wi-Fi network takes a second tap to confirm.
 - The Mix accent swatch shows a colour wheel.
+- Both update cards say how long ago they last checked.
 - Disabled controls dim to one depth, and high contrast lifts them.
 - Notification popups widen with the interface scale.
 - The notification list grows with the history it holds, up to the room the screen has.
@@ -63,6 +64,8 @@ Only work since the latest release is listed here. Completed notes move to
 
 - [0.7.0](docs/releases/0.7.0.md) — 2026-08-18
 - [0.6.1](docs/releases/0.6.1.md) — 2026-08-16
+- Silere Shell says it has not been checked yet rather than claiming to be up to date.
+- A package check that keeps failing raises a warning in the bar.
 - [0.6.0](docs/releases/0.6.0.md) — 2026-08-15
 - [0.5.1](docs/releases/0.5.1.md) — 2026-08-13
 - [0.5.0](docs/releases/0.5.0.md) — 2026-08-13

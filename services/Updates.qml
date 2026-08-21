@@ -18,6 +18,10 @@ Singleton {
     property string lastError: ""
     property real lastCheckMs: 0
     property bool _discardResult: false
+    // a check fails for a night offline as readily as for a wedged package database;
+    // only a failure that outlives a retry says the checker itself is broken
+    property int  _failStreak: 0
+    property real _nowMs: 0
 
     readonly property bool enabled: ShellSettings.updatesWidget
     readonly property bool _online: !Network.toolAvailable || Network.connected
@@ -45,6 +49,7 @@ Singleton {
     }
     readonly property bool   supported:  manager.length > 0
     readonly property bool   available:  enabled && supported && count > 0
+    readonly property bool   checkBroken: enabled && supported && lastFailed && _failStreak >= 2
     readonly property bool   isChecking: _proc.running
     readonly property string icon:      (manager === "pacman" || manager === "aur") ? "󰮯" : "󰚰"
     readonly property string label:     count + (count === 1 ? " update" : " updates")
@@ -69,9 +74,23 @@ Singleton {
         : !supported ? "Unsupported"
         : ready ? (count > 0 ? label : "Up to date")
         : "Waiting"
-    readonly property string lastCheckLabel: lastCheckMs > 0
-        ? "Last checked " + Qt.formatDateTime(new Date(lastCheckMs), "HH:mm")
-        : ""
+    readonly property string lastCheckedText: DateTime.agoText(lastCheckMs, _nowMs)
+    readonly property string lastCheckLabel: lastCheckedText.length > 0
+        ? "Checked " + lastCheckedText : ""
+
+    function _touchNow(): void { root._nowMs = Date.now() }
+
+    Timer {
+        interval: 60000
+        repeat: true
+        running: MenuState.settingsActive && MenuState.settingsSection === "updates"
+        onTriggered: root._touchNow()
+    }
+    Connections {
+        target: MenuState
+        function onOpenChanged() { if (MenuState.open) root._touchNow() }
+        function onSettingsSectionChanged() { root._touchNow() }
+    }
 
     function _limit(seconds: int, command: string): string {
         return SystemTools.hasTimeout ? ("timeout " + seconds + " " + command) : command
@@ -145,9 +164,6 @@ Singleton {
         out.push({ name: safeName, from: safeFrom, to: safeTo, aur: aur === true })
     }
 
-    // Every backend keeps its native read-only command, then lands here in one
-    // bounded model. This makes the detail drawer useful beyond Arch without
-    // adding an install path or trusting package output as rich text.
     function _parseDetail(text: string): void {
         const lines = text.split("\n")
         let repo = -1, aur = -1, start = 1
@@ -233,6 +249,7 @@ Singleton {
         root.ready = true
         root.lastFailed = false
         root.lastError = ""
+        root._failStreak = 0
     }
 
     function _sourcePreferenceChanged(): void {
@@ -260,7 +277,9 @@ Singleton {
         stdout: StdioCollector { id: _out }
         onTimeoutReached: {
             root.lastCheckMs = Date.now()
+            root._touchNow()
             root.lastFailed = true
+            root._failStreak++
             root.lastError = "Package check timed out"
             root.ready = true
             _retry.restart()
@@ -273,6 +292,7 @@ Singleton {
                 return
             }
             root.lastCheckMs = Date.now()
+            root._touchNow()
             if (!ShellSettings.updatesWidget) {
                 root._resetDisabledState()
                 return
@@ -284,10 +304,12 @@ Singleton {
                 root._parseDetail(t)
                 root.lastFailed = false
                 root.lastError = ""
+                root._failStreak = 0
                 _retry.stop()
                 _reconnect.stop()
             } else {
                 root.lastFailed = true
+                root._failStreak++
                 root.lastError = t.startsWith("ERR")
                     ? root._safeError(t.substring(3).trim())
                     : "Package check returned an invalid count"

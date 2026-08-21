@@ -82,7 +82,8 @@ Column {
                 animationActive: root.animationActive
                 glyph: ShellUpdate.checking || ShellUpdate.applying ? "󰓦"
                     : ShellUpdate.lastCheckError.length > 0 || ShellUpdate.lastApplyError.length > 0 ? "󰀦"
-                    : ShellUpdate.pending ? "󰚰" : "󰄬"
+                    : ShellUpdate.pending ? "󰚰"
+                    : ShellUpdate.neverChecked ? "󰓦" : "󰄬"
                 title: "Silere Shell"
                 status: ShellUpdate.statusDetail
                 meta: ShellUpdate.versionLabel
@@ -98,7 +99,7 @@ Column {
                     || (ShellUpdate.pending && ShellUpdate.blockedReason.length > 0)
                 statusColor: ShellUpdate.lastCheckError.length > 0 || ShellUpdate.lastApplyError.length > 0
                     ? Theme.warning : ShellUpdate.checking || ShellUpdate.applying || ShellUpdate.pending
-                        ? Theme.accent : Theme.success
+                        ? Theme.accent : ShellUpdate.neverChecked ? Theme.subtext : Theme.success
                 busy: ShellUpdate.checking || ShellUpdate.applying
 
                 primaryLabel: ShellUpdate.applying ? "Installing…"
