@@ -98,6 +98,11 @@ PanelWindow {
                 ColorFade on outlineColor {}
             }
 
+            Accessible.role: Accessible.Button
+            Accessible.name: chip.label
+            Accessible.focusable: chip.shown
+            Accessible.onPressAction: chip.triggered()
+
             HoverHandler { id: _hover; cursorShape: Qt.PointingHandCursor }
             TapHandler   { id: _tap; onTapped: chip.triggered() }
 

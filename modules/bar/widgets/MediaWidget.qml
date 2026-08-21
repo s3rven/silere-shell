@@ -226,6 +226,13 @@ Item {
         }
     }
 
+    Accessible.role: Accessible.Button
+    Accessible.name: Media.label.length > 0
+        ? (Media.playing ? "Pause " : "Play ") + Media.label
+        : (Media.playing ? "Pause" : "Play")
+    Accessible.focusable: root.show
+    Accessible.onPressAction: Media.togglePlay()
+
     HoverHandler { id: _rootHover; cursorShape: Qt.PointingHandCursor }
 
     TapHandler {

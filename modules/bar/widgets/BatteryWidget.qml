@@ -13,6 +13,7 @@ Pill {
     collapsed: !show
 
     glyph:          Battery.icon
+    accessibleName: batteryPill.text.length > 0 ? "Battery " + batteryPill.text : "Battery"
     glyphPixelSize: Settings.iconSize + 3
     glyphColor:     Battery.iconColor
     textColor:      Battery.iconColor

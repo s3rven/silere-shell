@@ -69,6 +69,13 @@ Item {
     // an initial instead of collapsing the slot and shifting the whole card.
     readonly property bool showIconSlot: _previewSettled
 
+    Accessible.role: Accessible.Notification
+    Accessible.name: card.appNameText.length > 0
+        ? card.appNameText + ": " + card.summaryText : card.summaryText
+    Accessible.description: card.bodyText
+    Accessible.focusable: true
+    Accessible.onPressAction: card.activatePrimary()
+
     readonly property string summaryText: Notifications.plainText(notification.summary, 2048)
     readonly property string bodyText:    Notifications.plainText(notification.body)
     readonly property string appNameText: Notifications.identityText(notification.appName)
@@ -475,6 +482,11 @@ Item {
                             ColorFade on color {}
                         }
 
+                        Accessible.role: Accessible.Button
+                        Accessible.name: card._actionText(_actBtn.modelData)
+                        Accessible.focusable: true
+                        Accessible.onPressAction: card.invokeAction(_actBtn.modelData)
+
                         MouseArea {
                             id: _actMa
                             anchors.fill: parent
@@ -555,6 +567,11 @@ Item {
             z: 2
             MotionBehavior on opacity      {NumberAnimation { duration: Motion.fast } }
             ColorFade on color {}
+            Accessible.role: Accessible.Button
+            Accessible.name: "Dismiss notification"
+            Accessible.focusable: true
+            Accessible.onPressAction: card.dismiss()
+
             HoverHandler { id: _closeHover; cursorShape: Qt.PointingHandCursor }
             TapHandler   { onTapped: card.dismiss() }
             ShellText {

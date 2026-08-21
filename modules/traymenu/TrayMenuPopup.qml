@@ -225,6 +225,18 @@ PanelWindow {
                 cursorShape: Qt.PointingHandCursor
                 onHoveredChanged: if (hovered && _entry.sub) _entry._openFlyout()
             }
+            Accessible.role: _entry.sep ? Accessible.Separator
+                : _entry.checkable ? Accessible.CheckBox : Accessible.MenuItem
+            Accessible.name: _entry.label
+            Accessible.checked: _entry.checked
+            Accessible.focusable: _entry.on
+            Accessible.onPressAction: {
+                if (!_entry.on) return
+                if (_entry.sub) { _entry._toggleFlyout(); return }
+                win._emitMenuSignal(_entry.modelData, "triggered", "sendTriggered")
+                TrayMenuState.close()
+            }
+
             TapHandler {
                 enabled: _entry.on && !_entry.sub
                 onTapped: {

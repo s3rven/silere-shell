@@ -30,6 +30,11 @@ Item {
 
     function _jump(): void { if (shown) root.jumpRequested(targetWs) }
 
+    Accessible.role: Accessible.Button
+    Accessible.name: "Go to workspace " + root.targetWs
+    Accessible.focusable: root.shown
+    Accessible.onPressAction: root._jump()
+
     HoverHandler { id: _tickHover; enabled: root.shown; cursorShape: Qt.PointingHandCursor }
     TapHandler   { enabled: root.shown; onTapped: root._jump() }
 

@@ -183,6 +183,11 @@ PageShell {
                 MotionBehavior on width {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
                 ColorFade on color {}
                 MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
+                Accessible.role: Accessible.Button
+                Accessible.name: "Clear all notifications"
+                Accessible.focusable: !root._clearing
+                Accessible.onPressAction: root.requestClearAll()
+
                 HoverHandler { id: _clearHover; enabled: !root._clearing; cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor }
                 TapHandler { id: _clearTap; enabled: !root._clearing; onTapped: root.requestClearAll() }
 

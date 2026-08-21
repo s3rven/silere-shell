@@ -113,6 +113,12 @@ Row {
         }
     }
 
+    Accessible.role: Accessible.Button
+    Accessible.name: "Clock, " + DateTime.cachedHour + ":" + DateTime.cachedMinute
+        + (DateTime.cachedAmPm.length > 0 ? " " + DateTime.cachedAmPm : "")
+    Accessible.focusable: true
+    Accessible.onPressAction: root._openCalendar()
+
     TapHandler {
         id: _calTap
         acceptedButtons: Qt.LeftButton

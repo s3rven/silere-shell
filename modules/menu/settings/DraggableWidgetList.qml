@@ -442,6 +442,12 @@ Item {
                 width: 44
                 height: parent.height
 
+                Accessible.role: Accessible.CheckBox
+                Accessible.name: _row.meta.label
+                Accessible.checked: _row.checked
+                Accessible.focusable: true
+                Accessible.onToggleAction: _toggleTap.activate()
+
                 HoverHandler { id: _toggleHover; cursorShape: Qt.PointingHandCursor }
                 TapHandler {
                     id: _toggleTap

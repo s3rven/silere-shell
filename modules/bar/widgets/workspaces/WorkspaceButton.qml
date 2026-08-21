@@ -71,6 +71,12 @@ Item {
         }
     }
 
+    Accessible.role: Accessible.Button
+    Accessible.name: "Workspace " + root.wsId
+    Accessible.selected: root.active
+    Accessible.focusable: true
+    Accessible.onPressAction: root._activate()
+
     HoverHandler { id: _hover; cursorShape: Qt.PointingHandCursor }
     onHoveredChanged: root.hoverReported(root.wsId, root.hovered)
 

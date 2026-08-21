@@ -58,6 +58,7 @@ Pill {
     visible:        layoutVisible
     // the icon cell is a fixed width: one glyph fits, two overflow it
     glyph:          Network.icon
+    accessibleName: root.text.length > 0 ? "Network, " + root.text : "Network"
     maxTextWidth:   compact ? 150 : 260
     // above the 2s traffic-stats poll: shrinkDelay:0 re-animated the pill's width on every single tick
     shrinkDelay:    2400

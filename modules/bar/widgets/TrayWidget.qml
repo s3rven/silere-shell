@@ -89,6 +89,11 @@ Item {
 
                 onNeedsAttentionChanged: _attentionSettled = false
 
+                Accessible.role: Accessible.Button
+                Accessible.name: _tile.label
+                Accessible.focusable: root.show
+                Accessible.onPressAction: root._activateItem(_tile.modelData, _tile)
+
                 width: root.iconSize + (_hoverLabel.width > 0 ? _hoverLabel.width + 5 : 0)
                 height: root.iconSize
                 opacity: passive ? 0.78 : 1.0
