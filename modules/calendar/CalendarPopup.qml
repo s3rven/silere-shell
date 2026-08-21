@@ -185,15 +185,24 @@ PanelWindow {
                 width: _todayRow.width + 20
                 height: Metrics.rowHeightFor(40)
 
+                Accessible.role: Accessible.Button
+                Accessible.name: "Today"
+                Accessible.focusable: true
+                Accessible.onPressAction: card._goToday()
+
                 HoverHandler { id: _todayH; cursorShape: Qt.PointingHandCursor }
-                TapHandler   { onTapped: card._goToday() }
+                TapHandler   { id: _todayTap; onTapped: card._goToday() }
 
                 Rectangle {
                     id: _todayFill
                     anchors.fill: parent
                     radius: Theme.radiusControl
                     antialiasing: true
-                    color: _todayH.hovered ? Theme.withAlpha(Theme.subtext, 0.12) : "transparent"
+                    color: _todayTap.pressed
+                        ? Theme.withAlpha(Theme.accent, 0.13)
+                        : _todayH.hovered
+                            ? Theme.withAlpha(Theme.subtext, 0.12)
+                            : "transparent"
                     ColorFade on color {}
                 }
 
@@ -275,6 +284,7 @@ PanelWindow {
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
                     glyph: "󰅁"
+                    accessibleName: "Previous month"
                     onTriggered: card._step(-1)
                 }
 
@@ -282,17 +292,28 @@ PanelWindow {
                     id: _monthButton
                     anchors.centerIn: parent
                     width: _mLabel.implicitWidth + 16; height: 26
+                    Accessible.role: Accessible.Button
+                    Accessible.name: "Return to current month"
+                    Accessible.focusable: true
+                    Accessible.onPressAction: card._goToday()
                     // distinct from the today pill's: two controls reading "Jump to today" are indistinguishable by voice
                     HoverHandler { id: _mH; cursorShape: Qt.PointingHandCursor }
-                    TapHandler   { onTapped: card._goToday() }
+                    TapHandler   { id: _mT; onTapped: card._goToday() }
 
                     Rectangle {
                         id: _monthFill
                         anchors.fill: parent
                         radius: Theme.radiusControl
                         antialiasing: true
-                        color: _mH.hovered ? Theme.withAlpha(Theme.subtext, 0.12) : "transparent"
+                        color: Theme.buttonFill(Theme.accent, _mH.hovered, _mT.pressed)
                         ColorFade on color {}
+
+                        OutlineBorder {
+                            radius: _monthFill.radius
+                            outlineColor: Theme.buttonLine(
+                                Theme.accent, _mH.hovered, _mT.pressed)
+                            ColorFade on outlineColor {}
+                        }
                     }
                     ShellText {
                         id: _mLabel
@@ -310,6 +331,7 @@ PanelWindow {
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     glyph: "󰅂"
+                    accessibleName: "Next month"
                     onTriggered: card._step(1)
                 }
             }
@@ -411,16 +433,33 @@ PanelWindow {
 
                             width: card.cell; height: card.cell
 
+                            Accessible.role: Accessible.CheckBox
+                            Accessible.name: card.monthLabel + " " + _dayCell.dayNum
+                            Accessible.focusable: _dayCell.cur
+                            Accessible.checkable: _dayCell.cur
+                            Accessible.checked: _dayCell.marked
+                            Accessible.onPressAction: if (_dayCell.cur)
+                                CalendarState.toggleMark(card.shownYear,
+                                    card.shownMonth, _dayCell.dayNum)
+
                             Rectangle {
                                 anchors.centerIn: parent
                                 width: 30; height: 30; radius: 15
                                 antialiasing: true
-                                color: _dayCell.today ? Theme.accent
-                                     : (_dayH.hovered && _dayCell.cur ? Theme.withAlpha(Theme.subtext, 0.10) : "transparent")
+                                color: _dayCell.today
+                                    ? (_dayTap.pressed
+                                        ? Theme.mix(Theme.accent, Theme.background, 0.12)
+                                        : Theme.accent)
+                                    : _dayTap.pressed && _dayCell.cur
+                                        ? Theme.withAlpha(Theme.accent, 0.14)
+                                    : (_dayH.hovered && _dayCell.cur
+                                        ? Theme.withAlpha(Theme.subtext, 0.10)
+                                        : "transparent")
                                 ColorFade on color {}
 
                                 HoverHandler { id: _dayH; enabled: _dayCell.cur; cursorShape: Qt.PointingHandCursor }
                                 TapHandler {
+                                    id: _dayTap
                                     enabled: _dayCell.cur
                                     onTapped: CalendarState.toggleMark(card.shownYear, card.shownMonth, _dayCell.dayNum)
                                 }

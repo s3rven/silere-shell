@@ -77,6 +77,14 @@ PanelWindow {
         width: parent ? parent.width : 0
         height: Metrics.rowHeightFor(38)
 
+        Accessible.role: Accessible.CheckBox
+        Accessible.name: _row.label
+        Accessible.description: _row.stateText
+        Accessible.focusable: _row.visible
+        Accessible.checkable: true
+        Accessible.checked: _row.active
+        Accessible.onPressAction: _row._activate()
+
         HoverHandler { id: _rowHover; cursorShape: Qt.PointingHandCursor }
         TapHandler   { id: _rowTap; onTapped: _row._activate() }
 
