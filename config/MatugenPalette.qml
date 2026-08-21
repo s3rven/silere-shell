@@ -27,7 +27,7 @@ Singleton {
         surface:    "#1d1f26",
         text:       "#e9eaf0",
         subtext:    "#a0a4b0",
-        accent:     "#b8bdd8",
+        accent:     "#9babe9",
         error:      "#dd92a2",
         warning:    "#d4ad77",
         success:    "#94bd8b"

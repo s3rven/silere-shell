@@ -24,7 +24,7 @@ Column {
         return s.length < 2 ? "0" + s : s
     }
 
-    SectionLabel { label: "THEME MODE"; first: true }
+    SectionLabel { label: "COLORS"; first: true }
     SettingsCard {
         ChoiceChipRow {
             glyph: "󰉦"; label: "Source"
@@ -35,10 +35,6 @@ Column {
             ]
             onChosen: (v) => ShellSettings.neutralTheme = (v === "neutral")
         }
-    }
-
-    SectionLabel { label: "PALETTE" }
-    SettingsCard {
         CollapsibleSection {
             expanded: ShellSettings.neutralTheme
             symmetric: true
@@ -53,7 +49,7 @@ Column {
                 readonly property int _swatchH: Metrics.rowHeightFor(32)
                 height: _titleH + _swatchH + _customStrips.height + 8
 
-                // the palette's own working point: presets measure L* 68-73, C* 25-35
+                // the palette's working point: presets hold L* 70.8 and use C* 20-36
                 readonly property real _accentL: 70.8
                 readonly property real _accentCMax: 38
                 function _accentForCh(hue01, c01): string {
@@ -62,7 +58,6 @@ Column {
                     return "#" + root._hex2(c.r) + root._hex2(c.g) + root._hex2(c.b)
                 }
                 readonly property color _curColor: ShellSettings.neutralAccentAuto ? MatugenTheme.accent : ShellSettings.neutralAccent
-                readonly property var  _curLch:  Theme.lchOf(_curColor)
 
                 // the strips own hue and intensity; the stored hex is only their output.
                 // reading both back out of one 8-bit colour made each axis inherit the
@@ -74,7 +69,9 @@ Column {
                 readonly property real _hueFloorC: 3.0
 
                 function _syncFromColor(): void {
-                    const l = _accentPicker._curLch
+                    // Read the colour at the point of use. A second derived binding can
+                    // still hold the previous value when _curColor's change handler runs.
+                    const l = Theme.lchOf(_accentPicker._curColor)
                     if (l.C >= _accentPicker._hueFloorC) _accentPicker._hueMemo = l.h / 360
                     _accentPicker._satMemo = Math.min(1, l.C / _accentPicker._accentCMax)
                 }
@@ -98,17 +95,16 @@ Column {
                 // line the rails up with the swatch run, not the viewport that scrolls it
                 readonly property int _railX: 12 + _swatchRow.edgePadding
 
-                readonly property var _options: [
-                    { auto: true,  custom: false, color: "",        name: "Auto"   },
-                    { auto: false, custom: false, color: "#b8bdd8", name: "Mist"   },
-                    { auto: false, custom: false, color: "#82aee5", name: "Blue"   },
-                    { auto: false, custom: false, color: "#b79bd7", name: "Violet" },
-                    { auto: false, custom: false, color: "#78bfb5", name: "Teal"   },
-                    { auto: false, custom: false, color: "#94bd8b", name: "Green"  },
-                    { auto: false, custom: false, color: "#dd92a2", name: "Rose"   },
-                    { auto: false, custom: false, color: "#d4ad77", name: "Amber"  },
-                    { auto: false, custom: true,  color: "",        name: "Mix", spectrum: true }
-                ]
+                readonly property var _options:
+                    [{ auto: true, custom: false, color: "", name: "Auto" }]
+                    .concat(Theme.neutralAccentPresets.map(o => ({
+                        auto: false, custom: false,
+                        color: o.color, name: o.name
+                    })))
+                    .concat([{
+                        auto: false, custom: true, color: "",
+                        name: "Mix", spectrum: true
+                    }])
                 readonly property int _customIndex: _options.length - 1
                 readonly property int _presetIndex: {
                     if (ShellSettings.neutralAccentAuto) return 0
@@ -255,42 +251,56 @@ Column {
                             }
                         }
 
-                        GradientSlider {
-                            id: _hueStrip
-                            x: _accentPicker._railX
-                            width: Math.max(1, parent.width - _accentPicker._railX * 2)
-                            height: 24
-                            position: _accentPicker._curHue
-                            thumbColor: _accentPicker._curColor
-                            trackGradient: Gradient {
-                                orientation: Gradient.Horizontal
-                                GradientStop { position: 0.000; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC,   0) }
-                                GradientStop { position: 0.167; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC,  60) }
-                                GradientStop { position: 0.333; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC, 120) }
-                                GradientStop { position: 0.500; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC, 180) }
-                                GradientStop { position: 0.667; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC, 240) }
-                                GradientStop { position: 0.833; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC, 300) }
-                                GradientStop { position: 1.000; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC, 360) }
+                        Item {
+                            width: parent.width
+                            height: Metrics.rowHeightFor(28)
+                            GradientSlider {
+                                id: _hueStrip
+                                x: _accentPicker._railX
+                                width: Math.max(1, parent.width - _accentPicker._railX * 2)
+                                anchors.verticalCenter: parent.verticalCenter
+                                accessibleName: "Accent hue"
+                                accessibleValueText: Math.round(
+                                    _accentPicker._curHue * 360) + " degrees"
+                                position: _accentPicker._curHue
+                                thumbColor: _accentPicker._curColor
+                                trackGradient: Gradient {
+                                    orientation: Gradient.Horizontal
+                                    GradientStop { position: 0.000; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC,   0) }
+                                    GradientStop { position: 0.167; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC,  60) }
+                                    GradientStop { position: 0.333; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC, 120) }
+                                    GradientStop { position: 0.500; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC, 180) }
+                                    GradientStop { position: 0.667; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC, 240) }
+                                    GradientStop { position: 0.833; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC, 300) }
+                                    GradientStop { position: 1.000; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC, 360) }
+                                }
+                                onPicked: hue => _accentPicker._writeStrips(hue, _accentPicker._satMemo)
                             }
-                            onPicked: hue => _accentPicker._writeStrips(hue, _accentPicker._satMemo)
                         }
 
-                        GradientSlider {
-                            id: _satStrip
-                            x: _accentPicker._railX
-                            width: Math.max(1, parent.width - _accentPicker._railX * 2)
-                            height: 24
-                            position: _accentPicker._curSat
-                            thumbColor: _accentPicker._curColor
-                            wraps: false
-                            displayScale: 100
-                            wheelKey: "accent-chroma"
-                            trackGradient: Gradient {
-                                orientation: Gradient.Horizontal
-                                GradientStop { position: 0.0; color: Theme.lchColor(_accentPicker._accentL, 0, _accentPicker._curHue * 360) }
-                                GradientStop { position: 1.0; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._accentCMax, _accentPicker._curHue * 360) }
+                        Item {
+                            width: parent.width
+                            height: Metrics.rowHeightFor(28)
+                            GradientSlider {
+                                id: _satStrip
+                                x: _accentPicker._railX
+                                width: Math.max(1, parent.width - _accentPicker._railX * 2)
+                                anchors.verticalCenter: parent.verticalCenter
+                                accessibleName: "Accent intensity"
+                                accessibleValueText: Math.round(
+                                    _accentPicker._curSat * 100) + "%"
+                                position: _accentPicker._curSat
+                                thumbColor: _accentPicker._curColor
+                                wraps: false
+                                displayScale: 100
+                                wheelKey: "accent-chroma"
+                                trackGradient: Gradient {
+                                    orientation: Gradient.Horizontal
+                                    GradientStop { position: 0.0; color: Theme.lchColor(_accentPicker._accentL, 0, _accentPicker._curHue * 360) }
+                                    GradientStop { position: 1.0; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._accentCMax, _accentPicker._curHue * 360) }
+                                }
+                                onPicked: sat => _accentPicker._writeStrips(_accentPicker._hueMemo, sat)
                             }
-                            onPicked: sat => _accentPicker._writeStrips(_accentPicker._hueMemo, sat)
                         }
                     }
                 }
@@ -324,9 +334,7 @@ Column {
             text: root._paletteNote
         }
 
-        // one row for both sources: each depth was solved to land on the matching neutral
-        // tone's luminance, so the three names mean the same thing on either side. Keeping it
-        // outside both groups means a Source switch recolours it instead of collapsing it.
+        // outside both groups on purpose: a Source switch recolours this row, never collapses it
         SwatchPickerRow {
             readonly property bool _neutral: ShellSettings.neutralTheme
             glyph: "󰏘"; label: "Base"
@@ -354,7 +362,10 @@ Column {
                 else ShellSettings.matugenDepth = options[i].value
             }
         }
+    }
 
+    SectionLabel { label: "SURFACES" }
+    SettingsCard {
         SliderRow {
             glyph: "󰃇"; label: "Outline strength"
             key: "outlineStrength"

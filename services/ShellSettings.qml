@@ -17,7 +17,7 @@ Singleton {
     property bool   workspaceShift:      true
     property bool   neutralTheme:        true
     property bool   neutralAccentAuto:   false
-    property string neutralAccent:       "#b8bdd8"
+    property string neutralAccent:       "#9babe9"
     property string matugenAccentRole:   "primary"
     property string matugenDepth:        "deeper"
     property string baseTone:            "black"

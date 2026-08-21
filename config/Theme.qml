@@ -45,6 +45,18 @@ Singleton {
     readonly property color warning:    _n ? _warnAnchor : tintKeepingChroma(_warnAnchor, MatugenTheme.warning, 0.30)
     readonly property color success:    _n ? _okAnchor   : tintKeepingChroma(_okAnchor,   MatugenTheme.success, 0.30)
 
+    // solved at L* 70.8, C* 20-36: equal visual weight on all three dark bases
+    readonly property var neutralAccentPresets: [
+        { color: "#8db2d0", name: "Glacier" },
+        { color: "#52b8e8", name: "Sky"     },
+        { color: "#9babe9", name: "Iris"    },
+        { color: "#c99fd3", name: "Orchid"  },
+        { color: "#56bdb6", name: "Aqua"    },
+        { color: "#86ba8b", name: "Leaf"    },
+        { color: "#eb979a", name: "Coral"   },
+        { color: "#cca870", name: "Gold"    }
+    ]
+
     function _lin(c: real): real {
         return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
     }

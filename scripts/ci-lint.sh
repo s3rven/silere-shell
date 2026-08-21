@@ -960,17 +960,17 @@ else
 fi
 
 # The accent picker marks a swatch active by string-matching neutralAccent against
-# its own preset list, so a default with no matching swatch opens with nothing
+# the shared Theme preset list, so a default with no matching swatch opens with nothing
 # selected on a fresh config.
 section "accent preset coverage"
-accent_section="modules/menu/settings/SettingsThemeSection.qml"
+accent_section="config/Theme.qml"
 accent_default="$(sed -n 's/^[[:space:]]*property string neutralAccent:[[:space:]]*"\(#[0-9a-fA-F]\{3,8\}\)".*/\1/p' services/ShellSettings.qml)"
 if [ -z "$accent_default" ]; then
   fail "could not read the neutralAccent default from services/ShellSettings.qml"
 elif grep -qiF "\"$accent_default\"" "$accent_section"; then
   ok "accent" "default $accent_default has a preset swatch"
 else
-  fail "neutralAccent default $accent_default has no swatch in $accent_section"
+  fail "neutralAccent default $accent_default has no shared preset in $accent_section"
 fi
 
 # With no palette written, the fallback accent is what the shell actually paints,

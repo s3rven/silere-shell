@@ -21,6 +21,9 @@ Only work since the latest release is listed here. Completed notes move to
 
 ### Changed
 
+- Theme settings groups source, accent, and base under Colors, with surface styling in its own card.
+- The bundled accent palette uses eight balanced, equal-lightness colors and a clearer Iris default.
+- The custom accent mixer keeps two full-width, uncluttered color rails.
 - Disconnecting the current Wi-Fi network takes a second tap to confirm.
 - The Mix accent swatch shows a colour wheel.
 - Disabled controls dim to one depth, and high contrast lifts them.
