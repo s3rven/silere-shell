@@ -43,6 +43,7 @@ Item {
         cardInset:    root.cardInset
         cardLeftBleed: root.cardLeftBleed
         glyph: Audio.icon
+        accessibleName: "Volume"
         wheelKey: "volume"
         value: Audio.uiVolume
         valueText: Audio.label

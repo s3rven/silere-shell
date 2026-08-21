@@ -42,6 +42,7 @@ Item {
         cardInset: root.cardInset
         cardLeftBleed: root.cardLeftBleed
         glyph: Brightness.icon
+        accessibleName: "Brightness"
         wheelKey: "brightness"
         value: Brightness.pendingPercent / 100
         valueText: Brightness.pendingPercent + "%"

@@ -15,9 +15,6 @@ ClippingRectangle {
     readonly property int _seekH: Math.max(14, Settings.fontMicro + 4)
     readonly property int _seekBlock: Media.hasPosition ? _seekH + 12 : 0
     // 4px multiple: an odd height lands the bottom border on a half physical pixel and doubles it
-    // mirrors the anchor chain exactly: 16 top, column, 12, seek block, controls, 16 bottom.
-    // reserving more than the chain spends parks the slack above the text, since every row
-    // in the card hangs off the bottom edge
     height: 4 * Math.ceil(Math.max(140,
         16 + _mediaCol.implicitHeight + 12 + _seekBlock + _controlsRow.height + 16) / 4)
     radius: Theme.radiusCard
@@ -342,6 +339,8 @@ ClippingRectangle {
             height: 12
 
             interactive: Media.canSeek && Media.lengthKnown
+            accessibleName: "Playback position"
+            accessibleValueText: _elapsedLabel.text + " of " + _totalLabel.text
             showThumb:   Media.canSeek && Media.lengthKnown
             hoverGrow:   false
             animate:     false
@@ -367,6 +366,7 @@ ClippingRectangle {
 
         MediaButton {
             glyph: "󰒮"
+            accessibleName: "Previous track"
             available: Media.canGoPrevious
             onTriggered: Media.previous()
         }
@@ -376,7 +376,11 @@ ClippingRectangle {
             readonly property bool _on: Media.canTogglePlaying
             width: 56; height: 40
             anchors.verticalCenter: parent.verticalCenter
-            opacity: _playBtn._on ? 1.0 : 0.25
+            opacity: _playBtn._on ? 1.0 : Theme.disabledOpacity
+            Accessible.role: Accessible.Button
+            Accessible.name: Media.playing ? "Pause" : "Play"
+            Accessible.focusable: _playBtn._on
+            Accessible.onPressAction: if (_playBtn._on) Media.togglePlay()
             MotionBehavior on opacity {
                 NumberAnimation { duration: Motion.fast }
             }
@@ -389,15 +393,16 @@ ClippingRectangle {
                 anchors.fill: parent
                 radius: Theme.radiusControl
                 antialiasing: true
-                color: _playT.pressed ? Theme.mix(Theme.menuControl, Theme.accent, 0.18)
-                    : _playH.hovered ? Theme.mix(Theme.menuControl, Theme.accent, 0.10)
-                    : Theme.menuControl
+                color: Theme.emphasisButtonFill(
+                    Theme.accent, _playH.hovered, _playT.pressed)
                 ColorFade on color {}
 
                 OutlineBorder {
                     radius: _playFill.radius
                     outlineWidth: 1
-                    outlineColor: Theme.menuControlLine
+                    outlineColor: Theme.withAlpha(Theme.accent,
+                        Theme.lineAlpha(_playT.pressed ? 0.52
+                            : _playH.hovered ? 0.38 : 0.24))
                     ColorFade on outlineColor {}
                 }
             }
@@ -428,6 +433,7 @@ ClippingRectangle {
 
         MediaButton {
             glyph: "󰒭"
+            accessibleName: "Next track"
             available: Media.canGoNext
             onTriggered: Media.next()
         }

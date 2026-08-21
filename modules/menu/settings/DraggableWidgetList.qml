@@ -451,11 +451,12 @@ Item {
                 HoverHandler { id: _toggleHover; cursorShape: Qt.PointingHandCursor }
                 TapHandler {
                     id: _toggleTap
-                    onTapped: {
+                    function activate(): void {
                         _toggle.armFlipAnimation()
                         ShellSettings.setBarWidgetConfiguredVisible(
                             _row.key, !_row.checked)
                     }
+                    onTapped: _toggleTap.activate()
                 }
 
                 ToggleSwitch {
