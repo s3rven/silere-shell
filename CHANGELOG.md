@@ -36,6 +36,7 @@ Only work since the latest release is listed here. Completed notes move to
 - The centre visualiser can be aligned without the window title switched on.
 - The bar Opacity readout matches what high contrast renders.
 - Keybinds open the menu, calendar and quick actions under the widget that opens them, not at the screen edge.
+- Animations no longer fall back to roughly 60 FPS when a bar and popup are visible together on a high-refresh display.
 - Notification history no longer holds read-state for notifications it has already dropped.
 - A double-click on a connected Bluetooth device no longer disconnects it in one gesture.
 - Notifications and the OSD sit at the edge of a monitor whose bar is turned off, rather than clearing a bar that is not on it.

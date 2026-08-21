@@ -38,6 +38,12 @@ Idle use on a reference session measured **under 1% of one CPU core** and **95-1
 
 CPU sits near zero when nothing is happening and rises with what is on screen: a playing track costs about four times idle, and the media visualizer costs more than everything else combined. Once the session goes idle, or the bar steps aside for the compositor overview, every animation stops on its own until you come back.
 
+Silere defaults to Qt's elapsed-time animation driver. Qt otherwise moves regular
+QML animations to a roughly 16 ms timer when the bar and a popup are visible as
+separate windows, making a high-refresh display look like 60 Hz. The default is
+overrideable: launch with `QSG_USE_SIMPLE_ANIMATION_DRIVER=0` to compare or work
+around a driver-specific issue.
+
 Results vary with hardware, drivers, and which widgets you enable. Measure your own checkout with `bash scripts/bench.sh 30`, where the number is how many seconds to sample. The report tracks open file descriptors too, so a leak shows up as a climbing number while everything else stays flat.
 
 Cava is the main optional CPU cost, and only while the visualizer is on screen.

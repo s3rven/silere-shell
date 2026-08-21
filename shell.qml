@@ -1,4 +1,8 @@
 //@ pragma UseQApplication
+// Regular Qt Quick animations fall back to a ~16 ms GUI timer while Silere's
+// bar and a popup are both visible. The elapsed-time driver avoids that
+// multi-window fallback; DefaultEnv still lets a user or driver override it.
+//@ pragma DefaultEnv QSG_USE_SIMPLE_ANIMATION_DRIVER = 1
 pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
