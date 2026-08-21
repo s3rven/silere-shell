@@ -458,6 +458,13 @@ else
   ok "motion" "every animation duration routes through Motion"
 fi
 
+section "multi-window animation pacing"
+if grep -qF '//@ pragma DefaultEnv QSG_USE_SIMPLE_ANIMATION_DRIVER = 1' shell.qml; then
+  ok "motion driver" "elapsed-time pacing is the overrideable default"
+else
+  fail "shell.qml must default QSG_USE_SIMPLE_ANIMATION_DRIVER=1 so popups do not fall back to the 16 ms multi-window timer"
+fi
+
 section "underscore property handlers"
 # Qt strips leading underscores before capitalising a handler name, so property
 # `_foo` is served by on_FooChanged. on_fooChanged type-checks, loads, and never
