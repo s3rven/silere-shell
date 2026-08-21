@@ -316,6 +316,32 @@ else
   ok "niri socket" "event stream flushes and reconnects"
 fi
 
+section "compositor backend contract"
+# The facade reads every model and action off Loader.item. A member the adapter does not
+# define comes back undefined rather than failing, so a backend silently renders empty.
+compositor_contract_missing=""
+for member in workspaces toplevels workspaceToplevels activeToplevel focusedMonitor \
+              focusedWorkspaceRef overviewActive specialOutput monitorName focusWorkspace \
+              moveActiveToWorkspace focusToplevel refreshToplevels; do
+  grep -qE "^[[:space:]]*(readonly[[:space:]]+)?(property[[:space:]]+[A-Za-z<>]+[[:space:]]+|function[[:space:]]+)${member}\b" \
+    services/Compositor.qml || continue
+  for adapter in services/CompositorHyprland.qml services/CompositorNiri.qml; do
+    grep -qE "^[[:space:]]*(readonly[[:space:]]+)?(property[[:space:]]+[A-Za-z<>]+[[:space:]]+|function[[:space:]]+)${member}\b" \
+      "$adapter" || compositor_contract_missing="$compositor_contract_missing $adapter:$member"
+  done
+done
+for sig in workspaceActivated overviewRaw; do
+  for adapter in services/CompositorHyprland.qml services/CompositorNiri.qml; do
+    grep -qE "^[[:space:]]*signal[[:space:]]+${sig}\b" "$adapter" \
+      || compositor_contract_missing="$compositor_contract_missing $adapter:$sig"
+  done
+done
+if [ -n "$compositor_contract_missing" ]; then
+  fail "compositor adapter does not implement the facade contract:$compositor_contract_missing"
+else
+  ok "compositor" "both backend adapters implement the facade contract"
+fi
+
 section "loader lifetime bindings"
 # Loader.item only exists while Loader.active is true. Feeding item visibility
 # or status back into active creates a runtime binding loop that qmlcachegen
