@@ -37,6 +37,13 @@ Item {
 
     signal activated()
 
+    property string accessibleName: root.text
+
+    Accessible.role: root.interactive ? Accessible.Button : Accessible.StaticText
+    Accessible.name: root.accessibleName
+    Accessible.focusable: root.interactive
+    Accessible.onPressAction: if (root.interactive) root.activated()
+
     readonly property int  pillH:   Metrics.barRowHeight
     readonly property bool hasText: text.length > 0
 
