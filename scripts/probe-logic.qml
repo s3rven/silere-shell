@@ -4,8 +4,11 @@ import QtQuick
 import Quickshell
 import "config"
 import "services"
+import "modules/bar"
 import "modules/bar/widgets"
+import "modules/bar/widgets/workspaces"
 import "modules/menu/controls"
+import "modules/notifications"
 
 // Small behavioral assertions for pure logic that a type-check or construction
 // probe cannot validate. Keep this free of compositor and hardware dependencies.
@@ -24,6 +27,22 @@ ShellRoot {
     Component { id: gradientSliderFactory; GradientSlider {} }
     Component { id: boundedProcessFactory; BoundedProcess {} }
     Component { id: supervisedProcessFactory; SupervisedProcess {} }
+    Component { id: barUnderlineFactory; BarUnderline {} }
+    Component { id: workspaceButtonFactory; WorkspaceButton {} }
+    Component { id: workspaceStripFactory; Workspaces { screen: null } }
+    Component {
+        id: notificationCardFactory
+        NotificationCard {
+            notification: ({
+                actions: [], hints: ({}), appIcon: "", image: "",
+                appName: "Probe", desktopEntry: "", summary: "Probe",
+                body: "", urgency: 1, expireTimeout: 5000,
+                resident: false, transient: false
+            })
+            notifId: 2147483646
+            createdAt: Date.now()
+        }
+    }
 
     property var _timeoutProbe: null
 
@@ -138,8 +157,160 @@ ShellRoot {
         root._check(layout.loc.media.zone === "left" && layout.loc.clock.zone === "center",
             "widget layout reports normalized locations")
 
+        const workspaceStrip = workspaceStripFactory.createObject(root)
+        const forwardCrossing = workspaceStrip._intermediateIndexes(0, 2)
+        const reverseCrossing = workspaceStrip._intermediateIndexes(3, 0)
+        root._check(forwardCrossing.length === 1 && forwardCrossing[0] === 1
+                && reverseCrossing.join(",") === "2,1",
+            "workspace hand-offs retain every crossed cell in travel order")
+        root._check(workspaceStrip._intermediateIndexes(0, 1).length === 0,
+            "adjacent workspace switches add no intermediate fade")
+        root._check(workspaceStrip.visibleIds.length > 0
+                && workspaceStrip._visibleIndex(workspaceStrip.visibleIds[0]) === 0
+                && workspaceStrip._visibleIndex(999999) === -1,
+            "workspace page IDs resolve through the shared index")
+        const earlyHandoff = workspaceStrip._handoffDelay(0, 2)
+        const laterHandoff = workspaceStrip._handoffDelay(1, 2)
+        root._check(earlyHandoff === 0 && laterHandoff > earlyHandoff,
+            "workspace hand-off timing follows the marker's eased travel")
+        workspaceStrip.destroy()
+
+        const underline = barUnderlineFactory.createObject(root)
+        root._check(underline._eventMotionAllowed(false, false)
+                && !underline._eventMotionAllowed(true, false)
+                && !underline._eventMotionAllowed(false, true),
+            "reactive underline motion is disabled by idle and reduce-motion states")
+        underline.destroy()
+
+        const notificationCard = notificationCardFactory.createObject(root)
+        root._check(notificationCard._visualMotionAllowed(false, false)
+                && !notificationCard._visualMotionAllowed(true, false)
+                && !notificationCard._visualMotionAllowed(false, true),
+            "notification visual work is disabled by idle and reduce-motion states")
+        notificationCard.destroy()
+
+        root._check(OsdBarState._presentationAllowed(false, true)
+                && !OsdBarState._presentationAllowed(true, true)
+                && !OsdBarState._presentationAllowed(false, false),
+            "OSD presentation is disabled while idle or globally switched off")
+        root._check(OsdBarState._kindAllowedByFilter("volume", "both")
+                && OsdBarState._kindAllowedByFilter("brightness", "both")
+                && OsdBarState._kindAllowedByFilter("volume", "volume")
+                && !OsdBarState._kindAllowedByFilter("brightness", "volume"),
+            "OSD input filtering admits only the selected feedback kind")
+
+        root._check(!OverlayCoordinator._environmentBlocksControls(false, false)
+                && OverlayCoordinator._environmentBlocksControls(true, false)
+                && OverlayCoordinator._environmentBlocksControls(false, true),
+            "screen blanking and overview activation retire open control surfaces")
+
+        const settingsNavComponent = Qt.createComponent("file://"
+            + Quickshell.shellDir + "/modules/menu/SettingsNav.qml")
+        const settingsNav = settingsNavComponent.status === Component.Ready
+            ? settingsNavComponent.createObject(root) : null
+        root._check(settingsNav !== null,
+            "the internal settings navigation is available to the behavior probe")
+        if (settingsNav !== null) {
+            settingsNav._expandedGroup = 0
+            settingsNav._syncExpansionMode(false, "updates")
+            root._check(settingsNav._expandedGroup
+                    === settingsNav._groupIndexForSection("updates"),
+                "leaving multi-group navigation keeps the selected settings group open")
+            settingsNav.destroy()
+        }
+        settingsNavComponent.destroy()
+
+        // available is temp>0, which drops to 0 every time the service is
+        // released; a control gated on it flickers on every menu open
+        const tempPathWas = CpuTemp._sensorPath
+        const tempProbeWas = CpuTemp._probeComplete
+        CpuTemp._sensorPath = ""
+        CpuTemp._probeComplete = false
+        root._check(!CpuTemp.sensorMissing,
+            "temperature controls stay put until the sensor probe answers")
+        CpuTemp._probeComplete = true
+        root._check(CpuTemp.sensorMissing,
+            "a finished probe that found nothing hides the temperature controls")
+        CpuTemp._sensorPath = "/sys/class/hwmon/hwmon0/temp1_input"
+        root._check(!CpuTemp.sensorMissing,
+            "a detected sensor keeps its controls whatever the current reading")
+        CpuTemp._sensorPath = tempPathWas
+        CpuTemp._probeComplete = tempProbeWas
+
+        const shiftWas = ShellSettings.workspaceShift
+        const reduceMotionWas = ShellSettings.reduceMotion
+        ShellSettings.workspaceShift = true
+        ShellSettings.reduceMotion = false
+        const crossingCell = workspaceButtonFactory.createObject(root, {
+            wsId: 2, monitorReady: true, active: false, occupied: false,
+            urgent: false, apps: [], compact: false, iconSize: 12,
+            cellWidth: 26, rowHeight: 24, barActive: true,
+            initialized: true, paging: false, markerCovers: true
+        })
+        crossingCell.playMarkerPass(0)
+        root._check(crossingCell && crossingCell.markerPassActive,
+            "a crossed workspace starts its fade hand-off")
+        crossingCell._markerPassCover = 0.6
+        crossingCell.playMarkerPass(20)
+        root._check(crossingCell.markerPassActive
+                && crossingCell._markerPassCover === 0,
+            "a repeated workspace hand-off restarts from full opacity")
+        crossingCell.active = true
+        root._check(!crossingCell.markerPassActive
+                && crossingCell._markerPassCover === 0,
+            "an active destination cancels any intermediate fade")
+        crossingCell.active = false
+        crossingCell.markerCovers = false
+        crossingCell.playMarkerPass(0)
+        root._check(!crossingCell.markerPassActive,
+            "a bar marker leaves the cells it crosses alone")
+        crossingCell.destroy()
+        ShellSettings.workspaceShift = shiftWas
+        ShellSettings.reduceMotion = reduceMotionWas
+
         // the settings file is untrusted input and the README promises it is type-checked
         // and clamped; a hand-edited or truncated file reaches setValue the same way
+        // every key, not just the sampled ones: a schema entry whose declared
+        // type disagrees with its property only shows up as a coerced NaN or a
+        // silently kept hostile value
+        const hostile = [99999, -99999, 9e99, -9e99, 0, "", "  ", "tall", "true",
+            "false", null, undefined, NaN, Infinity, -Infinity, [], ({}), "0x10"]
+        let fuzzBad = ""
+        let fuzzCount = 0
+        const fuzzSchema = ShellSettings._schema
+        for (let i = 0; i < fuzzSchema.length && fuzzBad.length === 0; i++) {
+            const entry = fuzzSchema[i]
+            const key = entry.k
+            const before = ShellSettings[key]
+            for (let j = 0; j < hostile.length; j++) {
+                ShellSettings.setValue(key, hostile[j])
+                const got = ShellSettings[key]
+                fuzzCount++
+                let ok = true
+                if (entry.t === "bool") ok = typeof got === "boolean"
+                else if (entry.t === "int")
+                    ok = typeof got === "number" && isFinite(got)
+                        && got >= entry.min && got <= entry.max
+                        && Math.abs(got - Math.round(got)) < 1e-9
+                else if (entry.t === "real")
+                    ok = typeof got === "number" && isFinite(got)
+                        && got >= entry.min - 1e-9 && got <= entry.max + 1e-9
+                else if (entry.t === "enum")
+                    ok = entry.vals.indexOf(got) >= 0
+                else if (entry.t === "re")
+                    ok = typeof got === "string" && entry.re.test(got)
+                if (!ok) {
+                    fuzzBad = key + " (" + entry.t + ") became " + JSON.stringify(got)
+                        + " from " + JSON.stringify(hostile[j])
+                    break
+                }
+            }
+            ShellSettings[key] = before
+        }
+        root._check(fuzzBad.length === 0,
+            "every setting survives hostile input: " + (fuzzBad.length === 0
+                ? fuzzCount + " coercions held their type and range" : fuzzBad))
+
         root._checkCoerce("barHeight", 99999, 60, "an over-range int clamps to its maximum")
         root._checkCoerce("barHeight", -5, 24, "an under-range int clamps to its minimum")
         root._checkCoerce("barHeight", "tall", 36, "a non-numeric int is refused")
