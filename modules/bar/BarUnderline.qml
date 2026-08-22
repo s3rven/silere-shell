@@ -12,10 +12,6 @@ Item {
     property real floatingProgress: ShellSettings.barFloating ? 1.0 : 0.0
     property real wrapRadius: 0
 
-    function _eventMotionAllowed(idle: bool, reduceMotion: bool): bool {
-        return !idle && !reduceMotion
-    }
-
     // a bottom bar mirrors the whole item vertically in one step; conditional anchor flips leave elements on the stale edge
     readonly property bool atBottom: ShellSettings.barPosition === "bottom"
     transform: Scale { origin.y: _ul.height / 2; yScale: _ul.atBottom ? -1 : 1 }
@@ -139,8 +135,7 @@ Item {
         readonly property bool _shotActive: _screenshotGlow > 0.001
 
         function _canRunEventMotion(): bool {
-            return _ul._eventMotionAllowed(
-                Idle.isIdle, ShellSettings.reduceMotion)
+            return Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)
         }
 
         function _playScreenshot(): void {

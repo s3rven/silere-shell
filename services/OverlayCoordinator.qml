@@ -12,12 +12,7 @@ Singleton {
         return idle || overview
     }
 
-    function closeAll(): void {
-        MenuState.close()
-        CalendarState.close()
-        TrayMenuState.close()
-        QuickActionsState.close()
-    }
+    function closeAll(): void { root._claim("") }
 
     function _opened(name: string): void {
         // IPC and keybind requests can arrive after the environment edge that closed the surfaces, so reject re-entry until it becomes interactive

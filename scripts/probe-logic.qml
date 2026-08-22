@@ -175,18 +175,17 @@ ShellRoot {
             "workspace hand-off timing follows the marker's eased travel")
         workspaceStrip.destroy()
 
+        root._check(Motion.allowsMotion(false, false)
+                && !Motion.allowsMotion(true, false)
+                && !Motion.allowsMotion(false, true),
+            "visible motion is disabled by idle and reduce-motion states")
+
         const underline = barUnderlineFactory.createObject(root)
-        root._check(underline._eventMotionAllowed(false, false)
-                && !underline._eventMotionAllowed(true, false)
-                && !underline._eventMotionAllowed(false, true),
-            "reactive underline motion is disabled by idle and reduce-motion states")
+        root._check(underline !== null, "the reactive underline builds")
         underline.destroy()
 
         const notificationCard = notificationCardFactory.createObject(root)
-        root._check(notificationCard._visualMotionAllowed(false, false)
-                && !notificationCard._visualMotionAllowed(true, false)
-                && !notificationCard._visualMotionAllowed(false, true),
-            "notification visual work is disabled by idle and reduce-motion states")
+        root._check(notificationCard !== null, "a notification card builds")
         notificationCard.destroy()
 
         root._check(OsdBarState._presentationAllowed(false, true)

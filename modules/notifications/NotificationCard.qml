@@ -85,10 +85,6 @@ Item {
 
     readonly property real _cardRadius: Theme.surfaceRadius
 
-    function _visualMotionAllowed(idle: bool, reduceMotion: bool): bool {
-        return !idle && !reduceMotion
-    }
-
     function dismiss(expired): void {
         if (!card.enabled) return
         card._expired = expired === true
@@ -99,7 +95,7 @@ Item {
         cardRect.opacity = 0
         cardRect.x = card._hiddenX
         card.enabled = false
-        if (!card._visualMotionAllowed(Idle.isIdle, ShellSettings.reduceMotion)
+        if (!Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)
                 || !card.visible) {
             card.dismissRequested(card.notifId, card.notification, card._expired)
             return
@@ -216,7 +212,7 @@ Item {
     property real _countdownPulse:  1.0
     readonly property bool _showCountdown: card.visible && card.enabled
         && _autoClose.shouldRun
-        && card._visualMotionAllowed(Idle.isIdle, ShellSettings.reduceMotion)
+        && Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)
 
     function _syncCountdown(): void {
         const full = _autoClose.fullInterval
@@ -286,7 +282,7 @@ Item {
         property bool _behaviorEnabled: false
         // abs: a top-left stack slides to negative x, and a layer toggling off mid-slide flashes the card
         layer.enabled: card.visible
-            && card._visualMotionAllowed(Idle.isIdle, ShellSettings.reduceMotion)
+            && Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)
             && (Math.abs(x) > 0.5 || opacity < 0.999)
 
         Component.onCompleted: {
