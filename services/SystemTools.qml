@@ -44,6 +44,26 @@ Singleton {
     readonly property bool hasPowerProfilesCtl: _tools.powerprofilesctl ?? false
     readonly property bool hasFcList:        _tools["fc-list"] ?? false
 
+    // "" | working | done | failed
+    property string matugenRepairState: ""
+
+    // the repair outlives the settings section that starts it; a page unload
+    // must not orphan the process or drop its result
+    function repairMatugen(): void {
+        if (root.matugenRepairState === "working") return
+        root.matugenRepairState = "working"
+        _matugenRepair.running = true
+    }
+
+    BoundedProcess {
+        id: _matugenRepair
+        timeoutMs: 15000
+        command: ["bash", Quickshell.shellDir + "/scripts/install.sh", "--repair-matugen"]
+        onExited: code => root.matugenRepairState = code === 0 ? "done" : "failed"
+        onTimeoutReached: root.matugenRepairState = "failed"
+        Component.onDestruction: running = false
+    }
+
     function _shq(s: string): string {
         return "'" + String(s).replace(/'/g, "'\\''") + "'"
     }

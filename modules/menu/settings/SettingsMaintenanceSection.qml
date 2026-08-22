@@ -1,7 +1,6 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import Quickshell
 import "../../../config"
 import "../../../services"
 import "../controls"
@@ -13,23 +12,6 @@ Column {
 
     property bool _armed: false
     property real _armedAtMs: 0
-
-    // "" | working | done | failed
-    property string _repairState: ""
-
-    function _repairMatugen(): void {
-        if (root._repairState === "working") return
-        root._repairState = "working"
-        _repairProc.running = true
-    }
-
-    BoundedProcess {
-        id: _repairProc
-        timeoutMs: 15000
-        command: ["bash", Quickshell.shellDir + "/scripts/install.sh", "--repair-matugen"]
-        onExited: code => root._repairState = code === 0 ? "done" : "failed"
-        onTimeoutReached: root._repairState = "failed"
-    }
 
     // Reopening Maintenance re-detects tools installed or removed while the
     // shell is running. FontScan follows the completed tool refresh itself.
@@ -112,12 +94,12 @@ Column {
             out.push({ g: "󰉦", n: "Wallpaper palette", s: "Unreadable; showing the last colors that loaded", v: "template" })
         else if (MatugenTheme.usingFallback)
             out.push({ g: "󰉦", n: "Wallpaper palette",
-                s: root._repairState === "working" ? "Rewiring Matugen…"
-                    : root._repairState === "done" ? "Rewired — colors follow your next wallpaper change"
-                    : root._repairState === "failed" ? "Could not rewire; run scripts/install.sh"
+                s: SystemTools.matugenRepairState === "working" ? "Rewiring Matugen…"
+                    : SystemTools.matugenRepairState === "done" ? "Rewired — colors follow your next wallpaper change"
+                    : SystemTools.matugenRepairState === "failed" ? "Could not rewire; run scripts/install.sh"
                     : "Matugen has not written one yet",
-                v: root._repairState === "working" ? "" : root._repairState === "done" ? "" : "Repair",
-                a: root._repairState === "working" || root._repairState === "done" ? "" : "matugen" })
+                v: SystemTools.matugenRepairState === "working" ? "" : "Repair",
+                a: SystemTools.matugenRepairState === "working" ? "" : "matugen" })
 
         const tool = (g, n, v) => out.push({ g: g, n: n, s: "Hidden until this is installed", v: v })
         if (!SystemTools.hasBrightnessctl)     tool("󰃟", "Brightness control", "brightnessctl")
@@ -166,7 +148,7 @@ Column {
                 status: modelData.s
                 valueText: modelData.v
                 passive: !modelData.a
-                onActivated: if (modelData.a === "matugen") root._repairMatugen()
+                onActivated: if (modelData.a === "matugen") SystemTools.repairMatugen()
             }
         }
         HintText {
