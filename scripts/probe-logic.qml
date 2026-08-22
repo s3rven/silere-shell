@@ -169,10 +169,14 @@ ShellRoot {
                 && workspaceStrip._visibleIndex(workspaceStrip.visibleIds[0]) === 0
                 && workspaceStrip._visibleIndex(999999) === -1,
             "workspace page IDs resolve through the shared index")
-        const earlyHandoff = workspaceStrip._handoffDelay(0, 2)
-        const laterHandoff = workspaceStrip._handoffDelay(1, 2)
+        const earlyHandoff = workspaceStrip._handoffDelayAt(0, 100, 25)
+        const laterHandoff = workspaceStrip._handoffDelayAt(0, 100, 75)
         root._check(earlyHandoff === 0 && laterHandoff > earlyHandoff,
             "workspace hand-off timing follows the marker's eased travel")
+        root._check(workspaceStrip._handoffDelayAt(100, 0, 25) === laterHandoff,
+            "a reversed jump staggers by distance travelled, not by index")
+        root._check(workspaceStrip._handoffDelayAt(50, 50, 50) === 0,
+            "a hand-off with no distance to cover waits for nothing")
         workspaceStrip.destroy()
 
         root._check(Motion.allowsMotion(false, false)

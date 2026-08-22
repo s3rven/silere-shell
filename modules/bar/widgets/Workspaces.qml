@@ -392,9 +392,11 @@ Item {
         return out
     }
 
-    function _handoffDelay(crossingIndex: int, crossingCount: int): int {
-        if (crossingIndex < 0 || crossingCount < 1) return 0
-        const progress = Math.min(1, (crossingIndex + 1) / (crossingCount + 1))
+    // app icons make cells different widths; an index fraction fades a wide cell before the marker reaches it
+    function _handoffDelayAt(fromX: real, toX: real, crossedX: real): int {
+        const span = toX - fromX
+        if (Math.abs(span) < 0.5) return 0
+        const progress = Math.min(1, Math.max(0, (crossedX - fromX) / span))
         // invert the marker's OutQuart travel; a fixed stagger drifts behind on long jumps
         const crossingMs = marker.travelDuration
             * (1 - Math.pow(1 - progress, 0.25))
@@ -408,9 +410,13 @@ Item {
         const fromIndex = root._visibleIndex(fromId)
         const toIndex = root._visibleIndex(toId)
         const crossed = root._intermediateIndexes(fromIndex, toIndex)
+        const fromX = root._cellCenterX(fromId)
+        const toX = root._cellCenterX(toId)
         for (let i = 0; i < crossed.length; i++) {
             const button = _wsRepeater.itemAt(crossed[i])
-            if (button) button.playMarkerPass(root._handoffDelay(i, crossed.length))
+            if (!button) continue
+            button.playMarkerPass(root._handoffDelayAt(
+                fromX, toX, root._cellCenterX(root.visibleIds[crossed[i]])))
         }
     }
 
