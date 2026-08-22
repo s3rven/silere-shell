@@ -25,6 +25,14 @@ Column {
         ShellSettings.osdBatteryWarn, ShellSettings.underlineBattGlow)
     readonly property string _tempAlertMode: root._alertMode(
         ShellSettings.osdTempWarn, ShellSettings.underlineTempGlow)
+    readonly property bool _batteryDesktopAlert:
+        Battery.available && ShellSettings.osdBatteryWarn
+    readonly property bool _tempDesktopAlert:
+        !CpuTemp.sensorMissing && ShellSettings.osdTempWarn
+    readonly property bool _desktopAlertsEnabled:
+        root._batteryDesktopAlert || root._tempDesktopAlert
+    readonly property bool _hardwareStatusVisible:
+        !Battery.available && CpuTemp.sensorMissing
 
     readonly property var _alertChipModel: ShellSettings.underlineGlow
         ? [
@@ -65,8 +73,13 @@ Column {
         }
     }
 
-    SectionLabel { label: "CPU TEMPERATURE"; first: !Battery.available }
+    SectionLabel {
+        label: "CPU TEMPERATURE"
+        first: !Battery.available
+        visible: !CpuTemp.sensorMissing
+    }
     SettingsCard {
+        visible: !CpuTemp.sensorMissing
         ChoiceChipRow {
             glyph: "󰔏"; label: "High temperature warning"
             currentValue: root._tempAlertMode
@@ -83,12 +96,27 @@ Column {
         HintText { text: "Escalates to critical at " + (ShellSettings.tempHotThreshold + 8) + "°." }
     }
 
+    SectionLabel {
+        label: "HARDWARE"
+        first: true
+        visible: root._hardwareStatusVisible
+    }
+    SettingsCard {
+        visible: root._hardwareStatusVisible
+        ControlRow {
+            glyph: "󰋼"
+            title: "No alert hardware found"
+            status: "Battery and temperature alerts stay hidden"
+            passive: true
+        }
+    }
+
     CollapsibleSection {
         id: _alertsSection
-        expanded: ShellSettings.osdBatteryWarn || ShellSettings.osdTempWarn
+        expanded: root._desktopAlertsEnabled
         Loader {
             width: parent.width
-            active: ShellSettings.osdBatteryWarn || ShellSettings.osdTempWarn || _alertsSection.height > 0.5
+            active: root._desktopAlertsEnabled || _alertsSection.height > 0.5
             height: item ? item.implicitHeight : 0
             sourceComponent: Component {
                 Column {

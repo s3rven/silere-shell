@@ -16,6 +16,14 @@ Column {
         !ShellSettings.underlineScreenshotGlow ? "off"
         : ShellSettings.screenshotGlowSweep ? "sweep"
         : "flash"
+    readonly property bool _hasReactiveSource:
+        ShellSettings.underlineIdleGlow
+        || ShellSettings.underlineNotifGlow
+        || ShellSettings.underlineNetGlow
+        || (Battery.available && ShellSettings.underlineBattGlow)
+        || (!CpuTemp.sensorMissing && ShellSettings.underlineTempGlow)
+        || ShellSettings.underlineScreenshotGlow
+        || ShellSettings.mediaProgress
 
     function _setScreenshotStyle(style) {
         ShellSettings.batch(() => {
@@ -134,10 +142,12 @@ Column {
                         ToggleRow {
                             glyph: "󱃍"; label: "Battery low"
                             key: "underlineBattGlow"
+                            visible: Battery.available
                         }
                         ToggleRow {
                             glyph: "󰔏"; label: "Temperature"
                             key: "underlineTempGlow"
+                            visible: !CpuTemp.sensorMissing
                         }
                         ChoiceChipRow {
                             glyph: "󰄀"; label: "Screenshots"
@@ -160,13 +170,7 @@ Column {
                         }
                         HintText {
                             // the base glow line is drawn either way; what is missing here is anything to react to
-                            visible: !ShellSettings.underlineIdleGlow
-                                && !ShellSettings.underlineNotifGlow
-                                && !ShellSettings.underlineNetGlow
-                                && !ShellSettings.underlineBattGlow
-                                && !ShellSettings.underlineTempGlow
-                                && !ShellSettings.underlineScreenshotGlow
-                                && !ShellSettings.mediaProgress
+                            visible: !root._hasReactiveSource
                             text: "No event will light the underline."
                         }
                     }

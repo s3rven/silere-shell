@@ -12,12 +12,18 @@ Singleton {
     readonly property bool available: temp > 0
     property bool _started: false
     readonly property bool needed: MenuState.homeActive
-        || (MenuState.settingsActive && MenuState.settingsSection === "warnings")
+        || (MenuState.settingsActive
+            && (MenuState.settingsSection === "warnings"
+                || MenuState.settingsSection === "underline"))
     readonly property bool _persistentNeed: ShellSettings.osdTempWarn
         || (ShellSettings.underlineGlow && ShellSettings.underlineTempGlow)
     readonly property bool _wanted: _started && (_persistentNeed || needed) && !Idle.isIdle
     property string _sensorPath: ""
     property bool _reading: false
+    property bool _probeComplete: false
+    // available drops to false whenever the service is released, so a control
+    // gated on it flickers on every menu open; sensors do not come and go
+    readonly property bool sensorMissing: _probeComplete && _sensorPath.length === 0
 
     property int _hotCount:      0
     property int _criticalCount: 0
@@ -138,6 +144,7 @@ Singleton {
             if (!root._wanted) return
             const path = code === 0 ? (_detectOut.text || "").trim() : ""
             root._sensorPath = path.startsWith("/sys/") ? path : ""
+            if (root._sensorPath.length === 0) root._probeComplete = true
         }
         Component.onDestruction: running = false
     }
@@ -164,12 +171,14 @@ Singleton {
         if (!root._wanted) return
         const t = root._normalizedTemp(parseFloat((raw || "").trim()))
         if (t > 0) root._sample(t)
+        root._probeComplete = true
     }
 
     function _failSensorRead(): void {
         if (!root._reading) return
         root._reading = false
         if (!root._wanted) return
+        root._probeComplete = false
         root._sensorPath = ""
         if (!_detectProc.running) _detectProc.running = true
     }
