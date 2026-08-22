@@ -209,6 +209,16 @@ PanelWindow {
 
         on_LoadedDeferredChanged: _syncPageRetention()
 
+        // settings costs ~60ms to build and it lands on the tap that starts the widen
+        function warmSettings(): void {
+            if (!MenuState.open || panel.activeTab === 1
+                    || panel._settingsRetained) return
+            panel._loadedDeferred = true
+            panel._settingsRetained = true
+            panel._settingsNavRetained = true
+            _settingsUnload.restart()
+        }
+
         function _settlePageVisuals(): void {
             if (homeLoader.item) homeLoader.item.settleVisual(activeTab === 0)
             if (settingsLoader.item) settingsLoader.item.settleVisual(activeTab === 1)
@@ -517,14 +527,17 @@ PanelWindow {
                         width: Math.max(height, _railBadgeCount.implicitWidth + 7)
                         height: 14; radius: height / 2
                         color: Theme.accent; antialiasing: true
-                        border.width: 2
-                        border.color: Theme.menuPane
                         opacity: _show ? 1.0 : 0.0
                         scale:   _show ? 1.0 : 0.5
                         visible: opacity > 0.01
                         transformOrigin: Item.Center
                         MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
                         MotionBehavior on scale   {NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
+                        OutlineBorder {
+                            radius: parent.radius
+                            outlineWidth: 2
+                            outlineColor: Theme.menuPane
+                        }
                         ShellText {
                             id: _railBadgeCount
                             anchors.fill: parent
@@ -548,6 +561,7 @@ PanelWindow {
                         || panel.navW < panel._navMinW
                     active: panel.activeTab === 1
                     onTapped: panel.switchTab(1)
+                    onHoveredChanged: if (hovered) panel.warmSettings()
                 }
             }
 
@@ -655,6 +669,21 @@ PanelWindow {
                         panel.activeTab === 1 ? settingsLoader.status === Loader.Error
                       : panel.activeTab === 2 ? recentLoader.status === Loader.Error
                       : false
+                    // a build shorter than this reads as a flicker, not as feedback
+                    property bool _pageSlow: false
+                    on_PagePendingChanged: {
+                        if (tabContent._pagePending) {
+                            _pageSlowDefer.restart()
+                        } else {
+                            _pageSlowDefer.stop()
+                            tabContent._pageSlow = false
+                        }
+                    }
+                    Timer {
+                        id: _pageSlowDefer
+                        interval: 220
+                        onTriggered: tabContent._pageSlow = tabContent._pagePending
+                    }
                     height: panel.activeTab === 0 ? (homeLoader.item?.implicitHeight ?? 0)
                           : panel.activeTab === 1 ? (settingsLoader.item?.implicitHeight
                                 ?? _pagePlaceholder.implicitHeight)
@@ -667,13 +696,20 @@ PanelWindow {
                         height: implicitHeight
                         implicitHeight: Math.max(1, panel.idealMinH
                             - panel.pageTopInset - panel.pageBottomInset)
-                        opacity: tabContent._pagePending ? 1 : 0
+                        readonly property bool _shown:
+                            tabContent._pageSlow || tabContent._pageError
+                        opacity: _pagePlaceholder._shown ? 1 : 0
                         visible: opacity > 0.001
                         enabled: false
                         z: 5
 
                         MotionBehavior on opacity {
-                            NumberAnimation { duration: Motion.pageOut; easing.type: Easing.InCubic }
+                            NumberAnimation {
+                                duration: Motion.pageOut
+                                easing.type: Easing.BezierSpline
+                                easing.bezierCurve: _pagePlaceholder._shown
+                                    ? Motion.standardDecel : Motion.standardAccel
+                            }
                         }
 
                         Column {

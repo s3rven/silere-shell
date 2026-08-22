@@ -16,6 +16,7 @@ Item {
     property RailLabelGroup labels: null
     property bool _hoverReady: false
 
+    readonly property alias hovered: _hover.hovered
     readonly property bool _hot: _hover.hovered
 
     signal tapped()

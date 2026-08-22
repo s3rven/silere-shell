@@ -100,7 +100,7 @@ PageShell {
         width:  root.width
         height: _detailHeader.height + _bodyGap + _detailBody.height
         property real _shift: 0
-        transform: Translate { y: _detail._shift }
+        transform: Translate { x: _detail._shift }
 
         readonly property int _bodyGap: 8
 
@@ -120,7 +120,7 @@ PageShell {
 
         SequentialAnimation {
             id: _detailSwap
-            NumberAnimation { target: _detail; property: "opacity"; to: 0.0; duration: Motion.pageOut; easing.type: Easing.InCubic }
+            NumberAnimation { target: _detail; property: "opacity"; to: 0.0; duration: Motion.pageOut; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standardAccel }
             ScriptAction {
                 script: {
                     root._awaitingSectionEnter = true
@@ -163,8 +163,8 @@ PageShell {
 
         ParallelAnimation {
             id: _detailEnter
-            NumberAnimation { target: _detail; property: "opacity"; to: 1.0; duration: Motion.pageIn; easing.type: Easing.OutCubic }
-            NumberAnimation { target: _detail; property: "_shift"; to: 0.0; duration: Motion.pageIn; easing.type: Easing.OutQuart }
+            NumberAnimation { target: _detail; property: "opacity"; to: 1.0; duration: Motion.pageIn; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standardDecel }
+            NumberAnimation { target: _detail; property: "_shift"; to: 0.0; duration: Motion.pageIn; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.emphasizedDecel }
         }
 
         Item {

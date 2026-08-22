@@ -160,6 +160,16 @@ Item {
         root.groupToggled()
     }
 
+    function _syncExpansionMode(keepGroupsOpen: bool, section: string): void {
+        if (!keepGroupsOpen)
+            root._expandedGroup = root._groupIndexForSection(section)
+        // The mode changes every group's height at once. Let the panel follow
+        // that disclosure and reveal the selected leaf after the rows settle.
+        root._settleGroup = -1
+        _disclosureSettle.restart()
+        root.groupToggled()
+    }
+
     function _toggleGroup(index: int): void {
         if (root.allExpanded) {
             const collapsing = root._isExpanded(index)
@@ -191,7 +201,10 @@ Item {
     Timer {
         id: _disclosureSettle
         interval: Motion.medium
-        onTriggered: root._scrollToGroup(root._settleGroup)
+        onTriggered: {
+            if (root._settleGroup >= 0) root._scrollToGroup(root._settleGroup)
+            else root._scrollToSelection()
+        }
     }
 
     Timer {
@@ -236,6 +249,13 @@ Item {
             if (root.active) root._selectGroupAndScroll()
         }
     }
+    Connections {
+        target: ShellSettings
+        function onSettingsNavPinnedChanged() {
+            root._syncExpansionMode(
+                ShellSettings.settingsNavPinned, MenuState.settingsSection)
+        }
+    }
 
     ShellFlickable {
         id: _navScroll
@@ -248,7 +268,11 @@ Item {
 
         MotionBehavior on contentY {
             gate: !_navScroll.moving
-            NumberAnimation { duration: Motion.medium; easing.type: Easing.OutQuart }
+            NumberAnimation {
+                duration: Motion.normal
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Motion.standard
+            }
         }
 
         Item {
@@ -402,7 +426,12 @@ Item {
                             visible: height > 0
                             clip: height < _leafColumn.implicitHeight + root._childrenPad * 2
 
-                            Disclosure on height { expanded: _grp.expanded }
+                            Disclosure on height {
+                                expanded: _grp.expanded
+                                symmetric: !root.allExpanded
+                                enterCurve: Motion.standard
+                                exitCurve: Motion.standard
+                            }
 
                             Column {
                                 id: _leafColumn
@@ -410,17 +439,16 @@ Item {
                                 y: root._childrenPad
                                 width: parent.width - 6
                                 spacing: root._navRowGap
-                                property real _shift: _grp.expanded ? 0 : -4
                                 opacity: _grp.expanded ? 1 : 0
-                                transform: Translate { y: _leafColumn._shift }
 
                                 MotionBehavior on opacity {
                                     NumberAnimation {
                                         duration: Motion.fast
-                                        easing.type: _grp.expanded ? Easing.OutCubic : Easing.InCubic
+                                        easing.type: Easing.BezierSpline
+                                        easing.bezierCurve: _grp.expanded
+                                            ? Motion.standardDecel : Motion.standardAccel
                                     }
                                 }
-                                Disclosure on _shift { expanded: _grp.expanded }
 
                                 Repeater {
                                     id: _leafRepeater
