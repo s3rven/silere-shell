@@ -91,8 +91,10 @@ Row {
                 radius: 3
                 antialiasing: true
                 color: Theme.accent
-                border.width: 1
-                border.color: Theme.surface
+                OutlineBorder {
+                    radius: parent.radius
+                    outlineColor: Theme.surface
+                }
             }
         }
     }

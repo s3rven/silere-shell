@@ -277,8 +277,11 @@ PanelWindow {
                         width: 8; height: 8; radius: 4
                         antialiasing: true
                         color: _entry.checked ? Theme.accent : "transparent"
-                        border.width: _entry.checked ? 0 : 1
-                        border.color: Theme.withAlpha(Theme.subtext, 0.5)
+                        OutlineBorder {
+                            radius: parent.radius
+                            outlineColor: _entry.checked
+                                ? "transparent" : Theme.withAlpha(Theme.subtext, 0.5)
+                        }
                     }
                 }
 

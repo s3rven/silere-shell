@@ -67,8 +67,11 @@ Item {
             radius: diameter / 2
             antialiasing: true
             color: root._style === "◦" ? "transparent" : Theme.barSeparator
-            border.width: root._style === "◦" ? 1 : 0
-            border.color: Theme.barSeparator
+            OutlineBorder {
+                radius: parent.radius
+                outlineColor: root._style === "◦"
+                    ? Theme.barSeparator : "transparent"
+            }
         }
 
         Rectangle {
