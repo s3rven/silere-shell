@@ -8,7 +8,9 @@ Item {
     property string text: ""
     property color textColor: Theme.menuTextDetail
     readonly property bool suppressDividerAbove: true
-    readonly property int _hPad: 14
+    // the row text spine: 14 card pad + 18 icon + 10 gap; dividers keep the bare 14
+    readonly property int _leftPad: 42
+    readonly property int _rightPad: 14
     readonly property int _topPad: 4
     readonly property int _bottomPad: 8
     readonly property int _fontPx: Settings.fontCaption
@@ -20,9 +22,9 @@ Item {
 
     ShellText {
         id: _text
-        x: root._hPad
+        x: root._leftPad
         y: root._topPad
-        width: Math.max(0, parent.width - root._hPad * 2)
+        width: Math.max(0, parent.width - root._leftPad - root._rightPad)
         text:        root.text
         color:       root.textColor
         ColorFade on color {}
