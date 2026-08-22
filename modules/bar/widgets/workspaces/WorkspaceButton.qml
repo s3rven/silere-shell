@@ -106,12 +106,34 @@ Item {
         if (_blanked) _dotFadeOut.restart()
         else          _dotFadeIn.restart()
     }
+    onActiveChanged: if (root.active) root.clearMarkerPass()
+    onPagingChanged: if (root.paging) root.clearMarkerPass()
 
     readonly property real _pulseOpacity: _urgentFx.item ? _urgentFx.item.pulseOpacity : 1.0
     readonly property real _shakeX: _urgentFx.item ? _urgentFx.item.shakeX : 0
     property real _dotFade: 1.0
+    property real _markerPassCover: 0.0
+    property int _markerPassDelayMs: 0
+    readonly property bool markerPassActive: _markerPassAnim.running
     property bool _notifPulseLoaded: false
     property bool _notifPulseCritical: false
+
+    function playMarkerPass(delayMs: int): void {
+        if (!root.barActive || root.active || root.paging || !root.markerCovers
+                || !ShellSettings.workspaceShift || ShellSettings.reduceMotion
+                || Idle.isIdle) return
+        // restart from full opacity; a second jump must not resume the first one's fade
+        _markerPassAnim.stop()
+        root._markerPassCover = 0
+        root._markerPassDelayMs = Math.max(0, Math.min(144, delayMs))
+        _markerPassAnim.start()
+    }
+
+    function clearMarkerPass(): void {
+        if (!_markerPassAnim.running && root._markerPassCover === 0) return
+        _markerPassAnim.stop()
+        root._markerPassCover = 0
+    }
 
     function playNotificationPulse(critical: bool): void {
         if (!root.barActive || !ShellSettings.wsNotifPulse
@@ -159,6 +181,19 @@ Item {
         NumberAnimation { target: root; property: "_dotFade"; to: 1; duration: Motion.ms(220); easing.type: Easing.OutCubic }
     }
 
+    SequentialAnimation {
+        id: _markerPassAnim
+        PauseAnimation { duration: root._markerPassDelayMs }
+        NumberAnimation {
+            target: root; property: "_markerPassCover"; to: 1
+            duration: Motion.ms(72); easing.type: Easing.OutCubic
+        }
+        PauseAnimation { duration: Motion.ms(16) }
+        NumberAnimation {
+            target: root; property: "_markerPassCover"; to: 0
+            duration: Motion.ms(145); easing.type: Easing.OutCubic
+        }
+    }
     Loader {
         id: _urgentFx
         active: root.urgent && !root.active && ShellSettings.wsUrgentPulse
@@ -167,61 +202,67 @@ Item {
         }
     }
 
-    ShellText {
-        anchors.centerIn: parent
-        transform: Translate { x: root._shakeX }
-        text:    root.wsId
-        opacity: (root._showIcons
-                ? root._revealAmt
-                : Math.max(ShellSettings.wsShowNumbers ? 1 : 0, root._revealAmt))
-            * (root._blanked ? 0 : 1) * root._pulseOpacity * ShellSettings.wsMarkerOpacity
-        scale:   root._blanked ? 0.6 : (root._hoverFx ? 1.12 : 1)
-        color:   root.urgent
-            ? Theme.warning
-            : root.active
-            ? Theme.accent
-            : (root.occupied
-                ? (root._hoverFx ? Theme.accent : Theme.withAlpha(Theme.text, 0.85))
-                : (root._hoverFx ? Theme.withAlpha(Theme.accent, 0.65) : Theme.withAlpha(Theme.subtext, 0.45)))
-        font.pixelSize: Settings.fontLabel
+    Item {
+        anchors.fill: parent
+        opacity: 1 - root._markerPassCover
 
-        MotionBehavior on opacity {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
-        MotionBehavior on scale   {NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
-        ColorFade on color {}
-    }
+        ShellText {
+            anchors.centerIn: parent
+            transform: Translate { x: root._shakeX }
+            text:    root.wsId
+            opacity: (root._showIcons
+                    ? root._revealAmt
+                    : Math.max(ShellSettings.wsShowNumbers ? 1 : 0, root._revealAmt))
+                * (root._blanked ? 0 : 1) * root._pulseOpacity * ShellSettings.wsMarkerOpacity
+            scale:   root._blanked ? 0.6 : (root._hoverFx ? 1.12 : 1)
+            color:   root.urgent
+                ? Theme.warning
+                : root.active
+                ? Theme.accent
+                : (root.occupied
+                    ? (root._hoverFx ? Theme.accent : Theme.withAlpha(Theme.text, 0.85))
+                    : (root._hoverFx ? Theme.withAlpha(Theme.accent, 0.65) : Theme.withAlpha(Theme.subtext, 0.45)))
+            font.pixelSize: Settings.fontLabel
 
-    Rectangle {
-        anchors.centerIn: parent
-        transform: Translate { x: root._shakeX }
-        width:  root.urgent ? 6 : (root.active || root.occupied ? 5 : 4)
-        height: width
-        radius: width / 2
-        antialiasing: true
-        visible: !ShellSettings.wsShowNumbers && !root._showIcons
-        opacity: (1 - root._revealAmt) * root._dotFade * (root._hoverFx && !root.urgent
-                 ? Math.min(1, root._dotAlpha + 0.18)
-                 : root._dotAlpha) * root._pulseOpacity * ShellSettings.wsMarkerOpacity
-        color: root.urgent ? Theme.warning
-             : root.active ? Theme.accent
-             : Theme.withAlpha(Theme.subtext, 0.85)
-        scale: root._hoverFx ? 1.2 : 1.0
+            MotionBehavior on opacity {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
+            MotionBehavior on scale   {NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
+            ColorFade on color {}
+        }
 
-        ColorFade on color {}
-        MotionBehavior on width {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
-        MotionBehavior on scale {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
-    }
+        Rectangle {
+            anchors.centerIn: parent
+            transform: Translate { x: root._shakeX }
+            width:  root.urgent ? 6 : (root.active || root.occupied ? 5 : 4)
+            height: width
+            radius: width / 2
+            antialiasing: true
+            visible: !ShellSettings.wsShowNumbers && !root._showIcons
+            opacity: (1 - root._revealAmt) * root._dotFade
+                * (root._hoverFx && !root.urgent ? Math.min(1, root._dotAlpha + 0.18)
+                    : root._dotAlpha)
+                * root._pulseOpacity * ShellSettings.wsMarkerOpacity
+            color: root.urgent ? Theme.warning
+                 : root.active ? Theme.accent
+                 : Theme.withAlpha(Theme.subtext, 0.85)
+            scale: root._hoverFx ? 1.2 : 1.0
 
-    Loader {
-        anchors.centerIn: parent
-        transform: Translate { x: root._shakeX }
-        opacity: 1 - root._revealAmt
-        active: root._showIcons
-        sourceComponent: Component {
-            WorkspaceAppIcons {
-                apps: root.compact ? root.apps.slice(0, 1) : root.apps
-                iconSize: root.iconSize
-                hoverFx: root._hoverFx
-                pulseOpacity: root._pulseOpacity
+            ColorFade on color {}
+            MotionBehavior on width {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
+            MotionBehavior on scale {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
+        }
+
+        Loader {
+            anchors.centerIn: parent
+            transform: Translate { x: root._shakeX }
+            opacity: 1 - root._revealAmt
+            active: root._showIcons
+            sourceComponent: Component {
+                WorkspaceAppIcons {
+                    apps: root.compact ? root.apps.slice(0, 1) : root.apps
+                    iconSize: root.iconSize
+                    hoverFx: root._hoverFx
+                    pulseOpacity: root._pulseOpacity
+                }
             }
         }
     }

@@ -25,6 +25,7 @@ Item {
     readonly property bool gem: style === "gem"
     readonly property bool _dot: style === "dot"
     readonly property bool _bar: style === "bar"
+    readonly property int travelDuration: 190
 
     readonly property real centerX: x + width / 2
     readonly property color tint: root.urgent ? Theme.warning : Theme.accent
@@ -279,8 +280,8 @@ Item {
         root.glint()
     }
 
-    MotionBehavior on x           { gate: root.shiftEnabled; NumberAnimation { duration: Motion.ms(190); easing.type: Easing.OutQuart } }
-    MotionBehavior on width       { gate: root.shiftEnabled && root._bar; NumberAnimation { duration: Motion.ms(190); easing.type: Easing.OutQuart } }
+    MotionBehavior on x           { gate: root.shiftEnabled; NumberAnimation { duration: Motion.ms(root.travelDuration); easing.type: Easing.OutQuart } }
+    MotionBehavior on width       { gate: root.shiftEnabled && root._bar; NumberAnimation { duration: Motion.ms(root.travelDuration); easing.type: Easing.OutQuart } }
     MotionBehavior on opacity     {NumberAnimation { duration: Motion.ms(150) } }
     MotionBehavior on _hoverScale {NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
 
