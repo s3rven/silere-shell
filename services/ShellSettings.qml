@@ -457,10 +457,13 @@ Singleton {
 
         function list(filter: string): string {
             const want = String(filter || "").trim()
+            // keys are camelCase, so a typed-out lowercase filter matches nothing without this
+            const fold = want.toLowerCase()
             const out = []
             for (let i = 0; i < root._schema.length; i++) {
                 const s = root._schema[i]
-                if (want.length > 0 && s.sec.indexOf(want) < 0 && s.k.indexOf(want) < 0)
+                if (fold.length > 0 && s.sec.toLowerCase().indexOf(fold) < 0
+                    && s.k.toLowerCase().indexOf(fold) < 0)
                     continue
                 out.push(s.k + "=" + String(root[s.k])
                     + "  [" + root.constraintOf(s.k) + "]")
