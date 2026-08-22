@@ -30,7 +30,7 @@ Nothing runs without a reason.
 - **Theming**: matugen from your wallpaper or a hand-picked accent, over three dark base tones.
 - **Calendar** from the clock, **OSD** for volume and brightness, **quick actions** for night light, power profiles and airplane mode.
 
-The menu, the calendar and the screenshot flash are scriptable over IPC.
+The menu, the calendar, quick actions and every setting are scriptable over IPC.
 
 ## Designed to stay idle
 
