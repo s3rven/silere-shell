@@ -86,6 +86,10 @@ Item {
 
     readonly property real _cardRadius: Theme.surfaceRadius
 
+    function _visualMotionAllowed(idle: bool, reduceMotion: bool): bool {
+        return !idle && !reduceMotion
+    }
+
     function dismiss(expired): void {
         if (!card.enabled) return
         card._expired = expired === true
@@ -96,7 +100,8 @@ Item {
         cardRect.opacity = 0
         cardRect.x = card._hiddenX
         card.enabled = false
-        if (ShellSettings.reduceMotion || !card.visible) {
+        if (!card._visualMotionAllowed(Idle.isIdle, ShellSettings.reduceMotion)
+                || !card.visible) {
             card.dismissRequested(card.notifId, card.notification, card._expired)
             return
         }
@@ -163,7 +168,7 @@ Item {
         id: _timeUpdate
         interval: 30000
         running:  card.visible && ShellSettings.notifPopupEnabled
-            && card.enabled && card._timeLive
+            && card.enabled && card._timeLive && !Idle.isIdle
         repeat:   true
         onTriggered: card._updateTime()
     }
@@ -211,7 +216,8 @@ Item {
     property real _timeoutProgress: 1.0
     property real _countdownPulse:  1.0
     readonly property bool _showCountdown: card.visible && card.enabled
-        && _autoClose.shouldRun && !ShellSettings.reduceMotion
+        && _autoClose.shouldRun
+        && card._visualMotionAllowed(Idle.isIdle, ShellSettings.reduceMotion)
 
     function _syncCountdown(): void {
         const full = _autoClose.fullInterval
@@ -246,6 +252,16 @@ Item {
         card._syncCountdown()
     }
 
+    Connections {
+        target: Idle
+        function onIsIdleChanged() {
+            if (!Idle.isIdle) {
+                card._updateTime()
+                card._syncCountdown()
+            }
+        }
+    }
+
     Loader {
         active: card.visible && ShellSettings.barShadow
         anchors.fill: cardRect
@@ -270,7 +286,8 @@ Item {
 
         property bool _behaviorEnabled: false
         // abs: a top-left stack slides to negative x, and a layer toggling off mid-slide flashes the card
-        layer.enabled: card.visible && !ShellSettings.reduceMotion
+        layer.enabled: card.visible
+            && card._visualMotionAllowed(Idle.isIdle, ShellSettings.reduceMotion)
             && (Math.abs(x) > 0.5 || opacity < 0.999)
 
         Component.onCompleted: {
@@ -287,10 +304,10 @@ Item {
             }
         }
 
-        MotionBehavior on x       { gate: card.visible && cardRect._behaviorEnabled; NumberAnimation { duration: card._leaving ? Motion.ms(200) : Motion.ms(280); easing.type: card._leaving ? Easing.InCubic : Easing.OutCubic } }
+        MotionBehavior on x       { gate: card.visible && cardRect._behaviorEnabled && !Idle.isIdle; NumberAnimation { duration: card._leaving ? Motion.ms(200) : Motion.ms(280); easing.type: card._leaving ? Easing.InCubic : Easing.OutCubic } }
         // the fade must outlast the slide both ways: a 140ms fade against the 200ms exit is spent a third of the way out
-        MotionBehavior on opacity { gate: card.visible && cardRect._behaviorEnabled; NumberAnimation { duration: Motion.ms(200); easing.type: card._leaving ? Easing.InCubic : Easing.OutCubic } }
-        MotionBehavior on height  { gate: card.visible && cardRect._behaviorEnabled; NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
+        MotionBehavior on opacity { gate: card.visible && cardRect._behaviorEnabled && !Idle.isIdle; NumberAnimation { duration: Motion.ms(200); easing.type: card._leaving ? Easing.InCubic : Easing.OutCubic } }
+        MotionBehavior on height  { gate: card.visible && cardRect._behaviorEnabled && !Idle.isIdle; NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
 
         // urgency rides the outline, glyph and ring only: tinting the whole fill red drowns the text it is warning about
         // mix() returns alpha 1, so a translucent popup would snap opaque under the cursor
@@ -404,6 +421,7 @@ Item {
                         height: parent.height; radius: parent.radius
                         color:  Theme.accent
                         MotionBehavior on width {
+                            gate: !Idle.isIdle
                             NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
                         }
                     }
@@ -595,7 +613,10 @@ Item {
             outlineColor: card.isCritical
                 ? Theme.withAlpha(Theme.error,  0.62)
                 : Theme.outline
-            MotionBehavior on outlineColor {ColorAnimation { duration: Motion.medium } }
+            MotionBehavior on outlineColor {
+                gate: !Idle.isIdle
+                ColorAnimation { duration: Motion.medium }
+            }
         }
     }
 

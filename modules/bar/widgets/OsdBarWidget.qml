@@ -7,7 +7,8 @@ Item {
     id: root
 
     readonly property bool _shouldShow: ShellSettings.osdEnabled
-        && ShellSettings.osdBarIntegrated && OsdBarState.showing && !OsdBarState.barConcealed
+        && ShellSettings.osdBarIntegrated && OsdBarState.showing
+        && !OsdBarState.barConcealed && !Idle.isIdle
     readonly property int  _barH: ShellSettings.barHeight
 
     readonly property real _slide: 5
@@ -35,10 +36,14 @@ Item {
         function onRapidChanged() {
             if (!OsdBarState.rapid) root._refreshAlertWidth()
         }
-        function onBumped() { if (root.state === "visible" && !_bumpAnim.running) _bumpAnim.restart() }
+        function onBumped() {
+            if (!Idle.isIdle && root.state === "visible" && !_bumpAnim.running)
+                _bumpAnim.restart()
+        }
         function onNextIconChanged() {
             if (OsdBarState.nextIcon === OsdBarState.icon) return
-            if (root.state !== "visible" || ShellSettings.reduceMotion || OsdBarState.rapid) {
+            if (Idle.isIdle || root.state !== "visible"
+                    || ShellSettings.reduceMotion || OsdBarState.rapid) {
                 OsdBarState.icon = OsdBarState.nextIcon
                 return
             }
@@ -46,6 +51,19 @@ Item {
         }
     }
     Connections { target: ShellSettings; function onOsdBarIntegratedChanged() { root._sync() } }
+    Connections {
+        target: Idle
+        function onIsIdleChanged() {
+            root._sync()
+            if (!Idle.isIdle) return
+            _bumpAnim.stop()
+            root._bump = 1
+            _iconStamp.stop()
+            _iconText.scale = 1
+            if (OsdBarState.nextIcon !== OsdBarState.icon)
+                OsdBarState.icon = OsdBarState.nextIcon
+        }
+    }
 
     states: [
         State { name: "hidden";  PropertyChanges { root._op: 0; root._y: root._slide } },
@@ -54,6 +72,7 @@ Item {
     transitions: [
         Transition {
             to: "visible"
+            enabled: !Idle.isIdle && !ShellSettings.reduceMotion
             ParallelAnimation {
                 NumberAnimation { target: root; property: "_op"; duration: Motion.ms(105); easing.type: Easing.OutCubic }
                 NumberAnimation { target: root; property: "_y";  duration: Motion.ms(165); easing.type: Easing.OutQuart }
@@ -61,6 +80,7 @@ Item {
         },
         Transition {
             to: "hidden"
+            enabled: !Idle.isIdle && !ShellSettings.reduceMotion
             ParallelAnimation {
                 NumberAnimation { target: root; property: "_y";  duration: Motion.ms(100); easing.type: Easing.InCubic }
                 NumberAnimation { target: root; property: "_op"; duration: Motion.ms(115); easing.type: Easing.InCubic }
@@ -118,7 +138,10 @@ Item {
             text:           OsdBarState.icon
             color:          OsdBarState.hasBar ? Theme.text : OsdBarState.fillColor
             font.pixelSize: Settings.iconSize + 2
-            MotionBehavior on color {ColorAnimation { duration: Motion.medium } }
+            MotionBehavior on color {
+                gate: !Idle.isIdle
+                ColorAnimation { duration: Motion.medium }
+            }
         }
 
         Rectangle {
@@ -142,7 +165,7 @@ Item {
                     : Theme.withAlpha(OsdBarState.fillColor, 0.88)
 
                 MotionBehavior on width {
-                    gate: root.state === "visible" && !OsdBarState.rapid
+                    gate: !Idle.isIdle && root.state === "visible" && !OsdBarState.rapid
                     NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
                 }
             }
@@ -163,6 +186,7 @@ Item {
             font.pixelSize: Settings.fontSize
             font.weight:    Font.Medium
             MotionBehavior on color {
+                gate: !Idle.isIdle
                 ColorAnimation { duration: Motion.medium }
             }
         }
