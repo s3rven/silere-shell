@@ -111,13 +111,33 @@ Singleton {
         root.refresh()
     }
 
+    function _syncToolAvailability(): void {
+        if (!SystemTools.ready) return
+        if (root.available) {
+            if (root._watched) root.refresh()
+            return
+        }
+
+        _getRetry.stop()
+        if (_get.running) _get.running = false
+        if (_set.running) _set.running = false
+        if (_degradedProc.running) _degradedProc.running = false
+        root._getRetries = 0
+        root._correctiveRefreshPending = false
+        root._readError = false
+        root.profile = ""
+        root._degradedReason = ""
+        root.lastError = ""
+    }
+
     Connections {
         target: ControlSurfaces
         function onOpened() { root._surfaceOpened() }
     }
     Connections {
         target: SystemTools
-        function onReadyChanged() { if (SystemTools.ready && root._watched) root.refresh() }
+        function onReadyChanged() { root._syncToolAvailability() }
+        function onScanRevisionChanged() { root._syncToolAvailability() }
     }
     BoundedProcess {
         id: _get
@@ -131,6 +151,7 @@ Singleton {
             root.lastError = "Power mode check timed out"
         }
         onExited: (code) => {
+            if (!root.available) return
             if (_set.running || _gen !== root._writeGen) return
             if (code === 0) {
                 const p = root._parseProfile(_getOut.text)
@@ -167,6 +188,10 @@ Singleton {
         stdout: StdioCollector { id: _degradedOut }
         onTimeoutReached: root._degradedReason = ""
         onExited: (code) => {
+            if (!root.available) {
+                root._degradedReason = ""
+                return
+            }
             root._degradedReason = (root.profile === "performance" && code === 0 && !timedOut)
                 ? root._parseDegraded(_degradedOut.text) : ""
         }
@@ -181,6 +206,7 @@ Singleton {
             root.lastError = "Power mode change timed out"
         }
         onExited: (code) => {
+            if (!root.available) return
             if (timedOut) {
                 root._queueCorrectiveRefresh()
                 return

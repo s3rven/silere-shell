@@ -23,6 +23,18 @@ Process {
         if (running !== wanted) running = wanted
     }
 
+    function retry(): void {
+        // Hold the process stopped until every backoff flag is reset; otherwise
+        // clearing gaveUp can launch once with the old cooldown state.
+        _cooldown = true
+        _coolTimer.stop()
+        _stableTimer.stop()
+        _gaveUp = false
+        _restartCount = 0
+        _cooldown = false
+        _syncRunning()
+    }
+
     Component.onCompleted: _syncRunning()
     on_CooldownChanged: _syncRunning()
     on_GaveUpChanged: _syncRunning()

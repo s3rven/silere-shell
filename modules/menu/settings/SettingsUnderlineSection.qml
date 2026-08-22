@@ -156,7 +156,7 @@ Column {
                         }
                         HintText {
                             visible: SystemTools.hasInotifywait && Screenshot.watcherRetired
-                            text: "No screenshot folder to watch; feedback stops until one exists."
+                            text: "Create a screenshot folder, then recheck tools under Maintenance."
                         }
                         HintText {
                             // the base glow line is drawn either way; what is missing here is anything to react to

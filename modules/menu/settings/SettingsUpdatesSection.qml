@@ -81,14 +81,16 @@ Column {
             UpdateStatusCard {
                 animationActive: root.animationActive
                 glyph: ShellUpdate.checking || ShellUpdate.applying ? "󰓦"
-                    : ShellUpdate.lastCheckError.length > 0 || ShellUpdate.lastApplyError.length > 0 ? "󰀦"
+                    : ShellUpdate.lastCheckError.length > 0 || ShellUpdate.lastApplyError.length > 0
+                        || ShellUpdate.statusReadError.length > 0 ? "󰀦"
                     : ShellUpdate.pending ? "󰚰"
-                    : ShellUpdate.neverChecked ? "󰓦" : "󰄬"
+                    : !ShellUpdate.statusReady || ShellUpdate.neverChecked ? "󰓦" : "󰄬"
                 title: "Silere Shell"
                 status: ShellUpdate.statusDetail
                 meta: ShellUpdate.versionLabel
                 detail: ShellUpdate.lastApplyError.length > 0 ? ShellUpdate.lastApplyError
                     : ShellUpdate.lastCheckError.length > 0 ? ShellUpdate.lastCheckError
+                    : ShellUpdate.statusReadError.length > 0 ? ShellUpdate.statusReadError
                     : ShellUpdate.pending && ShellUpdate.blockedReason.length > 0
                         ? ShellUpdate.blockedReason + " — installing will not run until that is resolved"
                     : root._installArmed
@@ -96,10 +98,13 @@ Column {
                     : ShellUpdate.pending ? ShellUpdate.verificationDetail
                     : ShellUpdate.versionDetail
                 detailError: ShellUpdate.lastApplyError.length > 0 || ShellUpdate.lastCheckError.length > 0
+                    || ShellUpdate.statusReadError.length > 0
                     || (ShellUpdate.pending && ShellUpdate.blockedReason.length > 0)
                 statusColor: ShellUpdate.lastCheckError.length > 0 || ShellUpdate.lastApplyError.length > 0
+                    || ShellUpdate.statusReadError.length > 0
                     ? Theme.warning : ShellUpdate.checking || ShellUpdate.applying || ShellUpdate.pending
-                        ? Theme.accent : ShellUpdate.neverChecked ? Theme.subtext : Theme.success
+                        ? Theme.accent : !ShellUpdate.statusReady || ShellUpdate.neverChecked
+                            ? Theme.subtext : Theme.success
                 busy: ShellUpdate.checking || ShellUpdate.applying
 
                 primaryLabel: ShellUpdate.applying ? "Installing…"

@@ -104,7 +104,10 @@ Column {
         // wallpaper theming degrades instead of hiding, so it reads as working while
         // the palette silently stays bundled — both causes need naming
         if (!SystemTools.hasMatugen)
-            out.push({ g: "󰉦", n: "Wallpaper theming", s: "Colors stay at Silere's bundled palette", v: "matugen" })
+            out.push({ g: "󰉦", n: "Wallpaper theming",
+                s: MatugenTheme.usingFallback ? "Wallpaper colors are unavailable"
+                    : "Last palette stays; sync stops",
+                v: "matugen" })
         else if (MatugenTheme.paletteStale)
             out.push({ g: "󰉦", n: "Wallpaper palette", s: "Unreadable; showing the last colors that loaded", v: "template" })
         else if (MatugenTheme.usingFallback)
@@ -137,8 +140,8 @@ Column {
             visible: SystemTools.ready && !SystemTools.checking
                 && !SystemTools.probeFailed && root._issues.length === 0
             glyph: "󰗠"
-            title: "All optional tools found"
-            status: "No features are hidden"
+            title: "No feature issues found"
+            status: "Available controls are ready"
             passive: true
         }
         ControlRow {
@@ -169,6 +172,14 @@ Column {
         HintText {
             visible: root._issues.length > 0
             text: "Install the listed package to enable its feature."
+        }
+        ControlRow {
+            glyph: "󰑐"
+            title: "Recheck optional tools"
+            status: "Refresh after tool changes"
+            valueText: SystemTools.checking ? "Checking…" : "Check"
+            available: !SystemTools.checking
+            onActivated: SystemTools.refresh()
         }
     }
 }

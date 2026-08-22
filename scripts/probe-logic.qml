@@ -23,6 +23,7 @@ ShellRoot {
     Component { id: sliderTrackFactory; SliderTrack {} }
     Component { id: gradientSliderFactory; GradientSlider {} }
     Component { id: boundedProcessFactory; BoundedProcess {} }
+    Component { id: supervisedProcessFactory; SupervisedProcess {} }
 
     property var _timeoutProbe: null
 
@@ -59,6 +60,20 @@ ShellRoot {
                 && MatugenTheme._parsePalette("{\"accent\":\"#ffffff\"}") === null
                 && MatugenTheme._parsePalette("{\"accent\":\"red\"}") === null,
             "matugen palette accepts only complete six-digit hex role sets")
+        const paletteEverWas = MatugenTheme._everLoaded
+        const paletteStaleWas = MatugenTheme.paletteStale
+        MatugenTheme._everLoaded = true
+        MatugenTheme.paletteStale = false
+        MatugenTheme._markUnreadable()
+        root._check(MatugenTheme.paletteStale && !MatugenTheme.usingFallback,
+            "a palette that disappears after loading is reported as retained")
+        MatugenTheme._everLoaded = false
+        MatugenTheme.paletteStale = false
+        MatugenTheme._markUnreadable()
+        root._check(!MatugenTheme.paletteStale && MatugenTheme.usingFallback,
+            "a missing first palette remains the normal bundled fallback")
+        MatugenTheme._everLoaded = paletteEverWas
+        MatugenTheme.paletteStale = paletteStaleWas
 
         const buttonIdle = Theme.buttonFill(Theme.accent, false, false)
         const buttonHover = Theme.buttonFill(Theme.accent, true, false)
@@ -249,6 +264,19 @@ ShellRoot {
         root._check(boundedHistoryNumbers.id === 12 && boundedHistoryNumbers.urgency === 2
                 && boundedHistoryNumbers.time === 0,
             "history bounds numeric roles before inserting them into the model")
+        const restoredSeen = Notifications._normalizeSeenMap(JSON.parse(
+            '{"1":true,"2":"true","-1":true,"2147483648":true,"__proto__":true}'))
+        root._check(Object.getPrototypeOf(restoredSeen) === null
+                && restoredSeen["1"] === true
+                && Object.keys(restoredSeen).length === 1,
+            "notification restore accepts only boolean read flags for valid ids")
+        const restoredTimes = Notifications._normalizeTimesMap({
+            "1": 1234, "2": "5678", "03": 9, "4": Infinity, "5": -1
+        })
+        root._check(Object.getPrototypeOf(restoredTimes) === null
+                && restoredTimes["1"] === 1234 && restoredTimes["2"] === 5678
+                && Object.keys(restoredTimes).length === 2,
+            "notification restore keeps only finite timestamps for valid ids")
 
         const savedLimit = ShellSettings.notifHistoryLimit
         Notifications.clearHistory()
@@ -483,6 +511,16 @@ ShellRoot {
         root._check(Updates.repoCount === 2 && Updates.aurCount === 1
                 && Updates.packages.length === 3 && Updates.packages[2].aur,
             "package updates split repository and AUR details")
+        const crowded = ["91", "SPLIT 90 1"]
+        for (let i = 0; i < Updates._maxDetail; i++)
+            crowded.push("repo" + i + " 1 -> 2")
+        crowded.push("DETAIL AUR", "foreign 3 -> 4")
+        Updates.count = 91
+        Updates._parseDetail(crowded.join("\n"))
+        root._check(Updates.packages.length === Updates._maxDetail
+                && Updates.packages[Updates.packages.length - 1].name === "foreign"
+                && Updates.packages[Updates.packages.length - 1].aur,
+            "package details reserve and label the AUR tail after repo truncation")
         SystemTools.packageFamily = "apt"
         SystemTools._tools = { apt: true }
         Updates.count = 2
@@ -539,7 +577,42 @@ ShellRoot {
         ShellUpdate._parse("1\ntarget abc1234 v1.2.3\nabc1234 legacy update")
         root._check(!ShellUpdate.targetVerified,
             "shell update rejects legacy status without a verification marker")
+        ShellUpdate._parse("7changes\ntarget abc1234 v1.2.3 verified extra\nabc1234 forged status")
+        root._check(ShellUpdate.count === 0 && !ShellUpdate.targetVerified
+                && ShellUpdate.targetTag.length === 0 && ShellUpdate._flagMalformed
+                && ShellUpdate.statusText === "Status unavailable" && !ShellUpdate.upToDate,
+            "shell update warns on partial counts and rejects inexact verification metadata")
+        ShellUpdate._parse("100001\ntarget abc1234 v1.2.3 verified\nabc1234 oversized status")
+        root._check(ShellUpdate.count === 0 && ShellUpdate._flagMalformed,
+            "shell update warns on oversized cached pending counts")
+        root._check(ShellUpdate._epochMsFrom("1234seconds") === 0
+                && ShellUpdate._epochMsFrom("1234") === 1234000,
+            "shell update accepts only whole epoch timestamps")
         ShellUpdate._parse("")
+        const checkedLoadedWas = ShellUpdate._checkedLoaded
+        const flagLoadedWas = ShellUpdate._flagLoaded
+        const flagReadErrorWas = ShellUpdate._flagReadError
+        const flagMalformedWas = ShellUpdate._flagMalformed
+        const checkedReadErrorWas = ShellUpdate._checkedReadError
+        const lastCheckWas = ShellUpdate.lastCheckMs
+        ShellUpdate._flagLoaded = false
+        ShellUpdate._checkedLoaded = false
+        ShellUpdate.lastCheckMs = 0
+        root._check(ShellUpdate.statusText === "Reading status" && !ShellUpdate.upToDate,
+            "shell update does not claim success before both status files load")
+        ShellUpdate._flagLoaded = true
+        ShellUpdate._checkedLoaded = true
+        root._check(ShellUpdate.statusText === "Not checked yet" && !ShellUpdate.upToDate,
+            "shell update does not call a missing check timestamp up to date")
+        ShellUpdate._checkedReadError = true
+        root._check(ShellUpdate.statusText === "Status unavailable" && !ShellUpdate.upToDate,
+            "an unreadable update status cannot appear up to date")
+        ShellUpdate.lastCheckMs = lastCheckWas
+        ShellUpdate._flagLoaded = flagLoadedWas
+        ShellUpdate._checkedLoaded = checkedLoadedWas
+        ShellUpdate._flagReadError = flagReadErrorWas
+        ShellUpdate._flagMalformed = flagMalformedWas
+        ShellUpdate._checkedReadError = checkedReadErrorWas
 
         root._check(PowerProfiles._parseProfile("balanced\n") === "balanced",
             "power mode accepts a known daemon profile")
@@ -663,6 +736,23 @@ ShellRoot {
             "an event storm stops at " + Hooks.maxRunsPerSecond + " hook runs a second")
         Hooks._runTimes = []
 
+        const supervised = supervisedProcessFactory.createObject(root, {
+            superviseWhen: false,
+            _gaveUp: true,
+            _cooldown: true,
+            _restartCount: 4
+        })
+        supervised.retry()
+        root._check(!supervised.gaveUp && !supervised._cooldown
+                && supervised._restartCount === 0 && !supervised.running,
+            "a retired supervised process can retry from a clean backoff state")
+        supervised.destroy()
+
+        NotifWatch.conflict = "stale-daemon"
+        NotifWatch.recheck()
+        root._check(NotifWatch.conflict === "",
+            "a notification-owner recheck clears stale conflict state immediately")
+
         const hues = [0, 30, 90, 150, 210, 270, 330]
         for (let i = 0; i < hues.length; i++) {
             const expected = hues[i]
@@ -719,12 +809,18 @@ ShellRoot {
                 && Notifications._times["42"] === 2000,
             "a notification trimmed out of history drops its seen and time entries")
 
-        Notifications._seen  = { "51": true }
+        Notifications._seen  = { "51": true, "52": true }
         Notifications._times = { "51": 1000, "52": 2000 }
-        Notifications._pruneOrphanState()
-        root._check(Object.keys(Notifications._seen).length === 0
-                && Object.keys(Notifications._times).length === 0,
-            "state for ids history no longer holds is pruned")
+        Notifications._updateTimes = { "51": 1100, "52": 2100 }
+        Notifications._pruneOrphanState([{ id: 51 }])
+        root._check(Notifications._seen["51"] === true
+                && Notifications._times["51"] === 1000
+                && Notifications._updateTimes["51"] === 1100,
+            "reload pruning preserves state for a notification the server still tracks")
+        root._check(Notifications._seen["52"] === undefined
+                && Notifications._times["52"] === undefined
+                && Notifications._updateTimes["52"] === undefined,
+            "state for ids neither history nor the server holds is pruned")
 
         const closedAdapter = { pairable: false }
         Bluetooth._armPairable(closedAdapter)

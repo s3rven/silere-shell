@@ -226,9 +226,30 @@ Singleton {
         if (!_checkProc.running) _checkProc.exec(["pgrep", "-x", "hyprsunset"])
     }
 
+    function _syncToolAvailability(): void {
+        if (!SystemTools.ready) return
+        if (!root.toolAvailable) {
+            root._pendingEnable = false
+            root.enabled = false
+            root.lastError = ""
+            if (_checkProc.running) _checkProc.running = false
+            if (_killProc.running) _killProc.running = false
+            if (_sunsetProc.running) {
+                root._stopping = true
+                _sunsetProc.running = false
+            } else {
+                root._stopping = false
+            }
+            return
+        }
+        root._init()
+        root._startGeo()
+    }
+
     Connections {
         target: SystemTools
-        function onReadyChanged() { root._init(); root._startGeo() }
+        function onReadyChanged() { root._syncToolAvailability() }
+        function onScanRevisionChanged() { root._syncToolAvailability() }
     }
     Connections {
         target: ShellSettings
@@ -245,6 +266,7 @@ Singleton {
         stdout: SplitParser { onRead: root.enabled = true }
         // pgrep answers "no match" with 1, so only 2+ or a timeout means the probe never ran
         onExited: (code) => {
+            if (!root.toolAvailable) return
             if (_checkProc.timedOut || code > 1) {
                 root.lastError = "could not check for a running hyprsunset"
                 return
@@ -277,6 +299,11 @@ Singleton {
     Process {
         id: _killProc
         onExited: (code) => {
+            if (!root.toolAvailable) {
+                root._pendingEnable = false
+                root.lastError = ""
+                return
+            }
             if (code !== 0) {
                 root._pendingEnable = false
                 root.lastError = "Could not stop the external night light"

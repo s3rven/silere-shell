@@ -9,6 +9,7 @@ Singleton {
 
     readonly property int maxCommitDetail: 80
     readonly property int maxCommitSubjectChars: 512
+    readonly property int maxPendingCount: 100000
     readonly property int maxStatusTextChars: 512
     readonly property int maxVersionTextChars: 128
 
@@ -21,6 +22,14 @@ Singleton {
     property real   lastCheckMs: 0
     property string lastCheckError: ""
     property string lastApplyError: ""
+    property bool   _flagLoaded: false
+    property bool   _flagReadError: false
+    property bool   _flagMalformed: false
+    property bool   _checkedReadError: false
+    readonly property string statusReadError: _flagReadError
+        ? "Could not read pending update status"
+        : _flagMalformed ? "Pending update status is malformed"
+        : _checkedReadError ? "Could not read the last-check time" : ""
     property string timerError: ""
     property bool   _timerStatusError: false
     property bool   timerSupported: false
@@ -44,6 +53,7 @@ Singleton {
 
     readonly property bool pending: count > 0
     readonly property bool checking: _checkProc.running
+    readonly property bool statusReady: _flagLoaded && _checkedLoaded
     readonly property string label: count + (count === 1 ? " change ready" : " changes ready")
     // "Up to date" is a claim about origin, so it needs a check to have reached it
     readonly property bool neverChecked: _checkedLoaded && lastCheckMs <= 0
@@ -51,12 +61,16 @@ Singleton {
         : checking ? "Checking"
         : lastApplyError.length > 0 ? "Install failed"
         : lastCheckError.length > 0 ? "Check failed"
+        : statusReadError.length > 0 ? "Status unavailable"
         : pending ? label
+        : !statusReady ? "Reading status"
         : neverChecked ? "Not checked yet"
         : "Up to date"
 
-    readonly property bool upToDate: !applying && !checking && !pending
+    readonly property bool upToDate: statusReady && lastCheckMs > 0
+        && !applying && !checking && !pending
         && lastApplyError.length === 0 && lastCheckError.length === 0
+        && statusReadError.length === 0
 
     readonly property string versionLabel: versionTag.length === 0
         ? (currentVersion.length > 0 ? "#" + currentVersion : "")
@@ -80,6 +94,7 @@ Singleton {
             ? "Checking checkout state"
             : root.versionError.length > 0 ? root.versionError
             : "The checkout state has not been verified"
+        if (root._flagReadError || root._flagMalformed) return root.statusReadError
         if (root.pending && !root.targetVerified) return "The release signature has not been verified"
         if (root.branch === "HEAD") return "The checkout is on a detached HEAD"
         if (root.branch.length > 0 && root.branch !== "main") return "The checkout is on branch " + root.branch
@@ -167,6 +182,23 @@ Singleton {
         return out
     }
 
+    function _countFrom(value): int {
+        const text = String(value ?? "").trim()
+        if (text.length === 0) return 0
+        // update-pending lives in a user-writable cache. Reject partial numbers,
+        // signs and values large enough to make the status UI meaningless.
+        if (!/^[0-9]{1,6}$/.test(text)) return -1
+        const count = Number(text)
+        return isFinite(count) && count <= root.maxPendingCount ? count : -1
+    }
+
+    function _epochMsFrom(value): real {
+        const text = String(value ?? "").trim()
+        if (!/^[0-9]{1,12}$/.test(text)) return 0
+        const seconds = Number(text)
+        return isFinite(seconds) && seconds > 0 ? seconds * 1000 : 0
+    }
+
     // history of what is already installed; the pending list disappears the moment it is applied
     property var  recentCommits: []
     property bool recentReady: false
@@ -240,9 +272,19 @@ Singleton {
         path: root._cacheDir.length > 0 ? root._cacheDir + "/update-pending" : ""
         watchChanges: true
         printErrors:  false
-        onLoaded:     root._parse(_flag.text())
-        // --apply clears the flag before restarting, so a missing file proves nothing
-        onLoadFailed: root._parse("")
+        onLoaded: {
+            root._flagReadError = false
+            root._flagLoaded = true
+            root._parse(_flag.text())
+        }
+        // A missing file means no pending update. Other failures are not safe
+        // to reinterpret as an empty file: retain the last state and warn.
+        onLoadFailed: error => {
+            root._flagLoaded = true
+            root._flagMalformed = false
+            root._flagReadError = error !== FileViewError.FileNotFound
+            if (!root._flagReadError) root._parse("")
+        }
         onFileChanged: reload()
     }
 
@@ -255,13 +297,14 @@ Singleton {
         watchChanges: true
         printErrors:  false
         onLoaded: {
-            const secs = parseInt((_checked.text() || "").trim())
-            root.lastCheckMs = isNaN(secs) || secs <= 0 ? 0 : secs * 1000
+            root._checkedReadError = false
+            root.lastCheckMs = root._epochMsFrom(_checked.text())
             root._checkedLoaded = true
             root._touchNow()
         }
-        onLoadFailed: {
-            root.lastCheckMs = 0
+        onLoadFailed: error => {
+            root._checkedReadError = error !== FileViewError.FileNotFound
+            if (!root._checkedReadError) root.lastCheckMs = 0
             root._checkedLoaded = true
         }
         onFileChanged: reload()
@@ -269,16 +312,23 @@ Singleton {
 
     function _parse(t: string): void {
         const lines = (t || "").split(/\r?\n/)
-        const n = parseInt((lines[0] || "").trim())
-        root.count = isNaN(n) ? 0 : Math.max(0, n)
+        const parsedCount = root._countFrom(lines[0])
+        root._flagMalformed = parsedCount < 0
+        root.count = Math.max(0, parsedCount)
         let rest = lines.slice(1)
         let tag = ""
         let verified = false
+        if (root._flagMalformed) rest = []
         // a flag file written before this line existed carries commits here instead
         if ((rest[0] ?? "").startsWith("target ")) {
-            const parts = rest[0].slice(7).trim().split(/\s+/)
-            tag = parts[1] ?? ""
-            verified = parts[2] === "verified"
+            // Match exactly what update.sh writes. A cache edit may change what
+            // the UI says, but must never make malformed metadata look verified.
+            const target = /^target ([0-9a-f]{7,64}) (v[0-9]+\.[0-9]+\.[0-9]+) verified$/
+                .exec(rest[0].trim())
+            if (target) {
+                tag = target[2]
+                verified = true
+            }
             rest = rest.slice(1)
         }
         root.targetTag = SafeText.boundedText(tag, root.maxVersionTextChars)
@@ -381,8 +431,7 @@ Singleton {
             const kv = root._parseKv(_timerStatusOut.text)
             root.timerSupported = kv.supported === "1"
             root.timerEnabled = kv.enabled === "1"
-            const next = parseInt(kv.next ?? "0")
-            root.nextCheckMs = isNaN(next) || next <= 0 ? 0 : next * 1000
+            root.nextCheckMs = root._epochMsFrom(kv.next)
             if (root._timerStatusError) root.timerError = ""
             root._timerStatusError = false
             root._touchNow()

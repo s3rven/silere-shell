@@ -9,6 +9,7 @@ Singleton {
 
     property string conflict: ""
     property bool   _checked: false
+    property int    _generation: 0
     readonly property bool armed: SystemTools.hasBusctl
 
     function _check(): void {
@@ -17,10 +18,20 @@ Singleton {
         _delay.start()
     }
 
+    function recheck(): void {
+        root._generation++
+        _delay.stop()
+        if (_proc.running) _proc.running = false
+        root._checked = false
+        root.conflict = ""
+        root._check()
+    }
+
     Component.onCompleted: _check()
     Connections {
         target: SystemTools
         function onReadyChanged() { root._check() }
+        function onScanRevisionChanged() { root.recheck() }
     }
 
     // settle delay: let our server and any autostarted daemon finish racing before we ask who won
@@ -28,11 +39,15 @@ Singleton {
         id: _delay
         interval: 5000
         repeat: false
-        onTriggered: _proc.running = true
+        onTriggered: {
+            _proc._generation = root._generation
+            _proc.running = true
+        }
     }
 
     BoundedProcess {
         id: _proc
+        property int _generation: 0
         running: false
         timeoutMs: 5000
         // Ignore only this process. Another Quickshell instance can own the
@@ -48,9 +63,10 @@ Singleton {
             "bash", String(Quickshell.processId)]
         stdout: StdioCollector { id: _out }
         onExited: {
+            if (_proc._generation !== root._generation) return
             const name = (_out.text || "").trim()
-            if (name.length === 0) return
             root.conflict = name
+            if (name.length === 0) return
             console.warn("silere-shell: notifications are owned by '" + name +
                 "', not silere — its notification server is inactive. Stop the other daemon to use silere's notifications.")
         }

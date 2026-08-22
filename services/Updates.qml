@@ -126,6 +126,7 @@ Singleton {
                    "echo $((repo + aur)); " +
                    "echo \"SPLIT $repo $aur\"; " +
                    "printf '%s\\n' \"$out\" | head -n " + root._maxDetail + "; " +
+                   "echo \"DETAIL AUR\"; " +
                    "printf '%s\\n' \"$aurout\" | head -n " + root._maxDetail
         }
         case "aur": {
@@ -179,14 +180,19 @@ Singleton {
         const repoBudget = Math.max(0, root._maxDetail - Math.max(0, aur))
         const out = []
         let seen = 0, repoShown = 0
+        let aurSection = root.manager === "aur"
         for (let i = start; i < lines.length && out.length < root._maxDetail; i++) {
             const line = lines[i].trim()
             if (line.length === 0) continue
+            if (line === "DETAIL AUR") {
+                aurSection = true
+                continue
+            }
             const parts = line.split(/\s+/)
 
             // checkupdates, paru and yay: name old -> new
             if (parts.length >= 4 && parts[2] === "->") {
-                const isAur = repo >= 0 ? seen >= repo : root.manager === "aur"
+                const isAur = aurSection || (repo >= 0 ? seen >= repo : root.manager === "aur")
                 seen++
                 if (!isAur) {
                     if (repoShown >= repoBudget) continue

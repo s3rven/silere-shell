@@ -12,6 +12,10 @@ Singleton {
     property string lastError: ""
     property var _tools: ({})
     property string packageFamily: ""
+    // ready stays true during a refresh so controls do not disappear. Consumers
+    // that need to redo work after a coherent scan use this completion edge.
+    property int _scanRevision: 0
+    readonly property int scanRevision: _scanRevision
 
     readonly property bool probeFailed: ready && lastError.length > 0
 
@@ -107,6 +111,7 @@ Singleton {
                 root.lastError = "Optional tool scan failed (exit " + code + ")"
                 root.ready = true
                 root.checking = false
+                root._scanRevision++
                 return
             }
             const found = {}
@@ -122,6 +127,7 @@ Singleton {
             root.lastError = ""
             root.ready = true
             root.checking = false
+            root._scanRevision++
         }
     }
 }

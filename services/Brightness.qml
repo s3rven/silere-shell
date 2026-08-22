@@ -72,7 +72,31 @@ Singleton {
         _brightnessFile.reload()
     }
 
-    Component.onCompleted: _init()
+    function _syncToolAvailability(): void {
+        if (!SystemTools.ready) return
+        if (root.toolAvailable) {
+            root._init()
+            return
+        }
+
+        _reprobe.stop()
+        _applyDebounce.stop()
+        if (_listProc.running) _listProc.running = false
+        if (_setProc.running) _setProc.running = false
+        root._listed = false
+        root._currentValid = false
+        root._maxValid = false
+        root._applyQueued = false
+        root._reprobeAttempts = 0
+        root.ready = false
+        root.currentBrightness = 0
+        root.maxBrightness = 0
+        root.devices = []
+        root._device = ""
+        root.lastError = ""
+    }
+
+    Component.onCompleted: _syncToolAvailability()
 
     function _init(): void {
         if (_listed || !SystemTools.ready) return
@@ -87,7 +111,8 @@ Singleton {
 
     Connections {
         target: SystemTools
-        function onReadyChanged() { root._init() }
+        function onReadyChanged() { root._syncToolAvailability() }
+        function onScanRevisionChanged() { root._syncToolAvailability() }
     }
 
     Connections {
@@ -270,6 +295,11 @@ Singleton {
         timeoutMs: 5000
         stderr: StdioCollector { id: _setErr }
         onExited: code => {
+            if (!root.toolAvailable) {
+                root.lastError = ""
+                root._applyQueued = false
+                return
+            }
             if (!_setProc.timedOut)
                 root.lastError = code === 0 ? ""
                     : (_setErr.text || "").trim().split("\n").pop() || "Could not set brightness"

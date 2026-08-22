@@ -79,6 +79,12 @@ Singleton {
         root.paletteStale = false
     }
 
+    function _markUnreadable(): void {
+        // Missing on first launch is the normal bundled fallback. Disappearing
+        // after a good load means the colors on screen are now a retained copy.
+        root.paletteStale = root._everLoaded
+    }
+
     FileView {
         id: _paletteFile
         path: root.palettePath
@@ -86,5 +92,6 @@ Singleton {
         printErrors: false
         onLoaded: root._load(_paletteFile.text() || "")
         onFileChanged: reload()
+        onLoadFailed: root._markUnreadable()
     }
 }

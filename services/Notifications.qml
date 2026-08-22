@@ -66,11 +66,19 @@ Singleton {
         root._forgetTrimmed(dropped)
     }
 
-    // clearing or restoring history leaves the maps whole; anything history no longer
-    // covers is dead weight that only a restart could clear
-    function _pruneOrphanState(): void {
+    // Clearing or restoring history leaves these maps whole. Drop entries that
+    // belong to neither history nor a notification still owned by the server.
+    function _pruneOrphanState(activeNotifications): void {
         const keep = Object.create(null)
         for (let i = 0; i < _history.count; i++) keep[String(_history.get(i).id)] = true
+        // On a hot reload NotificationServer already owns its kept objects, but
+        // root.list is rebuilt only after persisted timestamps are restored.
+        // Include those objects now or their original age/read state is lost.
+        const active = Array.isArray(activeNotifications) ? activeNotifications : []
+        for (let i = 0; i < active.length; i++) {
+            const entry = active[i]
+            if (entry && entry.id !== undefined) keep[String(entry.id)] = true
+        }
         const seen = Object.keys(root._seen)
             .concat(Object.keys(root._times), Object.keys(root._updateTimes))
         const stale = []
@@ -131,6 +139,8 @@ Singleton {
         // var properties can be undefined for one frame during hot-reload
         if (!root._seen || typeof root._seen !== "object") root._seen = Object.create(null)
         if (!root._times || typeof root._times !== "object") root._times = Object.create(null)
+        if (!root._updateTimes || typeof root._updateTimes !== "object")
+            root._updateTimes = Object.create(null)
     }
 
     function _parsePersistentJson(raw: string, fallback): var {
@@ -138,7 +148,38 @@ Singleton {
         catch (e) { return fallback }
     }
 
-    function _restorePersistentState(): void {
+    function _validStateId(value): bool {
+        const text = String(value)
+        if (!/^(0|[1-9][0-9]{0,9})$/.test(text)) return false
+        const id = Number(text)
+        return isFinite(id) && id <= 2147483647
+    }
+
+    function _normalizeSeenMap(map): var {
+        const out = Object.create(null)
+        if (!map || typeof map !== "object" || Array.isArray(map)) return out
+        const keys = Object.keys(map)
+        for (let i = 0; i < keys.length; i++) {
+            const key = keys[i]
+            if (root._validStateId(key) && map[key] === true) out[key] = true
+        }
+        return out
+    }
+
+    function _normalizeTimesMap(map): var {
+        const out = Object.create(null)
+        if (!map || typeof map !== "object" || Array.isArray(map)) return out
+        const keys = Object.keys(map)
+        for (let i = 0; i < keys.length; i++) {
+            const key = keys[i]
+            const value = Number(map[key])
+            if (root._validStateId(key) && isFinite(value)
+                    && value > 0 && value <= 8.64e15) out[key] = value
+        }
+        return out
+    }
+
+    function _restorePersistentState(activeNotifications): void {
         const savedHistory = ShellSettings.notifHistoryPersistent
             ? root._parsePersistentJson(_persist.historyJson, []) : []
         const savedSeen = root._parsePersistentJson(_persist.seenJson, Object.create(null))
@@ -150,10 +191,11 @@ Singleton {
                 if (e) _history.append(e)
             }
         }
-        root._seen = root._cloneMap(savedSeen)
-        root._times = root._cloneMap(savedTimes)
+        root._seen = root._normalizeSeenMap(savedSeen)
+        root._times = root._normalizeTimesMap(savedTimes)
+        root._ensurePersistentState()
         root._persistentReady = true
-        root._pruneOrphanState()
+        root._pruneOrphanState(activeNotifications)
         root._saveHistory()
     }
 
@@ -466,9 +508,9 @@ Singleton {
 
     Component.onCompleted: {
         ConfigStore.hardenQuickshellState()
-        root._restorePersistentState()
-        root._ensurePersistentState()
         const vals = notifServer.trackedNotifications.values ?? []
+        root._restorePersistentState(vals)
+        root._ensurePersistentState()
         const rebuilt = []
         const live = {}
         const nextTimes = root._cloneMap(root._times)

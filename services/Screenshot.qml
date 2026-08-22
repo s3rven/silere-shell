@@ -38,12 +38,24 @@ Singleton {
     // no screenshot directory exists, so the watcher retired and the glow cannot fire
     readonly property bool watcherRetired: _watcher.gaveUp
 
+    function retryWatcher(): void {
+        if (_watcher.gaveUp) _watcher.retry()
+    }
+
+    Connections {
+        target: SystemTools
+        function onScanRevisionChanged() {
+            if (SystemTools.hasInotifywait) root.retryWatcher()
+        }
+    }
+
     SupervisedProcess {
         id: _watcher
         superviseWhen: SystemTools.ready && SystemTools.hasInotifywait
             && ShellSettings.underlineGlow && ShellSettings.underlineScreenshotGlow
         restartDelay: 60000
-        // exit 3 means no screenshot directory exists at all; respawning cannot fix that
+        // exit 3 means no screenshot directory exists; immediate respawns cannot fix that,
+        // but a later explicit tool recheck retries after the user creates one
         giveUpCodes: [3]
         command: ["bash", "-c",
             "dirs=(); " +

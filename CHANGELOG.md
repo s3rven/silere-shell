@@ -18,6 +18,7 @@ Only work since the latest release is listed here. Completed notes move to
 - A Bluetooth device that refuses to connect or pair now says so on its row.
 - Quick actions carries Wi-Fi and Bluetooth toggles alongside airplane mode.
 - Appearance › Interface sets the size of tray and workspace app icons.
+- Maintenance can recheck optional tools without closing the settings page.
 
 ### Changed
 
@@ -33,6 +34,8 @@ Only work since the latest release is listed here. Completed notes move to
 - Disabled controls dim to one depth, and high contrast lifts them.
 - Notification popups widen with the interface scale.
 - The notification list grows with the history it holds, up to the room the screen has.
+- Services refresh themselves when an optional tool is installed or removed at runtime.
+- Hyprland title churn no longer rebuilds workspace models while the window-title widget is hidden.
 
 ### Fixed
 
@@ -65,7 +68,15 @@ Only work since the latest release is listed here. Completed notes move to
 - The Wi-Fi password field scrolls into view when it opens near the bottom of the list.
 - The Wi-Fi list refills after the adapter drops out and comes back.
 - Silere Shell says it has not been checked yet rather than claiming to be up to date.
+- Silere Shell treats unread or malformed update cache data as unverified instead of showing a trusted, current status.
+- Active notifications keep their original age and read state across a shell reload.
+- Malformed saved notification flags and timestamps no longer disturb card timing or read state.
+- A wallpaper palette that disappears after loading is reported as retained instead of silently looking live.
 - A package check that keeps failing raises a warning in the bar.
+- AUR packages stay labelled as AUR when a long repository update list is truncated.
+- Rechecking optional tools clears a notification-daemon conflict that has gone away.
+- Rechecking tools revives screenshot feedback after its target directory is created.
+- A saved wallpaper palette is described as retained, not bundled, when Matugen is removed.
 
 ## Releases
 

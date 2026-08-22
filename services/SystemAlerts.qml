@@ -61,6 +61,9 @@ Singleton {
         function onReadyChanged(): void {
             if (SystemTools.ready) root._checkCurrentWarnings()
         }
+        function onScanRevisionChanged(): void {
+            root._checkCurrentWarnings()
+        }
     }
 
     Connections {

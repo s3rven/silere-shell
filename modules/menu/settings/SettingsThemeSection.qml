@@ -12,7 +12,9 @@ Column {
 
     readonly property string _paletteNote: !SystemTools.ready ? ""
         : !SystemTools.hasMatugen
-            ? "Wallpaper theming needs matugen installed. These are Silere's bundled colors."
+            ? MatugenTheme.usingFallback
+                ? "Wallpaper theming needs matugen installed. These are Silere's bundled colors."
+                : "Matugen is not installed. The last palette stays loaded, but it cannot follow wallpaper changes."
             : MatugenTheme.usingFallback
                 ? "Matugen has not written a palette yet, so these are Silere's bundled colors. Re-run the installer, then set a wallpaper."
                 : MatugenTheme.paletteStale

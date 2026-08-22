@@ -58,9 +58,8 @@ QtObject {
     }
 
     function _syncLiveTitles(): void {
-        if (!root._liveTitlesWanted) return
         const tops = Hyprland.toplevels ? (Hyprland.toplevels.values ?? []) : []
-        const next = {}
+        const next = Object.create(null)
         for (let i = 0; i < tops.length; i++) {
             const t = tops[i]
             const c = t ? t.lastIpcObject : null
@@ -114,7 +113,9 @@ QtObject {
                 root._syncLiveTitles()
             } else {
                 _titleSync.stop()
-                root._liveTitles = ({})
+                // Keep one last snapshot for focus heuristics, but stop
+                // subscribing it to title-only compositor events.
+                root._syncLiveTitles()
             }
         }
     }
@@ -186,7 +187,6 @@ QtObject {
             out.push({
                 appId: root._identity((t.wayland && t.wayland.appId)
                     || c.class || c.initialClass),
-                title: root._title(c.title),
                 cls: root._identity(c.class),
                 initialClass: root._identity(c.initialClass),
                 pid: c.pid ?? -1, ref: c.address,
@@ -201,15 +201,15 @@ QtObject {
 
     readonly property var toplevels: {
         const base = root.workspaceToplevels
-        if (!root._liveTitlesWanted) return base
         const out = []
         for (let i = 0; i < base.length; i++) {
             const t = base[i]
             const liveTitle = root._liveTitles[t.ref]
             out.push({
                 appId: t.appId,
-                // titles are sampled by _titleSync; reading t.title here would subscribe this binding to every title frame
-                title: liveTitle !== undefined ? liveTitle : t.title,
+                // Titles are sampled imperatively. Reading the compositor title
+                // here would subscribe every consumer to title-only frames.
+                title: liveTitle !== undefined ? liveTitle : "",
                 cls: t.cls, initialClass: t.initialClass,
                 pid: t.pid, ref: t.ref,
                 wsRef: t.wsRef, wsId: t.wsId, output: t.output,
@@ -220,6 +220,8 @@ QtObject {
         }
         return out
     }
+
+    Component.onCompleted: Qt.callLater(root._syncLiveTitles)
 
     // quickshell never clears activeToplevel: hyprland reports unfocus as an empty
     // activewindowv2 address and its parser bails out before the assignment
