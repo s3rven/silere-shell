@@ -24,8 +24,7 @@ Process {
     }
 
     function retry(): void {
-        // Hold the process stopped until every backoff flag is reset; otherwise
-        // clearing gaveUp can launch once with the old cooldown state.
+        // hold the process stopped until every backoff flag is reset; otherwise clearing gaveUp can launch once with the old cooldown state
         _cooldown = true
         _coolTimer.stop()
         _stableTimer.stop()

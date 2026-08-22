@@ -14,8 +14,7 @@ Item {
     property real offset: 4
 
     readonly property real _strength: ShellSettings.barShadowStrength
-    // the strength slider's max is set to land on this ceiling; raising one without
-    // the other leaves the top of the slider doing nothing
+    // the strength slider's max is set to land on this ceiling; raising one without the other leaves the top of the slider doing nothing
     readonly property real _alpha: Math.min(0.38, 0.24 * _strength)
 
     readonly property real _keyAlpha: _alpha * 0.60

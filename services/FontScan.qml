@@ -65,8 +65,7 @@ Singleton {
                 root.lastError = "Font scan failed (exit " + code + ")"
                 return
             }
-            // Font family aliases are external input; a null-prototype table
-            // keeps names such as "constructor" from colliding with JS built-ins.
+            // font family aliases are external input; a null-prototype table keeps names such as "constructor" from colliding with JS built-ins
             const variants = Object.create(null)
             const lines = (_out.text || "").split("\n")
             for (let i = 0; i < lines.length; i++) {

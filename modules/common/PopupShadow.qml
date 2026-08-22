@@ -12,8 +12,7 @@ Loader {
     anchors.fill: card
     opacity: card.opacity
     z: -1
-    // This is a sibling of the card, so transforms are not inherited. Mirror
-    // the card's motion or its shadow visibly lags at the final geometry.
+    // this is a sibling of the card, so transforms are not inherited. Mirror the card's motion or its shadow visibly lags at the final geometry
     transform: [
         Translate { y: root.card.edgeOffset },
         Scale {

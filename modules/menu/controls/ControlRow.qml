@@ -10,8 +10,7 @@ MenuRow {
     property string status:      ""
     property string valueText:   ""
     property color  accentColor: Theme.accent
-    // Transparent follows the normal active/inactive hierarchy. A semantic
-    // colour lets a failure remain recognisable even when the control is off.
+    // transparent follows the normal active/inactive hierarchy. A semantic colour lets a failure remain recognisable even when the control is off
     property color  statusColor: "transparent"
     property bool   active:       false
     property bool   available:    true

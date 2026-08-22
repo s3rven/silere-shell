@@ -37,8 +37,7 @@ Singleton {
         if (root._anchorWriting || !root.open) return
         _anchorRegrab.restart()
     }
-    // never expose this timer's state: a consumer that reacts by taking the anchor stops
-    // the very timer it is bound to, which is a binding loop
+    // never expose this timer's state: a consumer that reacts by taking the anchor stops the very timer it is bound to, which is a binding loop
     Timer {
         id: _anchorRegrab
         interval: 150

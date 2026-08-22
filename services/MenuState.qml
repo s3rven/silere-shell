@@ -24,8 +24,7 @@ AnchoredPopupState {
 
     property string settingsSection: "theme"
 
-    // Order by user impact and frequency: global appearance first, daily bar
-    // surfaces next, then feedback; operational and recovery tools stay last.
+    // order by user impact and frequency: global appearance first, daily bar surfaces next, then feedback; operational and recovery tools stay last
     readonly property var settingsTree: [
         { glyph: "󰉦", label: "Appearance", children: [
             { glyph: "󰉦", label: "Theme",       section: "theme",
@@ -144,8 +143,7 @@ AnchoredPopupState {
             root.setSettingsSection(name)
             root.showTab(root.settingsTab)
             if (known) return "ok"
-            // pages get renamed; a keybind carrying an old name still opens Settings
-            // rather than doing nothing, and says why it landed somewhere else
+            // pages get renamed; a keybind carrying an old name still opens Settings rather than doing nothing, and says why it landed somewhere else
             return "unknown settings page '" + name + "'; opened theme instead. valid: "
                 + root._flatSections.join(", ")
         }

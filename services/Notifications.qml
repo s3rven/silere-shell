@@ -11,8 +11,7 @@ Singleton {
     property var list: []
     property alias dnd:         _persist.dnd
     property alias missedCount: _persist.missedCount
-    // These maps are restored from persisted JSON. Keep their prototype empty
-    // so a malformed key cannot change object behaviour between reloads.
+    // these maps are restored from persisted JSON. Keep their prototype empty so a malformed key cannot change object behaviour between reloads
     property var _seen:  Object.create(null)
     property var _times: Object.create(null)
     property var _updateTimes: Object.create(null)
@@ -210,8 +209,7 @@ Singleton {
             root._saveHistory()
         }
         function onNotifHistoryPersistentChanged() {
-            // Privacy-first: turning persistence off removes text restored from
-            // an earlier session. New entries still form an in-memory history.
+            // privacy-first: turning persistence off removes text restored from an earlier session. New entries still form an in-memory history
             if (!ShellSettings.notifHistoryPersistent) {
                 _history.clear()
                 root._pruneOrphanState()
@@ -377,8 +375,7 @@ Singleton {
         const active = Array.isArray(root.list) ? root.list.slice() : []
         if (active.length === 0) return
 
-        // Clear first: changing tracked may synchronously emit closed, and the
-        // close handler must not archive the same object a second time.
+        // clear first: changing tracked may synchronously emit closed, and the close handler must not archive the same object a second time
         root.list = []
         root.lastCritical = false
         for (let i = 0; i < active.length; i++) {

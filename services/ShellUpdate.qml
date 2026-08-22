@@ -141,8 +141,7 @@ Singleton {
     }
 
     function apply(): void {
-        // Keep fetch/check and merge/apply out of the same checkout at the same
-        // time even when this API is called outside the guarded settings UI.
+        // keep fetch/check and merge/apply out of the same checkout at the same time even when this API is called outside the guarded settings UI
         if (checking || applying || _applyProc.running || !pending || !targetVerified
                 || !versionReady || versionBusy || root.blockedReason.length > 0) return
         applying = true
@@ -185,8 +184,7 @@ Singleton {
     function _countFrom(value): int {
         const text = String(value ?? "").trim()
         if (text.length === 0) return 0
-        // update-pending lives in a user-writable cache. Reject partial numbers,
-        // signs and values large enough to make the status UI meaningless.
+        // update-pending lives in a user-writable cache. Reject partial numbers, signs and values large enough to make the status UI meaningless
         if (!/^[0-9]{1,6}$/.test(text)) return -1
         const count = Number(text)
         return isFinite(count) && count <= root.maxPendingCount ? count : -1
@@ -277,8 +275,7 @@ Singleton {
             root._flagLoaded = true
             root._parse(_flag.text())
         }
-        // A missing file means no pending update. Other failures are not safe
-        // to reinterpret as an empty file: retain the last state and warn.
+        // a missing file means no pending update. Other failures are not safe to reinterpret as an empty file: retain the last state and warn
         onLoadFailed: error => {
             root._flagLoaded = true
             root._flagMalformed = false
@@ -321,8 +318,7 @@ Singleton {
         if (root._flagMalformed) rest = []
         // a flag file written before this line existed carries commits here instead
         if ((rest[0] ?? "").startsWith("target ")) {
-            // Match exactly what update.sh writes. A cache edit may change what
-            // the UI says, but must never make malformed metadata look verified.
+            // match exactly what update.sh writes. A cache edit may change what the UI says, but must never make malformed metadata look verified
             const target = /^target ([0-9a-f]{7,64}) (v[0-9]+\.[0-9]+\.[0-9]+) verified$/
                 .exec(rest[0].trim())
             if (target) {
@@ -403,8 +399,7 @@ Singleton {
                 root._refreshVersion()
             } else {
                 root.lastApplyError = root._lastOutputLine(_applyOut.text, _applyErr.text, "Install failed")
-                // The authoritative script may discover a branch/dirty-state
-                // change after the UI was opened; refresh the displayed block.
+                // the authoritative script may discover a branch/dirty-state change after the UI was opened; refresh the displayed block
                 root._refreshVersion()
             }
         }
@@ -448,8 +443,7 @@ Singleton {
                 root.refreshTimer()
                 return
             }
-            // the switch is bound to the unit's real state, so a swallowed failure just
-            // flips it back with no reason given
+            // the switch is bound to the unit's real state, so a swallowed failure just flips it back with no reason given
             root.timerError = code === 0 ? ""
                 : SafeText.boundedText(
                     _timerSetErr.text.trim().split("\n").pop()

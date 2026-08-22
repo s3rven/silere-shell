@@ -19,8 +19,7 @@ Item {
     readonly property int btnW:       btnH + 2
     readonly property int _iconSz:    Math.round(ShellSettings.barIconSize * ShellSettings.uiScale) + 2
     readonly property int gap:        3
-    // Updated imperatively because mapToItem() does not expose ancestor geometry
-    // dependencies to the QML binding engine.
+    // updated imperatively because mapToItem() does not expose ancestor geometry dependencies to the QML binding engine
     property real menuAnchorX: 0
 
     // a keybind opens with no trigger widget, so the states' fallback x has to stay fresh
@@ -144,8 +143,7 @@ Item {
         if (root.urgentOffPage !== next) root.urgentOffPage = next
     }
 
-    // Window classes are compositor-supplied, so they must not inherit keys
-    // such as "constructor" from Object.prototype.
+    // Window classes are compositor-supplied, so they must not inherit keys such as "constructor" from Object.prototype
     property var _appMetaCache: Object.create(null)
     property int _appMetaCacheSize: 0
     readonly property int _appMetaCacheLimit: 256
@@ -464,8 +462,7 @@ Item {
         else root.opacity = 1
     }
 
-    // reflow only: the marker slide and the page shift are animations, and following
-    // them retargets an open popup's x every frame
+    // reflow only: the marker slide and the page shift are animations, and following them retargets an open popup's x every frame
     onXChanged: root._syncMenuAnchor()
     onYChanged: root._syncMenuAnchor()
     onImplicitWidthChanged: root._syncMenuAnchor()
@@ -524,8 +521,7 @@ Item {
 
     property int _hoveredWsId: 0
 
-    // One listener routes pulses to the matching button. Previously every
-    // visible workspace kept its own listener and renderer alive while idle.
+    // one listener routes pulses to the matching button. Previously every visible workspace kept its own listener and renderer alive while idle
     Connections {
         target: Notifications
         enabled: root.barActive && ShellSettings.wsNotifPulse

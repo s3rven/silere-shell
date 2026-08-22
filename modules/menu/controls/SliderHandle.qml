@@ -12,8 +12,7 @@ Rectangle {
     property bool hoverGrow: true
     property bool animate: true
 
-    // proportional, not fixed: 4px on the default 14px thumb is the squircle Silere uses,
-    // but the same 4px on a smaller thumb rounds it into a circle
+    // proportional, not fixed: 4px on the default 14px thumb is the squircle Silere uses, but the same 4px on a smaller thumb rounds it into a circle
     radius: Math.max(2, Math.round(Math.min(width, height) * 0.286))
     antialiasing: true
     color: root.fillColor

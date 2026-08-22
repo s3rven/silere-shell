@@ -58,8 +58,7 @@ Singleton {
     }
 
     function hardenFile(path: string): void {
-        // Only files owned by this store may be chmodded. Keep the path as a
-        // separate argv entry so even unusual XDG paths never become syntax.
+        // only files owned by this store may be chmodded. Keep the path as a separate argv entry so even unusual XDG paths never become syntax
         if (path.length === 0 || !root._owned(path)) return
         Quickshell.execDetached(["bash", "-c",
             "[ ! -L \"$1\" ] && chmod 0600 -- \"$1\"", "bash", path])

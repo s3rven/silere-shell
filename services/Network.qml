@@ -181,8 +181,7 @@ Singleton {
 
     function _wifiList(): var {
         if (!_scannerWanted) return []
-        // SSIDs are external strings: a normal object loses names such as
-        // "constructor" and lets "__proto__" alter the lookup prototype.
+        // SSIDs are external strings: a normal object loses names such as "constructor" and lets "__proto__" alter the lookup prototype
         const bySsid = Object.create(null)
         const order = []
         const devices = root._devices

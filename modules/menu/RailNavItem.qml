@@ -10,8 +10,7 @@ Item {
     property bool active: false
     property color accentColor: Theme.accent
     property int railW: 44
-    // Expanded drawers already provide their own labels. Keeping this tooltip
-    // open there paints it over the drawer's controls.
+    // expanded drawers already provide their own labels. Keeping this tooltip open there paints it over the drawer's controls
     property bool labelPillEnabled: true
     property RailLabelGroup labels: null
     property bool _hoverReady: false
@@ -91,8 +90,7 @@ Item {
 
     ShellText {
         id: _iconText
-        // centreIn plus a float offset lands the glyph on a sub-pixel x; solve for the
-        // ink centre and snap the result instead
+        // centreIn plus a float offset lands the glyph on a sub-pixel x; solve for the ink centre and snap the result instead
         x: Math.round(parent.width / 2
             - (_ink.tightBoundingRect.x + _ink.tightBoundingRect.width / 2))
         y: Math.round((parent.height - _iconText.height) / 2)

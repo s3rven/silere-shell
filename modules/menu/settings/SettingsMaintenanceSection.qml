@@ -13,8 +13,7 @@ Column {
     property bool _armed: false
     property real _armedAtMs: 0
 
-    // Reopening Maintenance re-detects tools installed or removed while the
-    // shell is running. FontScan follows the completed tool refresh itself.
+    // reopening Maintenance re-detects tools installed or removed while the shell is running. FontScan follows the completed tool refresh itself
     Component.onCompleted: SystemTools.refresh()
 
     function _disarm(): void {
@@ -65,8 +64,7 @@ Column {
         }
     }
 
-    // The whole section only instantiates while it is the open page; the probe
-    // runs once on entry and never polls in the background.
+    // the whole section only instantiates while it is the open page; the probe runs once on entry and never polls in the background
     readonly property var _issues: {
         const out = []
         if (!SystemTools.ready) return out
@@ -83,8 +81,7 @@ Column {
                  && FontScan.families.indexOf(ShellSettings.fontFamily) < 0)
             out.push({ g: "󰈵", n: "Chosen font", s: "“" + ShellSettings.fontFamily + "” is gone; using " + Settings.font, v: "fallback" })
 
-        // wallpaper theming degrades instead of hiding, so it reads as working while
-        // the palette silently stays bundled — both causes need naming
+        // wallpaper theming degrades instead of hiding, so it reads as working while the palette silently stays bundled — both causes need naming
         if (!SystemTools.hasMatugen)
             out.push({ g: "󰉦", n: "Wallpaper theming",
                 s: MatugenTheme.usingFallback ? "Wallpaper colors are unavailable"

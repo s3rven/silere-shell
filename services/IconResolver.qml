@@ -28,8 +28,7 @@ Singleton {
         const scheme = match[1].toLowerCase()
         if (scheme === "file") {
             const path = value.slice(match[0].length)
-            // A file URL with an authority can name a remote host. Accept only
-            // the two local absolute forms Qt understands: file:/x and file:///x.
+            // a file URL with an authority can name a remote host. Accept only the two local absolute forms Qt understands: file:/x and file:///x
             const localAbsolute = path.startsWith("///")
                 ? !path.startsWith("////")
                 : path.startsWith("/") && !path.startsWith("//")

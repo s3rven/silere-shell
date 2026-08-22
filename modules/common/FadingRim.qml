@@ -11,8 +11,7 @@ Shape {
     property bool uniform: false
 
     anchors.fill: parent
-    // without it Shape tessellates the corner arcs and a 1px ring facets visibly there —
-    // same reason OutlineBorder and PerimeterProgress set it
+    // without it Shape tessellates the corner arcs and a 1px ring facets visibly there — same reason OutlineBorder and PerimeterProgress set it
     preferredRendererType: Shape.CurveRenderer
 
     ShapePath {

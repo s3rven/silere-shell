@@ -123,8 +123,7 @@ Column {
 
                 readonly property var _swColors: _options.map(o => o.auto ? MatugenTheme.accent
                     : o.custom ? _accentPicker._curColor : o.color)
-                // dependent bindings settle in stages, so an index can be transiently out of
-                // range here even though no steady state produces one
+                // dependent bindings settle in stages, so an index can be transiently out of range here even though no steady state produces one
                 function _nameAt(i: int): string {
                     const o = i >= 0 && i < _options.length ? _options[i] : null
                     return o ? o.name : ""

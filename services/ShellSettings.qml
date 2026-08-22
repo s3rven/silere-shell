@@ -380,8 +380,7 @@ Singleton {
         { k: "wsIconMono",          t: "bool", sec: "workspaces" },
         { k: "wsActiveMarker",      t: "enum", vals: ["gem", "dot", "bar"], sec: "workspaces" }
     ]
-    // a settings row binds by key: the schema already states type and range, so a
-    // row that restates them is duplication the two can drift apart on
+    // a settings row binds by key: the schema already states type and range, so a row that restates them is duplication the two can drift apart on
     function schemaFor(key: string): var {
         for (let i = 0; i < root._schema.length; i++)
             if (root._schema[i].k === key) return root._schema[i]
@@ -535,8 +534,7 @@ Singleton {
             + "-" + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds())
     }
 
-    // one user action that moves several keys is still one settings change: without
-    // this each discrete key flushes the whole file on its own
+    // one user action that moves several keys is still one settings change: without this each discrete key flushes the whole file on its own
     function batch(apply): void {
         if (root._bulkAssign) { apply(); return }
         root._bulkAssign = true
@@ -578,8 +576,7 @@ Singleton {
 
     function _onSettingChanged(key: string): void {
         if (!_loaded) return
-        // Sliders can emit dozens of changes per second. Track the one key
-        // that moved instead of rescanning the entire schema on every tick.
+        // sliders can emit dozens of changes per second. Track the one key that moved instead of rescanning the entire schema on every tick
         const modified = !root._sameValue(root[key], root._defaults[key])
         const wasModified = root._modifiedKeys[key] === true
         if (modified !== wasModified) {

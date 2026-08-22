@@ -20,8 +20,7 @@ Singleton {
     }
 
     function _opened(name: string): void {
-        // IPC and keybind requests can arrive after the environment edge that
-        // closed the surfaces, so reject re-entry until it becomes interactive.
+        // IPC and keybind requests can arrive after the environment edge that closed the surfaces, so reject re-entry until it becomes interactive
         if (root._environmentBlocksControls(Idle.isIdle, OverviewState.active)) {
             root.closeAll()
             return

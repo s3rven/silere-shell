@@ -10,8 +10,7 @@ import "controls"
 ClippingRectangle {
     id: root
     width: parent ? parent.width : 0
-    // the labels inside are fontMicro, so a fixed row keeps the elapsed/total pair
-    // cramped while every neighbour grows with the type
+    // the labels inside are fontMicro, so a fixed row keeps the elapsed/total pair cramped while every neighbour grows with the type
     readonly property int _seekH: Math.max(14, Settings.fontMicro + 4)
     readonly property int _seekBlock: Media.hasPosition ? _seekH + 12 : 0
     // 4px multiple: an odd height lands the bottom border on a half physical pixel and doubles it

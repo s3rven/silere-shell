@@ -121,8 +121,7 @@ Item {
             ? 0.5 : _sweepSpread
         readonly property real _renderCenter: ShellSettings.underlineFullWidth
             ? 0.5 : _sweepCenter
-        // both stops share one rgb and differ only in alpha, so lerp that; mix() would
-        // return alpha 1 and light the ends brighter than the peak
+        // both stops share one rgb and differ only in alpha, so lerp that; mix() would return alpha 1 and light the ends brighter than the peak
         readonly property color _renderEdge: ShellSettings.underlineFullWidth
             ? Theme.withAlpha(_stopColor,
                 _stopColorMid.a + (_stopColor.a - _stopColorMid.a) * 0.55)
@@ -316,8 +315,7 @@ Item {
             target: ShellSettings
             function onUnderlineNotifGlowChanged() {
                 if (!ShellSettings.underlineNotifGlow) {
-                    // Event effects share sweep geometry; settling them together
-                    // avoids leaving a stopped effect's bloom behind another one.
+                    // event effects share sweep geometry; settling them together avoids leaving a stopped effect's bloom behind another one
                     _lineEffect._stopTransient()
                 } else if (_lineEffect._canPreview()) {
                     _previewTimer.restart()

@@ -318,8 +318,7 @@ PageShell {
                     height: _fullHeight
                     clip: true
 
-                    // text lays out a frame after the delegate completes, so an ungated
-                    // behaviour animates every row as it scrolls into view
+                    // text lays out a frame after the delegate completes, so an ungated behaviour animates every row as it scrolls into view
                     property bool _heightReady: false
                     Timer { id: _heightArm; interval: 0; onTriggered: _entry._heightReady = true }
                     Component.onCompleted: _heightArm.start()
@@ -332,8 +331,7 @@ PageShell {
                     function removeSelf(): void {
                         if (_removing || root._clearing) return
                         const rowIndex = index
-                        // Persist immediately. A delegate-owned delay is lost if
-                        // the user changes pages before its timer fires.
+                        // persist immediately. A delegate-owned delay is lost if the user changes pages before its timer fires
                         _removing = true
                         Notifications.removeFromHistory(rowIndex)
                     }

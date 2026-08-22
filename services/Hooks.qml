@@ -12,8 +12,7 @@ Singleton {
     readonly property string directory: ConfigStore.directory.length > 0
         ? ConfigStore.directory + "/hooks" : ""
 
-    // the scan probes these names rather than listing the directory, so a file
-    // dropped there under any other name is never a path this can execute
+    // the scan probes these names rather than listing the directory, so a file dropped there under any other name is never a path this can execute
     readonly property var events: [
         "battery-critical",
         "notification",
@@ -38,8 +37,7 @@ Singleton {
         return root._present[event] === true
     }
 
-    // a notification flood or a workspace event storm reaches here once per event;
-    // without a ceiling each one is another spawn
+    // a notification flood or a workspace event storm reaches here once per event; without a ceiling each one is another spawn
     function _budgetAllows(): bool {
         const now = Date.now()
         const recent = []
@@ -108,8 +106,7 @@ Singleton {
         }
     }
 
-    // an unset hook leaves its target out of the binding entirely, so a service
-    // nothing else has built is not created just to be watched
+    // an unset hook leaves its target out of the binding entirely, so a service nothing else has built is not created just to be watched
     Connections {
         target: root._present["notification"] === true ? Notifications : null
         function onNotificationShown(appName, summary, critical) {

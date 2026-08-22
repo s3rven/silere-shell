@@ -388,8 +388,7 @@ Singleton {
         function onOsdEnabledChanged() {
             if (!ShellSettings.osdEnabled) root._clearEntries()
         }
-        // A live volume entry must not reappear after changing the filter to
-        // brightness (or vice versa). The next accepted input starts fresh.
+        // a live volume entry must not reappear after changing the filter to brightness (or vice versa). The next accepted input starts fresh
         function onOsdKindFilterChanged() { root._clearEntries() }
     }
 }

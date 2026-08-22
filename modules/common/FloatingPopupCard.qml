@@ -99,8 +99,7 @@ Rectangle {
     function reclamp(): void {
         const nx = Metrics.snap4(_clampedX(x))
         if (Math.abs(nx - x) <= 0.5) return
-        // Clamp corrections are geometry invariants, not placement motion.
-        // Snapping also avoids retargeting x on every radius-animation frame.
+        // clamp corrections are geometry invariants, not placement motion. Snapping also avoids retargeting x on every radius-animation frame
         _hardClamping = true
         x = nx
         _hardClamping = false
@@ -248,8 +247,7 @@ Rectangle {
         NumberAnimation { target: root; property: "opacity"; to: 0.0; duration: Motion.popOutFade; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standardAccel }
         onFinished: {
             if (root.open || !root._closing) return
-            // Target inputs (notably bar edge) can change mid-exit. Normalize
-            // to today's hidden state before the next open reverses from it.
+            // target inputs (notably bar edge) can change mid-exit. Normalize to today's hidden state before the next open reverses from it
             root.scaleAmt = root._hiddenScale()
             root.edgeOffset = root._hiddenEdge()
             root.opacity = 0.0

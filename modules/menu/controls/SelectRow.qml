@@ -27,8 +27,7 @@ Item {
     readonly property int _controlH: Metrics.rowHeightFor(28)
     readonly property int _optionH: Metrics.rowHeightFor(32)
     readonly property int _optionsCapH: Math.min(224, root._optionH * 7)
-    // 44/56 are the shared single-line and two-line row heights; a select row that
-    // sits between toggles must not be the one that breaks the rhythm
+    // 44/56 are the shared single-line and two-line row heights; a select row that sits between toggles must not be the one that breaks the rhythm
     readonly property int _headerH: 4 * Math.ceil(Math.max(
         root._hasDesc ? 56 : 44,
         _headerText.implicitHeight + 12,

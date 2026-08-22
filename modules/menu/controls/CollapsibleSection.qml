@@ -8,8 +8,7 @@ Item {
     // set on both halves of a mode swap so the card height stays monotonic
     property bool symmetric: false
     default property alias rows: _content.data
-    // Semantic presence changes once per toggle. Divider/corner discovery can
-    // depend on this instead of rereading animated height every frame.
+    // semantic presence changes once per toggle. Divider/corner discovery can depend on this instead of rereading animated height every frame
     readonly property bool layoutPresent: expanded
 
     readonly property bool isRadiusGroup: true

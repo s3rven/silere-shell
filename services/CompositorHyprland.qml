@@ -113,8 +113,7 @@ QtObject {
                 root._syncLiveTitles()
             } else {
                 _titleSync.stop()
-                // Keep one last snapshot for focus heuristics, but stop
-                // subscribing it to title-only compositor events.
+                // keep one last snapshot for focus heuristics, but stop subscribing it to title-only compositor events
                 root._syncLiveTitles()
             }
         }
@@ -207,8 +206,7 @@ QtObject {
             const liveTitle = root._liveTitles[t.ref]
             out.push({
                 appId: t.appId,
-                // Titles are sampled imperatively. Reading the compositor title
-                // here would subscribe every consumer to title-only frames.
+                // titles are sampled imperatively. Reading the compositor title here would subscribe every consumer to title-only frames
                 title: liveTitle !== undefined ? liveTitle : "",
                 cls: t.cls, initialClass: t.initialClass,
                 pid: t.pid, ref: t.ref,

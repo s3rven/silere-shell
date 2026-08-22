@@ -263,8 +263,7 @@ PanelWindow {
             function onOpenChanged() {
                 if (MenuState.open) {
                     _closedUnload.stop()
-                    // closeFinished is canceled when a close animation reverses;
-                    // transient drawer state must not depend on that callback.
+                    // closeFinished is canceled when a close animation reverses; transient drawer state must not depend on that callback
                     panel.powerOpen = false
                     panel._outerHeightMotion = false
                     _outerHeightMotionHold.stop()
@@ -283,8 +282,7 @@ PanelWindow {
 
         Timer {
             id: _settingsUnload
-            // Keep Settings warm briefly for quick comparisons, then release
-            // both the page and its category delegates together.
+            // keep Settings warm briefly for quick comparisons, then release both the page and its category delegates together
             interval: 8000
             onTriggered: {
                 if (panel.activeTab === 1) return
@@ -378,8 +376,7 @@ PanelWindow {
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
                     vertical: true
-                    // The expanded drawer is declared later, so keep the rail
-                    // edge above its surface instead of letting it paint over it.
+                    // the expanded drawer is declared later, so keep the rail edge above its surface instead of letting it paint over it
                     z: 20
                     color: Theme.menuDivider
                     ColorFade on color {}

@@ -33,8 +33,7 @@ Singleton {
     readonly property int capHeightBase: Math.ceil(_capBaseM.height)
     TextMetrics { id: _capBaseM; font.family: root.font; font.pixelSize: Math.round(12 * root.fontScale); text: "M" }
 
-    // small type steps floor so a lowered uiScale cannot push secondary text under
-    // legibility; sizes above body need no floor
+    // small type steps floor so a lowered uiScale cannot push secondary text under legibility; sizes above body need no floor
     readonly property int fontLabel:   Math.max(9, fontSize - 1)
     readonly property int fontCaption: Math.max(9, fontSize - 2)
     readonly property int fontMicro:   Math.max(8, fontSize - 3)

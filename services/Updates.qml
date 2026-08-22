@@ -98,8 +98,7 @@ Singleton {
 
     function _countFrom(text: string): int {
         const first = String(text ?? "").split("\n")[0].trim()
-        // The count line is emitted by our own wrapper. Reject partial parses,
-        // signs and implausibly large values before they reach geometry or AT.
+        // the count line is emitted by our own wrapper. Reject partial parses, signs and implausibly large values before they reach geometry or AT
         if (!/^[0-9]{1,6}$/.test(first)) return -1
         const value = Number(first)
         return isFinite(value) && value <= 100000 ? value : -1
@@ -175,8 +174,7 @@ Singleton {
             if (!isNaN(r) && !isNaN(a)) { repo = r; aur = a }
             start = 2
         }
-        // Repo lines come first, then AUR; budget for the AUR tail so a long
-        // repo list cannot crowd it out.
+        // repo lines come first, then AUR; budget for the AUR tail so a long repo list cannot crowd it out
         const repoBudget = Math.max(0, root._maxDetail - Math.max(0, aur))
         const out = []
         let seen = 0, repoShown = 0
@@ -236,8 +234,7 @@ Singleton {
     function refresh(): void {
         // read the setting directly — on a manual toggle the `enabled` alias may not have re-evaluated yet
         if (!ShellSettings.updatesWidget || !supported || _proc.running) return
-        // A manual check supersedes delayed recovery work. Leaving either timer
-        // armed makes a successful check run again a few seconds/minutes later.
+        // a manual check supersedes delayed recovery work. Leaving either timer armed makes a successful check run again a few seconds/minutes later
         _retry.stop()
         _reconnect.stop()
         _proc.exec(["bash", "-c", root._cmd()])

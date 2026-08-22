@@ -100,8 +100,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
 
                 function syncMenuAnchor(): void {
-                    // Labels grow to the right on hover; the popup belongs to the
-                    // icon, so its anchor must not wander with the label width.
+                    // labels grow to the right on hover; the popup belongs to the icon, so its anchor must not wander with the label width
                     const pt = _tile.mapToItem(null, root.iconSize / 2, 0)
                     if (isFinite(pt.x)) _tile.menuAnchorX = pt.x
                 }

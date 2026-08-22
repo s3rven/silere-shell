@@ -27,8 +27,7 @@ MenuRow {
     readonly property int _stackedH: 4 * Math.ceil(Math.max(56,
         6 + _labelRow.height + 4 + root._controlH + 6) / 4)
     readonly property int _chipGap: 5
-    // detached chips size to the widest option so every chip in a row matches,
-    // instead of splitting a fixed track into equal cells
+    // detached chips size to the widest option so every chip in a row matches, instead of splitting a fixed track into equal cells
     FontMetrics {
         id: _chipFm
         font.family: Settings.font
@@ -183,8 +182,7 @@ MenuRow {
                         scale: _tap.pressed ? Motion.pressScale
                             : _hover.hovered ? Motion.hoverScale : 1.0
                         transformOrigin: Item.Center
-                        // ghost: the selected chip carries only its accent outline, so the
-                        // resting fill belongs to the unselected ones
+                        // ghost: the selected chip carries only its accent outline, so the resting fill belongs to the unselected ones
                         color: _option.active
                             ? (_tap.pressed
                                 ? Theme.withAlpha(root.accentColor, 0.13)

@@ -95,8 +95,7 @@ Singleton {
     property string _pendingAddr: ""
     property string _pendingKind: ""
     property bool   _pendingStarted: false
-    // Only undo pairable when this service raised it. An adapter already made
-    // pairable by the user or another tool belongs to that owner.
+    // only undo pairable when this service raised it. An adapter already made pairable by the user or another tool belongs to that owner
     property var    _pairableAdapter: null
 
     readonly property var _pendingDevice: {
@@ -149,8 +148,7 @@ Singleton {
         root.errorKind = ""
     }
 
-    // nothing watches an attempt once its list is gone, and the guard would still fire
-    // minutes later and paint a stale failure on the next open
+    // nothing watches an attempt once its list is gone, and the guard would still fire minutes later and paint a stale failure on the next open
     function abandonAttempt(): void {
         root._endAttempt()
         root.clearError()
@@ -204,8 +202,7 @@ Singleton {
         root._endAttempt()
     }
 
-    // an attempt that never moves the device would otherwise hold the row on its
-    // in-progress label forever
+    // an attempt that never moves the device would otherwise hold the row on its in-progress label forever
     Timer {
         id: _attemptGuard
         interval: 20000

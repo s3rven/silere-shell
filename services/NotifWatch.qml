@@ -50,8 +50,7 @@ Singleton {
         property int _generation: 0
         running: false
         timeoutMs: 5000
-        // Ignore only this process. Another Quickshell instance can own the
-        // notification name too, and is still a real conflict worth showing.
+        // ignore only this process. Another Quickshell instance can own the notification name too, and is still a real conflict worth showing
         command: ["bash", "-c",
             "self=$1; raw=$(busctl --user call org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus GetNameOwner s org.freedesktop.Notifications 2>/dev/null); " +
             "set -- $raw; o=${2#\"}; o=${o%\"}; [ -n \"$o\" ] || exit 0; " +

@@ -124,8 +124,7 @@ Singleton {
         target: MenuState
         function onOpenChanged() {
             if (MenuState.open && root.toolAvailable) {
-                // Backlight devices can appear after login (dock/GPU hot-plug).
-                // Relist on the user-driven menu edge instead of polling while idle.
+                // backlight devices can appear after login (dock/GPU hot-plug). Relist on the user-driven menu edge instead of polling while idle
                 root._reprobeAttempts = 0
                 _reprobe.restart()
             }
@@ -288,8 +287,7 @@ Singleton {
         }
     }
 
-    // bounded: a DDC/CI backlight writes over i2c and can block on a sleeping monitor,
-    // and onExited is the only thing that clears _applyQueued
+    // bounded: a DDC/CI backlight writes over i2c and can block on a sleeping monitor, and onExited is the only thing that clears _applyQueued
     BoundedProcess {
         id: _setProc
         timeoutMs: 5000

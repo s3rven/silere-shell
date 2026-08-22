@@ -55,8 +55,7 @@ Column {
             model: root._alertChipModel
             onChosen: (v) => root._setAlertMode(v, "osdBatteryWarn", "underlineBattGlow")
         }
-        // ungated: the power rail label, the vitals strip and the battery colour read this
-        // threshold whether or not either warning is switched on
+        // ungated: the power rail label, the vitals strip and the battery colour read this threshold whether or not either warning is switched on
         SliderRow {
             glyph: "󱃍"; label: "Low below"
             key: "batteryLowThreshold"

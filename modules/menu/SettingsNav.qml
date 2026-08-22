@@ -163,8 +163,7 @@ Item {
     function _syncExpansionMode(keepGroupsOpen: bool, section: string): void {
         if (!keepGroupsOpen)
             root._expandedGroup = root._groupIndexForSection(section)
-        // The mode changes every group's height at once. Let the panel follow
-        // that disclosure and reveal the selected leaf after the rows settle.
+        // the mode changes every group's height at once. Let the panel follow that disclosure and reveal the selected leaf after the rows settle
         root._settleGroup = -1
         _disclosureSettle.restart()
         root.groupToggled()

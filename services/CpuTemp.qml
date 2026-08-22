@@ -21,8 +21,7 @@ Singleton {
     property string _sensorPath: ""
     property bool _reading: false
     property bool _probeComplete: false
-    // available drops to false whenever the service is released, so a control
-    // gated on it flickers on every menu open; sensors do not come and go
+    // available drops to false whenever the service is released, so a control gated on it flickers on every menu open; sensors do not come and go
     readonly property bool sensorMissing: _probeComplete && _sensorPath.length === 0
 
     property int _hotCount:      0

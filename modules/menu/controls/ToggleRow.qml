@@ -19,8 +19,7 @@ MenuRow {
 
     signal toggled(bool nextChecked)
 
-    // Connections, not an onToggled handler: a handler here would be replaced by
-    // one written at the use site instead of running alongside it
+    // Connections, not an onToggled handler: a handler here would be replaced by one written at the use site instead of running alongside it
     Connections {
         target: root
         function onToggled(nextChecked) {

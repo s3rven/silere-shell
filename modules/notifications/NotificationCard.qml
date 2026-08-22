@@ -65,8 +65,7 @@ Item {
         && _previewImg.implicitWidth !== _previewImg.implicitHeight
     readonly property bool _previewSettled: !hasContentImage
         || _previewImg.status === Image.Ready || _previewImg.status === Image.Error
-    // Keep every header on the same text grid. Invalid or absent app icons get
-    // an initial instead of collapsing the slot and shifting the whole card.
+    // keep every header on the same text grid. Invalid or absent app icons get an initial instead of collapsing the slot and shifting the whole card
     readonly property bool showIconSlot: _previewSettled
 
     Accessible.role: Accessible.Notification

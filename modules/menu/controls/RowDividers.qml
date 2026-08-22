@@ -15,8 +15,7 @@ Repeater {
         if (!item) return false
         if (item.layoutPresent !== undefined)
             return item.layoutPresent === true
-        // Standard card rows expose their edge or divider contract. Their
-        // animated height is presentation only and must not drive the scan.
+        // standard card rows expose their edge or divider contract. Their animated height is presentation only and must not drive the scan
         if (item.topRadius !== undefined
                 || item.suppressDividerAbove !== undefined)
             return item.visible

@@ -6,8 +6,7 @@ Item {
 
     required property Flickable list
     property bool armed: true
-    // A shared Flickable can present several pages. A new page must earn its
-    // own settled state, while same-page disclosures keep the existing state.
+    // a shared Flickable can present several pages. A new page must earn its own settled state, while same-page disclosures keep the existing state
     property string contextKey: ""
 
     readonly property bool overflows: list.contentHeight > list.height + 1

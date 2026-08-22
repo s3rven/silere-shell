@@ -15,8 +15,7 @@ Item {
     property string trailingSuffix: ""
     property int maxHeight: 240
 
-    // entries scroll inside a capped list with no dividers, so they track the text
-    // rather than the row grid every other settings row snaps to
+    // entries scroll inside a capped list with no dividers, so they track the text rather than the row grid every other settings row snaps to
     readonly property int _entryH: Math.max(22, Settings.capHeight + 8)
 
     width: parent ? parent.width : 0
