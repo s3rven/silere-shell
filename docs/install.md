@@ -13,6 +13,7 @@ The installer:
 - checks every QML module Silere imports and names any that are missing
 - puts a checkout in your XDG config directory, or another path you choose
 - backs up files before editing them, and asks before touching compositor autostart
+- offers a key that opens the menu, and leaves a combination already in use alone
 - offers to leave the checkout on the latest signed release
 - prints the final install path when it's done
 
@@ -22,8 +23,8 @@ optional maintenance-command link exists, use `/that/path/scripts/silere run`.
 ## Previewing the install
 
 `bash scripts/install.sh --dry-run` lists every file the install would create or edit and
-the autostart line it would add, then exits without writing anything. It answers the
-prompts the way an unattended install does, so it shows the fullest plan.
+the autostart and keybind lines it would add, then exits without writing anything. It
+answers the prompts the way an unattended install does, so it shows the fullest plan.
 
 ## Maintenance command
 
@@ -122,9 +123,9 @@ leaves `~/.config/cava` untouched.
 
 ## Removing it
 
-Run `bash scripts/uninstall.sh` from the installed checkout. That clears autostart, theme
-and update-timer integrations, but keeps the checkout, your settings, and the installed
-font.
+Run `bash scripts/uninstall.sh` from the installed checkout. That clears autostart, the
+menu keybind, theme and update-timer integrations, but keeps the checkout, your settings,
+and the installed font.
 
 A package install has no `uninstall.sh`. Remove the package instead; it prints what is
 left in your home directory to clean up by hand.

@@ -116,6 +116,7 @@ TXN_FILE_COUNT=0
 install_mode=development
 receipt_compositor=unknown
 receipt_autostart=""
+receipt_keybind=""
 
 _txn_escape() { _shell_printf_bytes "$1"; }
 _txn_unescape() { printf '%b' "$1"; }
@@ -281,6 +282,7 @@ _txn_commit() {
             "checkoutPath=$(_txn_escape "$ROOT")" \
             "compositor=$receipt_compositor" \
             "autostartPath=$(_txn_escape "$receipt_autostart")" \
+            "keybindPath=$(_txn_escape "$receipt_keybind")" \
             "fontInstalled=$($did_font && printf 1 || printf 0)" \
             "cliInstalled=$($did_cli && printf 1 || printf 0)" \
             "matugenTemplate=$($did_tmpl && printf 1 || printf 0)" \
@@ -486,6 +488,38 @@ _owned_block_contains() {
     ' "$file"
 }
 
+_bind_taken() {
+    local file="$1"
+    [ -f "$file" ] || return 1
+    awk -v mods="$MENU_BIND_MODS" -v key="$MENU_BIND_KEY" '
+        function norm(s) { gsub(/[ \t]/, "", s); return tolower(s) }
+        {
+            line = $0
+            sub(/#.*/, "", line)
+            if (line !~ /^[ \t]*bind[a-z]*[ \t]*=/) next
+            sub(/^[ \t]*bind[a-z]*[ \t]*=[ \t]*/, "", line)
+            n = split(line, f, ",")
+            if (n < 2) next
+            if (norm(f[2]) != norm(key)) next
+            # $mainMod and friends cannot be compared literally, so a matching key
+            # behind any variable modifier counts as taken
+            if (norm(f[1]) == norm(mods) || f[1] ~ /\$/) found = 1
+        }
+        END { exit !found }
+    ' "$file"
+}
+
+_menu_bind_taken() {
+    local dir f
+    _bind_taken "$HYPR_CONFIG" && return 0
+    dir="$(dirname -- "$HYPR_CONFIG")"
+    [ -d "$dir" ] || return 1
+    while IFS= read -r -d '' f; do
+        _bind_taken "$f" && return 0
+    done < <(find "$dir" -type f -name '*.conf' -print0 2>/dev/null)
+    return 1
+}
+
 _replace_owned_block() {
     local file="$1" begin="$2" end="$3" body="$4" target tmp line removing=false
     [ -f "$file" ] || return 1
@@ -582,8 +616,9 @@ Usage:
 
   bash scripts/install.sh --dry-run
         Report every file the install would create or edit, and the autostart
-        line it would add, then exit without writing anything. Answers the
-        prompts the way SILERE_ASSUME_YES=1 does, so it shows the fullest plan.
+        and keybind lines it would add, then exit without writing anything.
+        Answers the prompts the way SILERE_ASSUME_YES=1 does, so it shows the
+        fullest plan.
 
   bash scripts/install.sh --check
         Run focused, read-only installation diagnostics. This does not install,
@@ -601,6 +636,9 @@ anything and backs up every file it edits.
 Environment:
   SILERE_HYPR_CONFIG   Hyprland config to wire autostart into
   SILERE_NIRI_CONFIG   niri config to wire autostart into
+  SILERE_MENU_BIND_MODS
+                       Modifiers for the menu keybind, default SUPER
+  SILERE_MENU_BIND_KEY Key for the menu keybind, default slash
   SILERE_ASSUME_YES=1  Answer the [Y/n] prompts yes and install to the default
                        path, for dotfiles bootstraps and containers. Files are
                        still backed up before editing, and the [y/N] prompts
@@ -1095,6 +1133,7 @@ fi
 
 ROOT="$INSTALL_DIR"
 did_tmpl=false did_toml=false did_autostart=false did_update=false did_cli=false
+did_keybind=false
 autostart_ready=false
 ROOT_PRINTF_BYTES="$(_shell_quote "$(_shell_printf_bytes "$ROOT")")"
 MATUGEN_OUTPUT_TOML="$(_toml_basic_string "$CONFIG_HOME/matugen/silere-shell.json")"
@@ -1389,6 +1428,51 @@ else
 fi
 fi
 
+# ── menu keybind ────────────────────────────────────────────────────────────────
+_section "menu keybind"
+
+MENU_BIND_MODS="${SILERE_MENU_BIND_MODS:-SUPER}"
+MENU_BIND_KEY="${SILERE_MENU_BIND_KEY:-slash}"
+MENU_BIND_CMD="qs ipc -p \"\$(printf '%b' $ROOT_PRINTF_BYTES)/shell.qml\" call menu toggle"
+MENU_BIND_SHOWN="qs ipc -p $(_shell_quote "$ROOT/shell.qml") call menu toggle"
+HYPR_BIND="bind = $MENU_BIND_MODS, $MENU_BIND_KEY, exec, $MENU_BIND_CMD"
+HYPR_BIND_SHOWN="bind = $MENU_BIND_MODS, $MENU_BIND_KEY, exec, $MENU_BIND_SHOWN"
+NIRI_BIND_SHOWN="Mod+Slash { spawn \"sh\" \"-c\" \"$MENU_BIND_SHOWN\"; }"
+
+if [ "$receipt_compositor" = niri ]; then
+    # niri takes one binds block, so a second one appended at the top level is a
+    # config error rather than a merge
+    _skip "niri keeps every bind in one block — add inside yours:"
+    _info "  $NIRI_BIND_SHOWN"
+elif [[ "$HYPR_CONFIG" == *.lua ]]; then
+    _skip "Lua config — add a bind the way your wrapper declares them:"
+    _info "  $HYPR_BIND_SHOWN"
+elif [ -z "$HYPR_CONFIG" ]; then
+    _skip "no Hyprland config found — add manually:"
+    _info "  $HYPR_BIND_SHOWN"
+elif _owned_block_contains "$HYPR_CONFIG" '# silere-shell keybind begin' \
+        '# silere-shell keybind end' 'call menu toggle'; then
+    _ok "already present in $(_tilde "$HYPR_CONFIG")"
+    did_keybind=true
+    receipt_keybind="$HYPR_CONFIG"
+elif _menu_bind_taken; then
+    _warn "$MENU_BIND_MODS + $MENU_BIND_KEY is already bound in your Hyprland config"
+    _warn "re-run with SILERE_MENU_BIND_KEY set to a free key, or add manually:"
+    _warn "  $HYPR_BIND_SHOWN"
+elif _dry; then
+    _would "append to $HYPR_CONFIG: $HYPR_BIND_SHOWN"
+elif _ask "Bind $MENU_BIND_MODS + $MENU_BIND_KEY to open the Silere menu?"; then
+    _reject_unsafe_path "$HYPR_CONFIG"
+    _backup "$HYPR_CONFIG"
+    printf '\n# silere-shell keybind begin\n%s\n# silere-shell keybind end\n' \
+        "$HYPR_BIND" >> "$HYPR_CONFIG" || _die "could not write $HYPR_CONFIG"
+    _ok "$MENU_BIND_MODS + $MENU_BIND_KEY opens the menu"
+    did_keybind=true
+    receipt_keybind="$HYPR_CONFIG"
+else
+    _skip "skipped — add manually: $HYPR_BIND_SHOWN"
+fi
+
 # ── update-check timer ──────────────────────────────────────────────────────────────
 _section "update-check timer"
 
@@ -1426,6 +1510,7 @@ $did_font      && printf "    ${GREEN}ok${R}      JetBrainsMono Nerd Font\n" || 
 $did_tmpl      && printf "    ${GREEN}ok${R}      matugen template\n" || printf "    ${DIM}skip${R}    matugen template\n"
 $did_toml      && printf "    ${GREEN}ok${R}      matugen toml\n"     || printf "    ${DIM}skip${R}    matugen toml\n"
 $did_autostart && printf "    ${GREEN}ok${R}      autostart\n"        || printf "    ${DIM}skip${R}    autostart\n"
+$did_keybind   && printf "    ${GREEN}ok${R}      menu keybind\n"     || printf "    ${DIM}skip${R}    menu keybind\n"
 $did_update    && printf "    ${GREEN}ok${R}      update-check timer\n" || printf "    ${DIM}skip${R}    update-check timer\n"
 $did_cli       && printf "    ${GREEN}ok${R}      silere maintenance command\n" || printf "    ${DIM}skip${R}    silere maintenance command\n"
 # a missing runtime and an unwired autostart are independent, so report them
@@ -1446,8 +1531,13 @@ fi
 if [ -f "$ROOT/scripts/check.sh" ]; then
     printf "  if a surface does not appear: ${DIM}bash %s/scripts/check.sh${R}\n" "$ROOT"
 fi
-printf "  click the active workspace diamond to open the menu and settings\n"
-printf "  or bind it: ${DIM}qs ipc -p %s/shell.qml call menu toggle${R}\n" "$ROOT"
+if $did_keybind; then
+    printf "  press ${DIM}%s + %s${R} or click the active workspace diamond to open the menu\n" \
+        "$MENU_BIND_MODS" "$MENU_BIND_KEY"
+else
+    printf "  click the active workspace diamond to open the menu and settings\n"
+    printf "  or bind it: ${DIM}%s${R}\n" "$MENU_BIND_SHOWN"
+fi
 # a packaged install ships no uninstall.sh: pointing at it there sends the user
 # to a path that does not exist and would fight their package manager if it did
 if [ -f "$ROOT/scripts/uninstall.sh" ]; then

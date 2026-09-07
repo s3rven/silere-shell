@@ -18,6 +18,8 @@ settings file carries its own `__version` and migrates separately.
 - Screen-reader names for the Wi-Fi password field and the missed-notification badge.
 - Do Not Disturb, night light, power mode, Wi-Fi, Bluetooth and airplane mode each toggle
   over IPC, for a keybind that changes one without opening a panel.
+- The installer offers a key that opens the menu, and leaves a combination the Hyprland
+  config already uses alone.
 
 ### Changed
 

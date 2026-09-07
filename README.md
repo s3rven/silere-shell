@@ -34,8 +34,9 @@ bash scripts/install.sh
 Restart your compositor, or start it right away with `silere run`. Before the optional
 maintenance-command link exists, use `scripts/silere run` from the checkout.
 
-Then **click the active workspace diamond**. That is the way into the menu and every
-setting, so bind a key to it early:
+The installer offers to bind **Super + /** to the menu. Take it — the menu holds every
+setting, and the other way in is clicking the active workspace diamond. On niri, or a
+Hyprland config in Lua, it prints the line to add yourself:
 
 ```bash
 qs ipc -p ~/.config/silere-shell/shell.qml call menu toggle
