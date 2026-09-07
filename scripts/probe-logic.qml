@@ -13,6 +13,7 @@ import "modules/menu/controls"
 import "modules/menu/settings"
 import "modules/notifications"
 import "services/SettingsMigrations.js" as SettingsMigrations
+import "services/NiriEvents.js" as NiriEvents
 
 // Small behavioral assertions for pure logic that a type-check or construction
 // probe cannot validate. Keep this free of compositor and hardware dependencies.
@@ -2067,6 +2068,61 @@ ShellRoot {
                 && PowerProfiles.nextProfile("balanced", []) === "",
             "a power mode outside the offered cycle names no successor")
 
+        // _onLine is replayed above; these reach the transforms behind it directly, where
+        // the rebuild-don't-mutate contract and the empty cases are visible
+        const wsRows = [
+            { id: 1, output: "DP-1", is_active: true,  is_focused: true },
+            { id: 2, output: "DP-1", is_active: false, is_focused: false },
+            { id: 3, output: "HDMI-A-1", is_active: true, is_focused: false }
+        ]
+        const wsActivated = NiriEvents.workspacesWithActivated(wsRows, 2, true)
+        root._check(wsActivated.output === "DP-1"
+                && !wsActivated.workspaces[0].is_active
+                && wsActivated.workspaces[1].is_active
+                && wsActivated.workspaces[2].is_active,
+            "activating a niri workspace deactivates only its own output")
+        root._check(!wsActivated.workspaces[0].is_focused
+                && wsActivated.workspaces[1].is_focused
+                && !wsActivated.workspaces[2].is_focused,
+            "a focused niri workspace activation moves focus across every output")
+        root._check(wsRows[0].is_active === true && wsRows[1].is_active === false,
+            "a niri workspace transform leaves the list it was given untouched")
+        root._check(NiriEvents.workspacesWithActivated(wsRows, 99, false).output === "",
+            "activating a niri workspace that is gone names no output")
+
+        const wsUrgent = NiriEvents.workspacesWithUrgency(wsRows, 2, true)
+        root._check(wsUrgent[1].is_urgent === true && wsUrgent[0].is_urgent === undefined
+                && wsRows[1].is_urgent === undefined,
+            "niri urgency marks one workspace without rewriting the others")
+
+        const winRows = [
+            { id: 10, title: "one", is_focused: true },
+            { id: 11, title: "two", is_focused: false }
+        ]
+        const winOpened = NiriEvents.windowsWithUpsert(winRows, { id: 12, title: "new", is_focused: true })
+        root._check(winOpened.length === 3 && winOpened[2].id === 12
+                && !winOpened[0].is_focused && !winOpened[1].is_focused,
+            "a focused niri window arriving unfocuses every window already open")
+        const winReplaced = NiriEvents.windowsWithUpsert(winRows, { id: 11, title: "again", is_focused: false })
+        root._check(winReplaced.length === 2 && winReplaced[1].title === "again"
+                && winReplaced[0].is_focused === true,
+            "a niri window that is already open is replaced in place, focus untouched")
+
+        root._check(NiriEvents.windowsWithout(winRows, 10).length === 1
+                && NiriEvents.windowsWithout(winRows, 10)[0].id === 11
+                && winRows.length === 2,
+            "closing a niri window drops only that row")
+        const winFocused = NiriEvents.windowsWithFocus(winRows, 11)
+        root._check(!winFocused[0].is_focused && winFocused[1].is_focused,
+            "a niri focus change leaves exactly one window focused")
+        const winStamped = NiriEvents.windowsWithFocusStamp(winRows, 11, { secs: 7, nanos: 3 })
+        root._check(winStamped[1].focus_timestamp.secs === 7
+                && winStamped[0].focus_timestamp === undefined,
+            "a niri focus timestamp lands on the window it names")
+        root._check(NiriEvents.indexOfWindow(winRows, 11) === 1
+                && NiriEvents.indexOfWindow(winRows, 99) === -1
+                && NiriEvents.indexOfWindow([null, { id: 5 }], 5) === 1,
+            "a niri window lookup skips holes and reports a miss")
 
         // qt reads the 12-hour clock off the whole format string: an hour formatted on its
         // own still comes back 0-23 and lands beside a PM that contradicts it

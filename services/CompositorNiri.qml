@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "NiriEvents.js" as NiriEvents
 
 QtObject {
     id: root
@@ -290,6 +291,36 @@ QtObject {
         }
     }
 
+    function _boundedWindows(incoming): var {
+        const wins = []
+        if (!Array.isArray(incoming)) return wins
+        for (let i = 0; i < incoming.length; i++) {
+            const bounded = root._boundedWindow(incoming[i])
+            if (bounded) wins.push(bounded)
+        }
+        return wins
+    }
+
+    function _armTitleSync(focused: bool): void {
+        if (!root._liveTitlesWanted || Idle.isIdle) return
+        const timer = focused ? _titleSync : _backgroundTitleSync
+        if (!timer.running) timer.start()
+    }
+
+    // a title-only change edits the row in place: rebuilding the list for every keystroke
+    // in a browser address bar wakes every consumer of the window model
+    function _applyWindowOpenedOrChanged(w): void {
+        const current = root._winRaw
+        const at = NiriEvents.indexOfWindow(current, w.id)
+        if (at >= 0 && !root._windowChanged(current[at], w)) {
+            const titleChanged = current[at].title !== w.title
+            current[at].title = w.title
+            if (titleChanged) root._armTitleSync(w.is_focused)
+            return
+        }
+        root._winRaw = NiriEvents.windowsWithUpsert(current, w)
+    }
+
     function _onLine(line): void {
         const text = String(line || "").trim()
         if (text.length === 0 || text.charAt(0) !== "{") return
@@ -302,91 +333,37 @@ QtObject {
             return
         }
         if (ev.WorkspaceActivated) {
-            const id = ev.WorkspaceActivated.id
-            const focused = !!ev.WorkspaceActivated.focused
-            const src = root._wsRaw
-            let output = ""
-            for (let i = 0; i < src.length; i++)
-                if (src[i] && src[i].id === id) { output = src[i].output ?? ""; break }
-            const ws = []
-            for (let i = 0; i < src.length; i++) {
-                const w = src[i]
-                if (!w) { ws.push(w); continue }
-                const patch = {}
-                if (w.output === output) patch.is_active = w.id === id
-                if (focused) patch.is_focused = w.id === id
-                ws.push(Object.keys(patch).length ? Object.assign({}, w, patch) : w)
-            }
-            root._wsRaw = ws
-            root.workspaceActivated(output)
+            const next = NiriEvents.workspacesWithActivated(root._wsRaw,
+                ev.WorkspaceActivated.id, !!ev.WorkspaceActivated.focused)
+            root._wsRaw = next.workspaces
+            root.workspaceActivated(next.output)
             return
         }
         if (ev.WorkspaceUrgencyChanged) {
             const d = ev.WorkspaceUrgencyChanged
-            const ws = root._wsRaw.slice()
-            for (let i = 0; i < ws.length; i++)
-                if (ws[i] && ws[i].id === d.id)
-                    ws[i] = Object.assign({}, ws[i], { is_urgent: !!d.urgent })
-            root._wsRaw = ws
+            root._wsRaw = NiriEvents.workspacesWithUrgency(root._wsRaw, d.id, !!d.urgent)
             return
         }
         if (ev.WindowsChanged) {
-            const incoming = Array.isArray(ev.WindowsChanged.windows)
-                ? ev.WindowsChanged.windows : []
-            const wins = []
-            for (let i = 0; i < incoming.length; i++) {
-                const bounded = root._boundedWindow(incoming[i])
-                if (bounded) wins.push(bounded)
-            }
-            root._winRaw = wins
+            root._winRaw = root._boundedWindows(ev.WindowsChanged.windows)
             return
         }
         if (ev.WindowOpenedOrChanged) {
             const w = root._boundedWindow(ev.WindowOpenedOrChanged.window)
-            if (!w) return
-            const current = root._winRaw
-            let foundAt = -1
-            for (let i = 0; i < current.length; i++)
-                if (current[i] && current[i].id === w.id) { foundAt = i; break }
-            if (foundAt >= 0 && !root._windowChanged(current[foundAt], w)) {
-                const titleChanged = current[foundAt].title !== w.title
-                current[foundAt].title = w.title
-                if (titleChanged && root._liveTitlesWanted && !Idle.isIdle) {
-                    const timer = w.is_focused ? _titleSync : _backgroundTitleSync
-                    if (!timer.running) timer.start()
-                }
-                return
-            }
-
-            const wins = current.slice()
-            for (let i = 0; i < wins.length; i++) {
-                if (wins[i] && wins[i].id === w.id) wins[i] = w
-                else if (wins[i] && w.is_focused) wins[i] = Object.assign({}, wins[i], { is_focused: false })
-            }
-            if (foundAt < 0) wins.push(w)
-            root._winRaw = wins
+            if (w) root._applyWindowOpenedOrChanged(w)
             return
         }
         if (ev.WindowClosed) {
-            const id = ev.WindowClosed.id
-            root._winRaw = root._winRaw.filter(w => w && w.id !== id)
+            root._winRaw = NiriEvents.windowsWithout(root._winRaw, ev.WindowClosed.id)
             return
         }
         if (ev.WindowFocusChanged) {
-            const id = ev.WindowFocusChanged.id
-            const wins = root._winRaw.slice()
-            for (let i = 0; i < wins.length; i++)
-                if (wins[i]) wins[i] = Object.assign({}, wins[i], { is_focused: wins[i].id === id })
-            root._winRaw = wins
+            root._winRaw = NiriEvents.windowsWithFocus(root._winRaw, ev.WindowFocusChanged.id)
             return
         }
         if (ev.WindowFocusTimestampChanged) {
             const d = ev.WindowFocusTimestampChanged
-            const wins = root._winRaw.slice()
-            for (let i = 0; i < wins.length; i++)
-                if (wins[i] && wins[i].id === d.id)
-                    wins[i] = Object.assign({}, wins[i], { focus_timestamp: d.focus_timestamp })
-            root._winRaw = wins
+            root._winRaw = NiriEvents.windowsWithFocusStamp(root._winRaw, d.id, d.focus_timestamp)
             return
         }
         if (ev.OverviewOpenedOrClosed) {
