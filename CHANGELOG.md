@@ -16,6 +16,8 @@ settings file carries its own `__version` and migrates separately.
 - Search notification history by app, title or message; Clear removes only the visible results.
 - Calendar week start and week-number visibility under Clock settings.
 - Screen-reader names for the Wi-Fi password field and the missed-notification badge.
+- Do Not Disturb, night light, power mode, Wi-Fi, Bluetooth and airplane mode each toggle
+  over IPC, for a keybind that changes one without opening a panel.
 
 ### Changed
 

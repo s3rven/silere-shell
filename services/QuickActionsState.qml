@@ -26,6 +26,50 @@ AnchoredPopupState {
             root.openUnanchored()
         }
         function close(): void { root.close() }
+
+        function dnd(): string {
+            Notifications.toggleDnd()
+            return Notifications.dnd ? "on" : "off"
+        }
+
+        function nightLight(): string {
+            // the optional-tool scan runs at startup; before it lands no tool looks installed
+            if (!SystemTools.ready) return "still looking for a night light tool"
+            if (!NightLight.toolAvailable)
+                return "night light needs hyprsunset or wlsunset"
+            NightLight.toggle()
+            return NightLight.enabled ? "on" : "off"
+        }
+
+        // the daemon answers over DBus, so the profile that landed is not readable yet
+        function powerMode(): string {
+            if (!PowerProfiles.available)
+                return "power profiles need power-profiles-daemon"
+            const next = PowerProfiles.cycle()
+            return next.length > 0 ? next : "a power profile change is already in flight"
+        }
+
+        function wifi(): string {
+            if (!root.wifiControllable)
+                return Network.wifiHardBlocked
+                    ? "the Wi-Fi radio is blocked in hardware"
+                    : "no Wi-Fi device the shell can control"
+            Network.toggleWifi()
+            return Network.wifiEnabled ? "on" : "off"
+        }
+
+        function bluetooth(): string {
+            if (!root.btControllable) return "no Bluetooth adapter"
+            Bluetooth.toggle()
+            return Bluetooth.enabled ? "on" : "off"
+        }
+
+        function airplane(): string {
+            if (!root.airplaneAvailable)
+                return "no Wi-Fi or Bluetooth radio the shell can control"
+            root.toggleAirplane()
+            return root.radiosOn ? "off" : "on"
+        }
     }
 
     // a hard-blocked radio refuses every write, so a row offering it would re-issue two doomed requests per tap and never change

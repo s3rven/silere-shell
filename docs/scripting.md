@@ -26,6 +26,28 @@ that dismisses without opening anything.
 `screenshot flash` opens nothing: it lets a screenshot tool trigger the underline effect
 directly, without the optional filesystem watcher.
 
+## Actions
+
+Everything on the quick actions panel also answers on its own, so a keybind can flip one
+without a panel appearing.
+
+| call | does |
+|---|---|
+| `quickActions dnd` | turns Do Not Disturb on or off |
+| `quickActions nightLight` | turns night light on or off |
+| `quickActions powerMode` | steps to the next power profile |
+| `quickActions wifi` | turns Wi-Fi on or off |
+| `quickActions bluetooth` | turns Bluetooth on or off |
+| `quickActions airplane` | drops both radios, then restores the ones that were on |
+
+Each prints the state it left behind, or says why it could not act — a machine with no
+Bluetooth adapter, a Wi-Fi radio blocked in hardware, or a missing night light tool.
+`powerMode` prints the profile it asked for, since the daemon answers afterwards.
+
+```bash
+qs ipc -p "$SILERE_DIR/shell.qml" call quickActions dnd
+```
+
 ## Settings
 
 `settings` reads and writes any setting the Settings pages expose.

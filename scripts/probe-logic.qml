@@ -2058,6 +2058,15 @@ ShellRoot {
                 && PowerProfiles.glyphFor("performance")
                     !== PowerProfiles.glyphFor("balanced"),
             "every power profile names and marks itself the same way in list and row")
+        const fullOrder = PowerProfiles.cycleOrder(true, true)
+        root._check(PowerProfiles.nextProfile("balanced", fullOrder) === "performance"
+                && PowerProfiles.nextProfile("power-saver", fullOrder) === "balanced",
+            "cycling a power mode names the profile it moves to, wrapping at the end")
+        root._check(PowerProfiles.nextProfile("performance",
+                    PowerProfiles.cycleOrder(true, false)) === ""
+                && PowerProfiles.nextProfile("balanced", []) === "",
+            "a power mode outside the offered cycle names no successor")
+
 
         // qt reads the 12-hour clock off the whole format string: an hour formatted on its
         // own still comes back 0-23 and lands beside a PM that contradicts it

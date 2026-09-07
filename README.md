@@ -108,13 +108,14 @@ To start over, use **Settings › System › Maintenance**, or replace the file 
 
 ## Scripting
 
-Every surface is scriptable over Quickshell IPC, and Silere can run an executable of your
-own on events like `battery-critical` or `workspace-changed`.
+Every surface and every quick action is scriptable over Quickshell IPC, and Silere can run
+an executable of your own on events like `battery-critical` or `workspace-changed`.
 
 ```bash
 SILERE_DIR="$HOME/.config/silere-shell"
 qs ipc -p "$SILERE_DIR/shell.qml" call menu toggle
 qs ipc -p "$SILERE_DIR/shell.qml" call calendar toggle
+qs ipc -p "$SILERE_DIR/shell.qml" call quickActions dnd
 qs ipc -p "$SILERE_DIR/shell.qml" call settings set osdTimeout 3000
 ```
 

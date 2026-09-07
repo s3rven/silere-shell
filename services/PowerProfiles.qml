@@ -82,12 +82,19 @@ Singleton {
         _set.exec(["powerprofilesctl", "set", want])
     }
 
-    function cycle(): void {
-        if (!root.available || root.profile.length === 0 || _set.running) return
-        const order = root._cycleOrder
-        const at = order.indexOf(root.profile)
-        if (order.length < 2 || at < 0) return
-        root.setProfile(order[(at + 1) % order.length])
+    function nextProfile(current: string, order: var): string {
+        const at = order.indexOf(current)
+        if (order.length < 2 || at < 0) return ""
+        return order[(at + 1) % order.length]
+    }
+
+    // the daemon answers over dbus, so the caller is told what was asked for
+    function cycle(): string {
+        if (!root.available || root.profile.length === 0 || _set.running) return ""
+        const next = root.nextProfile(root.profile, root._cycleOrder)
+        if (next.length === 0) return ""
+        root.setProfile(next)
+        return next
     }
 
     onAvailableChanged: if (!root.available) {
