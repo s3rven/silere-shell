@@ -15,6 +15,18 @@ PageShell {
     implicitHeight: viewportHeight
     onPageShown: root._touchNow()
 
+    readonly property string filter: MenuState.recentFilter
+    readonly property int rowCount: _filtered.count
+
+    // a reassigned list model resets the view, so the rail filters through a mirror that
+    // is reconciled row by row and leaves an untouched row's delegate alone
+    FilteredHistory {
+        id: _filtered
+        source: Notifications.historyModel
+        revision: Notifications.historyRevision
+        filter: root.filter
+    }
+
     property bool _clearing: false
     property int _timeTick: 0
     property real _nowMs: 0
@@ -85,9 +97,9 @@ PageShell {
 
 
     function clearAll(): void {
-        if (_clearing || Notifications.historyCount === 0) return
+        if (_clearing || root.rowCount === 0) return
         if (ShellSettings.reduceMotion) {
-            Notifications.clearHistory()
+            Notifications.clearHistoryFor(root.filter)
             return
         }
         _clearing = true
@@ -105,7 +117,7 @@ PageShell {
         }
         ScriptAction {
             script: {
-                Notifications.clearHistory()
+                Notifications.clearHistoryFor(root.filter)
                 _historyList.opacity = 1
                 root._clearing = false
             }
@@ -129,7 +141,7 @@ PageShell {
                 width: Math.max(1, Math.min(implicitWidth,
                     (_clearButton.visible ? _clearButton.x - 10 : _header.width)
                     - (_countChip.visible ? _countChip.width + 9 : 0)))
-                text: "Notifications"
+                text: root.filter.length > 0 ? root.filter : "Notifications"
                 color: Theme.text
                 font.pixelSize: Settings.fontSize + 4
                 font.weight: Font.DemiBold
@@ -141,7 +153,7 @@ PageShell {
                 anchors.left: _headerTitle.right
                 anchors.leftMargin: 9
                 anchors.verticalCenter: _headerTitle.verticalCenter
-                visible: Notifications.hasHistory
+                visible: root.rowCount > 0
                 width:  Math.max(18, _countTxt.implicitWidth + 12)
                 height: 18
                 radius: 9
@@ -151,7 +163,7 @@ PageShell {
                 ShellText {
                     id: _countTxt
                     anchors.centerIn: parent
-                    text: String(Notifications.historyCount)
+                    text: String(root.rowCount)
                     color: Theme.withAlpha(Theme.text, 0.62)
                     font.pixelSize: Settings.fontMicro
                     font.weight: Font.DemiBold
@@ -162,7 +174,7 @@ PageShell {
                 id: _clearButton
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                visible: Notifications.hasHistory
+                visible: root.rowCount > 0
                 glyph: "󰆴"
                 label: "Clear"
                 busy:  root._clearing
@@ -176,7 +188,7 @@ PageShell {
             anchors.topMargin: 8
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 10
-            visible: !Notifications.hasHistory
+            visible: root.rowCount === 0
 
             Column {
                 anchors.centerIn: parent
@@ -232,10 +244,10 @@ PageShell {
             width: parent.width
             // runs of one app close up and days pull apart, so every gap is carried by the delegate
             spacing: 0
-            visible: Notifications.hasHistory
+            visible: root.rowCount > 0
             cacheBuffer: 240
             reuseItems: true
-            model: Notifications.historyModel
+            model: _filtered.model
 
             // clearAll runs its own fade over the whole list, so per-row motion there
             // would animate every delegate at once behind an already-invisible list
@@ -267,7 +279,7 @@ PageShell {
                     required property int index
 
                     readonly property var _prev: index > 0
-                        ? Notifications.historyModel.get(index - 1) : null
+                        ? _filtered.model.get(index - 1) : null
                     readonly property bool _critical: Number(modelData.urgency) === 2
                     readonly property bool _showSection: !_prev
                         || root.dayKey(modelData.time) !== root.dayKey(_prev.time)
@@ -593,7 +605,7 @@ PageShell {
 
         ListEdgeLines {
             anchors.fill: _historyList
-            visible: Notifications.hasHistory
+            visible: root.rowCount > 0
             opacity: _historyList.opacity
             z: 2
             list: _historyList
@@ -605,7 +617,7 @@ PageShell {
             fadeMultiplier: _historyList.opacity
             trackInset: 4
             rightInset: 2
-            shown: Notifications.hasHistory
+            shown: root.rowCount > 0
             z: 3
         }
     }

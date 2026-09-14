@@ -11,10 +11,17 @@ settings file carries its own `__version` and migrates separately.
 
 ## [Unreleased]
 
+### Added
+
+- The notifications page carries a rail of the apps that have sent one; picking an app
+  narrows the page to it, and Clear then takes only that app's history.
+
 ### Changed
 
 - Workspace taps, window drops, special-workspace entries and OSD nudges settle on one
   timing instead of five.
+- The notifications page is taller and wider, and reads at one width whether or not the
+  app rail is showing.
 
 ## Releases
 

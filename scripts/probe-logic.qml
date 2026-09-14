@@ -112,6 +112,20 @@ ShellRoot {
         console.warn("PROBE-FAIL " + label)
     }
 
+    // the app rail derives its Repeater model this way; Qt never diffs a JS-array model,
+    // so the rail's cost is set by how often this list's contents change
+    function _railNames(): var {
+        const out = [""]
+        const apps = Notifications.historyApps
+        for (let i = 0; i < apps.length; i++) out.push(apps[i].appName)
+        return out
+    }
+    function _sameStrings(a, b): bool {
+        if (a.length !== b.length) return false
+        for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false
+        return true
+    }
+
     // setValue is the same coercion the settings file goes through on load
     function _checkCoerce(key: string, value, expected, label: string): void {
         const before = ShellSettings[key]
@@ -889,6 +903,131 @@ ShellRoot {
             "history stops growing at the configured limit")
         root._check(Notifications.historyModel.get(0).summary === "s11",
             "the newest history entry is first")
+        // at capacity an insert and a trim cancel out in the count, so anything deriving
+        // rows from history has to watch the revision or it freezes on a full list
+        const revAtCap = Notifications.historyRevision
+        const countAtCap = Notifications.historyCount
+        Notifications._prependHistory({ id: 99, appName: "probe", summary: "s99", time: 1 })
+        root._check(Notifications.historyCount === countAtCap
+                && Notifications.historyRevision !== revAtCap,
+            "a full history reports a revision even when its count cannot move")
+        Notifications.clearHistory()
+        Notifications._prependHistory({ id: 201, appName: "Alpha", summary: "a1", time: 1 })
+        Notifications._prependHistory({ id: 202, appName: "Beta",  summary: "b1", time: 1 })
+        Notifications._prependHistory({ id: 203, appName: "Alpha", summary: "a2", time: 1 })
+        const apps = Notifications.historyApps
+        root._check(apps.length === 2 && apps[0].appName === "Alpha"
+                && apps[0].count === 2 && apps[1].count === 1,
+            "the history app list counts each sender and leads with the most recent")
+        Notifications.clearHistoryFor("Alpha")
+        root._check(Notifications.historyCount === 1
+                && Notifications.historyModel.get(0).appName === "Beta",
+            "clearing one sender leaves the rest of the history alone")
+
+        // a count carried in the rail's array would rebuild every row on each arrival and
+        // re-resolve its icon, so only the identities may live in the model
+        Notifications.clearHistory()
+        Notifications._prependHistory({ id: 211, appName: "Alpha", summary: "a1", time: 1 })
+        Notifications._prependHistory({ id: 212, appName: "Beta",  summary: "b1", time: 2 })
+        const railBefore = root._railNames()
+        // stays under the capacity this block configured, or a trim would drop the oldest
+        // sender and change the row list for a reason that has nothing to do with counts
+        for (let i = 0; i < 2; i++)
+            Notifications._prependHistory({
+                id: 220 + i, appName: "Beta", summary: "b" + i, time: 10 + i
+            })
+        root._check(root._sameStrings(railBefore, root._railNames())
+                && Notifications.historyApps[0].count === 3,
+            "repeat arrivals from the leading app move its count, not the rail's row list")
+        Notifications._prependHistory({ id: 230, appName: "Gamma", summary: "g", time: 20 })
+        root._check(!root._sameStrings(railBefore, root._railNames())
+                && root._railNames().length === 4,
+            "a sender the rail has never shown does change its row list")
+
+        // the guard that matters: the rail's model must hold bare identities. A file-url
+        // component reaches its own empty Notifications copy, so the contents are not the
+        // point here — the element type is
+        const navComponent = Qt.createComponent("file://"
+            + Quickshell.shellDir + "/modules/menu/RecentNav.qml")
+        const nav = navComponent.status === Component.Ready
+            ? navComponent.createObject(root) : null
+        root._check(nav !== null, "the app rail is available to the behavior probe")
+        if (nav !== null) {
+            const model = nav._names
+            let allStrings = model.length > 0
+            for (let i = 0; i < model.length; i++)
+                if (typeof model[i] !== "string") allStrings = false
+            root._check(allStrings,
+                "the app rail's model carries identities, not rows that bake in a count")
+            nav.destroy()
+        }
+
+        // the notifications page draws from a mirror of history, and a reassigned list
+        // model resets the view: an arrival the filter excludes must not touch a row
+        Notifications.clearHistory()
+        const filteredComponent = Qt.createComponent("file://"
+            + Quickshell.shellDir + "/modules/menu/FilteredHistory.qml")
+        const filtered = filteredComponent.status === Component.Ready
+            ? filteredComponent.createObject(root) : null
+        root._check(filtered !== null,
+            "the notifications page mirror is available to the behavior probe")
+        if (filtered !== null) {
+            // a file-url component resolves its own imports, so the singleton it would
+            // reach is a second copy: hand it the model the probe is driving
+            filtered.source = Notifications.historyModel
+            Notifications._prependHistory({ id: 301, appName: "Alpha", summary: "a1", time: 10 })
+            Notifications._prependHistory({ id: 302, appName: "Beta",  summary: "b1", time: 11 })
+            filtered.revision = Notifications.historyRevision
+            root._check(filtered.count === 2, "an empty filter mirrors the whole history")
+
+            filtered.filter = "Alpha"
+            root._check(filtered.count === 1
+                    && filtered.model.get(0).summary === "a1",
+                "a filter mirrors only the rows its app sent")
+
+            let edits = filtered.inserts + filtered.removes
+            Notifications._prependHistory({ id: 303, appName: "Beta", summary: "b2", time: 12 })
+            filtered.revision = Notifications.historyRevision
+            root._check(filtered.count === 1
+                    && filtered.inserts + filtered.removes === edits,
+                "an arrival another app sent leaves every filtered row in place")
+
+            edits = filtered.inserts + filtered.removes
+            Notifications._prependHistory({ id: 304, appName: "Alpha", summary: "a2", time: 13 })
+            filtered.revision = Notifications.historyRevision
+            root._check(filtered.count === 2
+                    && filtered.model.get(0).summary === "a2"
+                    && filtered.inserts + filtered.removes === edits + 1,
+                "an arrival the filter keeps costs one row, not a rebuilt list")
+
+            edits = filtered.inserts + filtered.removes
+            filtered.sync()
+            root._check(filtered.inserts + filtered.removes === edits,
+                "re-syncing an unchanged history edits nothing")
+
+            filtered.filter = ""
+            root._check(filtered.count === 4, "clearing the filter mirrors every row again")
+
+            // at capacity an arrival inserts and trims in one revision, so the mirror has
+            // to move both ends and still leave the rows between them alone
+            const cap = Notifications._historyCapacity
+            Notifications.clearHistory()
+            for (let i = 0; i < cap; i++)
+                Notifications._prependHistory({
+                    id: 600 + i, appName: "Cap", summary: "c" + i, time: 100 + i
+                })
+            filtered.revision = Notifications.historyRevision
+            const full = filtered.count
+            edits = filtered.inserts + filtered.removes
+            Notifications._prependHistory({ id: 700, appName: "Cap", summary: "newest", time: 999 })
+            filtered.revision = Notifications.historyRevision
+            root._check(filtered.count === full
+                    && filtered.model.get(0).summary === "newest"
+                    && filtered.inserts + filtered.removes === edits + 2,
+                "a full history moves only the row that arrived and the row that fell off")
+            filtered.destroy()
+        }
+
         Notifications.clearHistory()
         Notifications._prependHistory({
             id: 71, appName: "Probe", summary: "Earlier session", time: 1

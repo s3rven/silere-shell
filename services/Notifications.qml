@@ -40,6 +40,32 @@ Singleton {
     readonly property alias historyModel: _history
     readonly property int historyCount: _history.count
     readonly property bool hasHistory: _history.count > 0
+    // at capacity a new notification inserts and trims in one go, so count alone holds
+    // still while the contents move. Anything deriving rows from history must watch this
+    property int historyRevision: 0
+
+    // history is newest-first, so first-seen order is recency order: the app that spoke
+    // last leads the rail. Rebuilt on revision, not count, for the reason above
+    readonly property var historyApps: {
+        root.historyRevision
+        const order = []
+        const byName = Object.create(null)
+        for (let i = 0; i < _history.count; i++) {
+            const e = _history.get(i)
+            if (!e) continue
+            const name = root.identityText(e.appName).trim()
+            const key = name.length > 0 ? name : "Unknown"
+            let row = byName[key]
+            if (!row) {
+                row = { appName: key, count: 0,
+                        appIcon: e.appIcon ?? "", desktopEntry: e.desktopEntry ?? "" }
+                byName[key] = row
+                order.push(row)
+            }
+            row.count++
+        }
+        return order
+    }
 
 
     function identityText(value): string {
@@ -71,11 +97,14 @@ Singleton {
 
     function _trimHistory(): void {
         const dropped = []
+        let removed = 0
         while (_history.count > root._historyCapacity) {
             const id = _history.get(_history.count - 1).id
             if (id !== undefined) dropped.push(String(id))
             _history.remove(_history.count - 1)
+            removed++
         }
+        if (removed > 0) root.historyRevision++
         root._forgetTrimmed(dropped)
     }
 
@@ -129,6 +158,7 @@ Singleton {
         const e = root._normalizeEntry(entry)
         if (!e) return
         _history.insert(0, e)
+        root.historyRevision++
         root._trimHistory()
     }
 
@@ -208,6 +238,7 @@ Singleton {
                 }
             }
         }
+        root.historyRevision++
         root._seen = root._normalizeSeenMap(savedSeen)
         root._times = root._normalizeTimesMap(savedTimes)
         root._ensurePersistentState()
@@ -230,6 +261,7 @@ Singleton {
             // privacy-first: turning persistence off removes text restored from an earlier session. New entries still form an in-memory history
             if (!ShellSettings.notifHistoryPersistent) {
                 _history.clear()
+                root.historyRevision++
                 root._pruneOrphanState()
             }
             root._saveHistory()
@@ -352,6 +384,28 @@ Singleton {
     }
     function isSeen(id: int):   bool { root._ensurePersistentState(); return !!_seen[id] }
 
+    // the history page can be filtered to one app, where a Clear that took the rest with
+    // it would be a trap. Empty name means the whole list
+    function clearHistoryFor(appName: string): void {
+        const want = root.identityText(appName).trim()
+        if (want.length === 0) { root.clearHistory(); return }
+        root._ensurePersistentState()
+        const ids = []
+        let removed = 0
+        for (let i = _history.count - 1; i >= 0; i--) {
+            const e = _history.get(i)
+            const name = root.identityText(e.appName).trim()
+            if ((name.length > 0 ? name : "Unknown") !== want) continue
+            if (e.id !== undefined) ids.push(String(e.id))
+            _history.remove(i)
+            removed++
+        }
+        if (removed === 0) return
+        root.historyRevision++
+        root._forgetTrimmed(ids)
+        root._saveHistory()
+    }
+
     function clearHistory(): void {
         root._ensurePersistentState()
         if (_history.count === 0) return
@@ -361,6 +415,7 @@ Singleton {
             if (id !== undefined) ids.push(String(id))
         }
         _history.clear()
+        root.historyRevision++
         // one map copy per state kind, not one set of copies per history row
         root._forgetTrimmed(ids)
         root._saveHistory()
@@ -395,6 +450,7 @@ Singleton {
             const previous = _history.get(i)
             if (previous.id === id && previous.sessionCurrent === true) {
                 _history.remove(i)
+                root.historyRevision++
                 replaced = true
             }
         }
@@ -529,6 +585,7 @@ Singleton {
         if (idx < 0 || idx >= _history.count) return
         const id = _history.get(idx).id
         _history.remove(idx)
+        root.historyRevision++
         root._saveHistory()
         // a reused id must not let an old row erase a live card's read/time state
         if (id !== undefined) root._forgetTrimmed([String(id)])

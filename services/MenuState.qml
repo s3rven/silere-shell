@@ -22,6 +22,12 @@ AnchoredPopupState {
     readonly property bool homeActive: open && activeTab === homeTab
     readonly property bool settingsActive: open && activeTab === settingsTab
 
+    // empty means every app; the rail owns the value, the page only reads it
+    property string recentFilter: ""
+    function setRecentFilter(name: string): void {
+        root.recentFilter = String(name ?? "")
+    }
+
     // Hovering the active workspace is a strong signal that the menu is about
     // to open. Let the shell prepare its LazyLoader between frames, while
     // keeping ownership explicit so a rebuilt or second monitor cannot cancel

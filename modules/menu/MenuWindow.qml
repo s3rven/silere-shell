@@ -98,18 +98,31 @@ PanelWindow {
         readonly property int _compactW: 400
         readonly property int _powerW: 568
         readonly property int _settingsW: 632 + _typeGain
+        // both recent widths are picked so the list reads at one width either way: the
+        // drawer adds its own 160 and the pane's padding steps 12 -> 18 alongside it.
+        // Only the drawered width carries _typeGain, because only it grows a rail to cancel
+        readonly property int _recentBaseW: 492
+        readonly property int _recentW: 664 + _typeGain
         readonly property bool _settingsNavVisible:
             activeTab === 1 && !powerOpen
-        readonly property bool _railExpanded: _settingsNavVisible || powerOpen
+        // one app cannot be filtered against anything, so the drawer stays out of its way
+        readonly property bool _recentNavVisible:
+            activeTab === 2 && !powerOpen && Notifications.historyApps.length > 1
+        readonly property bool _railExpanded:
+            _settingsNavVisible || _recentNavVisible || powerOpen
         readonly property int _targetPanelW: activeTab === 1 ? _settingsW
-            : powerOpen ? _powerW : _compactW
+            : powerOpen ? _powerW
+            : activeTab === 2 ? (_recentNavVisible ? _recentW : _recentBaseW)
+            : _compactW
+        // x is clamped once, against the widest page, so switching tabs never moves the card
+        readonly property int _widestW: Math.max(_settingsW, _recentW)
         readonly property int _availablePanelW: win.width > 0
             ? Math.max(4, Metrics.snap4Down(win.width - _minX * 2))
-            : _settingsW
+            : _widestW
         readonly property int panelW: Math.max(1,
             Math.min(_targetPanelW, _availablePanelW))
         readonly property int placementW: Math.max(1,
-            Math.min(_settingsW, _availablePanelW))
+            Math.min(_widestW, _availablePanelW))
         readonly property int railCollapsedW: 44
         readonly property int _navMinW: 112
         readonly property int _navMaxW: 160 + _typeGain
@@ -149,15 +162,29 @@ PanelWindow {
         readonly property int _availablePanelH: win.height > 0
             ? Math.max(1, Math.floor(win.height - _edgeY - _minX))
             : contentPane.targetH
+        // the rail filters the page, so the height has to follow the rows actually drawn
+        readonly property int _recentShownCount: {
+            const want = MenuState.recentFilter
+            if (want.length === 0) return Notifications.historyCount
+            const apps = Notifications.historyApps
+            for (let i = 0; i < apps.length; i++)
+                if (apps[i].appName === want) return apps[i].count
+            return 0
+        }
         // grows with what the list actually holds: a flat 360 cap scrolled hard on a tall
         // output, but sizing off the screen alone left an empty history as a tall blank box.
-        // 70 is NotificationCard's own minimum height, so this under-counts tall cards on purpose
+        // 84 is a measured card at the pane's width — the old 70 was a card's bare minimum,
+        // so a short history scrolled while the screen below it sat empty
         readonly property int recentViewportH: {
-            const floorH = panel.idealMinH - panel.pageTopInset - panel.pageBottomInset
+            // a notification centre keeps a steady size: the floor is a share of the output,
+            // not the panel's bare minimum, or a short history collapses to a sliver
+            const floorH = Math.max(
+                panel.idealMinH - panel.pageTopInset - panel.pageBottomInset,
+                Metrics.snap4(panel._availablePanelH * 0.40))
             const availH = panel._availablePanelH - panel.pageTopInset - panel.pageBottomInset
-            const wantH = Metrics.rowHeightFor(38) + 18 + Notifications.historyCount * 70
+            const wantH = Metrics.rowHeightFor(38) + 18 + panel._recentShownCount * 84
             return Math.max(1, Math.min(availH, Math.max(floorH,
-                Math.min(Metrics.snap4(panel._availablePanelH * 0.6), Metrics.snap4(wantH)))))
+                Math.min(Metrics.snap4(panel._availablePanelH * 0.82), Metrics.snap4(wantH)))))
         }
         readonly property int _resolvedPanelH: Math.max(1,
             Math.min(contentPane.targetH, _availablePanelH))
@@ -470,47 +497,39 @@ PanelWindow {
                     visible: parent.width > panel.railCollapsedW + 0.5
                 }
 
-                Item {
-                    id: _settingsRailSurface
+                RailDrawer {
+                    id: _settingsDrawer
                     x: panel.railCollapsedW
                     width: panel.navW
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
-                    property real _slide: panel._settingsNavVisible
-                        ? 0 : -Motion.pageOffset
-                    opacity: panel._settingsNavVisible ? 1 : 0
-                    visible: opacity > 0.001
-                    enabled: panel._settingsNavVisible
-                    transform: Translate { x: _settingsRailSurface._slide }
-                    MotionBehavior on opacity {
-                        NumberAnimation {
-                            duration: panel._settingsNavVisible
-                                ? Motion.ms(130) : Motion.ms(90)
-                            easing.type: Easing.BezierSpline
-                            easing.bezierCurve: panel._settingsNavVisible
-                                ? Motion.standardDecel : Motion.standardAccel
+                    shown: panel._settingsNavVisible
+                    retained: panel._settingsNavRetained
+                        || (MenuState.open && panel.activeTab === 1)
+                    slideMs: panel._railMotionMs
+                    slideCurve: panel._railMotionCurve
+                    content: Component {
+                        SettingsNav {
+                            powerOpen: panel.powerOpen
+                            onCurrentPageRetapped: contentFlick.contentY = 0
+                            onGroupToggled: panel._armOuterHeightMotion()
                         }
                     }
-                    MotionBehavior on _slide {
-                        NumberAnimation {
-                            duration: panel._railMotionMs
-                            easing.type: Easing.BezierSpline
-                            easing.bezierCurve: panel._railMotionCurve
-                        }
-                    }
+                }
 
-                    Loader {
-                        id: _settingsNavLoader
-                        anchors.fill: parent
-                        active: panel._settingsNavRetained
-                            || (MenuState.open && panel.activeTab === 1)
-                        asynchronous: !panel._settingsNavVisible
-                        sourceComponent: Component {
-                            SettingsNav {
-                                powerOpen: panel.powerOpen
-                                onCurrentPageRetapped: contentFlick.contentY = 0
-                                onGroupToggled: panel._armOuterHeightMotion()
-                            }
+                RailDrawer {
+                    x: panel.railCollapsedW
+                    width: panel.navW
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    shown: panel._recentNavVisible
+                    retained: panel._recentRetained
+                        || (MenuState.open && panel.activeTab === 2)
+                    slideMs: panel._railMotionMs
+                    slideCurve: panel._railMotionCurve
+                    content: Component {
+                        RecentNav {
+                            onFilterPicked: contentFlick.contentY = 0
                         }
                     }
                 }
@@ -714,7 +733,7 @@ PanelWindow {
                 const contentH = tabContent.y + tabContent.height
                     + panel.pageBottomInset
                 const navH = panel.activeTab === 1
-                    ? (_settingsNavLoader.item?.implicitHeight ?? 0) + 16 : 0
+                    ? (_settingsDrawer.item?.implicitHeight ?? 0) + 16 : 0
                 return 4 * Math.ceil(Math.max(panel.minRailFitH,
                     panel.idealMinH, contentH, navH) / 4)
             }
