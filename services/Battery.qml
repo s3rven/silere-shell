@@ -135,10 +135,29 @@ Singleton {
         return "discharging"
     }
 
+    // the glyph already carries the level in warning then error, so the pulse is emphasis
+    // on top of a standing signal: it announces each crossing and rests, rather than
+    // animating for the hours a low level holds on the machine least able to afford it
+    property bool _alertSettled: false
+    onLowChanged:      if (root.low) root._alertSettled = false
+    onCriticalChanged: if (root.critical) root._alertSettled = false
+
+    // nothing draws alertPulse with the pill hidden, the underline glow off and the menu shut
+    readonly property bool _alertWatched: ShellSettings.barShowBattery
+        || ShellSettings.underlineBattGlow || MenuState.homeActive
+
     PulseLoop {
         target:         root
         targetProperty: "alertPulse"
         duration:       root.pulseDuration
-        active:         root.low && !Idle.isQuiet
+        active:         root.low && root._alertWatched
+            && !root._alertSettled && !Idle.isQuiet
+    }
+
+    Timer {
+        interval: 15000
+        running: root.low && root._alertWatched && !root._alertSettled
+            && !Idle.isQuiet && !ShellSettings.reduceMotion
+        onTriggered: root._alertSettled = true
     }
 }

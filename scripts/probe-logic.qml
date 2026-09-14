@@ -810,6 +810,12 @@ ShellRoot {
         root._check(ShellSettings.modifiedSections.underline === true
                 && ShellSettings.modifiedSections.warnings === true,
             "a setting owned by two pages marks both")
+        // the underline page collapses to its master toggle when both masters are off, so a
+        // changed value behind that gate would dot a page with nothing on it to clear
+        ShellSettings.barBorderVisible = savedBorder
+        root._check(ShellSettings.modifiedSections.warnings === true
+                && ShellSettings.modifiedSections.underline === undefined,
+            "a value hidden behind a page's master toggle stops dotting that page")
         ShellSettings.underlineBattGlow = savedBattGlow
 
         const savedNight = ShellSettings.nightLightTemp
