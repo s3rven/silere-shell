@@ -11,6 +11,7 @@ Shape {
     property bool uniform: false
 
     anchors.fill: parent
+    visible: opacity > 0.001
     // without it Shape tessellates the corner arcs and a 1px ring facets visibly there — same reason OutlineBorder and PerimeterProgress set it
     preferredRendererType: Shape.CurveRenderer
 

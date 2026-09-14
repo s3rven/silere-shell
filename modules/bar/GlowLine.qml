@@ -22,6 +22,7 @@ Rectangle {
     // qt can report an integer dpr while the surface is downscaled again; 1/dpr goes sub-pixel there
     height: 1
     antialiasing: false
+    visible: opacity > 0.001
 
     gradient: Gradient {
         orientation: Gradient.Horizontal
