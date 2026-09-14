@@ -25,6 +25,7 @@ settings file carries its own `__version` and migrates separately.
 - The notifications page is taller and wider, and reads at one width whether or not the
   app rail is showing.
 - Notification popups are wider.
+- Device and option rows highlight the full row and follow the card’s corner.
 - The visualizer draws denser bars on wider tracks.
 
 ### Fixed

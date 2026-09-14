@@ -307,6 +307,9 @@ Item {
                 delegate: InlineOptionRow {
                     id: _opt
                     required property var modelData
+                    required property int index
+                    bottomRadius: _opt.index === _optRepeater.count - 1
+                        ? root.bottomRadius : 0
                     readonly property bool active: root.currentValue === modelData.value
                     readonly property string optionFont:
                         (modelData.fontFamily !== undefined && modelData.fontFamily !== null

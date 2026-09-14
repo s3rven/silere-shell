@@ -11,6 +11,9 @@ Item {
     id: root
 
     property bool open: false
+    // the card only reaches its direct children, so whoever places this list says whether
+    // its last row sits on the card's bottom corner
+    property real lastRowRadius: 0
 
     width: parent ? parent.width : 0
     implicitHeight: _col.implicitHeight
@@ -91,7 +94,9 @@ Item {
             delegate: InlineOptionRow {
                 id: _row
                 required property var modelData
+                required property int index
                 width: _list.width
+                bottomRadius: _row.index === _list.count - 1 ? root.lastRowRadius : 0
 
                 readonly property bool   _armed: root._armedAddr === modelData.address && modelData.connected
                 readonly property bool   _failed: Bluetooth.errorAddr === modelData.address

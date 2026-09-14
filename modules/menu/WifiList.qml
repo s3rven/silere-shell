@@ -10,6 +10,7 @@ Item {
     id: root
 
     property bool open: false
+    property real lastRowRadius: 0
 
     width: parent ? parent.width : 0
     implicitHeight: _col.implicitHeight
@@ -131,6 +132,7 @@ Item {
                 InlineOptionRow {
                     id: _row
                     width: parent.width
+                    bottomRadius: _entry.index === _list.count - 1 ? root.lastRowRadius : 0
                     glyph: _entry.modelData.glyph
                     label: _entry.modelData.label
                     status: _entry._armed ? "Disconnect?"

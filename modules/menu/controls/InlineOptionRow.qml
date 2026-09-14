@@ -18,6 +18,11 @@ Item {
     // asking and the other is reporting; they must not share a colour
     property bool failed: false
     property bool interactive: true
+    // same contract as MenuRow: the container says which end of the card this row is at,
+    // and the highlight takes that corner instead of inventing one of its own
+    property real topRadius: 0
+    property real bottomRadius: 0
+    property real cardInset: 1
     property string labelFontFamily: Settings.font
     property Component preview: null
     property var previewValue
@@ -73,7 +78,22 @@ Item {
 
     Rectangle {
         id: _fill
-        anchors.fill: parent
+        readonly property real _topR: Math.max(0, root.topRadius - root.cardInset)
+        readonly property real _botR: Math.max(0, root.bottomRadius - root.cardInset)
+
+        x: root.cardInset
+        y: root.topRadius > 0 ? root.cardInset : 0
+        width:  Math.max(0, root.width - root.cardInset * 2)
+        height: Math.max(0, root.height
+            - (root.topRadius > 0 ? root.cardInset : 0)
+            - (root.bottomRadius > 0 ? root.cardInset : 0))
+
+        topLeftRadius:     _topR
+        topRightRadius:    _topR
+        bottomLeftRadius:  _botR
+        bottomRightRadius: _botR
+        antialiasing: _topR > 0 || _botR > 0
+
         color: root._attentive
             ? Theme.withAlpha(root._attention,
                 root._hot ? 0.10 : root.selected ? 0.085 : 0.055)
