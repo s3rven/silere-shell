@@ -996,6 +996,29 @@ else
   ok "qmldir" "every tracked component is packaged"
 fi
 
+# qmlcachegen resolves an internal type from anywhere, so a cross-module use of one
+# type-checks clean and fails only when the surface loads, as "X is not a type"
+leaked=""
+while IFS= read -r qd; do
+  dir="$(dirname "$qd")"
+  while read -r name; do
+    [ -n "$name" ] || continue
+    while IFS= read -r user; do
+      [ -n "$user" ] || continue
+      # a path string naming the file is not a use of the type
+      grep -E "\\b$name\\b" "$user" | grep -qvE "$name\\.qml" || continue
+      leaked="$leaked $name:$user"
+    done < <(grep -rlE "\\b$name\\b" --include='*.qml' . 2>/dev/null \
+      | grep -vE "^$dir/[^/]*\\.qml$" || true)
+  done < <(awk '$1 == "internal" { print $2 }' "$qd")
+done < <(find . -path './.git' -prune -o -name qmldir -print)
+if [ -n "$leaked" ]; then
+  fail "internal types are used outside their own module, which only fails at runtime:"
+  for l in $leaked; do printf '  %s\n' "$l"; done
+else
+  ok "qmldir" "internal types stay inside their module"
+fi
+
 section "menu module boundaries"
 menu_root_public="$(awk 'NF && $1 !~ /^#/ && $1 != "internal" {print $1}' modules/menu/qmldir)"
 settings_public="$(awk 'NF && $1 !~ /^#/ && $1 != "internal" {print $1}' modules/menu/settings/qmldir)"
