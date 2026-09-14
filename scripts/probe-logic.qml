@@ -817,6 +817,8 @@ ShellRoot {
                 && ShellSettings.modifiedSections.underline === undefined,
             "a value hidden behind a page's master toggle stops dotting that page")
         ShellSettings.underlineBattGlow = savedBattGlow
+        root._check(ShellSettings.modifiedSections.warnings === undefined,
+            "clearing the shared setting clears the page that still showed it")
 
         const savedNight = ShellSettings.nightLightTemp
         ShellSettings.nightLightTemp = savedNight === 4000 ? 3500 : 4000
@@ -1832,6 +1834,11 @@ ShellRoot {
             "power mode omits performance when the native service says it is unavailable")
         root._check(PowerProfiles.cycleOrder(false, true).length === 0,
             "power mode exposes no cycle before its service is available")
+        root._check(PowerProfiles.labelFor("power-saver") === "Power Saver"
+                && PowerProfiles.labelFor("nonsense") === ""
+                && PowerProfiles.glyphFor("performance")
+                    !== PowerProfiles.glyphFor("balanced"),
+            "every power profile names and marks itself the same way in list and row")
 
         // qt reads the 12-hour clock off the whole format string: an hour formatted on its
         // own still comes back 0-23 and lands beside a PM that contradicts it

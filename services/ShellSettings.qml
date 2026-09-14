@@ -555,6 +555,25 @@ Singleton {
         return m
     }
 
+    // A page whose body collapses behind a master toggle has nothing to show while that
+    // toggle is off, so a changed value behind it would dot the nav with no way to clear
+    // it. `keys` are the masters; `always` still counts, because those rows stay visible.
+    readonly property var _sectionGates: ({
+        underline: {
+            keys:   ["barBorderVisible", "underlineGlow"],
+            always: ["barBorderVisible", "underlineGlow"]
+        }
+    })
+
+    function _dotHidden(section: string, key: string): bool {
+        const gate = root._sectionGates[section]
+        if (!gate) return false
+        if (gate.always.indexOf(key) >= 0) return false
+        for (let i = 0; i < gate.keys.length; i++)
+            if (root[gate.keys[i]]) return false
+        return true
+    }
+
     // reassigned, never mutated: the nav reads this through a binding, and a mutation
     // would leave every dot showing whatever the set held when the page was built
     function _rebuildModifiedSections(): void {
@@ -564,7 +583,10 @@ Singleton {
             const sec = root._sectionOf[key]
             if (!sec || sec === "-") continue
             const parts = sec.split(",")
-            for (let i = 0; i < parts.length; i++) secs[parts[i]] = true
+            for (let i = 0; i < parts.length; i++) {
+                if (root._dotHidden(parts[i], key)) continue
+                secs[parts[i]] = true
+            }
         }
         root._modifiedSections = secs
     }

@@ -32,6 +32,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- A settings category no longer shows a changed dot for a setting its page is hiding.
 - A paused player no longer leaves the underline lit.
 
 ## Releases
