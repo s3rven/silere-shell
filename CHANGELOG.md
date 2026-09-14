@@ -21,6 +21,7 @@ settings file carries its own `__version` and migrates separately.
 
 - Workspace taps, window drops, special-workspace entries and OSD nudges settle on one
   timing instead of five.
+- Power Mode on the Home page opens the list of available profiles.
 - The notifications page is taller and wider, and reads at one width whether or not the
   app rail is showing.
 - The visualizer draws denser bars on wider tracks.

@@ -804,6 +804,8 @@ ShellRoot {
             "restoring a setting clears its page")
 
         const savedBattGlow = ShellSettings.underlineBattGlow
+        const savedBorder = ShellSettings.barBorderVisible
+        ShellSettings.barBorderVisible = true
         ShellSettings.underlineBattGlow = !savedBattGlow
         root._check(ShellSettings.modifiedSections.underline === true
                 && ShellSettings.modifiedSections.warnings === true,
@@ -1948,6 +1950,23 @@ ShellRoot {
                 && SystemAlerts.batteryWarningLevel(true, false) === "low"
                 && SystemAlerts.batteryWarningLevel(false, false) === "",
             "a critical battery reading suppresses the duplicate low-battery alert")
+
+        // the pulse only drives a hidden pill, an off underline glow and a shut menu here
+        const battShowWas = ShellSettings.barShowBattery
+        const battGlowWas = ShellSettings.underlineBattGlow
+        const battMenuWas = MenuState.open
+        MenuState.open = false
+        ShellSettings.barShowBattery = false
+        ShellSettings.underlineBattGlow = false
+        root._check(!Battery._alertWatched,
+            "the battery alert rests when no surface draws it")
+        ShellSettings.underlineBattGlow = true
+        root._check(Battery._alertWatched,
+            "the underline glow alone keeps the battery alert watched")
+        ShellSettings.barShowBattery = battShowWas
+        ShellSettings.underlineBattGlow = battGlowWas
+        MenuState.open = battMenuWas
+
         Battery._scale100 = scaleWas
         Battery._ambiguousAttempts = attemptsWas
         Battery._pctOverride = overrideWas

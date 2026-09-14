@@ -88,6 +88,13 @@ PageShell {
             if (root._picker === "nightlight" && !NightLight.enabled) root._closePicker()
         }
     }
+    Connections {
+        target: PowerProfiles
+        enabled: root.active
+        function onAvailableChanged() {
+            if (root._picker === "power" && !PowerProfiles.available) root._closePicker()
+        }
+    }
 
     Column {
         id: _col
@@ -292,6 +299,8 @@ PageShell {
                     BluetoothList {
                         width: parent.width
                         open: root._btPickerOpen
+                        // last thing in the Connectivity card, so its last row owns the corner
+                        lastRowRadius: Theme.radiusCard
                     }
                 }
             }
@@ -383,7 +392,35 @@ PageShell {
                     ? Theme.error : Theme.accent
                 statusColor: PowerProfiles.lastError.length > 0 ? Theme.error
                     : PowerProfiles.degraded ? Theme.warning : "transparent"
-                onActivated: PowerProfiles.cycle()
+                expandable: PowerProfiles.choices.length > 1
+                expanded: root._picker === "power"
+                onActivated: root._togglePicker("power")
+                onExpandToggled: root._togglePicker("power")
+            }
+
+            InlinePicker {
+                id: _powerPicker
+                open: root._picker === "power"
+                content: Component {
+                    Column {
+                        width: parent ? parent.width : 0
+                        spacing: 0
+
+                        Repeater {
+                            model: PowerProfiles.choices
+
+                            InlineOptionRow {
+                                required property var modelData
+                                glyph: modelData.glyph
+                                label: modelData.label
+                                accessiblePrefix: "Power Mode"
+                                selected: PowerProfiles.profile === modelData.name
+                                interactive: !PowerProfiles.syncing
+                                onTriggered: PowerProfiles.setProfile(modelData.name)
+                            }
+                        }
+                    }
+                }
             }
 
             ControlRow {

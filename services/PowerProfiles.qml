@@ -48,21 +48,46 @@ Singleton {
     readonly property bool degraded: root.available && root.degradationActive(
         root.profile, UPower.PowerProfiles.degradationReason)
 
-    readonly property string label: profile === "performance" ? "Performance"
-                                  : profile === "power-saver" ? "Power Saver"
-                                  : profile === "balanced"    ? "Balanced"
-                                  : ""
-    readonly property string glyph: profile === "performance" ? "󰓅"
-                                  : profile === "power-saver" ? "󰾆" : "󰾅"
+    readonly property string label: root.labelFor(root.profile)
+    readonly property string glyph: root.glyphFor(root.profile)
+
+    function labelFor(name: string): string {
+        return name === "performance" ? "Performance"
+             : name === "power-saver" ? "Power Saver"
+             : name === "balanced"    ? "Balanced" : ""
+    }
+    function glyphFor(name: string): string {
+        return name === "performance" ? "󰓅"
+             : name === "power-saver" ? "󰾆" : "󰾅"
+    }
+
+    // least to most power, not the cycle order: a list is read top to bottom
+    readonly property var choices: {
+        if (!root.available) return []
+        const names = root.performanceAvailable
+            ? ["power-saver", "balanced", "performance"]
+            : ["power-saver", "balanced"]
+        return names.map(name => ({
+            name: name,
+            label: root.labelFor(name),
+            glyph: root.glyphFor(name)
+        }))
+    }
+
+    function setProfile(name: string): void {
+        if (!root.available || _set.running) return
+        const want = String(name)
+        if (root._cycleOrder.indexOf(want) < 0 || want === root.profile) return
+        root.lastError = ""
+        _set.exec(["powerprofilesctl", "set", want])
+    }
 
     function cycle(): void {
         if (!root.available || root.profile.length === 0 || _set.running) return
         const order = root._cycleOrder
         const at = order.indexOf(root.profile)
         if (order.length < 2 || at < 0) return
-        const next = order[(at + 1) % order.length]
-        root.lastError = ""
-        _set.exec(["powerprofilesctl", "set", next])
+        root.setProfile(order[(at + 1) % order.length])
     }
 
     onAvailableChanged: if (!root.available) {
