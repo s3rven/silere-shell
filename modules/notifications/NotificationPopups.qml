@@ -40,10 +40,10 @@ PanelWindow {
     }
 
     readonly property int _shadowPad: ShellSettings.barShadow ? 16 : 0
-    // the body wraps at 3 lines collapsed, so a card pinned at 320 elides sooner as type grows
+    // the body wraps at 3 lines collapsed, so a card pinned at one width elides sooner as type grows
     readonly property int _cardW: Math.max(180, Math.min(
-        Metrics.snap4(320 * Settings.fontSize / 12),
-        targetScreen ? targetScreen.width - 24 - _shadowPad : 320))
+        Metrics.snap4(384 * Settings.fontSize / 12),
+        targetScreen ? targetScreen.width - 24 - _shadowPad : 384))
     readonly property bool _hasBar: Metrics.barPresent(targetScreen)
     readonly property real _barSideGap: ShellSettings.barFloating && _hasBar && targetScreen
         ? 4 * Math.round(targetScreen.width * (1.0 - ShellSettings.barWidth) / 8)
