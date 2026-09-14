@@ -34,6 +34,7 @@ settings file carries its own `__version` and migrates separately.
 
 - A settings category no longer shows a changed dot for a setting its page is hiding.
 - A paused player no longer leaves the underline lit.
+- Notification history survives a restart when “Keep after restart” is on.
 
 ## Releases
 

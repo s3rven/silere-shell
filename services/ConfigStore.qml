@@ -12,6 +12,8 @@ Singleton {
         ? directory + "/settings.json" : ""
     readonly property string calendarMarksPath: directory.length > 0
         ? directory + "/calendar-marks.json" : ""
+    readonly property string notificationsPath: directory.length > 0
+        ? directory + "/notifications.json" : ""
     readonly property string quickshellStatePath: XdgPaths.stateHome.length > 0
         ? XdgPaths.stateHome + "/quickshell/states.json" : ""
 
@@ -57,7 +59,8 @@ Singleton {
     function hardenFile(path: string): void {
         // only files owned by this store may be chmodded. Keep the path as a separate argv entry so even unusual XDG paths never become syntax
         if (path.length === 0
-                || (path !== root.settingsPath && path !== root.calendarMarksPath)) return
+                || (path !== root.settingsPath && path !== root.calendarMarksPath
+                    && path !== root.notificationsPath)) return
         Quickshell.execDetached(["bash", "-c",
             "[ ! -L \"$1\" ] && chmod 0600 -- \"$1\"", "bash", path])
     }
@@ -84,9 +87,10 @@ Singleton {
             // without the exits, the trailing file check's status hides a failed mkdir
             "umask 077; mkdir -m 0700 -p -- \"$1\" || exit $?; " +
             "chmod 0700 -- \"$1\" || exit $?; " +
-            "for f in \"$2\" \"$3\"; do " +
+            "for f in \"$2\" \"$3\" \"$4\"; do " +
             "[ ! -e \"$f\" ] || [ -L \"$f\" ] || chmod 0600 -- \"$f\" || exit $?; done",
-            "bash", root.directory, root.settingsPath, root.calendarMarksPath]
+            "bash", root.directory, root.settingsPath, root.calendarMarksPath,
+            root.notificationsPath]
         onExited: code => {
             if (code === 0) {
                 _mkdirRetry.stop()

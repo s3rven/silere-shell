@@ -3,7 +3,9 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Services.Notifications
+import "../config"
 
 Singleton {
     id: root
@@ -174,6 +176,7 @@ Singleton {
         }
         _persist.historyJson = ShellSettings.notifHistoryPersistent
             ? JSON.stringify(out) : "[]"
+        root._queueDiskSave()
     }
 
     readonly property var popupModel: notifServer.trackedNotifications
@@ -184,6 +187,12 @@ Singleton {
         if (!root._times || typeof root._times !== "object") root._times = Object.create(null)
         if (!root._updateTimes || typeof root._updateTimes !== "object")
             root._updateTimes = Object.create(null)
+    }
+
+    // a reload can run a save after this singleton's state is restored but before the
+    // store below it exists; typeof keeps that window from throwing
+    function _queueDiskSave(): void {
+        if (typeof _diskStore !== "undefined") _diskStore.queue()
     }
 
     function _parsePersistentJson(raw: string, fallback): var {
@@ -269,8 +278,8 @@ Singleton {
     }
 
     on_HistoryCapacityChanged: if (_persistentReady) { root._trimHistory(); root._saveHistory() }
-    on_SeenChanged:   if (_persistentReady) _persist.seenJson = JSON.stringify(_seen)
-    on_TimesChanged:  if (_persistentReady) _persist.timesJson = JSON.stringify(_times)
+    on_SeenChanged:   if (_persistentReady) { _persist.seenJson = JSON.stringify(_seen); root._queueDiskSave() }
+    on_TimesChanged:  if (_persistentReady) { _persist.timesJson = JSON.stringify(_times); root._queueDiskSave() }
 
     function _cloneMap(map): var {
         const out = Object.create(null)
@@ -348,6 +357,76 @@ Singleton {
         property string historyJson: "[]"
         property string seenJson:  "{}"
         property string timesJson: "{}"
+    }
+
+    // PersistentProperties survives a config reload but not a restart, so the history
+    // "Keep after restart" promises has to reach disk on its own
+    PersistedFile {
+        id: _diskStore
+        path: ConfigStore.notificationsPath
+        writeAllowed: false
+        serialize: () => root._serializeDisk()
+        onLoaded: raw => root._restoreFromDisk(raw)
+        onLoadFailed: error => {
+            _diskStore.writeAllowed = error === FileViewError.FileNotFound
+        }
+        onSaveFailed: error =>
+            console.warn("silere-shell: failed to save notifications.json:", error)
+    }
+
+    function _serializeDisk(): string {
+        return JSON.stringify({
+            __version: 1,
+            history: root._parsePersistentJson(_persist.historyJson, []),
+            seen:    root._parsePersistentJson(_persist.seenJson, {}),
+            times:   root._parsePersistentJson(_persist.timesJson, {})
+        })
+    }
+
+    // live state wins: it either arrived this session or survived a reload, and the file
+    // is the older copy of the same data
+    function _mergeStateMap(base, live): var {
+        const out = root._cloneMap(base)
+        for (const key in live) out[key] = live[key]
+        return out
+    }
+
+    function _restoreFromDisk(raw: string): void {
+        const trimmed = String(raw || "").trim()
+        try {
+            const j = JSON.parse(trimmed || "{}")
+            // a reload already restored the same rows through _persist, so match on identity
+            const present = Object.create(null)
+            for (let i = 0; i < _history.count; i++) {
+                const h = _history.get(i)
+                present[String(h.id) + "\u0001" + String(h.time)] = true
+            }
+            if (ShellSettings.notifHistoryPersistent && Array.isArray(j.history)) {
+                for (let i = 0; i < j.history.length; i++) {
+                    const e = root._normalizeEntry(j.history[i])
+                    if (!e) continue
+                    const key = String(e.id) + "\u0001" + String(e.time)
+                    if (present[key]) continue
+                    present[key] = true
+                    // ids restart with the server, so a saved one names nothing this session
+                    e.sessionCurrent = false
+                    _history.append(e)
+                }
+            }
+            root._seen  = root._mergeStateMap(root._normalizeSeenMap(j.seen || {}), root._seen)
+            root._times = root._mergeStateMap(root._normalizeTimesMap(j.times || {}), root._times)
+            root._ensurePersistentState()
+            root._trimHistory()
+            root.historyRevision++
+            _diskStore.writeAllowed = true
+            _diskStore.lastSavedText = trimmed
+            root._pruneOrphanState()
+            root._saveHistory()
+        } catch (e) {
+            // a file we could not read may still hold history; writing this session over it loses it
+            _diskStore.writeAllowed = false
+            console.warn("silere-shell: bad notifications.json, ignoring:", String(e))
+        }
     }
 
     signal sourcePulse(int wsId, bool critical)
