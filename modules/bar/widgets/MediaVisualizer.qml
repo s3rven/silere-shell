@@ -9,6 +9,8 @@ Canvas {
     property var screen: null
     property bool lowPower: false
     property bool presentationActive: true
+    property real edgeFadeMax: 22
+    property real barWidthMax: 7
     readonly property bool _onActiveBar: Monitors.isActive(screen)
     readonly property string _style: ShellSettings.mediaVisualizerStyle
     property bool _registered: false
@@ -98,7 +100,7 @@ Canvas {
     // destination-out, not destination-in: in erases every pixel the source misses, so it would
     // have to cover the whole canvas to preserve a middle it never actually changes
     function _fadeEdges(ctx) {
-        var fadeW = Math.min(width * 0.18, 22)
+        var fadeW = Math.min(width * 0.18, edgeFadeMax)
         if (fadeW <= 0.5) return
         if (!_edgeL || Math.round(_edgeW) !== Math.round(width)) {
             var l = ctx.createLinearGradient(0, 0, fadeW, 0)
@@ -158,7 +160,7 @@ Canvas {
         for (var k = 0; k < n; k++) cy[k] = height - (h[k] ?? 0) * maxPx
 
         if (_style === "bars") {
-            var barW = Math.max(2, Math.min(7, slot * 0.46))
+            var barW = Math.max(2, Math.min(barWidthMax, slot * 0.46))
             var radius = Math.min(barW * 0.5, 3)
             ctx.fillStyle = Qt.rgba(ac.r, ac.g, ac.b, 0.82)
             for (var b = 0; b < n; b++) {

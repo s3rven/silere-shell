@@ -23,6 +23,7 @@ settings file carries its own `__version` and migrates separately.
   timing instead of five.
 - The notifications page is taller and wider, and reads at one width whether or not the
   app rail is showing.
+- The visualizer draws denser bars on wider tracks.
 
 ### Fixed
 
