@@ -21,7 +21,6 @@ singleton OverviewState 1.0 OverviewState.qml
 singleton Screenshot    1.0 Screenshot.qml
 
 # shell
-AnchoredPopupState      1.0 AnchoredPopupState.qml
 BoundedProcess          1.0 BoundedProcess.qml
 singleton CalendarState 1.0 CalendarState.qml
 singleton ConfigStore    1.0 ConfigStore.qml
@@ -47,3 +46,6 @@ singleton SystemTools   1.0 SystemTools.qml
 singleton TrayMenuState 1.0 TrayMenuState.qml
 singleton Updates       1.0 Updates.qml
 singleton XdgPaths      1.0 XdgPaths.qml
+
+# service-only implementation types
+internal AnchoredPopupState AnchoredPopupState.qml

@@ -1,8 +1,10 @@
 WorkspaceButton   1.0 WorkspaceButton.qml
 WorkspaceMarker   1.0 WorkspaceMarker.qml
 WorkspaceUrgentTick 1.0 WorkspaceUrgentTick.qml
-WorkspaceAppIcons 1.0 WorkspaceAppIcons.qml
 WorkspaceAppModel 1.0 WorkspaceAppModel.qml
 WorkspaceSlotModel 1.0 WorkspaceSlotModel.qml
-WorkspaceNotifPulse 1.0 WorkspaceNotifPulse.qml
-WorkspaceUrgentFx 1.0 WorkspaceUrgentFx.qml
+
+# workspace-only implementation types
+internal WorkspaceAppIcons WorkspaceAppIcons.qml
+internal WorkspaceNotifPulse WorkspaceNotifPulse.qml
+internal WorkspaceUrgentFx WorkspaceUrgentFx.qml

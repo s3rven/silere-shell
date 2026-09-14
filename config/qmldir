@@ -10,9 +10,11 @@ singleton Settings      1.0 Settings.qml
 # helpers
 BumpAnimation 1.0 BumpAnimation.qml
 ColorFade 1.0 ColorFade.qml
-PaletteFade 1.0 PaletteFade.qml
 Disclosure 1.0 Disclosure.qml
 MotionBehavior 1.0 MotionBehavior.qml
 PersistedFile 1.0 PersistedFile.qml
 PulseLoop 1.0 PulseLoop.qml
 SupervisedProcess 1.0 SupervisedProcess.qml
+
+# helper-only implementation types
+internal PaletteFade PaletteFade.qml
