@@ -174,9 +174,14 @@ Item {
 
     Item {
         id: _levelTrack
+        // the hover capsule has already curved inward by the track's last row, so padding
+        // alone leaves the ends poking past the rounded corner
+        readonly property real _capR: Metrics.hoverRadiusFor(root.pillH)
+        readonly property real _inset: Math.max(root.horizontalPadding + 1,
+            Math.ceil(_capR - Math.sqrt(Math.max(0, 2 * _capR - 1))))
         anchors.horizontalCenter: parent.horizontalCenter
         y: Math.round((parent.height + root.pillH) / 2) - 3
-        width: Math.max(10, parent.width - root.horizontalPadding * 2 - 2)
+        width: Math.max(10, parent.width - _inset * 2)
         height: 2
         opacity: root.levelVisible && root.levelValue >= 0 ? 1 : 0
         visible: opacity > 0.001
