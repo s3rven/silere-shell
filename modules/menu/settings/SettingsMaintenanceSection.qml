@@ -250,7 +250,7 @@ Column {
     SettingsCard {
         SelectRow {
             glyph: "󰌾"; label: "Lock with"
-            description: "Program the lock action runs"
+            description: "Program that locks"
             currentValue: ShellSettings.lockProvider
             model: root._lockChoices
             onChosen: (v) => ShellSettings.lockProvider = v
@@ -271,7 +271,7 @@ Column {
     SettingsCard {
         SelectRow {
             glyph: "󰖙"; label: "Warm with"
-            description: "Program the night light runs"
+            description: "Program that warms"
             currentValue: ShellSettings.nightLightProvider
             model: root._nightLightChoices
             onChosen: (v) => ShellSettings.nightLightProvider = v

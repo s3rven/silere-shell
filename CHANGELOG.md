@@ -26,6 +26,7 @@ settings file carries its own `__version` and migrates separately.
   app rail is showing.
 - Notification popups are wider.
 - Device and option rows highlight the full row and follow the card’s corner.
+- Maintenance names the lock and night-light programs in one line each.
 - The visualizer draws denser bars on wider tracks.
 
 ### Fixed
