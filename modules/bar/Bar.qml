@@ -247,6 +247,7 @@ PanelWindow {
                 active: ShellSettings.underlineGlow && contents.opacity > 0.001 && !bar.concealed
                 sourceComponent: Component {
                     BarUnderline {
+                        screen: bar.targetScreen
                         floatingProgress: bar.floatingProgress
                         wrapRadius: surface.radius
                     }

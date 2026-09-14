@@ -9,12 +9,22 @@ Item {
     id: _ul
     anchors.fill: parent
 
+    property var  screen: null
     property real floatingProgress: ShellSettings.barFloating ? 1.0 : 0.0
     property real wrapRadius: 0
 
     // a bottom bar mirrors the whole item vertically in one step; conditional anchor flips leave elements on the stale edge
     readonly property bool atBottom: ShellSettings.barPosition === "bottom"
     transform: Scale { origin.y: _ul.height / 2; yScale: _ul.atBottom ? -1 : 1 }
+
+    component TrackGlow: GlowLine {
+        property real inset: 0
+        anchors.left:        parent.left
+        anchors.right:       parent.right
+        anchors.leftMargin:  inset
+        anchors.rightMargin: inset
+        anchors.bottom:      parent.bottom
+    }
 
     Item {
         id: _lineEffect
@@ -33,7 +43,11 @@ Item {
         property bool _lastNetConnected: false
         readonly property real _tempGlowBase: (_tempGlowEnabled && CpuTemp.hot && !CpuTemp.critical) ? 0.32 : 0
         property real _tempPulseGlow: 0
-        readonly property real _tempGlow: (ShellSettings.reduceMotion && _tempGlowEnabled && CpuTemp.critical)
+        // a settled critical rests on the same steady 0.5 reduced motion already shows, so
+        // the glow reads the same whether motion stopped it or the settle window below did
+        property bool _tempSettled: false
+        readonly property bool _tempSteady: ShellSettings.reduceMotion || _tempSettled
+        readonly property real _tempGlow: (_tempGlowEnabled && CpuTemp.critical && _tempSteady)
             ? 0.5
             : _tempGlowBase + _tempPulseGlow
         readonly property real _screenshotStrength: ShellSettings.screenshotGlowSweep ? 1.1 : 1.0
@@ -54,7 +68,9 @@ Item {
         readonly property real _activeGlowStrength: Math.min(1, 0.45 + 0.4 * ShellSettings.glowStrength)
         readonly property real _scaledGlow:  (_primaryGlow + _stackBonus) * _activeGlowStrength
         readonly property real _eventGlow:   Math.max(_scaledGlow, _batteryGlow, _tempGlow)
-        property real _mediaGlow: (ShellSettings.mediaProgress && Media.shown && Media.cavaReady) ? 0.18 : 0
+        // the spectrum is the lift at its own position; a flat floor under it only washes the wave out
+        property real _mediaGlow: (Media.shown && Media.playing && Media.cavaReady
+            && ShellSettings.mediaVisualizerPosition !== "underline") ? 0.18 : 0
         MotionBehavior on _mediaGlow {
             gate: !Idle.isIdle
             NumberAnimation { duration: Motion.slow; easing.type: Easing.OutCubic }
@@ -422,17 +438,35 @@ Item {
             peak:           _lineEffect._tempPeak
             floor:          _lineEffect._tempFloor
             duration:       _lineEffect._tempPulseDur
-            active:         _lineEffect._tempGlowEnabled && CpuTemp.critical && !Idle.isQuiet
+            active:         _lineEffect._tempGlowEnabled && CpuTemp.critical
+                && !_lineEffect._tempSettled && !Idle.isQuiet
+        }
+
+        // critical holds for as long as the machine stays pegged, and animating the glow
+        // that whole time repaints a bar on hardware already at its limit
+        Connections {
+            target: CpuTemp
+            function onCriticalChanged() {
+                if (CpuTemp.critical) _lineEffect._tempSettled = false
+            }
+        }
+        Timer {
+            interval: 15000
+            running: _lineEffect._tempGlowEnabled && CpuTemp.critical
+                && !_lineEffect._tempSettled && !Idle.isQuiet
+                && !ShellSettings.reduceMotion
+            onTriggered: _lineEffect._tempSettled = true
         }
     }
 
-    GlowLine {
-        anchors.left:        parent.left
-        anchors.right:       parent.right
-        anchors.leftMargin:  _ul.wrapRadius
-        anchors.rightMargin: _ul.wrapRadius
-        anchors.bottom:      parent.bottom
-        visible: opacity > 0.001
+    BarSpectrum {
+        screen: _ul.screen
+        inset:  _ul.wrapRadius
+        duck:   Math.min(0.82, _lineEffect._eventGlow * 1.7)
+    }
+
+    TrackGlow {
+        inset: _ul.wrapRadius
         height: 2
         opacity: Math.min(0.58, 0.34 * ShellSettings.glowStrength)
             * (1.0 - _ul.floatingProgress)
@@ -444,13 +478,8 @@ Item {
         hiClamp: 0.97
     }
 
-    GlowLine {
-        anchors.left:        parent.left
-        anchors.right:       parent.right
-        anchors.leftMargin:  _ul.wrapRadius
-        anchors.rightMargin: _ul.wrapRadius
-        anchors.bottom:      parent.bottom
-        visible: opacity > 0.001
+    TrackGlow {
+        inset: _ul.wrapRadius
         height: 2
         opacity: Math.min(_lineEffect._ceiling,
             _lineEffect._combined * ShellSettings.glowStrength)
@@ -464,23 +493,15 @@ Item {
     }
 
     FadingRim {
-        id: _floatingBaseRim
         radius: _ul.wrapRadius
         uniform: ShellSettings.underlineFullWidth
         rimColor: Theme.mix(Theme.subtext, _lineEffect._effectColor, 0.18)
-        visible: opacity > 0.001
         opacity: Math.min(0.20, 0.12 * ShellSettings.glowStrength)
             * _ul.floatingProgress
     }
 
-    GlowLine {
-        id: _floatingBaseLine
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.leftMargin: _ul.wrapRadius
-        anchors.rightMargin: _ul.wrapRadius
-        anchors.bottom: parent.bottom
-        visible: opacity > 0.001
+    TrackGlow {
+        inset: _ul.wrapRadius
         opacity: Math.min(0.42, 0.24 * ShellSettings.glowStrength)
             * _ul.floatingProgress
         peak:    Theme.withAlpha(Theme.mix(Theme.subtext, _lineEffect._effectColor, 0.28), 0.64)
@@ -492,24 +513,16 @@ Item {
     }
 
     FadingRim {
-        id: _floatingRim
         radius: _ul.wrapRadius
         uniform: ShellSettings.underlineFullWidth
         rimColor: _lineEffect._effectColor
-        visible: opacity > 0.001
         opacity: Math.min(0.42,
             (_lineEffect._combined * 0.34 + _lineEffect._bloomBoost * 0.16)
             * ShellSettings.glowStrength) * _ul.floatingProgress
     }
 
-    GlowLine {
-        id: _floatingLine
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.leftMargin: _ul.wrapRadius
-        anchors.rightMargin: _ul.wrapRadius
-        anchors.bottom: parent.bottom
-        visible: opacity > 0.001
+    TrackGlow {
+        inset: _ul.wrapRadius
         opacity: Math.min(0.72,
             (_lineEffect._combined * 0.58 + _lineEffect._bloomBoost * 0.28)
             * ShellSettings.glowStrength) * _ul.floatingProgress
@@ -530,15 +543,10 @@ Item {
             { y: 5, c: 0.06, b: 0.09, s: 1.76 },
             { y: 6, c: 0.03, b: 0.05, s: 2.00 }
         ]
-        GlowLine {
+        TrackGlow {
             required property var modelData
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.leftMargin: _ul.wrapRadius
-            anchors.rightMargin: _ul.wrapRadius
-            anchors.bottom: parent.bottom
+            inset: _ul.wrapRadius
             anchors.bottomMargin: modelData.y
-            visible: opacity > 0.001
             opacity: Math.min(0.84,
                 (_lineEffect._combined * modelData.c + _lineEffect._bloomBoost * modelData.b)
                 * ShellSettings.glowStrength)

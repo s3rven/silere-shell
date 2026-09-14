@@ -383,17 +383,24 @@ Singleton {
         return row[preset] ?? row.balanced
     }
 
+    // the underline track spans the whole bar; the widget's count reads as scattered ticks across it
+    readonly property bool _vizWide: ShellSettings.mediaVisualizerPosition === "underline"
+    function vizBarCount(base: int, lowPower: bool): int {
+        return Math.min(48, Math.round(base * (root._vizWide && !lowPower ? 2 : 1)))
+    }
+
     // what the active bar runs at, so the settings hint does not have to restate the table
     readonly property string visualizerLabel: {
         const p = root.vizProfile(ShellSettings.mediaVisualizerStyle,
             ShellSettings.mediaVisualizerPreset, false)
-        return p.bars + " bars at " + p.fps + " fps"
+        return root.vizBarCount(p.bars, false) + " bars at " + p.fps + " fps"
     }
 
     readonly property var _vizActive: root.vizProfile(
         ShellSettings.mediaVisualizerStyle, ShellSettings.mediaVisualizerPreset,
         root._visualizerLowPowerOnly)
-    readonly property int _cavaBars: root._vizActive.bars
+    readonly property int _cavaBars: root.vizBarCount(root._vizActive.bars,
+        root._visualizerLowPowerOnly)
     readonly property int _cavaFps:  root._vizActive.fps
     readonly property real _cavaNoiseReduction: {
         switch (ShellSettings.mediaVisualizerPreset) {

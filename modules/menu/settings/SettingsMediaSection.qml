@@ -21,7 +21,7 @@ Column {
         }
         ToggleRow {
             glyph: "󰥶"; label: "Cover art from the web"
-            description: "Fetch art a player links off-machine"
+            description: "Fetches art the player links to"
             key: "mediaRemoteArt"
         }
     }
@@ -30,8 +30,10 @@ Column {
     SettingsCard {
         ToggleRow {
             glyph: "󰱐"; label: "Audio visualizer"
-            description: ShellSettings.reduceMotion
-                ? "Paused by Reduce motion" : "Active during playback"
+            description: ShellSettings.reduceMotion ? "Paused by Reduce motion"
+                : (ShellSettings.mediaVisualizerPosition === "underline"
+                    && !ShellSettings.underlineGlow) ? "Underline glow is off"
+                : "Active during playback"
             key: "mediaProgress"
             available: !SystemTools.ready || Media.cavaAvailable
             dependsNote: !SystemTools.ready ? "Checking"
@@ -43,8 +45,9 @@ Column {
                 glyph: "󰍹"; label: "Position"
                 currentValue: ShellSettings.mediaVisualizerPosition
                 model: [
-                    { value: "media",  label: "Media" },
-                    { value: "center", label: "Center" }
+                    { value: "media",     label: "Media" },
+                    { value: "center",    label: "Center" },
+                    { value: "underline", label: "Underline" }
                 ]
                 onChosen: (v) => ShellSettings.mediaVisualizerPosition = v
             }

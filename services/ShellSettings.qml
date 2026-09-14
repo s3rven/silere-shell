@@ -287,7 +287,7 @@ Singleton {
         { k: "mediaRemoteArt",      t: "bool", sec: "media" },
         { k: "mediaVisualizerPreset", t: "enum", vals: ["eco", "balanced", "smooth"], sec: "media" },
         { k: "mediaVisualizerStyle",  t: "enum", vals: ["wave", "bars", "pulse"], sec: "media" },
-        { k: "mediaVisualizerPosition", t: "enum", vals: ["media", "center"], sec: "media" },
+        { k: "mediaVisualizerPosition", t: "enum", vals: ["media", "center", "underline"], sec: "media" },
         { k: "workspaceShift",      t: "bool", sec: "workspaces" },
         { k: "neutralTheme",        t: "bool", sec: "theme" },
         { k: "neutralAccentAuto",   t: "bool", sec: "theme" },

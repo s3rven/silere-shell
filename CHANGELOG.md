@@ -15,6 +15,7 @@ settings file carries its own `__version` and migrates separately.
 
 - The notifications page carries a rail of the apps that have sent one; picking an app
   narrows the page to it, and Clear then takes only that app's history.
+- The audio visualizer can run along the bar's underline, spanning its full width.
 
 ### Changed
 
@@ -22,6 +23,10 @@ settings file carries its own `__version` and migrates separately.
   timing instead of five.
 - The notifications page is taller and wider, and reads at one width whether or not the
   app rail is showing.
+
+### Fixed
+
+- A paused player no longer leaves the underline lit.
 
 ## Releases
 
