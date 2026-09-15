@@ -256,7 +256,7 @@ Column {
         UpdateStatusCard {
             animationActive: root.animationActive
             glyph: Updates.isChecking ? "󰓦" : Updates.lastFailed ? "󰀦" : Updates.icon
-            title: "System packages"
+            title: "Packages"
             status: Updates.statusText
             meta: Updates.managerLabel
             detail: Updates.lastFailed ? Updates.lastError

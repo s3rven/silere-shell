@@ -46,6 +46,7 @@ settings file carries its own `__version` and migrates separately.
 - Confirmation buttons cancel pending confirmation when disabled or busy.
 - Scroll indicators stay aligned when entries are removed from a scrolled list.
 - A settings category no longer shows a changed dot for a setting its page is hiding.
+- Maintenance and update rows keep their labels on a machine without the optional tools.
 
 #### Notification fixes
 

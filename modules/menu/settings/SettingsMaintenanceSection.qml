@@ -123,7 +123,7 @@ Column {
         }
 
         const tool = (g, n, v) => add(optional, g, n,
-            "Install to enable this feature", v, true)
+            "Not installed", v, true)
         if (!SystemTools.hasBrightnessctl)     tool("󰃟", "Brightness control", "brightnessctl")
         if (Settings.autoNightLightProvider.length === 0)
             tool("󰖙", "Night light", Compositor.isHyprland ? "hyprsunset" : "wlsunset")
@@ -141,8 +141,8 @@ Column {
                 ? attention : optional
             add(target, "󰂚", "System alerts",
                 target === attention
-                    ? "Enabled warnings cannot be delivered"
-                    : "Install to deliver battery and temperature warnings",
+                    ? "Warnings cannot be delivered"
+                    : "Not installed",
                 "libnotify", true, "",
                 target === attention ? Theme.warning : "transparent")
         }
