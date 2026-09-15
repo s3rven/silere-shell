@@ -24,6 +24,7 @@ Canvas {
         && width > 0 && height > 0
 
     visible: _live || (holdFrame && width > 0 && height > 0)
+    opacity: ShellSettings.mediaVisualizerOpacity
     renderTarget: Canvas.Image
     // frozen once the context exists; binding it only logs "not changeable" and silently keeps the construction-time value
     renderStrategy: Canvas.Immediate

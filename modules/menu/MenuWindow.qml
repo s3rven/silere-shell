@@ -98,11 +98,8 @@ PanelWindow {
         readonly property int _compactW: 400
         readonly property int _powerW: 568
         readonly property int _settingsW: 632 + _typeGain
-        // both recent widths are picked so the list reads at one width either way: the
-        // drawer adds its own 160 and the pane's padding steps 12 -> 18 alongside it.
-        // Only the drawered width carries _typeGain, because only it grows a rail to cancel
-        readonly property int _recentBaseW: 492
-        readonly property int _recentW: 664 + _typeGain
+        readonly property int _recentBaseW: 460 + _typeGain
+        readonly property int _recentW: _recentBaseW + _navMaxW + 12
         readonly property bool _settingsNavVisible:
             activeTab === 1 && !powerOpen
         // one app cannot be filtered against anything, so the drawer stays out of its way
@@ -155,37 +152,16 @@ PanelWindow {
                 Metrics.snap4(12 + (width - _compactW) * 8 / (_settingsW - _compactW))))
             : _railExpanded && width >= 460 ? 18 : 12
         readonly property int innerW: Math.max(1, contentW - contentPad * 2)
-        readonly property int idealMinH: 360
+        readonly property int idealMinH: activeTab === 2 ? 300 : 360
         readonly property int minRailFitH: 252
         readonly property int pageTopInset: 12
         readonly property int pageBottomInset: 12
         readonly property int _availablePanelH: win.height > 0
             ? Math.max(1, Math.floor(win.height - _edgeY - _minX))
             : contentPane.targetH
-        // the rail filters the page, so the height has to follow the rows actually drawn
-        readonly property int _recentShownCount: {
-            const want = MenuState.recentFilter
-            if (want.length === 0) return Notifications.historyCount
-            const apps = Notifications.historyApps
-            for (let i = 0; i < apps.length; i++)
-                if (apps[i].appName === want) return apps[i].count
-            return 0
-        }
-        // grows with what the list actually holds: a flat 360 cap scrolled hard on a tall
-        // output, but sizing off the screen alone left an empty history as a tall blank box.
-        // 84 is a measured card at the pane's width — the old 70 was a card's bare minimum,
-        // so a short history scrolled while the screen below it sat empty
-        readonly property int recentViewportH: {
-            // a notification centre keeps a steady size: the floor is a share of the output,
-            // not the panel's bare minimum, or a short history collapses to a sliver
-            const floorH = Math.max(
-                panel.idealMinH - panel.pageTopInset - panel.pageBottomInset,
-                Metrics.snap4(panel._availablePanelH * 0.40))
-            const availH = panel._availablePanelH - panel.pageTopInset - panel.pageBottomInset
-            const wantH = Metrics.rowHeightFor(38) + 18 + panel._recentShownCount * 84
-            return Math.max(1, Math.min(availH, Math.max(floorH,
-                Math.min(Metrics.snap4(panel._availablePanelH * 0.82), Metrics.snap4(wantH)))))
-        }
+        readonly property int recentViewportH: Metrics.historyViewportFor(
+            panel._availablePanelH - panel.pageTopInset - panel.pageBottomInset,
+            Notifications.historyCount)
         readonly property int _resolvedPanelH: Math.max(1,
             Math.min(contentPane.targetH, _availablePanelH))
         // A lazy page briefly reports the placeholder height before its final

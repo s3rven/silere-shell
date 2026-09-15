@@ -9,6 +9,7 @@ Item {
     property var source: null
     property int revision: 0
     property string filter: ""
+    property bool active: true
 
     readonly property alias model: _rows
     readonly property int count: _rows.count
@@ -44,6 +45,7 @@ Item {
     }
 
     function sync(): void {
+        if (!root.active) return
         const src = root.source
         const want = root.filter
         const rows = []
@@ -75,5 +77,6 @@ Item {
     onSourceChanged: root.sync()
     onRevisionChanged: root.sync()
     onFilterChanged: root.sync()
+    onActiveChanged: root.sync()
     Component.onCompleted: root.sync()
 }

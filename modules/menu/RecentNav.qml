@@ -18,14 +18,20 @@ Item {
 
     implicitHeight: root._navTop + _rowColumn.implicitHeight + 10
 
-    // identities only: a JS-array model is never diffed, so a count carried in the array
-    // would rebuild every row on each arrival and re-resolve its icon. The empty string
-    // is the whole-history head rather than a second flag
-    readonly property var _names: {
-        const out = [""]
-        const apps = Notifications.historyApps
-        for (let i = 0; i < apps.length; i++) out.push(apps[i].appName)
-        return out
+    property var _names: [""]
+
+    function _syncNames(apps): void {
+        const names = [""]
+        for (let i = 0; i < apps.length; i++) names.push(apps[i].appName)
+        if (names.length === root._names.length
+                && names.every((name, index) => name === root._names[index])) return
+        root._names = names
+    }
+
+    Component.onCompleted: root._syncNames(Notifications.historyApps)
+    Connections {
+        target: Notifications
+        function onHistoryAppsChanged() { root._syncNames(Notifications.historyApps) }
     }
 
     function _appFor(name: string): var {

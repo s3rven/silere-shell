@@ -324,6 +324,8 @@ PanelWindow {
                 // reparented to the window root: inside the clipped row Flickable the submenu would be scissored away
                 parent: win.contentItem
                 property bool opened: false
+                readonly property Item parentFlyout: _entry.ownerFlyout
+                readonly property bool hovered: _flyHover.hovered
                 property real _shift: opened ? 0 : (_flip ? 5 : -5)
 
                 visible: opened || opacity > 0.001
@@ -341,10 +343,10 @@ PanelWindow {
                 function _syncOrigin(): void {
                     _flyout._origin = _entry.mapToItem(null, 0, 0)
                 }
-                readonly property bool  _flip: _origin.x + _entry.width + 4 + _w > win.width
+                readonly property bool  _flip: _origin.x + _entry.width + 4 + _w > win.width - 4
                 readonly property real _panelH: Math.min(_subCol.implicitHeight + pad * 2, Math.max(48, win.height - 8))
                 readonly property real _targetY: Math.max(4 - _origin.y, Math.min(-pad, win.height - 4 - _origin.y - _panelH))
-                x: _origin.x + (_flip ? -(_w + 4) : (_entry.width + 4))
+                x: Metrics.flyoutX(_origin.x, _entry.width, _w, win.width)
                 y: _origin.y + _targetY
                 width:  _w
                 height: _panelH
@@ -377,15 +379,9 @@ PanelWindow {
                 Timer {
                     id: _flyClose
                     interval: 180
-                    onTriggered: if (!_rowHover.hovered && !_flyHover.hovered) _entry.closeFlyout()
-                }
-                Connections {
-                    target: _flyHover
-                    function onHoveredChanged() { if (!_flyHover.hovered) _flyClose.restart() }
-                }
-                Connections {
-                    target: _rowHover
-                    function onHoveredChanged() { if (!_rowHover.hovered && _flyout.opened) _flyClose.restart() }
+                    running: _flyout.opened && !_rowHover.hovered
+                        && !TrayMenuState.branchHovered(_flyout, win.contentItem.children)
+                    onTriggered: _entry.closeFlyout()
                 }
 
                 ShellFlickable {

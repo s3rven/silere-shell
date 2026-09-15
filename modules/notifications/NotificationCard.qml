@@ -460,7 +460,10 @@ Item {
                     id: _critIcon
                     visible: card.isCritical
                     anchors.left: parent.left
-                    anchors.verticalCenter: _summary.verticalCenter
+                    // an expanded summary wraps, so centre on its first line rather than the block
+                    anchors.top: _summary.top
+                    anchors.topMargin: Math.round((_summary.contentHeight
+                        / Math.max(1, _summary.lineCount) - height) / 2)
                     text:           "󰀦"
                     color:          Theme.error
                     font.pixelSize: Settings.fontSize + 1
@@ -472,12 +475,14 @@ Item {
                     anchors.leftMargin: _critIcon.visible ? 6 : 0
                     anchors.right:      parent.right
                     anchors.rightMargin: 30
-                    text:           card.summaryText
+                    text:             card.summaryText
                     // glyph, rim and ring already carry urgency; red text on the red-tinted fill only costs contrast
-                    color:          Theme.text
-                    font.pixelSize: Settings.fontSize + 1
-                    font.weight:    Font.DemiBold
-                    elide:          Text.ElideRight
+                    color:            Theme.text
+                    font.pixelSize:   Settings.fontSize + 1
+                    font.weight:      Font.DemiBold
+                    wrapMode:         Text.Wrap
+                    maximumLineCount: card._expanded ? 6 : 1
+                    elide:            Text.ElideRight
                     ColorFade on color {}
                 }
             }

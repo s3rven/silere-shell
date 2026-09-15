@@ -176,9 +176,7 @@ Singleton {
     readonly property color swatchEdge:      withAlpha(text, _hc ? 0.34 : 0.20)
     readonly property color menuTextMuted:   mix(subtext, text, _hc ? 0.45 : (_n ? 0.30 : 0.24))
     readonly property color menuTextFaint:   mix(subtext, text, _hc ? 0.25 : (_n ? 0.15 : 0.10))
-    // row descriptions and hints: 10px type against a near-black card, so the sink that
-    // keeps secondary text under its label has a floor. high contrast lifts it through subtext
-    readonly property color menuTextDetail:  withAlpha(subtext, 0.70)
+    readonly property color menuTextDetail:  withAlpha(subtext, _hc ? 1.0 : 0.85)
 
     // shared focus-ring weight: button-family controls (2px) vs embedded row/track indicators (1px)
     // high contrast re-bases every other line onto white text; the ring keeps its accent, so it buys the contrast in alpha

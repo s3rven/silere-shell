@@ -15,6 +15,7 @@ Rectangle {
     property bool busy: false
     property color tint: Theme.error
 
+    readonly property bool _interactive: root.enabled && !root.busy
     readonly property bool armed: root._armed
     readonly property bool hovered: _hover.hovered
 
@@ -24,7 +25,7 @@ Rectangle {
     property real _armedAtMs: 0
 
     function request(): void {
-        if (root.busy) return
+        if (!root._interactive) return
         if (root._armed) {
             // TapHandler fires once per tap, so a double-click would arm and confirm in one gesture
             if (Date.now() - root._armedAtMs < Metrics.confirmGuardMs) return
@@ -52,6 +53,8 @@ Rectangle {
     radius: Theme.radiusControl
     antialiasing: true
     onVisibleChanged: if (!visible) root.disarm()
+    onEnabledChanged: if (!enabled) root.disarm()
+    onBusyChanged: if (busy) root.disarm()
 
     // mix, not withAlpha: the notification popup window is transparent, so an alpha tint
     // would let the desktop through where the menu's opaque backdrop hides it
@@ -60,7 +63,7 @@ Rectangle {
         : _tap.pressed ? Theme.mix(Theme.menuControl, root.tint, 0.20)
         : _hover.hovered ? Theme.mix(Theme.menuControl, Theme.subtext, 0.16) : Theme.menuControl
 
-    opacity: root.busy ? 0.45 : 1.0
+    opacity: root._interactive ? 1.0 : Theme.disabledOpacity
 
     OutlineBorder {
         radius: root.radius
@@ -77,15 +80,16 @@ Rectangle {
 
     Accessible.role: Accessible.Button
     Accessible.name: root.label
-    Accessible.focusable: !root.busy
+    Accessible.description: root._armed ? root.armedLabel : ""
+    Accessible.focusable: root._interactive
     Accessible.onPressAction: root.request()
 
     HoverHandler {
         id: _hover
-        enabled: !root.busy
+        enabled: root._interactive
         cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
     }
-    TapHandler { id: _tap; enabled: !root.busy; onTapped: root.request() }
+    TapHandler { id: _tap; enabled: root._interactive; onTapped: root.request() }
 
     Row {
         id: _row

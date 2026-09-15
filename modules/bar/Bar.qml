@@ -243,6 +243,7 @@ PanelWindow {
             }
 
             Loader {
+                id: _underline
                 anchors.fill: parent
                 active: ShellSettings.underlineGlow && contents.opacity > 0.001 && !bar.concealed
                 sourceComponent: Component {
@@ -250,6 +251,28 @@ PanelWindow {
                         screen: bar.targetScreen
                         floatingProgress: bar.floatingProgress
                         wrapRadius: surface.radius
+                    }
+                }
+            }
+
+            Loader {
+                anchors.fill: parent
+                active: ShellSettings.mediaVisualizerPosition === "underline"
+                    && contents.opacity > 0.001 && !bar.concealed
+                sourceComponent: Component {
+                    Item {
+                        id: _spectrumWrap
+                        anchors.fill: parent
+                        // the underline mirrors itself onto a bottom bar's desktop-facing edge; the spectrum rides the same edge
+                        transform: Scale {
+                            origin.y: _spectrumWrap.height / 2
+                            yScale: bar.atBottom ? -1 : 1
+                        }
+                        BarSpectrum {
+                            screen: bar.targetScreen
+                            inset:  surface.radius
+                            duck:   _underline.item ? Math.min(0.82, _underline.item.eventGlow * 1.7) : 0
+                        }
                     }
                 }
             }

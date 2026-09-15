@@ -57,6 +57,9 @@ Item {
                 anchors.right: parent.right
                 anchors.rightMargin: 12
                 anchors.verticalCenter: parent.verticalCenter
+                width: Math.min(implicitWidth, Math.max(0, (_entry.width - 62) * 0.45))
+                horizontalAlignment: Text.AlignRight
+                elide: Text.ElideMiddle
                 text: String(_entry.modelData[root.trailingRole] ?? "")
                     + (_entry.emphasised ? "  " + root.trailingSuffix : "")
                 color: Theme.withAlpha(Theme.subtext, _entry.emphasised ? 0.75 : 0.55)

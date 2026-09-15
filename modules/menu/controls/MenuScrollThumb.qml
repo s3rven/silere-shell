@@ -25,7 +25,7 @@ Rectangle {
     readonly property real _overflow: Math.max(1,
         list.contentHeight - list.height)
     readonly property real _position: Math.max(0, Math.min(1,
-        list.contentY / _overflow))
+        (list.contentY - list.originY) / _overflow))
 
     x: list.x + list.width - rightInset - width
     y: list.y + trackInset + Math.max(0, _trackH - height) * _position

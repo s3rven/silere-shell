@@ -10,9 +10,15 @@ import "controls"
 ClippingRectangle {
     id: root
     width: parent ? parent.width : 0
+    readonly property bool _stackTimeLabels: _elapsedLabel.visible && _totalLabel.visible
+        && width < _controlsRow.width
+            + 2 * (Math.max(_elapsedLabel.implicitWidth, _totalLabel.implicitWidth) + 24)
+    readonly property int _timeRowHeight: _stackTimeLabels
+        ? 4 * Math.ceil((Math.max(_elapsedLabel.implicitHeight, _totalLabel.implicitHeight) + 8) / 4) : 0
+
     // 4px multiple: an odd height lands the bottom border on a half physical pixel and doubles it
     height: 4 * Math.ceil(Math.max(172,
-        20 + _mediaCol.implicitHeight + 18 + _controlsRow.height + 26) / 4)
+        20 + _mediaCol.implicitHeight + 18 + _controlsRow.height + 26 + root._timeRowHeight) / 4)
     radius: Theme.radiusCard
     color: Theme.menuCard
     opacity: Media.shown ? 1.0 : 0.0
@@ -388,7 +394,9 @@ ClippingRectangle {
         visible: Media.hasPosition
         anchors {
             left: parent.left; leftMargin: 16
-            verticalCenter: _controlsRow.verticalCenter
+            verticalCenter: root._stackTimeLabels ? undefined : _controlsRow.verticalCenter
+            bottom: root._stackTimeLabels ? parent.bottom : undefined
+            bottomMargin: 16
         }
         text: Media.formatTime(Media.positionNow)
         color: Theme.withAlpha(Theme.text, 0.55)
@@ -400,7 +408,9 @@ ClippingRectangle {
         visible: Media.hasPosition
         anchors {
             right: parent.right; rightMargin: 16
-            verticalCenter: _controlsRow.verticalCenter
+            verticalCenter: root._stackTimeLabels ? undefined : _controlsRow.verticalCenter
+            bottom: root._stackTimeLabels ? parent.bottom : undefined
+            bottomMargin: 16
         }
         text: Media.lengthKnown ? Media.formatTime(Media.length)
             : Media.endless ? "LIVE" : "--:--"
@@ -412,7 +422,7 @@ ClippingRectangle {
         id: _controlsRow
         anchors {
             horizontalCenter: parent.horizontalCenter
-            bottom: parent.bottom; bottomMargin: 24
+            bottom: parent.bottom; bottomMargin: 24 + root._timeRowHeight
         }
         spacing: 26
 

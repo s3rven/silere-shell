@@ -35,11 +35,15 @@ QtObject {
         return Math.max(0, Math.min(1.0, v))
     }
 
+    function _volumeMatches(actual: real, wanted: real): bool {
+        return isFinite(actual) && Math.abs(actual - wanted) < _volumeEpsilon
+    }
+
     function _enforceVolumeLimit(): void {
         const a = ready ? audio : null
         if (!a) return
         const clamped = _clampVolume(a.volume)
-        if (Math.abs(a.volume - clamped) >= _volumeEpsilon) _writeVolume(clamped)
+        if (!_volumeMatches(a.volume, clamped)) _writeVolume(clamped)
     }
 
     function _acceptVolume(actual: real): void {
@@ -79,7 +83,7 @@ QtObject {
             if (!a) return
             const actual = a.volume
             const clamped = ctl._clampVolume(actual)
-            if (Math.abs(actual - clamped) >= ctl._volumeEpsilon) {
+            if (!ctl._volumeMatches(actual, clamped)) {
                 ctl._writeVolume(clamped)
                 return
             }
@@ -111,7 +115,7 @@ QtObject {
         onTriggered: {
             const a = ctl.audio
             if (!a) return
-            if (Math.abs(a.volume - ctl.targetVolume) >= ctl._volumeEpsilon)
+            if (!ctl._volumeMatches(a.volume, ctl.targetVolume))
                 a.volume = Math.max(0, Math.min(1.0, ctl.targetVolume))
         }
     }
@@ -122,7 +126,7 @@ QtObject {
             const a = ctl.audio
             if (!a || !ctl.pendingApply) return
             const actual = ctl._clampVolume(a.volume)
-            if (Math.abs(actual - ctl.targetVolume) > ctl._confirmTolerance) {
+            if (!isFinite(a.volume) || Math.abs(a.volume - ctl.targetVolume) > ctl._confirmTolerance) {
                 if (ctl._volRetries >= ctl._maxConfirmRetries) {
                     ctl._acceptVolume(actual)
                     return
@@ -174,7 +178,7 @@ QtObject {
         if (!a) return
         v = _clampVolume(v)
         if (Math.abs(v - targetVolume) < _volumeEpsilon && pendingApply) return
-        if (!pendingApply && Math.abs(v - _clampVolume(a.volume)) < _volumeEpsilon) return
+        if (!pendingApply && _volumeMatches(a.volume, v)) return
         targetVolume = v
         pendingApply = true
 

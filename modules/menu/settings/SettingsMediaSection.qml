@@ -31,8 +31,6 @@ Column {
         ToggleRow {
             glyph: "󰱐"; label: "Audio visualizer"
             description: ShellSettings.reduceMotion ? "Paused by Reduce motion"
-                : (ShellSettings.mediaVisualizerPosition === "underline"
-                    && !ShellSettings.underlineGlow) ? "Underline glow is off"
                 : "Active during playback"
             key: "mediaProgress"
             available: !SystemTools.ready || Media.cavaAvailable
@@ -70,6 +68,12 @@ Column {
                     { value: "smooth",   label: "Smooth" }
                 ]
                 onChosen: (v) => ShellSettings.mediaVisualizerPreset = v
+            }
+            SliderRow {
+                glyph: "󰗌"; label: "Opacity"
+                key: "mediaVisualizerOpacity"
+                step: 0.05
+                displayValue: Math.round(ShellSettings.mediaVisualizerOpacity * 100) + "%"
             }
             // the preset names say nothing about what they cost; the shape changes both
             HintText { text: Media.visualizerLabel + ". Eco uses the least CPU." }

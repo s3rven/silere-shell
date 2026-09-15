@@ -180,8 +180,8 @@ Singleton {
         const init = root._compact(c.initialClass)
 
         return cls === app || init === app
-            || (cls.length  > 2 && (app.endsWith(cls)  || cls.endsWith(app)))
-            || (init.length > 2 && (app.endsWith(init) || init.endsWith(app)))
+            || (app.length > 2 && cls.length > 2 && (app.endsWith(cls)  || cls.endsWith(app)))
+            || (app.length > 2 && init.length > 2 && (app.endsWith(init) || init.endsWith(app)))
     }
 
     readonly property var _browserClasses: [

@@ -37,7 +37,8 @@ else
         _probe_standalone modules/bar
         _probe_standalone modules/bar/widgets
         _probe_standalone modules/common
-        printf '%s\n' modules/menu/settings/SettingsPage.qml \
+        printf '%s\n' modules/menu/RecentPage.qml \
+                      modules/menu/settings/SettingsPage.qml \
                       modules/menu/settings/DraggableWidgetList.qml
     )"
     list="$(printf '%s\n' "$list" | sort -u)"

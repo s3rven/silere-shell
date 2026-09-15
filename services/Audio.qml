@@ -242,7 +242,6 @@ Singleton {
     function bumpBy(delta: real): void { root._out.bumpBy(delta) }
     function setVolume(v: real): void  { root._out.setVolume(v) }
     function toggleMute(): void        { root._out.toggleMute() }
-    function unmute(): void            { root._out.unmute() }
 
     function micBumpBy(delta: real): void { root._in.bumpBy(delta) }
     function setMicVolume(v: real): void  { root._in.setVolume(v) }

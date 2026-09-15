@@ -18,19 +18,49 @@ PageShell {
     readonly property string filter: MenuState.recentFilter
     readonly property int rowCount: _filtered.count
 
+    onFilterChanged: {
+        _clearButton.disarm()
+        // the clear fade already owns the list opacity; ride it rather than starting a second one
+        if (root._clearing || ShellSettings.reduceMotion) {
+            root._appliedFilter = root.filter
+            _historyList.positionViewAtBeginning()
+            return
+        }
+        root._swapping = true
+        _filterSwapAnimation.restart()
+    }
+
     // a reassigned list model resets the view, so the rail filters through a mirror that
     // is reconciled row by row and leaves an untouched row's delegate alone
     FilteredHistory {
         id: _filtered
         source: Notifications.historyModel
         revision: Notifications.historyRevision
-        filter: root.filter
+        filter: root._appliedFilter
+        active: root.active && MenuState.open
     }
 
     property bool _clearing: false
+    property string _clearFilter: ""
+    // reuse pools a row a few hundred pixels off screen, so expansion has to live on the
+    // page: kept on the delegate it collapses the moment the user scrolls past what they opened
+    property var _openRows: ({})
+    // a filter change replaces every row at once, so the reconcile waits out a fade
+    property bool _swapping: false
+    property string _appliedFilter: ""
     property int _timeTick: 0
     property real _nowMs: 0
     property real _todayStartMs: 0
+
+    function rowKey(e): string {
+        return e ? String(e.id) + "\u0001" + String(e.time) : ""
+    }
+
+    function setRowOpen(key: string, open: bool): void {
+        if (key.length === 0) return
+        if (open) root._openRows[key] = true
+        else delete root._openRows[key]
+    }
 
     function _touchNow(): void {
         const nowMs = Date.now()
@@ -40,7 +70,10 @@ PageShell {
         root._timeTick++
     }
 
-    Component.onCompleted: root._touchNow()
+    Component.onCompleted: {
+        root._appliedFilter = root.filter
+        root._touchNow()
+    }
 
     Connections {
         target: ShellSettings
@@ -50,12 +83,13 @@ PageShell {
     Timer {
         interval: 60000
         repeat: true
-        running: root.active && MenuState.open && !Idle.isIdle
+        running: root.active && MenuState.open && root.rowCount > 0 && !Idle.isIdle
         onTriggered: root._touchNow()
     }
 
     onPageHidden: {
         _clearButton.disarm()
+        root._openRows = ({})
     }
 
     function formatTime(ms): string {
@@ -102,6 +136,7 @@ PageShell {
             Notifications.clearHistoryFor(root.filter)
             return
         }
+        _clearFilter = root.filter
         _clearing = true
         _clearAllAnimation.restart()
     }
@@ -117,11 +152,37 @@ PageShell {
         }
         ScriptAction {
             script: {
-                Notifications.clearHistoryFor(root.filter)
+                Notifications.clearHistoryFor(root._clearFilter)
+                root._openRows = ({})
                 _historyList.opacity = 1
                 root._clearing = false
             }
         }
+    }
+
+    SequentialAnimation {
+        id: _filterSwapAnimation
+        NumberAnimation {
+            target: _historyList
+            property: "opacity"
+            to: 0
+            duration: Motion.fast
+            easing.type: Easing.InCubic
+        }
+        ScriptAction {
+            script: {
+                root._appliedFilter = root.filter
+                _historyList.positionViewAtBeginning()
+            }
+        }
+        NumberAnimation {
+            target: _historyList
+            property: "opacity"
+            to: 1
+            duration: Motion.fast
+            easing.type: Easing.OutCubic
+        }
+        ScriptAction { script: root._swapping = false }
     }
 
     Item {
@@ -227,7 +288,8 @@ PageShell {
 
                 ShellText {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: "New notifications will appear here"
+                    text: root.filter.length > 0 ? "No notifications from this app"
+                        : "New notifications will appear here"
                     color: Theme.withAlpha(Theme.subtext,
                         ShellSettings.highContrast ? 0.72 : 0.52)
                     font.pixelSize: Settings.fontCaption
@@ -249,25 +311,25 @@ PageShell {
             reuseItems: true
             model: _filtered.model
 
-            // clearAll runs its own fade over the whole list, so per-row motion there
+            // clearAll and a filter swap each fade the whole list, so per-row motion there
             // would animate every delegate at once behind an already-invisible list
             displaced: Transition {
-                enabled: !root._clearing
+                enabled: !root._clearing && !root._swapping
                 NumberAnimation { property: "y"; duration: Motion.normal; easing.type: Easing.OutCubic }
             }
             add: Transition {
-                enabled: !root._clearing
+                enabled: !root._clearing && !root._swapping
                 NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Motion.fast }
             }
             remove: Transition {
-                enabled: !root._clearing
+                enabled: !root._clearing && !root._swapping
                 ParallelAnimation {
                     NumberAnimation { property: "opacity"; to: 0; duration: Motion.fast; easing.type: Easing.InCubic }
                     NumberAnimation { property: "x"; to: 20; duration: Motion.fast; easing.type: Easing.InCubic }
                 }
             }
             removeDisplaced: Transition {
-                enabled: !root._clearing
+                enabled: !root._clearing && !root._swapping
                 NumberAnimation { property: "y"; duration: Motion.normal; easing.type: Easing.OutCubic }
             }
 
@@ -301,7 +363,8 @@ PageShell {
                     readonly property int _topPad: 11
                     readonly property int _sidePad: 14
                     readonly property int _rightGutter: _rightSlot.width + 10
-                    readonly property int _firstLineHeight: _showHeader ? _metaRow.height : _summary.height
+                    readonly property int _firstLineHeight: _showHeader ? _metaRow.height
+                        : Math.round(_summary.contentHeight / Math.max(1, _summary.lineCount))
                     readonly property int _sectionHeight: _showSection ? 24 : 0
                     readonly property int _gapAbove: index === 0 ? 0
                         : _showSection ? 14 : _showHeader ? 8 : 3
@@ -310,10 +373,18 @@ PageShell {
                     readonly property int _fullHeight: _gapAbove + _sectionHeight + _cardHeight
                     property bool _removing: false
                     property bool _expanded: false
+                    readonly property bool _expandable: _summary.truncated || _body.truncated
+                    readonly property string _rowKey: root.rowKey(modelData)
+
+                    function _restoreExpanded(): void {
+                        _entry._expanded = root._openRows[_entry._rowKey] === true
+                    }
 
                     function _toggleExpand(): void {
-                        if (_expanded) _expanded = false
-                        else if (_body.truncated) _expanded = true
+                        const open = _expanded ? false : _entry._expandable
+                        if (open === _expanded) return
+                        _entry._expanded = open
+                        root.setRowOpen(_entry._rowKey, open)
                     }
 
                     width: _historyList.width
@@ -323,7 +394,10 @@ PageShell {
                     // text lays out a frame after the delegate completes, so an ungated behaviour animates every row as it scrolls into view
                     property bool _heightReady: false
                     Timer { id: _heightArm; interval: 0; onTriggered: _entry._heightReady = true }
-                    Component.onCompleted: _heightArm.start()
+                    Component.onCompleted: {
+                        _entry._restoreExpanded()
+                        _heightArm.start()
+                    }
                     Component.onDestruction: _heightArm.stop()
                     ListView.onPooled: {
                         _heightArm.stop()
@@ -335,7 +409,7 @@ PageShell {
                         // the remove transition pools the row at its faded-out x and opacity
                         _entry.x = 0
                         _entry.opacity = 1
-                        _entry._expanded = false
+                        _entry._restoreExpanded()
                         _entry._removing = false
                         _entry._heightReady = false
                         _heightArm.restart()
@@ -347,10 +421,12 @@ PageShell {
 
                     function removeSelf(): void {
                         if (_removing || root._clearing) return
-                        const rowIndex = index
+                        const entry = { id: modelData.id, time: modelData.time,
+                            appName: modelData.appName, summary: modelData.summary }
                         // persist immediately. A delegate-owned delay is lost if the user changes pages before its timer fires
                         _removing = true
-                        Notifications.removeFromHistory(rowIndex)
+                        root.setRowOpen(_entry._rowKey, false)
+                        Notifications.removeFromHistory(entry)
                     }
 
                     Item {
@@ -413,11 +489,11 @@ PageShell {
 
                         HoverHandler {
                             id: _entryHover
-                            cursorShape: (_body.truncated || _entry._expanded) ? Qt.PointingHandCursor : Qt.ArrowCursor
+                            cursorShape: (_entry._expandable || _entry._expanded) ? Qt.PointingHandCursor : Qt.ArrowCursor
                         }
                         TapHandler {
                             id: _entryTap
-                            enabled: !root._clearing && !_entry._removing
+                            enabled: !root._clearing && !root._swapping && !_entry._removing
                             onTapped: eventPoint => {
                                 const p = _rightSlot.mapFromItem(_card, eventPoint.position.x, eventPoint.position.y)
                                 if (_rightSlot.contains(p)) return
@@ -498,8 +574,12 @@ PageShell {
                                     - (_metaRow.visible ? 0 : _entry._rightGutter))
                                 text: _entry.modelData.summary || "Notification"
                                 color: Theme.text
+                                // bottom-most text owes the chevron its corner
+                                rightPadding: _body.visible ? 0 : 16
                                 font.pixelSize: Settings.fontSize
                                 font.weight: Font.DemiBold
+                                wrapMode: Text.Wrap
+                                maximumLineCount: _entry._expanded ? 6 : 1
                                 elide: Text.ElideRight
                             }
 
@@ -589,7 +669,7 @@ PageShell {
                             anchors.rightMargin: _entry._sidePad - 2
                             anchors.bottom: parent.bottom
                             anchors.bottomMargin: _entry._topPad - 4
-                            visible: _entry._expanded || _body.truncated
+                            visible: _entry._expanded || _entry._expandable
                             text: "󰅀"
                             color: Theme.withAlpha(Theme.subtext,
                                 _entryHover.hovered ? 0.80 : 0.38)

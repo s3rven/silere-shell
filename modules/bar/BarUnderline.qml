@@ -12,6 +12,7 @@ Item {
     property var  screen: null
     property real floatingProgress: ShellSettings.barFloating ? 1.0 : 0.0
     property real wrapRadius: 0
+    readonly property real eventGlow: _lineEffect._eventGlow
 
     // a bottom bar mirrors the whole item vertically in one step; conditional anchor flips leave elements on the stale edge
     readonly property bool atBottom: ShellSettings.barPosition === "bottom"
@@ -457,12 +458,6 @@ Item {
                 && !ShellSettings.reduceMotion
             onTriggered: _lineEffect._tempSettled = true
         }
-    }
-
-    BarSpectrum {
-        screen: _ul.screen
-        inset:  _ul.wrapRadius
-        duck:   Math.min(0.82, _lineEffect._eventGlow * 1.7)
     }
 
     TrackGlow {

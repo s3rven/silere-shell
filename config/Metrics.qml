@@ -57,6 +57,20 @@ Singleton {
     function snap4Up(v: real): int   { return 4 * Math.ceil(v / 4) }
     function snap4Down(v: real): int { return 4 * Math.floor(v / 4) }
 
+    function flyoutX(origin: real, rowWidth: real, popupWidth: real, screenWidth: real): real {
+        const right = origin + rowWidth + 4
+        const target = right + popupWidth <= screenWidth - 4
+            ? right : origin - popupWidth - 4
+        return Math.max(4, Math.min(target, screenWidth - popupWidth - 4))
+    }
+
+    function historyViewportFor(available: real, count: int): int {
+        const limit = Math.max(1, snap4Down(available))
+        const wanted = rowHeightFor(56) + Math.max(0, count) * rowHeightFor(72)
+        return Math.min(limit, Math.max(rowHeightFor(276),
+            Math.min(rowHeightFor(480), snap4Up(wanted))))
+    }
+
     // fixed icon cell: Nerd glyph ink spans 0.64-1.08x the px size, so a natural-width slot shoves the row on every glyph swap
     function iconCellFor(pixelSize: int): int { return Math.ceil(pixelSize * 1.1) }
 

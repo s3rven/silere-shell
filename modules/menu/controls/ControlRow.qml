@@ -183,7 +183,7 @@ MenuRow {
                 ? Theme.withAlpha(Theme.mix(root.statusColor, Theme.text,
                     ShellSettings.highContrast ? 0.22 : 0.10), 0.94)
                 : root.active ? Theme.mix(root.accentColor, Theme.text, 0.12)
-                              : Theme.withAlpha(Theme.subtext, 0.62)
+                              : Theme.menuTextDetail
             font.pixelSize: Settings.fontCaption
             font.weight:    Font.Medium
             elide:          Text.ElideRight

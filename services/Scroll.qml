@@ -37,8 +37,10 @@ Singleton {
     function _processDelta(deltaY: real, key: string, threshold: real, maxSteps: int, minStepMs: int): int {
         if (!deltaY) return 0
         const now = Date.now()
-        const last = _lastSteps[key] || 0
-        const cur = (_accums[key] || 0) + deltaY
+        const previous = _accums[key] || 0
+        const reversed = previous * deltaY < 0
+        const last = reversed ? 0 : (_lastSteps[key] || 0)
+        const cur = (reversed ? 0 : previous) + deltaY
 
         const notches = Math.trunc(cur / threshold)
         if (notches === 0) {
