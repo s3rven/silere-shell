@@ -17,11 +17,17 @@ Item {
 
     property string _selected: ""
     property string _armedSsid: ""
+    property string _forgetSsid: ""
     // the model is a held snapshot: any content change in Network.wifiNetworks destroys every
     // delegate, and with it the password field being typed into
     property var _networks: []
     property real _armedAtMs: 0
-    Timer { id: _disarmTimer; interval: 3000; onTriggered: root._armedSsid = "" }
+    property real _forgetAtMs: 0
+    Timer {
+        id: _disarmTimer
+        interval: 3000
+        onTriggered: { root._armedSsid = ""; root._forgetSsid = "" }
+    }
 
     function _syncNetworks(): void {
         if (root._selected === "") root._networks = Network.wifiNetworks
@@ -84,7 +90,10 @@ Item {
         ShellText {
             visible: root.open && root._networks.length === 0
             width: parent.width
-            height: Metrics.rowHeightFor(32)
+            height: 4 * Math.ceil(Math.max(Metrics.rowHeightFor(32), contentHeight + 16) / 4)
+            leftPadding: 14
+            rightPadding: 14
+            wrapMode: Text.Wrap
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             text: !Network.toolAvailable ? "Wi-Fi unavailable"
@@ -92,7 +101,7 @@ Item {
                 : !Network.wifiEnabled   ? "Wi-Fi is off"
                 : Network.wifiScanning   ? "Searching for networks…"
                 :                          "No networks found"
-            color: Theme.withAlpha(Theme.subtext, 0.5)
+            color: Theme.menuTextDetail
             font.pixelSize: Settings.fontLabel
         }
 
@@ -113,6 +122,7 @@ Item {
                 spacing: 0
 
                 readonly property bool _armed:      root._armedSsid === modelData.ssid && modelData.active
+                readonly property bool _forgetArmed: root._forgetSsid === modelData.ssid
                 readonly property bool _sel:        root._selected === modelData.ssid
                 readonly property bool _connecting: Network.wifiConnecting === modelData.ssid
                 readonly property bool _failed:     Network.wifiError === modelData.ssid
@@ -135,19 +145,25 @@ Item {
                     bottomRadius: _entry.index === _list.count - 1 ? root.lastRowRadius : 0
                     glyph: _entry.modelData.glyph
                     label: _entry.modelData.label
-                    status: _entry._armed ? "Disconnect?"
+                    status: _entry._forgetArmed ? "Forget?"
+                        : _entry._armed ? "Disconnect?"
                         : _entry.modelData.active ? "Connected"
                         : _entry._connecting ? "Connecting…"
                         : _entry._failed ? (Network.wifiErrorNeedsSecret ? "Wrong password" : "Failed")
                         : _entry._sel ? "Password"
+                        : _entry.modelData.profileOnly ? (_entry.modelData.known ? "Secured" : "Not supported")
                         : _entry.modelData.secured ? "Secured"
                         : "Open"
                     selected: _entry.modelData.active
                     highlighted: _entry._sel
-                    warning: _entry._armed
+                    warning: _entry._armed || _entry._forgetArmed
                     failed:  _entry._failed
 
                     function _activate(): void {
+                        if (root._forgetSsid === modelData.ssid) {
+                            root._forgetSsid = ""
+                            _disarmTimer.stop()
+                        }
                         if (_entry.modelData.active) {
                             if (_entry._armed) {
                                 // TapHandler fires once per tap, so a double-click would arm and confirm in one gesture
@@ -162,11 +178,17 @@ Item {
                             }
                             return
                         }
+                        // an enterprise or WEP network can only join from a stored profile;
+                        // the shell has no way to collect those credentials
+                        if (_entry.modelData.profileOnly) {
+                            if (_entry.modelData.known) Network.connectWifi(_entry.modelData.ssid, "")
+                            return
+                        }
                         // a known network reconnects from its stored key; once that key is
                         // refused, repeating it can only fail again, so take a new one
                         const needsSecret = !_entry.modelData.known
                             || (_entry._failed && Network.wifiErrorNeedsSecret)
-                        if (_entry.modelData.secured && needsSecret) {
+                        if (_entry.modelData.psk && needsSecret) {
                             const wasSel = _entry._sel
                             root._selected = wasSel ? "" : _entry.modelData.ssid
                             Network.clearWifiError()
@@ -176,6 +198,25 @@ Item {
                         }
                     }
                     onTriggered: _activate()
+
+                    // middle-click forgets a saved profile; the first press only arms it
+                    function _middleTap(): void {
+                        if (!_entry.modelData.known || _entry.modelData.active) return
+                        if (root._forgetSsid === _entry.modelData.ssid) {
+                            if (Date.now() - root._forgetAtMs < Metrics.confirmGuardMs) return
+                            root._forgetSsid = ""
+                            _disarmTimer.stop()
+                            Network.forgetWifi(_entry.modelData.ssid)
+                        } else {
+                            root._forgetSsid = _entry.modelData.ssid
+                            root._forgetAtMs = Date.now()
+                            _disarmTimer.restart()
+                        }
+                    }
+                    TapHandler {
+                        acceptedButtons: Qt.MiddleButton
+                        onTapped: _row._middleTap()
+                    }
                 }
 
                 Item {

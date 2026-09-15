@@ -138,7 +138,8 @@ Singleton {
     // the saved profile's key is the thing that is wrong, so the row has to offer a retype
     readonly property bool wifiErrorNeedsSecret: wifiError.length > 0
         && (wifiErrorReason === ConnectionFailReason.NoSecrets
-            || wifiErrorReason === ConnectionFailReason.WifiAuthTimeout)
+            || wifiErrorReason === ConnectionFailReason.WifiAuthTimeout
+            || wifiErrorReason === ConnectionFailReason.WifiClientFailed)
     property var _pendingNetwork: null
     readonly property bool wifiScanning: _scanWarmup.running
 
@@ -205,11 +206,22 @@ Singleton {
                     if (network.known) existing.known = true
                     continue
                 }
+                const security = network.security
+                const passwordless = security === WifiSecurityType.Open
+                    || security === WifiSecurityType.Owe
+                // connectWithPsk accepts only these three; every other secured type
+                // has to join from a stored profile or not at all
+                const psk = security === WifiSecurityType.WpaPsk
+                    || security === WifiSecurityType.Wpa2Psk
+                    || security === WifiSecurityType.Sae
                 bySsid[ssid] = {
                     ssid: ssid,
                     label: SafeText.singleLineText(ssid, 128) || "Unnamed network",
                     signal: signal,
-                    secured: network.security !== WifiSecurityType.Open,
+                    secured: !passwordless,
+                    psk: psk,
+                    passwordless: passwordless,
+                    profileOnly: !passwordless && !psk,
                     active: network.connected,
                     known: network.known
                 }
@@ -235,6 +247,9 @@ Singleton {
                 label: entry.label,
                 glyph: signalGlyph(entry.signal),
                 secured: entry.secured,
+                psk: entry.psk,
+                passwordless: entry.passwordless,
+                profileOnly: entry.profileOnly,
                 active: entry.active,
                 known: entry.known
             }
@@ -259,6 +274,9 @@ Singleton {
                     || A.label !== B.label
                     || A.glyph !== B.glyph
                     || A.secured !== B.secured
+                    || A.psk !== B.psk
+                    || A.passwordless !== B.passwordless
+                    || A.profileOnly !== B.profileOnly
                     || A.active !== B.active
                     || A.known !== B.known) return false
         }
@@ -326,8 +344,19 @@ Singleton {
         wifiConnecting = ssid
         _pendingNetwork = network
         _connectTimeout.restart()
-        if (password && password.length > 0) network.connectWithPsk(password)
+        const security = network.security
+        const psk = security === WifiSecurityType.WpaPsk
+            || security === WifiSecurityType.Wpa2Psk
+            || security === WifiSecurityType.Sae
+        if (password && password.length > 0 && psk) network.connectWithPsk(password)
         else network.connect()
+    }
+
+    function forgetWifi(ssid: string): void {
+        const network = _findWifiNetwork(ssid)
+        if (!network) return
+        root.clearWifiError()
+        network.forget()
     }
 
     // the active link can be the wired one, so this cannot go through _linkState.best
