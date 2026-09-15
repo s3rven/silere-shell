@@ -33,6 +33,17 @@ skip() {
   else printf 'skip %s\n' "$1"
   fi
 }
+# CI installs these tools on purpose, so a checker missing there is a gate hole
+# rather than a pass; SILERE_REQUIRE_TOOLS turns the skips into failures
+require_tools="${SILERE_REQUIRE_TOOLS:-0}"
+structural_skip() {
+  if [ "$require_tools" = 1 ]; then
+    printf 'fail %-15s %s\n' "$1" "$2" >&2
+    status=1
+  else
+    printf 'skip %-15s %s\n' "$1" "$2"
+  fi
+}
 fail() { printf 'fail %s\n' "$*" >&2; status=1; }
 script_files=(scripts/*.sh scripts/silere scripts/lib/*.sh)
 
@@ -657,6 +668,39 @@ else
   fail "BumpAnimation must return its target to rest when it stops"
 fi
 
+# .stop() resets to rest and skips the settle; retire() exists precisely so a caller can
+# let a bump finish. A call site that reaches for .stop() reintroduces the parked-value bug.
+bump_stop=""
+while IFS= read -r _f; do
+  [ -n "$_f" ] && [ -f "$_f" ] || continue
+  _ids="$(awk '
+    /BumpAnimation[[:space:]]*\{/ { armed = 1; next }
+    armed && /id:[[:space:]]*[A-Za-z_][A-Za-z0-9_]*/ {
+      s = $0
+      sub(/.*id:[[:space:]]*/, "", s)
+      sub(/[^A-Za-z0-9_].*/, "", s)
+      print s
+      armed = 0
+    }
+  ' "$_f")"
+  while IFS= read -r _id; do
+    [ -n "$_id" ] || continue
+    _hit="$(grep -nE "\\b${_id}\\.stop\\(" "$_f" || true)"
+    [ -n "$_hit" ] && bump_stop="$bump_stop$_f:$_hit
+"
+  done <<EOF
+$_ids
+EOF
+done <<EOF
+$(grep -rlE 'BumpAnimation[[:space:]]*\{' --include='*.qml' modules services config 2>/dev/null)
+EOF
+if [ -n "$bump_stop" ]; then
+  fail "BumpAnimation call sites must use .retire(), not .stop() directly:"
+  printf '%s\n' "$bump_stop"
+else
+  ok "motion" "every BumpAnimation call site retires instead of stopping"
+fi
+
 section "bar widget sleep state"
 # A widget that never learns the bar slept keeps rolling its text and swapping its
 # glyphs behind the overview and through a blanked screen. Every entry in the map
@@ -773,7 +817,23 @@ if command -v python3 >/dev/null 2>&1 && [ -f scripts/check-connections.py ]; th
     printf '%s\n' "$orphan_handlers"
   fi
 else
-  skip "handlers" "python3 or scripts/check-connections.py missing; Connections check skipped"
+  structural_skip "handlers" "python3 or scripts/check-connections.py missing; Connections check skipped"
+fi
+
+# A component that decides its own visibility from one setting, but is only ever
+# built inside a Loader gated on a different one, silently inherits that gate: its
+# own setting is offered in Settings and does nothing in every state the host gate
+# excludes. The underline audio visualizer shipped this way - it drew only while the
+# underline was in Reactive mode, a switch on another page entirely.
+if command -v python3 >/dev/null 2>&1 && [ -f scripts/check-gate-inheritance.py ]; then
+  if borrowed_gates="$(python3 scripts/check-gate-inheritance.py)"; then
+    ok "gates" "no component inherits a gate stricter than its own setting"
+  else
+    fail "these components are unreachable in states their own setting allows:"
+    printf '%s\n' "$borrowed_gates"
+  fi
+else
+  structural_skip "gates" "python3 or scripts/check-gate-inheritance.py missing; gate check skipped"
 fi
 
 section "installer environment defaults"
@@ -833,7 +893,7 @@ if command -v shellcheck >/dev/null 2>&1; then
     [ -n "$shellcheck_stamp" ] && rm -f "$shellcheck_stamp" 2>/dev/null
   fi
 else
-  skip "shellcheck" "not installed"
+  structural_skip "shellcheck" "not installed"
 fi
 
 section "quickshell version floor"
@@ -1745,7 +1805,7 @@ if command -v python3 >/dev/null 2>&1 && [ -f scripts/check-text-scale.py ]; the
     printf '%s\n' "$text_scaled"
   fi
 else
-  skip "static text" "python3 or scripts/check-text-scale.py missing; text scale check skipped"
+  structural_skip "static text" "python3 or scripts/check-text-scale.py missing; text scale check skipped"
 fi
 
 section "inert compositor events"

@@ -23,7 +23,9 @@ jobs:
 
     steps:
       - name: Install validation dependencies
-        run: pacman -Syu --noconfirm git openssh shellcheck quickshell
+        run: |
+          pacman -Syu --noconfirm git openssh shellcheck quickshell python fontconfig ttf-jetbrains-mono-nerd
+          fc-cache -f >/dev/null
 
       # pinned to an immutable sha so a moved tag cannot run unreviewed code
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -36,7 +38,7 @@ jobs:
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Structural and portability validation
-        run: SILERE_REQUIRE_GIT_TESTS=1 bash scripts/ci-lint.sh
+        run: SILERE_REQUIRE_GIT_TESTS=1 SILERE_REQUIRE_TOOLS=1 bash scripts/ci-lint.sh
 
       - name: Quickshell package compatibility
         shell: bash
@@ -70,4 +72,6 @@ jobs:
 
       - name: Settings layout fit probe
         # a section can build and still lose its labels; Qt elides and reports success
+        env:
+          FIT_REQUIRE_FONT: "1"
         run: bash scripts/test-layout-fit.sh

@@ -31,13 +31,22 @@ _probe_require_qs
 # a bare CI container measured "Hidden until this is installed" at twice its real
 # width. fc-match always answers, so the returned family has to be compared.
 WANT_FONT="${FIT_FONT:-JetBrainsMono Nerd Font}"
+font_problem=""
 if ! command -v fc-match >/dev/null 2>&1; then
-    echo "SKIP: fontconfig missing, cannot confirm the shipped font" >&2
-    exit 0
+    font_problem="fontconfig missing"
+else
+    have_font="$(fc-match -f '%{family[0]}' "$WANT_FONT" 2>/dev/null || true)"
+    [ "$have_font" = "$WANT_FONT" ] \
+        || font_problem="$WANT_FONT not installed (got \"${have_font:-none}\")"
 fi
-have_font="$(fc-match -f '%{family[0]}' "$WANT_FONT" 2>/dev/null || true)"
-if [ "$have_font" != "$WANT_FONT" ]; then
-    echo "SKIP: $WANT_FONT not installed (got \"${have_font:-none}\"); text metrics would measure a substitute" >&2
+if [ -n "$font_problem" ]; then
+    # CI installs the shipped font on purpose; skipping there would drop the only
+    # check that catches elided labels while still reporting success
+    if [ "${FIT_REQUIRE_FONT:-0}" = 1 ]; then
+        echo "FAIL: $font_problem; text metrics would measure a substitute" >&2
+        exit 1
+    fi
+    echo "SKIP: $font_problem; text metrics would measure a substitute" >&2
     exit 0
 fi
 
