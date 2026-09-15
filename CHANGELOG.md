@@ -22,7 +22,6 @@ settings file carries its own `__version` and migrates separately.
 ### Changed
 
 - Settings descriptions and connection status messages use brighter secondary text.
-
 - Workspace taps, window drops, special-workspace entries and OSD nudges settle on one
   timing instead of five.
 - Power Mode on the Home page opens the list of available profiles.
@@ -36,39 +35,58 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
-- Long playback times move below the media buttons on narrow panels.
-- Confirmation buttons cancel pending confirmation when disabled or busy.
-
-- Scroll indicators stay aligned when entries are removed from a scrolled list.
-- Long package versions leave room for package names in the updates list.
-
-- Empty Wi-Fi and Bluetooth messages wrap to fit narrow panels and larger text.
+#### Bar fixes
 
 - Reversing a scroll immediately changes the direction of volume and other wheel controls.
-- Media progress follows the player’s playback speed.
 - Nested tray menus stay open while entering a child menu, and flyouts stay inside screen edges.
+- A paused player no longer leaves the underline lit.
+
+#### Menu and settings fixes
+
+- Confirmation buttons cancel pending confirmation when disabled or busy.
+- Scroll indicators stay aligned when entries are removed from a scrolled list.
+- A settings category no longer shows a changed dot for a setting its page is hiding.
+
+#### Notification fixes
+
 - A long notification title opens in full on the notifications page and in popups.
 - An expanded notification stays open while the history scrolls.
-
 - Notification history crossfades between app filters.
 - Removing an entry from filtered notification history deletes the selected notification.
 - Confirming Clear keeps its selected app even if the filter changes during the fade.
-- The audio controls enforce the 100% volume limit on amplified backend levels.
-- Disconnecting a Bluetooth device preserves pairing in progress on another device.
-- Short app names no longer jump to unrelated windows with matching suffixes.
-- A settings category no longer shows a changed dot for a setting its page is hiding.
-- A paused player no longer leaves the underline lit.
 - Notification history survives a restart when “Keep after restart” is on.
-- Auto night light tracks the sun from startup instead of after the first menu open.
-- The battery-critical hook still runs while other hooks are busy.
+
+#### Media fixes
+
+- Long playback times move below the media buttons on narrow panels.
+- Media progress follows the player’s playback speed.
+
+#### Sound fixes
+
+- The audio controls enforce the 100% volume limit on amplified backend levels.
+
+#### Network fixes
+
+- Empty Wi-Fi and Bluetooth messages wrap to fit narrow panels and larger text.
+- Disconnecting a Bluetooth device preserves pairing in progress on another device.
 - Work and campus Wi-Fi networks no longer offer a password field that cannot work.
 - Bluetooth reports a hardware switch that has blocked it.
 - Saved Wi-Fi networks and paired Bluetooth devices can be forgotten with a middle-click.
+
+#### System fixes
+
+- Short app names no longer jump to unrelated windows with matching suffixes.
+- Auto night light tracks the sun from startup instead of after the first menu open.
+- The battery-critical hook still runs while other hooks are busy.
 - Settings migrated from an older version are backed up before the rewrite.
 - Notification history and calendar marks saved by a newer release are left untouched.
-- A failed install no longer removes the directory it moved aside.
 - A systemd-managed shell recovers when Hyprland restarts instead of going stale.
 - Optional features stay available when the capability check fails.
+
+#### Install and update fixes
+
+- Long package versions leave room for package names in the updates list.
+- A failed install no longer removes the directory it moved aside.
 - The updater reports when a staged release could not be fully checked.
 
 ## Releases
