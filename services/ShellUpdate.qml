@@ -276,7 +276,12 @@ Singleton {
         timeoutMs: 15000
         command: ["bash", root._script, "--version"]
         stdout: StdioCollector { id: _versionOut }
+        onTimeoutReached: {
+            root.versionReady = false
+            root.versionError = "The checkout state check timed out"
+        }
         onExited: (code) => {
+            if (_versionProc.timedOut) return
             if (code !== 0) {
                 root.versionReady = false
                 root.versionError = "The checkout state could not be verified"
@@ -463,8 +468,8 @@ Singleton {
     }
 
     function _lastOutputLine(out: string, err: string, fallback: string): string {
-        const text = ((out || "") + "\n" + (err || "")).trim()
-        const line = text.split(/\r?\n/).filter(function(s) { return s.length > 0 }).pop() || fallback
+        const line = SafeText.lastNonEmptyLine((out || "") + "\n" + (err || ""),
+            fallback, root.maxStatusTextChars)
         return SafeText.boundedText(line.replace(/^silere-update:\s*/, ""),
             root.maxStatusTextChars)
     }
@@ -556,10 +561,8 @@ Singleton {
             }
             // the switch is bound to the unit's real state, so a swallowed failure just flips it back with no reason given
             root.timerError = code === 0 ? ""
-                : SafeText.boundedText(
-                    _timerSetErr.text.trim().split("\n").pop()
-                        || "Could not change the update timer",
-                    root.maxStatusTextChars)
+                : SafeText.lastNonEmptyLine(_timerSetErr.text,
+                    "Could not change the update timer", root.maxStatusTextChars)
             root.refreshTimer()
         }
     }

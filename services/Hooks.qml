@@ -25,6 +25,7 @@ Singleton {
     readonly property int maxArgs: 4
 
     readonly property int maxRunsPerSecond: 20
+    readonly property int maxCriticalRunsPerSecond: 2
     readonly property int maxRuntimeMs: 30000
     // timeout owns a process group, while the inner shell stays alive until ordinary
     // background children leave it; otherwise timeout exits with the hook entrypoint
@@ -33,17 +34,20 @@ Singleton {
     readonly property string _groupWaitScript: '"$@"; code=$?; '
         + 'IFS= read -r own < /proc/self/stat || exit "$code"; '
         + 'self=${own%% *}; rest=${own##*) }; set -- $rest; group=$3; outer=$PPID; '
+        // the containing deadline already bounds the run, so poll slowly: /proc churn
+        // here scales with every process on the box, times four runners
         + 'while :; do alive=false; for stat in /proc/[0-9]*/stat; do '
         + '[ -r "$stat" ] || continue; IFS= read -r line < "$stat" || continue; '
         + 'pid=${line%% *}; rest=${line##*) }; set -- $rest; '
         + '[ "${1:-}" != Z ] && [ "${3:-}" = "$group" ] '
         + '&& [ "$pid" != "$self" ] && [ "$pid" != "$outer" ] '
-        + '&& { alive=true; break; }; done; $alive || exit "$code"; sleep 0.1; done'
+        + '&& { alive=true; break; }; done; $alive || exit "$code"; sleep 0.25; done'
 
     property var _present: ({})
     property var _found: ({})
     property bool _scanned: false
     property var _runTimes: []
+    property var _criticalTimes: []
     property bool _throttled: false
     readonly property bool armed: true
 
@@ -66,9 +70,26 @@ Singleton {
         return true
     }
 
+    // a flood must not swallow a critical battery crossing, so it draws on a small
+    // separate allowance when the shared bucket is spent
+    function _criticalAllows(): bool {
+        const now = Date.now()
+        const recent = []
+        for (let i = 0; i < root._criticalTimes.length; i++)
+            if (now - root._criticalTimes[i] < 1000) recent.push(root._criticalTimes[i])
+        if (recent.length >= root.maxCriticalRunsPerSecond) {
+            root._criticalTimes = recent
+            return false
+        }
+        recent.push(now)
+        root._criticalTimes = recent
+        return true
+    }
+
     function fire(event: string, args): void {
         if (root._present[event] !== true) return
-        if (!root._budgetAllows()) {
+        if (!root._budgetAllows()
+                && !(event === "battery-critical" && root._criticalAllows())) {
             if (!root._throttled) {
                 root._throttled = true
                 console.warn("silere-shell: hooks exceeded "
@@ -156,6 +177,10 @@ Singleton {
         _scan.running = true
     }
 
+    readonly property int _minRescanDelayMs: 5000
+    readonly property int _maxRescanDelayMs: 120000
+    property int _rescanDelayMs: 0
+
     BoundedProcess {
         id: _scan
         timeoutMs: 5000
@@ -172,11 +197,31 @@ Singleton {
                 root._found[name] = true
             }
         }
+        onTimeoutReached: console.warn(
+            "silere-shell: hook scan timed out; keeping the last known set")
         onExited: {
+            // the exit code here is noise (the probe script only intentionally exits
+            // early on a missing directory), but a killed-by-timeout run truncated
+            // mid-scan must not disarm hooks it never got to check
+            if (timedOut) {
+                root._found = ({})
+                root._rescanDelayMs = root._rescanDelayMs > 0
+                    ? Math.min(root._rescanDelayMs * 2, root._maxRescanDelayMs)
+                    : root._minRescanDelayMs
+                _rescanTimer.restart()
+                return
+            }
             root._present = Object.assign({}, root._found)
             root._found = ({})
             root._scanned = true
+            root._rescanDelayMs = 0
         }
+    }
+
+    Timer {
+        id: _rescanTimer
+        interval: root._rescanDelayMs
+        onTriggered: root.rescan()
     }
 
     Connections {

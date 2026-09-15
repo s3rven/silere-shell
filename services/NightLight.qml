@@ -357,9 +357,9 @@ Singleton {
             // QProcess.NormalExit; a tool killed from outside reports a signal in code,
             // and wlsunset's running commentary on stderr is not the reason it went away
             if (code !== 0)
-                root.lastError = (status === 0
-                        ? _sunsetErr.text.trim().split("\n").pop() : "")
-                    || (stopped + " stopped unexpectedly")
+                root.lastError = status === 0
+                    ? SafeText.lastNonEmptyLine(_sunsetErr.text, stopped + " stopped unexpectedly")
+                    : (stopped + " stopped unexpectedly")
             root._runningTool = ""
             if (root.enabled) root.enabled = false
         }
@@ -374,7 +374,9 @@ Singleton {
                 root.lastError = ""
                 return
             }
-            if (code !== 0) {
+            // pkill exit 1 just means nothing matched — the common case when no
+            // external tool is running. Only 2 (usage) and 3 (fatal) are real errors
+            if (_killProc.timedOut || code === 2 || code === 3) {
                 root._pendingEnable = false
                 root.lastError = "Could not stop the external night light"
                 root._init()

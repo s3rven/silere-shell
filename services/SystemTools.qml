@@ -107,14 +107,38 @@ Singleton {
         Quickshell.execDetached(argv)
     }
 
-    // a scan that never lands leaves every capability flag false for the session
+    readonly property int _minRetryDelayMs: 5000
+    readonly property int _maxRetryDelayMs: 120000
+    property int _retryDelayMs: 0
+    property real _lastScanMs: 0
+
+    // the scan itself failing to land says nothing about whether a tool was
+    // actually removed; wiping _tools here would tear down NightLight, cava
+    // and Updates over a transient hiccup, so keep the last-known set and
+    // retry with backoff instead of advertising a false negative
     function _scanFailed(message: string): void {
-        root._tools = ({})
-        root.packageFamily = ""
         root.lastError = message
         root.ready = true
         root.checking = false
+        root._lastScanMs = Date.now()
         root._scanRevision++
+        root._retryDelayMs = root._retryDelayMs > 0
+            ? Math.min(root._retryDelayMs * 2, root._maxRetryDelayMs)
+            : root._minRetryDelayMs
+        _retryTimer.restart()
+    }
+
+    Timer {
+        id: _retryTimer
+        interval: root._retryDelayMs
+        onTriggered: root.refresh()
+    }
+
+    // opening a section re-runs the full probe; only do that when the last answer
+    // is stale, while the Refresh control still forces one
+    function refreshIfStale(maxAgeMs: int): void {
+        if (root._lastScanMs > 0 && Date.now() - root._lastScanMs < maxAgeMs) return
+        root.refresh()
     }
 
     function refresh(): void {
@@ -151,10 +175,10 @@ Singleton {
         onExited: (code) => {
             if (_checkProc.timedOut) return
             if (code !== 0) {
-                // a refresh must not leave removed tools advertised forever
                 root._scanFailed("Optional tool scan failed (exit " + code + ")")
                 return
             }
+            root._retryDelayMs = 0
             const found = {}
             let family = ""
             const lines = (_checkOut.text || "").split(/\r?\n/)
@@ -168,6 +192,7 @@ Singleton {
             root.lastError = ""
             root.ready = true
             root.checking = false
+            root._lastScanMs = Date.now()
             root._scanRevision++
         }
     }
