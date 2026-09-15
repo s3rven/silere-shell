@@ -414,6 +414,22 @@ test_install_transaction_and_receipt() (
     grep -q '^status=rolled-back$' "$TXN_JOURNAL" \
         || fail "install transaction did not record rollback"
 
+    # install.sh's own clone-failure handler can restore the backup by hand
+    # before _die triggers this same rollback a second time; the backup is
+    # gone by then, and rollback must leave the hand-restored tree alone
+    # rather than deleting it and finding nothing left to put back
+    local reentrant_tree="$work/reentrant-checkout"
+    local reentrant_backup="$work/reentrant-checkout.backup"
+    mkdir -p "$reentrant_tree"
+    printf 'original checkout\n' > "$reentrant_tree/value"
+    _txn_begin
+    mv "$reentrant_tree" "$reentrant_backup"
+    _txn_tree_replaced "$reentrant_tree" "$reentrant_backup"
+    mv "$reentrant_backup" "$reentrant_tree"
+    _txn_rollback
+    assert_eq "original checkout" "$(cat "$reentrant_tree/value")" \
+        "rollback left a hand-restored tree-replaced backup in place"
+
     _txn_begin
     ROOT="$work/managed-checkout"
     mkdir -p "$ROOT"
@@ -1455,7 +1471,7 @@ EOF
     monitor+='pid=${line%% *}; rest=${line##*) }; set -- $rest; '
     monitor+='[ "${1:-}" != Z ] && [ "${3:-}" = "$group" ] '
     monitor+='&& [ "$pid" != "$self" ] && [ "$pid" != "$outer" ] '
-    monitor+='&& { alive=true; break; }; done; $alive || exit "$code"; sleep 0.1; done'
+    monitor+='&& { alive=true; break; }; done; $alive || exit "$code"; sleep 0.25; done'
     timeout --kill-after=1 1 bash -c "$monitor" silere-hook "$hook" >/dev/null 2>&1 &
     local wrapper=$!
     local waited=0

@@ -17,9 +17,29 @@ _silere_quickshell_version() {
 }
 
 # 0 when $1 is at least $2, comparing dot-separated numbers left to right.
+# Pure bash rather than `sort -V`: that flag is a GNU extension, and on a host
+# without it the comparison fails silently instead of erroring.
 _silere_version_at_least() {
-    [ "$1" = "$2" ] && return 0
-    [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n 1)" = "$2" ]
+    local -a _svr_have _svr_want
+    IFS=. read -r -a _svr_have <<< "$1"
+    IFS=. read -r -a _svr_want <<< "$2"
+    local _svr_i _svr_n=${#_svr_want[@]} _svr_h _svr_w
+    [ "${#_svr_have[@]}" -gt "$_svr_n" ] && _svr_n=${#_svr_have[@]}
+    for ((_svr_i = 0; _svr_i < _svr_n; _svr_i++)); do
+        _svr_h="${_svr_have[_svr_i]:-0}"; _svr_w="${_svr_want[_svr_i]:-0}"
+        [[ "$_svr_h" =~ ^[0-9]+$ ]] || _svr_h=0
+        [[ "$_svr_w" =~ ^[0-9]+$ ]] || _svr_w=0
+        ((10#$_svr_h > 10#$_svr_w)) && return 0
+        ((10#$_svr_h < 10#$_svr_w)) && return 1
+    done
+    return 0
+}
+
+# BusyBox ships its own `timeout` applet without --kill-after; probe the flag
+# directly rather than trusting the binary's name.
+_silere_timeout_kill_after_ok() {
+    command -v timeout >/dev/null 2>&1 || return 1
+    timeout --kill-after=0 0 true >/dev/null 2>&1
 }
 
 # The array is consumed by the scripts that source this library; checking this

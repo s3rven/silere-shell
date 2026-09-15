@@ -28,3 +28,13 @@ _section() { printf "\n${BOLD}==> %s${R}\n" "$1"; }
 _need_tty() { # $1 = what to tell the user to do instead
     { : </dev/tty; } 2>/dev/null || _die "$1"
 }
+
+# 0 when $1 has exactly one $2...$3 marker pair, in that order. Missing,
+# reversed, nested, or duplicate markers are ambiguous and must fail closed.
+_silere_marker_pair_valid() {
+    awk -v begin="$2" -v end="$3" '
+        $0 == begin { begins++; begin_line = NR }
+        $0 == end   { ends++; end_line = NR }
+        END { exit !(begins == 1 && ends == 1 && begin_line < end_line) }
+    ' "$1"
+}

@@ -16,9 +16,16 @@ INSTALL_RECEIPT="$STATE_HOME/silere-shell/install-receipt"
 
 source "$SCRIPT_DIR/lib/ui.sh"
 
+# same convention as install.sh's _assume_yes: one env var, no CLI flag
+_assume_yes() { [ "${SILERE_ASSUME_YES:-0}" = "1" ]; }
+
 _ask() {
     local reply
-    _need_tty "interactive uninstall requires a TTY — run scripts/uninstall.sh from a terminal"
+    if _assume_yes; then
+        printf "  ${CYAN}::${R}  %s ${DIM}[y/N]${R} y\n" "$1"
+        return 0
+    fi
+    _need_tty "interactive uninstall requires a TTY — run scripts/uninstall.sh from a terminal, or set SILERE_ASSUME_YES=1"
     printf "  ${CYAN}::${R}  %s ${DIM}[y/N]${R} " "$1"
     read -r reply </dev/tty
     [[ "$reply" =~ ^[Yy] ]]
@@ -43,13 +50,7 @@ _remove_block() {
         target="$(readlink -f -- "$file" 2>/dev/null)" || return 1
     fi
 
-    # Only edit one exact, ordered marker pair. Missing, reversed, nested, or
-    # duplicate markers are ambiguous and must leave the file byte-for-byte intact.
-    if ! awk -v begin="$begin" -v end="$end" '
-        $0 == begin { begins++; begin_line = NR }
-        $0 == end   { ends++; end_line = NR }
-        END { exit !(begins == 1 && ends == 1 && begin_line < end_line) }
-    ' "$target"; then
+    if ! _silere_marker_pair_valid "$target" "$begin" "$end"; then
         _warn "markers malformed or ambiguous in $(basename "$file") — left untouched"
         return 1
     fi

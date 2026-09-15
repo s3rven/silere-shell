@@ -257,8 +257,10 @@ _has_local_changes() {
 # it. 9>&- is what closes that: a fetch nothing can signal any more still cannot
 # hold the lock. --kill-after covers one that sits on SIGTERM.
 _git_fetch() {
-    if command -v timeout >/dev/null 2>&1; then
+    if _silere_timeout_kill_after_ok; then
         GIT_TERMINAL_PROMPT=0 timeout --kill-after=5 90 git fetch --quiet "$@" 9>&-
+    elif command -v timeout >/dev/null 2>&1; then
+        GIT_TERMINAL_PROMPT=0 timeout 90 git fetch --quiet "$@" 9>&-
     else
         GIT_TERMINAL_PROMPT=0 git fetch --quiet "$@" 9>&-
     fi
@@ -441,7 +443,7 @@ _unit_runs_this_checkout() {
 # headless or bare checkout is never rolled back over a condition of its own.
 _candidate_tree_starts() {
     local candidate_root="$1"
-    command -v timeout >/dev/null 2>&1 || return 0
+    _silere_timeout_kill_after_ok || return 0
     [ -n "${WAYLAND_DISPLAY:-}" ] || return 0
     [ -n "${XDG_RUNTIME_DIR:-}" ] && [ -d "$XDG_RUNTIME_DIR" ] || return 0
     [ -f "$candidate_root/config/MatugenPalette.qml" ] || return 0
@@ -481,7 +483,17 @@ _candidate_tree_loads() {
     local candidate_root="$1"
     [ -r "$candidate_root/scripts/test-qml-headless.sh" ] || return 0
     command -v qs >/dev/null 2>&1 || return 0
-    bash "$candidate_root/scripts/test-qml-headless.sh" >/dev/null 2>&1 || return 1
+    # unbounded and holding the update lock's fd open is how a stuck qmllint
+    # wedges every later run behind this one; same guard as _git_fetch
+    if _silere_timeout_kill_after_ok; then
+        timeout --kill-after=5 60 bash "$candidate_root/scripts/test-qml-headless.sh" \
+            >/dev/null 2>&1 9>&- || return 1
+    elif command -v timeout >/dev/null 2>&1; then
+        timeout 60 bash "$candidate_root/scripts/test-qml-headless.sh" \
+            >/dev/null 2>&1 9>&- || return 1
+    else
+        bash "$candidate_root/scripts/test-qml-headless.sh" >/dev/null 2>&1 9>&- || return 1
+    fi
     _candidate_tree_starts "$candidate_root"
 }
 

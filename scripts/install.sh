@@ -250,8 +250,12 @@ _txn_rollback() {
             tree-replaced)
                 path="$(_txn_unescape "$a")"
                 backup="$(_txn_unescape "$b")"
-                _txn_remove_created_tree "$path" || true
-                [ ! -e "$backup" ] || mv -- "$backup" "$path" || true
+                # a caller may already have restored the backup by hand before dying;
+                # a missing backup here means path already holds the right content
+                if [ -e "$backup" ]; then
+                    _txn_remove_created_tree "$path" || true
+                    mv -- "$backup" "$path" || true
+                fi
                 ;;
             timer)
                 if [ "$a" = 0 ] && command -v systemctl >/dev/null 2>&1; then
@@ -448,11 +452,7 @@ _replace_matugen_block() {
     if [ -L "$file" ]; then
         target="$(readlink -f -- "$file" 2>/dev/null)" || return 1
     fi
-    if ! awk '
-        $0 == "# silere-shell begin" { begins++; begin_line = NR }
-        $0 == "# silere-shell end"   { ends++; end_line = NR }
-        END { exit !(begins == 1 && ends == 1 && begin_line < end_line) }
-    ' "$target"; then
+    if ! _silere_marker_pair_valid "$target" "# silere-shell begin" "# silere-shell end"; then
         _warn "silere-shell markers are malformed or ambiguous — left config.toml unchanged"
         return 1
     fi
@@ -477,11 +477,12 @@ _replace_matugen_block() {
 _owned_block_contains() {
     local file="$1" begin="$2" end="$3" needle="$4"
     [ -f "$file" ] || return 1
+    _silere_marker_pair_valid "$file" "$begin" "$end" || return 1
     awk -v begin="$begin" -v end="$end" -v needle="$needle" '
-        $0 == begin { begins++; begin_line = NR; inside = 1; next }
-        $0 == end   { ends++; end_line = NR; inside = 0; next }
+        $0 == begin { inside = 1; next }
+        $0 == end   { inside = 0; next }
         inside && index($0, needle) { found = 1 }
-        END { exit !(begins == 1 && ends == 1 && begin_line < end_line && found) }
+        END { exit !found }
     ' "$file"
 }
 
@@ -492,11 +493,7 @@ _replace_owned_block() {
     if [ -L "$file" ]; then
         target="$(readlink -f -- "$file" 2>/dev/null)" || return 1
     fi
-    if ! awk -v begin="$begin" -v end="$end" '
-        $0 == begin { begins++; begin_line = NR }
-        $0 == end   { ends++; end_line = NR }
-        END { exit !(begins == 1 && ends == 1 && begin_line < end_line) }
-    ' "$target"; then
+    if ! _silere_marker_pair_valid "$target" "$begin" "$end"; then
         _warn "silere-shell markers are malformed or ambiguous in $file — left untouched"
         return 1
     fi
@@ -955,7 +952,8 @@ else
         mkdir -p "$FONT_DIR"
         font_tmp="$(mktemp "${TMPDIR:-/tmp}/silere-font.XXXXXX.tar.xz")"
         spin_start "downloading..."
-        if ! curl -fsSL --proto '=https' --tlsv1.2 -o "$font_tmp" "$FONT_URL"; then
+        if ! curl -fsSL --proto '=https' --tlsv1.2 \
+                --connect-timeout 10 --max-time 60 -o "$font_tmp" "$FONT_URL"; then
             spin_stop
             rm -f "$font_tmp"
             _warn "download failed — install JetBrainsMono Nerd Font manually"

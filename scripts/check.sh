@@ -480,8 +480,8 @@ if [ "$qs_usable" = 1 ]; then
     warn "startup" "no Wayland display; runtime smoke test skipped"
   elif [ -z "${XDG_RUNTIME_DIR:-}" ] || [ ! -d "$XDG_RUNTIME_DIR" ]; then
     warn "startup" "no usable XDG_RUNTIME_DIR; runtime smoke test skipped"
-  elif ! command -v timeout >/dev/null 2>&1; then
-    warn "startup" "timeout command unavailable; runtime smoke test skipped"
+  elif ! _silere_timeout_kill_after_ok; then
+    warn "startup" "timeout --kill-after unsupported; runtime smoke test skipped"
   else
     smoke_log=""
     par_dir=""
