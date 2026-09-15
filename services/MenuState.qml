@@ -6,6 +6,8 @@ import Quickshell.Io
 AnchoredPopupState {
     id: root
 
+    readonly property bool armed: true
+    controlSurface: true
     anchorX: 10
 
     readonly property int homeTab: 0

@@ -143,11 +143,18 @@ Singleton {
         root._anchorMs  = Date.now()
         _recompute()
     }
+    function extrapolatedPosition(start: real, elapsedMs: real, isPlaying: bool,
+            rate: real, duration: real): real {
+        const speed = isFinite(rate) ? rate : 1
+        const progress = root.finiteNonnegative(start)
+            + (isPlaying ? root.finiteNonnegative(elapsedMs) * speed / 1000 : 0)
+        return duration > 0 ? Math.max(0, Math.min(duration, progress)) : Math.max(0, progress)
+    }
+
     function _recompute(): void {
         if (!player) { positionNow = 0; return }
-        let p = root._anchorPos
-        if (playing) p += (Date.now() - root._anchorMs) / 1000
-        positionNow = root.length > 0 ? Math.max(0, Math.min(root.length, p)) : Math.max(0, p)
+        positionNow = root.extrapolatedPosition(root._anchorPos,
+            Date.now() - root._anchorMs, root.playing, player.rate, root.length)
     }
     function seekToRatio(r: real): void {
         if (!player || !canSeek || length <= 0) return
@@ -171,6 +178,7 @@ Singleton {
         target: root.player
         enabled: root.player !== null
         function onPositionChanged() { root._reanchor() }
+        function onRateChanged() { root._reanchor() }
     }
     onPositionVisibleChanged: if (positionVisible) root._reanchor()
     Timer {
@@ -501,10 +509,10 @@ Singleton {
     property bool _fsBlocked: false
     readonly property bool _fullscreenPauseWanted: ShellSettings.mediaProgress
     Connections {
-        target: Notifications
+        target: FullscreenState
         enabled: root._fullscreenPauseWanted
-        function onFullscreenActiveChanged() {
-            if (Notifications.fullscreenActive) _fsBlockTimer.restart()
+        function onActiveChanged() {
+            if (FullscreenState.active) _fsBlockTimer.restart()
             else { _fsBlockTimer.stop(); root._fsBlocked = false }
         }
     }
@@ -513,7 +521,7 @@ Singleton {
         if (!root._fullscreenPauseWanted) {
             _fsBlockTimer.stop()
             root._fsBlocked = false
-        } else if (Notifications.fullscreenActive) {
+        } else if (FullscreenState.active) {
             _fsBlockTimer.restart()
         }
     }

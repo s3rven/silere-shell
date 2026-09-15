@@ -8,6 +8,21 @@ Singleton {
     property real anchorX: 0
     property QtObject anchorSource: null
     property ShellScreen triggerScreen: null
+    // rows that services key off live in the menu and quick actions; calendar and tray do not host them
+    property bool controlSurface: false
+
+    // registration is what lets the coordinator own exclusivity without naming each popup
+    Component.onCompleted: OverlayCoordinator.registerPopup(root)
+
+    // a Connections object, not onOpenChanged: a derived state's own handler on the same
+    // signal would replace a handler declared here
+    Connections {
+        target: root
+        function onOpenChanged() {
+            if (root.open) OverlayCoordinator.popupOpened(root)
+            else OverlayCoordinator.popupClosed()
+        }
+    }
 
     readonly property real effectiveAnchorX: {
         const live = Number(root.anchorSource?.menuAnchorX)

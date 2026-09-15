@@ -433,14 +433,8 @@ Singleton {
     signal contentUpdated(int notifId)
     signal notificationShown(string appName, string summary, bool critical)
 
-    readonly property bool _fullscreenWatchWanted: ShellSettings.notifFullscreenSilence
-        || ShellSettings.mediaProgress
-        || (ShellSettings.osdEnabled && ShellSettings.osdBarIntegrated)
-    readonly property bool _fullscreenActive: _fullscreenWatchWanted && Compositor.activeFullscreen
-    readonly property bool fullscreenActive: _fullscreenActive
-    readonly property bool fullscreenSilenced: ShellSettings.notifFullscreenSilence && _fullscreenActive
-
-    function refreshFullscreenState(): void { Compositor.refreshToplevels() }
+    readonly property bool fullscreenSilenced: ShellSettings.notifFullscreenSilence
+        && FullscreenState.active
     function toggleDnd(): void { dnd = !dnd }
 
     readonly property bool _quietActive: {
@@ -658,7 +652,11 @@ Singleton {
         } else if (entry) {
             for (let i = 0; i < _history.count; i++) {
                 const h = _history.get(i)
-                if (h.time === entry.time && h.summary === entry.summary) { idx = i; break }
+                if (h.id === entry.id && h.time === entry.time
+                        && h.appName === entry.appName && h.summary === entry.summary) {
+                    idx = i
+                    break
+                }
             }
         }
         if (idx < 0 || idx >= _history.count) return

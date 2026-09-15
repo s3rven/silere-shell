@@ -17,7 +17,7 @@ Singleton {
     property color  fillColor: Theme.accent
     readonly property bool hasBar: _hasBarKind(kind)
     readonly property real clamped: Math.max(0, Math.min(1, value))
-    readonly property bool barConcealed: OverviewState.active || Notifications.fullscreenActive
+    readonly property bool barConcealed: OverviewState.active || FullscreenState.active
     readonly property alias entries: _entries
     readonly property int activeCount: _entries.count
     MotionBehavior on fillColor {
@@ -218,7 +218,7 @@ Singleton {
         const refreshFullscreen = ShellSettings.osdBarIntegrated && !root._hasActiveBarEntry()
         root.fillColor = Theme.accent
         if (_applyValues(kind, icon, value, label, muted, Theme.accent) && refreshFullscreen)
-            Notifications.refreshFullscreenState()
+            FullscreenState.refresh()
     }
 
     function showAlert(kind: string, icon: string, value: real, label: string, fillColor: color): void {

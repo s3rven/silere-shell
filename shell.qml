@@ -45,6 +45,14 @@ ShellRoot {
         void ShellUpdate.pending
         void OverlayCoordinator.armed
         void ControlSurfaces.anyOpen
+        // the anchored popup states own the documented IPC targets and the shared control
+        // rows, so they cannot wait on the panel that happens to host them
+        void MenuState.armed
+        void CalendarState.armed
+        void TrayMenuState.armed
+        void QuickActionsState.armed
+        // auto night light tracks the sun in the background; with auto off the singleton stays lazy
+        if (ShellSettings.nightLightAuto) void NightLight.toolAvailable
         // nothing else references Hooks: unarmed it never scans, and no hook ever fires
         void Hooks.armed
         root.armSystemAlertsIfNeeded()
@@ -54,6 +62,9 @@ ShellRoot {
         target: ShellSettings
         function onOsdBatteryWarnChanged() { root.armSystemAlertsIfNeeded() }
         function onOsdTempWarnChanged() { root.armSystemAlertsIfNeeded() }
+        function onNightLightAutoChanged() {
+            if (ShellSettings.nightLightAuto) void NightLight.toolAvailable
+        }
     }
 
     Variants {

@@ -544,6 +544,28 @@ ShellRoot {
                 && OverlayCoordinator._environmentBlocksControls(false, true),
             "screen blanking and overview activation retire open control surfaces")
 
+        const fsSilenceWas = ShellSettings.notifFullscreenSilence
+        const fsMediaWas = ShellSettings.mediaProgress
+        const fsOsdWas = ShellSettings.osdEnabled
+        const fsIntegratedWas = ShellSettings.osdBarIntegrated
+        ShellSettings.notifFullscreenSilence = true
+        ShellSettings.mediaProgress = false
+        ShellSettings.osdEnabled = false
+        root._check(FullscreenState.wanted,
+            "notification silencing demands fullscreen tracking")
+        ShellSettings.notifFullscreenSilence = false
+        ShellSettings.osdEnabled = true
+        ShellSettings.osdBarIntegrated = false
+        root._check(!FullscreenState.wanted,
+            "an OSD that is not part of the bar needs no fullscreen tracking")
+        ShellSettings.osdBarIntegrated = true
+        root._check(FullscreenState.wanted,
+            "the integrated OSD demands fullscreen tracking")
+        ShellSettings.notifFullscreenSilence = fsSilenceWas
+        ShellSettings.mediaProgress = fsMediaWas
+        ShellSettings.osdEnabled = fsOsdWas
+        ShellSettings.osdBarIntegrated = fsIntegratedWas
+
         const settingsNavComponent = Qt.createComponent("file://"
             + Quickshell.shellDir + "/modules/menu/SettingsNav.qml")
         const settingsNav = settingsNavComponent.status === Component.Ready
@@ -1116,6 +1138,14 @@ ShellRoot {
         MenuState.toggleAt(probeAnchor.menuAnchorX, null, probeAnchor)
         root._check(MenuState.open && MenuState.anchorSource === probeAnchor,
             "menu takes the anchor it was opened from")
+        root._check(OverlayCoordinator.anyOpen && ControlSurfaces.anyOpen,
+            "an open control surface reports through the popup registry")
+        CalendarState.toggleAt(probeAnchor.menuAnchorX, null, probeAnchor)
+        root._check(CalendarState.open && !MenuState.open
+                && OverlayCoordinator.anyOpen && !ControlSurfaces.anyOpen,
+            "opening the calendar closes the menu and leaves the control surfaces")
+        CalendarState.close()
+        MenuState.toggleAt(probeAnchor.menuAnchorX, null, probeAnchor)
         // a destroyed widget nulls the property with no assignment behind it
         MenuState.anchorSource = null
         root._check(MenuState.open && MenuState.anchorSource !== null
@@ -1227,6 +1257,11 @@ ShellRoot {
         root._check(SafeText.singleLineText("Editor\nspoof\u202E", 64)
                 === "Editor spoof",
             "compositor sanitizes client-controlled window text")
+        root._check(SafeText.lastNonEmptyLine("warning: retrying\n\nfatal: no route\n\n", "fallback") === "fatal: no route",
+            "lastNonEmptyLine skips trailing blank lines")
+        root._check(SafeText.lastNonEmptyLine("", "fallback") === "fallback"
+                && SafeText.lastNonEmptyLine("   \n  \n", "fallback") === "fallback",
+            "lastNonEmptyLine falls back on blank output")
 
         const titleWidget = windowTitleFactory.createObject(root, {
             widthBudget: 10000
@@ -1498,12 +1533,14 @@ ShellRoot {
         SystemTools.ready = false
         SystemTools.checking = true
         SystemTools._tools = { hyprctl: true }
+        SystemTools._retryDelayMs = 0
         SystemTools._scanFailed("scan gave up")
         root._check(SystemTools.ready && !SystemTools.checking
                 && SystemTools.lastError === "scan gave up"
-                && Object.keys(SystemTools._tools).length === 0
+                && SystemTools._tools.hyprctl === true
+                && SystemTools._retryDelayMs === SystemTools._minRetryDelayMs
                 && SystemTools._scanRevision === revisionWas + 1,
-            "a capability scan that gives up still lands")
+            "a capability scan that gives up keeps the last-known tools and arms a retry")
         root._check(SystemTools._repairOutcome(0, false) === "done"
                 && SystemTools._repairOutcome(1, false) === "failed"
                 && SystemTools._repairOutcome(0, true) === "failed",

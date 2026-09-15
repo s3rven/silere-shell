@@ -7,45 +7,47 @@ Singleton {
     id: root
 
     readonly property bool armed: true
+    readonly property var popups: root._popups
+    property var _popups: []
+    property int _openCount: 0
+    readonly property bool anyOpen: root._openCount > 0
 
     function _environmentBlocksControls(idle: bool, overview: bool): bool {
         return idle || overview
     }
 
-    function closeAll(): void { root._claim("") }
+    function registerPopup(state): void {
+        if (!state || root._popups.indexOf(state) >= 0) return
+        root._popups = root._popups.concat([state])
+    }
 
-    function _opened(name: string): void {
+    function popupOpened(state): void {
+        root._openCount++
         // IPC and keybind requests can arrive after the environment edge that closed the surfaces, so reject re-entry until it becomes interactive
         if (root._environmentBlocksControls(Idle.isIdle, OverviewState.active)) {
             root.closeAll()
             return
         }
-        root._claim(name)
+        root._closeOthers(state)
     }
 
-    function _claim(name: string): void {
-        if (name !== "menu") MenuState.close()
-        if (name !== "calendar") CalendarState.close()
-        if (name !== "tray") TrayMenuState.close()
-        if (name !== "quickActions") QuickActionsState.close()
+    function popupClosed(): void {
+        root._openCount = Math.max(0, root._openCount - 1)
     }
 
-    Connections {
-        target: MenuState
-        function onOpenChanged() { if (MenuState.open) root._opened("menu") }
+    function closeAll(): void {
+        // close() re-enters popupClosed, so iterate a copy that cannot shift underneath
+        const list = root._popups.slice()
+        for (let i = 0; i < list.length; i++) list[i].close()
     }
-    Connections {
-        target: CalendarState
-        function onOpenChanged() { if (CalendarState.open) root._opened("calendar") }
+
+    function _closeOthers(opener): void {
+        const list = root._popups.slice()
+        for (let i = 0; i < list.length; i++) {
+            if (list[i] !== opener) list[i].close()
+        }
     }
-    Connections {
-        target: TrayMenuState
-        function onOpenChanged() { if (TrayMenuState.open) root._opened("tray") }
-    }
-    Connections {
-        target: QuickActionsState
-        function onOpenChanged() { if (QuickActionsState.open) root._opened("quickActions") }
-    }
+
     Connections {
         target: Idle
         function onIsIdleChanged() {
