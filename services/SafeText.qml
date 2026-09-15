@@ -82,6 +82,17 @@ Singleton {
         return root._clip(text, root._cap(limit, root.maxIdentityChars))
     }
 
+    // stderr from a package helper or gamma tool is often several lines of
+    // noise; the last non-empty one is usually the actual failure
+    function lastNonEmptyLine(value, fallback: string, limit): string {
+        const lines = String(value ?? "").split(/\r?\n/)
+        for (let i = lines.length - 1; i >= 0; i--) {
+            const line = lines[i].trim()
+            if (line.length > 0) return root.singleLineText(line, limit)
+        }
+        return fallback
+    }
+
     function initial(value, fallback: string): string {
         const text = root.singleLineText(value, 128)
         if (text.length === 0) return fallback

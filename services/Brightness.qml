@@ -301,7 +301,7 @@ Singleton {
             }
             if (!_setProc.timedOut)
                 root.lastError = code === 0 ? ""
-                    : (_setErr.text || "").trim().split("\n").pop() || "Could not set brightness"
+                    : SafeText.lastNonEmptyLine(_setErr.text, "Could not set brightness")
             if (root._applyQueued) {
                 root._applyQueued = false
                 if (!_applyDebounce.running) _applyDebounce.restart()

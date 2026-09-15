@@ -103,9 +103,8 @@ Singleton {
         onTimeoutReached: root.lastError = "Power mode change timed out"
         onExited: (code) => {
             if (!root.available || timedOut) return
-            root.lastError = code === 0 ? "" : SafeText.boundedText(
-                _setErr.text.trim().split("\n").pop()
-                    || "Could not change the power mode", 160)
+            root.lastError = code === 0 ? "" : SafeText.lastNonEmptyLine(
+                _setErr.text, "Could not change the power mode", 160)
         }
     }
 }
