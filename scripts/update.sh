@@ -41,6 +41,8 @@ APPLY_TRUSTED_SIGNERS="$STATE_DIR/update-transaction-$ROOT_KEY.signers"
 INSTALL_RECEIPT="$STATE_DIR/install-receipt"
 STAGE_PARENT=""
 STAGE_DIR=""
+# a candidate check that cannot run is reported, never silently counted as a pass
+CANDIDATE_GATE_NOTE=""
 
 _notify() {
     command -v notify-send >/dev/null 2>&1 || return 0
@@ -201,6 +203,14 @@ _journal_release_is_trusted() {
     git -C "$ROOT" merge-base --is-ancestor "$JOURNAL_FROM" "$JOURNAL_TO"
 }
 
+# A completed update is only known-good once the shell is up on it. With no unit
+# installed there is nothing this script can watch, so absence counts as running.
+_updated_shell_is_running() {
+    command -v systemctl >/dev/null 2>&1 || return 0
+    systemctl --user is-enabled --quiet silere-shell.service 2>/dev/null || return 0
+    systemctl --user is-active --quiet silere-shell.service 2>/dev/null
+}
+
 # A SIGKILL or power loss can land after the fast-forward but before validation.
 # Never infer success from HEAD alone: the last durable phase decides whether to
 # keep the signed target or return to the known-good revision.
@@ -224,9 +234,16 @@ _recover_interrupted_apply() {
     [ "$head" = "$JOURNAL_TO" ] \
         || _quiet_fail "checkout moved during an interrupted update — inspect $APPLY_JOURNAL"
     if [ "$JOURNAL_PHASE" = validated ]; then
-        _clear_apply_transaction \
-            || _quiet_fail "could not clear the completed update recovery journal"
-        echo "silere-update: retained the signed update that completed validation before interruption" >&2
+        # The journal is kept until the shell is seen running on the new revision; a
+        # release that passes the candidate gate can still fail in the live session,
+        # and --rollback needs the journal to restore it.
+        if _updated_shell_is_running; then
+            _clear_apply_transaction \
+                || _quiet_fail "could not clear the completed update recovery journal"
+            echo "silere-update: retained the signed update that completed validation before interruption" >&2
+        else
+            echo "silere-update: the updated shell is not running; run --rollback to restore $JOURNAL_FROM" >&2
+        fi
         return 0
     fi
     _has_local_changes \
@@ -236,6 +253,38 @@ _recover_interrupted_apply() {
     _clear_apply_transaction \
         || _quiet_fail "the checkout was restored but its update recovery journal could not be cleared"
     echo "silere-update: restored the previous revision after an interrupted update" >&2
+}
+
+# A release can pass the candidate smoke and still fail under the live session.
+# This puts the checkout back on the revision the journal recorded; the user runs
+# it from a working terminal when the shell no longer starts.
+_rollback_applied_update() {
+    [ -e "$APPLY_JOURNAL" ] \
+        || _fail "no completed update to roll back"
+    _read_apply_journal \
+        || _fail "the update journal is malformed — inspect $APPLY_JOURNAL"
+    _journal_release_is_trusted \
+        || _fail "the update journal could not be authenticated — inspect $APPLY_JOURNAL"
+    [ "$JOURNAL_PHASE" = validated ] \
+        || _fail "the last update did not reach a validated state"
+    [ "$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || true)" = "$JOURNAL_TO" ] \
+        || _fail "the checkout moved since the update — roll back manually"
+    _has_local_changes \
+        && _fail "local changes block the rollback — run: bash $ROOT/scripts/repair.sh --apply"
+    git -C "$ROOT" reset --hard --quiet "$JOURNAL_FROM" \
+        || _fail "could not restore $JOURNAL_FROM"
+    _clear_apply_transaction \
+        || _fail "the checkout was restored but the journal could not be cleared"
+    # Only restart a unit that actually runs this checkout; the test suite and a
+    # throwaway checkout share one user manager, where is-enabled alone would
+    # reach whatever shell is live.
+    if command -v systemctl >/dev/null 2>&1 \
+            && systemctl --user is-enabled --quiet silere-shell.service 2>/dev/null \
+            && _unit_runs_this_checkout; then
+        systemctl --user --no-block restart silere-shell.service || true
+    fi
+    _notify "Silere Shell rolled back" "restored $JOURNAL_FROM"
+    printf 'silere-update: rolled back to %s\n' "$JOURNAL_FROM"
 }
 
 _record_update_error() {
@@ -269,13 +318,15 @@ _git_fetch() {
 _fetch_main() {
     local shallow
     shallow="$(git -C "$ROOT" rev-parse --is-shallow-repository 2>/dev/null || true)"
+    # --prune-tags: a release withdrawn upstream must stop being eligible here too;
+    # without it a deleted or moved signed tag survives in the local namespace
     if [ "$shallow" = true ]; then
         # Older installer releases used --depth 1. Tags alone do not cross that
         # boundary, so git describe cannot recover the installed release until
         # the main-branch history is completed once.
-        _git_fetch --unshallow --tags origin main
+        _git_fetch --unshallow --tags --prune-tags origin main
     else
-        _git_fetch --tags origin main
+        _git_fetch --tags --prune-tags origin main
     fi
 }
 
@@ -443,10 +494,10 @@ _unit_runs_this_checkout() {
 # headless or bare checkout is never rolled back over a condition of its own.
 _candidate_tree_starts() {
     local candidate_root="$1"
-    _silere_timeout_kill_after_ok || return 0
-    [ -n "${WAYLAND_DISPLAY:-}" ] || return 0
-    [ -n "${XDG_RUNTIME_DIR:-}" ] && [ -d "$XDG_RUNTIME_DIR" ] || return 0
-    [ -f "$candidate_root/config/MatugenPalette.qml" ] || return 0
+    _silere_timeout_kill_after_ok || { CANDIDATE_GATE_NOTE="startup check skipped (timeout --kill-after unsupported)"; return 0; }
+    [ -n "${WAYLAND_DISPLAY:-}" ] || { CANDIDATE_GATE_NOTE="startup check skipped (no display)"; return 0; }
+    [ -n "${XDG_RUNTIME_DIR:-}" ] && [ -d "$XDG_RUNTIME_DIR" ] || { CANDIDATE_GATE_NOTE="startup check skipped (no runtime directory)"; return 0; }
+    [ -f "$candidate_root/config/MatugenPalette.qml" ] || { CANDIDATE_GATE_NOTE="startup check skipped (incomplete checkout)"; return 0; }
     local sandbox log code=0 verdict=0
     sandbox="$(mktemp -d "${TMPDIR:-/tmp}/silere-update-runtime.XXXXXX")" || return 1
     chmod 0700 "$sandbox" || { rmdir -- "$sandbox"; return 1; }
@@ -481,8 +532,10 @@ _candidate_tree_starts() {
 
 _candidate_tree_loads() {
     local candidate_root="$1"
-    [ -r "$candidate_root/scripts/test-qml-headless.sh" ] || return 0
-    command -v qs >/dev/null 2>&1 || return 0
+    [ -r "$candidate_root/scripts/test-qml-headless.sh" ] \
+        || { CANDIDATE_GATE_NOTE="load check skipped (candidate has no type-checker)"; return 0; }
+    command -v qs >/dev/null 2>&1 \
+        || { CANDIDATE_GATE_NOTE="load check skipped (qs is not on PATH)"; return 0; }
     # unbounded and holding the update lock's fd open is how a stuck qmllint
     # wedges every later run behind this one; same guard as _git_fetch
     if _silere_timeout_kill_after_ok; then
@@ -721,6 +774,11 @@ case "${1:-}" in
 esac
 
 _acquire_update_lock
+
+if [ "${1:-}" = "--rollback" ]; then
+    _rollback_applied_update
+    exit 0
+fi
 _recover_interrupted_apply
 
 if [ "${1:-}" != --pin-release ] && [ "$(_installation_mode)" = development ]; then
@@ -792,6 +850,9 @@ if [ "${1:-}" = "--apply" ]; then
         _fail "the staged update does not load; the live installation was not changed"
     fi
     _cleanup_candidate_stage
+    if [ -n "$CANDIDATE_GATE_NOTE" ]; then
+        echo "silere-update: $CANDIDATE_GATE_NOTE" >&2
+    fi
 
     # Validation takes long enough for an editor or a separate Git command to
     # change this checkout. The updater lock serializes Silere, not the user.
@@ -829,21 +890,28 @@ if [ "${1:-}" = "--apply" ]; then
     fi
     _clear_flag
     _clear_update_error
-    _clear_apply_transaction \
-        || echo "silere-update: could not clear the completed update recovery journal" >&2
     new_rev="$(git rev-parse HEAD)"
     count="$(git rev-list --count "${local_rev}..${new_rev}")"
     plural="change"; [ "$count" -ne 1 ] && plural="changes"
+    note_suffix=""
+    [ -n "$CANDIDATE_GATE_NOTE" ] && note_suffix=" (${CANDIDATE_GATE_NOTE})"
     # systemd unit only exists on dev installs; exec-once users restart by hand
     if systemctl --user is-active --quiet silere-shell.service 2>/dev/null \
             && _unit_runs_this_checkout; then
-        # Do not wait inside the shell's own process tree for systemd to stop
-        # that tree. The update is already committed and smoke-tested here.
-        if ! systemctl --user --no-block restart silere-shell.service; then
-            _notify "Silere Shell updated" "$count new $plural — restart the shell to use it"
+        # Do not wait inside the shell's own process tree for systemd to stop that tree.
+        # The journal stays until a later run sees the shell up on the new revision, so
+        # a release that fails to come back can be restored with --rollback.
+        if systemctl --user --no-block restart silere-shell.service; then
+            printf 'silere-update: the shell was restarted; if it does not come back, run: bash %s --rollback\n' \
+                "$ROOT/scripts/update.sh" >&2
+        else
+            _clear_apply_transaction || true
+            _notify "Silere Shell updated" "$count new $plural$note_suffix — restart the shell to use it"
         fi
     else
-        _notify "Silere Shell updated" "$count new $plural — restart the shell to use it"
+        _clear_apply_transaction \
+            || echo "silere-update: could not clear the completed update recovery journal" >&2
+        _notify "Silere Shell updated" "$count new $plural$note_suffix — restart the shell to use it"
     fi
     exit 0
 fi

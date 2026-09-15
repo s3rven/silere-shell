@@ -764,6 +764,32 @@ test_interrupted_update_recovery() (
         "validated interrupted update retained"
     [ ! -e "$APPLY_JOURNAL" ] || fail "validated transaction journal was not cleared"
 
+    # --rollback consumes a retained validated journal to undo a release that
+    # never came up in the live session. The stub answers as a unit running a
+    # different checkout: the rollback must not restart whatever shell is live.
+    local stub_dir="$TMP/update-rollback-stub"
+    local calls="$TMP/update-rollback-calls"
+    mkdir -p "$stub_dir"
+    cat > "$stub_dir/systemctl" <<EOF
+#!/bin/sh
+printf '%s\n' "\$*" >> "$calls"
+case "\$*" in
+    *" show "*) printf '{ path=/usr/bin/qs ; argv[]=/usr/bin/qs -p /elsewhere/shell.qml ; }\n' ;;
+esac
+EOF
+    chmod +x "$stub_dir/systemctl"
+    _start_apply_transaction "$old_rev" "$new_rev" v1.0.1
+    _write_apply_journal validated "$old_rev" "$new_rev" v1.0.1
+    PATH="$stub_dir:$PATH" _rollback_applied_update 2>/dev/null
+    assert_eq "$old_rev" "$(git -C "$repo" rev-parse HEAD)" \
+        "rollback restores the revision the update replaced"
+    [ ! -e "$APPLY_JOURNAL" ] || fail "rollback left the update journal behind"
+    grep -q 'restart silere-shell.service' "$calls" \
+        && fail "rollback restarted a unit that runs another checkout"
+    if ( _rollback_applied_update >/dev/null 2>&1 ); then
+        fail "rollback accepted a missing journal"
+    fi
+
     # Never turn a user-editable or damaged state file into a reset instruction.
     git -C "$repo" reset --hard -q "$old_rev"
     _start_apply_transaction "$old_rev" "$new_rev" v1.0.1

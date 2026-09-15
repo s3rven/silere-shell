@@ -17,6 +17,7 @@ Usage: silere <command> [options]
   doctor                 Run read-only installation diagnostics
   update                 Check for a signed Silere release
   update --apply         Install the confirmed signed release
+  update --rollback      Restore the revision an update replaced
   repair                 Preview local checkout changes
   repair --apply [--yes] Save local changes and restore shipped files
   repair --undo [--yes]  Restore the latest repair stash
@@ -211,6 +212,8 @@ case "$command_name" in
                 exec bash "$ROOT/scripts/update.sh" ;;
             --apply) [ "$#" -eq 1 ] || { usage >&2; exit 2; }
                 exec bash "$ROOT/scripts/update.sh" --apply ;;
+            --rollback) [ "$#" -eq 1 ] || { usage >&2; exit 2; }
+                exec bash "$ROOT/scripts/update.sh" --rollback ;;
             *) usage >&2; exit 2 ;;
         esac
         ;;
