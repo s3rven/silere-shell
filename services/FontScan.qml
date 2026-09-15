@@ -13,6 +13,9 @@ Singleton {
     property bool scanning: false
     property string lastError: ""
     property bool _scanned: false
+    // fc-list is a startup process spawn the default font does not need; run it only
+    // once something on screen asks for the list
+    property bool _wanted: false
 
     function scan(force: bool): void {
         if ((!force && _scanned) || !SystemTools.hasFcList || _proc.running) return
@@ -22,19 +25,22 @@ Singleton {
         _proc.running = true
     }
 
-    function refresh(): void { scan(true) }
+    function requestScan(): void {
+        root._wanted = true
+        root.scan(false)
+    }
 
-    // singletons are lazy: creation means the picker is on screen, and a menu-open signal would have fired before this object existed
-    Component.onCompleted: scan(false)
     Connections {
         target: SystemTools
-        function onReadyChanged() { if (SystemTools.ready) root.scan(false) }
+        function onReadyChanged() { if (SystemTools.ready && root._wanted) root.scan(false) }
+        // a completed tool probe can change fc-list availability, but it does not
+        // invalidate a list already collected
         function onCheckingChanged() {
-            if (!SystemTools.checking && SystemTools.ready) root.refresh()
+            if (!SystemTools.checking && SystemTools.ready && root._wanted) root.scan(false)
         }
         function onHasFcListChanged() {
             if (SystemTools.hasFcList) {
-                if (SystemTools.ready) root.scan(false)
+                if (SystemTools.ready && root._wanted) root.scan(false)
             } else if (SystemTools.ready) {
                 if (_proc.running) _proc.running = false
                 root._scanned = false

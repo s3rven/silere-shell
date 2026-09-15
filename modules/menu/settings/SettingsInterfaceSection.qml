@@ -15,6 +15,9 @@ Column {
     readonly property bool _hasMultiScreen: Quickshell.screens.length > 1
     readonly property bool _hasRouting: _hasBrightnessChoice || _hasMultiScreen
 
+    // the picker is the only consumer that needs the installed list
+    Component.onCompleted: FontScan.requestScan()
+
     SectionLabel { label: "TEXT & ACCESSIBILITY"; first: true }
     SettingsCard {
         SelectRow {

@@ -498,7 +498,10 @@ Singleton {
     }
 
     Timer {
-        interval: 300000
+        id: _vpnFallbackPoll
+        // the link signature covers device transitions; this is only a net for a
+        // VPN toggled outside the shell that left it unchanged
+        interval: 900000
         repeat: true
         running: root._vpnWanted
         onTriggered: root._queueVpnRefresh()

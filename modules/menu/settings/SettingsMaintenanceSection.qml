@@ -44,8 +44,12 @@ Column {
     property bool _armed: false
     property real _armedAtMs: 0
 
-    // reopening Maintenance re-detects tools installed or removed while the shell is running. FontScan follows the completed tool refresh itself
-    Component.onCompleted: SystemTools.refresh()
+    // reopening Maintenance re-detects tools installed or removed while the shell is
+    // running, but a recent answer still stands; Refresh on the page forces one
+    Component.onCompleted: {
+        SystemTools.refreshIfStale(60000)
+        FontScan.requestScan()
+    }
 
     function _disarm(): void {
         root._armed = false

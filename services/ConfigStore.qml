@@ -56,11 +56,17 @@ Singleton {
         onTriggered: root._startDirectoryAttempt()
     }
 
+    property var _hardened: ({})
+
     function hardenFile(path: string): void {
         // only files owned by this store may be chmodded. Keep the path as a separate argv entry so even unusual XDG paths never become syntax
         if (path.length === 0
                 || (path !== root.settingsPath && path !== root.calendarMarksPath
                     && path !== root.notificationsPath)) return
+        // an atomic write lands an owner-only replacement, so one chmod per path
+        // per session covers it; _mkdir re-hardens after a failed write
+        if (root._hardened[path] === true) return
+        root._hardened[path] = true
         Quickshell.execDetached(["bash", "-c",
             "[ ! -L \"$1\" ] && chmod 0600 -- \"$1\"", "bash", path])
     }

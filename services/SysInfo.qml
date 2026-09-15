@@ -73,7 +73,7 @@ Singleton {
 
     Timer {
         id: _slowPoll
-        interval: 10000
+        interval: 60000
         repeat: true
         running: root._active
         onTriggered: root._refreshSlow()
