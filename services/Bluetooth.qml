@@ -10,6 +10,10 @@ Singleton {
     readonly property var adapter: Bt.Bluetooth.defaultAdapter
     readonly property bool available: adapter !== null
     readonly property bool enabled:   adapter ? adapter.enabled : false
+    // a hardware switch puts the adapter in Blocked; writing enabled is refused, so the
+    // controls have to say why instead of flipping nothing
+    readonly property bool hardBlocked: adapter
+        ? adapter.state === Bt.BluetoothAdapterState.Blocked : false
 
     // Backend models can be momentarily empty while BlueZ re-enumerates.
     readonly property var _devices: (adapter && adapter.devices)
@@ -75,6 +79,7 @@ Singleton {
     }
 
     readonly property string statusText: {
+        if (root.hardBlocked) return "Blocked"
         if (!root.enabled) return "Off"
         if (root.connectedCount === 0) return "Not connected"
         if (root.connectedCount > 1) return root.connectedCount + " connected"
@@ -267,6 +272,9 @@ Singleton {
         interval: 20000
         onTriggered: {
             if (root._pendingAddr === "") return
+            // a passkey pairing can sit in progress well past 20s; that is not a stalled
+            // attempt, so keep the guard alive until BlueZ reports it done either way
+            if (root._pendingKind === "pair" && root._pendingPairing) { restart(); return }
             root.errorAddr = root._pendingAddr
             root.errorKind = root._pendingKind
             root._endAttempt()
@@ -280,10 +288,15 @@ Singleton {
             if (d && d.address === address) { root._beginAttempt(address, "connect"); d.connect(); return }
         }
     }
+    function _clearDeviceAttempt(address: string): void {
+        if (root._pendingAddr === address) root._endAttempt()
+        if (root.errorAddr === address) root.clearError()
+    }
+
     function disconnectDevice(address: string): void {
         for (let i = 0; i < _devices.length; i++) {
             const d = _devices[i]
-            if (d && d.address === address) { root._endAttempt(); root.clearError(); d.disconnect(); return }
+            if (d && d.address === address) { root._clearDeviceAttempt(address); d.disconnect(); return }
         }
     }
     function pairDevice(address: string): void {
@@ -295,7 +308,17 @@ Singleton {
     function cancelPair(address: string): void {
         for (let i = 0; i < _devices.length; i++) {
             const d = _devices[i]
-            if (d && d.address === address) { root._endAttempt(); root.clearError(); d.cancelPair(); return }
+            if (d && d.address === address) { root._clearDeviceAttempt(address); d.cancelPair(); return }
+        }
+    }
+    function forgetDevice(address: string): void {
+        for (let i = 0; i < _devices.length; i++) {
+            const d = _devices[i]
+            if (d && d.address === address) {
+                root._clearDeviceAttempt(address)
+                d.forget()
+                return
+            }
         }
     }
 }

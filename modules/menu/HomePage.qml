@@ -284,8 +284,11 @@ PageShell {
                     : Bluetooth.connectedCount === 1 && Bluetooth.connectedGlyph.length > 0
                         ? Bluetooth.connectedGlyph : "󰂯"
                 title: "Bluetooth"
-                status: Bluetooth.statusText
+                status: Bluetooth.hardBlocked ? "Blocked by the hardware switch"
+                    : Bluetooth.statusText
+                statusColor: Bluetooth.hardBlocked ? Theme.warning : "transparent"
                 showSwitch: true
+                available: !Bluetooth.hardBlocked
                 expandable: Bluetooth.enabled
                 expanded: root._btPickerOpen
                 onActivated: Bluetooth.toggle()

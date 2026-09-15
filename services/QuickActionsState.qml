@@ -31,7 +31,7 @@ AnchoredPopupState {
     // a hard-blocked radio refuses every write, so a row offering it would re-issue two doomed requests per tap and never change
     readonly property bool wifiControllable: Network.toolAvailable && Network.hasWifiDevice
         && !Network.wifiHardBlocked
-    readonly property bool btControllable: Bluetooth.available
+    readonly property bool btControllable: Bluetooth.available && !Bluetooth.hardBlocked
     readonly property bool airplaneAvailable: wifiControllable || btControllable
     readonly property bool radiosOn: (wifiControllable && Network.wifiEnabled)
         || (btControllable && Bluetooth.enabled)

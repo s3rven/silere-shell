@@ -19,8 +19,14 @@ Item {
     implicitHeight: _col.implicitHeight
 
     property string _armedAddr: ""
+    property string _forgetAddr: ""
     property real _armedAtMs: 0
-    Timer { id: _disarmTimer; interval: 3000; onTriggered: root._armedAddr = "" }
+    property real _forgetAtMs: 0
+    Timer {
+        id: _disarmTimer
+        interval: 3000
+        onTriggered: { root._armedAddr = ""; root._forgetAddr = "" }
+    }
 
     property bool _searchLapsed: false
     Timer {
@@ -68,14 +74,18 @@ Item {
         ShellText {
             visible: root.open && (!Bluetooth.available || !Bluetooth.enabled || Bluetooth.devices.length === 0)
             width: parent.width
-            height: Metrics.rowHeightFor(32)
+            height: 4 * Math.ceil(Math.max(Metrics.rowHeightFor(32), contentHeight + 16) / 4)
+            leftPadding: 14
+            rightPadding: 14
+            wrapMode: Text.Wrap
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             text: !Bluetooth.available ? "Bluetooth unavailable"
+                : Bluetooth.hardBlocked ? "Blocked by the hardware switch"
                 : !Bluetooth.enabled   ? "Bluetooth is off"
                 : root._searchLapsed   ? "No devices found"
                 :                        "Searching for devices…"
-            color: Theme.withAlpha(Theme.subtext, 0.5)
+            color: Theme.menuTextDetail
             font.pixelSize: Settings.fontLabel
         }
 
@@ -99,10 +109,12 @@ Item {
                 bottomRadius: _row.index === _list.count - 1 ? root.lastRowRadius : 0
 
                 readonly property bool   _armed: root._armedAddr === modelData.address && modelData.connected
+                readonly property bool   _forgetArmed: root._forgetAddr === modelData.address
                 readonly property bool   _failed: Bluetooth.errorAddr === modelData.address
                 readonly property int _batt: Bluetooth.batteryPercent(modelData)
                 readonly property string _state:
-                    _armed ? "Disconnect?"
+                    _forgetArmed ? "Forget?"
+                    : _armed ? "Disconnect?"
                     : modelData.pairing ? "Cancel?"
                     : modelData.state === Bt.BluetoothDeviceState.Connecting    ? "Connecting…"
                     : modelData.state === Bt.BluetoothDeviceState.Disconnecting ? "Disconnecting…"
@@ -115,11 +127,15 @@ Item {
                 label: Bluetooth.deviceLabel(modelData)
                 status: _state
                 selected: modelData.connected
-                warning: _armed || modelData.pairing
+                warning: _armed || _forgetArmed || modelData.pairing
                 failed:  _failed
 
                 function _activate(): void {
                     const addr = modelData.address
+                    if (root._forgetAddr === addr) {
+                        root._forgetAddr = ""
+                        _disarmTimer.stop()
+                    }
                     if (modelData.pairing) {
                         Bluetooth.cancelPair(addr)
                     } else if (modelData.connected) {
@@ -141,6 +157,26 @@ Item {
                     }
                 }
                 onTriggered: _activate()
+
+                // middle-click forgets a paired device; the first press only arms it
+                function _middleTap(): void {
+                    if (!modelData.paired || modelData.connected) return
+                    const addr = modelData.address
+                    if (root._forgetAddr === addr) {
+                        if (Date.now() - root._forgetAtMs < Metrics.confirmGuardMs) return
+                        root._forgetAddr = ""
+                        _disarmTimer.stop()
+                        Bluetooth.forgetDevice(addr)
+                    } else {
+                        root._forgetAddr = addr
+                        root._forgetAtMs = Date.now()
+                        _disarmTimer.restart()
+                    }
+                }
+                TapHandler {
+                    acceptedButtons: Qt.MiddleButton
+                    onTapped: _row._middleTap()
+                }
             }
         }
     }
