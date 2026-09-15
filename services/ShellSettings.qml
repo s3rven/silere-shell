@@ -16,6 +16,7 @@ Singleton {
     property string mediaVisualizerPreset: "balanced"
     property string mediaVisualizerStyle:  "wave"
     property string mediaVisualizerPosition: "media"
+    property real   mediaVisualizerOpacity: 1.0
     property bool   workspaceShift:      true
     property bool   neutralTheme:        true
     property bool   neutralAccentAuto:   false
@@ -288,6 +289,7 @@ Singleton {
         { k: "mediaVisualizerPreset", t: "enum", vals: ["eco", "balanced", "smooth"], sec: "media" },
         { k: "mediaVisualizerStyle",  t: "enum", vals: ["wave", "bars", "pulse"], sec: "media" },
         { k: "mediaVisualizerPosition", t: "enum", vals: ["media", "center", "underline"], sec: "media" },
+        { k: "mediaVisualizerOpacity", t: "real", min: 0.25, max: 1.0, sec: "media" },
         { k: "workspaceShift",      t: "bool", sec: "workspaces" },
         { k: "neutralTheme",        t: "bool", sec: "theme" },
         { k: "neutralAccentAuto",   t: "bool", sec: "theme" },
@@ -717,6 +719,37 @@ Singleton {
         return SettingsMigrations.migrate(value, fromVersion, root._settingsVersion)
     }
 
+    property string _migrationBackupSrc: ""
+    property string _migrationBackupDst: ""
+    property int _migrationFromVersion: 0
+
+    // the migration rewrites the only copy of a legacy file, so keep the raw text it read
+    // before the debounced flush can replace it
+    function _backupThenFlush(src: string, version: int): void {
+        const dir = ConfigStore.directory
+        if (dir.length === 0 || src.length === 0) {
+            _store.flush(false)
+            return
+        }
+        root._migrationBackupSrc = src
+        root._migrationBackupDst = dir + "/settings.pre-v" + version + ".bak.json"
+        if (_migrationBackup.running) _migrationBackup.running = false
+        _migrationBackup.running = true
+    }
+
+    BoundedProcess {
+        id: _migrationBackup
+        timeoutMs: 10000
+        command: ["bash", "-c",
+            "[ -e \"$1\" ] || exit 0; cp -- \"$1\" \"$2\"",
+            "bash", root._migrationBackupSrc, root._migrationBackupDst]
+        onExited: (code) => {
+            if (code !== 0)
+                console.warn("silere-shell: could not back up settings before migration")
+            _store.flush(false)
+        }
+    }
+
     function _applyText(t: string): void {
         const raw = (t || "").trim()
         let migrationApplied = false
@@ -737,9 +770,20 @@ Singleton {
                 ? parsed.__version : 0
             const onDiskVersion = Math.max(0, Math.floor(rawVersion))
             if (onDiskVersion < _settingsVersion && Object.keys(parsed).length > 0) {
-                const migration = root._migrateSettingsObject(parsed, onDiskVersion)
-                parsed = migration.value
-                migrationApplied = migration.applied.length > 0
+                try {
+                    const migration = root._migrateSettingsObject(parsed, onDiskVersion)
+                    parsed = migration.value
+                    migrationApplied = migration.applied.length > 0
+                    root._migrationFromVersion = onDiskVersion
+                } catch (e) {
+                    // a half-migrated object must never reach disk; the old file stays as it is
+                    _store.writeAllowed = false
+                    root._readError = "settings.json is from an older schema and could not be migrated. Existing data was left untouched."
+                    console.warn("silere-shell: settings migration failed:", String(e))
+                    _loaded = true
+                    root._recountModified()
+                    return
+                }
             }
             const fromFuture = onDiskVersion > _settingsVersion
             _loadedVersion = fromFuture ? onDiskVersion : _settingsVersion
@@ -769,7 +813,8 @@ Singleton {
         }
         _loaded = true
         root._recountModified()
-        if (migrationApplied && _store.writeAllowed) _store.flush(false)
+        if (migrationApplied && _store.writeAllowed)
+            root._backupThenFlush(ConfigStore.settingsPath, root._migrationFromVersion)
     }
 
     function _serialize(): string {

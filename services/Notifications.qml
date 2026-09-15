@@ -195,6 +195,11 @@ Singleton {
         if (typeof _diskStore !== "undefined") _diskStore.queue()
     }
 
+    // a queued save must land before a reload replaces the engine; SIGTERM skips destruction
+    Component.onDestruction: {
+        if (typeof _diskStore !== "undefined" && _diskStore.pending) _diskStore.flush(true)
+    }
+
     function _parsePersistentJson(raw: string, fallback): var {
         try { return JSON.parse(raw || "") }
         catch (e) { return fallback }
@@ -395,6 +400,12 @@ Singleton {
         const trimmed = String(raw || "").trim()
         try {
             const j = JSON.parse(trimmed || "{}")
+            // a file written by a newer release is left exactly as it is; its entries may
+            // carry fields this schema would drop on the next save
+            const version = Number(j.__version ?? 0)
+            const fromFuture = isFinite(version) && version > 1
+            if (fromFuture)
+                console.warn("silere-shell: notifications.json is from a newer version; keeping it as it is")
             // a reload already restored the same rows through _persist, so match on identity
             const present = Object.create(null)
             for (let i = 0; i < _history.count; i++) {
@@ -402,7 +413,10 @@ Singleton {
                 present[String(h.id) + "\u0001" + String(h.time)] = true
             }
             if (ShellSettings.notifHistoryPersistent && Array.isArray(j.history)) {
-                for (let i = 0; i < j.history.length; i++) {
+                // the cap is the most this session can hold, so a pathological file cannot
+                // freeze startup normalizing rows the trim would drop anyway
+                const limit = _history.count + root._historyCapacity
+                for (let i = 0; i < j.history.length && _history.count < limit; i++) {
                     const e = root._normalizeEntry(j.history[i])
                     if (!e) continue
                     const key = String(e.id) + "\u0001" + String(e.time)
@@ -418,10 +432,12 @@ Singleton {
             root._ensurePersistentState()
             root._trimHistory()
             root.historyRevision++
-            _diskStore.writeAllowed = true
             _diskStore.lastSavedText = trimmed
-            root._pruneOrphanState()
-            root._saveHistory()
+            if (!fromFuture) {
+                _diskStore.writeAllowed = true
+                root._pruneOrphanState()
+                root._saveHistory()
+            }
         } catch (e) {
             // a file we could not read may still hold history; writing this session over it loses it
             _diskStore.writeAllowed = false

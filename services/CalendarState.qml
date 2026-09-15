@@ -63,19 +63,26 @@ AnchoredPopupState {
     PersistedFile {
         id: _store
         path: ConfigStore.calendarMarksPath
-        serialize: () => JSON.stringify({ marks: Object.keys(root.marks) })
+        serialize: () => JSON.stringify({ __version: 1, marks: Object.keys(root.marks) })
         onLoaded: raw => {
             try {
                 const trimmed = raw.trim()
                 const j = JSON.parse(trimmed || "{}")
+                const version = Number(j.__version ?? 0)
+                const fromFuture = isFinite(version) && version > 1
                 const next = {}
                 if (Array.isArray(j.marks))
                     for (let i = 0; i < j.marks.length; i++)
                         if (root._validMarkKey(j.marks[i])) next[j.marks[i]] = true
                 root.marks = next
-                _store.writeAllowed = true
+                _store.writeAllowed = !fromFuture
                 _store.lastSavedText = trimmed
-                root.persistenceError = ""
+                if (fromFuture) {
+                    root.persistenceError = "Calendar marks are from a newer version. The existing file was left untouched."
+                    console.warn("silere-shell: calendar-marks.json is from a newer version; keeping it as it is")
+                } else {
+                    root.persistenceError = ""
+                }
             } catch (e) {
                 // a file we could not read may still hold marks; writing this session's set over it loses them
                 _store.writeAllowed = false
