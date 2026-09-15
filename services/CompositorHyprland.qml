@@ -1,7 +1,9 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import Quickshell.Hyprland
+import "../config"
 
 QtObject {
     id: root
@@ -17,6 +19,43 @@ QtObject {
     property bool _unfocused: false
     property string _special: ""
     readonly property bool _liveTitlesWanted: ShellSettings.showWindowTitle
+
+    readonly property string _instanceSignature:
+        String(Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE") || "")
+    readonly property string _runtimeHyprDir:
+        XdgPaths.runtimeDir.length > 0 ? XdgPaths.runtimeDir + "/hypr" : ""
+
+    // A shell that survives a Hyprland restart goes blind: the event socket is bound to the
+    // old instance and every dispatch keeps the stale signature. Watch the runtime directory
+    // for a new instance and let the user unit bring the shell back onto the fresh one.
+    property SupervisedProcess _restartWatch: SupervisedProcess {
+        id: _restartWatch
+        superviseWhen: SystemTools.hasInotifywait && SystemTools.hasSystemctl
+            && root._instanceSignature.length > 0 && root._runtimeHyprDir.length > 0
+        restartDelay: 10000
+        // a missing runtime directory cannot be fixed by respawning; a later tool rescan retries
+        giveUpCodes: [3]
+        command: ["bash", "-c",
+            "dir=\"$1\"; sig=\"$2\"; root=\"$3\"; " +
+            "[ -d \"$dir\" ] || exit 3; " +
+            "inotifywait -m -q -e create,moved_to --format '%f' \"$dir\" 2>/dev/null | " +
+            "while IFS= read -r name; do " +
+            "  [ \"$name\" = \"$sig\" ] && continue; " +
+            // our own socket directory surviving means the compositor that owns us is still here
+            "  [ -d \"$dir/$sig\" ] && continue; " +
+            "  unit=silere-shell.service; " +
+            "  systemctl --user is-active --quiet \"$unit\" || continue; " +
+            // the user manager is shared: a throwaway checkout running this file must
+            // not restart the shell the unit actually starts
+            "  exec_start=\"$(systemctl --user show \"$unit\" -p ExecStart --value 2>/dev/null)\"; " +
+            "  case \"$exec_start\" in " +
+            "    *\" $root/shell.qml\"*|*\" $root/scripts/silere\"*\" run\"*) ;; " +
+            "    *) continue ;; " +
+            "  esac; " +
+            "  systemctl --user restart \"$unit\"; " +
+            "done",
+            "bash", root._runtimeHyprDir, root._instanceSignature, Quickshell.shellDir]
+    }
 
     function _identity(value): string {
         return SafeText.singleLineText(value, Compositor.maxWindowIdentityChars)
