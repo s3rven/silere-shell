@@ -36,6 +36,7 @@ silere status
 silere doctor
 silere update
 silere update --apply
+silere update --rollback
 silere repair
 silere repair --apply
 silere repair --undo

@@ -17,6 +17,7 @@ settings file carries its own `__version` and migrates separately.
   narrows the page to it, and Clear then takes only that app's history.
 - The audio visualizer can run along the bar's underline, spanning its full width.
 - The audio visualizer has an opacity slider.
+- `silere update --rollback` restores the revision an update replaced when the shell does not come back.
 
 ### Changed
 
@@ -60,6 +61,11 @@ settings file carries its own `__version` and migrates separately.
 - Notification history survives a restart when “Keep after restart” is on.
 - Auto night light tracks the sun from startup instead of after the first menu open.
 - The battery-critical hook still runs while other hooks are busy.
+- Work and campus Wi-Fi networks no longer offer a password field that cannot work.
+- Bluetooth reports a hardware switch that has blocked it.
+- Saved Wi-Fi networks and paired Bluetooth devices can be forgotten with a middle-click.
+- Settings migrated from an older version are backed up before the rewrite.
+- Notification history and calendar marks saved by a newer release are left untouched.
 
 ## Releases
 

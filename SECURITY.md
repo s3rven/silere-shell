@@ -16,7 +16,9 @@ no network listener, and no privileged helper. What's in scope:
 
 - Notification content reaching the shell over D-Bus, including icon and image paths.
 - Anything the shell passes to a process it spawns.
-- Files the shell reads or writes under `$XDG_CONFIG_HOME` and `$XDG_STATE_HOME`.
+- Files the shell reads or writes under `$XDG_CONFIG_HOME`, `$XDG_STATE_HOME` and
+  `$XDG_CACHE_HOME`, and the `~/.local` paths the installer creates (the `silere`
+  command and the bundled font).
 - The installer and updater scripts under `scripts/`.
 
 Out of scope: Quickshell, the compositor, and anything requiring an attacker who
@@ -28,9 +30,11 @@ icon theme.
 
 ## Update trust
 
-Updates are verified: `scripts/update.sh` only fast-forwards to an annotated tag
-signed by a key in `security/update-signers`, using the copy of that key already
-in the installed checkout, and only when the tag belongs to `origin/main`.
+Updates are verified: `scripts/update.sh` fast-forwards to an annotated tag signed by
+a key in `security/update-signers`, using the copy of that key already in the installed
+checkout, and only when the tag belongs to `origin/main`. Rolling back a completed
+update (`--rollback`) and recovering an interrupted one also reset to a revision the
+signed transaction journal names.
 
 The first install is a different matter. `git clone` followed by
 `scripts/install.sh` runs code from `main` before any signature has been checked,

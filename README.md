@@ -91,6 +91,8 @@ controls are listed below.
 | shell update | **click** opens Settings › Updates |
 | tray | **click** jumps to the app · **right-click** opens its menu · **middle-click** runs the app's secondary action · **scroll** is passed through to the app |
 | notifications | **click** runs the default action · **right-click** dismisses · **middle-click** jumps to the app that sent it · a reply action opens an inline text field when the sender supports one |
+| wi-fi list | **click** joins a saved network, or opens a password field for a personal one · **middle-click** a saved network to forget it |
+| bluetooth list | **click** pairs or connects · **middle-click** a paired device to forget it |
 | menu | **Escape** steps back, then closes · **click** anywhere outside to close |
 | history | **click** an entry to read it in full |
 

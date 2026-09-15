@@ -25,6 +25,12 @@ A Qt update can leave the installed Quickshell unable to run, because it builds 
 Qt's private API. Reinstall Quickshell to rebuild it against the new Qt; `bash
 scripts/check.sh` reports this as its first failure.
 
+## The shell does not come back after an update
+
+The updater keeps the signed transaction journal until it sees the shell running on the
+new revision. From a working terminal, `silere update --rollback` restores the previous
+revision and restarts the shell.
+
 ## Notifications never appear
 
 Another daemon already owns `org.freedesktop.Notifications`. Silere works out which one and
