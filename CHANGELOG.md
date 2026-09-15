@@ -66,6 +66,10 @@ settings file carries its own `__version` and migrates separately.
 - Saved Wi-Fi networks and paired Bluetooth devices can be forgotten with a middle-click.
 - Settings migrated from an older version are backed up before the rewrite.
 - Notification history and calendar marks saved by a newer release are left untouched.
+- A failed install no longer removes the directory it moved aside.
+- A systemd-managed shell recovers when Hyprland restarts instead of going stale.
+- Optional features stay available when the capability check fails.
+- The updater reports when a staged release could not be fully checked.
 
 ## Releases
 
