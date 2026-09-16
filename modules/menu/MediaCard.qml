@@ -380,6 +380,8 @@ ClippingRectangle {
             hoverEnabled: true
             enabled: Media.canSeek && Media.lengthKnown
             cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+            // hold the grab or the surrounding Flickable steals a drag mid-seek
+            preventStealing: true
             function _seekTo(x) {
                 if (!enabled || width <= 0) return
                 Media.seekToRatio(Math.max(0, Math.min(1, x / width)))
