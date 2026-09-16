@@ -86,7 +86,7 @@ Column {
         // a dead font tofus the bar AND the menu that would fix it, so it leads
         if (!SystemTools.hasFcList)
             add(optional, "󰈵", "Font verification",
-                "Installed interface fonts cannot be checked", "fontconfig", true)
+                "Cannot check installed fonts", "fontconfig", true)
         else if (FontScan.lastError.length > 0)
             add(attention, "󰈵", "Font check", FontScan.lastError,
                 "fc-list", false, "", Theme.warning)
@@ -163,7 +163,7 @@ Column {
         if (root._optionalIssues.length > 0)
             return root._optionalIssues.length
                 + (root._optionalIssues.length === 1
-                    ? " optional feature unavailable" : " optional features unavailable")
+                    ? " optional feature missing" : " optional features missing")
         return "Installed features are ready"
     }
     readonly property string _healthDetail: {

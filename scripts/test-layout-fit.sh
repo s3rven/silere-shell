@@ -144,6 +144,55 @@ for scale in "${scales[@]}"; do
     fi
 done
 
+# The health and update cards only list tools that are MISSING, so on a machine with them
+# installed those rows never render and never get measured. A PATH holding nothing but bash
+# lets the real scan find none of them, which is the bare install the rows are written for.
+bare_conf="$scratch/bare"
+bare_bin="$bare_conf/bin"
+mkdir -p "$bare_conf/silere-shell" "$bare_conf/cache" "$bare_conf/state" \
+    "$bare_conf/runtime" "$bare_bin"
+chmod 0700 "$bare_conf/runtime"
+# the tighter end of the type range only: this pass measures rows, not the range
+printf '{ "__version": 1, "uiScale": 1.15 }\n' > "$bare_conf/silere-shell/settings.json"
+qs_bin="$(command -v qs)"
+ln -s "$(command -v bash)" "$bare_bin/bash"
+bare_list="modules/menu/settings/SettingsMaintenanceSection.qml
+modules/menu/settings/SettingsUpdatesSection.qml"
+
+FIT_ROOT="$ROOT" FIT_LIST="$bare_list" FIT_W="$CONTENT_WIDTH" \
+    PATH="$bare_bin" \
+    XDG_CONFIG_HOME="$bare_conf" XDG_CACHE_HOME="$bare_conf/cache" \
+    XDG_STATE_HOME="$bare_conf/state" XDG_RUNTIME_DIR="$bare_conf/runtime" \
+    QT_QPA_PLATFORM=offscreen QT_FORCE_STDERR_LOGGING=1 \
+    "$qs_bin" -p "$PROBE" --no-color >"$bare_conf/layout.log" 2>&1 &
+probe_pid=$!
+code=0
+if ! _probe_wait "$bare_conf/layout.log" "$probe_pid" 'FIT-DONE' 240 0.5; then
+    if kill -0 "$probe_pid" 2>/dev/null; then code=124; else wait "$probe_pid" 2>/dev/null || code=$?; fi
+fi
+_probe_stop "$probe_pid"
+probe_pid=""
+out="$(<"$bare_conf/layout.log")"
+
+if [ "$code" -eq 124 ]; then
+    echo "FAIL: bare-install fit probe timed out" >&2
+    status=1
+else
+    fit_failures="$(printf '%s\n' "$out" | grep -E "FIT-TRUNC|FIT-CLIP|FIT-WIDE|FIT-SHRINK|FIT-FAIL" || true)"
+    if [ -n "$fit_failures" ]; then
+        printf '%s\n' "$fit_failures" | sed 's/^/  /' >&2
+        status=1
+    fi
+    done_line="$(printf '%s\n' "$out" | grep -o 'FIT-DONE.*' | tail -1)"
+    bare_texts="$(printf '%s' "$done_line" | sed -n 's/.*texts \([0-9]*\).*/\1/p')"
+    # a failed scan hides the whole card, and the pass would then report clean without
+    # ever reaching the rows it exists for
+    if [ -z "$bare_texts" ] || [ "$bare_texts" -lt "${FIT_BARE_FLOOR:-60}" ]; then
+        echo "FAIL: bare-install fit probe never reached the missing-tool rows: ${done_line:-no FIT-DONE}" >&2
+        status=1
+    fi
+fi
+
 if [ "$status" -eq 0 ]; then
     echo "menu labels fit at the widths they ship at across the type range"
 fi
