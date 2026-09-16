@@ -5,6 +5,14 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/silere-portability-test.XXXXXX")"
 trap 'rm -rf "$TMP"' EXIT
 
+# No test may reach the live session's notification daemon. Individual stubs are
+# still preferred, but a path that notifies from a helper cannot leak past this one.
+mkdir -p "$TMP/suite-stubs"
+printf '#!/bin/sh\nexit 0\n' > "$TMP/suite-stubs/notify-send"
+chmod +x "$TMP/suite-stubs/notify-send"
+PATH="$TMP/suite-stubs:$PATH"
+export PATH
+
 fail() {
     printf 'FAIL: %s\n' "$*" >&2
     exit 1
@@ -777,7 +785,9 @@ case "\$*" in
     *" show "*) printf '{ path=/usr/bin/qs ; argv[]=/usr/bin/qs -p /elsewhere/shell.qml ; }\n' ;;
 esac
 EOF
-    chmod +x "$stub_dir/systemctl"
+    # the rollback path notifies; without a stub it reaches the live session's daemon
+    printf '#!/bin/sh\nexit 0\n' > "$stub_dir/notify-send"
+    chmod +x "$stub_dir/systemctl" "$stub_dir/notify-send"
     _start_apply_transaction "$old_rev" "$new_rev" v1.0.1
     _write_apply_journal validated "$old_rev" "$new_rev" v1.0.1
     PATH="$stub_dir:$PATH" _rollback_applied_update 2>/dev/null
