@@ -485,17 +485,28 @@ if [ "$qs_usable" = 1 ]; then
   else
     smoke_log=""
     par_dir=""
+    smoke_home=""
     _smoke_cleanup() {
       if [ -n "$smoke_log" ]; then rm -f "$smoke_log"; fi
       # an interrupt leaves a whole fan-out of scratch configs behind, not just one
       if [ -n "$par_dir" ]; then rm -rf "$par_dir"; fi
+      if [ -n "$smoke_home" ]; then rm -rf "$smoke_home"; fi
       return 0
     }
     trap _smoke_cleanup EXIT
 
     code=0
     smoke_log="$(mktemp "${TMPDIR:-/tmp}/silere-qs-smoke.XXXXXX.log")"
-    timeout --kill-after=2s 5s qs -p shell.qml --no-color >"$smoke_log" 2>&1 || code=$?
+    # The real settings decide whether this installation starts, so the dwell runs on a
+    # copy of them: a whole shell sitting at the live config writes its state files back,
+    # and a checkout under test would rewrite notification history the user is still using.
+    smoke_home="$(mktemp -d "${TMPDIR:-/tmp}/silere-qs-smoke-cfg.XXXXXX")"
+    mkdir -p "$smoke_home/silere-shell"
+    if [ -n "$_cfg_home" ] && [ -d "$_cfg_home/silere-shell" ]; then
+      cp -a "$_cfg_home/silere-shell/." "$smoke_home/silere-shell/" 2>/dev/null || true
+    fi
+    XDG_CONFIG_HOME="$smoke_home" timeout --kill-after=2s 5s qs -p shell.qml --no-color \
+      >"$smoke_log" 2>&1 || code=$?
     if [ "$code" -ne 0 ] && [ "$code" -ne 124 ]; then
       if grep -qE 'Failed to create wl_display|could not connect to display|no Qt platform plugin could be initialized' "$smoke_log"; then
         warn "startup" "display inaccessible; runtime smoke test skipped"
