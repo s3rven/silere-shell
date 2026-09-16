@@ -112,6 +112,11 @@ PanelWindow {
                     }
                 }
 
+                Connections {
+                    target: Idle
+                    function onIsIdleChanged() { if (Idle.isIdle) _bumpAnim.retire() }
+                }
+
                 states: [
                     State {
                         name: "hidden"
@@ -128,6 +133,7 @@ PanelWindow {
                 transitions: [
                     Transition {
                         to: "visible"
+                        enabled: !Idle.isIdle
                         ParallelAnimation {
                             NumberAnimation { target: card; property: "height"; duration: Motion.ms(150); easing.type: Easing.OutCubic }
                             NumberAnimation { target: card; property: "_op";    duration: Motion.ms(105); easing.type: Easing.OutCubic }
@@ -136,6 +142,7 @@ PanelWindow {
                     },
                     Transition {
                         to: "hidden"
+                        enabled: !Idle.isIdle
                         ParallelAnimation {
                             NumberAnimation { target: card; property: "_slide"; duration: Motion.ms(105); easing.type: Easing.InCubic }
                             NumberAnimation { target: card; property: "_op";    duration: Motion.ms(115); easing.type: Easing.InCubic }
