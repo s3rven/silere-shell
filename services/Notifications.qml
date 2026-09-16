@@ -283,8 +283,8 @@ Singleton {
     }
 
     on_HistoryCapacityChanged: if (_persistentReady) { root._trimHistory(); root._saveHistory() }
-    on_SeenChanged:   if (_persistentReady) { _persist.seenJson = JSON.stringify(_seen); root._queueDiskSave() }
-    on_TimesChanged:  if (_persistentReady) { _persist.timesJson = JSON.stringify(_times); root._queueDiskSave() }
+    on_SeenChanged:   if (_persistentReady) _persist.seenJson = JSON.stringify(_seen)
+    on_TimesChanged:  if (_persistentReady) _persist.timesJson = JSON.stringify(_times)
 
     function _cloneMap(map): var {
         const out = Object.create(null)
@@ -379,21 +379,13 @@ Singleton {
             console.warn("silere-shell: failed to save notifications.json:", error)
     }
 
+    // seen and times describe notifications the server still owns, and no server outlives a
+    // restart; persisting them only lets a reissued id inherit a dead session's flags
     function _serializeDisk(): string {
         return JSON.stringify({
             __version: 1,
-            history: root._parsePersistentJson(_persist.historyJson, []),
-            seen:    root._parsePersistentJson(_persist.seenJson, {}),
-            times:   root._parsePersistentJson(_persist.timesJson, {})
+            history: root._parsePersistentJson(_persist.historyJson, [])
         })
-    }
-
-    // live state wins: it either arrived this session or survived a reload, and the file
-    // is the older copy of the same data
-    function _mergeStateMap(base, live): var {
-        const out = root._cloneMap(base)
-        for (const key in live) out[key] = live[key]
-        return out
     }
 
     function _restoreFromDisk(raw: string): void {
@@ -427,8 +419,6 @@ Singleton {
                     _history.append(e)
                 }
             }
-            root._seen  = root._mergeStateMap(root._normalizeSeenMap(j.seen || {}), root._seen)
-            root._times = root._mergeStateMap(root._normalizeTimesMap(j.times || {}), root._times)
             root._ensurePersistentState()
             root._trimHistory()
             root.historyRevision++
