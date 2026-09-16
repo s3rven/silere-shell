@@ -41,8 +41,15 @@ QtObject {
             "inotifywait -m -q -e create,moved_to --format '%f' \"$dir\" 2>/dev/null | " +
             "while IFS= read -r name; do " +
             "  [ \"$name\" = \"$sig\" ] && continue; " +
-            // our own socket directory surviving means the compositor that owns us is still here
-            "  [ -d \"$dir/$sig\" ] && continue; " +
+            // a surviving socket directory is only proof the compositor is here if the pid in
+            // its lock is alive; a crash leaves the directory behind and the shell blind
+            "  if [ -d \"$dir/$sig\" ]; then " +
+            "    pid=\"\"; " +
+            "    [ -r \"$dir/$sig/hyprland.lock\" ] && read -r pid < \"$dir/$sig/hyprland.lock\"; " +
+            // an unreadable lock cannot prove the owner is gone, so leave the shell alone
+            "    case \"$pid\" in \"\"|*[!0-9]*) continue ;; esac; " +
+            "    kill -0 \"$pid\" 2>/dev/null && continue; " +
+            "  fi; " +
             "  unit=silere-shell.service; " +
             "  systemctl --user is-active --quiet \"$unit\" || continue; " +
             // the user manager is shared: a throwaway checkout running this file must
