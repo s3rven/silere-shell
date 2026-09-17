@@ -11,13 +11,11 @@ settings file carries its own `__version` and migrates separately.
 
 ## [Unreleased]
 
-### Removed
-
-- Dynamic workspaces and the new-workspace slot are gone; the strip always shows the
-  number of slots you set.
+Nothing yet.
 
 ## Releases
 
+- [1.1.1](docs/releases/1.1.1.md) — 2026-09-17
 - [1.1.0](docs/releases/1.1.0.md) — 2026-09-17
 - [1.0.0](docs/releases/1.0.0.md) — 2026-09-07
 - [0.9.0](docs/releases/0.9.0.md) — 2026-08-30
