@@ -61,7 +61,7 @@ the maintenance command, unattended installs, Matugen wiring and removal:
 
 - **Bar** — workspaces, window title, media, network, bluetooth, volume, microphone,
   brightness, battery, clock, tray, package updates and shell updates.
-  Drag them between left, centre and right, per monitor.
+  Drag them between left, centre and right.
 - **Menu** — live controls, every setting, and notification history in one panel.
 - **Notifications** — actions, images, history filtered by app, quiet hours, source-window jumping.
 - **Theming** — Matugen from your wallpaper or a hand-picked accent, over three dark base
