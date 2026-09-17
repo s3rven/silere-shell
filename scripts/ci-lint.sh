@@ -1026,7 +1026,7 @@ while IFS= read -r qd; do
     [ -f "$dir/$f" ] && continue
     missing="$missing $dir/$f"
   done < <(awk 'NF>=2 && $NF ~ /\.qml$/ {print $NF}' "$qd")
-done < <(find . -path './.git' -prune -o -name qmldir -print)
+done < <(find . -path './.git' -prune -o -path './.claude' -prune -o -name qmldir -print)
 if [ -n "$missing" ]; then
   fail "qmldir references missing files:"
   for m in $missing; do printf '  %s\n' "$m"; done
@@ -1069,9 +1069,10 @@ while IFS= read -r qd; do
       grep -E "\\b$name\\b" "$user" | grep -qvE "$name\\.qml" || continue
       leaked="$leaked $name:$user"
     done < <(grep -rlE "\\b$name\\b" --include='*.qml' . 2>/dev/null \
+      | grep -vE '^\./\.claude/' \
       | grep -vE "^$dir/[^/]*\\.qml$" || true)
   done < <(awk '$1 == "internal" { print $2 }' "$qd")
-done < <(find . -path './.git' -prune -o -name qmldir -print)
+done < <(find . -path './.git' -prune -o -path './.claude' -prune -o -name qmldir -print)
 if [ -n "$leaked" ]; then
   fail "internal types are used outside their own module, which only fails at runtime:"
   for l in $leaked; do printf '  %s\n' "$l"; done
