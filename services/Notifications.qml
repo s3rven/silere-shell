@@ -791,7 +791,7 @@ Singleton {
         }
         if (seenChanged) root._seen = nextSeen
         if (timesChanged) root._times = nextTimes
-        if (root._fullscreenWatchWanted) Compositor.refreshToplevels()
+        if (FullscreenState.wanted) Compositor.refreshToplevels()
     }
 
     NotificationServer {
