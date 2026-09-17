@@ -82,6 +82,7 @@ settings file carries its own `__version` and migrates separately.
 - Settings migrated from an older version are backed up before the rewrite.
 - Notification history and calendar marks saved by a newer release are left untouched.
 - A systemd-managed shell recovers when Hyprland restarts instead of going stale.
+- A maximized window no longer silences notifications or hides the on-screen display.
 - Optional features stay available when the capability check fails.
 
 #### Install and update fixes
