@@ -23,6 +23,7 @@ AnchoredPopupState {
     }
     readonly property bool homeActive: open && activeTab === homeTab
     readonly property bool settingsActive: open && activeTab === settingsTab
+    readonly property bool recentActive: open && activeTab === recentTab
 
     // empty means every app; the rail owns the value, the page only reads it
     property string recentFilter: ""

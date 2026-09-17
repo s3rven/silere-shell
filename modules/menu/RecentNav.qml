@@ -51,6 +51,7 @@ Item {
 
     // an app whose last notification was cleared takes the filter down with it
     on_NamesChanged: {
+        root._queueReveal()
         const want = MenuState.recentFilter
         if (want.length === 0) return
         const names = root._names
@@ -64,12 +65,68 @@ Item {
         root.filterPicked()
     }
 
+    function _rowY(index: int): real {
+        return root._navTop + index * (root._rowH + root._rowGap)
+    }
+
+    function _revealActive(): void {
+        if (!MenuState.recentActive) return
+        const names = root._names
+        const want = MenuState.recentFilter
+        let index = 0
+        for (let i = 0; i < names.length; i++) {
+            if (names[i] === want) { index = i; break }
+        }
+        const contentH = root.implicitHeight
+        const viewH = _navScroll.height
+        if (contentH <= viewH + 1) {
+            _navScroll.contentY = 0
+            return
+        }
+        const margin = 7
+        const top = root._rowY(index)
+        const bottom = top + root._rowH
+        let target = _navScroll.contentY
+        if (top - margin < target) target = top - margin
+        else if (bottom + margin > target + viewH) target = bottom + margin - viewH
+        _navScroll.contentY = Math.max(0, Math.min(Math.max(0, contentH - viewH), target))
+    }
+
+    // the outer panel keeps resizing the viewport for the whole open, so height
+    // notifications arrive every frame; reveal once they stop
+    Timer {
+        id: _revealSettle
+        interval: ShellSettings.reduceMotion ? 0 : 50
+        onTriggered: root._revealActive()
+    }
+    function _queueReveal(): void { _revealSettle.restart() }
+
+    Connections {
+        target: MenuState
+        function onRecentActiveChanged() {
+            if (MenuState.recentActive) root._queueReveal()
+            else _revealSettle.stop()
+        }
+        function onRecentFilterChanged() { root._queueReveal() }
+    }
+
     ShellFlickable {
         id: _navScroll
         anchors.fill: parent
         contentWidth: width
         contentHeight: _content.height
         interactive: contentHeight > height + 1
+
+        onHeightChanged: if (MenuState.recentActive) root._queueReveal()
+
+        MotionBehavior on contentY {
+            gate: !_navScroll.moving
+            NumberAnimation {
+                duration: Motion.normal
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Motion.standard
+            }
+        }
 
         Item {
             id: _content
@@ -240,5 +297,12 @@ Item {
                 }
             }
         }
+    }
+
+    ListEdgeLines {
+        anchors.fill: _navScroll
+        z: 2
+        list: _navScroll
+        maxOpacity: 0.72
     }
 }
