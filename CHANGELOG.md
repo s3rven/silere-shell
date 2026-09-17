@@ -83,6 +83,7 @@ settings file carries its own `__version` and migrates separately.
 - Notification history and calendar marks saved by a newer release are left untouched.
 - A systemd-managed shell recovers when Hyprland restarts instead of going stale.
 - A maximized window no longer silences notifications or hides the on-screen display.
+- Marking a date as the calendar opens no longer clears the marks already saved.
 - Optional features stay available when the capability check fails.
 
 #### Install and update fixes

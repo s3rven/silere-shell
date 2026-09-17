@@ -63,6 +63,7 @@ AnchoredPopupState {
     PersistedFile {
         id: _store
         path: ConfigStore.calendarMarksPath
+        writeAllowed: false
         serialize: () => JSON.stringify({ __version: 1, marks: Object.keys(root.marks) })
         onLoaded: raw => {
             try {
