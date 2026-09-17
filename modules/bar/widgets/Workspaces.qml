@@ -63,7 +63,7 @@ Item {
     implicitHeight: btnH
 
     MotionBehavior on implicitWidth {
-        gate: root.barActive && !Idle.isIdle
+        gate: root.barActive
         NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
     }
 

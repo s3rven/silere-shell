@@ -138,7 +138,6 @@ Item {
             color:          OsdBarState.hasBar ? Theme.text : OsdBarState.fillColor
             font.pixelSize: Settings.iconSize + 2
             MotionBehavior on color {
-                gate: !Idle.isIdle
                 ColorAnimation { duration: Motion.medium }
             }
         }
@@ -164,7 +163,7 @@ Item {
                     : Theme.withAlpha(OsdBarState.fillColor, 0.88)
 
                 MotionBehavior on width {
-                    gate: !Idle.isIdle && root.state === "visible" && !OsdBarState.rapid
+                    gate: root.state === "visible" && !OsdBarState.rapid
                     NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
                 }
             }
@@ -185,7 +184,6 @@ Item {
             font.pixelSize: Settings.fontSize
             font.weight:    Font.Medium
             MotionBehavior on color {
-                gate: !Idle.isIdle
                 ColorAnimation { duration: Motion.medium }
             }
         }

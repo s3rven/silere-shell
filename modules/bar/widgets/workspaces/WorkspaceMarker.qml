@@ -79,7 +79,7 @@ Item {
         && ShellSettings.wsMenuPulse
     property real _menuOn: root._menuFx ? 1 : 0
     MotionBehavior on _menuOn {
-        gate: root.shown && root.barActive && !Idle.isIdle
+        gate: root.shown && root.barActive
         NumberAnimation { duration: Motion.ms(220); easing.type: Easing.OutCubic }
     }
 

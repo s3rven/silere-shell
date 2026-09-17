@@ -21,7 +21,6 @@ Singleton {
     readonly property alias entries: _entries
     readonly property int activeCount: _entries.count
     MotionBehavior on fillColor {
-        gate: !Idle.isIdle
         ColorAnimation { duration: Motion.medium }
     }
 

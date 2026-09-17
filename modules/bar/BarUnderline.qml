@@ -63,7 +63,6 @@ Item {
             : (((_tempGlowEnabled && CpuTemp.critical) || (_batteryGlowEnabled && Battery.critical)) ? 0.74 : 0.62)
         property real _idleFloor: ShellSettings.underlineIdleGlow ? 0.20 : 0
         MotionBehavior on _idleFloor {
-            gate: !Idle.isIdle
             NumberAnimation { duration: Motion.slow; easing.type: Easing.OutCubic }
         }
         readonly property real _activeGlowStrength: Math.min(1, 0.45 + 0.4 * ShellSettings.glowStrength)
@@ -73,7 +72,6 @@ Item {
         property real _mediaGlow: (Media.shown && Media.playing && Media.cavaReady
             && ShellSettings.mediaVisualizerPosition !== "underline") ? 0.18 : 0
         MotionBehavior on _mediaGlow {
-            gate: !Idle.isIdle
             NumberAnimation { duration: Motion.slow; easing.type: Easing.OutCubic }
         }
         readonly property real _combined:    Math.min(_ceiling, Math.max(_idleFloor, _eventGlow, _mediaGlow))
@@ -94,7 +92,6 @@ Item {
         }
         property color _effectColor: _effectColorTarget
         MotionBehavior on _effectColor {
-            gate: !Idle.isIdle
             ColorAnimation { duration: Motion.ms(350) }
         }
 
@@ -102,14 +99,12 @@ Item {
             _effectColorTarget.r, _effectColorTarget.g, _effectColorTarget.b, 0.9
         )
         MotionBehavior on _stopColor {
-            gate: !Idle.isIdle
             ColorAnimation { duration: Motion.ms(350) }
         }
         property color _stopColorMid: Qt.rgba(
             _effectColorTarget.r, _effectColorTarget.g, _effectColorTarget.b, 0.45
         )
         MotionBehavior on _stopColorMid {
-            gate: !Idle.isIdle
             ColorAnimation { duration: Motion.ms(350) }
         }
         property real _sweepSpread: 0.28
@@ -144,8 +139,7 @@ Item {
         property real _sweepCenter: _sweepCenterTarget
         MotionBehavior on _sweepCenter {
             // sweep already animates this frame-by-frame, a second Behavior would lag behind it
-            gate: !Idle.isIdle
-                && !(_lineEffect._shotActive && ShellSettings.screenshotGlowSweep)
+            gate: !(_lineEffect._shotActive && ShellSettings.screenshotGlowSweep)
             NumberAnimation { duration: Motion.ms(400); easing.type: Easing.OutCubic }
         }
 

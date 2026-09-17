@@ -387,10 +387,10 @@ Item {
             }
         }
 
-        MotionBehavior on x       { gate: card.visible && cardRect._behaviorEnabled && !Idle.isIdle; NumberAnimation { duration: card._leaving ? Motion.ms(200) : Motion.ms(280); easing.type: card._leaving ? Easing.InCubic : Easing.OutCubic } }
+        MotionBehavior on x       { gate: card.visible && cardRect._behaviorEnabled; NumberAnimation { duration: card._leaving ? Motion.ms(200) : Motion.ms(280); easing.type: card._leaving ? Easing.InCubic : Easing.OutCubic } }
         // the fade must outlast the slide both ways: a 140ms fade against the 200ms exit is spent a third of the way out
-        MotionBehavior on opacity { gate: card.visible && cardRect._behaviorEnabled && !Idle.isIdle; NumberAnimation { duration: Motion.ms(200); easing.type: card._leaving ? Easing.InCubic : Easing.OutCubic } }
-        MotionBehavior on height  { gate: card.visible && cardRect._behaviorEnabled && !Idle.isIdle; NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
+        MotionBehavior on opacity { gate: card.visible && cardRect._behaviorEnabled; NumberAnimation { duration: Motion.ms(200); easing.type: card._leaving ? Easing.InCubic : Easing.OutCubic } }
+        MotionBehavior on height  { gate: card.visible && cardRect._behaviorEnabled; NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
 
         // urgency rides the outline, glyph and ring only: tinting the whole fill red drowns the text it is warning about
         // mix() returns alpha 1, so a translucent popup would snap opaque under the cursor
@@ -517,7 +517,6 @@ Item {
                         height: parent.height; radius: parent.radius
                         color:  Theme.accent
                         MotionBehavior on width {
-                            gate: !Idle.isIdle
                             NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
                         }
                     }
@@ -796,7 +795,6 @@ Item {
                 ? Theme.withAlpha(Theme.error,  0.62)
                 : Theme.outline
             MotionBehavior on outlineColor {
-                gate: !Idle.isIdle
                 ColorAnimation { duration: Motion.medium }
             }
         }
