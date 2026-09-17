@@ -632,6 +632,26 @@ else
   warn "surfaces" "scripts/test-surfaces.sh missing; section build check skipped"
 fi
 
+section "layer-shell build"
+# The surface pass above cannot reach these: every layer-shell root requires a
+# targetScreen, and a PanelWindow has no backend under the offscreen platform.
+if [ "$qs_usable" != 1 ]; then
+  warn "panels" "not run: Quickshell will not start"
+elif [ -f scripts/test-panels.sh ]; then
+  panel_code=0
+  panel_out="$(bash scripts/test-panels.sh 2>&1)" || panel_code=$?
+  if [ "$panel_code" -ne 0 ]; then
+    printf '%s\n' "$panel_out" | sed 's/^/       /'
+    fail "panels" "a layer-shell surface failed to build"
+  elif printf '%s' "$panel_out" | grep -q '^SKIP'; then
+    warn "panels" "$(printf '%s' "$panel_out" | sed -n 's/^SKIP: //p' | head -1)"
+  else
+    ok "panels" "$(printf '%s' "$panel_out" | tail -1)"
+  fi
+else
+  warn "panels" "scripts/test-panels.sh missing; layer-shell build check skipped"
+fi
+
 section "live settings changes"
 # Every pass above fixes the settings before the surface exists. A binding that
 # only breaks when the value changes under a built surface survives all of them.
