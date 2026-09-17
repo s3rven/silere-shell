@@ -130,8 +130,8 @@ Package updates only move the badge.
 
 ## Performance
 
-Idle use on a reference session measured about 87 MB PSS before the menu is first opened
-and about 96 MB after, at well under 1% of one CPU core — much of that the Qt and GPU
+Idle use on a reference session measured about 82 MB PSS before the menu is first opened
+and about 93 MB after, at well under 1% of one CPU core — much of that the Qt and GPU
 driver floor rather than Silere. The menu builds its pages on first open
 and keeps them: a one-time cost, not a leak. Measure your own checkout with
 `bash scripts/bench.sh 30`, or `--warm` for the post-menu number. Full numbers and the

@@ -31,6 +31,8 @@ Hardware not already listed takes a new letter.
 | 0.9.0 | 2026-09-01 | A | warm | 154 MB | 292 MB | 3.3% | 42 | 52 |
 | 1.0.0 | 2026-09-07 | A | cold | 87 MB | 179 MB | 0.1% | 21 | 46 |
 | 1.0.0 | 2026-09-07 | A | warm | 96 MB | 191 MB | 0.0% | 23 | 47 |
+| 1.1.0 | 2026-09-17 | A | cold | 82 MB | 181 MB | 0.0% | 21 | 50 |
+| 1.1.0 | 2026-09-17 | A | warm | 93 MB | 195 MB | 0.0% | 22 | 50 |
 
 0.9.0 was sampled one commit past the tag, with `fontFamily` set to `IosevkaTerm Nerd
 Font`. That font costs about 9 MB PSS over the JetBrainsMono Nerd Font default, so the

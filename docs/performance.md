@@ -12,8 +12,8 @@ Silere holds two steady states.
 
 | State | PSS | What it is |
 |---|---|---|
-| cold | ~87 MB | Freshly started, menu never opened. Only the bar has drawn. |
-| warm | ~96 MB | The same session after the menu has been opened once. |
+| cold | ~82 MB | Freshly started, menu never opened. Only the bar has drawn. |
+| warm | ~93 MB | The same session after the menu has been opened once. |
 
 Both hold across a day of uptime. Warm is the number to quote.
 
@@ -27,7 +27,7 @@ so a large part of even the cold number is the Qt and GPU driver floor rather th
 On an AMD system Mesa's `radeonsi` driver and the LLVM shader compiler behind it account
 for about 11 MB PSS of that floor.
 
-Read PSS, not RSS. The same session reads 179-191 MB RSS, most of the difference being
+Read PSS, not RSS. The same session reads 181-195 MB RSS, most of the difference being
 shared Qt, Mesa and font pages other processes already pay for.
 
 Measure with nothing else running. A second Quickshell process maps the same Qt and driver
