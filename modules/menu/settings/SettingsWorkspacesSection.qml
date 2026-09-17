@@ -9,26 +9,10 @@ Column {
 
     SectionLabel { label: "LAYOUT"; first: true }
     SettingsCard {
-        ToggleRow {
-            glyph: "󰡎"; label: "Dynamic workspaces"
-            description: "List the ones in use, not a fixed set"
-            key: "wsDynamic"
-        }
-        CollapsibleSection {
-            expanded: ShellSettings.wsDynamic
-            ToggleRow {
-                glyph: "󰐕"; label: "New workspace slot"
-                description: "A trailing slot opens the next one"
-                key: "wsDynamicNew"
-            }
-        }
-        CollapsibleSection {
-            expanded: !ShellSettings.wsDynamic
-            SliderRow {
-                glyph: "󰕰"; label: "Slots shown"
-                key: "wsMinVisible"
-                displayValue: ShellSettings.wsMinVisible
-            }
+        SliderRow {
+            glyph: "󰕰"; label: "Slots shown"
+            key: "wsMinVisible"
+            displayValue: ShellSettings.wsMinVisible
         }
         ChoiceChipRow {
             glyph: ShellSettings.wsActiveMarker === "bar" ? "━"

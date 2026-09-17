@@ -6,44 +6,8 @@ QtObject {
     required property string monitorName
     required property int activeId
     required property int effectiveWsCount
-    required property bool dynamicMode
-    required property bool wantNewWorkspace
     required property bool perOutputWorkspaceIds
     required property var workspaces
-
-    // No compositor numbers a workspace 0, so it can stand for one that does not exist yet.
-    readonly property int newWorkspaceId: 0
-    // Beyond this the strip is wider than it is readable.
-    readonly property int maxDynamicSlots: 12
-
-    function dynamicIds(own: var, active: int, wantNew: bool, limit: int): var {
-        const seen = Object.create(null)
-        const ids = []
-        let activeOccupied = false
-        for (let i = 0; i < own.length; i++) {
-            const ws = own[i]
-            if (!ws || ws.wsId < 1) continue
-            if (ws.wsId === active && ws.occupied) activeOccupied = true
-            if (!ws.occupied && !ws.urgent && ws.wsId !== active) continue
-            if (seen[ws.wsId] === true) continue
-            seen[ws.wsId] = true
-            ids.push(ws.wsId)
-        }
-        if (active > 0 && seen[active] !== true) ids.push(active)
-        ids.sort(function(a, b) { return a - b })
-        if (limit > 0 && ids.length > limit) {
-            // Window overflow around the active cell; trimming the tail hides the one in view.
-            const at = ids.indexOf(active)
-            const start = at < 0 ? 0
-                : Math.max(0, Math.min(ids.length - limit,
-                    at - Math.floor((limit - 1) / 2)))
-            ids.splice(0, start)
-            ids.length = limit
-        }
-        // A fresh workspace is already in hand when the one in view is empty.
-        if (wantNew && activeOccupied) ids.push(root.newWorkspaceId)
-        return ids
-    }
 
     // One pass feeds ownership, lookup, page anchoring and the per-output id cap.
     readonly property var workspaceIndex: {
@@ -92,9 +56,6 @@ QtObject {
 
     // Hyprland ids are global: a fixed page must skip ids owned by another output.
     readonly property string visibleIdsKey: {
-        if (root.dynamicMode)
-            return root.dynamicIds(root.workspaceIndex.own, root.activeId,
-                root.wantNewWorkspace, root.maxDynamicSlots).join(",")
         const ids = []
         const anchor = Math.max(1, root.monitorAnchorId)
         const active = Math.max(anchor, root.activeId)
@@ -125,8 +86,7 @@ QtObject {
     }
 
     // A Repeater over an id array rebuilds every delegate on any change. Keep stable slots.
-    readonly property int slotCount: root.dynamicMode
-        ? root.maxDynamicSlots + 1 : root.effectiveWsCount
+    readonly property int slotCount: root.effectiveWsCount
     readonly property var visibleIndexById: {
         const indexes = Object.create(null)
         const ids = root.visibleIds

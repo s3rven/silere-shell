@@ -254,8 +254,6 @@ Singleton {
     property bool   nightLightAuto:     false
 
     property int    wsMinVisible:        5
-    property bool   wsDynamic:           false
-    property bool   wsDynamicNew:        true
     property bool   wsShowNumbers:       false
     property bool   wsScrollSwitch:      false
     property bool   wsShowAppIcons:      false
@@ -397,8 +395,6 @@ Singleton {
         { k: "nightLightTemp",      t: "int",  min: 1000, max: 6500, sec: "-" },
         { k: "nightLightAuto",     t: "bool", sec: "-" },
         { k: "wsMinVisible",        t: "int",  min: 1,    max: 10, sec: "workspaces" },
-        { k: "wsDynamic",           t: "bool", sec: "workspaces" },
-        { k: "wsDynamicNew",        t: "bool", sec: "workspaces" },
         { k: "wsShowNumbers",       t: "bool", sec: "workspaces" },
         { k: "wsScrollSwitch",      t: "bool", sec: "workspaces" },
         { k: "wsShowAppIcons",      t: "bool", sec: "workspaces" },

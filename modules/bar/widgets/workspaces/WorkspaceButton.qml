@@ -9,7 +9,6 @@ Item {
     id: root
 
     required property int wsId
-    required property bool isNew
     required property bool monitorReady
     required property bool active
     required property bool occupied
@@ -39,7 +38,7 @@ Item {
     // an underline marker leaves the cell centre free, so the active workspace keeps its own content
     readonly property bool _blanked: active && markerCovers
     readonly property bool _showIcons: ShellSettings.wsShowAppIcons && !_blanked
-        && !isNew && apps.length > 0
+        && apps.length > 0
 
     width:  present ? cellWidth : 0
     height: rowHeight
@@ -57,7 +56,6 @@ Item {
     }
 
     function _settleMotion(): void {
-        _swapAnim.retire()
         _dropPulse.retire()
         _dotFadeOut.stop()
         _dotFadeIn.stop()
@@ -71,35 +69,8 @@ Item {
 
     Component.onCompleted: {
         _dotFade = _blanked ? 0 : 1
-        _prevWsId = wsId
     }
     Component.onDestruction: if (root.hovered) root.hoverReported(root.wsId, false)
-
-    // slots are index-keyed, so a workspace opening mid-strip renumbers every cell after
-    // it. Without this the labels change between two frames with nothing to read as motion.
-    property real _swapFade: 1
-    property int _prevWsId: -1
-    readonly property bool swapFading: _swapAnim.running
-    onWsIdChanged: {
-        const previous = root._prevWsId
-        root._prevWsId = root.wsId
-        // a fixed strip only renumbers on a page turn, which the whole row already fades;
-        // an arrival or a departure is carried by the collapse
-        if (previous < 0 || root.wsId < 0 || !root.initialized
-                || !ShellSettings.wsDynamic || !root._motionAllowed()) {
-            _swapAnim.retire()
-            return
-        }
-        _swapAnim.restart()
-    }
-
-    BumpAnimation {
-        id: _swapAnim
-        target: root
-        targetProperty: "_swapFade"
-        peak: 0.25
-        riseEasing: Easing.OutCubic
-    }
 
     BumpAnimation {
         id: _dropPulse
@@ -124,7 +95,7 @@ Item {
     }
 
     Accessible.role: Accessible.Button
-    Accessible.name: root.isNew ? "New workspace" : "Workspace " + root.wsId
+    Accessible.name: "Workspace " + root.wsId
     Accessible.selected: root.active
     Accessible.focusable: true
     Accessible.onPressAction: root._activate()
@@ -270,15 +241,13 @@ Item {
 
     Item {
         anchors.fill: parent
-        opacity: (1 - root._markerPassCover) * root._presence * root._swapFade
+        opacity: (1 - root._markerPassCover) * root._presence
 
         ShellText {
             anchors.centerIn: parent
             transform: Translate { x: root._shakeX }
-            text:    root.isNew ? "󰐕" : root.wsId
-            opacity: (root.isNew
-                    ? 1
-                    : root._showIcons
+            text:    root.wsId
+            opacity: (root._showIcons
                     ? root._revealAmt
                     : Math.max(ShellSettings.wsShowNumbers ? 1 : 0, root._revealAmt))
                 * (root._blanked ? 0 : 1) * root._pulseOpacity * ShellSettings.wsMarkerOpacity
@@ -287,8 +256,6 @@ Item {
                 ? Theme.warning
                 : root.active
                 ? Theme.accent
-                : root.isNew
-                ? (root._hoverFx ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.5))
                 : (root.occupied
                     ? (root._hoverFx ? Theme.accent : Theme.withAlpha(Theme.text, 0.85))
                     : (root._hoverFx ? Theme.withAlpha(Theme.accent, 0.65) : Theme.withAlpha(Theme.subtext, 0.45)))
@@ -306,7 +273,7 @@ Item {
             height: width
             radius: width / 2
             antialiasing: true
-            visible: !ShellSettings.wsShowNumbers && !root._showIcons && !root.isNew
+            visible: !ShellSettings.wsShowNumbers && !root._showIcons
             opacity: (1 - root._revealAmt) * root._dotFade
                 * (root._hoverFx && !root.urgent ? Math.min(1, root._dotAlpha + 0.18)
                     : root._dotAlpha)

@@ -57,7 +57,6 @@ Item {
     property int _lastNormalActiveId: 1
     property bool _initialized: false
 
-    readonly property bool dynamicMode: ShellSettings.wsDynamic
 
     implicitWidth:  wsRow.implicitWidth + (urgentOffPage > 0 ? 12 : 0)
     implicitHeight: btnH
@@ -83,8 +82,6 @@ Item {
         monitorName: root.monitorName
         activeId: root.activeId
         effectiveWsCount: root.effectiveWsCount
-        dynamicMode: root.dynamicMode
-        wantNewWorkspace: ShellSettings.wsDynamicNew
         perOutputWorkspaceIds: Compositor.perOutputWorkspaceIds
         workspaces: Compositor.workspaces
     }
@@ -97,8 +94,6 @@ Item {
         workspaceToplevels: Compositor.workspaceToplevels
     }
 
-    readonly property int newWorkspaceId: slotModel.newWorkspaceId
-    readonly property int maxDynamicSlots: slotModel.maxDynamicSlots
     readonly property var _workspaceIndex: slotModel.workspaceIndex
     readonly property int _monitorAnchorId: slotModel.monitorAnchorId
     readonly property var _wsMap: slotModel.workspaceMap
@@ -106,9 +101,6 @@ Item {
     readonly property var visibleIds: slotModel.visibleIds
     readonly property int slotCount: slotModel.slotCount
 
-    function dynamicIds(own: var, activeId: int, wantNew: bool, limit: int): var {
-        return slotModel.dynamicIds(own, activeId, wantNew, limit)
-    }
     function _knownOnOtherMonitor(id: int): bool {
         return slotModel.knownOnOtherMonitor(id)
     }
@@ -148,10 +140,6 @@ Item {
             _pagingReset.restart()
         }
         function onWsMinVisibleChanged() {
-            root._paging = true
-            _pagingReset.restart()
-        }
-        function onWsDynamicChanged() {
             root._paging = true
             _pagingReset.restart()
         }
@@ -204,10 +192,8 @@ Item {
     }
 
     readonly property int activeIndex: root._visibleIndex(root.activeId)
-    // a dynamic strip has no pages: the lowest id shifting is a workspace closing, and
-    // turning that into a page fade flashes the whole row over one cell going away
-    readonly property int pageKey: root.dynamicMode ? 0
-        : (visibleIds.length > 0 ? visibleIds[0] : _monitorAnchorId)
+    readonly property int pageKey: visibleIds.length > 0
+        ? visibleIds[0] : _monitorAnchorId
 
     onVisibleIdsChanged: root._syncUrgentOffPage()
     onMonitorNameChanged: root._syncUrgentOffPage()
@@ -381,18 +367,13 @@ Item {
 
     function activate(id: int): void {
         if (!monitorReady) return
-        if (id === root.newWorkspaceId) {
-            Compositor.focusNewWorkspace(root.monitorName)
-            return
-        }
         if (id < 1 || id === activeId || root._knownOnOtherMonitor(id)) return
         Compositor.focusWorkspace(id, root.monitorName)
     }
 
     function moveWindowTo(id: int): void {
         if (!Compositor.activeToplevel) return
-        if (id === root.newWorkspaceId) Compositor.moveActiveToNewWorkspace(root.monitorName)
-        else if (id > 0) Compositor.moveActiveToWorkspace(id, root.monitorName)
+        if (id > 0) Compositor.moveActiveToWorkspace(id, root.monitorName)
     }
 
     function _scrollTarget(delta: int): int {
@@ -520,7 +501,6 @@ Item {
                 required property int index
 
                 wsId:         root.visibleIds[index] ?? -1
-                isNew:        wsId === root.newWorkspaceId
                 monitorReady: root.monitorReady
                 active:       root.monitorReady && root.activeId === wsId
                 occupied:     root.occupied(wsId)

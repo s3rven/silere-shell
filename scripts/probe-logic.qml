@@ -333,41 +333,10 @@ ShellRoot {
                 && workspaceStrip._visibleIndex(999999) === -1,
             "workspace page IDs resolve through the shared index")
 
-        const wsOwn = [
-            { wsId: 1, occupied: true,  urgent: false },
-            { wsId: 2, occupied: false, urgent: false },
-            { wsId: 3, occupied: false, urgent: true  },
-            { wsId: 5, occupied: true,  urgent: false }
-        ]
-        root._check(workspaceStrip.dynamicIds(wsOwn, 1, false, 12).join(",") === "1,3,5",
-            "a dynamic strip lists the occupied, the urgent and the one in view")
-        root._check(workspaceStrip.dynamicIds(wsOwn, 2, false, 12).join(",") === "1,2,3,5",
-            "the workspace in view is listed while it is still empty")
-        root._check(workspaceStrip.dynamicIds([], 4, false, 12).join(",") === "4",
-            "the workspace in view is listed before the compositor reports it")
-        root._check(workspaceStrip.dynamicIds(wsOwn, 1, true, 12).join(",") === "1,3,5,0",
-            "a trailing new-workspace slot follows an occupied workspace")
-        root._check(workspaceStrip.dynamicIds(wsOwn, 2, true, 12).join(",") === "1,2,3,5",
-            "an empty workspace in view is already the new one, so no slot is offered")
-        const wsMany = []
-        for (let i = 1; i <= 20; i++)
-            wsMany.push({ wsId: i, occupied: true, urgent: false })
-        const wsWindow = workspaceStrip.dynamicIds(wsMany, 18, false, 5)
-        root._check(wsWindow.length === 5 && wsWindow.indexOf(18) >= 0
-                && wsWindow[wsWindow.length - 1] === 20,
-            "an overflowing workspace list keeps the one in view inside its window")
         root._check(workspaceStrip._btnW(-1) === 0,
             "a slot with no workspace behind it takes no width in the row")
-        const wsDynamicWas = ShellSettings.wsDynamic
-        ShellSettings.wsDynamic = false
         root._check(workspaceStrip.slotCount === workspaceStrip.effectiveWsCount,
-            "a fixed strip renders exactly the slots it is set to")
-        ShellSettings.wsDynamic = true
-        root._check(workspaceStrip.slotCount === workspaceStrip.maxDynamicSlots + 1,
-            "a dynamic strip holds its slot count so cells are never rebuilt under motion")
-        root._check(workspaceStrip.pageKey === 0,
-            "a dynamic strip reports no page, so a closing workspace cannot fade the row")
-        ShellSettings.wsDynamic = wsDynamicWas
+            "the strip renders exactly the slots it is set to")
         const earlyHandoff = workspaceStrip._handoffDelayAt(0, 100, 25)
         const laterHandoff = workspaceStrip._handoffDelayAt(0, 100, 75)
         root._check(earlyHandoff === 0 && laterHandoff > earlyHandoff,
@@ -635,7 +604,7 @@ ShellRoot {
         ShellSettings.workspaceShift = true
         ShellSettings.reduceMotion = false
         const crossingCell = workspaceButtonFactory.createObject(root, {
-            wsId: 2, isNew: false, monitorReady: true, active: false, occupied: false,
+            wsId: 2, monitorReady: true, active: false, occupied: false,
             urgent: false, apps: [], compact: false, iconSize: 12,
             cellWidth: 26, rowHeight: 24, barActive: true,
             initialized: true, paging: false, markerCovers: true
@@ -658,16 +627,6 @@ ShellRoot {
         root._check(!crossingCell.markerPassActive,
             "a bar marker leaves the cells it crosses alone")
         crossingCell.markerCovers = true
-        const cellDynamicWas = ShellSettings.wsDynamic
-        ShellSettings.wsDynamic = false
-        crossingCell.wsId = 7
-        root._check(!crossingCell.swapFading && crossingCell._swapFade === 1,
-            "a fixed strip turning its page does not also cross-fade every cell")
-        ShellSettings.wsDynamic = true
-        crossingCell.wsId = 8
-        root._check(crossingCell.swapFading,
-            "a dynamic strip cross-fades a cell that takes over another workspace")
-        ShellSettings.wsDynamic = cellDynamicWas
         crossingCell.playMarkerPass(0)
         crossingCell.scale = 0.7
         crossingCell._dotFade = 0.4

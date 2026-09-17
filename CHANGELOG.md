@@ -11,7 +11,10 @@ settings file carries its own `__version` and migrates separately.
 
 ## [Unreleased]
 
-Nothing yet.
+### Removed
+
+- Dynamic workspaces and the new-workspace slot are gone; the strip always shows the
+  number of slots you set.
 
 ## Releases
 
