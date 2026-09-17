@@ -192,8 +192,9 @@ Item {
     readonly property bool _osdBarShowing: ShellSettings.osdEnabled && ShellSettings.osdBarIntegrated
         && root._isOverlayBar && OsdBarState.showing && !OsdBarState.barConcealed
     readonly property bool _centerVizMode: ShellSettings.mediaVisualizerPosition === "center"
+    // isQuiet, not isIdle: cava and the canvas both stop at the quiet stage, and isIdle holds the last frame lit
     readonly property bool _centerVizWanted: _centerVizMode && ShellSettings.mediaProgress
-        && !ShellSettings.reduceMotion && !Idle.isIdle
+        && !ShellSettings.reduceMotion && !Idle.isQuiet
         && root.barActive && root._onActiveBar && Media.shown && Media.playing && Media.cavaReady
     readonly property bool _centerVizHasRoom: titleAvailableWidth >= 48
     // center widgets keep their slot; the visualizer drops behind them instead of being suppressed

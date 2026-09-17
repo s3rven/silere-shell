@@ -391,10 +391,10 @@ Singleton {
         return row[preset] ?? row.balanced
     }
 
-    // the underline track spans the whole bar; the widget's count reads as scattered ticks across it
+    // the bar's row band caps the underline's height, so density is the only lever on the wave's slope
     readonly property bool _vizWide: ShellSettings.mediaVisualizerPosition === "underline"
     function vizBarCount(base: int, lowPower: bool): int {
-        return Math.min(48, Math.round(base * (root._vizWide && !lowPower ? 2 : 1)))
+        return Math.min(96, Math.round(base * (root._vizWide && !lowPower ? 4 : 1)))
     }
 
     // what the active bar runs at, so the settings hint does not have to restate the table

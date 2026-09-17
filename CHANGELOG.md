@@ -41,12 +41,20 @@ settings file carries its own `__version` and migrates separately.
 
 #### Bar fixes
 
+- The wave visualizer no longer reads as a flat, stretched line at the underline's full width.
+- The centre visualizer clears when the session goes quiet.
 - Reversing a scroll immediately changes the direction of volume and other wheel controls.
 - Nested tray menus stay open while entering a child menu, and flyouts stay inside screen edges.
 - A paused player no longer leaves the underline lit.
+- The on-screen display settles its transitions while the session is idle.
+- Tray submenus and the on-screen display hold one edge weight around their outline.
 
 #### Menu and settings fixes
 
+- The menu opens at its full width instead of widening out of the left edge of the screen.
+- Menu row dividers hold one weight instead of alternating between two.
+- Popup cards sit so their top and bottom edges draw at matching weight.
+- The menu keeps both edges at matching weight when a short screen caps its height.
 - Confirmation buttons cancel pending confirmation when disabled or busy.
 - Scroll indicators stay aligned when entries are removed from a scrolled list.
 - A settings category no longer shows a changed dot for a setting its page is hiding.
