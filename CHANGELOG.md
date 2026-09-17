@@ -68,11 +68,14 @@ settings file carries its own `__version` and migrates separately.
 - Removing an entry from filtered notification history deletes the selected notification.
 - Confirming Clear keeps its selected app even if the filter changes during the fade.
 - Notification history survives a restart when “Keep after restart” is on.
+- A notification arriving after a restart no longer inherits another notification’s read state or time.
+- Notification popups draw an even outline at any height.
 
 #### Media fixes
 
 - Long playback times move below the media buttons on narrow panels.
 - Media progress follows the player’s playback speed.
+- Dragging the media seek bar no longer jumps if the panel scrolls at the same time.
 
 #### Sound fixes
 
@@ -85,6 +88,7 @@ settings file carries its own `__version` and migrates separately.
 - Work and campus Wi-Fi networks no longer offer a password field that cannot work.
 - Bluetooth reports a hardware switch that has blocked it.
 - Saved Wi-Fi networks and paired Bluetooth devices can be forgotten with a middle-click.
+- Bluetooth stops waiting on a pairing that never finishes and reports it failed.
 
 #### System fixes
 
