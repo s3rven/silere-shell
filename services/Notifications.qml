@@ -18,7 +18,6 @@ Singleton {
     property var _times: Object.create(null)
     property var _updateTimes: Object.create(null)
     property bool _persistentReady: false
-    readonly property int _maxHistory: Math.max(5, ShellSettings.notifHistoryLimit)
     // settings.json loads asynchronously: trimming to the default before it lands drops
     // rows a larger configured limit keeps, and the trim is written straight back.
     // Arguments, not live state, so the rule is testable.

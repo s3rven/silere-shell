@@ -100,11 +100,9 @@ Item {
     readonly property int newWorkspaceId: slotModel.newWorkspaceId
     readonly property int maxDynamicSlots: slotModel.maxDynamicSlots
     readonly property var _workspaceIndex: slotModel.workspaceIndex
-    readonly property var _workspaceOwners: slotModel.workspaceOwners
     readonly property int _monitorAnchorId: slotModel.monitorAnchorId
     readonly property var _wsMap: slotModel.workspaceMap
     readonly property int _idCap: slotModel.idCap
-    readonly property string _visibleIdsKey: slotModel.visibleIdsKey
     readonly property var visibleIds: slotModel.visibleIds
     readonly property int slotCount: slotModel.slotCount
 
@@ -536,7 +534,6 @@ Item {
                 initialized:  root._initialized
                 paging:       root._paging
                 markerCovers: root.markerCovers
-                screen:       root.screen
 
                 onActivateRequested:      root.activate(wsId)
                 onMoveWindowRequested:     root.moveWindowTo(wsId)

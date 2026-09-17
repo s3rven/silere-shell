@@ -23,7 +23,6 @@ Item {
     required property bool initialized
     required property bool paging
     required property bool markerCovers
-    required property var screen
 
     signal activateRequested()
     signal moveWindowRequested()

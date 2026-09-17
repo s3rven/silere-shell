@@ -421,7 +421,6 @@ Item {
     readonly property real _naturalWidth: root._displayText.length > 0
         ? root._measuredContentWidth + root._horizontalPadding * 2
         : 0
-    readonly property bool _titleElided: content.truncated
 
 
     implicitWidth: root._naturalWidth

@@ -638,8 +638,7 @@ ShellRoot {
             wsId: 2, isNew: false, monitorReady: true, active: false, occupied: false,
             urgent: false, apps: [], compact: false, iconSize: 12,
             cellWidth: 26, rowHeight: 24, barActive: true,
-            initialized: true, paging: false, markerCovers: true,
-            screen: Quickshell.screens[0] ?? null
+            initialized: true, paging: false, markerCovers: true
         })
         crossingCell.playMarkerPass(0)
         root._check(crossingCell && crossingCell.markerPassActive,
