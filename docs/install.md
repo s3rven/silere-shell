@@ -69,8 +69,8 @@ and still stops on a compositor it does not support.
 
 ## Fonts
 
-Silere draws its glyphs from JetBrainsMono Nerd Font. When no Nerd Font is installed, the
-installer offers to download one and skips the step if you decline. The release is pinned
+Silere draws its glyphs from JetBrainsMono Nerd Font. When it is missing, the
+installer offers to download it and skips the step if you decline. The release is pinned
 to a version and checked against a known SHA-256, and a mismatch refuses the install. Fonts
 go to `~/.local/share/fonts/JetBrainsMono`.
 
