@@ -30,18 +30,20 @@ isn't on.
 **A new component** must be listed in its folder's `qmldir`. Forget it and it fails
 only when running, as `X is not a type` — that one confuses everybody once.
 
-**A new bar widget** is the longest chain in the shell, six places:
+**A new bar widget** is the longest chain in the shell, seven places:
 
 1. `modules/bar/widgets/MyThing.qml` — start from `Volume.qml`, it is the smallest
    complete one. A widget is a `Pill` exposing `show`, and `BarZone` reads that.
 2. its line in `modules/bar/widgets/qmldir`
 3. a `Component` in `modules/bar/BarContent.qml`, added to `_widgetComponents` under
    the key you want
-4. an entry in `barWidgetMeta` in `services/ShellSettings.qml` — glyph, label, group,
+4. the key added to `barWidgetKeys` in `services/ShellSettings.qml` — layout
+   normalisation drops any key missing from that list
+5. an entry in `barWidgetMeta` in `services/ShellSettings.qml` — glyph, label, group,
    and the `setting` name that hides it (empty string means it cannot be hidden)
-5. that `setting` as a property plus a `_schema` entry whose `sec:` names the
+6. that `setting` as a property plus a `_schema` entry whose `sec:` names the
    `widgets` page, if it is hideable
-6. the key appended to one of the `barWidgetOrder*` defaults, or it ships in no zone
+7. the key appended to one of the `barWidgetOrder*` defaults, or it ships in no zone
    and only appears once someone drags it out of the arranger
 
 If it needs a backend that may be absent, gate it in `BarZone._widgetEnabled()` next to
