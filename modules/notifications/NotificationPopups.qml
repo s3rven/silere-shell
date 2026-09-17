@@ -359,7 +359,7 @@ PanelWindow {
                                 || index < ShellSettings.notifMaxVisible
                             readonly property var cardItem: _cardLoader.item
                             property real timeoutStartedAt: 0
-                            readonly property real _gap: index < win._visibleCards - 1 ? 6 : 0
+                            readonly property real _gap: index < win._visibleCards - 1 ? 10 : 0
 
                             width: win._cardW
                             height: cardItem
@@ -368,12 +368,29 @@ PanelWindow {
 
                             x: win._alignedX(parent.width, width)
 
+                            // a card arriving above others reorders the column in one frame;
+                            // settle lets that first placement land instantly, then eases every move after
+                            property bool _posReady: false
+                            Timer { id: _posArm; interval: 0; onTriggered: _slot._posReady = true }
+                            MotionBehavior on y {
+                                gate: _slot._posReady
+                                NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
+                            }
+
                             Component.onCompleted: {
                                 if (shouldLoad) timeoutStartedAt = Notifications.updateTimeFor(modelData.id)
+                                _posArm.start()
                             }
                             onShouldLoadChanged: {
-                                if (shouldLoad) timeoutStartedAt = Date.now()
-                                else timeoutStartedAt = 0
+                                if (shouldLoad) {
+                                    timeoutStartedAt = Date.now()
+                                    // was excluded from the column's layout while hidden, so its
+                                    // last y is stale; snap into the real one instead of easing to it
+                                    _slot._posReady = false
+                                    _posArm.restart()
+                                } else {
+                                    timeoutStartedAt = 0
+                                }
                             }
 
                             Connections {
