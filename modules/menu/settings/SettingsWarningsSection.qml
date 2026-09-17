@@ -63,12 +63,16 @@ Column {
             displayValue: ShellSettings.batteryLowThreshold + "%"
             glyphColor: Battery.critical ? Theme.error : (Battery.low ? Theme.warning : Theme.withAlpha(Theme.subtext, 0.85))
         }
-        HintText { text: "Escalates to critical at " + Math.max(5, Math.round(ShellSettings.batteryLowThreshold / 2)) + "%." }
-        ToggleRow {
-            glyph: "󰂄"; label: "Fully charged alert"
-            enabled: ShellSettings.osdEnabled
-            key: "osdChargedNotify"
-            dependsNote: "OSD off"
+        CollapsibleSection {
+            expanded: root._battAlertMode !== "off"
+            HintText { text: "Escalates to critical at " + Math.max(5, Math.round(ShellSettings.batteryLowThreshold / 2)) + "%." }
+        }
+        CollapsibleSection {
+            expanded: ShellSettings.osdEnabled
+            ToggleRow {
+                glyph: "󰂄"; label: "Fully charged alert"
+                key: "osdChargedNotify"
+            }
         }
     }
 
@@ -92,7 +96,10 @@ Column {
             displayValue: ShellSettings.tempHotThreshold + "°"
             glyphColor: CpuTemp.critical ? Theme.error : (CpuTemp.hot ? Theme.warning : Theme.withAlpha(Theme.subtext, 0.85))
         }
-        HintText { text: "Escalates to critical at " + (ShellSettings.tempHotThreshold + 8) + "°." }
+        CollapsibleSection {
+            expanded: root._tempAlertMode !== "off"
+            HintText { text: "Escalates to critical at " + (ShellSettings.tempHotThreshold + 8) + "°." }
+        }
     }
 
     SectionLabel {

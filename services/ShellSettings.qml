@@ -359,7 +359,7 @@ Singleton {
         { k: "barBorderVisible",    t: "bool", sec: "underline" },
         { k: "barLineStrength",     t: "real", min: 0.5, max: 3.0, sec: "underline" },
         { k: "underlineGlow",       t: "bool", sec: "underline" },
-        { k: "underlineLastStyle",  t: "enum", vals: ["static", "glow"], sec: "underline" },
+        { k: "underlineLastStyle",  t: "enum", vals: ["static", "glow"], sec: "-" },
         { k: "underlineIdleGlow",   t: "bool", sec: "underline" },
         { k: "underlineFullWidth",  t: "bool", sec: "underline" },
         { k: "underlineNotifGlow",  t: "bool", sec: "underline" },
@@ -557,23 +557,44 @@ Singleton {
         return m
     }
 
-    // A page whose body collapses behind a master toggle has nothing to show while that
-    // toggle is off, so a changed value behind it would dot the nav with no way to clear
-    // it. `keys` are the masters; `always` still counts, because those rows stay visible.
+    // A row that collapses behind an off master has nothing on the page to clear it, so a
+    // changed value behind one must not dot the nav. Each rule pairs a master with the keys
+    // that collapse with it: one page can have several independent masters, and OR-ing them
+    // together left every glow key dotting Underline whenever the bar border alone was on.
+    // A master, and anything that stays visible beside it, belongs in no rule. `negate` flips
+    // a rule to fire while its master is ON, for a key nested behind "expanded: !master".
     readonly property var _sectionGates: ({
-        underline: {
-            keys:   ["barBorderVisible", "underlineGlow"],
-            always: ["barBorderVisible", "underlineGlow"]
-        }
+        underline: [
+            { master: "underlineGlow", hides: ["underlineIdleGlow", "underlineFullWidth",
+                "underlineNotifGlow", "underlineBattGlow", "underlineNetGlow",
+                "underlineTempGlow", "underlineScreenshotGlow", "screenshotGlowSweep",
+                "glowStrength"] },
+            { master: "barBorderVisible", hides: ["barLineStrength"] }
+        ],
+        osd: [
+            { master: "osdEnabled", hides: ["osdTimeout", "osdKindFilter",
+                "osdBarIntegrated", "osdMatchBar"] },
+            { master: "osdBarIntegrated", negate: true, hides: ["osdMatchBar"] }
+        ],
+        popups: [
+            { master: "notifPopupEnabled", hides: ["notifFullscreenSilence",
+                "notifPosition", "notifMaxVisible", "notifDefaultTimeout"] },
+            { master: "dndSchedule", hides: ["dndFrom", "dndTo"] }
+        ],
+        warnings: [
+            { master: "osdEnabled", hides: ["osdChargedNotify"] }
+        ]
     })
 
     function _dotHidden(section: string, key: string): bool {
-        const gate = root._sectionGates[section]
-        if (!gate) return false
-        if (gate.always.indexOf(key) >= 0) return false
-        for (let i = 0; i < gate.keys.length; i++)
-            if (root[gate.keys[i]]) return false
-        return true
+        const rules = root._sectionGates[section]
+        if (!rules) return false
+        for (let i = 0; i < rules.length; i++) {
+            const rule = rules[i]
+            const collapsed = rule.negate ? !!root[rule.master] : !root[rule.master]
+            if (collapsed && rule.hides.indexOf(key) >= 0) return true
+        }
+        return false
     }
 
     // reassigned, never mutated: the nav reads this through a binding, and a mutation

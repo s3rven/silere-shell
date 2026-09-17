@@ -32,6 +32,7 @@ settings file carries its own `__version` and migrates separately.
   long histories. Switching app filters keeps its height steady.
 - Notification popups are wider.
 - Device and option rows highlight the full row and follow the card’s corner.
+- The Alerts page collapses the escalation note and the charged alert when they do not apply.
 - Maintenance names the lock and night-light programs in one line each.
 - The low-battery and overheating alerts pulse on each threshold, then hold steady.
 - The visualizer draws denser bars on wider tracks.

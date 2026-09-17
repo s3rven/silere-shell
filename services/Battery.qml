@@ -144,7 +144,7 @@ Singleton {
 
     // nothing draws alertPulse with the pill hidden, the underline glow off and the menu shut
     readonly property bool _alertWatched: ShellSettings.barShowBattery
-        || ShellSettings.underlineBattGlow || MenuState.homeActive
+        || (ShellSettings.underlineGlow && ShellSettings.underlineBattGlow) || MenuState.homeActive
 
     PulseLoop {
         target:         root

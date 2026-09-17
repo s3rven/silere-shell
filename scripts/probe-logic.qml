@@ -825,21 +825,65 @@ ShellRoot {
             "restoring a setting clears its page")
 
         const savedBattGlow = ShellSettings.underlineBattGlow
+        const savedGlow = ShellSettings.underlineGlow
         const savedBorder = ShellSettings.barBorderVisible
-        ShellSettings.barBorderVisible = true
+        ShellSettings.underlineGlow = true
         ShellSettings.underlineBattGlow = !savedBattGlow
         root._check(ShellSettings.modifiedSections.underline === true
                 && ShellSettings.modifiedSections.warnings === true,
             "a setting owned by two pages marks both")
-        // the underline page collapses to its master toggle when both masters are off, so a
-        // changed value behind that gate would dot a page with nothing on it to clear
-        ShellSettings.barBorderVisible = savedBorder
+        // the event rows collapse behind the glow master, so a changed value behind that
+        // gate would dot a page with nothing on it to clear
+        ShellSettings.underlineGlow = savedGlow
         root._check(ShellSettings.modifiedSections.warnings === true
                 && ShellSettings.modifiedSections.underline === undefined,
             "a value hidden behind a page's master toggle stops dotting that page")
         ShellSettings.underlineBattGlow = savedBattGlow
         root._check(ShellSettings.modifiedSections.warnings === undefined,
             "clearing the shared setting clears the page that still showed it")
+
+        // the masters on one page are independent. Asserted on the gate rather than the
+        // aggregate because flipping a master makes that master itself non-default, and a
+        // visible master row is supposed to dot its own page.
+        ShellSettings.barBorderVisible = true
+        ShellSettings.underlineGlow = false
+        root._check(ShellSettings._dotHidden("underline", "underlineBattGlow") === true,
+            "a glow row stays hidden while another master on the page is on")
+        root._check(ShellSettings._dotHidden("underline", "barLineStrength") === false,
+            "the line strength follows the border master, not the glow one")
+        ShellSettings.underlineGlow = true
+        root._check(ShellSettings._dotHidden("underline", "underlineBattGlow") === false,
+            "its own master brings a glow row back")
+        ShellSettings.underlineGlow = savedGlow
+        ShellSettings.barBorderVisible = savedBorder
+
+        // osd and popups collapse behind their own masters the same way
+        const savedOsdEnabled = ShellSettings.osdEnabled
+        ShellSettings.osdEnabled = false
+        root._check(ShellSettings._dotHidden("osd", "osdTimeout") === true
+                && ShellSettings._dotHidden("osd", "osdEnabled") === false,
+            "the OSD body hides behind its master while the master itself still counts")
+        ShellSettings.osdEnabled = savedOsdEnabled
+        root._check(ShellSettings._dotHidden("osd", "osdTimeout") === false,
+            "the OSD body counts again once it is back on")
+
+        // osdMatchBar nests a second gate behind osdBarIntegrated, so it needs a negated
+        // rule on top of the section's own osdEnabled one
+        const savedBarIntegrated = ShellSettings.osdBarIntegrated
+        ShellSettings.osdBarIntegrated = true
+        root._check(ShellSettings._dotHidden("osd", "osdMatchBar") === true
+                && ShellSettings._dotHidden("osd", "osdBarIntegrated") === false,
+            "match-bar hides behind bar-integrated while that toggle itself still counts")
+        ShellSettings.osdBarIntegrated = savedBarIntegrated
+        root._check(ShellSettings._dotHidden("osd", "osdMatchBar") === false,
+            "match-bar counts again once bar-integrated is back off")
+
+        const savedDndGate = ShellSettings.dndSchedule
+        ShellSettings.dndSchedule = false
+        root._check(ShellSettings._dotHidden("popups", "dndFrom") === true
+                && ShellSettings._dotHidden("popups", "notifHistoryLimit") === false,
+            "quiet hours hides its own times without touching the rest of Popups")
+        ShellSettings.dndSchedule = savedDndGate
 
         const savedNight = ShellSettings.nightLightTemp
         ShellSettings.nightLightTemp = savedNight === 4000 ? 3500 : 4000
@@ -2002,17 +2046,23 @@ ShellRoot {
 
         // the pulse only drives a hidden pill, an off underline glow and a shut menu here
         const battShowWas = ShellSettings.barShowBattery
+        const battGlowMasterWas = ShellSettings.underlineGlow
         const battGlowWas = ShellSettings.underlineBattGlow
         const battMenuWas = MenuState.open
         MenuState.open = false
         ShellSettings.barShowBattery = false
+        ShellSettings.underlineGlow = false
         ShellSettings.underlineBattGlow = false
         root._check(!Battery._alertWatched,
             "the battery alert rests when no surface draws it")
         ShellSettings.underlineBattGlow = true
+        root._check(!Battery._alertWatched,
+            "the battery glow toggle alone, without its master, does not keep the alert watched")
+        ShellSettings.underlineGlow = true
         root._check(Battery._alertWatched,
-            "the underline glow alone keeps the battery alert watched")
+            "the underline glow master plus its own toggle keeps the battery alert watched")
         ShellSettings.barShowBattery = battShowWas
+        ShellSettings.underlineGlow = battGlowMasterWas
         ShellSettings.underlineBattGlow = battGlowWas
         MenuState.open = battMenuWas
 
