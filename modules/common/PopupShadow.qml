@@ -18,7 +18,7 @@ Loader {
         Scale {
             origin.x: root.card.motionOriginX
             origin.y: root.card.barBottom ? root.height : 0
-            xScale: root.card.scaleAmt
+            xScale: root.card.scaleUniform ? root.card.scaleAmt : 1
             yScale: root.card.scaleAmt
         }
     ]

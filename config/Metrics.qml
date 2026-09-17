@@ -95,9 +95,11 @@ Singleton {
         return root.barPresent(screen) ? root.popupClearance(extraGap) : Math.max(6, extraGap)
     }
 
-    // takes the clearance, not the gap: a surface that animates its own inset must pass the live value
+    // takes the clearance, not the gap: a surface that animates its own inset must pass the live value.
+    // snapped like every width: an unsnapped y puts the card's two horizontal edges on different
+    // output-pixel phases, so one hairline rasterizes heavier than the other. The gap absorbs it
     function popupY(windowHeight: real, popupHeight: real, atBottom: bool, edge: real): real {
-        return Math.round(atBottom ? windowHeight - edge - popupHeight : edge)
+        return atBottom ? snap4Down(windowHeight - edge - popupHeight) : snap4Up(edge)
     }
 
     // the middle of a bar is the span left free by its side zones, not the bar's own centre:

@@ -43,7 +43,7 @@ PanelWindow {
 
     TapHandler {
         id: _dismiss
-        enabled: CalendarState.open && card.scaleAmt > 0.95
+        enabled: CalendarState.open
         onTapped: {
             if (_tapGuard.ignoring) return
             const p = _dismiss.point.position
@@ -163,7 +163,11 @@ PanelWindow {
 
         width:  panelW
         height: 4 * Math.ceil((_col.implicitHeight + pad * 2) / 4)
-
+        // a month with a sixth week row resizes the card while it stays open
+        MotionBehavior on height {
+            gate: card.geometryMotionReady
+            NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
+        }
 
         WheelHandler {
             acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
@@ -269,10 +273,6 @@ PanelWindow {
                     color: Theme.warning
                     font.pixelSize: Settings.fontCaption
                     wrapMode: Text.WordWrap
-                }
-
-                MotionBehavior on height {
-                    NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
                 }
             }
 
@@ -383,9 +383,6 @@ PanelWindow {
                 width: parent.width
                 height: card._rowCount * card.cell
                 clip: true
-                MotionBehavior on height {
-                    NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
-                }
 
                 Column {
                     id: _weekAxis

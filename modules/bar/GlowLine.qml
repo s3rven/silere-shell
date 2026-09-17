@@ -19,7 +19,7 @@ Rectangle {
     readonly property real _r:  Math.min(_hi, Math.max(_c, _c + Math.max(0, spread)))
     readonly property color _transparentEdge: Qt.rgba(edge.r, edge.g, edge.b, 0)
 
-    // qt can report an integer dpr while the surface is downscaled again; 1/dpr goes sub-pixel there
+    // dpr reports 2 while the output scale is 1.25, so 1/dpr lands sub-pixel; this glow wants that
     height: 1
     antialiasing: false
     visible: opacity > 0.001

@@ -14,6 +14,9 @@ Rectangle {
     // clamp against the width the card is headed for, not the live one, or an animating width fights the x Behavior every frame
     property real targetWidth: width
     property bool animateScale: true
+    // a wide card scaled on both axes grows sideways out of its anchor, which reads as drift;
+    // the menu unfolds on y alone
+    property bool scaleUniform: true
     property bool animatePlacement: true
 
     signal closeFinished()
@@ -24,8 +27,18 @@ Rectangle {
     property bool _closing: false
     readonly property bool fullyShown: root.open && root._transitionReady
         && !_enterAnimation.running && root.opacity >= 0.999
+    // a card that resizes while open gates its height motion on this: placed, revealed, and past
+    // the settle, so the open itself is never animated as a resize
+    readonly property bool geometryMotionReady: root.open && root._transitionReady
+        && root._placementSettled
     readonly property real _originX: Math.max(0, Math.min(targetWidth, anchorX - x))
     readonly property real motionOriginX: _originX
+
+    // an unmapped layer surface reports Qt's placeholder size — 100 while hidden, 500 for the
+    // turn after show — so clamping against the window collapses the card while it is closed and
+    // animates it back out on the next open. The screen stays correct the whole time.
+    readonly property real winW: win.screen ? win.screen.width : win.width
+    readonly property real winH: win.screen ? win.screen.height : win.height
 
     property real _barInset: Metrics.barEdgeInset
     MotionBehavior on _barInset {
@@ -34,7 +47,7 @@ Rectangle {
     readonly property real _edgeY: _barInset + ShellSettings.barHeight + 8
     readonly property real _minX: Metrics.snap4Up(radius + 4)
     readonly property real _maxX: Math.max(_minX,
-        Metrics.snap4Down(win.width - targetWidth - _minX))
+        Metrics.snap4Down(winW - targetWidth - _minX))
 
     property real scaleAmt: 1
     property real edgeOffset: 0
@@ -90,8 +103,8 @@ Rectangle {
         return Math.max(_minX, Math.min(px, _maxX))
     }
     function _targetX(): real {
-        const t = Math.max(0, Math.min(win.width, anchorX))
-        return Metrics.snap4(_clampedX(t - targetWidth * t / Math.max(1, win.width)))
+        const t = Math.max(0, Math.min(winW, anchorX))
+        return Metrics.snap4(_clampedX(t - targetWidth * t / Math.max(1, winW)))
     }
     function place(): void {
         x = _targetX()
@@ -128,7 +141,7 @@ Rectangle {
                 _transitionReady = true
                 root._snapOpen()
             } else {
-                _startupFrame.start()
+                root._beginWarmup()
             }
             return
         }
@@ -139,7 +152,7 @@ Rectangle {
     onBarBottomChanged: if (!root.open && !_exitAnimation.running)
         root.edgeOffset = root._hiddenEdge()
 
-    y: Metrics.popupY(win.height, height, barBottom, _edgeY)
+    y: Metrics.popupY(winH, height, barBottom, _edgeY)
     radius: Theme.surfaceRadius
     antialiasing: true
     color: Theme.popup
@@ -154,13 +167,10 @@ Rectangle {
         Scale {
             origin.x: root._originX
             origin.y: root.barBottom ? root.height : 0
-            xScale: root.scaleAmt
+            xScale: root.scaleUniform ? root.scaleAmt : 1
             yScale: root.scaleAmt
         }
     ]
-    layer.enabled: root.animateScale
-        && Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)
-        && opacity > 0.001 && (scaleAmt < 0.999 || !root.open)
 
     MotionBehavior on x {
         gate: root.animatePlacement && root.open && root._transitionReady
@@ -213,13 +223,10 @@ Rectangle {
         }
     }
 
-    Connections {
-        target: root.win
-        function onWidthChanged() {
-            if (!root.open) return
-            const nx = root._targetX()
-            if (Math.abs(nx - root.x) > 0.5) root.place()
-        }
+    onWinWChanged: {
+        if (!root.open) return
+        const nx = root._targetX()
+        if (Math.abs(nx - root.x) > 0.5) root.place()
     }
 
     Component.onCompleted: {
@@ -230,17 +237,25 @@ Rectangle {
             root._transitionReady = true
             if (root.open) root._startOpen()
         } else if (root.open) {
-            _startupFrame.start()
+            root._beginWarmup()
         }
     }
 
-    // Let the new scene graph synchronize once before revealing the card. A
-    // popup is a lazily-created window; starting its entrance in Component.onCompleted
-    // makes construction and the first visible animation frame compete on the GUI thread.
+    // Let the new scene graph synchronize before revealing the card. A popup is a
+    // lazily-created window; starting its entrance in Component.onCompleted makes
+    // construction and the first visible animation frame compete on the GUI thread.
+    // Measured: construction lands a ~22ms frame and the next two still pace at 3-9ms
+    // while the graph uploads, so one frame of slack leaves the stutter inside the motion.
+    property int _warmupFrames: 0
+    function _beginWarmup(): void {
+        root._warmupFrames = 0
+        _startupFrame.start()
+    }
     FrameAnimation {
         id: _startupFrame
         running: false
         onTriggered: {
+            if (++root._warmupFrames < 3) return
             stop()
             root._transitionReady = true
             if (root.open) root._startOpen()
@@ -251,14 +266,16 @@ Rectangle {
         id: _enterAnimation
         NumberAnimation { target: root; property: "scaleAmt";  to: 1.0; duration: root.animateScale ? Motion.popIn : 0; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.emphasizedDecel }
         NumberAnimation { target: root; property: "edgeOffset"; to: 0.0; duration: Motion.popIn; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.emphasizedDecel }
-        NumberAnimation { target: root; property: "opacity";   to: 1.0; duration: Motion.popInFade; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standardDecel }
+        // OutQuad, not standardDecel: that curve is 12% opaque in the first 1% of the fade, so the
+        // card blinks into existence instead of resolving
+        NumberAnimation { target: root; property: "opacity";   to: 1.0; duration: Motion.popInFade; easing.type: Easing.OutQuad }
     }
 
     ParallelAnimation {
         id: _exitAnimation
         NumberAnimation { target: root; property: "scaleAmt"; to: root._hiddenScale(); duration: root.animateScale ? Motion.popOut : 0; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.emphasizedAccel }
         NumberAnimation { target: root; property: "edgeOffset"; to: root._hiddenEdge(); duration: Motion.popOut; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.emphasizedAccel }
-        NumberAnimation { target: root; property: "opacity"; to: 0.0; duration: Motion.popOutFade; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standardAccel }
+        NumberAnimation { target: root; property: "opacity"; to: 0.0; duration: Motion.popOutFade; easing.type: Easing.InQuad }
         onFinished: {
             if (root.open || !root._closing) return
             // target inputs (notably bar edge) can change mid-exit. Normalize to today's hidden state before the next open reverses from it

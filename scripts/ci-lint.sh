@@ -1976,6 +1976,45 @@ else
   ok "row height" "every design row height derives from the shared grid"
 fi
 
+section "popup surface pixel grid"
+# 4 logical px is exactly 5 output px at the 1.25 fractional scale, so a span off that grid
+# puts a surface's two opposite edges on different sub-pixel phases and one outline stroke
+# rasterizes heavier than its partner. Metrics.snap4* is the only way onto it. This has
+# regressed three times on different surfaces, each time on a card that sizes itself from
+# its content — a leaf control does not need the grid, the card carrying the outline does.
+# Anchors match literally so a rename fails here rather than passing vacuously: when one of
+# these bindings moves, retarget its anchor instead of deleting the entry.
+grid_re='snap4|4 \* Math\.(ceil|round|floor)'
+grid_bad=0
+check_grid() {
+  local file="$1" anchor="$2" label="$3" window="${4:-1}" hit
+  if [ ! -f "$file" ]; then
+    fail "popup grid: $file is gone; retarget the $label check"
+    grid_bad=1
+    return
+  fi
+  # a binding may wrap onto the next lines, so the declaration carries a window with it
+  hit="$(grep -A"$window" -E "$anchor" "$file" 2>/dev/null || true)"
+  if [ -z "$hit" ]; then
+    fail "popup grid: nothing matches '$anchor' in $file; retarget the $label check"
+    grid_bad=1
+  elif ! printf '%s\n' "$hit" | grep -qE "$grid_re"; then
+    fail "popup grid: $label ($file) must take its span from Metrics.snap4*"
+    grid_bad=1
+  fi
+}
+check_grid modules/menu/MenuWindow.qml 'readonly property int targetH' "menu content height" 5
+check_grid modules/menu/MenuWindow.qml 'readonly property int _availablePanelH' "menu screen cap"
+check_grid modules/calendar/CalendarPopup.qml '_col\.implicitHeight \+ pad \* 2' "calendar card height"
+check_grid modules/quickactions/QuickActionsPopup.qml '_rows\.implicitHeight \+ pad \* 2' "quick actions card height"
+check_grid modules/traymenu/TrayMenuPopup.qml '_col\.implicitHeight, _maxContentH' "tray menu card height"
+check_grid modules/traymenu/TrayMenuPopup.qml 'readonly property real _panelH' "tray submenu flyout height"
+check_grid modules/notifications/NotificationCard.qml 'height:.*contentCol\.implicitHeight' "notification card height"
+check_grid modules/osd/OsdWindow.qml 'readonly property int pillW' "floating OSD pill width"
+if [ "$grid_bad" -eq 0 ]; then
+  ok "pixel grid" "every content-sized popup surface lands on the 4px grid"
+fi
+
 section "portability regressions"
 portability_log="$(mktemp "${TMPDIR:-/tmp}/silere-portability.XXXXXX.log")"
 if { bash scripts/test-portability.sh && bash scripts/test-update.sh; } \

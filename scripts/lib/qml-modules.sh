@@ -49,7 +49,6 @@ SILERE_REQUIRED_QML_MODULES=(
     QtQuick
     QtQuick.Effects
     QtQuick.Shapes
-    QtQuick.Window
     Quickshell
     Quickshell.Bluetooth
     Quickshell.Hyprland

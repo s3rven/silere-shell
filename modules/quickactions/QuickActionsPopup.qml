@@ -43,13 +43,19 @@ PanelWindow {
         }
     }
 
+    OutsideTapGuard {
+        id: _tapGuard
+        open: QuickActionsState.open
+    }
+
     Item { id: _fillArea; anchors.fill: parent }
     mask: Region { item: QuickActionsState.open ? _fillArea : null }
 
     TapHandler {
         id: _dismiss
-        enabled: QuickActionsState.open && card.scaleAmt > 0.95
+        enabled: QuickActionsState.open
         onTapped: {
+            if (_tapGuard.ignoring) return
             const p = _dismiss.point.position
             if (p.x < card.x || p.x > card.x + card.width ||
                 p.y < card.y || p.y > card.y + card.height)
@@ -171,6 +177,11 @@ PanelWindow {
             Metrics.snap4(236 * Settings.fontSize / 12))
         width: contentW + pad * 2
         height: Metrics.snap4Up(_rows.implicitHeight + pad * 2)
+        // a row can appear or disappear (radios toggled, a profile daemon starting) while the card is open
+        MotionBehavior on height {
+            gate: card.geometryMotionReady
+            NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
+        }
 
         Component.onCompleted: if (QuickActionsState.open) card.forceActiveFocus()
 

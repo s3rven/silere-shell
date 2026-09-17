@@ -359,7 +359,7 @@ Item {
     Rectangle {
         id: cardRect
         width:  card.width
-        height: Math.round(contentCol.implicitHeight) + 26
+        height: Metrics.snap4Up(contentCol.implicitHeight + 26)
         radius: card._cardRadius
         clip:   true
         antialiasing: true

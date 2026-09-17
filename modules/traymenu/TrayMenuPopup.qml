@@ -140,7 +140,7 @@ PanelWindow {
 
     TapHandler {
         id: _dismiss
-        enabled: TrayMenuState.open && card.scaleAmt > 0.95
+        enabled: TrayMenuState.open
         // a TapHandler keeps a passive grab, so this fires for taps on rows too
         onTapped: {
             if (_tapGuard.ignoring) return
@@ -343,10 +343,11 @@ PanelWindow {
                 function _syncOrigin(): void {
                     _flyout._origin = _entry.mapToItem(null, 0, 0)
                 }
-                readonly property bool  _flip: _origin.x + _entry.width + 4 + _w > win.width - 4
-                readonly property real _panelH: Math.min(_subCol.implicitHeight + pad * 2, Math.max(48, win.height - 8))
-                readonly property real _targetY: Math.max(4 - _origin.y, Math.min(-pad, win.height - 4 - _origin.y - _panelH))
-                x: Metrics.flyoutX(_origin.x, _entry.width, _w, win.width)
+                readonly property bool  _flip: _origin.x + _entry.width + 4 + _w > card.winW - 4
+                readonly property real _panelH: Metrics.snap4Up(
+                    Math.min(_subCol.implicitHeight + pad * 2, Math.max(48, card.winH - 8)))
+                readonly property real _targetY: Math.max(4 - _origin.y, Math.min(-pad, card.winH - 4 - _origin.y - _panelH))
+                x: Metrics.flyoutX(_origin.x, _entry.width, _w, card.winW)
                 y: _origin.y + _targetY
                 width:  _w
                 height: _panelH
@@ -430,10 +431,15 @@ PanelWindow {
         barBottom: TrayMenuState.barBottom
 
         readonly property int pad: 6
-        readonly property real _maxContentH: Math.max(48, win.height - _edgeY - pad * 2 - 8)
+        readonly property real _maxContentH: Math.max(48, winH - _edgeY - pad * 2 - 8)
 
         width:  win.menuWidth + pad * 2
-        height: Math.min(_col.implicitHeight, _maxContentH) + pad * 2
+        height: Metrics.snap4Up(Math.min(_col.implicitHeight, _maxContentH) + pad * 2)
+        // a different tray icon's menu can swap in at a different row count while the card stays open
+        MotionBehavior on height {
+            gate: card.geometryMotionReady
+            NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
+        }
 
         Connections {
             target: TrayMenuState

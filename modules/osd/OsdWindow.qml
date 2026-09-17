@@ -75,7 +75,8 @@ PanelWindow {
 
                 readonly property int pillH: ShellSettings.osdMatchBar ? Math.max(28, ShellSettings.barHeight) : 34
                 readonly property int chromeW: hasBar ? 216 : 70
-                readonly property int pillW: Math.max(268, Math.min(520, chromeW + Math.ceil(_labelMetrics.advanceWidth) + 2))
+                readonly property int pillW: Metrics.snap4(
+                    Math.max(268, Math.min(520, chromeW + Math.ceil(_labelMetrics.advanceWidth) + 2)))
                 readonly property real pillRadius: ShellSettings.osdMatchBar
                     ? Math.min(ShellSettings.barRadius, pillH / 2)
                     : Math.min(Theme.radiusPanel, pillH / 2)

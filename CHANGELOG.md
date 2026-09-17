@@ -21,6 +21,9 @@ settings file carries its own `__version` and migrates separately.
 
 ### Changed
 
+- The menu unfolds from the bar edge instead of only fading, and holds its width while it opens.
+- Menus and popups drop further and ease into place, and the menu rail and panel widen on the same curve.
+- Popups wait for their content to finish building before they start moving.
 - Settings descriptions and connection status messages use brighter secondary text.
 - Workspace taps, window drops, special-workspace entries and OSD nudges settle on one
   timing instead of five.

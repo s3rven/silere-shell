@@ -36,15 +36,23 @@ Singleton {
     readonly property var standard:        [0.2, 0.0, 0.0, 1.0, 1, 1]
     readonly property var standardDecel:   [0.0, 0.0, 0.0, 1.0, 1, 1]
     readonly property var standardAccel:   [0.3, 0.0, 1.0, 1.0, 1, 1]
-    readonly property var emphasizedDecel: [0.05, 0.7, 0.1, 1.0, 1, 1]
+    // ease-out-cubic, not M3's emphasized decelerate: that curve opens at 14x linear velocity, which
+    // spends half the travel in the first frame and crawls the rest. Nothing here moves far enough
+    readonly property var emphasizedDecel: [0.215, 0.61, 0.355, 1.0, 1, 1]
     readonly property var emphasizedAccel: [0.3, 0.0, 0.8, 0.15, 1, 1]
 
     readonly property real popScaleFrom: 0.985
-    readonly property real popEdgeOffset: 6
+    // the card starts behind the bar and clears it inside the first frame, while it is still
+    // near-transparent: travel shorter than the 8px popup gap reads as a twitch, not a drop
+    readonly property real popEdgeOffset: 12
     readonly property int  popIn:      _rm ? 0 : 240
-    readonly property int  popInFade:  _rm ? 0 : 170
-    readonly property int  popOut:     _rm ? 0 : 160
-    readonly property int  popOutFade: _rm ? 0 : 130
+    // the compositor blurs these layers above an alpha threshold, so a slow fade holds the card
+    // at part-alpha through the crossing; keep the reveal ahead of the travel
+    readonly property int  popInFade:  _rm ? 0 : 160
+    readonly property int  popOut:     _rm ? 0 : 150
+    // the popup window unmaps on opacity, so the fade has to outlast the travel or the card
+    // dissolves two thirds of the way through its own exit
+    readonly property int  popOutFade: _rm ? 0 : 190
     readonly property int  popSettle:  _rm ? 0 : 240
 
     // scroll physics are user-driven, not animation: they stay put under reduce-motion

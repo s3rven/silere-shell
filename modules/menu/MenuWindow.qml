@@ -62,7 +62,7 @@ PanelWindow {
 
     TapHandler {
         id: _dismiss
-        enabled: MenuState.open && panel.scaleAmt > 0.95
+        enabled: MenuState.open
         onTapped: {
             if (_tapGuard.ignoring) return
             const p = _dismiss.point.position
@@ -83,7 +83,8 @@ PanelWindow {
         anchorX: MenuState.effectiveAnchorX
         barBottom: Metrics.barAtBottom
         targetWidth: placementW
-        animateScale: false
+        animateScale: true
+        scaleUniform: false
         animatePlacement: false
         clip: true
 
@@ -113,8 +114,8 @@ PanelWindow {
             : _compactW
         // x is clamped once, against the widest page, so switching tabs never moves the card
         readonly property int _widestW: Math.max(_settingsW, _recentW)
-        readonly property int _availablePanelW: win.width > 0
-            ? Math.max(4, Metrics.snap4Down(win.width - _minX * 2))
+        readonly property int _availablePanelW: winW > 0
+            ? Math.max(4, Metrics.snap4Down(winW - _minX * 2))
             : _widestW
         readonly property int panelW: Math.max(1,
             Math.min(_targetPanelW, _availablePanelW))
@@ -156,8 +157,10 @@ PanelWindow {
         readonly property int minRailFitH: 252
         readonly property int pageTopInset: 12
         readonly property int pageBottomInset: 12
-        readonly property int _availablePanelH: win.height > 0
-            ? Math.max(1, Math.floor(win.height - _edgeY - _minX))
+        // snapped like the content height it clamps: a floor() here puts the bottom edge on a
+        // different output-pixel phase from the top whenever the screen is the limit
+        readonly property int _availablePanelH: winH > 0
+            ? Math.max(4, Metrics.snap4Down(winH - _edgeY - _minX))
             : contentPane.targetH
         readonly property int recentViewportH: Metrics.historyViewportFor(
             panel._availablePanelH - panel.pageTopInset - panel.pageBottomInset,
@@ -259,7 +262,7 @@ PanelWindow {
 
         function _beginTabHeightHold(): void {
             if (!panel.open || ShellSettings.reduceMotion) return
-            panel._tabHeldH = Math.max(1, Math.round(panel.height))
+            panel._tabHeldH = Math.max(4, Metrics.snap4Up(panel.height))
             panel._tabHeightHeld = true
         }
 
