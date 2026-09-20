@@ -88,6 +88,11 @@ Item {
                 property bool _dwelled: false
 
                 onNeedsAttentionChanged: _attentionSettled = false
+                onModelDataChanged: {
+                    _tile._fallbackDue = false
+                    _tile._dwelled = false
+                    if (!_icon.ready) _fallbackTimer.restart()
+                }
 
                 Accessible.role: Accessible.Button
                 Accessible.name: _tile.label
@@ -155,6 +160,7 @@ Item {
 
                 property bool _fallbackDue: false
                 Timer {
+                    id: _fallbackTimer
                     interval: 300
                     running: !_icon.ready
                     onTriggered: _tile._fallbackDue = true
