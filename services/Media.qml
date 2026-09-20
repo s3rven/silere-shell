@@ -535,6 +535,9 @@ Singleton {
         restartDelay: 1000
         maxRestartDelay: 30000
         stableAfter: 20000
+        // a clean exit 1 is cava refusing to start - an input method this build lacks,
+        // which respawning cannot fix; the playback gate retries when it next cycles
+        giveUpCodes: [1]
         stdout: SplitParser {
             onRead: line => {
                 const parts = line.split(";")
