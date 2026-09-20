@@ -35,6 +35,8 @@ Singleton {
     property bool   showSeconds:         false
     property bool   compactDate:         false
     property bool   clock12h:            false
+    property string calendarWeekStart:   "monday"
+    property bool   calendarWeekNumbers: true
     property bool   showWindowTitle:     false
     property bool   showWindowTitleApp:  false
     property bool   updatesWidget:       false
@@ -306,6 +308,8 @@ Singleton {
         { k: "showSeconds",         t: "bool", sec: "clock" },
         { k: "compactDate",         t: "bool", sec: "clock" },
         { k: "clock12h",            t: "bool", sec: "clock" },
+        { k: "calendarWeekStart",   t: "enum", vals: ["monday", "sunday", "locale"], sec: "clock" },
+        { k: "calendarWeekNumbers", t: "bool", sec: "clock" },
         { k: "showWindowTitle",     t: "bool", sec: "widgets,indicators" },
         { k: "showWindowTitleApp",  t: "bool", sec: "indicators" },
         { k: "updatesWidget",       t: "bool", sec: "widgets,updates" },

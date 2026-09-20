@@ -23,6 +23,8 @@ Singleton {
             ? SystemClock.Seconds : SystemClock.Minutes
     }
 
+    readonly property date currentDate: clock.date
+
     property string _lastDay:       ""
     property string _lastMinute:    ""
     property string cachedDayName:  ""

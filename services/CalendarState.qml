@@ -24,6 +24,27 @@ AnchoredPopupState {
         function close(): void { root.close() }
     }
 
+    readonly property int firstWeekday: weekStartFor(
+        ShellSettings.calendarWeekStart, Qt.locale().firstDayOfWeek)
+
+    function weekStartFor(mode: string, localeDay: int): int {
+        if (mode === "sunday") return 0
+        if (mode === "locale") return Math.max(0, Math.min(6, localeDay))
+        return 1
+    }
+
+    function weekdayAt(column: int): int { return (firstWeekday + column) % 7 }
+
+    function leadingDays(year: int, month: int): int {
+        return (new Date(year, month, 1).getDay() - firstWeekday + 7) % 7
+    }
+
+    function weekForRow(year: int, month: int, row: int): int {
+        // the thursday in a displayed row determines its iso week, even on a sunday-first grid
+        const thursday = (4 - firstWeekday + 7) % 7
+        return DateTime.isoWeek(new Date(year, month, 1 - leadingDays(year, month) + row * 7 + thursday))
+    }
+
     property var marks: ({})
     property bool _saveDirty: false
     property string persistenceError: ""
