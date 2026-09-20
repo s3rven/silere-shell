@@ -99,7 +99,13 @@ Rectangle {
 
     onArmedChanged: {
         _confirmStartedMs = root.armed ? Date.now() : 0
-        _confirmProgress = root.armed ? 1.0 : 0.0
+        _confirmDrain.stop()
+        if (!root.armed) {
+            root._confirmProgress = 0.0
+            return
+        }
+        root._confirmProgress = 1.0
+        if (!ShellSettings.reduceMotion) _confirmDrain.start()
     }
 
     Timer {
@@ -111,16 +117,14 @@ Rectangle {
     property real _confirmProgress: 0.0
     property real _confirmStartedMs: 0
 
-    // keep the confirmation countdown time-based so delayed frames never extend it
-    Timer {
-        interval: 33
-        repeat: true
-        triggeredOnStart: true
-        running: root.armed && !ShellSettings.reduceMotion
-        onTriggered: {
-            const elapsed = Date.now() - root._confirmStartedMs
-            root._confirmProgress = Math.max(0, 1 - elapsed / Math.max(1, root.confirmTimeout))
-        }
+    NumberAnimation {
+        id: _confirmDrain
+        target: root
+        property: "_confirmProgress"
+        from: 1.0
+        to: 0.0
+        duration: Math.max(1, root.confirmTimeout)
+        easing.type: Easing.Linear
     }
 
     PerimeterProgress {
