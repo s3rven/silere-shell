@@ -27,6 +27,12 @@ PageShell {
     property bool _awaitingSectionEnter: false
     signal sectionSwapped()
 
+    function dismissInline(): bool {
+        if (!MenuState.settingsSelectOpen) return false
+        MenuState.closeSettingsSelect()
+        return true
+    }
+
     function _holdBodyHeight(): void {
         _detailBody._heldH = _detailBody.height
     }
