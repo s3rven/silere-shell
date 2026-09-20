@@ -35,7 +35,7 @@ Column {
             key: "showSeconds"
         }
         ChoiceChipRow {
-            glyph: "󰃭"; label: "Week starts"
+            glyph: "󰨴"; label: "Week starts"
             currentValue: ShellSettings.calendarWeekStart
             model: [
                 { value: "monday", label: "Mon" },
