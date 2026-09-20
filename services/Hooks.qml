@@ -45,7 +45,6 @@ Singleton {
 
     property var _present: ({})
     property var _found: ({})
-    property bool _scanned: false
     property var _runTimes: []
     property var _criticalTimes: []
     property bool _throttled: false
@@ -213,7 +212,6 @@ Singleton {
             }
             root._present = Object.assign({}, root._found)
             root._found = ({})
-            root._scanned = true
             root._rescanDelayMs = 0
         }
     }

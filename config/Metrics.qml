@@ -40,11 +40,6 @@ Singleton {
     // a proportional cap alone lets one client own an ultrawide bar
     function windowTitleWidthFor(compact: bool): int { return compact ? 280 : 420 }
 
-    // about sixty-five monospace characters: enough to reveal a clipped title without spanning the screen
-    function barHintWidthFor(available: real): real {
-        return Math.min(available, Math.round(Settings.fontCaption * 40))
-    }
-
     // 4px multiples land on whole physical px at 1.25/1.5/1.75/2, not at 1.6; grows only with the font
     function rowHeightFor(design: real): int {
         return 4 * Math.ceil((design
