@@ -183,6 +183,7 @@ PanelWindow {
             }
 
             Component.onCompleted: Qt.callLater(function() {
+                if (!bar) return
                 if (ShellSettings.reduceMotion) contents.settle(!bar.concealed)
                 else if (!bar.concealed) _enterAnim.start()
             })
