@@ -1882,6 +1882,55 @@ else
   ok "surfaces" "no service enumerates panel state singletons"
 fi
 
+section "menu step-back"
+# README promises Escape steps back before it closes. Every tab page is a PageShell, so
+# each one owes a dismissInline() and a branch in MenuWindow's Escape chain; a page missing
+# either makes Escape close the whole menu over whatever the user had open.
+no_step_back=""
+for f in $(grep -rl '^PageShell {' --include='*.qml' modules); do
+  grep -qF 'function dismissInline' "$f" || no_step_back="$no_step_back $(basename "$f")"
+done
+page_count="$(grep -rl '^PageShell {' --include='*.qml' modules | wc -l)"
+branch_count="$(grep -c 'dismissInline()' modules/menu/MenuWindow.qml || true)"
+if [ -n "$no_step_back" ]; then
+  fail "these menu pages have no dismissInline() for Escape to step back through:$no_step_back"
+elif [ "$branch_count" -ne "$page_count" ]; then
+  fail "MenuWindow's Escape chain calls dismissInline() $branch_count time(s) for $page_count menu page(s)"
+else
+  ok "step back" "every menu page folds its inline state before Escape closes the menu"
+fi
+
+section "sender name fallback"
+# The app rail, the clear-by-app filter and history search all resolve a nameless sender
+# through identityOf. A row that spells its own fallback drifts from them, and search then
+# misses the very name the row is showing.
+own_fallback=""
+for f in modules/menu/*.qml; do
+  grep -qE 'appName[[:space:]]*\|\|[[:space:]]*"[^"]' "$f" || continue
+  own_fallback="$own_fallback $(basename "$f")"
+done
+if [ -n "$own_fallback" ]; then
+  fail "these files spell their own sender-name fallback instead of identityOf:$own_fallback"
+else
+  ok "sender name" "history rows resolve a nameless sender through identityOf"
+fi
+
+section "latched bar edge"
+# A popup that copies the bar edge at open time keeps drawing against it, so a bar that
+# moves underneath leaves the card hugging the edge the bar left. The popups that read
+# Metrics.barAtBottom live re-place themselves and need no guard; a latched one has to close.
+stale_edge_popups=""
+for f in modules/*/*.qml; do
+  grep -qE '^[[:space:]]*barBottom:[[:space:]]*[A-Za-z0-9_]+State\.barBottom' "$f" || continue
+  grep -qF 'onBarPositionChanged' "$f" && continue
+  stale_edge_popups="$stale_edge_popups $(basename "$f")"
+done
+if [ -n "$stale_edge_popups" ]; then
+  fail "these popups latch the bar edge but never close when the bar moves:$stale_edge_popups"
+else
+  ok "bar edge" "every popup latching the bar edge closes when the bar moves"
+fi
+
 section "boot arming"
 # A singleton is only created once something reads a member of it, so a watcher nothing
 # else references never starts and its events are silently lost. The armed marker is how
