@@ -30,6 +30,7 @@ settings file carries its own `__version` and migrates separately.
 - Escape closes an open Settings dropdown before it closes the menu.
 - A tray tile waits for its own icon when the bar hands it a different app.
 - The compositor restart watcher recovers once inotify-tools is installed.
+- The alert dismiss timeout is disabled when libnotify is missing.
 
 ## Releases
 
