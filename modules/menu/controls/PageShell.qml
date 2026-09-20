@@ -20,6 +20,7 @@ Item {
     property real _transitionDirection: 1
     transform: Translate { x: root._pageShift }
 
+    readonly property bool _motionAllowed: Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)
     property bool _announcedActive: false
 
     function _announceShown(): void {
@@ -47,21 +48,22 @@ Item {
         target: MenuState
         function onOpenChanged() {
             if (!MenuState.open) root._menuOpenSettled = false
-            else Qt.callLater(() => root._menuOpenSettled = true)
+            else Qt.callLater(() => root._menuOpenSettled = MenuState.open)
         }
     }
 
     Component.onCompleted: {
         const enterNow = root.active && root.animateOnCreate
-            && MenuState.open && !ShellSettings.reduceMotion
+            && MenuState.open && root._motionAllowed
         root._transitionDirection = MenuState.tabDirection === 0
             ? 1 : MenuState.tabDirection
         root.opacity = root.active && !enterNow ? 1.0 : 0.0
         root._pageShift = enterNow
             ? Motion.pageOffset * root._transitionDirection : 0
-        if (MenuState.open) Qt.callLater(() => root._menuOpenSettled = true)
+        if (MenuState.open) Qt.callLater(() => root._menuOpenSettled = MenuState.open)
         if (enterNow) Qt.callLater(function() {
-            if (root.active) _enter.restart()
+            if (root.active && MenuState.open && root._motionAllowed) _enter.restart()
+            else root.settleVisual(root.active)
         })
         Qt.callLater(root._announceShown)
     }
@@ -71,7 +73,11 @@ Item {
             ? 1 : MenuState.tabDirection
         if (root.active) {
             _exit.stop()
-            if (!root._menuOpenSettled) { root.opacity = 1.0; root._announceShown(); return }
+            if (!root._menuOpenSettled || !root._motionAllowed) {
+                root.settleVisual(true)
+                root._announceShown()
+                return
+            }
             if (root.opacity < 0.01)
                 root._pageShift = Motion.pageOffset * root._transitionDirection
             _enter.restart()
@@ -81,28 +87,23 @@ Item {
             if (!MenuState.open) {
                 return
             }
-            _exit.restart()
+            if (root._motionAllowed) _exit.restart()
+            else root.settleVisual(false)
             root._announceHidden()
         }
     }
 
-    Connections {
-        target: ShellSettings
-        function onReduceMotionChanged() {
-            if (!ShellSettings.reduceMotion) return
-            _enter.stop(); _exit.stop()
-            if (!MenuState.open) {
-                root._pageShift = 0
-                return
-            }
-            root.opacity = root.active ? 1.0 : 0.0
-            root._pageShift = 0
-        }
+    on_MotionAllowedChanged: {
+        if (root._motionAllowed) return
+        _enter.stop()
+        _exit.stop()
+        if (MenuState.open) root.settleVisual(root.active)
+        else root._pageShift = 0
     }
 
     ParallelAnimation {
         id: _enter
-        NumberAnimation { target: root; property: "opacity"; to: 1.0; duration: Motion.pageIn; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standardDecel }
+        NumberAnimation { target: root; property: "opacity"; to: 1.0; duration: Motion.pageIn; easing.type: Easing.OutQuad }
         NumberAnimation { target: root; property: "_pageShift"; to: 0.0; duration: Motion.pageIn; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.emphasizedDecel }
     }
     ParallelAnimation {

@@ -60,9 +60,9 @@ PageShell {
     }
 
     Connections {
-        target: ShellSettings
-        function onReduceMotionChanged() {
-            if (ShellSettings.reduceMotion) root._settleSection()
+        target: root
+        function on_MotionAllowedChanged() {
+            if (!root._motionAllowed) root._settleSection()
         }
     }
 
@@ -113,7 +113,7 @@ PageShell {
         Connections {
             target: MenuState
             function onSettingsSectionChanged() {
-                if (!root.active || root.powerOpen || ShellSettings.reduceMotion) {
+                if (!root.active || !MenuState.open || root.powerOpen || !root._motionAllowed) {
                     root._settleSection()
                     return
                 }
@@ -140,10 +140,10 @@ PageShell {
         }
 
         function _startSectionEnter(): void {
-            if (!root._awaitingSectionEnter) return
+            if (!root._awaitingSectionEnter || !root.contentReady) return
             root._awaitingSectionEnter = false
             _sectionEnterDefer.stop()
-            if (!root.active || root.powerOpen || ShellSettings.reduceMotion) {
+            if (!root.active || !MenuState.open || root.powerOpen || !root._motionAllowed) {
                 _detail.opacity = 1
                 _detail._shift = 0
                 return
@@ -156,20 +156,20 @@ PageShell {
         Connections {
             target: _detailBody
             function onStatusChanged() {
-                if (_detailBody.status === Loader.Ready) _detail._startSectionEnter()
+                if (root.contentReady) _sectionEnterDefer.restart()
             }
         }
 
-        // a section that resolves to the component already loaded never changes status
+        // defer one layout turn, including when the selected component is already loaded
         Timer {
             id: _sectionEnterDefer
-            interval: Motion.panelResize
+            interval: 0
             onTriggered: _detail._startSectionEnter()
         }
 
         ParallelAnimation {
             id: _detailEnter
-            NumberAnimation { target: _detail; property: "opacity"; to: 1.0; duration: Motion.pageIn; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standardDecel }
+            NumberAnimation { target: _detail; property: "opacity"; to: 1.0; duration: Motion.pageIn; easing.type: Easing.OutQuad }
             NumberAnimation { target: _detail; property: "_shift"; to: 0.0; duration: Motion.pageIn; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.emphasizedDecel }
         }
 
