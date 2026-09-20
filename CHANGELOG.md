@@ -11,7 +11,25 @@ settings file carries its own `__version` and migrates separately.
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- Search notification history by app, title or message; Clear removes only the visible results.
+- Calendar week start and week-number visibility under Clock settings.
+- Screen-reader names for the Wi-Fi password field and the missed-notification badge.
+
+### Changed
+
+- The clock highlights while its calendar is open and keeps hour and minute digits in stable-width slots.
+
+### Fixed
+
+- Pill hover values reset when the bar sleeps or the widget hides.
+- Calendar today markers follow the clock across midnight.
+- The tray menu closes when the bar moves to the other screen edge.
+- A notification with no app name is named the same in history as in the app rail, and search finds it.
+- Escape closes an open Settings dropdown before it closes the menu.
+- A tray tile waits for its own icon when the bar hands it a different app.
+- The compositor restart watcher recovers once inotify-tools is installed.
 
 ## Releases
 

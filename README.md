@@ -63,7 +63,7 @@ the maintenance command, unattended installs, Matugen wiring and removal:
   brightness, battery, clock, tray, package updates and shell updates.
   Drag them between left, centre and right.
 - **Menu** — live controls, every setting, and notification history in one panel.
-- **Notifications** — actions, images, history filtered by app, quiet hours, source-window jumping.
+- **Notifications** — actions, images, searchable history filtered by app, quiet hours, source-window jumping.
 - **Theming** — Matugen from your wallpaper or a hand-picked accent, over three dark base
   tones.
 - **Calendar** from the clock, **OSD** for volume and brightness, and **quick actions** for
@@ -80,9 +80,9 @@ controls are listed below.
 
 | area | pointer |
 |---|---|
-| workspaces | **click** switches · on the active diamond, **click** opens the menu and **right-click** opens quick actions · **middle-click** sends the focused window there · on the trailing **+**, **click** opens the next empty workspace · **scroll** switches too, once you turn it on under Settings › Workspaces |
+| workspaces | **click** switches · on the active diamond, **click** opens the menu and **right-click** opens quick actions · **middle-click** sends the focused window there · **scroll** switches too, once you turn it on under Settings › Workspaces |
 | clock | **click** opens the calendar · **middle-click** cycles seconds and date |
-| calendar | **scroll** changes the month · **click** the header to jump back to today |
+| calendar | **scroll** changes the month · **click** the header to jump back to today · **click** a date to mark it · choose week start and week numbers under Settings › Clock |
 | media | **click** plays or pauses · **scroll** changes track · **middle-click** jumps to the player |
 | volume | **scroll** changes volume · **click** mutes · **middle-click** moves to the next output · **right-click** opens Sound settings · in the menu, expand it for output, input and per-app levels |
 | microphone | **click** mutes · **scroll** changes the input level · **middle-click** moves to the next input · **right-click** opens Sound settings · it appears while an app is listening |
@@ -94,7 +94,7 @@ controls are listed below.
 | wi-fi list | **click** joins a saved network, or opens a password field for a personal one · **middle-click** a saved network to forget it |
 | bluetooth list | **click** pairs or connects · **middle-click** a paired device to forget it |
 | menu | **Escape** steps back, then closes · **click** anywhere outside to close |
-| history | **click** an entry to read it in full |
+| history | **type** in Search to find an app or message · **click** an entry to read it in full · **Clear** removes the visible results · **Escape** clears search, then closes |
 
 ## Configuration
 
