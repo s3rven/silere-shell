@@ -32,7 +32,12 @@ Item {
     }
 
     Loader {
-        anchors.fill: parent
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.horizontalCenter: parent.horizontalCenter
+        // snapped to an 8px grid: the Canvas backing this width drops and reallocates its
+        // texture on every resize, and surfaceWidth animates through a MotionBehavior
+        width: 8 * Math.round(parent.width / 8)
         // unloading in the same frame the opacity drops leaves the fade animating an empty Loader
         active: root.wanted || _hold.running
         Timer { id: _hold; interval: Motion.slow + 60 }
