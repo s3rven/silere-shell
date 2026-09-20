@@ -652,7 +652,7 @@ PageShell {
                                     anchors.verticalCenter: parent.verticalCenter
                                     width: Math.max(0, parent.width - _appIconSlot.width
                                         - parent.spacing - _entry._rightGutter)
-                                    text: _entry.modelData.appName || "Notification"
+                                    text: _filtered.identityOf(_entry.modelData.appName)
                                     color: _entry._critical ? Theme.error : Theme.withAlpha(Theme.subtext, 0.70)
                                     font.pixelSize: Settings.fontCaption
                                     font.weight: Font.Medium
