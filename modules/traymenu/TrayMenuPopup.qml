@@ -88,6 +88,10 @@ PanelWindow {
             if (output === win._output && TrayMenuState.open) TrayMenuState.close()
         }
     }
+    Connections {
+        target: ShellSettings
+        function onBarPositionChanged() { if (TrayMenuState.open) TrayMenuState.close() }
+    }
 
     screen:        targetScreen
     color:         "transparent"
