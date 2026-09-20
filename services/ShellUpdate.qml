@@ -568,15 +568,18 @@ Singleton {
     }
 
     property bool _probed: false
+    property real _lastProbeMs: 0
     function _probe(): void {
         _probed = true
+        _lastProbeMs = Date.now()
         _touchNow()
         _refreshVersion()
         refreshTimer()
     }
     function _probeIfVisible(): void {
-        if (MenuState.settingsActive && MenuState.settingsSection === "updates")
-            _probe()
+        if (!MenuState.settingsActive || MenuState.settingsSection !== "updates") return
+        if (root._lastProbeMs > 0 && Date.now() - root._lastProbeMs < 60000) return
+        _probe()
     }
     Connections {
         target: MenuState
