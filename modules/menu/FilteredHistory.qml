@@ -9,6 +9,7 @@ Item {
     property var source: null
     property int revision: 0
     property string filter: ""
+    property string query: ""
     property bool active: true
 
     readonly property alias model: _rows
@@ -44,15 +45,27 @@ Item {
                  body: e.body, urgency: e.urgency, time: e.time }
     }
 
+    function snapshot(): var {
+        const entries = []
+        for (let i = 0; i < _rows.count; i++) entries.push(root._copy(_rows.get(i)))
+        return entries
+    }
+
     function sync(): void {
         if (!root.active) return
         const src = root.source
         const want = root.filter
+        const terms = root.query.trim().toLowerCase().split(/\s+/).filter(t => t.length > 0)
         const rows = []
         for (let i = 0; src && i < src.count; i++) {
             const e = src.get(i)
             if (!e) continue
-            if (want.length === 0 || root.identityOf(e.appName) === want) rows.push(e)
+            if (want.length > 0 && root.identityOf(e.appName) !== want) continue
+            if (terms.length > 0) {
+                const text = [root.identityOf(e.appName), e.summary, e.body].join(" ").toLowerCase()
+                if (!terms.every(term => text.indexOf(term) >= 0)) continue
+            }
+            rows.push(e)
         }
         const keys = rows.map(e => root._key(e))
         const live = Object.create(null)
@@ -77,6 +90,7 @@ Item {
     onSourceChanged: root.sync()
     onRevisionChanged: root.sync()
     onFilterChanged: root.sync()
+    onQueryChanged: root.sync()
     onActiveChanged: root.sync()
     Component.onCompleted: root.sync()
 }

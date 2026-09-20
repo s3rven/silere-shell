@@ -17,6 +17,19 @@ PageShell {
 
     readonly property string filter: MenuState.recentFilter
     readonly property int rowCount: _filtered.count
+    property alias searchText: _searchInput.text
+    readonly property bool searching: searchText.trim().length > 0
+
+    onSearchTextChanged: {
+        _clearButton.disarm()
+        _historyList.positionViewAtBeginning()
+    }
+
+    function dismissInline(): bool {
+        if (root.searchText.length === 0) return false
+        root.searchText = ""
+        return true
+    }
 
     onFilterChanged: {
         _clearButton.disarm()
@@ -37,11 +50,12 @@ PageShell {
         source: Notifications.historyModel
         revision: Notifications.historyRevision
         filter: root._appliedFilter
+        query: root.searchText
         active: root.active && MenuState.open
     }
 
     property bool _clearing: false
-    property string _clearFilter: ""
+    property var _clearEntries: []
     // reuse pools a row a few hundred pixels off screen, so expansion has to live on the
     // page: kept on the delegate it collapses the moment the user scrolls past what they opened
     property var _openRows: ({})
@@ -90,6 +104,8 @@ PageShell {
     onPageHidden: {
         _clearButton.disarm()
         root._openRows = ({})
+        _searchInput.focus = false
+        root.searchText = ""
     }
 
     function formatTime(ms): string {
@@ -131,12 +147,14 @@ PageShell {
 
 
     function clearAll(): void {
-        if (_clearing || root.rowCount === 0) return
+        if (_clearing || _swapping || root.rowCount === 0) return
+        const entries = _filtered.snapshot()
         if (ShellSettings.reduceMotion) {
-            Notifications.clearHistoryFor(root.filter)
+            Notifications.clearHistoryEntries(entries)
+            root._openRows = ({})
             return
         }
-        _clearFilter = root.filter
+        _clearEntries = entries
         _clearing = true
         _clearAllAnimation.restart()
     }
@@ -152,7 +170,8 @@ PageShell {
         }
         ScriptAction {
             script: {
-                Notifications.clearHistoryFor(root._clearFilter)
+                Notifications.clearHistoryEntries(root._clearEntries)
+                root._clearEntries = []
                 root._openRows = ({})
                 _historyList.opacity = 1
                 root._clearing = false
@@ -238,14 +257,86 @@ PageShell {
                 visible: root.rowCount > 0
                 glyph: "󰆴"
                 label: "Clear"
-                busy:  root._clearing
+                busy:  root._clearing || root._swapping
                 onConfirmed: root.clearAll()
+            }
+        }
+
+        Rectangle {
+            id: _searchBox
+            width: parent.width
+            anchors.top: _header.bottom
+            anchors.topMargin: 8
+            height: Metrics.rowHeightFor(36)
+            radius: Theme.radiusControl
+            color: Theme.menuControl
+            enabled: !root._clearing
+
+            OutlineBorder {
+                radius: _searchBox.radius
+                outlineColor: _searchInput.activeFocus
+                    ? Theme.withAlpha(Theme.accent, Theme.focusRingSoftAlpha)
+                    : Theme.menuControlLine
+                ColorFade on outlineColor { gate: root.active && MenuState.open }
+            }
+
+            ShellText {
+                id: _searchGlyph
+                anchors.left: parent.left
+                anchors.leftMargin: 10
+                anchors.verticalCenter: parent.verticalCenter
+                text: "󰍉"
+                color: Theme.subtext
+                font.pixelSize: Settings.fontSize + 2
+            }
+
+            TextInput {
+                id: _searchInput
+                anchors.left: _searchGlyph.right
+                anchors.leftMargin: 8
+                anchors.right: _resetSearch.left
+                anchors.rightMargin: 8
+                anchors.verticalCenter: parent.verticalCenter
+                color: Theme.text
+                selectionColor: Theme.withAlpha(Theme.accent, 0.4)
+                font.family: Settings.font
+                font.pixelSize: Settings.fontSize
+                maximumLength: 256
+                selectByMouse: true
+                clip: true
+                inputMethodHints: Qt.ImhNoAutoUppercase
+                Accessible.name: "Search notifications"
+
+                ShellText {
+                    anchors.fill: parent
+                    verticalAlignment: Text.AlignVCenter
+                    visible: _searchInput.text.length === 0
+                    text: "Search notifications"
+                    color: Theme.subtext
+                    font.pixelSize: Settings.fontSize
+                    elide: Text.ElideRight
+                }
+            }
+
+            IconButton {
+                id: _resetSearch
+                anchors.right: parent.right
+                anchors.rightMargin: 4
+                anchors.verticalCenter: parent.verticalCenter
+                visible: root.searchText.length > 0
+                buttonSize: Metrics.rowHeightFor(28)
+                glyph: "󰅖"
+                accessibleName: "Clear search"
+                onTriggered: {
+                    root.searchText = ""
+                    _searchInput.forceActiveFocus()
+                }
             }
         }
 
         Item {
             width: parent.width
-            anchors.top: _header.bottom
+            anchors.top: _searchBox.bottom
             anchors.topMargin: 8
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 10
@@ -280,7 +371,7 @@ PageShell {
 
                 ShellText {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: "All caught up"
+                    text: root.searching ? "No matches" : "All caught up"
                     color: Theme.withAlpha(Theme.text, 0.78)
                     font.pixelSize: Settings.fontSize + 1
                     font.weight: Font.Medium
@@ -288,7 +379,8 @@ PageShell {
 
                 ShellText {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: root.filter.length > 0 ? "No notifications from this app"
+                    text: root.searching ? "Try different search terms"
+                        : root.filter.length > 0 ? "No notifications from this app"
                         : "New notifications will appear here"
                     color: Theme.withAlpha(Theme.subtext,
                         ShellSettings.highContrast ? 0.72 : 0.52)
@@ -299,7 +391,7 @@ PageShell {
 
         ShellListView {
             id: _historyList
-            anchors.top: _header.bottom
+            anchors.top: _searchBox.bottom
             anchors.topMargin: 8
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 10

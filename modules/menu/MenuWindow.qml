@@ -46,6 +46,7 @@ PanelWindow {
             if (panel.powerOpen) {
                 panel.powerOpen = false
             } else if (panel.activeTab === 0 && homeLoader.item && homeLoader.item.dismissInline()) {
+            } else if (panel.activeTab === 2 && recentLoader.item && recentLoader.item.dismissInline()) {
             } else {
                 MenuState.close()
             }
@@ -188,6 +189,7 @@ PanelWindow {
         property bool _settingsNavRetained: false
 
         Component.onCompleted: {
+            if (activeTab !== 0) _loadedDeferred = true
             if (activeTab === 1) _settingsNavRetained = true
             panel._syncPageRetention()
             Qt.callLater(function() { panel._geometryReady = true })
@@ -299,6 +301,7 @@ PanelWindow {
                 // so capture here as well as in switchTab.
                 if (!panel._tabHeightHeld) panel._beginTabHeightHold()
                 contentFlick.contentY = 0
+                if (panel.activeTab !== 0) panel._loadedDeferred = true
                 panel._syncPageRetention()
                 panel._scheduleTabHeightRelease()
                 if (!MenuState.open) panel._settlePageVisuals()

@@ -484,6 +484,29 @@ Singleton {
         root._saveHistory()
     }
 
+    function _historySnapshotKey(entry): string {
+        return JSON.stringify([entry.id, entry.time, entry.appName, entry.summary, entry.body])
+    }
+
+    function clearHistoryEntries(entries): void {
+        if (!Array.isArray(entries) || entries.length === 0) return
+        root._ensurePersistentState()
+        const selected = Object.create(null)
+        for (let i = 0; i < entries.length; i++)
+            selected[root._historySnapshotKey(entries[i])] = true
+        const ids = []
+        for (let i = _history.count - 1; i >= 0; i--) {
+            const entry = _history.get(i)
+            if (!selected[root._historySnapshotKey(entry)]) continue
+            ids.push(String(entry.id))
+            _history.remove(i)
+        }
+        if (ids.length === 0) return
+        root.historyRevision++
+        root._forgetTrimmed(ids)
+        root._saveHistory()
+    }
+
     function clearHistory(): void {
         root._ensurePersistentState()
         if (_history.count === 0) return
