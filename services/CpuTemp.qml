@@ -49,7 +49,7 @@ Singleton {
         target:         root
         targetProperty: "alertPulse"
         duration:       root.pulseDuration
-        active:         root.hot && root.needed && !Idle.isQuiet
+        active:         root.hot && MenuState.homeActive && !Idle.isQuiet
     }
 
     function _sample(t: real): void {
