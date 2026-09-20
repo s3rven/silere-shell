@@ -1915,6 +1915,22 @@ else
   ok "sender name" "history rows resolve a nameless sender through identityOf"
 fi
 
+section "supervised give-up path"
+# SupervisedProcess retries with a backoff that caps, so a command failing permanently
+# respawns for as long as its gate is true. giveUpCodes is the only brake, and it was
+# already found unset once on a watcher whose permanent failure was live in the tree.
+ungoverned_supervised=""
+for f in $(grep -rl 'SupervisedProcess {' --include='*.qml' services modules); do
+  starts="$(grep -c 'SupervisedProcess {' "$f")"
+  codes="$(grep -c 'giveUpCodes' "$f")"
+  [ "$starts" -eq "$codes" ] || ungoverned_supervised="$ungoverned_supervised $(basename "$f")"
+done
+if [ -n "$ungoverned_supervised" ]; then
+  fail "these supervised processes never give up on a permanent failure:$ungoverned_supervised"
+else
+  ok "give up" "every supervised process declares the exits it will not retry"
+fi
+
 section "settings row glyphs"
 # A card gives a toggle and the value it governs the same glyph on purpose, so an adjacent
 # repeat is deliberate pairing. A repeat with unrelated rows between them is two settings
