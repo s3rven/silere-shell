@@ -149,6 +149,10 @@ MenuRow {
                 anchors.margins: -4
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
+                Accessible.role: Accessible.Button
+                Accessible.name: root.badgeCount === 1
+                    ? "1 missed notification" : root.badgeCount + " missed notifications"
+                Accessible.onPressAction: root._activateBadge()
                 onClicked: {
                     root._activateBadge()
                 }

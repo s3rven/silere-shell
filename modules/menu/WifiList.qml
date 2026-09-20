@@ -264,6 +264,7 @@ Item {
                             // echoMode alone leaves inputMethodHints at 0: an IME still capitalises the first letter of a case-sensitive WPA key
                             inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText
                                 | Qt.ImhNoAutoUppercase
+                            Accessible.name: "Wi-Fi password"
                             color: Theme.text
                             selectionColor: Theme.withAlpha(Theme.accent, 0.4)
                             font.family: Settings.font; font.pixelSize: Settings.fontSize
