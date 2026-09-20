@@ -52,7 +52,12 @@ Item {
         NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
     }
 
-    readonly property bool  _hov:    (_hover.hovered && ShellSettings.barHoverHighlight)
+    readonly property bool _calendarOpen: CalendarState.open
+        && (CalendarState.anchorSource === root
+            || (CalendarState.anchorSource === null && root._anchorFallbackBar))
+    readonly property bool _pressed: _calTap.pressed || _cycleTap.pressed
+    readonly property bool _hov: root.barActive && root.show
+        && _hover.hovered && ShellSettings.barHoverHighlight
     readonly property color _cSub:   _hov ? Theme.mix(Theme.subtext, Theme.accent, 0.30) : Theme.subtext
     readonly property color _cText:  _hov ? Theme.mix(Theme.text,    Theme.accent, 0.30) : Theme.text
     readonly property color _cFaint: _hov ? Theme.mix(Theme.withAlpha(Theme.text, 0.65), Theme.accent, 0.30)
@@ -62,12 +67,30 @@ Item {
 
     HoverHandler {
         id: _hover
+        enabled: root.enabled && root.visible && root.barActive
         cursorShape: Qt.PointingHandCursor
     }
 
     function _openCalendar(): void {
         root._syncMenuAnchor()
         CalendarState.toggleAt(root.menuAnchorX, root.screen, root)
+    }
+
+    Rectangle {
+        anchors.centerIn: parent
+        width: parent.width
+        height: Metrics.barRowHeight
+        radius: Metrics.hoverRadiusFor(height)
+        color: root._pressed ? Theme.withAlpha(Theme.accent, 0.18)
+            : root._calendarOpen ? Theme.withAlpha(Theme.accent, 0.12)
+            : Theme.withAlpha(Theme.mix(Theme.text, Theme.accent, 0.30), 0.07)
+        opacity: root._pressed || root._calendarOpen || root._hov ? 1 : 0
+        visible: opacity > 0.001
+        MotionBehavior on opacity {
+            gate: root._animatable
+            NumberAnimation { duration: Motion.fast }
+        }
+        ColorFade on color { gate: root._animatable }
     }
 
     Row {
@@ -114,12 +137,18 @@ Item {
             spacing: 0
 
             RollingText {
+                tabularDigits: true
+                reserveText: "00"
+                horizontalAlignment: Text.AlignRight
                 text:    DateTime.cachedHour
                 color:   root._cText
                 animate: root._animatable
             }
             RollingText { text: ":"; color: root._cText; animate: root._animatable }
             RollingText {
+                tabularDigits: true
+                reserveText: "00"
+                horizontalAlignment: Text.AlignRight
                 text:    DateTime.cachedMinute
                 color:   root._cText
                 animate: root._animatable
@@ -130,6 +159,7 @@ Item {
                 animate:  root._animatable
                 expanded: ShellSettings.showSeconds
                 reserveText: ":00"
+                tabularDigits: true
             }
             CollapsingText {
                 text:     DateTime.cachedAmPm ? " " + DateTime.cachedAmPm : ""
@@ -148,11 +178,16 @@ Item {
 
     TapHandler {
         id: _calTap
+        enabled: root.show && root.barActive
+        gesturePolicy: TapHandler.ReleaseWithinBounds
         acceptedButtons: Qt.LeftButton
         onTapped: root._openCalendar()
     }
 
     TapHandler {
+        id: _cycleTap
+        enabled: root.show && root.barActive
+        gesturePolicy: TapHandler.ReleaseWithinBounds
         acceptedButtons: Qt.MiddleButton
         onTapped: ShellSettings.batch(() => {
             const s = ShellSettings.showSeconds

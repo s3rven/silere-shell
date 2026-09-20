@@ -8,11 +8,16 @@ Item {
     property string text: ""
     property color  color: Theme.text
     property bool   animate: true
+    property bool   tabularDigits: false
+    property string reserveText: ""
+    property int horizontalAlignment: Text.AlignLeft
+
+    TextMetrics { id: _reserve; font: _main.font; text: root.reserveText }
 
     clip: _roll.running
     anchors.verticalCenter: parent ? parent.verticalCenter : undefined
     // whole px so neighbours in a Row don't land on fractional pixels
-    implicitWidth:  Math.ceil(_main.implicitWidth)
+    implicitWidth:  Math.ceil(Math.max(_main.implicitWidth, _reserve.advanceWidth))
     implicitHeight: _main.implicitHeight
     width:  implicitWidth
     height: implicitHeight
@@ -65,6 +70,9 @@ Item {
         text:           root._shown
         color:          root.color
         font.pixelSize: Settings.fontSize
+        font.features: root.tabularDigits ? ({ "tnum": 1 }) : ({})
+        width: root.width
+        horizontalAlignment: root.horizontalAlignment
         property real rise: 0
         transform: Translate { y: _main.rise }
         ColorFade on color {}
@@ -77,6 +85,9 @@ Item {
         visible: opacity > 0.001
         color:          root.color
         font.pixelSize: Settings.fontSize
+        font.features: root.tabularDigits ? ({ "tnum": 1 }) : ({})
+        width: root.width
+        horizontalAlignment: root.horizontalAlignment
         property real rise: 0
         transform: Translate { y: _ghost.rise }
         ColorFade on color {}

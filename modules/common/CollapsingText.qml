@@ -8,6 +8,7 @@ Item {
     property color color: Theme.text
     property bool  expanded: true
     property bool  animate: true
+    property bool  tabularDigits: false
     // fixed-width floor: ticking digits re-hint per pair under fractional scaling and the +-1px wobble walks the whole bar once a second
     property string reserveText: ""
     property bool _ready: false
@@ -18,15 +19,14 @@ Item {
 
     TextMetrics {
         id: _reserve
-        font.family:    Settings.font
-        font.pixelSize: Settings.fontSize
+        font: _label.font
         text:           root.reserveText
     }
 
     anchors.verticalCenter: parent ? parent.verticalCenter : undefined
     height: _label.implicitHeight
     width:  !expanded ? 0
-          : reserveText.length > 0 ? Math.ceil(_reserve.advanceWidth)
+          : reserveText.length > 0 ? Math.ceil(Math.max(_reserve.advanceWidth, _label.implicitWidth))
           : Math.ceil(_label.implicitWidth)
     clip: width + 0.5 < Math.ceil(_label.implicitWidth)
 
@@ -41,6 +41,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         color:          root.color
         font.pixelSize: Settings.fontSize
+        font.features: root.tabularDigits ? ({ "tnum": 1 }) : ({})
         ColorFade on color {}
         opacity:        root.expanded ? 1.0 : 0.0
         MotionBehavior on opacity {
