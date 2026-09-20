@@ -1915,6 +1915,21 @@ else
   ok "sender name" "history rows resolve a nameless sender through identityOf"
 fi
 
+section "settings row glyphs"
+# A card gives a toggle and the value it governs the same glyph on purpose, so an adjacent
+# repeat is deliberate pairing. A repeat with unrelated rows between them is two settings
+# wearing one icon, which is how "Date" and "Week starts" ended up identical.
+if command -v python3 >/dev/null 2>&1 && [ -f scripts/check-row-glyphs.py ]; then
+  if shared_glyphs="$(python3 scripts/check-row-glyphs.py)"; then
+    ok "row glyphs" "no two unrelated settings rows share an icon"
+  else
+    fail "these settings rows share an icon without being a pair:"
+    printf '%s\n' "$shared_glyphs"
+  fi
+else
+  structural_skip "row glyphs" "python3 or the row glyph check is unavailable"
+fi
+
 section "latched bar edge"
 # A popup that copies the bar edge at open time keeps drawing against it, so a bar that
 # moves underneath leaves the card hugging the edge the bar left. The popups that read
