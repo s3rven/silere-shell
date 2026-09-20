@@ -64,6 +64,17 @@ QtObject {
             "bash", root._runtimeHyprDir, root._instanceSignature, Quickshell.shellDir]
     }
 
+    function retryWatcher(): void {
+        if (_restartWatch.gaveUp) _restartWatch.retry()
+    }
+
+    property Connections _restartWatchRetry: Connections {
+        target: SystemTools
+        function onScanRevisionChanged() {
+            if (SystemTools.hasInotifywait && SystemTools.hasSystemctl) root.retryWatcher()
+        }
+    }
+
     function _identity(value): string {
         return SafeText.singleLineText(value, Compositor.maxWindowIdentityChars)
     }
