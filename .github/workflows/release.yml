@@ -14,81 +14,7 @@ concurrency:
 jobs:
   # the same gate main gets: a tag that cannot pass validation must not become a release
   validate:
-    runs-on: ubuntu-latest
-    container: archlinux:base
-    timeout-minutes: 15
-
-    steps:
-      - name: Install validation dependencies
-        run: |
-          pacman -Syu --noconfirm git openssh shellcheck quickshell python fontconfig ttf-jetbrains-mono-nerd
-          fc-cache -f >/dev/null
-
-      # pinned to an immutable sha so a moved tag cannot run unreviewed code
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          persist-credentials: false
-
-      # the job runs as root over a workspace owned by the runner's uid, so without this
-      # git refuses to read the repository and every index-backed lint sees an empty list
-      - name: Trust the checkout
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-      - name: Verify signed release tag
-        run: >-
-          git -c safe.directory="$PWD"
-          -c gpg.format=ssh
-          -c gpg.ssh.allowedSignersFile="$PWD/security/update-signers"
-          verify-tag "$GITHUB_REF_NAME"
-
-      - name: Match release compatibility manifest
-        shell: bash
-        run: |
-          set -euo pipefail
-          version="$(sed -n 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' release.json)"
-          test "$version" = "${GITHUB_REF_NAME#v}" || {
-            echo "::error::release.json says $version; tag says ${GITHUB_REF_NAME#v}"
-            exit 1
-          }
-
-      - name: Structural and portability validation
-        run: SILERE_REQUIRE_GIT_TESTS=1 SILERE_REQUIRE_TOOLS=1 bash scripts/ci-lint.sh
-
-      - name: Quickshell package compatibility
-        shell: bash
-        run: |
-          set -euo pipefail
-          qs --version
-          source scripts/lib/qml-modules.sh
-          for module in "${SILERE_REQUIRED_QML_MODULES[@]}"; do
-            _qml_module_available "$module" || {
-              echo "::error::required QML module is missing: $module"
-              exit 1
-            }
-            echo "ok: $module"
-          done
-
-      - name: Headless QML import and type probe
-        run: SILERE_REQUIRE_QML_TOOLS=1 bash scripts/test-qml-headless.sh
-
-      - name: Behavioral logic probe
-        run: bash scripts/test-logic.sh
-
-      - name: Settings surface build probe
-        # offscreen QPA needs no display; catches runtime-only errors in the
-        # lazily-loaded settings pages that qmlcachegen and qmllint cannot see
-        run: bash scripts/test-surfaces.sh
-
-      - name: Live settings change sweep
-        # drives the whole schema against surfaces that already exist; the passes
-        # above only ever fix the settings before a surface is built
-        run: bash scripts/test-mutate.sh
-
-      - name: Settings layout fit probe
-        # a section can build and still lose its labels; Qt elides and reports success
-        env:
-          FIT_REQUIRE_FONT: "1"
-        run: bash scripts/test-layout-fit.sh
+    uses: ./.github/workflows/validate.yml
 
   publish:
     needs: validate
@@ -98,7 +24,7 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 

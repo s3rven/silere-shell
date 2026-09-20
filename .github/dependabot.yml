@@ -1,0 +1,12 @@
+version: 2
+updates:
+  # the workflows pin actions to a full commit sha, so the version comment on each
+  # `uses:` line is what lets Dependabot find and bump them
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    groups:
+      actions:
+        patterns: ["*"]

@@ -5,6 +5,7 @@
 #   - merge conflict markers left in code
 #   - a declaration inserted into the middle of a multi-line binding
 #   - broken shell scripts
+#   - GitHub Actions workflow files that will not run
 #   - qmldir entries pointing at files that don't exist
 #   - required Quickshell service imports and local module packaging
 #   - non-portable Keys attached handlers rejected by the live QML engine
@@ -298,7 +299,8 @@ if awk 'NF == 0 || /^#/ { next } \
         && grep -qF '_start_apply_transaction "$local_rev" "$remote_rev" "$release_tag"' scripts/update.sh \
         && grep -qF '_recover_interrupted_apply' scripts/update.sh \
         && grep -qF 'gpg.ssh.allowedSignersFile="$APPLY_TRUSTED_SIGNERS"' scripts/update.sh \
-        && grep -qF 'verify-tag "$GITHUB_REF_NAME"' .github/workflows/release.yml \
+        && grep -qF 'verify-tag "$GITHUB_REF_NAME"' .github/workflows/validate.yml \
+        && grep -qF 'uses: ./.github/workflows/validate.yml' .github/workflows/release.yml \
         && ! grep -qF 'ShellUpdate.apply()' modules/bar/widgets/ShellUpdateWidget.qml; then
   ok "shell updater" "trust gates, durable apply recovery, and review-only bar action"
 else
@@ -894,6 +896,19 @@ if command -v shellcheck >/dev/null 2>&1; then
   fi
 else
   structural_skip "shellcheck" "not installed"
+fi
+
+section "workflow lint"
+# A workflow file with a bad key or a broken reusable-workflow reference never
+# reaches the CI run it configures, so nothing inside CI can report it.
+if ! compgen -G '.github/workflows/*.yml' >/dev/null; then
+  skip "actions" "no workflow files in this tree"
+elif ! command -v actionlint >/dev/null 2>&1; then
+  structural_skip "actions" "actionlint not installed; workflow lint skipped"
+elif actionlint .github/workflows/*.yml; then
+  ok "actions" "actionlint found no workflow errors"
+else
+  fail "actionlint reported workflow errors"
 fi
 
 section "quickshell version floor"

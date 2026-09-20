@@ -7,12 +7,16 @@ on:
   schedule:
     # Weekly rolling-Arch probe catches upstream Quickshell compatibility drift.
     - cron: "17 6 * * 1"
+  workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
 
+# Literal prefix, never ${{ github.workflow }}: a called workflow resolves that to
+# the caller's name, and a group shared with the caller deadlocks the run.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: validate-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -24,18 +28,41 @@ jobs:
     steps:
       - name: Install validation dependencies
         run: |
-          pacman -Syu --noconfirm git openssh shellcheck quickshell python fontconfig ttf-jetbrains-mono-nerd
+          pacman -Syu --noconfirm git openssh shellcheck quickshell python fontconfig ttf-jetbrains-mono-nerd actionlint
           fc-cache -f >/dev/null
 
       # pinned to an immutable sha so a moved tag cannot run unreviewed code
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      # fetch-depth 0 also gets the tags: the lint compares the AUR pkgver against
+      # the newest local tag, and checkout's default is one commit and no tags
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       # the job runs as root over a workspace owned by the runner's uid, so without this
       # git refuses to read the repository and every index-backed lint sees an empty list
       - name: Trust the checkout
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      # tag runs only: a branch or pull request has no release to gate
+      - name: Verify signed release tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: >-
+          git -c safe.directory="$PWD"
+          -c gpg.format=ssh
+          -c gpg.ssh.allowedSignersFile="$PWD/security/update-signers"
+          verify-tag "$GITHUB_REF_NAME"
+
+      - name: Match release compatibility manifest
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(sed -n 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' release.json)"
+          test "$version" = "${GITHUB_REF_NAME#v}" || {
+            echo "::error::release.json says $version; tag says ${GITHUB_REF_NAME#v}"
+            exit 1
+          }
 
       - name: Structural and portability validation
         run: SILERE_REQUIRE_GIT_TESTS=1 SILERE_REQUIRE_TOOLS=1 bash scripts/ci-lint.sh
