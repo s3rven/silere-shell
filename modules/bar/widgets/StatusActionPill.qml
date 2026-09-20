@@ -39,8 +39,6 @@ Pill {
         PauseAnimation  { duration: Motion.ms(300) }
     }
 
-    HoverHandler { cursorShape: Qt.PointingHandCursor; enabled: root.interactive }
-
     pressed: _tap.pressed
     TapHandler {
         id: _tap

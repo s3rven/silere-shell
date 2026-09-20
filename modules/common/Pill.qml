@@ -16,7 +16,7 @@ Item {
     property bool   compact: ShellSettings.barCompact
     readonly property int horizontalPadding: Metrics.pillPadFor(compact)
     property bool   barActive: true
-    readonly property bool motionActive: root.barActive && root.visible
+    readonly property bool motionActive: root.barActive && root.visible && !root.collapsed
         && !Idle.isIdle && !ShellSettings.reduceMotion
     property bool   animateGlyph: true
     property bool   animateText: false
@@ -32,11 +32,13 @@ Item {
     property color  levelColor: Theme.accent
 
     property bool   hoverActive: false
-    readonly property bool hovered: _pillHover.hovered
-    readonly property bool expanded: hoverActive
+    readonly property bool hoverEnabled: root.enabled && root.visible && root.barActive
+        && !root.collapsed && !Idle.isIdle
+    readonly property bool hovered: root.hoverEnabled && _pillHover.hovered
+    readonly property bool expanded: root.hoverEnabled && hoverActive
 
     property bool   pressed: false
-    readonly property bool visualPressed: pressed
+    readonly property bool visualPressed: pressed && root.hoverEnabled
 
     signal activated()
 
@@ -58,7 +60,7 @@ Item {
     implicitWidth:  collapsed ? 0 : Math.max(rowWidth, _minW) + horizontalPadding * 2
 
     onRowWidthChanged: {
-        if (shrinkDelay <= 0) {
+        if (shrinkDelay <= 0 || !root.hoverEnabled) {
             _shrinkDelay.stop()
             _minW = rowWidth
             return
@@ -68,10 +70,11 @@ Item {
     }
     onTextChanged: if (text.length === 0) { _minW = 0; _shrinkDelay.stop() }
     onShrinkDelayChanged: if (shrinkDelay <= 0) { _shrinkDelay.stop(); _minW = rowWidth }
-    onVisibleChanged: if (!visible) {
+    onHoverEnabledChanged: if (!hoverEnabled) {
         _hoverRevealTimer.stop()
         _shrinkDelay.stop()
         hoverActive = false
+        _minW = rowWidth
     }
     onMotionActiveChanged: if (!motionActive && _ready) _settleAnimatedContent()
     Timer {
@@ -82,9 +85,8 @@ Item {
 
     TextMetrics {
         id: _reserveMetrics
-        font.family:    Settings.font
-        font.pixelSize: Settings.fontSize
-        text:           root.reserveText
+        font: _textEl.font
+        text: root.reserveText
     }
 
     property bool _ready: false
@@ -106,6 +108,9 @@ Item {
         _textEl.opacity = 1.0
         if (root.animateText) _textEl._shown = root.text
     }
+
+    onAnimateTextChanged: if (_ready) _settleAnimatedContent()
+    onAnimateGlyphChanged: if (_ready && !animateGlyph) _settleAnimatedContent()
 
     onGlyphChanged: {
         if (!_ready) { _shownGlyph = glyph; return }
@@ -145,7 +150,7 @@ Item {
         width: parent.width
         height: root.pillH
         radius: Metrics.hoverRadiusFor(height)
-        readonly property bool _hover: _pillHover.hovered
+        readonly property bool _hover: root.hovered
             && ShellSettings.barHoverHighlight
         color: root.visualPressed ? Theme.withAlpha(Theme.accent, 0.18)
              : Theme.withAlpha(Theme.mix(Theme.text, Theme.accent, 0.30), 0.07)
@@ -210,7 +215,7 @@ Item {
         }
     }
 
-    readonly property bool _contentHot: (_pillHover.hovered
+    readonly property bool _contentHot: (root.hovered
         && ShellSettings.barHoverHighlight)
         || root.visualPressed
     readonly property color _hoverGlyphColor: _contentHot
@@ -261,6 +266,7 @@ Item {
                 text:    root.animateText ? _shown : root.text
                 color:   root._hoverTextColor
                 font.pixelSize: Settings.fontSize
+                font.features: root.reserveText.length > 0 ? ({ "tnum": 1 }) : ({})
                 ColorFade on color {}
             }
 
@@ -332,6 +338,7 @@ Item {
                         text: root.animateText ? _textEl._shown : root.text
                         color: root.contentScanColor
                         font.pixelSize: Settings.fontSize
+                        font.features: _textEl.font.features
                     }
                 }
             }
@@ -340,7 +347,7 @@ Item {
 
     HoverHandler {
         id: _pillHover
-        enabled: root.enabled && root.visible
+        enabled: root.hoverEnabled
         margin: 0
         cursorShape: root.interactive ? Qt.PointingHandCursor : Qt.ArrowCursor
         onHoveredChanged: {
@@ -356,6 +363,6 @@ Item {
     Timer {
         id: _hoverRevealTimer
         interval: 80
-        onTriggered: root.hoverActive = true
+        onTriggered: root.hoverActive = root.hoverEnabled && _pillHover.hovered
     }
 }
