@@ -10,6 +10,7 @@ import "modules/common"
 import "modules/bar/widgets"
 import "modules/bar/widgets/workspaces"
 import "modules/menu/controls"
+import "modules/menu/settings"
 import "modules/notifications"
 import "services/SettingsMigrations.js" as SettingsMigrations
 
@@ -35,6 +36,15 @@ ShellRoot {
         property real value: 1
     }
 
+    Component { id: pageShellFactory; PageShell {} }
+    Component { id: settingsPageFactory; SettingsPage {} }
+    Component {
+        id: selectStubFactory
+        QtObject {
+            property bool folded: false
+            function _setOpen(next: bool): void { if (!next) folded = true }
+        }
+    }
     Component { id: sliderTrackFactory; SliderTrack {} }
     Component { id: gradientSliderFactory; GradientSlider {} }
     Component { id: boundedProcessFactory; BoundedProcess {} }
@@ -55,6 +65,8 @@ ShellRoot {
     Component { id: workspaceButtonFactory; WorkspaceButton {} }
     Component { id: pillFactory; Pill { visible: true; glyph: "a" } }
     Component { id: rollingTextFactory; RollingText { visible: true; text: "one" } }
+    Component { id: collapsingTextFactory; CollapsingText { animate: false; tabularDigits: true; reserveText: ":00" } }
+    Component { id: clockFactory; Clock { screen: null } }
     Component { id: pulseLoopFactory; PulseLoop {} }
     Component {
         id: windowTitleFactory
@@ -140,6 +152,15 @@ ShellRoot {
     function _hueDistance(a: real, b: real): real {
         const d = Math.abs(a - b) % 360
         return Math.min(d, 360 - d)
+    }
+
+    function _showsText(item, expected: string): bool {
+        if (!item || item.visible === false) return false
+        if (item.text === expected && item.contentWidth !== undefined) return true
+        const children = item.children || []
+        for (let i = 0; i < children.length; i++)
+            if (root._showsText(children[i], expected)) return true
+        return false
     }
 
     function _run(): void {
@@ -459,9 +480,31 @@ ShellRoot {
         pill.glyph = "b"
         root._check(pill._shownGlyph === "a",
             "an awake pill animates a glyph swap instead of jumping to it")
+        pill.hoverActive = true
         pill.barActive = false
         root._check(!pill.motionActive && pill._shownGlyph === "b",
             "a sleeping bar lands the pending glyph without animating")
+        root._check(!pill.hoverEnabled && !pill.expanded && !pill.hoverActive,
+            "a sleeping pill clears a previously revealed hover value")
+        pill.barActive = true
+        pill.hoverActive = true
+        pill.collapsed = true
+        root._check(!pill.hoverEnabled && !pill.expanded && !pill.motionActive,
+            "a collapsing pill stops revealing values and animating content")
+        pill.collapsed = false
+        pill.hoverActive = true
+        pill.enabled = false
+        root._check(!pill.hoverEnabled && !pill.hoverActive,
+            "a disabled pill clears hover state even without a pointer exit")
+        pill.enabled = true
+        pill.text = "A current label"
+        pill.animateText = true
+        root._check(root._showsText(pill, "A current label"),
+            "enabling animated pill text keeps the current label visible")
+        pill.glyph = "c"
+        pill.animateGlyph = false
+        root._check(pill._shownGlyph === "c",
+            "disabling glyph motion settles the latest icon")
         pill.destroy()
 
         const rolling = rollingTextFactory.createObject(root)
@@ -472,7 +515,38 @@ ShellRoot {
         rolling.animate = false
         root._check(!rolling.clip && rolling._shown === "two",
             "a sleeping readout drops the roll and lands on the value")
+        rolling.tabularDigits = true
+        rolling.reserveText = "00"
+        rolling.text = "11"
+        const clockDigitWidth = rolling.implicitWidth
+        rolling.text = "88"
+        root._check(rolling.implicitWidth === clockDigitWidth,
+            "tabular clock digits hold their width across a digit change")
+        rolling.text = "9"
+        root._check(rolling.implicitWidth === clockDigitWidth,
+            "a one-digit 12-hour hour retains the two-digit clock slot")
         rolling.destroy()
+
+        const seconds = collapsingTextFactory.createObject(root)
+        seconds.text = ":11"
+        const secondsWidth = seconds.width
+        seconds.text = ":58"
+        root._check(seconds.width === secondsWidth,
+            "seconds reserve space using the same numeral features as their text")
+        seconds.text = ":100"
+        root._check(seconds.width > secondsWidth && !seconds.clip,
+            "a reserved readout grows rather than clipping text wider than its reserve")
+        seconds.expanded = false
+        root._check(seconds.width === 0, "a reserved readout still folds completely closed")
+        seconds.destroy()
+
+        const barClock = clockFactory.createObject(root)
+        CalendarState.openAt(17, null, barClock)
+        root._check(barClock._calendarOpen,
+            "the clock reflects its open calendar even without pointer hover")
+        CalendarState.close()
+        root._check(!barClock._calendarOpen, "closing the calendar clears the clock's active state")
+        barClock.destroy()
 
         const underline = barUnderlineFactory.createObject(root)
         root._check(underline !== null, "the reactive underline builds")
@@ -1059,6 +1133,82 @@ ShellRoot {
                     && filtered.model.get(0).summary === "newest"
                     && filtered.inserts + filtered.removes === edits + 2,
                 "a full history moves only the row that arrived and the row that fell off")
+            Notifications.clearHistory()
+            Notifications._prependHistory({ id: 801, appName: "Mail", summary: "Release ready",
+                body: "Review the deployment notes", time: 1001 })
+            Notifications._prependHistory({ id: 802, appName: "Chat", summary: "Release discussion",
+                body: "Bring the notes", time: 1002 })
+            Notifications._prependHistory({ id: 803, appName: "Mail", summary: "Lunch",
+                body: "Meet at 12:00 [cafe]", time: 1003 })
+            filtered.revision = Notifications.historyRevision
+            filtered.query = "  RELEASE   notes  "
+            root._check(filtered.count === 2,
+                "history search ignores case and whitespace and matches words across title and body")
+            filtered.filter = "Mail"
+            root._check(filtered.count === 1 && filtered.model.get(0).id === 801,
+                "history search intersects the selected app filter")
+            filtered.filter = ""
+            filtered.query = "mail deployment"
+            root._check(filtered.count === 1 && filtered.model.get(0).id === 801,
+                "history search includes the sender alongside message text")
+            filtered.query = "[cafe]"
+            root._check(filtered.count === 1 && filtered.model.get(0).id === 803,
+                "history search treats punctuation as literal text")
+            filtered.query = "missing message"
+            root._check(filtered.count === 0, "unmatched history search leaves an empty result")
+            filtered.query = "  \t "
+            root._check(filtered.count === 3, "whitespace-only search shows all history")
+            filtered.active = false
+            filtered.query = "release"
+            root._check(filtered.count === 3, "hidden history defers search reconciliation")
+            filtered.active = true
+            root._check(filtered.count === 2, "reopening history applies the pending search")
+            edits = filtered.inserts + filtered.removes
+            Notifications._prependHistory({ id: 804, appName: "Music", summary: "Playing",
+                body: "Another song", time: 1004 })
+            filtered.revision = Notifications.historyRevision
+            root._check(filtered.count === 2 && filtered.inserts + filtered.removes === edits,
+                "an arrival excluded by search leaves matching delegates untouched")
+
+            const snapshot = filtered.snapshot()
+            Notifications._prependHistory({ id: 805, appName: "Mail", summary: "Release tomorrow",
+                body: "New notes", time: 1005 })
+            filtered.revision = Notifications.historyRevision
+            root._check(filtered.count === 3 && snapshot.length === 2,
+                "a clear snapshot stays fixed when matching notifications arrive")
+            const beforeClear = Notifications.historyRevision
+            Notifications.clearHistoryEntries(snapshot)
+            filtered.revision = Notifications.historyRevision
+            root._check(Notifications.historyCount === 3 && filtered.count === 1
+                    && filtered.model.get(0).id === 805
+                    && Notifications.historyRevision === beforeClear + 1,
+                "clearing search results preserves unrelated rows and later arrivals in one revision")
+            Notifications.clearHistoryEntries(snapshot)
+            root._check(Notifications.historyRevision === beforeClear + 1,
+                "clearing an already removed snapshot does not change history")
+            const changedSnapshot = filtered.snapshot()
+            Notifications.historyModel.setProperty(0, "body", "Updated after confirmation")
+            Notifications.clearHistoryEntries(changedSnapshot)
+            root._check(Notifications.historyCount === 3
+                    && Notifications.historyModel.get(0).body === "Updated after confirmation",
+                "a notification updated after confirmation survives clearing an older snapshot")
+
+            // the rail chip, the clear-by-app filter and the row label all have to spell a
+            // nameless sender the same way, or search misses what the row visibly says
+            Notifications.clearHistory()
+            Notifications._prependHistory({ id: 810, appName: "", summary: "Disk almost full",
+                body: "Only 2GB left", time: 1010 })
+            filtered.revision = Notifications.historyRevision
+            filtered.query = ""
+            const nameless = Notifications.historyApps
+            root._check(nameless.length === 1
+                    && nameless[0].appName === filtered.identityOf(
+                        Notifications.historyModel.get(0).appName),
+                "the app rail and the history row name a sender-less notification alike")
+            filtered.query = filtered.identityOf("")
+            root._check(filtered.count === 1,
+                "history search finds a sender-less notification by the name its row shows")
+            filtered.query = ""
             filtered.destroy()
         }
 
@@ -1119,6 +1269,36 @@ ShellRoot {
         root._check(MenuState.settingsSection === "theme",
             "setSettingsSection itself stays case-exact")
         MenuState.setSettingsSection(savedSection)
+
+        const weekStartWas = ShellSettings.calendarWeekStart
+        root._check(CalendarState.weekStartFor("monday", 0) === 1
+                && CalendarState.weekStartFor("sunday", 1) === 0
+                && CalendarState.weekStartFor("locale", 6) === 6
+                && CalendarState.weekStartFor("locale", 0) === 0,
+            "calendar week start supports explicit days and the system's Sunday or Saturday")
+        ShellSettings.calendarWeekStart = "monday"
+        root._check(CalendarState.leadingDays(2024, 0) === 0
+                && CalendarState.leadingDays(2024, 8) === 6
+                && CalendarState.weekdayAt(5) === 6 && CalendarState.weekdayAt(6) === 0,
+            "Monday-first calendar aligns month starts and weekend columns")
+        root._check(CalendarState.weekForRow(2021, 0, 0) === 53
+                && CalendarState.weekForRow(2021, 0, 1) === 1
+                && CalendarState.weekForRow(2024, 11, 5) === 1,
+            "calendar week numbers cross ISO week years correctly")
+        ShellSettings.calendarWeekStart = "sunday"
+        root._check(CalendarState.leadingDays(2024, 8) === 0
+                && CalendarState.leadingDays(2024, 0) === 1
+                && CalendarState.weekdayAt(0) === 0 && CalendarState.weekdayAt(6) === 6,
+            "Sunday-first calendar rotates both leading days and weekend columns")
+        root._check(CalendarState.weekForRow(2021, 0, 0) === 53
+                && CalendarState.weekForRow(2021, 0, 1) === 1
+                && CalendarState.weekForRow(2024, 11, 4) === 1,
+            "Sunday-first week numbers use the row's Thursday across year boundaries")
+        root._check(Math.ceil((CalendarState.leadingDays(2024, 1) + 29) / 7) === 5,
+            "a leap-year February keeps the expected number of calendar rows")
+        ShellSettings.calendarWeekStart = weekStartWas
+        root._checkCoerce("calendarWeekStart", "bad", "monday", "invalid calendar week starts reset")
+        root._checkCoerce("calendarWeekNumbers", false, false, "calendar week numbers can be hidden")
 
         root._check(CalendarState._validMarkKey("2024-2-29"),
             "calendar accepts leap day")
@@ -2459,7 +2639,72 @@ ShellRoot {
         Hooks._queued = ({})
         Hooks._queueOrder = []
 
-        root._startDirectAnchorProbe()
+        root._startHistoryPageProbe()
+    }
+
+    property var _historyPage: null
+    property bool _historyReduceWas: false
+
+    function _startHistoryPageProbe(): void {
+        root._historyReduceWas = ShellSettings.reduceMotion
+        ShellSettings.reduceMotion = true
+        MenuState.setRecentFilter("")
+        MenuState.openAt(17, null, probeAnchor)
+        Notifications.clearHistory()
+        Notifications._prependHistory({ id: 901, appName: "Mail", summary: "Match this", time: 2001 })
+        Notifications._prependHistory({ id: 902, appName: "Chat", summary: "Keep this", time: 2002 })
+        const pageComponent = Qt.createComponent("modules/menu/RecentPage.qml")
+        root._historyPage = pageComponent.status === Component.Ready
+            ? pageComponent.createObject(root, {
+                width: 332, viewportHeight: 520, active: true, powerOpen: false
+            }) : null
+        root._check(root._historyPage !== null, "the history page builds with its search field")
+        if (!root._historyPage) {
+            ShellSettings.reduceMotion = root._historyReduceWas
+            MenuState.close()
+            Notifications.clearHistory()
+            root._startDirectAnchorProbe()
+            return
+        }
+        root._historyPage.searchText = "match"
+        root._check(root._historyPage.rowCount === 1 && root._historyPage.searching,
+            "typing in the history page filters its displayed rows")
+        root._check(root._historyPage.dismissInline() && root._historyPage.rowCount === 2
+                && !root._historyPage.searching && !root._historyPage.dismissInline(),
+            "Escape clears search once before allowing the menu to close")
+        root._historyPage.searchText = "match"
+        root._historyPage.clearAll()
+        root._check(Notifications.historyCount === 1
+                && Notifications.historyModel.get(0).id === 902 && root._historyPage.rowCount === 0,
+            "reduced-motion clear removes only the history page's search results")
+        Notifications._prependHistory({ id: 903, appName: "Mail", summary: "Match again", time: 2003 })
+        ShellSettings.reduceMotion = false
+        root._historyPage.clearAll()
+        root._check(root._historyPage._clearing, "animated history clear captures results before fading")
+        Notifications._prependHistory({ id: 904, appName: "Mail", summary: "Match arrival", time: 2004 })
+        MenuState.setRecentFilter("Chat")
+        _historyClearSettle.restart()
+    }
+
+    Timer {
+        id: _historyClearSettle
+        interval: 300
+        onTriggered: {
+            root._check(!root._historyPage._clearing && Notifications.historyCount === 2
+                    && Notifications.historyModel.get(0).id === 904
+                    && Notifications.historyModel.get(1).id === 902,
+                "animated clear preserves later arrivals and does not follow a changed app filter")
+            root._historyPage.active = false
+            root._check(root._historyPage.searchText.length === 0,
+                "leaving history resets the search for its next visit")
+            root._historyPage.destroy()
+            root._historyPage = null
+            MenuState.close()
+            MenuState.setRecentFilter("")
+            ShellSettings.reduceMotion = root._historyReduceWas
+            Notifications.clearHistory()
+            root._startDirectAnchorProbe()
+        }
     }
 
     function _startDirectAnchorProbe(): void {
@@ -2562,7 +2807,110 @@ ShellRoot {
             MenuState.close()
             ShellSettings.resetBarWidgets()
             ShellSettings._loaded = root._savedLoadedForTeardown
-            root._runProcessChecks()
+            root._startPageMotionChecks()
+        }
+    }
+
+    property var _motionPage: null
+    property var _motionSettings: null
+    property bool _motionReduceWas: false
+    property int _motionStep: 0
+
+    function _startPageMotionChecks(): void {
+        root._motionReduceWas = ShellSettings.reduceMotion
+        ShellSettings.reduceMotion = false
+        MenuState.open = true
+        root._motionPage = pageShellFactory.createObject(root, {
+            active: true, powerOpen: false
+        })
+        root._motionStep = 0
+        _pageMotionCheck.interval = 40
+        _pageMotionCheck.restart()
+    }
+
+    Timer {
+        id: _pageMotionCheck
+        onTriggered: {
+            const page = root._motionPage
+            switch (root._motionStep++) {
+            case 0:
+                page.active = false
+                interval = Motion.pageOut + 80
+                restart()
+                break
+            case 1:
+                root._check(page.opacity === 0 && Math.abs(page._pageShift) > 0,
+                    "a departing page completes its fade and slide")
+                MenuState.close()
+                MenuState.open = true
+                page.active = true
+                root._check(page.opacity === 1 && page._pageShift === 0,
+                    "reopening a retained page resets the completed exit offset")
+                page._menuOpenSettled = true
+                page.active = false
+                ShellSettings.reduceMotion = true
+                root._check(page.opacity === 0 && page._pageShift === 0,
+                    "enabling reduced motion settles an interrupted page exit")
+                page.active = true
+                root._check(page.opacity === 1 && page._pageShift === 0,
+                    "reduced-motion page entry has no lingering offset")
+                ShellSettings.reduceMotion = false
+                root._motionSettings = settingsPageFactory.createObject(root, {
+                    active: true, powerOpen: false, width: 400
+                })
+                interval = 500
+                restart()
+                break
+            case 2: {
+                const settings = root._motionSettings
+                const detail = settings.children[0]
+                const body = detail.children.find(child => child.sourceComponent !== undefined)
+                root._check(settings.contentReady, "settings content finishes its initial load")
+                body.active = false
+                settings._awaitingSectionEnter = true
+                detail.opacity = 0
+                detail._startSectionEnter()
+                root._check(settings._awaitingSectionEnter && detail.opacity === 0,
+                    "a settings section waits for its loader before starting its reveal")
+                body.active = true
+                interval = 500
+                restart()
+                break
+            }
+            case 3: {
+                const settings = root._motionSettings
+                const detail = settings.children[0]
+                root._check(settings.contentReady && !settings._awaitingSectionEnter
+                        && detail.opacity === 1 && detail._shift === 0,
+                    "a ready settings section completes its reveal")
+                MenuState.close()
+                MenuState.setSettingsSection("clock")
+                root._check(settings._shownSection === "clock" && detail.opacity === 1,
+                    "a settings change while the menu is closed settles without a fade")
+
+                // README promises Escape steps back before it closes; Home and the
+                // history page fold their inline state, so Settings has to as well
+                root._check(!settings.dismissInline(),
+                    "escape on settings with nothing open falls through to closing the menu")
+                const selectStub = selectStubFactory.createObject(root)
+                MenuState.claimSettingsSelect(selectStub)
+                root._check(MenuState.settingsSelectOpen,
+                    "an open settings dropdown is visible to the page")
+                root._check(settings.dismissInline() && selectStub.folded
+                        && !MenuState.settingsSelectOpen,
+                    "escape on settings folds an open dropdown instead of closing the menu")
+                selectStub.destroy()
+
+                root._motionPage.destroy()
+                root._motionSettings.destroy()
+                root._motionPage = null
+                root._motionSettings = null
+                MenuState.setSettingsSection("theme")
+                ShellSettings.reduceMotion = root._motionReduceWas
+                root._runProcessChecks()
+                break
+            }
+            }
         }
     }
 
