@@ -505,7 +505,7 @@ if [ "$qs_usable" = 1 ]; then
     if [ -n "$_cfg_home" ] && [ -d "$_cfg_home/silere-shell" ]; then
       cp -a "$_cfg_home/silere-shell/." "$smoke_home/silere-shell/" 2>/dev/null || true
     fi
-    XDG_CONFIG_HOME="$smoke_home" timeout --kill-after=2s 5s qs -p shell.qml --no-color \
+    XDG_CONFIG_HOME="$smoke_home" XDG_STATE_HOME="$smoke_home" timeout --kill-after=2s 5s qs -p shell.qml --no-color \
       >"$smoke_log" 2>&1 || code=$?
     if [ "$code" -ne 0 ] && [ "$code" -ne 124 ]; then
       if grep -qE 'Failed to create wl_display|could not connect to display|no Qt platform plugin could be initialized' "$smoke_log"; then
@@ -537,7 +537,7 @@ if [ "$qs_usable" = 1 ]; then
         mkdir -p "$par_dir/$1/silere-shell"
         printf '%s' "$2" > "$par_dir/$1/silere-shell/settings.json"
         _case_code=0
-        XDG_CONFIG_HOME="$par_dir/$1" timeout --kill-after=2s 5s qs -p shell.qml --no-color \
+        XDG_CONFIG_HOME="$par_dir/$1" XDG_STATE_HOME="$par_dir/$1" timeout --kill-after=2s 5s qs -p shell.qml --no-color \
           >"$par_dir/$1.log" 2>&1 || _case_code=$?
         printf '%s' "$_case_code" > "$par_dir/$1.code"
       }
