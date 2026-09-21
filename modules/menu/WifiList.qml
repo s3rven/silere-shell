@@ -112,6 +112,7 @@ Item {
             visible: root.open && root._networks.length > 0
             interactive: contentHeight > height
             spacing: 0
+            reuseItems: true
             model: root.open ? root._networks : []
 
             delegate: Column {
@@ -120,6 +121,13 @@ Item {
                 required property int index
                 width: _list.width
                 spacing: 0
+
+                // a pooled row rebinds holding the previous row's values
+                property bool motionReady: true
+                ListView.onPooled: { _settle.stop(); _entry.motionReady = false }
+                ListView.onReused: { _entry.motionReady = false; _settle.restart() }
+                Timer { id: _settle; interval: 0; onTriggered: _entry.motionReady = true }
+                Component.onDestruction: _settle.stop()
 
                 readonly property bool _armed:      root._armedSsid === modelData.ssid && modelData.active
                 readonly property bool _forgetArmed: root._forgetSsid === modelData.ssid
@@ -244,7 +252,7 @@ Item {
                             outlineColor: _entry._failed ? Theme.withAlpha(Theme.error, 0.5)
                                                          : _pw.activeFocus ? Theme.withAlpha(Theme.accent, Theme.focusRingSoftAlpha)
                                                                             : Theme.menuControlLine
-                            ColorFade on outlineColor {}
+                            ColorFade on outlineColor { gate: _entry.motionReady }
                         }
 
                         Connections {
@@ -292,10 +300,10 @@ Item {
                             antialiasing: true
                             enabled: _pw.text.length > 0 && !_entry._connecting
                             opacity: enabled ? 1.0 : Theme.disabledOpacity
-                            MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
+                            MotionBehavior on opacity { gate: _entry.motionReady; NumberAnimation { duration: Motion.fast } }
                             color: Theme.emphasisButtonFill(
                                 Theme.accent, _joinHover.hovered, _joinTap.pressed)
-                            ColorFade on color {}
+                            ColorFade on color { gate: _entry.motionReady }
 
                             Accessible.role: Accessible.Button
                             Accessible.name: "Join " + _entry.modelData.label
