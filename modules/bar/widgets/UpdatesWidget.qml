@@ -3,8 +3,6 @@ import "../../../config"
 import "../../../services"
 
 StatusActionPill {
-    property var screen: null
-
     show: Updates.available || Updates.isChecking || Updates.checkBroken
     busy: Updates.isChecking
 
