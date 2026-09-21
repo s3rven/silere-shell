@@ -31,6 +31,10 @@ settings file carries its own `__version` and migrates separately.
 - A tray tile waits for its own icon when the bar hands it a different app.
 - The compositor restart watcher recovers once inotify-tools is installed.
 - The alert dismiss timeout is disabled when libnotify is missing.
+- A notification progress bar draws the percentage its sender set.
+- A notification asking to outlast the popup limit is held at the limit instead of the default.
+- Night light holds its memory steady over a long session.
+- A failing package check backs off instead of retrying every three minutes.
 
 ## Releases
 
