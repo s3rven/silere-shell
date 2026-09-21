@@ -405,7 +405,12 @@ Singleton {
         onTriggered: root._refreshBackground()
     }
 
-    Timer { id: _retry; interval: 180000; onTriggered: root._refreshBackground() }
+    Timer {
+        id: _retry
+        // double the wait per consecutive failure, up to the regular poll cadence
+        interval: Math.min(_poll.interval, 180000 * Math.pow(2, Math.max(0, root._failStreak - 1)))
+        onTriggered: root._refreshBackground()
+    }
 
     Connections {
         target: Idle
