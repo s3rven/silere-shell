@@ -262,7 +262,8 @@ Item {
             : (card.notification.expireTimeout !== 0)
         readonly property real fullInterval: {
             const t = card.notification.expireTimeout
-            return (t > 0 && t < 30000) ? t : ShellSettings.notifDefaultTimeout
+            // a sender's own request is clamped to the notifDefaultTimeout ceiling, not discarded
+            return t > 0 ? Math.min(t, 30000) : ShellSettings.notifDefaultTimeout
         }
         interval: Math.max(400, fullInterval - (Date.now() - card.timeoutStartedAt) + card._hoverPausedMs)
         running:  shouldRun && !card._paused
