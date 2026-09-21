@@ -194,8 +194,9 @@ Item {
     readonly property var   _rawProgress: notification.hints ? notification.hints["value"] : undefined
     readonly property real  _progressNumber: Number(_rawProgress)
     readonly property bool  hasProgress:  _rawProgress !== undefined && _rawProgress !== null && _progressNumber >= 0
+    // the spec's value hint is a 0-100 percentage, not a 0-1 fraction
     readonly property real  progressValue: hasProgress
-        ? Math.max(0, Math.min(1, _progressNumber > 1 ? _progressNumber / 100.0 : _progressNumber))
+        ? Math.max(0, Math.min(1, _progressNumber / 100.0))
         : 0
 
     readonly property real _createdAt: card.createdAt
