@@ -181,6 +181,7 @@ Singleton {
         root.lastError = ""
         root._probeFailed = false
         root._runningTool = root.tool
+        _sunsetProc._lastErrLine = ""
         _sunsetProc.command = argv
         _sunsetProc.running = true
         enabled = true
@@ -339,7 +340,14 @@ Singleton {
     Process {
         id: _sunsetProc
         running: false
-        stderr: StdioCollector { id: _sunsetErr }
+        // a StdioCollector grows for as long as the night light runs; keep only the last line
+        property string _lastErrLine: ""
+        stderr: SplitParser {
+            onRead: line => {
+                const trimmed = line.trim()
+                if (trimmed.length > 0) _sunsetProc._lastErrLine = SafeText.singleLineText(trimmed)
+            }
+        }
         onExited: (code, status) => {
             const stopped = root._runningTool.length > 0
                 ? root._runningTool : "The night light"
@@ -358,7 +366,8 @@ Singleton {
             // and wlsunset's running commentary on stderr is not the reason it went away
             if (code !== 0)
                 root.lastError = status === 0
-                    ? SafeText.lastNonEmptyLine(_sunsetErr.text, stopped + " stopped unexpectedly")
+                    ? (_sunsetProc._lastErrLine.length > 0
+                        ? _sunsetProc._lastErrLine : stopped + " stopped unexpectedly")
                     : (stopped + " stopped unexpectedly")
             root._runningTool = ""
             if (root.enabled) root.enabled = false
