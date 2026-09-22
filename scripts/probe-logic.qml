@@ -1271,6 +1271,17 @@ ShellRoot {
             "setSettingsSection itself stays case-exact")
         MenuState.setSettingsSection(savedSection)
 
+        const tabWas = MenuState.activeTab
+        const tabTarget = tabWas === MenuState.recentTab ? MenuState.homeTab : MenuState.recentTab
+        let tabSeenWhileChanging = -1
+        const noteTabChanging = function() { tabSeenWhileChanging = MenuState.activeTab }
+        MenuState.tabChanging.connect(noteTabChanging)
+        MenuState.selectTab(tabTarget)
+        MenuState.tabChanging.disconnect(noteTabChanging)
+        root._check(tabSeenWhileChanging === tabWas && MenuState.activeTab === tabTarget,
+            "a tab change is announced while the old tab is still active")
+        MenuState.selectTab(tabWas)
+
         const historyFloor = Metrics.rowHeightFor(276)
         const historyCap = Metrics.rowHeightFor(480)
         const historyMid = Math.round((historyFloor + historyCap) / 2)

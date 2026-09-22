@@ -301,10 +301,10 @@ PanelWindow {
                 if (index !== 0) panel._loadedDeferred = true
                 panel.switchTab(index)
             }
-            function onActiveTabChanged() {
-                // IPC can change the tab before tabRequested reaches this window,
-                // so capture here as well as in switchTab.
+            function onTabChanging() {
                 if (!panel._tabHeightHeld) panel._beginTabHeightHold()
+            }
+            function onActiveTabChanged() {
                 contentFlick.contentY = 0
                 if (panel.activeTab !== 0) panel._loadedDeferred = true
                 panel._syncPageRetention()
