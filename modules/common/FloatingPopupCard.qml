@@ -27,6 +27,8 @@ Rectangle {
     property bool _closing: false
     readonly property bool fullyShown: root.open && root._transitionReady
         && !_enterAnimation.running && root.opacity >= 0.999
+    // null while opaque or moving: an empty region still overrides compositor blur rules, and a transform never refreshes it
+    readonly property Item blurItem: Theme.popup.a < 1 && root.fullyShown ? root : null
     // a card that resizes while open gates its height motion on this: placed, revealed, and past
     // the settle, so the open itself is never animated as a resize
     readonly property bool geometryMotionReady: root.open && root._transitionReady

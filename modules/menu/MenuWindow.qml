@@ -61,6 +61,7 @@ PanelWindow {
 
     Item { id: _fillArea; anchors.fill: parent }
     mask: Region { item: MenuState.open ? _fillArea : null }
+    BackgroundEffect.blurRegion: Region { item: panel.blurItem; radius: Math.round(panel.radius) }
 
     TapHandler {
         id: _dismiss

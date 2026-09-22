@@ -129,6 +129,7 @@ PanelWindow {
 
     Item { id: _fillArea; anchors.fill: parent }
     mask: Region { item: TrayMenuState.open ? _fillArea : null }
+    BackgroundEffect.blurRegion: Region { item: card.blurItem; radius: Math.round(card.radius) }
 
     // submenu flyouts sit outside the card, as siblings of it under contentItem
     function _overFlyout(p: point): bool {

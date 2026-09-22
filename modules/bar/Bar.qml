@@ -77,6 +77,11 @@ PanelWindow {
         + bar.insetPad * bar.floatingProgress + bar.effectPad) / 4)
 
     mask: Region { item: bar.concealed ? null : surface }
+    // blur with no tint over it reads as a frosted slab, so it waits for the fade's midpoint
+    BackgroundEffect.blurRegion: Region {
+        item: Theme.panelOpacity < 1 && contents.opacity >= 0.5 ? surface : null
+        radius: Math.round(surface.radius)
+    }
 
     anchors {
         top:    !bar.atBottom

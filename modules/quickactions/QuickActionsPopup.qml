@@ -50,6 +50,7 @@ PanelWindow {
 
     Item { id: _fillArea; anchors.fill: parent }
     mask: Region { item: QuickActionsState.open ? _fillArea : null }
+    BackgroundEffect.blurRegion: Region { item: card.blurItem; radius: Math.round(card.radius) }
 
     TapHandler {
         id: _dismiss

@@ -46,8 +46,6 @@ Singleton {
     // near-transparent: travel shorter than the 8px popup gap reads as a twitch, not a drop
     readonly property real popEdgeOffset: 12
     readonly property int  popIn:      _rm ? 0 : 240
-    // the compositor blurs these layers above an alpha threshold, so a slow fade holds the card
-    // at part-alpha through the crossing; keep the reveal ahead of the travel
     readonly property int  popInFade:  _rm ? 0 : 160
     readonly property int  popOut:     _rm ? 0 : 150
     // the popup window unmaps on opacity, so the fade has to outlast the travel or the card
