@@ -1271,6 +1271,15 @@ ShellRoot {
             "setSettingsSection itself stays case-exact")
         MenuState.setSettingsSection(savedSection)
 
+        const historyFloor = Metrics.rowHeightFor(276)
+        const historyCap = Metrics.rowHeightFor(480)
+        const historyMid = Math.round((historyFloor + historyCap) / 2)
+        root._check(Metrics.historyViewportFor(2000, 0) === historyFloor
+                && Metrics.historyViewportFor(2000, historyMid) === Metrics.snap4Up(historyMid)
+                && Metrics.historyViewportFor(2000, 5000) === historyCap
+                && Metrics.historyViewportFor(300, 5000) === 300,
+            "the history page fits its content between the floor, the cap and the screen")
+
         const weekStartWas = ShellSettings.calendarWeekStart
         root._check(CalendarState.weekStartFor("monday", 0) === 1
                 && CalendarState.weekStartFor("sunday", 1) === 0

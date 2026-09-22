@@ -167,7 +167,7 @@ PanelWindow {
             : contentPane.targetH
         readonly property int recentViewportH: Metrics.historyViewportFor(
             panel._availablePanelH - panel.pageTopInset - panel.pageBottomInset,
-            Notifications.historyCount)
+            recentLoader.item ? recentLoader.item.wantedHeight : 0)
         readonly property int _resolvedPanelH: Math.max(1,
             Math.min(contentPane.targetH, _availablePanelH))
         // A lazy page briefly reports the placeholder height before its final
@@ -276,9 +276,12 @@ PanelWindow {
                 return settingsLoader.status === Loader.Ready
                     && settingsLoader.item?.contentReady === true
             }
-            const status = panel.activeTab === 0
-                ? homeLoader.status : recentLoader.status
-            return status === Loader.Ready || status === Loader.Error
+            if (panel.activeTab === 2) {
+                if (recentLoader.status === Loader.Error) return true
+                return recentLoader.status === Loader.Ready
+                    && recentLoader.item?.contentReady === true
+            }
+            return homeLoader.status === Loader.Ready || homeLoader.status === Loader.Error
         }
 
         function _scheduleTabHeightRelease(): void {
@@ -909,6 +912,7 @@ PanelWindow {
                             RecentPage {
                                 width: parent.width
                                 viewportHeight: panel.recentViewportH
+                                onContentReadyChanged: panel._scheduleTabHeightRelease()
                                 active: panel.activeTab === 2 && MenuState.open
                                 powerOpen: panel.powerOpen
                                 animateOnCreate: panel.fullyShown

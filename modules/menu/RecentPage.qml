@@ -13,6 +13,17 @@ PageShell {
     required property int viewportHeight
 
     implicitHeight: viewportHeight
+    // grouped runs, day sections and expanded rows all change a row's height, so only the laid-out list knows
+    readonly property real _fullListHeight: _searchBox.y + _searchBox.height + 8
+        + (_historyList.visible ? _historyList.contentHeight : 0) + 10
+    // a filter or search holds the height it opened with, or every keystroke would resize the panel
+    readonly property bool _narrowed: root._appliedFilter.length > 0 || root.searching || root._swapping
+    property real _heldHeight: 0
+    readonly property real wantedHeight: _narrowed && _heldHeight > 0 ? _heldHeight : _fullListHeight
+    on_FullListHeightChanged: if (!_narrowed) _heldHeight = _fullListHeight
+    // rows land a frame before the list lays them out; the menu holds its height until then
+    readonly property bool contentReady: _filtered.active && (root.rowCount === 0
+        || (_historyList.count === root.rowCount && _historyList.contentHeight > 0))
     onPageShown: root._touchNow()
 
     readonly property string filter: MenuState.recentFilter
