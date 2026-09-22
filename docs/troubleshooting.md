@@ -44,6 +44,26 @@ Install a Nerd Font such as `ttf-jetbrains-mono-nerd`, then refresh the user fon
 
 Start Silere with `QSG_DISTANCEFIELD_ANTIALIASING=gray` in its environment.
 
+## Popups and the OSD open sluggishly on Hyprland
+
+Hyprland fades layers in on top of Silere's own animation. Turn that off for Silere's
+layers only:
+
+```ini
+layerrule = no_anim on, match:namespace ^silere-.*$
+```
+
+In a Lua config:
+
+```lua
+hl.layer_rule({ name = "silere-no-anim", match = { namespace = "^silere-.*$" }, no_anim = true })
+```
+
+## No blur behind the bar
+
+Blur needs Hyprland 0.56 or niri 26.04 or newer, and a translucent bar: lower Settings ›
+Bar › Layout › Opacity below 100%.
+
 ## Brightness controls the wrong screen
 
 On hybrid laptops with several backlights, pick the right display under Settings ›

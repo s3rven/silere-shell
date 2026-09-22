@@ -57,8 +57,8 @@ folder along with its `import` and loader in `shell.qml` and the rest keeps work
 
 The name appears a few hundred times, nearly all of it cosmetic. Three matter:
 
-- the **layer-shell namespaces** (`silere-bar`, `silere-menu`, …) — compositor blur
-  and animation rules match those strings
+- the **layer-shell namespaces** (`silere-bar`, `silere-menu`, …) — compositor
+  animation rules match those strings
 - the **config directory** `"/silere-shell"` in `services/ConfigStore.qml` and
   `services/ShellUpdate.qml` — changing it leaves the old `settings.json` behind
 - **`security/update-signers`** — swap in your own key, or your fork's updater will
