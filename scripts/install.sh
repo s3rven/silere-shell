@@ -1437,7 +1437,8 @@ MENU_BIND_CMD="qs ipc -p \"\$(printf '%b' $ROOT_PRINTF_BYTES)/shell.qml\" call m
 MENU_BIND_SHOWN="qs ipc -p $(_shell_quote "$ROOT/shell.qml") call menu toggle"
 HYPR_BIND="bind = $MENU_BIND_MODS, $MENU_BIND_KEY, exec, $MENU_BIND_CMD"
 HYPR_BIND_SHOWN="bind = $MENU_BIND_MODS, $MENU_BIND_KEY, exec, $MENU_BIND_SHOWN"
-NIRI_BIND_SHOWN="Mod+Slash { spawn \"sh\" \"-c\" \"$MENU_BIND_SHOWN\"; }"
+LUA_BIND_SHOWN="hl.bind($(_lua_string "$MENU_BIND_MODS + $MENU_BIND_KEY"), hl.dsp.exec_cmd($(_lua_string "$MENU_BIND_SHOWN")))"
+NIRI_BIND_SHOWN="Mod+Slash { spawn \"sh\" \"-c\" $(_lua_string "$MENU_BIND_SHOWN"); }"
 
 if [ "$receipt_compositor" = niri ]; then
     # niri takes one binds block, so a second one appended at the top level is a
@@ -1445,8 +1446,8 @@ if [ "$receipt_compositor" = niri ]; then
     _skip "niri keeps every bind in one block — add inside yours:"
     _info "  $NIRI_BIND_SHOWN"
 elif [[ "$HYPR_CONFIG" == *.lua ]]; then
-    _skip "Lua config — add a bind the way your wrapper declares them:"
-    _info "  $HYPR_BIND_SHOWN"
+    _skip "Lua config — add this where your config declares its binds:"
+    _info "  $LUA_BIND_SHOWN"
 elif [ -z "$HYPR_CONFIG" ]; then
     _skip "no Hyprland config found — add manually:"
     _info "  $HYPR_BIND_SHOWN"
