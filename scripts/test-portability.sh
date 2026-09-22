@@ -1653,6 +1653,62 @@ test_update_apply_binds_to_confirmed_release() (
         "apply proceeds once the newest release has been confirmed"
 )
 
+test_menu_keybind_plan() (
+    local home="$TMP/keybind-home" dir conf before out verdict
+    dir="$home/.config/hypr"
+    conf="$dir/hyprland.conf"
+    mkdir -p "$dir"
+
+    verdict() { # $1 = line under test
+        printf '%s\n' "$1" > "$TMP/keybind-probe.conf"
+        MENU_BIND_MODS=SUPER MENU_BIND_KEY=slash bash -c '
+            SILERE_SCRIPT_LIB_ONLY=1 source "$1"
+            _bind_taken "$2" && printf taken || printf free
+        ' _ "$ROOT/scripts/install.sh" "$TMP/keybind-probe.conf"
+    }
+    assert_eq taken "$(verdict 'bind = SUPER, slash, exec, foot')" "literal modifier and key"
+    assert_eq taken "$(verdict 'bind = $mainMod, slash, exec, foot')" "variable modifier"
+    assert_eq taken "$(verdict 'bindd = SUPER, Slash, menu, exec, foot')" "bind variant and key case"
+    assert_eq free "$(verdict '# bind = SUPER, slash, exec, foot')" "commented-out bind"
+    assert_eq free "$(verdict 'bind = SUPER, S, exec, foot')" "different key"
+    assert_eq free "$(verdict 'bind = SUPER SHIFT, slash, exec, foot')" "different modifiers"
+
+    printf 'monitor=,preferred,auto,1\n' > "$conf"
+    before="$(<"$conf")"
+    out="$(HOME="$home" XDG_CONFIG_HOME="$home/.config" SILERE_HYPR_CONFIG="$conf" \
+        bash "$ROOT/scripts/install.sh" --dry-run </dev/null 2>&1)" \
+        || fail "keybind dry run exited non-zero"
+    case "$out" in
+        *"append to $conf: bind = SUPER, slash, exec, qs ipc -p "*"call menu toggle"*) ;;
+        *) fail "dry run did not plan the menu keybind for a free key" ;;
+    esac
+    assert_eq "$before" "$(<"$conf")" "keybind dry run left the config unchanged"
+
+    printf 'bind = $mainMod, slash, exec, foot\n' > "$dir/binds.conf"
+    out="$(HOME="$home" XDG_CONFIG_HOME="$home/.config" SILERE_HYPR_CONFIG="$conf" \
+        bash "$ROOT/scripts/install.sh" --dry-run </dev/null 2>&1)" \
+        || fail "keybind dry run with a taken key exited non-zero"
+    case "$out" in
+        *"already bound in your Hyprland config"*) ;;
+        *) fail "a key bound in a sourced file was not reported as taken" ;;
+    esac
+    case "$out" in
+        *"append to $conf: bind = "*) fail "dry run planned a keybind over a taken key" ;;
+    esac
+    rm -f "$dir/binds.conf"
+
+    printf -- '-- lua config\n' > "$dir/hyprland.lua"
+    before="$(<"$dir/hyprland.lua")"
+    out="$(HOME="$home" XDG_CONFIG_HOME="$home/.config" SILERE_HYPR_CONFIG="$dir/hyprland.lua" \
+        bash "$ROOT/scripts/install.sh" --dry-run </dev/null 2>&1)" \
+        || fail "keybind dry run with a Lua config exited non-zero"
+    case "$out" in
+        *"Lua config"*'hl.bind("SUPER + slash", hl.dsp.exec_cmd("qs ipc -p '*'call menu toggle"))'*) ;;
+        *) fail "a Lua config was not offered a Lua bind to add" ;;
+    esac
+    assert_eq "$before" "$(<"$dir/hyprland.lua")" "Lua config left unchanged"
+)
+
 if [ "${SILERE_TEST_LIB_ONLY:-0}" = 1 ]; then
     return 0 2>/dev/null || exit 0
 fi
@@ -1668,6 +1724,7 @@ test_assume_yes_prompts
 test_install_path_safety
 test_install_transaction_and_receipt
 test_dry_run_writes_nothing
+test_menu_keybind_plan
 test_hypr_discovery
 test_niri_config_discovery
 test_atomic_units
