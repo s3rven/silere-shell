@@ -1709,6 +1709,41 @@ test_menu_keybind_plan() (
     assert_eq "$before" "$(<"$dir/hyprland.lua")" "Lua config left unchanged"
 )
 
+test_plain_copy_is_not_package_managed() (
+    local copy="$TMP/plain-copy" home="$TMP/plain-copy-home" out
+    mkdir -p "$copy" "$home"
+    cp -R "$ROOT/scripts" "$copy/"
+    cp "$ROOT/release.json" "$copy/"
+    git -C "$copy" rev-parse --git-dir >/dev/null 2>&1 && fail "plain copy fixture sits inside a git checkout"
+
+    run_update() {
+        HOME="$home" XDG_STATE_HOME="$home/state" XDG_CONFIG_HOME="$home/config" \
+            bash "$copy/scripts/update.sh" "$@" </dev/null 2>&1
+    }
+    out="$(run_update --version)" || fail "version query failed on a plain copy"
+    case "$out" in
+        *"packaged=1"*"mode=copy"*) ;;
+        *) fail "a download without git or a package marker was reported as package-managed" ;;
+    esac
+    out="$(run_update)" && fail "an update check succeeded on a plain copy"
+    case "$out" in
+        *"reinstall with scripts/install.sh"*) ;;
+        *) fail "a plain copy was not pointed at the installer" ;;
+    esac
+
+    printf '9.9.9\n' > "$copy/package-version"
+    out="$(run_update --version)" || fail "version query failed on a packaged copy"
+    case "$out" in
+        *"version=9.9.9"*"mode=package"*) ;;
+        *) fail "a copy carrying package-version was not reported as package-managed" ;;
+    esac
+    out="$(run_update)" && fail "an update check succeeded on a packaged copy"
+    case "$out" in
+        *"through your package manager"*) ;;
+        *) fail "a packaged copy was not pointed at its package manager" ;;
+    esac
+)
+
 if [ "${SILERE_TEST_LIB_ONLY:-0}" = 1 ]; then
     return 0 2>/dev/null || exit 0
 fi
@@ -1725,6 +1760,7 @@ test_install_path_safety
 test_install_transaction_and_receipt
 test_dry_run_writes_nothing
 test_menu_keybind_plan
+test_plain_copy_is_not_package_managed
 test_hypr_discovery
 test_niri_config_discovery
 test_atomic_units

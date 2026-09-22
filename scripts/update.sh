@@ -721,18 +721,23 @@ trap 'exit 130' INT TERM
 if ! git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1; then
     case "${1:-}" in
         --version)
+            # only a distro package writes package-version; a plain download has no updater at all
             if [ -r "$ROOT/package-version" ]; then
                 packaged_version="$(head -n 1 "$ROOT/package-version")"
+                packaged_mode=package
             else
                 packaged_version="$(sed -n 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
                     "$ROOT/release.json" 2>/dev/null | head -n 1)"
+                packaged_mode=copy
             fi
-            printf 'packaged=1\nversion=%s\nmode=package\n' "$packaged_version"
+            printf 'packaged=1\nversion=%s\nmode=%s\n' "$packaged_version" "$packaged_mode"
             exit 0
             ;;
         --transaction-status) printf 'pending=0\n'; exit 0 ;;
         --recent|--timer-status) exit 0 ;;
     esac
+    [ -r "$ROOT/package-version" ] \
+        || _quiet_fail "$ROOT is not a git checkout — reinstall with scripts/install.sh to get updates"
     _quiet_fail "$ROOT is not a git checkout — update it through your package manager"
 fi
 

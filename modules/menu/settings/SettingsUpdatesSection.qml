@@ -230,23 +230,25 @@ Column {
         SectionLabel { label: "SILERE SHELL"; first: true }
         SettingsCard {
             ControlRow {
-                glyph: "󰄬"
+                glyph: ShellUpdate.plainCopy ? "󰀦" : "󰄬"
                 title: "Silere Shell"
-                status: "Package-managed install"
+                status: ShellUpdate.plainCopy ? "Not a Git checkout" : "Package-managed install"
                 valueText: ShellUpdate.versionLabel
-                statusColor: Theme.success
+                statusColor: ShellUpdate.plainCopy ? Theme.warning : Theme.success
                 passive: true
             }
             ControlRow {
                 glyph: "󰏗"
                 title: "Managed by"
                 status: "Built-in self-update is disabled"
-                valueText: SystemTools.packageFamily.length > 0
-                    ? SystemTools.packageFamily : "packages"
+                valueText: ShellUpdate.plainCopy ? "nothing"
+                    : SystemTools.packageFamily.length > 0 ? SystemTools.packageFamily : "packages"
                 passive: true
             }
             HintText {
-                text: "Silere updates with the rest of the system. No second updater touches package-owned files."
+                text: ShellUpdate.plainCopy
+                    ? "Nothing updates this copy. scripts/install.sh sets up one that can update itself."
+                    : "Silere updates with the rest of the system. No second updater touches package-owned files."
             }
         }
     }

@@ -53,6 +53,7 @@ Singleton {
     property bool   packaged: false
     property string installationMode: ""
     readonly property bool development: installationMode === "development"
+    readonly property bool plainCopy: installationMode === "copy"
     readonly property bool versionBusy: _versionProc.running
     property string targetTag: ""
     property bool   targetVerified: false
@@ -290,7 +291,7 @@ Singleton {
             const kv = root._parseKv(_versionOut.text)
             if ((kv.packaged ?? "") === "1") {
                 root.packaged = true
-                root.installationMode = "package"
+                root.installationMode = kv.mode === "copy" ? "copy" : "package"
                 root.versionTag = SafeText.boundedText(kv.version,
                     root.maxVersionTextChars)
                 root.versionReady = false
