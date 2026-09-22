@@ -41,6 +41,9 @@ settings file carries its own `__version` and migrates separately.
 - Night light holds its memory steady over a long session.
 - A failing package check backs off instead of retrying every three minutes.
 - Popups open and close over a window without a bright flash.
+- Notification history grows to fit its entries instead of cutting off the last one.
+- Switching menu pages from a keybind resizes the panel in one motion.
+- A downloaded copy of Silere is no longer described as package-managed; Settings › Updates points it at the installer.
 
 ## Releases
 
