@@ -166,6 +166,14 @@ PanelWindow {
         left:  win._left              ? Math.max(0, win._edgeMargin - win._shadowPad) : 0
     }
     mask: Region { item: outerCol }
+    BackgroundEffect.blurRegion: Region {
+        regions: win._blurShapes.concat([_scrollClip, _viewportClip, _columnClip])
+    }
+    property var _blurShapes: []
+    // an item region only follows its own geometry; these clips re-place the cards when the stack scrolls, shifts or resizes
+    Region { id: _scrollClip; item: _cardScroll.contentItem; intersection: Intersection.Intersect }
+    Region { id: _viewportClip; item: _cardViewport; intersection: Intersection.Intersect }
+    Region { id: _columnClip; item: outerCol; intersection: Intersection.Intersect }
 
     property var _pendingDismissItems: []
     readonly property int _pendingDismissAll: _pendingDismissItems.length
@@ -348,6 +356,9 @@ PanelWindow {
                     Repeater {
                         id: stack
                         model: Notifications.popupModel
+                        onItemAdded: (index, item) => win._blurShapes = win._blurShapes.concat([item.blurShape])
+                        onItemRemoved: (index, item) =>
+                            win._blurShapes = win._blurShapes.filter(s => s !== item.blurShape)
 
                         Item {
                             id: _slot
@@ -358,6 +369,15 @@ PanelWindow {
                                 || ShellSettings.notifMaxVisible <= 0
                                 || index < ShellSettings.notifMaxVisible
                             readonly property var cardItem: _cardLoader.item
+                            readonly property Region blurShape: Region {
+                                item: _slot
+                                Region {
+                                    item: _slot.cardItem ? _slot.cardItem.blurItem : null
+                                    radius: _slot.cardItem && _slot.cardItem.blurItem
+                                        ? Math.round(_slot.cardItem.blurItem.radius) : 0
+                                    intersection: Intersection.Intersect
+                                }
+                            }
                             property real timeoutStartedAt: 0
                             readonly property real _gap: index < win._visibleCards - 1 ? 10 : 0
 

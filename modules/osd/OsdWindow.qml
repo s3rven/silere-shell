@@ -34,6 +34,10 @@ PanelWindow {
     margins.top:    osd._bottom ? 0 : osd._edgeY
     margins.bottom: osd._bottom ? osd._edgeY : 0
     mask: Region {}
+    BackgroundEffect.blurRegion: Region { regions: osd._blurShapes.concat([_stackClip]) }
+    property var _blurShapes: []
+    // an item region only follows its own geometry; this clip re-places the pills when the window resizes
+    Region { id: _stackClip; item: stack; intersection: Intersection.Intersect }
 
     visible: osd._active && OsdBarState.activeCount > 0
 
@@ -59,6 +63,8 @@ PanelWindow {
 
         Repeater {
             model: osd._active ? OsdBarState.entries : null
+            onItemAdded: (index, item) => osd._blurShapes = osd._blurShapes.concat([item.blurShape])
+            onItemRemoved: (index, item) => osd._blurShapes = osd._blurShapes.filter(s => s !== item.blurShape)
 
             delegate: Item {
                 id: card
@@ -81,6 +87,16 @@ PanelWindow {
                     ? Math.min(ShellSettings.barRadius, pillH / 2)
                     : Math.min(Theme.radiusPanel, pillH / 2)
                 readonly property real _hiddenSlide: osd._bottom ? 7 : -7
+                // the pill moves by transform, which never refreshes a region, so it blurs only at rest
+                readonly property Region blurShape: Region {
+                    item: card
+                    Region {
+                        item: card.hasBar && Theme.panelOpacity < 1 && !card.closing
+                            && card._op >= 0.999 && card._slide === 0 ? pillWrap : null
+                        radius: Math.round(card.pillRadius)
+                        intersection: Intersection.Intersect
+                    }
+                }
 
                 property bool _ready: false
                 property real _op: 0
