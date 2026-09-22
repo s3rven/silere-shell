@@ -84,8 +84,7 @@ the maintenance command, unattended installs, Matugen wiring and removal:
 The same page in the neutral theme and in colours Matugen took from the wallpaper:
 
 <p align="center">
-  <img src="assets/shot-theme-neutral.webp" alt="The home page in the neutral theme" width="440"/>
-  <img src="assets/shot-theme-wallpaper.webp" alt="The home page in colours taken from the wallpaper" width="440"/>
+  <img src="assets/shot-themes.webp" alt="The home page in the neutral theme, and in colours taken from the wallpaper" width="900"/>
 </p>
 
 ## Controls
