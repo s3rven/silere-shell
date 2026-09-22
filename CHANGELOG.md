@@ -20,6 +20,7 @@ settings file carries its own `__version` and migrates separately.
   over IPC, for a keybind that changes one without opening a panel.
 - The installer offers a key that opens the menu, and leaves a combination the Hyprland
   config already uses alone.
+- The bar and OSD blur what is behind them on Hyprland 0.56 and niri 26.04 or newer, as do popups set to match the bar's opacity.
 
 ### Changed
 
@@ -39,6 +40,7 @@ settings file carries its own `__version` and migrates separately.
 - A notification asking to outlast the popup limit is held at the limit instead of the default.
 - Night light holds its memory steady over a long session.
 - A failing package check backs off instead of retrying every three minutes.
+- Popups open and close over a window without a bright flash.
 
 ## Releases
 
