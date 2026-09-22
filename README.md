@@ -1,14 +1,17 @@
 <p align="center">
-  <img src="assets/banner.svg" alt="silere shell - quiet by default." width="720"/>
+  <picture>
+    <source media="(prefers-color-scheme: light)" srcset="assets/banner-light.svg"/>
+    <img src="assets/banner.svg" alt="silere shell - quiet by default." width="720"/>
+  </picture>
 </p>
 
 <p align="center"><em>silere</em>, from Latin: to be silent.</p>
 
 <p align="center">
-  <a href="https://github.com/s3rven/silere-shell/releases"><img src="https://img.shields.io/github/v/release/s3rven/silere-shell?style=flat-square&labelColor=17181d&color=747a98" alt="latest release"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-747a98?style=flat-square&labelColor=17181d" alt="license: MIT"/></a>
-  <a href="https://quickshell.org/"><img src="https://img.shields.io/badge/built%20on-Quickshell-747a98?style=flat-square&labelColor=17181d" alt="built on Quickshell"/></a>
-  <img src="https://img.shields.io/badge/runs%20on-Hyprland%20%C2%B7%20niri-747a98?style=flat-square&labelColor=17181d" alt="runs on Hyprland and niri"/>
+  <a href="https://github.com/s3rven/silere-shell/releases"><img src="https://img.shields.io/github/v/release/s3rven/silere-shell?style=flat-square&labelColor=0f1013&color=2a2d33&logo=github&logoColor=9a9ca1" alt="latest release"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2a2d33?style=flat-square&labelColor=0f1013" alt="license: MIT"/></a>
+  <a href="https://quickshell.org/"><img src="https://img.shields.io/badge/built%20on-Quickshell-2a2d33?style=flat-square&labelColor=0f1013" alt="built on Quickshell"/></a>
+  <img src="https://img.shields.io/badge/runs%20on-Hyprland%20%C2%B7%20niri-2a2d33?style=flat-square&labelColor=0f1013&logo=hyprland&logoColor=9a9ca1" alt="runs on Hyprland and niri"/>
 </p>
 
 Silere is a Quickshell desktop shell for Hyprland and niri built around one idea: nothing
@@ -18,7 +21,7 @@ Bar, notifications, OSD, calendar and tray, all in one process — and it sits u
 CPU core when you are not touching it.
 
 <p align="center">
-  <img src="assets/shot-desktop.webp" alt="The Silere bar with the menu panel open" width="900"/>
+  <img src="assets/shot-desktop.webp" alt="The floating Silere bar with the home page open and a notification" width="900"/>
 </p>
 
 ## Install
@@ -66,18 +69,32 @@ the maintenance command, unattended installs, Matugen wiring and removal:
 - **Menu** — live controls, every setting, and notification history in one panel.
 - **Notifications** — actions, images, searchable history filtered by app, quiet hours, source-window jumping.
 - **Theming** — Matugen from your wallpaper or a hand-picked accent, over three dark base
-  tones.
+  tones, with background blur on Hyprland 0.56 and niri 26.04.
 - **Calendar** from the clock, **OSD** for volume and brightness, and **quick actions** for
   night light, power profiles and airplane mode.
 
 <p align="center">
-  <img src="assets/shot-surfaces.webp" alt="The menu panel, the settings rail, and the calendar" width="900"/>
+  <img src="assets/shot-surfaces.webp" alt="The home page, the settings rail, and the calendar" width="900"/>
+</p>
+
+<p align="center">
+  <img src="assets/shot-popups.webp" alt="The floating bar, notification history, a notification, the OSD and quick actions" width="900"/>
+</p>
+
+The same page in the neutral theme and in colours Matugen took from the wallpaper:
+
+<p align="center">
+  <img src="assets/shot-theme-neutral.webp" alt="The home page in the neutral theme" width="440"/>
+  <img src="assets/shot-theme-wallpaper.webp" alt="The home page in colours taken from the wallpaper" width="440"/>
 </p>
 
 ## Controls
 
-Silere is pointer-driven: Escape and text fields are its keyboard paths. Every widget's
-controls are listed below.
+Silere is pointer-driven: Escape and text fields are its keyboard paths.
+
+<details>
+<summary>Every widget's controls</summary>
+
 
 | area | pointer |
 |---|---|
@@ -96,6 +113,8 @@ controls are listed below.
 | bluetooth list | **click** pairs or connects · **middle-click** a paired device to forget it |
 | menu | **Escape** steps back, then closes · **click** anywhere outside to close |
 | history | **type** in Search to find an app or message · **click** an entry to read it in full · **Clear** removes the visible results · **Escape** clears search, then closes |
+
+</details>
 
 ## Configuration
 
