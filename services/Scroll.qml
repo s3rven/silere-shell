@@ -18,6 +18,12 @@ Singleton {
     property var _timers: ({})
     property var _lastSteps: ({})
 
+    // natural scrolling flips the delta; a level keeps "up means more", as Qt's own sliders do
+    function processLevelWheel(event, key: string): int {
+        const n = root.processControlWheel(event, key)
+        return event && event.inverted ? -n : n
+    }
+
     function processControlWheel(event, key: string): int {
         if (!event) return 0
         const touchpad = _isTouchpad(event)

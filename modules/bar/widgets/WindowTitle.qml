@@ -21,9 +21,10 @@ Item {
 
     readonly property bool layoutVisible: root._titleVisible || root._op > 0.001
         || root.implicitWidth > 0.5 || _debounce.running || _seq.running
-    // the width takes longer to collapse than the fade-out, and it leads the fade-in;
-    // a divider keyed off either one marks a slot with nothing painted in it
-    readonly property bool contentVisible: root._op > 0.001 && root._displayText.length > 0
+    // the width lags the fade both ways, so a divider keyed off it marks an empty slot;
+    // a crossfade between titles holds this up, or each focus change blinks the divider
+    readonly property bool contentVisible: root._displayText.length > 0
+        && (root._op > 0.001 || (_seq.running && root._pendVisible))
 
     Accessible.role: Accessible.StaticText
     Accessible.name: root._spokenText.length > 0
@@ -128,6 +129,16 @@ Item {
         return leaf
     }
 
+    // the desktop entry names the app: an id's last segment can be a word like "desktop"
+    function _appName(app: string): string {
+        if (!ShellSettings.showWindowTitleApp || app.length === 0) return root._clean(app)
+        const entry = DesktopEntries.heuristicLookup(app)
+        // "Spotify (Launcher)": a packaging note, not part of the app's name
+        const name = entry ? SafeText.singleLineText(entry.name || "", 64)
+            .replace(/\s*\([^()]*\)$/, "") : ""
+        return name.length > 0 ? name : root._clean(app)
+    }
+
     // visible labels, not reverse-domain ids: _clean() would leave "notes.md" as "MD"
     function _labelKey(s: string): string {
         return String(s || "").toLowerCase()
@@ -194,7 +205,7 @@ Item {
         _seq.stop()
         _wsJustChanged = false
         if (monitorWsId > 0) _lastWsId = monitorWsId
-        _shownApp = _clean(currentApp)
+        _shownApp = _appName(currentApp)
         _shownTitle = currentTitle
         _shownRef = currentRef
         _shownVisible = _titleVisible
@@ -205,7 +216,7 @@ Item {
     }
 
     function _matchesCurrent(): bool {
-        return root._shownApp === root._clean(root.currentApp)
+        return root._shownApp === root._appName(root.currentApp)
             && root._shownTitle === root.currentTitle
             && root._shownRef === root.currentRef
             && root._shownVisible === root._titleVisible
@@ -214,7 +225,7 @@ Item {
     }
 
     function _capturePending(): void {
-        root._pendApp = root._clean(root.currentApp)
+        root._pendApp = root._appName(root.currentApp)
         root._pendTitle = root.currentTitle
         root._pendRef = root.currentRef
         root._pendVisible = root._titleVisible
@@ -297,7 +308,7 @@ Item {
     Component.onCompleted: {
         root._syncMediaOwnership()
         _wsJustChanged = false
-        _shownApp   = _clean(currentApp)
+        _shownApp   = _appName(currentApp)
         _shownTitle = currentTitle
         _shownRef   = currentRef
         _shownVisible = _titleVisible
@@ -332,6 +343,12 @@ Item {
         function onReduceMotionChanged() {
             if (ShellSettings.reduceMotion) root._settleCurrent()
         }
+    }
+
+    // entries land after startup, so a title shown before then carries the id's name
+    Connections {
+        target: ShellSettings.showWindowTitleApp ? DesktopEntries : null
+        function onApplicationsChanged() { root._queueTransition() }
     }
 
     Connections {

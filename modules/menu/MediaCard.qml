@@ -352,7 +352,11 @@ ClippingRectangle {
             + (Media.lengthKnown ? Media.formatTime(Media.length)
                 : Media.endless ? "live" : "unknown")
 
-        readonly property real _ratio: Math.max(0, Math.min(1, Media.positionRatio))
+        // a drag previews locally and seeks at most every 100ms; each seek is a dbus call the player acts on
+        property real _dragRatio: -1
+        readonly property real _ratio: _dragRatio >= 0 ? _dragRatio
+            : Math.max(0, Math.min(1, Media.positionRatio))
+        Timer { id: _seekThrottle; interval: 100 }
 
         Rectangle {
             id: _seekRail
@@ -382,12 +386,20 @@ ClippingRectangle {
             cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
             // hold the grab or the surrounding Flickable steals a drag mid-seek
             preventStealing: true
-            function _seekTo(x) {
+            function _track(x) {
                 if (!enabled || width <= 0) return
-                Media.seekToRatio(Math.max(0, Math.min(1, x / width)))
+                _seek._dragRatio = Math.max(0, Math.min(1, x / width))
+                if (_seekThrottle.running) return
+                _seekThrottle.start()
+                Media.seekToRatio(_seek._dragRatio)
             }
-            onPressed: (e) => _seekTo(e.x)
-            onPositionChanged: (e) => { if (pressed) _seekTo(e.x) }
+            onPressed: (e) => _track(e.x)
+            onPositionChanged: (e) => { if (pressed) _track(e.x) }
+            onReleased: {
+                if (_seek._dragRatio >= 0) Media.seekToRatio(_seek._dragRatio)
+                _seek._dragRatio = -1
+            }
+            onCanceled: _seek._dragRatio = -1
         }
     }
 

@@ -54,7 +54,8 @@ Singleton {
         const elev = root._elevation
         if (elev >= 6)  return 6500
         if (elev <= -6) return 3000
-        return Math.round((3000 + 3500 * (elev + 6) / 12) / 100) * 100
+        // every step restarts the tool, so dusk takes a handful of steps rather than dozens
+        return Math.round((3000 + 3500 * (elev + 6) / 12) / 500) * 500
     }
 
     readonly property real _solarNoon: {
@@ -68,7 +69,9 @@ Singleton {
     readonly property real sunriseHour: _solarNoon - _halfDay
     readonly property real sunsetHour:  _solarNoon + _halfDay
     readonly property real _nowHour: { root._solarTick; const d = new Date(); return d.getHours() + d.getMinutes() / 60 }
-    readonly property bool isDaytime: _halfDay > 0 && _nowHour >= sunriseHour && _nowHour <= sunsetHour
+    // a midnight sun's day wraps past 24:00, which the window below cannot express
+    readonly property bool isDaytime: _halfDay >= 12
+        || (_halfDay > 0 && _nowHour >= sunriseHour && _nowHour <= sunsetHour)
     readonly property real dayProgress:
         _halfDay <= 0 ? -1 : Math.max(0, Math.min(1, (_nowHour - sunriseHour) / (sunsetHour - sunriseHour)))
     readonly property real nightProgress: {
@@ -80,11 +83,7 @@ Singleton {
     }
 
     function _fmtHour(h: real): string {
-        if (!isFinite(h)) return "--:--"
-        let hh = Math.floor(((h % 24) + 24) % 24)
-        let mm = Math.round((h - Math.floor(h)) * 60)
-        if (mm >= 60) { mm -= 60; hh = (hh + 1) % 24 }
-        return (hh < 10 ? "0" : "") + hh + ":" + (mm < 10 ? "0" : "") + mm
+        return isFinite(h) ? DateTime.hourText(h) : "--:--"
     }
     readonly property string sunriseLabel: _halfDay <= 0 ? "--:--" : _fmtHour(sunriseHour)
     readonly property string sunsetLabel:  _halfDay <= 0 ? "--:--" : _fmtHour(sunsetHour)
@@ -154,7 +153,9 @@ Singleton {
 
     Timer {
         interval: 60000; repeat: true
-        running: root.toolAvailable && ShellSettings.nightLightAuto && root.enabled && !Idle.isIdle
+        // the menu draws the sun's position too, so it keeps moving while open
+        running: root.toolAvailable && !Idle.isIdle
+            && ((ShellSettings.nightLightAuto && root.enabled) || MenuState.open)
         onTriggered: root._solarTick++
     }
     Connections {
@@ -165,6 +166,13 @@ Singleton {
         target: Idle
         function onIsIdleChanged() {
             if (!Idle.isIdle && ShellSettings.nightLightAuto && root.enabled) root._solarTick++
+        }
+    }
+    // the minute timer stops across suspend; the network returning is the wake the shell sees
+    Connections {
+        target: Network
+        function onConnectedChanged() {
+            if (ShellSettings.nightLightAuto && root.enabled) root._solarTick++
         }
     }
 
@@ -337,7 +345,8 @@ Singleton {
         }
     }
 
-    Process {
+    // bounded only for its exit report: a tool removed mid-session fails to start without one
+    BoundedProcess {
         id: _sunsetProc
         running: false
         // a StdioCollector grows for as long as the night light runs; keep only the last line
@@ -366,8 +375,9 @@ Singleton {
             // and wlsunset's running commentary on stderr is not the reason it went away
             if (code !== 0)
                 root.lastError = status === 0
-                    ? (_sunsetProc._lastErrLine.length > 0
-                        ? _sunsetProc._lastErrLine : stopped + " stopped unexpectedly")
+                    ? (_sunsetProc._lastErrLine.length > 0 ? _sunsetProc._lastErrLine
+                        : code === 127 ? stopped + " could not start"
+                        : stopped + " stopped unexpectedly")
                     : (stopped + " stopped unexpectedly")
             root._runningTool = ""
             if (root.enabled) root.enabled = false

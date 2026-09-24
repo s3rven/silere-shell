@@ -25,7 +25,7 @@ QtObject {
     }
 
     function _title(value): string {
-        return SafeText.singleLineText(value, Compositor.maxWindowTitleChars)
+        return Compositor.windowTitle(value)
     }
 
     function monitorName(screen): string {
@@ -40,26 +40,6 @@ QtObject {
                 "sh", output, String(wsId)])
         else
             root._action(["focus-workspace", String(wsId)])
-    }
-
-    // niri keeps one empty workspace at the end of every output, so the next empty
-    // one already exists and is always the highest index there
-    function _trailingWorkspace(output): int {
-        const ws = root._wsRaw
-        let target = 0
-        for (let i = 0; i < ws.length; i++) {
-            const w = ws[i]
-            if (!w) continue
-            if (output.length > 0 && (w.output ?? "") !== output) continue
-            const idx = w.idx ?? 0
-            if (idx > target) target = idx
-        }
-        return target
-    }
-
-    function focusNewWorkspace(output): void {
-        const target = root._trailingWorkspace(output)
-        if (target > 0) root.focusWorkspace(target, output)
     }
 
     function moveWorkspaceCommand(wsId, output, windowId, windowOutput): var {
@@ -83,11 +63,6 @@ QtObject {
         if (!active || active.ref === undefined || active.ref === null) return
         Quickshell.execDetached(root.moveWorkspaceCommand(
             wsId, output, active.ref, active.output))
-    }
-
-    function moveActiveToNewWorkspace(output): void {
-        const target = root._trailingWorkspace(output)
-        if (target > 0) root.moveActiveToWorkspace(target, output)
     }
 
     function focusToplevel(c): void {

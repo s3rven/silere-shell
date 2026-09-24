@@ -54,21 +54,25 @@ AnchoredPopupState {
                 return Network.wifiHardBlocked
                     ? "the Wi-Fi radio is blocked in hardware"
                     : "no Wi-Fi device the shell can control"
+            // the radios answer over dbus, so report the state that was asked for
+            const next = !Network.wifiEnabled
             Network.toggleWifi()
-            return Network.wifiEnabled ? "on" : "off"
+            return next ? "on" : "off"
         }
 
         function bluetooth(): string {
             if (!root.btControllable) return "no Bluetooth adapter"
+            const next = !Bluetooth.enabled
             Bluetooth.toggle()
-            return Bluetooth.enabled ? "on" : "off"
+            return next ? "on" : "off"
         }
 
         function airplane(): string {
             if (!root.airplaneAvailable)
                 return "no Wi-Fi or Bluetooth radio the shell can control"
+            const entering = root.radiosOn
             root.toggleAirplane()
-            return root.radiosOn ? "off" : "on"
+            return entering ? "on" : "off"
         }
     }
 

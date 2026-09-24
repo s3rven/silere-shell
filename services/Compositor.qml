@@ -9,6 +9,12 @@ Singleton {
     readonly property int maxWindowIdentityChars: 512
     readonly property int maxWindowTitleChars: 2048
 
+    // a terminal's spinner glyph changes its title every frame without changing what it says
+    function windowTitle(value): string {
+        return SafeText.singleLineText(value, root.maxWindowTitleChars)
+            .replace(/^[⠀-⣿◐-◓◴-◷✢-✽] +/, "")
+    }
+
     readonly property string backend: {
         if (String(Quickshell.env("NIRI_SOCKET") || "").length > 0) return "niri"
         if (String(Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE") || "").length > 0) return "hyprland"
@@ -54,21 +60,9 @@ Singleton {
         root._be.focusWorkspace(wsId, output || "")
     }
 
-    // the trailing slot has no id to focus until the compositor makes one; each
-    // backend resolves its own idea of "the next empty workspace on this output"
-    function focusNewWorkspace(output): void {
-        if (!root._be) return
-        root._be.focusNewWorkspace(output || "")
-    }
-
     function moveActiveToWorkspace(wsId, output): void {
         if (wsId === undefined || wsId === null || wsId < 1 || !root._be) return
         root._be.moveActiveToWorkspace(wsId, output || "")
-    }
-
-    function moveActiveToNewWorkspace(output): void {
-        if (!root._be) return
-        root._be.moveActiveToNewWorkspace(output || "")
     }
 
     function focusToplevel(c): void {

@@ -54,8 +54,13 @@ Singleton {
     property int pendingPercent: percent
     onPercentChanged: pendingPercent = percent
 
+    // like volume, a notch lands on the step grid rather than keeping an odd starting level
     function bumpBy(delta: int): void {
-        setPercent(pendingPercent + delta)
+        const notches = Math.round(delta / stepPct)
+        if (notches === 0) { setPercent(pendingPercent + delta); return }
+        const base = notches > 0 ? Math.floor(pendingPercent / stepPct)
+            : Math.ceil(pendingPercent / stepPct)
+        setPercent((base + notches) * stepPct)
     }
 
     function setPercent(p: int): void {

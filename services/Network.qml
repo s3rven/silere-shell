@@ -183,6 +183,24 @@ Singleton {
         wifiErrorReason = ConnectionFailReason.Unknown
     }
 
+    // one ssid, many bssids: a saved profile beats a stronger unknown ap, or the row offers a key it cannot use
+    function _preferWifiNetwork(candidate, current): bool {
+        if (!current) return true
+        if (!!candidate.connected !== !!current.connected) return !!candidate.connected
+        if (!!candidate.known !== !!current.known) return !!candidate.known
+        return Number(candidate.signalStrength || 0) > Number(current.signalStrength || 0)
+    }
+
+    // by the tier the row draws, not the raw percentage: signal drifts a few points
+    // between scans and neighbouring networks traded places under the pointer
+    function _compareWifi(A, B): int {
+        if (A.active !== B.active) return A.active ? -1 : 1
+        // a saved network joins without a password, so it outranks a stronger stranger
+        if (!!A.known !== !!B.known) return A.known ? -1 : 1
+        const tier = signalTier(B.signal) - signalTier(A.signal)
+        return tier !== 0 ? tier : A.ssid.localeCompare(B.ssid)
+    }
+
     function _wifiList(): var {
         if (!_scannerWanted) return []
         // SSIDs are external strings: a normal object loses names such as "constructor" and lets "__proto__" alter the lookup prototype
@@ -200,12 +218,7 @@ Singleton {
                 if (!network || ssid.length === 0) continue
                 const signal = Math.round(Math.max(0, Math.min(1, network.signalStrength || 0)) * 100)
                 const existing = bySsid[ssid]
-                if (existing) {
-                    if (signal > existing.signal) existing.signal = signal
-                    if (network.connected) existing.active = true
-                    if (network.known) existing.known = true
-                    continue
-                }
+                if (existing && !root._preferWifiNetwork(network, existing.network)) continue
                 const security = network.security
                 const passwordless = security === WifiSecurityType.Open
                     || security === WifiSecurityType.Owe
@@ -215,6 +228,7 @@ Singleton {
                     || security === WifiSecurityType.Wpa2Psk
                     || security === WifiSecurityType.Sae
                 bySsid[ssid] = {
+                    network: network,
                     ssid: ssid,
                     label: SafeText.singleLineText(ssid, 128) || "Unnamed network",
                     signal: signal,
@@ -225,19 +239,11 @@ Singleton {
                     active: network.connected,
                     known: network.known
                 }
-                order.push(ssid)
+                if (!existing) order.push(ssid)
             }
         }
 
-        // by the tier the row draws, not the raw percentage: signal drifts a few points
-        // between scans and neighbouring networks traded places under the pointer
-        order.sort((a, b) => {
-            const A = bySsid[a]
-            const B = bySsid[b]
-            if (A.active !== B.active) return A.active ? -1 : 1
-            const tier = signalTier(B.signal) - signalTier(A.signal)
-            return tier !== 0 ? tier : A.ssid.localeCompare(B.ssid)
-        })
+        order.sort((a, b) => root._compareWifi(bySsid[a], bySsid[b]))
         // the row draws a tier, never the percentage: publishing the raw signal changed the
         // list's content every few seconds, and one changed entry rebuilds every delegate
         return order.map(ssid => {
@@ -301,7 +307,7 @@ Singleton {
             for (let j = 0; j < networks.length; j++) {
                 const network = networks[j]
                 if (!network || network.name !== ssid) continue
-                if (!best || network.signalStrength > best.signalStrength) best = network
+                if (root._preferWifiNetwork(network, best)) best = network
             }
         }
         return best
@@ -359,16 +365,17 @@ Singleton {
         network.forget()
     }
 
-    // the active link can be the wired one, so this cannot go through _linkState.best
-    function disconnectWifi(): void {
-        const devices = root._devices
+    // by name, not _linkState.best: the active link may be wired, and a vanished network must not drop another
+    function disconnectWifi(ssid: string): void {
+        const devices = root._devices.filter(d => d && d.type === DeviceType.Wifi)
         for (let i = 0; i < devices.length; i++) {
-            const device = devices[i]
-            if (!device || device.type !== DeviceType.Wifi) continue
-            const networks = device.networks ? (device.networks.values || []) : []
-            for (let j = 0; j < networks.length; j++)
-                if (networks[j] && networks[j].connected) { networks[j].disconnect(); return }
-            if (device.connected) { device.disconnect(); return }
+            const networks = devices[i].networks ? (devices[i].networks.values || []) : []
+            for (let j = 0; j < networks.length; j++) {
+                const network = networks[j]
+                if (!network || !network.connected || network.name !== ssid) continue
+                network.disconnect()
+                return
+            }
         }
     }
 

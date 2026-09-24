@@ -59,7 +59,7 @@ Pill {
         onWheel: (event) => {
             event.accepted = true
             if (!Audio.micReady) return
-            const n = Scroll.processControlWheel(event, "microphone")
+            const n = Scroll.processLevelWheel(event, "microphone")
             if (n !== 0) Audio.micBumpBy(n * Audio.stepPct)
         }
     }

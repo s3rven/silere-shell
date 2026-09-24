@@ -15,9 +15,12 @@ Singleton {
         ShellSettings.barShowClock, OverviewState.active,
         ShellSettings.dndSchedule, MenuState.homeActive, CalendarState.open)
 
+    // a monotonic timer stops across suspend, so the next tick can land up to a minute after wake
+    property bool _resync: false
+
     SystemClock {
         id: clock
-        enabled: root._clockNeeded
+        enabled: root._clockNeeded && !root._resync
         precision: ShellSettings.barShowClock && ShellSettings.showSeconds
             && !Idle.isIdle && !OverviewState.active
             ? SystemClock.Seconds : SystemClock.Minutes
@@ -71,6 +74,11 @@ Singleton {
             + (suffix.length > 0 ? " " + suffix : "")
     }
 
+    function hourText(hours: real): string {
+        const mins = Math.round((((hours % 24) + 24) % 24) * 60) % 1440
+        return root.clockText(new Date(2000, 0, 1, Math.floor(mins / 60), mins % 60))
+    }
+
     function isoWeek(d): int {
         const t = new Date(d.getFullYear(), d.getMonth(), d.getDate())
         t.setDate(t.getDate() + 3 - (t.getDay() + 6) % 7)
@@ -93,7 +101,33 @@ Singleton {
 
     Connections {
         target: Idle
-        function onIsIdleChanged() { root._update() }
+        function onIsIdleChanged() {
+            root.catchUp()
+            root._update()
+        }
+    }
+
+    // NetworkManager parks every device for sleep and brings them back within seconds of wake
+    Connections {
+        target: Network
+        function onConnectedChanged() { root.catchUp() }
+    }
+
+    Connections {
+        target: CalendarState
+        function onOpenChanged() { if (CalendarState.open) root.catchUp() }
+    }
+
+    Connections {
+        target: MenuState
+        function onOpenChanged() { if (MenuState.open) root.catchUp() }
+    }
+
+    function catchUp(): void {
+        if (!clock.enabled
+                || Qt.formatDateTime(new Date(), "yyyyMMddHHmm") === root._lastMinute) return
+        root._resync = true
+        root._resync = false
     }
 
     Connections {

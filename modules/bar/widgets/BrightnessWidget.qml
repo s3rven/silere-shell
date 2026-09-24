@@ -22,7 +22,9 @@ Pill {
     text:        (ShellSettings.valuesOnHover && !expanded) ? ""
                  : (canControl ? Brightness.label : "—")
     textColor:   Theme.subtext
-    interactive: canControl
+    // scroll controls brightness and a click does nothing, so it takes the pointer but is no button
+    interactive: false
+    adjustable: canControl
     levelValue: canControl ? Brightness.pct : -1
     levelVisible: canControl && ShellSettings.valuesOnHover && ShellSettings.hoverLevelBar && !expanded
     levelColor: Theme.accent
@@ -35,7 +37,7 @@ Pill {
         onWheel: (event) => {
             event.accepted = true
             if (!root.canControl) return
-            const n = Scroll.processControlWheel(event, "brightness")
+            const n = Scroll.processLevelWheel(event, "brightness")
             if (n !== 0) Brightness.bumpBy(n * Brightness.stepPct)
         }
     }

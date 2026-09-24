@@ -69,6 +69,21 @@ Item {
         id: _hover
         enabled: root.enabled && root.visible && root.barActive
         cursorShape: Qt.PointingHandCursor
+        onHoveredChanged: {
+            root._datePeek = false
+            if (hovered) _datePeekDelay.restart()
+            else _datePeekDelay.stop()
+        }
+    }
+
+    property bool _datePeek: false
+    readonly property bool _dateRevealed: root._datePeek && _hover.hovered
+        && ShellSettings.valuesOnHover && !Idle.isIdle
+
+    Timer {
+        id: _datePeekDelay
+        interval: 80
+        onTriggered: root._datePeek = true
     }
 
     function _openCalendar(): void {
@@ -104,13 +119,13 @@ Item {
             id: _dateSectionClip
             anchors.verticalCenter: parent.verticalCenter
             height:  _dateRow.implicitHeight
-            width:   ShellSettings.clockShowDate ? _dateRow.implicitWidth + Metrics.clockDateGapFor(root.compact) : 0
-            opacity: ShellSettings.clockShowDate ? 1.0 : 0.0
-            visible: ShellSettings.clockShowDate || opacity > 0.001
+            // the day and date ease their own widths; easing their sum again stalls until they settle
+            property real _shown: ShellSettings.clockShowDate || root._dateRevealed ? 1 : 0
+            MotionBehavior on _shown {NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic } }
+            width:   (_dateRow.implicitWidth + Metrics.clockDateGapFor(root.compact)) * _shown
+            opacity: _shown
+            visible: _shown > 0.001
             clip:    true
-
-            MotionBehavior on width   {NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic } }
-            MotionBehavior on opacity {NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic } }
 
             Row {
                 id: _dateRow
@@ -170,9 +185,11 @@ Item {
         }
     }
 
-    Accessible.role: Accessible.Button
-    Accessible.name: "Clock, " + DateTime.cachedHour + ":" + DateTime.cachedMinute
+    readonly property string accessibleName: "Clock, " + DateTime.cachedHour + ":" + DateTime.cachedMinute
         + (DateTime.cachedAmPm.length > 0 ? " " + DateTime.cachedAmPm : "")
+        + ", " + DateTime.cachedWeekday + " " + DateTime.cachedMonthDay
+    Accessible.role: Accessible.Button
+    Accessible.name: root.accessibleName
     Accessible.focusable: root.show
     Accessible.onPressAction: root._openCalendar()
 
@@ -189,13 +206,17 @@ Item {
         enabled: root.show && root.barActive
         gesturePolicy: TapHandler.ReleaseWithinBounds
         acceptedButtons: Qt.MiddleButton
-        onTapped: ShellSettings.batch(() => {
-            const s = ShellSettings.showSeconds
-            const d = ShellSettings.clockShowDate
-            if (!s && !d)     { ShellSettings.showSeconds = true }
-            else if (s && !d) { ShellSettings.showSeconds = false; ShellSettings.clockShowDate = true }
-            else if (!s && d) { ShellSettings.showSeconds = true }
-            else              { ShellSettings.showSeconds = false; ShellSettings.clockShowDate = false }
-        })
+        onTapped: {
+            // a peeked date would hide the step that turns the date off
+            root._datePeek = false
+            ShellSettings.batch(() => {
+                const s = ShellSettings.showSeconds
+                const d = ShellSettings.clockShowDate
+                if (!s && !d)     { ShellSettings.showSeconds = true }
+                else if (s && !d) { ShellSettings.showSeconds = false; ShellSettings.clockShowDate = true }
+                else if (!s && d) { ShellSettings.showSeconds = true }
+                else              { ShellSettings.showSeconds = false; ShellSettings.clockShowDate = false }
+            })
+        }
     }
 }

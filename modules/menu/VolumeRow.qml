@@ -189,7 +189,8 @@ Item {
                         width: _optCol.width
                         glyph: Audio.deviceClass(modelData.value) === "headset" ? "󰋋" : "󰓃"
                         label: modelData.label
-                        status: active ? "Current" : ""
+                        status: Audio.feedsNothing(modelData.value) ? "No device"
+                            : active ? "Current" : ""
                         selected: active
                         accessiblePrefix: "Output"
 

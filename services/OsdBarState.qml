@@ -37,18 +37,21 @@ Singleton {
         _rapidTimer.restart()
     }
 
-    property bool _seenInitialBrightness: false
     readonly property bool _batteryWatcherWanted: !Idle.isIdle && ShellSettings.osdEnabled
         && (ShellSettings.osdBatteryWarn || ShellSettings.osdChargedNotify)
     readonly property bool _tempWatcherWanted: !Idle.isIdle
         && ShellSettings.osdEnabled && ShellSettings.osdTempWarn
 
     property bool _armed: false
+    // an alert raised while unarmed was dropped, so arming replays whatever is still true
     Timer {
         interval: 600
         running:  true
         repeat:   false
-        onTriggered: root._armed = true
+        onTriggered: {
+            root._armed = true
+            root._replayAlerts()
+        }
     }
 
     ListModel { id: _entries }
@@ -75,6 +78,7 @@ Singleton {
 
     function _kindAllowedByFilter(kind: string, filter: string): bool {
         return filter === "both" || kind === filter
+            || (kind === "microphone" && filter === "volume")
     }
 
     function _clearEntries(): void {
@@ -296,6 +300,12 @@ Singleton {
             : (root._showDeviceName && Audio.sinkName ? `${Audio.sinkName} · ${Audio.label}` : Audio.label)
         root.show("volume", Audio.icon, Audio.uiVolume, lbl, effectiveMuted)
     }
+    // with nothing recording the bar shows no microphone, so a mute key had no visible answer
+    function _showMicMute(): void {
+        if (!Audio.micReady) return
+        root.show("microphone", Audio.micIcon, Audio.micVolume,
+            Audio.micMuted ? "Microphone muted" : "Microphone · " + Audio.micLabel, Audio.micMuted)
+    }
     function _queueVolumeUpdate(): void {
         if (_volumeUpdateQueued) return
         _volumeUpdateQueued = true
@@ -308,6 +318,7 @@ Singleton {
         function onTargetVolumeChanged() { root._queueVolumeUpdate() }
         function onPendingApplyChanged() { if (Audio.pendingApply) root._queueVolumeUpdate() }
         function onMutedChanged() { root._queueVolumeUpdate() }
+        function onMicMutedExternally() { root._showMicMute() }
         function onSinkNameChanged() {
             const name = Audio.sinkName
             if (!name || name === root._lastSinkName) return
@@ -323,13 +334,10 @@ Singleton {
 
     Connections {
         target: Brightness
+        // the startup read lands before ready flips, so ready alone keeps it quiet
         function onPctChanged() {
-            if (!Brightness.ready) return
-            if (!root._seenInitialBrightness) {
-                root._seenInitialBrightness = true
-                return
-            }
-            root.show("brightness", Brightness.icon, Brightness.pct, Brightness.label, false)
+            if (Brightness.ready)
+                root.show("brightness", Brightness.icon, Brightness.pct, Brightness.label, false)
         }
     }
 
@@ -348,8 +356,15 @@ Singleton {
             + (Battery.timeLabel ? "  " + Battery.timeLabel : "")
         root.showAlert("battery", Battery.icon, Battery.pct / 100, label, Theme.error)
     }
+    // once per charge, and a full battery seen before arming counts, so login stays quiet
+    property bool _fullAnnounced: false
     function _alertBatteryFull(): void {
-        if (!Battery.full || !Battery.charging || !ShellSettings.osdChargedNotify) return
+        if (!Battery.full || !Battery.charging) {
+            root._fullAnnounced = false
+            return
+        }
+        if (!ShellSettings.osdChargedNotify || root._fullAnnounced) return
+        root._fullAnnounced = true
         root.showAlert("battery", Battery.icon, 1.0, "Fully charged · 100%", Theme.success)
     }
     function _alertTempHot(): void {
@@ -378,6 +393,7 @@ Singleton {
         function onLowChanged() { root._alertBatteryLow() }
         function onCriticalChanged() { root._alertBatteryCritical() }
         function onFullChanged() { root._alertBatteryFull() }
+        function onChargingChanged() { root._alertBatteryFull() }
     }
 
     Connections {

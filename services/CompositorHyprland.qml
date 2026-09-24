@@ -38,7 +38,10 @@ QtObject {
         command: ["bash", "-c",
             "dir=\"$1\"; sig=\"$2\"; root=\"$3\"; " +
             "[ -d \"$dir\" ] || exit 3; " +
-            "inotifywait -m -q -e create,moved_to --format '%f' \"$dir\" 2>/dev/null | " +
+            // a signal to qs skips its cleanup, so the kernel ends the watcher with it
+            "setpriv --pdeathsig KILL true >/dev/null 2>&1 && set -- setpriv --pdeathsig KILL || set --; " +
+            // quickshell kills only its direct child: a piped loop outlived every reload, so the reader ends on eof
+            "exec \"$@\" inotifywait -m -q -e create,moved_to --format '%f' \"$dir\" 2>/dev/null > >(" +
             "while IFS= read -r name; do " +
             "  [ \"$name\" = \"$sig\" ] && continue; " +
             // a surviving socket directory is only proof the compositor is here if the pid in
@@ -60,7 +63,7 @@ QtObject {
             "    *) continue ;; " +
             "  esac; " +
             "  systemctl --user restart \"$unit\"; " +
-            "done",
+            "done)",
             "bash", root._runtimeHyprDir, root._instanceSignature, Quickshell.shellDir]
     }
 
@@ -80,7 +83,7 @@ QtObject {
     }
 
     function _title(value): string {
-        return SafeText.singleLineText(value, Compositor.maxWindowTitleChars)
+        return Compositor.windowTitle(value)
     }
 
     function monitorName(screen): string {
@@ -93,28 +96,8 @@ QtObject {
         else HyprDispatch.dispatch("workspace", wsId)
     }
 
-    // "emptynm" is hyprland's own selector: there is no workspace object to focus
-    // until a window opens on it, so an id cannot stand in for this
-    function focusNewWorkspace(output): void {
-        if (output.length > 0) HyprDispatch.dispatchPair("focusmonitor", output, "workspace", "emptynm")
-        else HyprDispatch.dispatch("workspace", "emptynm")
-    }
-
     function moveActiveToWorkspace(wsId, output): void {
         HyprDispatch.dispatch("movetoworkspacesilent", wsId)
-    }
-
-    function moveActiveToNewWorkspace(output): void {
-        const active = root.activeToplevel
-        const ref = active && active.ref ? String(active.ref) : ""
-        const addr = ref.length > 0
-            ? (ref.startsWith("address:") ? ref : "address:" + ref) : ""
-        const sourceOutput = active ? String(active.output || "") : ""
-        if (output.length > 0 && output !== sourceOutput && addr.length > 0)
-            HyprDispatch.moveWindowToWorkspaceOnMonitor(
-                output, sourceOutput, "emptynm", addr)
-        else
-            HyprDispatch.dispatch("movetoworkspacesilent", "emptynm")
     }
 
     function focusToplevel(c): void {
@@ -325,8 +308,8 @@ QtObject {
                 wsName: c.workspace ? String(c.workspace.name ?? "") : "",
                 focused: !root._unfocused && !!(Hyprland.activeToplevel && Hyprland.activeToplevel === t),
                 focusRank: c.focusHistoryID ?? 9999,
-                // hyprland's fullscreen is a mode enum, and 1 is merely maximized
-                fullscreen: c.fullscreen === 2
+                // hyprland's fullscreen is a mode bitmask: 1 maximized, 2 fullscreen, 3 both
+                fullscreen: (Number(c.fullscreen) & 2) !== 0
             })
         }
         return out

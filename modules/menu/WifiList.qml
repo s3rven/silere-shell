@@ -159,7 +159,8 @@ Item {
                         : _entry._connecting ? "Connecting…"
                         : _entry._failed ? (Network.wifiErrorNeedsSecret ? "Wrong password" : "Failed")
                         : _entry._sel ? "Password"
-                        : _entry.modelData.profileOnly ? (_entry.modelData.known ? "Secured" : "Not supported")
+                        : _entry.modelData.known ? "Saved"
+                        : _entry.modelData.profileOnly ? "Not supported"
                         : _entry.modelData.secured ? "Secured"
                         : "Open"
                     selected: _entry.modelData.active
@@ -168,7 +169,7 @@ Item {
                     failed:  _entry._failed
 
                     function _activate(): void {
-                        if (root._forgetSsid === modelData.ssid) {
+                        if (root._forgetSsid === _entry.modelData.ssid) {
                             root._forgetSsid = ""
                             _disarmTimer.stop()
                         }
@@ -178,7 +179,7 @@ Item {
                                 if (Date.now() - root._armedAtMs < Metrics.confirmGuardMs) return
                                 root._armedSsid = ""
                                 _disarmTimer.stop()
-                                Network.disconnectWifi()
+                                Network.disconnectWifi(_entry.modelData.ssid)
                             } else {
                                 root._armedSsid = _entry.modelData.ssid
                                 root._armedAtMs = Date.now()

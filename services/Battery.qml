@@ -129,9 +129,13 @@ Singleton {
         return onBattery ? time : `+ ${time}`
     }
 
+    // a charge limit (Lenovo conservation mode, ThinkPad thresholds) parks the battery on AC
+    readonly property bool held: available && !onBattery
+        && UPower.displayDevice.state === UPowerDeviceState.PendingCharge
+
     readonly property string statusLabel: {
         if (!available)  return ""
-        if (!onBattery)  return "charging"
+        if (!onBattery)  return full ? "charged" : held ? "not charging" : "charging"
         return "discharging"
     }
 

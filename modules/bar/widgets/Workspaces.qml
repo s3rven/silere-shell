@@ -58,13 +58,14 @@ Item {
     property bool _initialized: false
 
 
-    implicitWidth:  wsRow.implicitWidth + (urgentOffPage > 0 ? 12 : 0)
-    implicitHeight: btnH
-
-    MotionBehavior on implicitWidth {
+    // the cells ease their own widths; a Behavior on their sum restarts every frame and stalls until they settle
+    property real _tickRoom: urgentOffPage > 0 ? 12 : 0
+    MotionBehavior on _tickRoom {
         gate: root.barActive
         NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
     }
+    implicitWidth:  wsRow.implicitWidth + _tickRoom
+    implicitHeight: btnH
 
     readonly property string monitorName: Compositor.monitorName(root.screen)
     readonly property bool monitorReady: monitorName.length > 0 && Compositor.activeWorkspaceId(monitorName) > 0

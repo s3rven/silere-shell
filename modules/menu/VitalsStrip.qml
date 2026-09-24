@@ -43,11 +43,12 @@ Rectangle {
 
         height: Metrics.rowHeightFor(70)
 
-        readonly property real _p: Math.max(0, Math.min(1, progress))
+        // whole percent like the readout: every poll's fraction ran the glide, and a running glide redraws every window
+        readonly property real _p: Math.round(Math.max(0, Math.min(1, progress)) * 100) / 100
         property real _disp: _p
         MotionBehavior on _disp {
             gate: tile.live
-            NumberAnimation { duration: Motion.ms(450); easing.type: Easing.OutCubic }
+            NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
         }
 
         Rectangle {
@@ -149,9 +150,9 @@ Rectangle {
             divider: false
             glyph: "󰔏"
             label: "CPU"
-            value: Math.round(SysInfo.cpuPct * 100) + "%"
+            value: SysInfo.cpuReady ? Math.round(SysInfo.cpuPct * 100) + "%" : "—"
             sub: CpuTemp.available ? Math.round(CpuTemp.temp) + "°" : ""
-            progress: SysInfo.cpuPct
+            progress: SysInfo.cpuReady ? SysInfo.cpuPct : 0
             status: CpuTemp.critical ? 2 : (CpuTemp.hot ? 1 : 0)
             pulse: CpuTemp.alertPulse
         }
@@ -172,7 +173,7 @@ Rectangle {
             padR: Battery.available ? 18 : 14
             glyph: "󰋊"
             label: "Disk"
-            value: SysInfo.diskPct > 0 ? Math.round(SysInfo.diskPct * 100) + "%" : "—"
+            value: SysInfo.diskTotalKb > 0 ? Math.round(SysInfo.diskPct * 100) + "%" : "—"
             progress: SysInfo.diskPct
             status: SysInfo.diskPct > 0.9 ? 2 : (SysInfo.diskPct > 0.75 ? 1 : 0)
         }

@@ -31,8 +31,9 @@ PanelWindow {
         right:  true
     }
 
-    margins.top:    osd._bottom ? 0 : osd._edgeY
-    margins.bottom: osd._bottom ? osd._edgeY : 0
+    // at 1.25 only multiples of 4 land on whole output pixels, so every offset down to the pill stays on that grid
+    margins.top:    osd._bottom ? 0 : Metrics.snap4Up(osd._edgeY)
+    margins.bottom: osd._bottom ? Metrics.snap4Up(osd._edgeY) : 0
     mask: Region {}
     BackgroundEffect.blurRegion: Region { regions: osd._blurShapes.concat([_stackClip]) }
     property var _blurShapes: []
@@ -44,20 +45,20 @@ PanelWindow {
     Column {
         id: stack
         anchors.horizontalCenter: parent.horizontalCenter
-        spacing: 6
+        spacing: 8
 
         states: [
             State {
                 name: "top"
                 when: !osd._bottom
                 AnchorChanges { target: stack; anchors.top: parent.top; anchors.bottom: undefined }
-                PropertyChanges { stack.anchors.topMargin: 6; stack.anchors.bottomMargin: 0 }
+                PropertyChanges { stack.anchors.topMargin: 8; stack.anchors.bottomMargin: 0 }
             },
             State {
                 name: "bottom"
                 when: osd._bottom
                 AnchorChanges { target: stack; anchors.top: undefined; anchors.bottom: parent.bottom }
-                PropertyChanges { stack.anchors.topMargin: 0; stack.anchors.bottomMargin: 6 }
+                PropertyChanges { stack.anchors.topMargin: 0; stack.anchors.bottomMargin: 8 }
             }
         ]
 
@@ -79,10 +80,11 @@ PanelWindow {
                 required property int serial
                 required property var fillColor
 
-                readonly property int pillH: ShellSettings.osdMatchBar ? Math.max(28, ShellSettings.barHeight) : 34
+                readonly property int pillH: ShellSettings.osdMatchBar ? Math.max(28, ShellSettings.barHeight) : 36
                 readonly property int chromeW: hasBar ? 216 : 70
-                readonly property int pillW: Metrics.snap4(
-                    Math.max(268, Math.min(520, chromeW + Math.ceil(_labelMetrics.advanceWidth) + 2)))
+                // a multiple of 8 so centring on the screen leaves the left edge on the 4px grid
+                readonly property int pillW: 2 * Metrics.snap4(
+                    Math.max(268, Math.min(520, chromeW + Math.ceil(_labelMetrics.advanceWidth) + 2)) / 2)
                 readonly property real pillRadius: ShellSettings.osdMatchBar
                     ? Math.min(ShellSettings.barRadius, pillH / 2)
                     : Math.min(Theme.radiusPanel, pillH / 2)
@@ -216,6 +218,8 @@ PanelWindow {
 
                         OutlineBorder {
                             radius: _osdPillFill.radius
+                            // two device pixels at 1.25: one reads as a broken hairline over whatever is behind a floating card
+                            outlineWidth: 1.5
                             outlineColor: _osdPillFill._outlineColor
                             MotionBehavior on outlineColor {ColorAnimation { duration: Motion.medium } }
                         }

@@ -18,9 +18,12 @@ Singleton {
         node: root.sink
         enabled: Pipewire.ready
     }
+    signal micMutedExternally()
+
     readonly property PwVolumeControl _in: PwVolumeControl {
         node: root.source
         enabled: Pipewire.ready
+        onMutedExternally: root.micMutedExternally()
     }
 
     readonly property bool ready: _out.ready
@@ -37,9 +40,51 @@ Singleton {
     // icon name and form factor live on the device, not the node, and a bluez sink carries
     // neither: the node name and its description are all there is to go on. Any Bluetooth
     // audio sink reads as a headset, since nothing on the node separates one from a speaker
-    function deviceClass(node): string {
+    readonly property var _linkGroups: Pipewire.linkGroups ? (Pipewire.linkGroups.values || []) : []
+
+    function _isVirtual(props): bool {
+        const v = props["node.virtual"]
+        return v === true || String(v) === "true"
+    }
+
+    // a combine sink, loopback or filter chain feeds devices through its own streams, which share its node.group
+    function _fedDevices(node, links): var {
+        const props = node.properties || ({})
+        const group = String(props["node.group"] || props["node.link-group"] || "")
+        const out = []
+        if (group.length === 0) return out
+        for (let i = 0; i < links.length; i++) {
+            const src = links[i] ? links[i].source : null
+            const dst = links[i] ? links[i].target : null
+            if (!src || !dst || src === node || dst === node || dst.isStream) continue
+            const p = src.properties || ({})
+            if (String(p["node.group"] || p["node.link-group"] || "") === group) out.push(dst)
+        }
+        return out
+    }
+
+    // only routing visible here (a node.group shared with its streams) can be said to reach no device;
+    // a sink fed by another process, like an equalizer app, is never flagged
+    function feedsNothing(node, links): bool {
+        if (!node) return false
+        const props = node.properties || ({})
+        if (!root._isVirtual(props)) return false
+        if (String(props["node.group"] || props["node.link-group"] || "").length === 0) return false
+        return root._fedDevices(node, links || root._linkGroups).length === 0
+    }
+
+    function deviceClass(node, links, depth): string {
         if (!node) return ""
         const props = node.properties || ({})
+        // a virtual sink is named by its config ("Combined Headphones"), not by what is plugged in
+        if (root._isVirtual(props)) {
+            const level = depth || 0
+            if (level > 3) return "speaker"
+            const fed = root._fedDevices(node, links || root._linkGroups)
+            for (let i = 0; i < fed.length; i++)
+                if (root.deviceClass(fed[i], links, level + 1) === "headset") return "headset"
+            return "speaker"
+        }
         const stated = (String(props["device.form-factor"] || "") + " "
             + String(props["device.icon-name"] || "")).toLowerCase()
         if (stated.indexOf("headset") >= 0 || stated.indexOf("headphone") >= 0) return "headset"
@@ -183,6 +228,10 @@ Singleton {
         const out = []
         if (root.sink) out.push(root.sink)
         if (root.source) out.push(root.source)
+        // a handful of device nodes; untracked, the output list cannot tell a virtual sink by its properties
+        const devices = root.sinks
+        for (let i = 0; i < devices.length; i++)
+            if (devices[i] !== root.sink) out.push(devices[i])
         const play = root._outputStreams
         for (let i = 0; i < play.length; i++) out.push(play[i])
         const cap = root._inputStreams

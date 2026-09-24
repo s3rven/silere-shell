@@ -13,6 +13,7 @@ Singleton {
     property real diskUsedKb: 0
     property real diskTotalKb: 0
     property real cpuPct: 0
+    property bool cpuReady: false
     property real _lastCpuTotal: 0
     property real _lastCpuIdle: 0
 
@@ -42,6 +43,7 @@ Singleton {
     function _activate(): void {
         if (_active) return
         _active = true
+        cpuReady = false
         _refreshFast()
         _refreshSlow()
         // cpuPct is a delta between two /proc/stat reads; without a quick second sample the tile shows the last session's figure
@@ -52,6 +54,7 @@ Singleton {
         _startDelay.stop()
         _cpuPrime.stop()
         _active = false
+        cpuReady = false
         _lastCpuTotal = 0
         _lastCpuIdle = 0
         if (_slowProc.running) _slowProc.running = false
@@ -143,6 +146,7 @@ Singleton {
                 const dTotal = total - root._lastCpuTotal
                 const dIdle  = idle  - root._lastCpuIdle
                 root.cpuPct = Math.max(0, Math.min(1, (dTotal - dIdle) / dTotal))
+                root.cpuReady = true
             }
             root._lastCpuTotal = total
             root._lastCpuIdle  = idle

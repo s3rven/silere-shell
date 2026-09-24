@@ -39,7 +39,7 @@ Pill {
         onWheel: (event) => {
             event.accepted = true
             if (!Audio.ready) return
-            const n = Scroll.processControlWheel(event, "audio")
+            const n = Scroll.processLevelWheel(event, "audio")
             if (n !== 0) Audio.bumpBy(n * Audio.stepPct)
         }
     }

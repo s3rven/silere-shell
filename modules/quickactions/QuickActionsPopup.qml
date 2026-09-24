@@ -213,7 +213,8 @@ PanelWindow {
                 glyph: PowerProfiles.glyph.length > 0 ? PowerProfiles.glyph : "󰾅"
                 label: "Power Mode"
                 active: PowerProfiles.profile === "performance"
-                stateText: PowerProfiles.label.length > 0 ? PowerProfiles.label
+                stateText: PowerProfiles.lastError.length > 0 ? "Failed"
+                         : PowerProfiles.label.length > 0 ? PowerProfiles.label
                          : PowerProfiles.syncing ? "Checking…" : "…"
                 onTriggered: PowerProfiles.cycle()
             }
