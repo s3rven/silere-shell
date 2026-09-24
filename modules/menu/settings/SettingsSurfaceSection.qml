@@ -39,17 +39,6 @@ Column {
                     ? ShellSettings.barHeight / 2 : Metrics.barRowHeight / 2) ? "Round"
                 : ShellSettings.barRadius + "px"
         }
-        SliderRow {
-            glyph: "󰗌"; label: "Opacity"
-            key: "barOpacity"
-            step: 0.02
-            displayValue: Math.round(Theme.panelOpacity * 100) + "%"
-        }
-        ToggleRow {
-            glyph: "󱡓"; label: "Popups match bar opacity"
-            description: "Notifications, calendar, tray and quick actions"
-            key: "popupMatchBarOpacity"
-        }
     }
 
     SectionLabel { label: "FLOATING" }

@@ -93,7 +93,8 @@ MenuRow {
         width: Math.max(Math.ceil(_vm.advanceWidth), Math.ceil(implicitWidth))
         horizontalAlignment: Text.AlignRight
         text:           root.displayValue
-        color:          Theme.withAlpha(Theme.text, 0.58)
+        color:          _track.dragging ? Theme.accent : Theme.withAlpha(Theme.text, 0.58)
+        ColorFade on color {}
         font.pixelSize: Settings.fontLabel
         font.weight:    Font.DemiBold
     }
@@ -102,7 +103,8 @@ MenuRow {
         id: _track
         anchors.left:         parent.left
         anchors.right:        parent.right
-        anchors.leftMargin:   _head.x + _label.x
+        // spans the glyph column too, so both ends sit the same distance from the card edge
+        anchors.leftMargin:   _head.x
         anchors.rightMargin:  12
         anchors.bottom:       parent.bottom
         anchors.bottomMargin: 4

@@ -22,8 +22,8 @@ Column {
         || ShellSettings.underlineNetGlow
         || (Battery.available && ShellSettings.underlineBattGlow)
         || (!CpuTemp.sensorMissing && ShellSettings.underlineTempGlow)
-        || ShellSettings.underlineScreenshotGlow
-        || ShellSettings.mediaProgress
+        || (SystemTools.hasInotifywait && !Screenshot.watcherRetired
+            && ShellSettings.underlineScreenshotGlow)
 
     function _setScreenshotStyle(style) {
         ShellSettings.batch(() => {
@@ -50,27 +50,19 @@ Column {
             ShellSettings.underlineLastStyle = next
             ShellSettings.barBorderVisible = next === "static"
             ShellSettings.underlineGlow = next === "glow"
-            if (next === "glow" && !ShellSettings.underlineIdleGlow
-                    && !ShellSettings.underlineNotifGlow
-                    && !ShellSettings.underlineBattGlow
-                    && !ShellSettings.underlineNetGlow
-                    && !ShellSettings.underlineTempGlow
-                    && !ShellSettings.underlineScreenshotGlow) {
+            if (next === "glow" && !root._hasReactiveSource) {
                 ShellSettings.underlineNotifGlow = true
                 ShellSettings.underlineNetGlow = true
             }
         })
     }
 
-    // pairs with EVENTS below: both headings appear together, so a lone card is never labelled
-    CollapsibleSection {
-        expanded: ShellSettings.underlineGlow
-        SectionLabel { label: "APPEARANCE"; first: true }
-    }
+    SectionLabel { label: "APPEARANCE"; first: true }
 
     SettingsCard {
         ToggleRow {
             glyph: "󰍴"; label: "Underline"
+            description: "A line along the bar that can glow on events"
             checked: root._enabled
             onToggled: nextChecked => root._setEnabled(nextChecked)
         }

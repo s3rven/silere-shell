@@ -6,7 +6,7 @@ Column {
     width: parent ? parent.width : 0
     spacing: 0
 
-    SectionLabel { label: "CONTENT"; first: true }
+    SectionLabel { label: "WINDOW TITLE"; first: true }
     SettingsCard {
         ToggleRow {
             glyph: "󰦩"; label: "Window title"
@@ -22,38 +22,13 @@ Column {
         }
     }
 
-    SectionLabel { label: "INTERACTION" }
+    SectionLabel { label: "STATUS" }
     SettingsCard {
         ToggleRow {
-            glyph: "󰍽"; label: "Hover highlight"
-            key: "barHoverHighlight"
-        }
-        ToggleRow {
-            glyph: "󰈈"; label: "Reveal values on hover"
-            key: "valuesOnHover"
-        }
-        CollapsibleSection {
-            expanded: ShellSettings.valuesOnHover
-            ToggleRow {
-                glyph: "󰡵"; label: "Compact level bars"
-                checked: ShellSettings.hoverLevelBar
-                description: "Keep levels visible"
-                onToggled: nextChecked => ShellSettings.hoverLevelBar = nextChecked
-            }
-        }
-    }
-
-    SectionLabel { label: "BATTERY"; visible: Battery.available }
-    SettingsCard {
-        visible: Battery.available
-        ToggleRow {
+            visible: Battery.available
             glyph: "󱟢"; label: "Hide charged battery"
             key: "batteryAutoHide"
         }
-    }
-
-    SectionLabel { label: "NETWORK" }
-    SettingsCard {
         ToggleRow {
             glyph: "󰓅"; label: "Network speed"
             checked: ShellSettings.networkTrafficStats
@@ -74,6 +49,27 @@ Column {
             available: Network.toolAvailable
             dependsNote: "No NetworkManager"
             onToggled: nextChecked => ShellSettings.netVpnShowLink = nextChecked
+        }
+    }
+
+    SectionLabel { label: "HOVER" }
+    SettingsCard {
+        ToggleRow {
+            glyph: "󰍽"; label: "Hover highlight"
+            key: "barHoverHighlight"
+        }
+        ToggleRow {
+            glyph: "󰈈"; label: "Reveal values on hover"
+            key: "valuesOnHover"
+        }
+        CollapsibleSection {
+            expanded: ShellSettings.valuesOnHover
+            ToggleRow {
+                glyph: "󰡵"; label: "Level bars"
+                checked: ShellSettings.hoverLevelBar
+                description: "A slim bar while the value is hidden"
+                onToggled: nextChecked => ShellSettings.hoverLevelBar = nextChecked
+            }
         }
     }
 }

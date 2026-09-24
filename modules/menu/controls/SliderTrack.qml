@@ -26,7 +26,7 @@ Item {
 
     property real thumbWidth: 14
     property real thumbHeight: 14
-    property real railHeight: 8
+    property real railHeight: 6
 
     readonly property real _railInset: root.showThumb ? root.thumbWidth / 2 : 0
     readonly property real _railWidth: Math.max(1, root.width - root._railInset * 2)
@@ -140,7 +140,7 @@ Item {
         onCanceled:        root._shownValue = root.value
         onWheel: (wheel) => {
             if (root.wheelKey === "") { wheel.accepted = false; return }
-            const n = Scroll.processControlWheel(wheel, root.wheelKey)
+            const n = Scroll.processLevelWheel(wheel, root.wheelKey)
             if (n !== 0) root.nudge(n, 1)
         }
     }

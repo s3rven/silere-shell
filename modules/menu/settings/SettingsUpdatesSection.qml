@@ -255,53 +255,56 @@ Column {
 
     SectionLabel { label: "SYSTEM PACKAGES" }
     SettingsCard {
-        UpdateStatusCard {
-            animationActive: root.animationActive
-            glyph: Updates.isChecking ? "󰓦" : Updates.lastFailed ? "󰀦" : Updates.icon
-            title: "Packages"
-            status: Updates.statusText
-            meta: Updates.managerLabel
-            detail: Updates.lastFailed ? Updates.lastError
-                : Updates.aurCount > 0
-                    ? Updates.repoCount + " from repos, " + Updates.aurCount + " from the AUR"
-                        + (Updates.lastCheckLabel.length > 0 ? " · " + Updates.lastCheckLabel : "")
-                    : Updates.lastCheckLabel
-            detailError: Updates.lastFailed
-            statusColor: Updates.lastFailed ? Theme.warning
-                : Updates.isChecking ? Theme.accent
-                : Updates.enabled && Updates.ready && Updates.count === 0 ? Theme.success
-                : Updates.count > 0 ? Theme.accent : Theme.subtext
-            busy: Updates.isChecking
-
-            primaryLabel: !SystemTools.ready ? "Detecting…"
-                : !Updates.supported ? "Unavailable"
-                : !ShellSettings.updatesWidget ? "Off"
-                : Updates.isChecking ? "Checking…" : "Check"
-            primaryGlyph: "󰓦"
-            primaryEnabled: SystemTools.ready && Updates.supported
-                && ShellSettings.updatesWidget && !Updates.isChecking
-            onPrimaryTriggered: Updates.refresh()
-        }
-        ControlRow {
-            glyph: "󰏗"
-            title: "Pending packages"
-            valueText: Updates.packages.length < Updates.count
-                ? Updates.packages.length + " of " + Updates.count : String(Updates.count)
-            visible: root._packagesAvailable
-            expandable: true
-            expanded: root._listOpen && root._packagesAvailable
-            onExpandToggled: root._listOpen = !root._listOpen
-            onActivated: root._listOpen = !root._listOpen
-        }
         CollapsibleSection {
-            expanded: root._listOpen && root._packagesAvailable
-            EntryList {
-                model: root._listOpen && root._packagesAvailable
-                    ? Updates.packages : []
-                textRole: "name"
-                trailingRole: "to"
-                emphasisRole: "aur"
-                trailingSuffix: "AUR"
+            expanded: ShellSettings.updatesWidget
+            UpdateStatusCard {
+                animationActive: root.animationActive
+                glyph: Updates.isChecking ? "󰓦" : Updates.lastFailed ? "󰀦" : Updates.icon
+                title: "Packages"
+                status: Updates.statusText
+                meta: Updates.managerLabel
+                detail: Updates.lastFailed ? Updates.lastError
+                    : Updates.aurCount > 0
+                        ? Updates.repoCount + " from repos, " + Updates.aurCount + " from the AUR"
+                            + (Updates.lastCheckLabel.length > 0 ? " · " + Updates.lastCheckLabel : "")
+                        : Updates.lastCheckLabel
+                detailError: Updates.lastFailed
+                statusColor: Updates.lastFailed ? Theme.warning
+                    : Updates.isChecking ? Theme.accent
+                    : Updates.enabled && Updates.ready && Updates.count === 0 ? Theme.success
+                    : Updates.count > 0 ? Theme.accent : Theme.subtext
+                busy: Updates.isChecking
+
+                primaryLabel: !SystemTools.ready ? "Detecting…"
+                    : !Updates.supported ? "Unavailable"
+                    : !ShellSettings.updatesWidget ? "Off"
+                    : Updates.isChecking ? "Checking…" : "Check"
+                primaryGlyph: "󰓦"
+                primaryEnabled: SystemTools.ready && Updates.supported
+                    && ShellSettings.updatesWidget && !Updates.isChecking
+                onPrimaryTriggered: Updates.refresh()
+            }
+            ControlRow {
+                glyph: "󰏗"
+                title: "Pending packages"
+                valueText: Updates.packages.length < Updates.count
+                    ? Updates.packages.length + " of " + Updates.count : String(Updates.count)
+                visible: root._packagesAvailable
+                expandable: true
+                expanded: root._listOpen && root._packagesAvailable
+                onExpandToggled: root._listOpen = !root._listOpen
+                onActivated: root._listOpen = !root._listOpen
+            }
+            CollapsibleSection {
+                expanded: root._listOpen && root._packagesAvailable
+                EntryList {
+                    model: root._listOpen && root._packagesAvailable
+                        ? Updates.packages : []
+                    textRole: "name"
+                    trailingRole: "to"
+                    emphasisRole: "aur"
+                    trailingSuffix: "AUR"
+                }
             }
         }
         ToggleRow {

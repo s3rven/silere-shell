@@ -63,6 +63,12 @@ MenuRow {
         && _labelRow.neededW > root._inlineLabelW
 
     readonly property int _activeIndex: root.model.findIndex(o => o.value === root.currentValue)
+    // travels by chip, not pixels, so a relayout moves it with the chips instead of chasing them
+    property real _slot: Math.max(0, root._activeIndex)
+    on_ActiveIndexChanged: if (root._activeIndex >= 0) root._slot = root._activeIndex
+    MotionBehavior on _slot {
+        SpringAnimation { spring: 4.4; damping: 0.62; epsilon: 0.002 }
+    }
 
     height: root._stacked ? root._stackedH : root._inlineH
     // the settings pane width animates when the nav rail expands, and crossing the
@@ -191,13 +197,13 @@ MenuRow {
                         scale: _tap.pressed ? Motion.pressScale
                             : _hover.hovered ? Motion.hoverScale : 1.0
                         transformOrigin: Item.Center
-                        // ghost: the selected chip carries only its accent outline, so the resting fill belongs to the unselected ones
+                        // the gliding selection carries the selected look, so this only adds hover and press
                         color: _option.active
                             ? (_tap.pressed
-                                ? Theme.withAlpha(root.accentColor, 0.13)
+                                ? Theme.withAlpha(root.accentColor, 0.075)
                                 : _hover.hovered
-                                    ? Theme.withAlpha(root.accentColor, 0.09)
-                                    : Theme.withAlpha(root.accentColor, 0.055))
+                                    ? Theme.withAlpha(root.accentColor, 0.035)
+                                    : "transparent")
                             : Theme.buttonFill(root.accentColor,
                                 _hover.hovered, _tap.pressed)
                         ColorFade on color {}
@@ -213,7 +219,7 @@ MenuRow {
                             radius: _surface.radius
                             outlineWidth: 1
                             outlineColor: _option.active
-                                    ? Theme.controlLineActive(root.accentColor)
+                                    ? "transparent"
                                     : Theme.buttonLine(root.accentColor,
                                         _hover.hovered, _tap.pressed)
                             ColorFade on outlineColor {}
@@ -262,6 +268,26 @@ MenuRow {
                     }
 
                 }
+            }
+        }
+
+        Rectangle {
+            id: _selection
+            readonly property int _cell: Math.round(root._slot)
+            x: root._slot * (_choiceGroup.cellW + root._chipGap)
+                + Math.min(root._slot, _choiceGroup.cellRemainder)
+            width: _choiceGroup.cellW + (_cell < _choiceGroup.cellRemainder ? 1 : 0)
+            height: parent.height
+            radius: Theme.radiusField
+            antialiasing: true
+            visible: root._activeIndex >= 0
+            color: Theme.withAlpha(root.accentColor, 0.055)
+
+            OutlineBorder {
+                radius: _selection.radius
+                outlineWidth: 1
+                outlineColor: Theme.controlLineActive(root.accentColor)
+                ColorFade on outlineColor {}
             }
         }
     }

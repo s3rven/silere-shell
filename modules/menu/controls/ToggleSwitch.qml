@@ -51,13 +51,16 @@ Item {
         Rectangle {
             id: _knob
             anchors.verticalCenter: parent.verticalCenter
-            width: 14
+            // a held knob stretches toward where it will travel; its outer edge stays pinned
+            width: root.pressed ? 19 : 14
             height: 14
             radius: 4
             antialiasing: true
             x: root.checked ? parent.width - width - 3 : 3
-            scale: root.pressed ? 0.90
-                : root.highlighted ? 1.04 : 1.0
+            scale: root.highlighted && !root.pressed ? 1.04 : 1.0
+            MotionBehavior on width {
+                NumberAnimation { duration: Motion.press; easing.type: Easing.OutCubic }
+            }
             color: Theme.controlKnobFill(root.accentColor, root.checked,
                 root.highlighted, root.pressed)
 

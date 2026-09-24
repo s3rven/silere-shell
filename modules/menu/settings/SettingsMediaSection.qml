@@ -9,7 +9,8 @@ Column {
     SectionLabel { label: "NOW PLAYING"; first: true }
     SettingsCard {
         ToggleRow {
-            glyph: "󰎇"; label: "Artist and title"
+            glyph: "󰎇"; label: "Artist"
+            description: "Shown before the track title"
             checked: ShellSettings.mediaWidgetFormat === "artist-title"
             onToggled: nextChecked => ShellSettings.mediaWidgetFormat =
                 nextChecked ? "artist-title" : "title"

@@ -45,6 +45,39 @@ Item {
         return it.children ? it.children : [it]
     }
 
+    readonly property var _flatLeaves: {
+        const out = []
+        const tree = MenuState.settingsTree
+        for (let g = 0; g < tree.length; g++) {
+            const leaves = root._leaves(tree[g])
+            for (let j = 0; j < leaves.length; j++)
+                out.push({ group: g, row: j, section: leaves[j].section })
+        }
+        return out
+    }
+    readonly property int _activeOrdinal: root._flatLeaves.findIndex(
+        leaf => leaf.section === MenuState.settingsSection)
+    readonly property bool _selectionShown: root._activeOrdinal >= 0
+        && root._isExpanded(root._flatLeaves[root._activeOrdinal].group)
+    property int _groupItemsVersion: 0
+
+    function _leafTop(ordinal: int): real {
+        // a fresh drawer knows its section before the repeater builds that group, so fall back to computed geometry
+        void root._groupItemsVersion
+        const leaf = root._flatLeaves[ordinal]
+        if (!leaf) return root._navTop
+        const grp = _groupRepeater.itemAt(leaf.group)
+        const groupTop = grp ? _groupColumn.y + grp.y : root._groupY(leaf.group)
+        return groupTop + root._groupH + root._childrenPad
+            + leaf.row * (root._navRowH + root._navRowGap)
+    }
+    function _slotTop(slot: real): real {
+        const s = Math.max(0, Math.min(root._flatLeaves.length - 1, slot))
+        const lo = Math.floor(s)
+        const a = root._leafTop(lo)
+        return a + (root._leafTop(Math.ceil(s)) - a) * (s - lo)
+    }
+
     function _groupIndexForSection(section: string): int {
         const tree = MenuState.settingsTree
         for (let i = 0; i < tree.length; i++) {
@@ -313,6 +346,16 @@ Item {
                 }
             }
 
+            RailSelection {
+                id: _selection
+                x: _groupColumn.x + 6
+                width: _groupColumn.width - 6
+                index: root._activeOrdinal
+                rowHeight: root._navRowH
+                rowTop: root._slotTop(_selection.slot)
+                shown: root.active && root._selectionShown
+            }
+
             Column {
                 id: _groupColumn
                 x: 6
@@ -323,6 +366,7 @@ Item {
                 Repeater {
                     id: _groupRepeater
                     model: MenuState.settingsTree
+                    onItemAdded: root._groupItemsVersion++
 
                     delegate: Item {
                         id: _grp
@@ -351,9 +395,9 @@ Item {
                                     : _headerHover.hovered
                                     ? Theme.withAlpha(Theme.text, 0.035) : "transparent")
                                 : _grp.expanded
-                                    ? Theme.withAlpha(Theme.accent,
-                                        _headerTap.pressed ? 0.13
-                                            : _headerHover.hovered ? 0.075 : 0.035)
+                                    ? (_headerTap.pressed ? Theme.withAlpha(Theme.accent, 0.12)
+                                        : _headerHover.hovered
+                                        ? Theme.withAlpha(Theme.text, 0.035) : "transparent")
                                     : Theme.mix(Theme.menuControl, Theme.accent,
                                         ShellSettings.highContrast
                                             ? (_headerTap.pressed ? 0.30
@@ -365,7 +409,7 @@ Item {
                             Accessible.name: _grp.modelData.label
                             Accessible.description: _grp.expanded ? "Expanded" : "Collapsed"
                             Accessible.focusable: true
-                            Accessible.selected: _grp.groupActive
+                            Accessible.selected: _grp.groupActive && !_grp.expanded
                             Accessible.onPressAction: root._toggleGroup(_grp.index)
 
                             HoverHandler {
@@ -395,8 +439,8 @@ Item {
                                     ? Theme.withAlpha(Theme.menuTextMuted,
                                         _headerHover.hovered ? 0.88 : 0.62)
                                     : _grp.expanded
-                                        ? Theme.withAlpha(Theme.mix(
-                                            Theme.menuTextMuted, Theme.accent, 0.34), 0.96)
+                                        ? Theme.withAlpha(Theme.menuTextMuted,
+                                            _headerHover.hovered ? 0.88 : 0.76)
                                         : Theme.withAlpha(Theme.mix(
                                             Theme.text, Theme.accent, 0.22), 0.98)
                                 font.pixelSize: Settings.fontCaption
@@ -488,13 +532,11 @@ Item {
                                         height: root._navRowH
                                         radius: Theme.radiusInline
                                         antialiasing: true
+                                        // the gliding selection underneath carries the resting fill and outline
                                         color: _leaf.active
                                             ? Theme.withAlpha(Theme.accent,
-                                                ShellSettings.highContrast
-                                                    ? (_leafTap.pressed ? 0.27
-                                                        : _leafHover.hovered ? 0.20 : 0.14)
-                                                    : (_leafTap.pressed ? 0.16
-                                                        : _leafHover.hovered ? 0.115 : 0.075))
+                                                _leafTap.pressed ? 0.09
+                                                    : _leafHover.hovered ? 0.04 : 0)
                                             : _leafTap.pressed
                                                 ? Theme.withAlpha(Theme.accent, 0.12)
                                             : _leafHover.hovered

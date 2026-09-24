@@ -61,8 +61,8 @@ Singleton {
 
     function historyViewportFor(available: real, wanted: real): int {
         const limit = Math.max(1, snap4Down(available))
-        return Math.min(limit, Math.max(rowHeightFor(276),
-            Math.min(rowHeightFor(480), snap4Up(Math.max(0, wanted)))))
+        return Math.min(limit, Math.max(rowHeightFor(416),
+            Math.min(rowHeightFor(640), snap4Up(Math.max(0, wanted)))))
     }
 
     // fixed icon cell: Nerd glyph ink spans 0.64-1.08x the px size, so a natural-width slot shoves the row on every glyph swap

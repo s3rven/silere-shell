@@ -96,8 +96,6 @@ Column {
                 readonly property real _curSat: _satMemo
                 // the hue rail must stay readable at zero intensity, where the colour is grey
                 readonly property real _railC: Math.max(_satMemo * _accentCMax, 20)
-                // line the rails up with the swatch run, not the viewport that scrolls it
-                readonly property int _railX: 12 + _swatchRow.edgePadding
 
                 readonly property var _options:
                     [{ auto: true, custom: false, color: "", name: "Auto" }]
@@ -246,7 +244,6 @@ Column {
                         id: _stripCol
                         width: parent.width
                         topPadding: 4
-                        spacing: 4
                         opacity: _accentPicker._customOpen ? 1.0 : 0.0
                         MotionBehavior on opacity {
                             NumberAnimation {
@@ -255,56 +252,38 @@ Column {
                             }
                         }
 
-                        Item {
-                            width: parent.width
-                            height: Metrics.rowHeightFor(28)
-                            GradientSlider {
-                                id: _hueStrip
-                                x: _accentPicker._railX
-                                width: Math.max(1, parent.width - _accentPicker._railX * 2)
-                                anchors.verticalCenter: parent.verticalCenter
-                                accessibleName: "Accent hue"
-                                accessibleValueText: Math.round(
-                                    _accentPicker._curHue * 360) + " degrees"
-                                position: _accentPicker._curHue
-                                thumbColor: _accentPicker._curColor
-                                trackGradient: Gradient {
-                                    orientation: Gradient.Horizontal
-                                    GradientStop { position: 0.000; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC,   0) }
-                                    GradientStop { position: 0.167; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC,  60) }
-                                    GradientStop { position: 0.333; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC, 120) }
-                                    GradientStop { position: 0.500; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC, 180) }
-                                    GradientStop { position: 0.667; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC, 240) }
-                                    GradientStop { position: 0.833; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC, 300) }
-                                    GradientStop { position: 1.000; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC, 360) }
-                                }
-                                onPicked: hue => _accentPicker._writeStrips(hue, _accentPicker._satMemo)
+                        GradientSliderRow {
+                            label: "Hue"
+                            displayValue: Math.round(_accentPicker._curHue * 360) % 360 + "°"
+                            position: _accentPicker._curHue
+                            thumbColor: _accentPicker._curColor
+                            trackGradient: Gradient {
+                                orientation: Gradient.Horizontal
+                                GradientStop { position: 0.000; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC,   0) }
+                                GradientStop { position: 0.167; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC,  60) }
+                                GradientStop { position: 0.333; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC, 120) }
+                                GradientStop { position: 0.500; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC, 180) }
+                                GradientStop { position: 0.667; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC, 240) }
+                                GradientStop { position: 0.833; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC, 300) }
+                                GradientStop { position: 1.000; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._railC, 360) }
                             }
+                            onPicked: hue => _accentPicker._writeStrips(hue, _accentPicker._satMemo)
                         }
 
-                        Item {
-                            width: parent.width
-                            height: Metrics.rowHeightFor(28)
-                            GradientSlider {
-                                id: _satStrip
-                                x: _accentPicker._railX
-                                width: Math.max(1, parent.width - _accentPicker._railX * 2)
-                                anchors.verticalCenter: parent.verticalCenter
-                                accessibleName: "Accent intensity"
-                                accessibleValueText: Math.round(
-                                    _accentPicker._curSat * 100) + "%"
-                                position: _accentPicker._curSat
-                                thumbColor: _accentPicker._curColor
-                                wraps: false
-                                displayScale: 100
-                                wheelKey: "accent-chroma"
-                                trackGradient: Gradient {
-                                    orientation: Gradient.Horizontal
-                                    GradientStop { position: 0.0; color: Theme.lchColor(_accentPicker._accentL, 0, _accentPicker._curHue * 360) }
-                                    GradientStop { position: 1.0; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._accentCMax, _accentPicker._curHue * 360) }
-                                }
-                                onPicked: sat => _accentPicker._writeStrips(_accentPicker._hueMemo, sat)
+                        GradientSliderRow {
+                            label: "Intensity"
+                            displayValue: Math.round(_accentPicker._curSat * 100) + "%"
+                            position: _accentPicker._curSat
+                            thumbColor: _accentPicker._curColor
+                            wraps: false
+                            displayScale: 100
+                            wheelKey: "accent-chroma"
+                            trackGradient: Gradient {
+                                orientation: Gradient.Horizontal
+                                GradientStop { position: 0.0; color: Theme.lchColor(_accentPicker._accentL, 0, _accentPicker._curHue * 360) }
+                                GradientStop { position: 1.0; color: Theme.lchColor(_accentPicker._accentL, _accentPicker._accentCMax, _accentPicker._curHue * 360) }
                             }
+                            onPicked: sat => _accentPicker._writeStrips(_accentPicker._hueMemo, sat)
                         }
                     }
                 }
@@ -345,7 +324,7 @@ Column {
 
             ToggleRow {
                 glyph: "󰆖"; label: "Balance accent"
-                description: "Match the custom presets' weight"
+                description: "Even out loud or dull wallpaper accents"
                 key: "matugenAccentBalance"
             }
         }
@@ -382,6 +361,17 @@ Column {
 
     SectionLabel { label: "SURFACES" }
     SettingsCard {
+        SliderRow {
+            glyph: "󰗌"; label: "Bar opacity"
+            key: "barOpacity"
+            step: 0.02
+            displayValue: Math.round(Theme.panelOpacity * 100) + "%"
+        }
+        ToggleRow {
+            glyph: "󱡓"; label: "Popups match bar opacity"
+            description: "Notifications, calendar, tray and quick actions"
+            key: "popupMatchBarOpacity"
+        }
         SliderRow {
             glyph: "󰃇"; label: "Outline strength"
             key: "outlineStrength"

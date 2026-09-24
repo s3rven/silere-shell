@@ -194,7 +194,10 @@ Column {
             primaryLabel: root._healthBusy ? "Refreshing" : "Refresh"
             primaryGlyph: "󰑐"
             primaryEnabled: !root._healthBusy
-            onPrimaryTriggered: SystemTools.refresh()
+            onPrimaryTriggered: {
+                SystemTools.refresh()
+                FontScan.scan(true)
+            }
         }
     }
 
@@ -250,11 +253,10 @@ Column {
         }
     }
 
-    SectionLabel { label: "LOCK SCREEN" }
+    SectionLabel { label: "PROGRAMS" }
     SettingsCard {
         SelectRow {
-            glyph: "󰌾"; label: "Lock with"
-            description: "Program that locks"
+            glyph: "󰌾"; label: "Screen lock"
             currentValue: ShellSettings.lockProvider
             model: root._lockChoices
             onChosen: (v) => ShellSettings.lockProvider = v
@@ -269,13 +271,8 @@ Column {
                 && Settings.lockCommand.length === 0
             text: "The chosen lock program is not installed, so the lock action stays off."
         }
-    }
-
-    SectionLabel { label: "NIGHT LIGHT" }
-    SettingsCard {
         SelectRow {
-            glyph: "󰖙"; label: "Warm with"
-            description: "Program that warms"
+            glyph: "󰖙"; label: "Night light"
             currentValue: ShellSettings.nightLightProvider
             model: root._nightLightChoices
             onChosen: (v) => ShellSettings.nightLightProvider = v

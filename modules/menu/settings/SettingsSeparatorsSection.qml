@@ -19,8 +19,13 @@ Column {
         }
     }
 
-    SectionLabel { label: "LAYOUT"; first: true }
+    SectionLabel { label: "GAPS"; first: true }
     SettingsCard {
+        SliderRow {
+            glyph: "󰤼"; label: "Spacing"
+            key: "barSpacing"
+            displayValue: ShellSettings.barSpacing + "px"
+        }
         ToggleRow {
             glyph: "󰡍"; label: "Compact spacing"
             description: "Reduce widget padding and gaps"
@@ -38,11 +43,6 @@ Column {
             glyph: "󰉠"; label: "Center between widgets"
             description: "Balance the middle zone between both sides"
             key: "barCenterInGap"
-        }
-        SliderRow {
-            glyph: "󰤼"; label: "Spacing"
-            key: "barSpacing"
-            displayValue: ShellSettings.barSpacing + "px"
         }
     }
 

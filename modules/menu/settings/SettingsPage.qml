@@ -25,6 +25,7 @@ PageShell {
     // so the first transition fades out content that was already replaced
     Component.onCompleted: root._shownSection = MenuState.settingsSection
     property bool _awaitingSectionEnter: false
+    property int _sectionDirection: 1
     signal sectionSwapped()
 
     function dismissInline(): bool {
@@ -123,6 +124,10 @@ PageShell {
                     root._settleSection()
                     return
                 }
+                const sections = MenuState._flatSections
+                const from = sections.indexOf(root._shownSection)
+                const to = sections.indexOf(MenuState.settingsSection)
+                root._sectionDirection = from >= 0 && to >= 0 && to < from ? -1 : 1
                 root._awaitingSectionEnter = false
                 _sectionEnterDefer.stop()
                 _detailEnter.stop()
@@ -132,13 +137,16 @@ PageShell {
 
         SequentialAnimation {
             id: _detailSwap
-            NumberAnimation { target: _detail; property: "opacity"; to: 0.0; duration: Motion.pageOut; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standardAccel }
+            ParallelAnimation {
+                NumberAnimation { target: _detail; property: "opacity"; to: 0.0; duration: Motion.pageOut; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standardAccel }
+                NumberAnimation { target: _detail; property: "_shift"; to: -Motion.pageOffset * root._sectionDirection; duration: Motion.pageOut; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standardAccel }
+            }
             ScriptAction {
                 script: {
                     root._awaitingSectionEnter = true
                     root._holdBodyHeight()
                     root._shownSection = MenuState.settingsSection
-                    _detail._shift = Motion.pageOffset
+                    _detail._shift = Motion.pageOffset * root._sectionDirection
                     root.sectionSwapped()
                     _sectionEnterDefer.restart()
                 }
@@ -184,7 +192,7 @@ PageShell {
             width: parent.width
             readonly property real _mainH: Math.max(30, _hdrText.implicitHeight)
             readonly property real _contentBottom: _hdrError.visible
-                ? _mainH + 4 + _hdrError.implicitHeight
+                ? _mainH + 8 + _hdrError.height
                 : _mainH
             height: 4 * Math.ceil((_contentBottom + 4) / 4)
             readonly property var _meta: root._sectionMeta[root._shownSection]
@@ -235,16 +243,44 @@ PageShell {
                 }
             }
 
-            ShellText {
+            Rectangle {
                 id: _hdrError
                 visible: ShellSettings.settingsError.length > 0
-                anchors.left: _hdrText.left
-                anchors.right: parent.right
-                y: _detailHeader._mainH + 4
-                text: ShellSettings.settingsError
-                color: Theme.warning
-                font.pixelSize: Settings.fontMicro
-                elide: Text.ElideRight
+                x: 0
+                y: _detailHeader._mainH + 8
+                width: parent.width
+                height: _errorText.implicitHeight + 16
+                radius: Theme.radiusInline
+                color: Theme.withAlpha(Theme.warning, 0.08)
+
+                OutlineBorder {
+                    radius: _hdrError.radius
+                    outlineColor: Theme.withAlpha(Theme.warning, 0.24)
+                }
+
+                ShellText {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 10
+                    anchors.top: parent.top
+                    anchors.topMargin: 8
+                    text: "󰀦"
+                    color: Theme.warning
+                    font.pixelSize: Settings.fontCaption
+                }
+
+                ShellText {
+                    id: _errorText
+                    anchors.left: parent.left
+                    anchors.leftMargin: 30
+                    anchors.right: parent.right
+                    anchors.rightMargin: 10
+                    anchors.top: parent.top
+                    anchors.topMargin: 8
+                    text: ShellSettings.settingsError
+                    wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                    color: Theme.warning
+                    font.pixelSize: Settings.fontCaption
+                }
             }
         }
 

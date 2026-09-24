@@ -80,12 +80,12 @@ Column {
             expanded: ShellSettings.dndSchedule
             SliderRow {
                 glyph: "󰃰"; label: "From"
-                displayValue: (ShellSettings.dndFrom < 10 ? "0" : "") + ShellSettings.dndFrom + ":00"
+                displayValue: DateTime.hourText(ShellSettings.dndFrom)
                 key: "dndFrom"
             }
             SliderRow {
                 glyph: "󰃰"; label: "To"
-                displayValue: (ShellSettings.dndTo < 10 ? "0" : "") + ShellSettings.dndTo + ":00"
+                displayValue: DateTime.hourText(ShellSettings.dndTo)
                 key: "dndTo"
             }
             HintText {

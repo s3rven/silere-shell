@@ -12,6 +12,7 @@ Column {
     spacing: 0
 
     readonly property bool _hasBrightnessChoice: Brightness.devices.length > 1
+        || ShellSettings.brightnessDevice.length > 0
     readonly property bool _hasMultiScreen: Quickshell.screens.length > 1
     readonly property bool _hasRouting: _hasBrightnessChoice || _hasMultiScreen
 
@@ -119,7 +120,8 @@ Column {
                 expanded: root._hasBrightnessChoice
                 SelectRow {
                     glyph: "󰃟"; label: "Brightness display"
-                    currentValue: Brightness.deviceChoice
+                    currentValue: ShellSettings.brightnessDevice
+                    fallbackLabel: ShellSettings.brightnessDevice + " (unavailable)"
                     model: Brightness.deviceChoices
                     onChosen: (v) => ShellSettings.brightnessDevice = v
                 }

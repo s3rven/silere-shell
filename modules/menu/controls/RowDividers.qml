@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import "../../../config"
 
 Repeater {
@@ -8,6 +9,7 @@ Repeater {
 
     required property Item column
     property color lineColor: Theme.menuDivider
+    readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
 
     function present(item): bool {
         if (!item) return false
@@ -48,7 +50,7 @@ Repeater {
         width: root.column
             ? Math.max(0, root.column.width - 28)
             : 0
-        height: 1
+        height: Math.max(1, Math.ceil(root._dpr - 0.5)) / root._dpr
         opacity: row
             ? Math.min(1, Math.max(0, (row.height - 4) / 20)) * Math.min(1, row.opacity * 2)
             : 0

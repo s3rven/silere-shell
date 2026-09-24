@@ -52,6 +52,24 @@ Item {
     height: _rightListTop + _rightCount * _rowH + _rightPad + _bottomPad
     implicitHeight: height
 
+    function _noteFor(key: string): string {
+        switch (key) {
+        case "battery":
+            if (Battery.upowerReady && !Battery.available) return "No battery"
+            return ShellSettings.batteryAutoHide ? "When unplugged" : ""
+        case "bluetooth":
+            return Bluetooth.available ? "" : "No adapter"
+        case "brightness":
+            if (!SystemTools.ready || Brightness.controllable) return ""
+            return Brightness.toolAvailable ? "No backlight" : "No brightnessctl"
+        case "microphone": return "While in use"
+        case "media": return "While playing"
+        case "shellUpdate":
+        case "updates": return "When pending"
+        }
+        return ""
+    }
+
     function _locate(key: string): var {
         if (root._draggingKey.length === 0) return ShellSettings.barWidgetLocate(key)
         return root._previewLayout.loc[key] ?? ({ zone: "", index: -1 })
@@ -253,8 +271,9 @@ Item {
             id: _zoneHeader
             required property int index
             readonly property string zone: root._zones[index]
-            readonly property int count: zone === "left" ? root._leftCount
-                : zone === "center" ? root._centerCount : root._rightCount
+            readonly property var keys: zone === "left" ? root._leftKeys
+                : zone === "center" ? root._centerKeys : root._rightKeys
+            readonly property int shown: keys.filter(k => ShellSettings.barWidgetConfiguredVisible(k)).length
             readonly property bool hot: root._dragZone === zone
 
             x: 0
@@ -272,7 +291,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 text: (_zoneHeader.zone === "left" ? "Left"
                     : _zoneHeader.zone === "center" ? "Center" : "Right")
-                    + " · " + _zoneHeader.count
+                    + " · " + _zoneHeader.shown + " shown"
                 color: _zoneHeader.hot
                     ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.54)
                 font.pixelSize: Settings.fontMicro
@@ -328,6 +347,7 @@ Item {
             readonly property bool dragging: root._draggingKey === key
             readonly property bool hasToggle: meta.setting.length > 0
             readonly property bool checked: ShellSettings.barWidgetConfiguredVisible(key)
+            readonly property string note: checked ? root._noteFor(key) : ""
 
             x: 4
             width: root.width - 8
@@ -396,14 +416,24 @@ Item {
             ShellText {
                 anchors.left: _glyph.right
                 anchors.leftMargin: 10
-                anchors.right: _dragGrip.left
-                anchors.rightMargin: 4
+                anchors.right: _note.left
+                anchors.rightMargin: _note.text.length > 0 ? 8 : 0
                 anchors.verticalCenter: parent.verticalCenter
                 text: _row.meta.label
                 elide: Text.ElideRight
                 color: _row.checked ? Theme.text : Theme.withAlpha(Theme.text, 0.48)
                 font.pixelSize: Settings.fontSize
                 ColorFade on color {}
+            }
+
+            ShellText {
+                id: _note
+                anchors.right: _dragGrip.left
+                anchors.rightMargin: 4
+                anchors.verticalCenter: parent.verticalCenter
+                text: _row.note
+                color: Theme.menuTextDetail
+                font.pixelSize: Settings.fontCaption
             }
 
             ShellText {
@@ -431,6 +461,7 @@ Item {
 
                 Accessible.role: Accessible.CheckBox
                 Accessible.name: _row.meta.label
+                Accessible.description: _row.note
                 Accessible.checked: _row.checked
                 Accessible.focusable: true
                 Accessible.onToggleAction: _toggleTap.activate()

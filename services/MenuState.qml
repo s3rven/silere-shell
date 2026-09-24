@@ -58,11 +58,13 @@ AnchoredPopupState {
     // settings surface and ask the previous row to fold before the next opens.
     property var _settingsSelectOwner: null
     readonly property bool settingsSelectOpen: _settingsSelectOwner !== null
+    signal settingsSelectClaimed()
     function claimSettingsSelect(owner): void {
         if (!owner || _settingsSelectOwner === owner) return
         const previous = _settingsSelectOwner
         if (previous) previous._setOpen(false)
         _settingsSelectOwner = owner
+        root.settingsSelectClaimed()
     }
     function releaseSettingsSelect(owner): void {
         if (_settingsSelectOwner === owner) _settingsSelectOwner = null
@@ -78,13 +80,13 @@ AnchoredPopupState {
     readonly property var settingsTree: [
         { glyph: "󰉦", label: "Appearance", children: [
             { glyph: "󰉦", label: "Theme",       section: "theme",
-              description: "Colors, accent, and outlines" },
+              description: "Colors, opacity, and outlines" },
             { glyph: "󰍉", label: "Interface", section: "interface",
               description: "Font, scale, contrast, motion, and displays" }
         ]},
         { glyph: "󰕮", label: "Bar", children: [
             { glyph: "󰍹", label: "Layout",    section: "surface",
-              description: "Bar position, size, shape, and opacity" },
+              description: "Bar position, size, and shape" },
             { glyph: "󰍴", label: "Underline", section: "underline",
               description: "Line and event glow" },
             { glyph: "󰻂", label: "Spacing",   section: "separators",
@@ -96,7 +98,7 @@ AnchoredPopupState {
             { glyph: "󰕰", label: "Workspaces", section: "workspaces",
               description: "Markers, labels, and app icons" },
             { glyph: "󰅐", label: "Clock",      section: "clock",
-              description: "Date and time" },
+              description: "Date, time, and calendar" },
             { glyph: "󰝚", label: "Media",      section: "media",
               description: "Track details and visualizer" },
             { glyph: "󰈈", label: "Indicators", section: "indicators",

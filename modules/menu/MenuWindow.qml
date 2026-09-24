@@ -102,7 +102,7 @@ PanelWindow {
         readonly property int _compactW: 400
         readonly property int _powerW: 568
         readonly property int _settingsW: 632 + _typeGain
-        readonly property int _recentBaseW: 460 + _typeGain
+        readonly property int _recentBaseW: 492 + _typeGain
         readonly property int _recentW: _recentBaseW + _navMaxW + 12
         readonly property bool _settingsNavVisible:
             activeTab === 1 && !powerOpen
@@ -156,7 +156,7 @@ PanelWindow {
                 Metrics.snap4(12 + (width - _compactW) * 8 / (_settingsW - _compactW))))
             : _railExpanded && width >= 460 ? 18 : 12
         readonly property int innerW: Math.max(1, contentW - contentPad * 2)
-        readonly property int idealMinH: activeTab === 2 ? 300 : 360
+        readonly property int idealMinH: activeTab === 2 ? 440 : 360
         readonly property int minRailFitH: 252
         readonly property int pageTopInset: 12
         readonly property int pageBottomInset: 12
@@ -464,17 +464,6 @@ PanelWindow {
                     color: Theme.menuPane
                 }
 
-                Hairline {
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.bottom: parent.bottom
-                    vertical: true
-                    // the expanded drawer is declared later, so keep the rail edge above its surface instead of letting it paint over it
-                    z: 20
-                    color: Theme.menuDivider
-                    ColorFade on color {}
-                }
-
                 Rectangle {
                     x: panel.railCollapsedW
                     width: Math.max(0, parent.width - x)
@@ -579,6 +568,26 @@ PanelWindow {
                 onTriggered: if (_railSettings.hovered) panel.warmSettings()
             }
 
+            Rectangle {
+                id: _railSelection
+                // strip order is Home, Notifications, Settings; tabs are numbered 0, 2, 1
+                readonly property int _slotIndex: panel.activeTab === 2 ? 1
+                    : panel.activeTab === 1 ? 2 : 0
+                property real _slot: _slotIndex
+                on_SlotIndexChanged: _slot = _slotIndex
+                MotionBehavior on _slot { SpringAnimation { spring: 4.4; damping: 0.62; epsilon: 0.002 } }
+                x: _railNav.x + (panel.railCollapsedW - width) / 2
+                y: _railNav.y + (_railHome.height - height) / 2
+                    + _slot * (_railHome.height + _railNav.spacing)
+                width: 30; height: 30; radius: 9
+                antialiasing: true
+                color: Theme.menuControl
+                OutlineBorder {
+                    radius: _railSelection.radius
+                    outlineColor: Theme.menuControlLine
+                }
+            }
+
             Column {
                 id: _railNav
                 width: panel.railCollapsedW
@@ -589,6 +598,7 @@ PanelWindow {
                 RailNavItem {
                     id: _railHome
                     labels: _railLabels
+                    glidingSelection: true
                     railW: panel.railCollapsedW
                     glyph: "󰋜"
                     label: "Home"
@@ -601,6 +611,7 @@ PanelWindow {
                 RailNavItem {
                     id: _railRecent
                     labels: _railLabels
+                    glidingSelection: true
                     railW: panel.railCollapsedW
                     glyph: "󰋚"
                     label: "Notifications"
@@ -645,6 +656,7 @@ PanelWindow {
                 RailNavItem {
                     id: _railSettings
                     labels: _railLabels
+                    glidingSelection: true
                     railW: panel.railCollapsedW
                     glyph: "󰒓"
                     label: "Settings"
@@ -747,8 +759,52 @@ PanelWindow {
                     else if (contentY < 0) contentY = 0
                 }
 
+                function revealSettingsSelect(): void {
+                    const row = MenuState._settingsSelectOwner
+                    if (!row || !panel.open || panel.activeTab !== 1) return
+                    // a list taller than the viewport keeps its header in view, not its end
+                    const top = row.mapToItem(contentFlick.contentItem, 0, 0).y
+                    const bottom = top + row.height
+                    const margin = 8
+                    let target = contentY
+                    if (row.height + margin * 2 > height)
+                        target = top - margin
+                    else if (top - margin < target)
+                        target = top - margin
+                    else if (bottom + margin > target + height)
+                        target = bottom + margin - height
+                    contentY = Math.max(0,
+                        Math.min(Math.max(0, contentHeight - height), target))
+                }
+
+                Timer {
+                    id: _selectReveal
+                    interval: Motion.medium + 24
+                    onTriggered: contentFlick.revealSettingsSelect()
+                }
+
+                Connections {
+                    target: MenuState
+                    function onSettingsSelectClaimed() {
+                        if (panel.open && panel.activeTab === 1) {
+                            panel._armOuterHeightMotion()
+                            _selectReveal.restart()
+                        }
+                    }
+                    function onSettingsSelectOpenChanged() {
+                        if (!MenuState.settingsSelectOpen) {
+                            _selectReveal.stop()
+                            if (panel.activeTab === 1) panel._armOuterHeightMotion()
+                        }
+                    }
+                }
+
                 onContentHeightChanged: clampToContent()
-                onHeightChanged: clampToContent()
+                onHeightChanged: {
+                    clampToContent()
+                    if (MenuState.settingsSelectOpen && panel.activeTab === 1)
+                        _selectReveal.restart()
+                }
 
                 Item {
                     id: tabContent
@@ -912,6 +968,7 @@ PanelWindow {
                             RecentPage {
                                 width: parent.width
                                 viewportHeight: panel.recentViewportH
+                                thumbOutset: panel.contentPad
                                 onContentReadyChanged: panel._scheduleTabHeightRelease()
                                 active: panel.activeTab === 2 && MenuState.open
                                 powerOpen: panel.powerOpen
@@ -947,7 +1004,8 @@ PanelWindow {
 
         OutlineBorder {
             radius: panel.radius
-            outlineColor: Theme.outline
+            outlineColor: Theme.withAlpha(Theme.outline,
+                Math.min(1, Theme.outline.a * 1.35))
             z: 20
         }
     }

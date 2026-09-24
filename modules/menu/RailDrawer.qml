@@ -34,7 +34,6 @@ Item {
             easing.bezierCurve: root.slideCurve
         }
     }
-
     Loader {
         id: _loader
         anchors.fill: parent

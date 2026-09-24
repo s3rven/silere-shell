@@ -7,6 +7,7 @@ Rectangle {
 
     property color fillColor: Theme.accent
     property color outlineColor: "transparent"
+    property real outlineWidth: 1
     property bool hovered: false
     property bool pressed: false
     property bool hoverGrow: true
@@ -17,8 +18,9 @@ Rectangle {
     antialiasing: true
     color: root.fillColor
     // grow via scale, not width: a re-layouted odd width lands the centre on a half-pixel and the handle visibly shifts under fractional scaling
+    // a held handle lifts toward the finger rather than sinking under it
     scale: !root.hoverGrow ? 1.0
-         : root.pressed ? 0.92
+         : root.pressed ? 1.14
          : root.hovered ? 1.06 : 1.0
     transformOrigin: Item.Center
 
@@ -36,7 +38,7 @@ Rectangle {
     // Rectangle.border over-weights the corners and, on a scaled item, smears into a halo
     OutlineBorder {
         radius: root.radius
-        outlineWidth: 1
+        outlineWidth: root.outlineWidth
         outlineColor: root.outlineColor
         ColorFade on outlineColor { gate: root.animate }
     }

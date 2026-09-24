@@ -8,6 +8,9 @@ Item {
     property string glyph: ""
     property string label: ""
     property bool active: false
+    // the strip draws one shared selection that glides between items
+    property bool glidingSelection: false
+    readonly property bool _ownsActive: root.active && !root.glidingSelection
     property color accentColor: Theme.accent
     property int railW: 44
     // expanded drawers already provide their own labels. Keeping this tooltip open there paints it over the drawer's controls
@@ -72,8 +75,8 @@ Item {
         antialiasing: true
         color: _tap.pressed
             ? Theme.mix(Theme.menuControl, root.accentColor, 0.10)
-            : root.active ? Theme.menuControl
-            : root._hot ? Theme.withAlpha(Theme.text, 0.050) : "transparent"
+            : root._ownsActive ? Theme.menuControl
+            : root._hot && !root.active ? Theme.withAlpha(Theme.text, 0.050) : "transparent"
         scale: _tap.pressed ? 0.94 : (root.active || root._hot ? 1.0 : 0.90)
         transformOrigin: Item.Center
         ColorFade on color {}
@@ -81,8 +84,8 @@ Item {
 
         OutlineBorder {
             radius: _activeBg.radius
-            outlineColor: (root.active || _hover.hovered)
-                ? (root.active ? Theme.menuControlLine : Theme.menuControlLineHot)
+            outlineColor: root._ownsActive ? Theme.menuControlLine
+                : _hover.hovered && !root.active ? Theme.menuControlLineHot
                 : "transparent"
             ColorFade on outlineColor {}
         }

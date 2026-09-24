@@ -82,30 +82,50 @@ Item {
                     }
                 }
                 Rectangle {
-                    id: _ring
                     anchors.centerIn: parent
-                    width: _sw.active ? 28 : 22
+                    width: 22
                     height: width
                     radius: width / 2
                     antialiasing: true
                     color: "transparent"
 
-                    MotionBehavior on width {
-                        NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
-                    }
-
                     OutlineBorder {
-                        radius: _ring.radius
-                        outlineWidth: _sw.active ? 2 : 1
-                        outlineColor: _sw.active
-                            ? (root.ringColor.a > 0
-                                ? root.ringColor
-                                : Theme.mix(_sw.chipColor, Theme.text, 0.68))
-                            : Theme.withAlpha(Theme.subtext, 0.24)
-                        ColorFade on outlineColor {}
+                        radius: 11
+                        outlineWidth: 1
+                        outlineColor: Theme.withAlpha(Theme.subtext, 0.24)
                     }
                 }
             }
+        }
+    }
+
+    // travels by slot, not pixels: a relayout moves it with the swatches instead of chasing them
+    property real _slot: Math.max(0, root.activeIndex)
+    onActiveIndexChanged: if (root.activeIndex >= 0) root._slot = root.activeIndex
+    MotionBehavior on _slot {
+        SpringAnimation { spring: 4.4; damping: 0.62; epsilon: 0.002 }
+    }
+
+    Rectangle {
+        id: _selection
+        width: 28
+        height: width
+        radius: width / 2
+        antialiasing: true
+        color: "transparent"
+        x: _chipRow.x + root._slot * (26 + _chipRow.spacing) + 13 - width / 2
+        y: Math.round((root.height - height) / 2)
+        opacity: root.activeIndex >= 0 ? 1 : 0
+        MotionBehavior on opacity {
+            NumberAnimation { duration: Motion.fast }
+        }
+
+        OutlineBorder {
+            radius: _selection.radius
+            outlineWidth: 2
+            outlineColor: root.ringColor.a > 0 ? root.ringColor
+                : Theme.mix(root.colorAt(root.activeIndex), Theme.text, 0.68)
+            ColorFade on outlineColor {}
         }
     }
 }

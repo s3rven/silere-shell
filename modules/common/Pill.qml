@@ -12,6 +12,8 @@ Item {
     property color  glyphColor: Theme.text
     property color  textColor:  Theme.subtext
     property bool   interactive: false
+    // scroll-only: still a control under the pointer, but no button to a screen reader
+    property bool   adjustable: false
     property int    maxTextWidth: 150
     property bool   compact: ShellSettings.barCompact
     readonly property int horizontalPadding: Metrics.pillPadFor(compact)
@@ -349,7 +351,7 @@ Item {
         id: _pillHover
         enabled: root.hoverEnabled
         margin: 0
-        cursorShape: root.interactive ? Qt.PointingHandCursor : Qt.ArrowCursor
+        cursorShape: root.interactive || root.adjustable ? Qt.PointingHandCursor : Qt.ArrowCursor
         onHoveredChanged: {
             if (hovered) {
                 _hoverRevealTimer.restart()
