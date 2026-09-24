@@ -2,8 +2,8 @@ name: Stale
 
 on:
   schedule:
-    # daily; the action only ever touches issues carrying the needs-info label
-    - cron: "23 7 * * *"
+    # weekly, so each 6-day limit below lands on the next run; only needs-info issues are touched
+    - cron: "23 7 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -25,8 +25,8 @@ jobs:
         with:
           only-labels: needs-info
           exempt-issue-labels: bug,enhancement,documentation,help wanted
-          days-before-issue-stale: 7
-          days-before-issue-close: 7
+          days-before-issue-stale: 6
+          days-before-issue-close: 6
           remove-issue-stale-when-updated: true
           stale-issue-label: stale
           close-issue-reason: not_planned
