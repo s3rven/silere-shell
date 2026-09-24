@@ -115,6 +115,18 @@ for f, text in SOURCE.items():
                 bad.append(f"{f}:{line}: {name} has no "
                            f"on{handler.group(1)} to serve")
 
+# a misspelt singleton member reads as undefined, and neither the type-check nor the engine says so
+CODE = re.compile(r'//[^\n]*|"(?:\\.|[^"\\\n])*"|\'(?:\\.|[^\'\\\n])*\'')
+checked = {n: members(n) for n in singleton if rooted_in_singleton(n)}
+REF = re.compile(r'(?<![\w.])(%s)\.(\w+)' % '|'.join(sorted(checked)))
+for f, text in SOURCE.items():
+    code = CODE.sub('""', text)
+    for ref in REF.finditer(code):
+        name, member = ref.groups()
+        if f.rsplit('/', 1)[-1][:-4] != name and member not in checked[name]:
+            line = code[:ref.start()].count('\n') + 1
+            bad.append(f"{f}:{line}: {name} has no {member}")
+
 for b in sorted(bad):
     print("  " + b)
 sys.exit(1 if bad else 0)

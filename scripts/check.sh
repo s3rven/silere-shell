@@ -6,7 +6,10 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT/scripts/lib/xdg.sh"
 cd "$ROOT" || exit 1
 
-trap 'printf "\ninterrupted\n" >&2; exit 130' INT TERM
+_stop_jobs=1
+trap 'printf "\ninterrupted\n" >&2; exit 130' TERM
+# ctrl-c reaches every probe itself, and a second signal would cut its own cleanup short
+trap 'printf "\ninterrupted\n" >&2; _stop_jobs=0; exit 130' INT
 
 status=0
 warnings=0
@@ -21,6 +24,75 @@ ok() { printf 'ok   %-15s %s\n' "$1" "$2"; }
 info() { printf '     %-15s %s\n' "$1" "$2"; }
 warn() { printf 'warn %-15s %s\n' "$1" "$2"; warnings=$((warnings + 1)); }
 fail() { printf 'fail %-15s %s\n' "$1" "$2" >&2; status=1; }
+
+# a binary that cannot start still satisfies `command -v`; without this every probe below
+# fails describing whatever it was testing instead of the runtime that never ran
+qs_usable=0
+qs_probe=""
+if command -v qs >/dev/null 2>&1 && qs_probe="$(qs --version 2>&1)"; then
+  qs_usable=1
+fi
+
+# each probe runs its own qs under private config and runtime dirs, so they all run at once
+scratch="$(mktemp -d "${TMPDIR:-/tmp}/silere-check.XXXXXX")"
+_jobs=""
+_cleanup() {
+  local j p
+  for j in $_jobs; do
+    p="_pid_$j"
+    [ "$_stop_jobs" = 0 ] || kill "${!p}" 2>/dev/null || true
+    wait "${!p}" 2>/dev/null || true
+  done
+  rm -rf "$scratch"
+  return 0
+}
+trap _cleanup EXIT
+
+_start() { # $1 = job, $2 = script
+  if [ -f "$2" ]; then
+    # a background job starts with Ctrl-C ignored, and the probes clean up on it
+    ( trap - INT; exec bash "$2" ) >"$scratch/$1.out" 2>&1 &
+    printf -v "_pid_$1" '%s' "$!"
+    _jobs="$_jobs $1"
+  else
+    printf 'SKIP: %s missing\n' "$2" >"$scratch/$1.out"
+  fi
+}
+
+_join() { # $1 = job; sets job_out and job_code
+  local p="_pid_$1"
+  job_code=0
+  if [ -n "${!p:-}" ]; then
+    wait "${!p}" || job_code=$?
+    _jobs="${_jobs/ $1/}"
+  fi
+  job_out="$(cat "$scratch/$1.out")"
+}
+
+_report() { # $1 = job, $2 = label, $3 = failure, $4 = pattern for the ok line
+  if [ "$qs_usable" != 1 ]; then
+    warn "$2" "not run: Quickshell will not start"
+    return 0
+  fi
+  _join "$1"
+  if [ "$job_code" -ne 0 ]; then
+    printf '%s\n' "$job_out" | sed 's/^/       /'
+    fail "$2" "$3"
+  elif printf '%s\n' "$job_out" | grep -q '^SKIP'; then
+    warn "$2" "$(printf '%s\n' "$job_out" | sed -n 's/^SKIP: //p' | head -1)"
+  else
+    ok "$2" "$(printf '%s\n' "$job_out" | grep -oE "${4:-.+}" | tail -1)"
+  fi
+}
+
+_start lint scripts/ci-lint.sh
+if [ "$qs_usable" = 1 ]; then
+  _start logic scripts/test-logic.sh
+  _start surfaces scripts/test-surfaces.sh
+  _start panels scripts/test-panels.sh
+  _start mutate scripts/test-mutate.sh
+  _start fit scripts/test-layout-fit.sh
+fi
 
 section "versions"
 # reported, never judged: the dependency section below is what fails on a missing qs
@@ -73,18 +145,14 @@ else
 fi
 
 section "structural lint"
-if [ -f scripts/ci-lint.sh ]; then
-  lint_log="$(mktemp "${TMPDIR:-/tmp}/silere-ci-lint.XXXXXX.log")"
-  if bash scripts/ci-lint.sh >"$lint_log" 2>&1; then
-    ok "ci-lint" "structural checks passed"
-  else
-    status=1
-    fail "ci-lint" "structural checks failed"
-    cat "$lint_log"
-  fi
-  rm -f "$lint_log"
-else
+_join lint
+if [ ! -f scripts/ci-lint.sh ]; then
   info "ci-lint" "developer tooling, not in this install"
+elif [ "$job_code" -eq 0 ]; then
+  ok "ci-lint" "structural checks passed"
+else
+  fail "ci-lint" "structural checks failed"
+  printf '%s\n' "$job_out"
 fi
 
 section "dependencies"
@@ -122,13 +190,9 @@ optional_any_tool() {
   fi
 }
 
-# a binary that cannot start still satisfies `command -v`; without this every probe below
-# fails describing whatever it was testing instead of the runtime that never ran
-qs_usable=0
 if ! command -v qs >/dev/null 2>&1; then
   fail qs "Quickshell runtime is required but was not found in PATH"
-elif qs_probe="$(qs --version 2>&1)"; then
-  qs_usable=1
+elif [ "$qs_usable" = 1 ]; then
   ok qs "Quickshell runtime"
 else
   fail qs "Quickshell is installed but will not start: ${qs_probe%%$'\n'*}"
@@ -144,7 +208,7 @@ optional_tool pipewire "volume service"
 optional_tool wireplumber "PipeWire session manager"
 optional_tool upower "battery widget + warnings"
 optional_tool brightnessctl "brightness control + popup"
-optional_tool inotifywait "screenshot feedback"
+optional_tool inotifywait "screenshot feedback + Hyprland restart recovery"
 optional_tool nmcli "VPN name fallback"
 optional_tool cava "audio visualizer"
 optional_tool matugen "wallpaper-matched colors"
@@ -444,7 +508,7 @@ section "headless QML probe"
 ok "qml" "checking files; this can take a few seconds"
 # teed rather than captured: the probe streams progress over several seconds, and a
 # skip here still exits 0 while CI runs it under SILERE_REQUIRE_QML_TOOLS=1 and fails
-qml_log="$(mktemp "${TMPDIR:-/tmp}/silere-qml.XXXXXX.log")"
+qml_log="$scratch/qml.log"
 bash scripts/test-qml-headless.sh 2>&1 | tee "$qml_log"
 qml_code=${PIPESTATUS[0]}
 if [ "$qml_code" -ne 0 ]; then
@@ -452,27 +516,9 @@ if [ "$qml_code" -ne 0 ]; then
 elif grep -q '^SKIP' "$qml_log"; then
   warn "qml" "$(sed -n 's/^SKIP: //p' "$qml_log" | head -1)"
 fi
-rm -f "$qml_log"
 
 section "behavioral logic"
-if [ "$qs_usable" != 1 ]; then
-  warn "logic" "not run: Quickshell will not start"
-elif [ -f scripts/test-logic.sh ]; then
-  logic_out=""
-  if logic_out="$(bash scripts/test-logic.sh 2>&1)"; then
-    if printf '%s' "$logic_out" | grep -q '^SKIP'; then
-      warn "logic" "$(printf '%s' "$logic_out" | sed -n 's/^SKIP: //p' | head -1)"
-    else
-      ok "logic" "$logic_out"
-    fi
-  else
-    status=1
-    fail "logic" "behavioral probe failed"
-    printf '%s\n' "$logic_out"
-  fi
-else
-  fail "logic" "scripts/test-logic.sh missing"
-fi
+_report logic logic "behavioral probe failed"
 
 section "quickshell smoke"
 if [ "$qs_usable" = 1 ]; then
@@ -483,30 +529,113 @@ if [ "$qs_usable" = 1 ]; then
   elif ! _silere_timeout_kill_after_ok; then
     warn "startup" "timeout --kill-after unsupported; runtime smoke test skipped"
   else
-    smoke_log=""
-    par_dir=""
-    smoke_home=""
-    _smoke_cleanup() {
-      if [ -n "$smoke_log" ]; then rm -f "$smoke_log"; fi
-      # an interrupt leaves a whole fan-out of scratch configs behind, not just one
-      if [ -n "$par_dir" ]; then rm -rf "$par_dir"; fi
-      if [ -n "$smoke_home" ]; then rm -rf "$smoke_home"; fi
-      return 0
-    }
-    trap _smoke_cleanup EXIT
-
     code=0
-    smoke_log="$(mktemp "${TMPDIR:-/tmp}/silere-qs-smoke.XXXXXX.log")"
+    smoke_log="$scratch/smoke.log"
     # The real settings decide whether this installation starts, so the dwell runs on a
     # copy of them: a whole shell sitting at the live config writes its state files back,
     # and a checkout under test would rewrite notification history the user is still using.
-    smoke_home="$(mktemp -d "${TMPDIR:-/tmp}/silere-qs-smoke-cfg.XXXXXX")"
+    smoke_home="$scratch/smoke-cfg"
     mkdir -p "$smoke_home/silere-shell"
     if [ -n "$_cfg_home" ] && [ -d "$_cfg_home/silere-shell" ]; then
       cp -a "$_cfg_home/silere-shell/." "$smoke_home/silere-shell/" 2>/dev/null || true
     fi
-    XDG_CONFIG_HOME="$smoke_home" XDG_STATE_HOME="$smoke_home" timeout --kill-after=2s 5s qs -p shell.qml --no-color \
-      >"$smoke_log" 2>&1 || code=$?
+
+    # Every default-off setting gates a Loader, so the startup pass never loads those
+    # paths and the type-check cannot see a runtime-only error inside one. Load once
+    # more with them all on, in a scratch config so real settings stay untouched.
+    # nightLightAuto and neutralAccentAuto drive a gamma tool and matugen hooks;
+    # reduceMotion would zero the animations this is meant to instantiate.
+    cov_keys="$(sed -n 's/.*property bool[[:space:]]\{1,\}\([A-Za-z_][A-Za-z0-9_]*\)[[:space:]]*:[[:space:]]*false.*/\1/p' \
+      services/ShellSettings.qml \
+      | grep -vxE '_loaded|nightLightAuto|neutralAccentAuto|reduceMotion' || true)"
+
+    # Each case below is a whole shell that must sit at its config for the full dwell.
+    # They share nothing but the checkout, so they dwell at the same time rather than
+    # costing one 5s wait each.
+    par_dir="$scratch/par"
+    mkdir -p "$par_dir"
+    smoke_pids=""
+    _smoke_case() {
+      mkdir -p "$par_dir/$1/silere-shell"
+      printf '%s' "$2" > "$par_dir/$1/silere-shell/settings.json"
+      _case_code=0
+      XDG_CONFIG_HOME="$par_dir/$1" XDG_STATE_HOME="$par_dir/$1" timeout --kill-after=2s 5s qs -p shell.qml --no-color \
+        >"$par_dir/$1.log" 2>&1 || _case_code=$?
+      printf '%s' "$_case_code" > "$par_dir/$1.code"
+    }
+
+    # timeout above signals the whole group, which hides a helper that outlives the shell.
+    # This one signals qs alone, as a crash or a manual restart does, then looks for
+    # anything still carrying its tag.
+    _exit_case() {
+      mkdir -p "$par_dir/exit/silere-shell"
+      # the screenshot glow starts the second long-running watcher
+      printf '{"underlineGlow": true, "underlineScreenshotGlow": true}' \
+        > "$par_dir/exit/silere-shell/settings.json"
+      _tag="silere-exit-$$-$RANDOM$RANDOM"
+      _tagged() {
+        grep -lzxF "SILERE_EXIT_TAG=$_tag" /proc/[0-9]*/environ 2>/dev/null \
+          | sed 's#^/proc/##; s#/environ$##' || true
+      }
+      SILERE_EXIT_TAG="$_tag" XDG_CONFIG_HOME="$par_dir/exit" XDG_STATE_HOME="$par_dir/exit" \
+        qs -p shell.qml --no-color >"$par_dir/exit.log" 2>&1 &
+      _qs=$!
+      _i=0
+      while [ "$_i" -lt 20 ] && ! grep -q 'Configuration Loaded' "$par_dir/exit.log" 2>/dev/null; do
+        sleep 0.25; _i=$((_i + 1))
+      done
+      # the tool scan runs after load, and the watchers wait on it
+      sleep 2
+      _tagged | grep -vx "$_qs" | wc -l | tr -d ' ' > "$par_dir/exit.before"
+      kill -TERM "$_qs" 2>/dev/null || true
+      _i=0
+      while [ "$_i" -lt 12 ] && kill -0 "$_qs" 2>/dev/null; do sleep 0.25; _i=$((_i + 1)); done
+      kill -KILL "$_qs" 2>/dev/null || true
+      wait "$_qs" 2>/dev/null || true
+      sleep 0.5
+      : > "$par_dir/exit.left"
+      for _p in $(_tagged); do
+        printf '%s(%s) ' "$(cat "/proc/$_p/comm" 2>/dev/null || echo gone)" "$_p" >> "$par_dir/exit.left"
+        kill -KILL "$_p" 2>/dev/null || true
+      done
+    }
+    exit_probe=0
+    if printf 'a\0' | grep -qzx a 2>/dev/null && [ -r /proc/self/environ ]; then
+      exit_probe=1
+      _exit_case &
+      smoke_pids="$smoke_pids $!"
+    fi
+
+    if [ -n "$cov_keys" ]; then
+      _smoke_case cov "$({ printf '{\n'
+        printf '%s\n' "$cov_keys" | sed '$!s/.*/  "&": true,/; $s/.*/  "&": true/'
+        printf '}\n'; })" &
+      smoke_pids="$smoke_pids $!"
+    fi
+
+    # settings.json is hand-editable and the README says so, so a truncated or
+    # retyped file is a real user state, not a hypothetical. The loader must keep
+    # the shell up and leave a file it could not read alone.
+    bad_n=0
+    for _case in '{"barHeight": 3' '[1,2,3]' 'null' '' \
+      '{"barHeight":"tall","osdEnabled":42,"barPosition":"sideways"}' \
+      '{"__version":999,"unknownFutureKey":"keep","barHeight":40}'
+    do
+      bad_n=$((bad_n + 1))
+      printf '%s' "${_case:-<empty>}" > "$par_dir/bad$bad_n.desc"
+      _smoke_case "bad$bad_n" "$_case" &
+      smoke_pids="$smoke_pids $!"
+    done
+
+    # the startup dwell runs beside the cases below instead of ahead of them; they only
+    # report once it has passed, so a shell that cannot start still fails just once
+    ( _main_code=0
+      XDG_CONFIG_HOME="$smoke_home" XDG_STATE_HOME="$smoke_home" timeout --kill-after=2s 5s qs -p shell.qml --no-color \
+        >"$smoke_log" 2>&1 || _main_code=$?
+      printf '%s' "$_main_code" > "$scratch/smoke.code" ) &
+    smoke_pids="$smoke_pids $!"
+    wait $smoke_pids || true
+    code="$(cat "$scratch/smoke.code" 2>/dev/null || echo 1)"
     if [ "$code" -ne 0 ] && [ "$code" -ne 124 ]; then
       if grep -qE 'Failed to create wl_display|could not connect to display|no Qt platform plugin could be initialized' "$smoke_log"; then
         warn "startup" "display inaccessible; runtime smoke test skipped"
@@ -519,52 +648,9 @@ if [ "$qs_usable" = 1 ]; then
       fail "startup" "Quickshell reported a QML compatibility error"
     else
       ok "startup" "Quickshell stayed alive for 5 seconds without load errors"
-
-      # Every default-off setting gates a Loader, so the pass above never loads those
-      # paths and the type-check cannot see a runtime-only error inside one. Load once
-      # more with them all on, in a scratch config so real settings stay untouched.
-      # nightLightAuto and neutralAccentAuto drive a gamma tool and matugen hooks;
-      # reduceMotion would zero the animations this is meant to instantiate.
-      cov_keys="$(sed -n 's/.*property bool[[:space:]]\{1,\}\([A-Za-z_][A-Za-z0-9_]*\)[[:space:]]*:[[:space:]]*false.*/\1/p' \
-        services/ShellSettings.qml \
-        | grep -vxE '_loaded|nightLightAuto|neutralAccentAuto|reduceMotion' || true)"
-
-      # Each case below is a whole shell that must sit at its config for the full dwell.
-      # They share nothing but the checkout, so they dwell at the same time rather than
-      # costing one 5s wait each.
-      par_dir="$(mktemp -d "${TMPDIR:-/tmp}/silere-qs-par.XXXXXX")"
-      _smoke_case() {
-        mkdir -p "$par_dir/$1/silere-shell"
-        printf '%s' "$2" > "$par_dir/$1/silere-shell/settings.json"
-        _case_code=0
-        XDG_CONFIG_HOME="$par_dir/$1" XDG_STATE_HOME="$par_dir/$1" timeout --kill-after=2s 5s qs -p shell.qml --no-color \
-          >"$par_dir/$1.log" 2>&1 || _case_code=$?
-        printf '%s' "$_case_code" > "$par_dir/$1.code"
-      }
-
       if [ -z "$cov_keys" ]; then
         warn "off-path load" "no default-off settings found; coverage pass skipped"
       else
-        _smoke_case cov "$({ printf '{\n'
-          printf '%s\n' "$cov_keys" | sed '$!s/.*/  "&": true,/; $s/.*/  "&": true/'
-          printf '}\n'; })" &
-      fi
-
-      # settings.json is hand-editable and the README says so, so a truncated or
-      # retyped file is a real user state, not a hypothetical. The loader must keep
-      # the shell up and leave a file it could not read alone.
-      bad_n=0
-      for _case in '{"barHeight": 3' '[1,2,3]' 'null' '' \
-        '{"barHeight":"tall","osdEnabled":42,"barPosition":"sideways"}' \
-        '{"__version":999,"unknownFutureKey":"keep","barHeight":40}'
-      do
-        bad_n=$((bad_n + 1))
-        printf '%s' "${_case:-<empty>}" > "$par_dir/bad$bad_n.desc"
-        _smoke_case "bad$bad_n" "$_case" &
-      done
-      wait || true
-
-      if [ -n "$cov_keys" ]; then
         code="$(cat "$par_dir/cov.code" 2>/dev/null || echo 1)"
         if [ "$code" -ne 0 ] && [ "$code" -ne 124 ]; then
           cat "$par_dir/cov.log"
@@ -605,7 +691,22 @@ if [ "$qs_usable" = 1 ]; then
       else
         ok "bad settings" "$bad_n malformed settings files each left the shell running"
       fi
-      rm -rf "$par_dir"
+
+      if [ "$exit_probe" = 0 ]; then
+        warn "exit" "grep -z or /proc environ unavailable; leftover helper check skipped"
+      else
+        exit_left="$(cat "$par_dir/exit.left" 2>/dev/null || true)"
+        exit_before="$(cat "$par_dir/exit.before" 2>/dev/null || echo 0)"
+        if [ -n "$exit_left" ]; then
+          if command -v setpriv >/dev/null 2>&1; then
+            fail "exit" "helpers outlived a killed shell: $exit_left"
+          else
+            warn "exit" "helpers outlive a killed shell without setpriv (util-linux): $exit_left"
+          fi
+        else
+          ok "exit" "a killed shell took its $exit_before helper process(es) with it"
+        fi
+      fi
     fi
   fi
 else
@@ -615,82 +716,22 @@ fi
 section "surface build"
 # The passes above launch the shell but never open the menu, so no settings
 # section is ever built and a runtime-only error inside one stays invisible.
-if [ "$qs_usable" != 1 ]; then
-  warn "surfaces" "not run: Quickshell will not start"
-elif [ -f scripts/test-surfaces.sh ]; then
-  surf_code=0
-  surf_out="$(bash scripts/test-surfaces.sh 2>&1)" || surf_code=$?
-  if [ "$surf_code" -ne 0 ]; then
-    printf '%s\n' "$surf_out" | sed 's/^/       /'
-    fail "surfaces" "a settings section failed to build standalone"
-  elif printf '%s' "$surf_out" | grep -q '^SKIP'; then
-    warn "surfaces" "$(printf '%s' "$surf_out" | sed -n 's/^SKIP: //p' | head -1)"
-  else
-    ok "surfaces" "$(printf '%s' "$surf_out" | tail -1)"
-  fi
-else
-  warn "surfaces" "scripts/test-surfaces.sh missing; section build check skipped"
-fi
+_report surfaces surfaces "a settings section failed to build standalone"
 
 section "layer-shell build"
 # The surface pass above cannot reach these: every layer-shell root requires a
 # targetScreen, and a PanelWindow has no backend under the offscreen platform.
-if [ "$qs_usable" != 1 ]; then
-  warn "panels" "not run: Quickshell will not start"
-elif [ -f scripts/test-panels.sh ]; then
-  panel_code=0
-  panel_out="$(bash scripts/test-panels.sh 2>&1)" || panel_code=$?
-  if [ "$panel_code" -ne 0 ]; then
-    printf '%s\n' "$panel_out" | sed 's/^/       /'
-    fail "panels" "a layer-shell surface failed to build"
-  elif printf '%s' "$panel_out" | grep -q '^SKIP'; then
-    warn "panels" "$(printf '%s' "$panel_out" | sed -n 's/^SKIP: //p' | head -1)"
-  else
-    ok "panels" "$(printf '%s' "$panel_out" | tail -1)"
-  fi
-else
-  warn "panels" "scripts/test-panels.sh missing; layer-shell build check skipped"
-fi
+_report panels panels "a layer-shell surface failed to build"
 
 section "live settings changes"
 # Every pass above fixes the settings before the surface exists. A binding that
 # only breaks when the value changes under a built surface survives all of them.
-if [ "$qs_usable" != 1 ]; then
-  warn "mutate" "not run: Quickshell will not start"
-elif [ -f scripts/test-mutate.sh ]; then
-  mut_code=0
-  mut_out="$(bash scripts/test-mutate.sh 2>&1)" || mut_code=$?
-  if [ "$mut_code" -ne 0 ]; then
-    printf '%s\n' "$mut_out" | sed 's/^/       /'
-    fail "mutate" "a live settings change broke a surface"
-  elif printf '%s' "$mut_out" | grep -q '^SKIP'; then
-    warn "mutate" "$(printf '%s' "$mut_out" | sed -n 's/^SKIP: //p' | head -1)"
-  else
-    ok "mutate" "$(printf '%s' "$mut_out" | grep -oE 'swept .*' | tail -1)"
-  fi
-else
-  warn "mutate" "scripts/test-mutate.sh missing; live settings check skipped"
-fi
+_report mutate mutate "a live settings change broke a surface" 'swept .*'
 
 section "layout fit"
 # Building a section says nothing about whether its labels survive the width they
 # ship at; Qt elides them and reports success either way.
-if [ "$qs_usable" != 1 ]; then
-  warn "layout" "not run: Quickshell will not start"
-elif [ -f scripts/test-layout-fit.sh ]; then
-  fit_code=0
-  fit_out="$(bash scripts/test-layout-fit.sh 2>&1)" || fit_code=$?
-  if [ "$fit_code" -ne 0 ]; then
-    printf '%s\n' "$fit_out" | sed 's/^/       /'
-    fail "layout" "settings text is truncated at the shipped panel width"
-  elif printf '%s' "$fit_out" | grep -q '^SKIP'; then
-    warn "layout" "$(printf '%s' "$fit_out" | sed -n 's/^SKIP: //p' | head -1)"
-  else
-    ok "layout" "$(printf '%s' "$fit_out" | tail -1)"
-  fi
-else
-  warn "layout" "scripts/test-layout-fit.sh missing; label fit check skipped"
-fi
+_report fit layout "settings text is truncated at the shipped panel width"
 
 if [ "$status" -eq 0 ]; then
   printf '\nchecks passed (%d warning(s))\n' "$warnings"

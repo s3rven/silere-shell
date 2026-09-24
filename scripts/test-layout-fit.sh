@@ -53,8 +53,8 @@ fi
 list="$(find modules/menu/settings -name 'Settings*Section.qml' | sort)"
 [ -n "$list" ] || { echo "FAIL: no settings sections found" >&2; exit 1; }
 
-# The other tabs are narrower: 400 panel less the 44 rail and 12 of pad a side. The nav
-# column ships at its 160 cap. HomePage stays out on purpose — its status lines carry
+# The 332px RecentPage case is a narrow-screen stress check; the normal history pane is
+# wider. The nav column ships at its 160 cap. HomePage stays out on purpose — its status lines carry
 # network and device names from outside the shell, which are meant to elide.
 list="$list
 modules/menu/RecentPage.qml|332

@@ -16,7 +16,7 @@ set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT" || exit 1
 source "$ROOT/scripts/lib/qml-modules.sh"
-source "$ROOT/scripts/lib/xdg.sh"
+trap 'kill ${portability_pid:-} ${update_pid:-} 2>/dev/null; rm -f "${aur_srcinfo:-}" "${portability_log:-}" "${update_log:-}"' EXIT
 status=0
 seen_section=0
 section() {
@@ -48,10 +48,19 @@ structural_skip() {
 fail() { printf 'fail %s\n' "$*" >&2; status=1; }
 script_files=(scripts/*.sh scripts/silere scripts/lib/*.sh)
 
+# the two regression suites are over half of this lint's time and touch only their own
+# temp dirs, so they run beside every check below and report at the end
+portability_log="$(mktemp "${TMPDIR:-/tmp}/silere-portability.XXXXXX.log")"
+update_log="$(mktemp "${TMPDIR:-/tmp}/silere-update-test.XXXXXX.log")"
+bash scripts/test-portability.sh >"$portability_log" 2>&1 &
+portability_pid=$!
+bash scripts/test-update.sh >"$update_log" 2>&1 &
+update_pid=$!
+
 section "merge conflict markers"
 # grep, not git grep: this lint is also meant to work from a release archive or
 # any other plain source tree without repository metadata.
-if grep -rn -I -E '^(<<<<<<< |=======$|>>>>>>> )' --exclude-dir=.git . ; then
+if grep -rn -I -E '^(<<<<<<< |=======$|>>>>>>> )' --exclude-dir=.git --exclude-dir=.claude . ; then
   fail "conflict markers found"
 else
   ok "markers" "none"
@@ -135,9 +144,9 @@ section "invisible characters in source"
 # line renders in a review without changing what the engine runs. The tree accepts
 # outside pull requests, so the source has to hold the rule it applies to everyone else.
 if printf 'a\n' | grep -qP 'a' 2>/dev/null; then
-  bidi_hits="$(grep -rlP '[\x{202A}-\x{202E}\x{2066}-\x{2069}\x{200B}\x{200E}\x{200F}]' \
+  bidi_hits="$(grep -rlP '[\x{061C}\x{200B}\x{200E}\x{200F}\x{202A}-\x{202E}\x{2066}-\x{206F}]' \
     --include='*.qml' --include='*.sh' --include='*.md' --include='*.json' \
-    --include='*.yml' --include='*.toml' --exclude-dir=.git . 2>/dev/null || true)"
+    --include='*.yml' --include='*.toml' --exclude-dir=.git --exclude-dir=.claude . 2>/dev/null || true)"
   if [ -n "$bidi_hits" ]; then
     fail "these files carry bidi or zero-width characters; write them as \\uXXXX escapes:"
     while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$bidi_hits"
@@ -188,7 +197,7 @@ for pair in $shadow_pairs; do
     [ "$f" = "./services/$local_name.qml" ] && continue
     grep -qE '^import "(\.\./)*services"' "$f" \
       && shadowed="$shadowed  $f imports $module beside the services directory, shadowing $local_name"$'\n'
-  done < <(grep -rlF "import $module" --include='*.qml' . || true)
+  done < <(grep -rlF "import $module" --include='*.qml' --exclude-dir=.claude . || true)
 done
 if [ -n "$shadowed" ]; then
   fail "an external type would take a local singleton's name:"
@@ -295,7 +304,8 @@ if awk 'NF == 0 || /^#/ { next } \
         && $3 == "ssh-ed25519" && $4 ~ /^AAA[A-Za-z0-9+\/=]+$/ { valid++; next } \
         { bad=1 } END { exit bad || valid < 1 }' security/update-signers \
         && grep -qF 'verify-tag "$release_tag"' scripts/update.sh \
-        && grep -qF 'tag --merged origin/main' scripts/update.sh \
+        && grep -qF 'tag --merged refs/remotes/origin/main' scripts/update.sh \
+        && grep -qF -e "--prune origin main '+refs/tags/*:refs/tags/*'" scripts/update.sh \
         && grep -qF '_start_apply_transaction "$local_rev" "$remote_rev" "$release_tag"' scripts/update.sh \
         && grep -qF '_recover_interrupted_apply' scripts/update.sh \
         && grep -qF 'gpg.ssh.allowedSignersFile="$APPLY_TRUSTED_SIGNERS"' scripts/update.sh \
@@ -368,7 +378,7 @@ else
 fi
 
 section "public Quickshell imports"
-if grep -R -n -F 'import Quickshell.Wayland._' --include='*.qml' .; then
+if grep -R -n -F 'import Quickshell.Wayland._' --include='*.qml' --exclude-dir=.claude .; then
   fail "QML files must not import private Quickshell Wayland modules"
 else
   ok "Wayland" "public module only"
@@ -808,14 +818,15 @@ fi
 
 # A Connections handler naming a signal its target does not have is the same
 # silence one step further out: no type error, no runtime warning, and the
-# effect the handler was written for simply never happens. Only targets whose
-# whole chain is local files ending at Singleton are checked; anything rooted
-# in an external type inherits members this cannot see.
+# effect the handler was written for simply never happens. A misspelt singleton
+# member is the same again, read as undefined. Only targets whose whole chain is
+# local files ending at Singleton are checked; anything rooted in an external
+# type inherits members this cannot see.
 if command -v python3 >/dev/null 2>&1 && [ -f scripts/check-connections.py ]; then
   if orphan_handlers="$(python3 scripts/check-connections.py)"; then
-    ok "handlers" "every Connections handler matches a signal on its target"
+    ok "handlers" "every Connections handler and singleton member resolves"
   else
-    fail "these Connections handlers will never fire:"
+    fail "these name nothing on their singleton:"
     printf '%s\n' "$orphan_handlers"
   fi
 else
@@ -865,34 +876,12 @@ fi
 
 section "shellcheck"
 if command -v shellcheck >/dev/null 2>&1; then
-  # Warnings include mode/word-splitting mistakes that are real portability or
-  # permission bugs. Intentional sourced-library false positives are suppressed
-  # at their declaration so a new warning cannot disappear in the noise.
-  # one invocation, not per-file: shellcheck resolves assignments and uses across the
-  # whole set, so sharding it invents SC2154/SC2034 false positives. That pooling is
-  # superlinear — measured at 36s together against 6s of per-file work — so a pass is
-  # remembered against the exact bytes that earned it instead of being paid for again.
-  shellcheck_stamp=""
-  if [ -z "${CI:-}" ] && [ -z "${SILERE_NO_LINT_CACHE:-}" ] \
-      && command -v sha256sum >/dev/null 2>&1; then
-    shellcheck_cache="$(_silere_xdg_home "${XDG_CACHE_HOME:-}" .cache 2>/dev/null || true)"
-    [ -n "$shellcheck_cache" ] && shellcheck_stamp="$shellcheck_cache/silere-shell/shellcheck.stamp"
-  fi
-  shellcheck_key=""
-  if [ -n "$shellcheck_stamp" ]; then
-    shellcheck_key="$({ shellcheck --version; sha256sum "${script_files[@]}"; } \
-      | sha256sum | cut -d' ' -f1)"
-  fi
-  if [ -n "$shellcheck_key" ] && [ "$shellcheck_key" = "$(cat "$shellcheck_stamp" 2>/dev/null)" ]; then
-    ok "shellcheck" "unchanged since the last pass"
-  elif shellcheck --severity=warning "${script_files[@]}"; then
+  # per-file needs -x, or a sourced library's variables read as unassigned
+  if printf '%s\0' "${script_files[@]}" \
+      | xargs -0 -n1 -P"$(nproc 2>/dev/null || echo 4)" shellcheck -x --severity=warning; then
     ok "shellcheck"
-    if [ -n "$shellcheck_key" ] && mkdir -p "$(dirname "$shellcheck_stamp")" 2>/dev/null; then
-      printf '%s\n' "$shellcheck_key" > "$shellcheck_stamp" 2>/dev/null || true
-    fi
   else
     fail "shellcheck reported warnings"
-    [ -n "$shellcheck_stamp" ] && rm -f "$shellcheck_stamp" 2>/dev/null
   fi
 else
   structural_skip "shellcheck" "not installed"
@@ -1592,7 +1581,7 @@ theme_loader="config/MatugenPalette.qml"
 if [ -f "$theme_tmpl" ] && [ -f "$theme_loader" ]; then
     # Palette roles the shell actually reads. usingFallback and paletteStale describe
     # load state, not colours, so they have no template key to cover.
-    used=$(grep -rhoE 'MatugenTheme\.[a-zA-Z_][a-zA-Z0-9_]*' --include='*.qml' . \
+    used=$(grep -rhoE 'MatugenTheme\.[a-zA-Z_][a-zA-Z0-9_]*' --include='*.qml' --exclude-dir=.claude . \
            | sed 's/^MatugenTheme\.//' \
            | grep -vE '^(_|qml$|usingFallback$|paletteStale$)' | sort -u)
     theme_gap=0
@@ -1931,6 +1920,26 @@ else
   ok "give up" "every supervised process declares the exits it will not retry"
 fi
 
+section "monitor lifetime"
+# Quickshell kills only the process it started, and a signal to qs skips even that. A
+# monitor piped into a loop outlived every reload, and one left behind by a killed qs
+# waits for an event that may never come.
+monitor_lines="$(grep -rn 'inotifywait -m' --include='*.qml' services modules || true)"
+unexeced_monitors="$(printf '%s\n' "$monitor_lines" \
+  | grep -vE 'exec (\\"\$@\\" )?inotifywait -m' | sed '/^$/d' || true)"
+untied_monitors=""
+for f in $(printf '%s\n' "$monitor_lines" | cut -d: -f1 | sort -u); do
+  grep -q -- '--pdeathsig' "$f" || untied_monitors="$untied_monitors $f"
+done
+if [ -n "$unexeced_monitors" ]; then
+  fail "these monitors are not exec'd, so a reload leaves them running:"
+  while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$unexeced_monitors"
+elif [ -n "$untied_monitors" ]; then
+  fail "these monitors outlive a killed shell; exec them through setpriv --pdeathsig:$untied_monitors"
+else
+  ok "monitor lifetime" "every long-running monitor is exec'd and ends with the shell"
+fi
+
 section "settings row glyphs"
 # A card gives a toggle and the value it governs the same glyph on purpose, so an adjacent
 # repeat is deliberate pairing. A repeat with unrelated rows between them is two settings
@@ -2063,7 +2072,7 @@ section "row height derivation"
 # Metrics.rowHeightFor already snaps a design height to the 4px grid using the measured
 # base cap height. Hand-rolled "capHeight + 12" hardcodes a base of 20; the real one is
 # 16, so every copy came out 4px short of its neighbours above uiScale 1.0.
-row_formulas="$(grep -rln 'capHeight + 12' --include='*.qml' . || true)"
+row_formulas="$(grep -rln 'capHeight + 12' --include='*.qml' --exclude-dir=.claude . || true)"
 if [ -n "$row_formulas" ]; then
   fail "row heights must come from Metrics.rowHeightFor(design), not a hand-rolled cap height:"
   while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$row_formulas"
@@ -2111,18 +2120,23 @@ if [ "$grid_bad" -eq 0 ]; then
 fi
 
 section "portability regressions"
-portability_log="$(mktemp "${TMPDIR:-/tmp}/silere-portability.XXXXXX.log")"
-if { bash scripts/test-portability.sh && bash scripts/test-update.sh; } \
-        2>&1 | tee "$portability_log"; [ "${PIPESTATUS[0]}" -eq 0 ]; then
-  if grep -q '^SKIP' "$portability_log"; then
-    skip "portability" "$(sed -n 's/^SKIP: //p' "$portability_log" | head -1)"
+portability_code=0
+wait "$portability_pid" || portability_code=$?
+update_code=0
+wait "$update_pid" || update_code=$?
+portability_pid=""
+update_pid=""
+cat "$portability_log" "$update_log"
+if [ "$portability_code" -eq 0 ] && [ "$update_code" -eq 0 ]; then
+  if grep -q '^SKIP' "$portability_log" "$update_log"; then
+    skip "portability" "$(sed -n 's/^SKIP: //p' "$portability_log" "$update_log" | head -1)"
   else
     ok "portability"
   fi
 else
   fail "portability regression tests failed"
 fi
-rm -f "$portability_log"
+rm -f "$portability_log" "$update_log"
 
 if [ "$status" -eq 0 ]; then
   printf '\nlint passed\n'

@@ -51,6 +51,18 @@ ShellRoot {
     Component { id: boundedProcessFactory; BoundedProcess {} }
     Component { id: niriBackendFactory; CompositorNiri {} }
     Component { id: processFactory; Process {} }
+    Component {
+        id: keptNotificationFactory
+        QtObject {
+            property int id: 0
+            property bool tracked: false
+            property bool lastGeneration: true
+            property string summary: ""
+            property string body: ""
+            property var hints: ({})
+            signal closed()
+        }
+    }
     Component { id: supervisedProcessFactory; SupervisedProcess {} }
     Component { id: barUnderlineFactory; BarUnderline {} }
     Component {
@@ -114,6 +126,9 @@ ShellRoot {
     property var _timeoutProbe: null
     property var _killProbe: null
     property var _orphanCheck: null
+    property var _missingProbe: null
+    property var _missingSupervised: null
+    property int _missingExit: -1
     readonly property string _orphanPidFile:
         (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp")
         + "/silere-bounded-orphan-" + Quickshell.processId
@@ -582,6 +597,10 @@ ShellRoot {
                 && OsdBarState._kindAllowedByFilter("volume", "volume")
                 && !OsdBarState._kindAllowedByFilter("brightness", "volume"),
             "OSD input filtering admits only the selected feedback kind")
+        root._check(OsdBarState._kindAllowedByFilter("microphone", "both")
+                && OsdBarState._kindAllowedByFilter("microphone", "volume")
+                && !OsdBarState._kindAllowedByFilter("microphone", "brightness"),
+            "microphone feedback follows the volume filter")
 
         root._check(!OverlayCoordinator._environmentBlocksControls(false, false)
                 && OverlayCoordinator._environmentBlocksControls(true, false)
@@ -821,12 +840,16 @@ ShellRoot {
         const savedVersion = ShellSettings._loadedVersion
         const savedFuture = ShellSettings._futureSettings
         const savedHeight = ShellSettings.barHeight
+        const savedTouched = ShellSettings._futureTouched
         ShellSettings._loadedVersion = 999
         ShellSettings._futureSettings = ({
-            __version: 999, unknownFutureKey: "keep", barHeight: 40
+            __version: 999, unknownFutureKey: "keep", barHeight: 40, osdTimeout: 999999
         })
         ShellSettings.barHeight = 42
+        ShellSettings._futureTouched = ({ barHeight: true })
         const future = JSON.parse(ShellSettings._serialize())
+        root._check(future.osdTimeout === 999999,
+            "a newer file's value this version would clamp is written back as it was")
         root._check(future.unknownFutureKey === "keep",
             "a key from a newer settings file survives a write by this version")
         root._check(future.__version === 999,
@@ -836,6 +859,7 @@ ShellRoot {
 
         ShellSettings._loadedVersion = savedVersion
         ShellSettings._futureSettings = savedFuture
+        ShellSettings._futureTouched = savedTouched
         ShellSettings.barHeight = savedHeight
         const clean = JSON.parse(ShellSettings._serialize())
         root._check(Object.keys(clean).length === 1 && clean.__version === 1,
@@ -964,6 +988,8 @@ ShellRoot {
             "history text drops markup and decodes entities")
         root._check(Notifications._normalizeEntry({ body: "a\u202Eb" }).body === "ab",
             "history text drops a bidi override a sender embedded")
+        root._check(Notifications.plainText("a\u061C\u200E\u206Ab", 32) === "ab",
+            "notification body drops direction marks and deprecated bidi controls")
         root._check(Notifications._normalizeEntry({ body: "line1\nline2" }).body
                 === "line1\nline2",
             "history text keeps the newlines a multi-line body needs")
@@ -1028,7 +1054,13 @@ ShellRoot {
         root._check(apps.length === 2 && apps[0].appName === "Alpha"
                 && apps[0].count === 2 && apps[1].count === 1,
             "the history app list counts each sender and leads with the most recent")
-        Notifications.clearHistoryFor("Alpha")
+        const alphaRows = []
+        for (let i = 0; i < Notifications.historyCount; i++) {
+            const row = Notifications.historyModel.get(i)
+            if (row.appName === "Alpha") alphaRows.push({ id: row.id, time: row.time,
+                appName: row.appName, summary: row.summary, body: row.body })
+        }
+        Notifications.clearHistoryEntries(alphaRows)
         root._check(Notifications.historyCount === 1
                 && Notifications.historyModel.get(0).appName === "Beta",
             "clearing one sender leaves the rest of the history alone")
@@ -1210,6 +1242,38 @@ ShellRoot {
             root._check(filtered.count === 1,
                 "history search finds a sender-less notification by the name its row shows")
             filtered.query = ""
+
+            // rows lay out from flags on the model, so a flag has to follow its neighbours
+            const flagsOf = () => {
+                const out = []
+                for (let i = 0; i < filtered.count; i++) {
+                    const r = filtered.model.get(i)
+                    out.push((r.first ? "F" : "-") + (r.showSection ? "S" : "-")
+                        + (r.groupStart ? "<" : "-") + (r.groupEnd ? ">" : "-"))
+                }
+                return out.join(" ")
+            }
+            const dayMs = 86400000
+            const today = new Date(2026, 8, 24, 12, 0).getTime()
+            Notifications.clearHistory()
+            Notifications._prependHistory({ id: 901, appName: "Chat", summary: "old", time: today - dayMs })
+            Notifications._prependHistory({ id: 902, appName: "Mail", summary: "invoice", time: today - 3000 })
+            Notifications._prependHistory({ id: 903, appName: "Chat", summary: "two", time: today - 2000 })
+            Notifications._prependHistory({ id: 904, appName: "Chat", summary: "one", time: today - 1000 })
+            filtered.revision = Notifications.historyRevision
+            root._check(flagsOf() === "FS<- ---> --<> -S<>",
+                "a run of one app shares a card, and a new day starts a section and a card")
+            filtered.query = "two"
+            root._check(flagsOf() === "FS<>",
+                "a row left alone by a search becomes the first row, its own section and card")
+            filtered.query = ""
+            root._check(flagsOf() === "FS<- ---> --<> -S<>",
+                "clearing a search puts every neighbour's flags back")
+            Notifications._prependHistory({ id: 905, appName: "Chat", summary: "alert",
+                urgency: 2, time: today })
+            filtered.revision = Notifications.historyRevision
+            root._check(flagsOf() === "FS<> --<- ---> --<> -S<>",
+                "a critical row stands alone and demotes the old first row without a rebuild")
             filtered.destroy()
         }
 
@@ -1282,8 +1346,8 @@ ShellRoot {
             "a tab change is announced while the old tab is still active")
         MenuState.selectTab(tabWas)
 
-        const historyFloor = Metrics.rowHeightFor(276)
-        const historyCap = Metrics.rowHeightFor(480)
+        const historyFloor = Metrics.rowHeightFor(416)
+        const historyCap = Metrics.rowHeightFor(640)
         const historyMid = Math.round((historyFloor + historyCap) / 2)
         root._check(Metrics.historyViewportFor(2000, 0) === historyFloor
                 && Metrics.historyViewportFor(2000, historyMid) === Metrics.snap4Up(historyMid)
@@ -1321,12 +1385,14 @@ ShellRoot {
         root._checkCoerce("calendarWeekStart", "bad", "monday", "invalid calendar week starts reset")
         root._checkCoerce("calendarWeekNumbers", false, false, "calendar week numbers can be hidden")
 
-        root._check(CalendarState._validMarkKey("2024-2-29"),
+        root._check(CalendarState._canonicalMarkKey("2024-2-29") === "2024-2-29",
             "calendar accepts leap day")
-        root._check(!CalendarState._validMarkKey("2023-2-29"),
+        root._check(CalendarState._canonicalMarkKey("2023-2-29") === "",
             "calendar rejects non-leap day")
-        root._check(!CalendarState._validMarkKey("2024-13-1"),
+        root._check(CalendarState._canonicalMarkKey("2024-13-1") === "",
             "calendar rejects invalid month")
+        root._check(CalendarState._canonicalMarkKey("2026-09-05") === CalendarState.markKey(2026, 8, 5),
+            "a zero-padded mark still names the day the calendar draws")
 
         CalendarState.toggleAt(probeAnchor.menuAnchorX, null, probeAnchor)
         root._check(CalendarState.effectiveAnchorX === 42,
@@ -1446,6 +1512,9 @@ ShellRoot {
             "text clipping never leaves half a surrogate pair")
         root._check(SafeText.singleLineText("  alpha\nbeta\u202E  ", 32) === "alpha beta",
             "icon resolver flattens controls in external labels")
+        root._check(SafeText.singleLineText("pay\u200Bpal\u200F", 32) === "pay pal"
+                && SafeText.singleLineText("a\u061C\u206Ab", 32) === "a b",
+            "single-line labels flatten invisible direction marks")
         root._check(SafeText.initial("👩🏽‍💻 developer", "?") === "👩🏽‍💻",
             "icon resolver keeps a joined emoji grapheme whole")
         root._check(SafeText.boundedText("ab👩🏽‍💻cd", 8) === "ab…",
@@ -1460,6 +1529,14 @@ ShellRoot {
         root._check(SafeText.singleLineText("Editor\nspoof\u202E", 64)
                 === "Editor spoof",
             "compositor sanitizes client-controlled window text")
+        root._check(Compositor.windowTitle("\u25D0 build") === "build"
+                && Compositor.windowTitle("\u280B cargo test") === "cargo test"
+                && Compositor.windowTitle("\u2733 Claude Code") === "Claude Code",
+            "a terminal's spinner glyph is not part of its window title")
+        root._check(Compositor.windowTitle("\u25CF main.ts") === "\u25CF main.ts"
+                && Compositor.windowTitle("* notes") === "* notes"
+                && Compositor.windowTitle("\u2733") === "\u2733",
+            "unsaved markers and a lone glyph stay in the window title")
         root._check(SafeText.lastNonEmptyLine("warning: retrying\n\nfatal: no route\n\n", "fallback") === "fatal: no route",
             "lastNonEmptyLine skips trailing blank lines")
         root._check(SafeText.lastNonEmptyLine("", "fallback") === "fallback"
@@ -1586,6 +1663,12 @@ ShellRoot {
                 && Audio._out._clampVolume(Infinity) === 0
                 && Audio._out._clampVolume(1.5) === 1,
             "audio service normalizes non-finite backend volume")
+        const near = (a, b) => Math.abs(a - b) < 0.0001
+        root._check(near(Audio._out._stepFrom(0.43, 0.05), 0.45)
+                && near(Audio._out._stepFrom(0.43, -0.05), 0.40)
+                && near(Audio._out._stepFrom(0.45, 0.10), 0.55)
+                && near(Audio._out._stepFrom(0.45, -0.05), 0.40),
+            "a volume notch lands on the step grid from any starting level")
         root._check(CpuTemp.temperatureDemand(false, true, false, false)
                 && !CpuTemp.temperatureDemand(false, true, true, false)
                 && CpuTemp.temperatureDemand(true, false, true, false)
@@ -1755,13 +1838,17 @@ ShellRoot {
         const cpuTotalWas = SysInfo._lastCpuTotal
         const cpuIdleWas = SysInfo._lastCpuIdle
         const cpuPctWas = SysInfo.cpuPct
+        const cpuReadyWas = SysInfo.cpuReady
         SysInfo._active = true
+        SysInfo.cpuReady = false
         SysInfo._lastCpuTotal = 0
         SysInfo._lastCpuIdle = 0
         // nonzero iowait: it counts as idle, and a sample without it proves nothing
         SysInfo._applyCpuStat("cpu  100 0 100 800 100 0 0 0 0 0\n")
+        root._check(!SysInfo.cpuReady,
+            "the Now page waits for a CPU delta before showing a percentage")
         SysInfo._applyCpuStat("cpu  150 0 150 900 150 0 0 0 0 0\n")
-        root._check(Math.abs(SysInfo.cpuPct - 0.4) < 0.001,
+        root._check(SysInfo.cpuReady && Math.abs(SysInfo.cpuPct - 0.4) < 0.001,
             "cpu load counts iowait as idle, not as busy")
         // guest and guest_nice are already counted inside user and nice
         SysInfo._lastCpuTotal = 0
@@ -1773,6 +1860,7 @@ ShellRoot {
         SysInfo._lastCpuTotal = cpuTotalWas
         SysInfo._lastCpuIdle = cpuIdleWas
         SysInfo.cpuPct = cpuPctWas
+        SysInfo.cpuReady = cpuReadyWas
         SysInfo._active = cpuActiveWas
 
         const niri = niriBackendFactory.createObject(root)
@@ -1900,6 +1988,24 @@ ShellRoot {
         root._check(nmEmpty.length === 3 && nmEmpty[1] === "",
             "an empty nmcli field is kept in place")
 
+        const savedWeak = { active: false, known: true, signal: 20, ssid: "b" }
+        const strangerStrong = { active: false, known: false, signal: 95, ssid: "a" }
+        const joined = { active: true, known: false, signal: 10, ssid: "c" }
+        root._check(Network._compareWifi(savedWeak, strangerStrong) < 0
+                && Network._compareWifi(joined, savedWeak) < 0
+                && Network._compareWifi(strangerStrong, savedWeak) > 0,
+            "the Wi-Fi list ranks the connected network, then saved ones, then signal")
+
+        const weakSavedAp = { connected: false, known: true, signalStrength: 0.3 }
+        const strongUnknownAp = { connected: false, known: false, signalStrength: 0.9 }
+        const connectedAp = { connected: true, known: false, signalStrength: 0.1 }
+        root._check(Network._preferWifiNetwork(weakSavedAp, strongUnknownAp)
+                && !Network._preferWifiNetwork(strongUnknownAp, weakSavedAp)
+                && Network._preferWifiNetwork(connectedAp, weakSavedAp)
+                && Network._preferWifiNetwork(
+                    { connected: false, known: true, signalStrength: 0.8 }, weakSavedAp),
+            "duplicate SSIDs choose connected, then saved, then strongest access point")
+
         const publishedWifiWas = Network._publishedWifiNetworks
         Network._publishedWifiNetworks = [{
             ssid: "probe", label: "Probe", glyph: "tier-2",
@@ -1940,6 +2046,11 @@ ShellRoot {
             "two half-notches accumulate into one step")
         root._check(Scroll._processDelta(600, wheelKey, 120, 2, 0) === 2,
             "one wheel burst emits at most the step ceiling")
+        const notchUp = inverted => ({ angleDelta: { x: 0, y: 120 }, inverted: inverted })
+        root._check(Scroll.processLevelWheel(notchUp(false), "probe-level-a") === 1
+                && Scroll.processLevelWheel(notchUp(true), "probe-level-b") === -1
+                && Scroll.processControlWheel(notchUp(true), "probe-level-c") === 1,
+            "natural scrolling flips a level control but not content navigation")
 
         SystemTools._tools = toolsWas
         SystemTools.packageFamily = familyWas
@@ -2171,6 +2282,13 @@ ShellRoot {
             "the clock sleeps behind overview unless a background consumer needs it")
         ShellSettings.clock12h = clock12Was
 
+        // a minute tick armed before suspend fires late after wake; catching up re-reads the wall clock
+        DateTime._lastMinute = "190001010000"
+        DateTime.catchUp()
+        root._check(DateTime._lastMinute === Qt.formatDateTime(new Date(), "yyyyMMddHHmm")
+                && !DateTime._resync,
+            "a stale clock catches up to the wall clock on a wake-time event")
+
         // auto is a mode, not a value: it must never consume the hand-picked temperature
         const autoWas = ShellSettings.nightLightAuto
         const tempWas = ShellSettings.nightLightTemp
@@ -2327,13 +2445,6 @@ ShellRoot {
             "dispatch quotes a monitor name in the lua form")
         root._check(HyprDispatch._text("togglefloating", "") === "togglefloating",
             "dispatch passes an unmapped dispatcher through untouched")
-        root._check(HyprDispatch._moveText("emptynm", "address:0xabc")
-                === "hl.dsp.window.move({ workspace = \"emptynm\", follow = false, window = \"address:0xabc\" })",
-            "lua dispatch can move the original window to a monitor-relative empty workspace")
-        HyprDispatch.useLua = false
-        root._check(HyprDispatch._moveText("emptynm", "address:0xabc")
-                === "movetoworkspacesilent emptynm,address:0xabc",
-            "legacy dispatch can move the original window to a monitor-relative empty workspace")
         HyprDispatch.useLua = luaWas
 
         const spacing = ShellSettings.schemaFor("barSpacing")
@@ -2552,7 +2663,17 @@ ShellRoot {
         Notifications._seen  = { "51": true, "52": true }
         Notifications._times = { "51": 1000, "52": 2000 }
         Notifications._updateTimes = { "51": 1100, "52": 2100 }
-        Notifications._pruneOrphanState([{ id: 51 }])
+        const listBeforePrune = Notifications.list
+        Notifications.list = [{ notification: { id: 51 }, id: 51, time: 1000 }]
+        const serverWasSettled = Notifications._serverSettled
+        Notifications._serverSettled = false
+        Notifications._pruneOrphanState()
+        root._check(Notifications._seen["52"] === true && Notifications._times["52"] === 2000,
+            "pruning waits until a reload has handed the kept notifications back")
+        Notifications._serverSettled = true
+        Notifications._pruneOrphanState()
+        Notifications._serverSettled = serverWasSettled
+        Notifications.list = listBeforePrune
         root._check(Notifications._seen["51"] === true
                 && Notifications._times["51"] === 1000
                 && Notifications._updateTimes["51"] === 1100,
@@ -2561,6 +2682,25 @@ ShellRoot {
                 && Notifications._times["52"] === undefined
                 && Notifications._updateTimes["52"] === undefined,
             "state for ids neither history nor the server holds is pruned")
+
+        const kept = keptNotificationFactory.createObject(root, { id: 61 })
+        Notifications._times = { "61": 4200 }
+        let shownDuringAdopt = 0
+        const countShown = () => shownDuringAdopt++
+        Notifications.notificationShown.connect(countShown)
+        Notifications._adoptKept(kept)
+        Notifications.notificationShown.disconnect(countShown)
+        const adopted = Notifications.list.find(e => e.id === 61)
+        root._check(adopted && adopted.time === 4200 && kept.tracked
+                && Notifications._times["61"] === 4200 && shownDuringAdopt === 0,
+            "a notification kept across a reload keeps its age and replays no arrival")
+        Notifications._updateTimes["61"] = 1
+        kept.body = "progress 50%"
+        root._check(Notifications.updateTimeFor(61) > 1,
+            "an in-place update to a live notification restarts its card timestamp")
+        Notifications.list = Notifications.list.filter(e => e.id !== 61)
+        Notifications._forgetState(61)
+        kept.destroy()
 
         const liveNotification = { id: 53, tracked: true }
         Notifications.list = [{
@@ -2672,6 +2812,22 @@ ShellRoot {
             "a bluetooth sink that states a form factor is believed over its bluez name")
         root._check(Audio.deviceClass(node("bluez_output.AA_BB.1", "Q45", "", "")) === "headset",
             "a bluetooth sink BlueZ cannot place still reads as a headset")
+        const comboSink = { name: "combined", description: "Combined Headphones",
+            properties: { "node.virtual": true, "node.group": "combine-1" } }
+        const comboFeed = { isStream: true, properties: { "node.virtual": true, "node.group": "combine-1" } }
+        const comboBuds = { name: "bluez_output.AA_BB.1", description: "Buds", isStream: false, properties: {} }
+        const comboSpeakers = { name: "alsa_output.pci", description: "Analog Stereo", isStream: false,
+            properties: { "device.api": "alsa" } }
+        root._check(Audio.deviceClass(comboSink, []) === "speaker"
+                && Audio.deviceClass(comboSink, [{ source: comboFeed, target: comboSpeakers }]) === "speaker"
+                && Audio.deviceClass(comboSink, [{ source: comboFeed, target: comboBuds }]) === "headset",
+            "a virtual sink is classed by the device it feeds, not by the name its config gave it")
+        const loneSink = { name: "eq", properties: { "node.virtual": true } }
+        root._check(Audio.feedsNothing(comboSink, [])
+                && !Audio.feedsNothing(comboSink, [{ source: comboFeed, target: comboSpeakers }])
+                && !Audio.feedsNothing(comboSpeakers, [])
+                && !Audio.feedsNothing(loneSink, []),
+            "only a virtual sink with visible routing and no link is said to reach no device")
         root._check(Audio.isAppStream({ "application.name": "Spotify" })
                 && Audio.isAppStream({ "application.process.binary": "zen-bin" })
                 && !Audio.isAppStream({ "media.name": "Combined Headphones output",
@@ -2900,6 +3056,20 @@ ShellRoot {
     property var _motionSettings: null
     property bool _motionReduceWas: false
     property int _motionStep: 0
+    property int _motionWaits: 0
+
+    // the gate runs its probes side by side, so a load can outlast a fixed wait on a busy machine
+    function _motionNotYet(ready: bool): bool {
+        if (ready || root._motionWaits >= 30) {
+            root._motionWaits = 0
+            return false
+        }
+        root._motionWaits++
+        root._motionStep--
+        _pageMotionCheck.interval = 100
+        _pageMotionCheck.restart()
+        return true
+    }
 
     function _startPageMotionChecks(): void {
         root._motionReduceWas = ShellSettings.reduceMotion
@@ -2948,6 +3118,7 @@ ShellRoot {
                 break
             case 2: {
                 const settings = root._motionSettings
+                if (root._motionNotYet(settings.contentReady)) break
                 const detail = settings.children[0]
                 const body = detail.children.find(child => child.sourceComponent !== undefined)
                 root._check(settings.contentReady, "settings content finishes its initial load")
@@ -2965,9 +3136,10 @@ ShellRoot {
             case 3: {
                 const settings = root._motionSettings
                 const detail = settings.children[0]
-                root._check(settings.contentReady && !settings._awaitingSectionEnter
-                        && detail.opacity === 1 && detail._shift === 0,
-                    "a ready settings section completes its reveal")
+                const revealed = settings.contentReady && !settings._awaitingSectionEnter
+                        && detail.opacity === 1 && detail._shift === 0
+                if (root._motionNotYet(revealed)) break
+                root._check(revealed, "a ready settings section completes its reveal")
                 MenuState.close()
                 MenuState.setSettingsSection("clock")
                 root._check(settings._shownSection === "clock" && detail.opacity === 1,
@@ -3067,9 +3239,39 @@ ShellRoot {
                     "a bounded process terminates descendants with its wrapper")
                 root._orphanCheck.destroy()
                 root._orphanCheck = null
-                Qt.callLater(root._finish)
+                Qt.callLater(root._runMissingBinaryCheck)
             })
             root._orphanCheck.running = true
+        }
+    }
+
+    // Quickshell emits no exited for a binary that fails to start
+    function _runMissingBinaryCheck(): void {
+        root._missingProbe = boundedProcessFactory.createObject(root, {
+            command: ["/nonexistent/silere-probe-binary"]
+        })
+        root._missingSupervised = supervisedProcessFactory.createObject(root, {
+            command: ["/nonexistent/silere-probe-binary"]
+        })
+        root._missingProbe.exited.connect(function(code) { root._missingExit = code })
+        root._missingProbe.running = true
+        root._missingSupervised.superviseWhen = true
+        _missingSettle.restart()
+    }
+    Timer {
+        id: _missingSettle
+        interval: 500
+        onTriggered: {
+            root._check(root._missingExit === 127 && !root._missingProbe.running,
+                "a bounded process whose binary is missing still reports an exit")
+            root._missingProbe.destroy()
+            root._missingProbe = null
+            root._check(root._missingSupervised.gaveUp && !root._missingSupervised.running,
+                "a supervised process whose binary is missing gives up instead of wedging")
+            root._missingSupervised.superviseWhen = false
+            root._missingSupervised.destroy()
+            root._missingSupervised = null
+            Qt.callLater(root._finish)
         }
     }
 

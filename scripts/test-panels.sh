@@ -18,6 +18,14 @@ if [ -z "${WAYLAND_DISPLAY:-}" ]; then
     echo "SKIP: no Wayland display; layer-shell surfaces cannot be built" >&2
     exit 0
 fi
+case "$WAYLAND_DISPLAY" in
+    /*) wayland_socket="$WAYLAND_DISPLAY" ;;
+    *)  wayland_socket="${XDG_RUNTIME_DIR:-}/$WAYLAND_DISPLAY" ;;
+esac
+if [ ! -S "$wayland_socket" ]; then
+    echo "SKIP: Wayland socket unavailable; layer-shell surfaces cannot be built" >&2
+    exit 0
+fi
 
 # Every surface requiring a targetScreen, so a new one is covered without editing
 # this list.
@@ -58,6 +66,10 @@ _probe_wait "$log" "$probe_pid" 'PROBE-PANELS' 120 0.5 || true
 
 if grep -q 'PROBE-PANELS: no screen' "$log" 2>/dev/null; then
     echo "SKIP: compositor exposed no screen to the probe" >&2
+    exit 0
+fi
+if grep -qE 'Failed to create wl_display|Failed to connect to Wayland display' "$log" 2>/dev/null; then
+    echo "SKIP: Wayland display inaccessible; layer-shell surfaces cannot be built" >&2
     exit 0
 fi
 if ! grep -q 'PROBE-PANELS built' "$log" 2>/dev/null; then

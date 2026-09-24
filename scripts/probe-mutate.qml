@@ -88,6 +88,13 @@ ShellRoot {
                     root.steps.push({ k: s.k, v: s.vals[j], d: String(s.vals[j]) })
             }
         }
+        // every state is restored before the next, so shards can split the sweep between them
+        const shard = /^([0-9]+)\/([1-9][0-9]*)$/.exec(Quickshell.env("SILERE_PROBE_SHARD") || "")
+        if (shard) {
+            const i = Number(shard[1])
+            const n = Number(shard[2])
+            root.steps = root.steps.filter((_, k) => k % n === i)
+        }
     }
 
     Component.onCompleted: {
