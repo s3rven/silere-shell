@@ -243,8 +243,9 @@ Item {
 
     // reading one card holds the whole stack: cards expiring out from under the pointer reflow what is being read
     property bool stackHovered: false
+    // an abandoned empty reply lets the card go; one being typed or holding text keeps it
     readonly property bool _paused: _cardHover.hovered || card.stackHovered
-        || card._replyOpen
+        || (card._replyOpen && (_replyInput.activeFocus || _replyInput.text.length > 0))
 
     property real _hoverPausedMs: 0
     property real _hoverStartMs:  0
@@ -756,7 +757,8 @@ Item {
             anchors.top:         parent.top
             anchors.right:       parent.right
             // the disc rides the content grid and centres on the summary's first line
-            anchors.topMargin:   13 + Math.round((_summary.implicitHeight - height) / 2)
+            anchors.topMargin:   13 + Math.round((_summary.contentHeight
+                / Math.max(1, _summary.lineCount) - height) / 2)
             anchors.rightMargin: 16
             width: 24; height: 24; radius: 12
             antialiasing: true
@@ -795,7 +797,8 @@ Item {
 
         OutlineBorder {
             radius: cardRect.radius
-            outlineWidth: card.isCritical ? 2 : 1
+            // two device pixels at 1.25: one reads as a broken hairline over whatever is behind a floating card
+            outlineWidth: card.isCritical ? 2.5 : 1.5
             outlineColor: card.isCritical
                 ? Theme.withAlpha(Theme.error,  0.62)
                 : Theme.outline
@@ -810,7 +813,7 @@ Item {
         visible: card._showCountdown
         paused:  card.quietPaint
         opacity: cardRect.opacity * card._countdownPulse
-        inset:        2.5
+        inset:        4
         cornerRadius: cardRect.radius
         progress:     card._timeoutProgress
         trackColor:   "transparent"

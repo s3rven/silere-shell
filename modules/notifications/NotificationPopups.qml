@@ -41,9 +41,9 @@ PanelWindow {
 
     readonly property int _shadowPad: ShellSettings.barShadow ? 16 : 0
     // the body wraps at 3 lines collapsed, so a card pinned at one width elides sooner as type grows
-    readonly property int _cardW: Math.max(180, Math.min(
-        Metrics.snap4(384 * Settings.fontSize / 12),
-        targetScreen ? targetScreen.width - 24 - _shadowPad : 384))
+    readonly property int _cardW: Math.max(1, Math.min(
+        Metrics.snap4(400 * Settings.fontSize / 12),
+        targetScreen ? targetScreen.width - 24 - _shadowPad : 400))
     readonly property bool _hasBar: Metrics.barPresent(targetScreen)
     readonly property real _barSideGap: ShellSettings.barFloating && _hasBar && targetScreen
         ? 4 * Math.round(targetScreen.width * (1.0 - ShellSettings.barWidth) / 8)
@@ -64,6 +64,33 @@ PanelWindow {
     readonly property bool   _center:   _pos === "top-center"
     readonly property int    _slideDir: _center ? 0 : (_left ? -1 : 1)
     readonly property bool   _barBottom: ShellSettings.barPosition === "bottom"
+    // the stack reads outward from the bar: newest card first, older ones behind the more chip
+    readonly property bool   _newestFirst: !_barBottom
+    readonly property int    _lastVisualIndex: _newestFirst
+        ? stack.count - _visibleCards : stack.count - 1
+
+    // a Column can only follow the model's order, so each card sums the cards in front of it.
+    // count moves before the delegates exist, so the sums re-read on their arrival instead
+    property int _slotsRevision: 0
+    function _slotTop(index: int): real {
+        void win._slotsRevision
+        let y = 0
+        for (let i = 0; i < stack.count; i++) {
+            if (win._newestFirst ? i <= index : i >= index) continue
+            const slot = stack.itemAt(i)
+            if (slot && slot.shouldLoad) y += slot.height
+        }
+        return y
+    }
+    readonly property real _stackHeight: {
+        void win._slotsRevision
+        let h = 0
+        for (let i = 0; i < stack.count; i++) {
+            const slot = stack.itemAt(i)
+            if (slot && slot.shouldLoad) h += slot.height
+        }
+        return h
+    }
 
     function _alignedX(containerWidth: real, itemWidth: real): real {
         if (win._left) return 0
@@ -111,7 +138,7 @@ PanelWindow {
 
             OutlineBorder {
                 radius: _surface.radius
-                outlineWidth: 1
+                outlineWidth: 1.5
                 outlineColor: _hover.hovered
                     ? Theme.withAlpha(chip.tint, 0.42) : Theme.menuControlLine
                 ColorFade on outlineColor {}
@@ -224,6 +251,7 @@ PanelWindow {
             items.push(slot.cardItem)
         }
 
+        if (win._newestFirst) items.reverse()
         win._pendingDismissItems = pending
         win._batchExits = items.length
         if (items.length === 0) { win._dismissPendingSnapshot(); return }
@@ -258,6 +286,20 @@ PanelWindow {
         if (win._batchExits > 0) return
         _cascadeSafety.stop()
         win._dismissPendingSnapshot()
+    }
+
+    // a sender can withdraw a card mid-stack with no exit of its own; a neighbour holds its space and lets it close
+    function _closeGap(index: int, slot): void {
+        const card = slot ? slot.cardItem : null
+        const h = slot ? slot.height : 0
+        if (!card || h < 1 || !card.collapseOnDismiss || !slot.visible
+                || !Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)) return
+        const newer = stack.itemAt(index)
+        const older = index > 0 ? stack.itemAt(index - 1) : null
+        const below = win._newestFirst ? older : newer
+        const above = win._newestFirst ? newer : older
+        if (below && below.visible) below.holdGap(h, true)
+        else if (above && above.visible) above.holdGap(h, false)
     }
 
     function _dismissPendingSnapshot(): void {
@@ -296,7 +338,7 @@ PanelWindow {
         }
     }
 
-    Column {
+    Item {
         id: outerCol
         anchors {
             top:    win._barBottom ? undefined : parent.top
@@ -308,10 +350,30 @@ PanelWindow {
             rightMargin: (win._left || win._center) ? 0 : win._shadowPad
             leftMargin:  win._left ? win._shadowPad : 0
         }
-        spacing: 6
+        readonly property int spacing: 6
+        // the stack reads outward from the bar, so clear-all stays nearest it and the more chip farthest
+        readonly property var _order: win._barBottom
+            ? [_moreChip, _cardViewport, _clearChip] : [_clearChip, _cardViewport, _moreChip]
+        function _topOf(item): real {
+            let y = 0
+            for (let i = 0; i < outerCol._order.length && outerCol._order[i] !== item; i++)
+                if (outerCol._order[i].visible) y += outerCol._order[i].height + outerCol.spacing
+            return y
+        }
+        height: {
+            let h = 0
+            let shown = 0
+            for (let i = 0; i < outerCol._order.length; i++) {
+                if (!outerCol._order[i].visible) continue
+                h += outerCol._order[i].height
+                shown++
+            }
+            return h + Math.max(0, shown - 1) * outerCol.spacing
+        }
 
         Item {
             id: _clearChip
+            y: outerCol._topOf(_clearChip)
             readonly property bool shown: Notifications.activeCount > 1 || win._dismissing
 
             width:   parent.width
@@ -333,11 +395,14 @@ PanelWindow {
 
         Item {
             id: _cardViewport
+            y: outerCol._topOf(_cardViewport)
             width: parent.width
-            visible: height > 0.5
+            // not height: each card gates its own motion on visibility, and the height is their sum
+            visible: stack.count > 0
             height: Math.min(cardCol.implicitHeight, Math.max(48,
                 win._availableContentH - _clearChip.height - _moreChip.height
-                - outerCol.spacing * 2))
+                - outerCol.spacing * ((_clearChip.visible ? 1 : 0)
+                    + (_moreChip.visible ? 1 : 0))))
 
             HoverHandler { id: _stackHover }
 
@@ -347,27 +412,38 @@ PanelWindow {
                 contentWidth: width
                 contentHeight: cardCol.implicitHeight
                 interactive: contentHeight > height + 1
+                // with the bar below, the newest card is the last one, so an overflowing stack follows it
+                onContentHeightChanged: if (win._barBottom && !moving)
+                    contentY = Math.max(0, contentHeight - height)
 
-                Column {
+                Item {
                     id: cardCol
                     width: _cardScroll.width
-                    spacing: 0
+                    implicitHeight: win._stackHeight
+                    height: implicitHeight
 
                     Repeater {
                         id: stack
                         model: Notifications.popupModel
-                        onItemAdded: (index, item) => win._blurShapes = win._blurShapes.concat([item.blurShape])
-                        onItemRemoved: (index, item) =>
+                        onItemAdded: (index, item) => {
+                            win._blurShapes = win._blurShapes.concat([item.blurShape])
+                            win._slotsRevision++
+                        }
+                        onItemRemoved: (index, item) => {
+                            win._slotsRevision++
                             win._blurShapes = win._blurShapes.filter(s => s !== item.blurShape)
+                            win._closeGap(index, item)
+                        }
 
                         Item {
                             id: _slot
                             required property var modelData
                             required property int index
 
+                            // a slot being removed reads index -1; it has to keep its card for the gap to close over
                             readonly property bool shouldLoad: win._showAll
-                                || ShellSettings.notifMaxVisible <= 0
-                                || index < ShellSettings.notifMaxVisible
+                                || ShellSettings.notifMaxVisible <= 0 || index < 0
+                                || index >= stack.count - ShellSettings.notifMaxVisible
                             readonly property var cardItem: _cardLoader.item
                             readonly property Region blurShape: Region {
                                 item: _slot
@@ -379,39 +455,39 @@ PanelWindow {
                                 }
                             }
                             property real timeoutStartedAt: 0
-                            readonly property real _gap: index < win._visibleCards - 1 ? 10 : 0
+                            // a multiple of 4, or every card below the first lands half an output pixel off the grid at 1.25
+                            readonly property real _gap: index !== win._lastVisualIndex ? 12 : 0
+
+                            property real _heldAbove: 0
+                            property real _heldBelow: 0
+                            function holdGap(h: real, aboveCard: bool): void {
+                                if (aboveCard) { _heldAbove += h; _heldAboveAnim.restart() }
+                                else { _heldBelow += h; _heldBelowAnim.restart() }
+                            }
+                            NumberAnimation {
+                                id: _heldAboveAnim
+                                target: _slot; property: "_heldAbove"; to: 0
+                                duration: Motion.ms(190); easing.type: Easing.InOutCubic
+                            }
+                            NumberAnimation {
+                                id: _heldBelowAnim
+                                target: _slot; property: "_heldBelow"; to: 0
+                                duration: Motion.ms(190); easing.type: Easing.InOutCubic
+                            }
 
                             width: win._cardW
-                            height: cardItem
-                                ? cardItem.implicitHeight + _gap * cardItem.collapseRatio : 0
+                            height: (cardItem
+                                ? cardItem.implicitHeight + _gap * cardItem.collapseRatio : 0)
+                                + _heldAbove + _heldBelow
                             visible: shouldLoad
 
                             x: win._alignedX(parent.width, width)
-
-                            // a card arriving above others reorders the column in one frame;
-                            // settle lets that first placement land instantly, then eases every move after
-                            property bool _posReady: false
-                            Timer { id: _posArm; interval: 0; onTriggered: _slot._posReady = true }
-                            MotionBehavior on y {
-                                gate: _slot._posReady
-                                NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
-                            }
+                            y: win._slotTop(index)
 
                             Component.onCompleted: {
                                 if (shouldLoad) timeoutStartedAt = Notifications.updateTimeFor(modelData.id)
-                                _posArm.start()
                             }
-                            onShouldLoadChanged: {
-                                if (shouldLoad) {
-                                    timeoutStartedAt = Date.now()
-                                    // was excluded from the column's layout while hidden, so its
-                                    // last y is stale; snap into the real one instead of easing to it
-                                    _slot._posReady = false
-                                    _posArm.restart()
-                                } else {
-                                    timeoutStartedAt = 0
-                                }
-                            }
+                            onShouldLoadChanged: timeoutStartedAt = shouldLoad ? Date.now() : 0
 
                             Connections {
                                 target: Notifications
@@ -424,6 +500,7 @@ PanelWindow {
                             Loader {
                                 id: _cardLoader
                                 anchors.top: parent.top
+                                anchors.topMargin: _slot._heldAbove
                                 anchors.left: parent.left
                                 anchors.right: parent.right
                                 height: _slot.cardItem ? _slot.cardItem.implicitHeight : 0
@@ -467,13 +544,18 @@ PanelWindow {
 
         NotifChip {
             id: _moreChip
+            y: outerCol._topOf(_moreChip)
             readonly property int _extra: !win._showAll && ShellSettings.notifMaxVisible > 0
                 ? Math.max(0, Notifications.activeCount - ShellSettings.notifMaxVisible) : 0
+            // the chip collapses after the count reaches zero, so it keeps the last count it showed
+            property int _label: 1
+            on_ExtraChanged: if (_extra > 0) _label = _extra
+            Component.onCompleted: if (_extra > 0) _label = _extra
             shown:          _extra > 0
             alignLeft:      win._left
             alignCenter:    win._center
             glyph:          "󰂚"
-            label:          "Show " + _extra + " more"
+            label:          "Show " + _label + " more"
             onTriggered:    win.revealAll()
         }
     }

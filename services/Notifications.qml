@@ -111,23 +111,16 @@ Singleton {
 
     // Clearing or restoring history leaves these maps whole. Drop entries that
     // belong to neither history nor a notification still owned by the server.
-    function _pruneOrphanState(activeNotifications): void {
+    function _pruneOrphanState(): void {
+        // a hot reload hands kept notifications back only once the server is live
+        if (!root._serverSettled) return
         const keep = Object.create(null)
         for (let i = 0; i < _history.count; i++) keep[String(_history.get(i).id)] = true
-        // On a hot reload NotificationServer already owns its kept objects, but
-        // root.list is rebuilt only after persisted timestamps are restored.
-        // Include those objects now or their original age/read state is lost.
-        const active = Array.isArray(activeNotifications) ? activeNotifications : []
-        for (let i = 0; i < active.length; i++) {
-            const entry = active[i]
-            if (entry && entry.id !== undefined) keep[String(entry.id)] = true
-        }
-        const seen = Object.keys(root._seen)
-            .concat(Object.keys(root._times), Object.keys(root._updateTimes))
-        const stale = []
-        for (let i = 0; i < seen.length; i++)
-            if (keep[seen[i]] !== true && stale.indexOf(seen[i]) < 0) stale.push(seen[i])
-        root._forgetTrimmed(stale)
+        const stale = Object.create(null)
+        const maps = [root._seen, root._times, root._updateTimes]
+        for (let m = 0; m < maps.length; m++)
+            for (const key in maps[m]) if (keep[key] !== true) stale[key] = true
+        root._forgetTrimmed(Object.keys(stale))
     }
 
     // history is capped but these maps were not: an id that rolled off kept its seen
@@ -235,7 +228,7 @@ Singleton {
         return out
     }
 
-    function _restorePersistentState(activeNotifications): void {
+    function _restorePersistentState(): void {
         const savedHistory = ShellSettings.notifHistoryPersistent
             ? root._parsePersistentJson(_persist.historyJson, []) : []
         const savedSeen = root._parsePersistentJson(_persist.seenJson, Object.create(null))
@@ -256,8 +249,12 @@ Singleton {
         root._times = root._normalizeTimesMap(savedTimes)
         root._ensurePersistentState()
         root._persistentReady = true
-        root._pruneOrphanState(activeNotifications)
         root._saveHistory()
+        if (root._pendingDiskText !== null) {
+            const raw = root._pendingDiskText
+            root._pendingDiskText = null
+            root._restoreFromDisk(raw)
+        }
     }
 
     Connections {
@@ -361,6 +358,15 @@ Singleton {
         property string historyJson: "[]"
         property string seenJson:  "{}"
         property string timesJson: "{}"
+        // a reload restores these after the singleton completes, so state is read here
+        onLoaded: root._restorePersistentState()
+    }
+
+    property bool _serverSettled: false
+    property var _pendingDiskText: null
+    function _settleServer(): void {
+        root._serverSettled = true
+        root._pruneOrphanState()
     }
 
     // PersistentProperties survives a config reload but not a restart, so the history
@@ -370,7 +376,10 @@ Singleton {
         path: ConfigStore.notificationsPath
         writeAllowed: false
         serialize: () => root._serializeDisk()
-        onLoaded: raw => root._restoreFromDisk(raw)
+        onLoaded: raw => {
+            if (root._persistentReady) root._restoreFromDisk(raw)
+            else root._pendingDiskText = raw
+        }
         onLoadFailed: error => {
             _diskStore.writeAllowed = error === FileViewError.FileNotFound
         }
@@ -381,10 +390,8 @@ Singleton {
     // seen and times describe notifications the server still owns, and no server outlives a
     // restart; persisting them only lets a reissued id inherit a dead session's flags
     function _serializeDisk(): string {
-        return JSON.stringify({
-            __version: 1,
-            history: root._parsePersistentJson(_persist.historyJson, [])
-        })
+        // historyJson is already compact JSON of the rows; splicing it in skips a parse and a re-stringify
+        return '{"__version":1,"history":' + (_persist.historyJson || "[]") + '}'
     }
 
     function _restoreFromDisk(raw: string): void {
@@ -461,28 +468,6 @@ Singleton {
         root._seen = next
     }
     function isSeen(id: int):   bool { root._ensurePersistentState(); return !!_seen[id] }
-
-    // the history page can be filtered to one app, where a Clear that took the rest with
-    // it would be a trap. Empty name means the whole list
-    function clearHistoryFor(appName: string): void {
-        const want = root.identityText(appName).trim()
-        if (want.length === 0) { root.clearHistory(); return }
-        root._ensurePersistentState()
-        const ids = []
-        let removed = 0
-        for (let i = _history.count - 1; i >= 0; i--) {
-            const e = _history.get(i)
-            const name = root.identityText(e.appName).trim()
-            if ((name.length > 0 ? name : "Unknown") !== want) continue
-            if (e.id !== undefined) ids.push(String(e.id))
-            _history.remove(i)
-            removed++
-        }
-        if (removed === 0) return
-        root.historyRevision++
-        root._forgetTrimmed(ids)
-        root._saveHistory()
-    }
 
     function _historySnapshotKey(entry): string {
         return JSON.stringify([entry.id, entry.time, entry.appName, entry.summary, entry.body])
@@ -639,7 +624,7 @@ Singleton {
             .replace(/&quot;/g, "\"").replace(/&apos;/g, "'").replace(/&#39;/g, "'")
             .replace(/&nbsp;/g, " ").replace(/&hellip;/g, "…")
             .replace(/&amp;/g, "&")
-            .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u202A-\u202E\u2066-\u2069]/g, "")
+            .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u061C\u200B\u200E\u200F\u202A-\u202E\u2066-\u206F]/g, "")
         return SafeText.boundedText(plain, limit)
     }
 
@@ -778,42 +763,40 @@ Singleton {
 
     Component.onCompleted: {
         ConfigStore.hardenQuickshellState()
-        const vals = notifServer.trackedNotifications.values ?? []
-        root._restorePersistentState(vals)
-        root._ensurePersistentState()
-        const rebuilt = []
-        const live = {}
-        const nextTimes = root._cloneMap(root._times)
-        let timesChanged = false
-        for (let i = 0; i < vals.length; i++) {
-            const n = vals[i]
-            if (!n) continue
-            if (nextTimes[n.id] === undefined) {
-                nextTimes[n.id] = Date.now()
-                timesChanged = true
-            }
-            live[n.id] = true
-            rebuilt.push({ notification: n, id: n.id, time: nextTimes[n.id] })
-            n.closed.connect(() => root._onClosed(n.id, n))
-        }
-        if (rebuilt.length > 0) root.list = rebuilt
-        const nextSeen = root._cloneMap(root._seen)
-        let seenChanged = false
-        for (const id in nextSeen) {
-            if (!live[id]) {
-                delete nextSeen[id]
-                seenChanged = true
-            }
-        }
-        for (const id in nextTimes) {
-            if (!live[id]) {
-                delete nextTimes[id]
-                timesChanged = true
-            }
-        }
-        if (seenChanged) root._seen = nextSeen
-        if (timesChanged) root._times = nextTimes
         if (FullscreenState.wanted) Compositor.refreshToplevels()
+    }
+
+    // a hot reload hands every kept notification back through onNotification; it already
+    // arrived once, so it keeps its age and read state and replays none of the arrival side effects
+    function _adoptKept(n): void {
+        root._ensurePersistentState()
+        const arrivalTime = root._ensureTime(n.id)
+        root._recordUpdateTime(n.id, Date.now())
+        if (root._upsertActiveNotification(n, arrivalTime))
+            root._watchNotification(n)
+        n.tracked = true
+    }
+
+    // quickshell rewrites a replaced notification in place and never re-emits it
+    function _watchNotification(n): void {
+        n.closed.connect(() => root._onClosed(n.id, n))
+        const touched = () => {
+            if (!n.tracked) return
+            root._recordUpdateTime(n.id, Date.now())
+            root.contentUpdated(n.id)
+        }
+        n.summaryChanged.connect(touched)
+        n.bodyChanged.connect(touched)
+        n.hintsChanged.connect(touched)
+    }
+
+    // a runaway sender would otherwise hold every object it ever sent
+    readonly property int _maxActive: 50
+    function _retireOverflow(): void {
+        const extra = root.list.length - root._maxActive
+        if (extra <= 0) return
+        root.dismissObjects(root.list.slice(0, extra)
+            .map(e => ({ id: e.id, notification: e.notification })), true)
     }
 
     NotificationServer {
@@ -826,7 +809,10 @@ Singleton {
         inlineReplySupported: true
         persistenceSupported: true
 
+        onTrackedNotificationsChanged: Qt.callLater(root._settleServer)
+
         onNotification: (n) => {
+            if (n.lastGeneration) { root._adoptKept(n); return }
             root._ensurePersistentState()
             const bypasses = ShellSettings.notifCriticalBypass
                 && n.urgency === NotificationUrgency.Critical
@@ -853,11 +839,12 @@ Singleton {
             root._recordUpdateTime(n.id, Date.now())
             const isNewObject = root._upsertActiveNotification(n, arrivalTime)
             // connect once per object — stacked handlers fire _onClosed twice
-            if (isNewObject) n.closed.connect(() => root._onClosed(n.id, n))
+            if (isNewObject) root._watchNotification(n)
             n.tracked = true
             if (!isNewObject) root.contentUpdated(n.id)
             else root.notificationShown(String(n.appName || ""), String(n.summary || ""),
                 n.urgency === NotificationUrgency.Critical)
+            root._retireOverflow()
 
             if (ShellSettings.wsNotifPulse) {
                 const srcWs = WindowActions.notificationSourceWorkspace(n)

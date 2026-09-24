@@ -12,6 +12,7 @@ internal PowerRailRow PowerRailRow.qml
 internal RailLabelGroup RailLabelGroup.qml
 internal RailDrawer RailDrawer.qml
 internal RailNavItem RailNavItem.qml
+internal RailSelection RailSelection.qml
 internal RecentNav RecentNav.qml
 internal RecentPage RecentPage.qml
 internal SettingsNav SettingsNav.qml

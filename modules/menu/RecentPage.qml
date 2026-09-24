@@ -11,6 +11,8 @@ PageShell {
     id: root
 
     required property int viewportHeight
+    // the page padding beside the list; the thumb rides there, clear of the cards
+    property int thumbOutset: 0
 
     implicitHeight: viewportHeight
     // grouped runs, day sections and expanded rows all change a row's height, so only the laid-out list knows
@@ -31,7 +33,14 @@ PageShell {
     property alias searchText: _searchInput.text
     readonly property bool searching: searchText.trim().length > 0
 
+    // a keystroke reconciles many rows at once, and per-row transitions interrupted by the
+    // next one leave removed rows drawn over the new ones
+    property bool _querying: false
+    Timer { id: _queryHold; interval: 180; onTriggered: root._querying = false }
+
     onSearchTextChanged: {
+        root._querying = true
+        _queryHold.restart()
         _clearButton.disarm()
         _historyList.positionViewAtBeginning()
     }
@@ -67,8 +76,7 @@ PageShell {
 
     property bool _clearing: false
     property var _clearEntries: []
-    // reuse pools a row a few hundred pixels off screen, so expansion has to live on the
-    // page: kept on the delegate it collapses the moment the user scrolls past what they opened
+    // a row scrolled past the cache buffer is destroyed, so expansion has to live on the page
     property var _openRows: ({})
     // a filter change replaces every row at once, so the reconcile waits out a fade
     property bool _swapping: false
@@ -136,11 +144,6 @@ PageShell {
         // the section header already carries the day, so an older entry only owes a clock
         // qt only counts 12-hour when AP shares the format string
         return Qt.formatDateTime(d, ShellSettings.clock12h ? "h:mm ap" : "HH:mm")
-    }
-
-    function dayKey(ms): string {
-        const d = new Date(Number(ms || root._nowMs || Date.now()))
-        return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate()
     }
 
     function sectionLabel(ms): string {
@@ -411,28 +414,25 @@ PageShell {
             spacing: 0
             visible: root.rowCount > 0
             cacheBuffer: 240
-            reuseItems: true
+            // no reuseItems: a pooled row stays painted after a search removes it
             model: _filtered.model
 
             // clearAll and a filter swap each fade the whole list, so per-row motion there
             // would animate every delegate at once behind an already-invisible list
             displaced: Transition {
-                enabled: !root._clearing && !root._swapping
+                enabled: !root._clearing && !root._swapping && !root._querying
                 NumberAnimation { property: "y"; duration: Motion.normal; easing.type: Easing.OutCubic }
             }
             add: Transition {
-                enabled: !root._clearing && !root._swapping
+                enabled: !root._clearing && !root._swapping && !root._querying
                 NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Motion.fast }
             }
             remove: Transition {
-                enabled: !root._clearing && !root._swapping
-                ParallelAnimation {
-                    NumberAnimation { property: "opacity"; to: 0; duration: Motion.fast; easing.type: Easing.InCubic }
-                    NumberAnimation { property: "x"; to: 20; duration: Motion.fast; easing.type: Easing.InCubic }
-                }
+                enabled: !root._clearing && !root._swapping && !root._querying
+                NumberAnimation { property: "opacity"; to: 0; duration: Motion.fast; easing.type: Easing.InCubic }
             }
             removeDisplaced: Transition {
-                enabled: !root._clearing && !root._swapping
+                enabled: !root._clearing && !root._swapping && !root._querying
                 NumberAnimation { property: "y"; duration: Motion.normal; easing.type: Easing.OutCubic }
             }
 
@@ -441,16 +441,12 @@ PageShell {
                     // a ListModel delegate gets roles, not modelData; alias so the rest of the entry reads the same
                     required property var model
                     readonly property var modelData: model
-                    required property int index
 
-                    readonly property var _prev: index > 0
-                        ? _filtered.model.get(index - 1) : null
                     readonly property bool _critical: Number(modelData.urgency) === 2
-                    readonly property bool _showSection: !_prev
-                        || root.dayKey(modelData.time) !== root.dayKey(_prev.time)
-                    // a run of one app carries its name once; the rest of the run is just the messages
-                    readonly property bool _showHeader: _showSection
-                        || String(_prev.appName) !== String(modelData.appName)
+                    readonly property bool _showSection: modelData.showSection === true
+                    // a run of one app shares one card and carries its name once
+                    readonly property bool _showHeader: modelData.groupStart === true
+                    readonly property bool _groupEnd: modelData.groupEnd === true
 
                     readonly property string _appIconSource: {
                         Notifications.entriesTick
@@ -465,12 +461,17 @@ PageShell {
 
                     readonly property int _topPad: 11
                     readonly property int _sidePad: 14
+                    // a lone line has no bottom corner clear of the remove button, so the chevron joins that line
+                    readonly property bool _chevronInline: !_showHeader && !_body.visible
                     readonly property int _rightGutter: _rightSlot.width + 10
+                        + (_chevronInline ? _chevron.implicitWidth + 10 : 0)
                     readonly property int _firstLineHeight: _showHeader ? _metaRow.height
                         : Math.round(_summary.contentHeight / Math.max(1, _summary.lineCount))
                     readonly property int _sectionHeight: _showSection ? 24 : 0
-                    readonly property int _gapAbove: index === 0 ? 0
-                        : _showSection ? 14 : _showHeader ? 8 : 3
+                    // a flag, not index: a row sized by its index is never released when removed
+                    readonly property int _gapAbove: modelData.first === true ? 0
+                        : _showSection ? 12 : _showHeader ? 8 : 0
+                    readonly property real _radius: Theme.radiusControl
                     readonly property int _cardHeight: Metrics.snap4Up(
                         _entryContent.implicitHeight + 2 * _entry._topPad)
                     readonly property int _fullHeight: _gapAbove + _sectionHeight + _cardHeight
@@ -502,23 +503,8 @@ PageShell {
                         _heightArm.start()
                     }
                     Component.onDestruction: _heightArm.stop()
-                    ListView.onPooled: {
-                        _heightArm.stop()
-                        _entry._heightReady = false
-                        _entry._expanded = false
-                        _entry._removing = false
-                    }
-                    ListView.onReused: {
-                        // the remove transition pools the row at its faded-out x and opacity
-                        _entry.x = 0
-                        _entry.opacity = 1
-                        _entry._restoreExpanded()
-                        _entry._removing = false
-                        _entry._heightReady = false
-                        _heightArm.restart()
-                    }
                     MotionBehavior on height {
-                        gate: _entry._heightReady
+                        gate: _entry._heightReady && !root._querying
                         NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
                     }
 
@@ -567,18 +553,43 @@ PageShell {
                         y: _entry._gapAbove + _entry._sectionHeight
                         width: parent.width
                         height: _entry._cardHeight
-                        radius: Theme.radiusControl
+                        topLeftRadius: _entry._showHeader ? _entry._radius : 0
+                        topRightRadius: _entry._showHeader ? _entry._radius : 0
+                        bottomLeftRadius: _entry._groupEnd ? _entry._radius : 0
+                        bottomRightRadius: _entry._groupEnd ? _entry._radius : 0
                         antialiasing: true
                         color: Theme.rowFill(_entryHover.hovered, _entryTap.pressed)
 
-                        OutlineBorder {
-                            radius: _card.radius
-                            outlineWidth: 1
-                            outlineColor: _entry._critical ? Theme.withAlpha(Theme.error, 0.50)
-                                : Theme.menuCardBorder
-                            // same gate as the height above: a recycled row would otherwise
-                            // cross-fade the previous notification's urgency colour into view
-                            ColorFade on outlineColor { gate: _entry._heightReady }
+                        // one outline per run: each row draws its slice of the whole card's border
+                        Item {
+                            anchors.fill: parent
+                            clip: true
+
+                            Item {
+                                readonly property real _reach: _entry._radius + 4
+                                y: _entry._showHeader ? 0 : -_reach
+                                width: parent.width
+                                height: parent.height + (_entry._showHeader ? 0 : _reach)
+                                    + (_entry._groupEnd ? 0 : _reach)
+
+                                OutlineBorder {
+                                    radius: _entry._radius
+                                    outlineWidth: 1
+                                    outlineColor: _entry._critical ? Theme.withAlpha(Theme.error, 0.50)
+                                        : Theme.menuCardBorder
+                                    ColorFade on outlineColor { gate: _entry._heightReady }
+                                }
+                            }
+                        }
+
+                        Hairline {
+                            visible: !_entry._showHeader
+                            anchors.top: parent.top
+                            anchors.left: parent.left
+                            anchors.leftMargin: _entry._sidePad
+                            anchors.right: parent.right
+                            anchors.rightMargin: _entry._sidePad
+                            color: Theme.menuDivider
                         }
 
                         ColorFade on color { gate: _entry._heightReady }
@@ -678,7 +689,7 @@ PageShell {
                                 text: _entry.modelData.summary || "Notification"
                                 color: Theme.text
                                 // bottom-most text owes the chevron its corner
-                                rightPadding: _body.visible ? 0 : 16
+                                rightPadding: _body.visible || _entry._chevronInline ? 0 : 16
                                 font.pixelSize: Settings.fontSize
                                 font.weight: Font.DemiBold
                                 wrapMode: Text.Wrap
@@ -768,10 +779,12 @@ PageShell {
                         }
 
                         ShellText {
-                            anchors.right: parent.right
-                            anchors.rightMargin: _entry._sidePad - 2
-                            anchors.bottom: parent.bottom
+                            id: _chevron
+                            anchors.right: _entry._chevronInline ? _rightSlot.left : parent.right
+                            anchors.rightMargin: _entry._chevronInline ? 10 : _entry._sidePad - 2
+                            anchors.bottom: _entry._chevronInline ? undefined : parent.bottom
                             anchors.bottomMargin: _entry._topPad - 4
+                            anchors.verticalCenter: _entry._chevronInline ? _rightSlot.verticalCenter : undefined
                             visible: _entry._expanded || _entry._expandable
                             text: "󰅀"
                             color: Theme.withAlpha(Theme.subtext,
@@ -799,7 +812,7 @@ PageShell {
             list: _historyList
             fadeMultiplier: _historyList.opacity
             trackInset: 4
-            rightInset: 2
+            rightInset: 3 - root.thumbOutset
             shown: root.rowCount > 0
             z: 3
         }

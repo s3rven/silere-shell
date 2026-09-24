@@ -65,18 +65,14 @@ Item {
         root.filterPicked()
     }
 
-    function _rowY(index: int): real {
+    function _rowY(index: real): real {
         return root._navTop + index * (root._rowH + root._rowGap)
     }
+    readonly property int _activeIndex: root._names.indexOf(MenuState.recentFilter)
 
     function _revealActive(): void {
         if (!MenuState.recentActive) return
-        const names = root._names
-        const want = MenuState.recentFilter
-        let index = 0
-        for (let i = 0; i < names.length; i++) {
-            if (names[i] === want) { index = i; break }
-        }
+        const index = Math.max(0, root._activeIndex)
         const contentH = root.implicitHeight
         const viewH = _navScroll.height
         if (contentH <= viewH + 1) {
@@ -151,6 +147,15 @@ Item {
                 }
             }
 
+            RailSelection {
+                id: _selection
+                x: _rowColumn.x
+                width: _rowColumn.width
+                index: root._activeIndex
+                rowHeight: root._rowH
+                rowTop: root._rowY(_selection.slot)
+            }
+
             Column {
                 id: _rowColumn
                 x: 6
@@ -182,13 +187,10 @@ Item {
                         height: root._rowH
                         radius: Theme.radiusInline
                         antialiasing: true
+                        // the gliding selection underneath carries the resting fill
                         color: _row.active
                             ? Theme.withAlpha(Theme.accent,
-                                ShellSettings.highContrast
-                                    ? (_rowTap.pressed ? 0.27
-                                        : _rowHover.hovered ? 0.20 : 0.14)
-                                    : (_rowTap.pressed ? 0.16
-                                        : _rowHover.hovered ? 0.115 : 0.075))
+                                _rowTap.pressed ? 0.09 : _rowHover.hovered ? 0.04 : 0)
                             : _rowTap.pressed
                                 ? Theme.withAlpha(Theme.accent, 0.12)
                             : _rowHover.hovered

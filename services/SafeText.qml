@@ -76,7 +76,7 @@ Singleton {
     // Natural RTL text still works without those explicit formatting controls.
     function singleLineText(value, limit): string {
         const text = String(value ?? "")
-            .replace(/[\u0000-\u001F\u007F-\u009F\u202A-\u202E\u2066-\u2069]/g, " ")
+            .replace(/[\u0000-\u001F\u007F-\u009F\u061C\u200B\u200E\u200F\u202A-\u202E\u2066-\u206F]/g, " ")
             .replace(/\s+/g, " ")
             .trim()
         return root._clip(text, root._cap(limit, root.maxIdentityChars))

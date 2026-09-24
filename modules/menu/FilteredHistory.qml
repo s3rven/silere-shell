@@ -45,6 +45,45 @@ Item {
                  body: e.body, urgency: e.urgency, time: e.time }
     }
 
+    // on the row, not the delegate: a neighbour read through get() never reports its changes
+    function _row(e): var {
+        const r = root._copy(e)
+        r.first = false
+        r.showSection = false
+        r.groupStart = false
+        r.groupEnd = false
+        return r
+    }
+
+    function _dayKey(ms): int {
+        const d = new Date(Number(ms))
+        return d.getFullYear() * 10000 + d.getMonth() * 100 + d.getDate()
+    }
+
+    function _flag(i: int, role: string, value: bool): void {
+        if (_rows.get(i)[role] !== value) _rows.setProperty(i, role, value)
+    }
+
+    // a critical row stands alone so its red outline is never shared with a run
+    function _syncFlags(): void {
+        const n = _rows.count
+        const starts = []
+        for (let i = 0; i < n; i++) {
+            const e = _rows.get(i)
+            const prev = i > 0 ? _rows.get(i - 1) : null
+            const section = !prev || root._dayKey(prev.time) !== root._dayKey(e.time)
+            starts.push(section
+                || root.identityOf(prev.appName) !== root.identityOf(e.appName)
+                || Number(e.urgency) === 2 || Number(prev.urgency) === 2)
+            root._flag(i, "first", i === 0)
+            root._flag(i, "showSection", section)
+        }
+        for (let i = 0; i < n; i++) {
+            root._flag(i, "groupStart", starts[i])
+            root._flag(i, "groupEnd", i === n - 1 || starts[i + 1])
+        }
+    }
+
     function snapshot(): var {
         const entries = []
         for (let i = 0; i < _rows.count; i++) entries.push(root._copy(_rows.get(i)))
@@ -78,13 +117,14 @@ Item {
         }
         for (let i = 0; i < rows.length; i++) {
             if (i < _rows.count && root._key(_rows.get(i)) === keys[i]) continue
-            _rows.insert(i, root._copy(rows[i]))
+            _rows.insert(i, root._row(rows[i]))
             root.inserts++
         }
         while (_rows.count > rows.length) {
             _rows.remove(_rows.count - 1)
             root.removes++
         }
+        root._syncFlags()
     }
 
     onSourceChanged: root.sync()
