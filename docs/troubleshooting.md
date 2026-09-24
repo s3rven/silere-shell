@@ -29,7 +29,7 @@ scripts/check.sh` reports this as its first failure.
 
 The updater keeps the signed transaction journal until it sees the shell running on the
 new revision. From a working terminal, `silere update --rollback` restores the previous
-revision and restarts the shell.
+revision, and restarts the shell when a systemd user unit runs it.
 
 ## Notifications never appear
 

@@ -225,7 +225,7 @@ optional_any "sound settings" "per-app routing UI" pwvucontrol pavucontrol
 optional_tool cava "audio visualizer"
 optional_tool notify-send "desktop alerts"
 optional_tool fc-list "font verification"
-optional_tool inotifywait "screenshot feedback"
+optional_tool inotifywait "screenshot feedback + Hyprland restart recovery"
 optional_tool nmcli "VPN name fallback"
 optional_tool busctl "notification daemon check"
 optional_any "power actions" "suspend, reboot, shut down" systemctl loginctl

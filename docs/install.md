@@ -93,7 +93,7 @@ hides that widget or marks it unavailable.
 | `matugen` | wallpaper theming |
 | `cava` | media visualizer |
 | `powerprofilesctl` | power profiles |
-| `inotifywait` | automatic screenshot-file watcher for underline feedback |
+| `inotifywait` | screenshot feedback on the underline, and restarting the shell onto a restarted Hyprland |
 | `checkupdates` / `apt` / `dnf` / `zypper` / `xbps-install` | package update badge |
 | `paru` / `yay` | AUR update count on Arch Linux |
 | `hyprlock` / `swaylock` / `gtklock` | lock action |

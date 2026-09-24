@@ -305,6 +305,15 @@ _lua_string() {
     printf '"%s"' "$s"
 }
 
+_niri_combo() { # $1 = hyprland-style modifiers, $2 = key
+    local u="${1^^}" out=""
+    case "$u" in *SUPER*|*WIN*|*LOGO*|*MOD4*|*META*) out+="Mod+" ;; esac
+    case "$u" in *CTRL*|*CONTROL*) out+="Ctrl+" ;; esac
+    case "$u" in *ALT*|*MOD1*) out+="Alt+" ;; esac
+    case "$u" in *SHIFT*) out+="Shift+" ;; esac
+    printf '%s%s' "$out" "${2^}"
+}
+
 _toml_basic_string() {
     local s="$1"
     s="${s//\\/\\\\}"
@@ -493,6 +502,19 @@ _bind_taken() {
     [ -f "$file" ] || return 1
     awk -v mods="$MENU_BIND_MODS" -v key="$MENU_BIND_KEY" '
         function norm(s) { gsub(/[ \t]/, "", s); return tolower(s) }
+        # hyprland reads a modifier by the names it contains, so WIN is SUPER and order is free
+        function modset(s,   u, m) {
+            u = toupper(s); m = ""
+            if (u ~ /SHIFT/) m = m "s"
+            if (u ~ /CAPS/) m = m "k"
+            if (u ~ /CTRL|CONTROL/) m = m "c"
+            if (u ~ /ALT|MOD1/) m = m "a"
+            if (u ~ /MOD2/) m = m "2"
+            if (u ~ /MOD3/) m = m "3"
+            if (u ~ /SUPER|WIN|LOGO|MOD4|META/) m = m "w"
+            if (u ~ /MOD5/) m = m "5"
+            return m
+        }
         {
             line = $0
             sub(/#.*/, "", line)
@@ -503,7 +525,7 @@ _bind_taken() {
             if (norm(f[2]) != norm(key)) next
             # $mainMod and friends cannot be compared literally, so a matching key
             # behind any variable modifier counts as taken
-            if (norm(f[1]) == norm(mods) || f[1] ~ /\$/) found = 1
+            if (modset(f[1]) == modset(mods) || f[1] ~ /\$/) found = 1
         }
         END { exit !found }
     ' "$file"
@@ -879,7 +901,7 @@ else
 fi
 _optdep fc-list       "font picker + font checks"
 _optdep brightnessctl "brightness control + popup"
-_optdep inotifywait   "screenshot flash"
+_optdep inotifywait   "screenshot flash + Hyprland restart recovery"
 _optdep nmcli         "VPN name fallback"
 _optdep cava          "audio visualizer (auto-configured at runtime)"
 _optdep_any "updates" "update count" checkupdates apt dnf zypper xbps-install
@@ -1438,7 +1460,7 @@ MENU_BIND_SHOWN="qs ipc -p $(_shell_quote "$ROOT/shell.qml") call menu toggle"
 HYPR_BIND="bind = $MENU_BIND_MODS, $MENU_BIND_KEY, exec, $MENU_BIND_CMD"
 HYPR_BIND_SHOWN="bind = $MENU_BIND_MODS, $MENU_BIND_KEY, exec, $MENU_BIND_SHOWN"
 LUA_BIND_SHOWN="hl.bind($(_lua_string "$MENU_BIND_MODS + $MENU_BIND_KEY"), hl.dsp.exec_cmd($(_lua_string "$MENU_BIND_SHOWN")))"
-NIRI_BIND_SHOWN="Mod+Slash { spawn \"sh\" \"-c\" $(_lua_string "$MENU_BIND_SHOWN"); }"
+NIRI_BIND_SHOWN="$(_niri_combo "$MENU_BIND_MODS" "$MENU_BIND_KEY") { spawn \"sh\" \"-c\" $(_lua_string "$MENU_BIND_SHOWN"); }"
 
 if [ "$receipt_compositor" = niri ]; then
     # niri takes one binds block, so a second one appended at the top level is a

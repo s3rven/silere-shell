@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# the sourced scripts are linted on their own and read the globals set here
+# shellcheck source=/dev/null disable=SC2034
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -1235,6 +1237,12 @@ EOF
     [ ! -e "$cache/update-pending" ] \
         || fail "unsigned release left an installable update flag"
 
+    git -C "$seed" push -q origin :refs/tags/v9.9.3 :refs/tags/v9.9.2
+    _run >/dev/null 2>&1 \
+        || fail "a release withdrawn upstream still blocked the update check"
+    [ -z "$(git -C "$client" tag -l v9.9.3)" ] \
+        || fail "update check kept a release tag withdrawn upstream"
+
     printf '4242\n' > "$cache/update-checked"
     git -C "$client" remote set-url origin "$TMP/unavailable-report-origin.git"
     if _run >/dev/null 2>&1; then
@@ -1659,9 +1667,9 @@ test_menu_keybind_plan() (
     conf="$dir/hyprland.conf"
     mkdir -p "$dir"
 
-    verdict() { # $1 = line under test
+    verdict() { # $1 = line under test, $2 = modifiers to offer
         printf '%s\n' "$1" > "$TMP/keybind-probe.conf"
-        MENU_BIND_MODS=SUPER MENU_BIND_KEY=slash bash -c '
+        MENU_BIND_MODS="${2:-SUPER}" MENU_BIND_KEY=slash bash -c '
             SILERE_SCRIPT_LIB_ONLY=1 source "$1"
             _bind_taken "$2" && printf taken || printf free
         ' _ "$ROOT/scripts/install.sh" "$TMP/keybind-probe.conf"
@@ -1672,6 +1680,12 @@ test_menu_keybind_plan() (
     assert_eq free "$(verdict '# bind = SUPER, slash, exec, foot')" "commented-out bind"
     assert_eq free "$(verdict 'bind = SUPER, S, exec, foot')" "different key"
     assert_eq free "$(verdict 'bind = SUPER SHIFT, slash, exec, foot')" "different modifiers"
+    assert_eq taken "$(verdict 'bind = WIN, slash, exec, foot')" "a modifier synonym"
+    assert_eq taken "$(verdict 'bind = mod4, slash, exec, foot')" "a lowercase modifier synonym"
+    assert_eq taken "$(verdict 'bind = SHIFT_SUPER, slash, exec, foot' 'SUPER SHIFT')" "modifier order"
+    assert_eq free "$(verdict 'bind = SUPER_SHIFT, slash, exec, foot' 'SUPER CTRL')" "one modifier apart"
+    assert_eq "Mod+Shift+M" "$(bash -c 'SILERE_SCRIPT_LIB_ONLY=1 source "$1"; _niri_combo "SUPER SHIFT" m' \
+        _ "$ROOT/scripts/install.sh")" "niri hint follows the configured keys"
 
     printf 'monitor=,preferred,auto,1\n' > "$conf"
     before="$(<"$conf")"

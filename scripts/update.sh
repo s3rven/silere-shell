@@ -318,15 +318,16 @@ _git_fetch() {
 _fetch_main() {
     local shallow
     shallow="$(git -C "$ROOT" rev-parse --is-shallow-repository 2>/dev/null || true)"
-    # --prune-tags: a release withdrawn upstream must stop being eligible here too;
-    # without it a deleted or moved signed tag survives in the local namespace
+    # A release withdrawn upstream must stop being eligible here too. --prune-tags
+    # does nothing beside an explicit refspec, so the tag refspec is spelled out;
+    # its + lets a moved signed tag replace the local one.
     if [ "$shallow" = true ]; then
         # Older installer releases used --depth 1. Tags alone do not cross that
         # boundary, so git describe cannot recover the installed release until
         # the main-branch history is completed once.
-        _git_fetch --unshallow --tags --prune-tags origin main
+        _git_fetch --unshallow --prune origin main '+refs/tags/*:refs/tags/*'
     else
-        _git_fetch --tags --prune-tags origin main
+        _git_fetch --prune origin main '+refs/tags/*:refs/tags/*'
     fi
 }
 
@@ -337,7 +338,7 @@ _latest_release_tag() {
             printf '%s\n' "$tag"
             return 0
         fi
-    done < <(git -C "$ROOT" tag --merged origin/main --list 'v*' --sort=-v:refname)
+    done < <(git -C "$ROOT" tag --merged refs/remotes/origin/main --list 'v*' --sort=-v:refname)
     return 1
 }
 
@@ -465,7 +466,7 @@ _resolve_trusted_release() {
         || _release_fail "$mode" "$release_tag is not signed by the trusted Silere release key"
     release_rev="$(git -C "$ROOT" rev-parse "$release_tag^{}" 2>/dev/null)" \
         || _release_fail "$mode" "could not resolve $release_tag"
-    git -C "$ROOT" merge-base --is-ancestor "$release_rev" origin/main \
+    git -C "$ROOT" merge-base --is-ancestor "$release_rev" refs/remotes/origin/main \
         || _release_fail "$mode" "$release_tag is not part of origin/main"
     _check_release_manifest "$mode"
 }
@@ -828,7 +829,7 @@ if [ "${1:-}" = "--apply" ]; then
     [ "$apply_branch" = main ] \
         || _fail "checkout is on branch $apply_branch — switch to main before applying"
     local_rev="$(git rev-parse HEAD)"
-    git rev-parse origin/main >/dev/null 2>&1 \
+    git rev-parse --verify --quiet refs/remotes/origin/main >/dev/null 2>&1 \
         || _fail "origin/main is unavailable — check for updates again"
     _resolve_trusted_release apply
     remote_rev="$release_rev"

@@ -21,6 +21,9 @@ leading `v`. Keep its Quickshell floor and settings schema in step with
 both, and the release workflow rejects a version/tag mismatch. On `main`, the next
 planned version may carry the `-dev` suffix.
 
+Bump `pkgver` in `packaging/aur/PKGBUILD` and `.SRCINFO` to the new version too. Lint fails
+once a tag is newer than the `pkgver` it finds.
+
 Repository rules should also restrict creation and deletion of matching `v*`
 tags — signature checks complement access control rather than replacing it.
 
