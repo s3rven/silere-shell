@@ -55,12 +55,14 @@ folder along with its `import` and loader in `shell.qml` and the rest keeps work
 
 ## Renaming your fork
 
-The name appears a few hundred times, nearly all of it cosmetic. Three matter:
+The name appears a few hundred times, nearly all of it cosmetic. Four matter:
 
 - the **layer-shell namespaces** (`silere-bar`, `silere-menu`, …) — compositor
   animation rules match those strings
-- the **config directory** `"/silere-shell"` in `services/ConfigStore.qml` and
-  `services/ShellUpdate.qml` — changing it leaves the old `settings.json` behind
+- the **config and cache directories**, `"/silere-shell"` in `services/ConfigStore.qml`
+  and `services/ShellUpdate.qml` — changing them leaves the old `settings.json` behind
+- the **matugen palette** `matugen/silere-shell.json` in `config/MatugenPalette.qml`,
+  which has to match the output path in the matugen template
 - **`security/update-signers`** — swap in your own key, or your fork's updater will
   reject your own releases
 

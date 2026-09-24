@@ -1,6 +1,6 @@
 # Scripting
 
-Every surface is scriptable over Quickshell IPC, so compositor keybinds and scripts can
+The menu, calendar, quick actions and settings are scriptable over Quickshell IPC, so compositor keybinds and scripts can
 open them without simulating a click. Set `SILERE_DIR` to the path the installer printed.
 
 ```bash
@@ -94,6 +94,8 @@ Silere runs a command of your own when something happens. Drop an executable fil
 | `update-available` | count |
 | `workspace-changed` | workspace id |
 
+`update-available` fires only while Settings › Updates tracks package updates.
+
 ```bash
 mkdir -p ~/.config/silere-shell/hooks
 cat > ~/.config/silere-shell/hooks/battery-critical <<'EOF'
@@ -112,4 +114,6 @@ executable file costs nothing.
 Hook runs are capped at 20 a second and 4 at a time, and one still running after 30 seconds
 is terminated. Anything past the rate cap is dropped rather than queued. While all four
 runners are busy, further events wait, and repeats of the same event collapse to the most
-recent one. Hooks are children of the shell, so they stop when it does.
+recent one. A `battery-critical` crossing still runs during a flood, up to 2 a second. The shell
+exiting does not stop a running hook by itself; with `timeout` installed, the 30-second limit
+still ends it.

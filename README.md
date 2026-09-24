@@ -14,41 +14,24 @@
   <img src="https://img.shields.io/badge/runs%20on-Hyprland%20%C2%B7%20niri-2a2d33?style=flat-square&labelColor=0f1013&logo=hyprland&logoColor=9a9ca1" alt="runs on Hyprland and niri"/>
 </p>
 
-Silere is a Quickshell desktop shell for Hyprland and niri built around one idea: nothing
-runs without a reason.
+<p align="center">
+  <a href="#install">Install</a> ·
+  <a href="#what-you-get">Features</a> ·
+  <a href="#controls">Controls</a> ·
+  <a href="#scripting">Scripting</a> ·
+  <a href="#performance">Performance</a> ·
+  <a href="#docs">Docs</a>
+</p>
 
-Bar, notifications, OSD, calendar and tray, all in one process — and it sits under 1% of a
-CPU core when you are not touching it.
+Silere is a desktop shell for Hyprland and niri, built on Quickshell around one idea:
+nothing runs without a reason.
+
+Bar, menu, notifications, OSD, calendar and tray run in one process, at under 1% of a CPU
+core while you are not touching it.
 
 <p align="center">
   <img src="assets/shot-desktop.webp" alt="The floating Silere bar with the home page open and a notification" width="900"/>
 </p>
-
-## Install
-
-You need `git`, Hyprland or niri, and Quickshell 0.3.1 or newer.
-
-```bash
-git clone https://github.com/s3rven/silere-shell
-cd silere-shell
-bash scripts/install.sh
-```
-
-Restart your compositor, or start it right away with `silere run`. Before the optional
-maintenance-command link exists, use `scripts/silere run` from the checkout.
-
-The installer offers to bind **Super + /** to the menu. Take it — the menu holds every
-setting, and the other way in is clicking the active workspace diamond. On niri, or a
-Hyprland config in Lua, it prints the line to add yourself:
-
-```bash
-qs ipc -p ~/.config/silere-shell/shell.qml call menu toggle
-```
-
-Preview it first with `bash scripts/install.sh --dry-run`. After installation,
-`silere doctor` checks the runtime and integrations without changing them. Fonts, optional tools,
-the maintenance command, unattended installs, Matugen wiring and removal:
-[`docs/install.md`](docs/install.md).
 
 ## Why Silere
 
@@ -64,14 +47,17 @@ the maintenance command, unattended installs, Matugen wiring and removal:
 ## What you get
 
 - **Bar** — workspaces, window title, media, network, bluetooth, volume, microphone,
-  brightness, battery, clock, tray, package updates and shell updates.
-  Drag them between left, centre and right.
+  brightness, battery, clock, tray, package updates and shell updates. Drag them between
+  left, centre and right; put the bar on the top or bottom edge, docked or floating.
 - **Menu** — live controls, every setting, and notification history in one panel.
-- **Notifications** — actions, images, searchable history filtered by app, quiet hours, source-window jumping.
+- **Notifications** — actions, images, inline replies, quiet hours, and a searchable
+  history filtered by app. Middle-click one to jump to the app that sent it.
 - **Theming** — Matugen from your wallpaper or a hand-picked accent, over three dark base
   tones, with background blur on Hyprland 0.56 and niri 26.04.
 - **Calendar** from the clock, **OSD** for volume and brightness, and **quick actions** for
-  night light, power profiles and airplane mode.
+  do not disturb, night light, power mode and the radios.
+- **More than one screen** — a bar on each one, switched off per screen, with
+  notifications and the OSD following focus or kept on the display you choose.
 
 <p align="center">
   <img src="assets/shot-surfaces.webp" alt="The home page, the settings rail, and the calendar" width="900"/>
@@ -86,6 +72,42 @@ The same page in the neutral theme and in colours Matugen took from the wallpape
 <p align="center">
   <img src="assets/shot-themes.webp" alt="The home page in the neutral theme, and in colours taken from the wallpaper" width="900"/>
 </p>
+
+### What it leaves to you
+
+Silere is the bar and the surfaces that open from it. It has no launcher, dock, lock
+screen, wallpaper setter or clipboard history; keep the ones you already use. The lock
+action runs hyprlock, swaylock, gtklock or a command of your own.
+
+## Install
+
+You need Hyprland or niri, Quickshell 0.3.1 or newer, and `git`.
+
+```bash
+git clone https://github.com/s3rven/silere-shell
+cd silere-shell
+bash scripts/install.sh
+```
+
+The checkout lands in `~/.config/silere-shell` unless you choose another path. The
+installer backs up every file it edits and asks before adding autostart; `--dry-run` shows
+the whole plan without writing anything.
+
+Restart your compositor, or start Silere now with `silere run`. If you skipped the
+`silere` command, that is `~/.config/silere-shell/scripts/silere run`.
+
+**Opening the menu.** The installer offers to bind **Super + /** to the menu, which holds
+every setting. Clicking the active workspace diamond opens it too. On niri, or a Hyprland
+config in Lua, bind this yourself:
+
+```bash
+qs ipc -p ~/.config/silere-shell/shell.qml call menu toggle
+```
+
+Volume, battery, brightness, night light and the other widgets appear when their tool is
+installed. `silere doctor` lists what is missing and checks the install without changing
+it. Fonts, optional tools, unattended installs, Matugen and removal:
+[`docs/install.md`](docs/install.md).
 
 ## Controls
 
@@ -108,8 +130,8 @@ Silere is pointer-driven: Escape and text fields are its keyboard paths.
 | shell update | **click** opens Settings › Updates |
 | tray | **click** jumps to the app · **right-click** opens its menu · **middle-click** runs the app's secondary action · **scroll** is passed through to the app |
 | notifications | **click** runs the default action · **right-click** dismisses · **middle-click** jumps to the app that sent it · a reply action opens an inline text field when the sender supports one |
-| wi-fi list | **click** joins a saved network, or opens a password field for a personal one · **middle-click** a saved network to forget it |
-| bluetooth list | **click** pairs or connects · **middle-click** a paired device to forget it |
+| wi-fi list | **click** joins a saved network, or opens a password field for a personal one · **middle-click** a saved network twice to forget it, unless you are connected to it |
+| bluetooth list | **click** pairs or connects · **middle-click** a paired device twice to forget it, unless it is connected |
 | menu | **Escape** steps back, then closes · **click** anywhere outside to close |
 | history | **type** in Search to find an app or message · **click** an entry to read it in full · **Clear** removes the visible results · **Escape** clears search, then closes |
 
@@ -127,8 +149,8 @@ To start over, use **Settings › System › Maintenance**, or replace the file 
 
 ## Scripting
 
-Every surface and every quick action is scriptable over Quickshell IPC, and Silere can run
-an executable of your own on events like `battery-critical` or `workspace-changed`.
+The menu, calendar, quick actions and settings are scriptable over Quickshell IPC, and Silere
+can run an executable of your own on events like `battery-critical` or `workspace-changed`.
 
 ```bash
 SILERE_DIR="$HOME/.config/silere-shell"
@@ -150,13 +172,21 @@ Package updates only move the badge.
 
 ## Performance
 
-Idle use on a reference session measured about 82 MB PSS before the menu is first opened
-and about 93 MB after, at well under 1% of one CPU core — much of that the Qt and GPU
-driver floor rather than Silere. The menu builds its pages on first open
-and keeps them: a one-time cost, not a leak. Measure your own checkout with
-`bash scripts/bench.sh 30`, or `--warm` for the post-menu number. Full numbers and the
-animation-driver note: [`docs/performance.md`](docs/performance.md). Per-release history:
-[`docs/perf-history.md`](docs/perf-history.md).
+Measured on a reference session, as proportional set size (PSS):
+
+| state | memory |
+|---|---|
+| an empty Quickshell panel, for comparison | ~57 MB |
+| Silere, before the menu is first opened | ~82 MB |
+| Silere, after the menu has opened once | ~93 MB |
+
+Much of that is the Qt and GPU driver floor rather than Silere, and idle CPU stays well
+under 1% of one core. The first menu open loads code and caches that stay resident: a
+one-time cost, not a leak.
+
+Measure your own checkout with `bash scripts/bench.sh 30`, or `--warm` for the post-menu
+number. Method, fonts and the animation driver: [`docs/performance.md`](docs/performance.md).
+Per release: [`docs/perf-history.md`](docs/perf-history.md).
 
 ## Troubleshooting
 
@@ -183,7 +213,8 @@ That runs the dependency, autostart and configuration checks. For startup errors
 ## Contributing
 
 Ideas, fixes, and new features are all welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) to
-get started. Forking or making it your own? [`docs/forking.md`](docs/forking.md) maps the
+get started, and [Discussions](https://github.com/s3rven/silere-shell/discussions) for
+questions. Forking or making it your own? [`docs/forking.md`](docs/forking.md) maps the
 tree, lists what a change actually touches, and names the few things a rename has to get
 right.
 

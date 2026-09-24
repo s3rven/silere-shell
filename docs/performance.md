@@ -17,8 +17,8 @@ Silere holds two steady states.
 
 Both hold across a day of uptime. Warm is the number to quote.
 
-The gap is the menu building its pages on first open and keeping them, in trade for fast
-reopening. It is bounded: across more than 30 open and close cycles, PSS peaked between
+The gap is what the first menu open leaves loaded: its compiled code and caches. The panel
+itself is released a moment after it closes. The gap is bounded: across more than 30 open and close cycles, PSS peaked between
 164 and 170 MB and returned to its warm figure once idle, while open file descriptors and threads
 settled rather than climbing.
 
