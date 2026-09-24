@@ -39,6 +39,7 @@ Process {
     on_GaveUpChanged: _syncRunning()
 
     onExited: (code, status) => {
+        _exitSeen = true
         _stableTimer.stop()
         if (!superviseWhen) return
 
@@ -56,6 +57,15 @@ Process {
     }
 
     onStarted: _stableTimer.restart()
+
+    // a binary that is gone fails to start without exiting, and respawning cannot bring it back;
+    // superviseWhen going false and true again, as a tool rescan does, is the retry
+    property bool _exitSeen: false
+    onRunningChanged: {
+        if (running) return
+        if (!_exitSeen && superviseWhen) proc._gaveUp = true
+        _exitSeen = false
+    }
 
     onSuperviseWhenChanged: {
         if (!superviseWhen) {

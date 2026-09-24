@@ -225,7 +225,7 @@ Singleton {
 
     readonly property var barWidgetMeta: ({
         // no setting: the diamond is the only way into the menu, so this one cannot be hidden
-        workspaces:  { glyph: "󰊗", label: "Workspaces",      group: "workspaces", setting: "" },
+        workspaces:  { glyph: "󰕰", label: "Workspaces",      group: "workspaces", setting: "" },
         windowTitle: { glyph: "󰖯", label: "Window title",    group: "windowTitle", setting: "showWindowTitle" },
         shellUpdate: { glyph: "󰑐", label: "Shell update",    group: "updates", setting: "barShowShellUpdate" },
         tray:        { glyph: "󰇘", label: "System tray",     group: "tray",    setting: "trayWidget" },
@@ -388,8 +388,8 @@ Singleton {
         { k: "barShadow",           t: "bool", sec: "theme" },
         { k: "barShadowStrength",   t: "real", min: 0.3,  max: 1.6, sec: "theme" },
         { k: "barPosition",         t: "enum", vals: ["top", "bottom"], sec: "surface" },
-        { k: "barOpacity",          t: "real", min: 0.4,  max: 1.0, sec: "surface" },
-        { k: "popupMatchBarOpacity", t: "bool", sec: "surface" },
+        { k: "barOpacity",          t: "real", min: 0.4,  max: 1.0, sec: "theme" },
+        { k: "popupMatchBarOpacity", t: "bool", sec: "theme" },
         { k: "barDisabledMonitors", t: "re",   re: /^[A-Za-z0-9._,-]*$/, sec: "interface" },
         { k: "overlayMonitor",      t: "re",   re: /^[A-Za-z0-9._-]*$/, sec: "interface" },
         { k: "barWidgetOrderLeft",  t: "re",   re: /^[a-zA-Z]*(,[a-zA-Z]+)*$/, sec: "widgets" },
@@ -765,9 +765,14 @@ Singleton {
             "[ -e \"$1\" ] || exit 0; cp -- \"$1\" \"$2\"",
             "bash", root._migrationBackupSrc, root._migrationBackupDst]
         onExited: (code) => {
-            if (code !== 0)
-                console.warn("silere-shell: could not back up settings before migration")
-            _store.flush(false)
+            if (code === 0) {
+                _store.flush(false)
+                return
+            }
+            // the migration rewrites the only copy, so without a backup it stays in memory
+            _store.writeAllowed = false
+            root._readError = "Could not back up settings.json before upgrading it. Existing data was left untouched."
+            console.warn("silere-shell: could not back up settings before migration")
         }
     }
 
@@ -787,8 +792,8 @@ Singleton {
             let parsed = JSON.parse(raw || "{}")
             if (parsed === null || Array.isArray(parsed) || typeof parsed !== "object")
                 throw new Error("settings root must be an object")
-            const rawVersion = typeof parsed.__version === "number" && isFinite(parsed.__version)
-                ? parsed.__version : 0
+            const versionNumber = Number(parsed.__version ?? 0)
+            const rawVersion = isFinite(versionNumber) ? versionNumber : 0
             const onDiskVersion = Math.max(0, Math.floor(rawVersion))
             if (onDiskVersion < _settingsVersion && Object.keys(parsed).length > 0) {
                 try {
@@ -825,6 +830,8 @@ Singleton {
                 if (parsed[s.k] !== undefined) _coerce(s, parsed[s.k])
             }
             root._appliedText = raw
+            // what is on disk now, so a later revert to the same values still writes
+            _store.lastSavedText = raw
             root._readError = ""
             _store.writeAllowed = true
         } catch(e) {
@@ -847,13 +854,16 @@ Singleton {
         const modifiedKeys = Object.create(null)
         for (let i = 0; i < _schema.length; i++) {
             const key = _schema[i].k
-            if (!root._sameValue(root[key], root._defaults[key])) {
-                out[key] = root[key]
+            const modified = !root._sameValue(root[key], root._defaults[key])
+            if (modified) {
                 modifiedKeys[key] = true
                 changed++
-            } else if (!preserveFuture || root._futureTouched[key] === true) {
-                delete out[key]
             }
+            // a newer release may allow a value this one clamps, so its raw value stands until edited here
+            if (preserveFuture && root._futureTouched[key] !== true
+                    && Object.prototype.hasOwnProperty.call(out, key)) continue
+            if (modified) out[key] = root[key]
+            else delete out[key]
         }
         root._modifiedKeys = modifiedKeys
         root._modifiedCount = changed

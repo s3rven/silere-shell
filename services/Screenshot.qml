@@ -75,7 +75,9 @@ Singleton {
             "add_dir \"$HOME/Screenshots\"; " +
             "add_dir \"$HOME/.nxc/screenshots\"; " +
             "[ \"${#dirs[@]}\" -gt 0 ] || exit 3; " +
-            "exec inotifywait -m -q -e close_write,moved_to --format '%w%f' \"${dirs[@]}\" 2>/dev/null"]
+            // a signal to qs skips its cleanup, so the kernel ends the watcher with it
+            "setpriv --pdeathsig KILL true >/dev/null 2>&1 && set -- setpriv --pdeathsig KILL || set --; " +
+            "exec \"$@\" inotifywait -m -q -e close_write,moved_to --format '%w%f' \"${dirs[@]}\" 2>/dev/null"]
         stdout: SplitParser {
             onRead: line => root._maybeFlash(line)
         }

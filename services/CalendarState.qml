@@ -50,16 +50,17 @@ AnchoredPopupState {
     property string persistenceError: ""
 
     function markKey(y: int, m: int, d: int): string { return y + "-" + (m + 1) + "-" + d }
-    function _validMarkKey(value): bool {
+    // "" for anything that is not a real date; a hand-written 2026-09-05 still marks the 5th
+    function _canonicalMarkKey(value): string {
         const match = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(value))
-        if (!match) return false
+        if (!match) return ""
         const year = Number(match[1])
         const month = Number(match[2])
         const day = Number(match[3])
-        if (year < 1 || month < 1 || month > 12 || day < 1) return false
+        if (year < 1 || month < 1 || month > 12 || day < 1) return ""
         const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)
         const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-        return day <= days[month - 1]
+        return day <= days[month - 1] ? root.markKey(year, month - 1, day) : ""
     }
     function toggleMark(y: int, m: int, d: int): void {
         const k = markKey(y, m, d)
@@ -84,18 +85,26 @@ AnchoredPopupState {
     PersistedFile {
         id: _store
         path: ConfigStore.calendarMarksPath
+        watchChanges: true
         writeAllowed: false
         serialize: () => JSON.stringify({ __version: 1, marks: Object.keys(root.marks) })
         onLoaded: raw => {
             try {
                 const trimmed = raw.trim()
+                // our own write echoing back through the watcher
+                if (_store.writeAllowed && trimmed === _store.lastSavedText) return
                 const j = JSON.parse(trimmed || "{}")
+                if (j === null || typeof j !== "object" || Array.isArray(j)
+                        || (j.marks !== undefined && !Array.isArray(j.marks)))
+                    throw new Error("unexpected shape")
                 const version = Number(j.__version ?? 0)
                 const fromFuture = isFinite(version) && version > 1
                 const next = {}
                 if (Array.isArray(j.marks))
-                    for (let i = 0; i < j.marks.length; i++)
-                        if (root._validMarkKey(j.marks[i])) next[j.marks[i]] = true
+                    for (let i = 0; i < j.marks.length; i++) {
+                        const key = root._canonicalMarkKey(j.marks[i])
+                        if (key.length > 0) next[key] = true
+                    }
                 root.marks = next
                 _store.writeAllowed = !fromFuture
                 _store.lastSavedText = trimmed

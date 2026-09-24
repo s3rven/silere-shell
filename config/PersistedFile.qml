@@ -20,6 +20,8 @@ Scope {
     property int failureCount: 0
     property string lastSavedText: ""
     property bool _pendingForDir: false
+    // a watched file changed under us: the owner has not seen it yet, so a write now would overwrite it
+    property bool _reloading: false
 
     // owner-supplied, returns the text to persist
     property var serialize: null
@@ -43,6 +45,10 @@ Scope {
 
     function flush(force: bool): void {
         if (!root.writeAllowed || !root.serialize) return
+        if (!force && root._reloading) {
+            _debounce.restart()
+            return
+        }
         if (!force && !ConfigStore.ready) {
             root._pendingForDir = true
             ConfigStore.ensureDirectory()
@@ -81,9 +87,18 @@ Scope {
         atomicWrites: true
         blockWrites:  true
         printErrors:  false
-        onLoaded: root.loaded(_file.text() || "")
-        onFileChanged: reload()
-        onLoadFailed: error => root.loadFailed(error)
+        onLoaded: {
+            root._reloading = false
+            root.loaded(_file.text() || "")
+        }
+        onFileChanged: {
+            root._reloading = true
+            reload()
+        }
+        onLoadFailed: error => {
+            root._reloading = false
+            root.loadFailed(error)
+        }
         onSaved: {
             root.failureCount = 0
             _retry.stop()

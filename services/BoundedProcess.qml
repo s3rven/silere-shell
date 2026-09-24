@@ -29,10 +29,18 @@ Process {
         'current=$(start_of "$root_pid") || current=; [ "$current" != "$root_start" ] || collect "$root_pid"; ' +
         'signal_saved KILL'
 
+    // a binary that is gone fails to start without emitting exited, and callers recover only there
+    property bool _exitSeen: false
     property Connections _runningWatch: Connections {
         target: root
+        function onExited() { root._exitSeen = true }
         function onRunningChanged() {
-            if (root.running) root.timedOut = false
+            if (root.running) {
+                root.timedOut = false
+                return
+            }
+            if (!root._exitSeen) root.exited(127, 0)
+            root._exitSeen = false
         }
     }
 
