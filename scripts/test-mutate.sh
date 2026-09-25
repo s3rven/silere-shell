@@ -86,4 +86,14 @@ fi
 states="$(grep -oE 'PROBE-MUTATE swept [0-9]+' "$log" | awk '{ n += $3 } END { print n + 0 }')"
 surfaces="$(grep -oE 'over [0-9]+ surfaces' "$log" | head -1 | grep -oE '[0-9]+')"
 printf '  PROBE-MUTATE swept %s states over %s surfaces\n' "$states" "${surfaces:-0}"
+# the README states floors for these counts; a sweep that shrinks below them makes the README false
+claim="$(grep -oE '[0-9]+\+ setting changes applied under [0-9]+\+ built surfaces' "$ROOT/README.md" | head -1 || true)"
+if [ -n "$claim" ]; then
+    want_states="${claim%%+*}"
+    want_surfaces="$(printf '%s' "$claim" | grep -oE 'under [0-9]+' | grep -oE '[0-9]+')"
+    if [ "$states" -lt "$want_states" ] || [ "${surfaces:-0}" -lt "$want_surfaces" ]; then
+        echo "FAIL: README claims $want_states+ setting changes under $want_surfaces+ surfaces; the sweep ran $states under ${surfaces:-0}" >&2
+        exit 1
+    fi
+fi
 echo "mutation sweep passed"

@@ -1761,6 +1761,18 @@ fi
 [ "$release_archive_failed" -ne 0 ] \
   || ok "release notes" "$release_count indexed archives are publishable"
 
+section "readme check counts"
+# the README states a floor, so a new rule needs no edit there but removing rules cannot leave it false
+claimed_rules="$(grep -oE '[0-9]+\+ rule groups' README.md | head -1 | grep -oE '^[0-9]+' || true)"
+actual_rules="$(grep -cE '^section ' scripts/ci-lint.sh)"
+if [ -z "$claimed_rules" ]; then
+    skip "README" "states no lint rule count"
+elif [ "$actual_rules" -lt "$claimed_rules" ]; then
+    fail "README claims $claimed_rules+ lint rule groups; ci-lint has $actual_rules"
+else
+    ok "README" "$actual_rules lint rule groups cover the stated $claimed_rules+"
+fi
+
 section "Markdown heading anchors"
 mapfile -d '' markdown_files < <(find README.md CHANGELOG.md CONTRIBUTING.md SECURITY.md docs \
   -name '*.md' -print0)

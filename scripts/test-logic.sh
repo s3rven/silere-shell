@@ -57,3 +57,11 @@ fi
 grep -oE 'PROBE-LOGIC passed [0-9]+ checks' "$log" | tail -1
 _probe_stop "$probe_pid"
 probe_pid=""
+
+# the README states a floor for this count; a probe that shrinks below it makes the README false
+passed="$(grep -oE 'PROBE-LOGIC passed [0-9]+' "$log" | tail -1 | grep -oE '[0-9]+$' || true)"
+claim="$(grep -oE '[0-9]+\+ checks against the real services' "$ROOT/README.md" | head -1 | grep -oE '^[0-9]+' || true)"
+if [ -n "$claim" ] && [ "${passed:-0}" -lt "$claim" ]; then
+    echo "FAIL: README claims $claim+ logic checks; the probe passed ${passed:-0}" >&2
+    exit 1
+fi
