@@ -138,11 +138,21 @@ AnchoredPopupState {
         }
     }
 
+    function _foldName(name): string {
+        return String(name || "").toLowerCase().replace(/[^a-z0-9]/g, "")
+    }
+
     // folds only hand-typed ipc names; setSettingsSection stays exact so no caller lands on a page by accident
     function _ipcSection(name: string): string {
-        const fold = String(name || "").toLowerCase()
+        const fold = root._foldName(name)
+        if (fold.length === 0) return name
         for (let i = 0; i < root._flatSections.length; i++)
-            if (root._flatSections[i].toLowerCase() === fold) return root._flatSections[i]
+            if (root._foldName(root._flatSections[i]) === fold) return root._flatSections[i]
+        for (let i = 0; i < settingsTree.length; i++) {
+            const kids = settingsTree[i].children || []
+            for (let j = 0; j < kids.length; j++)
+                if (root._foldName(kids[j].label) === fold) return kids[j].section
+        }
         return name
     }
 
@@ -187,6 +197,8 @@ AnchoredPopupState {
         tabRequested(tab)
     }
 
+    readonly property string _refusedText: "error: the menu stays closed while the session is idle or the overview is open"
+
     IpcHandler {
         target: "menu"
 
@@ -198,10 +210,10 @@ AnchoredPopupState {
         function close(): void { root.close() }
         function tab(index: int): string {
             if (index < root.homeTab || index > root.recentTab)
-                return "unknown menu tab " + index + "; valid: 0 (home), 1 (settings), 2 (recent)"
+                return "error: unknown menu tab " + index + "; valid: 0 (home), 1 (settings), 2 (recent)"
             root._unanchor()
             root.showTab(index)
-            return "ok"
+            return root.open ? "ok" : root._refusedText
         }
         // keep `section: "` out of any literal below: ci-lint harvests nav entries by that pattern
         function settings(name: string): string {
@@ -210,6 +222,7 @@ AnchoredPopupState {
             root._unanchor()
             root.setSettingsSection(resolved)
             root.showTab(root.settingsTab)
+            if (!root.open) return root._refusedText
             if (known) return "ok"
             // pages get renamed; a keybind carrying an old name still opens Settings rather than doing nothing, and says why it landed somewhere else
             return "unknown settings page '" + name + "'; opened theme instead. valid: "

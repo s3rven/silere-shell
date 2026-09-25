@@ -100,10 +100,40 @@ Singleton {
     readonly property list<string> soundSettingsCommand: SystemTools.hasPwvucontrol
         ? ["pwvucontrol"] : SystemTools.hasPavucontrol ? ["pavucontrol"] : []
 
-    readonly property list<string> customLockCommand: {
-        const raw = ShellSettings.lockCommandCustom.trim()
-        if (raw.length === 0) return []
-        return raw.split(/\s+/)
+    readonly property list<string> customLockCommand: root.splitCommand(ShellSettings.lockCommandCustom)
+
+    // shell-style words with no shell: quotes group, a backslash escapes, an unclosed quote yields nothing
+    function splitCommand(raw): var {
+        const text = String(raw ?? "")
+        const out = []
+        let word = "", open = false, quote = ""
+        for (let i = 0; i < text.length; i++) {
+            const c = text[i]
+            if (quote === "'") {
+                if (c === "'") quote = ""
+                else word += c
+            } else if (quote === "\"") {
+                if (c === "\"") quote = ""
+                else if (c === "\\" && (text[i + 1] === "\"" || text[i + 1] === "\\")) word += text[++i]
+                else word += c
+            } else if (c === "'" || c === "\"") {
+                quote = c
+                open = true
+            } else if (c === "\\" && i + 1 < text.length) {
+                word += text[++i]
+                open = true
+            } else if (/\s/.test(c)) {
+                if (open) out.push(word)
+                word = ""
+                open = false
+            } else {
+                word += c
+                open = true
+            }
+        }
+        if (quote.length > 0) return []
+        if (open) out.push(word)
+        return out
     }
 
     // a named provider that is not installed stays empty: the lock button disables and

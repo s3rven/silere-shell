@@ -254,6 +254,9 @@ Singleton {
 
     property int    nightLightTemp:      3500
     property bool   nightLightAuto:     false
+    // runtime toggles kept across a restart; no page shows them
+    property bool   nightLightOn:       false
+    property bool   dnd:                false
 
     property int    wsMinVisible:        5
     property bool   wsShowNumbers:       false
@@ -398,6 +401,8 @@ Singleton {
 
         { k: "nightLightTemp",      t: "int",  min: 1000, max: 6500, sec: "-" },
         { k: "nightLightAuto",     t: "bool", sec: "-" },
+        { k: "nightLightOn",        t: "bool", sec: "-" },
+        { k: "dnd",                 t: "bool", sec: "-" },
         { k: "wsMinVisible",        t: "int",  min: 1,    max: 10, sec: "workspaces" },
         { k: "wsShowNumbers",       t: "bool", sec: "workspaces" },
         { k: "wsScrollSwitch",      t: "bool", sec: "workspaces" },
@@ -435,29 +440,32 @@ Singleton {
         return key
     }
 
-    function _coerce(s, v): bool {
+    function _coerced(s, v): var {
         switch (s.t) {
         case "bool":
-            if (typeof v === "boolean") root[s.k] = v
-            else if (v === "true" || v === "false") root[s.k] = v === "true"
-            else return false
-            return true
+            if (typeof v === "boolean") return { ok: true, value: v }
+            if (v === "true" || v === "false") return { ok: true, value: v === "true" }
+            return { ok: false }
         case "int": {
             const n = (typeof v === "number" || (typeof v === "string" && v.trim().length > 0)) ? Number(v) : NaN
-            if (!isFinite(n)) return false
-            root[s.k] = Math.max(s.min, Math.min(s.max, Math.round(n)))
-            return true
+            if (!isFinite(n)) return { ok: false }
+            return { ok: true, value: Math.max(s.min, Math.min(s.max, Math.round(n))) }
         }
         case "real": {
             const n = (typeof v === "number" || (typeof v === "string" && v.trim().length > 0)) ? Number(v) : NaN
-            if (!isFinite(n)) return false
-            root[s.k] = Math.max(s.min, Math.min(s.max, n))
-            return true
+            if (!isFinite(n)) return { ok: false }
+            return { ok: true, value: Math.max(s.min, Math.min(s.max, n)) }
         }
-        case "enum": if (s.vals.indexOf(v) >= 0) { root[s.k] = v; return true } return false
-        case "re":   if (typeof v === "string" && s.re.test(v)) { root[s.k] = v; return true } return false
+        case "enum": return s.vals.indexOf(v) >= 0 ? { ok: true, value: v } : { ok: false }
+        case "re":   return typeof v === "string" && s.re.test(v) ? { ok: true, value: v } : { ok: false }
         }
-        return false
+        return { ok: false }
+    }
+
+    function _coerce(s, v): bool {
+        const c = root._coerced(s, v)
+        if (c.ok) root[s.k] = c.value
+        return c.ok
     }
 
     function constraintOf(key: string): string {
@@ -475,9 +483,9 @@ Singleton {
 
     function _ipcSet(key: string, value): string {
         const k = root._ipcKey(key)
-        if (!root.schemaFor(k)) return "unknown setting '" + key + "'; try `list`"
+        if (!root.schemaFor(k)) return "error: unknown setting '" + key + "'; try `list`"
         if (!root.setValue(k, value))
-            return "'" + value + "' is not valid for " + k
+            return "error: '" + value + "' is not valid for " + k
                 + "; expected " + root.constraintOf(k)
         // normalize widget-order writes after all three zones are readable
         if (k === "barWidgetOrderLeft" || k === "barWidgetOrderCenter"
@@ -492,20 +500,23 @@ Singleton {
 
         function get(key: string): string {
             const k = root._ipcKey(key)
-            if (!root.schemaFor(k)) return "unknown setting '" + key + "'; try `list`"
+            if (!root.schemaFor(k)) return "error: unknown setting '" + key + "'; try `list`"
             return String(root[k])
         }
 
+        // before the load, a write is overwritten by the file or never saved
         function set(key: string, value: string): string {
+            if (!root.ready) return "error: settings are still loading; try again"
             return root._ipcSet(key, value)
         }
 
         function toggle(key: string): string {
+            if (!root.ready) return "error: settings are still loading; try again"
             const k = root._ipcKey(key)
             const s = root.schemaFor(k)
-            if (!s) return "unknown setting '" + key + "'; try `list`"
+            if (!s) return "error: unknown setting '" + key + "'; try `list`"
             if (s.t !== "bool")
-                return k + " is not a toggle; expected " + root.constraintOf(k)
+                return "error: " + k + " is not a toggle; expected " + root.constraintOf(k)
             root[k] = !root[k]
             return String(root[k])
         }
@@ -514,11 +525,14 @@ Singleton {
             const want = String(filter || "").trim()
             // keys are camelCase, so a typed-out lowercase filter matches nothing without this
             const fold = want.toLowerCase()
+            // the rail's labels ("Alerts") name the same pages as the section ids ("warnings")
+            const page = MenuState._ipcSection(want).toLowerCase()
             const out = []
             for (let i = 0; i < root._schema.length; i++) {
                 const s = root._schema[i]
                 if (fold.length > 0 && s.sec.toLowerCase().indexOf(fold) < 0
-                    && s.k.toLowerCase().indexOf(fold) < 0)
+                    && s.k.toLowerCase().indexOf(fold) < 0
+                    && s.sec.split(",").indexOf(page) < 0)
                     continue
                 out.push(s.k + "=" + String(root[s.k])
                     + "  [" + root.constraintOf(s.k) + "]")
@@ -546,6 +560,7 @@ Singleton {
     property var _discreteKeys: Object.create(null)
     // reset assigns every key at once; one write at the end, not one per toggle
     property bool _bulkAssign: false
+    property bool _applying: false
     readonly property int modifiedCount: _modifiedCount
 
     property var _modifiedSections: Object.create(null)
@@ -562,7 +577,8 @@ Singleton {
     // that collapse with it: one page can have several independent masters, and OR-ing them
     // together left every glow key dotting Underline whenever the bar border alone was on.
     // A master, and anything that stays visible beside it, belongs in no rule. `negate` flips
-    // a rule to fire while its master is ON, for a key nested behind "expanded: !master".
+    // a rule to fire while its master is ON, for a key nested behind "expanded: !master";
+    // `off` names the enum value that collapses the rule.
     readonly property var _sectionGates: ({
         underline: [
             { master: "underlineGlow", hides: ["underlineIdleGlow", "underlineFullWidth",
@@ -583,6 +599,36 @@ Singleton {
         ],
         warnings: [
             { master: "osdEnabled", hides: ["osdChargedNotify"] }
+        ],
+        surface: [
+            { master: "barFloating", hides: ["barWidth", "barGap"] }
+        ],
+        separators: [
+            { master: "barCompact", negate: true, hides: ["barAutoCompact"] },
+            { master: "dotStyle", off: "none", hides: ["barSeparatorMode", "dotOpacity"] }
+        ],
+        theme: [
+            { master: "neutralTheme", hides: ["neutralAccent", "neutralAccentAuto"] },
+            { master: "neutralTheme", negate: true, hides: ["matugenAccentRole"] },
+            { master: "barShadow", hides: ["barShadowStrength"] }
+        ],
+        clock: [
+            { master: "clockShowDate", hides: ["compactDate"] }
+        ],
+        indicators: [
+            { master: "showWindowTitle", hides: ["showWindowTitleApp"] },
+            { master: "networkTrafficStats", hides: ["networkSpeedInline"] },
+            { master: "valuesOnHover", hides: ["hoverLevelBar"] }
+        ],
+        media: [
+            { master: "mediaProgress", hides: ["mediaVisualizerOpacity", "mediaVisualizerPosition",
+                "mediaVisualizerPreset", "mediaVisualizerStyle"] }
+        ],
+        updates: [
+            { master: "updatesWidget", hides: ["updatesIncludeAur"] }
+        ],
+        workspaces: [
+            { master: "wsShowAppIcons", hides: ["wsIconMono", "wsIconOpacity"] }
         ]
     })
 
@@ -591,7 +637,8 @@ Singleton {
         if (!rules) return false
         for (let i = 0; i < rules.length; i++) {
             const rule = rules[i]
-            const collapsed = rule.negate ? !!root[rule.master] : !root[rule.master]
+            const collapsed = rule.off !== undefined ? root[rule.master] === rule.off
+                : rule.negate ? !!root[rule.master] : !root[rule.master]
             if (collapsed && rule.hides.indexOf(key) >= 0) return true
         }
         return false
@@ -671,7 +718,7 @@ Singleton {
     }
 
     function _onSettingChanged(key: string): void {
-        if (!_loaded) return
+        if (!_loaded || _applying) return
         // sliders can emit dozens of changes per second. Track the one key that moved instead of rescanning the entire schema on every tick
         const modified = !root._sameValue(root[key], root._defaults[key])
         const wasModified = root._modifiedKeys[key] === true
@@ -818,16 +865,22 @@ Singleton {
             if (fromFuture)
                 console.warn("silere-shell: settings.json is from newer version", onDiskVersion,
                     "— preserving unknown values")
-            if (_loaded) {
-                _loaded = false
+            // assign only what differs, so a hand edit can't bounce every key through its default
+            _applying = true
+            try {
                 for (let i = 0; i < _schema.length; i++) {
-                    const key = _schema[i].k
-                    root[key] = _defaults[key]
+                    const s = _schema[i]
+                    let value = _defaults[s.k]
+                    if (parsed[s.k] !== undefined) {
+                        const c = _coerced(s, parsed[s.k])
+                        if (c.ok) value = c.value
+                    } else if (!_loaded) {
+                        continue
+                    }
+                    if (!_sameValue(root[s.k], value)) root[s.k] = value
                 }
-            }
-            for (let i = 0; i < _schema.length; i++) {
-                const s = _schema[i]
-                if (parsed[s.k] !== undefined) _coerce(s, parsed[s.k])
+            } finally {
+                _applying = false
             }
             root._appliedText = raw
             // what is on disk now, so a later revert to the same values still writes

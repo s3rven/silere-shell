@@ -34,9 +34,9 @@ AnchoredPopupState {
 
         function nightLight(): string {
             // the optional-tool scan runs at startup; before it lands no tool looks installed
-            if (!SystemTools.ready) return "still looking for a night light tool"
+            if (!SystemTools.ready) return "error: still looking for a night light tool"
             if (!NightLight.toolAvailable)
-                return "night light needs hyprsunset or wlsunset"
+                return "error: night light needs hyprsunset or wlsunset"
             NightLight.toggle()
             return NightLight.enabled ? "on" : "off"
         }
@@ -44,16 +44,16 @@ AnchoredPopupState {
         // the daemon answers over DBus, so the profile that landed is not readable yet
         function powerMode(): string {
             if (!PowerProfiles.available)
-                return "power profiles need power-profiles-daemon"
+                return "error: power modes need power-profiles-daemon or tuned-ppd"
             const next = PowerProfiles.cycle()
-            return next.length > 0 ? next : "a power profile change is already in flight"
+            return next.length > 0 ? next : "error: a power profile change is already in flight"
         }
 
         function wifi(): string {
             if (!root.wifiControllable)
                 return Network.wifiHardBlocked
-                    ? "the Wi-Fi radio is blocked in hardware"
-                    : "no Wi-Fi device the shell can control"
+                    ? "error: the Wi-Fi radio is blocked in hardware"
+                    : "error: no Wi-Fi device the shell can control"
             // the radios answer over dbus, so report the state that was asked for
             const next = !Network.wifiEnabled
             Network.toggleWifi()
@@ -61,7 +61,7 @@ AnchoredPopupState {
         }
 
         function bluetooth(): string {
-            if (!root.btControllable) return "no Bluetooth adapter"
+            if (!root.btControllable) return "error: no Bluetooth adapter"
             const next = !Bluetooth.enabled
             Bluetooth.toggle()
             return next ? "on" : "off"
@@ -69,7 +69,7 @@ AnchoredPopupState {
 
         function airplane(): string {
             if (!root.airplaneAvailable)
-                return "no Wi-Fi or Bluetooth radio the shell can control"
+                return "error: no Wi-Fi or Bluetooth radio the shell can control"
             const entering = root.radiosOn
             root.toggleAirplane()
             return entering ? "on" : "off"
