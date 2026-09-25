@@ -1761,16 +1761,19 @@ fi
 [ "$release_archive_failed" -ne 0 ] \
   || ok "release notes" "$release_count indexed archives are publishable"
 
-section "readme check counts"
-# the README states a floor, so a new rule needs no edit there but removing rules cannot leave it false
-claimed_rules="$(grep -oE '[0-9]+\+ rule groups' README.md | head -1 | grep -oE '^[0-9]+' || true)"
-actual_rules="$(grep -cE '^section ' scripts/ci-lint.sh)"
-if [ -z "$claimed_rules" ]; then
-    skip "README" "states no lint rule count"
-elif [ "$actual_rules" -lt "$claimed_rules" ]; then
-    fail "README claims $claimed_rules+ lint rule groups; ci-lint has $actual_rules"
+section "unpublished AUR package"
+# releasing.md is where the package goes live; until it says so, no user-facing doc may send anyone to it
+if grep -qF 'The package is not on the AUR yet' docs/releasing.md 2>/dev/null; then
+  aur_refs="$(git ls-files -- README.md CONTRIBUTING.md 'docs/*.md' \
+    | grep -vE '^docs/(releasing\.md|releases/)' \
+    | xargs -r grep -lE 'silere-shell-git|from the AUR|the AUR package' 2>/dev/null || true)"
+  if [ -n "$aur_refs" ]; then
+    fail "user docs point at an AUR package that is not published:" $aur_refs
+  else
+    ok "AUR" "no user doc points at the unpublished package"
+  fi
 else
-    ok "README" "$actual_rules lint rule groups cover the stated $claimed_rules+"
+  skip "AUR" "releasing.md no longer says the package is unpublished"
 fi
 
 section "Markdown heading anchors"

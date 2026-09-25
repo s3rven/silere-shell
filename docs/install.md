@@ -1,6 +1,8 @@
 # Installing
 
 You need `git`, Hyprland or niri, and Quickshell 0.3.1 or newer.
+On Arch and its derivatives, `sudo pacman -S --needed quickshell git` installs both; other
+distros are covered by [Quickshell's install guide](https://quickshell.org/docs/v0.3.1/guide/install-setup/).
 
 ```bash
 git clone https://github.com/s3rven/silere-shell

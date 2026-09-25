@@ -9,7 +9,8 @@
 
 <p align="center">
   <a href="https://github.com/s3rven/silere-shell/releases"><img src="https://img.shields.io/github/v/release/s3rven/silere-shell?style=flat-square&labelColor=0f1013&color=2a2d33&logo=github&logoColor=9a9ca1" alt="latest release"/></a>
-  <a href="https://github.com/s3rven/silere-shell/actions/workflows/validate.yml"><img src="https://img.shields.io/github/actions/workflow/status/s3rven/silere-shell/validate.yml?branch=main&style=flat-square&labelColor=0f1013&label=checks&logo=githubactions&logoColor=9a9ca1" alt="checks on main"/></a>
+  <a href="https://github.com/s3rven/silere-shell/actions/workflows/validate.yml"><img src="https://img.shields.io/github/actions/workflow/status/s3rven/silere-shell/validate.yml?branch=main&style=flat-square&labelColor=0f1013&label=1000%2B%20checks&color=2a2d33&logo=githubactions&logoColor=9a9ca1" alt="1000+ checks on main"/></a>
+  <a href="https://github.com/s3rven/silere-shell/commits/main"><img src="https://img.shields.io/github/last-commit/s3rven/silere-shell/main?style=flat-square&labelColor=0f1013&color=2a2d33&label=last%20commit" alt="last commit"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2a2d33?style=flat-square&labelColor=0f1013" alt="license: MIT"/></a>
   <a href="https://quickshell.org/"><img src="https://img.shields.io/badge/built%20on-Quickshell-2a2d33?style=flat-square&labelColor=0f1013" alt="built on Quickshell"/></a>
   <img src="https://img.shields.io/badge/runs%20on-Hyprland%20%C2%B7%20niri-2a2d33?style=flat-square&labelColor=0f1013&logo=hyprland&logoColor=9a9ca1" alt="runs on Hyprland and niri"/>
@@ -21,7 +22,6 @@
   <a href="#controls">Controls</a> ·
   <a href="#scripting">Scripting</a> ·
   <a href="#performance">Performance</a> ·
-  <a href="#checks">Checks</a> ·
   <a href="#docs">Docs</a>
 </p>
 
@@ -84,6 +84,8 @@ action runs hyprlock, swaylock, gtklock or a command of your own.
 ## Install
 
 You need Hyprland or niri, Quickshell 0.3.1 or newer, and `git`.
+On Arch and its derivatives, `sudo pacman -S --needed quickshell git` installs both; other
+distros are covered by [Quickshell's install guide](https://quickshell.org/docs/v0.3.1/guide/install-setup/).
 
 ```bash
 git clone https://github.com/s3rven/silere-shell
@@ -93,8 +95,7 @@ bash scripts/install.sh
 
 The checkout lands in `~/.config/silere-shell` unless you choose another path. The
 installer backs up every file it edits and asks before adding autostart; `--dry-run` shows
-the whole plan without writing anything. On Arch, `silere-shell-git` from the AUR installs
-under `/usr/share/silere-shell` and updates through pacman.
+the whole plan without writing anything.
 
 Restart your compositor, or start Silere now with `silere run`. If you skipped the
 `silere` command, that is `~/.config/silere-shell/scripts/silere run`.
@@ -156,7 +157,7 @@ The menu, calendar, quick actions and settings are scriptable over Quickshell IP
 can run an executable of your own on events like `battery-critical` or `workspace-changed`.
 
 ```bash
-SILERE_DIR="$HOME/.config/silere-shell"    # /usr/share/silere-shell with the AUR package
+SILERE_DIR="$HOME/.config/silere-shell"
 qs ipc -p "$SILERE_DIR/shell.qml" call menu toggle
 qs ipc -p "$SILERE_DIR/shell.qml" call calendar toggle
 qs ipc -p "$SILERE_DIR/shell.qml" call quickActions dnd
@@ -190,25 +191,6 @@ one-time cost, not a leak.
 Measure your own checkout with `bash scripts/bench.sh 30`, or `--warm` for the post-menu
 number. Method, fonts and the animation driver: [`docs/performance.md`](docs/performance.md).
 Per release: [`docs/perf-history.md`](docs/perf-history.md).
-
-## Checks
-
-Every push and pull request runs these in a clean Arch container, and a weekly run repeats
-them against the latest Quickshell package:
-
-| check | what it covers |
-|---|---|
-| lint | 75+ rule groups, among them the settings schema against every settings row, the reduce-motion gate on every animation, what the AUR package ships, shellcheck and actionlint |
-| portability | the installer, updater and uninstaller, run against throwaway repositories |
-| Quickshell modules | every QML module Silere imports is present in the packaged Quickshell |
-| type check | every QML file compiled ahead of time, which resolves each import and type |
-| logic probe | 550+ checks against the real services, from settings reloads to IPC answers and update parsing |
-| surface build | every settings page and menu surface, with reduce motion, high contrast, every option on, the largest type and fractional scaling |
-| settings sweep | 180+ setting changes applied under 50+ built surfaces, each watched for errors and runaway layout |
-| layout fit | every menu label at the width it ships at, across the type scale |
-
-`bash scripts/check.sh` runs the same suite locally, and adds a startup smoke test and a
-build of every layer-shell panel.
 
 ## Troubleshooting
 

@@ -4,7 +4,7 @@ The menu, calendar, quick actions and settings are scriptable over Quickshell IP
 open them without simulating a click. Set `SILERE_DIR` to the path the installer printed.
 
 ```bash
-SILERE_DIR="$HOME/.config/silere-shell"    # /usr/share/silere-shell with the AUR package
+SILERE_DIR="$HOME/.config/silere-shell"
 qs ipc -p "$SILERE_DIR/shell.qml" call menu toggle
 ```
 

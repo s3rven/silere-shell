@@ -163,7 +163,7 @@ settings file carries its own `__version` and migrates separately.
 - Replacing a `~/.config/silere-shell` that is not a Git checkout keeps its settings, history, hooks and calendar marks.
 - An update reports a type-check it could not run instead of counting it as passed, and flushes its journal to disk at each step.
 - `silere doctor` and `check.sh` report whether this Silere is running, not just any Quickshell.
-- The AUR package lists wlsunset, BlueZ, pwvucontrol, pavucontrol and fakeroot among its optional dependencies.
+- The PKGBUILD in `packaging/aur` lists wlsunset, BlueZ, pwvucontrol, pavucontrol and fakeroot among its optional dependencies.
 
 ### Security
 
