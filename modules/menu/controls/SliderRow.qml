@@ -19,6 +19,8 @@ MenuRow {
     property real   min:          root._schema ? Number(root._schema.min) : 0.0
     property real   max:          root._schema ? Number(root._schema.max) : 1.0
     property real   step:         root._schema && root._schema.t === "int" ? 1 : 0.05
+    property bool   commitOnRelease: false
+    readonly property real shownValue: _track.shownValue
     property color  glyphColor:   Theme.withAlpha(Theme.subtext, 0.85)
 
     rowHovered:     _rowHover.hovered
@@ -118,7 +120,9 @@ MenuRow {
         min:   root.min
         max:   root.max
         step:  root.step
+        commitOnRelease: root.commitOnRelease
         wheelKey: "slider:" + root.label
+        wheelNeedsRest: true
         onChanged: value => root.changed(value)
     }
 }

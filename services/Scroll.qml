@@ -13,10 +13,27 @@ Singleton {
     readonly property real touchpadPixelScale: 8.0
     readonly property int  controlTouchpadMinStepMs: 30
     readonly property real horizontalRejectRatio: 1.25
+    readonly property int  pageLatchMs: 400
+    readonly property int  sliderRestMs: 300
 
     property var _accums: ({})
     property var _timers: ({})
     property var _lastSteps: ({})
+    // a plain field, so stamping it on every scrolled frame notifies nothing
+    readonly property var _page: ({ movedAt: 0 })
+
+    function notePageMoved(): void {
+        root._page.movedAt = Date.now()
+    }
+
+    // a wheel gesture that is scrolling the page keeps scrolling it when a slider passes under the pointer
+    function wheelBelongsToPage(hoveredSince: real): bool {
+        const now = Date.now()
+        if (now - root._page.movedAt >= root.pageLatchMs
+                && now - hoveredSince >= root.sliderRestMs) return false
+        root._page.movedAt = now
+        return true
+    }
 
     // natural scrolling flips the delta; a level keeps "up means more", as Qt's own sliders do
     function processLevelWheel(event, key: string): int {

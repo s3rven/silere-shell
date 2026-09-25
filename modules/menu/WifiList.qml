@@ -208,8 +208,8 @@ Item {
                     }
                     onTriggered: _activate()
 
-                    // middle-click forgets a saved profile; the first press only arms it
-                    function _middleTap(): void {
+                    // right- or middle-click forgets a saved profile; the first press only arms it
+                    function _forgetTap(): void {
                         if (!_entry.modelData.known || _entry.modelData.active) return
                         if (root._forgetSsid === _entry.modelData.ssid) {
                             if (Date.now() - root._forgetAtMs < Metrics.confirmGuardMs) return
@@ -223,8 +223,8 @@ Item {
                         }
                     }
                     TapHandler {
-                        acceptedButtons: Qt.MiddleButton
-                        onTapped: _row._middleTap()
+                        acceptedButtons: Qt.RightButton | Qt.MiddleButton
+                        onTapped: _row._forgetTap()
                     }
                 }
 

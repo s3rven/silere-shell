@@ -11,6 +11,7 @@ Item {
     property real max:   1
     property real step:  0.05
     property string wheelKey: ""
+    property bool wheelNeedsRest: false
     property bool commitOnRelease: false
     property bool interactive: true
     property bool showThumb: true
@@ -36,6 +37,7 @@ Item {
     readonly property real shownValue: _shownValue
     readonly property bool dragging: _ma.pressed
     property real _shownValue: value
+    property real _hoveredSince: 0
 
     signal changed(real value)
 
@@ -138,8 +140,13 @@ Item {
         onPositionChanged: (mouse) => { if (pressed) root._setFromUser(root._posToVal(mouse.x)) }
         onReleased:        if (root.commitOnRelease) root.changed(root._shownValue)
         onCanceled:        root._shownValue = root.value
+        onContainsMouseChanged: if (containsMouse) root._hoveredSince = Date.now()
         onWheel: (wheel) => {
-            if (root.wheelKey === "") { wheel.accepted = false; return }
+            const since = !root.wheelNeedsRest ? 0
+                : containsMouse ? root._hoveredSince : Date.now()
+            if (root.wheelKey === "" || Scroll.wheelBelongsToPage(since)) {
+                wheel.accepted = false; return
+            }
             const n = Scroll.processLevelWheel(wheel, root.wheelKey)
             if (n !== 0) root.nudge(n, 1)
         }

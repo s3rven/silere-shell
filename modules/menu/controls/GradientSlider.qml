@@ -23,6 +23,7 @@ Item {
         : Math.round(_clamped(position) * displayScale)
     readonly property real stepSize: 1
     readonly property bool dragging: _mouse.pressed
+    property real _hoveredSince: 0
 
     signal picked(real position)
 
@@ -101,6 +102,14 @@ Item {
         cursorShape: Qt.PointingHandCursor
         preventStealing: true
         hoverEnabled: true
+        onContainsMouseChanged: if (containsMouse) root._hoveredSince = Date.now()
+        onWheel: (wheel) => {
+            if (Scroll.wheelBelongsToPage(containsMouse ? root._hoveredSince : Date.now())) {
+                wheel.accepted = false; return
+            }
+            const n = Scroll.processLevelWheel(wheel, root.wheelKey)
+            if (n !== 0) root._nudge(n, 1)
+        }
 
         function _set(mx: real): void {
             root.picked(root._clamped(
@@ -111,15 +120,5 @@ Item {
             _set(mouse.x)
         }
         onPositionChanged: mouse => { if (pressed) _set(mouse.x) }
-    }
-
-    WheelHandler {
-        enabled: root.enabled && root.interactive
-        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-        onWheel: event => {
-            event.accepted = true
-            const n = Scroll.processLevelWheel(event, root.wheelKey)
-            if (n !== 0) root._nudge(n, 1)
-        }
     }
 }

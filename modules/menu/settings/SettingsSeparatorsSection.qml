@@ -85,6 +85,7 @@ Column {
                 glyphColor: Theme.withAlpha(Theme.text, Math.max(0.35, ShellSettings.dotOpacity))
                 label: "Opacity"
                 key: "dotOpacity"
+                step: 0.02
                 displayValue: Math.round(ShellSettings.dotOpacity * 100) + "%"
             }
         }

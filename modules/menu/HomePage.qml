@@ -345,11 +345,14 @@ PageShell {
                         CollapsibleSection {
                             expanded: !ShellSettings.nightLightAuto
                             SliderRow {
+                                id: _nightTemp
                                 glyph: "󰔄"
                                 label: "Temperature"
-                                displayValue: ShellSettings.nightLightTemp + "K"
+                                displayValue: Math.round(_nightTemp.shownValue) + "K"
                                 value: ShellSettings.nightLightTemp
                                 min: 1000; max: 6500; step: 100
+                                // each value relaunches the gamma tool, which drops to white in between
+                                commitOnRelease: true
                                 glyphColor: Theme.withAlpha(Theme.warning, 0.85)
                                 onChanged: (v) => ShellSettings.nightLightTemp = v
                             }

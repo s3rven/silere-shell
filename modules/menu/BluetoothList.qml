@@ -158,8 +158,8 @@ Item {
                 }
                 onTriggered: _activate()
 
-                // middle-click forgets a paired device; the first press only arms it
-                function _middleTap(): void {
+                // right- or middle-click forgets a paired device; the first press only arms it
+                function _forgetTap(): void {
                     if (!modelData.paired || modelData.connected) return
                     const addr = modelData.address
                     if (root._forgetAddr === addr) {
@@ -174,8 +174,8 @@ Item {
                     }
                 }
                 TapHandler {
-                    acceptedButtons: Qt.MiddleButton
-                    onTapped: _row._middleTap()
+                    acceptedButtons: Qt.RightButton | Qt.MiddleButton
+                    onTapped: _row._forgetTap()
                 }
             }
         }

@@ -55,6 +55,7 @@ Column {
             SliderRow {
                 glyph: "󰋩"; label: "Icon opacity"
                 key: "wsIconOpacity"
+                step: 0.02
                 displayValue: Math.round(ShellSettings.wsIconOpacity * 100) + "%"
             }
         }
