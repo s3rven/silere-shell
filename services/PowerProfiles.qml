@@ -9,9 +9,9 @@ import Quickshell.Services.UPower as UPower
 Singleton {
     id: root
 
-    // the native service pushes reads; powerprofilesctl stays the write path so a
-    // rejected change can report stderr
+    // the service pushes reads; powerprofilesctl writes where installed, so a refusal reports stderr
     readonly property bool available: SystemTools.hasPowerProfilesCtl
+        || SystemTools.hasPowerProfilesService
     readonly property bool syncing: _set.running
     property string lastError: ""
 
@@ -79,7 +79,12 @@ Singleton {
         const want = String(name)
         if (root._cycleOrder.indexOf(want) < 0 || want === root.profile) return
         root.lastError = ""
-        _set.exec(["powerprofilesctl", "set", want])
+        if (SystemTools.hasPowerProfilesCtl) {
+            _set.exec(["powerprofilesctl", "set", want])
+            return
+        }
+        UPower.PowerProfiles.profile = want === "performance" ? UPower.PowerProfile.Performance
+            : want === "power-saver" ? UPower.PowerProfile.PowerSaver : UPower.PowerProfile.Balanced
     }
 
     function nextProfile(current: string, order: var): string {

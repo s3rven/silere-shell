@@ -135,11 +135,11 @@ Singleton {
             // non-zero exit (especially timeout's 124) is a failed source, not
             // proof that the previously reported AUR updates disappeared.
             const aur = aurTool.length > 0
-                ? "aurout=$(" + root._limit(60, aurTool + " -Qua") + " 2>&1); aurrc=$?; "
+                ? "aurout=$(" + root._limit(60, aurTool + " -Qua") + " 2>/dev/null); aurrc=$?; "
                   + "if [ \"$aurrc\" -ne 0 ] && { [ \"$aurrc\" -ne 1 ] || [ -n \"$aurout\" ]; }; "
                   + "then echo \"ERR " + aurTool + " check failed (exit $aurrc)\"; exit 0; fi; "
                 : "aurout=''; "
-            return "out=$(" + root._limit(90, "checkupdates") + " 2>&1); rc=$?; " +
+            return "out=$(" + root._limit(90, "checkupdates") + " 2>/dev/null); rc=$?; " +
                    "if [ \"$rc\" -ne 0 ] && [ \"$rc\" -ne 2 ]; then echo \"ERR checkupdates failed (exit $rc)\"; exit 0; fi; " +
                    aur +
                    "repo=$(printf '%s' \"$out\" | grep -c .); " +
@@ -152,27 +152,27 @@ Singleton {
         }
         case "aur": {
             const tool = SystemTools.hasParu ? "paru" : "yay"
-            return "out=$(" + root._limit(90, tool + " -Qu") + " 2>&1); rc=$?; " +
+            return "out=$(" + root._limit(90, tool + " -Qu") + " 2>/dev/null); rc=$?; " +
                    "if [ \"$rc\" -ne 0 ] && { [ \"$rc\" -ne 1 ] || [ -n \"$out\" ]; }; " +
                    "then echo \"ERR " + tool + " check failed (exit $rc)\"; exit 0; fi; " +
                    "printf '%s' \"$out\" | grep -c .; " +
                    "printf '%s\\n' \"$out\" | head -n " + root._maxDetail
         }
-        case "apt":    return "out=$(" + root._limit(120, "apt list --upgradable") + " 2>&1); rc=$?; " +
+        case "apt":    return "out=$(" + root._limit(120, "apt list --upgradable") + " 2>/dev/null); rc=$?; " +
                               "if [ \"$rc\" -ne 0 ]; then echo \"ERR apt check failed (exit $rc)\"; exit 0; fi; " +
                               "printf '%s\\n' \"$out\" | grep -c /; " +
                               "printf '%s\\n' \"$out\" | head -n " + (root._maxDetail + 4)
-        case "dnf":    return "out=$(" + root._limit(120, "dnf -q check-update") + " 2>&1); rc=$?; " +
+        case "dnf":    return "out=$(" + root._limit(120, "dnf -q check-update") + " 2>/dev/null); rc=$?; " +
                               "if [ \"$rc\" -ne 0 ] && [ \"$rc\" -ne 100 ]; then echo \"ERR dnf check failed (exit $rc)\"; exit 0; fi; " +
-                              "printf '%s\\n' \"$out\" | awk 'NF == 3 && $1 ~ /\\./ { n++ } END { print n + 0 }'; " +
+                              "printf '%s\\n' \"$out\" | awk '/^Obsoleting/ { exit } NF == 3 && $1 ~ /\\./ && $3 !~ /^@/ { n++ } END { print n + 0 }'; " +
                               "printf '%s\\n' \"$out\" | head -n " + (root._maxDetail + 8)
-        case "zypper": return "out=$(" + root._limit(120, "zypper -q list-updates") + " 2>&1); rc=$?; " +
+        case "zypper": return "out=$(" + root._limit(120, "zypper -q list-updates") + " 2>/dev/null); rc=$?; " +
                               "if [ \"$rc\" -ne 0 ]; then echo \"ERR zypper check failed (exit $rc)\"; exit 0; fi; " +
                               "printf '%s\\n' \"$out\" | grep -c '^v '; " +
                               "printf '%s\\n' \"$out\" | head -n " + (root._maxDetail + 4)
-        case "xbps":   return "out=$(" + root._limit(120, "xbps-install -Mun") + " 2>&1); rc=$?; " +
+        case "xbps":   return "out=$(" + root._limit(120, "xbps-install -Mun") + " 2>/dev/null); rc=$?; " +
                               "if [ \"$rc\" -ne 0 ]; then echo \"ERR xbps check failed (exit $rc)\"; exit 0; fi; " +
-                              "printf '%s\\n' \"$out\" | grep -c .; " +
+                              "printf '%s\\n' \"$out\" | awk '$2 == \"update\" { n++ } END { print n + 0 }'; " +
                               "printf '%s\\n' \"$out\" | head -n " + root._maxDetail
         }
         return "echo 0"
@@ -230,8 +230,9 @@ Singleton {
                 continue
             }
             if (root.manager === "dnf") {
-                // name.arch new-version repository
-                if (parts.length !== 3 || parts[0].indexOf(".") < 1) continue
+                // name.arch new-version repository; the obsoletes block repeats installed packages
+                if (line.startsWith("Obsoleting")) break
+                if (parts.length !== 3 || parts[0].indexOf(".") < 1 || parts[2].startsWith("@")) continue
                 const name = parts[0].replace(/\.(noarch|x86_64|aarch64|i[3-6]86|ppc64le|s390x|src)$/, "")
                 root._detail(out, name, "", parts[1], false)
                 continue
@@ -244,9 +245,9 @@ Singleton {
                 continue
             }
             if (root.manager === "xbps") {
-                // name-old_version update name-new_version
-                const m = line.match(/^(.+)-([0-9][^\s]*_[0-9]+)\s+\S+\s+(.+)-([0-9][^\s]*_[0-9]+)$/)
-                if (m) root._detail(out, m[1], m[2], m[4], false)
+                // pkgver action arch repository [sizes]
+                const m = line.match(/^(.+)-([^-\s]+_[0-9]+)\s+update\s/)
+                if (m) root._detail(out, m[1], "", m[2], false)
             }
         }
         root.repoCount = repo >= 0 ? repo : root.manager === "aur" ? 0 : root.count
@@ -399,7 +400,7 @@ Singleton {
 
     Timer {
         id: _poll
-        interval: 900000
+        interval: 3600000
         repeat:   true
         running:  root.enabled && root.supported && !Idle.isIdle && root._online
         onTriggered: root._refreshBackground()

@@ -37,7 +37,7 @@ Singleton {
     readonly property string focusedMonitor:  _be ? _be.focusedMonitor : ""
     readonly property int focusedWorkspaceRef: _be ? _be.focusedWorkspaceRef : -1
     readonly property bool overviewActive:    _be ? _be.overviewActive : false
-    readonly property string specialOutput:   _be ? _be.specialOutput : ""
+    readonly property var specialOutputs:     _be ? _be.specialOutputs : []
     readonly property bool activeFullscreen:  !!(activeToplevel && activeToplevel.fullscreen)
 
     signal workspaceActivated(string output)

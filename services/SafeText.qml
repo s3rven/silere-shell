@@ -40,6 +40,15 @@ Singleton {
             || (value >= 0xFE20 && value <= 0xFE2F)
             || (value >= 0x1F3FB && value <= 0x1F3FF)
             || (value >= 0xE0100 && value <= 0xE01EF)
+            || root._isIndicMark(value)
+    }
+
+    // devanagari..malayalam share one layout: signs at 00-03, 3a-4f (3d is a letter), 51-57, 62-63
+    function _isIndicMark(value: int): bool {
+        if (value < 0x0900 || value > 0x0D7F) return false
+        const o = value & 0x7F
+        return o <= 0x03 || (o >= 0x3A && o <= 0x4F && o !== 0x3D)
+            || (o >= 0x51 && o <= 0x57) || o === 0x62 || o === 0x63
     }
 
     function _graphemeEnd(text: string, start: int): int {
@@ -55,6 +64,12 @@ Singleton {
             const value = text.codePointAt(at)
             if (root._isGraphemeTail(value)) {
                 at += root._codePointWidth(value)
+                // a virama joins the next consonant into the same conjunct
+                if (value >= 0x0900 && value <= 0x0D7F && (value & 0x7F) === 0x4D && at < text.length) {
+                    const next = text.codePointAt(at)
+                    if (next >= 0x0900 && next <= 0x0D7F && !root._isIndicMark(next))
+                        at += root._codePointWidth(next)
+                }
                 continue
             }
             if (value !== 0x200D) break
@@ -75,11 +90,14 @@ Singleton {
     // controls can make a title appear to say something other than its value.
     // Natural RTL text still works without those explicit formatting controls.
     function singleLineText(value, limit): string {
-        const text = String(value ?? "")
+        const cap = root._cap(limit, root.maxIdentityChars)
+        const raw = String(value ?? "")
+        // bounded before the regexes: a runaway title would otherwise be scanned whole on every change
+        const text = (raw.length > cap * 8 + 64 ? raw.slice(0, cap * 8 + 64) : raw)
             .replace(/[\u0000-\u001F\u007F-\u009F\u061C\u200B\u200E\u200F\u202A-\u202E\u2066-\u206F]/g, " ")
             .replace(/\s+/g, " ")
             .trim()
-        return root._clip(text, root._cap(limit, root.maxIdentityChars))
+        return root._clip(text, cap)
     }
 
     // stderr from a package helper or gamma tool is often several lines of

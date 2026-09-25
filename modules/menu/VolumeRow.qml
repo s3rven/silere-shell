@@ -256,7 +256,7 @@ Item {
                     delegate: Column {
                         id: _app
                         required property var modelData
-                        readonly property PwVolumeControl ctl: PwVolumeControl { node: _app.modelData.value }
+                        readonly property PwVolumeControl ctl: PwVolumeControl { node: _app.modelData.value; capExternal: false }
 
                         width: _optCol.width
 

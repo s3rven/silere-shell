@@ -12,6 +12,8 @@ QtObject {
     property PwNode node: null
     readonly property PwNodeAudio audio: node ? node.audio : null
     property bool enabled: true
+    // off for app streams: another mixer's boost there is the user's own choice
+    property bool capExternal: true
     readonly property bool ready: enabled && node !== null && node.ready && audio !== null
 
     readonly property real stepPct: 0.05
@@ -69,7 +71,7 @@ QtObject {
         _muteWritePending = false
         _volRetries = 0
         _muteRetries = 0
-        if (a) Qt.callLater(ctl._enforceVolumeLimit)
+        if (a && capExternal) Qt.callLater(ctl._enforceVolumeLimit)
     }
     onAudioChanged: sync()
     onReadyChanged: sync()
@@ -86,7 +88,7 @@ QtObject {
             if (!a) return
             const actual = a.volume
             const clamped = ctl._clampVolume(actual)
-            if (!ctl._volumeMatches(actual, clamped)) {
+            if (ctl.capExternal && !ctl._volumeMatches(actual, clamped)) {
                 ctl._writeVolume(clamped)
                 return
             }

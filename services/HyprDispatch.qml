@@ -6,47 +6,8 @@ import Quickshell
 Singleton {
     id: root
 
-    // the lua config framework replaces the plain dispatchers, so this has to be
-    // known here rather than set by a caller: whichever singleton dispatches
-    // first may be the only one ever instantiated
+    // set by CompositorHyprland from hyprland's own answer, so a leftover hyprland.lua can't mislead it
     property bool useLua: false
-    property bool _luaChecked: false
-
-    BoundedProcess {
-        id: _luaCheck
-        timeoutMs: 10000
-        command: ["bash", Quickshell.shellDir + "/scripts/install.sh", "--hypr-config-kind"]
-        onExited: (code) => {
-            if (!SystemTools.hasHyprctl) {
-                root.useLua = false
-                root._luaChecked = false
-                return
-            }
-            // only 0 and 1 are answers; a timeout or a missing script leaves the next scan to ask again
-            if (timedOut || (code !== 0 && code !== 1)) return
-            root.useLua = (code === 0)
-            root._luaChecked = true
-        }
-    }
-
-    // hasHyprctl arrives asynchronously, so this is retried rather than read once
-    function _detectLua(): void {
-        if (root._luaChecked || _luaCheck.running) return
-        if (!SystemTools.ready || !SystemTools.hasHyprctl) return
-        _luaCheck.running = true
-    }
-
-    Component.onCompleted: root._detectLua()
-    Connections {
-        target: SystemTools
-        function onReadyChanged() { root._detectLua() }
-        function onScanRevisionChanged() {
-            root._luaChecked = false
-            root.useLua = false
-            if (!SystemTools.hasHyprctl && _luaCheck.running) _luaCheck.running = false
-            root._detectLua()
-        }
-    }
 
     function _quote(value): string {
         return "\"" + String(value).replace(/\\/g, "\\\\").replace(/"/g, "\\\"") + "\""

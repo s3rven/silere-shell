@@ -17,7 +17,8 @@ QtObject {
     property bool _refreshAgain: false
     property string _activeAddr: ""
     property bool _unfocused: false
-    property string _special: ""
+    // per output: two monitors can each show a special workspace
+    property var _specialOn: ({})
     readonly property bool _liveTitlesWanted: ShellSettings.showWindowTitle
 
     readonly property string _instanceSignature:
@@ -30,7 +31,7 @@ QtObject {
     // for a new instance and let the user unit bring the shell back onto the fresh one.
     property SupervisedProcess _restartWatch: SupervisedProcess {
         id: _restartWatch
-        superviseWhen: SystemTools.hasInotifywait && SystemTools.hasSystemctl
+        superviseWhen: root._unitRunsHere && SystemTools.hasInotifywait
             && root._instanceSignature.length > 0 && root._runtimeHyprDir.length > 0
         restartDelay: 10000
         // a missing runtime directory cannot be fixed by respawning; a later tool rescan retries
@@ -57,11 +58,7 @@ QtObject {
             "  systemctl --user is-active --quiet \"$unit\" || continue; " +
             // the user manager is shared: a throwaway checkout running this file must
             // not restart the shell the unit actually starts
-            "  exec_start=\"$(systemctl --user show \"$unit\" -p ExecStart --value 2>/dev/null)\"; " +
-            "  case \"$exec_start\" in " +
-            "    *\" $root/shell.qml\"*|*\" $root/scripts/silere\"*\" run\"*) ;; " +
-            "    *) continue ;; " +
-            "  esac; " +
+            "  . \"$root/scripts/lib/unit.sh\" 2>/dev/null && _silere_unit_runs_checkout \"$root\" || continue; " +
             "  systemctl --user restart \"$unit\"; " +
             "done)",
             "bash", root._runtimeHyprDir, root._instanceSignature, Quickshell.shellDir]
@@ -69,6 +66,30 @@ QtObject {
 
     function retryWatcher(): void {
         if (_restartWatch.gaveUp) _restartWatch.retry()
+    }
+
+    property Binding _luaDispatch: Binding {
+        target: HyprDispatch
+        property: "useLua"
+        value: Hyprland.usingLua
+    }
+
+    // the watcher can only ever restart the unit, so without one it would idle all session
+    property bool _unitRunsHere: false
+    property BoundedProcess _unitProbe: BoundedProcess {
+        timeoutMs: 5000
+        command: ["bash", "-c", ". \"$1/scripts/lib/unit.sh\" && _silere_unit_runs_checkout \"$1\"",
+            "bash", Quickshell.shellDir]
+        onExited: code => root._unitRunsHere = code === 0
+    }
+    function _probeUnit(): void {
+        if (!SystemTools.ready || !SystemTools.hasSystemctl || _unitProbe.running) return
+        _unitProbe.running = true
+    }
+    property Connections _unitProbeRearm: Connections {
+        target: SystemTools
+        function onReadyChanged() { root._probeUnit() }
+        function onScanRevisionChanged() { root._probeUnit() }
     }
 
     property Connections _restartWatchRetry: Connections {
@@ -246,7 +267,7 @@ QtObject {
 
     // hyprland has no compositor-side overview; OverviewState drives its own (overviewIsLive is false)
     readonly property bool overviewActive: false
-    readonly property string specialOutput: root._special
+    readonly property var specialOutputs: Object.keys(root._specialOn)
 
     readonly property var workspaces: {
         root._layoutTick
@@ -336,10 +357,13 @@ QtObject {
         return out
     }
 
-    Component.onCompleted: Qt.callLater(function() {
-        root._syncLiveTitles()
-        root._syncActiveTitle()
-    })
+    Component.onCompleted: {
+        root._probeUnit()
+        Qt.callLater(function() {
+            root._syncLiveTitles()
+            root._syncActiveTitle()
+        })
+    }
 
     // quickshell never clears activeToplevel: hyprland reports unfocus as an empty
     // activewindowv2 address and its parser bails out before the assignment
@@ -358,9 +382,12 @@ QtObject {
 
     function _updateSpecial(data): void {
         const parts = String(data ?? "").split(",")
-        if (parts.length < 2) { root._special = ""; return }
-        root._special = String(parts[parts.length - 2]).length > 0
-            ? String(parts[parts.length - 1]) : ""
+        const output = parts.length >= 2 ? String(parts[parts.length - 1]) : ""
+        if (output.length === 0) return
+        const next = Object.assign({}, root._specialOn)
+        if (String(parts[parts.length - 2]).length > 0) next[output] = true
+        else delete next[output]
+        root._specialOn = next
     }
 
     readonly property var _inertEvents: ({

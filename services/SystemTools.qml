@@ -45,6 +45,7 @@ Singleton {
     readonly property bool hasZypper:        _tools.zypper ?? false
     readonly property bool hasXbps:          _tools["xbps-install"] ?? false
     readonly property bool hasPowerProfilesCtl: _tools.powerprofilesctl ?? false
+    readonly property bool hasPowerProfilesService: _tools["@powerprofiles"] ?? false
     readonly property bool hasFcList:        _tools["fc-list"] ?? false
     readonly property bool hasPwvucontrol:   _tools.pwvucontrol ?? false
     readonly property bool hasPavucontrol:   _tools.pavucontrol ?? false
@@ -158,6 +159,10 @@ Singleton {
             "    esac; [ -n \"$family\" ] && break; " +
             "  done; " +
             "fi; [ -n \"$family\" ] && echo \"@family=$family\"; " +
+            // tuned-ppd serves the same bus API without shipping powerprofilesctl
+            "command -v busctl >/dev/null 2>&1 && busctl --system --no-pager --timeout=2 get-property " +
+            "net.hadess.PowerProfiles /net/hadess/PowerProfiles net.hadess.PowerProfiles ActiveProfile " +
+            ">/dev/null 2>&1 && echo @powerprofiles; " +
             "for t in brightnessctl inotifywait nmcli cava matugen hyprsunset wlsunset hyprlock swaylock gtklock systemctl loginctl hyprctl pgrep pkill notify-send " +
             "busctl checkupdates paru yay timeout apt dnf zypper xbps-install powerprofilesctl fc-list pwvucontrol pavucontrol; do " +
             "  command -v \"$t\" >/dev/null 2>&1 && echo \"$t\"; " +

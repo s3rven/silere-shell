@@ -114,7 +114,7 @@ QtObject {
     }
 
     readonly property bool overviewActive: root._overview
-    readonly property string specialOutput: ""
+    readonly property var specialOutputs: []
 
     readonly property var workspaces: {
         const src = root._wsRaw

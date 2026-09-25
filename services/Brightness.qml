@@ -289,7 +289,8 @@ Singleton {
                 return
             }
             root._applyQueued = false
-            _setProc.exec(["brightnessctl", "-d", root._device, "set", `${root.pendingPercent}%`, "-q"])
+            // raw, not percent: brightnessctl rounds 1% of a 15-step backlight down to off
+            _setProc.exec(["brightnessctl", "-d", root._device, "set", String(root.currentBrightness), "-q"])
         }
     }
 

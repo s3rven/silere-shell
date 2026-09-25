@@ -47,7 +47,11 @@ Singleton {
         for (let i = 0; i < screens.length; i++)
             if (_configuredBarEnabled(screens[i])) return false
 
-        const fallback = overlayScreen || screens[0]
+        // never focus-following: a moving fallback would rebuild the bar on every focus change
+        const pin = ShellSettings.overlayMonitor
+        let fallback = screens[0]
+        for (let i = 0; pin && i < screens.length; i++)
+            if (screens[i].name === pin) fallback = screens[i]
         return !!fallback && fallback.name === screen.name
     }
 

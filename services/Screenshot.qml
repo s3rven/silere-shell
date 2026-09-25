@@ -25,9 +25,24 @@ Singleton {
     property string _lastFile: ""
     property real   _lastTime: 0
 
+    // the pictures root also holds photos, so only a screenshot-like name flashes there
+    property var _pictureRoots: []
+    function _screenshotName(name: string): bool {
+        return /screen|shot|grim|swappy|satty|spectacle/i.test(name)
+            || /^\d{4}-\d{2}-\d{2}[T_ ]\d{2}[:-]\d{2}/.test(name)
+    }
+
     function _maybeFlash(path: string): void {
         const f = String(path || "").trim()
+        if (f.startsWith("ROOT ")) {
+            if (root._pictureRoots.indexOf(f.slice(5)) < 0)
+                root._pictureRoots = root._pictureRoots.concat([f.slice(5)])
+            return
+        }
         if (!f || !/\.(png|jpg|jpeg|webp)$/i.test(f)) return
+        const slash = f.lastIndexOf("/")
+        if (root._pictureRoots.indexOf(f.slice(0, slash + 1)) >= 0
+                && !root._screenshotName(f.slice(slash + 1))) return
         const now = Date.now()
         if (f === root._lastFile && now - root._lastTime < 1500) return
         root._lastFile = f
@@ -75,6 +90,10 @@ Singleton {
             "add_dir \"$HOME/Screenshots\"; " +
             "add_dir \"$HOME/.nxc/screenshots\"; " +
             "[ \"${#dirs[@]}\" -gt 0 ] || exit 3; " +
+            "envd=(\"${HYPRSHOT_DIR:-}\" \"${GRIM_DEFAULT_DIR:-}\" \"${SCREENSHOT_DIR:-}\" \"${XDG_SCREENSHOTS_DIR:-}\"); " +
+            "for r in \"$pic\" \"$HOME/Pictures\"; do own=0; " +
+            "  for e in \"${envd[@]}\"; do [ -n \"$e\" ] && [ \"${e%/}\" = \"${r%/}\" ] && own=1; done; " +
+            "  [ \"$own\" = 1 ] || printf 'ROOT %s/\\n' \"${r%/}\"; done; " +
             // a signal to qs skips its cleanup, so the kernel ends the watcher with it
             "setpriv --pdeathsig KILL true >/dev/null 2>&1 && set -- setpriv --pdeathsig KILL || set --; " +
             "exec \"$@\" inotifywait -m -q -e close_write,moved_to --format '%w%f' \"${dirs[@]}\" 2>/dev/null"]

@@ -943,12 +943,47 @@ ShellRoot {
             "quiet hours hides its own times without touching the rest of Popups")
         ShellSettings.dndSchedule = savedDndGate
 
+        const savedFloating = ShellSettings.barFloating
+        const savedDots = ShellSettings.dotStyle
+        ShellSettings.barFloating = false
+        ShellSettings.dotStyle = "none"
+        root._check(ShellSettings._dotHidden("surface", "barWidth") === true
+                && ShellSettings._dotHidden("separators", "dotOpacity") === true
+                && ShellSettings._dotHidden("separators", "dotStyle") === false,
+            "a docked bar hides its width and dots set to none hide their opacity")
+        ShellSettings.barFloating = savedFloating
+        ShellSettings.dotStyle = savedDots
+
         const savedNight = ShellSettings.nightLightTemp
         ShellSettings.nightLightTemp = savedNight === 4000 ? 3500 : 4000
         root._check(ShellSettings.modifiedCount === 1
                 && Object.keys(ShellSettings.modifiedSections).length === 0,
             "a setting with no page of its own marks nothing")
         ShellSettings.nightLightTemp = savedNight
+
+        const beforeEdit = ShellSettings._serialize()
+        const savedTitle = ShellSettings.showWindowTitle
+        const savedSeconds = ShellSettings.showSeconds
+        ShellSettings.showWindowTitle = !savedTitle
+        const edited = JSON.parse(ShellSettings._serialize())
+        edited.showSeconds = !savedSeconds
+        let titleFires = 0
+        let readyDrops = 0
+        const onTitle = () => titleFires++
+        const onReady = () => { if (!ShellSettings.ready) readyDrops++ }
+        ShellSettings.showWindowTitleChanged.connect(onTitle)
+        ShellSettings.readyChanged.connect(onReady)
+        ShellSettings._applyText(JSON.stringify(edited))
+        ShellSettings.showWindowTitleChanged.disconnect(onTitle)
+        ShellSettings.readyChanged.disconnect(onReady)
+        root._check(titleFires === 0 && readyDrops === 0
+                && ShellSettings.showSeconds === !savedSeconds
+                && ShellSettings.showWindowTitle === !savedTitle,
+            "a hand edit applies only the key it changed and never drops ready")
+        ShellSettings._applyText(beforeEdit)
+        root._check(ShellSettings.showSeconds === savedSeconds
+                && ShellSettings.showWindowTitle === savedTitle,
+            "a key removed by hand falls back to its default")
         ShellSettings._loaded = savedLoaded
 
         // the visualizer table drives a live cava config; a wrong cell is a silent cost change
@@ -1328,6 +1363,10 @@ ShellRoot {
         root._check(MenuState._ipcSection("Surface") === "surface"
                 && MenuState._ipcSection("INDICATORS") === "indicators",
             "a settings page typed over ipc matches without case")
+        root._check(MenuState._ipcSection("Alerts") === "warnings"
+                && MenuState._ipcSection("show-order") === "widgets"
+                && MenuState._ipcSection("layout") === "surface",
+            "ipc accepts the page labels the rail shows")
         root._check(MenuState._ipcSection("nosuchpage") === "nosuchpage",
             "an unknown ipc page name is left alone for the caller's message")
         MenuState.setSettingsSection("Surface")
@@ -1807,12 +1846,13 @@ ShellRoot {
         SystemTools.packageFamily = "xbps"
         SystemTools._tools = { "xbps-install": true }
         Updates.count = 1
-        Updates._parseDetail("1\nalpha-1.0_1 update alpha-2.0_1")
+        // xbps-install -n prints: pkgver action arch repository installed-size download-size
+        Updates._parseDetail("1\nalpha-2.0_1 update x86_64 https://repo-default.voidlinux.org/current 1024 512\n"
+            + "beta-lib-3.1_2 install x86_64 https://repo-default.voidlinux.org/current 10 5")
         root._check(Updates.packages.length === 1
                 && Updates.packages[0].name === "alpha"
-                && Updates.packages[0].from === "1.0_1"
                 && Updates.packages[0].to === "2.0_1",
-            "package updates parse XBPS details")
+            "package updates parse XBPS details and skip new dependencies")
         const checkingWas = SystemTools.checking
         const lastErrorWas = SystemTools.lastError
         const revisionWas = SystemTools._scanRevision

@@ -12,13 +12,15 @@ Singleton {
     property real uptimeSecs: 0
     property real diskUsedKb: 0
     property real diskTotalKb: 0
+    property real diskAvailKb: 0
     property real cpuPct: 0
     property bool cpuReady: false
     property real _lastCpuTotal: 0
     property real _lastCpuIdle: 0
 
     readonly property real memPct:     memTotalKb > 0 ? (memTotalKb - memAvailKb) / memTotalKb : 0
-    readonly property real diskPct:    diskTotalKb > 0 ? diskUsedKb / diskTotalKb : 0
+    // as df counts it: blocks reserved for root are neither used nor available to the user
+    readonly property real diskPct:    diskUsedKb + diskAvailKb > 0 ? diskUsedKb / (diskUsedKb + diskAvailKb) : 0
 
     readonly property string uptimeLabel: {
         if (uptimeSecs <= 0) return "—"
@@ -158,8 +160,8 @@ Singleton {
         _slowProc.exec(["bash", "-c",
             // -P keeps a long device name on one line; read from the right so its spaces cannot shift the columns
             "df -Pk / 2>/dev/null | awk '" +
-            "NF >= 6 && $(NF-4) ~ /^[0-9]+$/ && $(NF-3) ~ /^[0-9]+$/ { " +
-            "printf \"d%s %s\\n\", $(NF-3), $(NF-4); exit }'"])
+            "NF >= 6 && $(NF-4) ~ /^[0-9]+$/ && $(NF-3) ~ /^[0-9]+$/ && $(NF-2) ~ /^[0-9]+$/ { " +
+            "printf \"d%s %s %s\\n\", $(NF-3), $(NF-4), $(NF-2); exit }'"])
     }
 
     BoundedProcess {
@@ -171,9 +173,10 @@ Singleton {
                 if (!root._active) return
                 if (line.startsWith("d")) {
                     const p = line.slice(1).trim().split(/\s+/)
-                    if (p.length >= 2) {
+                    if (p.length >= 3) {
                         root.diskUsedKb  = parseInt(p[0]) || 0
                         root.diskTotalKb = parseInt(p[1]) || 0
+                        root.diskAvailKb = parseInt(p[2]) || 0
                     }
                 }
             }

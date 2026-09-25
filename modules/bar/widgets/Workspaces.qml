@@ -69,6 +69,8 @@ Item {
 
     readonly property string monitorName: Compositor.monitorName(root.screen)
     readonly property bool monitorReady: monitorName.length > 0 && Compositor.activeWorkspaceId(monitorName) > 0
+    // a named hyprland workspace has an id below -1337; only -1 means no data yet
+    readonly property bool monitorLive: monitorName.length > 0 && rawActiveId !== -1
     readonly property bool show: true
     readonly property int  rawActiveId:  Compositor.activeWorkspaceId(root.monitorName)
     readonly property int  activeId:     rawActiveId > 0 ? rawActiveId : _lastNormalActiveId
@@ -76,7 +78,7 @@ Item {
     property int _handoffFromId: 0
     property int _handoffToId: 0
 
-    readonly property bool inSpecial: Compositor.hasSpecialWorkspaces && Compositor.specialOutput === root.monitorName
+    readonly property bool inSpecial: Compositor.hasSpecialWorkspaces && Compositor.specialOutputs.indexOf(root.monitorName) >= 0
 
     WorkspaceSlotModel {
         id: slotModel
@@ -367,8 +369,8 @@ Item {
     }
 
     function activate(id: int): void {
-        if (!monitorReady) return
-        if (id < 1 || id === activeId || root._knownOnOtherMonitor(id)) return
+        if (!monitorLive) return
+        if (id < 1 || id === rawActiveId || root._knownOnOtherMonitor(id)) return
         Compositor.focusWorkspace(id, root.monitorName)
     }
 
@@ -406,7 +408,7 @@ Item {
 
     WheelHandler {
         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-        enabled: root.monitorReady && ShellSettings.wsScrollSwitch
+        enabled: root.monitorLive && ShellSettings.wsScrollSwitch
         onWheel: (event) => {
             event.accepted = true
             const n = Scroll.processControlWheel(event, "workspaces")
@@ -502,7 +504,7 @@ Item {
                 required property int index
 
                 wsId:         root.visibleIds[index] ?? -1
-                monitorReady: root.monitorReady
+                monitorReady: root.monitorLive
                 active:       root.monitorReady && root.activeId === wsId
                 occupied:     root.occupied(wsId)
                 urgent:       root.urgent(wsId)
