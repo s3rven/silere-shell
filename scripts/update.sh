@@ -328,9 +328,9 @@ _fetch_main() {
         # Older installer releases used --depth 1. Tags alone do not cross that
         # boundary, so git describe cannot recover the installed release until
         # the main-branch history is completed once.
-        _git_fetch --unshallow --prune origin main '+refs/tags/*:refs/tags/*'
+        _git_fetch --unshallow --prune origin main '+refs/tags/v*:refs/tags/v*'
     else
-        _git_fetch --prune origin main '+refs/tags/*:refs/tags/*'
+        _git_fetch --prune origin main '+refs/tags/v*:refs/tags/v*'
     fi
 }
 
@@ -484,12 +484,7 @@ _unit_runs_this_checkout() {
     _silere_unit_runs_checkout "$ROOT"
 }
 
-# The type-check compiles every file but never loads shell.qml, and a missing
-# property or unresolvable type surfaces only at load — which is precisely the
-# break this gate exists to catch. Launching for real is the only thing that
-# sees it. Offscreen cannot stand in: with no PanelWindow backend every tree
-# fails alike. Skipped when a display, timeout or the theme is missing, so a
-# headless or bare checkout is never rolled back over a condition of its own.
+# the type-check never loads shell.qml; skipped without a display, timeout or theme
 _candidate_tree_starts() {
     local candidate_root="$1"
     _silere_timeout_kill_after_ok || { CANDIDATE_GATE_NOTE="startup check skipped (timeout --kill-after unsupported)"; return 0; }
@@ -512,7 +507,7 @@ _candidate_tree_starts() {
     log="$(mktemp "${TMPDIR:-/tmp}/silere-update-smoke.XXXXXX.log")" \
         || { rm -rf -- "$sandbox"; return 1; }
     XDG_CONFIG_HOME="$sandbox/config" XDG_CACHE_HOME="$sandbox/cache" \
-        XDG_STATE_HOME="$sandbox/state" \
+        XDG_STATE_HOME="$sandbox/state" SILERE_SMOKE_TEST=1 \
         timeout --kill-after=5 5s qs -p "$candidate_root/shell.qml" --no-color \
         >"$log" 2>&1 9>&- || code=$?
     # 124 is the timeout firing, i.e. it stayed up for the whole window

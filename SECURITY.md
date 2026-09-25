@@ -35,6 +35,8 @@ a key in `security/update-signers`, using the copy of that key already in the in
 checkout, and only when the tag belongs to `origin/main`. Rolling back a completed
 update (`--rollback`) and recovering an interrupted one also reset to a revision the
 signed transaction journal names.
+After signature verification and confirmation, the update gate runs the candidate
+release's QML checker and starts its shell in smoke mode before switching revisions.
 
 The first install is a different matter. `git clone` followed by
 `scripts/install.sh` runs code from `main` before any signature has been checked,

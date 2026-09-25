@@ -19,10 +19,12 @@ import "config"
 ShellRoot {
     id: root
 
-    readonly property ShellScreen activeOverlayScreen: Monitors.overlayScreen
+    readonly property bool smokeTest: Quickshell.env("SILERE_SMOKE_TEST") === "1"
+    settings.watchFiles: !smokeTest && Quickshell.env("SILERE_WATCH_FILES") !== "0"
+    readonly property ShellScreen activeOverlayScreen: smokeTest ? null : Monitors.overlayScreen
     // bar-anchored popups open with no trigger screen over IPC, and the overlay screen
     // is whichever one has focus — including one the user turned the bar off on
-    readonly property ShellScreen anchoredPopupScreen: Monitors.overlayBarScreen
+    readonly property ShellScreen anchoredPopupScreen: smokeTest ? null : Monitors.overlayBarScreen
 
     function armSystemAlertsIfNeeded(): void {
         if (ShellSettings.osdBatteryWarn || ShellSettings.osdTempWarn)
@@ -36,6 +38,7 @@ ShellRoot {
 
     // reading a member instantiates a lazy singleton; these watchers must arm before the user opens a panel
     Component.onCompleted: {
+        if (root.smokeTest) return
         void NotifWatch.armed
         // PowerProfiles reads when a panel opens: created lazily it misses the first open and the row sits on "Unavailable"
         void PowerProfiles.available
@@ -60,18 +63,18 @@ ShellRoot {
 
     Connections {
         target: ShellSettings
-        function onOsdBatteryWarnChanged() { root.armSystemAlertsIfNeeded() }
-        function onOsdTempWarnChanged() { root.armSystemAlertsIfNeeded() }
+        function onOsdBatteryWarnChanged() { if (!root.smokeTest) root.armSystemAlertsIfNeeded() }
+        function onOsdTempWarnChanged() { if (!root.smokeTest) root.armSystemAlertsIfNeeded() }
         function onNightLightAutoChanged() {
-            if (ShellSettings.nightLightAuto) void NightLight.toolAvailable
+            if (!root.smokeTest && ShellSettings.nightLightAuto) void NightLight.toolAvailable
         }
         function onNightLightOnChanged() {
-            if (ShellSettings.nightLightOn) void NightLight.toolAvailable
+            if (!root.smokeTest && ShellSettings.nightLightOn) void NightLight.toolAvailable
         }
     }
 
     Variants {
-        model: Quickshell.screens
+        model: root.smokeTest ? [] : Quickshell.screens
         delegate: Scope {
             id: _barScope
             required property ShellScreen modelData
@@ -183,7 +186,7 @@ ShellRoot {
 
     PopupLoader {
         id: _osdPopup
-        wantOpen: ShellSettings.osdEnabled && OsdBarState.activeCount > 0
+        wantOpen: !root.smokeTest && ShellSettings.osdEnabled && OsdBarState.activeCount > 0
             && (!ShellSettings.osdBarIntegrated || OsdBarState.barConcealed)
         requestedScreen: root.activeOverlayScreen
         unloadDelay: 50
@@ -192,7 +195,7 @@ ShellRoot {
 
     PopupLoader {
         id: _notificationPopup
-        wantOpen: ShellSettings.notifPopupEnabled
+        wantOpen: !root.smokeTest && ShellSettings.notifPopupEnabled
             && Notifications.activeCount > 0
         requestedScreen: root.activeOverlayScreen
         surface: Component {
@@ -204,9 +207,9 @@ ShellRoot {
 
     PopupLoader {
         id: _menuPopup
-        warm: MenuState.warmRequested
-        wantOpen: MenuState.open
-        requestedScreen: MenuState.triggerScreen
+        warm: !root.smokeTest && MenuState.warmRequested
+        wantOpen: !root.smokeTest && MenuState.open
+        requestedScreen: root.smokeTest ? null : MenuState.triggerScreen
             ?? MenuState.warmScreen
             ?? root.anchoredPopupScreen
         surface: Component { MenuWindow { targetScreen: _menuPopup.latchedScreen } }
@@ -214,22 +217,22 @@ ShellRoot {
 
     PopupLoader {
         id: _calendarPopup
-        wantOpen: CalendarState.open
-        requestedScreen: CalendarState.triggerScreen ?? root.anchoredPopupScreen
+        wantOpen: !root.smokeTest && CalendarState.open
+        requestedScreen: root.smokeTest ? null : CalendarState.triggerScreen ?? root.anchoredPopupScreen
         surface: Component { CalendarPopup { targetScreen: _calendarPopup.latchedScreen } }
     }
 
     PopupLoader {
         id: _trayPopup
-        wantOpen: TrayMenuState.open
-        requestedScreen: TrayMenuState.triggerScreen ?? root.anchoredPopupScreen
+        wantOpen: !root.smokeTest && TrayMenuState.open
+        requestedScreen: root.smokeTest ? null : TrayMenuState.triggerScreen ?? root.anchoredPopupScreen
         surface: Component { TrayMenuPopup { targetScreen: _trayPopup.latchedScreen } }
     }
 
     PopupLoader {
         id: _quickActionsPopup
-        wantOpen: QuickActionsState.open
-        requestedScreen: QuickActionsState.triggerScreen ?? root.anchoredPopupScreen
+        wantOpen: !root.smokeTest && QuickActionsState.open
+        requestedScreen: root.smokeTest ? null : QuickActionsState.triggerScreen ?? root.anchoredPopupScreen
         surface: Component { QuickActionsPopup { targetScreen: _quickActionsPopup.latchedScreen } }
     }
 }

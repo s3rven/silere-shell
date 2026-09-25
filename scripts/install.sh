@@ -1512,7 +1512,7 @@ elif _ask_no "Install daily update-check timer (flags pending updates in the bar
         || _die "could not journal silere-update.service"
     _txn_before_file "$CONFIG_HOME/systemd/user/silere-update.timer" \
         || _die "could not journal silere-update.timer"
-    if "$ROOT/scripts/update.sh" --timer-enable 2>/dev/null; then
+    if bash "$ROOT/scripts/update.sh" --timer-enable 2>/dev/null; then
         _ok "enabled — checks for Silere updates and shows a bar badge when one is ready"
         did_update=true
     else

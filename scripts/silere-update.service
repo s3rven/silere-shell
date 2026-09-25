@@ -3,5 +3,8 @@ Description=Silere Shell update check
 
 [Service]
 Type=oneshot
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=yes
 TimeoutStartSec=5min
 ExecStart=__ROOT__/scripts/update.sh

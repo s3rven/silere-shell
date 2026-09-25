@@ -669,39 +669,50 @@ test_shared_launcher() (
     local stub_dir="$TMP/launcher-stubs"
     local capture="$TMP/launcher-default.out"
     local expected_args
+    umask 022
     mkdir -p "$stub_dir"
     printf '%s\n' \
         '#!/bin/sh' \
         ': > "$SILERE_LAUNCH_CAPTURE"' \
-        'printf "malloc=%s\nimages=%s\negl=%s\n" "$MALLOC_CONF" "$QSG_TRANSIENT_IMAGES" "${__EGL_VENDOR_LIBRARY_FILENAMES-}" >> "$SILERE_LAUNCH_CAPTURE"' \
+        'printf "malloc=%s\nimages=%s\negl=%s\nlocale=%s\numask=%s\nwatch=%s\n" "${MALLOC_CONF-}" "${QSG_TRANSIENT_IMAGES-}" "${__EGL_VENDOR_LIBRARY_FILENAMES-}" "${LC_ALL-<unset>}" "$(umask)" "${SILERE_WATCH_FILES-}" >> "$SILERE_LAUNCH_CAPTURE"' \
         'for arg do printf "arg=%s\n" "$arg" >> "$SILERE_LAUNCH_CAPTURE"; done' \
         > "$stub_dir/qs"
     chmod +x "$stub_dir/qs"
 
-    env -u MALLOC_CONF -u QSG_TRANSIENT_IMAGES \
+    env -u MALLOC_CONF -u QSG_TRANSIENT_IMAGES -u LC_ALL -u SILERE_WATCH_FILES \
         PATH="$stub_dir:$PATH" SILERE_LAUNCH_CAPTURE="$capture" \
         __EGL_VENDOR_LIBRARY_FILENAMES=/chosen/vendor.json \
         bash "$ROOT/scripts/silere" run --verbose
-    grep -qF 'malloc=narenas:2,background_thread:true,dirty_decay_ms:1000,muzzy_decay_ms:0' "$capture" \
-        || fail "shared launcher did not apply its allocator default"
+    grep -qFx 'malloc=' "$capture" \
+        || fail "shared launcher added an allocator override"
     # the second window to draw a cached image gets an empty texture with it set
     grep -qFx 'images=' "$capture" \
         || fail "shared launcher set QSG_TRANSIENT_IMAGES"
     grep -qF 'egl=/chosen/vendor.json' "$capture" \
         || fail "shared launcher replaced an inherited EGL vendor"
+    grep -qFx 'locale=<unset>' "$capture" \
+        || fail "shared launcher leaked its parser locale"
+    grep -qFx 'umask=0022' "$capture" \
+        || fail "shared launcher changed the user's umask"
+    grep -qFx 'watch=0' "$capture" \
+        || fail "shared launcher did not disable reload during managed updates"
     expected_args=$'arg=--no-duplicate\narg=-p\narg='"$ROOT"$'/shell.qml\narg=--verbose'
     assert_eq "$expected_args" "$(grep '^arg=' "$capture")" "shared launcher argv"
-    assert_eq "600" "$(stat -c '%a' "$capture")" "shared launcher state umask"
+    assert_eq "644" "$(stat -c '%a' "$capture")" "shared launcher state umask"
 
     capture="$TMP/launcher-overrides.out"
-    MALLOC_CONF='' \
-        PATH="$stub_dir:$PATH" SILERE_LAUNCH_CAPTURE="$capture" \
+    MALLOC_CONF='' SILERE_WATCH_FILES=1 \
+        LC_ALL=C PATH="$stub_dir:$PATH" SILERE_LAUNCH_CAPTURE="$capture" \
         __EGL_VENDOR_LIBRARY_FILENAMES='' \
         bash "$ROOT/scripts/silere" run
     grep -qFx 'malloc=' "$capture" \
         || fail "shared launcher did not preserve an empty allocator override"
     grep -qFx 'egl=' "$capture" \
         || fail "shared launcher did not preserve an empty EGL override"
+    grep -qFx 'locale=C' "$capture" \
+        || fail "shared launcher did not preserve an inherited locale"
+    grep -qFx 'watch=1' "$capture" \
+        || fail "shared launcher did not preserve the user's hot reload choice"
 
     capture="$TMP/launcher-package-name.out"
     ln -s "$ROOT/scripts/silere" "$stub_dir/silere-shell"
@@ -896,7 +907,7 @@ test_candidate_runtime_isolation() (
     printf 'shell\n' > "$candidate/shell.qml"
     cat > "$stubs/qs" <<'EOF'
 #!/usr/bin/env bash
-printf '%s\n%s\n%s\n' "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" "$XDG_STATE_HOME" \
+printf '%s\n%s\n%s\n%s\n' "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" "$XDG_STATE_HOME" "$SILERE_SMOKE_TEST" \
     > "${SILERE_RUNTIME_CAPTURE:?}"
 cat "$XDG_CONFIG_HOME/silere-shell/settings.json" >> "$SILERE_RUNTIME_CAPTURE"
 printf '{"candidate":"wrote here"}\n' > "$XDG_CONFIG_HOME/silere-shell/settings.json"
@@ -913,6 +924,7 @@ EOF
     assert_eq '{"__version":1,"barHeight":40}' \
         "$(cat "$home/config/silere-shell/settings.json")" \
         "candidate runtime left live settings untouched"
+    assert_eq 1 "$(sed -n '4p' "$capture")" "candidate starts in smoke mode"
     isolated_config="$(sed -n '1p' "$capture")"
     [ "$isolated_config" != "$home/config" ] \
         || fail "candidate runtime received the live config home"

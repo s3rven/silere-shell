@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+original_lc_all_set="${LC_ALL+x}"
+original_lc_all="${LC_ALL-}"
 export LC_ALL=C
 
 source_path="$(readlink -f -- "${BASH_SOURCE[0]}" 2>/dev/null || true)"
@@ -34,10 +36,7 @@ die() {
 }
 
 run_shell() {
-    local startup=0 renderer=""
-    local allocator_default="narenas:2,background_thread:true,dirty_decay_ms:1000,muzzy_decay_ms:0"
-    local mesa_egl="/usr/share/glvnd/egl_vendor.d/50_mesa.json"
-    local nvidia_egl="/usr/share/glvnd/egl_vendor.d/10_nvidia.json"
+    local startup=0
 
     if [ "${1:-}" = --startup ]; then
         startup=1
@@ -46,29 +45,17 @@ run_shell() {
     [ -f "$ROOT/shell.qml" ] || die "shell.qml is missing from $ROOT"
     command -v qs >/dev/null 2>&1 || die "Quickshell is not installed"
 
-    # Preserve an explicitly empty override. Quickshell links jemalloc; a small
-    # arena count and prompt decay return transient menu/image allocations to the
-    # OS instead of retaining every high-water mark for the session.
-    export MALLOC_CONF="${MALLOC_CONF-$allocator_default}"
-
-    umask 077
-    # At compositor boot the Wayland/Xwayland endpoints can lag the autostart
-    # event. Wait before renderer detection too, or glxinfo races the same gap.
+    # at compositor boot the wayland endpoints can lag the autostart event
     [ "$startup" -eq 0 ] || sleep 1
 
-    # libglvnd otherwise maps the unused nvidia EGL vendor into an iGPU-rendered
-    # shell. Only choose Mesa when both vendors exist and the active renderer is
-    # positively known not to be nvidia. An inherited value, including empty,
-    # always belongs to the user.
-    if [ -z "${__EGL_VENDOR_LIBRARY_FILENAMES+x}" ] \
-            && [ -f "$mesa_egl" ] && [ -f "$nvidia_egl" ] \
-            && command -v glxinfo >/dev/null 2>&1; then
-        renderer="$(glxinfo -B 2>/dev/null | grep -i 'OpenGL renderer' || true)"
-        if [ -n "$renderer" ] && ! printf '%s\n' "$renderer" | grep -qi nvidia; then
-            export __EGL_VENDOR_LIBRARY_FILENAMES="$mesa_egl"
-        fi
+    # LC_ALL=C is for this script's parsing; programs the shell launches get the user's locale
+    if [ -n "$original_lc_all_set" ]; then
+        export LC_ALL="$original_lc_all"
+    else
+        unset LC_ALL
     fi
-
+    # an update rewrites qml files one by one, so a reload mid-update loads a mixed tree
+    export SILERE_WATCH_FILES="${SILERE_WATCH_FILES-0}"
     exec qs --no-duplicate -p "$ROOT/shell.qml" "$@"
 }
 

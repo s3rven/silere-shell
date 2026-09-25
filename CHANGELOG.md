@@ -61,6 +61,10 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- The launcher preserves the user's locale, umask, allocator and EGL environment when starting the shell and its child programs.
+- The update startup gate uses smoke mode, so it does not map a second bar or arm session services.
+- Launches through `silere run` wait for an intentional restart instead of reloading a partly updated tree.
+
 #### Bar
 
 - Pill hover values reset when the bar sleeps or the widget hides.

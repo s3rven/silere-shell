@@ -21,6 +21,9 @@ The installer:
 
 To start it, restart your compositor, or try it right away with `silere run`. Before the
 optional maintenance-command link exists, use `/that/path/scripts/silere run`.
+Launches through `silere run` hold the loaded shell steady while an update replaces QML
+files; restart the shell after an update if you do not use the systemd user service.
+For a development checkout, `SILERE_WATCH_FILES=1 silere run` enables live QML reloads.
 
 ## Previewing the install
 

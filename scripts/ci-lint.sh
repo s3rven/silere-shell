@@ -305,7 +305,7 @@ if awk 'NF == 0 || /^#/ { next } \
         { bad=1 } END { exit bad || valid < 1 }' security/update-signers \
         && grep -qF 'verify-tag "$release_tag"' scripts/update.sh \
         && grep -qF 'tag --merged refs/remotes/origin/main' scripts/update.sh \
-        && grep -qF -e "--prune origin main '+refs/tags/*:refs/tags/*'" scripts/update.sh \
+        && grep -qF -e "--prune origin main '+refs/tags/v*:refs/tags/v*'" scripts/update.sh \
         && grep -qF '_start_apply_transaction "$local_rev" "$remote_rev" "$release_tag"' scripts/update.sh \
         && grep -qF '_recover_interrupted_apply' scripts/update.sh \
         && grep -qF 'gpg.ssh.allowedSignersFile="$APPLY_TRUSTED_SIGNERS"' scripts/update.sh \
@@ -850,13 +850,13 @@ else
 fi
 
 section "installer environment defaults"
-if grep -qF '${MALLOC_CONF-' scripts/silere \
+if ! grep -qF '${MALLOC_CONF-' scripts/silere \
     && ! grep -qF 'QSG_TRANSIENT_IMAGES' scripts/silere scripts/install.sh \
     && grep -qF 'exec qs --no-duplicate -p "$ROOT/shell.qml"' scripts/silere \
     && grep -qF 'LAUNCH_CMD="exec \"\$(printf' scripts/install.sh \
     && grep -qF 'set -- run "$@"' scripts/silere \
     && [ "$(grep -Fc 'ln -s "/usr/share/$_pkgname/scripts/silere"' packaging/aur/PKGBUILD)" -eq 2 ]; then
-  ok "launcher" "one exec path owns tuning, startup grace, and duplicate refusal"
+  ok "launcher" "one exec path preserves the user environment and refuses duplicates"
 else
   fail "source, compositor, and packaged launchers must share silere run"
 fi
@@ -922,8 +922,6 @@ if [ ! -f "$aur_dir/PKGBUILD" ] || [ ! -f "$aur_dir/.SRCINFO" ]; then
 elif ! grep -qF "depends=('quickshell>=$SILERE_MIN_QUICKSHELL')" "$aur_dir/PKGBUILD" \
     || ! grep -qF "$(printf '\tdepends = quickshell>=%s' "$SILERE_MIN_QUICKSHELL")" "$aur_dir/.SRCINFO"; then
   fail "AUR package must enforce the documented Quickshell $SILERE_MIN_QUICKSHELL minimum"
-elif ! grep -qF 'umask 077' scripts/silere; then
-  fail "AUR launcher must use a private umask for Quickshell state"
 elif command -v makepkg >/dev/null 2>&1; then
   aur_srcinfo="$(mktemp "${TMPDIR:-/tmp}/silere-srcinfo.XXXXXX")"
   # makepkg refuses to run as root, which is exactly how a container CI runs it;
