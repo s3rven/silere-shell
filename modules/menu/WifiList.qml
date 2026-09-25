@@ -44,6 +44,7 @@ Item {
             _selected = ""
             _disarmTimer.stop()
             _armedSsid = ""
+            _forgetSsid = ""
             Network.clearWifiScan()
         }
     }
@@ -51,7 +52,13 @@ Item {
     on_SelectedChanged: _syncNetworks()
     onOpenChanged: {
         if (open) _syncScanState()
-        else      { _selected = ""; _disarmTimer.stop(); _armedSsid = ""; Network.clearWifiScan() }
+        else      {
+            _selected = ""
+            _disarmTimer.stop()
+            _armedSsid = ""
+            _forgetSsid = ""
+            Network.clearWifiScan()
+        }
     }
     Component.onCompleted: { _syncScanState(); _syncNetworks() }
     Component.onDestruction: {
@@ -136,6 +143,7 @@ Item {
                 readonly property bool _failed:     Network.wifiError === modelData.ssid
 
                 function _submitPassword(): void {
+                    if (_entry._connecting) return
                     const secret = _pw.text
                     _pw.text = ""
                     if (secret.length > 0) Network.connectWifi(modelData.ssid, secret)
@@ -167,6 +175,9 @@ Item {
                     highlighted: _entry._sel
                     warning: _entry._armed || _entry._forgetArmed
                     failed:  _entry._failed
+                    interactive: !_entry._connecting
+                        && (!_entry.modelData.profileOnly || _entry.modelData.known
+                            || _entry.modelData.active)
 
                     function _activate(): void {
                         if (root._forgetSsid === _entry.modelData.ssid) {
@@ -182,6 +193,7 @@ Item {
                                 Network.disconnectWifi(_entry.modelData.ssid)
                             } else {
                                 root._armedSsid = _entry.modelData.ssid
+                                root._forgetSsid = ""
                                 root._armedAtMs = Date.now()
                                 _disarmTimer.restart()
                             }
@@ -218,11 +230,13 @@ Item {
                             Network.forgetWifi(_entry.modelData.ssid)
                         } else {
                             root._forgetSsid = _entry.modelData.ssid
+                            root._armedSsid = ""
                             root._forgetAtMs = Date.now()
                             _disarmTimer.restart()
                         }
                     }
                     TapHandler {
+                        enabled: _row.interactive
                         acceptedButtons: Qt.RightButton | Qt.MiddleButton
                         onTapped: _row._forgetTap()
                     }

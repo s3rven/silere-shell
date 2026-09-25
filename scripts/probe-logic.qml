@@ -2952,6 +2952,8 @@ ShellRoot {
             root._startDirectAnchorProbe()
             return
         }
+        root._check(root._historyPage.hasHistory,
+            "history search is available when notifications exist")
         root._historyPage.searchText = "match"
         root._check(root._historyPage.rowCount === 1 && root._historyPage.searching,
             "typing in the history page filters its displayed rows")
@@ -2961,9 +2963,16 @@ ShellRoot {
         root._historyPage.searchText = "match"
         root._historyPage.clearAll()
         root._check(Notifications.historyCount === 1
-                && Notifications.historyModel.get(0).id === 902 && root._historyPage.rowCount === 0,
-            "reduced-motion clear removes only the history page's search results")
+                && Notifications.historyModel.get(0).id === 902 && root._historyPage.rowCount === 0
+                && root._historyPage.hasHistory && root._historyPage.searching,
+            "search stays available when a query has no matches but history remains")
+        Notifications.clearHistory()
+        root._check(!root._historyPage.hasHistory && !root._historyPage.searching
+                && root._historyPage.rowCount === 0,
+            "empty history hides search and clears the stale query")
+        Notifications._prependHistory({ id: 902, appName: "Chat", summary: "Keep this", time: 2002 })
         Notifications._prependHistory({ id: 903, appName: "Mail", summary: "Match again", time: 2003 })
+        root._historyPage.searchText = "match"
         ShellSettings.reduceMotion = false
         root._historyPage.clearAll()
         root._check(root._historyPage._clearing, "animated history clear captures results before fading")

@@ -42,13 +42,19 @@ Item {
         if (!Bluetooth.available || !Bluetooth.enabled) {
             _disarmTimer.stop()
             root._armedAddr = ""
+            root._forgetAddr = ""
             Bluetooth.abandonAttempt()
         }
     }
 
     onOpenChanged: {
         _syncScanState()
-        if (!open) { _disarmTimer.stop(); root._armedAddr = ""; Bluetooth.abandonAttempt() }
+        if (!open) {
+            _disarmTimer.stop()
+            root._armedAddr = ""
+            root._forgetAddr = ""
+            Bluetooth.abandonAttempt()
+        }
     }
     Component.onCompleted: _syncScanState()
     Component.onDestruction: {
@@ -129,6 +135,9 @@ Item {
                 selected: modelData.connected
                 warning: _armed || _forgetArmed || modelData.pairing
                 failed:  _failed
+                interactive: modelData.pairing
+                    || (modelData.state !== Bt.BluetoothDeviceState.Connecting
+                        && modelData.state !== Bt.BluetoothDeviceState.Disconnecting)
 
                 function _activate(): void {
                     const addr = modelData.address
@@ -147,6 +156,7 @@ Item {
                             Bluetooth.disconnectDevice(addr)
                         } else {
                             root._armedAddr = addr
+                            root._forgetAddr = ""
                             root._armedAtMs = Date.now()
                             _disarmTimer.restart()
                         }
@@ -169,15 +179,24 @@ Item {
                         Bluetooth.forgetDevice(addr)
                     } else {
                         root._forgetAddr = addr
+                        root._armedAddr = ""
                         root._forgetAtMs = Date.now()
                         _disarmTimer.restart()
                     }
                 }
                 TapHandler {
+                    enabled: _row.interactive
                     acceptedButtons: Qt.RightButton | Qt.MiddleButton
                     onTapped: _row._forgetTap()
                 }
             }
+        }
+
+        HintText {
+            visible: root.open && Bluetooth.errorAddr.length > 0
+                && Bluetooth.errorKind === "pair"
+            text: "If this device needs a passkey, start a Bluetooth pairing agent "
+                + "such as blueman-applet or bt-agent, then try again."
         }
     }
 

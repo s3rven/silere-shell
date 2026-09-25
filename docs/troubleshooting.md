@@ -43,6 +43,11 @@ reports it too. Stop that daemon and restart Silere.
 
 Install a Nerd Font such as `ttf-jetbrains-mono-nerd`, then refresh the user font cache.
 
+## Bluetooth pairing fails for a passkey device
+
+Silere needs a separate Bluetooth pairing agent for PIN entry or confirmation. Start
+`blueman-applet` or `bt-agent` in your session, then retry pairing.
+
 ## Night light is unavailable on niri
 
 Install `wlsunset`. `hyprsunset` needs Hyprland and cannot control niri's display gamma.

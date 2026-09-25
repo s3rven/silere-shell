@@ -30,8 +30,21 @@ PageShell {
 
     readonly property string filter: MenuState.recentFilter
     readonly property int rowCount: _filtered.count
+    readonly property bool hasHistory: Notifications.historyCount > 0
     property alias searchText: _searchInput.text
     readonly property bool searching: searchText.trim().length > 0
+
+    onHasHistoryChanged: if (!hasHistory) root.searchText = ""
+
+    Shortcut {
+        sequence: "Ctrl+F"
+        context: Qt.ApplicationShortcut
+        enabled: root.active && MenuState.open && _searchBox.enabled
+        onActivated: {
+            _searchInput.forceActiveFocus()
+            _searchInput.selectAll()
+        }
+    }
 
     // a keystroke reconciles many rows at once, and per-row transitions interrupted by the
     // next one leave removed rows drawn over the new ones
@@ -270,7 +283,8 @@ PageShell {
                 anchors.verticalCenter: parent.verticalCenter
                 visible: root.rowCount > 0
                 glyph: "󰆴"
-                label: "Clear"
+                label: root.searching ? "Clear matches"
+                    : root.filter.length > 0 ? "Clear app" : "Clear all"
                 busy:  root._clearing || root._swapping
                 onConfirmed: root.clearAll()
             }
@@ -280,11 +294,12 @@ PageShell {
             id: _searchBox
             width: parent.width
             anchors.top: _header.bottom
-            anchors.topMargin: 8
-            height: Metrics.rowHeightFor(36)
+            anchors.topMargin: visible ? 8 : 0
+            visible: root.hasHistory
+            height: visible ? Metrics.rowHeightFor(36) : 0
             radius: Theme.radiusControl
             color: Theme.menuControl
-            enabled: !root._clearing
+            enabled: visible && !root._clearing
 
             OutlineBorder {
                 radius: _searchBox.radius
@@ -693,8 +708,9 @@ PageShell {
                                 font.pixelSize: Settings.fontSize
                                 font.weight: Font.DemiBold
                                 wrapMode: Text.Wrap
-                                maximumLineCount: _entry._expanded ? 6 : 1
-                                elide: Text.ElideRight
+                                // a line per stored character can never truncate the bounded title
+                                maximumLineCount: _entry._expanded ? Notifications._maxSummaryChars : 1
+                                elide: _entry._expanded ? Text.ElideNone : Text.ElideRight
                             }
 
                             ShellText {
@@ -706,8 +722,8 @@ PageShell {
                                 color: Theme.withAlpha(Theme.text, 0.78)
                                 font.pixelSize: Settings.fontLabel
                                 wrapMode: Text.Wrap
-                                maximumLineCount: _entry._expanded ? 12 : 2
-                                elide: Text.ElideRight
+                                maximumLineCount: _entry._expanded ? Notifications._maxBodyChars : 2
+                                elide: _entry._expanded ? Text.ElideNone : Text.ElideRight
                             }
                         }
 

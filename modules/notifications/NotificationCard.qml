@@ -489,8 +489,8 @@ Item {
                     font.pixelSize:   Settings.fontSize + 1
                     font.weight:      Font.DemiBold
                     wrapMode:         Text.Wrap
-                    maximumLineCount: card._expanded ? 6 : 1
-                    elide:            Text.ElideRight
+                    maximumLineCount: card._expanded ? Notifications._maxSummaryChars : 1
+                    elide:            card._expanded ? Text.ElideNone : Text.ElideRight
                     ColorFade on color {}
                 }
             }
@@ -502,8 +502,8 @@ Item {
                 color:            Theme.withAlpha(Theme.menuTextMuted, 0.82)
                 font.pixelSize:   Settings.fontLabel
                 wrapMode:         Text.Wrap
-                maximumLineCount: card._expanded ? 12 : 3
-                elide:            Text.ElideRight
+                maximumLineCount: card._expanded ? Notifications._maxBodyChars : 3
+                elide:            card._expanded ? Text.ElideNone : Text.ElideRight
             }
 
             Item {
