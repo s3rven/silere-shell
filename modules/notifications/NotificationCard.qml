@@ -29,9 +29,8 @@ Item {
 
     property bool _expired: false
     property bool _leaving: false
-    // null while opaque or fading: an empty region still overrides compositor blur rules
-    readonly property Rectangle blurItem: Theme.popup.a < 1 && cardRect.opacity >= 0.999 && !card._leaving
-        ? cardRect : null
+    // null while opaque or gone: an empty region still overrides compositor blur rules
+    readonly property Rectangle blurItem: Theme.popup.a < 1 && cardRect.opacity > 0 ? cardRect : null
     // dismiss-all clears this: every card is leaving, so collapsing heights only drags the lower ones through their own exit
     property bool collapseOnDismiss: true
 
