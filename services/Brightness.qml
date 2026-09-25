@@ -279,6 +279,24 @@ Singleton {
         }
     }
 
+    // firmware hotkeys can change actual_brightness without touching brightness
+    FileView {
+        id: _actualBrightnessFile
+        path: root._device.length > 0
+            ? "/sys/class/backlight/" + root._device + "/actual_brightness" : ""
+        watchChanges: root._device.length > 0
+        printErrors: false
+        onLoaded: {
+            if (_applyDebounce.running || _setProc.running) return
+            const value = root._readValue(_actualBrightnessFile)
+            if (value < 0) return
+            root._currentValid = true
+            root.currentBrightness = value
+            root._syncReady()
+        }
+        onFileChanged: reload()
+    }
+
     Timer {
         id: _applyDebounce
         interval: 50

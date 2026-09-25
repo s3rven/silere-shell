@@ -59,12 +59,15 @@ settings file carries its own `__version` and migrates separately.
 - Scrolling a settings page carries on past its sliders; a slider takes the wheel once the pointer rests on it.
 - The night light temperature applies when you let go of the slider.
 - Divider and workspace icon opacity move in 2% steps.
+- A long track title in the bar scrolls twice when it appears, then holds still.
 
 ### Fixed
 
 - The launcher preserves the user's locale, umask, allocator and EGL environment when starting the shell and its child programs.
 - Night light selects hyprsunset only on Hyprland; niri uses wlsunset.
 - Notifications and controls appear over fullscreen windows, including on niri.
+- A charged battery reappears as soon as the laptop is unplugged.
+- Reset to defaults keeps Do Not Disturb and night light state, and IPC toggles report refused opens.
 - The update startup gate uses smoke mode, so it does not map a second bar or arm session services.
 - Launches through `silere run` wait for an intentional restart instead of reloading a partly updated tree.
 

@@ -113,9 +113,7 @@ Singleton {
     function _lin(c: real): real {
         return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
     }
-    readonly property real _baseL: 903.3 * (0.2126 * _lin(background.r)
-                                          + 0.7152 * _lin(background.g)
-                                          + 0.0722 * _lin(background.b))
+    readonly property real _baseL: _labOf(background).L
     readonly property real _elevK: Math.min(1.33, Math.max(1.0, 1.0 + 0.098 * (3.36 - _baseL)))
 
     readonly property real _lineK: ShellSettings.outlineStrength

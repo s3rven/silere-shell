@@ -17,9 +17,11 @@ AnchoredPopupState {
     IpcHandler {
         target: "calendar"
 
-        function toggle(): void {
-            if (root.open) { root.close(); return }
+        function toggle(): string {
+            if (root.open) { root.close(); return "ok" }
             root.openUnanchored()
+            return root.open ? "ok"
+                : "error: the calendar stays closed while the session is idle or the overview is open"
         }
         function close(): void { root.close() }
     }

@@ -665,10 +665,11 @@ Singleton {
         let n = 0
         const keys = Object.create(null)
         for (let i = 0; i < _schema.length; i++) {
-            const key = _schema[i].k
+            const entry = _schema[i]
+            const key = entry.k
             if (root._sameValue(root[key], root._defaults[key])) continue
             keys[key] = true
-            n++
+            if (entry.sec !== "-") n++
         }
         root._modifiedKeys = keys
         root._modifiedCount = n
@@ -684,17 +685,17 @@ Singleton {
     }
 
     function resetToDefaults(): void {
-        root._bulkAssign = true
-        for (let i = 0; i < _schema.length; i++) {
-            const k = _schema[i].k
-            if (k !== "barWidgetOrderLeft" && k !== "barWidgetOrderCenter"
-                    && k !== "barWidgetOrderRight")
-                root[k] = _defaults[k]
-        }
-        // the order keys go through the normalising setter, not a raw assignment
-        root.resetBarWidgets()
-        root._bulkAssign = false
-        _store.flush(false)
+        root.batch(function() {
+            for (let i = 0; i < _schema.length; i++) {
+                const entry = _schema[i]
+                const k = entry.k
+                if (entry.sec !== "-" && k !== "barWidgetOrderLeft"
+                        && k !== "barWidgetOrderCenter" && k !== "barWidgetOrderRight")
+                    root[k] = _defaults[k]
+            }
+            // the order keys go through the normalising setter, not a raw assignment
+            root.resetBarWidgets()
+        })
         root._recountModified()
     }
 
@@ -725,7 +726,7 @@ Singleton {
         if (modified !== wasModified) {
             if (modified) root._modifiedKeys[key] = true
             else delete root._modifiedKeys[key]
-            root._modifiedCount += modified ? 1 : -1
+            if (root._sectionOf[key] !== "-") root._modifiedCount += modified ? 1 : -1
             // only when a key crosses its default, not on every slider tick
             root._rebuildModifiedSections()
         }

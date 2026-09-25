@@ -189,6 +189,10 @@ Singleton {
         "chrome", "chromium", "brave", "edge", "opera", "vivaldi", "thorium"
     ]
 
+    function _hasBrowserToken(value, browser): bool {
+        return root._norm(value).split(/[.\s_-]+/).indexOf(browser) >= 0
+    }
+
     function _resolveByDesktopEntry(clients, name, lookup): var {
         const identity = root._norm(name)
         if (identity.length === 0) return null
@@ -250,18 +254,23 @@ Singleton {
 
         const name   = String(playerName || "").toLowerCase()
         const norm   = (s) => String(s || "").toLowerCase()
+        const browserName = root._browserClasses.some(b => root._hasBrowserToken(name, b))
 
         let best = name.length > 0
             ? root._chooseMatchingSource(clients, c =>
-                norm(c.cls).includes(name) ||
-                norm(c.initialClass).includes(name) ||
-                norm(c.title).includes(name))
+                (browserName
+                    ? root._browserClasses.some(b => root._hasBrowserToken(name, b)
+                        && (root._hasBrowserToken(c.cls, b)
+                            || root._hasBrowserToken(c.initialClass, b)))
+                    : norm(c.cls).includes(name) || norm(c.initialClass).includes(name)
+                        || norm(c.title).includes(name)))
             : null
 
-        if (!best && root._browserClasses.some(b => name.includes(b)))
+        if (!best && browserName)
             best = root._chooseMatchingSource(clients, c =>
                 root._browserClasses.some(b =>
-                    norm(c.cls).includes(b) || norm(c.initialClass).includes(b)))
+                    root._hasBrowserToken(c.cls, b)
+                    || root._hasBrowserToken(c.initialClass, b)))
 
         if (!best && songTitle && songTitle.length > 4) {
             const t = songTitle.toLowerCase()

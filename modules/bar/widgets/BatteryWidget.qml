@@ -6,7 +6,7 @@ import "../../common"
 Pill {
     id: batteryPill
 
-    readonly property bool autoHidden: ShellSettings.batteryAutoHide && (Battery.charging || Battery.full)
+    readonly property bool autoHidden: ShellSettings.batteryAutoHide && !Battery.onBattery
     readonly property bool show: ShellSettings.barShowBattery && Battery.available && !autoHidden
     property real _baseOpacity: show ? 1.0 : 0.0
     readonly property bool layoutVisible: show || _baseOpacity > 0.001

@@ -20,10 +20,12 @@ AnchoredPopupState {
     IpcHandler {
         target: "quickActions"
 
-        function toggle(): void {
-            if (root.open) { root.close(); return }
+        function toggle(): string {
+            if (root.open) { root.close(); return "ok" }
             root.barBottom = Metrics.barAtBottom
             root.openUnanchored()
+            return root.open ? "ok"
+                : "error: quick actions stay closed while the session is idle or the overview is open"
         }
         function close(): void { root.close() }
 

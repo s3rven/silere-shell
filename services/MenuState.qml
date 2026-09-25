@@ -202,10 +202,11 @@ AnchoredPopupState {
     IpcHandler {
         target: "menu"
 
-        function toggle(): void {
-            if (root.open) { root.close(); return }
+        function toggle(): string {
+            if (root.open) { root.close(); return "ok" }
             root.selectTab(root.homeTab)
             root.openUnanchored()
+            return root.open ? "ok" : root._refusedText
         }
         function close(): void { root.close() }
         function tab(index: int): string {

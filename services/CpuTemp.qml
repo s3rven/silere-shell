@@ -157,7 +157,7 @@ Singleton {
             "        k10temp:*tdie*|zenpower:*tdie*|coretemp:*package*|coretemp:*physical*) score=100 ;; " +
             "        k10temp:*tctl*|zenpower:*tctl*) score=90 ;; " +
             "        k10temp:*package*|zenpower:*package*) score=85 ;; " +
-            "        k10temp:*tccd0*|zenpower:*tccd0*) score=75 ;; " +
+            "        k10temp:*tccd1*|zenpower:*tccd1*) score=75 ;; " +
             "        coretemp:*core*) score=60 ;; " +
             "        cpu_thermal:*|cpu-thermal:*|soc_thermal:*|bcm2835_thermal:*) score=55 ;; " +
             "        *:*cpu*|*:*package*|*:*physical*|*:*tctl*|*:*tdie*) score=50 ;; " +

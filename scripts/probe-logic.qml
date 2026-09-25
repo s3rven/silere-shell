@@ -405,6 +405,11 @@ ShellRoot {
             "window matching normalizes desktop ids and empty hints")
         root._check(WindowActions._compact("Org.Example-App.desktop") === "orgexampleapp",
             "window matching compacts punctuation after normalizing desktop ids")
+        root._check(WindowActions._hasBrowserToken("org.mozilla.firefox", "firefox")
+                && WindowActions._hasBrowserToken("microsoft-edge", "edge")
+                && !WindowActions._hasBrowserToken("zenity", "zen")
+                && !WindowActions._hasBrowserToken("operator", "opera"),
+            "browser window matching uses complete class tokens")
         root._check(WindowActions._toPid("42.9") === 42
                 && WindowActions._toPid(0) === -1
                 && WindowActions._toPid("not-a-pid") === -1,
@@ -956,9 +961,9 @@ ShellRoot {
 
         const savedNight = ShellSettings.nightLightTemp
         ShellSettings.nightLightTemp = savedNight === 4000 ? 3500 : 4000
-        root._check(ShellSettings.modifiedCount === 1
+        root._check(ShellSettings.modifiedCount === 0
                 && Object.keys(ShellSettings.modifiedSections).length === 0,
-            "a setting with no page of its own marks nothing")
+            "a setting with no page of its own does not offer a reset")
         ShellSettings.nightLightTemp = savedNight
 
         const beforeEdit = ShellSettings._serialize()
@@ -3316,6 +3321,12 @@ ShellRoot {
     }
 
     function _finish(): void {
+        ShellSettings.dnd = true
+        ShellSettings.showSeconds = !ShellSettings._defaults.showSeconds
+        ShellSettings.resetToDefaults()
+        root._check(ShellSettings.dnd === true
+                && ShellSettings.showSeconds === ShellSettings._defaults.showSeconds,
+            "restoring settings keeps the live Do Not Disturb choice")
         if (root._failures === 0)
             console.warn("PROBE-LOGIC passed " + root._checks + " checks")
         else
