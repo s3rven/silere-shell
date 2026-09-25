@@ -97,7 +97,7 @@ settings file carries its own `__version` and migrates separately.
 - Popups open and close over a window without a bright flash.
 - Switching menu pages from a keybind resizes the panel in one motion.
 - Show & order lists Workspaces with the same icon as the settings rail.
-- Outlines on the OSD, notifications, menus and settings cards stay one pixel sharp on fractionally scaled displays.
+- Outlines on the OSD, notifications, menus and settings cards stay one pixel sharp on fractionally scaled displays, also while the OSD changes value or a control sits under the pointer.
 - Settings saved by a newer Silere keep the values this version would clamp, until you change them here.
 - A setting changed back after a hand edit of settings.json is saved, and a hand edit made while a change is pending is no longer written over.
 - A settings upgrade that cannot back up the old file leaves that file as it was.

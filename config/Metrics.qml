@@ -52,6 +52,12 @@ Singleton {
     function snap4Up(v: real): int   { return 4 * Math.ceil(v / 4) }
     function snap4Down(v: real): int { return 4 * Math.floor(v / 4) }
 
+    // an edge moved by part of a device pixel splits its outline across two; under half a pixel rounds to no move
+    function pixelScale(size: real, scale: real, dpr: real): real {
+        if (size <= 0 || dpr <= 0) return 1
+        return 1 + 2 * Math.round((scale - 1) * size / 2 * dpr) / (dpr * size)
+    }
+
     function flyoutX(origin: real, rowWidth: real, popupWidth: real, screenWidth: real): real {
         const right = origin + rowWidth + 4
         const target = right + popupWidth <= screenWidth - 4

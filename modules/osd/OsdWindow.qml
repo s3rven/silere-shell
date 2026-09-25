@@ -187,15 +187,7 @@ PanelWindow {
                     height: card.pillH
                     anchors.horizontalCenter: parent.horizontalCenter
                     opacity: card._op
-                    transform: [
-                        Translate { y: card._slide },
-                        Scale {
-                            origin.x: pillWrap.width / 2
-                            origin.y: pillWrap.height / 2
-                            xScale: card._bump
-                            yScale: card._bump
-                        }
-                    ]
+                    transform: Translate { y: card._slide }
 
                     Loader {
                         active: ShellSettings.barShadow
@@ -226,8 +218,16 @@ PanelWindow {
                         }
 
                         Row {
+                            id: _content
                             anchors.centerIn: parent
                             spacing: 10
+                            // the bump rides the content: a scaled frame takes its outline off the pixel grid and past its blur region
+                            transform: Scale {
+                                origin.x: _content.width / 2
+                                origin.y: _content.height / 2
+                                xScale: card._bump
+                                yScale: card._bump
+                            }
 
                             ShellText {
                                 anchors.verticalCenter: parent.verticalCenter

@@ -1399,6 +1399,19 @@ ShellRoot {
                 && Metrics.historyViewportFor(300, 5000) === 300,
             "the history page fits its content between the floor, the cap and the screen")
 
+        const edgeShift = (size, s, dpr) => (Metrics.pixelScale(size, s, dpr) - 1) * size / 2 * dpr
+        const wholePx = v => Math.abs(v - Math.round(v)) < 1e-9
+        root._check(Metrics.pixelScale(28, Motion.hoverScale, 1.25) === 1
+                && wholePx(edgeShift(28, Motion.pressScale, 1.25))
+                && Math.round(edgeShift(28, Motion.pressScale, 1.25)) === -1
+                && wholePx(edgeShift(80, Motion.hoverScale, 1.25))
+                && wholePx(edgeShift(22, 1.04, 2))
+                && Metrics.pixelScale(0, 1.5, 1.25) === 1,
+            "a scaled outline moves each edge by whole device pixels")
+        root._check(edgeShift(14, 1.18, 1.25) > edgeShift(14, 1.06, 1.25)
+                && edgeShift(14, 1.06, 1.25) > 0,
+            "a held slider thumb still lifts past its hover size")
+
         const weekStartWas = ShellSettings.calendarWeekStart
         root._check(CalendarState.weekStartFor("monday", 0) === 1
                 && CalendarState.weekStartFor("sunday", 1) === 0

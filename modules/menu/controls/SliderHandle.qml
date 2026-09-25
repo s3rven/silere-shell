@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import "../../../config"
 import "../../common"
 
@@ -18,20 +19,17 @@ Rectangle {
     antialiasing: true
     color: root.fillColor
     // grow via scale, not width: a re-layouted odd width lands the centre on a half-pixel and the handle visibly shifts under fractional scaling
-    // a held handle lifts toward the finger rather than sinking under it
-    scale: !root.hoverGrow ? 1.0
-         : root.pressed ? 1.14
-         : root.hovered ? 1.06 : 1.0
-    transformOrigin: Item.Center
-
-    // scale magnitudes stay larger than Motion.hoverScale: on a 14px handle 1.8% is a sub-pixel no-op
-    MotionBehavior on scale {
-        gate: root.animate
-        NumberAnimation {
-            duration: root.pressed ? Motion.press
-                : root.hovered ? Motion.hoverIn : Motion.hoverOut
-            easing.type: Easing.OutCubic
-        }
+    readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+    transform: PixelScale {
+        item: root
+        dpr: root._dpr
+        animate: root.animate
+        // pressed must round to more device pixels than hovered, or the held lift vanishes at 1.25
+        factor: !root.hoverGrow ? 1.0
+              : root.pressed ? 1.18
+              : root.hovered ? 1.06 : 1.0
+        duration: root.pressed ? Motion.press
+            : root.hovered ? Motion.hoverIn : Motion.hoverOut
     }
     ColorFade on color { gate: root.animate && !root.pressed }
 

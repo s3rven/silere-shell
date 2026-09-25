@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import "../../config"
 
 Item {
@@ -46,12 +47,19 @@ Item {
     }
 
     Rectangle {
+        id: _face
         anchors.fill: parent
         radius: width / 2
         antialiasing: true
-        scale: root.pressed ? Motion.pressScale
-            : _hover.hovered ? Motion.hoverScale : 1.0
-        transformOrigin: Item.Center
+        readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+        transform: PixelScale {
+            item: _face
+            dpr: _face._dpr
+            factor: root.pressed ? Motion.pressScale
+                : _hover.hovered ? Motion.hoverScale : 1.0
+            duration: root.pressed ? Motion.press
+                : _hover.hovered ? Motion.hoverIn : Motion.hoverOut
+        }
         color: Theme.buttonFill(root.accentColor, _hover.hovered, root.pressed)
 
         OutlineBorder {
@@ -63,13 +71,6 @@ Item {
         }
 
         ColorFade on color {}
-        MotionBehavior on scale {
-            NumberAnimation {
-                duration: root.pressed ? Motion.press
-                    : _hover.hovered ? Motion.hoverIn : Motion.hoverOut
-                easing.type: Easing.OutCubic
-            }
-        }
     }
 
     ShellText {

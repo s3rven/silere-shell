@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import "../../../config"
 import "../../common"
 
@@ -50,9 +51,12 @@ Item {
         anchors.centerIn: parent; width: 22; height: 22; radius: 11
         antialiasing: true
         color: root.spectrum ? "transparent" : root.chipColor
-        scale: _t.pressed ? 0.90 : _h.hovered ? 1.04 : 1.0
-        transformOrigin: Item.Center
-        MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+        readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+        transform: PixelScale {
+            item: _chip
+            dpr: _chip._dpr
+            factor: _t.pressed ? 0.90 : _h.hovered ? 1.04 : 1.0
+        }
 
         // only the custom chip pays for a canvas; the presets stay a flat fill
         Loader {

@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import "../../../config"
 import "../../../services"
 import "../../common"
@@ -194,9 +195,15 @@ MenuRow {
                         anchors.fill: parent
                         radius: Theme.radiusField
                         antialiasing: true
-                        scale: _tap.pressed ? Motion.pressScale
-                            : _hover.hovered ? Motion.hoverScale : 1.0
-                        transformOrigin: Item.Center
+                        readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+                        transform: PixelScale {
+                            item: _surface
+                            dpr: _surface._dpr
+                            factor: _tap.pressed ? Motion.pressScale
+                                : _hover.hovered ? Motion.hoverScale : 1.0
+                            duration: _tap.pressed ? Motion.press
+                                : _hover.hovered ? Motion.hoverIn : Motion.hoverOut
+                        }
                         // the gliding selection carries the selected look, so this only adds hover and press
                         color: _option.active
                             ? (_tap.pressed
@@ -207,13 +214,6 @@ MenuRow {
                             : Theme.buttonFill(root.accentColor,
                                 _hover.hovered, _tap.pressed)
                         ColorFade on color {}
-                        MotionBehavior on scale {
-                            NumberAnimation {
-                                duration: _tap.pressed ? Motion.press
-                                    : _hover.hovered ? Motion.hoverIn : Motion.hoverOut
-                                easing.type: Easing.OutCubic
-                            }
-                        }
 
                         OutlineBorder {
                             radius: _surface.radius
