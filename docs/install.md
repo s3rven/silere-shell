@@ -94,13 +94,13 @@ hides that widget or marks it unavailable.
 |---|---|
 | `pipewire` + `wireplumber` | volume, output picker |
 | `upower` | battery |
-| `nmcli` | VPN name fallback (network and Wi-Fi use Quickshell directly) |
+| `nmcli` | VPN indicator and name (network and Wi-Fi use Quickshell directly) |
 | `brightnessctl` | brightness |
 | `hyprsunset` / `wlsunset` | night light (`hyprsunset` on Hyprland, `wlsunset` elsewhere) |
 | `matugen` | wallpaper theming |
 | `cava` | media visualizer |
 | `powerprofilesctl` | power profiles; a daemon on the same D-Bus API, such as `tuned-ppd`, works without it |
-| `inotifywait` | screenshot feedback on the underline, and restarting the shell onto a restarted Hyprland |
+| `inotifywait` | screenshot feedback on the underline, and restarting the shell onto a restarted Hyprland when the systemd user service runs this checkout |
 | `checkupdates` / `apt` / `dnf` / `zypper` / `xbps-install` | package update badge; `checkupdates` also needs `fakeroot` |
 | `paru` / `yay` | AUR update count on Arch Linux |
 | `hyprlock` / `swaylock` / `gtklock` | lock action |

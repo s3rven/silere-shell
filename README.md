@@ -9,7 +9,7 @@
 
 <p align="center">
   <a href="https://github.com/s3rven/silere-shell/releases"><img src="https://img.shields.io/github/v/release/s3rven/silere-shell?style=flat-square&labelColor=0f1013&color=2a2d33&logo=github&logoColor=9a9ca1" alt="latest release"/></a>
-  <a href="https://github.com/s3rven/silere-shell/actions/workflows/validate.yml"><img src="https://img.shields.io/github/actions/workflow/status/s3rven/silere-shell/validate.yml?branch=main&style=flat-square&labelColor=0f1013&label=1000%2B%20checks&color=2a2d33&logo=githubactions&logoColor=9a9ca1" alt="1000+ checks on main"/></a>
+  <a href="https://github.com/s3rven/silere-shell/actions/workflows/validate.yml"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fs3rven%2Fsilere-shell%2Fbadges%2Fchecks.json&style=flat-square" alt="checks passed on main"/></a>
   <a href="https://github.com/s3rven/silere-shell/commits/main"><img src="https://img.shields.io/github/last-commit/s3rven/silere-shell/main?style=flat-square&labelColor=0f1013&color=2a2d33&label=last%20commit" alt="last commit"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2a2d33?style=flat-square&labelColor=0f1013" alt="license: MIT"/></a>
   <a href="https://quickshell.org/"><img src="https://img.shields.io/badge/built%20on-Quickshell-2a2d33?style=flat-square&labelColor=0f1013" alt="built on Quickshell"/></a>

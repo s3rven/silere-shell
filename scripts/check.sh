@@ -209,7 +209,7 @@ optional_tool wireplumber "PipeWire session manager"
 optional_tool upower "battery widget + warnings"
 optional_tool brightnessctl "brightness control + popup"
 optional_tool inotifywait "screenshot feedback + Hyprland restart recovery"
-optional_tool nmcli "VPN name fallback"
+optional_tool nmcli "VPN indicator"
 optional_tool cava "audio visualizer"
 optional_tool matugen "wallpaper-matched colors"
 optional_any_tool "updates" "update count widget" checkupdates apt dnf zypper xbps-install

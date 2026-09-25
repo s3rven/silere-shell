@@ -1,0 +1,56 @@
+name: Badge
+
+# kept out of Validate so Validate stays read-only for the release workflow
+on:
+  workflow_run:
+    workflows: [Validate]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: write
+  actions: read
+  checks: read
+
+concurrency:
+  group: badge
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    if: >-
+      github.event.workflow_run.conclusion != 'cancelled'
+      && contains(fromJSON('["push", "schedule"]'), github.event.workflow_run.event)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Publish the check count
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+        run: |
+          message=failing
+          if [ "$CONCLUSION" = success ]; then
+            count=""
+            for job in $(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --jq '.jobs[].id'); do
+              count="$(gh api "repos/$REPO/check-runs/$job/annotations" \
+                --jq '.[] | select(.title == "Check count") | .message' | head -n1)"
+              [ -n "$count" ] && break
+            done
+            [[ "$count" =~ ^[0-9]+$ ]] || { echo "::error::Validate announced no check count"; exit 1; }
+            message="$count passed"
+          fi
+          dir="$(mktemp -d)"
+          printf '{"schemaVersion":1,"label":"checks","message":"%s","color":"2a2d33","labelColor":"0f1013","namedLogo":"githubactions","logoColor":"9a9ca1","style":"flat-square"}\n' \
+            "$message" > "$dir/checks.json"
+          cd "$dir"
+          git init -q -b badges
+          git add checks.json
+          git -c user.name="github-actions[bot]" \
+            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "update the check count"
+          git push -q --force "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" badges

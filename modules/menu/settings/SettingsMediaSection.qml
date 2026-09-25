@@ -25,6 +25,9 @@ Column {
             description: "Fetches art the player links to"
             key: "mediaRemoteArt"
         }
+        HintText {
+            text: "Image hosts can see what you play; remote image loading may also crash the shell."
+        }
     }
 
     SectionLabel { label: "VISUALIZER" }

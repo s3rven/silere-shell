@@ -64,8 +64,10 @@ jobs:
             exit 1
           }
 
+      # shell: bash sets pipefail, so the tee cannot hide a failing suite
       - name: Structural and portability validation
-        run: SILERE_REQUIRE_GIT_TESTS=1 SILERE_REQUIRE_TOOLS=1 bash scripts/ci-lint.sh
+        shell: bash
+        run: SILERE_REQUIRE_GIT_TESTS=1 SILERE_REQUIRE_TOOLS=1 bash scripts/ci-lint.sh 2>&1 | tee /tmp/count-lint.log
 
       - name: Quickshell package compatibility
         shell: bash
@@ -82,10 +84,12 @@ jobs:
           done
 
       - name: Headless QML import and type probe
-        run: SILERE_REQUIRE_QML_TOOLS=1 bash scripts/test-qml-headless.sh
+        shell: bash
+        run: SILERE_REQUIRE_QML_TOOLS=1 bash scripts/test-qml-headless.sh 2>&1 | tee /tmp/count-types.log
 
       - name: Behavioral logic probe
-        run: bash scripts/test-logic.sh
+        shell: bash
+        run: bash scripts/test-logic.sh 2>&1 | tee /tmp/count-logic.log
 
       - name: Settings surface build probe
         # offscreen QPA needs no display; catches runtime-only errors in the
@@ -95,10 +99,23 @@ jobs:
       - name: Live settings change sweep
         # drives the whole schema against surfaces that already exist; the passes
         # above only ever fix the settings before a surface is built
-        run: bash scripts/test-mutate.sh
+        shell: bash
+        run: bash scripts/test-mutate.sh 2>&1 | tee /tmp/count-sweep.log
 
       - name: Settings layout fit probe
         # a section can build and still lose its labels; Qt elides and reports success
         env:
           FIT_REQUIRE_FONT: "1"
         run: bash scripts/test-layout-fit.sh
+
+      # the README badge reads this notice back through the API; see badge.yml
+      - name: Count the checks
+        shell: bash
+        run: |
+          lint="$(grep -c '^ok ' /tmp/count-lint.log || true)"
+          types="$(grep -oE 'type-check passed \([0-9]+ files\)' /tmp/count-types.log | grep -oE '[0-9]+' | tail -n1 || true)"
+          logic="$(grep -oE 'PROBE-LOGIC passed [0-9]+' /tmp/count-logic.log | grep -oE '[0-9]+$' | tail -n1 || true)"
+          sweep="$(grep -oE 'PROBE-MUTATE swept [0-9]+' /tmp/count-sweep.log | grep -oE '[0-9]+$' | tail -n1 || true)"
+          total=$(( ${lint:-0} + ${types:-0} + ${logic:-0} + ${sweep:-0} ))
+          echo "lint $lint, types $types, logic $logic, sweep $sweep"
+          echo "::notice title=Check count::$total"

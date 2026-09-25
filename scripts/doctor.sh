@@ -198,7 +198,12 @@ done
 [ "$missing_modules" -gt 0 ] || ok "QML modules" "all ${#SILERE_REQUIRED_QML_MODULES[@]} required imports found"
 
 if [ "$qs_usable" -eq 1 ]; then
-    if timeout 5 qs ipc -p "$ROOT/shell.qml" show >/dev/null 2>&1; then ok "shell IPC" "Silere is running and answers"
+    if command -v timeout >/dev/null 2>&1; then
+        ipc_probe=(timeout 5 qs ipc -p "$ROOT/shell.qml" show)
+    else
+        ipc_probe=(qs ipc -p "$ROOT/shell.qml" show)
+    fi
+    if "${ipc_probe[@]}" >/dev/null 2>&1; then ok "shell IPC" "Silere is running and answers"
     else warn "shell IPC" "Silere from $ROOT is not running or does not answer"
     fi
 fi
@@ -263,7 +268,7 @@ if command -v fc-list >/dev/null 2>&1; then
     fi
 fi
 optional_tool inotifywait "screenshot feedback + Hyprland restart recovery"
-optional_tool nmcli "VPN name fallback"
+optional_tool nmcli "VPN indicator"
 optional_tool busctl "notification daemon check"
 optional_any "power actions" "suspend, reboot, shut down" systemctl loginctl
 optional_any "updates" "update count widget" checkupdates apt dnf zypper xbps-install

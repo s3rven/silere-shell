@@ -1575,7 +1575,7 @@ ShellRoot {
             "compositor sanitizes client-controlled window text")
         root._check(Compositor.windowTitle("\u25D0 build") === "build"
                 && Compositor.windowTitle("\u280B cargo test") === "cargo test"
-                && Compositor.windowTitle("\u2733 Claude Code") === "Claude Code",
+                && Compositor.windowTitle("\u2733 npm run dev") === "npm run dev",
             "a terminal's spinner glyph is not part of its window title")
         root._check(Compositor.windowTitle("\u25CF main.ts") === "\u25CF main.ts"
                 && Compositor.windowTitle("* notes") === "* notes"

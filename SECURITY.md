@@ -38,6 +38,10 @@ signed transaction journal names.
 After signature verification and confirmation, the update gate runs the candidate
 release's QML checker and starts its shell in smoke mode before switching revisions.
 
+Remote cover art is optional. Enabling it sends requests to image hosts named by
+players, which can reveal what you are playing; Qt's remote image loading has also
+caused a shell crash on some systems.
+
 The first install is a different matter. `git clone` followed by
 `scripts/install.sh` runs code from `main` before any signature has been checked,
 and a repository that shipped a tampered `install.sh` would also ship a tampered

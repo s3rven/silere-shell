@@ -897,7 +897,7 @@ fi
 _optdep fc-list       "font picker + font checks"
 _optdep brightnessctl "brightness control + popup"
 _optdep inotifywait   "screenshot flash + Hyprland restart recovery"
-_optdep nmcli         "VPN name fallback"
+_optdep nmcli         "VPN indicator"
 _optdep cava          "audio visualizer (auto-configured at runtime)"
 _optdep_any "updates" "update count" checkupdates apt dnf zypper xbps-install
 _optdep_any "AUR helper" "AUR update count" paru yay

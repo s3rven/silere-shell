@@ -73,6 +73,9 @@ rejected write also names the values the key accepts. The `list` filter matches 
 `list clock` reaches `showSeconds`. The filter is required; pass `""` to list every key at
 once.
 
+Hook arguments can contain text supplied by any application on the session bus. Quote
+arguments such as `"$1"` in hook scripts and never pass them to `eval`.
+
 `set dnd true` and `set dnd false` switch Do Not Disturb without toggling it, and `get dnd`
 reads it.
 

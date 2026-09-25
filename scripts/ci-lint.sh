@@ -60,7 +60,8 @@ update_pid=$!
 section "merge conflict markers"
 # grep, not git grep: this lint is also meant to work from a release archive or
 # any other plain source tree without repository metadata.
-if grep -rn -I -E '^(<<<<<<< |=======$|>>>>>>> )' --exclude-dir=.git --exclude-dir=.claude . ; then
+# hidden directories other than .github hold local tooling and parked checkouts, not project files
+if grep -rn -I -E '^(<<<<<<< |=======$|>>>>>>> )' --exclude-dir=.git --exclude-dir='.[!g]*' . ; then
   fail "conflict markers found"
 else
   ok "markers" "none"
@@ -146,7 +147,7 @@ section "invisible characters in source"
 if printf 'a\n' | grep -qP 'a' 2>/dev/null; then
   bidi_hits="$(grep -rlP '[\x{061C}\x{200B}\x{200E}\x{200F}\x{202A}-\x{202E}\x{2066}-\x{206F}]' \
     --include='*.qml' --include='*.sh' --include='*.md' --include='*.json' \
-    --include='*.yml' --include='*.toml' --exclude-dir=.git --exclude-dir=.claude . 2>/dev/null || true)"
+    --include='*.yml' --include='*.toml' --exclude-dir=.git --exclude-dir='.[!g]*' . 2>/dev/null || true)"
   if [ -n "$bidi_hits" ]; then
     fail "these files carry bidi or zero-width characters; write them as \\uXXXX escapes:"
     while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$bidi_hits"
@@ -197,7 +198,7 @@ for pair in $shadow_pairs; do
     [ "$f" = "./services/$local_name.qml" ] && continue
     grep -qE '^import "(\.\./)*services"' "$f" \
       && shadowed="$shadowed  $f imports $module beside the services directory, shadowing $local_name"$'\n'
-  done < <(grep -rlF "import $module" --include='*.qml' --exclude-dir=.claude . || true)
+  done < <(grep -rlF "import $module" --include='*.qml' --exclude-dir='.?*' . || true)
 done
 if [ -n "$shadowed" ]; then
   fail "an external type would take a local singleton's name:"
@@ -378,7 +379,7 @@ else
 fi
 
 section "public Quickshell imports"
-if grep -R -n -F 'import Quickshell.Wayland._' --include='*.qml' --exclude-dir=.claude .; then
+if grep -R -n -F 'import Quickshell.Wayland._' --include='*.qml' --exclude-dir='.?*' .; then
   fail "QML files must not import private Quickshell Wayland modules"
 else
   ok "Wayland" "public module only"
@@ -1028,7 +1029,7 @@ while IFS= read -r qd; do
     [ -f "$dir/$f" ] && continue
     missing="$missing $dir/$f"
   done < <(awk 'NF>=2 && $NF ~ /\.qml$/ {print $NF}' "$qd")
-done < <(find . -path './.git' -prune -o -path './.claude' -prune -o -name qmldir -print)
+done < <(find . -path './.*' -prune -o -name qmldir -print)
 if [ -n "$missing" ]; then
   fail "qmldir references missing files:"
   for m in $missing; do printf '  %s\n' "$m"; done
@@ -1071,10 +1072,10 @@ while IFS= read -r qd; do
       grep -E "\\b$name\\b" "$user" | grep -qvE "$name\\.qml" || continue
       leaked="$leaked $name:$user"
     done < <(grep -rlE "\\b$name\\b" --include='*.qml' . 2>/dev/null \
-      | grep -vE '^\./\.claude/' \
+      | grep -vE '^\./\.' \
       | grep -vE "^$dir/[^/]*\\.qml$" || true)
   done < <(awk '$1 == "internal" { print $2 }' "$qd")
-done < <(find . -path './.git' -prune -o -path './.claude' -prune -o -name qmldir -print)
+done < <(find . -path './.*' -prune -o -name qmldir -print)
 if [ -n "$leaked" ]; then
   fail "internal types are used outside their own module, which only fails at runtime:"
   for l in $leaked; do printf '  %s\n' "$l"; done
@@ -1646,7 +1647,7 @@ theme_loader="config/MatugenPalette.qml"
 if [ -f "$theme_tmpl" ] && [ -f "$theme_loader" ]; then
     # Palette roles the shell actually reads. usingFallback and paletteStale describe
     # load state, not colours, so they have no template key to cover.
-    used=$(grep -rhoE 'MatugenTheme\.[a-zA-Z_][a-zA-Z0-9_]*' --include='*.qml' --exclude-dir=.claude . \
+    used=$(grep -rhoE 'MatugenTheme\.[a-zA-Z_][a-zA-Z0-9_]*' --include='*.qml' --exclude-dir='.?*' . \
            | sed 's/^MatugenTheme\.//' \
            | grep -vE '^(_|qml$|usingFallback$|paletteStale$)' | sort -u)
     theme_gap=0
@@ -2152,7 +2153,7 @@ section "row height derivation"
 # Metrics.rowHeightFor already snaps a design height to the 4px grid using the measured
 # base cap height. Hand-rolled "capHeight + 12" hardcodes a base of 20; the real one is
 # 16, so every copy came out 4px short of its neighbours above uiScale 1.0.
-row_formulas="$(grep -rln 'capHeight + 12' --include='*.qml' --exclude-dir=.claude . || true)"
+row_formulas="$(grep -rln 'capHeight + 12' --include='*.qml' --exclude-dir='.?*' . || true)"
 if [ -n "$row_formulas" ]; then
   fail "row heights must come from Metrics.rowHeightFor(design), not a hand-rolled cap height:"
   while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$row_formulas"
