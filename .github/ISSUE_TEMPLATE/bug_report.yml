@@ -7,7 +7,7 @@ body:
       value: |
         Include enough environment detail to reproduce the problem. Remove usernames, window titles, network names, and other private information from logs.
 
-        From a Silere checkout, `bash scripts/check.sh` prints the three versions below in its first block.
+        Run `silere doctor` for runtime checks and `silere version` for the installed version.
 
   - type: input
     id: silere

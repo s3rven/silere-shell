@@ -1179,7 +1179,7 @@ elif [ -L "$CLI_LINK" ] \
 elif [ -e "$CLI_LINK" ] || [ -L "$CLI_LINK" ]; then
     _warn "$CLI_LINK already exists and is not owned by this Silere install"
     _skip "left it untouched; run $CLI_TARGET directly"
-elif _ask "Install the silere doctor/update/repair command?"; then
+elif _ask "Install the silere command (run, status, doctor, ipc, update)?"; then
     if _dry; then
         _would "create $CLI_LINK → $CLI_TARGET"
     else
@@ -1190,7 +1190,7 @@ elif _ask "Install the silere doctor/update/repair command?"; then
         did_cli=true
     fi
 else
-    _skip "run it directly: $CLI_TARGET"
+    _skip "run it directly, or add it later with: $CLI_TARGET link"
 fi
 
 # ── matugen template ─────────────────────────────────────────────────────────────
@@ -1556,9 +1556,7 @@ else
     printf "  add the line above to your Hyprland or niri config, or run it now:\n"
     printf "    ${DIM}%s/scripts/silere run${R}\n" "$ROOT"
 fi
-if [ -f "$ROOT/scripts/check.sh" ]; then
-    printf "  if a surface does not appear: ${DIM}bash %s/scripts/check.sh${R}\n" "$ROOT"
-fi
+printf "  if a surface does not appear: ${DIM}%s/scripts/silere doctor${R}\n" "$ROOT"
 if $did_keybind; then
     printf "  press ${DIM}%s + %s${R} or click the active workspace diamond to open the menu\n" \
         "$MENU_BIND_MODS" "$MENU_BIND_KEY"

@@ -29,6 +29,7 @@ settings file carries its own `__version` and migrates separately.
 - Settings pages also answer to the names the rail shows, so `menu settings alerts` opens Alerts.
 - `silere doctor` names the program holding notifications and checks for a Nerd Font, `fakeroot` and a readable settings.json.
 - Right-click forgets a saved Wi-Fi network or a paired Bluetooth device, as middle-click does.
+- `silere link` puts the `silere` command on your PATH if the installer skipped it.
 
 ### Changed
 

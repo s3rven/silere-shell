@@ -18,6 +18,7 @@ Usage: silere <command> [options]
   status                 Show installation and updater state
   doctor                 Run read-only installation diagnostics
   ipc <target> <fn> ...  Call the running shell over IPC; `ipc show` lists targets
+  link                   Put this silere command on PATH, in ~/.local/bin
   update                 Check for a signed Silere release
   update --apply         Install the confirmed signed release
   update --rollback      Restore the revision an update replaced
@@ -226,6 +227,30 @@ case "$command_name" in
         fi
         [ -x "$ROOT/scripts/repair.sh" ] || die "this installation is managed by $(package_manager); repair it there"
         exec bash "$ROOT/scripts/repair.sh" "$@"
+        ;;
+    link)
+        [ "$#" -eq 0 ] || { usage >&2; exit 2; }
+        [ "${HOME#/}" != "$HOME" ] || die "HOME must be absolute"
+        if is_packaged; then
+            die "the $(package_manager) package already puts silere on PATH"
+        fi
+        link_dir="$HOME/.local/bin"
+        link_path="$link_dir/silere"
+        link_target="$ROOT/scripts/silere"
+        if [ -L "$link_path" ] \
+                && [ "$(readlink -f -- "$link_path" 2>/dev/null || true)" = "$link_target" ]; then
+            printf 'silere is already linked at %s\n' "$link_path"
+        elif [ -e "$link_path" ] || [ -L "$link_path" ]; then
+            die "$link_path already exists and points elsewhere; remove it first"
+        else
+            (umask 077 && mkdir -p -- "$link_dir") || die "could not create $link_dir"
+            ln -s -- "$link_target" "$link_path" || die "could not create $link_path"
+            printf 'linked %s -> %s\n' "$link_path" "$link_target"
+        fi
+        case ":$PATH:" in
+            *":$link_dir:"*) ;;
+            *) printf 'note: %s is not on your PATH; add it in your shell config\n' "$link_dir" ;;
+        esac
         ;;
     uninstall)
         [ "$#" -eq 0 ] || { usage >&2; exit 2; }

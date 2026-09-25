@@ -98,7 +98,8 @@ installer backs up every file it edits and asks before adding autostart; `--dry-
 the whole plan without writing anything.
 
 Restart your compositor, or start Silere now with `silere run`. If you skipped the
-`silere` command, that is `~/.config/silere-shell/scripts/silere run`.
+`silere` command, that is `~/.config/silere-shell/scripts/silere run`, and
+`~/.config/silere-shell/scripts/silere link` adds the command later.
 
 **Opening the menu.** The installer offers to bind **Super + /** to the menu, which holds
 every setting. Clicking the active workspace diamond opens it too. On niri, or a Hyprland
@@ -157,15 +158,15 @@ The menu, calendar, quick actions and settings are scriptable over Quickshell IP
 can run an executable of your own on events like `battery-critical` or `workspace-changed`.
 
 ```bash
-SILERE_DIR="$HOME/.config/silere-shell"
-qs ipc -p "$SILERE_DIR/shell.qml" call menu toggle
-qs ipc -p "$SILERE_DIR/shell.qml" call calendar toggle
-qs ipc -p "$SILERE_DIR/shell.qml" call quickActions dnd
-qs ipc -p "$SILERE_DIR/shell.qml" call settings set osdTimeout 3000
+silere ipc menu toggle
+silere ipc calendar toggle
+silere ipc quickActions dnd
+silere ipc settings set osdTimeout 3000
 ```
 
-`silere ipc menu toggle` is the same call without the path. The full IPC surface, the
-settings page names, and hooks: [`docs/scripting.md`](docs/scripting.md).
+Without the `silere` command, each call is `qs ipc -p ~/.config/silere-shell/shell.qml call`
+followed by the same words. The full IPC surface, the settings page names, and hooks:
+[`docs/scripting.md`](docs/scripting.md).
 
 ## Updates
 
