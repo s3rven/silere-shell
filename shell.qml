@@ -51,8 +51,8 @@ ShellRoot {
         void CalendarState.armed
         void TrayMenuState.armed
         void QuickActionsState.armed
-        // auto night light tracks the sun in the background; with auto off the singleton stays lazy
-        if (ShellSettings.nightLightAuto) void NightLight.toolAvailable
+        // auto night light tracks the sun, and one left on returns after a restart; otherwise lazy
+        if (ShellSettings.nightLightAuto || ShellSettings.nightLightOn) void NightLight.toolAvailable
         // nothing else references Hooks: unarmed it never scans, and no hook ever fires
         void Hooks.armed
         root.armSystemAlertsIfNeeded()
@@ -64,6 +64,9 @@ ShellRoot {
         function onOsdTempWarnChanged() { root.armSystemAlertsIfNeeded() }
         function onNightLightAutoChanged() {
             if (ShellSettings.nightLightAuto) void NightLight.toolAvailable
+        }
+        function onNightLightOnChanged() {
+            if (ShellSettings.nightLightOn) void NightLight.toolAvailable
         }
     }
 
@@ -181,6 +184,7 @@ ShellRoot {
     PopupLoader {
         id: _osdPopup
         wantOpen: ShellSettings.osdEnabled && OsdBarState.activeCount > 0
+            && (!ShellSettings.osdBarIntegrated || OsdBarState.barConcealed)
         requestedScreen: root.activeOverlayScreen
         unloadDelay: 50
         surface: Component { OsdWindow { targetScreen: _osdPopup.latchedScreen } }

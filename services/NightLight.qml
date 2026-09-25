@@ -35,17 +35,32 @@ Singleton {
         Math.abs(_useLat).toFixed(0) + "°" + (_useLat >= 0 ? "N" : "S")
 
     property int _solarTick: 0
-    readonly property real _declRad: {
+    // noaa's fractional-year series: declination in radians and the equation of time in minutes
+    readonly property real _yearAngle: {
         root._solarTick
         const d = new Date()
-        const n = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 86400000)
-        return 23.44 * Math.sin(2 * Math.PI * (n - 81) / 365) * Math.PI / 180
+        // counted in utc: a local-midnight difference is an hour short across a dst change
+        const n = Math.round((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())
+            - Date.UTC(d.getFullYear(), 0, 0)) / 86400000)
+        return 2 * Math.PI / 365 * (n - 1 + (d.getHours() + d.getMinutes() / 60 - 12) / 24)
+    }
+    readonly property real _declRad: {
+        const g = root._yearAngle
+        return 0.006918 - 0.399912 * Math.cos(g) + 0.070257 * Math.sin(g)
+            - 0.006758 * Math.cos(2 * g) + 0.000907 * Math.sin(2 * g)
+            - 0.002697 * Math.cos(3 * g) + 0.00148 * Math.sin(3 * g)
+    }
+    readonly property real _eqTimeMin: {
+        const g = root._yearAngle
+        return 229.18 * (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g)
+            - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g))
     }
     readonly property real _elevation: {
         root._solarTick
         const d    = new Date()
         const decl = root._declRad
-        const h    = ((d.getUTCHours() + d.getUTCMinutes() / 60 + root._useLon / 15 - 12) * 15) * Math.PI / 180
+        const h    = ((d.getUTCHours() + d.getUTCMinutes() / 60 + root._useLon / 15
+            + root._eqTimeMin / 60 - 12) * 15) * Math.PI / 180
         const phi  = root._useLat * Math.PI / 180
         return Math.asin(Math.sin(phi) * Math.sin(decl) +
                          Math.cos(phi) * Math.cos(decl) * Math.cos(h)) * 180 / Math.PI
@@ -60,10 +75,14 @@ Singleton {
 
     readonly property real _solarNoon: {
         root._solarTick
-        return 12 - root._useLon / 15 - (new Date()).getTimezoneOffset() / 60
+        return 12 - root._useLon / 15 - root._eqTimeMin / 60 - (new Date()).getTimezoneOffset() / 60
     }
+    // -0.833°: refraction plus the sun's radius, so the times match published ones
     readonly property real _halfDay: {
-        const c = Math.max(-1, Math.min(1, -Math.tan(root._useLat * Math.PI / 180) * Math.tan(root._declRad)))
+        const phi = root._useLat * Math.PI / 180
+        const decl = root._declRad
+        const c = Math.max(-1, Math.min(1, Math.cos(90.833 * Math.PI / 180) / (Math.cos(phi) * Math.cos(decl))
+            - Math.tan(phi) * Math.tan(decl)))
         return Math.acos(c) * 180 / Math.PI / 15
     }
     readonly property real sunriseHour: _solarNoon - _halfDay
@@ -142,6 +161,11 @@ Singleton {
             "[ -z \"$tz\" ] && tz=\"$(readlink -f /etc/localtime 2>/dev/null | sed -n 's#.*/zoneinfo/##p')\"; " +
             "[ -z \"$tz\" ] && [ -r /etc/timezone ] && tz=\"$(cat /etc/timezone)\"; " +
             "[ -z \"$tz\" ] && exit 0; " +
+            // the tables list only canonical zones; an alias like Asia/Calcutta would fall back to 45°N
+            "for _ in 1 2 3; do " +
+            "  l=\"$(awk -v z=\"$tz\" '$1==\"L\" && $3==z {print $2; exit}' /usr/share/zoneinfo/tzdata.zi 2>/dev/null)\"; " +
+            "  [ -n \"$l\" ] && [ \"$l\" != \"$tz\" ] || break; tz=\"$l\"; " +
+            "done; " +
             "for f in /usr/share/zoneinfo/zone1970.tab /usr/share/zoneinfo/zone.tab; do " +
             "  [ -r \"$f\" ] || continue; " +
             "  c=\"$(awk -v z=\"$tz\" 'BEGIN{FS=\"\\t\"} $0 !~ /^#/ && $3==z {print $2; exit}' \"$f\")\"; " +
@@ -224,6 +248,8 @@ Singleton {
         if (!toolAvailable) return
         // any pgrep in flight describes the state before this action
         root._stateGeneration++
+        root._restoreDone = true
+        ShellSettings.nightLightOn = !enabled
         if (enabled) {
             _pendingEnable = false
             if (_killProc.running) { enabled = false; return }
@@ -261,7 +287,12 @@ Singleton {
     function _init(): void {
         if (!SystemTools.ready) return
         if (!toolAvailable) { enabled = false; return }
-        if (!SystemTools.hasPgrep) { enabled = _sunsetProc.running; return }
+        if (!SystemTools.hasPgrep) {
+            enabled = _sunsetProc.running
+            root._probedOnce = true
+            root._maybeRestore()
+            return
+        }
         if (_killProc.running || root._stopping || root._pendingEnable) return
         if (!_checkProc.running) {
             _checkProc._generation = root._stateGeneration
@@ -342,7 +373,25 @@ Singleton {
             root.enabled = state === 1
             if (root.enabled && root._runningTool.length === 0)
                 root._runningTool = root.tool
+            root._probedOnce = true
+            root._maybeRestore()
         }
+    }
+
+    // a restart kills the tool: bring back a hand-chosen state once, never a tool that died later
+    property bool _probedOnce: false
+    property bool _restoreDone: false
+    function _maybeRestore(): void {
+        if (root._restoreDone || !root._probedOnce || !ShellSettings.ready) return
+        root._restoreDone = true
+        if (!ShellSettings.nightLightOn || root.enabled || !root.toolAvailable) return
+        if (_sunsetProc.running || root._stopping || _killProc.running) return
+        if (ShellSettings.nightLightAuto) root._solarTick++
+        root._startSunset()
+    }
+    Connections {
+        target: ShellSettings
+        function onReadyChanged() { root._maybeRestore() }
     }
 
     // bounded only for its exit report: a tool removed mid-session fails to start without one
