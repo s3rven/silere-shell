@@ -12,7 +12,9 @@ Singleton {
     // the service pushes reads; powerprofilesctl writes where installed, so a refusal reports stderr
     readonly property bool available: SystemTools.hasPowerProfilesCtl
         || SystemTools.hasPowerProfilesService
-    readonly property bool syncing: _set.running
+    // a set returns in ~85ms, so only a daemon slow enough to notice shows an in-between state
+    readonly property bool changing: _set.running && root._setIsSlow
+    property bool _setIsSlow: false
     property string lastError: ""
 
     function profileName(value): string {
@@ -112,11 +114,22 @@ Singleton {
         timeoutMs: 8000
         environment: ({ "LC_ALL": "C" })
         stderr: StdioCollector { id: _setErr }
+        onRunningChanged: {
+            root._setIsSlow = false
+            if (running) _slowSet.restart()
+            else _slowSet.stop()
+        }
         onTimeoutReached: root.lastError = "Power mode change timed out"
         onExited: (code) => {
             if (!root.available || timedOut) return
             root.lastError = code === 0 ? "" : SafeText.lastNonEmptyLine(
                 _setErr.text, "Could not change the power mode", 160)
         }
+    }
+
+    Timer {
+        id: _slowSet
+        interval: 400
+        onTriggered: root._setIsSlow = true
     }
 }

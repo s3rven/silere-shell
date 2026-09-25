@@ -231,10 +231,10 @@ PanelWindow {
                 glyph: PowerProfiles.glyph.length > 0 ? PowerProfiles.glyph : "󰾅"
                 label: "Power Mode"
                 checkable: false
-                enabled: PowerProfiles.profile.length > 0 && !PowerProfiles.syncing
+                enabled: PowerProfiles.profile.length > 0 && !PowerProfiles.changing
                 active: PowerProfiles.profile === "performance"
                 error: PowerProfiles.lastError.length > 0
-                stateText: PowerProfiles.syncing ? "Changing…"
+                stateText: PowerProfiles.changing ? "Changing…"
                          : PowerProfiles.lastError.length > 0 ? "Failed"
                          : PowerProfiles.label.length > 0 ? PowerProfiles.label
                          : "Unavailable"

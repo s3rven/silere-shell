@@ -385,11 +385,11 @@ PageShell {
             ControlRow {
                 id: _powerRow
                 visible: PowerProfiles.available
-                available: PowerProfiles.profile !== "" && !PowerProfiles.syncing
+                available: PowerProfiles.profile !== "" && !PowerProfiles.changing
                 active: PowerProfiles.profile !== "" && PowerProfiles.profile !== "balanced"
                 glyph: PowerProfiles.glyph
                 title: "Power Mode"
-                valueText: PowerProfiles.syncing ? "Changing…"
+                valueText: PowerProfiles.changing ? "Changing…"
                          : PowerProfiles.profile !== "" ? PowerProfiles.label
                          : "Unavailable"
                 status: PowerProfiles.lastError.length > 0 ? PowerProfiles.lastError
@@ -421,7 +421,7 @@ PageShell {
                                 label: modelData.label
                                 accessiblePrefix: "Power Mode"
                                 selected: PowerProfiles.profile === modelData.name
-                                interactive: !PowerProfiles.syncing
+                                interactive: !PowerProfiles.changing
                                 onTriggered: PowerProfiles.setProfile(modelData.name)
                             }
                         }
