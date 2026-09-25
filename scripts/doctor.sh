@@ -198,8 +198,34 @@ done
 [ "$missing_modules" -gt 0 ] || ok "QML modules" "all ${#SILERE_REQUIRED_QML_MODULES[@]} required imports found"
 
 if [ "$qs_usable" -eq 1 ]; then
-    if qs list --all >/dev/null 2>&1; then ok "shell IPC" "Quickshell instance registry reachable"
-    else warn "shell IPC" "no reachable Quickshell instance (Silere may be stopped)"
+    if timeout 5 qs ipc -p "$ROOT/shell.qml" show >/dev/null 2>&1; then ok "shell IPC" "Silere is running and answers"
+    else warn "shell IPC" "Silere from $ROOT is not running or does not answer"
+    fi
+fi
+
+# another daemon holding the name is the usual reason notifications never appear
+if command -v busctl >/dev/null 2>&1; then
+    notif_owner="" notif_pid="" notif_comm="" notif_cmd=""
+    read -r _ notif_owner < <(busctl --user call org.freedesktop.DBus /org/freedesktop/DBus \
+        org.freedesktop.DBus GetNameOwner s org.freedesktop.Notifications 2>/dev/null) || true
+    notif_owner="${notif_owner//\"/}"
+    if [ -n "$notif_owner" ]; then
+        read -r _ notif_pid < <(busctl --user call org.freedesktop.DBus /org/freedesktop/DBus \
+            org.freedesktop.DBus GetConnectionUnixProcessID s "$notif_owner" 2>/dev/null) || true
+    fi
+    case "$notif_pid" in ''|*[!0-9]*) notif_pid="" ;; esac
+    if [ -n "$notif_pid" ]; then
+        IFS= read -r notif_comm < "/proc/$notif_pid/comm" 2>/dev/null || true
+        notif_cmd="$(tr '\0' ' ' < "/proc/$notif_pid/cmdline" 2>/dev/null || true)"
+    fi
+    if [ -z "$notif_owner" ]; then
+        warn "notifications" "no notification daemon is running"
+    elif [ "$notif_comm" = qs ] && [[ "$notif_cmd" == *"$ROOT/shell.qml"* || "$notif_cmd" == *"$ROOT "* ]]; then
+        ok "notifications" "served by Silere"
+    elif [ "$notif_comm" = qs ]; then
+        warn "notifications" "owned by another Quickshell config; stop it to use Silere's notifications"
+    else
+        warn "notifications" "owned by ${notif_comm:-another process}; stop it to use Silere's notifications"
     fi
 fi
 
@@ -218,13 +244,24 @@ section "Optional features"
 optional_tool upower "battery"
 optional_tool brightnessctl "brightness control"
 optional_tool matugen "wallpaper theming"
-optional_tool powerprofilesctl "power profiles"
+if ! command -v powerprofilesctl >/dev/null 2>&1 && command -v busctl >/dev/null 2>&1 \
+        && busctl --system --no-pager --timeout=2 get-property net.hadess.PowerProfiles \
+            /net/hadess/PowerProfiles net.hadess.PowerProfiles ActiveProfile >/dev/null 2>&1; then
+    ok "power profiles" "served over D-Bus (tuned-ppd or similar)"
+else
+    optional_tool powerprofilesctl "power profiles"
+fi
 optional_any "night light" "warm display" hyprsunset wlsunset
 optional_any "screen lock" "lock action" hyprlock swaylock gtklock
 optional_any "sound settings" "per-app routing UI" pwvucontrol pavucontrol
 optional_tool cava "audio visualizer"
 optional_tool notify-send "desktop alerts"
 optional_tool fc-list "font verification"
+if command -v fc-list >/dev/null 2>&1; then
+    if fc-list : family 2>/dev/null | grep -qi 'nerd font'; then ok "Nerd Font" "installed"
+    else fail "Nerd Font" "none installed; bar and menu icons render as boxes"
+    fi
+fi
 optional_tool inotifywait "screenshot feedback + Hyprland restart recovery"
 optional_tool nmcli "VPN name fallback"
 optional_tool busctl "notification daemon check"
@@ -232,6 +269,11 @@ optional_any "power actions" "suspend, reboot, shut down" systemctl loginctl
 optional_any "updates" "update count widget" checkupdates apt dnf zypper xbps-install
 [ "$package_family" != pacman ] \
     || optional_any "AUR helper" "AUR update count" paru yay
+if command -v checkupdates >/dev/null 2>&1 && ! command -v fakeroot >/dev/null 2>&1; then
+    warn "fakeroot" "checkupdates needs it; the update badge reports an error without it"
+    optional_missing=$((optional_missing + 1))
+    _remember_package fakeroot
+fi
 
 section "Integration"
 config_home="$(_silere_xdg_home "${XDG_CONFIG_HOME:-}" .config 2>/dev/null || true)"
@@ -239,8 +281,11 @@ state_home="$(_silere_xdg_home "${XDG_STATE_HOME:-}" .local/state 2>/dev/null ||
 settings="${config_home:+$config_home/silere-shell/settings.json}"
 if [ -z "$config_home" ]; then fail "XDG config" "HOME must be absolute"
 elif [ ! -e "$settings" ]; then info "settings" "not created yet"
-elif [ -r "$settings" ]; then ok "settings" "readable at $settings"
-else fail "settings" "not readable at $settings"
+elif [ ! -r "$settings" ]; then fail "settings" "not readable at $settings"
+elif command -v python3 >/dev/null 2>&1 \
+        && ! python3 -c 'import json, sys; json.load(open(sys.argv[1]))' "$settings" 2>/dev/null; then
+    fail "settings" "not valid JSON; Silere keeps its defaults and leaves the file alone"
+else ok "settings" "readable at $settings"
 fi
 
 if [ -r "$ROOT/security/update-signers" ]; then ok "release trust" "installed signer list is readable"

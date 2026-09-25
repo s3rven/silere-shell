@@ -851,7 +851,7 @@ fi
 
 section "installer environment defaults"
 if grep -qF '${MALLOC_CONF-' scripts/silere \
-    && grep -qF '${QSG_TRANSIENT_IMAGES-' scripts/silere \
+    && ! grep -qF 'QSG_TRANSIENT_IMAGES' scripts/silere scripts/install.sh \
     && grep -qF 'exec qs --no-duplicate -p "$ROOT/shell.qml"' scripts/silere \
     && grep -qF 'LAUNCH_CMD="exec \"\$(printf' scripts/install.sh \
     && grep -qF 'set -- run "$@"' scripts/silere \
@@ -1225,6 +1225,72 @@ else
     ok "settings" "slider ranges match the schema"
 fi
 
+section "slider default grid"
+# A slider snaps to min + k * step. A default between two steps can never be dragged
+# back to, so that page keeps its modified dot until a full reset.
+slider_grid=$(awk '
+function braces(s, c,   n, i) {
+    n = 0
+    for (i = 1; i <= length(s); i++) if (substr(s, i, 1) == c) n++
+    return n
+}
+function literal(line, name,   seg) {
+    if (!match(line, "(^|[ \t;{])" name ": *-?[0-9]+(\\.[0-9]+)? *(;|$)")) return ""
+    seg = substr(line, RSTART, RLENGTH)
+    sub(".*" name ": *", "", seg)
+    sub(/ *;?$/, "", seg)
+    return seg
+}
+FILENAME ~ /ShellSettings\.qml$/ {
+    if (match($0, /^ *property +(real|int) +[A-Za-z0-9_]+: *-?[0-9]+(\.[0-9]+)? *$/)) {
+        line = $0
+        sub(/^ *property +(real|int) +/, "", line)
+        name = line; sub(/:.*/, "", name)
+        sub(/^[^:]*: */, "", line)
+        def[name] = line + 0
+        next
+    }
+    if (!match($0, /k: "[A-Za-z0-9_]+"/)) next
+    key = substr($0, RSTART + 4, RLENGTH - 5)
+    if (!match($0, /min: *[-0-9.]+/)) next
+    smin[key] = substr($0, RSTART + 4, RLENGTH - 4) + 0
+    sint[key] = ($0 ~ /t: "int"/)
+    next
+}
+!inrow && /SliderRow[ \t]*\{/ {
+    inrow = 1; depth = 1; rstep = ""; rmin = ""
+    delete keys
+    next
+}
+inrow {
+    depth += braces($0, "{") - braces($0, "}")
+    if (match($0, /key: *"[A-Za-z0-9_]+"/)) keys[substr($0, RSTART + 6, RLENGTH - 7)] = 1
+    line = $0
+    while (match(line, /ShellSettings\.[A-Za-z0-9_]+/)) {
+        keys[substr(line, RSTART + 14, RLENGTH - 14)] = 1
+        line = substr(line, RSTART + RLENGTH)
+    }
+    v = literal($0, "step"); if (v != "") rstep = v + 0
+    v = literal($0, "min");  if (v != "") rmin = v + 0
+    if (depth > 0) next
+    inrow = 0
+    for (k in keys) {
+        if (!(k in smin) || !(k in def)) continue
+        step = rstep != "" ? rstep : (sint[k] ? 1 : 0.05)
+        lo = rmin != "" ? rmin : smin[k]
+        r = (def[k] - lo) / step
+        if (r - int(r + 0.5) > 1e-6 || int(r + 0.5) - r > 1e-6)
+            printf "  %s: default %s is not on %s + k * %s (%s)\n", k, def[k], lo, step, FILENAME
+    }
+}
+' services/ShellSettings.qml "${slider_files[@]}")
+if [ -n "$slider_grid" ]; then
+    fail "slider defaults a slider can never return to:"
+    printf '%s\n' "$slider_grid"
+else
+    ok "settings" "every slider default sits on its step grid"
+fi
+
 section "glow strength travel"
 # The slider-vs-schema check above compares two declared numbers, so it cannot see a
 # range the renderer clamps away. Every glow layer is Math.min(cap, coef * glowStrength),
@@ -1367,7 +1433,8 @@ fi
 if grep -qF 'ERROR_FLAG="$CACHE_DIR/update-error"' scripts/update.sh \
     && grep -qF '_record_update_error "$1"' scripts/update.sh \
     && grep -qF 'systemctl --user --no-block restart silere-shell.service' scripts/update.sh \
-    && grep -qF '$ROOT/scripts/silere"*" run' scripts/update.sh \
+    && grep -qF '_silere_unit_runs_checkout "$ROOT"' scripts/update.sh \
+    && grep -qF '"$root/scripts/silere"' scripts/lib/unit.sh \
     && grep -qF 'root._reloadOperationState()' services/ShellUpdate.qml \
     && grep -qF 'id: _error' services/ShellUpdate.qml; then
     ok "shell updater" "timer failures persist and operation exits reload authoritative state"

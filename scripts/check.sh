@@ -254,12 +254,10 @@ _wayland_socket() {
 }
 
 if [ "$qs_usable" = 1 ]; then
-  # Include instances on other displays when this runs from a terminal or CI
-  # environment without the active Wayland display variables.
-  if qs list --all >/dev/null 2>&1; then
-    ok "qs IPC" "available"
+  if timeout 5 qs ipc -p "$ROOT/shell.qml" show >/dev/null 2>&1; then
+    ok "qs IPC" "this checkout's shell answers"
   else
-    warn "qs IPC" "qs list failed (shell may not be running)"
+    warn "qs IPC" "this checkout's shell is not running or does not answer"
   fi
 fi
 
@@ -331,7 +329,7 @@ if [ -z "$_autostart_hit" ] && command -v systemctl >/dev/null 2>&1; then
     # the launcher binary or the checkout's shell.qml, never a path that merely lives
     # under silere-shell/ — the update timer's ExecStart does too, and sorts first
     _autostart_unit="$(grep -rlE \
-      "^[[:space:]]*ExecStart=.*(shell\\.qml|silere-shell([[:space:]\"']|\$))" \
+      "^[[:space:]]*ExecStart=.*(shell\\.qml|silere-shell([[:space:]\"']|\$)|/silere[[:space:]]+run)" \
       "$_udir" 2>/dev/null | head -n 1 || true)"
     [ -n "$_autostart_unit" ] && break
   done

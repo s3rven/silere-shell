@@ -442,11 +442,6 @@ case "${1:-}" in
         _hypr_config_path
         exit 0
         ;;
-    --hypr-config-kind)
-        _hypr_kind="$(_hypr_config_path)"
-        [[ "$_hypr_kind" == *.lua ]] && exit 0
-        exit 1
-        ;;
     --niri-config-path)
         _niri_config_path
         exit 0
@@ -1118,6 +1113,16 @@ elif [ -e "$INSTALL_DIR" ] || [ -L "$INSTALL_DIR" ]; then
         fi
         fresh_clone=true
         spin_stop; _ok "cloned to $INSTALL_DIR"
+        if [ "$INSTALL_DIR" = "$CONFIG_HOME/silere-shell" ]; then
+            for _data in settings.json calendar-marks.json notifications.json hooks; do
+                [ -e "$install_backup/$_data" ] || continue
+                if cp -a -- "$install_backup/$_data" "$INSTALL_DIR/"; then
+                    _ok "kept $_data"
+                else
+                    _warn "could not carry $_data over; it remains in $install_backup"
+                fi
+            done
+        fi
     else
         _die "$INSTALL_DIR exists but is not a git repo — pick a different path or clean it up manually"
     fi

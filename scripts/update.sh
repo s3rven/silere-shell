@@ -5,6 +5,7 @@ export LC_ALL=C
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT/scripts/lib/xdg.sh"
 source "$ROOT/scripts/lib/qml-modules.sh"
+source "$ROOT/scripts/lib/unit.sh"
 cd "$ROOT"
 
 CACHE_HOME="$(_silere_xdg_home "${XDG_CACHE_HOME:-}" .cache)" || {
@@ -125,7 +126,9 @@ _write_apply_journal() {
     [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || return 1
     _write_state_file "$APPLY_JOURNAL" \
         version=1 "phase=$phase" "rootHex=$ROOT_HEX" \
-        "from=$old_rev" "to=$new_rev" "tag=$tag"
+        "from=$old_rev" "to=$new_rev" "tag=$tag" || return 1
+    # recovery trusts a recorded phase, so it has to be on disk before the next step
+    sync -f -- "$APPLY_JOURNAL" 2>/dev/null || true
 }
 
 _start_apply_transaction() {
@@ -476,15 +479,9 @@ _resolve_trusted_release() {
 # a detached candidate tree first (~15s) and only activate it if it actually loads.
 # Skipping the gate when the checker or qs is missing keeps the updater usable without them.
 # The unit name is fixed, so a --apply run from a second checkout would otherwise
-# restart whichever shell is live, not the one it just updated. systemd expands %h
-# in ExecStart before reporting it, so the resolved path is safe to match on.
+# restart whichever shell is live, not the one it just updated.
 _unit_runs_this_checkout() {
-    local exec_start
-    exec_start="$(systemctl --user show silere-shell.service -p ExecStart --value 2>/dev/null || true)"
-    case "$exec_start" in
-        *" $ROOT/shell.qml"*|*" $ROOT/scripts/silere"*" run"*) return 0 ;;
-        *) return 1 ;;
-    esac
+    _silere_unit_runs_checkout "$ROOT"
 }
 
 # The type-check compiles every file but never loads shell.qml, and a missing
@@ -539,16 +536,23 @@ _candidate_tree_loads() {
         || { CANDIDATE_GATE_NOTE="load check skipped (qs is not on PATH)"; return 0; }
     # unbounded and holding the update lock's fd open is how a stuck qmllint
     # wedges every later run behind this one; same guard as _git_fetch
+    local check_out type_note="" rc=0
     if _silere_timeout_kill_after_ok; then
-        timeout --kill-after=5 60 bash "$candidate_root/scripts/test-qml-headless.sh" \
-            >/dev/null 2>&1 9>&- || return 1
+        check_out="$(timeout --kill-after=5 60 bash "$candidate_root/scripts/test-qml-headless.sh" \
+            2>&1 9>&-)" || return 1
     elif command -v timeout >/dev/null 2>&1; then
-        timeout 60 bash "$candidate_root/scripts/test-qml-headless.sh" \
-            >/dev/null 2>&1 9>&- || return 1
+        check_out="$(timeout 60 bash "$candidate_root/scripts/test-qml-headless.sh" \
+            2>&1 9>&-)" || return 1
     else
-        bash "$candidate_root/scripts/test-qml-headless.sh" >/dev/null 2>&1 9>&- || return 1
+        check_out="$(bash "$candidate_root/scripts/test-qml-headless.sh" 2>&1 9>&-)" || return 1
     fi
-    _candidate_tree_starts "$candidate_root"
+    # the checker exits 0 when Qt's QML tools are missing; that is not a pass
+    case "$check_out" in
+        *"SKIP: "*) type_note="type-check skipped (Qt QML tools not installed)" ;;
+    esac
+    _candidate_tree_starts "$candidate_root" || rc=$?
+    [ -z "$type_note" ] || CANDIDATE_GATE_NOTE="$type_note${CANDIDATE_GATE_NOTE:+; $CANDIDATE_GATE_NOTE}"
+    return "$rc"
 }
 
 _acquire_update_lock() {
@@ -894,6 +898,7 @@ if [ "${1:-}" = "--apply" ]; then
         merge_file="$(printf '%s\n' "$merge_err" | sed -n 's/^\t//p' | head -n1)"
         _fail "$merge_line${merge_file:+ $merge_file} — bash $ROOT/scripts/repair.sh --apply clears blocking files"
     fi
+    sync -f -- "$ROOT" 2>/dev/null || true
     _clear_flag
     _clear_update_error
     new_rev="$(git rev-parse HEAD)"

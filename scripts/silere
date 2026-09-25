@@ -15,6 +15,7 @@ Usage: silere <command> [options]
   run [--startup]        Start Silere once; --startup waits for the compositor
   status                 Show installation and updater state
   doctor                 Run read-only installation diagnostics
+  ipc <target> <fn> ...  Call the running shell over IPC; `ipc show` lists targets
   update                 Check for a signed Silere release
   update --apply         Install the confirmed signed release
   update --rollback      Restore the revision an update replaced
@@ -49,7 +50,6 @@ run_shell() {
     # arena count and prompt decay return transient menu/image allocations to the
     # OS instead of retaining every high-water mark for the session.
     export MALLOC_CONF="${MALLOC_CONF-$allocator_default}"
-    export QSG_TRANSIENT_IMAGES="${QSG_TRANSIENT_IMAGES-1}"
 
     umask 077
     # At compositor boot the Wayland/Xwayland endpoints can lag the autostart
@@ -176,6 +176,14 @@ case "$command_name" in
         [ "$#" -eq 0 ] || { usage >&2; exit 2; }
         info="$(version_info)" || die "could not read updater state"
         human_version
+        shell_pid=""
+        command -v qs >/dev/null 2>&1 \
+            && shell_pid="$(qs list -p "$ROOT/shell.qml" 2>/dev/null | sed -n 's/^  Process ID: //p' | head -n 1)"
+        if [ -n "$shell_pid" ]; then
+            printf 'Shell: running (pid %s)\n' "$shell_pid"
+        else
+            printf 'Shell: not running\n'
+        fi
         if printf '%s\n' "$info" | grep -q '^packaged=1$'; then
             printf 'Updates: managed by %s; Silere self-update is disabled\n' "$(package_manager)"
         else
@@ -202,6 +210,14 @@ case "$command_name" in
     doctor)
         [ "$#" -eq 0 ] || { usage >&2; exit 2; }
         exec bash "$ROOT/scripts/doctor.sh"
+        ;;
+    ipc)
+        [ "$#" -gt 0 ] || { usage >&2; exit 2; }
+        command -v qs >/dev/null 2>&1 || die "qs (Quickshell) is not installed"
+        if [ "$1" = show ] && [ "$#" -eq 1 ]; then
+            exec qs ipc -p "$ROOT/shell.qml" show
+        fi
+        exec qs ipc -p "$ROOT/shell.qml" call "$@"
         ;;
     update)
         if is_packaged; then

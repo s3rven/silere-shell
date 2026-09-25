@@ -1,8 +1,11 @@
 *.qslog
 
-# runtime data (written by ShellSettings and CalendarState)
+# runtime data (written by ShellSettings, CalendarState, Notifications and Hooks)
 settings.json
+settings.*.bak.json
 calendar-marks.json
+notifications.json
+hooks/
 
 # legacy pre-0.5 generated theme; current Matugen output is per-user JSON
 config/MatugenTheme.qml

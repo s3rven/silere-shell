@@ -684,8 +684,9 @@ test_shared_launcher() (
         bash "$ROOT/scripts/silere" run --verbose
     grep -qF 'malloc=narenas:2,background_thread:true,dirty_decay_ms:1000,muzzy_decay_ms:0' "$capture" \
         || fail "shared launcher did not apply its allocator default"
-    grep -qF 'images=1' "$capture" \
-        || fail "shared launcher did not apply transient images"
+    # the second window to draw a cached image gets an empty texture with it set
+    grep -qFx 'images=' "$capture" \
+        || fail "shared launcher set QSG_TRANSIENT_IMAGES"
     grep -qF 'egl=/chosen/vendor.json' "$capture" \
         || fail "shared launcher replaced an inherited EGL vendor"
     expected_args=$'arg=--no-duplicate\narg=-p\narg='"$ROOT"$'/shell.qml\narg=--verbose'
@@ -693,20 +694,18 @@ test_shared_launcher() (
     assert_eq "600" "$(stat -c '%a' "$capture")" "shared launcher state umask"
 
     capture="$TMP/launcher-overrides.out"
-    MALLOC_CONF='' QSG_TRANSIENT_IMAGES=0 \
+    MALLOC_CONF='' \
         PATH="$stub_dir:$PATH" SILERE_LAUNCH_CAPTURE="$capture" \
         __EGL_VENDOR_LIBRARY_FILENAMES='' \
         bash "$ROOT/scripts/silere" run
     grep -qFx 'malloc=' "$capture" \
         || fail "shared launcher did not preserve an empty allocator override"
-    grep -qFx 'images=0' "$capture" \
-        || fail "shared launcher did not preserve the image-cache override"
     grep -qFx 'egl=' "$capture" \
         || fail "shared launcher did not preserve an empty EGL override"
 
     capture="$TMP/launcher-package-name.out"
     ln -s "$ROOT/scripts/silere" "$stub_dir/silere-shell"
-    MALLOC_CONF='' QSG_TRANSIENT_IMAGES=0 \
+    MALLOC_CONF='' \
         PATH="$stub_dir:$PATH" SILERE_LAUNCH_CAPTURE="$capture" \
         __EGL_VENDOR_LIBRARY_FILENAMES='' \
         "$stub_dir/silere-shell" --verbose
@@ -943,6 +942,7 @@ test_update_refuses_dirty_apply() (
     cp "$ROOT/scripts/update.sh" "$seed/scripts/update.sh"
     cp "$ROOT/scripts/lib/xdg.sh" "$seed/scripts/lib/xdg.sh"
     cp "$ROOT/scripts/lib/qml-modules.sh" "$seed/scripts/lib/qml-modules.sh"
+    cp "$ROOT/scripts/lib/unit.sh" "$seed/scripts/lib/unit.sh"
     printf 'upstream v1\n' > "$seed/tracked.qml"
     git -C "$seed" add scripts security tracked.qml
     git -C "$seed" commit -qm "initial"
@@ -1077,6 +1077,7 @@ test_update_reporting() (
     cp "$ROOT/scripts/update.sh" "$seed/scripts/update.sh"
     cp "$ROOT/scripts/lib/xdg.sh" "$seed/scripts/lib/xdg.sh"
     cp "$ROOT/scripts/lib/qml-modules.sh" "$seed/scripts/lib/qml-modules.sh"
+    cp "$ROOT/scripts/lib/unit.sh" "$seed/scripts/lib/unit.sh"
     printf 'v1\n' > "$seed/tracked.qml"
     git -C "$seed" add scripts security tracked.qml
     git -C "$seed" commit -qm "initial"
@@ -1340,6 +1341,7 @@ test_update_rejects_broken_stage() (
     cp "$ROOT/scripts/update.sh" "$seed/scripts/update.sh"
     cp "$ROOT/scripts/lib/xdg.sh" "$seed/scripts/lib/xdg.sh"
     cp "$ROOT/scripts/lib/qml-modules.sh" "$seed/scripts/lib/qml-modules.sh"
+    cp "$ROOT/scripts/lib/unit.sh" "$seed/scripts/lib/unit.sh"
     # The gate runs whatever type-checker the staged tree ships, so the fixture
     # owns the verdict without ever replacing the live script mid-execution.
     printf '#!/bin/sh\nexit 0\n' > "$seed/scripts/test-qml-headless.sh"
@@ -1454,6 +1456,7 @@ test_fresh_install_pins_release() (
     cp "$ROOT/scripts/update.sh" "$seed/scripts/update.sh"
     cp "$ROOT/scripts/lib/xdg.sh" "$seed/scripts/lib/xdg.sh"
     cp "$ROOT/scripts/lib/qml-modules.sh" "$seed/scripts/lib/qml-modules.sh"
+    cp "$ROOT/scripts/lib/unit.sh" "$seed/scripts/lib/unit.sh"
     printf 'release\n' > "$seed/tracked.qml"
     git -C "$seed" add scripts security tracked.qml
     git -C "$seed" commit -qm "initial"
@@ -1592,6 +1595,7 @@ test_update_apply_binds_to_confirmed_release() (
     cp "$ROOT/scripts/update.sh" "$seed/scripts/update.sh"
     cp "$ROOT/scripts/lib/xdg.sh" "$seed/scripts/lib/xdg.sh"
     cp "$ROOT/scripts/lib/qml-modules.sh" "$seed/scripts/lib/qml-modules.sh"
+    cp "$ROOT/scripts/lib/unit.sh" "$seed/scripts/lib/unit.sh"
     printf 'upstream v1\n' > "$seed/tracked.qml"
     git -C "$seed" add scripts security tracked.qml
     git -C "$seed" commit -qm "initial"
@@ -1758,6 +1762,32 @@ test_plain_copy_is_not_package_managed() (
     esac
 )
 
+test_unit_identity() (
+    local root="$TMP/unit-root" stubs="$TMP/unit-stubs" link="$TMP/unit-bin/silere" exec_start
+    mkdir -p "$root/scripts" "$stubs" "$TMP/unit-bin"
+    printf '#!/bin/sh\n' > "$root/scripts/silere"
+    chmod +x "$root/scripts/silere"
+    ln -s "$root/scripts/silere" "$link"
+    source "$ROOT/scripts/lib/unit.sh"
+    unit_says() {
+        printf '#!/bin/sh\nprintf "%%s\\n" "%s"\n' "$1" > "$stubs/systemctl"
+        chmod +x "$stubs/systemctl"
+    }
+    for exec_start in "qs -p $root/shell.qml" "qs -n -p $root/shell.qml" "qs -p $root" \
+            "$root/scripts/silere run" "$link run"; do
+        unit_says "{ path=/usr/bin/x ; argv[]=$exec_start ; ignore_errors=no ; }"
+        PATH="$stubs:$PATH" _silere_unit_runs_checkout "$root" \
+            || fail "a unit running '$exec_start' was not recognised as this checkout"
+    done
+    for exec_start in "qs -p /elsewhere/shell.qml" "$root/scripts/silere status" \
+            "qs -p $root/shell.qml.bak"; do
+        unit_says "{ path=/usr/bin/x ; argv[]=$exec_start ; ignore_errors=no ; }"
+        PATH="$stubs:$PATH" _silere_unit_runs_checkout "$root" \
+            && fail "a unit running '$exec_start' was taken for this checkout"
+    done
+    return 0
+)
+
 if [ "${SILERE_TEST_LIB_ONLY:-0}" = 1 ]; then
     return 0 2>/dev/null || exit 0
 fi
@@ -1775,6 +1805,7 @@ test_install_transaction_and_receipt
 test_dry_run_writes_nothing
 test_menu_keybind_plan
 test_plain_copy_is_not_package_managed
+test_unit_identity
 test_hypr_discovery
 test_niri_config_discovery
 test_atomic_units
