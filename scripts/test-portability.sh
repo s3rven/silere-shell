@@ -151,7 +151,7 @@ test_marker_removal() (
                 ;;
         esac
         cp "$dir/$name.conf" "$dir/$name.before"
-        if _remove_block "$dir/$name.conf" '# silere-shell begin' '# silere-shell end'; then
+        if _remove_block "$dir/$name.conf" '# silere-shell begin' '# silere-shell end' >/dev/null; then
             fail "$name markers were accepted"
         fi
         [ "$(<"$dir/$name.before")" = "$(<"$dir/$name.conf")" ] || fail "$name markers changed the file"
@@ -414,7 +414,7 @@ test_install_transaction_and_receipt() (
     _txn_tree_replaced "$replaced_tree" "$replaced_backup"
     mkdir -p "$replaced_tree"
     printf 'replacement\n' > "$replaced_tree/value"
-    _txn_rollback
+    _txn_rollback >/dev/null
 
     assert_eq before "$(cat "$existing")" "install transaction restored a file"
     [ ! -e "$new_file" ] || fail "install transaction retained a created file"
@@ -436,7 +436,7 @@ test_install_transaction_and_receipt() (
     mv "$reentrant_tree" "$reentrant_backup"
     _txn_tree_replaced "$reentrant_tree" "$reentrant_backup"
     mv "$reentrant_backup" "$reentrant_tree"
-    _txn_rollback
+    _txn_rollback >/dev/null
     assert_eq "original checkout" "$(cat "$reentrant_tree/value")" \
         "rollback left a hand-restored tree-replaced backup in place"
 
@@ -791,7 +791,7 @@ EOF
     chmod +x "$stub_dir/systemctl" "$stub_dir/notify-send"
     _start_apply_transaction "$old_rev" "$new_rev" v1.0.1
     _write_apply_journal validated "$old_rev" "$new_rev" v1.0.1
-    PATH="$stub_dir:$PATH" _rollback_applied_update 2>/dev/null
+    PATH="$stub_dir:$PATH" _rollback_applied_update >/dev/null 2>&1
     assert_eq "$old_rev" "$(git -C "$repo" rev-parse HEAD)" \
         "rollback restores the revision the update replaced"
     [ ! -e "$APPLY_JOURNAL" ] || fail "rollback left the update journal behind"
@@ -1193,7 +1193,7 @@ EOF
     printf '%s\n' "$notes" | grep -qF $'Fixed\tA test fixture bug.' \
         || fail "release notes cache omitted a Fixed entry"
 
-    _run --apply >/dev/null
+    _run --apply >/dev/null 2>&1
     [ ! -e "$cache/update-pending" ] || fail "apply left the pending update flag"
     assert_eq "$checked" "$(cat "$cache/update-checked")" "apply discarded the last-checked time"
     assert_eq "tag=v9.9.1" "$(_run --version | grep '^tag=')" "--version tag after apply"
@@ -1401,7 +1401,7 @@ EOF
     stage_capture="$TMP/update-stage-path"
     HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" \
         SILERE_EXPECT_LIVE_ROOT="$client" SILERE_STAGE_CAPTURE="$stage_capture" \
-        bash "$client/scripts/update.sh" --apply >/dev/null
+        bash "$client/scripts/update.sh" --apply >/dev/null 2>&1
     assert_eq "upstream v3" "$(cat "$client/tracked.qml")" "applied a tree that loads"
     [ "$(cat "$stage_capture")" != "$client" ] \
         || fail "candidate validation ran in the live checkout"
