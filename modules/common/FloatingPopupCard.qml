@@ -27,8 +27,8 @@ Rectangle {
     property bool _closing: false
     readonly property bool fullyShown: root.open && root._transitionReady
         && !_enterAnimation.running && root.opacity >= 0.999
-    // null while opaque or moving: an empty region still overrides compositor blur rules, and a transform never refreshes it
-    readonly property Item blurItem: Theme.popup.a < 1 && root.fullyShown ? root : null
+    // null while opaque: an empty region still overrides compositor blur rules
+    readonly property Item blurItem: Theme.popup.a < 1 && root.opacity > 0 ? _blurBox : null
     // a card that resizes while open gates its height motion on this: placed, revealed, and past
     // the settle, so the open itself is never animated as a resize
     readonly property bool geometryMotionReady: root.open && root._transitionReady
@@ -162,6 +162,18 @@ Rectangle {
     OutlineBorder {
         radius: root.radius
         outlineColor: Theme.outline
+    }
+
+    // a transform never refreshes a blur region, so the region follows this box around the drawn card
+    Item {
+        id: _blurBox
+        parent: root.parent
+        readonly property real _sx: root.scaleUniform ? root.scaleAmt : 1
+        readonly property real _oy: root.barBottom ? root.height : 0
+        x: root.x + root._originX * (1 - _sx)
+        y: root.y + _oy + (root.edgeOffset - _oy) * root.scaleAmt
+        width: root.width * _sx
+        height: root.height * root.scaleAmt
     }
 
     transform: [
