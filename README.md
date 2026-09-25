@@ -91,14 +91,15 @@ bash scripts/install.sh
 
 The checkout lands in `~/.config/silere-shell` unless you choose another path. The
 installer backs up every file it edits and asks before adding autostart; `--dry-run` shows
-the whole plan without writing anything.
+the whole plan without writing anything. On Arch, `silere-shell-git` from the AUR installs
+under `/usr/share/silere-shell` and updates through pacman.
 
 Restart your compositor, or start Silere now with `silere run`. If you skipped the
 `silere` command, that is `~/.config/silere-shell/scripts/silere run`.
 
 **Opening the menu.** The installer offers to bind **Super + /** to the menu, which holds
 every setting. Clicking the active workspace diamond opens it too. On niri, or a Hyprland
-config in Lua, bind this yourself:
+config in Lua, bind this yourself; niri runs it without a shell, so write out the full path:
 
 ```bash
 qs ipc -p ~/.config/silere-shell/shell.qml call menu toggle
@@ -119,19 +120,19 @@ Silere is pointer-driven: Escape and text fields are its keyboard paths.
 
 | area | pointer |
 |---|---|
-| workspaces | **click** switches · on the active diamond, **click** opens the menu and **right-click** opens quick actions · **middle-click** sends the focused window there · **scroll** switches too, once you turn it on under Settings › Workspaces |
+| workspaces | **click** switches · on the active diamond, **click** opens the menu and **right-click** opens quick actions · **middle-click** sends the focused window there · **scroll** switches too, once you turn it on under Settings › Widgets › Workspaces |
 | clock | **click** opens the calendar · **middle-click** cycles seconds and date |
-| calendar | **scroll** changes the month · **click** the header to jump back to today · **click** a date to mark it · choose week start and week numbers under Settings › Clock |
+| calendar | **scroll** changes the month · **click** the header to jump back to today · **click** a date to mark it · choose week start and week numbers under Settings › Widgets › Clock |
 | media | **click** plays or pauses · **scroll** changes track · **middle-click** jumps to the player |
-| volume | **scroll** changes volume · **click** mutes · **middle-click** moves to the next output · **right-click** opens Sound settings · in the menu, expand it for output, input and per-app levels |
-| microphone | **click** mutes · **scroll** changes the input level · **middle-click** moves to the next input · **right-click** opens Sound settings · it appears while an app is listening |
+| volume | **scroll** changes volume · **click** mutes · **middle-click** moves to the next output · **right-click** opens pwvucontrol or pavucontrol · in the menu, expand it for output, input and per-app levels |
+| microphone | **click** mutes · **scroll** changes the input level · **middle-click** moves to the next input · **right-click** opens pwvucontrol or pavucontrol · it appears while an app is listening |
 | brightness | **scroll** changes brightness |
 | updates | **click** rechecks for packages |
-| shell update | **click** opens Settings › Updates |
-| tray | **click** jumps to the app · **right-click** opens its menu · **middle-click** runs the app's secondary action · **scroll** is passed through to the app |
+| shell update | **click** opens Settings › System › Updates |
+| tray | **click** jumps to the app's window, or activates the app when it has none · **right-click** opens its menu · **middle-click** runs the app's secondary action · **scroll** is passed through to the app |
 | notifications | **click** runs the default action · **right-click** dismisses · **middle-click** jumps to the app that sent it · a reply action opens an inline text field when the sender supports one |
-| wi-fi list | **click** joins a saved network, or opens a password field for a personal one · **middle-click** a saved network twice to forget it, unless you are connected to it |
-| bluetooth list | **click** pairs or connects · **middle-click** a paired device twice to forget it, unless it is connected |
+| wi-fi list | **click** joins a saved network, or opens a password field for a personal one · **right-click** or **middle-click** a saved network twice to forget it, unless you are connected to it |
+| bluetooth list | **click** pairs or connects · **right-click** or **middle-click** a paired device twice to forget it, unless it is connected |
 | menu | **Escape** steps back, then closes · **click** anywhere outside to close |
 | history | **type** in Search to find an app or message · **click** an entry to read it in full · **Clear** removes the visible results · **Escape** clears search, then closes |
 
@@ -153,15 +154,15 @@ The menu, calendar, quick actions and settings are scriptable over Quickshell IP
 can run an executable of your own on events like `battery-critical` or `workspace-changed`.
 
 ```bash
-SILERE_DIR="$HOME/.config/silere-shell"
+SILERE_DIR="$HOME/.config/silere-shell"    # /usr/share/silere-shell with the AUR package
 qs ipc -p "$SILERE_DIR/shell.qml" call menu toggle
 qs ipc -p "$SILERE_DIR/shell.qml" call calendar toggle
 qs ipc -p "$SILERE_DIR/shell.qml" call quickActions dnd
 qs ipc -p "$SILERE_DIR/shell.qml" call settings set osdTimeout 3000
 ```
 
-The full IPC surface, the settings section names, and hooks:
-[`docs/scripting.md`](docs/scripting.md).
+`silere ipc menu toggle` is the same call without the path. The full IPC surface, the
+settings page names, and hooks: [`docs/scripting.md`](docs/scripting.md).
 
 ## Updates
 
@@ -191,19 +192,20 @@ Per release: [`docs/perf-history.md`](docs/perf-history.md).
 ## Troubleshooting
 
 ```bash
-bash scripts/check.sh
+silere doctor
 ```
 
-That runs the dependency, autostart and configuration checks. For startup errors, run
-`qs -p shell.qml` directly. Common problems: [`docs/troubleshooting.md`](docs/troubleshooting.md).
+That checks dependencies, autostart and configuration without changing anything. A running
+shell's log is in `qs log -p ~/.config/silere-shell/shell.qml --follow`. Common problems:
+[`docs/troubleshooting.md`](docs/troubleshooting.md).
 
 ## Docs
 
 | page | what's in it |
 |---|---|
 | [install.md](docs/install.md) | doctor/maintenance command, optional tools, Matugen, removal |
-| [scripting.md](docs/scripting.md) | the IPC surface, settings over IPC, section names, hooks |
-| [troubleshooting.md](docs/troubleshooting.md) | symptom by symptom, starting with `check.sh` |
+| [scripting.md](docs/scripting.md) | the IPC surface, settings over IPC, page names, hooks |
+| [troubleshooting.md](docs/troubleshooting.md) | symptom by symptom, starting with `silere doctor` |
 | [performance.md](docs/performance.md) | reference numbers, how to measure, fonts, the animation driver |
 | [perf-history.md](docs/perf-history.md) | per-release numbers, reference machines, how to record a row |
 | [forking.md](docs/forking.md) | the tree, what a change touches, what a rename has to get right |

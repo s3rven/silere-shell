@@ -3,14 +3,16 @@
 Start here:
 
 ```bash
-bash scripts/check.sh
+silere doctor
 ```
 
-It reports the runtime, the optional tools, the font, and whether Silere is set to start on
-login, either from the compositor config or from a systemd user unit. A package install
-does not carry it — clone the repository to run it.
+It reports the runtime, the optional tools, the font, which program owns notifications, and
+whether Silere is set to start on login, either from the compositor config or from a
+systemd user unit. It changes nothing.
 
-To inspect startup errors directly, run `qs -p shell.qml`.
+A running shell's log is in `qs log -p ~/.config/silere-shell/shell.qml --follow`. A second
+`qs -p` next to a running shell brings its own bar and notification server, so stop the
+first with `qs kill -p` on the same path before running one in the foreground.
 
 ## It installed but nothing appears
 
@@ -22,8 +24,8 @@ and restart it.
 ## It stopped working after a system update
 
 A Qt update can leave the installed Quickshell unable to run, because it builds against
-Qt's private API. Reinstall Quickshell to rebuild it against the new Qt; `bash
-scripts/check.sh` reports this as its first failure.
+Qt's private API. Reinstall Quickshell to rebuild it against the new Qt; `silere doctor`
+reports this under Quickshell.
 
 ## The shell does not come back after an update
 
@@ -33,8 +35,9 @@ revision, and restarts the shell when a systemd user unit runs it.
 
 ## Notifications never appear
 
-Another daemon already owns `org.freedesktop.Notifications`. Silere works out which one and
-says so in an alert naming the process, a few seconds after start.
+Another daemon already owns `org.freedesktop.Notifications`. Silere names it in an alert a
+few seconds after start and under Settings › System › Maintenance, and `silere doctor`
+reports it too. Stop that daemon and restart Silere.
 
 ## Icons or text use the wrong font
 
@@ -67,10 +70,25 @@ Bar › Layout › Opacity below 100%.
 ## Brightness controls the wrong screen
 
 On hybrid laptops with several backlights, pick the right display under Settings ›
-Interface.
+Appearance › Interface.
 
 ## A shell update is blocked by local edits
 
 Preview them with `bash scripts/repair.sh`. Running it with `--apply` saves the edits in a
 reversible Git stash and restores the shipped files; `--undo` restores the latest saved
 repair.
+
+## The screen is unlocked after sleep
+
+Sleep in the power menu suspends without locking. Have your idle daemon lock first, for
+example `before_sleep_cmd = loginctl lock-session` in hypridle.
+
+## The network widget stops updating
+
+With Quickshell 0.3.1, the network widget and Wi-Fi list can keep showing old devices after
+NetworkManager restarts. Restart Silere.
+
+## A tray icon opens an empty menu
+
+Some apps publish a tray icon with no menu, which Quickshell 0.3.1 still offers as one. Click
+outside the card to close it.

@@ -24,6 +24,11 @@ settings file carries its own `__version` and migrates separately.
 - Muting the microphone from a key or another mixer shows on the OSD.
 - Hovering the clock shows the date while the date is turned off.
 - Show & order notes which widgets appear only in use, and which this machine cannot show.
+- `silere ipc` calls the running shell without its path, and `silere status` says whether the shell is running.
+- `settings set dnd true` or `false` sets Do Not Disturb from a script instead of toggling it.
+- Settings pages also answer to the names the rail shows, so `menu settings alerts` opens Alerts.
+- `silere doctor` names the program holding notifications and checks for a Nerd Font, `fakeroot` and a readable settings.json.
+- Right-click forgets a saved Wi-Fi network or a paired Bluetooth device, as middle-click does.
 
 ### Changed
 
@@ -45,6 +50,14 @@ settings file carries its own `__version` and migrates separately.
 - The window title drops a terminal's spinner glyph, and names the app as its launcher entry does.
 - With natural touchpad scrolling, an upward swipe still raises volume, brightness and sliders.
 - The OSD and notification cards draw a heavier edge, and the notification countdown ring no longer blurs at fractional scales.
+- Do Not Disturb stays on across a restart, as does night light switched on by hand.
+- A notification waits while you are away and starts its countdown when you come back.
+- The package update badge checks hourly.
+- Power modes work with any daemon on the power-profiles D-Bus API, such as Fedora's tuned-ppd.
+- The screenshot glow skips ordinary pictures saved straight into the Pictures folder.
+- Scrolling a settings page carries on past its sliders; a slider takes the wheel once the pointer rests on it.
+- The night light temperature applies when you let go of the slider.
+- Divider and workspace icon opacity move in 2% steps.
 
 ### Fixed
 
@@ -60,6 +73,12 @@ settings file carries its own `__version` and migrates separately.
 - The volume icon judges a combined or virtual output by the device it plays to, not by its name.
 - An output that reaches no connected device reads No device in the output list.
 - A battery held at a charge limit, such as Lenovo conservation mode, reads not charging instead of charging.
+- Tray and app icons draw on every bar and in a reopened popup, not just in the first window to show them.
+- On a named Hyprland workspace, the numbered buttons and scrolling still switch workspaces.
+- A special workspace closed on one monitor leaves the other monitor's marked.
+- With every screen's bar switched off, the one fallback bar stays put when focus moves.
+- The network rate reads 100 instead of 00.0 just below a hundred.
+- Long titles in Indic scripts are shortened between letters rather than through a conjunct.
 
 #### Menu and settings
 
@@ -77,12 +96,18 @@ settings file carries its own `__version` and migrates separately.
 - Quick actions show Failed when a power mode change is refused, and the IPC toggles for Wi-Fi, Bluetooth and airplane mode report the state they asked for.
 - The Now page's usage bars step in whole percents, and an open Now page uses much less CPU.
 - Quiet hours and the night light's sunrise and sunset follow the 12-hour clock.
+- Editing settings.json by hand applies only the options you changed, and the bar stays up.
+- Every settings page drops its nav dot once the only changed rows fold away.
+- A custom lock command takes quoted arguments, and its hint is a command you can run.
+- A setting sent over IPC before settings finish loading is refused rather than lost.
+- IPC calls that fail answer with a line starting `error:`, including a menu page refused while the session is idle.
+- The disk tile reads 100% on a full ext4 root, matching df.
 
 #### Notifications
 
 - A notification with no app name is named the same in history as in the app rail, and search finds it.
 - A notification progress bar draws the percentage its sender set.
-- A notification asking to outlast the popup limit is held at the limit instead of the default.
+- A notification that asks to stay up longer than 30 seconds stays for 30 instead of the default.
 - Notification history grows to fit its entries instead of cutting off the last one.
 - Cards below a notification its app withdraws slide up to close the gap.
 - The "Show more" notification chip keeps its count while it folds away.
@@ -94,11 +119,18 @@ settings file carries its own `__version` and migrates separately.
 - A one-line history entry keeps its expand arrow clear of the remove button.
 - Searching history shows only the matches, without leftover entries or repeated day headings, and each keystroke settles in one step.
 - The history scroll bar runs beside the entries rather than over their edge.
+- The alert for another notification daemon now appears, and Settings › System › Maintenance lists it.
+- Apps are told a notification silenced by Do Not Disturb or a fullscreen window expired, not that you dismissed it.
+- Paragraph and image tags and numeric character codes no longer show up as raw text in a notification.
+- A low battery alert goes out once per discharge, even while the reading wavers at the threshold.
+- The battery-critical hook gets a whole percentage.
+- Settings › System › Maintenance says so when notification history cannot be read or saved.
 
 #### Media
 
 - The audio visualizer stops retrying when cava refuses to start, and tries again at the next playback.
 - Dragging the seek bar sends the player a seek at most ten times a second.
+- Opening the per-app volume tab leaves an app boosted above 100% where it was.
 
 #### Network
 
@@ -115,11 +147,23 @@ settings file carries its own `__version` and migrates separately.
 - A low battery or hot CPU at login still raises its alert, and plugging in a full battery says so once.
 - Brightness and night light report a program removed while the shell runs instead of waiting on it.
 - The night light sun arc keeps moving while the menu stays open, and a midnight sun no longer reads as night after midnight.
+- Automatic night light finds your location from timezone aliases such as Asia/Calcutta or US/Eastern.
+- Sunrise and sunset land within minutes of published times.
+- The lowest brightness step no longer switches a coarse backlight off.
+- On Hyprland, startup no longer spends about a second of CPU working out the config format.
+- The package update badge ignores helper warnings, lists Void updates, and counts a replaced Fedora package once.
+- The Hyprland restart watcher runs only when a user unit starts this Silere, including one that runs `silere run`.
 
 #### Install and updates
 
 - A downloaded copy of Silere is no longer described as package-managed; Settings › Updates points it at the installer.
 - A release tag withdrawn upstream stops blocking update checks.
+- `silere update --apply` and `--rollback` restart a user unit that starts Silere with `silere run`.
+- `silere repair --apply` and the installer leave notification history, hooks and settings backups alone.
+- Replacing a `~/.config/silere-shell` that is not a Git checkout keeps its settings, history, hooks and calendar marks.
+- An update reports a type-check it could not run instead of counting it as passed, and flushes its journal to disk at each step.
+- `silere doctor` and `check.sh` report whether this Silere is running, not just any Quickshell.
+- The AUR package lists wlsunset, BlueZ, pwvucontrol, pavucontrol and fakeroot among its optional dependencies.
 
 ### Security
 

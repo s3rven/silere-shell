@@ -4,11 +4,12 @@ The menu, calendar, quick actions and settings are scriptable over Quickshell IP
 open them without simulating a click. Set `SILERE_DIR` to the path the installer printed.
 
 ```bash
-SILERE_DIR="$HOME/.config/silere-shell"
+SILERE_DIR="$HOME/.config/silere-shell"    # /usr/share/silere-shell with the AUR package
 qs ipc -p "$SILERE_DIR/shell.qml" call menu toggle
 ```
 
-Run `qs ipc -p "$SILERE_DIR/shell.qml" show` for the current list.
+Run `qs ipc -p "$SILERE_DIR/shell.qml" show` for the current list. The `silere` command makes
+the same calls without the path: `silere ipc menu toggle`, `silere ipc show`.
 
 ## Surfaces
 
@@ -67,19 +68,34 @@ qs ipc -p "$SILERE_DIR/shell.qml" call settings list ""
 | `list <filter>` | prints each key with its own range or vocabulary |
 | `modified` | prints only what differs from the defaults |
 
-A rejected write names the values the key accepts. The `list` filter matches a section name
-as well as a key, so `list clock` reaches `showSeconds`. The filter is required; pass `""` to
-list every key at once.
+A call that fails answers with a line starting `error:`, so a script can test for it. A
+rejected write also names the values the key accepts. The `list` filter matches a page name as well as a key, so
+`list clock` reaches `showSeconds`. The filter is required; pass `""` to list every key at
+once.
 
-### Settings section names
+`set dnd true` and `set dnd false` switch Do Not Disturb without toggling it, and `get dnd`
+reads it.
 
-For `menu settings <name>`:
+### Settings page names
+
+For `menu settings <name>` and `settings list <name>`, use a page's label as Settings shows
+it, or its id:
 
 `theme`, `interface`, `surface`, `underline`, `separators`, `widgets`, `workspaces`,
 `clock`, `media`, `indicators`, `popups`, `osd`, `warnings`, `updates`, `maintenance`
 
-Names match without case. An unknown one falls back to `theme`, so an out-of-date keybind
-still opens Settings.
+Five ids differ from their labels:
+
+| label | id |
+|---|---|
+| Layout | `surface` |
+| Spacing | `separators` |
+| Show & order | `widgets` |
+| Notifications | `popups` |
+| Alerts | `warnings` |
+
+Names match without case, spaces or punctuation, so `show-order` works. An unknown one falls
+back to `theme`, so an out-of-date keybind still opens Settings.
 
 ## Hooks
 
@@ -95,6 +111,8 @@ Silere runs a command of your own when something happens. Drop an executable fil
 | `workspace-changed` | workspace id |
 
 `update-available` fires only while Settings › Updates tracks package updates.
+`notification` fires only for notifications that show a popup, not for ones silenced by
+Do Not Disturb, a fullscreen window or turned-off popups.
 
 ```bash
 mkdir -p ~/.config/silere-shell/hooks
