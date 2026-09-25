@@ -437,10 +437,10 @@ Item {
                                 // collapsed, the header is the only marker the selection has
                                 color: !_grp.groupActive
                                     ? Theme.withAlpha(Theme.menuTextMuted,
-                                        _headerHover.hovered ? 0.88 : 0.62)
+                                        _headerHover.hovered ? 1.0 : 0.82)
                                     : _grp.expanded
                                         ? Theme.withAlpha(Theme.menuTextMuted,
-                                            _headerHover.hovered ? 0.88 : 0.76)
+                                            _headerHover.hovered ? 1.0 : 0.88)
                                         : Theme.withAlpha(Theme.mix(
                                             Theme.text, Theme.accent, 0.22), 0.98)
                                 font.pixelSize: Settings.fontCaption
@@ -472,8 +472,8 @@ Item {
                                 rotation: _grp.expanded ? 90 : 0
                                 transformOrigin: Item.Center
                                 color: Theme.withAlpha(Theme.subtext,
-                                    _headerHover.hovered ? 0.78
-                                    : _grp.expanded ? 0.62 : 0.44)
+                                    _headerHover.hovered ? 0.90
+                                    : _grp.expanded ? 0.80 : 0.74)
                                 font.pixelSize: Settings.fontCaption
 
                                 Disclosure on rotation { expanded: _grp.expanded }
@@ -577,7 +577,7 @@ Item {
                                             color: _leaf.active
                                                 ? Theme.mix(Theme.accent, Theme.text, 0.10)
                                                 : Theme.withAlpha(Theme.subtext,
-                                                    _leafHover.hovered ? 0.72 : 0.46)
+                                                    _leafHover.hovered ? 0.92 : 0.76)
                                             font.pixelSize: Settings.fontLabel
                                             ColorFade on color {}
                                         }
@@ -608,7 +608,7 @@ Item {
                                             color: _leaf.active
                                                 ? Theme.text
                                                 : Theme.withAlpha(Theme.mix(Theme.subtext, Theme.text, 0.12),
-                                                    _leafHover.hovered ? 0.92 : 0.76)
+                                                    _leafHover.hovered ? 1.0 : 0.90)
                                             font.pixelSize: Settings.fontLabel
                                             font.weight: _leaf.active ? Font.DemiBold : Font.Normal
                                             ColorFade on color {}

@@ -258,7 +258,7 @@ PageShell {
                     id: _countTxt
                     anchors.centerIn: parent
                     text: String(root.rowCount)
-                    color: Theme.withAlpha(Theme.text, 0.62)
+                    color: Theme.withAlpha(Theme.text, 0.82)
                     font.pixelSize: Settings.fontMicro
                     font.weight: Font.DemiBold
                 }
@@ -397,7 +397,7 @@ PageShell {
                         : root.filter.length > 0 ? "No notifications from this app"
                         : "New notifications will appear here"
                     color: Theme.withAlpha(Theme.subtext,
-                        ShellSettings.highContrast ? 0.72 : 0.52)
+                        ShellSettings.highContrast ? 0.90 : 0.76)
                     font.pixelSize: Settings.fontCaption
                 }
             }
@@ -531,7 +531,7 @@ PageShell {
                             anchors.leftMargin:     4
                             anchors.verticalCenter: parent.verticalCenter
                             text: { root._timeTick; return root.sectionLabel(_entry.modelData.time) }
-                            color: Theme.withAlpha(Theme.mix(Theme.subtext, Theme.accent, 0.22), 0.74)
+                            color: Theme.withAlpha(Theme.mix(Theme.subtext, Theme.accent, 0.22), 0.88)
                             font.pixelSize: Settings.fontMicro
                             font.weight: Font.DemiBold
                             font.capitalization: Font.AllUppercase
@@ -675,7 +675,7 @@ PageShell {
                                     width: Math.max(0, parent.width - _appIconSlot.width
                                         - parent.spacing - _entry._rightGutter)
                                     text: _filtered.identityOf(_entry.modelData.appName)
-                                    color: _entry._critical ? Theme.error : Theme.withAlpha(Theme.subtext, 0.70)
+                                    color: _entry._critical ? Theme.error : Theme.withAlpha(Theme.subtext, 0.84)
                                     font.pixelSize: Settings.fontCaption
                                     font.weight: Font.Medium
                                     elide: Text.ElideRight
@@ -703,7 +703,7 @@ PageShell {
                                 rightPadding: 16
                                 visible: text.length > 0
                                 text: _entry.modelData.body || ""
-                                color: Theme.withAlpha(Theme.text, 0.58)
+                                color: Theme.withAlpha(Theme.text, 0.78)
                                 font.pixelSize: Settings.fontLabel
                                 wrapMode: Text.Wrap
                                 maximumLineCount: _entry._expanded ? 12 : 2
@@ -729,7 +729,7 @@ PageShell {
                                 anchors.right: parent.right
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: { root._timeTick; return root.formatTime(_entry.modelData.time) }
-                                color: Theme.withAlpha(Theme.subtext, 0.42)
+                                color: Theme.withAlpha(Theme.subtext, 0.78)
                                 font.pixelSize: Settings.fontMicro
                                 opacity: _entryHover.hovered ? 0 : 1
                                 MotionBehavior on opacity { gate: _entry._heightReady; NumberAnimation { duration: Motion.fast } }
@@ -788,7 +788,7 @@ PageShell {
                             visible: _entry._expanded || _entry._expandable
                             text: "󰅀"
                             color: Theme.withAlpha(Theme.subtext,
-                                _entryHover.hovered ? 0.80 : 0.38)
+                                _entryHover.hovered ? 0.90 : 0.70)
                             font.pixelSize: Settings.fontMicro
                             rotation: _entry._expanded ? 180 : 0
                             transformOrigin: Item.Center

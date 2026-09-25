@@ -283,7 +283,7 @@ PanelWindow {
                                 text:           card.label
                                 // the glyph and rim carry the alert; a coloured readout only costs contrast
                                 color:          card.muted
-                                    ? Theme.withAlpha(Theme.subtext, 0.7)
+                                    ? Theme.withAlpha(Theme.subtext, 0.82)
                                     : Theme.text
                                 font.pixelSize: Settings.fontSize
 

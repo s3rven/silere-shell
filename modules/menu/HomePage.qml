@@ -140,7 +140,7 @@ PageShell {
                 anchors.verticalCenter: _metaLine.verticalCenter
                 visible: SysInfo.uptimeSecs > 0
                 text: "up " + SysInfo.uptimeLabel
-                color: Theme.withAlpha(Theme.subtext, 0.62)
+                color: Theme.withAlpha(Theme.subtext, 0.82)
                 font.pixelSize: Settings.fontLabel
                 font.weight: Font.Medium
             }

@@ -63,6 +63,7 @@ settings file carries its own `__version` and migrates separately.
 ### Fixed
 
 - The launcher preserves the user's locale, umask, allocator and EGL environment when starting the shell and its child programs.
+- Notifications and controls appear over fullscreen windows, including on niri.
 - The update startup gate uses smoke mode, so it does not map a second bar or arm session services.
 - Launches through `silere run` wait for an intentional restart instead of reloading a partly updated tree.
 

@@ -97,6 +97,7 @@ PanelWindow {
     color:         "transparent"
     exclusiveZone: -1
     WlrLayershell.namespace: "silere-traymenu"
+    WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: TrayMenuState.open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     visible: TrayMenuState.open || card.opacity > 0.001

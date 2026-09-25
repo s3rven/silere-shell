@@ -232,7 +232,7 @@ Item {
                                 color: _row.active
                                     ? Theme.mix(Theme.accent, Theme.text, 0.10)
                                     : Theme.withAlpha(Theme.subtext,
-                                        _rowHover.hovered ? 0.72 : 0.46)
+                                        _rowHover.hovered ? 0.92 : 0.76)
                                 font.pixelSize: _row.isAll
                                     ? Settings.fontLabel : Settings.fontMicro
                                 font.weight: _row.isAll ? Font.Normal : Font.DemiBold
@@ -273,7 +273,7 @@ Item {
                             anchors.rightMargin: 8
                             anchors.verticalCenter: parent.verticalCenter
                             text: String(_row.count)
-                            color: Theme.withAlpha(Theme.subtext, _row.active ? 0.82 : 0.50)
+                            color: Theme.withAlpha(Theme.subtext, _row.active ? 0.92 : 0.76)
                             font.pixelSize: Settings.fontMicro
                             font.weight: Font.DemiBold
                             ColorFade on color {}
@@ -289,7 +289,7 @@ Item {
                             color: _row.active
                                 ? Theme.withAlpha(Theme.text, 0.96)
                                 : Theme.withAlpha(Theme.text,
-                                    _rowHover.hovered ? 0.86 : 0.70)
+                                    _rowHover.hovered ? 0.96 : 0.84)
                             font.pixelSize: Settings.fontLabel
                             font.weight: _row.active ? Font.DemiBold : Font.Normal
                             elide: Text.ElideRight

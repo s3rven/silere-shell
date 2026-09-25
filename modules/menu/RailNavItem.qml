@@ -101,7 +101,7 @@ Item {
         color: root.active
             ? Theme.mix(root.accentColor, Theme.text, 0.10)
             : Theme.withAlpha(Theme.mix(Theme.subtext, root.accentColor, _hover.hovered ? 0.24 : 0),
-                               _hover.hovered ? 0.78 : 0.50)
+                               _hover.hovered ? 0.90 : 0.76)
         font.pixelSize: Settings.iconSize + 2
         scale: _tap.pressed ? 0.92 : (root.active ? 1.015 : 1.0)
         transformOrigin: Item.Center

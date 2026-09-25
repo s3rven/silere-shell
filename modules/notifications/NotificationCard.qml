@@ -673,7 +673,7 @@ Item {
                         visible: _replyInput.text.length === 0
                         text: Notifications.plainText(
                             card.notification.inlineReplyPlaceholder, 128).trim() || "Reply"
-                        color: Theme.withAlpha(Theme.subtext, 0.48)
+                        color: Theme.withAlpha(Theme.subtext, 0.76)
                         font.pixelSize: Settings.fontSize
                         elide: Text.ElideRight
                     }
@@ -713,7 +713,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     visible:        text.length > 0
                     text:           card.appNameText
-                    color:          Theme.withAlpha(Theme.menuTextMuted, card.isCritical ? 0.72 : 0.62)
+                    color:          Theme.withAlpha(Theme.menuTextMuted, card.isCritical ? 0.92 : 0.82)
                     font.pixelSize: Settings.fontMicro
                     font.weight:    Font.Medium
                     font.capitalization: Font.AllUppercase
@@ -735,7 +735,7 @@ Item {
                     id: _capTime
                     anchors.verticalCenter: parent.verticalCenter
                     text:           card._timeLabel
-                    color:          Theme.withAlpha(Theme.menuTextFaint, 0.70)
+                    color:          Theme.withAlpha(Theme.menuTextFaint, 0.82)
                     font.pixelSize: Settings.fontMicro
                 }
             }

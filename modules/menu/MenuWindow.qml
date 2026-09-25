@@ -27,6 +27,7 @@ PanelWindow {
     color:         "transparent"
     exclusiveZone: -1
     WlrLayershell.namespace: "silere-menu"
+    WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: MenuState.open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     visible: MenuState.open || panel.opacity > 0.001

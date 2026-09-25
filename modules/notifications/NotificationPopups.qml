@@ -13,6 +13,7 @@ PanelWindow {
     required property ShellScreen targetScreen
 
     WlrLayershell.namespace: "silere-notifications"
+    WlrLayershell.layer: WlrLayer.Overlay
     // on demand, not exclusive: exclusive routes every key in the session to this layer
     // and the user cannot click away from it
     WlrLayershell.keyboardFocus: win._replyOwner

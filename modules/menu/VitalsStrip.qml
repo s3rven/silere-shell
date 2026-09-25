@@ -72,13 +72,13 @@ Rectangle {
                 text: tile.glyph
                 color: tile.pulse > 0.001
                     ? Theme.mix(Theme.menuTextMuted, tile.tint, 0.36 + tile.pulse * 0.38)
-                    : Theme.withAlpha(Theme.menuTextMuted, 0.66)
+                    : Theme.withAlpha(Theme.menuTextMuted, 0.82)
                 font.pixelSize: Settings.fontMicro
             }
             ShellText {
                 anchors.baseline: _gl.baseline
                 text: tile.label
-                color: Theme.withAlpha(Theme.menuTextMuted, 0.62)
+                color: Theme.withAlpha(Theme.menuTextMuted, 0.82)
                 font.pixelSize: Settings.fontMicro
                 font.letterSpacing: 0.4
                 font.weight: Font.DemiBold
