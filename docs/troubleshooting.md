@@ -43,6 +43,10 @@ reports it too. Stop that daemon and restart Silere.
 
 Install a Nerd Font such as `ttf-jetbrains-mono-nerd`, then refresh the user font cache.
 
+## Night light is unavailable on niri
+
+Install `wlsunset`. `hyprsunset` needs Hyprland and cannot control niri's display gamma.
+
 ## Text has coloured fringes on a fractionally scaled display
 
 Start Silere with `QSG_DISTANCEFIELD_ANTIALIASING=gray` in its environment.

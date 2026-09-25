@@ -74,27 +74,40 @@ PanelWindow {
         property string label: ""
         property string stateText: ""
         property bool   active: false
+        property bool   error: false
+        property bool   checkable: true
+        readonly property bool _canActivate: _row.visible && _row.enabled
         readonly property bool _pressed: _rowTap.pressed
 
         signal triggered()
 
         function _activate(): void {
-            if (_row.visible) _row.triggered()
+            if (_row._canActivate) _row.triggered()
         }
 
         width: parent ? parent.width : 0
         height: Metrics.rowHeightFor(38)
+        opacity: _canActivate ? 1.0 : Theme.disabledOpacity
+        MotionBehavior on opacity { NumberAnimation { duration: Motion.medium } }
 
-        Accessible.role: Accessible.CheckBox
+        Accessible.role: _row.checkable ? Accessible.CheckBox : Accessible.Button
         Accessible.name: _row.label
         Accessible.description: _row.stateText
-        Accessible.focusable: _row.visible
-        Accessible.checkable: true
-        Accessible.checked: _row.active
+        Accessible.focusable: _row._canActivate
+        Accessible.checkable: _row.checkable
+        Accessible.checked: _row.checkable && _row.active
         Accessible.onPressAction: _row._activate()
 
-        HoverHandler { id: _rowHover; cursorShape: Qt.PointingHandCursor }
-        TapHandler   { id: _rowTap; onTapped: _row._activate() }
+        HoverHandler {
+            id: _rowHover
+            enabled: _row._canActivate
+            cursorShape: Qt.PointingHandCursor
+        }
+        TapHandler {
+            id: _rowTap
+            enabled: _row._canActivate
+            onTapped: _row._activate()
+        }
 
         Rectangle {
             anchors.fill: parent
@@ -141,14 +154,15 @@ PanelWindow {
             height: 20
             radius: 7
             antialiasing: true
-            color: _row.active
-                ? Theme.withAlpha(Theme.accent, 0.13) : "transparent"
+            color: _row.error ? Theme.withAlpha(Theme.error, 0.13)
+                : _row.active ? Theme.withAlpha(Theme.accent, 0.13) : "transparent"
             ColorFade on color {}
             MotionBehavior on width {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
             OutlineBorder {
                 radius: _state.radius
-                outlineColor: _row.active ? Theme.withAlpha(Theme.accent, 0.22) : "transparent"
+                outlineColor: _row.error ? Theme.withAlpha(Theme.error, 0.30)
+                    : _row.active ? Theme.withAlpha(Theme.accent, 0.22) : "transparent"
                 ColorFade on outlineColor {}
             }
 
@@ -156,7 +170,9 @@ PanelWindow {
                 id: _stateLabel
                 anchors.centerIn: parent
                 text: _row.stateText
-                color: _row.active ? Theme.mix(Theme.accent, Theme.text, 0.18) : Theme.withAlpha(Theme.subtext, 0.62)
+                color: _row.error ? Theme.error
+                    : _row.active ? Theme.mix(Theme.accent, Theme.text, 0.18)
+                    : Theme.withAlpha(Theme.subtext, 0.82)
                 font.pixelSize: Settings.fontCaption
                 font.weight: Font.Medium
                 ColorFade on color {}
@@ -205,6 +221,7 @@ PanelWindow {
                 glyph: "󰖔"
                 label: "Night Light"
                 active: NightLight.enabled
+                error: NightLight.lastError.length > 0
                 stateText: NightLight.lastError.length > 0 ? "Failed"
                     : NightLight.enabled ? "On" : "Off"
                 onTriggered: NightLight.toggle()
@@ -213,10 +230,14 @@ PanelWindow {
                 visible: PowerProfiles.available
                 glyph: PowerProfiles.glyph.length > 0 ? PowerProfiles.glyph : "󰾅"
                 label: "Power Mode"
+                checkable: false
+                enabled: PowerProfiles.profile.length > 0 && !PowerProfiles.syncing
                 active: PowerProfiles.profile === "performance"
-                stateText: PowerProfiles.lastError.length > 0 ? "Failed"
+                error: PowerProfiles.lastError.length > 0
+                stateText: PowerProfiles.syncing ? "Changing…"
+                         : PowerProfiles.lastError.length > 0 ? "Failed"
                          : PowerProfiles.label.length > 0 ? PowerProfiles.label
-                         : PowerProfiles.syncing ? "Checking…" : "…"
+                         : "Unavailable"
                 onTriggered: PowerProfiles.cycle()
             }
             QuickActionRow {

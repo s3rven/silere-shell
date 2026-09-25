@@ -385,12 +385,12 @@ PageShell {
             ControlRow {
                 id: _powerRow
                 visible: PowerProfiles.available
-                available: PowerProfiles.profile !== ""
+                available: PowerProfiles.profile !== "" && !PowerProfiles.syncing
                 active: PowerProfiles.profile !== "" && PowerProfiles.profile !== "balanced"
                 glyph: PowerProfiles.glyph
                 title: "Power Mode"
-                valueText: PowerProfiles.profile !== "" ? PowerProfiles.label
-                         : PowerProfiles.syncing ? "Checking…"
+                valueText: PowerProfiles.syncing ? "Changing…"
+                         : PowerProfiles.profile !== "" ? PowerProfiles.label
                          : "Unavailable"
                 status: PowerProfiles.lastError.length > 0 ? PowerProfiles.lastError
                       : PowerProfiles.degraded ? "Throttled" : ""

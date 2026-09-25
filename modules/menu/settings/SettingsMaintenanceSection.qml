@@ -15,12 +15,15 @@ Column {
         const out = [{ value: "auto",
             label: auto.length > 0 ? "Automatic (" + auto + ")" : "Automatic (none found)" }]
         const named = [
-            { value: "hyprsunset", label: "hyprsunset", ok: SystemTools.hasHyprsunset },
+            { value: "hyprsunset", label: "hyprsunset",
+              ok: Compositor.isHyprland && SystemTools.hasHyprsunset },
             { value: "wlsunset",   label: "wlsunset",   ok: SystemTools.hasWlsunset   }
         ]
-        for (let i = 0; i < named.length; i++)
+        for (let i = 0; i < named.length; i++) {
+            if (named[i].value === "hyprsunset" && !Compositor.isHyprland) continue
             out.push({ value: named[i].value,
                 label: named[i].ok ? named[i].label : named[i].label + " (not installed)" })
+        }
         return out
     }
 

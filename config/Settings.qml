@@ -67,7 +67,8 @@ Singleton {
     function nightLightProviderArgv(name: string, temp: int): var {
         const t = Math.max(1000, Math.min(20000, Math.round(temp)))
         if (name === "hyprsunset")
-            return SystemTools.hasHyprsunset ? ["hyprsunset", "-t", String(t)] : []
+            return Compositor.isHyprland && SystemTools.hasHyprsunset
+                ? ["hyprsunset", "-t", String(t)] : []
         // wlsunset interpolates between an unequal day and night pair and exits on an equal
         // one, so hold a value with a day that spans the clock and sits one step above night
         if (name === "wlsunset") {
@@ -79,12 +80,10 @@ Singleton {
         return []
     }
 
-    // hyprsunset speaks Hyprland's own IPC as well as wlr-gamma-control; wlsunset is
-    // the portable one, and is what niri's maintainer points at
+    // hyprsunset needs a hyprland-only protocol
     readonly property string autoNightLightProvider:
         Compositor.isHyprland && SystemTools.hasHyprsunset ? "hyprsunset"
-        : SystemTools.hasWlsunset   ? "wlsunset"
-        : SystemTools.hasHyprsunset ? "hyprsunset" : ""
+        : SystemTools.hasWlsunset ? "wlsunset" : ""
 
     readonly property string nightLightTool: {
         const choice = ShellSettings.nightLightProvider

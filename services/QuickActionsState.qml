@@ -36,7 +36,9 @@ AnchoredPopupState {
             // the optional-tool scan runs at startup; before it lands no tool looks installed
             if (!SystemTools.ready) return "error: still looking for a night light tool"
             if (!NightLight.toolAvailable)
-                return "error: night light needs hyprsunset or wlsunset"
+                return Compositor.isHyprland
+                    ? "error: night light needs hyprsunset or wlsunset"
+                    : "error: night light needs wlsunset on this compositor"
             NightLight.toggle()
             return NightLight.enabled ? "on" : "off"
         }
