@@ -216,7 +216,10 @@ Item {
         }
     }
 
-    Component.onCompleted: _updateTime()
+    Component.onCompleted: {
+        _updateTime()
+        if (card._paused) card._hoverStartMs = Date.now()
+    }
     onVisibleChanged: {
         if (!visible && card._leaving) card._completeDismiss()
         else if (visible) card._updateTime()
@@ -244,7 +247,7 @@ Item {
     // reading one card holds the whole stack: cards expiring out from under the pointer reflow what is being read
     property bool stackHovered: false
     // an abandoned empty reply lets the card go; one being typed or holding text keeps it
-    readonly property bool _paused: _cardHover.hovered || card.stackHovered
+    readonly property bool _paused: _cardHover.hovered || card.stackHovered || Idle.isIdle
         || (card._replyOpen && (_replyInput.activeFocus || _replyInput.text.length > 0))
 
     property real _hoverPausedMs: 0
@@ -266,7 +269,7 @@ Item {
             : (card.notification.expireTimeout !== 0)
         readonly property real fullInterval: {
             const t = card.notification.expireTimeout
-            // a sender's own request is clamped to the notifDefaultTimeout ceiling, not discarded
+            // a sender's own request is capped at 30 s, not discarded
             return t > 0 ? Math.min(t, 30000) : ShellSettings.notifDefaultTimeout
         }
         interval: Math.max(400, fullInterval - (Date.now() - card.timeoutStartedAt) + card._hoverPausedMs)

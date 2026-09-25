@@ -122,6 +122,15 @@ Column {
                 SystemTools.matugenRepairState === "done" ? Theme.success : Theme.warning)
         }
 
+        if (Notifications.storeError.length > 0)
+            add(attention, "󰂚", "Notification history",
+                Notifications.storeError, "notifications.json", false, "", Theme.warning)
+
+        if (NotifWatch.conflict.length > 0)
+            add(attention, "󰂛", "Notifications blocked",
+                "Another daemon owns notifications", NotifWatch.conflict, false,
+                "", Theme.warning)
+
         const tool = (g, n, v) => add(optional, g, n,
             "Not installed", v, true)
         if (!SystemTools.hasBrightnessctl)     tool("󰃟", "Brightness control", "brightnessctl")
@@ -130,7 +139,7 @@ Column {
         if (Settings.soundSettingsCommand.length === 0)
             tool("󰕾", "Sound settings", "pwvucontrol")
         if (!SystemTools.hasCava)              tool("󰝚", "Audio visualizer", "cava")
-        if (!SystemTools.hasPowerProfilesCtl)  tool("󰾅", "Power profiles", "power-profiles-daemon")
+        if (!PowerProfiles.available)          tool("󰾅", "Power profiles", "power-profiles-daemon")
         if (Settings.lockCommand.length === 0)  tool("󰌾", "Screen lock", "hyprlock")
         if (!SystemTools.hasCheckupdates && !SystemTools.hasParu && !SystemTools.hasYay
                 && SystemTools.packageFamily === "pacman")
@@ -264,7 +273,7 @@ Column {
         HintText {
             visible: ShellSettings.lockProvider === "custom"
                 && Settings.customLockCommand.length === 0
-            text: "No custom command set. Add one with: settings set lockCommandCustom \"swaylock -f\""
+            text: "No command set yet. Run: silere ipc settings set lockCommandCustom \"swaylock -f\""
         }
         HintText {
             visible: ShellSettings.lockProvider !== "custom"

@@ -11,7 +11,7 @@ Singleton {
     id: root
 
     property var list: []
-    property alias dnd:         _persist.dnd
+    readonly property bool dnd: ShellSettings.dnd
     property alias missedCount: _persist.missedCount
     // these maps are restored from persisted JSON. Keep their prototype empty so a malformed key cannot change object behaviour between reloads
     property var _seen:  Object.create(null)
@@ -352,7 +352,6 @@ Singleton {
     PersistentProperties {
         id: _persist
         reloadableId: "silereNotifications"
-        property bool dnd: false
         property int  missedCount: 0
         // PersistentProperties survives an engine replacement; keep JS arrays serialized so values never cross engines
         property string historyJson: "[]"
@@ -382,10 +381,16 @@ Singleton {
         }
         onLoadFailed: error => {
             _diskStore.writeAllowed = error === FileViewError.FileNotFound
+            root.storeError = _diskStore.writeAllowed ? "" : "History file could not be read"
         }
-        onSaveFailed: error =>
+        onSaved: root.storeError = ""
+        onSaveFailed: error => {
+            root.storeError = "History could not be saved"
             console.warn("silere-shell: failed to save notifications.json:", error)
+        }
     }
+    // shown in Maintenance: history stops saving on either, and nothing else says so
+    property string storeError: ""
 
     // seen and times describe notifications the server still owns, and no server outlives a
     // restart; persisting them only lets a reissued id inherit a dead session's flags
@@ -437,6 +442,7 @@ Singleton {
         } catch (e) {
             // a file we could not read may still hold history; writing this session over it loses it
             _diskStore.writeAllowed = false
+            root.storeError = "History file could not be read"
             console.warn("silere-shell: bad notifications.json, ignoring:", String(e))
         }
     }
@@ -447,7 +453,7 @@ Singleton {
 
     readonly property bool fullscreenSilenced: ShellSettings.notifFullscreenSilence
         && FullscreenState.active
-    function toggleDnd(): void { dnd = !dnd }
+    function toggleDnd(): void { ShellSettings.dnd = !ShellSettings.dnd }
 
     readonly property bool _quietActive: {
         if (!ShellSettings.dndSchedule) return false
@@ -618,10 +624,14 @@ Singleton {
             ? Math.min(root._maxBodyChars, Math.floor(requested)) : root._maxBodyChars
         const source = SafeText.boundedText(s, limit * 2)
         const plain = source
-            .replace(/<\/?(b|i|u|a|span|small|big|tt|markup|sub|sup|s)\b[^>]*>/gi, "")
-            .replace(/<br\s*\/?>/gi, " ")
+            .replace(/<\/?(b|i|u|a|span|small|big|tt|markup|sub|sup|s|em|strong|font|img)\b[^>]*>/gi, "")
+            .replace(/<br\s*\/?>|<\/?(p|div)\b[^>]*>/gi, " ")
             .replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-            .replace(/&quot;/g, "\"").replace(/&apos;/g, "'").replace(/&#39;/g, "'")
+            .replace(/&quot;/g, "\"").replace(/&apos;/g, "'")
+            .replace(/&#(x[0-9a-f]{1,6}|[0-9]{1,7});/gi, (m, n) => {
+                const cp = n[0] === "x" || n[0] === "X" ? parseInt(n.slice(1), 16) : parseInt(n, 10)
+                return cp > 0 && cp <= 0x10FFFF && (cp < 0xD800 || cp > 0xDFFF) ? String.fromCodePoint(cp) : m
+            })
             .replace(/&nbsp;/g, " ").replace(/&hellip;/g, "…")
             .replace(/&amp;/g, "&")
             .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u061C\u200B\u200E\u200F\u202A-\u202E\u2066-\u206F]/g, "")
@@ -762,7 +772,6 @@ Singleton {
     }
 
     Component.onCompleted: {
-        ConfigStore.hardenQuickshellState()
         if (FullscreenState.wanted) Compositor.refreshToplevels()
     }
 
@@ -816,21 +825,22 @@ Singleton {
             root._ensurePersistentState()
             const bypasses = ShellSettings.notifCriticalBypass
                 && n.urgency === NotificationUrgency.Critical
+            // expired, not dismissed: a sender may read a dismissal as the user having seen it
             if (root.effectiveDnd && !bypasses) {
                 if (root._archiveNotification(n, n.id, Date.now()) || n.transient)
                     root.missedCount++
-                n.tracked = false
+                n.expire()
                 return
             }
             if (root.fullscreenSilenced && !bypasses) {
                 if (root._archiveNotification(n, n.id, Date.now()) || n.transient)
                     root.missedCount++
-                n.tracked = false
+                n.expire()
                 return
             }
             if (!ShellSettings.notifPopupEnabled) {
                 root._archiveNotification(n, n.id, Date.now())
-                n.tracked = false
+                n.expire()
                 return
             }
             const arrivalTime = root._ensureTime(n.id)

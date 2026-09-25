@@ -14,8 +14,6 @@ Singleton {
         ? directory + "/calendar-marks.json" : ""
     readonly property string notificationsPath: directory.length > 0
         ? directory + "/notifications.json" : ""
-    readonly property string quickshellStatePath: XdgPaths.stateHome.length > 0
-        ? XdgPaths.stateHome + "/quickshell/states.json" : ""
 
     property bool ready: false
     property string _error: ""
@@ -69,21 +67,6 @@ Singleton {
         root._hardened[path] = true
         Quickshell.execDetached(["bash", "-c",
             "[ ! -L \"$1\" ] && chmod 0600 -- \"$1\"", "bash", path])
-    }
-
-    // PersistentProperties is managed by Quickshell rather than this store, and
-    // Silere's notification history persists through it. Quickshell may create
-    // the shared state file with the session umask (commonly 0644), so close the
-    // directory once: a 0700 directory also covers a file written after this
-    // runs, which chmod'ing the file alone cannot. Never follow a replacement
-    // symlink and accept only the exact XDG-derived absolute path.
-    function hardenQuickshellState(): void {
-        const path = root.quickshellStatePath
-        if (!path.startsWith("/")) return
-        Quickshell.execDetached(["bash", "-c",
-            "d=${1%/*}; [ -d \"$d\" ] && [ ! -L \"$d\" ] && chmod 0700 -- \"$d\"; "
-            + "if [ -f \"$1\" ] && [ ! -L \"$1\" ]; then chmod 0600 -- \"$1\"; fi",
-            "bash", path])
     }
 
     BoundedProcess {

@@ -53,7 +53,7 @@ Singleton {
         // ignore only this process. Another Quickshell instance can own the notification name too, and is still a real conflict worth showing
         command: ["bash", "-c",
             "self=$1; raw=$(busctl --user call org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus GetNameOwner s org.freedesktop.Notifications 2>/dev/null); " +
-            "set -- $raw; o=${2#\"}; o=${o%\"}; [ -n \"$o\" ] || exit 0; " +
+            "set -- $raw; o=${2#\\\"}; o=${o%\\\"}; [ -n \"$o\" ] || exit 0; " +
             "raw=$(busctl --user call org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus GetConnectionUnixProcessID s \"$o\" 2>/dev/null); " +
             "set -- $raw; p=$2; case $p in ''|*[!0-9]*) exit 0;; esac; " +
             "[ \"$p\" = \"$self\" ] && exit 0; " +

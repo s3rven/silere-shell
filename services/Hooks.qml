@@ -240,7 +240,7 @@ Singleton {
     Connections {
         target: root._present["battery-critical"] === true ? Battery : null
         function onCriticalChanged() {
-            if (Battery.critical) root.fire("battery-critical", [Battery.pct])
+            if (Battery.critical) root.fire("battery-critical", [Math.round(Battery.pct)])
         }
     }
 
