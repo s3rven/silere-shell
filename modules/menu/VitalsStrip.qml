@@ -47,7 +47,9 @@ Rectangle {
         readonly property real _p: Math.round(Math.max(0, Math.min(1, progress)) * 100) / 100
         property real _disp: _p
         MotionBehavior on _disp {
-            gate: tile.live
+            id: _glide
+            // a step under five points moves the bar a pixel or two; snap it rather than redraw every window
+            gate: tile.live && Math.abs(_glide.targetValue - tile._disp) >= 0.05
             NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
         }
 
