@@ -83,7 +83,7 @@ action runs hyprlock, swaylock, gtklock or a command of your own.
 
 ## Install
 
-You need Hyprland or niri, Quickshell 0.3.1 or newer, and `git`.
+You need Hyprland or niri, Quickshell 0.3.1 or newer built on Qt 6.9 or newer, and `git`.
 On Arch and its derivatives, `sudo pacman -S --needed quickshell git` installs both; other
 distros are covered by [Quickshell's install guide](https://quickshell.org/docs/v0.3.1/guide/install-setup/).
 

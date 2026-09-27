@@ -257,6 +257,29 @@ test_qml_module_lookup() (
     fi
 )
 
+test_qml_type_floor() (
+    local older="$TMP/qml-qt68" newer="$TMP/qml-qt69" bare="$TMP/qml-bare" rc
+    mkdir -p "$older/QtQuick/Effects" "$newer/QtQuick/Effects" "$bare/QtQuick/Effects"
+    printf 'module QtQuick.Effects\n' | tee "$older/QtQuick/Effects/qmldir" \
+        "$newer/QtQuick/Effects/qmldir" "$bare/QtQuick/Effects/qmldir" >/dev/null
+    printf 'exports: ["QtQuick.Effects/MultiEffect 6.5"]\n' > "$older/QtQuick/Effects/plugins.qmltypes"
+    printf 'exports: ["QtQuick.Effects/RectangularShadow 6.9"]\n' > "$newer/QtQuick/Effects/plugins.qmltypes"
+
+    export QML_IMPORT_PATH=""
+    export QML2_IMPORT_PATH="$older:$newer"
+    SILERE_SCRIPT_LIB_ONLY=1 source "$ROOT/scripts/install.sh"
+    rc=0; _qml_type_exported QtQuick.Effects RectangularShadow || rc=$?
+    assert_eq 1 "$rc" "a Qt 6.8 QtQuick.Effects first on the path is below the floor"
+
+    _silere_qml_import_roots=("$newer" "$older")
+    rc=0; _qml_type_exported QtQuick.Effects RectangularShadow || rc=$?
+    assert_eq 0 "$rc" "a Qt 6.9 QtQuick.Effects meets the floor"
+
+    _silere_qml_import_roots=("$bare")
+    rc=0; _qml_type_exported QtQuick.Effects RectangularShadow || rc=$?
+    assert_eq 2 "$rc" "a module without qmltypes is unknown, not a failure"
+)
+
 test_headless_qml_import_roots() (
     local stubs="$TMP/qml-tool-stubs"
     local first="$TMP/qml-import-first"
@@ -1984,6 +2007,7 @@ test_existing_checkout_installer_update
 test_marker_removal
 test_uninstall_targets_and_backups
 test_qml_module_lookup
+test_qml_type_floor
 test_headless_qml_import_roots
 test_font_archive_selection
 test_assume_yes_prompts

@@ -8,6 +8,10 @@
 # step with this value; check.sh compares it against the Quickshell actually installed.
 # shellcheck disable=SC2034
 SILERE_MIN_QUICKSHELL="0.3.1"
+# Quickshell 0.3.1 builds on older Qt, but FloatingShadow's RectangularShadow is 6.9+
+# and every shadowed surface (bar, osd, popups, notification cards) fails to load without it.
+# shellcheck disable=SC2034
+SILERE_MIN_QT="6.9"
 
 # Reads the version out of `qs --version`, e.g. "Quickshell 0.3.1 (revision ...)".
 # Prints nothing when the binary is missing or the format is one we don't know.
@@ -96,4 +100,21 @@ _qml_module_available() {
         [ -r "$root/$module_path/qmldir" ] && return 0
     done
     return 1
+}
+
+# 0 when the module Qt would load exports the type, 1 when it does not, 2 when there is
+# no module or no qmltypes to tell. Only the first root holding the module counts.
+_qml_type_exported() { # $1 = module, $2 = type
+    local module_path="${1//./\/}" root file seen=0
+    for root in "${_silere_qml_import_roots[@]}"; do
+        [ -n "$root" ] && [ -r "$root/$module_path/qmldir" ] || continue
+        for file in "$root/$module_path"/*.qmltypes; do
+            [ -r "$file" ] || continue
+            seen=1
+            grep -qF "\"$1/$2 " "$file" && return 0
+        done
+        [ "$seen" -eq 1 ] && return 1
+        return 2
+    done
+    return 2
 }

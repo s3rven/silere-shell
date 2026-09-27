@@ -867,6 +867,12 @@ if $has_qs; then
             qs_modules_ok=false
         fi
     done
+    qt_floor=0
+    _qml_type_exported QtQuick.Effects RectangularShadow || qt_floor=$?
+    if [ "$qt_floor" -eq 1 ]; then
+        _warn "Qt is older than $SILERE_MIN_QT — the bar and popups cannot load"
+        qs_modules_ok=false
+    fi
     $qs_modules_ok || _warn "this Quickshell build cannot load Silere; install the full current package"
 fi
 

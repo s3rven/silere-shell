@@ -197,6 +197,12 @@ for module in "${SILERE_REQUIRED_QML_MODULES[@]}"; do
     fi
 done
 [ "$missing_modules" -gt 0 ] || ok "QML modules" "all ${#SILERE_REQUIRED_QML_MODULES[@]} required imports found"
+qt_floor=0
+_qml_type_exported QtQuick.Effects RectangularShadow || qt_floor=$?
+case "$qt_floor" in
+    0) ok "Qt" "$SILERE_MIN_QT or newer" ;;
+    1) fail "Qt" "older than $SILERE_MIN_QT; the bar, OSD and popups cannot load" ;;
+esac
 
 if [ "$qs_usable" -eq 1 ]; then
     if command -v timeout >/dev/null 2>&1; then

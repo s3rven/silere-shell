@@ -969,13 +969,13 @@ section "quickshell version floor"
 floor_prose_missing=""
 for doc in README.md docs/install.md; do
   [ -f "$doc" ] || continue
-  grep -qF "Quickshell $SILERE_MIN_QUICKSHELL or newer" "$doc" \
+  grep -qF "Quickshell $SILERE_MIN_QUICKSHELL or newer built on Qt $SILERE_MIN_QT or newer" "$doc" \
     || floor_prose_missing="$floor_prose_missing $doc"
 done
 if [ -n "$floor_prose_missing" ]; then
-  fail "these must state \"Quickshell $SILERE_MIN_QUICKSHELL or newer\":$floor_prose_missing"
+  fail "these must state \"Quickshell $SILERE_MIN_QUICKSHELL or newer built on Qt $SILERE_MIN_QT or newer\":$floor_prose_missing"
 else
-  ok "qs floor" "docs state the $SILERE_MIN_QUICKSHELL minimum from qml-modules.sh"
+  ok "qs floor" "docs state the $SILERE_MIN_QUICKSHELL and Qt $SILERE_MIN_QT minimums from qml-modules.sh"
 fi
 
 section "aur metadata"
