@@ -14,6 +14,8 @@ optdepends=(
     'hyprland: compositor support'
     'niri: compositor support'
     'ttf-jetbrains-mono-nerd: the default bar font and every glyph in the UI'
+    'fontconfig: detect installed Nerd Fonts and offer them in the font picker'
+    'systemd: loginctl lock action and optional user update timer'
     'matugen: colours generated from your wallpaper'
     'pipewire: volume and the output picker'
     'wireplumber: volume and the output picker'
@@ -88,8 +90,9 @@ package() {
         "$pkgdir/usr/share/bash-completion/completions/silere"
 
     install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$_pkgname/LICENSE"
-    install -Dm644 README.md "$pkgdir/usr/share/doc/$_pkgname/README.md"
-    # the README defers detail to these; maintainer notes stay out of the package
-    install -Dm644 -t "$pkgdir/usr/share/doc/$_pkgname/docs" \
-        docs/install.md docs/scripting.md docs/performance.md docs/troubleshooting.md
+    local docdir="$pkgdir/usr/share/doc/$_pkgname"
+    install -Dm644 -t "$docdir" README.md CONTRIBUTING.md CHANGELOG.md
+    cp -a docs "$docdir/"
+    install -Dm644 -t "$docdir/assets" \
+        assets/banner.svg assets/banner-light.svg assets/shot-*.webp
 }

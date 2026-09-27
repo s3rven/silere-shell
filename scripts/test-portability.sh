@@ -112,6 +112,7 @@ test_xdg_paths_and_timer_default() (
 
 test_fresh_install_permissions() (
     local home="$TMP/install-mode-home" custom="$TMP/custom-install"
+    local linked_home="$TMP/install-linked-home" linked_default="$TMP/linked-default" actual
     HOME="$home" XDG_CONFIG_HOME=relative SILERE_SCRIPT_LIB_ONLY=1 \
         source "$ROOT/scripts/install.sh"
 
@@ -122,6 +123,51 @@ test_fresh_install_permissions() (
 
     _secure_fresh_default_install "$custom"
     assert_eq "755" "$(stat -c '%a' "$custom")" "custom install mode"
+
+    mkdir -p "$linked_home/.config" "$linked_default"
+    ln -s "$linked_default" "$linked_home/.config/silere-shell"
+    chmod 0755 "$linked_default"
+    actual="$(HOME="$linked_home" XDG_CONFIG_HOME="$linked_home/.config" \
+        SILERE_SCRIPT_LIB_ONLY=1 bash -c '
+            source "$1"
+            _secure_fresh_default_install "$DEFAULT_DIR"
+            printf "%s|%s" "$DEFAULT_DIR" "$(stat -c %a "$DEFAULT_DIR")"
+        ' _ "$ROOT/scripts/install.sh")"
+    assert_eq "$linked_default|700" "$actual" "symlinked default install mode"
+)
+
+test_existing_checkout_installer_update() (
+    local home="$TMP/install-update-home" checkout="$TMP/install-update-checkout"
+    local calls="$TMP/install-update-calls"
+    mkdir -p "$checkout/scripts" "$home"
+    cat > "$checkout/scripts/update.sh" <<'EOF'
+#!/usr/bin/env bash
+set -e
+mkdir -p "$XDG_CACHE_HOME/silere-shell"
+if [ "${1:-}" = --apply ]; then
+    printf 'apply\n' >> "$SILERE_TEST_CALLS"
+    rm -f "$XDG_CACHE_HOME/silere-shell/update-pending"
+else
+    printf 'check\n' >> "$SILERE_TEST_CALLS"
+    if [ "${SILERE_TEST_PENDING:-0}" = 1 ]; then
+        printf '1\n' > "$XDG_CACHE_HOME/silere-shell/update-pending"
+    else
+        rm -f "$XDG_CACHE_HOME/silere-shell/update-pending"
+    fi
+fi
+EOF
+    export HOME="$home" XDG_CACHE_HOME="$home/cache" SILERE_TEST_CALLS="$calls"
+    SILERE_SCRIPT_LIB_ONLY=1 source "$ROOT/scripts/install.sh"
+
+    : > "$calls"
+    SILERE_TEST_PENDING=1 \
+        _install_checked_release "$checkout" || fail "installer could not apply a pending release"
+    assert_eq $'check\napply' "$(cat "$calls")" "installer applies a pending release"
+
+    : > "$calls"
+    SILERE_TEST_PENDING=0 \
+        _install_checked_release "$checkout" || fail "installer rejected an up-to-date checkout"
+    assert_eq check "$(cat "$calls")" "installer leaves an up-to-date checkout alone"
 )
 
 test_marker_removal() (
@@ -1770,6 +1816,18 @@ test_menu_keybind_plan() (
     esac
     assert_eq "$before" "$(<"$conf")" "keybind dry run left the config unchanged"
 
+    if HOME="$home" XDG_CONFIG_HOME="$home/.config" SILERE_HYPR_CONFIG="$conf" \
+            SILERE_MENU_BIND_KEY=$'slash\nexec-once=unexpected' \
+            bash "$ROOT/scripts/install.sh" --dry-run </dev/null >/dev/null 2>&1; then
+        fail "installer accepted a newline in the menu keybind"
+    fi
+    if HOME="$home" XDG_CONFIG_HOME="$home/.config" SILERE_HYPR_CONFIG="$conf" \
+            SILERE_MENU_BIND_MODS='SUPER, slash, exec, unexpected' \
+            bash "$ROOT/scripts/install.sh" --dry-run </dev/null >/dev/null 2>&1; then
+        fail "installer accepted compositor syntax in menu keybind modifiers"
+    fi
+    assert_eq "$before" "$(<"$conf")" "invalid keybinds left the config unchanged"
+
     printf 'bind = $mainMod, slash, exec, foot\n' > "$dir/binds.conf"
     out="$(HOME="$home" XDG_CONFIG_HOME="$home/.config" SILERE_HYPR_CONFIG="$conf" \
         bash "$ROOT/scripts/install.sh" --dry-run </dev/null 2>&1)" \
@@ -1922,6 +1980,7 @@ fi
 
 test_xdg_paths_and_timer_default
 test_fresh_install_permissions
+test_existing_checkout_installer_update
 test_marker_removal
 test_uninstall_targets_and_backups
 test_qml_module_lookup

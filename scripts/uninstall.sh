@@ -288,7 +288,9 @@ for f in "${AUTOSTART_FILES[@]}"; do
         if _ask "Remove autostart block from $(basename "$f")?"; then
             if [[ "$f" == *.lua ]]; then
                 _remove_block "$f" '-- silere-shell begin' '-- silere-shell end' && _ok "removed from $f"
-            elif [[ "$f" == *.kdl ]]; then
+            elif { [ -n "$ACTIVE_NIRI_CONFIG" ] &&
+                    [ "$(readlink -m -- "$f")" = "$(readlink -m -- "$ACTIVE_NIRI_CONFIG")" ]; } \
+                    || grep -qxF '// silere-shell begin' "$f" 2>/dev/null; then
                 _remove_block "$f" '// silere-shell begin' '// silere-shell end' && _ok "removed from $f"
             else
                 _remove_block "$f" '# silere-shell begin' '# silere-shell end' && _ok "removed from $f"

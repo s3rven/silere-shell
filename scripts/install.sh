@@ -10,11 +10,18 @@ CONFIG_HOME="$(_silere_xdg_home "${XDG_CONFIG_HOME:-}" .config)" || {
     printf 'silere: HOME must be an absolute path\n' >&2
     exit 1
 }
+CONFIG_HOME="$(readlink -m -- "$CONFIG_HOME")" || {
+    printf 'silere: could not resolve config directory\n' >&2
+    exit 1
+}
 STATE_HOME="$(_silere_xdg_home "${XDG_STATE_HOME:-}" .local/state)" || {
     printf 'silere: HOME must be an absolute path\n' >&2
     exit 1
 }
-DEFAULT_DIR="$CONFIG_HOME/silere-shell"
+DEFAULT_DIR="$(readlink -m -- "$CONFIG_HOME/silere-shell")" || {
+    printf 'silere: could not resolve default install directory\n' >&2
+    exit 1
+}
 
 source "$SCRIPT_DIR/lib/ui.sh"
 TTY_HINT="interactive install requires a TTY — clone the repo and run scripts/install.sh from a terminal"
@@ -622,6 +629,15 @@ _ask_path() {
     fi
 }
 
+_install_checked_release() {
+    local checkout="$1" cache_home
+    cache_home="$(_silere_xdg_home "${XDG_CACHE_HOME:-}" .cache)" || return 1
+    GIT_TERMINAL_PROMPT=0 bash "$checkout/scripts/update.sh" >/dev/null || return 1
+    if [ -e "$cache_home/silere-shell/update-pending" ]; then
+        GIT_TERMINAL_PROMPT=0 bash "$checkout/scripts/update.sh" --apply >/dev/null || return 1
+    fi
+}
+
 if [ "${SILERE_SCRIPT_LIB_ONLY:-0}" = "1" ]; then
     return 0 2>/dev/null || exit 0
 fi
@@ -1078,8 +1094,7 @@ if [ -d "$INSTALL_DIR/.git" ]; then
         _would "update $INSTALL_DIR to the latest signed release"
     elif _ask "Install the latest signed release?"; then
         spin_start "checking release..."
-        if ! GIT_TERMINAL_PROMPT=0 bash "$INSTALL_DIR/scripts/update.sh" >/dev/null \
-                || ! GIT_TERMINAL_PROMPT=0 bash "$INSTALL_DIR/scripts/update.sh" --apply >/dev/null; then
+        if ! _install_checked_release "$INSTALL_DIR"; then
             spin_stop
             if $install_has_changes; then
                 _die "the signed update could not preserve the local edits — repair or stash them, then retry"
@@ -1479,6 +1494,10 @@ _section "menu keybind"
 
 MENU_BIND_MODS="${SILERE_MENU_BIND_MODS:-SUPER}"
 MENU_BIND_KEY="${SILERE_MENU_BIND_KEY:-slash}"
+[[ "$MENU_BIND_MODS" =~ ^[A-Za-z0-9_+\ -]+$ ]] \
+    || _die "menu keybind modifiers contain unsupported characters"
+[[ "$MENU_BIND_KEY" =~ ^[A-Za-z0-9_:-]+$ ]] \
+    || _die "menu keybind key contains unsupported characters"
 MENU_BIND_CMD="qs ipc -p \"\$(printf '%b' $ROOT_PRINTF_BYTES)/shell.qml\" call menu toggle"
 MENU_BIND_SHOWN="qs ipc -p $(_shell_quote "$ROOT/shell.qml") call menu toggle"
 HYPR_BIND="bind = $MENU_BIND_MODS, $MENU_BIND_KEY, exec, $MENU_BIND_CMD"

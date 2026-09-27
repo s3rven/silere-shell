@@ -69,7 +69,8 @@ _package_for() {
         apt:nmcli)          printf 'network-manager' ;;
         dnf:nmcli|zypper:nmcli) printf 'NetworkManager' ;;
         *:pwvucontrol) printf 'pavucontrol' ;;
-        *:wireplumber|*:pipewire|*:upower|*:brightnessctl|*:cava|*:pavucontrol)
+        pacman:hyprsunset|pacman:matugen) printf '%s' "$tool" ;;
+        *:wireplumber|*:pipewire|*:upower|*:brightnessctl|*:cava|*:pavucontrol|*:wlsunset)
             printf '%s' "$tool" ;;
         *) return 1 ;;
     esac
@@ -256,8 +257,11 @@ if ! command -v powerprofilesctl >/dev/null 2>&1 && command -v busctl >/dev/null
 else
     optional_tool powerprofilesctl "power profiles"
 fi
-optional_any "night light" "warm display" hyprsunset wlsunset
-optional_any "screen lock" "lock action" hyprlock swaylock gtklock
+# hyprsunset needs a hyprland-only protocol
+if [ "$compositor" = niri ]; then optional_any "night light" "warm display" wlsunset
+else optional_any "night light" "warm display" hyprsunset wlsunset
+fi
+optional_any "screen lock" "lock action" hyprlock swaylock gtklock loginctl
 optional_any "sound settings" "per-app routing UI" pwvucontrol pavucontrol
 optional_tool cava "audio visualizer"
 optional_tool notify-send "desktop alerts"
@@ -331,14 +335,14 @@ if [ "$git_install" -eq 1 ]; then
 fi
 
 autostart=""
-if [ -x "$ROOT/scripts/install.sh" ]; then
+autostart_re='silere-shell begin|^[[:space:]]*(exec-once[[:space:]]*=|spawn(-sh)?-at-startup|hl\.exec_cmd).*(silere-shell|scripts/silere|silere run)'
+if [ -f "$ROOT/scripts/install.sh" ]; then
     for active_config in \
         "$(bash "$ROOT/scripts/install.sh" --hypr-config-path 2>/dev/null || true)" \
         "$(bash "$ROOT/scripts/install.sh" --niri-config-path 2>/dev/null || true)"
     do
         [ -f "$active_config" ] || continue
-        if grep -qE 'silere-shell begin|^[[:space:]]*(exec-once[[:space:]]*=|spawn-at-startup).*silere-shell' \
-                "$active_config" 2>/dev/null; then
+        if grep -qE "$autostart_re" "$active_config" 2>/dev/null; then
             autostart="$active_config"
             break
         fi
@@ -346,8 +350,7 @@ if [ -x "$ROOT/scripts/install.sh" ]; then
 fi
 if [ -n "$config_home" ]; then
     if [ -z "$autostart" ]; then
-        autostart="$(grep -rliE \
-            'silere-shell begin|^[[:space:]]*(exec-once[[:space:]]*=|spawn-at-startup).*silere-shell' \
+        autostart="$(grep -rliE "$autostart_re" \
             "$config_home/hypr" "$config_home/niri" 2>/dev/null | head -n 1 || true)"
     fi
 fi
