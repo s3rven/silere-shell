@@ -890,9 +890,9 @@ _section "optional tools"
 
 _optdep() {
     if command -v "$1" >/dev/null 2>&1; then
-        printf "    ${GREEN}ok${R}      %-13s ${DIM}%s${R}\n" "$1" "$2"
+        printf "    ${GREEN}ok${R}      %-28s ${DIM}%s${R}\n" "$1" "$2"
     else
-        printf "    ${DIM}–       %-13s %s${R}\n" "$1" "$2"
+        printf "    ${DIM}–       %-28s %s${R}\n" "$1" "$2"
     fi
 }
 
@@ -906,16 +906,16 @@ _optdep_any() {
         fi
     done
     if [ -n "$found" ]; then
-        printf "    ${GREEN}ok${R}      %-13s ${DIM}%s${R}\n" "$label ($found)" "$desc"
+        printf "    ${GREEN}ok${R}      %-28s ${DIM}%s${R}\n" "$label ($found)" "$desc"
     else
-        printf "    ${DIM}–       %-13s %s${R}\n" "$label" "$desc"
+        printf "    ${DIM}–       %-28s %s${R}\n" "$label" "$desc"
     fi
 }
 
 if _qml_module_available Quickshell.Services.Pipewire; then
-    printf "    ${GREEN}ok${R}      %-13s ${DIM}%s${R}\n" "pipewire" "volume + sound popup"
+    printf "    ${GREEN}ok${R}      %-28s ${DIM}%s${R}\n" "pipewire" "volume + sound popup"
 else
-    printf "    ${DIM}–       %-13s %s${R}\n" "pipewire" "volume + sound popup"
+    printf "    ${DIM}–       %-28s %s${R}\n" "pipewire" "volume + sound popup"
 fi
 _optdep fc-list       "font picker + font checks"
 _optdep brightnessctl "brightness control + popup"
@@ -1324,6 +1324,9 @@ fi
 # --startup retains the one-second Wayland-socket grace needed at compositor boot.
 LAUNCH_CMD="exec \"\$(printf '%b' $ROOT_PRINTF_BYTES)/scripts/silere\" run --startup"
 LAUNCH_CMD_LUA="$(_lua_string "$LAUNCH_CMD")"
+# what the installer writes stays byte-encoded; a line printed for someone to copy uses a plain quoted path
+LAUNCH_SHOWN="exec $(_shell_quote "$ROOT/scripts/silere") run --startup"
+LAUNCH_SHOWN_LUA="$(_lua_string "$LAUNCH_SHOWN")"
 
 _already_present() { grep -qF 'silere-shell begin' "$1" 2>/dev/null; }
 
@@ -1350,7 +1353,7 @@ if [ -n "${NIRI_SOCKET:-}" ] || [ "${XDG_CURRENT_DESKTOP:-}" = "niri" ] \
     receipt_autostart="$NIRI_CONFIG"
     if [ ! -f "$NIRI_CONFIG" ]; then
         _warn "no niri config at $(_tilde "$NIRI_CONFIG")"
-        _warn "add manually: $NIRI_SPAWN"
+        _warn "add manually: spawn-at-startup \"sh\" \"-c\" $(_lua_string "$LAUNCH_SHOWN")"
     else
         _ok "found niri config at $(_tilde "$NIRI_CONFIG")"
         if _already_present "$NIRI_CONFIG"; then
@@ -1379,7 +1382,7 @@ if [ -n "${NIRI_SOCKET:-}" ] || [ "${XDG_CURRENT_DESKTOP:-}" = "niri" ] \
             printf '\n// silere-shell begin\n%s\n// silere-shell end\n' "$NIRI_SPAWN" >> "$NIRI_CONFIG"
             _ok "added to $(_tilde "$NIRI_CONFIG")"; did_autostart=true autostart_ready=true
         else
-            _skip "skipped — add manually: $NIRI_SPAWN"
+            _skip "skipped — add manually: spawn-at-startup \"sh\" \"-c\" $(_lua_string "$LAUNCH_SHOWN")"
         fi
     fi
     _autostart_done=true
@@ -1441,7 +1444,7 @@ end)
 EOF
             _ok "added to $(_tilde "$LUA_EXEC_FILE")"; did_autostart=true autostart_ready=true
         else
-            _skip "skipped — add manually: hl.exec_cmd($LAUNCH_CMD_LUA)"
+            _skip "skipped — add manually: hl.exec_cmd($LAUNCH_SHOWN_LUA)"
         fi
     else
         # appending to hyprland.lua itself is not safe: Lua requires `return` to end
@@ -1449,7 +1452,7 @@ EOF
         _warn "Lua config detected but no execs.lua found — looked in:"
         _warn "  $(_tilde "$HYPR_DIR")/{custom,hyprland}/execs.lua and $(_tilde "$HYPR_DIR")/execs.lua"
         _warn "create one of those and re-run, or add manually:"
-        _warn "  hl.on(\"hyprland.start\", function() hl.exec_cmd($LAUNCH_CMD_LUA) end)"
+        _warn "  hl.on(\"hyprland.start\", function() hl.exec_cmd($LAUNCH_SHOWN_LUA) end)"
     fi
 
 elif [[ "$HYPR_CONFIG" == *.conf ]]; then
@@ -1486,12 +1489,12 @@ exec-once = $LAUNCH_CMD
 EOF
             _ok "added"; did_autostart=true autostart_ready=true
         else
-            _skip "skipped — add manually: exec-once = $LAUNCH_CMD"
+            _skip "skipped — add manually: exec-once = $LAUNCH_SHOWN"
         fi
     fi
 else
     _warn "no Hyprland config found"
-    _warn "add manually: exec-once = $LAUNCH_CMD"
+    _warn "add manually: exec-once = $LAUNCH_SHOWN"
 fi
 fi
 

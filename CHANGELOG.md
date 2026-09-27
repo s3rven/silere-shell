@@ -19,6 +19,7 @@ settings file carries its own `__version` and migrates separately.
 
 - Album art on the Home page crossfades to the next cover without dimming halfway through.
 - With night light off after sunset, its row says After sunset instead of Recommended.
+- The installer lines up its optional-tools list, and prints autostart lines to copy by hand with a readable path.
 - `silere` and `silere doctor` color their status words in a terminal, using its own palette; `NO_COLOR` turns this off, as it now does for the installer.
 
 ### Fixed
