@@ -66,8 +66,8 @@ bash scripts/bench.sh 30 --label 0.9.0            # cold
 bash scripts/bench.sh 30 --warm --label 0.9.0     # warm
 ```
 
-The restart is what makes the cold row cold. Without it `bench.sh` reports the state as
-`as-found`.
+`bench.sh` labels any run without `--warm` as `as-found`; the restart is what makes that row
+the cold one.
 
 `--json` writes the same fields plus CPU model, kernel and Quickshell version:
 

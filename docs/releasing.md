@@ -77,7 +77,10 @@ bash scripts/bench.sh 30 --label <version>            # cold row
 bash scripts/bench.sh 30 --warm --label <version>     # warm row
 ```
 
-The restart is what makes the cold row cold; without it `bench.sh` reports `as-found`.
+`bench.sh` labels every run without `--warm` as `as-found`, since it cannot tell a fresh process
+from an old one; the restart is what makes that row the cold one. Check that nothing else is
+busy first (`ps -eo pcpu,comm --sort=-pcpu | head`): another program holding the CPU skews both
+the PSS and the CPU figures.
 
 Both rows go in against the reference machine letter they came from. Hardware not already
 in that table takes a new letter — rows from different machines are not comparable.
