@@ -485,8 +485,15 @@ EOF
 
 pooled_ungated=""
 pooled_unhooked=""
+pooled_animation_count=0
 while IFS= read -r _f; do
   [ -n "$_f" ] && [ -f "$_f" ] || continue
+  _count="$(awk '
+    { line = $0; sub(/\/\/.*/, "", line)
+      if (line ~ /(ColorFade|MotionBehavior|Disclosure)[[:space:]]+on[[:space:]]/) n++ }
+    END { print n + 0 }
+  ' "$_f")"
+  pooled_animation_count=$((pooled_animation_count + _count))
   # buffered, not getline: a getline here consumes the following line and would skip
   # a second animation declared directly beneath the first
   _hits="$(awk '
@@ -494,9 +501,10 @@ while IFS= read -r _f; do
     END {
       for (i = 1; i <= n; i++) {
         line = raw[i]; sub(/\/\/.*/, "", line)
-        if (line !~ /(ColorFade|MotionBehavior)[[:space:]]+on[[:space:]]/) continue
+        if (line !~ /(ColorFade|MotionBehavior|Disclosure)[[:space:]]+on[[:space:]]/) continue
         if (line ~ /gate:/) continue
         nxt = (i < n) ? raw[i + 1] : ""
+        sub(/\/\/.*/, "", nxt)
         if (nxt ~ /gate:/) continue
         print FILENAME ":" i ":" line
       }
@@ -504,7 +512,7 @@ while IFS= read -r _f; do
   ' "$_f" || true)"
   [ -n "$_hits" ] && pooled_ungated="$pooled_ungated$_hits"$'\n'
   # a gate that no pool or reuse ever closes is not a gate
-  if grep -qE '(ColorFade|MotionBehavior)[[:space:]]+on[[:space:]]' "$_f" \
+  if [ "$_count" -gt 0 ] \
      && ! grep -qE 'ListView\.on(Pooled|Reused)' "$_f"; then
     pooled_unhooked="$pooled_unhooked  $_f"$'\n'
   fi
@@ -512,7 +520,9 @@ done <<EOF
 $(_pooled_file_list | sort -u)
 EOF
 
-if [ -n "$pooled_ungated" ] || [ -n "$pooled_unhooked" ]; then
+if [ "$pooled_animation_count" -eq 0 ]; then
+  fail "pooling scan inspected no delegate animations"
+elif [ -n "$pooled_ungated" ] || [ -n "$pooled_unhooked" ]; then
   if [ -n "$pooled_ungated" ]; then
     fail "animations in a pooled delegate must carry a gate closed by onPooled/onReused:"
     printf '%s' "$pooled_ungated"

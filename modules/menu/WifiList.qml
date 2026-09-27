@@ -131,7 +131,7 @@ Item {
 
                 // a pooled row rebinds holding the previous row's values
                 property bool motionReady: true
-                ListView.onPooled: { _settle.stop(); _entry.motionReady = false }
+                ListView.onPooled: { _settle.stop(); _entry.motionReady = false; _pw.focus = false }
                 ListView.onReused: { _entry.motionReady = false; _settle.restart() }
                 Timer { id: _settle; interval: 0; onTriggered: _entry.motionReady = true }
                 Component.onDestruction: _settle.stop()
@@ -149,7 +149,7 @@ Item {
                     if (secret.length > 0) Network.connectWifi(modelData.ssid, secret)
                 }
 
-                on_SelChanged: if (!_sel) _pw.text = ""
+                on_SelChanged: if (!_sel) { _pw.text = ""; _pw.focus = false }
 
                 function _revealField(): void {
                     if (_entry._sel) _list.positionViewAtIndex(_entry.index, ListView.Contain)
@@ -173,6 +173,7 @@ Item {
                         : "Open"
                     selected: _entry.modelData.active
                     highlighted: _entry._sel
+                    motionReady: _entry.motionReady
                     warning: _entry._armed || _entry._forgetArmed
                     failed:  _entry._failed
                     interactive: !_entry._connecting

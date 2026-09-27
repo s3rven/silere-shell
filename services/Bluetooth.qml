@@ -37,7 +37,7 @@ Singleton {
     function deviceLabel(device): string {
         if (!device) return "Unknown"
         return SafeText.singleLineText(
-            device.deviceName || device.name || device.address || "Unknown", 128) || "Unknown"
+            device.name || device.deviceName || device.address || "Unknown", 128) || "Unknown"
     }
 
     // BlueZ can briefly advertise batteryAvailable before the percentage
@@ -116,8 +116,10 @@ Singleton {
             if (!a || !b) return 0
             if (a.connected !== b.connected) return a.connected ? -1 : 1
             if (a.paired !== b.paired)       return a.paired ? -1 : 1
-            const an = (a.deviceName || a.name || "").toLowerCase()
-            const bn = (b.deviceName || b.name || "").toLowerCase()
+            const aNamed = String(a.deviceName || "").length > 0
+            if (aNamed !== (String(b.deviceName || "").length > 0)) return aNamed ? -1 : 1
+            const an = (a.name || a.deviceName || "").toLowerCase()
+            const bn = (b.name || b.deviceName || "").toLowerCase()
             return an < bn ? -1 : (an > bn ? 1 : 0)
         })
         return list
@@ -264,10 +266,31 @@ Singleton {
             root.errorAddr = root._pendingAddr
             root.errorKind = root._pendingKind
         }
+        const pairedAddr = outcome === "ok" && root._pendingKind === "pair" ? root._pendingAddr : ""
         root._endAttempt()
+        if (pairedAddr.length > 0) root._trustAndConnect(pairedAddr)
+    }
+
+    // an untrusted device is refused when it reconnects by itself later
+    function _trustAndConnect(address: string): void {
+        for (let i = 0; i < _devices.length; i++) {
+            const d = _devices[i]
+            if (!d || d.address !== address) continue
+            d.trusted = true
+            if (!d.connected) root.connectDevice(address)
+            return
+        }
     }
 
     property int _guardExtensions: 0
+
+    function _extendAttemptGuard(kind: string, pairing: bool, state: int,
+                                 extensions: int): bool {
+        if (kind === "pair") return pairing && extensions < 8
+        // bluez can outlast one guard interval connecting a paired device; wait while it reports progress
+        return kind === "connect" && state === Bt.BluetoothDeviceState.Connecting
+            && extensions < 2
+    }
 
     // an attempt that never moves the device would otherwise hold the row on its in-progress label forever
     Timer {
@@ -278,8 +301,8 @@ Singleton {
             // a passkey pairing can sit in progress well past 20s; that is not a stalled
             // attempt. Bounded, though: a BlueZ that never clears `pairing` must not hold
             // the row on "Pairing…" with no way out
-            if (root._pendingKind === "pair" && root._pendingPairing
-                    && root._guardExtensions < 8) {
+            if (root._extendAttemptGuard(root._pendingKind, root._pendingPairing,
+                    root._pendingState, root._guardExtensions)) {
                 root._guardExtensions++
                 restart()
                 return
