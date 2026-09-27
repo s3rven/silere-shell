@@ -57,6 +57,22 @@ Singleton {
         )
     }
 
+    // a tray app steps once per Scroll call, so a touchpad's stream of small deltas has to arrive as whole notches
+    function processTrayWheel(event, key: string): var {
+        if (!event) return { steps: 0, horizontal: false }
+        const touchpad = _isTouchpad(event)
+        const axes = _wheelAxes(event, touchpad)
+        const horizontal = Math.abs(axes.x) > Math.abs(axes.y)
+        return {
+            steps: _processDelta(
+                horizontal ? axes.x : axes.y, key + (horizontal ? ":h" : ":v"),
+                touchpad ? controlTouchpadNotch : notch,
+                touchpad ? 1 : 2,
+                touchpad ? controlTouchpadMinStepMs : 0),
+            horizontal: horizontal
+        }
+    }
+
     function _processDelta(deltaY: real, key: string, threshold: real, maxSteps: int, minStepMs: int): int {
         if (!deltaY) return 0
         const now = Date.now()

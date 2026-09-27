@@ -2153,6 +2153,15 @@ ShellRoot {
                 && Scroll.processLevelWheel(notchUp(true), "probe-level-b") === -1
                 && Scroll.processControlWheel(notchUp(true), "probe-level-c") === 1,
             "natural scrolling flips a level control but not content navigation")
+        const pad = (x, y) => ({ angleDelta: { x: x, y: y }, pixelDelta: { x: x / 8, y: y / 8 },
+            device: { type: PointerDevice.TouchPad } })
+        let padSteps = 0
+        for (let i = 0; i < 12; i++) padSteps += Scroll.processTrayWheel(pad(0, 12), "probe-tray-a").steps
+        const trayNotch = Scroll.processTrayWheel(notchUp(false), "probe-tray-b")
+        const trayLeft = Scroll.processTrayWheel({ angleDelta: { x: -120, y: 0 } }, "probe-tray-c")
+        root._check(padSteps === 1 && trayNotch.steps === 1 && !trayNotch.horizontal
+                && trayLeft.steps === -1 && trayLeft.horizontal,
+            "a touchpad flick reaches a tray app as one step, not one call per event")
 
         SystemTools._tools = toolsWas
         SystemTools.packageFamily = familyWas

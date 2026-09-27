@@ -13,6 +13,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- Scrolling over a tray icon with a touchpad sends the app whole steps instead of one per touchpad event.
 - `silere log` prints plain text when piped or saved to a file, without terminal color codes.
 
 ## Releases

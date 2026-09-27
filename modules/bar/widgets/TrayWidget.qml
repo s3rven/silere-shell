@@ -240,9 +240,8 @@ Item {
                     }
                     onWheel: (wheel) => {
                         wheel.accepted = true
-                        const horizontal = Math.abs(wheel.angleDelta.x) > Math.abs(wheel.angleDelta.y)
-                        const delta = horizontal ? wheel.angleDelta.x : wheel.angleDelta.y
-                        if (delta !== 0) _tile.modelData.scroll(delta, horizontal)
+                        const r = Scroll.processTrayWheel(wheel, "tray:" + _tile.modelData.id)
+                        if (r.steps !== 0) _tile.modelData.scroll(r.steps * Scroll.notch, r.horizontal)
                     }
                 }
 
