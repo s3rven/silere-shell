@@ -296,6 +296,7 @@ case "$command_name" in
         fi
         color=()
         [ -t 1 ] || color=(--no-color)
+        restore_locale
         exec qs log "${color[@]}" -p "$ROOT/shell.qml" "${follow[@]}"
         ;;
     status)
@@ -336,6 +337,8 @@ case "$command_name" in
         ;;
     ipc)
         command -v qs >/dev/null 2>&1 || die "qs (Quickshell) is not installed"
+        # under this script's LC_ALL=C, Qt prints a locale warning ahead of every answer
+        restore_locale
         if [ "$#" -eq 0 ] || { [ "$1" = show ] && [ "$#" -eq 1 ]; }; then
             exec qs ipc -p "$ROOT/shell.qml" show
         fi

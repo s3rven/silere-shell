@@ -27,6 +27,7 @@ settings file carries its own `__version` and migrates separately.
 - Opening or closing a tray submenu tells the app once, not twice.
 - Notifications sent with `notify-send -i` show their icon instead of a letter, whether the icon is a theme name or a file in the system icon folders.
 - `silere log` prints plain text when piped or saved to a file, without terminal color codes.
+- `silere ipc` and `silere log` no longer print Qt's locale warning above their output in a terminal.
 - Run from a terminal, `silere doctor` reads the Quickshell version instead of warning it could not, and `silere update` no longer refuses a release because of it.
 
 ## Releases
