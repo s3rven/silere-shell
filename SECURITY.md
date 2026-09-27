@@ -24,9 +24,9 @@ no network listener, and no privileged helper. What's in scope:
 Out of scope: Quickshell, the compositor, and anything requiring an attacker who
 already runs code as the user.
 
-Notification images accept Quickshell's in-memory image provider, but not a filesystem
-path supplied by the sender. Application icon names still resolve through the installed
-icon theme.
+Notification icons and images accept Quickshell's in-memory image provider, icon names
+from the installed icon theme, and files inside the system icon directories, which only
+root can write to. Any other filesystem path supplied by the sender is refused.
 
 ## Update trust
 

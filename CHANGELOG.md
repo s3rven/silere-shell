@@ -15,6 +15,7 @@ settings file carries its own `__version` and migrates separately.
 
 - Scrolling over a tray icon with a touchpad sends the app whole steps instead of one per touchpad event.
 - Opening or closing a tray submenu tells the app once, not twice.
+- Notifications sent with `notify-send -i` show their icon instead of a letter, whether the icon is a theme name or a file in the system icon folders.
 - `silere log` prints plain text when piped or saved to a file, without terminal color codes.
 
 ## Releases

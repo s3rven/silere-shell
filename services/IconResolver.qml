@@ -91,16 +91,41 @@ Singleton {
     }
 
     function senderImageSource(raw): string {
-        const source = root.localSource(raw)
+        const value = String(raw ?? "").trim()
+        if (value.length > root.maxSourceChars) return ""
+        if (value.startsWith("/") || /^file:/i.test(value)) return root._systemIconFile(value)
+        // notify-send sends -i as the image-path hint, which quickshell rewrites to image://icon/<value>
+        const hinted = /^image:(?:\/\/)?icon\/([^?]*)$/i.exec(value)
+        if (hinted) {
+            const name = hinted[1]
+            if (name.startsWith("/")) return root._systemIconFile(name)
+            return name.length > 0 && name.indexOf("/") < 0 ? root.iconSource(name) : ""
+        }
+        const source = root.localSource(value)
         if (source.startsWith("qrc:")) return source
         return root._imageScheme.test(source) && root._isSafeImageProvider(source) ? source : ""
     }
 
+    // only root can create files here, so a sender cannot plant a fifo or device node behind an icon path
+    readonly property var _systemIconRoots: ["/usr/share/icons/", "/usr/share/pixmaps/",
+        "/usr/local/share/icons/", "/usr/local/share/pixmaps/", "/var/lib/flatpak/exports/share/icons/"]
+
+    function _systemIconFile(value: string): string {
+        let path = value
+        if (/^file:/i.test(path)) {
+            if (!/^file:\/\/\//i.test(path) || /^file:\/\/\/\//i.test(path)) return ""
+            try { path = decodeURIComponent(path.slice(7)) } catch (e) { return "" }
+        }
+        if (("/" + path + "/").indexOf("/../") >= 0 || ("/" + path + "/").indexOf("/./") >= 0) return ""
+        return root._systemIconRoots.some(prefix => path.startsWith(prefix)) ? root._fileUrl(path) : ""
+    }
+
     function senderIconSource(raw): string {
         const value = String(raw ?? "").trim()
-        if (value.startsWith("/")) return ""
+        if (value.length > root.maxSourceChars) return ""
+        if (value.startsWith("/")) return root._systemIconFile(value)
         const match = root._scheme.exec(value)
-        if (match && match[1].toLowerCase() === "file") return ""
+        if (match && match[1].toLowerCase() === "file") return root._systemIconFile(value)
         return root.iconSource(value)
     }
 
