@@ -11,8 +11,17 @@ ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$ROOT/scripts/lib/xdg.sh"
 source "$ROOT/scripts/lib/unit.sh"
 source "$ROOT/scripts/lib/completions.sh"
+source "$ROOT/scripts/lib/ui.sh"
 
 usage() {
+    # bold the command column when colors are on; the text itself stays plain
+    _usage_text | awk -v b="$BOLD" -v r="$R" '
+        /^Usage:/ { print b $0 r; next }
+        /^  [^ ]/ { printf "  %s%s%s%s\n", b, substr($0, 3, 23), r, substr($0, 26); next }
+        { print }'
+}
+
+_usage_text() {
     cat <<'EOF'
 Usage: silere <command> [options]
 
@@ -37,7 +46,7 @@ EOF
 }
 
 die() {
-    printf 'silere: %s\n' "$*" >&2
+    printf '%ssilere:%s %s\n' "$RED" "$R" "$*" >&2
     exit 1
 }
 
@@ -142,9 +151,9 @@ restart_shell() {
         pid="$(await_shell "$old_pid")" || die "the shell did not start; run silere run to see why"
     fi
     if [ -n "$old_pid" ]; then
-        printf 'Silere restarted (pid %s)\n' "$pid"
+        printf '%sSilere restarted%s (pid %s)\n' "$GREEN" "$R" "$pid"
     else
-        printf 'Silere started (pid %s)\n' "$pid"
+        printf '%sSilere started%s (pid %s)\n' "$GREEN" "$R" "$pid"
     fi
 }
 
@@ -154,11 +163,11 @@ link_completions() {
         if [ -L "$dest" ] && [ "$(readlink -f -- "$dest" 2>/dev/null || true)" = "$src" ]; then
             continue
         elif [ -e "$dest" ] || [ -L "$dest" ]; then
-            printf 'note: %s already exists; left it alone\n' "$dest"
+            printf '%snote:%s %s already exists; left it alone\n' "$YELLOW" "$R" "$dest"
         elif (umask 077 && mkdir -p -- "${dest%/*}") && ln -s -- "$src" "$dest"; then
             printf 'linked %s\n' "$dest"
         else
-            printf 'note: could not link %s\n' "$dest" >&2
+            printf '%snote:%s could not link %s\n' "$YELLOW" "$R" "$dest" >&2
         fi
     done < <(_silere_completion_links "$ROOT")
 }
@@ -191,14 +200,14 @@ print_update_status() {
     target="$(sed -n '2p' "$flag" 2>/dev/null || true)"
     if [[ "$count" =~ ^[0-9]{1,6}$ ]] \
             && [[ "$target" =~ ^target\ ([0-9a-f]{40}|[0-9a-f]{64})\ (v[0-9]+\.[0-9]+\.[0-9]+)\ verified$ ]]; then
-        printf 'Update: %s ready (%s commit%s, signature verified)\n' \
-            "${BASH_REMATCH[2]}" "$count" "$([ "$count" = 1 ] || printf s)"
+        printf 'Update: %s%s ready%s (%s commit%s, signature verified)\n' "$GREEN" \
+            "${BASH_REMATCH[2]}" "$R" "$count" "$([ "$count" = 1 ] || printf s)"
         return
     fi
     error="$(sed -n '2p' "$cache_dir/update-error" 2>/dev/null \
         | LC_ALL=C tr -d '\001-\037\177' | cut -c 1-512 || true)"
     if [ -n "$error" ]; then
-        printf 'Update: last check failed — %s\n' "$error"
+        printf 'Update: %slast check failed%s — %s\n' "$RED" "$R" "$error"
     elif [ -s "$cache_dir/update-checked" ]; then
         printf 'Update: no pending release from the last check\n'
     else
@@ -210,12 +219,12 @@ print_transaction_status() {
     local out phase tag
     if ! out="$(bash "$ROOT/scripts/update.sh" --transaction-status 2>/dev/null)"; then
         if printf '%s\n' "$out" | grep -q '^pending=1$'; then
-            printf 'Update transaction: recovery state is damaged; run silere doctor\n'
+            printf 'Update transaction: %srecovery state is damaged%s; run silere doctor\n' "$RED" "$R"
         fi
         return 0
     fi
     if printf '%s\n' "$out" | grep -q '^quarantined=1$'; then
-        printf 'Update transaction: damaged recovery state was preserved; run silere doctor\n'
+        printf 'Update transaction: %sdamaged recovery state was preserved%s; run silere doctor\n' "$YELLOW" "$R"
         return 0
     fi
     printf '%s\n' "$out" | grep -q '^pending=1$' || return 0
@@ -235,13 +244,13 @@ human_version() {
     packaged="$(printf '%s\n' "$out" | sed -n 's/^packaged=//p')"
     version="$(printf '%s\n' "$out" | sed -n 's/^version=//p')"
     if [ "$packaged" = 1 ]; then
-        printf 'Silere Shell %s (managed by %s)\n' "${version:-package build}" "$(package_manager)"
+        printf '%sSilere Shell %s%s (managed by %s)\n' "$BOLD" "${version:-package build}" "$R" "$(package_manager)"
         return 0
     fi
     tag="$(printf '%s\n' "$out" | sed -n 's/^tag=//p')"
     sha="$(printf '%s\n' "$out" | sed -n 's/^sha=//p')"
     ahead="$(printf '%s\n' "$out" | sed -n 's/^ahead=//p')"
-    printf 'Silere Shell %s%s%s\n' "${tag:-#$sha}" \
+    printf '%sSilere Shell %s%s%s%s\n' "$BOLD" "${tag:-#$sha}" "$R" \
         "$([ "${ahead:-0}" -gt 0 ] 2>/dev/null && printf ' +%s' "$ahead")" \
         "$([ -n "$sha" ] && printf ' (#%s)' "$sha")"
 }
@@ -294,9 +303,9 @@ case "$command_name" in
         info="$(version_info)" || die "could not read updater state"
         human_version
         if shell_pid="$(running_pid)"; then
-            printf 'Shell: running (pid %s)\n' "$shell_pid"
+            printf 'Shell: %srunning%s (pid %s)\n' "$GREEN" "$R" "$shell_pid"
         else
-            printf 'Shell: not running\n'
+            printf 'Shell: %snot running%s\n' "$RED" "$R"
         fi
         if printf '%s\n' "$info" | grep -q '^packaged=1$'; then
             printf 'Updates: managed by %s; Silere self-update is disabled\n' "$(package_manager)"
@@ -375,7 +384,7 @@ case "$command_name" in
         link_completions
         case ":$PATH:" in
             *":$link_dir:"*) ;;
-            *) printf 'note: %s is not on your PATH; add it in your shell config\n' "$link_dir" ;;
+            *) printf '%snote:%s %s is not on your PATH; add it in your shell config\n' "$YELLOW" "$R" "$link_dir" ;;
         esac
         ;;
     uninstall)
@@ -388,7 +397,7 @@ case "$command_name" in
         exec bash "$ROOT/scripts/uninstall.sh"
         ;;
     *)
-        printf 'silere: unknown command: %s\n' "$command_name" >&2
+        printf '%ssilere:%s unknown command: %s\n' "$RED" "$R" "$command_name" >&2
         usage >&2
         exit 2
         ;;

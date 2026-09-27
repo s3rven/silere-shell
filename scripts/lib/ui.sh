@@ -1,9 +1,10 @@
 # shellcheck shell=bash
-# Shared by install.sh and uninstall.sh: one set of status lines and one TTY test.
+# Shared by install.sh, uninstall.sh, doctor.sh and silere: one set of status lines and one
+# TTY test. Colors are the terminal's own ANSI palette, off when piped or NO_COLOR is set.
 
-if [ -t 1 ]; then
-    R='\033[0m' BOLD='\033[1m'
-    GREEN='\033[0;32m' CYAN='\033[0;36m' YELLOW='\033[1;33m' DIM='\033[2m' RED='\033[0;31m'
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+    R=$'\033[0m' BOLD=$'\033[1m'
+    GREEN=$'\033[0;32m' CYAN=$'\033[0;36m' YELLOW=$'\033[1;33m' DIM=$'\033[2m' RED=$'\033[0;31m'
 else
     R='' BOLD='' GREEN='' CYAN='' YELLOW='' DIM='' RED=''
 fi

@@ -7,6 +7,7 @@ export LC_ALL=C
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT/scripts/lib/xdg.sh"
 source "$ROOT/scripts/lib/qml-modules.sh"
+source "$ROOT/scripts/lib/ui.sh"
 
 if [ "$#" -gt 0 ]; then
     if [ "$#" -eq 1 ] && [[ "$1" = -h || "$1" = --help ]]; then
@@ -25,12 +26,12 @@ missing_packages=()
 section() {
     [ "$seen_section" -eq 0 ] || printf '\n'
     seen_section=1
-    printf '== %s ==\n' "$1"
+    printf '%s== %s ==%s\n' "$BOLD" "$1" "$R"
 }
-ok()   { printf 'ok   %-18s %s\n' "$1" "$2"; }
+ok()   { printf '%sok%s   %-18s %s\n' "$GREEN" "$R" "$1" "$2"; }
 info() { printf '     %-18s %s\n' "$1" "$2"; }
-warn() { printf 'warn %-18s %s\n' "$1" "$2"; }
-fail() { printf 'fail %-18s %s\n' "$1" "$2" >&2; status=1; }
+warn() { printf '%swarn%s %-18s %s\n' "$YELLOW" "$R" "$1" "$2"; }
+fail() { printf '%sfail%s %-18s %s\n' "$RED" "$R" "$1" "$2" >&2; status=1; }
 
 _package_family() {
     local id="" like=""
@@ -392,11 +393,11 @@ fi
 
 printf '\n'
 if [ "$status" -ne 0 ]; then
-    printf 'Silere has required components that need attention.\n'
+    printf '%sSilere has required components that need attention.%s\n' "$RED" "$R"
 elif [ "$optional_missing" -gt 0 ]; then
-    printf 'Silere is usable; %d optional feature%s unavailable.\n' \
+    printf '%sSilere is usable%s; %d optional feature%s unavailable.\n' "$GREEN" "$R" \
         "$optional_missing" "$([ "$optional_missing" -eq 1 ] || printf s)"
 else
-    printf 'Silere is ready.\n'
+    printf '%sSilere is ready.%s\n' "$GREEN" "$R"
 fi
 exit "$status"

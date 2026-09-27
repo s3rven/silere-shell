@@ -15,6 +15,10 @@ settings file carries its own `__version` and migrates separately.
 
 - Log out in the power menu, confirmed with a second press like Reboot and Power off.
 
+### Changed
+
+- `silere` and `silere doctor` color their status words in a terminal, using its own palette; `NO_COLOR` turns this off, as it now does for the installer.
+
 ### Fixed
 
 - Scrolling over a tray icon with a touchpad sends the app whole steps instead of one per touchpad event.
