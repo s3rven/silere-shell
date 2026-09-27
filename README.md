@@ -24,7 +24,7 @@ Silere gives you a bar, notifications, an OSD, a calendar, a tray and a menu tha
 quick controls and every setting, all running in one Quickshell process. It's built to
 cost almost nothing while you're not using it:
 
-- It uses about 82 MB of memory with only the bar drawn, and about 93 MB once the menu
+- It uses about 88 MB of memory with only the bar drawn, and about 95 MB once the menu
   has been opened ([how that's measured](#performance)).
 - It idles at well under 1% of one CPU core. After 10 minutes without input, it also
   pauses its periodic readings and checks; the clock keeps updating once a minute.
@@ -197,10 +197,10 @@ Memory, measured as proportional set size (PSS) on the reference machine:
 | state | memory |
 |---|---|
 | an empty Quickshell panel, for comparison | ~57 MB |
-| Silere, before the menu is first opened | ~82 MB |
-| Silere, after the menu has opened once | ~93 MB |
+| Silere, before the menu is first opened | ~88 MB |
+| Silere, after the menu has opened once | ~95 MB |
 
-`top` and `htop` show resident memory (RSS) instead, about 180 to 195 MB for the same
+`top` and `htop` show resident memory (RSS) instead, about 175 to 195 MB for the same
 session, because RSS counts shared Qt and GPU driver pages in full. The first time the menu
 opens, it loads code and caches that stay in memory, so the number rises once and then
 holds.
