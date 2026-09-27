@@ -17,6 +17,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Changed
 
+- Album art on the Home page crossfades to the next cover without dimming halfway through.
 - `silere` and `silere doctor` color their status words in a terminal, using its own palette; `NO_COLOR` turns this off, as it now does for the installer.
 
 ### Fixed

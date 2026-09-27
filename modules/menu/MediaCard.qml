@@ -38,7 +38,7 @@ ClippingRectangle {
         _mediaCol.settleText()
         if (_artIn.running) _artIn.complete()
         if (_artInScale.running) _artInScale.complete()
-        if (_artOut.running) _artOut.complete()
+        _art._dropFading()
     }
 
     OutlineBorder {
@@ -89,7 +89,7 @@ ClippingRectangle {
             _pendingLayer = null
             _artRetry.stop()
             if (!url || url.length === 0) {
-                _artIn.stop(); _artInScale.stop(); _artOut.stop()
+                _artIn.stop(); _artInScale.stop(); _fading = null
                 _artA.opacity = 0; _artA.scale = 1.0; _artA.source = ""
                 _artB.opacity = 0; _artB.scale = 1.0; _artB.source = ""
                 return
@@ -139,15 +139,31 @@ ClippingRectangle {
             _retries = 0
             _useA = isA
             const outgoing = isA ? _artB : _artA
+            // a layer coming back mid-swap still carries the binding that faded it, and animations leave bindings in place
+            _artIn.stop(); _artInScale.stop()
+            img.opacity = img.opacity
+            _fading = null
             if (!root._motionAllowed()) {
                 img.scale = 1.0; img.opacity = maxAlpha; outgoing.opacity = 0
                 _releaseLayer(outgoing)
                 return
             }
             img.scale = 1.06
+            img.z = 1; outgoing.z = 0
+            // both layers are translucent, so fading them against each other let the card show
+            // through mid-swap; the outgoing cover yields only as fast as the incoming one covers it
+            const a0 = img.opacity, bg = (1 - a0) * (1 - outgoing.opacity)
+            outgoing.opacity = Qt.binding(() => Math.max(0, 1 - bg / Math.max(0.001, 1 - img.opacity)))
+            _fading = outgoing
             _artIn.target = img;      _artIn.restart()
             _artInScale.target = img; _artInScale.restart()
-            _artOut.target = outgoing; _artOut.to = 0; _artOut.restart()
+        }
+
+        property var _fading: null
+        function _dropFading(): void {
+            const layer = _fading
+            _fading = null
+            if (layer) _releaseLayer(layer)
         }
 
         Connections { target: Media; function onStableArtUrlChanged() { _art._apply() } }
@@ -181,15 +197,12 @@ ClippingRectangle {
             onStatusChanged: status === Image.Error ? _art._failed(_artB) : _art._promote(_artB, false)
         }
 
-        NumberAnimation { id: _artIn;      property: "opacity"; to: _art.maxAlpha; duration: Motion.ms(380); easing.type: Easing.OutCubic }
-        NumberAnimation { id: _artInScale; property: "scale";   to: 1.0;           duration: Motion.ms(520); easing.type: Easing.OutCubic }
         NumberAnimation {
-            id: _artOut
-            property: "opacity"
-            duration: Motion.ms(300)
-            easing.type: Easing.OutCubic
-            onFinished: _art._releaseLayer(_artOut.target)
+            id: _artIn
+            property: "opacity"; to: _art.maxAlpha; duration: Motion.ms(380); easing.type: Easing.OutCubic
+            onFinished: _art._dropFading()
         }
+        NumberAnimation { id: _artInScale; property: "scale";   to: 1.0;           duration: Motion.ms(520); easing.type: Easing.OutCubic }
     }
 
     Rectangle {
