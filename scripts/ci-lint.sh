@@ -396,7 +396,7 @@ if ! awk '
 ' services/CompositorNiri.qml; then
   fail "Niri EventStream request must flush the socket write"
 elif ! grep -qF 'id: _reconnect' services/CompositorNiri.qml \
-    || ! grep -qF 'running: !_socket.connected' services/CompositorNiri.qml; then
+    || ! grep -qE 'running: .*![[:space:]]*_socket\.connected' services/CompositorNiri.qml; then
   fail "Niri socket must retry after a dropped connection"
 else
   ok "niri socket" "event stream flushes and reconnects"

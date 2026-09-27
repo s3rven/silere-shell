@@ -1960,6 +1960,16 @@ ShellRoot {
         root._check(niri._titleSyncTimer.running
                 && !niri._backgroundTitleSyncTimer.running,
             "the focused niri title keeps the responsive title path")
+        ShellSettings.showWindowTitle = false
+        const titleBeforeAction = niri.toplevels[0].title
+        const actionTitleEvent = Object.assign({}, niri._winRaw[0],
+            { title: "new media title" })
+        niri._onLine(JSON.stringify({ WindowOpenedOrChanged: { window: actionTitleEvent } }))
+        root._check(niri.toplevels[0].title === titleBeforeAction,
+            "a hidden niri title does not rebuild the window list on each event")
+        niri.refreshToplevels()
+        root._check(niri.toplevels[0].title === "new media title",
+            "a window action refreshes the latest niri title on demand")
         ShellSettings.showWindowTitle = titleSettingWas
 
         // niri idx values are per-output, so both monitors carry an idx 1 and every
@@ -2266,6 +2276,11 @@ ShellRoot {
             { id: 3, output: "HDMI-A-1", is_active: true, is_focused: false }
         ]
         const wsActivated = NiriEvents.workspacesWithActivated(wsRows, 2, true)
+        const wsChurn = wsRows.map(w => Object.assign({}, w, { name: "renamed" }))
+        root._check(NiriEvents.focusedWorkspaceChangeOutput(wsRows, wsChurn) === null
+                && NiriEvents.focusedWorkspaceChangeOutput(wsRows,
+                    wsActivated.workspaces) === "DP-1",
+            "niri workspace-list churn emits activation only when focused workspace changes")
         root._check(wsActivated.output === "DP-1"
                 && !wsActivated.workspaces[0].is_active
                 && wsActivated.workspaces[1].is_active

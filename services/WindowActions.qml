@@ -19,6 +19,7 @@ Singleton {
     readonly property int _parentPidCacheLimit: 128
 
     function _clients(): var {
+        if (Compositor.isNiri) Compositor.refreshToplevels()
         return Compositor.toplevels || []
     }
 

@@ -38,7 +38,8 @@ Singleton {
     readonly property int focusedWorkspaceRef: _be ? _be.focusedWorkspaceRef : -1
     readonly property bool overviewActive:    _be ? _be.overviewActive : false
     readonly property var specialOutputs:     _be ? _be.specialOutputs : []
-    readonly property bool activeFullscreen:  !!(activeToplevel && activeToplevel.fullscreen)
+    readonly property bool activeFullscreen: isNiri ? !!(_be && _be.activeFullscreen)
+        : !!(activeToplevel && activeToplevel.fullscreen)
 
     signal workspaceActivated(string output)
     signal overviewRaw(bool open)

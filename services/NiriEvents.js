@@ -3,6 +3,16 @@
 // Every transform rebuilds the list it is given rather than mutating it: the models are
 // read through bindings, and an in-place edit updates no consumer.
 
+function focusedWorkspaceChangeOutput(previous, next) {
+    let oldId = null
+    for (let i = 0; i < previous.length; i++)
+        if (previous[i] && previous[i].is_focused) { oldId = previous[i].id; break }
+    for (let i = 0; i < next.length; i++)
+        if (next[i] && next[i].is_focused)
+            return next[i].id === oldId ? null : (next[i].output ?? "")
+    return null
+}
+
 function workspacesWithActivated(src, id, focused) {
     let output = ""
     for (let i = 0; i < src.length; i++)

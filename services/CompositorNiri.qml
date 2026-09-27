@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Wayland
 import "NiriEvents.js" as NiriEvents
 
 QtObject {
@@ -70,6 +71,9 @@ QtObject {
     }
 
     function refreshToplevels(): void {
+        // window actions match on titles; flush the title events a hidden title widget left coalesced
+        root._titleTick++
+        root._activeTitleTick++
     }
 
     function _action(args): void {
@@ -183,8 +187,7 @@ QtObject {
                 focused: !!w.is_focused,
                 focusRank: w.focus_timestamp
                     ? -(Number(w.focus_timestamp.secs ?? 0) + Number(w.focus_timestamp.nanos ?? 0) / 1e9)
-                    : 9999,
-                fullscreen: !!w.is_fullscreen
+                    : 9999
             })
         }
         return out
@@ -216,9 +219,16 @@ QtObject {
             focusRank: focused.focus_timestamp
                 ? -(Number(focused.focus_timestamp.secs ?? 0)
                     + Number(focused.focus_timestamp.nanos ?? 0) / 1e9)
-                : 9999,
-            fullscreen: !!focused.is_fullscreen
+                : 9999
         }
+    }
+
+    // niri's IPC has no fullscreen field; foreign-toplevel carries it, activated only on the focused window
+    readonly property bool activeFullscreen: {
+        const list = ToplevelManager.toplevels.values
+        for (let i = 0; i < list.length; i++)
+            if (list[i] && list[i].activated && list[i].fullscreen) return true
+        return false
     }
 
     readonly property string focusedMonitor: {
@@ -243,7 +253,6 @@ QtObject {
             || previous.pid !== next.pid
             || previous.workspace_id !== next.workspace_id
             || previous.is_focused !== next.is_focused
-            || previous.is_fullscreen !== next.is_fullscreen
             || oldStamp.secs !== newStamp.secs
             || oldStamp.nanos !== newStamp.nanos
     }
@@ -258,7 +267,6 @@ QtObject {
             pid: raw.pid ?? -1,
             workspace_id: raw.workspace_id,
             is_focused: !!raw.is_focused,
-            is_fullscreen: !!raw.is_fullscreen,
             focus_timestamp: raw.focus_timestamp ? {
                 secs: Number(stamp.secs ?? 0),
                 nanos: Number(stamp.nanos ?? 0)
@@ -303,8 +311,10 @@ QtObject {
         try { ev = JSON.parse(text) } catch (e) { return }
 
         if (ev.WorkspacesChanged) {
-            root._wsRaw = ev.WorkspacesChanged.workspaces || []
-            root.workspaceActivated(root.focusedMonitor)
+            const next = ev.WorkspacesChanged.workspaces || []
+            const changedOutput = NiriEvents.focusedWorkspaceChangeOutput(root._wsRaw, next)
+            root._wsRaw = next
+            if (changedOutput !== null) root.workspaceActivated(changedOutput)
             return
         }
         if (ev.WorkspaceActivated) {
@@ -350,12 +360,16 @@ QtObject {
     // Socket.connected is both the current state and the connect request. A
     // compositor restart drops it to false, so retry until the replacement
     // niri socket accepts the event stream again.
+    property int _reconnectFailures: 0
     property Timer _reconnectTimer: Timer {
         id: _reconnect
-        interval: 1500
+        interval: Math.min(30000, 1500 * Math.pow(2, root._reconnectFailures))
         repeat: true
-        running: !_socket.connected
-        onTriggered: _socket.connected = true
+        running: root.socketPath.length > 0 && !_socket.connected
+        onTriggered: {
+            root._reconnectFailures = Math.min(5, root._reconnectFailures + 1)
+            _socket.connected = true
+        }
     }
 
     property Socket _eventSocket: Socket {
@@ -369,6 +383,7 @@ QtObject {
         Component.onCompleted: connected = true
         onConnectedChanged: {
             if (connected) {
+                root._reconnectFailures = 0
                 write("\"EventStream\"\n")
                 flush()
             } else {
