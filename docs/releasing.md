@@ -22,7 +22,9 @@ both, and the release workflow rejects a version/tag mismatch. On `main`, the ne
 planned version may carry the `-dev` suffix.
 
 Bump `pkgver` in `packaging/aur/PKGBUILD` and `.SRCINFO` to the new version too. Lint fails
-once a tag is newer than the `pkgver` it finds.
+once a tag is newer than the `pkgver` it finds, and the release workflow runs lint on the tagged
+commit, so tag the commit that carries the bump. A tag on the release commit before it fails
+the release and publishes nothing.
 
 Repository rules should also restrict creation and deletion of matching `v*`
 tags — signature checks complement access control rather than replacing it.
