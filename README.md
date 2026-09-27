@@ -37,6 +37,10 @@ cost almost nothing while you're not using it:
 
 ## Features
 
+<details>
+<summary>Bar, menu, notifications, OSD, calendar, night light, theming and more</summary>
+
+
 - The bar can show workspaces, the focused window's title, what's playing, network,
   Bluetooth, volume, microphone, brightness, battery, the clock, the tray, and badges for
   package and Silere updates. It sits on the top or bottom edge, docked or floating, and
@@ -62,6 +66,8 @@ cost almost nothing while you're not using it:
 - Settings include high contrast, reduced motion and interface scaling.
 - With several screens, each one can have a bar or not, and notifications and the OSD
   either follow focus or stay on the screen you pick.
+
+</details>
 
 Silere doesn't include a launcher, dock, lock screen, wallpaper setter or clipboard
 history, so keep the ones you already use. The lock button runs hyprlock, swaylock,
