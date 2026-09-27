@@ -17,11 +17,6 @@ PanelWindow {
     readonly property int menuWidth: 220
 
     property var _activeMenu: null
-    property bool _rootOpenedSent: false
-
-    function _menuRoot(): var {
-        return win._activeMenu?.menu ?? win._activeMenu
-    }
     function _emitMenuSignal(entry, signalName: string, fallbackName: string): bool {
         if (entry === null || entry === undefined) return false
         try {
@@ -44,25 +39,8 @@ PanelWindow {
         console.warn("silere-shell: tray menu entry has no", signalName, "signal")
         return false
     }
-    function _sendRootOpened(): void {
-        if (_rootOpenedSent || !TrayMenuState.open) return
-        if (_emitMenuSignal(_menuRoot(), "opened", "sendOpened"))
-            _rootOpenedSent = true
-    }
-    function _sendRootClosed(): void {
-        if (!_rootOpenedSent) return
-        _emitMenuSignal(_menuRoot(), "closed", "sendClosed")
-        _rootOpenedSent = false
-    }
     function _setActiveMenu(handle): void {
-        if (win._activeMenu === handle) {
-            // a quick close/reopen reuses the handle: same object identity, but the previous close already cleared the sent flag
-            if (handle !== null) win._sendRootOpened()
-            return
-        }
-        win._sendRootClosed()
         win._activeMenu = handle
-        win._sendRootOpened()
     }
     function _closeFlyouts(): void {
         const kids = win.contentItem.children
@@ -70,6 +48,15 @@ PanelWindow {
             const k = kids[i]
             if (k && k.opened === true) k.opened = false
         }
+    }
+    function _closeFlyoutBranch(flyout): void {
+        const kids = win.contentItem.children
+        for (let i = 0; i < kids.length; i++) {
+            const k = kids[i]
+            if (k && k.parentFlyout === flyout && k.opened === true)
+                win._closeFlyoutBranch(k)
+        }
+        flyout.opened = false
     }
 
     onVisibleChanged: if (!visible) win._setActiveMenu(null)
@@ -116,16 +103,13 @@ PanelWindow {
         function onOpenChanged() {
             if (!TrayMenuState.open) {
                 win._closeFlyouts()
-                win._sendRootClosed()
-            } else {
-                win._sendRootOpened()
             }
         }
     }
 
     QsMenuOpener {
         id: _opener
-        menu: win._menuRoot()
+        menu: win._activeMenu
     }
 
     Item { id: _fillArea; anchors.fill: parent }
@@ -138,8 +122,9 @@ PanelWindow {
         for (let i = 0; i < kids.length; i++) {
             const k = kids[i]
             if (!k || k.opened !== true || !k.visible) continue
-            if (p.x >= k.x && p.x <= k.x + k.width &&
-                p.y >= k.y && p.y <= k.y + k.height) return true
+            const local = k.mapFromItem(win.contentItem, p.x, p.y)
+            if (local.x >= 0 && local.x <= k.width &&
+                local.y >= 0 && local.y <= k.height) return true
         }
         return false
     }
@@ -170,9 +155,12 @@ PanelWindow {
             property int menuDepth: 0
 
             readonly property bool sep:       modelData?.isSeparator ?? false
-            readonly property bool on:        (modelData?.enabled ?? true) && !sep
-            readonly property bool sub:       (modelData?.hasChildren ?? false)
+            readonly property bool hasChildMenu: modelData?.hasChildren ?? false
+            readonly property bool sub:       hasChildMenu
                 && menuDepth < 8
+            // a branch past the depth cap renders nothing, so its row must never send a leaf click
+            readonly property bool on:        (modelData?.enabled ?? true) && !sep
+                && (!hasChildMenu || sub)
             readonly property int  btnType:   modelData?.buttonType ?? 0
             readonly property bool checkable: btnType !== 0
             readonly property bool checked:   (modelData?.checkState ?? Qt.Unchecked) === Qt.Checked
@@ -183,7 +171,7 @@ PanelWindow {
             height: sep ? 11 : 32
 
             function closeFlyout(): void {
-                if (_flyout.opened) _flyout.opened = false
+                if (_flyout.opened) win._closeFlyoutBranch(_flyout)
             }
             function _openFlyout(): void {
                 if (!_entry.sub || _flyout.opened) return
@@ -202,7 +190,8 @@ PanelWindow {
             }
             QsMenuOpener {
                 id: _subOpener
-                menu: _entry.sub ? _entry.modelData : null
+                menu: _entry.sub && (_flyout.opened || _flyout.opacity > 0.001)
+                    ? _entry.modelData : null
             }
 
             Hairline {
