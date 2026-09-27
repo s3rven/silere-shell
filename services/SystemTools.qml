@@ -88,6 +88,7 @@ Singleton {
         if (tool === "gtklock")   return root.hasGtklock
         if (tool === "systemctl") return root.hasSystemctl
         if (tool === "loginctl")  return root.hasLoginctl
+        if (tool === "hyprctl")   return root.hasHyprctl
         if (tool === "hyprsunset") return root.hasHyprsunset
         if (tool === "wlsunset")   return root.hasWlsunset
         if (tool === "pwvucontrol") return root.hasPwvucontrol

@@ -149,4 +149,11 @@ Singleton {
         : SystemTools.hasLoginctl ? ["loginctl", "reboot"] : []
     readonly property list<string> poweroffCommand: SystemTools.hasSystemctl ? ["systemctl", "poweroff"]
         : SystemTools.hasLoginctl ? ["loginctl", "poweroff"] : []
+    // the compositor's own exit ends the session the way its quit keybind would
+    readonly property list<string> logoutCommand: {
+        if (Compositor.isHyprland && SystemTools.hasHyprctl) return ["hyprctl", "dispatch", "exit"]
+        if (Compositor.isNiri) return ["niri", "msg", "action", "quit", "--skip-confirmation"]
+        const session = String(Quickshell.env("XDG_SESSION_ID") || "")
+        return SystemTools.hasLoginctl && session.length > 0 ? ["loginctl", "terminate-session", session] : []
+    }
 }

@@ -11,6 +11,10 @@ settings file carries its own `__version` and migrates separately.
 
 ## [Unreleased]
 
+### Added
+
+- Log out in the power menu, confirmed with a second press like Reboot and Power off.
+
 ### Fixed
 
 - Scrolling over a tray icon with a touchpad sends the app whole steps instead of one per touchpad event.
