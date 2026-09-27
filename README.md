@@ -8,19 +8,21 @@
 <p align="center">
   <a href="https://github.com/s3rven/silere-shell/releases"><img src="https://img.shields.io/github/v/release/s3rven/silere-shell?style=flat-square&labelColor=0f1013&color=2a2d33&logo=github&logoColor=9a9ca1" alt="latest release"/></a>
   <a href="https://github.com/s3rven/silere-shell/actions/workflows/validate.yml"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fs3rven%2Fsilere-shell%2Fbadges%2Fchecks.json&style=flat-square" alt="checks passed on main"/></a>
-  <a href="https://github.com/s3rven/silere-shell/commits/main"><img src="https://img.shields.io/github/last-commit/s3rven/silere-shell/main?style=flat-square&labelColor=0f1013&color=2a2d33&label=last%20commit" alt="last commit"/></a>
+  <a href="#performance"><img src="https://img.shields.io/badge/idle-under%201%25%20CPU-2a2d33?style=flat-square&labelColor=0f1013" alt="idle: under 1% CPU"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2a2d33?style=flat-square&labelColor=0f1013" alt="license: MIT"/></a>
   <a href="https://quickshell.org/"><img src="https://img.shields.io/badge/built%20on-Quickshell-2a2d33?style=flat-square&labelColor=0f1013" alt="built on Quickshell"/></a>
   <img src="https://img.shields.io/badge/runs%20on-Hyprland%20%C2%B7%20niri-2a2d33?style=flat-square&labelColor=0f1013&logo=hyprland&logoColor=9a9ca1" alt="runs on Hyprland and niri"/>
 </p>
 
-Silere is a desktop shell for Hyprland and niri, built on Quickshell. It's the bar, the
-menu, notifications, the OSD, the calendar and the tray, all running in one process.
+Silere is a bloat-free desktop shell for Hyprland and niri, built on Quickshell. It's the
+bar, the menu, notifications, the OSD, the calendar and the tray, all running in one
+process, and its only runtime dependency is Quickshell.
 
-The name is Latin for *to be silent*, and that's the idea. Timers and polls only run while
-something on screen needs them, so an idle session sits well under 1% of one CPU core.
-Every setting is in the menu and applies the moment you change it. There's no plugin
-system; hooks run your own commands as separate processes with a time limit.
+The name is Latin for *to be silent*, and that's the idea. An idle session sits well under
+1% of one CPU core, because timers and polls only run while something on screen needs
+them, and it uses [roughly 80 to 100 MB](#performance) of memory. Every setting is in the
+menu and applies the moment you change it. There's no plugin system; hooks run your own
+commands as separate processes with a time limit.
 
 <p align="center">
   <img src="assets/shot-desktop.webp" alt="The floating Silere bar with the home page open and a notification" width="900"/>
@@ -159,7 +161,8 @@ Package updates just move the badge.
 
 ## Performance
 
-Measured on the reference machine as proportional set size (PSS):
+An idle session uses well under 1% of one CPU core. Memory, measured on the reference
+machine as proportional set size (PSS):
 
 | state | memory |
 |---|---|
