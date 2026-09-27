@@ -46,7 +46,7 @@ structural_skip() {
   fi
 }
 fail() { printf 'fail %s\n' "$*" >&2; status=1; }
-script_files=(scripts/*.sh scripts/silere scripts/lib/*.sh)
+script_files=(scripts/*.sh scripts/silere scripts/lib/*.sh scripts/completions/silere.bash)
 
 # the two regression suites are over half of this lint's time and touch only their own
 # temp dirs, so they run beside every check below and report at the end
@@ -1045,7 +1045,7 @@ else
 
   # allowlist, not a denylist of known dev tools: a new dev script only this check
   # doesn't yet know the name of must still fail, not pass silently
-  allowed_scripts="install.sh update.sh repair.sh doctor.sh silere silere-update.service silere-update.timer lib"
+  allowed_scripts="install.sh update.sh repair.sh doctor.sh silere silere-update.service silere-update.timer lib completions"
   payload_extra=""
   while IFS= read -r ref; do
     [ -n "$ref" ] || continue
@@ -1062,7 +1062,7 @@ else
   # scripts/lib is copied wholesale by name, so its own tracked contents are the allowlist:
   # anything landing there ships, which is why the probe harness lives in scripts/ instead
   lib_extra="$(git ls-files scripts/lib | sed 's|^scripts/lib/||' \
-    | grep -vxE 'xdg\.sh|qml-modules\.sh|ui\.sh|unit\.sh')"
+    | grep -vxE 'xdg\.sh|qml-modules\.sh|ui\.sh|unit\.sh|completions\.sh')"
   [ -n "$lib_extra" ] && payload_extra="$payload_extra scripts/lib/{$(printf '%s' "$lib_extra" | tr '\n' ',')}"
 
   # the packaged installer still reads this one out of the pruned assets/ tree

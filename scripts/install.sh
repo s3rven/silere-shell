@@ -5,6 +5,7 @@ export LC_ALL=C
 REPO_URL="https://github.com/s3rven/silere-shell.git"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib/xdg.sh"
+source "$SCRIPT_DIR/lib/completions.sh"
 CONFIG_HOME="$(_silere_xdg_home "${XDG_CONFIG_HOME:-}" .config)" || {
     printf 'silere: HOME must be an absolute path\n' >&2
     exit 1
@@ -1191,6 +1192,24 @@ elif _ask "Install the silere command (run, status, doctor, ipc, update)?"; then
     fi
 else
     _skip "run it directly, or add it later with: $CLI_TARGET link"
+fi
+if [ -L "$CLI_LINK" ] \
+        && [ "$(readlink -f -- "$CLI_LINK" 2>/dev/null || true)" = "$CLI_TARGET" ]; then
+    while IFS=$'\t' read -r comp_src comp_dest; do
+        if [ -L "$comp_dest" ] \
+                && [ "$(readlink -f -- "$comp_dest" 2>/dev/null || true)" = "$comp_src" ]; then
+            continue
+        elif [ -e "$comp_dest" ] || [ -L "$comp_dest" ]; then
+            _skip "left $comp_dest alone; it is not Silere's"
+        elif _dry; then
+            _would "create $comp_dest → $comp_src"
+        else
+            (umask 077 && mkdir -p -- "${comp_dest%/*}") || _die "could not create ${comp_dest%/*}"
+            _txn_before_file "$comp_dest" || _die "could not journal $comp_dest"
+            ln -s -- "$comp_src" "$comp_dest" || _die "could not create $comp_dest"
+            _ok "shell completions at $comp_dest"
+        fi
+    done < <(_silere_completion_links "$ROOT")
 fi
 
 # ── matugen template ─────────────────────────────────────────────────────────────

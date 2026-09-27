@@ -9,16 +9,20 @@ source_path="$(readlink -f -- "${BASH_SOURCE[0]}" 2>/dev/null || true)"
 SCRIPT_DIR="$(cd "$(dirname "$source_path")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$ROOT/scripts/lib/xdg.sh"
+source "$ROOT/scripts/lib/unit.sh"
+source "$ROOT/scripts/lib/completions.sh"
 
 usage() {
     cat <<'EOF'
 Usage: silere <command> [options]
 
   run [--startup]        Start Silere once; --startup waits for the compositor
+  restart                Stop the running shell and start it again
   status                 Show installation and updater state
+  log [--follow]         Print the running shell's log
   doctor                 Run read-only installation diagnostics
-  ipc <target> <fn> ...  Call the running shell over IPC; `ipc show` lists targets
-  link                   Put this silere command on PATH, in ~/.local/bin
+  ipc <target> <fn> ...  Call the running shell over IPC; alone, it lists the calls
+  link                   Put silere on PATH, in ~/.local/bin, with shell completions
   update                 Check for a signed Silere release
   update --apply         Install the confirmed signed release
   update --rollback      Restore the revision an update replaced
@@ -26,6 +30,7 @@ Usage: silere <command> [options]
   repair --apply [--yes] Save local changes and restore shipped files
   repair --undo [--yes]  Restore the latest repair stash
   version                Print the installed Silere version
+  -V, --version          Print the installed Silere version
   uninstall              Remove integrations created by the installer
   help                   Show this message
 EOF
@@ -49,15 +54,113 @@ run_shell() {
     # at compositor boot the wayland endpoints can lag the autostart event
     [ "$startup" -eq 0 ] || sleep 1
 
-    # LC_ALL=C is for this script's parsing; programs the shell launches get the user's locale
+    if [ "$startup" -eq 0 ] && pid="$(running_pid)"; then
+        printf 'Silere is already running (pid %s); silere restart starts it again\n' "$pid"
+        exit 0
+    fi
+
+    restore_locale
+    # an update rewrites qml files one by one, so a reload mid-update loads a mixed tree
+    export SILERE_WATCH_FILES="${SILERE_WATCH_FILES-0}"
+    exec qs --no-duplicate -p "$ROOT/shell.qml" "$@"
+}
+
+# LC_ALL=C is for this script's parsing; programs the shell launches get the user's locale
+restore_locale() {
     if [ -n "$original_lc_all_set" ]; then
         export LC_ALL="$original_lc_all"
     else
         unset LC_ALL
     fi
-    # an update rewrites qml files one by one, so a reload mid-update loads a mixed tree
-    export SILERE_WATCH_FILES="${SILERE_WATCH_FILES-0}"
-    exec qs --no-duplicate -p "$ROOT/shell.qml" "$@"
+}
+
+running_pid() {
+    local pid=""
+    command -v qs >/dev/null 2>&1 || return 1
+    pid="$(qs list -p "$ROOT/shell.qml" 2>/dev/null \
+        | sed -n 's/^  Process ID: \([0-9][0-9]*\)$/\1/p')" || true
+    pid="${pid%%$'\n'*}"
+    [ -n "$pid" ] || return 1
+    printf '%s\n' "$pid"
+}
+
+unit_runs_shell() {
+    command -v systemctl >/dev/null 2>&1 || return 1
+    systemctl --user is-active --quiet silere-shell.service 2>/dev/null \
+        || systemctl --user is-enabled --quiet silere-shell.service 2>/dev/null \
+        || return 1
+    _silere_unit_runs_checkout "$ROOT"
+}
+
+await_exit() {
+    for _ in $(seq 50); do
+        running_pid >/dev/null || return 0
+        sleep 0.1
+    done
+    return 1
+}
+
+# prints the pid of an instance other than the one being replaced
+await_shell() {
+    local old="$1" pid
+    for _ in $(seq 50); do
+        if pid="$(running_pid)" && [ "$pid" != "$old" ]; then
+            printf '%s\n' "$pid"
+            return 0
+        fi
+        sleep 0.2
+    done
+    return 1
+}
+
+stop_stray_shell() {
+    local pid="$1"
+    [ -n "$pid" ] || return 0
+    qs kill -p "$ROOT/shell.qml" >/dev/null 2>&1 || true
+    await_exit || die "the running shell (pid $pid) did not stop"
+}
+
+restart_shell() {
+    local old_pid pid
+    [ -f "$ROOT/shell.qml" ] || die "shell.qml is missing from $ROOT"
+    command -v qs >/dev/null 2>&1 || die "Quickshell is not installed"
+    old_pid="$(running_pid)" || old_pid=""
+    if unit_runs_shell; then
+        systemctl --user is-active --quiet silere-shell.service 2>/dev/null \
+            || stop_stray_shell "$old_pid"
+        # a crash loop leaves the unit refusing starts until this clears
+        systemctl --user reset-failed silere-shell.service 2>/dev/null || true
+        systemctl --user restart silere-shell.service \
+            || die "systemd could not restart silere-shell.service"
+        pid="$(await_shell "$old_pid")" \
+            || die "the shell did not come back; see journalctl --user -u silere-shell.service"
+    else
+        [ -n "${WAYLAND_DISPLAY:-}" ] || die "run this from inside your Wayland session"
+        stop_stray_shell "$old_pid"
+        (restore_locale; exec bash "$ROOT/scripts/silere" run --daemonize) \
+            </dev/null >/dev/null 2>&1 || true
+        pid="$(await_shell "$old_pid")" || die "the shell did not start; run silere run to see why"
+    fi
+    if [ -n "$old_pid" ]; then
+        printf 'Silere restarted (pid %s)\n' "$pid"
+    else
+        printf 'Silere started (pid %s)\n' "$pid"
+    fi
+}
+
+link_completions() {
+    local src dest
+    while IFS=$'\t' read -r src dest; do
+        if [ -L "$dest" ] && [ "$(readlink -f -- "$dest" 2>/dev/null || true)" = "$src" ]; then
+            continue
+        elif [ -e "$dest" ] || [ -L "$dest" ]; then
+            printf 'note: %s already exists; left it alone\n' "$dest"
+        elif (umask 077 && mkdir -p -- "${dest%/*}") && ln -s -- "$src" "$dest"; then
+            printf 'linked %s\n' "$dest"
+        else
+            printf 'note: could not link %s\n' "$dest" >&2
+        fi
+    done < <(_silere_completion_links "$ROOT")
 }
 
 package_manager() {
@@ -153,21 +256,38 @@ case "$command_name" in
         [ "$#" -eq 0 ] || { usage >&2; exit 2; }
         usage
         ;;
-    version)
+    version|-V|--version)
         [ "$#" -eq 0 ] || { usage >&2; exit 2; }
         human_version
         ;;
     run)
         run_shell "$@"
         ;;
+    restart)
+        [ "$#" -eq 0 ] || { usage >&2; exit 2; }
+        restart_shell
+        ;;
+    log)
+        follow=()
+        case "${1:-}" in
+            "") [ "$#" -eq 0 ] || { usage >&2; exit 2; } ;;
+            -f|--follow) [ "$#" -eq 1 ] || { usage >&2; exit 2; }
+                follow=(--follow) ;;
+            *) usage >&2; exit 2 ;;
+        esac
+        command -v qs >/dev/null 2>&1 || die "Quickshell is not installed"
+        if ! running_pid >/dev/null; then
+            unit_runs_shell \
+                && die "Silere is not running; its last run is in journalctl --user -u silere-shell.service"
+            die "Silere is not running"
+        fi
+        exec qs log -p "$ROOT/shell.qml" "${follow[@]}"
+        ;;
     status)
         [ "$#" -eq 0 ] || { usage >&2; exit 2; }
         info="$(version_info)" || die "could not read updater state"
         human_version
-        shell_pid=""
-        command -v qs >/dev/null 2>&1 \
-            && shell_pid="$(qs list -p "$ROOT/shell.qml" 2>/dev/null | sed -n 's/^  Process ID: //p' | head -n 1)"
-        if [ -n "$shell_pid" ]; then
+        if shell_pid="$(running_pid)"; then
             printf 'Shell: running (pid %s)\n' "$shell_pid"
         else
             printf 'Shell: not running\n'
@@ -200,9 +320,8 @@ case "$command_name" in
         exec bash "$ROOT/scripts/doctor.sh"
         ;;
     ipc)
-        [ "$#" -gt 0 ] || { usage >&2; exit 2; }
         command -v qs >/dev/null 2>&1 || die "qs (Quickshell) is not installed"
-        if [ "$1" = show ] && [ "$#" -eq 1 ]; then
+        if [ "$#" -eq 0 ] || { [ "$1" = show ] && [ "$#" -eq 1 ]; }; then
             exec qs ipc -p "$ROOT/shell.qml" show
         fi
         exec qs ipc -p "$ROOT/shell.qml" call "$@"
@@ -225,7 +344,7 @@ case "$command_name" in
         if is_packaged; then
             die "this installation is managed by $(package_manager); repair its package there"
         fi
-        [ -x "$ROOT/scripts/repair.sh" ] || die "this installation is managed by $(package_manager); repair it there"
+        [ -f "$ROOT/scripts/repair.sh" ] || die "this installation is managed by $(package_manager); repair it there"
         exec bash "$ROOT/scripts/repair.sh" "$@"
         ;;
     link)
@@ -247,6 +366,7 @@ case "$command_name" in
             ln -s -- "$link_target" "$link_path" || die "could not create $link_path"
             printf 'linked %s -> %s\n' "$link_path" "$link_target"
         fi
+        link_completions
         case ":$PATH:" in
             *":$link_dir:"*) ;;
             *) printf 'note: %s is not on your PATH; add it in your shell config\n' "$link_dir" ;;
@@ -257,7 +377,7 @@ case "$command_name" in
         if is_packaged; then
             die "this installation is managed by $(package_manager); remove its package there"
         fi
-        [ -x "$ROOT/scripts/uninstall.sh" ] \
+        [ -f "$ROOT/scripts/uninstall.sh" ] \
             || die "this installation is managed by $(package_manager); remove its package there"
         exec bash "$ROOT/scripts/uninstall.sh"
         ;;

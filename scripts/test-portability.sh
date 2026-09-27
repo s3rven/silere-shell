@@ -1800,6 +1800,66 @@ test_unit_identity() (
     return 0
 )
 
+test_cli_restart_and_log() (
+    local stubs="$TMP/cli-stubs" state="$TMP/cli-state" out
+    mkdir -p "$stubs"
+    printf '%s\n' \
+        '#!/bin/sh' \
+        'state="$SILERE_TEST_STATE"' \
+        'case "$1" in' \
+        '    list) [ -s "$state" ] && printf "Instance t:\n  Process ID: %s\n" "$(cat "$state")"; exit 0 ;;' \
+        '    kill) : > "$state"; echo kill >> "$state.calls"; exit 0 ;;' \
+        '    log) echo "log $*" >> "$state.calls"; exit 0 ;;' \
+        '    *) echo "launch $* locale=${LC_ALL-<unset>}" >> "$state.calls"; echo 777 > "$state" ;;' \
+        'esac' > "$stubs/qs"
+    # never the real systemctl: it would restart the live shell of whoever runs the tests
+    printf '%s\n' \
+        '#!/bin/sh' \
+        'echo "systemctl $*" >> "$SILERE_TEST_STATE.calls"' \
+        'case "$*" in' \
+        '    *is-active*|*is-enabled*) [ -n "${SILERE_TEST_UNIT-}" ]; exit $? ;;' \
+        '    *show*) printf "{ path=/usr/bin/qs ; argv[]=/usr/bin/qs -n -p %s/shell.qml ; }\n" "$SILERE_TEST_ROOT" ;;' \
+        '    *" restart "*) echo 888 > "$SILERE_TEST_STATE" ;;' \
+        'esac' > "$stubs/systemctl"
+    chmod +x "$stubs/qs" "$stubs/systemctl"
+    cli() {
+        env -u LC_ALL PATH="$stubs:$PATH" SILERE_TEST_STATE="$state" SILERE_TEST_ROOT="$ROOT" \
+            bash "$ROOT/scripts/silere" "$@"
+    }
+
+    echo 4242 > "$state"; : > "$state.calls"
+    out="$(WAYLAND_DISPLAY=wayland-test cli restart)" || fail "restart without a unit failed"
+    assert_eq "Silere restarted (pid 777)" "$out" "restart without a unit"
+    assert_eq $'kill\nlaunch --no-duplicate -p '"$ROOT"$'/shell.qml --daemonize locale=<unset>' \
+        "$(grep -v '^systemctl' "$state.calls")" "restart stops, then relaunches detached"
+
+    echo 4242 > "$state"; : > "$state.calls"
+    if env -u WAYLAND_DISPLAY PATH="$stubs:$PATH" SILERE_TEST_STATE="$state" \
+            bash "$ROOT/scripts/silere" restart >/dev/null 2>&1; then
+        fail "restart outside a Wayland session claimed success"
+    fi
+    assert_eq 4242 "$(cat "$state")" "restart outside a Wayland session left the shell running"
+
+    echo 4242 > "$state"; : > "$state.calls"
+    out="$(SILERE_TEST_UNIT=1 cli restart)" || fail "restart through the unit failed"
+    assert_eq "Silere restarted (pid 888)" "$out" "restart through the unit"
+    grep -qFx 'systemctl --user restart silere-shell.service' "$state.calls" \
+        || fail "restart did not go through the user unit"
+    ! grep -qx 'kill' "$state.calls" || fail "restart killed the unit's shell behind systemd"
+
+    echo 4242 > "$state"; : > "$state.calls"
+    out="$(cli run)" || fail "run beside a running shell failed"
+    assert_eq "Silere is already running (pid 4242); silere restart starts it again" "$out" \
+        "run beside a running shell"
+    ! grep -q '^launch' "$state.calls" || fail "run started a second shell"
+
+    : > "$state"; : > "$state.calls"
+    if cli log >/dev/null 2>&1; then fail "log claimed a stopped shell"; fi
+    echo 4242 > "$state"
+    cli log --follow || fail "log of a running shell failed"
+    assert_eq "log log -p $ROOT/shell.qml --follow" "$(grep '^log' "$state.calls")" "log argv"
+)
+
 if [ "${SILERE_TEST_LIB_ONLY:-0}" = 1 ]; then
     return 0 2>/dev/null || exit 0
 fi
@@ -1822,6 +1882,7 @@ test_hypr_discovery
 test_niri_config_discovery
 test_atomic_units
 test_shared_launcher
+test_cli_restart_and_log
 test_hook_timeout_contains_tree
 test_repair_workflow
 

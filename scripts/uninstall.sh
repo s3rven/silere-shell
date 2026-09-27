@@ -4,6 +4,7 @@ export LC_ALL=C
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib/xdg.sh"
+source "$SCRIPT_DIR/lib/completions.sh"
 CONFIG_HOME="$(_silere_xdg_home "${XDG_CONFIG_HOME:-}" .config)" || {
     printf 'silere-uninstall: HOME must be an absolute path\n' >&2
     exit 1
@@ -148,6 +149,14 @@ elif [ -e "$CLI_LINK" ] || [ -L "$CLI_LINK" ]; then
 else
     _skip "not found"
 fi
+for target in "${CLI_TARGETS[@]}"; do
+    while IFS=$'\t' read -r comp_src comp_dest; do
+        [ -L "$comp_dest" ] || continue
+        [ "$(readlink -f -- "$comp_dest" 2>/dev/null || true)" = "$comp_src" ] || continue
+        rm -f -- "$comp_dest"
+        _ok "removed $comp_dest"
+    done < <(_silere_completion_links "${target%/scripts/silere}" all)
+done
 
 # ── legacy cava config ───────────────────────────────────────────────────────────
 _section "legacy cava config"
