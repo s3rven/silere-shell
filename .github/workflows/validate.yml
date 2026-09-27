@@ -28,7 +28,7 @@ jobs:
     steps:
       - name: Install validation dependencies
         run: |
-          pacman -Syu --noconfirm git openssh shellcheck quickshell python fontconfig ttf-jetbrains-mono-nerd actionlint
+          pacman -Syu --noconfirm git openssh shellcheck quickshell python fontconfig ttf-jetbrains-mono-nerd actionlint util-linux
           fc-cache -f >/dev/null
 
       # pinned to an immutable sha so a moved tag cannot run unreviewed code
@@ -47,11 +47,20 @@ jobs:
       # tag runs only: a branch or pull request has no release to gate
       - name: Verify signed release tag
         if: startsWith(github.ref, 'refs/tags/v')
-        run: >-
-          git -c safe.directory="$PWD"
-          -c gpg.format=ssh
-          -c gpg.ssh.allowedSignersFile="$PWD/security/update-signers"
-          verify-tag "$GITHUB_REF_NAME"
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          tag_commit="$(git rev-parse "refs/tags/$GITHUB_REF_NAME^{commit}")"
+          git merge-base --is-ancestor "$tag_commit" refs/remotes/origin/main || {
+            echo "::error::release tag is not on origin/main"
+            exit 1
+          }
+          signers="$(mktemp)"
+          trap 'rm -f "$signers"' EXIT
+          git show refs/remotes/origin/main:security/update-signers > "$signers"
+          git -c safe.directory="$PWD" -c gpg.format=ssh \
+            -c gpg.ssh.allowedSignersFile="$signers" verify-tag "$GITHUB_REF_NAME"
 
       - name: Match release compatibility manifest
         if: startsWith(github.ref, 'refs/tags/v')

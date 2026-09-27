@@ -19,7 +19,7 @@ concurrency:
 jobs:
   publish:
     if: >-
-      github.event.workflow_run.conclusion != 'cancelled'
+      contains(fromJSON('["success", "failure", "timed_out", "startup_failure"]'), github.event.workflow_run.conclusion)
       && contains(fromJSON('["push", "schedule"]'), github.event.workflow_run.event)
     runs-on: ubuntu-latest
     timeout-minutes: 5

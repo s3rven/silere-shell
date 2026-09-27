@@ -264,10 +264,25 @@ if [ "$qs_usable" = 1 ]; then
 fi
 
 if command -v busctl >/dev/null 2>&1; then
-  if busctl --user call org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus GetNameOwner s org.freedesktop.Notifications >/dev/null 2>&1; then
-    ok "notifications" "D-Bus owner present"
-  else
+  notif_owner="" notif_pid="" notif_comm="" notif_cmd=""
+  read -r _ notif_owner < <(busctl --user call org.freedesktop.DBus /org/freedesktop/DBus \
+    org.freedesktop.DBus GetNameOwner s org.freedesktop.Notifications 2>/dev/null) || true
+  notif_owner="${notif_owner//\"/}"
+  if [ -n "$notif_owner" ]; then
+    read -r _ notif_pid < <(busctl --user call org.freedesktop.DBus /org/freedesktop/DBus \
+      org.freedesktop.DBus GetConnectionUnixProcessID s "$notif_owner" 2>/dev/null) || true
+  fi
+  case "$notif_pid" in ''|*[!0-9]*) notif_pid="" ;; esac
+  if [ -n "$notif_pid" ]; then
+    IFS= read -r notif_comm < "/proc/$notif_pid/comm" 2>/dev/null || true
+    notif_cmd="$(tr '\0' ' ' < "/proc/$notif_pid/cmdline" 2>/dev/null || true)"
+  fi
+  if [ -z "$notif_owner" ]; then
     warn "notifications" "no D-Bus notification owner"
+  elif [ "$notif_comm" = qs ] && [[ "$notif_cmd" == *"$ROOT/shell.qml"* || "$notif_cmd" == *"$ROOT "* ]]; then
+    ok "notifications" "served by this Silere"
+  else
+    warn "notifications" "owned by ${notif_comm:-another process}, not this Silere"
   fi
 fi
 
@@ -644,12 +659,12 @@ if [ "$qs_usable" = 1 ]; then
     smoke_pids="$smoke_pids $!"
     wait $smoke_pids || true
     code="$(cat "$scratch/smoke.code" 2>/dev/null || echo 1)"
-    if [ "$code" -ne 0 ] && [ "$code" -ne 124 ]; then
-      if grep -qE 'Failed to create wl_display|could not connect to display|no Qt platform plugin could be initialized' "$smoke_log"; then
+    if [ "$code" -ne 124 ]; then
+      if [ "$code" -ne 0 ] && grep -qE 'Failed to create wl_display|could not connect to display|no Qt platform plugin could be initialized' "$smoke_log"; then
         warn "startup" "display inaccessible; runtime smoke test skipped"
       else
         cat "$smoke_log"
-        fail "startup" "Quickshell exited with status $code"
+        fail "startup" "Quickshell exited before the five-second dwell (status $code)"
       fi
     elif grep -qE 'Failed to load configuration|Type [^ ]+ unavailable|module ".*" is not installed|Binding loop detected' "$smoke_log"; then
       cat "$smoke_log"
@@ -660,9 +675,9 @@ if [ "$qs_usable" = 1 ]; then
         warn "off-path load" "no default-off settings found; coverage pass skipped"
       else
         code="$(cat "$par_dir/cov.code" 2>/dev/null || echo 1)"
-        if [ "$code" -ne 0 ] && [ "$code" -ne 124 ]; then
+        if [ "$code" -ne 124 ]; then
           cat "$par_dir/cov.log"
-          fail "off-path load" "Quickshell exited with status $code with every option on"
+          fail "off-path load" "Quickshell exited before the dwell (status $code) with every option on"
         elif grep -qE 'Failed to load configuration|Type [^ ]+ unavailable|Cannot assign to non-existent property|is not a type|Binding loop detected' "$par_dir/cov.log"; then
           cat "$par_dir/cov.log"
           fail "off-path load" "a default-off code path failed to load"
@@ -687,7 +702,7 @@ if [ "$qs_usable" = 1 ]; then
         _i=$((_i + 1))
         code="$(cat "$par_dir/bad$_i.code" 2>/dev/null || echo 1)"
         _desc="$(cat "$par_dir/bad$_i.desc" 2>/dev/null || echo '?')"
-        if [ "$code" -ne 0 ] && [ "$code" -ne 124 ]; then
+        if [ "$code" -ne 124 ]; then
           bad_failures="$bad_failures  exited $code on: $_desc"$'\n'
         elif grep -qE 'Failed to load configuration|Type [^ ]+ unavailable|Binding loop detected' "$par_dir/bad$_i.log"; then
           bad_failures="$bad_failures  failed to load on: $_desc"$'\n'

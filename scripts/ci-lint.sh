@@ -16,7 +16,7 @@ set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT" || exit 1
 source "$ROOT/scripts/lib/qml-modules.sh"
-trap 'kill ${portability_pid:-} ${update_pid:-} 2>/dev/null; rm -f "${aur_srcinfo:-}" "${portability_log:-}" "${update_log:-}"' EXIT
+trap 'kill ${portability_pid:-} ${update_pid:-} 2>/dev/null; rm -f "${aur_srcinfo:-}" "${portability_log:-}" "${update_log:-}"; [ -z "${aur_srcdir:-}" ] || rm -rf -- "$aur_srcdir"' EXIT
 status=0
 seen_section=0
 section() {
@@ -144,18 +144,25 @@ section "invisible characters in source"
 # characters in Silere's own source are the Trojan Source problem: they reorder how a
 # line renders in a review without changing what the engine runs. The tree accepts
 # outside pull requests, so the source has to hold the rule it applies to everyone else.
-if printf 'a\n' | grep -qP 'a' 2>/dev/null; then
-  bidi_hits="$(grep -rlP '[\x{061C}\x{200B}\x{200E}\x{200F}\x{202A}-\x{202E}\x{2066}-\x{206F}]' \
+# in the C locale grep -P rejects \x{} above 0xff with exit 2, which read as a clean tree
+bidi_pattern='[\x{061C}\x{200B}\x{200E}\x{200F}\x{202A}-\x{202E}\x{2066}-\x{206F}]'
+if printf 'a\342\200\256b\n' | LC_ALL=C.UTF-8 grep -qP "$bidi_pattern" 2>/dev/null; then
+  bidi_rc=0
+  bidi_hits="$(LC_ALL=C.UTF-8 grep -rlP "$bidi_pattern" \
     --include='*.qml' --include='*.sh' --include='*.md' --include='*.json' \
-    --include='*.yml' --include='*.toml' --exclude-dir=.git --exclude-dir='.[!g]*' . 2>/dev/null || true)"
-  if [ -n "$bidi_hits" ]; then
+    --include='*.yml' --include='*.toml' --include='*.js' --include='*.py' \
+    --include='*.fish' --include='PKGBUILD' --include='silere' \
+    --exclude-dir=.git --exclude-dir='.[!g]*' . 2>/dev/null)" || bidi_rc=$?
+  if [ "$bidi_rc" -gt 1 ]; then
+    fail "invisible character scan could not read the tree (grep exit $bidi_rc)"
+  elif [ -n "$bidi_hits" ]; then
     fail "these files carry bidi or zero-width characters; write them as \\uXXXX escapes:"
     while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$bidi_hits"
   else
     ok "source text" "no bidi or zero-width characters in tracked sources"
   fi
 else
-  skip "source text" "grep -P unavailable; invisible character scan skipped"
+  skip "source text" "grep -P or a UTF-8 locale unavailable; invisible character scan skipped"
 fi
 
 section "orphaned binding continuations"
@@ -987,19 +994,32 @@ elif ! grep -qF "depends=('quickshell>=$SILERE_MIN_QUICKSHELL')" "$aur_dir/PKGBU
   fail "AUR package must enforce the documented Quickshell $SILERE_MIN_QUICKSHELL minimum"
 elif command -v makepkg >/dev/null 2>&1; then
   aur_srcinfo="$(mktemp "${TMPDIR:-/tmp}/silere-srcinfo.XXXXXX")"
-  # makepkg refuses to run as root, which is exactly how a container CI runs it;
-  # that is "could not check", not "stale", and the two must not report the same
-  if ! (cd "$aur_dir" && makepkg --printsrcinfo -p PKGBUILD) >"$aur_srcinfo" 2>/dev/null \
-      || [ ! -s "$aur_srcinfo" ]; then
-    skip "AUR" "makepkg cannot run here; dependency floor still checked"
+  aur_check_ok=0
+  if [ "$(id -u)" -eq 0 ]; then
+    if command -v runuser >/dev/null 2>&1; then
+      aur_srcdir="$(mktemp -d "${TMPDIR:-/tmp}/silere-aur-src.XXXXXX")"
+      chmod 0755 "$aur_srcdir"
+      cp "$aur_dir/PKGBUILD" "$aur_srcdir/PKGBUILD"
+      chmod 0644 "$aur_srcdir/PKGBUILD"
+      (cd "$aur_srcdir" && runuser -u nobody -- env HOME=/tmp \
+        makepkg --printsrcinfo -p PKGBUILD) >"$aur_srcinfo" 2>/dev/null \
+        && aur_check_ok=1
+    fi
+  else
+    (cd "$aur_dir" && makepkg --printsrcinfo -p PKGBUILD) >"$aur_srcinfo" 2>/dev/null \
+      && aur_check_ok=1
+  fi
+  if [ "$aur_check_ok" -ne 1 ] || [ ! -s "$aur_srcinfo" ]; then
+    structural_skip "AUR" "makepkg could not verify .SRCINFO"
   elif [ "$(cat "$aur_srcinfo")" = "$(cat "$aur_dir/.SRCINFO")" ]; then
     ok "AUR" ".SRCINFO matches PKGBUILD"
   else
     fail "packaging/aur/.SRCINFO is stale; regenerate it with makepkg --printsrcinfo"
   fi
   rm -f "$aur_srcinfo"
+  [ -z "${aur_srcdir:-}" ] || { rm -rf -- "$aur_srcdir"; aur_srcdir=""; }
 else
-  skip "AUR" "makepkg unavailable; dependency floor still checked"
+  structural_skip "AUR" "makepkg unavailable; .SRCINFO cannot be verified"
 fi
 
 # PKGBUILD and .SRCINFO can agree while both predate the latest release.
@@ -1604,6 +1624,9 @@ solid_surface_files=(
   modules/notifications/NotificationCard.qml
   modules/menu/HomePage.qml
 )
+for surface_file in "${solid_surface_files[@]}"; do
+  [ -f "$surface_file" ] || fail "required structural surface is missing: $surface_file"
+done
 surface_gradients="$(grep -nHE 'Gradient|GradientStop|create(Linear|Radial)Gradient' \
   "${solid_surface_files[@]}" || true)"
 if [ -n "$surface_gradients" ]; then
