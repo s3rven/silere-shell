@@ -2403,6 +2403,11 @@ ShellRoot {
                 && NightLight._probeState(2, false, false) === -1
                 && NightLight._probeState(-1, false, false) === -1,
             "night light distinguishes an external daemon, no match, and a failed state probe")
+        root._check(NightLight._temperatureUpdateSucceeded(0, false, "ok\n")
+                && !NightLight._temperatureUpdateSucceeded(0, false, "unknown request\n")
+                && !NightLight._temperatureUpdateSucceeded(1, false, "ok\n")
+                && !NightLight._temperatureUpdateSucceeded(0, true, "ok\n"),
+            "night light accepts only a confirmed live temperature update")
         NightLight._geoResolved = geoResolvedWas
         NightLight._autoLat = autoLatWas
         NightLight._autoLon = autoLonWas

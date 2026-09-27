@@ -69,7 +69,7 @@ Singleton {
         const elev = root._elevation
         if (elev >= 6)  return 6500
         if (elev <= -6) return 3000
-        // every step restarts the tool, so dusk takes a handful of steps rather than dozens
+        // wlsunset restarts on every step, so dusk takes a handful of steps rather than dozens
         return Math.round((3000 + 3500 * (elev + 6) / 12) / 500) * 500
     }
 
@@ -172,7 +172,7 @@ Singleton {
             "  [ -n \"$c\" ] && { printf '%s\\n' \"$c\"; break; }; " +
             "done"]
         stdout: StdioCollector { id: _geoOut }
-        onExited: root._parseCoord(_geoOut.text)
+        onExited: if (!root._parseCoord(_geoOut.text)) root._geoStarted = false
     }
 
     Timer {
@@ -219,7 +219,64 @@ Singleton {
         enabled = true
     }
 
-    // the tools take their temperature at launch, so a new value means a new process
+    // hyprsunset takes a new temperature over hyprctl; a restart per step blinks the gamma off
+    function _setTemperature(): void {
+        if (!root.enabled || !root.toolAvailable) return
+        if (root._runningTool !== "hyprsunset" || !SystemTools.hasHyprctl
+                || root._stopping || _killProc.running) {
+            root._restart()
+            return
+        }
+        if (!_tempProc.running) root._sendTemperature()
+    }
+
+    function _sendTemperature(): void {
+        if (_tempProc.running) return
+        _tempProc._targetTemp = root.temperature
+        _tempProc._generation = root._stateGeneration
+        _tempProc.exec(["hyprctl", "hyprsunset", "temperature",
+            String(_tempProc._targetTemp)])
+    }
+
+    function _temperatureUpdateSucceeded(code: int, timedOut: bool, response: string): bool {
+        return !timedOut && code === 0 && (response || "").trim().toLowerCase() === "ok"
+    }
+
+    Timer {
+        id: _queuedTemp
+        interval: 0
+        onTriggered: {
+            if (root.enabled && !root._stopping
+                    && root._runningTool === "hyprsunset" && root.tool === "hyprsunset")
+                root._sendTemperature()
+        }
+    }
+
+    BoundedProcess {
+        id: _tempProc
+        property int _targetTemp: 0
+        property int _generation: -1
+        timeoutMs: 3000
+        stdout: StdioCollector { id: _tempOut }
+        onExited: (code) => {
+            if (_tempProc._generation !== root._stateGeneration) {
+                if (root.enabled && !root._stopping
+                        && root._runningTool === "hyprsunset" && root.tool === "hyprsunset")
+                    _queuedTemp.restart()
+                return
+            }
+            if (!root.enabled || root._stopping
+                    || root._runningTool !== "hyprsunset" || root.tool !== "hyprsunset") return
+            if (root.temperature !== _tempProc._targetTemp) {
+                _queuedTemp.restart()
+                return
+            }
+            if (!root._temperatureUpdateSucceeded(code, _tempProc.timedOut, _tempOut.text))
+                root._restart()
+        }
+    }
+
+    // wlsunset has no live temperature command, and a failed hyprctl update falls back to this
     function _restart(): void {
         if (!root.enabled || !root.toolAvailable) return
         _pendingEnable = true
@@ -234,7 +291,7 @@ Singleton {
         }
     }
 
-    onTemperatureChanged: root._restart()
+    onTemperatureChanged: root._setTemperature()
 
     onToolChanged: {
         root._stateGeneration++
