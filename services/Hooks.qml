@@ -256,10 +256,13 @@ Singleton {
         function onAccentChanged() { _accentSettle.restart() }
     }
 
+    property int _lastUpdateCount: 0
     Connections {
         target: root._present["update-available"] === true ? Updates : null
         function onCountChanged() {
-            if (Updates.count > 0) root.fire("update-available", [Updates.count])
+            const rose = Updates.count > root._lastUpdateCount
+            root._lastUpdateCount = Updates.count
+            if (rose) root.fire("update-available", [Updates.count])
         }
     }
 

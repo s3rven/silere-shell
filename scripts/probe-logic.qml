@@ -572,6 +572,20 @@ ShellRoot {
 
         const underline = barUnderlineFactory.createObject(root)
         root._check(underline !== null, "the reactive underline builds")
+        if (underline) {
+            const lineEffect = underline.children.find(child =>
+                typeof child._clearNetLossFlash === "function")
+            root._check(lineEffect !== undefined,
+                "the reactive underline exposes its network flash reset")
+            if (lineEffect) {
+                lineEffect._sweepSpread = 0.19
+                lineEffect._bloomBoost = 0.14
+                lineEffect._clearNetLossFlash()
+                root._check(lineEffect._sweepSpread === 0.28
+                        && lineEffect._bloomBoost === 0,
+                    "a canceled network flash restores its spread and bloom")
+            }
+        }
         underline.destroy()
 
         const notificationCard = notificationCardFactory.createObject(root)
@@ -693,11 +707,24 @@ ShellRoot {
         CpuTemp._probeComplete = true
         root._check(CpuTemp.sensorMissing,
             "a finished probe that found nothing hides the temperature controls")
+        root._check(!CpuTemp._needsSensorDetection(),
+            "sensorless demand reuses the completed discovery result")
         CpuTemp._sensorPath = "/sys/class/hwmon/hwmon0/temp1_input"
         root._check(!CpuTemp.sensorMissing,
             "a detected sensor keeps its controls whatever the current reading")
         CpuTemp._sensorPath = tempPathWas
         CpuTemp._probeComplete = tempProbeWas
+
+        const badSensorsWas = CpuTemp._badSensorPaths
+        CpuTemp._badSensorPaths = ""
+        CpuTemp._rejectSensor("/sys/class/hwmon/hwmon1/temp1_input")
+        CpuTemp._rejectSensor("/sys/class/thermal/thermal_zone0/temp")
+        CpuTemp._rejectSensor("/sys/class/hwmon/hwmon1/temp1_input")
+        CpuTemp._rejectSensor("")
+        root._check(CpuTemp._badSensorPaths
+            === ":/sys/class/hwmon/hwmon1/temp1_input:/sys/class/thermal/thermal_zone0/temp:",
+            "every failed sensor stays skipped, so two bad sensors cannot ping-pong")
+        CpuTemp._badSensorPaths = badSensorsWas
 
         const shiftWas = ShellSettings.workspaceShift
         const reduceMotionWas = ShellSettings.reduceMotion
@@ -966,6 +993,12 @@ ShellRoot {
                 && Object.keys(ShellSettings.modifiedSections).length === 0,
             "a setting with no page of its own does not offer a reset")
         ShellSettings.nightLightTemp = savedNight
+        const dndBeforeSave = ShellSettings.dnd
+        ShellSettings.dnd = !dndBeforeSave
+        void ShellSettings._serialize()
+        root._check(ShellSettings.modifiedCount === 0,
+            "saving a setting with no page of its own does not offer a reset either")
+        ShellSettings.dnd = dndBeforeSave
 
         const beforeEdit = ShellSettings._serialize()
         const savedTitle = ShellSettings.showWindowTitle
@@ -1792,7 +1825,7 @@ ShellRoot {
         root._check(updateCommand("pacman", { checkupdates: true }).includes("checkupdates"),
             "package updates build the pacman command")
         root._check(!SystemTools.hasTimeout
-                || Updates._limit(10, "checker").startsWith("timeout --kill-after=2 10 "),
+                || Updates._limit(10, "checker").startsWith("timeout -k 2 10 "),
             "package update timeouts force helpers down after the TERM grace")
         const pacmanAurCommand = updateCommand("pacman", { checkupdates: true, paru: true })
         root._check(pacmanAurCommand.includes("aurrc=$?")
@@ -2464,6 +2497,11 @@ ShellRoot {
                 && SystemAlerts.batteryWarningLevel(true, false) === "low"
                 && SystemAlerts.batteryWarningLevel(false, false) === "",
             "a critical battery reading suppresses the duplicate low-battery alert")
+        const dropout = SystemAlerts.batteryRearmState(false, false, 0, 20, 10, true, true)
+        const plugged = SystemAlerts.batteryRearmState(true, false, 0, 20, 10, true, true)
+        root._check(dropout.low && dropout.critical
+                && !plugged.low && !plugged.critical,
+            "a battery backend dropout keeps warning latches until a real plug reading")
 
         // the pulse only drives a hidden pill, an off underline glow and a shut menu here
         const battShowWas = ShellSettings.barShowBattery
@@ -2596,8 +2634,9 @@ ShellRoot {
         ShellSettings.osdTimeout = timeoutWas
 
         root._check(ShellSettings._ipcKey("BARSPACING") === "barSpacing"
+                && ShellSettings._ipcKey(" osdTimeout ") === "osdTimeout"
                 && ShellSettings._ipcKey("noSuchSetting") === "noSuchSetting",
-            "settings IPC folds known key capitalization without weakening schema lookup")
+            "settings IPC trims hand-typed keys and folds known capitalization")
         const ipcSpacingWas = ShellSettings.barSpacing
         root._check(ShellSettings._ipcSet("BARSPACING", "999") === "24"
                 && ShellSettings.barSpacing === 24,

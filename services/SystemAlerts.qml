@@ -93,11 +93,22 @@ Singleton {
     }
 
     // a reading that wobbles across the threshold must not send the warning again
+    function batteryRearmState(available: bool, onBattery: bool, pct: real,
+            lowThreshold: real, criticalThreshold: real,
+            lowSent: bool, criticalSent: bool): var {
+        if (!available) return { low: lowSent, critical: criticalSent }
+        const plugged = !onBattery
+        return {
+            low: lowSent && !(plugged || pct >= lowThreshold + 2),
+            critical: criticalSent && !(plugged || pct >= criticalThreshold + 2)
+        }
+    }
     function _rearmBattery(): void {
-        const margin = 2
-        const plugged = !Battery.onBattery
-        if (plugged || Battery.pct >= ShellSettings.batteryLowThreshold + margin) root._battLowSent = false
-        if (plugged || Battery.pct >= Battery._critPct + margin) root._battCritSent = false
+        const state = root.batteryRearmState(Battery.available, Battery.onBattery,
+            Battery.pct, ShellSettings.batteryLowThreshold, Battery._critPct,
+            root._battLowSent, root._battCritSent)
+        root._battLowSent = state.low
+        root._battCritSent = state.critical
     }
 
     Connections {

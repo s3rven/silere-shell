@@ -433,11 +433,12 @@ Singleton {
 
     // folds only hand-typed ipc keys; schemaFor stays exact so a row's key: cannot match the wrong setting
     function _ipcKey(key: string): string {
-        if (root.schemaFor(key)) return key
-        const fold = String(key || "").toLowerCase()
+        const trimmed = String(key || "").trim()
+        if (root.schemaFor(trimmed)) return trimmed
+        const fold = trimmed.toLowerCase()
         for (let i = 0; i < root._schema.length; i++)
             if (root._schema[i].k.toLowerCase() === fold) return root._schema[i].k
-        return key
+        return trimmed
     }
 
     function _coerced(s, v): var {
@@ -677,11 +678,12 @@ Singleton {
     }
 
     // one user action that moves several keys is still one settings change: without this each discrete key flushes the whole file on its own
-    function batch(apply): void {
+    function batch(apply, flushNow): void {
         if (root._bulkAssign) { apply(); return }
         root._bulkAssign = true
         try { apply() } finally { root._bulkAssign = false }
-        _store.flush(false)
+        if (flushNow === false) _store.queue()
+        else _store.flush(false)
     }
 
     function resetToDefaults(): void {
@@ -907,11 +909,12 @@ Singleton {
         let changed = 0
         const modifiedKeys = Object.create(null)
         for (let i = 0; i < _schema.length; i++) {
-            const key = _schema[i].k
+            const entry = _schema[i]
+            const key = entry.k
             const modified = !root._sameValue(root[key], root._defaults[key])
             if (modified) {
                 modifiedKeys[key] = true
-                changed++
+                if (entry.sec !== "-") changed++
             }
             // a newer release may allow a value this one clamps, so its raw value stands until edited here
             if (preserveFuture && root._futureTouched[key] !== true

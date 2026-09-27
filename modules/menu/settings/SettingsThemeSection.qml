@@ -86,7 +86,7 @@ Column {
                     ShellSettings.batch(() => {
                         ShellSettings.neutralAccentAuto = false
                         ShellSettings.neutralAccent = _accentPicker._accentForCh(hue01, sat01)
-                    })
+                    }, false)
                     _accentPicker._stripWrite = false
                 }
                 on_CurColorChanged: if (!_stripWrite) _syncFromColor()

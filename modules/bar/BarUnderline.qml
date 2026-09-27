@@ -117,7 +117,8 @@ Item {
         readonly property real _sweepCenterTarget: {
             if (_notifFlash.running)                                         return 0.50
             if (_batteryGlowEnabled && (Battery.low || Battery.critical))    return _widgetSweep("battery")
-            if (_tempGlowEnabled && (CpuTemp.hot || CpuTemp.critical))       return _widgetSweep("battery")
+            // no bar widget shows temperature; its warning surfaces in the centred osd
+            if (_tempGlowEnabled && (CpuTemp.hot || CpuTemp.critical))       return 0.50
             if (ShellSettings.underlineScreenshotGlow
                 && _shotActive)                                              return ShellSettings.screenshotGlowSweep && !ShellSettings.reduceMotion
                                                                                   ? _screenshotSweepCenter : 0.50
@@ -318,6 +319,11 @@ Item {
             _sweepSpread = 0.28
             _screenshotSweepCenter = 0.50
         }
+        function _clearNetLossFlash(): void {
+            _netLossFlash.stop()
+            _sweepSpread = 0.28
+            _bloomBoost = 0
+        }
         Connections {
             target: ShellSettings
             function onUnderlineNotifGlowChanged() {
@@ -386,7 +392,7 @@ Item {
                     && _lineEffect._canRunEventMotion()) {
                 _netLossFlash.restart()
             } else if (currentConnected || !Network.available) {
-                _netLossFlash.stop()
+                _lineEffect._clearNetLossFlash()
                 _netGlowAnim.to = 0
                 _netGlowAnim.restart()
             }

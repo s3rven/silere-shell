@@ -137,12 +137,15 @@ Rectangle {
         }
     }
 
-    Row {
+    Grid {
         id: _grid
         y: root._pad
         width: parent.width
-        readonly property int  cells: Battery.available ? 4 : 3
+        readonly property int naturalCells: Battery.available ? 4 : 3
+        readonly property int minCellW: 80 + Math.max(0, Settings.fontSize - Settings.fontSizeBase) * 4
+        readonly property int cells: width >= naturalCells * minCellW ? naturalCells : 2
         readonly property real cellW: width / cells
+        columns: cells
 
         Vital {
             width: _grid.cellW
@@ -171,6 +174,7 @@ Rectangle {
             width: _grid.cellW
             live: root.active
             padR: Battery.available ? 18 : 14
+            divider: _grid.cells !== 2
             glyph: "󰋊"
             label: "Disk"
             value: SysInfo.diskTotalKb > 0 ? Math.round(SysInfo.diskPct * 100) + "%" : "—"

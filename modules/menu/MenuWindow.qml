@@ -317,6 +317,7 @@ PanelWindow {
             function onOpenChanged() {
                 if (MenuState.open) {
                     _closedUnload.stop()
+                    panel._syncPageRetention()
                     // closeFinished is canceled when a close animation reverses; transient drawer state must not depend on that callback
                     panel.powerOpen = false
                     panel._outerHeightMotion = false

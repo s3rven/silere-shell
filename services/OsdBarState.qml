@@ -359,6 +359,7 @@ Singleton {
     // once per charge, and a full battery seen before arming counts, so login stays quiet
     property bool _fullAnnounced: false
     function _alertBatteryFull(): void {
+        if (!Battery.available) return
         if (!Battery.full || !Battery.charging) {
             root._fullAnnounced = false
             return

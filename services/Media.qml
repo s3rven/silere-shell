@@ -503,6 +503,8 @@ Singleton {
         onSaveFailed: {
             root._cavaConfigReady = false
             root._writtenCavaProfileKey = ""
+            // FileView coalesces an identical setText; without the reload a retry never writes
+            reload()
         }
     }
 

@@ -23,6 +23,50 @@ ShellRoot {
     Item {
         id: host
 
+        function _retentionPanel(item): var {
+            if (!item) return null
+            if (typeof item._syncPageRetention === "function") return item
+            const children = item.children || []
+            for (let i = 0; i < children.length; i++) {
+                const found = host._retentionPanel(children[i])
+                if (found) return found
+            }
+            return null
+        }
+
+        // the surface's own import resolves by file url, so only a file-url import reaches its singleton
+        function _menuState(): var {
+            const bridge = Qt.createQmlObject('import QtQuick\nimport "file://'
+                + root._probeRoot + '/services"\nQtObject { readonly property var state: MenuState }',
+                host, "menu-state-bridge")
+            const state = bridge.state
+            bridge.destroy()
+            return state
+        }
+
+        function _checkWarmMenuReopen(obj): void {
+            const MenuState = host._menuState()
+            const panel = host._retentionPanel(obj.contentItem)
+            if (!panel) {
+                console.warn("PROBE-FAIL MenuWindow :: retention panel missing")
+                root._failed++
+                return
+            }
+            const previousTab = MenuState._activeTab
+            const previousOpen = MenuState.open
+            MenuState.open = false
+            MenuState._activeTab = MenuState.settingsTab
+            panel._settingsRetained = false
+            MenuState.open = true
+            if (!panel._settingsRetained) {
+                console.warn("PROBE-FAIL MenuWindow :: warm reopen did not retain the active page")
+                root._failed++
+            }
+            MenuState.open = false
+            MenuState._activeTab = previousTab
+            MenuState.open = previousOpen
+        }
+
         function _finishCurrent(): void {
             root._object.destroy()
             root._component.destroy()
@@ -72,6 +116,7 @@ ShellRoot {
             }
             root._component = c
             root._object = obj
+            if (path === "modules/menu/MenuWindow.qml") host._checkWarmMenuReopen(obj)
             root._settleTurn = 0
             Qt.callLater(host._settleCurrent)
         }

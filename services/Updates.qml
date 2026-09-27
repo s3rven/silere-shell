@@ -95,8 +95,9 @@ Singleton {
 
     function _limit(seconds: int, command: string): string {
         // TERM is advisory: a package helper can hold its capture open past it
+        // -k, not --kill-after: busybox timeout has no long option
         return SystemTools.hasTimeout
-            ? ("timeout --kill-after=2 " + seconds + " " + command) : command
+            ? ("timeout -k 2 " + seconds + " " + command) : command
     }
 
     function _countFrom(text: string): int {
@@ -438,8 +439,11 @@ Singleton {
     Connections {
         target: Network
         function onConnectedChanged() {
-            if (Network.connected && root.enabled && root.supported && root.lastFailed)
+            if (Network.connected && root.enabled && root.supported
+                    && (root.lastFailed || root.lastCheckMs <= 0)) {
+                _initDelay.stop()
                 _reconnect.restart()
+            }
         }
     }
 

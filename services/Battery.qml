@@ -56,7 +56,7 @@ Singleton {
 
     readonly property color iconColor: {
         if (!available || !_validReading)             return Theme.subtext
-        if (charging)                                 return full ? Theme.success : Theme.accent
+        if (charging)                                 return full ? Theme.success : held ? Theme.subtext : Theme.accent
         if (pct < _critPct)                           return Theme.error
         if (pct < ShellSettings.batteryLowThreshold)  return Theme.warning
         return Theme.accent
@@ -64,6 +64,7 @@ Singleton {
 
     readonly property string icon: {
         if (!available || !_validReading)  return "󰂎"
+        if (held)                          return "󰚥"
         if (!onBattery) {
             if (pct >= 95)   return "󰂅"
             if (pct >= 90)   return "󰂋"

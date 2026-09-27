@@ -126,13 +126,21 @@ Singleton {
         root._retryDelayMs = root._retryDelayMs > 0
             ? Math.min(root._retryDelayMs * 2, root._maxRetryDelayMs)
             : root._minRetryDelayMs
-        _retryTimer.restart()
+        if (!Idle.isIdle) _retryTimer.restart()
     }
 
     Timer {
         id: _retryTimer
         interval: root._retryDelayMs
-        onTriggered: root.refresh()
+        onTriggered: if (!Idle.isIdle) root.refresh()
+    }
+
+    Connections {
+        target: Idle
+        function onIsIdleChanged() {
+            if (Idle.isIdle) _retryTimer.stop()
+            else if (root.lastError.length > 0) _retryTimer.restart()
+        }
     }
 
     // opening a section re-runs the full probe; only do that when the last answer
@@ -184,6 +192,7 @@ Singleton {
                 return
             }
             root._retryDelayMs = 0
+            _retryTimer.stop()
             const found = {}
             let family = ""
             const lines = (_checkOut.text || "").split(/\r?\n/)

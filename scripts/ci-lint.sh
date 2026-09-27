@@ -285,7 +285,7 @@ else
 fi
 check_qml_locale_count() {
   local file="$1" expected="$2" actual
-  actual="$(grep -c 'environment: ({ "LC_ALL": "C" })' "$file" || true)"
+  actual="$(grep -Ec 'environment: \(\{ "LC_ALL": "C"[[:space:]]*[,}]' "$file" || true)"
   if [ "$actual" -ge "$expected" ]; then
     ok "$file" "$actual parser process(es)"
   else
