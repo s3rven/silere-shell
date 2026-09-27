@@ -36,15 +36,15 @@ Hardware not already listed takes a new letter.
 | 1.1.1 | 2026-09-17 | A | cold | — | — | — | — | — |
 | 1.1.1 | 2026-09-17 | A | warm | — | — | — | — | — |
 | 1.2.0 | 2026-09-27 | A | cold | 88 MB | 177 MB | 0.1% | 21 | 52 |
-| 1.2.0 | 2026-09-27 | A | warm | 95 MB | 185 MB | 0.2% | 21 | 52 |
+| 1.2.0 | 2026-09-27 | A | warm | 96 MB | 186 MB | 0.2% | 21 | 52 |
 
 No benchmark was recorded for 1.1.1; the blank rows mark the missing baseline without
 assigning measurements from another revision to that release.
 
-1.2.0 was sampled one commit before the tag, at `98aea64` with the release notes applied. The
-commit between them only changes when the Home page's usage bars glide, which neither state
-exercises beyond the warm run's single menu open. A rerun on the tagged tree read 98/105 MB at
-0.4-0.6% CPU while other programs held the machine at a load of 3, so it was not recorded.
+1.2.0 was sampled two commits past the tag, at `8b50b02`; those commits change only packaging
+metadata and these docs. A second restart on the same tree read 92/98 MB, the usual spread of a
+few MB between runs. An earlier run taken while other programs held the machine at a load of 3
+read 98/105 MB at 0.4-0.6% CPU and was discarded.
 
 0.9.0 was sampled one commit past the tag, with `fontFamily` set to `IosevkaTerm Nerd
 Font`. That font costs about 9 MB PSS over the JetBrainsMono Nerd Font default, so the
