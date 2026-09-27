@@ -29,6 +29,7 @@ settings file carries its own `__version` and migrates separately.
 - Notifications sent with `notify-send -i` show their icon instead of a letter, whether the icon is a theme name or a file in the system icon folders.
 - `silere log` prints plain text when piped or saved to a file, without terminal color codes.
 - `silere ipc` and `silere log` no longer print Qt's locale warning above their output in a terminal.
+- `silere update` says which version is installed and whether a release is waiting, instead of finishing silently.
 - Run from a terminal, `silere doctor` reads the Quickshell version instead of warning it could not, and `silere update` no longer refuses a release because of it.
 
 ## Releases

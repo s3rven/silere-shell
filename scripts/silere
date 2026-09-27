@@ -350,7 +350,13 @@ case "$command_name" in
         fi
         case "${1:-}" in
             "") [ "$#" -eq 0 ] || { usage >&2; exit 2; }
-                exec bash "$ROOT/scripts/update.sh" ;;
+                # the check itself stays silent for the timer and the menu; say what it found here
+                rc=0; bash "$ROOT/scripts/update.sh" || rc=$?
+                human_version || true
+                print_update_status
+                [ ! -s "$(_silere_xdg_home "${XDG_CACHE_HOME:-}" .cache)/silere-shell/update-pending" ] \
+                    || printf 'silere update --apply installs it\n'
+                exit "$rc" ;;
             --apply) [ "$#" -eq 1 ] || { usage >&2; exit 2; }
                 exec bash "$ROOT/scripts/update.sh" --apply ;;
             --rollback) [ "$#" -eq 1 ] || { usage >&2; exit 2; }
