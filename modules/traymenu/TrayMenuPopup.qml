@@ -360,16 +360,8 @@ PanelWindow {
                 Disclosure on opacity { enterEasing: Easing.OutCubic }
                 Disclosure on _shift { closedValue: _flyout._closedShift }
 
-                onOpenedChanged: {
-                    if (!_entry.sub) return
-                    if (opened) {
-                        _flyout._syncOrigin()
-                        win._emitMenuSignal(_entry.modelData, "opened", "sendOpened")
-                    } else {
-                        win._emitMenuSignal(_entry.modelData, "closed", "sendClosed")
-                    }
-                }
-                Component.onDestruction: if (_entry.sub && _flyout.opened) win._emitMenuSignal(_entry.modelData, "closed", "sendClosed")
+                // _subOpener's reference already tells the app when this submenu opens and closes
+                onOpenedChanged: if (_entry.sub && opened) _flyout._syncOrigin()
 
                 HoverHandler { id: _flyHover }
 
