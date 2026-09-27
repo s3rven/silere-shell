@@ -86,8 +86,9 @@ the PSS and the CPU figures.
 
 Both rows go in against the reference machine letter they came from. Hardware not already
 in that table takes a new letter — rows from different machines are not comparable.
-The unrecorded 1.1.1 run is marked with dashes and explained in the table. New releases
-need measured values; do not assign numbers from a different revision to one.
+New releases need measured values; do not assign numbers from a different revision to one.
+Record only a run the report calls `steady` with a per-second median near zero; `noisy` means
+input landed mid-sample.
 
 A few MB between releases is font and driver noise. Tens of MB, a descriptor count that no
 longer settles, or a thread count past the core count holds the tag.

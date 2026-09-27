@@ -32,8 +32,6 @@ cost almost nothing while you're not using it:
   on the clock and the underline effects all start switched off.
 - Quickshell is the only package it requires. Night light, the visualizer and the
   underline's screenshot feedback start their helper programs only while they're on.
-- It has no plugin system. Hooks run your own scripts as separate processes, each with a
-  time limit.
 
 ## Features
 
@@ -159,8 +157,7 @@ the notification history, and text fields.
 
 Every setting is in the menu and applies as soon as you change it. Settings are saved to
 `$XDG_CONFIG_HOME/silere-shell/settings.json`, usually `~/.config/silere-shell/settings.json`,
-and the file holds only what you changed from the defaults. Silere checks every value's
-type and range when it loads the file, and never overwrites a file it can't read.
+and the file holds only what you changed from the defaults.
 
 To reset everything, use **Settings › System › Maintenance** or replace the file's
 contents with `{ "__version": 1 }`. Deleting a single key resets that one setting.
@@ -182,9 +179,8 @@ settings page names and the hooks.
 ## Updates
 
 When a new release is out, Settings › System › Updates lists its commits and asks you to
-confirm twice before installing it. Silere only accepts stable release tags signed with
-the key that ships in your checkout. A valid signature proves who published a release,
-not that its code is safe. `silere update --rollback` returns to the version you had
+confirm twice before installing it. Silere only accepts release tags signed with the key
+that ships in your checkout, and `silere update --rollback` returns to the version you had
 before.
 
 Nothing installs on its own; the optional update timer only checks for releases. The
@@ -192,26 +188,10 @@ package badge in the bar counts pending system updates, and Silere never install
 
 ## Performance
 
-Memory, measured as proportional set size (PSS) on the reference machine:
-
-| state | memory |
-|---|---|
-| an empty Quickshell panel, for comparison | ~57 MB |
-| Silere, before the menu is first opened | ~88 MB |
-| Silere, after the menu has opened once | ~95 MB |
-
-`top` and `htop` show resident memory (RSS) instead, about 175 to 195 MB for the same
-session, because RSS counts shared Qt and GPU driver pages in full. The first time the menu
-opens, it loads code and caches that stay in memory, so the number rises once and then
-holds.
-
-Idle CPU use is well under 1% of one core. Animations and the media visualizer use more
-while they run.
-
-To measure your own setup, run `bash scripts/bench.sh 30`, or `bash scripts/bench.sh 30 --warm`
-for the number after the menu has opened. [docs/performance.md](docs/performance.md)
-explains the method, and [docs/perf-history.md](docs/perf-history.md) lists the numbers
-for each release.
+With only the bar drawn, Silere uses about 88 MB of memory, and about 95 MB once the menu
+has been opened. It idles at well under 1% of one CPU core; animations and the media
+visualizer use more while they run. [docs/performance.md](docs/performance.md) explains
+how that's measured and how to check your own setup.
 
 ## Documentation
 
@@ -220,7 +200,6 @@ for each release.
 - [troubleshooting.md](docs/troubleshooting.md): symptom by symptom, starting with `silere doctor`
 - [performance.md](docs/performance.md): how the numbers are measured, fonts, the animation driver
 - [forking.md](docs/forking.md): the code layout, and what a change or a rename has to touch
-- [releasing.md](docs/releasing.md): tags, signing and key rotation, for maintainers
 - [CHANGELOG.md](CHANGELOG.md): changes since the last release, with older releases in [docs/releases](docs/releases/)
 
 ## Contributing
