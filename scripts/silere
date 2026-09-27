@@ -214,6 +214,10 @@ print_transaction_status() {
         fi
         return 0
     fi
+    if printf '%s\n' "$out" | grep -q '^quarantined=1$'; then
+        printf 'Update transaction: damaged recovery state was preserved; run silere doctor\n'
+        return 0
+    fi
     printf '%s\n' "$out" | grep -q '^pending=1$' || return 0
     phase="$(printf '%s\n' "$out" | sed -n 's/^phase=//p')"
     tag="$(printf '%s\n' "$out" | sed -n 's/^tag=//p')"

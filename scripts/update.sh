@@ -117,6 +117,11 @@ _snapshot_trusted_signers() {
         rm -f -- "$tmp"
         return 1
     fi
+    if ! sync -f -- "$APPLY_TRUSTED_SIGNERS" 2>/dev/null \
+            || ! sync -f -- "$STATE_DIR" 2>/dev/null; then
+        rm -f -- "$APPLY_TRUSTED_SIGNERS"
+        return 1
+    fi
 }
 
 _write_apply_journal() {
@@ -127,8 +132,10 @@ _write_apply_journal() {
     _write_state_file "$APPLY_JOURNAL" \
         version=1 "phase=$phase" "rootHex=$ROOT_HEX" \
         "from=$old_rev" "to=$new_rev" "tag=$tag" || return 1
-    # recovery trusts a recorded phase, so it has to be on disk before the next step
-    sync -f -- "$APPLY_JOURNAL" 2>/dev/null || true
+    # recovery trusts a recorded phase, so both the file and its renamed directory
+    # entry have to reach disk before the next step.
+    sync -f -- "$APPLY_JOURNAL" 2>/dev/null \
+        && sync -f -- "$STATE_DIR" 2>/dev/null
 }
 
 _start_apply_transaction() {
@@ -144,7 +151,22 @@ _clear_apply_transaction() {
     # The signer snapshot must outlive the journal. If removing the journal
     # fails, retaining the key keeps the next recovery attempt authenticatable.
     rm -f -- "$APPLY_JOURNAL" || return 1
-    rm -f -- "$APPLY_TRUSTED_SIGNERS"
+    rm -f -- "$APPLY_TRUSTED_SIGNERS" || return 1
+    sync -f -- "$STATE_DIR" 2>/dev/null
+}
+
+_quarantine_apply_transaction() {
+    local quarantine
+    _ensure_state_dir || return 1
+    quarantine="$(mktemp -d "$STATE_DIR/update-quarantine-$ROOT_KEY.XXXXXX")" || return 1
+    chmod 0700 "$quarantine" || return 1
+    if [ -e "$APPLY_TRUSTED_SIGNERS" ] || [ -L "$APPLY_TRUSTED_SIGNERS" ]; then
+        mv -- "$APPLY_TRUSTED_SIGNERS" "$quarantine/signers" || return 1
+    fi
+    mv -- "$APPLY_JOURNAL" "$quarantine/journal" || return 1
+    sync -f -- "$quarantine" 2>/dev/null \
+        && sync -f -- "$STATE_DIR" 2>/dev/null || return 1
+    printf '%s\n' "$quarantine"
 }
 
 _cleanup_candidate_stage() {
@@ -218,17 +240,25 @@ _updated_shell_is_running() {
 # Never infer success from HEAD alone: the last durable phase decides whether to
 # keep the signed target or return to the known-good revision.
 _recover_interrupted_apply() {
-    local head
+    local head quarantine
     if [ ! -e "$APPLY_JOURNAL" ]; then
         rm -f -- "$APPLY_TRUSTED_SIGNERS"
         return 0
     fi
-    _read_apply_journal \
-        || _quiet_fail "the interrupted-update journal is malformed — inspect $APPLY_JOURNAL"
-    _journal_release_is_trusted \
-        || _quiet_fail "the interrupted-update journal could not be authenticated — inspect $APPLY_JOURNAL"
+    if ! _read_apply_journal; then
+        quarantine="$(_quarantine_apply_transaction)" \
+            || _quiet_fail "the interrupted-update journal is malformed and could not be quarantined — inspect $APPLY_JOURNAL"
+        _quiet_fail "the malformed interrupted-update journal was preserved at $quarantine; inspect it before another update"
+    fi
+    if ! _journal_release_is_trusted; then
+        quarantine="$(_quarantine_apply_transaction)" \
+            || _quiet_fail "the interrupted-update journal could not be authenticated or quarantined — inspect $APPLY_JOURNAL"
+        _quiet_fail "the unauthenticated interrupted-update journal was preserved at $quarantine; inspect it before another update"
+    fi
     head="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || true)"
     if [ "$head" = "$JOURNAL_FROM" ]; then
+        _has_local_changes \
+            && _quiet_fail "local changes appeared during an interrupted update — inspect $APPLY_JOURNAL"
         _clear_apply_transaction \
             || _quiet_fail "could not clear the completed update recovery journal"
         echo "silere-update: cleared an interrupted update that had not changed the checkout" >&2
@@ -251,7 +281,7 @@ _recover_interrupted_apply() {
     fi
     _has_local_changes \
         && _quiet_fail "local changes prevent recovery of an interrupted update — inspect $APPLY_JOURNAL"
-    git -C "$ROOT" reset --hard --quiet "$JOURNAL_FROM" \
+    _reset_preserving_user_files "$JOURNAL_FROM" \
         || _quiet_fail "could not restore the checkout after an interrupted update — reset to $JOURNAL_FROM manually"
     _clear_apply_transaction \
         || _quiet_fail "the checkout was restored but its update recovery journal could not be cleared"
@@ -274,7 +304,7 @@ _rollback_applied_update() {
         || _fail "the checkout moved since the update — roll back manually"
     _has_local_changes \
         && _fail "local changes block the rollback — run: bash $ROOT/scripts/repair.sh --apply"
-    git -C "$ROOT" reset --hard --quiet "$JOURNAL_FROM" \
+    _reset_preserving_user_files "$JOURNAL_FROM" \
         || _fail "could not restore $JOURNAL_FROM"
     _clear_apply_transaction \
         || _fail "the checkout was restored but the journal could not be cleared"
@@ -302,6 +332,22 @@ _clear_update_error() {
 _has_local_changes() {
     # tracked only: an untracked file cannot block a fast-forward, and git refuses collisions itself
     [ -n "$(git -C "$ROOT" status --porcelain --untracked-files=no)" ]
+}
+
+# reset --hard can replace ignored or untracked files when the destination
+# revision tracks their paths. --keep protects tracked edits and ordinary
+# untracked collisions, but Git still overwrites ignored collisions.
+_reset_preserving_user_files() {
+    local target="$1" path
+    git -C "$ROOT" cat-file -e "$target^{commit}" 2>/dev/null || return 1
+    while IFS= read -r -d '' path; do
+        if ! git -C "$ROOT" ls-files --error-unmatch -- ":(literal)$path" >/dev/null 2>&1 \
+                && { [ -e "$ROOT/$path" ] || [ -L "$ROOT/$path" ]; }; then
+            printf 'silere-update: local file blocks revision change: %s\n' "$path" >&2
+            return 1
+        fi
+    done < <(git -C "$ROOT" ls-tree -r -z --name-only "$target")
+    git -C "$ROOT" reset --keep --quiet "$target"
 }
 
 # A blackholed network keeps a fetch running past the shell's own check timeout,
@@ -757,6 +803,12 @@ case "${1:-}" in
         ;;
     --transaction-status)
         if [ ! -e "$APPLY_JOURNAL" ]; then
+            for quarantine in "$STATE_DIR"/update-quarantine-"$ROOT_KEY".*; do
+                if [ -f "$quarantine/journal" ]; then
+                    printf 'pending=0\nquarantined=1\npath=%s\n' "$quarantine"
+                    exit 0
+                fi
+            done
             printf 'pending=0\n'
             exit 0
         fi
@@ -809,7 +861,7 @@ if [ "${1:-}" = "--pin-release" ]; then
     _fetch_main || _fail "git fetch failed (check network / connectivity)"
     _resolve_trusted_release pin
     if [ "$(git rev-parse HEAD)" != "$release_rev" ]; then
-        git -C "$ROOT" reset --hard --quiet "$release_rev" \
+        _reset_preserving_user_files "$release_rev" \
             || _fail "could not move the checkout to $release_tag"
     fi
     _clear_flag
@@ -818,9 +870,9 @@ if [ "${1:-}" = "--pin-release" ]; then
     exit 0
 fi
 
-# --apply: validate the already-fetched, signed release outside the live checkout,
-# then fast-forward and restart. The trust check runs again so the cache flag is
-# never authoritative.
+# --apply: refresh the release refs before trusting a confirmation. A tag can be
+# withdrawn after the check; local tags alone cannot reveal that while offline.
+# Validate the signed release outside the live checkout, then fast-forward and restart.
 if [ "${1:-}" = "--apply" ]; then
     apply_branch="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
     [ -n "$apply_branch" ] \
@@ -828,20 +880,23 @@ if [ "${1:-}" = "--apply" ]; then
     [ "$apply_branch" = main ] \
         || _fail "checkout is on branch $apply_branch — switch to main before applying"
     local_rev="$(git rev-parse HEAD)"
+    _fetch_main || _fail "could not verify the release is still published upstream — check connectivity"
     git rev-parse --verify --quiet refs/remotes/origin/main >/dev/null 2>&1 \
         || _fail "origin/main is unavailable — check for updates again"
-    _resolve_trusted_release apply
-    remote_rev="$release_rev"
-    _exit_if_not_behind "$local_rev" "$remote_rev" 0
-    # The confirm screen names one release. A newer signed tag landing between the check
-    # and the press is still trusted, but it is not what was agreed to — send it back
-    # through a check rather than installing something the user never saw.
     cached_target="$(sed -n '2p' "$FLAG" 2>/dev/null || true)"
     if [[ ! "$cached_target" =~ ^target\ ([0-9a-f]{40}|[0-9a-f]{64})\ (v[0-9]+\.[0-9]+\.[0-9]+)\ verified$ ]]; then
         _fail "the confirmed release is missing or malformed — check for updates again"
     fi
     cached_rev="${BASH_REMATCH[1]}"
     cached_tag="${BASH_REMATCH[2]}"
+    git -C "$ROOT" show-ref --verify --quiet "refs/tags/$cached_tag" \
+        || _fail "$cached_tag was withdrawn upstream — check for updates again"
+    _resolve_trusted_release apply
+    remote_rev="$release_rev"
+    _exit_if_not_behind "$local_rev" "$remote_rev" 0
+    # The confirm screen names one release. A newer signed tag landing between the check
+    # and the press is still trusted, but it is not what was agreed to — send it back
+    # through a check rather than installing something the user never saw.
     if [ "$cached_tag" != "$release_tag" ] || [ "$cached_rev" != "$release_rev" ]; then
         _fail "$release_tag is not the release that was confirmed ($cached_tag) — check for updates again"
     fi
@@ -893,7 +948,10 @@ if [ "${1:-}" = "--apply" ]; then
         merge_file="$(printf '%s\n' "$merge_err" | sed -n 's/^\t//p' | head -n1)"
         _fail "$merge_line${merge_file:+ $merge_file} — bash $ROOT/scripts/repair.sh --apply clears blocking files"
     fi
-    sync -f -- "$ROOT" 2>/dev/null || true
+    # Retain the validated recovery journal until the moved checkout reaches
+    # stable storage; otherwise a failed sync can erase the only rollback path.
+    sync -f -- "$ROOT" 2>/dev/null \
+        || _fail "could not sync the updated checkout; recovery journal was retained"
     _clear_flag
     _clear_update_error
     new_rev="$(git rev-parse HEAD)"

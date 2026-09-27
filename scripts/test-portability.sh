@@ -742,10 +742,15 @@ test_interrupted_update_recovery() (
     git -C "$repo" config user.email "test@example.invalid"
     _prepare_release_signer "$repo"
     printf 'known good\n' > "$repo/tracked.qml"
-    git -C "$repo" add security tracked.qml
+    printf 'old release\n' > "$repo/old-only"
+    printf 'new-only\n' > "$repo/.gitignore"
+    git -C "$repo" add security tracked.qml old-only .gitignore
     git -C "$repo" commit -qm "known good"
     old_rev="$(git -C "$repo" rev-parse HEAD)"
     printf 'signed update\n' > "$repo/tracked.qml"
+    git -C "$repo" rm -q old-only
+    printf 'new release\n' > "$repo/new-only"
+    git -C "$repo" add -f new-only
     git -C "$repo" commit -qam "signed update"
     _sign_release "$repo" v1.0.1
     new_rev="$(git -C "$repo" rev-parse HEAD)"
@@ -759,6 +764,27 @@ test_interrupted_update_recovery() (
     APPLY_JOURNAL="$STATE_DIR/update-transaction-$ROOT_KEY"
     APPLY_TRUSTED_SIGNERS="$STATE_DIR/update-transaction-$ROOT_KEY.signers"
     REQUESTED_MODE=--apply
+
+    # Git's reset --keep still overwrites ignored paths. The updater's own
+    # revision switch must preserve both ignored and ordinary untracked files.
+    printf 'personal ignored data\n' > "$repo/new-only"
+    if ( _reset_preserving_user_files "$new_rev" >/dev/null 2>&1 ); then
+        fail "revision switch overwrote an ignored file"
+    fi
+    assert_eq "personal ignored data" "$(cat "$repo/new-only")" \
+        "ignored file survives a blocked revision switch"
+    assert_eq "$old_rev" "$(git -C "$repo" rev-parse HEAD)" \
+        "ignored collision leaves HEAD untouched"
+    rm -f "$repo/new-only"
+    git -C "$repo" reset --hard -q "$new_rev"
+    printf 'personal untracked data\n' > "$repo/old-only"
+    if ( _reset_preserving_user_files "$old_rev" >/dev/null 2>&1 ); then
+        fail "revision switch overwrote an untracked file"
+    fi
+    assert_eq "personal untracked data" "$(cat "$repo/old-only")" \
+        "untracked file survives a blocked revision switch"
+    rm -f "$repo/old-only"
+    git -C "$repo" reset --hard -q "$old_rev"
 
     # Interruption immediately after the merge still has a prepared journal.
     # Recovery must return to the old revision rather than assuming HEAD is good.
@@ -823,6 +849,14 @@ EOF
     fi
     assert_eq "$head_before" "$(git -C "$repo" rev-parse HEAD)" \
         "malformed journal leaves checkout untouched"
+    local -a quarantines=( "$STATE_DIR"/update-quarantine-"$ROOT_KEY".* )
+    [ -f "${quarantines[0]}/journal" ] \
+        || fail "malformed journal was not preserved for inspection"
+    assert_eq "not a journal" "$(cat "${quarantines[0]}/journal")" \
+        "quarantined journal keeps its original bytes"
+    [ ! -e "$APPLY_JOURNAL" ] \
+        || fail "malformed journal still blocks the next update run"
+    rm -rf -- "${quarantines[@]}"
     git -C "$repo" reset --hard -q "$old_rev"
     _clear_apply_transaction
 
@@ -1058,14 +1092,22 @@ test_update_refuses_dirty_apply() (
     printf '%s\n' 1 "target $remote_head v1.0.1 verified" 'upstream update' \
         > "$test_home/cache/silere-shell/update-pending"
     git -C "$client" remote set-url origin "$TMP/unavailable-update-origin.git"
-    if ! HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" \
+    if HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" \
             PATH="$stub_dir:$PATH" \
             bash "$client/scripts/update.sh" --apply >/dev/null 2>&1; then
-        fail "update apply contacted origin instead of using its fetched ref"
+        fail "offline update apply accepted a release it could not recheck upstream"
     fi
-    assert_eq "$remote_head" "$(git -C "$client" rev-parse HEAD)" "offline update apply HEAD"
+    assert_eq "$old_head" "$(git -C "$client" rev-parse HEAD)" "offline update apply HEAD"
+    [ -e "$test_home/cache/silere-shell/update-pending" ] \
+        || fail "offline update apply cleared the pending update flag"
+
+    git -C "$client" remote set-url origin "$remote"
+    HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" \
+        bash "$client/scripts/update.sh" --apply >/dev/null 2>&1 \
+        || fail "apply did not recover after the origin returned"
+    assert_eq "$remote_head" "$(git -C "$client" rev-parse HEAD)" "reconnected update apply HEAD"
     [ ! -e "$test_home/cache/silere-shell/update-pending" ] \
-        || fail "successful offline apply left the pending update flag"
+        || fail "successful apply left the pending update flag"
 )
 
 test_update_reporting() (
@@ -1636,6 +1678,20 @@ test_update_apply_binds_to_confirmed_release() (
     grep -qF "target $confirmed_rev v1.0.1 verified" \
         "$test_home/cache/silere-shell/update-pending" \
         || fail "apply binding: the check did not record the full confirmed target"
+
+    git -C "$seed" push -q origin :refs/tags/v1.0.1
+    head_before="$(git -C "$client" rev-parse HEAD)"
+    if out="$(HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" \
+            bash "$client/scripts/update.sh" --apply 2>&1)"; then
+        fail "apply installed a release withdrawn after confirmation"
+    fi
+    printf '%s\n' "$out" | grep -q 'v1.0.1 was withdrawn upstream' \
+        || fail "withdrawn release refusal was unclear: $out"
+    assert_eq "$head_before" "$(git -C "$client" rev-parse HEAD)" \
+        "withdrawn release leaves the checkout untouched"
+    [ -e "$test_home/cache/silere-shell/update-pending" ] \
+        || fail "withdrawn release cleared the pending update flag"
+    git -C "$seed" push -q origin refs/tags/v1.0.1
 
     pending_flag="$test_home/cache/silere-shell/update-pending"
     cp "$pending_flag" "$pending_flag.good"

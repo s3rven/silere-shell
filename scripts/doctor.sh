@@ -313,7 +313,10 @@ fi
 if [ "$git_install" -eq 1 ]; then
     transaction=""
     if transaction="$(bash "$ROOT/scripts/update.sh" --transaction-status 2>/dev/null)"; then
-        if printf '%s\n' "$transaction" | grep -q '^pending=1$'; then
+        if printf '%s\n' "$transaction" | grep -q '^quarantined=1$'; then
+            transaction_path="$(printf '%s\n' "$transaction" | sed -n 's/^path=//p')"
+            warn "update recovery" "damaged journal preserved at $transaction_path; inspect it before another update"
+        elif printf '%s\n' "$transaction" | grep -q '^pending=1$'; then
             transaction_phase="$(printf '%s\n' "$transaction" | sed -n 's/^phase=//p')"
             transaction_tag="$(printf '%s\n' "$transaction" | sed -n 's/^tag=//p')"
             warn "update recovery" "${transaction_tag:-release} interrupted at ${transaction_phase:-apply}; run silere update"
