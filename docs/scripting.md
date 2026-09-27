@@ -9,17 +9,17 @@ qs ipc -p "$SILERE_DIR/shell.qml" call menu toggle
 ```
 
 Run `qs ipc -p "$SILERE_DIR/shell.qml" show` for the current list. The `silere` command makes
-the same calls without the path: `silere ipc menu toggle`, `silere ipc show`.
+the same calls without the path: `silere ipc menu toggle`, and `silere ipc` alone for the list.
 
 ## Surfaces
 
 | call | opens |
 |---|---|
 | `menu toggle` | the menu |
-| `menu tab <n>` | the menu on `0` Home, `1` Settings or `2` Recent |
+| `menu tab <n>` | the menu on `0` Home, `1` Settings or `2` Notifications |
 | `menu settings <name>` | Settings on one page — names below |
 | `calendar toggle` | the calendar |
-| `quickActions toggle` | Do Not Disturb, night light, power mode and airplane mode |
+| `quickActions toggle` | Do Not Disturb, night light, power mode, Wi-Fi, Bluetooth and airplane mode |
 
 `menu`, `calendar` and `quickActions` each take `close` as well as `toggle`, for a keybind
 that dismisses without opening anything.
@@ -113,7 +113,7 @@ Silere runs a command of your own when something happens. Drop an executable fil
 | `update-available` | count |
 | `workspace-changed` | workspace id |
 
-`update-available` fires only while Settings › Updates tracks package updates.
+`update-available` fires when the count rises, and only while Settings › Updates tracks package updates.
 `notification` fires only for notifications that show a popup, not for ones silenced by
 Do Not Disturb, a fullscreen window or turned-off popups.
 

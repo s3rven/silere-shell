@@ -33,6 +33,11 @@ Hardware not already listed takes a new letter.
 | 1.0.0 | 2026-09-07 | A | warm | 96 MB | 191 MB | 0.0% | 23 | 47 |
 | 1.1.0 | 2026-09-17 | A | cold | 82 MB | 181 MB | 0.0% | 21 | 50 |
 | 1.1.0 | 2026-09-17 | A | warm | 93 MB | 195 MB | 0.0% | 22 | 50 |
+| 1.1.1 | 2026-09-17 | A | cold | — | — | — | — | — |
+| 1.1.1 | 2026-09-17 | A | warm | — | — | — | — | — |
+
+No benchmark was recorded for 1.1.1; the blank rows mark the missing baseline without
+assigning measurements from another revision to that release.
 
 0.9.0 was sampled one commit past the tag, with `fontFamily` set to `IosevkaTerm Nerd
 Font`. That font costs about 9 MB PSS over the JetBrainsMono Nerd Font default, so the
@@ -48,7 +53,7 @@ comparable with each other. Take a matched pair on a quiet machine to compare st
 ## Recording a row
 
 ```bash
-systemctl --user restart silere-shell.service
+silere restart
 sleep 30
 bash scripts/bench.sh 30 --label 0.9.0            # cold
 bash scripts/bench.sh 30 --warm --label 0.9.0     # warm

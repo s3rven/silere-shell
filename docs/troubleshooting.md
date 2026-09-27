@@ -10,9 +10,10 @@ It reports the runtime, the optional tools, the font, which program owns notific
 whether Silere is set to start on login, either from the compositor config or from a
 systemd user unit. It changes nothing.
 
-A running shell's log is in `qs log -p ~/.config/silere-shell/shell.qml --follow`. A second
-`qs -p` next to a running shell brings its own bar and notification server, so stop the
-first with `qs kill -p` on the same path before running one in the foreground.
+`silere log --follow` prints the running shell's log as it grows, and `silere restart`
+starts the shell again. A second `qs -p` next to a running shell brings its own bar and
+notification server, so stop the first with `qs kill -p` on the same path before running
+one in the foreground.
 
 ## It installed but nothing appears
 
@@ -37,7 +38,7 @@ revision, and restarts the shell when a systemd user unit runs it.
 
 Another daemon already owns `org.freedesktop.Notifications`. Silere names it in an alert a
 few seconds after start and under Settings › System › Maintenance, and `silere doctor`
-reports it too. Stop that daemon and restart Silere.
+reports it too. Stop that daemon and run `silere restart`.
 
 ## Icons or text use the wrong font
 
@@ -74,7 +75,7 @@ hl.layer_rule({ name = "silere-no-anim", match = { namespace = "^silere-.*$" }, 
 ## No blur behind the bar
 
 Blur needs Hyprland 0.56 or niri 26.04 or newer, and a translucent bar: lower Settings ›
-Bar › Layout › Opacity below 100%.
+Appearance › Theme › Bar opacity below 100%.
 
 ## Brightness controls the wrong screen
 

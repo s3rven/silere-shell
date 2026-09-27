@@ -71,7 +71,7 @@ Record a row in [`perf-history.md`](perf-history.md) as part of tagging. The REA
 figures, and a per-release measurement on a known machine is what keeps them true.
 
 ```bash
-systemctl --user restart silere-shell.service
+silere restart
 sleep 30
 bash scripts/bench.sh 30 --label <version>            # cold row
 bash scripts/bench.sh 30 --warm --label <version>     # warm row
@@ -81,6 +81,8 @@ The restart is what makes the cold row cold; without it `bench.sh` reports `as-f
 
 Both rows go in against the reference machine letter they came from. Hardware not already
 in that table takes a new letter — rows from different machines are not comparable.
+The unrecorded 1.1.1 run is marked with dashes and explained in the table. New releases
+need measured values; do not assign numbers from a different revision to one.
 
 A few MB between releases is font and driver noise. Tens of MB, a descriptor count that no
 longer settles, or a thread count past the core count holds the tag.

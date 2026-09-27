@@ -9,7 +9,10 @@ whole shell to change part of it.
 - `config/` — colours, durations, sizes
 - `services/` — settings and system state, no UI
 - `modules/` — one folder per surface: `bar/`, `menu/`, `notifications/`, `osd/`, …
-- `scripts/` — install, update, checks
+- `scripts/` — install, update, checks and command completions
+- `packaging/aur/` — the package recipe and its generated `.SRCINFO`
+- `security/` — the release signer list used by installed updaters
+- `docs/` — user guides and archived release notes
 
 ## Changing things
 
@@ -66,7 +69,7 @@ The name appears a few hundred times, nearly all of it cosmetic. Four matter:
 - **`security/update-signers`** — swap in your own key, or your fork's updater will
   reject your own releases
 
-`grep -rIl silere .` finds the rest, and the AUR files and systemd units are in there.
+`grep -rIl --exclude-dir=.git silere .` finds the rest, including the AUR files and update timer units.
 
 ## Before you push
 

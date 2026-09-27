@@ -79,7 +79,7 @@ The same page in the neutral theme and in colours Matugen took from the wallpape
 
 Silere is the bar and the surfaces that open from it. It has no launcher, dock, lock
 screen, wallpaper setter or clipboard history; keep the ones you already use. The lock
-action runs hyprlock, swaylock, gtklock or a command of your own.
+action runs hyprlock, swaylock, gtklock, `loginctl lock-session` or a command of your own.
 
 ## Install
 
@@ -100,6 +100,8 @@ the whole plan without writing anything.
 Restart your compositor, or start Silere now with `silere run`. If you skipped the
 `silere` command, that is `~/.config/silere-shell/scripts/silere run`, and
 `~/.config/silere-shell/scripts/silere link` adds the command later.
+`silere status` checks the running shell, `silere log --follow` reads its log, and
+`silere restart` starts it again.
 
 **Opening the menu.** The installer offers to bind **Super + /** to the menu, which holds
 every setting. Clicking the active workspace diamond opens it too. On niri, or a Hyprland

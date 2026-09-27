@@ -15,15 +15,18 @@ The installer:
 - checks every QML module Silere imports and names any that are missing
 - puts a checkout in your XDG config directory, or another path you choose
 - backs up files before editing them, and asks before touching compositor autostart
-- offers a key that opens the menu, and leaves a combination already in use alone
+- offers a key that opens the menu in a Hyprland `.conf`, and leaves a combination already in use alone;
+  for niri and a Lua config it prints the line to add
 - offers to leave the checkout on the latest signed release
 - prints the final install path when it's done
 
 To start it, restart your compositor, or try it right away with `silere run`. Before the
 optional maintenance-command link exists, use `/that/path/scripts/silere run`.
 Launches through `silere run` hold the loaded shell steady while an update replaces QML
-files; restart the shell after an update if you do not use the systemd user service.
+files; run `silere restart` after an update if you do not use the systemd user service.
 For a development checkout, `SILERE_WATCH_FILES=1 silere run` enables live QML reloads.
+`silere restart` uses an existing `silere-shell.service` when it runs this checkout.
+Silere ships an optional update timer; create the shell service yourself if you want one.
 
 ## Previewing the install
 
@@ -38,7 +41,10 @@ same reviewed scripts in the checkout—there is no daemon:
 
 ```bash
 silere run
+silere link
+silere restart
 silere status
+silere log --follow
 silere doctor
 silere ipc <target> <function> [args]
 silere update
@@ -48,8 +54,13 @@ silere repair
 silere repair --apply
 silere repair --undo
 silere version
+silere -V
 silere uninstall
 ```
+
+`silere` alone lists its commands, and `silere ipc` alone lists the calls the running
+shell answers. `silere --version` also prints the installed version. The link adds fish
+and bash completions, down to setting names and their values.
 
 `silere doctor` and `bash scripts/install.sh --check` are read-only. They check the
 runtime, compositor IPC, required QML modules, which program owns notifications, the Nerd
@@ -60,11 +71,15 @@ never runs it or elevates privileges.
 
 `silere update --apply` stages the signed release in a detached worktree and validates it
 there — headless type-check, then a sandboxed launch against a copy of your settings —
-before the live checkout changes at all. It writes a private transaction journal recording
+before the live checkout changes at all. Applying needs a connection to confirm that the
+release tag is still published. It writes a private transaction journal recording
 that validation passed, then fast-forwards. If power is lost or the updater is killed after
 that point, the next update run authenticates the journal with a snapshot of the previously
 installed release key and retains the validated revision, or restores the previous one.
 Recovery refuses to reset a checkout that gained local edits after the interruption.
+If a recovery journal is damaged, Silere preserves it under the XDG state directory
+and reports the location in `silere doctor`. The failed run leaves the checkout alone;
+later update checks can run again.
 
 A checkout the installer marked as a development install — or any checkout not on
 `main` — is left to Git; Updates shows its branch and state but self-update is disabled.
@@ -103,10 +118,11 @@ hides that widget or marks it unavailable.
 | `inotifywait` | screenshot feedback on the underline, and restarting the shell onto a restarted Hyprland when the systemd user service runs this checkout |
 | `checkupdates` / `apt` / `dnf` / `zypper` / `xbps-install` | package update badge; `checkupdates` also needs `fakeroot` |
 | `paru` / `yay` | AUR update count on Arch Linux |
-| `hyprlock` / `swaylock` / `gtklock` | lock action |
+| `hyprlock` / `swaylock` / `gtklock` / `loginctl lock-session` | lock action |
 | `pwvucontrol` / `pavucontrol` | Sound settings, reached from the volume control |
 | `systemctl` / `loginctl` | suspend, reboot, and shutdown actions |
 | `notify-send` | battery, temperature, and update notifications |
+| `fc-list` (fontconfig) | installed Nerd Font detection and font picker |
 | `ssh-keygen` | cryptographic verification of Silere release tags |
 
 The installer also reports on `busctl`, `pgrep`, `pkill` and `timeout`. Those ship with
