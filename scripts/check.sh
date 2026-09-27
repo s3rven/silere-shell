@@ -302,7 +302,7 @@ if command -v fc-list >/dev/null 2>&1; then
       if printf '%s' "$resolved" | grep -qi "JetBrainsMono Nerd Font"; then
         ok "font match" "resolves to $resolved"
       else
-        warn "font match" "fontconfig serves '$resolved' instead — icons will render wrong; run fc-cache -f (see README troubleshooting)"
+        warn "font match" "fontconfig serves '$resolved' instead — icons will render wrong; run fc-cache -f (see docs/troubleshooting.md)"
       fi
     fi
   else
