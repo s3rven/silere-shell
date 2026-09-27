@@ -68,7 +68,8 @@ qs ipc -p "$SILERE_DIR/shell.qml" call settings list ""
 | `list <filter>` | prints each key with its own range or vocabulary |
 | `modified` | prints only what differs from the defaults |
 
-A call that fails answers with a line starting `error:`, so a script can test for it. A
+A call that fails answers with a line starting `error:`, so a script can test for it;
+`silere ipc` prints that line to stderr and exits 1. `silere ipc <target>` lists one target's calls. A
 rejected write also names the values the key accepts. The `list` filter matches a page name as well as a key, so
 `list clock` reaches `showSeconds`. The filter is required; pass `""` to list every key at
 once.

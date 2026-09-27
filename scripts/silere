@@ -342,7 +342,21 @@ case "$command_name" in
         if [ "$#" -eq 0 ] || { [ "$1" = show ] && [ "$#" -eq 1 ]; }; then
             exec qs ipc -p "$ROOT/shell.qml" show
         fi
-        exec qs ipc -p "$ROOT/shell.qml" call "$@"
+        if [ "$#" -eq 1 ]; then
+            # a target alone lists its calls rather than Quickshell's "Function required"
+            calls="$(qs ipc -p "$ROOT/shell.qml" show 2>/dev/null \
+                | awk -v t="$1" '/^target / { on = ($2 == t) } on')" || true
+            [ -n "$calls" ] || die "no IPC target named $1; silere ipc lists them"
+            printf '%s\n' "$calls"
+            exit 0
+        fi
+        # a refused call answers with a line starting "error:"; scripts need that as a failure
+        rc=0; out="$(qs ipc -p "$ROOT/shell.qml" call "$@")" || rc=$?
+        case "$out" in
+            error:*) printf '%s\n' "$out" >&2; exit 1 ;;
+        esac
+        [ -z "$out" ] || printf '%s\n' "$out"
+        exit "$rc"
         ;;
     update)
         if is_packaged; then
