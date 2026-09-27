@@ -247,7 +247,7 @@ Item {
                     height: _entry._sel ? _pwField.height + 4 : 0
                     clip: true
                     visible: height > 0.5
-                    Disclosure on height { expanded: _entry._sel }
+                    Disclosure on height { gate: _entry.motionReady && _geometryReady }
                     // the field opens below its row, which can be past the list's bottom edge
                     onHeightChanged: Qt.callLater(_entry._revealField)
 

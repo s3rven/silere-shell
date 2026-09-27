@@ -139,17 +139,16 @@ PanelWindow {
         // animated here, not on the rail Item: the content pane derives its x and width from this, and easing only the rail leaves the content snapping ahead of it
         property int railW: _railExpanded ? railExpandedW : railCollapsedW
         MotionBehavior on railW {
+            id: _railMotion
             gate: panel._geometryReady && panel.open
             NumberAnimation {
-                duration: panel._railMotionMs
+                duration: _railMotion.targetValue > panel.railCollapsedW
+                    ? Motion.panelResize : Motion.panelCollapse
                 easing.type: Easing.BezierSpline
-                easing.bezierCurve: panel._railMotionCurve
+                easing.bezierCurve: _railMotion.targetValue > panel.railCollapsedW
+                    ? Motion.emphasizedDecel : Motion.emphasizedAccel
             }
         }
-        readonly property int _railMotionMs: _railExpanded
-            ? Motion.panelResize : Motion.panelCollapse
-        readonly property var _railMotionCurve: _railExpanded
-            ? Motion.emphasizedDecel : Motion.emphasizedAccel
         // live width, not the target: the page reflows ahead of the outer edge otherwise
         readonly property int contentW: Math.max(1, Math.round(width - railW))
         readonly property int contentPad: activeTab === 1
@@ -415,15 +414,18 @@ PanelWindow {
 
         // must match railW's curve, or the panel's outer edge and the rail's inner edge disagree mid-motion
         MotionBehavior on width {
+            id: _widthMotion
             gate: panel._geometryReady && panel.open
             NumberAnimation {
-                duration: panel._railMotionMs
+                duration: _widthMotion.targetValue >= panel.width
+                    ? Motion.panelResize : Motion.panelCollapse
                 easing.type: Easing.BezierSpline
-                easing.bezierCurve: panel._railMotionCurve
+                easing.bezierCurve: _widthMotion.targetValue >= panel.width
+                    ? Motion.emphasizedDecel : Motion.emphasizedAccel
             }
         }
         // duration caps the velocity: without it a tall page swap crawls for ~700ms while the
-        // width beside it lands in _railMotionMs, and every scroll-affordance settle times out early
+        // width beside it has long landed, and every scroll-affordance settle times out early
         MotionBehavior on height {
             gate: panel._geometryReady && panel.open && panel._outerHeightMotion
             SmoothedAnimation {
@@ -483,8 +485,6 @@ PanelWindow {
                     shown: panel._settingsNavVisible
                     retained: panel._settingsNavRetained
                         || (MenuState.open && panel.activeTab === 1)
-                    slideMs: panel._railMotionMs
-                    slideCurve: panel._railMotionCurve
                     content: Component {
                         SettingsNav {
                             powerOpen: panel.powerOpen
@@ -502,8 +502,6 @@ PanelWindow {
                     shown: panel._recentNavVisible
                     retained: panel._recentRetained
                         || (MenuState.open && panel.activeTab === 2)
-                    slideMs: panel._railMotionMs
-                    slideCurve: panel._railMotionCurve
                     content: Component {
                         RecentNav {
                             onFilterPicked: contentFlick.contentY = 0
@@ -525,18 +523,20 @@ PanelWindow {
                     enabled: panel.powerOpen
 
                     MotionBehavior on height {
+                        id: _powerRailHeight
                         NumberAnimation {
-                            duration: panel.powerOpen ? Motion.panelResize : Motion.panelCollapse
+                            duration: _powerRailHeight.targetValue > 0 ? Motion.panelResize : Motion.panelCollapse
                             easing.type: Easing.BezierSpline
-                            easing.bezierCurve: panel.powerOpen
+                            easing.bezierCurve: _powerRailHeight.targetValue > 0
                                 ? Motion.emphasizedDecel : Motion.emphasizedAccel
                         }
                     }
                     MotionBehavior on opacity {
+                        id: _powerRailFade
                         NumberAnimation {
                             duration: Motion.fast
                             easing.type: Easing.BezierSpline
-                            easing.bezierCurve: panel.powerOpen
+                            easing.bezierCurve: _powerRailFade.targetValue > 0.5
                                 ? Motion.standardDecel : Motion.standardAccel
                         }
                     }
@@ -859,10 +859,11 @@ PanelWindow {
                         z: 5
 
                         MotionBehavior on opacity {
+                            id: _placeholderFade
                             NumberAnimation {
                                 duration: Motion.pageOut
                                 easing.type: Easing.BezierSpline
-                                easing.bezierCurve: _pagePlaceholder._shown
+                                easing.bezierCurve: _placeholderFade.targetValue > 0.5
                                     ? Motion.standardDecel : Motion.standardAccel
                             }
                         }

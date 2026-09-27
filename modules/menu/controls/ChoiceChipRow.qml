@@ -201,8 +201,6 @@ MenuRow {
                             dpr: _surface._dpr
                             factor: _tap.pressed ? Motion.pressScale
                                 : _hover.hovered ? Motion.hoverScale : 1.0
-                            duration: _tap.pressed ? Motion.press
-                                : _hover.hovered ? Motion.hoverIn : Motion.hoverOut
                         }
                         // the gliding selection carries the selected look, so this only adds hover and press
                         color: _option.active

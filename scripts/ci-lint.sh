@@ -778,6 +778,58 @@ else
   ok "motion" "every animation duration routes through Motion"
 fi
 
+section "motion timing direction"
+# A duration or easing that branches on the flag moving the value runs one flip late:
+# Qt starts the Behavior's job before a binding on that flag re-evaluates, so every
+# press, hover and reveal after the first played on the other direction's timing.
+# targetValue is written before the job starts, so a branch must read it instead.
+# NotificationCard's _leaving is set in code before x moves, CollapsibleSection's
+# symmetric never flips with the value, and Disclosure's _enter is read from targetValue.
+mapfile -t motion_files < <(find shell.qml modules config -name '*.qml')
+stale_timing="$(awk '
+  function check(   e) {
+    e = expr
+    gsub(/\?\?|\?\./, "", e)
+    if (index(e, "?") == 0 || e ~ /targetValue/) return
+    if (file ~ /NotificationCard\.qml$/ && e ~ /_leaving/) return
+    if (file ~ /CollapsibleSection\.qml$/ && e ~ /^[[:space:]]*root\.symmetric[[:space:]]*\?/) return
+    if (enter_ok[file] && e ~ /^[[:space:]]*root\._enter[[:space:]]*\?/) return
+    printf "%s:%d:%s\n", file, at, expr
+  }
+  FNR == 1 { if (pending) check(); depth = 0; inb = 0; pending = 0 }
+  /readonly property bool _enter:.*targetValue/ { enter_ok[FILENAME] = 1 }
+  {
+    if (pending && $0 ~ /^[[:space:]]*[?:]/) { expr = expr " " $0; next }
+    if (pending) { check(); pending = 0 }
+    if (!inb && ($0 ~ /(MotionBehavior|ColorFade|Disclosure)[[:space:]]+on[[:space:]]+[A-Za-z_.]+[[:space:]]*\{/ \
+        || $0 ~ /^(MotionBehavior|Behavior)[[:space:]]*\{/)) {
+      inb = 1; base = depth
+    }
+    if (inb) {
+      rest = $0
+      while (match(rest, /(duration|easing\.type|easing\.bezierCurve)[[:space:]]*:/)) {
+        rest = substr(rest, RSTART + RLENGTH)
+        cut = match(rest, /[;}]/)
+        if (pending) check()
+        expr = cut ? substr(rest, 1, RSTART - 1) : rest
+        file = FILENAME; at = FNR; pending = 1
+        if (cut) { check(); pending = 0 }
+      }
+    }
+    line = $0
+    opens = gsub(/\{/, "{", line); closes = gsub(/\}/, "}", line)
+    depth += opens - closes
+    if (inb && depth <= base) inb = 0
+  }
+  END { if (pending) check() }
+' "${motion_files[@]}" </dev/null)"
+if [ -n "$stale_timing" ]; then
+  fail "a Behavior timing that branches must read its targetValue, not the flag moving the value:"
+  printf '%s\n' "$stale_timing"
+else
+  ok "motion" "branching Behavior timings follow the value's destination"
+fi
+
 section "multi-window animation pacing"
 if grep -qF '//@ pragma DefaultEnv QSG_USE_SIMPLE_ANIMATION_DRIVER = 1' shell.qml; then
   ok "motion driver" "elapsed-time pacing is the overrideable default"

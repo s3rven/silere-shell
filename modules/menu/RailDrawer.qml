@@ -8,8 +8,6 @@ Item {
 
     required property bool shown
     property bool retained: root.shown
-    property int slideMs: Motion.panelResize
-    property var slideCurve: Motion.emphasizedDecel
     property Component content: null
     readonly property alias item: _loader.item
 
@@ -20,18 +18,21 @@ Item {
     transform: Translate { x: root._slide }
 
     MotionBehavior on opacity {
+        id: _drawerFade
         NumberAnimation {
-            duration: root.shown ? Motion.ms(130) : Motion.ms(90)
+            duration: _drawerFade.targetValue > 0.5 ? Motion.ms(130) : Motion.ms(90)
             easing.type: Easing.BezierSpline
-            easing.bezierCurve: root.shown
+            easing.bezierCurve: _drawerFade.targetValue > 0.5
                 ? Motion.standardDecel : Motion.standardAccel
         }
     }
     MotionBehavior on _slide {
+        id: _slideMotion
         NumberAnimation {
-            duration: root.slideMs
+            duration: _slideMotion.targetValue >= 0 ? Motion.panelResize : Motion.panelCollapse
             easing.type: Easing.BezierSpline
-            easing.bezierCurve: root.slideCurve
+            easing.bezierCurve: _slideMotion.targetValue >= 0
+                ? Motion.emphasizedDecel : Motion.emphasizedAccel
         }
     }
     Loader {

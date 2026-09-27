@@ -33,9 +33,10 @@ Item {
             root.highlighted, root.pressed)
         ColorFade on color {}
         MotionBehavior on scale {
+            id: _trackScale
             NumberAnimation {
-                duration: root.pressed ? Motion.press
-                    : root.highlighted ? Motion.hoverIn : Motion.hoverOut
+                duration: _trackScale.targetValue < 1 ? Motion.press
+                    : _trackScale.targetValue > 1 ? Motion.hoverIn : Motion.hoverOut
                 easing.type: Easing.OutCubic
             }
         }
@@ -57,7 +58,7 @@ Item {
             radius: 4
             antialiasing: true
             x: root.checked ? parent.width - width - 3 : 3
-            scale: root.highlighted && !root.pressed ? 1.04 : 1.0
+            scale: root.pressed ? 0.98 : root.highlighted ? 1.04 : 1.0
             MotionBehavior on width {
                 NumberAnimation { duration: Motion.press; easing.type: Easing.OutCubic }
             }
@@ -66,9 +67,10 @@ Item {
 
             MotionBehavior on x     { gate: root._animateX; NumberAnimation { duration: Motion.normal; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.emphasizedDecel } }
             MotionBehavior on scale {
+                id: _knobScale
                 NumberAnimation {
-                    duration: root.pressed ? Motion.press
-                        : root.highlighted ? Motion.hoverIn : Motion.hoverOut
+                    duration: _knobScale.targetValue < 1 ? Motion.press
+                        : _knobScale.targetValue > 1 ? Motion.hoverIn : Motion.hoverOut
                     easing.type: Easing.OutCubic
                 }
             }

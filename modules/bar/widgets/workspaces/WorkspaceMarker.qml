@@ -140,8 +140,8 @@ Item {
         scale:   root.inSpecial ? 1.0 : 0.76
         transformOrigin: Item.Center
         visible: root.gem && opacity > 0.01
-        MotionBehavior on opacity { gate: root._motionAllowed(); NumberAnimation { duration: Motion.ms(root.inSpecial ? 180 : 130); easing.type: Easing.OutCubic } }
-        MotionBehavior on scale   { gate: root._motionAllowed(); NumberAnimation { duration: Motion.ms(root.inSpecial ? 210 : 130); easing.type: Easing.OutQuart } }
+        MotionBehavior on opacity { id: _frameFade;  gate: root._motionAllowed(); NumberAnimation { duration: Motion.ms(_frameFade.targetValue > 0 ? 180 : 130); easing.type: Easing.OutCubic } }
+        MotionBehavior on scale   { id: _frameScale; gate: root._motionAllowed(); NumberAnimation { duration: Motion.ms(_frameScale.targetValue >= 1 ? 210 : 130); easing.type: Easing.OutQuart } }
     }
     Rectangle {
         anchors.centerIn: parent
@@ -155,8 +155,8 @@ Item {
         scale:   root.inSpecial ? 1.0 : 0.68
         transformOrigin: Item.Center
         visible: !root._bar && opacity > 0.01
-        MotionBehavior on opacity { gate: root._motionAllowed(); NumberAnimation { duration: Motion.ms(root.inSpecial ? 165 : 120); easing.type: Easing.OutCubic } }
-        MotionBehavior on scale   { gate: root._motionAllowed(); NumberAnimation { duration: Motion.ms(root.inSpecial ? 190 : 120); easing.type: Easing.OutQuart } }
+        MotionBehavior on opacity { id: _haloFade;  gate: root._motionAllowed(); NumberAnimation { duration: Motion.ms(_haloFade.targetValue > 0 ? 165 : 120); easing.type: Easing.OutCubic } }
+        MotionBehavior on scale   { id: _haloScale; gate: root._motionAllowed(); NumberAnimation { duration: Motion.ms(_haloScale.targetValue >= 1 ? 190 : 120); easing.type: Easing.OutQuart } }
     }
 
     // filled rim, not a stroke (crisp on fractional displays); dot/ring reuse it as an energy-only halo

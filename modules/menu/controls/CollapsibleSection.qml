@@ -28,7 +28,7 @@ Item {
     enabled: expanded
     visible: expanded || height > 0.5
 
-    Disclosure on height { expanded: root.expanded; symmetric: root.symmetric }
+    Disclosure on height { symmetric: root.symmetric }
 
     Column {
         id: _content
@@ -39,9 +39,10 @@ Item {
         // one curve both ways makes the pair's opacity sum exactly 1 instead of 1.75,
         // and matching the height duration keeps content from landing opaque mid-resize
         MotionBehavior on opacity {
+            id: _contentFade
             NumberAnimation {
                 duration: root.symmetric ? Motion.medium : Motion.fast
-                easing.type: root.symmetric || root.expanded
+                easing.type: root.symmetric || _contentFade.targetValue > 0.5
                     ? Easing.OutCubic : Easing.InCubic
             }
         }

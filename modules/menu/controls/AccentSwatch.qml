@@ -56,6 +56,7 @@ Item {
             item: _chip
             dpr: _chip._dpr
             factor: _t.pressed ? 0.90 : _h.hovered ? 1.04 : 1.0
+            hoverFactor: 1.04
         }
 
         // only the custom chip pays for a canvas; the presets stay a flat fill

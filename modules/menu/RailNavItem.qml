@@ -135,13 +135,16 @@ Item {
         transformOrigin: Item.Left
         z: 10
         MotionBehavior on opacity {
-            NumberAnimation { duration: _pill._show ? Motion.fast : Motion.instant; easing.type: Easing.OutCubic }
+            id: _pillFade
+            NumberAnimation { duration: _pillFade.targetValue > 0.5 ? Motion.fast : Motion.instant; easing.type: Easing.OutCubic }
         }
         MotionBehavior on scale {
-            NumberAnimation { duration: _pill._show ? Motion.fast : Motion.instant; easing.type: Easing.OutCubic }
+            id: _pillScale
+            NumberAnimation { duration: _pillScale.targetValue >= 1 ? Motion.fast : Motion.instant; easing.type: Easing.OutCubic }
         }
         MotionBehavior on _slide {
-            NumberAnimation { duration: _pill._show ? Motion.fast : Motion.instant; easing.type: Easing.OutCubic }
+            id: _pillSlide
+            NumberAnimation { duration: _pillSlide.targetValue >= 0 ? Motion.fast : Motion.instant; easing.type: Easing.OutCubic }
         }
         ShellText {
             id: _pillLabel

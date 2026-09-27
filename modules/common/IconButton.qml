@@ -57,8 +57,6 @@ Item {
             dpr: _face._dpr
             factor: root.pressed ? Motion.pressScale
                 : _hover.hovered ? Motion.hoverScale : 1.0
-            duration: root.pressed ? Motion.press
-                : _hover.hovered ? Motion.hoverIn : Motion.hoverOut
         }
         color: Theme.buttonFill(root.accentColor, _hover.hovered, root.pressed)
 

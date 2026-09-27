@@ -3,7 +3,7 @@ import QtQuick
 MotionBehavior {
     id: root
 
-    property bool expanded: true
+    property real closedValue: 0
     property int enterEasing: Easing.BezierSpline
     property int exitEasing: Easing.BezierSpline
     property var enterCurve: Motion.emphasizedDecel
@@ -11,7 +11,7 @@ MotionBehavior {
     // a mutually-exclusive pair must share one curve in both directions, or the
     // expanding sibling outruns the collapsing one and their summed height bulges
     property bool symmetric: false
-    readonly property bool _enter: root.expanded || root.symmetric
+    readonly property bool _enter: root.symmetric || Math.abs(root.targetValue - root.closedValue) > 1e-6
     property bool _geometryReady: false
     property Timer _geometrySettle: Timer {
         interval: 0

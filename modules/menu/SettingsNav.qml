@@ -476,7 +476,7 @@ Item {
                                     : _grp.expanded ? 0.80 : 0.74)
                                 font.pixelSize: Settings.fontCaption
 
-                                Disclosure on rotation { expanded: _grp.expanded }
+                                Disclosure on rotation {}
                                 ColorFade on color {}
                             }
                         }
@@ -492,7 +492,6 @@ Item {
                             clip: height < _leafColumn.implicitHeight + root._childrenPad * 2
 
                             Disclosure on height {
-                                expanded: _grp.expanded
                                 symmetric: !root.allExpanded
                                 enterCurve: Motion.standard
                                 exitCurve: Motion.standard
@@ -507,10 +506,11 @@ Item {
                                 opacity: _grp.expanded ? 1 : 0
 
                                 MotionBehavior on opacity {
+                                    id: _leafFade
                                     NumberAnimation {
                                         duration: Motion.fast
                                         easing.type: Easing.BezierSpline
-                                        easing.bezierCurve: _grp.expanded
+                                        easing.bezierCurve: _leafFade.targetValue > 0.5
                                             ? Motion.standardDecel : Motion.standardAccel
                                     }
                                 }

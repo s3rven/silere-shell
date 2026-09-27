@@ -25,9 +25,10 @@ Pill {
     scale: root.show ? 1.0 : 0.88
     transformOrigin: Item.Center
     MotionBehavior on scale {
+        id: _scaleMotion
         NumberAnimation {
-            duration: root.show ? Motion.medium : Motion.fast
-            easing.type: root.show ? Easing.OutBack : Easing.InCubic
+            duration: _scaleMotion.targetValue >= 1 ? Motion.medium : Motion.fast
+            easing.type: _scaleMotion.targetValue >= 1 ? Easing.OutBack : Easing.InCubic
             easing.overshoot: 1.7
         }
     }

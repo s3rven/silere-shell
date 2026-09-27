@@ -332,7 +332,8 @@ PanelWindow {
                 property bool opened: false
                 readonly property Item parentFlyout: _entry.ownerFlyout
                 readonly property bool hovered: _flyHover.hovered
-                property real _shift: opened ? 0 : (_flip ? 5 : -5)
+                readonly property real _closedShift: _flip ? 5 : -5
+                property real _shift: opened ? 0 : _closedShift
 
                 visible: opened || opacity > 0.001
                 enabled: opened
@@ -367,8 +368,8 @@ PanelWindow {
                     outlineColor: Theme.outline
                 }
 
-                Disclosure on opacity { expanded: _flyout.opened; enterEasing: Easing.OutCubic }
-                Disclosure on _shift { expanded: _flyout.opened }
+                Disclosure on opacity { enterEasing: Easing.OutCubic }
+                Disclosure on _shift { closedValue: _flyout._closedShift }
 
                 onOpenedChanged: {
                     if (!_entry.sub) return

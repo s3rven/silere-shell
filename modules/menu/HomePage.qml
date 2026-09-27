@@ -149,7 +149,7 @@ PageShell {
         Item {
             width: 1
             height: Media.shown ? root._sectionGap : 0
-            Disclosure on height { expanded: Media.shown }
+            Disclosure on height {}
         }
 
         Item {
@@ -184,7 +184,7 @@ PageShell {
                 ? 4 * Math.ceil((_mediaLoader.item.height + 10) / 4) : 0
             clip: true
 
-            Disclosure on height { expanded: Media.shown }
+            Disclosure on height {}
 
             Loader {
                 id: _mediaLoader

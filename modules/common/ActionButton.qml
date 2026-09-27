@@ -55,9 +55,10 @@ Item {
         y: root.pressed ? 1 : _hover.hovered ? -1 : 0
         height: parent.height - y
         MotionBehavior on y {
+            id: _liftMotion
             NumberAnimation {
-                duration: root.pressed ? Motion.press
-                    : _hover.hovered ? Motion.hoverIn : Motion.hoverOut
+                duration: _liftMotion.targetValue > 0 ? Motion.press
+                    : _liftMotion.targetValue < 0 ? Motion.hoverIn : Motion.hoverOut
                 easing.type: Easing.OutCubic
             }
         }

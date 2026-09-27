@@ -28,8 +28,7 @@ Rectangle {
         factor: !root.hoverGrow ? 1.0
               : root.pressed ? 1.18
               : root.hovered ? 1.06 : 1.0
-        duration: root.pressed ? Motion.press
-            : root.hovered ? Motion.hoverIn : Motion.hoverOut
+        hoverFactor: 1.06
     }
     ColorFade on color { gate: root.animate && !root.pressed }
 

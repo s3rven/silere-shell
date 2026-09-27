@@ -119,7 +119,7 @@ PanelWindow {
         enabled: shown
         visible: height > 0.5
 
-        Disclosure on height { expanded: chip.shown }
+        Disclosure on height {}
 
         Rectangle {
             id: _surface
@@ -383,7 +383,7 @@ PanelWindow {
             enabled: shown
             visible: height > 0.5
 
-            Disclosure on height { expanded: _clearChip.shown }
+            Disclosure on height {}
 
             ConfirmButton {
                 anchors.verticalCenter: parent.verticalCenter
