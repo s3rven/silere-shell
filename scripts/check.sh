@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -eu
 export LC_ALL=C
+# every shell this launches must leave the desktop's night light and alerts alone
+export SILERE_SANDBOX=1
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT/scripts/lib/xdg.sh"

@@ -8,6 +8,9 @@
 # shellcheck disable=SC2034
 SILERE_PROBE_ERRORS='Unable to assign .*|Cannot assign .*|is not a type|ReferenceError: [^,]*|TypeError: [^,]*|Binding loop detected[^,]*'
 
+# pgrep/pkill match the live night light by name; see NightLight._sandboxed
+export SILERE_SANDBOX=1
+
 _probe_require_qs() {
     if ! command -v qs >/dev/null 2>&1; then
         echo "SKIP: quickshell (qs) not installed" >&2

@@ -553,7 +553,7 @@ _candidate_tree_starts() {
     log="$(mktemp "${TMPDIR:-/tmp}/silere-update-smoke.XXXXXX.log")" \
         || { rm -rf -- "$sandbox"; return 1; }
     XDG_CONFIG_HOME="$sandbox/config" XDG_CACHE_HOME="$sandbox/cache" \
-        XDG_STATE_HOME="$sandbox/state" SILERE_SMOKE_TEST=1 \
+        XDG_STATE_HOME="$sandbox/state" SILERE_SMOKE_TEST=1 SILERE_SANDBOX=1 \
         timeout --kill-after=5 5s qs -p "$candidate_root/shell.qml" --no-color \
         >"$log" 2>&1 9>&- || code=$?
     # 124 is the timeout firing, i.e. it stayed up for the whole window

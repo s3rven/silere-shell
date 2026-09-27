@@ -20,6 +20,8 @@ Singleton {
     property string _runningTool: ""
     readonly property string _killTarget: _runningTool.length > 0 ? _runningTool : tool
     readonly property bool toolAvailable: tool.length > 0
+    // pgrep and pkill match by name, so a test copy of the shell would adopt and kill the live tool
+    readonly property bool _sandboxed: Quickshell.env("SILERE_SANDBOX") === "1"
     // auto is a mode, not a value: nightLightTemp stays whatever the user last chose by hand,
     // so turning auto off restores it instead of leaving the last solar step behind
     readonly property int  temperature: ShellSettings.nightLightAuto ? root.suggestedTemp
@@ -302,7 +304,7 @@ Singleton {
     }
 
     function toggle(): void {
-        if (!toolAvailable) return
+        if (!toolAvailable || _sandboxed) return
         // any pgrep in flight describes the state before this action
         root._stateGeneration++
         root._restoreDone = true
@@ -342,7 +344,7 @@ Singleton {
     }
 
     function _init(): void {
-        if (!SystemTools.ready) return
+        if (_sandboxed || !SystemTools.ready) return
         if (!toolAvailable) { enabled = false; return }
         if (!SystemTools.hasPgrep) {
             enabled = _sunsetProc.running

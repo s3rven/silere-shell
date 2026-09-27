@@ -19,7 +19,8 @@ Singleton {
     }
 
     function _send(summary: string, body: string, urgency: string): bool {
-        if (!SystemTools.ready || !SystemTools.hasNotifySend) return false
+        if (!SystemTools.ready || !SystemTools.hasNotifySend
+                || Quickshell.env("SILERE_SANDBOX") === "1") return false
         Quickshell.execDetached([
             "notify-send",
             "--urgency=" + urgency,

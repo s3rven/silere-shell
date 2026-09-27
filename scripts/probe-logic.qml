@@ -2414,6 +2414,23 @@ ShellRoot {
         ShellSettings.nightLightTemp = tempWas
         ShellSettings.nightLightAuto = autoWas
 
+        const nightOnWas = ShellSettings.nightLightOn
+        const nightProviderWas = ShellSettings.nightLightProvider
+        const nightToolsWas = SystemTools._tools
+        const nightReadyWas = SystemTools.ready
+        SystemTools._tools = { wlsunset: true, pgrep: true, pkill: true }
+        SystemTools.ready = true
+        ShellSettings.nightLightProvider = "wlsunset"
+        NightLight.toggle()
+        root._check(NightLight.toolAvailable && NightLight._sandboxed && !NightLight.enabled
+                && ShellSettings.nightLightOn === nightOnWas
+                && NightLight._runningTool === "" && !NightLight._probedOnce,
+            "a test copy of the shell never adopts, starts or stops the live night light")
+        ShellSettings.nightLightOn = nightOnWas
+        ShellSettings.nightLightProvider = nightProviderWas
+        SystemTools._tools = nightToolsWas
+        SystemTools.ready = nightReadyWas
+
         const geoResolvedWas = NightLight._geoResolved
         const autoLatWas = NightLight._autoLat
         const autoLonWas = NightLight._autoLon
