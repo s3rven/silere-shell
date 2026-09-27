@@ -407,8 +407,10 @@ Singleton {
             // carry fields this schema would drop on the next save
             const version = Number(j.__version ?? 0)
             const fromFuture = isFinite(version) && version > 1
-            if (fromFuture)
+            if (fromFuture) {
+                root.storeError = "From a newer version; not saving over it"
                 console.warn("silere-shell: notifications.json is from a newer version; keeping it as it is")
+            }
             // a reload already restored the same rows through _persist, so match on identity
             const present = Object.create(null)
             for (let i = 0; i < _history.count; i++) {
@@ -435,6 +437,7 @@ Singleton {
             root.historyRevision++
             _diskStore.lastSavedText = trimmed
             if (!fromFuture) {
+                root.storeError = ""
                 _diskStore.writeAllowed = true
                 root._pruneOrphanState()
                 root._saveHistory()

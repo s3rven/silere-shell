@@ -416,6 +416,8 @@ PanelWindow {
                 // with the bar below, the newest card is the last one, so an overflowing stack follows it
                 onContentHeightChanged: if (win._barBottom && !moving)
                     contentY = Math.max(0, contentHeight - height)
+                onHeightChanged: if (win._barBottom && !moving)
+                    contentY = Math.max(0, contentHeight - height)
 
                 Item {
                     id: cardCol

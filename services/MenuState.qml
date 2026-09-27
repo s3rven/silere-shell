@@ -211,7 +211,7 @@ AnchoredPopupState {
         function close(): void { root.close() }
         function tab(index: int): string {
             if (index < root.homeTab || index > root.recentTab)
-                return "error: unknown menu tab " + index + "; valid: 0 (home), 1 (settings), 2 (recent)"
+                return "error: unknown menu tab " + index + "; valid: 0 (home), 1 (settings), 2 (notifications)"
             root._unanchor()
             root.showTab(index)
             return root.open ? "ok" : root._refusedText

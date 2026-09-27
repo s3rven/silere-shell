@@ -210,10 +210,12 @@ PanelWindow {
             spacing: 1
 
             QuickActionRow {
-                glyph: Notifications.effectiveDnd ? "󰂛" : "󰂚"
+                glyph: Notifications.silencingActive ? "󰂛" : "󰂚"
                 label: "Do Not Disturb"
-                active: Notifications.effectiveDnd
-                stateText: Notifications.dnd ? "On" : (Notifications.effectiveDnd ? "Quiet hours" : "Off")
+                active: Notifications.dnd
+                stateText: Notifications.dnd ? "On"
+                    : Notifications.effectiveDnd ? "Quiet hours"
+                    : Notifications.fullscreenSilenced ? "Fullscreen" : "Off"
                 onTriggered: Notifications.toggleDnd()
             }
             QuickActionRow {

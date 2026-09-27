@@ -241,12 +241,12 @@ Item {
     property int slideDir: 1
     // arrival is flung to cross a full card width in reasonable time; the exit still travels the whole way
     readonly property real _enterX:  slideDir * 44
-    readonly property real _hiddenX: slideDir * (implicitWidth + 16)
+    readonly property real _hiddenX: slideDir * (width + 16)
 
     // reading one card holds the whole stack: cards expiring out from under the pointer reflow what is being read
     property bool stackHovered: false
     // an abandoned empty reply lets the card go; one being typed or holding text keeps it
-    readonly property bool _paused: _cardHover.hovered || card.stackHovered || Idle.isIdle
+    readonly property bool _paused: _cardHover.hovered || card.stackHovered || Idle.isQuiet
         || (card._replyOpen && (_replyInput.activeFocus || _replyInput.text.length > 0))
 
     property real _hoverPausedMs: 0
@@ -338,7 +338,7 @@ Item {
             if (Idle.isIdle) {
                 card.cancelReply()
                 // this can remove the delegate synchronously: keep it last
-                card._completeDismiss()
+                card.dismiss(true)
                 return
             }
             card._updateTime()
