@@ -11,7 +11,9 @@ settings file carries its own `__version` and migrates separately.
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+
+- `silere log` prints plain text when piped or saved to a file, without terminal color codes.
 
 ## Releases
 

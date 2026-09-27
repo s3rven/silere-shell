@@ -285,7 +285,9 @@ case "$command_name" in
                 && die "Silere is not running; its last run is in journalctl --user -u silere-shell.service"
             die "Silere is not running"
         fi
-        exec qs log -p "$ROOT/shell.qml" "${follow[@]}"
+        color=()
+        [ -t 1 ] || color=(--no-color)
+        exec qs log "${color[@]}" -p "$ROOT/shell.qml" "${follow[@]}"
         ;;
     status)
         [ "$#" -eq 0 ] || { usage >&2; exit 2; }

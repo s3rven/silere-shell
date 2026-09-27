@@ -1993,8 +1993,9 @@ test_cli_restart_and_log() (
     : > "$state"; : > "$state.calls"
     if cli log >/dev/null 2>&1; then fail "log claimed a stopped shell"; fi
     echo 4242 > "$state"
-    cli log --follow || fail "log of a running shell failed"
-    assert_eq "log log -p $ROOT/shell.qml --follow" "$(grep '^log' "$state.calls")" "log argv"
+    cli log --follow > "$state.out" || fail "log of a running shell failed"
+    assert_eq "log log --no-color -p $ROOT/shell.qml --follow" "$(grep '^log' "$state.calls")" \
+        "log argv drops color when not writing to a terminal"
 )
 
 if [ "${SILERE_TEST_LIB_ONLY:-0}" = 1 ]; then
