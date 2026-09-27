@@ -997,10 +997,10 @@ elif command -v makepkg >/dev/null 2>&1; then
   aur_check_ok=0
   if [ "$(id -u)" -eq 0 ]; then
     if command -v runuser >/dev/null 2>&1; then
-      aur_srcdir="$(mktemp -d "${TMPDIR:-/tmp}/silere-aur-src.XXXXXX")"
-      chmod 0755 "$aur_srcdir"
-      cp "$aur_dir/PKGBUILD" "$aur_srcdir/PKGBUILD"
-      chmod 0644 "$aur_srcdir/PKGBUILD"
+      # nobody must reach and write the build dir (/tmp, not TMPDIR) and read the .install file too
+      aur_srcdir="$(mktemp -d /tmp/silere-aur-src.XXXXXX)"
+      cp -- "$aur_dir"/* "$aur_srcdir/"
+      chown -R nobody "$aur_srcdir"
       (cd "$aur_srcdir" && runuser -u nobody -- env HOME=/tmp \
         makepkg --printsrcinfo -p PKGBUILD) >"$aur_srcinfo" 2>/dev/null \
         && aur_check_ok=1
