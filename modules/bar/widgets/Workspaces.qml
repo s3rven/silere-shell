@@ -117,7 +117,7 @@ Item {
         id: appModel
         monitorName: root.monitorName
         visibleIdsKey: slotModel.visibleIdsKey
-        visibleIds: slotModel.visibleIds
+        visibleIndexById: slotModel.visibleIndexById
         workspaceToplevels: Compositor.workspaceToplevels
     }
 

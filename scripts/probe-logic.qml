@@ -91,6 +91,15 @@ ShellRoot {
     }
     Component { id: workspaceStripFactory; Workspaces { screen: null } }
     Component {
+        id: workspaceAppModelFactory
+        WorkspaceAppModel {
+            monitorName: "DP-1"
+            visibleIdsKey: "1,2"
+            visibleIndexById: ({ 1: 0, 2: 1 })
+            workspaceToplevels: []
+        }
+    }
+    Component {
         id: workspaceMarkerFactory
         WorkspaceMarker {
             style: "gem"
@@ -370,6 +379,18 @@ ShellRoot {
                 && workspaceStrip._visibleIndex(workspaceStrip.visibleIds[0]) === 0
                 && workspaceStrip._visibleIndex(999999) === -1,
             "workspace page IDs resolve through the shared index")
+        const appIconsWere = ShellSettings.wsShowAppIcons
+        ShellSettings.wsShowAppIcons = true
+        const workspaceApps = workspaceAppModelFactory.createObject(root, { workspaceToplevels: [
+            { output: "DP-1", wsId: 1, appId: "foot" },
+            { output: "DP-1", wsId: 5, appId: "foot" },
+            { output: "HDMI-A-1", wsId: 2, appId: "foot" }] })
+        workspaceApps.rebuild()
+        root._check(workspaceApps.appsFor(1).length === 1 && workspaceApps.appsFor(5).length === 0
+                && workspaceApps.appsFor(2).length === 0,
+            "workspace app icons cover only this output's visible workspaces")
+        workspaceApps.destroy()
+        ShellSettings.wsShowAppIcons = appIconsWere
 
         root._check(workspaceStrip._btnW(-1) === 0,
             "a slot with no workspace behind it takes no width in the row")

@@ -9,7 +9,7 @@ QtObject {
 
     required property string monitorName
     required property string visibleIdsKey
-    required property var visibleIds
+    required property var visibleIndexById
     required property var workspaceToplevels
 
     property var _appMetaCache: Object.create(null)
@@ -37,14 +37,8 @@ QtObject {
         return meta
     }
 
-    readonly property var _visibleIndexById: {
-        const indexes = Object.create(null)
-        for (let i = 0; i < root.visibleIds.length; i++)
-            indexes[root.visibleIds[i]] = i
-        return indexes
-    }
     function _isVisible(wsId: int): bool {
-        return root._visibleIndexById[wsId] !== undefined
+        return root.visibleIndexById[wsId] !== undefined
     }
 
     // Niri refreshes its whole window snapshot on a title change; key off identity.
