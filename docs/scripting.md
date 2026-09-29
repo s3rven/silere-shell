@@ -115,7 +115,7 @@ Silere runs a command of your own when something happens. Drop an executable fil
 | `update-available` | count |
 | `workspace-changed` | workspace id |
 
-`update-available` fires when the count rises, and only while Settings › Updates tracks package updates.
+`update-available` fires when the count rises, and only while Settings › System › Updates tracks package updates.
 `notification` fires only for notifications that show a popup, not for ones silenced by
 Do Not Disturb, a fullscreen window or turned-off popups.
 
