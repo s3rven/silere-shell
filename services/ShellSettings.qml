@@ -455,7 +455,8 @@ Singleton {
         case "real": {
             const n = (typeof v === "number" || (typeof v === "string" && v.trim().length > 0)) ? Number(v) : NaN
             if (!isFinite(n)) return { ok: false }
-            return { ok: true, value: Math.max(s.min, Math.min(s.max, n)) }
+            // older slider steps saved float residue such as 1.9000000000000001
+            return { ok: true, value: Math.round(Math.max(s.min, Math.min(s.max, n)) * 1e6) / 1e6 }
         }
         case "enum": return s.vals.indexOf(v) >= 0 ? { ok: true, value: v } : { ok: false }
         case "re":   return typeof v === "string" && s.re.test(v) ? { ok: true, value: v } : { ok: false }

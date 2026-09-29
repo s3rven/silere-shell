@@ -1804,6 +1804,10 @@ ShellRoot {
             "slider scroll steps stop at the minimum")
         root._check(track._posToVal(0) === 0 && track._posToVal(100) === 1,
             "slider inset endpoints preserve the full range")
+        track.min = 0.5; track.max = 3; track.step = 0.05
+        root._check(String(track._snap(1.9)) === "1.9" && String(track._snap(0.96)) === "0.95",
+            "slider steps land on the grid without float residue")
+        track.min = 0; track.max = 1; track.step = 0.1
         track.enabled = false
         trackChanged = -1
         track.nudge(1, 1)
@@ -2667,6 +2671,9 @@ ShellRoot {
         root._check(ShellSettings.notifHistoryLimit === 5,
             "settings clamp history limit low")
         ShellSettings.notifHistoryLimit = originalLimit
+        const residue = ShellSettings._coerced({ k: "barLineStrength", t: "real", min: 0.5, max: 3 }, 1.9000000000000001)
+        root._check(residue.ok && String(residue.value) === "1.9",
+            "a saved real drops float residue on load")
 
         // the IPC surface reports failure from the same coercion the file load uses,
         // so a key added to the schema is scriptable without touching the handler

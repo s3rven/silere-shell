@@ -57,7 +57,10 @@ Item {
         const number = Number(v)
         return isFinite(number) ? Math.max(min, Math.min(max, number)) : min
     }
-    function _snap(v: real): real  { return step > 0 ? min + Math.round((v - min) / step) * step : v }
+    // 0.5 + 28 * 0.05 is 1.9000000000000001; round off the float residue or it lands in settings.json
+    function _snap(v: real): real {
+        return step > 0 ? Math.round((min + Math.round((v - min) / step) * step) * 1e6) / 1e6 : v
+    }
     function _posToVal(px: real): real {
         if (width <= 0) return min
         const ratio = Math.max(0, Math.min(1,
