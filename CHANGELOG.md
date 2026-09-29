@@ -36,7 +36,7 @@ settings file carries its own `__version` and migrates separately.
 - `silere log` prints plain text when piped or saved to a file, without terminal color codes.
 - `silere ipc` and `silere log` no longer print Qt's locale warning above their output in a terminal.
 - `silere update` says which version is installed and whether a release is waiting, instead of finishing silently.
-- `silere ipc` exits 1 when a call answers with an error, and `silere ipc <target>` lists that target's calls.
+- `silere ipc` exits 1 when a call fails, including an unknown target or function or unusable arguments, and `silere ipc <target>` lists that target's calls.
 - Run from a terminal, `silere doctor` reads the Quickshell version instead of warning it could not, and `silere update` no longer refuses a release because of it.
 - The updater refuses a signed release tag that was published under another version's name.
 

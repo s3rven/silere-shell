@@ -353,13 +353,19 @@ case "$command_name" in
             printf '%s\n' "$calls"
             exit 0
         fi
-        # a refused call answers with a line starting "error:"; scripts need that as a failure
+        # a refused call still exits 0 with its reason on stdout: the shell's own "error:" line, or
+        # Quickshell's for a target, function or argument it cannot match; scripts need a failure
         rc=0; out="$(qs ipc -p "$ROOT/shell.qml" call "$@")" || rc=$?
         case "$out" in
-            error:*) printf '%s\n' "$out" >&2; exit 1 ;;
+            error:*|"Target not found."|"Function not found."|"Too few arguments provided"*\
+                |"Too many arguments provided"*|"Unable to parse argument"*)
+                [ "$rc" -ne 0 ] || rc=1 ;;
         esac
+        if [ "$rc" -ne 0 ]; then
+            [ -z "$out" ] || printf '%s\n' "$out" >&2
+            exit "$rc"
+        fi
         [ -z "$out" ] || printf '%s\n' "$out"
-        exit "$rc"
         ;;
     update)
         if is_packaged; then
