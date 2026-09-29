@@ -194,9 +194,11 @@ Item {
 
         HintText {
             visible: root.open && Bluetooth.errorAddr.length > 0
-                && Bluetooth.errorKind === "pair"
-            text: "If this device needs a passkey, start a Bluetooth pairing agent "
-                + "such as blueman-applet or bt-agent, then try again."
+            // a device that lost its pairing key refuses every reconnect until it is paired again
+            text: Bluetooth.errorKind === "pair"
+                ? "If this device needs a passkey, start a Bluetooth pairing agent "
+                    + "such as blueman-applet or bt-agent, then try again."
+                : "If it keeps failing, right-click the device twice to forget it, then pair it again."
         }
     }
 
