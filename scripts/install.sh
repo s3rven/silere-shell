@@ -1121,6 +1121,8 @@ if [ -d "$INSTALL_DIR/.git" ]; then
 elif [ -e "$INSTALL_DIR" ] || [ -L "$INSTALL_DIR" ]; then
     if _dry; then
         _would "move $INSTALL_DIR aside and clone $REPO_URL in its place"
+        [ "$INSTALL_DIR" != "$CONFIG_HOME/silere-shell" ] \
+            || _would "carry settings, notification history, calendar marks and hooks into the clone"
         fresh_clone=true
     elif _ask "Path exists but is not a git repo. Move it aside and clone fresh?"; then
         install_backup="$(_move_aside_path "$INSTALL_DIR")" \
