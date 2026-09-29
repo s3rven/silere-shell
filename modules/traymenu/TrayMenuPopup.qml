@@ -17,27 +17,15 @@ PanelWindow {
     readonly property int menuWidth: 220
 
     property var _activeMenu: null
-    function _emitMenuSignal(entry, signalName: string, fallbackName: string): bool {
-        if (entry === null || entry === undefined) return false
+    function _trigger(entry): void {
+        if (entry === null || entry === undefined) return
         try {
-            const fn = entry[signalName]
-            if (typeof fn === "function") {
-                fn()
-                return true
-            }
-
-            const fallback = entry[fallbackName]
-            if (typeof fallback === "function") {
-                fallback()
-                return true
-            }
+            if (typeof entry.triggered === "function") entry.triggered()
+            else if (typeof entry.sendTriggered === "function") entry.sendTriggered()
+            else console.warn("silere-shell: tray menu entry has no triggered signal")
         } catch (error) {
             console.warn("silere-shell: tray menu signal failed:", String(error))
-            return false
         }
-
-        console.warn("silere-shell: tray menu entry has no", signalName, "signal")
-        return false
     }
     function _setActiveMenu(handle): void {
         win._activeMenu = handle
@@ -228,14 +216,14 @@ PanelWindow {
             Accessible.onPressAction: {
                 if (!_entry.on) return
                 if (_entry.sub) { _entry._toggleFlyout(); return }
-                win._emitMenuSignal(_entry.modelData, "triggered", "sendTriggered")
+                win._trigger(_entry.modelData)
                 TrayMenuState.close()
             }
 
             TapHandler {
                 enabled: _entry.on && !_entry.sub
                 onTapped: {
-                    win._emitMenuSignal(_entry.modelData, "triggered", "sendTriggered")
+                    win._trigger(_entry.modelData)
                     TrayMenuState.close()
                 }
             }
