@@ -513,6 +513,10 @@ _resolve_trusted_release() {
         -c gpg.ssh.allowedSignersFile="$TRUSTED_SIGNERS" \
         verify-tag "$release_tag" >/dev/null 2>&1 \
         || _release_fail "$mode" "$release_tag is not signed by the trusted Silere release key"
+    # the signature covers the tag object, not the ref: an old signed tag pushed under a
+    # newer name would otherwise pass and hold every install on that old release
+    [ "$(git -C "$ROOT" cat-file tag "$release_tag" 2>/dev/null | sed -n '/^$/q; s/^tag //p')" = "$release_tag" ] \
+        || _release_fail "$mode" "$release_tag carries the signature of a different release"
     release_rev="$(git -C "$ROOT" rev-parse "$release_tag^{}" 2>/dev/null)" \
         || _release_fail "$mode" "could not resolve $release_tag"
     git -C "$ROOT" merge-base --is-ancestor "$release_rev" refs/remotes/origin/main \

@@ -1379,6 +1379,18 @@ EOF
     [ -z "$(git -C "$client" tag -l v9.9.3)" ] \
         || fail "update check kept a release tag withdrawn upstream"
 
+    git -C "$seed" update-ref refs/tags/v9.9.5 "$(git -C "$seed" rev-parse v9.9.0)"
+    git -C "$seed" push -q origin refs/tags/v9.9.5
+    if _run >/dev/null 2>&1; then
+        fail "update check accepted an old signed release under a newer name"
+    fi
+    grep -qF 'v9.9.5 carries the signature of a different release' "$cache/update-error" \
+        || fail "a renamed release did not record why it was refused"
+    git -C "$seed" push -q origin :refs/tags/v9.9.5
+    git -C "$seed" tag -d v9.9.5 >/dev/null
+    _run >/dev/null 2>&1 \
+        || fail "a renamed release withdrawn upstream still blocked the update check"
+
     printf '4242\n' > "$cache/update-checked"
     git -C "$client" remote set-url origin "$TMP/unavailable-report-origin.git"
     if _run >/dev/null 2>&1; then
