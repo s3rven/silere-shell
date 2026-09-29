@@ -139,6 +139,13 @@ Item {
         return name.length > 0 ? name : root._clean(app)
     }
 
+    // resolved once per app, not per title: an animated title changes several times a second
+    property int _entriesRevision: 0
+    readonly property string _currentAppName: {
+        void root._entriesRevision
+        return root._appName(root.currentApp)
+    }
+
     // visible labels, not reverse-domain ids: _clean() would leave "notes.md" as "MD"
     function _labelKey(s: string): string {
         return String(s || "").toLowerCase()
@@ -205,7 +212,7 @@ Item {
         _seq.stop()
         _wsJustChanged = false
         if (monitorWsId > 0) _lastWsId = monitorWsId
-        _shownApp = _appName(currentApp)
+        _shownApp = _currentAppName
         _shownTitle = currentTitle
         _shownRef = currentRef
         _shownVisible = _titleVisible
@@ -216,7 +223,7 @@ Item {
     }
 
     function _matchesCurrent(): bool {
-        return root._shownApp === root._appName(root.currentApp)
+        return root._shownApp === root._currentAppName
             && root._shownTitle === root.currentTitle
             && root._shownRef === root.currentRef
             && root._shownVisible === root._titleVisible
@@ -225,7 +232,7 @@ Item {
     }
 
     function _capturePending(): void {
-        root._pendApp = root._appName(root.currentApp)
+        root._pendApp = root._currentAppName
         root._pendTitle = root.currentTitle
         root._pendRef = root.currentRef
         root._pendVisible = root._titleVisible
@@ -308,7 +315,7 @@ Item {
     Component.onCompleted: {
         root._syncMediaOwnership()
         _wsJustChanged = false
-        _shownApp   = _appName(currentApp)
+        _shownApp   = _currentAppName
         _shownTitle = currentTitle
         _shownRef   = currentRef
         _shownVisible = _titleVisible
@@ -326,7 +333,7 @@ Item {
         root._syncMediaOwnership()
         root._queueTransition()
     }
-    onCurrentAppChanged: root._queueTransition()
+    on_CurrentAppNameChanged: root._queueTransition()
     onCurrentTitleChanged: root._queueTransition()
     // the handlers above run before this binding is recomputed, so a queue driven only by
     // them settles on a stale invisible state and never hears that a title arrived
@@ -348,7 +355,7 @@ Item {
     // entries land after startup, so a title shown before then carries the id's name
     Connections {
         target: ShellSettings.showWindowTitleApp ? DesktopEntries : null
-        function onApplicationsChanged() { root._queueTransition() }
+        function onApplicationsChanged() { root._entriesRevision++ }
     }
 
     Connections {
