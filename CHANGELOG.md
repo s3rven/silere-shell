@@ -22,6 +22,7 @@ settings file carries its own `__version` and migrates separately.
 - The night light arc shows the whole day: the sun rides above the horizon by day and dips below it at night, with sunrise and sunset under the points where it crosses.
 - The installer lines up its optional-tools list, and prints autostart lines to copy by hand with a readable path.
 - `silere` and `silere doctor` color their status words in a terminal, using its own palette; `NO_COLOR` turns this off, as it now does for the installer.
+- A critical notification stays in the popup stack instead of folding behind Show more when newer ones arrive.
 
 ### Fixed
 

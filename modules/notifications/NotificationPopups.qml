@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
+import Quickshell.Services.Notifications
 import "../../config"
 import "../../services"
 import "../common"
@@ -67,8 +68,13 @@ PanelWindow {
     readonly property bool   _barBottom: ShellSettings.barPosition === "bottom"
     // the stack reads outward from the bar: newest card first, older ones behind the more chip
     readonly property bool   _newestFirst: !_barBottom
-    readonly property int    _lastVisualIndex: _newestFirst
-        ? stack.count - _visibleCards : stack.count - 1
+    readonly property int    _lastVisualIndex: {
+        if (!_newestFirst) return stack.count - 1
+        const older = win._olderThanShown
+        for (let i = 0; i < older; i++)
+            if (win._isCritical(Notifications.popupModel.values[i])) return i
+        return stack.count - _visibleCards
+    }
 
     // a Column can only follow the model's order, so each card sums the cards in front of it.
     // count moves before the delegates exist, so the sums re-read on their arrival instead
@@ -211,8 +217,20 @@ PanelWindow {
 
     property bool _quietPaint: false
 
+    function _isCritical(n): bool {
+        return !!n && n.urgency === NotificationUrgency.Critical
+    }
+    // a critical card stays until dismissed, so newer ones must not fold it behind the more chip
+    readonly property int _olderThanShown: win._showAll || ShellSettings.notifMaxVisible <= 0
+        ? 0 : Math.max(0, Notifications.popupModel.values.length - ShellSettings.notifMaxVisible)
+    readonly property int _pinnedCritical: {
+        const values = Notifications.popupModel.values
+        let n = 0
+        for (let i = 0; i < win._olderThanShown; i++) if (win._isCritical(values[i])) n++
+        return n
+    }
     readonly property int _visibleCards: win._showAll || ShellSettings.notifMaxVisible <= 0
-        ? stack.count : Math.min(stack.count, ShellSettings.notifMaxVisible)
+        ? stack.count : Math.min(stack.count, ShellSettings.notifMaxVisible + win._pinnedCritical)
 
     function _noteLeaving(): void {
         win._quietPaint = true
@@ -447,6 +465,7 @@ PanelWindow {
                             readonly property bool shouldLoad: win._showAll
                                 || ShellSettings.notifMaxVisible <= 0 || index < 0
                                 || index >= stack.count - ShellSettings.notifMaxVisible
+                                || win._isCritical(modelData)
                             readonly property var cardItem: _cardLoader.item
                             readonly property Region blurShape: Region {
                                 item: _slot
@@ -549,7 +568,8 @@ PanelWindow {
             id: _moreChip
             y: outerCol._topOf(_moreChip)
             readonly property int _extra: !win._showAll && ShellSettings.notifMaxVisible > 0
-                ? Math.max(0, Notifications.activeCount - ShellSettings.notifMaxVisible) : 0
+                ? Math.max(0, Notifications.activeCount - ShellSettings.notifMaxVisible
+                    - win._pinnedCritical) : 0
             // the chip collapses after the count reaches zero, so it keeps the last count it showed
             property int _label: 1
             on_ExtraChanged: if (_extra > 0) _label = _extra
