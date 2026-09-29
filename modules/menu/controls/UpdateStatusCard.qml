@@ -48,7 +48,7 @@ Rectangle {
         Item {
             id: _main
             width: parent.width
-            height: 56
+            height: Metrics.rowHeightFor(56)
 
             ShellText {
                 id: _g
@@ -145,7 +145,7 @@ Rectangle {
 
                 ActionButton {
                     visible: root.secondaryShown
-                    height: 28
+                    height: Metrics.rowHeightFor(28)
                     glyph: root.secondaryGlyph
                     accessibleName: root.secondaryLabel
                     enabled: root.secondaryEnabled
@@ -153,7 +153,7 @@ Rectangle {
                 }
 
                 ActionButton {
-                    height: 28
+                    height: Metrics.rowHeightFor(28)
                     label: root._compactActions ? "" : root.primaryLabel
                     accessibleName: root.primaryLabel
                     glyph: root.primaryGlyph

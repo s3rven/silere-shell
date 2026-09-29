@@ -2286,6 +2286,24 @@ if [ -n "$row_formulas" ]; then
 else
   ok "row height" "every design row height derives from the shared grid"
 fi
+# a literal on an ActionButton freezes it while the text inside grows with uiScale
+mapfile -t button_files < <(grep -rl 'ActionButton' --include='*.qml' modules || true)
+button_literals="$(awk '
+FNR == 1 { depth = 0; inbtn = 0 }
+{
+  line = $0; sub(/\/\/.*/, "", line)
+  if (!inbtn && line ~ /(^|[^A-Za-z_])ActionButton[[:space:]]*\{/) { inbtn = 1; btndepth = depth }
+  if (inbtn && depth == btndepth + 1 && line ~ /^[[:space:]]*(implicitHeight|height):[[:space:]]*[0-9]+[[:space:]]*$/)
+    print FILENAME ":" FNR ":" $0
+  n = gsub(/\{/, "{", line); m = gsub(/\}/, "}", line); depth += n - m
+  if (inbtn && depth <= btndepth) inbtn = 0
+}' "${button_files[@]}" </dev/null || true)"
+if [ -n "$button_literals" ]; then
+  fail "size an ActionButton with Metrics.rowHeightFor(design), not a literal:"
+  while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$button_literals"
+else
+  ok "button height" "every ActionButton height stays on the shared grid"
+fi
 
 section "popup surface pixel grid"
 # 4 logical px is exactly 5 output px at the 1.25 fractional scale, so a span off that grid
