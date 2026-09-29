@@ -42,7 +42,8 @@ reports it too. Stop that daemon and run `silere restart`.
 
 ## Icons or text use the wrong font
 
-Install a Nerd Font such as `ttf-jetbrains-mono-nerd`, then refresh the user font cache.
+Install a Nerd Font such as `ttf-jetbrains-mono-nerd`, then refresh the font cache with
+`fc-cache -f` and run `silere restart`.
 
 ## Bluetooth pairing fails for a passkey device
 

@@ -30,7 +30,7 @@ cost almost nothing while you're not using it:
   pauses its periodic readings and checks; the clock keeps updating once a minute.
 - The media visualizer, package update checks, network speed, temperature alerts, seconds
   on the clock and the underline effects all start switched off.
-- Quickshell is the only package it requires. Night light, the visualizer and the
+- Quickshell is the only package it needs to run. Night light, the visualizer and the
   underline's screenshot feedback start their helper programs only while they're on.
 
 ## Features
@@ -42,11 +42,12 @@ cost almost nothing while you're not using it:
 - The bar can show workspaces, the focused window's title, what's playing, network,
   Bluetooth, volume, microphone, brightness, battery, the clock, the tray, and badges for
   package and Silere updates. It sits on the top or bottom edge, docked or floating, and
-  you can drag its widgets between the left, centre and right.
+  Settings lets you drag its widgets between the left, centre and right.
 - The menu has three pages. Home holds media controls, volume and brightness, Wi-Fi and
   Bluetooth, night light, Do Not Disturb, power mode, the lock button, and CPU, memory,
   disk and battery readouts. Settings holds every option, and the third page is your
-  notification history.
+  notification history. The Power button under the page buttons offers sleep, log out,
+  reboot and power off; the last three need a second press.
 - Notifications support actions, images, inline replies and progress bars. Do Not Disturb
   can follow a schedule, and the history can be searched, filtered by app and kept across
   restarts.
@@ -119,8 +120,7 @@ problems.
 
 Open the menu with **Super + /**, if you let the installer add that keybind, or by
 clicking the active workspace. On niri, or with a Hyprland config written in Lua, the
-installer prints the keybind for you to add yourself. niri runs keybind commands without a
-shell, so use the full path:
+installer prints the keybind with your full path for you to add yourself. It runs:
 
 ```bash
 qs ipc -p ~/.config/silere-shell/shell.qml call menu toggle
@@ -146,8 +146,8 @@ the notification history, and text fields.
 | shell update | **click** opens Settings › System › Updates |
 | tray | **click** jumps to the app's window, or activates the app when it has none · **right-click** opens its menu · **middle-click** runs the app's secondary action · **scroll** is passed through to the app |
 | notifications | **click** runs the default action · **right-click** dismisses · **middle-click** jumps to the app that sent it · a reply action opens an inline text field when the sender supports one |
-| wi-fi list | **click** joins a saved network, or opens a password field for a personal one · **right-click** or **middle-click** a saved network twice to forget it, unless you are connected to it |
-| bluetooth list | **click** pairs or connects · **right-click** or **middle-click** a paired device twice to forget it, unless it is connected |
+| wi-fi list | **click** joins a saved or open network, or opens a password field for a personal one · **click** the connected network twice to disconnect · **right-click** or **middle-click** a saved network twice to forget it, unless you are connected to it |
+| bluetooth list | **click** pairs or connects · **click** a connected device twice to disconnect · **right-click** or **middle-click** a paired device twice to forget it, unless it is connected |
 | menu | **Escape** steps back, then closes · **click** anywhere outside to close |
 | history | **type** in Search, or press **Ctrl+F** to get there, to find an app or message · **click** an app in the rail to show only its notifications · **click** an entry to read it in full · **Clear** removes what is shown, after a second click to confirm · **Escape** clears search, then closes |
 
@@ -178,10 +178,10 @@ settings page names and the hooks.
 
 ## Updates
 
-When a new release is out, Settings › System › Updates lists its commits and asks you to
-confirm twice before installing it. Silere only accepts release tags signed with the key
-that ships in your checkout, and `silere update --rollback` returns to the version you had
-before.
+When a new release is out, Settings › System › Updates shows its release notes and
+commits, and installs it after you press Install and then Confirm. Silere only accepts
+release tags signed with the key that ships in your checkout, and `silere update --rollback`
+returns to the version you had before.
 
 Nothing installs on its own; the optional update timer only checks for releases. The
 package badge in the bar counts pending system updates, and Silere never installs packages.

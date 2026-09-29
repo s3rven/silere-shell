@@ -121,6 +121,7 @@ hides that widget or marks it unavailable.
 | `hyprlock` / `swaylock` / `gtklock` / `loginctl lock-session` | lock action |
 | `pwvucontrol` / `pavucontrol` | Sound settings, reached from the volume control |
 | `systemctl` / `loginctl` | suspend, reboot, and shutdown actions |
+| `hyprshutdown` | Log out on Hyprland closes your apps before it ends the session |
 | `notify-send` | battery, temperature, and update notifications |
 | `fc-list` (fontconfig) | installed Nerd Font detection and font picker |
 | `ssh-keygen` | cryptographic verification of Silere release tags |
