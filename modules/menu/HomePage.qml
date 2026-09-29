@@ -318,7 +318,7 @@ PageShell {
                 glyph: NightLight.enabled ? "󰖔" : "󰖙"
                 title: "Night Light"
                 status: NightLight.lastError.length > 0 ? NightLight.lastError
-                      : NightLight.enabled ? NightLight.temperature + "K" : NightLight.recommendLabel
+                      : NightLight.enabled ? NightLight.temperature + "K" : NightLight.offStatus
                 accentColor: NightLight.lastError.length > 0 ? Theme.error : Theme.warning
                 statusColor: NightLight.lastError.length > 0 ? Theme.error : "transparent"
                 showSwitch: true

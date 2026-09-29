@@ -18,7 +18,8 @@ settings file carries its own `__version` and migrates separately.
 ### Changed
 
 - Album art on the Home page crossfades to the next cover without dimming halfway through.
-- With night light off after sunset, its row says After sunset instead of Recommended.
+- With night light off, its row shows the sunset time in the evening and the sunrise time after midnight, instead of Recommended.
+- The night light arc shows the whole day: the sun rides above the horizon by day and dips below it at night, with sunrise and sunset under the points where it crosses.
 - The installer lines up its optional-tools list, and prints autostart lines to copy by hand with a readable path.
 - `silere` and `silere doctor` color their status words in a terminal, using its own palette; `NO_COLOR` turns this off, as it now does for the installer.
 
