@@ -69,6 +69,13 @@ _secure_fresh_default_install() {
     chmod 0700 "$1" || _warn "could not restrict permissions on $1"
 }
 
+# the shell runs code from inside it, so no other account may rename entries there;
+# an existing directory keeps the read access the user gave it
+_secure_config_home() {
+    (umask 077 && mkdir -p "$1") || return 1
+    chmod go-w "$1"
+}
+
 _is_silere_checkout() {
     local path="$1"
     [ -f "$path/shell.qml" ] \
@@ -1074,15 +1081,14 @@ fresh_clone=false
 if [ "$INSTALL_DIR" = "$DEFAULT_DIR" ] && _dry; then
     if [ ! -d "$CONFIG_HOME" ]; then
         _would "create $CONFIG_HOME with mode 0700"
-    elif [ "$(stat -c '%a' "$CONFIG_HOME" 2>/dev/null)" != 700 ]; then
-        _would "restrict $CONFIG_HOME to mode 0700"
+    elif [ -n "$(find "$CONFIG_HOME" -maxdepth 0 -perm /022 2>/dev/null)" ]; then
+        _would "remove group and other write access from $CONFIG_HOME"
     fi
 elif [ "$INSTALL_DIR" = "$DEFAULT_DIR" ]; then
     # -m with -p only applies to the deepest directory, so any parent this
     # creates would land at the umask default; clamp it for the whole path.
     _txn_before_mode "$CONFIG_HOME" || _die "could not journal permissions for $CONFIG_HOME"
-    (umask 077 && mkdir -p "$CONFIG_HOME") || _die "could not create $CONFIG_HOME"
-    chmod 0700 "$CONFIG_HOME" || _die "could not secure $CONFIG_HOME"
+    _secure_config_home "$CONFIG_HOME" || _die "could not secure $CONFIG_HOME"
 fi
 
 if [ -d "$INSTALL_DIR/.git" ]; then

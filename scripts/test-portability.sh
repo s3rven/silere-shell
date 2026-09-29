@@ -124,6 +124,16 @@ test_fresh_install_permissions() (
     _secure_fresh_default_install "$custom"
     assert_eq "755" "$(stat -c '%a' "$custom")" "custom install mode"
 
+    _secure_config_home "$home/fresh-config/nested"
+    assert_eq "700|700" "$(stat -c '%a' "$home/fresh-config")|$(stat -c '%a' "$home/fresh-config/nested")" \
+        "fresh config home mode"
+    mkdir -p "$home/kept-config" "$home/shared-config"
+    chmod 0755 "$home/kept-config"; chmod 0777 "$home/shared-config"
+    _secure_config_home "$home/kept-config"
+    _secure_config_home "$home/shared-config"
+    assert_eq "755|755" "$(stat -c '%a' "$home/kept-config")|$(stat -c '%a' "$home/shared-config")" \
+        "existing config home keeps its read access and loses shared write"
+
     mkdir -p "$linked_home/.config" "$linked_default"
     ln -s "$linked_default" "$linked_home/.config/silere-shell"
     chmod 0755 "$linked_default"
