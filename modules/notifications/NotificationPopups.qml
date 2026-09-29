@@ -34,9 +34,9 @@ PanelWindow {
         const previous = win._replyOwner
         if (previous && previous !== owner) previous.cancelReply()
         win._replyOwner = owner
+        // a PanelWindow has no requestActivate(); the on-demand keyboard focus above hands the layer the keys
         Qt.callLater(function() {
             if (win._replyOwner !== owner) return
-            win.requestActivate()
             owner.focusReplyInput()
         })
     }
