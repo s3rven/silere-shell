@@ -30,6 +30,7 @@ settings file carries its own `__version` and migrates separately.
 ### Fixed
 
 - Starting an inline reply in a notification popup no longer stops on a script error before it focuses the reply field.
+- With week numbers off, the calendar's side borders draw at the same weight on a 125% display.
 - The update card in Settings grows with the interface scale instead of keeping a fixed height.
 - Scrolling over a tray icon with a touchpad sends the app whole steps instead of one per touchpad event.
 - Opening or closing a tray submenu tells the app once, not twice.

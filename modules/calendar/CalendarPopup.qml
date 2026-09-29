@@ -67,7 +67,8 @@ PanelWindow {
         readonly property int  cell:     34
         readonly property int  pad:      14
         readonly property int  weekCol:  ShellSettings.calendarWeekNumbers ? 22 : 0
-        readonly property int  panelW:   weekCol + cell * 7 + pad * 2
+        readonly property int  gridW:    weekCol + cell * 7
+        readonly property int  panelW:   Metrics.snap4Up(gridW + pad * 2)
 
         property int dispYear:  2000
         property int dispMonth: 0
@@ -180,8 +181,8 @@ PanelWindow {
 
         Column {
             id: _col
-            x: card.pad; y: card.pad
-            width: card.panelW - card.pad * 2
+            x: Math.round((card.panelW - card.gridW) / 2); y: card.pad
+            width: card.gridW
             spacing: 6
 
             Item {
