@@ -78,7 +78,8 @@ Item {
             visible: Media.lengthKnown
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
-            width: Math.max(0, parent.width * Media.positionRatio)
+            // whole px: a sub-pixel step every position tick would repaint the bar for nothing
+            width: Math.round(Math.max(0, parent.width * Media.positionRatio))
             height: 1.5
             radius: height / 2
             antialiasing: true
