@@ -27,6 +27,8 @@ Singleton {
             return "hl.dsp.window.move({ workspace = " + root._value(args) + ", follow = false })"
         if (dispatcher === "focuswindow")
             return "hl.dsp.focus({ window = " + root._quote(args) + " })"
+        if (dispatcher === "exit")
+            return "hl.dsp.exit()"
         return ""
     }
 
@@ -52,6 +54,12 @@ Singleton {
         if (args !== undefined && args !== null && String(args).length > 0)
             cmd.push(String(args))
         Quickshell.execDetached(cmd)
+    }
+
+    // ends the session the way Hyprland's default quit bind does: hyprshutdown lets apps close first
+    function exitCommand(): var {
+        return ["sh", "-c", "command -v hyprshutdown >/dev/null 2>&1 && exec hyprshutdown; exec hyprctl dispatch \"$1\"",
+            "sh", root._text("exit", "")]
     }
 
     // chain in one sh: detached hyprctl processes land out of order, and --batch mangles the quoted lua-framework calls

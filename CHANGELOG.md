@@ -13,7 +13,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Added
 
-- Log out in the power menu, confirmed with a second press like Reboot and Power off.
+- Log out in the power menu, confirmed with a second press like Reboot and Power off. On Hyprland it goes through `hyprshutdown` when that is installed, so apps close first.
 
 ### Changed
 

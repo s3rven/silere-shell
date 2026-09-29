@@ -2039,6 +2039,19 @@ else
   ok "compositor facade" "Quickshell.Hyprland stays behind the Hyprland adapter"
 fi
 
+# A Lua config reads every `hyprctl dispatch` argument as Lua, so the classic text fails
+# there (the first Log out row sent `dispatch exit` and could never log out). HyprDispatch
+# is the one place that picks the syntax, so a dispatch written anywhere else skips it.
+raw_dispatch="$(grep -rnE 'hyprctl"?,? *"?dispatch' --include='*.qml' \
+  modules config services shell.qml 2>/dev/null \
+  | grep -v '^services/HyprDispatch\.qml:' || true)"
+if [ -n "$raw_dispatch" ]; then
+  fail "only services/HyprDispatch.qml may run hyprctl dispatch:"
+  while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$raw_dispatch"
+else
+  ok "dispatch" "every Hyprland dispatch picks its syntax in HyprDispatch"
+fi
+
 section "control surface gating"
 # The power profile row shipped stuck on "..." inside quick actions because PowerProfiles
 # gated its reads on the menu alone. ControlSurfaces is the one place that enumerates the

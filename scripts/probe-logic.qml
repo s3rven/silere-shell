@@ -2611,6 +2611,11 @@ ShellRoot {
             "dispatch quotes a monitor name in the lua form")
         root._check(HyprDispatch._text("togglefloating", "") === "togglefloating",
             "dispatch passes an unmapped dispatcher through untouched")
+        root._check(HyprDispatch.exitCommand()[4] === "hl.dsp.exit()",
+            "a Lua config logs out with the Lua exit dispatcher")
+        HyprDispatch.useLua = false
+        root._check(HyprDispatch.exitCommand()[4] === "exit",
+            "a classic config logs out with the exit dispatcher")
         HyprDispatch.useLua = luaWas
 
         const spacing = ShellSettings.schemaFor("barSpacing")
