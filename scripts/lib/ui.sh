@@ -2,11 +2,22 @@
 # Shared by install.sh, uninstall.sh, doctor.sh and silere: one set of status lines and one
 # TTY test. Colors are the terminal's own ANSI palette, off when piped or NO_COLOR is set.
 
-if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+_silere_color_fd() { [ -t "$1" ] && [ -z "${NO_COLOR:-}" ]; }
+
+# the sourcing scripts read these
+# shellcheck disable=SC2034
+if _silere_color_fd 1; then
     R=$'\033[0m' BOLD=$'\033[1m'
     GREEN=$'\033[0;32m' CYAN=$'\033[0;36m' YELLOW=$'\033[1;33m' DIM=$'\033[2m' RED=$'\033[0;31m'
 else
     R='' BOLD='' GREEN='' CYAN='' YELLOW='' DIM='' RED=''
+fi
+# stderr is tested on its own, so a redirected error log never collects escape codes
+# shellcheck disable=SC2034
+if _silere_color_fd 2; then
+    ER=$'\033[0m' ERED=$'\033[0;31m' EYELLOW=$'\033[1;33m'
+else
+    ER='' ERED='' EYELLOW=''
 fi
 
 # shellcheck disable=SC2059
@@ -16,7 +27,7 @@ _skip() { printf "    ${DIM}skip${R}    %s\n" "$*"; }
 # shellcheck disable=SC2059
 _warn() { printf "    ${YELLOW}warn${R}    %s\n" "$*"; }
 # shellcheck disable=SC2059
-_err()  { printf "    ${RED}error${R}   %s\n" "$*" >&2; }
+_err()  { printf "    ${ERED}error${ER}   %s\n" "$*" >&2; }
 _die()  { _err "$*"; exit 1; }
 # shellcheck disable=SC2059
 _info() { printf "  ${CYAN}::${R}  %s\n" "$*"; }

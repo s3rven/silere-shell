@@ -14,8 +14,11 @@ source "$ROOT/scripts/lib/completions.sh"
 source "$ROOT/scripts/lib/ui.sh"
 
 usage() {
-    # bold the command column when colors are on; the text itself stays plain
-    _usage_text | awk -v b="$BOLD" -v r="$R" '
+    # bold the command column when colors are on; the text itself stays plain. Callers
+    # redirect this to stderr, so test the descriptor it is writing to now
+    local b="" r=""
+    ! _silere_color_fd 1 || { b=$'\033[1m'; r=$'\033[0m'; }
+    _usage_text | awk -v b="$b" -v r="$r" '
         /^Usage:/ { print b $0 r; next }
         /^  [^ ]/ { printf "  %s%s%s%s\n", b, substr($0, 3, 23), r, substr($0, 26); next }
         { print }'
@@ -46,7 +49,7 @@ EOF
 }
 
 die() {
-    printf '%ssilere:%s %s\n' "$RED" "$R" "$*" >&2
+    printf '%ssilere:%s %s\n' "$ERED" "$ER" "$*" >&2
     exit 1
 }
 
@@ -167,7 +170,7 @@ link_completions() {
         elif (umask 077 && mkdir -p -- "${dest%/*}") && ln -s -- "$src" "$dest"; then
             printf 'linked %s\n' "$dest"
         else
-            printf '%snote:%s could not link %s\n' "$YELLOW" "$R" "$dest" >&2
+            printf '%snote:%s could not link %s\n' "$EYELLOW" "$ER" "$dest" >&2
         fi
     done < <(_silere_completion_links "$ROOT")
 }
@@ -420,7 +423,7 @@ case "$command_name" in
         exec bash "$ROOT/scripts/uninstall.sh"
         ;;
     *)
-        printf '%ssilere:%s unknown command: %s\n' "$RED" "$R" "$command_name" >&2
+        printf '%ssilere:%s unknown command: %s\n' "$ERED" "$ER" "$command_name" >&2
         usage >&2
         exit 2
         ;;

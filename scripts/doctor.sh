@@ -31,7 +31,7 @@ section() {
 ok()   { printf '%sok%s   %-18s %s\n' "$GREEN" "$R" "$1" "$2"; }
 info() { printf '     %-18s %s\n' "$1" "$2"; }
 warn() { printf '%swarn%s %-18s %s\n' "$YELLOW" "$R" "$1" "$2"; }
-fail() { printf '%sfail%s %-18s %s\n' "$RED" "$R" "$1" "$2" >&2; status=1; }
+fail() { printf '%sfail%s %-18s %s\n' "$ERED" "$ER" "$1" "$2" >&2; status=1; }
 
 _package_family() {
     local id="" like=""
