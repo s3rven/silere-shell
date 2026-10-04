@@ -32,8 +32,7 @@ Item {
 
     readonly property bool hovered: _hover.hovered
     readonly property bool _hoverFx: hovered && ShellSettings.barHoverHighlight
-    // a slot with no workspace behind it collapses instead of being destroyed, so the
-    // strip can grow and shrink without the row rebuilding under the motion
+    // a slot with no workspace behind it collapses instead of being destroyed, so the strip can grow and shrink without the row rebuilding under the motion
     readonly property bool present: wsId >= 0
     // an underline marker leaves the cell centre free, so the active workspace keeps its own content
     readonly property bool _blanked: active && markerCovers
@@ -42,8 +41,7 @@ Item {
 
     width:  present ? cellWidth : 0
     height: rowHeight
-    // the centred glyph is not clipped by a narrowing cell, so it has to be gone before
-    // the cell is: the fade runs shorter than the collapse on purpose
+    // the centred glyph is not clipped by a narrowing cell, so it has to be gone before the cell is: the fade runs shorter than the collapse on purpose
     property real _presence: present ? 1 : 0
     MotionBehavior on _presence {
         NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
@@ -214,8 +212,9 @@ Item {
     }
     SequentialAnimation {
         id: _dotFadeIn
-        PauseAnimation  { duration: Motion.ms(150) }
-        NumberAnimation { target: root; property: "_dotFade"; to: 1; duration: Motion.ms(220); easing.type: Easing.OutCubic }
+        // start once the marker has left this cell, then finish near its arrival
+        PauseAnimation  { duration: Motion.ms(45) }
+        NumberAnimation { target: root; property: "_dotFade"; to: 1; duration: Motion.ms(170); easing.type: Easing.OutCubic }
     }
 
     SequentialAnimation {
@@ -250,7 +249,7 @@ Item {
             opacity: (root._showIcons
                     ? root._revealAmt
                     : Math.max(ShellSettings.wsShowNumbers ? 1 : 0, root._revealAmt))
-                * (root._blanked ? 0 : 1) * root._pulseOpacity * ShellSettings.wsMarkerOpacity
+                * (root._blanked ? 0 : 1) * root._pulseOpacity
             scale:   root._blanked ? 0.6 : (root._hoverFx ? 1.12 : 1)
             color:   root.urgent
                 ? Theme.warning
@@ -277,7 +276,7 @@ Item {
             opacity: (1 - root._revealAmt) * root._dotFade
                 * (root._hoverFx && !root.urgent ? Math.min(1, root._dotAlpha + 0.18)
                     : root._dotAlpha)
-                * root._pulseOpacity * ShellSettings.wsMarkerOpacity
+                * root._pulseOpacity
             color: root.urgent ? Theme.warning
                  : root.active ? Theme.accent
                  : Theme.withAlpha(Theme.subtext, 0.85)

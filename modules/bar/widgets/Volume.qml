@@ -54,8 +54,6 @@ Pill {
         onTapped: root.activated()
     }
 
-    // only claim the buttons that lead somewhere; the hint already names exactly these,
-    // and a swallowed click with nothing behind it reads as a dead widget
     TapHandler {
         enabled: root.interactive && (Audio.hasSoundSettings || root._canSwitch)
         acceptedButtons: (Audio.hasSoundSettings ? Qt.RightButton : Qt.NoButton)

@@ -6,8 +6,6 @@ import "../../common"
 Pill {
     id: root
 
-    // strictly a capture indicator: a mic left muted with nothing listening is not
-    // news, and pinning the pill open for it is how a bar fills with nothing
     readonly property bool show: ShellSettings.barShowMic && Audio.micActive
     property real _baseOpacity: show ? 1.0 : 0.0
     readonly property bool layoutVisible: show || _baseOpacity > 0.001
@@ -20,8 +18,6 @@ Pill {
 
     MotionBehavior on _baseOpacity { NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
 
-    // the pill arrives mid-bar rather than sliding in from an edge, so a small settle
-    // is what separates it from a repaint
     scale: root.show ? 1.0 : 0.88
     transformOrigin: Item.Center
     MotionBehavior on scale {

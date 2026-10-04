@@ -181,8 +181,7 @@ Item {
 
     Item {
         id: _levelTrack
-        // the hover capsule has already curved inward by the track's last row, so padding
-        // alone leaves the ends poking past the rounded corner
+        // the hover capsule has already curved inward by the track's last row, so padding alone leaves the ends poking past the rounded corner
         readonly property real _capR: Metrics.hoverRadiusFor(root.pillH)
         readonly property real _inset: Math.max(root.horizontalPadding + 1,
             Math.ceil(_capR - Math.sqrt(Math.max(0, 2 * _capR - 1))))

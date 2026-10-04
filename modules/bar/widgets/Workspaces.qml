@@ -57,7 +57,6 @@ Item {
     property int _lastNormalActiveId: 1
     property bool _initialized: false
 
-
     // the cells ease their own widths; a Behavior on their sum restarts every frame and stalls until they settle
     property real _tickRoom: urgentOffPage > 0 ? 12 : 0
     MotionBehavior on _tickRoom {
@@ -77,9 +76,9 @@ Item {
         const ink = String(wsId).length * _digitM.advanceWidth
         return Math.max(0, Math.min(_dotTrim, Math.floor((btnW - ink) / 2) - Metrics.pillPadFor(compact)))
     }
-    property real _leadTrim: visibleIds.length > 0 ? _edgeTrim(visibleIds[0]) : 0
-    property real _tailTrim: visibleIds.length > 0 && urgentOffPage <= 0
-        ? _edgeTrim(visibleIds[visibleIds.length - 1]) : 0
+    property real _leadTrim: _displayIds.length > 0 ? _edgeTrim(_displayIds[0]) : 0
+    property real _tailTrim: _displayIds.length > 0 && urgentOffPage <= 0
+        ? _edgeTrim(_displayIds[_displayIds.length - 1]) : 0
     MotionBehavior on _leadTrim {
         gate: root.barActive
         NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
@@ -116,8 +115,8 @@ Item {
     WorkspaceAppModel {
         id: appModel
         monitorName: root.monitorName
-        visibleIdsKey: slotModel.visibleIdsKey
-        visibleIndexById: slotModel.visibleIndexById
+        visibleIdsKey: root._displayIdsKey
+        visibleIndexById: root._displayIndexById
         workspaceToplevels: Compositor.workspaceToplevels
     }
 
@@ -126,6 +125,16 @@ Item {
     readonly property var _wsMap: slotModel.workspaceMap
     readonly property int _idCap: slotModel.idCap
     readonly property var visibleIds: slotModel.visibleIds
+    // held through the page fade, or the incoming ids draw before the fade-out and the page shows twice
+    property var _displayIds: []
+    property int _displayActiveId: root.activeId
+    readonly property string _displayIdsKey: _displayIds.join(",")
+    readonly property var _displayIndexById: {
+        const indexes = Object.create(null)
+        for (let i = 0; i < root._displayIds.length; i++)
+            indexes[root._displayIds[i]] = i
+        return indexes
+    }
     readonly property int slotCount: slotModel.slotCount
 
     function _knownOnOtherMonitor(id: int): bool {
@@ -152,7 +161,7 @@ Item {
         for (let i = 0; i < vals.length; i++) {
             const ws = vals[i]
             if (ws.urgent && ws.wsId > 0
-                    && root._visibleIndex(ws.wsId) < 0) {
+                    && root._displayIds.indexOf(ws.wsId) < 0) {
                 next = ws.wsId
                 break
             }
@@ -197,7 +206,7 @@ Item {
 
     function _btnW(wsId: int): int {
         if (wsId < 0) return 0
-        if (ShellSettings.wsShowAppIcons && !(wsId === activeId && root.markerCovers)) {
+        if (ShellSettings.wsShowAppIcons && !(wsId === root._displayActiveId && root.markerCovers)) {
             const apps = root.appsFor(wsId)
             if (apps && apps.length > 0)
                 return (root.compact ? 1 : apps.length) * _iconSz
@@ -207,7 +216,7 @@ Item {
     }
     function _cellCenterX(wsId: int): real {
         let acc = -_leadTrim
-        const ids = visibleIds
+        const ids = root._displayIds
         for (let i = 0; i < ids.length; i++) {
             if (ids[i] === wsId) return acc + _btnW(ids[i]) / 2
             acc += _btnW(ids[i]) + gap
@@ -215,14 +224,25 @@ Item {
         return 0
     }
     function _markerX(markerW: real): real {
-        return root._cellCenterX(root.activeId) - markerW / 2
+        return root._cellCenterX(root._displayActiveId) - markerW / 2
     }
 
-    readonly property int activeIndex: root._visibleIndex(root.activeId)
+    readonly property int activeIndex: root._displayIds.indexOf(root._displayActiveId)
     readonly property int pageKey: visibleIds.length > 0
         ? visibleIds[0] : _monitorAnchorId
 
-    onVisibleIdsChanged: root._syncUrgentOffPage()
+    onVisibleIdsChanged: {
+        root._syncUrgentOffPage()
+        if (!root._initialized || root.visibleIds.length === 0
+                || root._displayIds.length === 0
+                || root.visibleIds[0] === root._displayIds[0]) {
+            root._displayIds = root.visibleIds.slice()
+            // A per-output page can grow around a newly active workspace without
+            // changing its first id, so no page animation will commit the marker.
+            root._displayActiveId = root.activeId
+        }
+    }
+    on_DisplayIdsChanged: root._syncUrgentOffPage()
     onMonitorNameChanged: root._syncUrgentOffPage()
     Connections {
         target: Compositor
@@ -256,6 +276,8 @@ Item {
     }
 
     Component.onCompleted: {
+        _displayIds = visibleIds.slice()
+        _displayActiveId = activeId
         _lastNormalActiveId = activeId
         _previousActiveId = activeId
         _prevPageKey = pageKey
@@ -273,6 +295,9 @@ Item {
     onActiveIdChanged: {
         const previous = root._previousActiveId
         root._previousActiveId = root.activeId
+        // fires while the component is still building, before _displayIds has its default
+        if ((root._displayIds ?? []).indexOf(root.activeId) >= 0)
+            root._displayActiveId = root.activeId
         if (previous < 1 || previous === root.activeId) return
         if (!_handoffDispatch.running) root._handoffFromId = previous
         root._handoffToId = root.activeId
@@ -293,9 +318,9 @@ Item {
         const span = toX - fromX
         if (Math.abs(span) < 0.5) return 0
         const progress = Math.min(1, Math.max(0, (crossedX - fromX) / span))
-        // invert the marker's OutQuart travel; a fixed stagger drifts behind on long jumps
+        // invert the marker's OutCubic travel; a fixed stagger drifts behind on long jumps
         const crossingMs = marker.travelDuration
-            * (1 - Math.pow(1 - progress, 0.25))
+            * (1 - Math.pow(1 - progress, 1 / 3))
         return Math.max(0, Math.round(crossingMs - 30))
     }
 
@@ -333,6 +358,7 @@ Item {
     onMonitorReadyChanged: {
         if (!monitorReady) {
             root._clearWorkspaceHandoffs()
+            root._settleGroupMotion()
             return
         }
         _lastNormalActiveId = activeId
@@ -356,8 +382,9 @@ Item {
     onPageKeyChanged: {
         const dir = pageKey >= _prevPageKey ? 1 : -1
         _prevPageKey = pageKey
-        if (!_initialized || !monitorReady) {
-            root.opacity = 1
+        if (!_initialized || !monitorReady
+                || root._displayIdsKey === slotModel.visibleIdsKey) {
+            root._settleGroupMotion()
             return
         }
         _pageDir = dir
@@ -379,7 +406,11 @@ Item {
     SequentialAnimation {
         id: _groupFadeAnim
         NumberAnimation { target: root; property: "opacity"; to: 0; duration: Motion.ms(85);  easing.type: Easing.InCubic }
-        ScriptAction    { script: root._pageShift = root._pageDir * 10 }
+        ScriptAction { script: {
+            root._displayIds = root.visibleIds.slice()
+            root._displayActiveId = root.activeId
+            root._pageShift = root._pageDir * 10
+        } }
         ParallelAnimation {
             NumberAnimation { target: root; property: "opacity";    to: 1; duration: Motion.ms(150); easing.type: Easing.OutCubic }
             NumberAnimation { target: root; property: "_pageShift"; to: 0; duration: Motion.ms(165); easing.type: Easing.OutQuart }
@@ -388,6 +419,8 @@ Item {
 
     function _settleGroupMotion(): void {
         _groupFadeAnim.stop()
+        root._displayIds = root.visibleIds.slice()
+        root._displayActiveId = root.activeId
         root.opacity = 1
         root._pageShift = 0
     }
@@ -460,8 +493,6 @@ Item {
 
     Timer {
         id: _menuWarmDelay
-        // Ignore quick pointer sweeps across the bar. A deliberate hover gets
-        // enough time to prepare the menu before the following click.
         interval: 110
         onTriggered: if (root._menuWarmIntent) {
             MenuState.requestWarm(root, root.screen)
@@ -471,16 +502,12 @@ Item {
 
     Timer {
         id: _menuWarmRelease
-        // Keep the prepared surface across the short gap between leaving the
-        // marker and clicking, then return its memory if no open followed.
         interval: 900
         onTriggered: MenuState.cancelWarm(root)
     }
 
     Timer {
         id: _menuWarmExpiry
-        // A parked pointer is not permanent intent. Bound speculative memory
-        // even if no hover edge arrives to start the shorter release timer.
         interval: 2500
         onTriggered: MenuState.cancelWarm(root)
     }
@@ -489,7 +516,7 @@ Item {
     Connections {
         target: Notifications
         enabled: root.barActive && ShellSettings.wsNotifPulse
-            && !ShellSettings.reduceMotion && !Idle.isIdle
+            && !root._paging && !ShellSettings.reduceMotion && !Idle.isIdle
         function onSourcePulse(wsId, critical) {
             const index = root._visibleIndex(wsId)
             if (index < 0) return
@@ -501,24 +528,25 @@ Item {
     WorkspaceMarker {
         id: marker
         style: ShellSettings.wsActiveMarker
+        workspaceId: root._displayActiveId
         rowHeight: root.btnH
-        cellWidth: root._btnW(root.activeId)
+        cellWidth: root._btnW(root._displayActiveId)
         targetX: root.activeIndex >= 0 ? root._markerX(marker.markerWidth) : 0
         shown: root.monitorReady && root.activeIndex >= 0
         inSpecial: root.inSpecial
-        urgent: root.urgent(root.activeId)
-        menuTargets: root._menuTargetsThisBar
+        urgent: root.urgent(root._displayActiveId)
         barActive: root.barActive
         paging: root._paging
         monitorReady: root.monitorReady
         shiftEnabled: ShellSettings.workspaceShift
-        hovered: root._hoveredWsId === root.activeId && ShellSettings.barHoverHighlight
+        hovered: root._hoveredWsId === root._displayActiveId && ShellSettings.barHoverHighlight
     }
 
     Row {
         id: wsRow
         x: -root._leadTrim
         spacing: root.gap
+        enabled: root._displayIdsKey === slotModel.visibleIdsKey
 
         Repeater {
             id: _wsRepeater
@@ -528,9 +556,9 @@ Item {
                 id: ws
                 required property int index
 
-                wsId:         root.visibleIds[index] ?? -1
+                wsId:         root._displayIds[index] ?? -1
                 monitorReady: root.monitorLive
-                active:       root.monitorReady && root.activeId === wsId
+                active:       root.monitorReady && root._displayActiveId === wsId
                 occupied:     root.occupied(wsId)
                 urgent:       root.urgent(wsId)
                 apps:         root.appsFor(wsId)

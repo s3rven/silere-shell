@@ -17,8 +17,7 @@ Pill {
         NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
     }
 
-    // routing, not the rendered glyph: the volume pill swaps to mute and would hand the
-    // device straight back here on every mute
+    // routing, not the rendered glyph: the volume pill swaps to mute and would hand the device straight back here on every mute
     readonly property bool _glyphEchoesVolume: ShellSettings.barShowVolume
         && Audio.sinkClass === "headset"
         && Bluetooth.connectedGlyph === Bluetooth.deviceGlyph("headset")

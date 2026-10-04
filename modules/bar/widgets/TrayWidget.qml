@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import Quickshell.Services.SystemTray
 import Quickshell.Widgets
 import "../../../config"
@@ -13,13 +14,19 @@ Item {
     property var screen: null
     property bool compact: ShellSettings.barCompact
     property bool barActive: true
-    readonly property bool show: ShellSettings.trayWidget && _items.count > 0
+    property var trayModel: SystemTray.items
+    readonly property var _trayItems: root.trayModel
+        ? (Array.isArray(root.trayModel) ? root.trayModel : (root.trayModel.values ?? [])) : []
+    readonly property bool show: ShellSettings.trayWidget
+        && root._trayItems.some(i => i && !ShellSettings.trayItemHidden(i.id))
+    readonly property bool contentVisible: root.show
     readonly property bool layoutVisible: show || implicitWidth > 0.5
     // the bar height is a ceiling, not the source: the old barHeight*0.44 ignored uiScale
     // entirely, so tray icons were the one thing that could not follow the interface scale
     readonly property int iconSize: Math.max(12,
         Math.min(Math.round(ShellSettings.barHeight * 0.62),
             Math.round(ShellSettings.barIconSize * ShellSettings.uiScale) + 4))
+    readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
     readonly property int _pillPad: Metrics.pillPadFor(compact)
 
     // only appearing/leaving eases; hover growth is already eased by the label, and a second ease on top lags the slot behind its own content
@@ -42,13 +49,13 @@ Item {
     onYChanged: root._syncMenuAnchors()
     onImplicitWidthChanged: root._syncMenuAnchors()
 
+    // an item without its own menu still opens one, holding only the hide entry
     function _openMenu(item, tile): void {
-        if (!item.hasMenu) return
         tile.syncMenuAnchor()
         TrayMenuState.toggleAt(
             tile.menuAnchorX,
             root.screen,
-            item.menu,
+            item.hasMenu ? item.menu : null,
             Metrics.barAtBottom,
             tile,
             item
@@ -56,21 +63,22 @@ Item {
     }
 
     function _activateItem(item, tile): void {
-        if (!WindowActions.focusTrayItem(item.id, item.title, item.tooltipTitle)) {
-            if (item.onlyMenu) root._openMenu(item, tile)
-            else item.activate()
-        }
+        if (!root.show || !item || ShellSettings.trayItemHidden(item.id)) return
+        if (item.onlyMenu) root._openMenu(item, tile)
+        else if (!WindowActions.focusTrayItem(item.id, item.title, item.tooltipTitle))
+            item.activate()
     }
 
     Row {
         id: _row
         x: root._pillPad
         anchors.verticalCenter: parent.verticalCenter
-        spacing: Math.max(2, Metrics.widgetGapFor(root.compact) - (root.compact ? 2 : 4))
+        spacing: Math.max(3, Metrics.widgetGapFor(root.compact) - 2)
 
         Repeater {
             id: _items
-            model: ShellSettings.trayWidget ? SystemTray.items : null
+            // a quick off/on keeps each item's image and event handlers intact
+            model: root.trayModel
 
             delegate: Item {
                 id: _tile
@@ -79,9 +87,19 @@ Item {
                     String(modelData.tooltipTitle || "").length > 0 ? modelData.tooltipTitle
                     : String(modelData.title || "").length > 0 ? modelData.title
                     : modelData.id, 128)
-                readonly property string iconSource: IconResolver.trayIconSource(modelData.icon)
+                readonly property string _providedIconSource: IconResolver.trayIconSource(modelData.icon)
+                property bool _providedIconFailed: false
+                readonly property string iconSource: IconResolver.trayAppIconSource(
+                    _tile._providedIconFailed ? "" : _tile._providedIconSource, modelData.id)
+                readonly property bool fallbackVisible: !_icon.ready
+                    && (_tile.iconSource.length === 0 || _icon.status === Image.Error || _tile._fallbackDue)
+                on_ProvidedIconSourceChanged: _tile._providedIconFailed = false
                 readonly property bool passive: modelData.status === Status.Passive
                 readonly property bool needsAttention: modelData.status === Status.NeedsAttention
+                readonly property bool hidden: ShellSettings.trayItemHidden(modelData.id)
+                onHiddenChanged: if (!_tile.hidden) _tile._providedIconFailed = false
+                // hidden, not filtered out: a filtered model recreates the icon on every un-hide
+                visible: !hidden
                 property real menuAnchorX: 0
                 property real attnPulse: 1.0
                 property bool _attentionSettled: false
@@ -89,6 +107,7 @@ Item {
 
                 onNeedsAttentionChanged: _attentionSettled = false
                 onModelDataChanged: {
+                    _tile._providedIconFailed = false
                     _tile._fallbackDue = false
                     _tile._dwelled = false
                     if (!_icon.ready) _fallbackTimer.restart()
@@ -96,7 +115,8 @@ Item {
 
                 Accessible.role: Accessible.Button
                 Accessible.name: _tile.label
-                Accessible.focusable: root.show
+                Accessible.description: SafeText.singleLineText(modelData.tooltipDescription, 256)
+                Accessible.focusable: root.show && !_tile.hidden
                 Accessible.onPressAction: root._activateItem(_tile.modelData, _tile)
 
                 width: root.iconSize + (_hoverLabel.width > 0 ? _hoverLabel.width + 5 : 0)
@@ -143,7 +163,7 @@ Item {
                 }
 
                 PulseLoop {
-                    active: root.barActive && _tile.needsAttention && !_tile._attentionSettled
+                    active: root.barActive && _tile.visible && _tile.needsAttention && !_tile._attentionSettled
                         && !Idle.isIdle
                     target: _tile; targetProperty: "attnPulse"
                     peak: 0.4; floor: 1.0; restValue: 1.0
@@ -162,7 +182,7 @@ Item {
                 Timer {
                     id: _fallbackTimer
                     interval: 300
-                    running: !_icon.ready
+                    running: root.show && !_tile.hidden && _icon.status === Image.Loading
                     onTriggered: _tile._fallbackDue = true
                 }
 
@@ -172,7 +192,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     radius: Math.min(width, height) / 2
                     color: Theme.withAlpha(Theme.subtext, 0.12)
-                    visible: !_icon.ready && _tile._fallbackDue
+                    visible: _tile.fallbackVisible
 
                     ShellText {
                         anchors.centerIn: parent
@@ -194,15 +214,24 @@ Item {
                 IconImage {
                     id: _icon
                     readonly property bool ready: status === Image.Ready
+                    onStatusChanged: {
+                        if (status === Image.Error && !_tile._providedIconFailed
+                                && _tile._providedIconSource.length > 0)
+                            _tile._providedIconFailed = true
+                    }
                     width: root.iconSize
                     height: root.iconSize
                     anchors.verticalCenter: parent.verticalCenter
-                    source: _tile.iconSource
+                    // a hidden app can keep animating its icon, and each frame goes through the icon theme loader
+                    source: _tile.hidden ? "" : _tile.iconSource
                     implicitSize: root.iconSize
-                    backer.sourceSize.width:  64
-                    backer.sourceSize.height: 64
-                    mipmap: true
+                    // loaded at device size: mipmap takes the image out of the texture atlas, and that path SEGVs the render thread
+                    backer.sourceSize.width:  Math.ceil(root.iconSize * root._dpr)
+                    backer.sourceSize.height: Math.ceil(root.iconSize * root._dpr)
+                    // apps reuse an icon url across restarts and updates; a reload must not keep an earlier failed image
+                    backer.cache: false
                     asynchronous: true
+                    transform: PixelSnap { item: _icon; dpr: root._dpr }
                     visible: opacity > 0.01
                     opacity: ready ? 1.0 : 0.0
                     transformOrigin: Item.Center

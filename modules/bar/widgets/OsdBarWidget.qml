@@ -12,10 +12,22 @@ Item {
     readonly property int  _barH: ShellSettings.barHeight
 
     readonly property real _slide: 5
+    readonly property int _iconWidth: Settings.iconSize + 6
+    readonly property real _labelWidth: OsdBarState.hasBar
+        ? Math.ceil(Math.max(_maxLabel.advanceWidth, _maxValue.advanceWidth)) + 2
+        : Math.min(Math.round(240 * ShellSettings.uiScale),
+            Math.max(Math.ceil(_alertLabel.advanceWidth) + 2, _alertWidth))
+    readonly property real _availableWidth: Math.max(0,
+        width - _iconWidth - (OsdBarState.hasBar ? 16 : 8))
 
-    implicitHeight: parent ? parent.height : _barH
-    implicitWidth:  _content.implicitWidth
+    implicitHeight: _barH
+    // Report the desired width separately from the rendered width: the bar may
+    // grow to fit it, while the content still fits during that animation.
+    implicitWidth: _iconWidth + _labelWidth + (OsdBarState.hasBar ? 96 : 8)
     visible: _op > 0.001 || state === "visible"
+    clip: width < implicitWidth
+    Accessible.role: Accessible.StaticText
+    Accessible.name: OsdBarState.label
 
     property real _op:   0
     property real _y:    _slide
@@ -28,11 +40,10 @@ Item {
         if (!_shouldShow) _alertWidth = 0
     }
     Component.onCompleted: _sync()
+    on_ShouldShowChanged: _sync()
 
     Connections {
         target: OsdBarState
-        function onShowingChanged() { root._sync() }
-        function onBarConcealedChanged() { root._sync() }
         function onRapidChanged() {
             if (!OsdBarState.rapid) root._refreshAlertWidth()
         }
@@ -50,11 +61,9 @@ Item {
             if (!_iconStamp.running) _iconStamp.start()
         }
     }
-    Connections { target: ShellSettings; function onOsdBarIntegratedChanged() { root._sync() } }
     Connections {
         target: Idle
         function onIsIdleChanged() {
-            root._sync()
             if (!Idle.isIdle) return
             _bumpAnim.retire()
             _iconStamp.stop()
@@ -102,6 +111,12 @@ Item {
     }
 
     TextMetrics {
+        id: _maxValue
+        font: _maxLabel.font
+        text: "100%"
+    }
+
+    TextMetrics {
         id: _alertLabel
         font.family:    Settings.font
         font.pixelSize: Settings.fontSize
@@ -131,7 +146,7 @@ Item {
         ShellText {
             id: _iconText
             anchors.verticalCenter: parent.verticalCenter
-            width:               Settings.iconSize + 6   // fixed so the stamp's scale-to-0 doesn't collapse the Row
+            width:               Math.min(root._iconWidth, root.width)
             horizontalAlignment: Text.AlignHCenter
             transformOrigin:     Item.Center
             text:           OsdBarState.icon
@@ -145,7 +160,8 @@ Item {
         Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             visible: OsdBarState.hasBar
-            width:  visible ? 80 : 0
+            width: visible ? Math.min(80,
+                Math.max(0, root._availableWidth - root._labelWidth)) : 0
             height: 3
             radius: 1.5
             color:  Theme.withAlpha(Theme.text, 0.22)
@@ -154,7 +170,8 @@ Item {
                 id: _fill
                 width: {
                     const v = OsdBarState.clamped
-                    return v <= 0 ? 0 : Math.max(parent.radius * 2, parent.width * v)
+                    return v <= 0 ? 0 : Math.min(parent.width,
+                        Math.max(parent.radius * 2, parent.width * v))
                 }
                 height: parent.height
                 radius: parent.radius
@@ -174,9 +191,8 @@ Item {
             text:           !OsdBarState.hasBar ? OsdBarState.label
                             : OsdBarState.muted ? "Muted"
                             : (Math.round(OsdBarState.clamped * 100) + "%")
-            width:          OsdBarState.hasBar
-                                ? Math.ceil(_maxLabel.advanceWidth) + 2
-                                : Math.max(implicitWidth, root._alertWidth)
+            width: Math.min(root._labelWidth, root._availableWidth)
+            elide: Text.ElideRight
             horizontalAlignment: OsdBarState.hasBar ? Text.AlignRight : Text.AlignLeft
             color:          OsdBarState.muted
                                 ? Theme.withAlpha(Theme.subtext, 0.7)

@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import "../../config"
 import "../../services"
 
@@ -25,8 +26,10 @@ Item {
                                        : _style === "slash" ? (compact ? 0.50 : 0.58)
                                        : (compact ? 0.40 : 0.48)
 
+    // whole device pixels: a 2px line at 1.25 is 2.5 of them, drawn 2 or 3 wide depending on where it lands
+    readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
     function _roundedSize(logicalSize: real): real {
-        return Math.max(1, Math.round(logicalSize))
+        return Math.max(1, Math.ceil(logicalSize * root._dpr - 0.5)) / root._dpr
     }
 
     property real _animatedSpan: hasNext
@@ -55,6 +58,7 @@ Item {
         }
 
         Rectangle {
+            id: _dot
             visible: root._isDot
             // each dot style steps down by one when compact, or · and • land on the same size
             readonly property real diameter: root._roundedSize(
@@ -66,6 +70,7 @@ Item {
             height: diameter
             radius: diameter / 2
             antialiasing: true
+            transform: PixelSnap { item: _dot; dpr: root._dpr }
             color: root._style === "◦" ? "transparent" : Theme.barSeparator
             OutlineBorder {
                 radius: parent.radius
@@ -75,14 +80,17 @@ Item {
         }
 
         Rectangle {
+            id: _stroke
             visible: !root._isDot
             anchors.centerIn: parent
-            width: root.compact ? 1.5 : 2
+            width: root._roundedSize(root.compact ? 1.5 : 2)
             height: root._roundedSize(Settings.capHeight * root._strokeScale)
+            transform: PixelSnap { item: _stroke; dpr: root._dpr }
             color: Theme.barSeparator
             rotation: root._style === "slash" ? 18 : 0
             radius: width / 2
-            antialiasing: true
+            // snapped and upright it has no edge to smooth; antialiasing would only feather it
+            antialiasing: root._style === "slash"
             transformOrigin: Item.Center
         }
     }

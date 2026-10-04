@@ -55,6 +55,8 @@ QtObject {
         return parts.join("|")
     }
     on_WorkspaceAppsKeyChanged: root.rebuild()
+    onVisibleIndexByIdChanged: if (root.workspaceToplevels && root.visibleIndexById)
+        root.rebuild()
 
     function rebuild(): void {
         const map = Object.create(null)

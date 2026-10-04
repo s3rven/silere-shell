@@ -83,11 +83,10 @@ Pill {
     animateText: false
 
     function _physicalLabel(): string {
+        if (Network.isWifi) return Network.connectionName || "Wi-Fi"
         const name = Network.connectionName || Network.deviceName
-        if (!Network.isWifi) {
-            const generic = /^(wired connection [0-9]+|ethernet|enp[0-9a-z]+|eth[0-9]+)$/i
-            if (name.length === 0 || generic.test(name)) return "Wired"
-        }
+        const generic = /^(wired connection [0-9]+|ethernet|enp[0-9a-z]+|eth[0-9]+)$/i
+        if (name.length === 0 || generic.test(name)) return "Wired"
         return name
     }
 

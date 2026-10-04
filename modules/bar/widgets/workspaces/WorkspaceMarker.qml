@@ -15,11 +15,11 @@ Item {
     required property bool shown
     required property bool inSpecial
     required property bool urgent
-    required property bool menuTargets
     required property bool barActive
     required property bool paging
     required property bool monitorReady
     required property bool shiftEnabled
+    property int workspaceId: 0
     property bool hovered: false
 
     readonly property bool gem: style === "gem"
@@ -34,17 +34,12 @@ Item {
         return root.shown && root.barActive
             && !ShellSettings.reduceMotion && !Idle.isIdle
     }
-    function _settleMenuMotion(): void {
-        _menuRippleAnim.stop()
-        _menuRipple.opacity = 0
-        _menuRipple.scale = 1
-    }
     function _settleMotion(): void {
         _specialPulse.retire()
         _glintAnim.stop()
+        _movePulseDelay.stop()
         _moveAnim.retire()
         _tapPulse.retire()
-        root._settleMenuMotion()
         root._glint = -1.15
     }
     function pulse(): void {
@@ -75,26 +70,17 @@ Item {
     property real _moveScale:    1.0
     property real _specialScale: 1.0
     property real _glint:        -1.15
-    readonly property bool _menuFx: root.menuTargets && MenuState.open
-        && ShellSettings.wsMenuPulse
-    property real _menuOn: root._menuFx ? 1 : 0
-    MotionBehavior on _menuOn {
-        gate: root.shown && root.barActive
-        NumberAnimation { duration: Motion.ms(220); easing.type: Easing.OutCubic }
-    }
-
+    property int _lastWorkspaceId: 0
     property real _specialOn: root.inSpecial ? 0.65 : 0
     MotionBehavior on _specialOn {
         gate: root._motionAllowed()
         NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic }
     }
-    readonly property real _energy: Math.max(root._menuOn * 0.82,
-                                              _specialOn,
+    readonly property real _energy: Math.max(_specialOn,
                                               (_hoverScale - 1.0) * 4.2,
                                               (_tapScale   - 1.0) * 2.2,
                                               (_moveScale  - 1.0) * 3.0)
 
-    // the sprite bounces; the wider line gets only a restrained version of that response
     readonly property real _scaleStack: _hoverScale * _tapScale * _moveScale * _specialScale
     scale: _bar ? 1 + (_scaleStack - 1) * 0.22 : _scaleStack
     transformOrigin: Item.Center
@@ -110,21 +96,6 @@ Item {
         opacity: root._energy * 0.22
         scale: 0.70 + root._energy * 0.22
         visible: root.gem && opacity > 0.01
-    }
-
-    Rectangle {
-        id: _menuRipple
-        anchors.centerIn: parent
-        width:  parent.width + 6
-        height: width
-        radius: root.gem ? 4 : width / 2
-        rotation: root.gem ? 45 : 0
-        antialiasing: true
-        color: Theme.withAlpha(root.tint, 0.5)
-        opacity: 0
-        scale: 1.0
-        transformOrigin: Item.Center
-        visible: !root._bar && opacity > 0.01
     }
 
     // special-workspace frame; filled layers not strokes — 1px rotated borders look uneven on fractional displays
@@ -167,7 +138,7 @@ Item {
         radius: root.gem ? 3 : width / 2
         rotation: root.gem ? 45 : 0
         antialiasing: true
-        color: Theme.withAlpha(root.tint, root._menuFx ? 0.50 : 0.30)
+        color: Theme.withAlpha(root.tint, 0.30)
         opacity: root.gem ? 0.28 + root._energy * 0.30 : root._energy * 0.60
         scale: 1.0 + root._energy * (root.gem ? 0.035 : 0.10)
         visible: !root._bar && opacity > 0.01
@@ -256,16 +227,6 @@ Item {
     }
 
     Rectangle {
-        anchors.fill: parent
-        radius: root.gem ? 2 : Math.min(width, height) / 2
-        rotation: root.gem ? 45 : 0
-        antialiasing: true
-        color: Qt.rgba(1, 1, 1, 1)
-        opacity: root._menuOn * 0.22
-        visible: opacity > 0.01
-    }
-
-    Rectangle {
         readonly property bool _show: Notifications.silencingActive && Notifications.missedCount > 0
         // placed, not anchored: the underline needs it at the line's tip and a conditional anchor leaves the stale edge set
         x: root._bar ? root.width - width + 2 : (root.width - width) / 2
@@ -308,18 +269,30 @@ Item {
 
     onShownChanged: if (!shown) root._settleMotion()
     onBarActiveChanged: if (!barActive) root._settleMotion()
-    onMenuTargetsChanged: if (!menuTargets) root._settleMenuMotion()
+    onShiftEnabledChanged: if (!shiftEnabled) {
+        _movePulseDelay.stop()
+        _moveAnim.retire()
+    }
 
-    MotionBehavior on x           { gate: root.shiftEnabled && root._motionAllowed(); NumberAnimation { duration: Motion.ms(root.travelDuration); easing.type: Easing.OutQuart } }
-    MotionBehavior on width       { gate: root.shiftEnabled && root._bar && root._motionAllowed(); NumberAnimation { duration: Motion.ms(root.travelDuration); easing.type: Easing.OutQuart } }
+    MotionBehavior on x           { gate: root.shiftEnabled && !root.paging && root._motionAllowed(); NumberAnimation { duration: Motion.ms(root.travelDuration); easing.type: Easing.OutCubic } }
+    MotionBehavior on width       { gate: root.shiftEnabled && !root.paging && root._bar && root._motionAllowed(); NumberAnimation { duration: Motion.ms(root.travelDuration); easing.type: Easing.OutCubic } }
     MotionBehavior on opacity     {NumberAnimation { duration: Motion.ms(150) } }
     MotionBehavior on _hoverScale { gate: root._motionAllowed(); NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
 
-    onTargetXChanged: {
-        if (!root.monitorReady || root.paging) return
-        if (Math.abs(targetX - x) < 2) return
-        if (!root.shiftEnabled || !root._motionAllowed()) return
-        _moveAnim.restart()
+    Component.onCompleted: root._lastWorkspaceId = root.workspaceId
+    onWorkspaceIdChanged: {
+        const previous = root._lastWorkspaceId
+        root._lastWorkspaceId = root.workspaceId
+        if (previous > 0 && previous !== root.workspaceId) _movePulseDelay.restart()
+    }
+    Timer {
+        id: _movePulseDelay
+        interval: 0
+        onTriggered: {
+            if (!root.monitorReady || root.paging || !root.shiftEnabled
+                    || !root._motionAllowed() || Math.abs(root.targetX - root.x) < 2) return
+            _moveAnim.restart()
+        }
     }
 
     BumpAnimation {
@@ -336,26 +309,8 @@ Item {
         peak: 1.14
     }
 
-    ParallelAnimation {
-        id: _menuRippleAnim
-        NumberAnimation { target: _menuRipple; property: "scale";   from: 0.9;  to: 2.7; duration: Motion.ms(540); easing.type: Easing.OutCubic }
-        NumberAnimation { target: _menuRipple; property: "opacity"; from: 0.55; to: 0;   duration: Motion.ms(540); easing.type: Easing.OutCubic }
-    }
-    Connections {
-        target: MenuState
-        enabled: ShellSettings.wsMenuPulse && root.menuTargets
-            && root._motionAllowed()
-        function onOpenChanged() {
-            if (!MenuState.open) return
-            if (root._bar) root.glint()
-            else _menuRippleAnim.restart()
-        }
-    }
     Connections {
         target: ShellSettings
-        function onWsMenuPulseChanged() {
-            if (!ShellSettings.wsMenuPulse) root._settleMenuMotion()
-        }
         function onReduceMotionChanged() {
             if (ShellSettings.reduceMotion) root._settleMotion()
         }

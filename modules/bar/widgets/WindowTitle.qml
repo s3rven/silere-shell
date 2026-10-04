@@ -446,15 +446,13 @@ Item {
         ? root._measuredContentWidth + root._horizontalPadding * 2
         : 0
 
-
     implicitWidth: root._naturalWidth
     // a zone widget shoves its neighbours when it resizes, and titles change on every
     // navigation; ease the box so the rest of the bar does not twitch with the text
     MotionBehavior on implicitWidth {
         NumberAnimation { duration: Motion.ms(110); easing.type: Easing.OutCubic }
     }
-    // not parent.height: the zone's Loader takes its height from this item, so reading it back
-    // collapses to zero and the clip below erases the text
+    // not parent.height: the zone's Loader takes its height from this item, so reading it back collapses to zero and the clip below erases the text
     implicitHeight: ShellSettings.barHeight
 
     Item {
@@ -476,9 +474,8 @@ Item {
             textFormat:     Text.StyledText
             font.pixelSize: Settings.fontSize
             elide:          Text.ElideRight
-            width:          Math.max(0, Math.min(
-                root.width - root._horizontalPadding * 2,
-                root._measuredContentWidth))
+            // the cap is already in the measured width; following the easing box re-elides every frame of a longer title
+            width:          root._measuredContentWidth
         }
     }
 

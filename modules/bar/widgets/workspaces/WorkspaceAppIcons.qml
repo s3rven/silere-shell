@@ -3,7 +3,6 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Effects
 import "../../../../config"
-import "../../../../services"
 import "../../../common"
 
 Row {
@@ -14,9 +13,7 @@ Row {
     required property bool hoverFx
     required property real pulseOpacity
 
-    readonly property bool _mono: ShellSettings.wsIconMono && !hoverFx
-    // keyed off the setting, not _mono: swapping render paths mid-hover would snap instead of fade
-    readonly property bool _fxNeeded: ShellSettings.wsIconMono
+    readonly property bool _mono: !hoverFx
 
     spacing: 4
     opacity: pulseOpacity
@@ -42,19 +39,15 @@ Row {
                 sourceSize.height: root.iconSize * 2
                 fillMode: Image.PreserveAspectFit
                 asynchronous: true
-                visible: !root._fxNeeded && status === Image.Ready
-                opacity: root.hoverFx ? 1.0 : ShellSettings.wsIconOpacity
-                MotionBehavior on opacity {
-                    NumberAnimation { duration: Motion.fast }
-                }
+                visible: false
             }
 
             Loader {
                 anchors.fill: _iconSrc
-                active: root._fxNeeded && _iconSrc.status === Image.Ready
+                active: _iconSrc.status === Image.Ready
                 sourceComponent: MultiEffect {
                     source: _iconSrc
-                    opacity: root.hoverFx ? 1.0 : ShellSettings.wsIconOpacity
+                    opacity: root.hoverFx ? 1.0 : 0.68
                     saturation: root._mono ? -1.0 : 0.0
                     MotionBehavior on opacity {
                         NumberAnimation { duration: Motion.fast }

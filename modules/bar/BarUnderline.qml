@@ -125,8 +125,7 @@ Item {
             if (_netLossFlash.running)                                       return _widgetSweep("network")
             return 0.50
         }
-        // 0.5 pushes the gradient's edge stops onto the clamps, so the lit band reaches
-        // both ends instead of falling off at 0.22/0.78 the way the sweep does
+        // 0.5 pushes the gradient's edge stops onto the clamps, so the lit band reaches both ends instead of falling off at 0.22/0.78 the way the sweep does
         readonly property real _renderSpread: ShellSettings.underlineFullWidth
             ? 0.5 : _sweepSpread
         readonly property real _renderCenter: ShellSettings.underlineFullWidth
@@ -443,8 +442,7 @@ Item {
                 && !_lineEffect._tempSettled && !Idle.isQuiet
         }
 
-        // critical holds for as long as the machine stays pegged, and animating the glow
-        // that whole time repaints a bar on hardware already at its limit
+        // critical holds for as long as the machine stays pegged, and animating the glow that whole time repaints a bar on hardware already at its limit
         Connections {
             target: CpuTemp
             function onCriticalChanged() {

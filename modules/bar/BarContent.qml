@@ -30,7 +30,9 @@ Item {
         : leftZone.implicitWidth + rightZone.implicitWidth + gap
     readonly property real _osdLayoutWidth: _osdBarShowing && _osdLoader.item
         ? _osdLoader.item.implicitWidth
-            + 2 * Math.max(leftZone.implicitWidth, rightZone.implicitWidth)
+            + (ShellSettings.barCenterInGap
+                ? leftZone.implicitWidth + rightZone.implicitWidth
+                : 2 * Math.max(leftZone.implicitWidth, rightZone.implicitWidth))
             + gap * 2
         : 0
     readonly property real minimumSurfaceWidth:
@@ -39,8 +41,7 @@ Item {
     readonly property real titleFreeRight: width - rightZone.implicitWidth - gap
     readonly property real titleAvailableWidth: Math.max(0, titleFreeRight - titleFreeLeft)
 
-    // animate the axis, not the zone's x: a title resize recentres at once while a
-    // side-widget change still carries the whole middle group
+    // animate the axis, not the zone's x: a title resize recentres at once while a side-widget change still carries the whole middle group
     property real centerAxis: ShellSettings.barCenterInGap
         ? (titleFreeLeft + titleFreeRight) / 2 : width / 2
     // only the gap axis needs easing; width/2 rides the surface's own morph
@@ -59,10 +60,7 @@ Item {
         _compactSync.restart()
     }
 
-    // an empty centre still has to leave the window title somewhere to sit
-    readonly property int _bareCenterReserve: 52
-    // room the expanded layout must regain before compact is given up, so a bar sitting
-    // on the threshold does not flip on every widget that changes a digit
+    // room the expanded layout must regain before compact is given up, so a bar sitting on the threshold does not flip on every widget that changes a digit
     readonly property int _expandMargin: 56
 
     function _clearCompactMeasure(): void {
@@ -81,8 +79,9 @@ Item {
             return
         }
 
-        const layoutW = centerHasWidgets ? _widgetLayoutWidth
-            : leftZone.implicitWidth + rightZone.implicitWidth + _bareCenterReserve
+        // The title is a zone widget too. An empty centre needs only the actual
+        // gap between the sides, rather than a second, invisible title reserve.
+        const layoutW = _widgetLayoutWidth
         const capacity = fitWidth > 0 ? Math.min(fitWidth, width) : width
 
         if (!_autoCompact) {
@@ -148,7 +147,10 @@ Item {
         target: ShellSettings
         function onBarAutoCompactChanged() { root._queueAutoCompact() }
         function onBarCompactChanged() { root._queueAutoCompact() }
-        function onBarCenterInGapChanged() { root._queueAutoCompact() }
+        function onBarCenterInGapChanged() {
+            if (root._autoCompact) _layoutSettle.restart()
+            else root._queueAutoCompact()
+        }
         function onShowWindowTitleChanged() { root._queueAutoCompact() }
     }
 
@@ -156,7 +158,7 @@ Item {
     Component { id: _cWorkspaces;  Workspaces       { anchors.verticalCenter: parent.verticalCenter; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cShellUpdate; ShellUpdateWidget { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cTray;        TrayWidget       { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
-    Component { id: _cUpdates;     UpdatesWidget    { anchors.verticalCenter: parent.verticalCenter; height: root.height; compact: root.effectiveCompact; barActive: root.barActive } }
+    Component { id: _cUpdates;     UpdatesWidget    { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cNetwork;     NetworkWidget    { anchors.verticalCenter: parent.verticalCenter; height: root.height; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cBluetooth;   BluetoothWidget  { anchors.verticalCenter: parent.verticalCenter; height: root.height; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cVolume;      Volume           { anchors.verticalCenter: parent.verticalCenter; height: root.height; compact: root.effectiveCompact; barActive: root.barActive } }
@@ -190,7 +192,7 @@ Item {
     readonly property bool _isOverlayBar: root.screen && root.screen.name === Monitors.overlayBarName
     readonly property bool _onActiveBar: Monitors.isActive(root.screen)
     readonly property bool _osdBarShowing: ShellSettings.osdEnabled && ShellSettings.osdBarIntegrated
-        && root._isOverlayBar && OsdBarState.showing && !OsdBarState.barConcealed
+        && root._isOverlayBar && OsdBarState.showing && !OsdBarState.barConcealed && !Idle.isIdle
     readonly property bool _centerVizMode: ShellSettings.mediaVisualizerPosition === "center"
     // isQuiet, not isIdle: cava and the canvas both stop at the quiet stage, and isIdle holds the last frame lit
     readonly property bool _centerVizWanted: _centerVizMode && ShellSettings.mediaProgress
@@ -224,6 +226,7 @@ Item {
         compact: root.effectiveCompact
         opacity: root._osdBarShowing ? 0 : 1
         visible: opacity > 0.001
+        enabled: !root._osdBarShowing
         onImplicitWidthChanged: root._queueAutoCompact()
 
         MotionBehavior on opacity {
@@ -270,7 +273,11 @@ Item {
 
     Loader {
         id: _osdLoader
-        anchors.centerIn: parent
+        anchors.verticalCenter: parent.verticalCenter
+        x: Metrics.centeredSpanX(root.centerAxis, width,
+            root.titleFreeLeft, root.titleFreeRight)
+        width: item ? Math.min(item.implicitWidth, root.titleAvailableWidth) : 0
+        height: parent.height
         z: 2
         active: ShellSettings.osdEnabled && ShellSettings.osdBarIntegrated && root._isOverlayBar
         sourceComponent: Component { OsdBarWidget {} }

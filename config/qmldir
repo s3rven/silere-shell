@@ -14,6 +14,7 @@ Disclosure 1.0 Disclosure.qml
 MotionBehavior 1.0 MotionBehavior.qml
 PersistedFile 1.0 PersistedFile.qml
 PixelScale 1.0 PixelScale.qml
+PixelSnap 1.0 PixelSnap.qml
 PulseLoop 1.0 PulseLoop.qml
 SupervisedProcess 1.0 SupervisedProcess.qml
 

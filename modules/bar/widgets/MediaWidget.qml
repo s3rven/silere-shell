@@ -203,8 +203,7 @@ Item {
                 // two passes per title, then rest: any running animation redraws every window each frame
                 loops: 2
                 PauseAnimation  { duration: root._scrollHoldStart }
-                // linear, or _scrollSpeed is a lie: an eased slide covers half the distance
-                // in the first fifth of _slideMs and then crawls, which is unreadable
+                // linear, or _scrollSpeed is a lie: an eased slide covers half the distance in the first fifth of _slideMs and then crawls, which is unreadable
                 NumberAnimation {
                     target: trackText; property: "x"
                     from: 0; to: -textClip._overflow

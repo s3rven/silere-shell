@@ -16,11 +16,12 @@ Singleton {
                        : ShellSettings.barSpacing
     }
 
-    // the divider owns the whole span between two widgets, not gap + mark + gap
+    // the divider owns the whole span between two widgets, not gap + mark + gap; twice the gap, so a
+    // group break reads wider than the plain gap inside a group at every spacing
     function dividerSpanFor(compact: bool): int {
         const gap = widgetGapFor(compact)
-        return compact ? Math.max(9, gap + 4)
-                       : Math.max(14, gap + 6)
+        return compact ? Math.max(9, 2 * gap + 2)
+                       : Math.max(14, 2 * gap + 6)
     }
 
     function titleGapFor(compact: bool): int {
@@ -30,7 +31,6 @@ Singleton {
     function pillPadFor(compact: bool): int { return compact ? 2 : 5 }
     function pillGapFor(compact: bool): int { return compact ? 3 : 5 }
 
-    // hover surfaces borrow the bar's own corner rounding; a capsule inside a gently rounded bar reads as a foreign shape
     function hoverRadiusFor(size: real): real {
         return Math.max(3, Math.min(size / 2, ShellSettings.barRadius))
     }
