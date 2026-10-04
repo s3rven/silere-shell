@@ -494,21 +494,12 @@ Item {
     Timer {
         id: _menuWarmDelay
         interval: 110
-        onTriggered: if (root._menuWarmIntent) {
-            MenuState.requestWarm(root, root.screen)
-            _menuWarmExpiry.restart()
-        }
+        onTriggered: if (root._menuWarmIntent) MenuState.requestWarm(root, root.screen)
     }
 
     Timer {
         id: _menuWarmRelease
         interval: 900
-        onTriggered: MenuState.cancelWarm(root)
-    }
-
-    Timer {
-        id: _menuWarmExpiry
-        interval: 2500
         onTriggered: MenuState.cancelWarm(root)
     }
 
