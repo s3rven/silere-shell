@@ -11,9 +11,8 @@ Rows compare only within one reference machine and one state.
 | cold | Freshly restarted, menu never opened. Only the bar has drawn. |
 | warm | The same session after one menu open and close. |
 
-The menu builds its pages on first open and holds them for the life of the process. The
-retention is bounded; repeated opens do not grow it. Warm is the state a session spends
-its day in.
+The menu releases its page instances after closing. Code, font and driver caches can stay
+warm across opens. Warm is the state a session spends its day in.
 
 ## Reference machines
 

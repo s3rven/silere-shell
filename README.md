@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/runs%20on-Hyprland%20%C2%B7%20niri-2a2d33?style=flat-square&labelColor=0f1013&logo=hyprland&logoColor=9a9ca1" alt="runs on Hyprland and niri"/>
 </p>
 
-<p align="center">A desktop shell for Hyprland and niri, built on Quickshell.</p>
+<p align="center">A desktop shell for Hyprland and niri that replaces your bar, notification daemon, OSD and tray.</p>
 
 <p align="center">
   <img src="assets/shot-desktop.webp" alt="The floating Silere bar with the home page open and a notification" width="900"/>
@@ -24,8 +24,8 @@ Silere gives you a bar, notifications, an OSD, a calendar, a tray and a menu tha
 quick controls and every setting, all running in one Quickshell process. It's built to
 cost almost nothing while you're not using it:
 
-- It uses about 88 MB of memory with only the bar drawn, and about 95 MB once the menu
-  has been opened ([how that's measured](#performance)).
+- Version 1.2.0 measured about 88 MB PSS with only the bar drawn, and about 96 MB after
+  opening the menu ([reference measurements](#performance)).
 - It idles at well under 1% of one CPU core. After 10 minutes without input, it also
   pauses its periodic readings and checks; the clock keeps updating once a minute.
 - The media visualizer, package update checks, network speed, temperature alerts, seconds
@@ -54,9 +54,10 @@ cost almost nothing while you're not using it:
 - The OSD shows volume, brightness and microphone mute, either as a popup or in the middle
   of the bar.
 - Quick actions, opened by right-clicking the active workspace, switch Do Not Disturb,
-  night light, power mode, Wi-Fi, Bluetooth and airplane mode.
+  night light, power mode, Wi-Fi, Bluetooth and airplane mode. Blocked radios and failed
+  actions show an explanation beside their control.
 - The calendar opens from the clock. It can show week numbers, start the week on Monday,
-  Sunday or your locale's first day, and mark the dates you click.
+  Sunday or your locale's first day, and open an adjacent month when you click one of its dates.
 - Night light uses hyprsunset on Hyprland and wlsunset on niri. In automatic mode it
   follows sunrise and sunset, estimated from your timezone instead of a location service.
 - Colours come from your wallpaper through Matugen, or from an accent you pick, over three
@@ -106,7 +107,8 @@ It also offers to add a `silere` command to `~/.local/bin`. If you skip that, us
 `~/.config/silere-shell/scripts/silere` wherever this README says `silere`; running it
 with `link` adds the command later.
 
-Then restart your compositor, or start Silere now with `silere run`.
+The installer offers to start Silere when it finishes. Otherwise restart your compositor,
+or run `silere run`.
 
 A widget that needs a tool you don't have stays hidden. `silere doctor` lists the missing
 tools and checks the install without changing anything. `silere log --follow` shows the
@@ -137,14 +139,14 @@ the notification history, and text fields.
 |---|---|
 | workspaces | **click** switches · on the active workspace, **click** opens the menu and **right-click** opens quick actions · **middle-click** sends the focused window there · **scroll** switches too, once you turn it on under Settings › Widgets › Workspaces |
 | clock | **click** opens the calendar · **middle-click** cycles through adding seconds, the date, or both |
-| calendar | **scroll** changes the month · **click** the header to jump back to today · **click** a date to mark it · choose week start and week numbers under Settings › Widgets › Clock |
+| calendar | **scroll** changes the month · **click** the header to jump back to today · **click** an adjacent-month date to open that month · choose week start and week numbers under Settings › Widgets › Clock |
 | media | **click** plays or pauses · **scroll** changes track · **middle-click** jumps to the player |
 | volume | **scroll** changes volume · **click** mutes · **middle-click** moves to the next output · **right-click** opens pwvucontrol or pavucontrol · in the menu, expand it for output, input and per-app levels |
 | microphone | **click** mutes · **scroll** changes the input level · **middle-click** moves to the next input · **right-click** opens pwvucontrol or pavucontrol · it appears while an app is listening |
 | brightness | **scroll** changes brightness |
-| updates | **click** rechecks for packages |
+| updates | **click** opens package details in Settings › System › Updates · **right-click** rechecks for packages |
 | shell update | **click** opens Settings › System › Updates |
-| tray | **click** jumps to the app's window, or activates the app when it has none · **right-click** opens its menu · **middle-click** runs the app's secondary action · **scroll** is passed through to the app |
+| tray | **click** opens a menu-only app's menu, otherwise jumps to its window or activates it · **right-click** opens its menu, with Hide from bar at the end · **middle-click** runs the app's secondary action · **scroll** is passed through to the app |
 | notifications | **click** runs the default action · **right-click** dismisses · **middle-click** jumps to the app that sent it · a reply action opens an inline text field when the sender supports one |
 | wi-fi list | **click** joins a saved or open network, or opens a password field for a personal one · **click** the connected network twice to disconnect · **right-click** or **middle-click** a saved network twice to forget it, unless you are connected to it |
 | bluetooth list | **click** pairs or connects · **click** a connected device twice to disconnect · **right-click** or **middle-click** a paired device twice to forget it, unless it is connected |
@@ -188,10 +190,13 @@ package badge in the bar counts pending system updates, and Silere never install
 
 ## Performance
 
-With only the bar drawn, Silere uses about 88 MB of memory, and about 95 MB once the menu
-has been opened. It idles at well under 1% of one CPU core; animations and the media
-visualizer use more while they run. [docs/performance.md](docs/performance.md) explains
-how that's measured and how to check your own setup.
+Version 1.2.0 measured about 88 MB with only the bar drawn, and about 96 MB after opening
+the menu on the reference machine. Your checkout, fonts and enabled widgets can change
+that footprint. Those are PSS figures: `btop` and `top` show RSS, which also counts the Qt and
+graphics libraries every Qt app shares, and reads about twice as high. It idles at well under 1%
+of one CPU core; animations and the media visualizer use more while they run.
+[docs/performance.md](docs/performance.md) explains how that's measured and how to check your own
+setup.
 
 ## Documentation
 

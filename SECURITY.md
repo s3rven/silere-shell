@@ -39,8 +39,11 @@ After signature verification and confirmation, the update gate runs the candidat
 release's QML checker and starts its shell in smoke mode before switching revisions.
 
 Remote cover art is optional. Enabling it sends requests to image hosts named by
-players, which can reveal what you are playing; Qt's remote image loading has also
-caused a shell crash on some systems.
+players, which can reveal what you are playing. Player metadata is untrusted input:
+any app on the session bus can set a cover url. The shell never fetches it itself;
+`curl` downloads it over HTTPS only, capped at 10 MB and 10 seconds, into
+`~/.cache/silere-shell/art`, and the shell shows the saved file. Turning the setting
+off deletes that folder.
 
 The first install is a different matter. `git clone` followed by
 `scripts/install.sh` runs code from `main` before any signature has been checked,

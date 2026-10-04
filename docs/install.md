@@ -19,8 +19,9 @@ The installer:
   for niri and a Lua config it prints the line to add
 - offers to leave the checkout on the latest signed release
 - prints the final install path when it's done
+- offers to start Silere right away in a Wayland session
 
-To start it, restart your compositor, or try it right away with `silere run`. Before the
+To start it later, restart your compositor, or run `silere run`. Before the
 optional maintenance-command link exists, use `/that/path/scripts/silere run`.
 Launches through `silere run` hold the loaded shell steady while an update replaces QML
 files; run `silere restart` after an update if you do not use the systemd user service.
@@ -114,6 +115,8 @@ hides that widget or marks it unavailable.
 | `hyprsunset` / `wlsunset` | night light (`hyprsunset` on Hyprland, `wlsunset` elsewhere) |
 | `matugen` | wallpaper theming |
 | `cava` | media visualizer |
+| `curl` | cover art from the web, when that setting is on |
+| `wpctl` | volume on Bluetooth outputs without hardware volume (part of WirePlumber) |
 | `powerprofilesctl` | power profiles; a daemon on the same D-Bus API, such as `tuned-ppd`, works without it |
 | `inotifywait` | screenshot feedback on the underline, and restarting the shell onto a restarted Hyprland when the systemd user service runs this checkout |
 | `checkupdates` / `apt` / `dnf` / `zypper` / `xbps-install` | package update badge; `checkupdates` also needs `fakeroot` |

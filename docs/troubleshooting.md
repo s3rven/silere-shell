@@ -18,9 +18,10 @@ one in the foreground.
 ## It installed but nothing appears
 
 Silere runs on Hyprland and niri only. On either of those it is nearly always the autostart
-line — run `qs -p ~/.config/silere-shell/shell.qml` to check. If the bar comes up, add that
-command to your compositor's startup (`exec-once` on Hyprland, `spawn-at-startup` on niri)
-and restart it.
+line — run `~/.config/silere-shell/scripts/silere run` to check. If the bar comes up, add
+`~/.config/silere-shell/scripts/silere run --startup` to your compositor's startup
+(`exec-once` on Hyprland, `spawn-at-startup` on niri) and restart it. Use the full path:
+the compositor's `PATH` often lacks `~/.local/bin`.
 
 ## It stopped working after a system update
 
@@ -40,10 +41,30 @@ Another daemon already owns `org.freedesktop.Notifications`. Silere names it in 
 few seconds after start and under Settings › System › Maintenance, and `silere doctor`
 reports it too. Stop that daemon and run `silere restart`.
 
+Sandboxed tests skip this conflict alert because the desktop's running shell is expected
+to own notifications. A warning from an older test instance does not mean that the live
+shell lost its notification server. Check the current owner with `silere doctor`.
+
 ## Icons or text use the wrong font
 
 Install a Nerd Font such as `ttf-jetbrains-mono-nerd`, then refresh the font cache with
 `fc-cache -f` and run `silere restart`.
+
+## Tray icons disappear when shown again
+
+First check Settings › Widgets › Tray: the tray must be enabled and the app must say
+Shown. Show all apps restores hidden apps without resetting the bar layout.
+
+Older user services may set `QSG_TRANSIENT_IMAGES`. [Qt's texture factory](https://github.com/qt/qtdeclarative/blob/6.11/src/quick/util/qquickpixmapcache.cpp#L125-L131)
+discards image data after its first texture upload with this variable present, even
+when its value is `0` or empty.
+Later windows can get a blank icon that still reports as loaded. `silere run` clears
+this variable, and `silere doctor` warns about affected services.
+
+If you use `silere-shell.service`, remove its `Environment=QSG_TRANSIENT_IMAGES=…`
+line and set `ExecStart` to the absolute path of `scripts/silere` followed by `run`.
+Then run `systemctl --user daemon-reload` and `silere restart`. A QML reload cannot
+change the running process's environment.
 
 ## Bluetooth pairing fails for a passkey device
 
@@ -99,7 +120,8 @@ example `before_sleep_cmd = loginctl lock-session` in hypridle.
 With Quickshell 0.3.1, the network widget and Wi-Fi list can keep showing old devices after
 NetworkManager restarts. Restart Silere.
 
-## A tray icon opens an empty menu
+## Workspaces break after a Hyprland update
 
-Some apps publish a tray icon with no menu, which Quickshell 0.3.1 still offers as one. Click
-outside the card to close it.
+Hyprland 0.57 changes how it names workspaces, and Quickshell 0.3.1 cannot read the new form.
+Stay on Hyprland 0.56 until a Quickshell release after 0.3.1 ships, or build Quickshell from
+its main branch. `silere doctor` reports this pairing.
