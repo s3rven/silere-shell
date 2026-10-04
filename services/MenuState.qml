@@ -53,8 +53,7 @@ AnchoredPopupState {
         root.warmScreen = null
     }
 
-    // A pointer parked on the active workspace is only a speculative open.
-    // Release the prepared window if no click follows; a later click can load it.
+    // a hover is only a speculative open: release the prepared window if no click follows
     Timer {
         id: _warmExpiry
         interval: 2500

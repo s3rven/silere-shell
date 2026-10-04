@@ -10,7 +10,7 @@ Singleton {
     property string conflict: ""
     property bool   _checked: false
     property int    _generation: 0
-    // Test shells share the desktop bus; its real notification owner is expected.
+    // test shells share the desktop bus, where the real notification owner is expected
     readonly property bool _sandboxed: Quickshell.env("SILERE_SANDBOX") === "1"
     readonly property bool armed: SystemTools.hasBusctl
 

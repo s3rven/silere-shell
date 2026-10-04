@@ -79,8 +79,7 @@ Item {
             return
         }
 
-        // The title is a zone widget too. An empty centre needs only the actual
-        // gap between the sides, rather than a second, invisible title reserve.
+        // the title is a zone widget, so an empty centre needs no reserve of its own
         const layoutW = _widgetLayoutWidth
         const capacity = fitWidth > 0 ? Math.min(fitWidth, width) : width
 

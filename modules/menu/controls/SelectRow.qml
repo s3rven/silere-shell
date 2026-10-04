@@ -270,8 +270,7 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
 
-        // Only the viewport's options need objects or font previews. A Repeater
-        // loads every installed font even when all but seven rows are clipped.
+        // a ListView, not a Repeater: a Repeater loads every installed font even with all but seven rows clipped
         height: root._open ? Math.min(root._optionCount * root._optionH
             + (headerItem ? headerItem.height : 2) + 2, root._optionsCapH) : 0
         interactive: contentHeight > height + 1

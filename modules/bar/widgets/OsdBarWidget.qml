@@ -21,8 +21,7 @@ Item {
         width - _iconWidth - (OsdBarState.hasBar ? 16 : 8))
 
     implicitHeight: _barH
-    // Report the desired width separately from the rendered width: the bar may
-    // grow to fit it, while the content still fits during that animation.
+    // the desired width, not the rendered one: the bar grows to fit it while the content still fits mid-animation
     implicitWidth: _iconWidth + _labelWidth + (OsdBarState.hasBar ? 96 : 8)
     visible: _op > 0.001 || state === "visible"
     clip: width < implicitWidth

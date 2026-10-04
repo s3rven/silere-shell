@@ -235,9 +235,7 @@ PanelWindow {
                     recentLoader.item ? recentLoader.item.wantedHeight : 0)
                 readonly property int _resolvedPanelH: Math.max(1,
                     Math.min(contentPane.targetH, _availablePanelH))
-                // A lazy page briefly reports the placeholder height before its final
-                // implicit height. Hold the live edge through that interval so a tab
-                // switch has one height destination instead of shrinking then growing.
+                // a lazy page reports its placeholder height first; holding the edge gives a tab switch one destination instead of shrinking then growing
                 readonly property int targetPanelH: _tabHeightHeld
                     ? Math.max(1, Math.min(_tabHeldH, _availablePanelH))
                     : _resolvedPanelH
@@ -416,9 +414,7 @@ PanelWindow {
 
                 Timer {
                     id: _settingsWarmUnload
-                    // A hover preload is speculative. Keep it long enough to cover an
-                    // intentional pause before clicking, but do not retain a whole
-                    // settings tree for the normal eight-second comparison window.
+                    // a hover preload is speculative: long enough for a pause before the click, not the eight seconds a visited page keeps
                     interval: 2500
                     onTriggered: {
                         if (panel.activeTab === 1) return

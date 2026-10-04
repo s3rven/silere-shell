@@ -237,8 +237,7 @@ Item {
                 || root._displayIds.length === 0
                 || root.visibleIds[0] === root._displayIds[0]) {
             root._displayIds = root.visibleIds.slice()
-            // A per-output page can grow around a newly active workspace without
-            // changing its first id, so no page animation will commit the marker.
+            // a page can grow around a newly active workspace without changing its first id, and then no page animation commits the marker
             root._displayActiveId = root.activeId
         }
     }
