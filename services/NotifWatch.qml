@@ -10,10 +10,12 @@ Singleton {
     property string conflict: ""
     property bool   _checked: false
     property int    _generation: 0
+    // Test shells share the desktop bus; its real notification owner is expected.
+    readonly property bool _sandboxed: Quickshell.env("SILERE_SANDBOX") === "1"
     readonly property bool armed: SystemTools.hasBusctl
 
     function _check(): void {
-        if (_checked || !SystemTools.ready || !SystemTools.hasBusctl) return
+        if (_sandboxed || _checked || !SystemTools.ready || !SystemTools.hasBusctl) return
         _checked = true
         _delay.start()
     }
