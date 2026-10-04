@@ -3,7 +3,6 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import "../../config"
 import "../../services"
-import "../common"
 import "controls"
 
 PageShell {
@@ -73,6 +72,9 @@ PageShell {
         function onWifiEnabledChanged() {
             if (root._picker === "wifi" && !Network.wifiEnabled) root._closePicker()
         }
+        function onToolAvailableChanged() {
+            if (root._picker === "wifi" && !Network.toolAvailable) root._closePicker()
+        }
     }
     Connections {
         target: Bluetooth
@@ -80,12 +82,18 @@ PageShell {
         function onEnabledChanged() {
             if (root._picker === "bt" && !Bluetooth.enabled) root._closePicker()
         }
+        function onAvailableChanged() {
+            if (root._picker === "bt" && !Bluetooth.available) root._closePicker()
+        }
     }
     Connections {
         target: NightLight
         enabled: root.active
         function onEnabledChanged() {
             if (root._picker === "nightlight" && !NightLight.enabled) root._closePicker()
+        }
+        function onToolAvailableChanged() {
+            if (root._picker === "nightlight" && !NightLight.toolAvailable) root._closePicker()
         }
     }
     Connections {
@@ -101,49 +109,8 @@ PageShell {
         width: parent.width
         spacing: 0
 
-        Item {
-            id: _header
+        HomeHeader {
             width: parent.width
-            height: 4 * Math.ceil((_dayLine.implicitHeight + 2 + _metaLine.implicitHeight) / 4)
-
-            ShellText {
-                id: _dayLine
-                anchors.top: parent.top
-                anchors.left: parent.left
-                anchors.right: parent.right
-                text: DateTime.cachedWeekday
-                color: Theme.text
-                font.pixelSize: Settings.fontSize + 5
-                font.weight: Font.DemiBold
-                elide: Text.ElideRight
-            }
-
-            ShellText {
-                id: _metaLine
-                anchors.left: parent.left
-                anchors.right: _uptimeRow.visible ? _uptimeRow.left : parent.right
-                anchors.rightMargin: 12
-                anchors.top: _dayLine.bottom
-                anchors.topMargin: 2
-                text: DateTime.cachedWeek.length > 0
-                    ? DateTime.cachedMonthDay + " · Week " + DateTime.cachedWeek
-                    : DateTime.cachedMonthDay
-                color: Theme.withAlpha(Theme.subtext, 0.78)
-                font.pixelSize: Settings.fontLabel
-                font.weight: Font.Medium
-                elide: Text.ElideRight
-            }
-
-            ShellText {
-                id: _uptimeRow
-                anchors.right: parent.right
-                anchors.verticalCenter: _metaLine.verticalCenter
-                visible: SysInfo.uptimeSecs > 0
-                text: "up " + SysInfo.uptimeLabel
-                color: Theme.withAlpha(Theme.subtext, 0.82)
-                font.pixelSize: Settings.fontLabel
-                font.weight: Font.Medium
-            }
         }
 
         Item {
@@ -244,18 +211,16 @@ PageShell {
                     ? (Network.isWifi && Network.connected ? Network.signalGlyph(Network.signalStrength) : "󰤨")
                     : "󰤭"
                 title: "Wi-Fi"
-                // the hardware block is why the switch is dead, so it outranks a note about
-                // a different interface: with Ethernet up it was the one thing never shown
-                status: Network.wifiEnabled && Network.isWifi && Network.connected ? Network.connectionName
+                status: Network.wifiHardBlocked ? "Blocked by the hardware switch"
                       : Network.wifiConnecting.length > 0 ? "Connecting to " + SafeText.singleLineText(Network.wifiConnecting, 128)
                       : Network.wifiError.length > 0 ? "Couldn't connect to " + SafeText.singleLineText(Network.wifiError, 128)
-                      : Network.wifiHardBlocked ? "Blocked by the hardware switch"
+                      : Network.wifiEnabled && Network.isWifi && Network.connected ? Network.connectionName
                       : _ethActive ? "Ethernet active"
                       : Network.wifiEnabled ? "Not connected"
                       : "Off"
-                statusColor: Network.wifiError.length > 0 ? Theme.error
-                    : Network.wifiHardBlocked ? Theme.warning
+                statusColor: Network.wifiHardBlocked ? Theme.warning
                     : Network.wifiConnecting.length > 0 ? Theme.accent
+                    : Network.wifiError.length > 0 ? Theme.error
                     : "transparent"
                 showSwitch: true
                 available: !Network.wifiHardBlocked
@@ -318,7 +283,8 @@ PageShell {
                 glyph: NightLight.enabled ? "󰖔" : "󰖙"
                 title: "Night Light"
                 status: NightLight.lastError.length > 0 ? NightLight.lastError
-                      : NightLight.enabled ? NightLight.temperature + "K" : NightLight.offStatus
+                      : NightLight.enabled ? (ShellSettings.nightLightAuto ? "Auto · " : "")
+                          + NightLight.temperature + "K" : NightLight.offStatus
                 accentColor: NightLight.lastError.length > 0 ? Theme.error : Theme.warning
                 statusColor: NightLight.lastError.length > 0 ? Theme.error : "transparent"
                 showSwitch: true

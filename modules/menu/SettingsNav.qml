@@ -188,21 +188,20 @@ Item {
     function _settleTo(index: int): void {
         root._settleGroup = index
         _disclosureSettle.restart()
-        // implicitHeight is the final math height, so the panel's floor steps
-        // instantly while the disclosure animates — the panel needs its own easing
-        root.groupToggled()
     }
 
     function _syncExpansionMode(keepGroupsOpen: bool, section: string): void {
+        root.groupToggled()
         if (!keepGroupsOpen)
             root._expandedGroup = root._groupIndexForSection(section)
         // the mode changes every group's height at once. Let the panel follow that disclosure and reveal the selected leaf after the rows settle
         root._settleGroup = -1
         _disclosureSettle.restart()
-        root.groupToggled()
     }
 
     function _toggleGroup(index: int): void {
+        // arm the outer panel before the final-height binding changes
+        root.groupToggled()
         if (root.allExpanded) {
             const collapsing = root._isExpanded(index)
             root._setCollapsed(index, collapsing)
@@ -244,8 +243,7 @@ Item {
     Timer {
         id: _disclosureSettle
         interval: Motion.medium
-        // Queue the reveal after the disclosure, then let _resizeSettle debounce
-        // any remaining outer-panel height frames.
+        // queue the reveal after the disclosure, then let _resizeSettle debounce any remaining outer-panel height frames
         onTriggered: root._queueReveal(root._settleGroup)
     }
 
@@ -265,6 +263,7 @@ Item {
         // a section can be selected from the page side; never leave it hidden in a collapsed group
         if (root.allExpanded) {
             if (selectedGroup >= 0 && !root._isExpanded(selectedGroup)) {
+                root.groupToggled()
                 root._setCollapsed(selectedGroup, false)
                 root._settleTo(selectedGroup)
             } else {
@@ -273,6 +272,7 @@ Item {
             return
         }
         if (selectedGroup >= 0 && selectedGroup !== root._expandedGroup) {
+            root.groupToggled()
             root._expandedGroup = selectedGroup
             root._settleTo(selectedGroup)
         } else {
@@ -453,8 +453,7 @@ Item {
                             // only while collapsed: an expanded group shows its leaves' own dots
                             Rectangle {
                                 id: _groupDot
-                                visible: ShellSettings.settingsNavDots
-                                    && !_grp.expanded && root._groupModified(_grp.modelData)
+                                visible: !_grp.expanded && root._groupModified(_grp.modelData)
                                 anchors.right: _groupChevron.left
                                 anchors.rightMargin: 5
                                 anchors.verticalCenter: parent.verticalCenter
@@ -526,8 +525,7 @@ Item {
                                         required property var modelData
                                         readonly property bool active: MenuState.settingsSection === modelData.section
                                         readonly property string glyph: modelData.glyph ?? ""
-                                        readonly property bool showDot: ShellSettings.settingsNavDots
-                                            && ShellSettings.modifiedSections[modelData.section] === true
+                                        readonly property bool showDot: ShellSettings.modifiedSections[modelData.section] === true
                                         width: _leafColumn.width
                                         height: root._navRowH
                                         radius: Theme.radiusInline
@@ -569,8 +567,7 @@ Item {
                                             anchors.left: parent.left
                                             anchors.leftMargin: 9
                                             anchors.verticalCenter: parent.verticalCenter
-                                            // the rail cap is fixed while the label grows with uiScale, so the
-                                            // slot beside it has to give the type its width back
+                                            // the rail cap is fixed while the label grows with uiScale, so the slot beside it has to give the type its width back
                                             width: Metrics.iconCellFor(Settings.fontLabel)
                                             horizontalAlignment: Text.AlignHCenter
                                             text: _leaf.glyph
@@ -582,8 +579,7 @@ Item {
                                             ColorFade on color {}
                                         }
 
-                                        // 4px on a 7/5 inset: the rail is a fixed 160 and the dot
-                                        // eats the label's budget, which "Notifications" fills
+                                        // 4px on a 7/5 inset: the rail is a fixed 160 and the dot eats the label's budget, which "Notifications" fills
                                         Rectangle {
                                             id: _leafDot
                                             visible: _leaf.showDot

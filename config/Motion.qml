@@ -48,8 +48,7 @@ Singleton {
     readonly property int  popIn:      _rm ? 0 : 240
     readonly property int  popInFade:  _rm ? 0 : 160
     readonly property int  popOut:     _rm ? 0 : 150
-    // the popup window unmaps on opacity, so the fade has to outlast the travel or the card
-    // dissolves two thirds of the way through its own exit
+    // the popup window unmaps on opacity, so the fade has to outlast the travel or the card dissolves two thirds of the way through its own exit
     readonly property int  popOutFade: _rm ? 0 : 190
     readonly property int  popSettle:  _rm ? 0 : 240
 
@@ -67,6 +66,7 @@ Singleton {
     readonly property int pageIn:      _rm ? 0 : panelResize
     readonly property int pageOut:     _rm ? 0 : 120
     readonly property real pageOffset: 10
+    readonly property real pageLift: 4
 
     readonly property int barMorph: _rm ? 0 : 260
 }

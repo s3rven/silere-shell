@@ -61,14 +61,13 @@ Singleton {
         if (l.C < 4) return c
         return lchColor(_accentPresetL, Math.max(20, Math.min(38, l.C)), l.h)
     }
-    function _sourcedAccent(c: color): color {
+    function sourcedAccent(c: color): color {
         return ShellSettings.matugenAccentBalance ? balancedAccent(c) : c
     }
-    readonly property color _tAccent:   _n ? (ShellSettings.neutralAccentAuto ? _sourcedAccent(MatugenTheme.accent) : ShellSettings.neutralAccent) : _sourcedAccent(_matuAccent)
+    readonly property color _tAccent:   _n ? (ShellSettings.neutralAccentAuto ? sourcedAccent(MatugenTheme.accent) : ShellSettings.neutralAccent) : sourcedAccent(_matuAccent)
     property color accent: root._tAccent
     PaletteFade on accent { gate: root._paletteReady }
-    // read off the target, not the eased value: a lerp between opposite hues passes
-    // through low chroma, and this must not flicker on the way
+    // read off the target, not the eased value: a lerp between opposite hues passes through low chroma, and this must not flicker on the way
     readonly property bool accentColorless: lchOf(_tAccent).C < 4
     // matugen warning/success are M3 tertiary/secondary with no semantic meaning, so anchor the hue and let it tint; error is real
     readonly property color _warnAnchor: "#d4ad77"
@@ -83,8 +82,7 @@ Singleton {
     PaletteFade on warning { gate: root._paletteReady }
     PaletteFade on success { gate: root._paletteReady }
 
-    // the wallpaper palette lands a moment after the shell does; easing in from the
-    // bundled colours on every launch would read as a flash, not a transition
+    // the wallpaper palette lands a moment after the shell does; easing in from the bundled colours on every launch would read as a flash, not a transition
     property bool _paletteReady: false
     Timer { interval: 700; running: true; onTriggered: root._paletteReady = true }
 
@@ -129,8 +127,7 @@ Singleton {
                                         : _n ? withAlpha(_lineBase, lineAlpha(0.14))
                                              : withAlpha(mix(_lineBase, accent, 0.22), lineAlpha(0.17))
 
-    readonly property color barSeparator: withAlpha(_n ? _lineBase : mix(_lineBase, accent, 0.10),
-                                                    ShellSettings.dotOpacity)
+    readonly property color barSeparator: withAlpha(_n ? _lineBase : mix(_lineBase, accent, 0.10), 0.38)
 
     // signature, not structure: keeps its accent in neutral where the panel lines drop theirs
     readonly property color barLine: mix(_lineBase, accent, 0.30)
@@ -201,8 +198,6 @@ Singleton {
     function controlTrackFill(c: color, active: bool,
                               hovered: bool, pressed: bool): color {
         if (active) {
-            // the filled half sits back into the card rather than glowing off it; high
-            // contrast keeps the old weights, where legibility outranks restraint
             const k = _hc
                 ? (_n ? (pressed ? 0.80 : hovered ? 0.74 : 0.68)
                       : (pressed ? 0.85 : hovered ? 0.79 : 0.73))

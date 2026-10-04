@@ -58,12 +58,16 @@ Singleton {
             "set -- $raw; p=$2; case $p in ''|*[!0-9]*) exit 0;; esac; " +
             "[ \"$p\" = \"$self\" ] && exit 0; " +
             "c=; IFS= read -r c < \"/proc/$p/comm\" 2>/dev/null || exit 0; " +
+            "case \"$c\" in qs|quickshell) n=; prev=; " +
+            "while IFS= read -r -d '' a; do case $prev in -c|--config|-p|--path) n=$a;; esac; " +
+            "case $a in --config=*|--path=*) n=${a#*=};; esac; prev=$a; done < \"/proc/$p/cmdline\"; " +
+            "n=${n%/}; case $n in *.qml) n=${n%/*};; esac; n=${n##*/}; c=\"Quickshell${n:+ ($n)}\";; esac; " +
             "case \"$c\" in \"\") exit 0;; *) echo \"$c\";; esac",
             "bash", String(Quickshell.processId)]
         stdout: StdioCollector { id: _out }
         onExited: {
             if (_proc._generation !== root._generation) return
-            const name = (_out.text || "").trim()
+            const name = SafeText.singleLineText(_out.text, 64).trim()
             root.conflict = name
             if (name.length === 0) return
             console.warn("silere-shell: notifications are owned by '" + name +

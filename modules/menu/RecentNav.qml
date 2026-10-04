@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import Quickshell.Widgets
 import "../../config"
 import "../../services"
@@ -88,8 +89,7 @@ Item {
         _navScroll.contentY = Math.max(0, Math.min(Math.max(0, contentH - viewH), target))
     }
 
-    // the outer panel keeps resizing the viewport for the whole open, so height
-    // notifications arrive every frame; reveal once they stop
+    // the outer panel keeps resizing the viewport for the whole open, so height notifications arrive every frame; reveal once they stop
     Timer {
         id: _revealSettle
         interval: ShellSettings.reduceMotion ? 0 : 50
@@ -176,8 +176,7 @@ Item {
                             MenuState.recentFilter === _row.modelData
                         readonly property string label: root._labelFor(_row.modelData)
                         readonly property int count: root._countFor(_row.modelData)
-                        // strings, not the app row: the row object is rebuilt on every
-                        // revision, and the icon must only re-resolve when it truly changes
+                        // strings, not the app row: the row object is rebuilt on every revision, and the icon must only re-resolve when it truly changes
                         readonly property string appIcon:
                             _row.isAll ? "" : (root._appFor(_row.modelData)?.appIcon ?? "")
                         readonly property string desktopEntry:
@@ -242,6 +241,8 @@ Item {
                             IconImage {
                                 id: _rowIcon
                                 anchors.centerIn: parent
+                                readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+                                transform: PixelSnap { item: _rowIcon; dpr: _rowIcon._dpr }
                                 width: 16
                                 height: 16
                                 visible: !_row.isAll && status === Image.Ready

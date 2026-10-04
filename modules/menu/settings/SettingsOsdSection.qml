@@ -6,12 +6,6 @@ Column {
     width: parent ? parent.width : 0
     spacing: 0
 
-    // pairs with FEEDBACK below: both headings appear together, so a lone card is never labelled
-    CollapsibleSection {
-        expanded: ShellSettings.osdEnabled
-        SectionLabel { label: "GENERAL"; first: true }
-    }
-
     SettingsCard {
         ToggleRow {
             glyph: "󱀅"; label: "On-screen display"
@@ -28,17 +22,10 @@ Column {
                 expanded: !ShellSettings.osdBarIntegrated
                 ToggleRow {
                     glyph: "󰖲"; label: "Match bar shape"
+                    description: "Use the bar's height and roundness"
                     key: "osdMatchBar"
                 }
             }
-        }
-    }
-
-    CollapsibleSection {
-        expanded: ShellSettings.osdEnabled
-
-        SectionLabel { label: "FEEDBACK" }
-        SettingsCard {
             SliderRow {
                 glyph: "󰔛"; label: "Dismiss after"
                 displayValue: (ShellSettings.osdTimeout / 1000) + "s"
@@ -46,14 +33,13 @@ Column {
                 step: 500
             }
             ChoiceChipRow {
+                key: "osdKindFilter"
                 glyph: "󰈶"; label: "Feedback for"
-                currentValue: ShellSettings.osdKindFilter
                 model: [
                     { value: "both",       label: "Both" },
                     { value: "volume",     label: "Volume" },
                     { value: "brightness", label: "Bright" }
                 ]
-                onChosen: (v) => ShellSettings.osdKindFilter = v
             }
         }
     }

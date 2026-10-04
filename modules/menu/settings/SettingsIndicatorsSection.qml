@@ -30,11 +30,10 @@ Column {
             key: "batteryAutoHide"
         }
         ToggleRow {
+            key: "networkTrafficStats"
             glyph: "󰓅"; label: "Network speed"
-            checked: ShellSettings.networkTrafficStats
             available: Network.toolAvailable
             dependsNote: "No NetworkManager"
-            onToggled: nextChecked => ShellSettings.networkTrafficStats = nextChecked
         }
         CollapsibleSection {
             expanded: ShellSettings.networkTrafficStats && Network.toolAvailable
@@ -44,32 +43,11 @@ Column {
             }
         }
         ToggleRow {
+            key: "netVpnShowLink"
             glyph: "󰦝"; label: "Connection beside VPN"
-            checked: ShellSettings.netVpnShowLink
+            description: "Show Wi-Fi or Ethernet while on VPN"
             available: Network.toolAvailable
             dependsNote: "No NetworkManager"
-            onToggled: nextChecked => ShellSettings.netVpnShowLink = nextChecked
-        }
-    }
-
-    SectionLabel { label: "HOVER" }
-    SettingsCard {
-        ToggleRow {
-            glyph: "󰍽"; label: "Hover highlight"
-            key: "barHoverHighlight"
-        }
-        ToggleRow {
-            glyph: "󰈈"; label: "Reveal values on hover"
-            key: "valuesOnHover"
-        }
-        CollapsibleSection {
-            expanded: ShellSettings.valuesOnHover
-            ToggleRow {
-                glyph: "󰡵"; label: "Level bars"
-                checked: ShellSettings.hoverLevelBar
-                description: "A slim bar while the value is hidden"
-                onToggled: nextChecked => ShellSettings.hoverLevelBar = nextChecked
-            }
         }
     }
 }

@@ -10,8 +10,9 @@ MenuRow {
     id: root
 
     property string label: ""
+    property string key: ""
     property var    model: []
-    property var    currentValue
+    property var    currentValue: root.key.length > 0 ? ShellSettings[root.key] : undefined
     property color  accentColor: Theme.accent
 
     rowHovered:     _rowHover.hovered
@@ -19,14 +20,21 @@ MenuRow {
 
     signal chosen(var value)
 
+    Connections {
+        target: root
+        function onChosen(value) {
+            if (root.key.length > 0) ShellSettings.setValue(root.key, value)
+        }
+    }
+
     readonly property int _optionCount: Math.max(1, root.model.length)
     readonly property int _controlH: Metrics.rowHeightFor(28)
     // floor matches ToggleRow: every single-line settings row shares one height,
     // and the two-line rows (slider with a track, toggle with a description) share 56
     readonly property int _inlineH: 4 * Math.ceil(Math.max(44,
-        _labelRow.height + 12, root._controlH + 12) / 4)
+        _labelRow.height + 12, _choiceGroup.height + 12) / 4)
     readonly property int _stackedH: 4 * Math.ceil(Math.max(56,
-        6 + _labelRow.height + 4 + root._controlH + 6) / 4)
+        6 + _labelRow.height + 4 + _choiceGroup.height + 6) / 4)
     readonly property int _chipGap: 5
     // detached chips size to the widest option so every chip in a row matches, instead of splitting a fixed track into equal cells
     FontMetrics {
@@ -52,22 +60,22 @@ MenuRow {
     // with nothing in the label column the row is a standalone control, not a setting:
     // holding it to the right cap leaves the gutter it would have used as dead space
     readonly property bool _headless: root.label.length === 0 && root.glyph.length === 0
-    // a flat pixel cap keeps its width while the type grows, so the chips lose their padding
-    // at the top of the scale; it rises with the label font the way the bar hint's cap does
     readonly property real _preferredControlW: root._headless
         ? Math.max(1, root.width - 28)
-        : Math.min(Math.max(236, Settings.fontLabel * 22),
-            root._chipW * root._optionCount + root._chipGap * (root._optionCount - 1))
+        : root._chipW * root._optionCount + root._chipGap * (root._optionCount - 1)
     readonly property real _inlineLabelW:
         Math.max(0, root.width - 12 - root._preferredControlW - 14 - 10)
     readonly property bool _stacked: root.width > 0
         && _labelRow.neededW > root._inlineLabelW
 
     readonly property int _activeIndex: root.model.findIndex(o => o.value === root.currentValue)
-    // travels by chip, not pixels, so a relayout moves it with the chips instead of chasing them
-    property real _slot: Math.max(0, root._activeIndex)
-    on_ActiveIndexChanged: if (root._activeIndex >= 0) root._slot = root._activeIndex
-    MotionBehavior on _slot {
+    // separate row and column coordinates keep the selection inside a wrapped group
+    property real _selectionColumn: Math.max(0, root._activeIndex) % _choiceGroup.columns
+    property real _selectionRow: Math.floor(Math.max(0, root._activeIndex) / _choiceGroup.columns)
+    MotionBehavior on _selectionColumn {
+        SpringAnimation { spring: 4.4; damping: 0.62; epsilon: 0.002 }
+    }
+    MotionBehavior on _selectionRow {
         SpringAnimation { spring: 4.4; damping: 0.62; epsilon: 0.002 }
     }
 
@@ -131,18 +139,26 @@ MenuRow {
             ? root.height - 6 - height
             : Math.round((root.height - height) / 2)
         width: Math.min(root._preferredControlW, Math.max(1, root.width - 28))
-        height: root._controlH
+        height: rows * root._controlH + (rows - 1) * root._chipGap
 
-        readonly property int _gapTotal: root._chipGap * (root._optionCount - 1)
+        readonly property int columns: {
+            const fit = Math.max(1, Math.min(root._optionCount,
+                Math.floor((width + root._chipGap) / (root._chipW + root._chipGap))))
+            return Math.ceil(root._optionCount / Math.ceil(root._optionCount / fit))
+        }
+        readonly property int rows: Math.ceil(root._optionCount / columns)
+
+        readonly property int _gapTotal: root._chipGap * (columns - 1)
         readonly property int contentW: Math.max(1,
             Math.floor(width) - _gapTotal)
         readonly property int cellW: Math.max(1,
-            Math.floor(contentW / root._optionCount))
+            Math.floor(contentW / columns))
         readonly property int cellRemainder: Math.max(0,
-            contentW - cellW * root._optionCount)
+            contentW - cellW * columns)
 
-        Row {
+        Grid {
             anchors.fill: parent
+            columns: _choiceGroup.columns
             spacing: root._chipGap
 
             Repeater {
@@ -163,8 +179,8 @@ MenuRow {
                             ? "" : String(modelData.glyph)
 
                     width: _choiceGroup.cellW
-                        + (index < _choiceGroup.cellRemainder ? 1 : 0)
-                    height: _choiceGroup.height
+                        + (index % _choiceGroup.columns < _choiceGroup.cellRemainder ? 1 : 0)
+                    height: root._controlH
 
                     Accessible.role: Accessible.RadioButton
                     Accessible.name: root.label.length > 0
@@ -174,6 +190,8 @@ MenuRow {
                     Accessible.checkable: true
                     Accessible.checked: _option.active
                     Accessible.onPressAction: if (root.enabled)
+                        root.chosen(_option.modelData.value)
+                    Accessible.onToggleAction: if (root.enabled && !_option.active)
                         root.chosen(_option.modelData.value)
 
                     HoverHandler {
@@ -257,8 +275,6 @@ MenuRow {
                                 : Theme.withAlpha(Theme.subtext,
                                     _hover.hovered ? 0.90 : 0.72)
                             font.pixelSize: Settings.fontLabel
-                            fontSizeMode: Text.HorizontalFit
-                            minimumPixelSize: Settings.fontCaption
                             font.weight: _option.active
                                 ? Font.DemiBold : Font.Medium
                             ColorFade on color {}
@@ -271,11 +287,12 @@ MenuRow {
 
         Rectangle {
             id: _selection
-            readonly property int _cell: Math.round(root._slot)
-            x: root._slot * (_choiceGroup.cellW + root._chipGap)
-                + Math.min(root._slot, _choiceGroup.cellRemainder)
-            width: _choiceGroup.cellW + (_cell < _choiceGroup.cellRemainder ? 1 : 0)
-            height: parent.height
+            readonly property int _column: Math.round(root._selectionColumn)
+            x: root._selectionColumn * (_choiceGroup.cellW + root._chipGap)
+                + Math.min(root._selectionColumn, _choiceGroup.cellRemainder)
+            y: root._selectionRow * (root._controlH + root._chipGap)
+            width: _choiceGroup.cellW + (_column < _choiceGroup.cellRemainder ? 1 : 0)
+            height: root._controlH
             radius: Theme.radiusField
             antialiasing: true
             visible: root._activeIndex >= 0

@@ -1,5 +1,4 @@
 import QtQuick
-import "../../../config"
 import "../../../services"
 import "../controls"
 
@@ -10,21 +9,20 @@ Column {
     SectionLabel { label: "LAYOUT"; first: true }
     SettingsCard {
         SliderRow {
-            glyph: "󰕰"; label: "Slots shown"
+            glyph: "󰕰"; label: "Workspaces shown"
             key: "wsMinVisible"
             displayValue: ShellSettings.wsMinVisible
         }
         ChoiceChipRow {
+            key: "wsActiveMarker"
             glyph: ShellSettings.wsActiveMarker === "bar" ? "━"
                 : ShellSettings.wsActiveMarker === "dot" ? "●" : "◆"
             label: "Active marker"
-            currentValue: ShellSettings.wsActiveMarker
             model: [
                 { value: "gem", label: "Gem" },
                 { value: "dot", label: "Dot" },
                 { value: "bar", label: "Line" }
             ]
-            onChosen: (v) => ShellSettings.wsActiveMarker = v
         }
     }
 
@@ -34,30 +32,10 @@ Column {
             glyph: "󰎠"; label: "Numbers"
             key: "wsShowNumbers"
         }
-        SliderRow {
-            glyph: ShellSettings.wsShowNumbers ? "1" : "•"
-            glyphColor: Theme.withAlpha(Theme.text, Math.max(0.35, ShellSettings.wsMarkerOpacity))
-            label: ShellSettings.wsShowNumbers ? "Number opacity" : "Dot opacity"
-            key: "wsMarkerOpacity"
-            displayValue: Math.round(ShellSettings.wsMarkerOpacity * 100) + "%"
-        }
         ToggleRow {
             glyph: "󰀻"; label: "App icons"
             description: "Up to three apps per workspace"
             key: "wsShowAppIcons"
-        }
-        CollapsibleSection {
-            expanded: ShellSettings.wsShowAppIcons
-            ToggleRow {
-                glyph: "󰋰"; label: "Monochrome icons"
-                key: "wsIconMono"
-            }
-            SliderRow {
-                glyph: "󰋩"; label: "Icon opacity"
-                key: "wsIconOpacity"
-                step: 0.02
-                displayValue: Math.round(ShellSettings.wsIconOpacity * 100) + "%"
-            }
         }
     }
 
@@ -84,11 +62,6 @@ Column {
             glyph: "󰕦"; label: "Urgent window pulse"
             description: "Animate a workspace demanding attention"
             key: "wsUrgentPulse"
-        }
-        ToggleRow {
-            glyph: "󰍜"; label: "Menu open pulse"
-            description: "Animate the marker when the menu opens"
-            key: "wsMenuPulse"
         }
         HintText {
             visible: ShellSettings.reduceMotion

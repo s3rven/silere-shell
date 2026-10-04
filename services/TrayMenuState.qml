@@ -12,6 +12,7 @@ AnchoredPopupState {
     property QtObject menuHandle: null
 
     onMenuHandleChanged: if (open && menuHandle === null) close()
+    onSourceItemChanged: if (open && sourceItem === null) close()
     // every close path lands here, so the menu-specific handles clear without overriding close()
     onOpenChanged: if (!open) {
         sourceItem = null
@@ -21,6 +22,10 @@ AnchoredPopupState {
     Connections {
         target: ShellSettings
         function onTrayWidgetChanged() { if (!ShellSettings.trayWidget) root.close() }
+        function onTrayHiddenChanged() {
+            if (root.sourceItem && ShellSettings.trayItemHidden(root.sourceItem.id))
+                root.close()
+        }
     }
 
     function branchHovered(branch, flyouts): bool {
@@ -41,6 +46,8 @@ AnchoredPopupState {
             root.close()
             return
         }
+        // close first: a menu-less item is a valid destination, and the old app's menu must not linger
+        if (root.open) root.close()
         sourceItem = source ?? null
         barBottom = bottom
         menuHandle = handle

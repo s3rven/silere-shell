@@ -14,7 +14,8 @@ PanelWindow {
     required property ShellScreen targetScreen
 
     readonly property string _output: Compositor.monitorName(win.screen)
-    readonly property int menuWidth: 220
+    readonly property int menuWidth: Metrics.snap4Up(220
+        + Math.max(0, Settings.capHeight - Settings.capHeightBase) * 6)
 
     property var _activeMenu: null
     function _trigger(entry): void {
@@ -27,7 +28,19 @@ PanelWindow {
             console.warn("silere-shell: tray menu signal failed:", String(error))
         }
     }
+    function _activateEntry(entry): void {
+        if (!TrayMenuState.open || !entry || !entry.on) return
+        if (entry.sub) {
+            entry._openFlyout()
+            return
+        }
+        win._trigger(entry.modelData)
+        TrayMenuState.close()
+    }
     function _setActiveMenu(handle): void {
+        if (win._activeMenu === handle) return
+        win._closeFlyouts()
+        _scroll.contentY = 0
         win._activeMenu = handle
     }
     function _closeFlyouts(): void {
@@ -54,6 +67,9 @@ PanelWindow {
         target: TrayMenuState
         function onMenuHandleChanged() {
             if (TrayMenuState.menuHandle !== null) win._setActiveMenu(TrayMenuState.menuHandle)
+        }
+        function onOpenChanged() {
+            if (TrayMenuState.open) win._setActiveMenu(TrayMenuState.menuHandle)
         }
     }
 
@@ -137,7 +153,7 @@ PanelWindow {
         Item {
             id: _entry
             required property var modelData
-            // submenu rows only: lets Left-arrow close the right flyout, reparented to the window root and no longer bubbling keys up
+            // flyouts live at the window root so the scroll clip cannot cut them off
             property Item ownerFlyout: null
             property Flickable ownerScroll: null
             property int menuDepth: 0
@@ -156,13 +172,13 @@ PanelWindow {
             readonly property string iconSrc: IconResolver.trayIconSource(modelData?.icon)
 
             width: win.menuWidth
-            height: sep ? 11 : 32
+            height: sep ? 11 : Metrics.rowHeightFor(32)
 
             function closeFlyout(): void {
                 if (_flyout.opened) win._closeFlyoutBranch(_flyout)
             }
             function _openFlyout(): void {
-                if (!_entry.sub || _flyout.opened) return
+                if (!_entry.on || !_entry.sub || _flyout.opened) return
                 // one visible child branch per menu branch; closing the siblings releases their nested models
                 const sibs = _entry.parent ? _entry.parent.children : []
                 for (let k = 0; k < sibs.length; k++) {
@@ -171,10 +187,6 @@ PanelWindow {
                         c.closeFlyout()
                 }
                 _flyout.opened = true
-            }
-            function _toggleFlyout(): void {
-                if (_flyout.opened) _entry.closeFlyout()
-                else _entry._openFlyout()
             }
             QsMenuOpener {
                 id: _subOpener
@@ -197,8 +209,10 @@ PanelWindow {
                 anchors.fill: parent
                 radius: Theme.radiusControl
                 antialiasing: true
-                color: (_entry.on && (_rowHover.hovered || _flyout.opened))
-                    ? Theme.withAlpha(Theme.menuHover, 0.08) : "transparent"
+                color: !_entry.on ? "transparent"
+                    : _entryTap.pressed ? Theme.withAlpha(Theme.menuHover, 0.13)
+                    : (_rowHover.hovered || _flyout.opened)
+                        ? Theme.withAlpha(Theme.menuHover, 0.08) : "transparent"
                 ColorFade on color {}
             }
 
@@ -213,23 +227,13 @@ PanelWindow {
             Accessible.name: _entry.label
             Accessible.checked: _entry.checked
             Accessible.focusable: _entry.on
-            Accessible.onPressAction: {
-                if (!_entry.on) return
-                if (_entry.sub) { _entry._toggleFlyout(); return }
-                win._trigger(_entry.modelData)
-                TrayMenuState.close()
-            }
+            Accessible.onPressAction: win._activateEntry(_entry)
 
             TapHandler {
-                enabled: _entry.on && !_entry.sub
-                onTapped: {
-                    win._trigger(_entry.modelData)
-                    TrayMenuState.close()
-                }
-            }
-            TapHandler {
-                enabled: _entry.on && _entry.sub
-                onTapped: _entry._toggleFlyout()
+                id: _entryTap
+                enabled: _entry.on
+                // hover may already have opened it, so a tap never toggles it shut
+                onTapped: win._activateEntry(_entry)
             }
 
             Item {
@@ -271,6 +275,8 @@ PanelWindow {
                 IconImage {
                     id: _icon
                     visible: !_entry.checkable && _entry.iconSrc !== "" && status === Image.Ready
+                    readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+                    transform: PixelSnap { item: _icon; dpr: _icon._dpr }
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
                     implicitSize: Settings.fontSize + 4
@@ -438,9 +444,82 @@ PanelWindow {
                 spacing: 1
 
                 Repeater {
+                    id: _topRows
                     model: _opener.children
                     delegate: _rowDelegate
                     onItemAdded: (index, item) => item.ownerScroll = _scroll
+                }
+
+                Item {
+                    visible: _hideRow.visible && _topRows.count > 0
+                    width: win.menuWidth
+                    height: 11
+
+                    Hairline {
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.leftMargin: 8
+                        anchors.rightMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        color: Theme.menuDivider
+                    }
+                }
+
+                Item {
+                    id: _hideRow
+                    readonly property string _liveId: String(TrayMenuState.sourceItem?.id ?? "")
+                    // latched: the source clears on close, and the row must not drop out during the fade
+                    property string trayId: ""
+                    on_LiveIdChanged: if (TrayMenuState.sourceItem !== null) trayId = _liveId
+                    Component.onCompleted: if (_liveId.length > 0) trayId = _liveId
+                    Connections {
+                        target: TrayMenuState
+                        function onOpenChanged() {
+                            if (TrayMenuState.open) _hideRow.trayId = _hideRow._liveId
+                        }
+                    }
+                    visible: trayId.length > 0
+                    width: win.menuWidth
+                    height: Metrics.rowHeightFor(32)
+                    enabled: TrayMenuState.open
+
+                    function hide(): void {
+                        if (!_hideRow.enabled || _hideRow._liveId.length === 0
+                                || _hideRow.trayId !== _hideRow._liveId) return
+                        const id = _hideRow.trayId
+                        TrayMenuState.close()
+                        ShellSettings.setTrayItemHidden(id, true)
+                    }
+
+                    Accessible.role: Accessible.MenuItem
+                    Accessible.name: "Hide from bar"
+                    Accessible.focusable: true
+                    Accessible.onPressAction: _hideRow.hide()
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: Theme.radiusControl
+                        antialiasing: true
+                        color: _hideTap.pressed ? Theme.withAlpha(Theme.menuHover, 0.13)
+                            : _hideHover.hovered ? Theme.withAlpha(Theme.menuHover, 0.08) : "transparent"
+                        ColorFade on color {}
+                    }
+
+                    HoverHandler { id: _hideHover; cursorShape: Qt.PointingHandCursor }
+                    TapHandler { id: _hideTap; onTapped: _hideRow.hide() }
+
+                    ShellText {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 10
+                        anchors.right: parent.right
+                        anchors.rightMargin: 10
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "Hide from bar"
+                        color: _hideHover.hovered ? Theme.text : Theme.withAlpha(Theme.subtext, 0.86)
+                        font.pixelSize: Settings.fontSize
+                        elide: Text.ElideRight
+                        ColorFade on color {}
+                    }
                 }
             }
         }

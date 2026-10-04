@@ -58,14 +58,13 @@ Column {
     SectionLabel { label: "CALENDAR" }
     SettingsCard {
         ChoiceChipRow {
+            key: "calendarWeekStart"
             glyph: "󰨴"; label: "Week starts"
-            currentValue: ShellSettings.calendarWeekStart
             model: [
                 { value: "monday", label: "Mon" },
                 { value: "sunday", label: "Sun" },
                 { value: "locale", label: "System" }
             ]
-            onChosen: (v) => ShellSettings.calendarWeekStart = v
         }
         ToggleRow {
             glyph: "󰨲"; label: "Week numbers"

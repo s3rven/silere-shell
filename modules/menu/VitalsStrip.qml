@@ -10,6 +10,15 @@ Rectangle {
     property bool active: true
     readonly property int _pad: 7
 
+    function sizeText(kb: real): string {
+        if (!isFinite(kb) || kb <= 0) return ""
+        const units = ["K", "M", "G", "T"]
+        let v = kb, i = 0
+        while (v >= 1024 && i < units.length - 1) { v /= 1024; i++ }
+        const tenths = Math.round(v * 10) / 10
+        return (tenths < 10 ? tenths.toFixed(1) : String(Math.round(v))) + units[i]
+    }
+
     width: parent ? parent.width : 0
     implicitHeight: _grid.implicitHeight + 2 * _pad
     height: implicitHeight
@@ -29,6 +38,7 @@ Rectangle {
         property string label: ""
         property string value: ""
         property string sub: ""
+        property string reserveSub: ""
         property real   progress: 0
         property int    status: 0
         property real   pulse: 0
@@ -42,6 +52,13 @@ Rectangle {
                                     : Theme.menuTextMuted
 
         height: Metrics.rowHeightFor(70)
+        // reserve the widest readings so 99 -> 100 never changes the column count
+        implicitWidth: 36 + Math.max(_labelRow.implicitWidth,
+            _valueMetrics.advanceWidth + (tile.sub.length > 0
+                ? 4 + Math.max(_subMetrics.advanceWidth, _sub.implicitWidth) : 0))
+
+        TextMetrics { id: _valueMetrics; font: _val.font; text: "100%" }
+        TextMetrics { id: _subMetrics; font: _sub.font; text: tile.reserveSub }
 
         // whole percent like the readout: every poll's fraction ran the glide, and a running glide redraws every window
         readonly property real _p: Math.round(Math.max(0, Math.min(1, progress)) * 100) / 100
@@ -108,6 +125,7 @@ Rectangle {
                 font.weight: Font.DemiBold
             }
             ShellText {
+                id: _sub
                 visible: tile.sub !== ""
                 anchors.baseline: _val.baseline
                 text: tile.sub
@@ -144,12 +162,16 @@ Rectangle {
         y: root._pad
         width: parent.width
         readonly property int naturalCells: Battery.available ? 4 : 3
-        readonly property int minCellW: 80 + Math.max(0, Settings.fontSize - Settings.fontSizeBase) * 4
-        readonly property int cells: width >= naturalCells * minCellW ? naturalCells : 2
+        readonly property int minCellW: Metrics.snap4Up(Math.max(80,
+            _cpu.implicitWidth, _memory.implicitWidth, _disk.implicitWidth,
+            _battery.visible ? _battery.implicitWidth : 0))
+        readonly property int cells: width >= naturalCells * minCellW ? naturalCells
+            : width >= 2 * minCellW ? 2 : 1
         readonly property real cellW: width / cells
         columns: cells
 
         Vital {
+            id: _cpu
             width: _grid.cellW
             live: root.active
             divider: false
@@ -157,41 +179,53 @@ Rectangle {
             label: "CPU"
             value: SysInfo.cpuReady ? Math.round(SysInfo.cpuPct * 100) + "%" : "—"
             sub: CpuTemp.available ? Math.round(CpuTemp.temp) + "°" : ""
+            reserveSub: "125°"
             progress: SysInfo.cpuReady ? SysInfo.cpuPct : 0
             status: CpuTemp.critical ? 2 : (CpuTemp.hot ? 1 : 0)
             pulse: CpuTemp.alertPulse
         }
 
         Vital {
+            id: _memory
             width: _grid.cellW
             live: root.active
+            divider: _grid.cells > 1
             glyph: "󰘚"
             label: "Mem"
             value: SysInfo.memTotalKb > 0 ? Math.round(SysInfo.memPct * 100) + "%" : "—"
+            sub: SysInfo.memTotalKb > 0 ? root.sizeText(SysInfo.memTotalKb - SysInfo.memAvailKb) : ""
+            reserveSub: "999G"
             progress: SysInfo.memPct
             status: SysInfo.memPct > 0.9 ? 2 : (SysInfo.memPct > 0.75 ? 1 : 0)
         }
 
         Vital {
+            id: _disk
             width: _grid.cellW
             live: root.active
             padR: Battery.available ? 18 : 14
-            divider: _grid.cells !== 2
+            divider: _grid.cells > 2
             glyph: "󰋊"
             label: "Disk"
             value: SysInfo.diskTotalKb > 0 ? Math.round(SysInfo.diskPct * 100) + "%" : "—"
+            sub: SysInfo.diskTotalKb > 0 && SysInfo.diskAvailKb > 0 ? root.sizeText(SysInfo.diskAvailKb) + " free" : ""
+            reserveSub: "999G free"
             progress: SysInfo.diskPct
             status: SysInfo.diskPct > 0.9 ? 2 : (SysInfo.diskPct > 0.75 ? 1 : 0)
         }
 
         Vital {
+            id: _battery
             width: _grid.cellW
             live: root.active
             visible: Battery.available
+            divider: _grid.cells > 1
             padR: 14
             glyph: Battery.icon
             label: "Batt"
             value: Battery.available ? Battery.label : "—"
+            sub: Battery.timeLabel
+            reserveSub: "+ 9h 59m"
             progress: Battery.available ? Math.min(Battery.pct / 100, 1.0) : 0
             status: Battery.critical ? 2 : (Battery.low ? 1 : 0)
             pulse: Battery.alertPulse

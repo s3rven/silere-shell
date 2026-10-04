@@ -268,10 +268,9 @@ Column {
     SectionLabel { label: "PROGRAMS" }
     SettingsCard {
         SelectRow {
+            key: "lockProvider"
             glyph: "󰌾"; label: "Screen lock"
-            currentValue: ShellSettings.lockProvider
             model: root._lockChoices
-            onChosen: (v) => ShellSettings.lockProvider = v
         }
         HintText {
             visible: ShellSettings.lockProvider === "custom"
@@ -284,10 +283,9 @@ Column {
             text: "The chosen lock program is not installed, so the lock action stays off."
         }
         SelectRow {
+            key: "nightLightProvider"
             glyph: "󰖙"; label: "Night light"
-            currentValue: ShellSettings.nightLightProvider
             model: root._nightLightChoices
-            onChosen: (v) => ShellSettings.nightLightProvider = v
         }
         HintText {
             visible: Settings.nightLightTool.length === 0
@@ -325,7 +323,7 @@ Column {
             }
         }
         HintText {
-            text: "Wallpaper colors and calendar marks stay unchanged."
+            text: "Wallpaper colors stay unchanged."
         }
     }
 }

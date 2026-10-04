@@ -14,8 +14,6 @@ Rectangle {
     // clamp against the width the card is headed for, not the live one, or an animating width fights the x Behavior every frame
     property real targetWidth: width
     property bool animateScale: true
-    // a wide card scaled on both axes grows sideways out of its anchor, which reads as drift;
-    // the menu unfolds on y alone
     property bool scaleUniform: true
     property bool animatePlacement: true
 
@@ -108,8 +106,15 @@ Rectangle {
         const t = Math.max(0, Math.min(winW, anchorX))
         return Metrics.snap4(_clampedX(t - targetWidth * t / Math.max(1, winW)))
     }
+    // what a window fitted around the card must cover: the whole glide while one runs, else where it sits; set here, as a binding on x re-entered when that window resized mid-glide
+    property point placementSpan: Qt.point(0, 0)
+    function _spanTo(from: real, to: real): void {
+        placementSpan = _xGlide.running ? Qt.point(Math.min(from, to), Math.max(from, to)) : Qt.point(to, to)
+    }
     function place(): void {
-        x = _targetX()
+        const from = x, to = _targetX()
+        x = to
+        _spanTo(from, to)
     }
     function reclamp(): void {
         const nx = Metrics.snap4(_clampedX(x))
@@ -118,6 +123,7 @@ Rectangle {
         _hardClamping = true
         x = nx
         _hardClamping = false
+        _spanTo(x, nx)
     }
 
     onRadiusChanged: {
@@ -190,9 +196,11 @@ Rectangle {
         gate: root.animatePlacement && root.open && root._transitionReady
             && root._placementSettled && !root._hardClamping
         NumberAnimation {
+            id: _xGlide
             duration: Motion.medium
             easing.type: Easing.BezierSpline
             easing.bezierCurve: Motion.standard
+            onRunningChanged: if (!running) root.placementSpan = Qt.point(root.x, root.x)
         }
     }
 
@@ -280,8 +288,7 @@ Rectangle {
         id: _enterAnimation
         NumberAnimation { target: root; property: "scaleAmt";  to: 1.0; duration: root.animateScale ? Motion.popIn : 0; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.emphasizedDecel }
         NumberAnimation { target: root; property: "edgeOffset"; to: 0.0; duration: Motion.popIn; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.emphasizedDecel }
-        // OutQuad, not standardDecel: that curve is 12% opaque in the first 1% of the fade, so the
-        // card blinks into existence instead of resolving
+        // OutQuad, not standardDecel: that curve is 12% opaque in the first 1% of the fade, so the card blinks into existence instead of resolving
         NumberAnimation { target: root; property: "opacity";   to: 1.0; duration: Motion.popInFade; easing.type: Easing.OutQuad }
     }
 

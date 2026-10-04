@@ -25,10 +25,9 @@ MenuRow {
     signal expandToggled()
 
     function _requestExpand(): void {
-        root.expandToggled()
+        if (root.enabled && root.expandable) root.expandToggled()
     }
 
-    // matches ControlRow: the Home page reads as one row rhythm, not two
     height: Metrics.rowHeightFor(48)
 
     HoverHandler { id: _rowHover; enabled: root.enabled }
@@ -89,6 +88,11 @@ MenuRow {
         width: root._hasChevSlot ? 24 : 0
         height: parent.height
         visible: root.expandable
+        Accessible.role: Accessible.Button
+        Accessible.name: (root.expanded ? "Hide " : "Show ")
+            + root.accessibleName.toLowerCase() + " options"
+        Accessible.focusable: root.enabled && root.expandable
+        Accessible.onPressAction: root._requestExpand()
         opacity: (_chevHover.hovered) ? 1.0 : 0.7
         MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
 

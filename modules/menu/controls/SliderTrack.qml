@@ -10,6 +10,11 @@ Item {
     property real min:   0
     property real max:   1
     property real step:  0.05
+    // qt's accessible value interface reads these exact names
+    readonly property real minimumValue: root.min
+    readonly property real maximumValue: root.max
+    readonly property real stepSize: root.step > 0
+        ? root.step : Math.max(0.01, (root.max - root.min) / 100)
     property string wheelKey: ""
     property bool wheelNeedsRest: false
     property bool commitOnRelease: false
@@ -59,6 +64,10 @@ Item {
     }
     // 0.5 + 28 * 0.05 is 1.9000000000000001; round off the float residue or it lands in settings.json
     function _snap(v: real): real {
+        if (!isFinite(v)) return v
+        // the bounds stay reachable when the range ends between grid steps
+        if (v <= min) return min
+        if (v >= max) return max
         return step > 0 ? Math.round((min + Math.round((v - min) / step) * step) * 1e6) / 1e6 : v
     }
     function _posToVal(px: real): real {
@@ -75,8 +84,7 @@ Item {
     }
     function nudge(dir: int, mult: int): void {
         if (!root.enabled || !root.interactive) return
-        const baseStep = step > 0 ? step : Math.max(0.01, (max - min) / 100)
-        _setFromUser(_shownValue + dir * baseStep * mult)
+        _setFromUser(_shownValue + dir * root.stepSize * mult)
     }
 
     Rectangle {

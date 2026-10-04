@@ -18,7 +18,6 @@ MenuRow {
     property bool   expandable:   false
     property bool   expanded:     false
     property bool   passive:      false
-    // a value that is a call to action, not a datum: it reads as accent like an armed row does
     property bool   valueIsAction: false
     property int    badgeCount:   0
 
@@ -39,7 +38,7 @@ MenuRow {
     }
 
     function _activateBadge(): void {
-        if (root.badgeCount > 0) root.badgeActivated()
+        if (root._canTap && root.badgeCount > 0) root.badgeActivated()
     }
 
     function _toggleExpanded(): void {
@@ -75,6 +74,7 @@ MenuRow {
     Accessible.checkable: root.showSwitch
     Accessible.checked: root.showSwitch && root.active
     Accessible.onPressAction: root._activate()
+    Accessible.onToggleAction: if (root.showSwitch) root._activate()
 
     HoverHandler { id: _hover; cursorShape: root._canTap ? Qt.PointingHandCursor : Qt.ArrowCursor }
     TapHandler {
@@ -145,6 +145,7 @@ MenuRow {
 
             MouseArea {
                 id: _badgeMouse
+                enabled: root._canTap && root.badgeCount > 0
                 anchors.fill: parent
                 anchors.margins: -4
                 hoverEnabled: true
@@ -152,6 +153,7 @@ MenuRow {
                 Accessible.role: Accessible.Button
                 Accessible.name: root.badgeCount === 1
                     ? "1 missed notification" : root.badgeCount + " missed notifications"
+                Accessible.focusable: enabled
                 Accessible.onPressAction: root._activateBadge()
                 onClicked: {
                     root._activateBadge()
@@ -265,13 +267,17 @@ MenuRow {
                 ColorFade on color {}
             }
 
-            HoverHandler { id: _chevHover; enabled: root.expandable; cursorShape: Qt.PointingHandCursor }
+            HoverHandler { id: _chevHover; enabled: root._canTap && root.expandable; cursorShape: Qt.PointingHandCursor }
             MouseArea {
                 anchors.fill: parent
                 anchors.leftMargin: -4
                 anchors.rightMargin: -4
-                enabled: root.expandable
+                enabled: root._canTap && root.expandable
                 cursorShape: Qt.PointingHandCursor
+                Accessible.role: Accessible.Button
+                Accessible.name: (root.expanded ? "Hide " : "Show ") + root.title + " options"
+                Accessible.focusable: enabled
+                Accessible.onPressAction: root._toggleExpanded()
                 onClicked: {
                     root._toggleExpanded()
                 }

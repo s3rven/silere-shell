@@ -22,6 +22,8 @@ Item {
         ? Math.round(_wrapped(position) * displayScale) % displayScale
         : Math.round(_clamped(position) * displayScale)
     readonly property real stepSize: 1
+    readonly property real minimumValue: 0
+    readonly property real maximumValue: root.wraps ? root.displayScale - 1 : root.displayScale
     readonly property bool dragging: _mouse.pressed
     property real _hoveredSince: 0
 

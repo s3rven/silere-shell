@@ -20,7 +20,7 @@ Item {
         : Battery.critical ? "Critical"
         : Battery.low ? "Low"
         : Battery.full ? "Full"
-        : Battery.charging ? "AC"
+        : Battery.onAc ? "AC"
         : "Battery"
     readonly property string _batteryValue: Battery.label
     // the rail caps this at 86px and "Performance · throttled" needs 138, so the suffix

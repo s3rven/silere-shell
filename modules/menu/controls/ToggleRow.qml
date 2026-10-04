@@ -65,6 +65,7 @@ MenuRow {
     Accessible.checkable: true
     Accessible.checked: root.checked
     Accessible.onPressAction: root._activate()
+    Accessible.onToggleAction: root._activate()
 
     HoverHandler { id: _hover; cursorShape: root._canToggle ? Qt.PointingHandCursor : Qt.ArrowCursor }
     TapHandler {

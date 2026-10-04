@@ -16,6 +16,11 @@ Singleton {
         return idle || overview
     }
 
+    // a card arriving over an open popup lands on top of it, so new ones wait for it to close; cards already showing stay, and a critical one releases them
+    // set on edges only: bound to the popup's own load, it re-entered while the loader opened
+    property bool notificationsHeld: false
+    onAnyOpenChanged: root.notificationsHeld = root.anyOpen && Notifications.activeCount === 0
+
     function registerPopup(state): void {
         if (!state || root._popups.indexOf(state) >= 0) return
         root._popups = root._popups.concat([state])
@@ -48,6 +53,15 @@ Singleton {
         }
     }
 
+    Connections {
+        target: Notifications
+        function onActiveCountChanged() {
+            if (Notifications.activeCount === 0) root.notificationsHeld = root.anyOpen
+        }
+        function onLastCriticalChanged() {
+            if (Notifications.lastCritical) root.notificationsHeld = false
+        }
+    }
     Connections {
         target: Idle
         function onIsIdleChanged() {

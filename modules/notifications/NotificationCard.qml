@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import Quickshell.Widgets
 import Quickshell.Services.Notifications
 import "../../config"
@@ -329,6 +330,9 @@ Item {
         card._hoverPausedMs = 0
         card._hoverStartMs = card._paused ? Date.now() : 0
         card._syncCountdown()
+        // a replacement can keep the same interval, which leaves the timer's elapsed time running
+        if (card.enabled && _autoClose.shouldRun && !card._paused)
+            _autoClose.restart()
     }
 
     Connections {
@@ -402,7 +406,9 @@ Item {
 
         // urgency rides the outline, glyph and ring only: tinting the whole fill red drowns the text it is warning about
         // mix() returns alpha 1, so a translucent popup would snap opaque under the cursor
-        color: card._expanded
+        color: _bodyArea.pressed
+            ? Theme.withAlpha(Theme.mix(Theme.popup, Theme.subtext, 0.11), Theme.popup.a)
+            : card._expanded
             ? Theme.withAlpha(Theme.mix(Theme.popup, Theme.subtext, 0.06), Theme.popup.a)
             : Theme.popup
 
@@ -430,6 +436,8 @@ Item {
             IconImage {
                 id: _headerIcon
                 anchors.fill: parent
+                readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+                transform: PixelSnap { item: _headerIcon; dpr: _headerIcon._dpr }
                 // without this the themed icon decodes at its native size (often 256px+) to paint 24px
                 implicitSize: 24
                 // a deleted temp icon is still a valid path, so only the load failing reveals it
@@ -755,33 +763,42 @@ Item {
             }
         }
 
-        Rectangle {
+        Item {
             anchors.top:         parent.top
             anchors.right:       parent.right
             // the disc rides the content grid and centres on the summary's first line
             anchors.topMargin:   13 + Math.round((_summary.contentHeight
                 / Math.max(1, _summary.lineCount) - height) / 2)
             anchors.rightMargin: 16
-            width: 24; height: 24; radius: 12
-            antialiasing: true
-            color:        _closeHover.hovered ? Theme.withAlpha(Theme.error, 0.18) : Theme.menuControl
+            width: 24; height: 24
             opacity: card._expanded ? 1.0 : 0.48
 
-            OutlineBorder {
+            Rectangle {
+                anchors.fill: parent
                 radius: 12
-                outlineColor: _closeHover.hovered ? Theme.withAlpha(Theme.error, 0.32) : Theme.menuControlLine
-                ColorFade on outlineColor {}
+                antialiasing: true
+                color: _closeTap.pressed ? Theme.withAlpha(Theme.error, 0.24)
+                    : _closeHover.hovered ? Theme.withAlpha(Theme.error, 0.18) : Theme.menuControl
+                scale: _closeTap.pressed ? 0.94 : 1.0
+                MotionBehavior on scale {
+                    NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
+                }
+                ColorFade on color {}
+                OutlineBorder {
+                    radius: 12
+                    outlineColor: _closeHover.hovered ? Theme.withAlpha(Theme.error, 0.32) : Theme.menuControlLine
+                    ColorFade on outlineColor {}
+                }
             }
             z: 2
             MotionBehavior on opacity      {NumberAnimation { duration: Motion.fast } }
-            ColorFade on color {}
             Accessible.role: Accessible.Button
             Accessible.name: "Dismiss notification"
             Accessible.focusable: true
             Accessible.onPressAction: card.dismiss()
 
             HoverHandler { id: _closeHover; cursorShape: Qt.PointingHandCursor }
-            TapHandler   { onTapped: card.dismiss() }
+            TapHandler   { id: _closeTap; onTapped: card.dismiss() }
             ShellText {
                 anchors.centerIn: parent
                 text:  "󰅖"

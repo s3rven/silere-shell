@@ -16,7 +16,6 @@ Singleton {
     property string mediaVisualizerPreset: "balanced"
     property string mediaVisualizerStyle:  "wave"
     property string mediaVisualizerPosition: "media"
-    property real   mediaVisualizerOpacity: 1.0
     property bool   workspaceShift:      true
     property bool   neutralTheme:        true
     property bool   neutralAccentAuto:   false
@@ -42,6 +41,8 @@ Singleton {
     property bool   updatesWidget:       false
     property bool   updatesIncludeAur:   false
     property bool   trayWidget:          false
+    // uri-encoded ids, so a comma inside an id cannot split it
+    property string trayHidden:          ""
     property bool   valuesOnHover:       true
     property bool   hoverLevelBar:       false
     property bool   batteryAutoHide:     true
@@ -59,13 +60,12 @@ Singleton {
     property bool   osdEnabled:     true
     property int    osdTimeout:     2000
     property string osdKindFilter:  "both"
-    property bool   osdBatteryWarn: false
+    property bool   osdBatteryWarn: true
     property bool   osdTempWarn:    false
     property bool   osdChargedNotify: false
     property bool   osdBarIntegrated: false
     property bool   osdMatchBar:      true
     property bool   settingsNavPinned:   true
-    property bool   settingsNavDots:     true
     property bool   reduceMotion:        false
     property bool   highContrast:        false
     property real   outlineStrength:     1.0
@@ -102,14 +102,13 @@ Singleton {
     property real   glowStrength:            1.0
     property bool   screenshotGlowSweep:     false
 
-    property real   dotOpacity:          0.38
     property string dotStyle:            "line"
     readonly property string dotTextGlyph: dotStyle === "|" || dotStyle === "line" ? "│"
                                          : dotStyle === "slash" ? "/"
                                          : dotStyle === "none"  ? "·"
                                          : dotStyle
     property string barSeparatorMode:   "groups"
-    property int    barSpacing:          11
+    property int    barSpacing:          8
     property bool   barAutoCompact:      true
     property bool   barCompact:          false
     property bool   barCenterInGap:      false
@@ -201,6 +200,7 @@ Singleton {
             const setting = root.barWidgetMeta[key].setting
             if (setting.length > 0) root[setting] = _defaults[setting]
         }
+        root.trayHidden = _defaults.trayHidden
     }
 
     function _barWidgetsModified(): bool {
@@ -219,9 +219,25 @@ Singleton {
             if (setting.length > 0
                     && !root._sameValue(root[setting], root._defaults[setting])) return true
         }
-        return false
+        return root.trayHidden !== root._defaults.trayHidden
     }
     readonly property bool barWidgetsModified: root._barWidgetsModified()
+
+    readonly property var trayHiddenIds: root.trayHidden.split(",")
+        .filter(s => s.length > 0).map(s => {
+            try { return decodeURIComponent(s) } catch (e) { return s }
+        })
+
+    function trayItemHidden(id: string): bool {
+        return root.trayHiddenIds.indexOf(id) >= 0
+    }
+
+    function setTrayItemHidden(id: string, hidden: bool): void {
+        if (id.length === 0 || root.trayItemHidden(id) === hidden) return
+        const ids = root.trayHiddenIds.filter(k => k !== id)
+        if (hidden) ids.push(id)
+        root.trayHidden = ids.map(k => encodeURIComponent(k)).join(",")
+    }
 
     readonly property var barWidgetMeta: ({
         // no setting: the diamond is the only way into the menu, so this one cannot be hidden
@@ -264,10 +280,6 @@ Singleton {
     property bool   wsShowAppIcons:      false
     property bool   wsNotifPulse:        false
     property bool   wsUrgentPulse:       true
-    property bool   wsMenuPulse:         false
-    property real   wsMarkerOpacity:     1.0
-    property real   wsIconOpacity:       0.68
-    property bool   wsIconMono:          true
     property string wsActiveMarker:      "dot"
 
     property bool _loaded: false
@@ -292,7 +304,6 @@ Singleton {
         { k: "mediaVisualizerPreset", t: "enum", vals: ["eco", "balanced", "smooth"], sec: "media" },
         { k: "mediaVisualizerStyle",  t: "enum", vals: ["wave", "bars", "pulse"], sec: "media" },
         { k: "mediaVisualizerPosition", t: "enum", vals: ["media", "center", "underline"], sec: "media" },
-        { k: "mediaVisualizerOpacity", t: "real", min: 0.25, max: 1.0, sec: "media" },
         { k: "workspaceShift",      t: "bool", sec: "workspaces" },
         { k: "neutralTheme",        t: "bool", sec: "theme" },
         { k: "neutralAccentAuto",   t: "bool", sec: "theme" },
@@ -318,8 +329,9 @@ Singleton {
         { k: "updatesWidget",       t: "bool", sec: "widgets,updates" },
         { k: "updatesIncludeAur",   t: "bool", sec: "updates" },
         { k: "trayWidget",          t: "bool", sec: "widgets" },
-        { k: "valuesOnHover",       t: "bool", sec: "indicators" },
-        { k: "hoverLevelBar",       t: "bool", sec: "indicators" },
+        { k: "trayHidden",          t: "re",   re: /^[A-Za-z0-9%._~!*'()-]*(,[A-Za-z0-9%._~!*'()-]+)*$/, sec: "widgets" },
+        { k: "valuesOnHover",       t: "bool", sec: "surface" },
+        { k: "hoverLevelBar",       t: "bool", sec: "surface" },
         { k: "batteryAutoHide",     t: "bool", sec: "indicators" },
         { k: "barShowBattery",      t: "bool", sec: "widgets" },
         { k: "barShowNetwork",      t: "bool", sec: "widgets" },
@@ -339,7 +351,6 @@ Singleton {
         { k: "osdBarIntegrated",    t: "bool", sec: "osd" },
         { k: "osdMatchBar",         t: "bool", sec: "osd" },
         { k: "settingsNavPinned",   t: "bool", sec: "interface" },
-        { k: "settingsNavDots",     t: "bool", sec: "interface" },
         { k: "reduceMotion",        t: "bool", sec: "interface" },
         { k: "highContrast",        t: "bool", sec: "interface" },
         { k: "outlineStrength",     t: "real", min: 0.5, max: 2.4, sec: "theme" },
@@ -374,14 +385,13 @@ Singleton {
         { k: "underlineScreenshotGlow", t: "bool", sec: "underline" },
         { k: "glowStrength",        t: "real", min: 0.5, max: 1.75, sec: "underline" },
         { k: "screenshotGlowSweep", t: "bool", sec: "underline" },
-        { k: "dotOpacity",          t: "real", min: 0.1,  max: 1.0, sec: "separators" },
         { k: "dotStyle",            t: "enum", vals: ["·", "•", "◦", "|", "slash", "line", "none"], sec: "separators" },
         { k: "barSeparatorMode",    t: "enum", vals: ["groups", "widgets"], sec: "separators" },
         { k: "barSpacing",          t: "int",  min: 4, max: 24, sec: "separators" },
         { k: "barAutoCompact",      t: "bool", sec: "separators" },
         { k: "barCompact",          t: "bool", sec: "separators" },
         { k: "barCenterInGap",      t: "bool", sec: "separators" },
-        { k: "barHoverHighlight",   t: "bool", sec: "indicators" },
+        { k: "barHoverHighlight",   t: "bool", sec: "surface" },
         { k: "barHeight",           t: "int",  min: 24,   max: 60, sec: "surface" },
         { k: "barIconSize",        t: "int",  min: 10,   max: 20, sec: "interface" },
         { k: "barFloating",         t: "bool", sec: "surface" },
@@ -409,10 +419,6 @@ Singleton {
         { k: "wsShowAppIcons",      t: "bool", sec: "workspaces" },
         { k: "wsNotifPulse",        t: "bool", sec: "workspaces" },
         { k: "wsUrgentPulse",       t: "bool", sec: "workspaces" },
-        { k: "wsMenuPulse",         t: "bool", sec: "workspaces" },
-        { k: "wsMarkerOpacity",     t: "real", min: 0.2, max: 1.0, sec: "workspaces" },
-        { k: "wsIconOpacity",       t: "real", min: 0.3, max: 1.0, sec: "workspaces" },
-        { k: "wsIconMono",          t: "bool", sec: "workspaces" },
         { k: "wsActiveMarker",      t: "enum", vals: ["gem", "dot", "bar"], sec: "workspaces" }
     ]
     readonly property var _schemaByKey: {
@@ -603,11 +609,12 @@ Singleton {
             { master: "osdEnabled", hides: ["osdChargedNotify"] }
         ],
         surface: [
-            { master: "barFloating", hides: ["barWidth", "barGap"] }
+            { master: "barFloating", hides: ["barWidth", "barGap"] },
+            { master: "valuesOnHover", hides: ["hoverLevelBar"] }
         ],
         separators: [
             { master: "barCompact", negate: true, hides: ["barAutoCompact"] },
-            { master: "dotStyle", off: "none", hides: ["barSeparatorMode", "dotOpacity"] }
+            { master: "dotStyle", off: "none", hides: ["barSeparatorMode"] }
         ],
         theme: [
             { master: "neutralTheme", hides: ["neutralAccent", "neutralAccentAuto"] },
@@ -619,18 +626,14 @@ Singleton {
         ],
         indicators: [
             { master: "showWindowTitle", hides: ["showWindowTitleApp"] },
-            { master: "networkTrafficStats", hides: ["networkSpeedInline"] },
-            { master: "valuesOnHover", hides: ["hoverLevelBar"] }
+            { master: "networkTrafficStats", hides: ["networkSpeedInline"] }
         ],
         media: [
-            { master: "mediaProgress", hides: ["mediaVisualizerOpacity", "mediaVisualizerPosition",
+            { master: "mediaProgress", hides: ["mediaVisualizerPosition",
                 "mediaVisualizerPreset", "mediaVisualizerStyle"] }
         ],
         updates: [
             { master: "updatesWidget", hides: ["updatesIncludeAur"] }
-        ],
-        workspaces: [
-            { master: "wsShowAppIcons", hides: ["wsIconMono", "wsIconOpacity"] }
         ]
     })
 
@@ -837,8 +840,8 @@ Singleton {
             return
         }
         // the startup chmod trips the watcher too: re-running the reload path below would bounce
-        // every setting through its default and back, rebuilding the bar on the way
-        if (_loaded && raw === root._appliedText) return
+        // every setting through its default and back, rebuilding the bar; a bad read must still re-arm saving
+        if (_loaded && _store.writeAllowed && raw === root._appliedText) return
         try {
             let parsed = JSON.parse(raw || "{}")
             if (parsed === null || Array.isArray(parsed) || typeof parsed !== "object")

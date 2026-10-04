@@ -1,5 +1,4 @@
 import QtQuick
-import "../../../config"
 import "../../../services"
 import "../../common"
 import "../controls"
@@ -22,12 +21,12 @@ Column {
     SectionLabel { label: "GAPS"; first: true }
     SettingsCard {
         SliderRow {
-            glyph: "󰤼"; label: "Spacing"
+            glyph: "󰤼"; label: "Widget gap"
             key: "barSpacing"
             displayValue: ShellSettings.barSpacing + "px"
         }
         ToggleRow {
-            glyph: "󰡍"; label: "Compact spacing"
+            glyph: "󰡍"; label: "Compact widgets"
             description: "Reduce widget padding and gaps"
             key: "barCompact"
         }
@@ -49,9 +48,9 @@ Column {
     SectionLabel { label: "DIVIDERS" }
     SettingsCard {
         SelectRow {
+            key: "dotStyle"
             label: "Style"
             description: "Divider between widgets"
-            currentValue: ShellSettings.dotStyle
             optionPreview: _dividerPreview
             model: [
                 { value: "line",  label: "Line"       },
@@ -62,31 +61,16 @@ Column {
                 { value: "slash", label: "Slash"     },
                 { value: "none",  label: "None"      }
             ]
-            onChosen: (v) => ShellSettings.dotStyle = v
         }
         CollapsibleSection {
             expanded: ShellSettings.dotStyle !== "none"
             ChoiceChipRow {
+                key: "barSeparatorMode"
                 glyph: "󰕯"; label: "Placement"
-                currentValue: ShellSettings.barSeparatorMode
                 model: [
                     { value: "groups",  label: "Groups" },
                     { value: "widgets", label: "Every"  }
                 ]
-                onChosen: (v) => ShellSettings.barSeparatorMode = v
-            }
-        }
-        // the window title separator takes this alpha under the None style too
-        CollapsibleSection {
-            expanded: ShellSettings.dotStyle !== "none"
-                || (ShellSettings.showWindowTitle && ShellSettings.showWindowTitleApp)
-            SliderRow {
-                glyph: ShellSettings.dotTextGlyph
-                glyphColor: Theme.withAlpha(Theme.text, Math.max(0.35, ShellSettings.dotOpacity))
-                label: "Opacity"
-                key: "dotOpacity"
-                step: 0.02
-                displayValue: Math.round(ShellSettings.dotOpacity * 100) + "%"
             }
         }
     }

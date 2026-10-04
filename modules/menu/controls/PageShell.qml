@@ -17,8 +17,9 @@ Item {
     enabled: root.active && !root.powerOpen
     visible: opacity > 0.001
     property real _pageShift: 0
+    property real _pageLift: 0
     property real _transitionDirection: 1
-    transform: Translate { x: root._pageShift }
+    transform: Translate { x: root._pageShift; y: root._pageLift }
 
     readonly property bool _motionAllowed: Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)
     property bool _announcedActive: false
@@ -40,6 +41,7 @@ Item {
         _exit.stop()
         root.opacity = shown ? 1.0 : 0.0
         root._pageShift = 0
+        root._pageLift = 0
         if (!MenuState.open) root._announceHidden()
     }
 
@@ -60,6 +62,7 @@ Item {
         root.opacity = root.active && !enterNow ? 1.0 : 0.0
         root._pageShift = enterNow
             ? Motion.pageOffset * root._transitionDirection : 0
+        root._pageLift = enterNow ? Motion.pageLift : 0
         if (MenuState.open) Qt.callLater(() => root._menuOpenSettled = MenuState.open)
         if (enterNow) Qt.callLater(function() {
             if (root.active && MenuState.open && root._motionAllowed) _enter.restart()
@@ -78,8 +81,10 @@ Item {
                 root._announceShown()
                 return
             }
-            if (root.opacity < 0.01)
+            if (root.opacity < 0.01) {
                 root._pageShift = Motion.pageOffset * root._transitionDirection
+                root._pageLift = Motion.pageLift
+            }
             _enter.restart()
             root._announceShown()
         } else {
@@ -98,17 +103,22 @@ Item {
         _enter.stop()
         _exit.stop()
         if (MenuState.open) root.settleVisual(root.active)
-        else root._pageShift = 0
+        else {
+            root._pageShift = 0
+            root._pageLift = 0
+        }
     }
 
     ParallelAnimation {
         id: _enter
         NumberAnimation { target: root; property: "opacity"; to: 1.0; duration: Motion.pageIn; easing.type: Easing.OutQuad }
         NumberAnimation { target: root; property: "_pageShift"; to: 0.0; duration: Motion.pageIn; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.emphasizedDecel }
+        NumberAnimation { target: root; property: "_pageLift"; to: 0.0; duration: Motion.pageIn; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.emphasizedDecel }
     }
     ParallelAnimation {
         id: _exit
         NumberAnimation { target: root; property: "opacity"; to: 0.0; duration: Motion.pageOut; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standardAccel }
         NumberAnimation { target: root; property: "_pageShift"; to: -Motion.pageOffset * root._transitionDirection; duration: Motion.pageOut; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.emphasizedAccel }
+        NumberAnimation { target: root; property: "_pageLift"; to: -Motion.pageLift; duration: Motion.pageOut; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.emphasizedAccel }
     }
 }

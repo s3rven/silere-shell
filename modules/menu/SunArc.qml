@@ -13,6 +13,8 @@ Item {
     height: implicitHeight
 
     property bool shown: true
+    readonly property bool _motionAllowed: Motion.allowsMotion(
+        Idle.isIdle, ShellSettings.reduceMotion)
 
     readonly property bool _isDay: NightLight.isDaytime
     readonly property real _half: Math.max(0, Math.min(12,
@@ -31,8 +33,12 @@ Item {
     function _playSweep(): void {
         if (!root.shown) return
         _sweep.stop()
-        if (ShellSettings.reduceMotion) { root.animProg = 1; return }
+        if (!root._motionAllowed) { root.animProg = 1; return }
         _sweep.restart()
+    }
+    on_MotionAllowedChanged: if (!root._motionAllowed) {
+        _sweep.stop()
+        root.animProg = 1
     }
     Component.onCompleted: Qt.callLater(root._playSweep)
     onShownChanged: {

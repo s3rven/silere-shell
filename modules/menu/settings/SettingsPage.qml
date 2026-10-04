@@ -48,6 +48,7 @@ PageShell {
         root._shownSection = MenuState.settingsSection
         _detail.opacity = 1
         _detail._shift = 0
+        _detail._lift = 0
         if (changed) root.sectionSwapped()
     }
 
@@ -56,8 +57,7 @@ PageShell {
         _detailEnter.stop()
         _sectionEnterDefer.stop()
         root._awaitingSectionEnter = false
-        // Keep the current opacity/offset while PageShell fades the whole page.
-        // Restoring full opacity here produces a flash during a fast tab switch.
+        // keep the current opacity/offset while PageShell fades the whole page; restoring full opacity here produces a flash during a fast tab switch
     }
 
     onPageHidden: root._pauseSectionVisual()
@@ -113,7 +113,8 @@ PageShell {
         width:  root.width
         height: _detailHeader.height + _bodyGap + _detailBody.height
         property real _shift: 0
-        transform: Translate { x: _detail._shift }
+        property real _lift: 0
+        transform: Translate { x: _detail._shift; y: _detail._lift }
 
         readonly property int _bodyGap: 8
 
@@ -140,6 +141,7 @@ PageShell {
             ParallelAnimation {
                 NumberAnimation { target: _detail; property: "opacity"; to: 0.0; duration: Motion.pageOut; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standardAccel }
                 NumberAnimation { target: _detail; property: "_shift"; to: -Motion.pageOffset * root._sectionDirection; duration: Motion.pageOut; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standardAccel }
+                NumberAnimation { target: _detail; property: "_lift"; to: -Motion.pageLift; duration: Motion.pageOut; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standardAccel }
             }
             ScriptAction {
                 script: {
@@ -147,6 +149,7 @@ PageShell {
                     root._holdBodyHeight()
                     root._shownSection = MenuState.settingsSection
                     _detail._shift = Motion.pageOffset * root._sectionDirection
+                    _detail._lift = Motion.pageLift
                     root.sectionSwapped()
                     _sectionEnterDefer.restart()
                 }
@@ -160,13 +163,13 @@ PageShell {
             if (!root.active || !MenuState.open || root.powerOpen || !root._motionAllowed) {
                 _detail.opacity = 1
                 _detail._shift = 0
+                _detail._lift = 0
                 return
             }
             _detailEnter.restart()
         }
 
-        // the incubating section still reports the outgoing height, so starting the enter
-        // before it is Ready slides content the panel is still resizing under
+        // the incubating section still reports the outgoing height, so starting the enter before it is Ready slides content the panel is still resizing under
         Connections {
             target: _detailBody
             function onStatusChanged() {
@@ -174,10 +177,10 @@ PageShell {
             }
         }
 
-        // defer one layout turn, including when the selected component is already loaded
         Timer {
             id: _sectionEnterDefer
-            interval: 0
+            interval: Math.abs(_detailBody.height - _detailBody._heldH) > 64
+                ? Motion.ms(55) : 0
             onTriggered: _detail._startSectionEnter()
         }
 
@@ -185,6 +188,7 @@ PageShell {
             id: _detailEnter
             NumberAnimation { target: _detail; property: "opacity"; to: 1.0; duration: Motion.pageIn; easing.type: Easing.OutQuad }
             NumberAnimation { target: _detail; property: "_shift"; to: 0.0; duration: Motion.pageIn; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.emphasizedDecel }
+            NumberAnimation { target: _detail; property: "_lift"; to: 0.0; duration: Motion.pageIn; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.emphasizedDecel }
         }
 
         Item {

@@ -19,6 +19,8 @@ PanelWindow {
     WlrLayershell.namespace: "silere-osd"
 
     implicitHeight: Math.max(150, Math.ceil((stack.implicitHeight + 24) / 64) * 64)
+    // the widest pill at its bump peak plus shadow, not the screen: the compositor recomposites the whole surface on every animated frame; a multiple of 8 keeps the centred pill on the 4px grid
+    implicitWidth: 576
 
     readonly property bool _bottom: Metrics.barAtBottom
     readonly property real _edgeY: Metrics.popupClearanceOn(osd.targetScreen, 2)
@@ -27,8 +29,6 @@ PanelWindow {
     anchors {
         top:    !osd._bottom
         bottom: osd._bottom
-        left:   true
-        right:  true
     }
 
     // at 1.25 only multiples of 4 land on whole output pixels, so every offset down to the pill stays on that grid

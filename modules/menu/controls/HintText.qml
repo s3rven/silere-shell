@@ -29,6 +29,6 @@ Item {
         color:       root.textColor
         ColorFade on color {}
         font.pixelSize: root._fontPx
-        wrapMode:    Text.WordWrap
+        wrapMode:    Text.WrapAtWordBoundaryOrAnywhere
     }
 }

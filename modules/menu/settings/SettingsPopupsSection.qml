@@ -6,7 +6,7 @@ Column {
     width: parent ? parent.width : 0
     spacing: 0
 
-    SectionLabel { label: "GENERAL"; first: true }
+    SectionLabel { label: "POPUPS"; first: true }
     SettingsCard {
         ToggleRow {
             glyph: "󰂚"; label: "Popup notifications"
@@ -18,14 +18,6 @@ Column {
                 glyph: "󰊓"; label: "Hide in fullscreen"
                 key: "notifFullscreenSilence"
             }
-        }
-    }
-
-    CollapsibleSection {
-        expanded: ShellSettings.notifPopupEnabled
-
-        SectionLabel { label: "DISPLAY" }
-        SettingsCard {
             SliderRow {
                 glyph: "󰔛"; label: "Dismiss after"
                 displayValue: (ShellSettings.notifDefaultTimeout / 1000) + "s"
@@ -33,24 +25,22 @@ Column {
                 step: 1000
             }
             ChoiceChipRow {
+                key: "notifPosition"
                 glyph: "󰍹"; label: "Position"
-                currentValue: ShellSettings.notifPosition
                 model: [
                     { value: "top-left",   label: "Left"   },
                     { value: "top-center", label: "Center" },
                     { value: "top-right",  label: "Right"  }
                 ]
-                onChosen: (v) => ShellSettings.notifPosition = v
             }
             ChoiceChipRow {
+                key: "notifMaxVisible"
                 glyph: "󰽘"; label: "Max shown"
-                currentValue: ShellSettings.notifMaxVisible
                 model: [
                     { value: 3, label: "3"   },
                     { value: 5, label: "5"   },
                     { value: 0, label: "All" }
                 ]
-                onChosen: (v) => ShellSettings.notifMaxVisible = v
             }
         }
     }

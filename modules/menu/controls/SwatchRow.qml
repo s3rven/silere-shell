@@ -17,6 +17,9 @@ Item {
     property int hoveredIndex: -1
     property string accessiblePrefix: ""
 
+    onOptionsChanged: if (root.hoveredIndex >= root.options.length)
+        root.hoveredIndex = -1
+
     signal picked(int index)
 
     implicitHeight: Metrics.rowHeightFor(32)

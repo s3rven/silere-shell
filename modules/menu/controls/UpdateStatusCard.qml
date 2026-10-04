@@ -89,8 +89,6 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 3
 
-                // the version/manager label rides with the title, not the status line:
-                // sharing a line with the status starved it by a few px and elided it
                 Item {
                     width: parent.width
                     height: Math.max(_title.implicitHeight, _sub.implicitHeight)
@@ -113,8 +111,7 @@ Rectangle {
                         anchors.left: _title.right
                         anchors.leftMargin: 8
                         anchors.baseline: _title.baseline
-                        // caps on the parent alone: reading _title.width here closed a
-                        // binding loop, since the title already sizes itself off this one
+                        // caps on the parent alone: reading _title.width here closed a binding loop, since the title already sizes itself off this one
                         width: Math.min(implicitWidth, Math.max(0, parent.width * 0.46 - 8))
                         text: root.meta
                         elide: Text.ElideRight
@@ -182,7 +179,7 @@ Rectangle {
                 y: 3
                 width: parent.width - 42 - 12
                 text: root.detail
-                wrapMode: Text.WordWrap
+                wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                 opacity: root.detail.length > 0 ? 1 : 0
                 color: root.detailError
                     ? Theme.withAlpha(Theme.warning, 0.85)

@@ -351,7 +351,6 @@ ClippingRectangle {
         }
     }
 
-    // a muted 3px rail read as a border rather than a position
     Item {
         id: _seek
         visible: Media.hasPosition

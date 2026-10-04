@@ -19,7 +19,6 @@ Item {
     width: parent ? parent.width : 0
     height: Metrics.rowHeightFor(48)
 
-    // label column and value cell match SliderRow, so these read as the page's other sliders
     ShellText {
         id: _label
         anchors.left: parent.left

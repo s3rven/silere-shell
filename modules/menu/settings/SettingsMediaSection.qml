@@ -22,11 +22,10 @@ Column {
         }
         ToggleRow {
             glyph: "󰥶"; label: "Cover art from the web"
-            description: "Fetches art the player links to"
+            description: "Image hosts can see what you play"
             key: "mediaRemoteArt"
-        }
-        HintText {
-            text: "Image hosts can see what you play; remote image loading may also crash the shell."
+            available: !SystemTools.ready || Media.remoteArtAvailable
+            dependsNote: "No curl"
         }
     }
 
@@ -44,40 +43,31 @@ Column {
         CollapsibleSection {
             expanded: ShellSettings.mediaProgress && Media.cavaAvailable
             ChoiceChipRow {
+                key: "mediaVisualizerPosition"
                 glyph: "󰍹"; label: "Position"
-                currentValue: ShellSettings.mediaVisualizerPosition
                 model: [
                     { value: "media",     label: "Media" },
                     { value: "center",    label: "Center" },
                     { value: "underline", label: "Underline" }
                 ]
-                onChosen: (v) => ShellSettings.mediaVisualizerPosition = v
             }
             ChoiceChipRow {
+                key: "mediaVisualizerStyle"
                 glyph: "󰀁"; label: "Shape"
-                currentValue: ShellSettings.mediaVisualizerStyle
                 model: [
                     { value: "wave",  label: "Wave" },
                     { value: "bars",  label: "Bars" },
                     { value: "pulse", label: "Pulse" }
                 ]
-                onChosen: (v) => ShellSettings.mediaVisualizerStyle = v
             }
             ChoiceChipRow {
+                key: "mediaVisualizerPreset"
                 glyph: "󰓅"; label: "Preset"
-                currentValue: ShellSettings.mediaVisualizerPreset
                 model: [
                     { value: "eco",      label: "Eco" },
                     { value: "balanced", label: "Balanced" },
                     { value: "smooth",   label: "Smooth" }
                 ]
-                onChosen: (v) => ShellSettings.mediaVisualizerPreset = v
-            }
-            SliderRow {
-                glyph: "󰗌"; label: "Opacity"
-                key: "mediaVisualizerOpacity"
-                step: 0.05
-                displayValue: Math.round(ShellSettings.mediaVisualizerOpacity * 100) + "%"
             }
             // the preset names say nothing about what they cost; the shape changes both
             HintText { text: Media.visualizerLabel + ". Eco uses the least CPU." }

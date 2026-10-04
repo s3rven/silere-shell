@@ -14,8 +14,6 @@ Item {
     property bool selected: false
     property bool highlighted: false
     property bool warning: false
-    // an arm-to-confirm prompt and a refused connection are both "attention", but one is
-    // asking and the other is reporting; they must not share a colour
     property bool failed: false
     property bool interactive: true
     // same contract as MenuRow: the container says which end of the card this row is at,
@@ -62,6 +60,8 @@ Item {
     Accessible.checked: root.accessiblePrefix.length > 0 && root.selected
     Accessible.selected: root.selected
     Accessible.onPressAction: root.trigger()
+    Accessible.onToggleAction: if (root.accessiblePrefix.length > 0 && !root.selected)
+        root.trigger()
 
     HoverHandler {
         id: _hover

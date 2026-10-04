@@ -19,6 +19,7 @@ Singleton {
     property var _accums: ({})
     property var _timers: ({})
     property var _lastSteps: ({})
+    property var _directions: ({})
     // a plain field, so stamping it on every scrolled frame notifies nothing
     readonly property var _page: ({ movedAt: 0 })
 
@@ -77,7 +78,10 @@ Singleton {
         if (!deltaY) return 0
         const now = Date.now()
         const previous = _accums[key] || 0
-        const reversed = previous * deltaY < 0
+        // a complete notch leaves no remainder, so direction must survive separately
+        const reversed = (_directions[key] || 0) * deltaY < 0
+        _directions[key] = Math.sign(deltaY)
+        if (reversed) delete _lastSteps[key]
         const last = reversed ? 0 : (_lastSteps[key] || 0)
         const cur = (reversed ? 0 : previous) + deltaY
 
@@ -95,7 +99,8 @@ Singleton {
         }
 
         const emitted = Math.max(-maxSteps, Math.min(maxSteps, notches))
-        _accums[key]    = cur - emitted * threshold
+        // consume the whole burst even when capped; only a fractional notch carries over
+        _accums[key]    = cur - notches * threshold
         _lastSteps[key] = now
         _restartTimer(key)
         return emitted
@@ -130,6 +135,7 @@ Singleton {
                 // reap every per-key entry, not just the timer — a deleted key reads as 0 in _processDelta, so the maps don't accrue dead entries
                 delete root._accums[key]
                 delete root._lastSteps[key]
+                delete root._directions[key]
                 delete root._timers[key]
                 destroy()
             }

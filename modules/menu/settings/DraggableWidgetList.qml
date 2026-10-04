@@ -1,6 +1,9 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
+import Quickshell.Services.SystemTray
+import Quickshell.Widgets
 import "../../../config"
 import "../../../services"
 import "../../common"
@@ -11,6 +14,7 @@ Item {
 
     // the page's scroll container, so a drag can reach lanes past the viewport edge
     property Flickable scroller: null
+    property var trayItems: SystemTray.items.values
 
     readonly property int _toolbarH: Metrics.rowHeightFor(32)
     readonly property int _zoneHeaderH: 20
@@ -19,6 +23,49 @@ Item {
     readonly property int _bottomPad: 8
     readonly property var _allKeys: ShellSettings.barWidgetKeys
     readonly property var _zones: ["left", "center", "right"]
+
+    signal flipsArmed()
+
+    readonly property int _traySubH: Metrics.rowHeightFor(28)
+    readonly property int _trayPadBottom: 4
+    property bool _trayOpen: false
+    property real _trayReveal: 0
+    readonly property bool _trayMotionAllowed: Motion.allowsMotion(
+        Idle.isIdle, ShellSettings.reduceMotion)
+    on_TrayMotionAllowedChanged: if (!root._trayMotionAllowed) {
+        _trayRevealAnim.stop()
+        root._trayReveal = root._trayOpen ? 1 : 0
+    }
+    // ids toggled while open stay listed, so un-hiding an app that is not running cannot pull its row out from under the pointer
+    property var _trayStickyIds: []
+    readonly property var _trayItemById: {
+        const m = Object.create(null)
+        const items = root.trayItems
+        for (let i = 0; i < items.length; i++) {
+            const id = String(items[i]?.id || "")
+            if (id.length > 0 && !m[id]) m[id] = items[i]
+        }
+        return m
+    }
+    readonly property var _trayIds: {
+        const out = []
+        const items = root.trayItems
+        for (let i = 0; i < items.length; i++) {
+            const id = String(items[i]?.id || "")
+            if (id.length > 0 && out.indexOf(id) < 0) out.push(id)
+        }
+        const extra = ShellSettings.trayHiddenIds.concat(root._trayStickyIds)
+        for (let i = 0; i < extra.length; i++)
+            if (out.indexOf(extra[i]) < 0) out.push(extra[i])
+        return out
+    }
+    readonly property int _trayPanelH: root._trayIds.length > 0
+        ? root._trayIds.length * root._traySubH + root._trayPadBottom
+            + (ShellSettings.trayHiddenIds.length > 0 ? root._traySubH : 0)
+        : root._emptyH
+    readonly property real _trayExtra: root._trayPanelH * root._trayReveal
+    readonly property string _trayZone: root._locate("tray").zone
+    readonly property int _traySlot: root._combinedSlotOf("tray")
 
     property var _previewLayout: ({ left: [], center: [], right: [], loc: ({}) })
     property string _draggingKey: ""
@@ -40,17 +87,25 @@ Item {
     readonly property int _centerPad: _centerEmpty ? _emptyH : 0
     readonly property int _rightPad: _rightEmpty ? _emptyH : 0
     readonly property int _leftListTop: _toolbarH + _zoneHeaderH
-    readonly property int _leftBottom: _leftListTop + _leftCount * _rowH + _leftPad
-    readonly property int _centerListTop: _leftBottom + _zoneHeaderH
-    readonly property int _centerBottom: _centerListTop + _centerCount * _rowH + _centerPad
-    readonly property int _rightListTop: _centerBottom + _zoneHeaderH
+    readonly property real _leftBottom: _leftListTop + _leftCount * _rowH + _leftPad
+        + (_trayZone === "left" ? _trayExtra : 0)
+    readonly property real _centerListTop: _leftBottom + _zoneHeaderH
+    readonly property real _centerBottom: _centerListTop + _centerCount * _rowH + _centerPad
+        + (_trayZone === "center" ? _trayExtra : 0)
+    readonly property real _rightListTop: _centerBottom + _zoneHeaderH
     readonly property string _dragZone: _draggingKey.length > 0
         ? _zoneForY(_dragY) : ""
     readonly property int _dragSlot: _combinedSlotOf(_draggingKey)
 
     width: parent ? parent.width : 0
     height: _rightListTop + _rightCount * _rowH + _rightPad + _bottomPad
+        + (_trayZone === "right" ? _trayExtra : 0)
     implicitHeight: height
+
+    MotionBehavior on height {
+        gate: !_trayRevealAnim.running
+        NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
+    }
 
     function _noteFor(key: string): string {
         switch (key) {
@@ -66,6 +121,11 @@ Item {
         case "media": return "While playing"
         case "shellUpdate":
         case "updates": return "When pending"
+        case "tray": {
+            const n = ShellSettings.trayHiddenIds.length
+            if (n > 0) return n + " hidden"
+            return root.trayItems.length === 0 ? "No apps running" : ""
+        }
         }
         return ""
     }
@@ -93,12 +153,29 @@ Item {
     }
 
     function _yForSlot(slot: real): real {
+        const below = slot > root._traySlot ? root._trayExtra : 0
         if (slot < root._leftCount)
             return root._leftListTop + slot * root._rowH
+                + (root._trayZone === "left" ? below : 0)
         if (slot < root._leftCount + root._centerCount)
             return root._centerListTop + (slot - root._leftCount) * root._rowH
+                + (root._trayZone === "center" ? below : 0)
         return root._rightListTop
             + (slot - root._leftCount - root._centerCount) * root._rowH
+            + (root._trayZone === "right" ? below : 0)
+    }
+
+    // index the dragged row would take in a zone; an open tray panel sits between the tray and the row after it
+    function _zoneIndexForY(zone: string, keys: var, rel: real): int {
+        let idx = Math.round(rel / root._rowH)
+        if (zone === root._trayZone && root._trayExtra > 0) {
+            const t = keys.filter(k => k !== root._draggingKey).indexOf("tray")
+            if (t >= 0)
+                idx = rel < (t + 0.5) * root._rowH + root._trayExtra / 2
+                    ? Math.min(t, idx)
+                    : Math.max(t + 1, Math.round((rel - root._trayExtra) / root._rowH))
+        }
+        return Math.max(0, Math.min(keys.length, idx))
     }
 
     function _zoneForY(y: real): string {
@@ -109,17 +186,58 @@ Item {
 
     function _slotForY(y: real): int {
         const zone = root._zoneForY(y)
-        if (zone === "left") {
-            const idx = Math.round((y - root._leftListTop) / root._rowH)
-            return Math.max(0, Math.min(root._leftCount, idx))
-        }
-        if (zone === "center") {
-            const idx = Math.round((y - root._centerListTop) / root._rowH)
-            return root._leftCount + Math.max(0, Math.min(root._centerCount, idx))
-        }
-        const idx = Math.round((y - root._rightListTop) / root._rowH)
+        if (zone === "left")
+            return root._zoneIndexForY("left", root._leftKeys, y - root._leftListTop)
+        if (zone === "center")
+            return root._leftCount
+                + root._zoneIndexForY("center", root._centerKeys, y - root._centerListTop)
         return root._leftCount + root._centerCount
-            + Math.max(0, Math.min(root._rightCount, idx))
+            + root._zoneIndexForY("right", root._rightKeys, y - root._rightListTop)
+    }
+
+    function _setTrayOpen(open: bool): void {
+        if (root._trayOpen === open) return
+        root._trayOpen = open
+        if (open) root._trayStickyIds = []
+        _trayRevealAnim.stop()
+        if (!root._trayMotionAllowed) {
+            root._trayReveal = open ? 1 : 0
+            return
+        }
+        _trayRevealAnim.to = open ? 1 : 0
+        _trayRevealAnim.duration = open ? Motion.medium : Motion.fast
+        _trayRevealAnim.easing.bezierCurve = open ? Motion.emphasizedDecel : Motion.emphasizedAccel
+        _trayRevealAnim.start()
+    }
+
+    function _setTrayItemShown(id: string, shown: bool): void {
+        if (root._trayStickyIds.indexOf(id) < 0)
+            root._trayStickyIds = root._trayStickyIds.concat([id])
+        ShellSettings.setTrayItemHidden(id, !shown)
+        if (shown) ShellSettings.trayWidget = true
+    }
+
+    function _showAllTrayItems(): void {
+        root._trayStickyIds = root._trayStickyIds.concat(ShellSettings.trayHiddenIds
+            .filter(id => root._trayStickyIds.indexOf(id) < 0))
+        root.flipsArmed()
+        ShellSettings.trayHidden = ""
+        ShellSettings.trayWidget = true
+    }
+
+    function _resetAll(): void {
+        root._trayStickyIds = root._trayStickyIds.concat(ShellSettings.trayHiddenIds
+            .filter(id => root._trayStickyIds.indexOf(id) < 0))
+        root.flipsArmed()
+        ShellSettings.resetBarWidgets()
+    }
+
+    // rows, headers and the card height read the reveal every frame; their own Behaviors stand down while it runs
+    NumberAnimation {
+        id: _trayRevealAnim
+        target: root
+        property: "_trayReveal"
+        easing.type: Easing.BezierSpline
     }
 
     function _beginDrag(key: string): void {
@@ -131,6 +249,11 @@ Item {
         root._dragScrollOffset = 0
         root._autoScrollDir = 0
         root._draggingKey = key
+        if (key === "tray" && root._trayReveal > 0) {
+            _trayRevealAnim.stop()
+            root._trayOpen = false
+            root._trayReveal = 0
+        }
     }
 
     function _previewMove(key: string, zone: string, atIndex: int): void {
@@ -147,6 +270,7 @@ Item {
     function _clampDragY(y: real): real {
         const maxY = root._rightEmpty ? root._rightListTop
             : root._rightListTop + (root._rightCount - 1) * root._rowH
+                + (root._trayZone === "right" ? root._trayExtra : 0)
         return Math.max(root._leftListTop, Math.min(maxY, y))
     }
 
@@ -251,8 +375,8 @@ Item {
             glyph: "󰦛"
             label: "Reset"
             tint: Theme.warning
-            visible: ShellSettings.barWidgetsModified
-            onConfirmed: ShellSettings.resetBarWidgets()
+            shown: ShellSettings.barWidgetsModified
+            onConfirmed: root._resetAll()
         }
 
         Hairline {
@@ -300,7 +424,7 @@ Item {
             }
 
             MotionBehavior on y {
-                gate: root._draggingKey.length > 0
+                gate: !_trayRevealAnim.running
                 NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
             }
         }
@@ -348,6 +472,7 @@ Item {
             readonly property bool hasToggle: meta.setting.length > 0
             readonly property bool checked: ShellSettings.barWidgetConfiguredVisible(key)
             readonly property string note: checked ? root._noteFor(key) : ""
+            readonly property bool isTray: key === "tray"
 
             x: 4
             width: root.width - 8
@@ -356,8 +481,21 @@ Item {
             y: dragging ? root._dragY : root._yForSlot(combinedSlot)
 
             MotionBehavior on y {
-                gate: !_row.dragging
+                gate: !_row.dragging && !_trayRevealAnim.running
                 NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
+            }
+
+            Connections {
+                target: root
+                function onFlipsArmed() { _toggle.armFlipAnimation() }
+            }
+
+            TapHandler {
+                enabled: _row.isTray
+                onTapped: (point) => {
+                    if (point.position.x < _toggleTarget.x)
+                        root._setTrayOpen(!root._trayOpen)
+                }
             }
             RowHoverBg {
                 anchors.fill: parent
@@ -428,12 +566,46 @@ Item {
 
             ShellText {
                 id: _note
-                anchors.right: _dragGrip.left
+                anchors.right: _chevron.left
                 anchors.rightMargin: 4
                 anchors.verticalCenter: parent.verticalCenter
                 text: _row.note
                 color: Theme.menuTextDetail
                 font.pixelSize: Settings.fontCaption
+            }
+
+            Item {
+                id: _chevron
+                visible: _row.isTray
+                anchors.right: _dragGrip.left
+                width: visible ? 22 : 0
+                height: parent.height
+
+                ShellText {
+                    anchors.centerIn: parent
+                    text: "󰅀"
+                    rotation: root._trayOpen ? 180 : 0
+                    transformOrigin: Item.Center
+                    color: _chevHover.hovered ? Theme.text
+                        : Theme.withAlpha(Theme.subtext, root._trayOpen ? 0.85 : 0.55)
+                    font.pixelSize: Settings.fontSize
+                    Disclosure on rotation {}
+                    ColorFade on color {}
+                }
+
+                HoverHandler { id: _chevHover; cursorShape: Qt.PointingHandCursor }
+            }
+
+            Loader {
+                active: _row.isTray
+                y: root._rowH
+                width: parent.width
+                height: root._trayExtra
+                visible: root._trayExtra > 0.5
+                enabled: root._trayOpen && root._draggingKey.length === 0
+                clip: true
+                opacity: root._trayReveal
+                sourceComponent: _trayPanel
             }
 
             ShellText {
@@ -454,6 +626,7 @@ Item {
             Item {
                 id: _toggleTarget
                 visible: _row.hasToggle
+                enabled: _row.hasToggle && root._draggingKey.length === 0
                 anchors.right: parent.right
                 anchors.rightMargin: 8
                 width: 44
@@ -462,14 +635,17 @@ Item {
                 Accessible.role: Accessible.CheckBox
                 Accessible.name: _row.meta.label
                 Accessible.description: _row.note
+                Accessible.checkable: true
                 Accessible.checked: _row.checked
-                Accessible.focusable: true
+                Accessible.focusable: enabled
+                Accessible.onPressAction: _toggleTap.activate()
                 Accessible.onToggleAction: _toggleTap.activate()
 
                 HoverHandler { id: _toggleHover; cursorShape: Qt.PointingHandCursor }
                 TapHandler {
                     id: _toggleTap
                     function activate(): void {
+                        if (!_toggleTarget.enabled || !_toggleTarget.visible) return
                         _toggle.armFlipAnimation()
                         ShellSettings.setBarWidgetConfiguredVisible(
                             _row.key, !_row.checked)
@@ -526,8 +702,180 @@ Item {
 
             ColorFade on color {}
             MotionBehavior on y {
-                gate: root._draggingKey.length > 0
+                gate: !_trayRevealAnim.running
                 NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
+            }
+        }
+    }
+
+    Component {
+        id: _trayPanel
+
+        Item {
+            opacity: ShellSettings.trayWidget ? 1.0 : Theme.disabledOpacity
+            MotionBehavior on opacity {NumberAnimation { duration: Motion.color } }
+
+            ShellText {
+                visible: root._trayIds.length === 0
+                x: 38
+                height: root._emptyH
+                verticalAlignment: Text.AlignVCenter
+                text: "No tray apps running"
+                color: Theme.withAlpha(Theme.subtext, 0.46)
+                font.pixelSize: Settings.fontCaption
+            }
+
+            Column {
+                width: parent.width
+
+                Repeater {
+                    model: root._trayIds
+
+                    delegate: Item {
+                        id: _sub
+                        required property string modelData
+                        readonly property var item: root._trayItemById[modelData] ?? null
+                        readonly property bool running: item !== null
+                        readonly property string _providedIconSource: _sub.running
+                            ? IconResolver.trayIconSource(_sub.item.icon) : ""
+                        property bool _providedIconFailed: false
+                        on_ProvidedIconSourceChanged: _sub._providedIconFailed = false
+                        readonly property bool checked: !ShellSettings.trayItemHidden(modelData)
+                        readonly property string statusText: !_sub.running ? "Not running"
+                            : !_sub.checked ? "Hidden"
+                            : !ShellSettings.trayWidget ? "Tray off" : "Shown"
+                        readonly property string label: !running ? modelData
+                            : SafeText.singleLineText(
+                                String(item.title || "").length > 0 ? item.title
+                                : String(item.tooltipTitle || "").length > 0 ? item.tooltipTitle
+                                : modelData, 128)
+
+                        width: parent.width
+                        height: root._traySubH
+
+                        function toggleShown(): void {
+                            if (!_sub.enabled || !_sub.visible) return
+                            _subToggle.armFlipAnimation()
+                            root._setTrayItemShown(_sub.modelData,
+                                !ShellSettings.trayWidget || !_sub.checked)
+                        }
+
+                        Accessible.role: Accessible.CheckBox
+                        Accessible.name: _sub.label
+                        Accessible.description: _sub.statusText
+                        Accessible.checkable: true
+                        Accessible.checked: _sub.checked && ShellSettings.trayWidget
+                        Accessible.focusable: enabled
+                        Accessible.onPressAction: _sub.toggleShown()
+                        Accessible.onToggleAction: _sub.toggleShown()
+
+                        Connections {
+                            target: root
+                            function onFlipsArmed() { _subToggle.armFlipAnimation() }
+                        }
+
+                        RowHoverBg {
+                            anchors.fill: parent
+                            cardInset: 0
+                            topRadius: Theme.radiusControl
+                            bottomRadius: Theme.radiusControl
+                            active: _subHover.hovered
+                            fillColor: Theme.text
+                            fillOpacity: 0.04
+                        }
+
+                        HoverHandler { id: _subHover; cursorShape: Qt.PointingHandCursor }
+                        TapHandler {
+                            id: _subTap
+                            onTapped: _sub.toggleShown()
+                        }
+
+                        Item {
+                            id: _subIcon
+                            x: 38
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: Settings.iconSize + 4
+                            height: width
+                            opacity: _sub.checked ? 1.0 : 0.45
+                            MotionBehavior on opacity {NumberAnimation { duration: Motion.color } }
+
+                            IconImage {
+                                id: _subImage
+                                anchors.fill: parent
+                                readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+                                transform: PixelSnap { item: _subImage; dpr: _subImage._dpr }
+                                source: IconResolver.trayAppIconSource(
+                                    _sub._providedIconFailed ? "" : _sub._providedIconSource, _sub.modelData)
+                                implicitSize: parent.width
+                                asynchronous: true
+                                backer.cache: false
+                                visible: status === Image.Ready
+                                onStatusChanged: {
+                                    if (status === Image.Error && !_sub._providedIconFailed
+                                            && _sub._providedIconSource.length > 0)
+                                        _sub._providedIconFailed = true
+                                }
+                            }
+
+                            ShellText {
+                                anchors.centerIn: parent
+                                visible: !_subImage.visible
+                                text: SafeText.initial(_sub.label, "?")
+                                color: Theme.subtext
+                                font.pixelSize: Settings.fontCaption
+                            }
+                        }
+
+                        ShellText {
+                            anchors.left: _subIcon.right
+                            anchors.leftMargin: 10
+                            anchors.right: _subNote.left
+                            anchors.rightMargin: _subNote.text.length > 0 ? 8 : 0
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: _sub.label
+                            elide: Text.ElideRight
+                            color: _sub.checked
+                                ? Theme.withAlpha(Theme.text, 0.86) : Theme.withAlpha(Theme.text, 0.48)
+                            font.pixelSize: Settings.fontLabel
+                            ColorFade on color {}
+                        }
+
+                        ShellText {
+                            id: _subNote
+                            anchors.right: _subToggleTarget.left
+                            anchors.rightMargin: 4
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: _sub.statusText
+                            color: Theme.menuTextDetail
+                            font.pixelSize: Settings.fontCaption
+                        }
+
+                        Item {
+                            id: _subToggleTarget
+                            anchors.right: parent.right
+                            anchors.rightMargin: 8
+                            width: 44
+                            height: parent.height
+
+                            ToggleSwitch {
+                                id: _subToggle
+                                anchors.centerIn: parent
+                                checked: _sub.checked && ShellSettings.trayWidget
+                                highlighted: _subHover.hovered
+                                pressed: _subTap.pressed
+                            }
+                        }
+                    }
+                }
+
+                InlineOptionRow {
+                    visible: ShellSettings.trayHiddenIds.length > 0
+                    width: parent.width
+                    height: root._traySubH
+                    glyph: "󰈈"
+                    label: "Show all apps"
+                    onTriggered: root._showAllTrayItems()
+                }
             }
         }
     }

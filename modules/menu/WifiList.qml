@@ -18,8 +18,7 @@ Item {
     property string _selected: ""
     property string _armedSsid: ""
     property string _forgetSsid: ""
-    // the model is a held snapshot: any content change in Network.wifiNetworks destroys every
-    // delegate, and with it the password field being typed into
+    // the model is a held snapshot: any content change in Network.wifiNetworks destroys every delegate, and with it the password field being typed into
     property var _networks: []
     property real _armedAtMs: 0
     property real _forgetAtMs: 0
@@ -200,14 +199,12 @@ Item {
                             }
                             return
                         }
-                        // an enterprise or WEP network can only join from a stored profile;
-                        // the shell has no way to collect those credentials
+                        // an enterprise or WEP network can only join from a stored profile; the shell has no way to collect those credentials
                         if (_entry.modelData.profileOnly) {
                             if (_entry.modelData.known) Network.connectWifi(_entry.modelData.ssid, "")
                             return
                         }
-                        // a known network reconnects from its stored key; once that key is
-                        // refused, repeating it can only fail again, so take a new one
+                        // a known network reconnects from its stored key; once that key is refused, repeating it can only fail again, so take a new one
                         const needsSecret = !_entry.modelData.known
                             || (_entry._failed && Network.wifiErrorNeedsSecret)
                         if (_entry.modelData.psk && needsSecret) {

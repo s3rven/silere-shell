@@ -15,8 +15,7 @@ PanelWindow {
 
     WlrLayershell.namespace: "silere-notifications"
     WlrLayershell.layer: WlrLayer.Overlay
-    // on demand, not exclusive: exclusive routes every key in the session to this layer
-    // and the user cannot click away from it
+    // on demand, not exclusive: exclusive routes every key in the session to this layer and the user cannot click away from it
     WlrLayershell.keyboardFocus: win._replyOwner
         ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
@@ -25,6 +24,8 @@ PanelWindow {
     exclusiveZone:  -1
 
     property var _replyOwner: null
+    // a card held back while a popup was open starts its countdown when it is first shown, not when it arrived
+    readonly property real _createdAt: Date.now()
 
     function _setReplyFocus(owner, active: bool): void {
         if (!active) {
@@ -507,7 +508,8 @@ PanelWindow {
                             y: win._slotTop(index)
 
                             Component.onCompleted: {
-                                if (shouldLoad) timeoutStartedAt = Notifications.updateTimeFor(modelData.id)
+                                if (shouldLoad) timeoutStartedAt = Math.max(
+                                    Notifications.updateTimeFor(modelData.id), win._createdAt)
                             }
                             onShouldLoadChanged: timeoutStartedAt = shouldLoad ? Date.now() : 0
 

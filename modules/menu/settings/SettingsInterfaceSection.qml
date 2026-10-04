@@ -22,8 +22,8 @@ Column {
     SectionLabel { label: "TEXT & ACCESSIBILITY"; first: true }
     SettingsCard {
         SelectRow {
+            key: "fontFamily"
             glyph: "󰛖"; label: "Font"
-            currentValue: ShellSettings.fontFamily
             model: {
                 const m = [{
                     value: "",
@@ -49,21 +49,18 @@ Column {
                 }
                 return m
             }
-            onChosen: (v) => ShellSettings.fontFamily = v
         }
-        // the list is a small slice of what fc-list reports, and an installed font missing
-        // from it reads as a broken scan rather than a deliberate filter
         CollapsibleSection {
             expanded: FontScan.scanned
             HintText {
                 text: FontScan.families.length > 0
-                    ? "Nerd Fonts only — the shell draws its icons as glyphs, so other fonts show boxes."
+                    ? "Nerd Fonts only, so the shell's icons render."
                     : "No Nerd Font found; shell icons render as boxes until one is installed."
             }
         }
         SelectRow {
+            key: "uiScale"
             glyph: "󰍉"; label: "UI scale"
-            currentValue: ShellSettings.uiScale
             fallbackLabel: Math.round(ShellSettings.uiScale * 100) + "%"
             model: [
                 { value: 0.8,  label: "80%"  },
@@ -72,19 +69,17 @@ Column {
                 { value: 1.1,  label: "110%" },
                 { value: 1.15, label: "115%" }
             ]
-            onChosen: (v) => ShellSettings.uiScale = v
         }
         SelectRow {
+            key: "barIconSize"
             glyph: "󰀻"; label: "Icon size"
             description: "Tray and workspace app icons"
-            currentValue: ShellSettings.barIconSize
             fallbackLabel: ShellSettings.barIconSize + "px"
             model: [
                 { value: 12, label: "Normal" },
                 { value: 15, label: "Large"  },
                 { value: 18, label: "XL"     }
             ]
-            onChosen: (v) => ShellSettings.barIconSize = v
         }
         ToggleRow {
             glyph: "󰆖"; label: "High contrast"
@@ -101,38 +96,33 @@ Column {
     SettingsCard {
         ToggleRow {
             glyph: "󱂪"; label: "Keep groups open"
-            description: "Show multiple category groups"
+            description: "Sidebar starts with every group expanded"
             key: "settingsNavPinned"
-        }
-        ToggleRow {
-            glyph: "󰧞"; label: "Mark changed pages"
-            description: "Dot the categories holding a changed setting"
-            key: "settingsNavDots"
         }
     }
 
     CollapsibleSection {
         expanded: root._hasRouting
 
-        SectionLabel { label: "DISPLAY ROUTING" }
+        SectionLabel { label: "DISPLAYS" }
         SettingsCard {
             CollapsibleSection {
                 expanded: root._hasBrightnessChoice
                 SelectRow {
+                    key: "brightnessDevice"
                     glyph: "󰃟"; label: "Brightness display"
-                    currentValue: ShellSettings.brightnessDevice
+                    description: "Backlight the slider adjusts"
                     fallbackLabel: ShellSettings.brightnessDevice + " (unavailable)"
                     model: Brightness.deviceChoices
-                    onChosen: (v) => ShellSettings.brightnessDevice = v
                 }
             }
 
             CollapsibleSection {
                 expanded: root._hasMultiScreen
                 SelectRow {
+                    key: "overlayMonitor"
                     glyph: "󰍹"; label: "Overlay display"
-                    description: "Follow focus or choose a display"
-                    currentValue: ShellSettings.overlayMonitor
+                    description: "Where popups and the OSD appear"
                     fallbackLabel: ShellSettings.overlayMonitor.length > 0
                         ? ShellSettings.overlayMonitor + " (unavailable)" : "Follow focus"
                     model: {
@@ -144,7 +134,6 @@ Column {
                         }
                         return choices
                     }
-                    onChosen: (v) => ShellSettings.overlayMonitor = v
                 }
 
                 Repeater {

@@ -20,7 +20,7 @@ Item {
     }
     MotionBehavior on _slot {
         gate: root.shown
-        SpringAnimation { spring: 4.4; damping: 0.62; epsilon: 0.002 }
+        NumberAnimation { duration: Motion.panelResize; easing.type: Easing.OutCubic }
     }
 
     y: root.rowTop

@@ -10,23 +10,21 @@ Column {
     SectionLabel { label: "BAR"; first: true }
     SettingsCard {
         ChoiceChipRow {
+            key: "barPosition"
             glyph: "󰍹"; label: "Position"
-            currentValue: ShellSettings.barPosition
             model: [
                 { value: "top",    label: "Top"    },
                 { value: "bottom", label: "Bottom" }
             ]
-            onChosen: (v) => ShellSettings.barPosition = v
         }
         ChoiceChipRow {
+            key: "barHeight"
             glyph: "󰲏"; label: "Height"
-            currentValue: ShellSettings.barHeight
             model: [
                 { value: 28, label: "Compact" },
                 { value: 36, label: "Normal"  },
                 { value: 44, label: "Tall"    }
             ]
-            onChosen: (v) => ShellSettings.barHeight = v
         }
         // docked pins the bar's own corners to zero; the hover capsule and OSD pill still take
         // this radius, and they round at half a row rather than half the bar
@@ -62,6 +60,26 @@ Column {
                 key: "barGap"
                 step: 4
                 displayValue: ShellSettings.barGap === 0 ? "None" : ShellSettings.barGap + "px"
+            }
+        }
+    }
+
+    SectionLabel { label: "HOVER" }
+    SettingsCard {
+        ToggleRow {
+            glyph: "󰍽"; label: "Hover highlight"
+            key: "barHoverHighlight"
+        }
+        ToggleRow {
+            glyph: "󰈈"; label: "Reveal values on hover"
+            key: "valuesOnHover"
+        }
+        CollapsibleSection {
+            expanded: ShellSettings.valuesOnHover
+            ToggleRow {
+                key: "hoverLevelBar"
+                glyph: "󰡵"; label: "Level bars"
+                description: "A slim bar while the value is hidden"
             }
         }
     }

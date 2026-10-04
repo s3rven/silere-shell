@@ -8,8 +8,7 @@ MotionBehavior {
     property int exitEasing: Easing.BezierSpline
     property var enterCurve: Motion.emphasizedDecel
     property var exitCurve: Motion.emphasizedAccel
-    // a mutually-exclusive pair must share one curve in both directions, or the
-    // expanding sibling outruns the collapsing one and their summed height bulges
+    // a mutually-exclusive pair must share one curve in both directions, or the expanding sibling outruns the collapsing one and their summed height bulges
     property bool symmetric: false
     readonly property bool _enter: root.symmetric || Math.abs(root.targetValue - root.closedValue) > 1e-6
     property bool _geometryReady: false

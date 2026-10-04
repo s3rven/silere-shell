@@ -130,9 +130,9 @@ Column {
                     SectionLabel { label: "DESKTOP NOTIFICATIONS" }
                     SettingsCard {
                         SelectRow {
+                            key: "sysAlertTimeout"
                             glyph: "󰔛"; label: "Dismiss after"
                             enabled: SystemTools.hasNotifySend
-                            currentValue: ShellSettings.sysAlertTimeout
                             fallbackLabel: ShellSettings.sysAlertTimeout === 0
                                 ? "Stay" : (ShellSettings.sysAlertTimeout / 1000) + "s"
                             model: [
@@ -141,7 +141,6 @@ Column {
                                 { value: 20000, label: "20s"  },
                                 { value: 0,     label: "Stay" }
                             ]
-                            onChosen: (v) => ShellSettings.sysAlertTimeout = v
                         }
                         HintText {
                             visible: SystemTools.ready && !SystemTools.hasNotifySend

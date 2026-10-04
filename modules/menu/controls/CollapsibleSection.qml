@@ -36,14 +36,15 @@ Item {
 
         y: 0
         opacity: root.expanded ? 1.0 : 0.0
-        // one curve both ways makes the pair's opacity sum exactly 1 instead of 1.75,
-        // and matching the height duration keeps content from landing opaque mid-resize
+        // match the height's timing; a symmetric pair shares one curve so its opacities sum to 1
         MotionBehavior on opacity {
             id: _contentFade
             NumberAnimation {
-                duration: root.symmetric ? Motion.medium : Motion.fast
-                easing.type: root.symmetric || _contentFade.targetValue > 0.5
-                    ? Easing.OutCubic : Easing.InCubic
+                duration: root.symmetric || _contentFade.targetValue > 0.5
+                    ? Motion.medium : Motion.fast
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: root.symmetric || _contentFade.targetValue > 0.5
+                    ? Motion.emphasizedDecel : Motion.emphasizedAccel
             }
         }
     }

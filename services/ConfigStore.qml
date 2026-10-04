@@ -10,8 +10,6 @@ Singleton {
         ? XdgPaths.configHome + "/silere-shell" : ""
     readonly property string settingsPath: directory.length > 0
         ? directory + "/settings.json" : ""
-    readonly property string calendarMarksPath: directory.length > 0
-        ? directory + "/calendar-marks.json" : ""
     readonly property string notificationsPath: directory.length > 0
         ? directory + "/notifications.json" : ""
 
@@ -59,10 +57,8 @@ Singleton {
     function hardenFile(path: string): void {
         // only files owned by this store may be chmodded. Keep the path as a separate argv entry so even unusual XDG paths never become syntax
         if (path.length === 0
-                || (path !== root.settingsPath && path !== root.calendarMarksPath
-                    && path !== root.notificationsPath)) return
-        // an atomic write lands an owner-only replacement, so one chmod per path
-        // per session covers it; _mkdir re-hardens after a failed write
+                || (path !== root.settingsPath && path !== root.notificationsPath)) return
+        // an atomic write lands an owner-only replacement, so one chmod per path per session covers it; _mkdir re-hardens after a failed write
         if (root._hardened[path] === true) return
         root._hardened[path] = true
         Quickshell.execDetached(["bash", "-c",
@@ -77,10 +73,9 @@ Singleton {
             "umask 077; [ ! -L \"$1\" ] || exit 1; " +
             "mkdir -m 0700 -p -- \"$1\" || exit $?; " +
             "chmod 0700 -- \"$1\" || exit $?; " +
-            "for f in \"$2\" \"$3\" \"$4\"; do " +
+            "for f in \"$2\" \"$3\"; do " +
             "[ ! -e \"$f\" ] || [ -L \"$f\" ] || chmod 0600 -- \"$f\" || exit $?; done",
-            "bash", root.directory, root.settingsPath, root.calendarMarksPath,
-            root.notificationsPath]
+            "bash", root.directory, root.settingsPath, root.notificationsPath]
         onExited: code => {
             if (code === 0) {
                 _mkdirRetry.stop()

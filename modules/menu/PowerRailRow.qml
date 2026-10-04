@@ -129,8 +129,7 @@ Rectangle {
 
     PerimeterProgress {
         anchors.fill: parent
-        // the ticker that drains this is a motion gate, so under reduce motion the ring
-        // would sit full for the whole window and read as "nothing is expiring"
+        // the ticker that drains this is a motion gate, so under reduce motion the ring would sit full for the whole window and read as "nothing is expiring"
         visible: root.armed && !ShellSettings.reduceMotion
         inset:        1.0
         cornerRadius: root.radius

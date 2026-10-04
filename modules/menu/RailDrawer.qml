@@ -9,18 +9,23 @@ Item {
     required property bool shown
     property bool retained: root.shown
     property Component content: null
+    // the outer rail clips the drawer to its live width
+    property real revealedWidth: width
     readonly property alias item: _loader.item
+    readonly property bool _contentReady: _loader.status === Loader.Ready
+    readonly property bool _present: root.shown && root._contentReady
+        && root.revealedWidth >= Math.min(root.width, 28)
 
-    property real _slide: root.shown ? 0 : -Motion.pageOffset
-    opacity: root.shown ? 1 : 0
+    property real _slide: root._present ? 0 : -Motion.pageOffset
+    opacity: root._present ? 1 : 0
     visible: opacity > 0.001
-    enabled: root.shown
+    enabled: root._present
     transform: Translate { x: root._slide }
 
     MotionBehavior on opacity {
         id: _drawerFade
         NumberAnimation {
-            duration: _drawerFade.targetValue > 0.5 ? Motion.ms(130) : Motion.ms(90)
+            duration: _drawerFade.targetValue > 0.5 ? Motion.pageIn : Motion.pageOut
             easing.type: Easing.BezierSpline
             easing.bezierCurve: _drawerFade.targetValue > 0.5
                 ? Motion.standardDecel : Motion.standardAccel

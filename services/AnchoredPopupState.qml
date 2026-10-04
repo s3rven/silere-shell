@@ -14,8 +14,7 @@ Singleton {
     // registration is what lets the coordinator own exclusivity without naming each popup
     Component.onCompleted: OverlayCoordinator.registerPopup(root)
 
-    // a Connections object, not onOpenChanged: a derived state's own handler on the same
-    // signal would replace a handler declared here
+    // a Connections object, not onOpenChanged: a derived state's own handler on the same signal would replace a handler declared here
     Connections {
         target: root
         function onOpenChanged() {

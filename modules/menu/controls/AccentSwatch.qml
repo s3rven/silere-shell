@@ -31,6 +31,7 @@ Item {
     Accessible.checkable: true
     Accessible.checked: root.active
     Accessible.onPressAction: root._activate()
+    Accessible.onToggleAction: if (!root.active) root._activate()
 
     HoverHandler {
         id: _h

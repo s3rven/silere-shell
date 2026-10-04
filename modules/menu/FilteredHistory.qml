@@ -15,8 +15,7 @@ Item {
     readonly property alias model: _rows
     readonly property int count: _rows.count
 
-    // the reconcile edits only the rows that differ, and these count the edits it made:
-    // an arrival the filter excludes has to leave the drawn rows untouched
+    // the reconcile edits only the rows that differ, and these count the edits it made: an arrival the filter excludes has to leave the drawn rows untouched
     property int inserts: 0
     property int removes: 0
 

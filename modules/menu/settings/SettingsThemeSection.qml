@@ -34,7 +34,7 @@ Column {
             glyph: "󰉦"; label: "Source"
             currentValue: ShellSettings.neutralTheme ? "neutral" : "wallpaper"
             model: [
-                { value: "neutral",   label: "Custom"    },
+                { value: "neutral",   label: "Neutral"   },
                 { value: "wallpaper", label: "Wallpaper" }
             ]
             onChosen: (v) => ShellSettings.neutralTheme = (v === "neutral")
@@ -61,7 +61,8 @@ Column {
                         c01 * _accentPicker._accentCMax, hue01 * 360)
                     return "#" + root._hex2(c.r) + root._hex2(c.g) + root._hex2(c.b)
                 }
-                readonly property color _curColor: ShellSettings.neutralAccentAuto ? MatugenTheme.accent : ShellSettings.neutralAccent
+                readonly property color _curColor: ShellSettings.neutralAccentAuto
+                    ? Theme.sourcedAccent(MatugenTheme.accent) : ShellSettings.neutralAccent
 
                 // the strips own hue and intensity; the stored hex is only their output.
                 // reading both back out of one 8-bit colour made each axis inherit the
@@ -73,8 +74,7 @@ Column {
                 readonly property real _hueFloorC: 3.0
 
                 function _syncFromColor(): void {
-                    // Read the colour at the point of use. A second derived binding can
-                    // still hold the previous value when _curColor's change handler runs.
+                    // read the colour at the point of use; a second derived binding can still hold the previous value when _curColor's change handler runs
                     const l = Theme.lchOf(_accentPicker._curColor)
                     if (l.C >= _accentPicker._hueFloorC) _accentPicker._hueMemo = l.h / 360
                     _accentPicker._satMemo = Math.min(1, l.C / _accentPicker._accentCMax)
@@ -83,11 +83,14 @@ Column {
                     _accentPicker._hueMemo = hue01
                     _accentPicker._satMemo = sat01
                     _accentPicker._stripWrite = true
-                    ShellSettings.batch(() => {
-                        ShellSettings.neutralAccentAuto = false
-                        ShellSettings.neutralAccent = _accentPicker._accentForCh(hue01, sat01)
-                    }, false)
-                    _accentPicker._stripWrite = false
+                    try {
+                        ShellSettings.batch(() => {
+                            ShellSettings.neutralAccentAuto = false
+                            ShellSettings.neutralAccent = _accentPicker._accentForCh(hue01, sat01)
+                        }, false)
+                    } finally {
+                        _accentPicker._stripWrite = false
+                    }
                 }
                 on_CurColorChanged: if (!_stripWrite) _syncFromColor()
                 Component.onCompleted: _syncFromColor()
@@ -121,7 +124,8 @@ Column {
                     && (_customPinned || _presetIndex < 0)
                 readonly property int _activeIndex: _customOpen ? _customIndex : _presetIndex
 
-                readonly property var _swColors: _options.map(o => o.auto ? MatugenTheme.accent
+                readonly property var _swColors: _options.map(o => o.auto
+                    ? Theme.sourcedAccent(MatugenTheme.accent)
                     : o.custom ? _accentPicker._curColor : o.color)
                 // dependent bindings settle in stages, so an index can be transiently out of range here even though no steady state produces one
                 function _nameAt(i: int): string {
@@ -138,8 +142,7 @@ Column {
                     && _swatchRow.hoveredIndex < _swColors.length
                     ? _swColors[_swatchRow.hoveredIndex] : _curColor
 
-                // glyph cell and margins mirror SwatchPickerRow's header, or this stacked block
-                // sits 26px off the label column every neighbouring row shares
+                // glyph cell and margins mirror SwatchPickerRow's header, or this stacked block sits 26px off the label column every neighbouring row shares
                 ShellText {
                     id: _accentGlyph
                     anchors.left:   parent.left; anchors.leftMargin: 14
@@ -204,8 +207,7 @@ Column {
                         options: _accentPicker._options
                         colors:  _accentPicker._swColors
                         activeIndex: _accentPicker._activeIndex
-                        // timer, not Qt.callLater: this dies with the section, where a deferred
-                        // call survives the swap and fires against a destroyed viewport
+                        // timer, not Qt.callLater: this dies with the section, where a deferred call survives the swap and fires against a destroyed viewport
                         onActiveIndexChanged: _revealDefer.restart()
                         Timer {
                             id: _revealDefer
@@ -303,7 +305,9 @@ Column {
                     { value: "secondary", name: "Secondary" },
                     { value: "tertiary",  name: "Tertiary"  }
                 ]
-                colors: [MatugenTheme.accent, MatugenTheme.success, MatugenTheme.warning]
+                colors: [Theme.sourcedAccent(MatugenTheme.accent),
+                         Theme.sourcedAccent(MatugenTheme.success),
+                         Theme.sourcedAccent(MatugenTheme.warning)]
                 activeIndex: options.findIndex(o => o.value === ShellSettings.matugenAccentRole)
                 tintedReadout: true
                 onPicked: (i) => ShellSettings.matugenAccentRole = options[i].value
@@ -379,8 +383,7 @@ Column {
             displayValue: Math.round(ShellSettings.outlineStrength * 100) + "%"
         }
 
-        // shell-wide, not a bar setting: every floating card casts one whether the bar
-        // is docked or not, and only the bar's own shadow needs the floating gate
+        // shell-wide, not a bar setting: every floating card casts one whether the bar is docked or not, and only the bar's own shadow needs the floating gate
         ToggleRow {
             glyph: "󰘷"; label: "Shell shadows"
             description: "Popups, notifications, OSD, and the bar"

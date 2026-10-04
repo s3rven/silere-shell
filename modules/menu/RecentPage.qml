@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import Quickshell.Widgets
 import "../../config"
 import "../../services"
@@ -46,8 +47,7 @@ PageShell {
         }
     }
 
-    // a keystroke reconciles many rows at once, and per-row transitions interrupted by the
-    // next one leave removed rows drawn over the new ones
+    // a keystroke reconciles many rows at once, and per-row transitions interrupted by the next one leave removed rows drawn over the new ones
     property bool _querying: false
     Timer { id: _queryHold; interval: 180; onTriggered: root._querying = false }
 
@@ -150,8 +150,7 @@ PageShell {
         const d = new Date(value)
         const today = root._todayStartMs > 0 ? root._todayStartMs : nowMs
         const day = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
-        // whole days, not milliseconds: a DST day is 23 or 25 hours long, and the raw
-        // gap then lands one bucket early — two sections both headed Yesterday
+        // whole days, not milliseconds: a DST day is 23 or 25 hours long, and the raw gap then lands one bucket early — two sections both headed Yesterday
         const days = Math.round((today - day) / 86400000)
         if (days <= 0 && diff < 86400000) return Math.floor(diff / 3600000) + "h"
         // the section header already carries the day, so an older entry only owes a clock
@@ -171,7 +170,6 @@ PageShell {
         if (days < 7) return Qt.formatDateTime(d, "dddd")
         return Qt.formatDateTime(d, "MMM d, yyyy")
     }
-
 
     function clearAll(): void {
         if (_clearing || _swapping || root.rowCount === 0) return
@@ -281,7 +279,7 @@ PageShell {
                 id: _clearButton
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                visible: root.rowCount > 0
+                shown: root.rowCount > 0
                 glyph: "󰆴"
                 label: root.searching ? "Clear matches"
                     : root.filter.length > 0 ? "Clear app" : "Clear all"
@@ -432,24 +430,7 @@ PageShell {
             // no reuseItems: a pooled row stays painted after a search removes it
             model: _filtered.model
 
-            // clearAll and a filter swap each fade the whole list, so per-row motion there
-            // would animate every delegate at once behind an already-invisible list
-            displaced: Transition {
-                enabled: !root._clearing && !root._swapping && !root._querying
-                NumberAnimation { property: "y"; duration: Motion.normal; easing.type: Easing.OutCubic }
-            }
-            add: Transition {
-                enabled: !root._clearing && !root._swapping && !root._querying
-                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Motion.fast }
-            }
-            remove: Transition {
-                enabled: !root._clearing && !root._swapping && !root._querying
-                NumberAnimation { property: "opacity"; to: 0; duration: Motion.fast; easing.type: Easing.InCubic }
-            }
-            removeDisplaced: Transition {
-                enabled: !root._clearing && !root._swapping && !root._querying
-                NumberAnimation { property: "y"; duration: Motion.normal; easing.type: Easing.OutCubic }
-            }
+            // rows grow and shrink in place instead of view transitions: a displaced row slides to a position measured before its neighbours' headers changed, and lands on top of them
 
             delegate: Item {
                     id: _entry
@@ -502,13 +483,42 @@ PageShell {
                     function _toggleExpand(): void {
                         const open = _expanded ? false : _entry._expandable
                         if (open === _expanded) return
+                        _entry._resizing = true
+                        _resizeSettle.restart()
                         _entry._expanded = open
                         root.setRowOpen(_entry._rowKey, open)
                     }
 
                     width: _historyList.width
-                    height: _fullHeight
+                    height: _fullHeight * _presence
+                    opacity: _presence
                     clip: true
+
+                    // clearAll and a filter swap each fade the whole list, so per-row motion there would animate every delegate at once behind an already-invisible list
+                    readonly property bool _animateRows: Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)
+                        && !root._clearing && !root._swapping && !root._querying
+                    property real _presence: 1
+                    NumberAnimation {
+                        id: _presenceAnim
+                        target: _entry; property: "_presence"
+                        duration: Motion.normal; easing.type: Easing.OutCubic
+                        onRunningChanged: if (!running && _entry.ListView.delayRemove) _entry.ListView.delayRemove = false
+                    }
+                    ListView.onAdd: {
+                        if (!_entry._animateRows) return
+                        _presenceAnim.stop()
+                        _entry._presence = 0
+                        _presenceAnim.to = 1
+                        _presenceAnim.start()
+                    }
+                    ListView.onRemove: {
+                        if (!_entry._animateRows) return
+                        // stop first: a stopped grow-in releases delayRemove on its way out
+                        _presenceAnim.stop()
+                        _entry.ListView.delayRemove = true
+                        _presenceAnim.to = 0
+                        _presenceAnim.start()
+                    }
 
                     // text lays out a frame after the delegate completes, so an ungated behaviour animates every row as it scrolls into view
                     property bool _heightReady: false
@@ -518,8 +528,11 @@ PageShell {
                         _heightArm.start()
                     }
                     Component.onDestruction: _heightArm.stop()
+                    // only an expand eases: a header or section that moves with an insert or removal has to land at once
+                    property bool _resizing: false
+                    Timer { id: _resizeSettle; interval: Motion.normal + 40; onTriggered: _entry._resizing = false }
                     MotionBehavior on height {
-                        gate: _entry._heightReady && !root._querying
+                        gate: _entry._heightReady && _entry._resizing && !root._querying
                         NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
                     }
 
@@ -668,6 +681,8 @@ PageShell {
                                     IconImage {
                                         id: _recentAppIcon
                                         anchors.fill: parent
+                                        readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+                                        transform: PixelSnap { item: _recentAppIcon; dpr: _recentAppIcon._dpr }
                                         visible: status === Image.Ready
                                         // without this the themed icon decodes at its native size (often 256px+) to paint 16px
                                         implicitSize: 16
@@ -727,8 +742,6 @@ PageShell {
                             }
                         }
 
-                        // one right column for both states: the timestamp rests there and the
-                        // remove button takes its place under the pointer, so nothing reflows on hover
                         Item {
                             id: _rightSlot
                             anchors.right: parent.right

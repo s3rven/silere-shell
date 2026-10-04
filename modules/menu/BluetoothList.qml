@@ -11,8 +11,7 @@ Item {
     id: root
 
     property bool open: false
-    // the card only reaches its direct children, so whoever places this list says whether
-    // its last row sits on the card's bottom corner
+    // the card only reaches its direct children, so whoever places this list says whether its last row sits on the card's bottom corner
     property real lastRowRadius: 0
 
     width: parent ? parent.width : 0
@@ -102,8 +101,7 @@ Item {
             visible: root.open && Bluetooth.available && Bluetooth.enabled && Bluetooth.devices.length > 0
             interactive: contentHeight > height
             spacing: 0
-            // every visible value comes from the device or service; the delegate
-            // owns no row state, so off-screen instances are safe to recycle
+            // every visible value comes from the device or service; the delegate owns no row state, so off-screen instances are safe to recycle
             reuseItems: true
             model: root.open ? Bluetooth.devices : []
 

@@ -68,7 +68,6 @@ Singleton {
         return order
     }
 
-
     function identityText(value): string {
         return SafeText.singleLineText(value, root._maxIdentityChars)
     }
@@ -109,8 +108,7 @@ Singleton {
         root._forgetTrimmed(dropped)
     }
 
-    // Clearing or restoring history leaves these maps whole. Drop entries that
-    // belong to neither history nor a notification still owned by the server.
+    // clearing or restoring history leaves these maps whole; drop entries that belong to neither history nor a notification still owned by the server
     function _pruneOrphanState(): void {
         // a hot reload hands kept notifications back only once the server is live
         if (!root._serverSettled) return
@@ -181,8 +179,7 @@ Singleton {
             root._updateTimes = Object.create(null)
     }
 
-    // a reload can run a save after this singleton's state is restored but before the
-    // store below it exists; typeof keeps that window from throwing
+    // a reload can run a save after this singleton's state is restored but before the store below it exists; typeof keeps that window from throwing
     function _queueDiskSave(): void {
         if (typeof _diskStore !== "undefined") _diskStore.queue()
     }
@@ -368,8 +365,7 @@ Singleton {
         root._pruneOrphanState()
     }
 
-    // PersistentProperties survives a config reload but not a restart, so the history
-    // "Keep after restart" promises has to reach disk on its own
+    // PersistentProperties survives a config reload but not a restart, so the history "Keep after restart" promises has to reach disk on its own
     PersistedFile {
         id: _diskStore
         path: ConfigStore.notificationsPath
@@ -401,12 +397,17 @@ Singleton {
 
     function _restoreFromDisk(raw: string): void {
         const trimmed = String(raw || "").trim()
+        // every read must earn write permission again, even one after a valid older file
+        _diskStore.writeAllowed = false
         try {
             const j = JSON.parse(trimmed || "{}")
-            // a file written by a newer release is left exactly as it is; its entries may
-            // carry fields this schema would drop on the next save
+            if (j === null || Array.isArray(j) || typeof j !== "object")
+                throw new Error("notification history root must be an object")
+            // a file written by a newer release is left exactly as it is; its entries may carry fields this schema would drop on the next save
             const version = Number(j.__version ?? 0)
             const fromFuture = isFinite(version) && version > 1
+            if (!fromFuture && j.history !== undefined && !Array.isArray(j.history))
+                throw new Error("notification history must be an array")
             if (fromFuture) {
                 root.storeError = "From a newer version; not saving over it"
                 console.warn("silere-shell: notifications.json is from a newer version; keeping it as it is")
@@ -418,8 +419,7 @@ Singleton {
                 present[String(h.id) + "\u0001" + String(h.time)] = true
             }
             if (ShellSettings.notifHistoryPersistent && Array.isArray(j.history)) {
-                // the cap is the most this session can hold, so a pathological file cannot
-                // freeze startup normalizing rows the trim would drop anyway
+                // the cap is the most this session can hold, so a pathological file cannot freeze startup normalizing rows the trim would drop anyway
                 const limit = _history.count + root._historyCapacity
                 for (let i = 0; i < j.history.length && _history.count < limit; i++) {
                     const e = root._normalizeEntry(j.history[i])
@@ -576,8 +576,7 @@ Singleton {
             retiredIds.push(String(e.id))
         }
         root._forgetTrimmed(retiredIds)
-        // _archiveNotification normally persists immediately; this synchronous
-        // batch reaches the same final history with one serialization
+        // _archiveNotification normally persists immediately; this synchronous batch reaches the same final history with one serialization
         root._saveHistory()
     }
 
@@ -740,15 +739,14 @@ Singleton {
     function _onClosed(id: int, notification): void {
         if (root._consumeClosing(id, notification)) return
         const n = root.list.find(e => e.id === id && e.notification === notification)
-        if (n) {
-            const entry = root._historyEntry(n)
-            if (entry) { root._prependHistory(entry); root._saveHistory() }
-        }
+        // a late or repeated close belongs to that object, not a newer one that reused its id
+        if (!n) return
+        const entry = root._historyEntry(n)
+        if (entry) { root._prependHistory(entry); root._saveHistory() }
         root._forget(id)
     }
 
-    // quickshell mutates a tracked notification in place, so only a replaces_id object
-    // needs a new list entry
+    // quickshell mutates a tracked notification in place, so only a replaces_id object needs a new list entry
     function _upsertActiveNotification(notification, arrivalTime: real): bool {
         const existing = root.list.findIndex(e => e.id === notification.id)
         if (existing < 0) {

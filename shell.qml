@@ -20,6 +20,8 @@ ShellRoot {
     id: root
 
     readonly property bool smokeTest: Quickshell.env("SILERE_SMOKE_TEST") === "1"
+    // check.sh's smoke shells share the live display; a mapped bar would reserve its exclusive zone on the user's screen
+    readonly property bool unmappedBars: Quickshell.env("SILERE_UNMAPPED_BARS") === "1"
     settings.watchFiles: !smokeTest && Quickshell.env("SILERE_WATCH_FILES") !== "0"
     readonly property ShellScreen activeOverlayScreen: smokeTest ? null : Monitors.overlayScreen
     // bar-anchored popups open with no trigger screen over IPC, and the overlay screen
@@ -48,8 +50,7 @@ ShellRoot {
         void ShellUpdate.pending
         void OverlayCoordinator.armed
         void ControlSurfaces.anyOpen
-        // the anchored popup states own the documented IPC targets and the shared control
-        // rows, so they cannot wait on the panel that happens to host them
+        // the anchored popup states own the documented IPC targets and the shared control rows, so they cannot wait on the panel that happens to host them
         void MenuState.armed
         void CalendarState.armed
         void TrayMenuState.armed
@@ -92,7 +93,7 @@ ShellRoot {
                     active = false
                     Qt.callLater(() => _barLoader.active = _barLoader.barOn)
                 }
-                component: Bar { targetScreen: _barScope.modelData }
+                component: Bar { targetScreen: _barScope.modelData; visible: !root.unmappedBars }
             }
         }
     }
@@ -196,7 +197,7 @@ ShellRoot {
     PopupLoader {
         id: _notificationPopup
         wantOpen: !root.smokeTest && ShellSettings.notifPopupEnabled
-            && Notifications.activeCount > 0
+            && Notifications.activeCount > 0 && !OverlayCoordinator.notificationsHeld
         requestedScreen: root.activeOverlayScreen
         surface: Component {
             NotificationPopups {

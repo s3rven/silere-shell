@@ -10,9 +10,10 @@ Item {
 
     property string glyph:       ""
     property string label:       ""
+    property string key: ""
     property string description: ""
     property var    model:       []
-    property var    currentValue
+    property var    currentValue: root.key.length > 0 ? ShellSettings[root.key] : undefined
     property color  accentColor: Theme.accent
     // one component serves the header and every option; each reads its subject off its own Loader
     property Component optionPreview: null
@@ -41,6 +42,13 @@ Item {
     readonly property int _pillMaxW: Math.max(92, root.width - root._leadW - 10 - 12 - 96)
 
     signal chosen(var value)
+
+    Connections {
+        target: root
+        function onChosen(value) {
+            if (root.key.length > 0) ShellSettings.setValue(root.key, value)
+        }
+    }
 
     property bool _open: false
 
@@ -318,6 +326,7 @@ Item {
                         ? String(modelData.fontFamily) : Settings.font
 
                     width: _optCol.width
+                    enabled: root.enabled && root._open
                     label: String(modelData.label ?? "")
                     accessiblePrefix: root.label
                     labelFontFamily: optionFont
@@ -327,6 +336,7 @@ Item {
                     accentColor: root.accentColor
 
                     onTriggered: {
+                        if (!root.enabled || !root._open) return
                         root.chosen(_opt.modelData.value)
                         root._setOpen(false)
                     }

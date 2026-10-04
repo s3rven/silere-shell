@@ -86,7 +86,7 @@ AnchoredPopupState {
         ]},
         { glyph: "󰕮", label: "Bar", children: [
             { glyph: "󰍹", label: "Layout",    section: "surface",
-              description: "Bar position, size, and shape" },
+              description: "Position, size, shape, and hover" },
             { glyph: "󰍴", label: "Underline", section: "underline",
               description: "Line and event glow" },
             { glyph: "󰻂", label: "Spacing",   section: "separators",
@@ -102,7 +102,7 @@ AnchoredPopupState {
             { glyph: "󰝚", label: "Media",      section: "media",
               description: "Track details and visualizer" },
             { glyph: "󰈈", label: "Indicators", section: "indicators",
-              description: "Titles, status, and hover" }
+              description: "Window title and status" }
         ]},
         { glyph: "󰂚", label: "Feedback", children: [
             { glyph: "󰂚", label: "Notifications", section: "popups",
@@ -195,6 +195,14 @@ AnchoredPopupState {
         // set before opening: the lazy surface can't catch a pre-creation signal
         if (!open) open = true
         tabRequested(tab)
+    }
+
+    function showSettingsAt(section: string, source, screen): void {
+        const point = source ? source.mapToItem(null, source.width / 2, 0) : null
+        root.setSettingsSection(section)
+        root.selectTab(root.settingsTab)
+        root.openAt(point && isFinite(point.x) ? point.x : 10, screen, source)
+        root.tabRequested(root.settingsTab)
     }
 
     readonly property string _refusedText: "error: the menu stays closed while the session is idle or the overview is open"
