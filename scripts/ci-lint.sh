@@ -116,24 +116,26 @@ section "settings row description width"
 # Every branch of the binding counts, so this scans literals, not just `description: "…"`.
 # A binding continues onto the next line only when that line opens with an operator;
 # anything else ends it, or the scan swallows the `key:` below and reports it as a
-# description.
+# description. A SelectRow's dropdown takes more of the row than a switch does: 40
+# characters wrapped beside "Automatic", 31 fit beside "Follow focus".
 desc_over="$(find modules -name '*.qml' -exec awk '
   function flush(   lit) {
     while (match(buf, /"[^"]*"/)) {
       lit = substr(buf, RSTART + 1, RLENGTH - 2)
-      if (length(lit) > 47) printf "  %s:%d  (%d chars) %s\n", file, line, length(lit), lit
+      if (length(lit) > budget) printf "  %s:%d  (%d chars, budget %d) %s\n", file, line, length(lit), budget, lit
       buf = substr(buf, RSTART + RLENGTH)
     }
     buf = ""
   }
-  FNR == 1 { if (collecting) flush(); collecting = 0 }
+  FNR == 1 { if (collecting) flush(); collecting = 0; select = 0 }
   collecting && $0 ~ /^[[:space:]]*[+?:]/ { buf = buf $0; next }
   collecting { flush(); collecting = 0 }
-  /description:/ { collecting = 1; buf = $0; line = FNR; file = FILENAME }
+  /(^|[^A-Za-z])[A-Z][A-Za-z]*Row[[:space:]]*\{/ { select = ($0 ~ /SelectRow[[:space:]]*\{/) }
+  /description:/ { collecting = 1; buf = $0; line = FNR; file = FILENAME; budget = select ? 31 : 47 }
   END { if (collecting) flush() }
 ' {} + || true)"
 if [ -n "$desc_over" ]; then
-  fail "these row descriptions exceed the 47-character budget and will wrap:"
+  fail "these row descriptions exceed their budget (47, or 31 beside a dropdown) and will wrap:"
   printf '%s\n' "$desc_over"
 else
   ok "row descriptions" "every settings row description fits on one line"
@@ -464,82 +466,17 @@ else
 fi
 
 section "pooled delegate motion"
-# A recycled delegate keeps the previous row's values, so an ungated animation plays the
-# new subject in from them as the row scrolls into view. Scan every file that pools rows,
-# plus the component each pooling list names as its delegate: turning reuseItems on for a
-# list whose delegate lives in another file is exactly how this regressed.
-_pooled_file_list() {
-  local f type cand
-  while IFS= read -r f; do
-    [ -n "$f" ] || continue
-    printf '%s\n' "$f"
-    grep -qE 'reuseItems:[[:space:]]*true' "$f" || continue
-    while IFS= read -r type; do
-      [ -n "$type" ] || continue
-      while IFS= read -r cand; do
-        [ -n "$cand" ] && printf '%s\n' "$cand"
-      done <<EOF
-$(find modules config services -name "$type.qml" 2>/dev/null)
-EOF
-    done <<EOF
-$(sed -n 's/^[[:space:]]*delegate:[[:space:]]*\([A-Z][A-Za-z0-9_]*\).*/\1/p' "$f")
-EOF
-  done <<EOF
-$(grep -rlE 'reuseItems:[[:space:]]*true|ListView\.on(Pooled|Reused)' \
-  --include='*.qml' shell.qml modules config services 2>/dev/null)
-EOF
-}
-
-pooled_ungated=""
-pooled_unhooked=""
-pooled_animation_count=0
-while IFS= read -r _f; do
-  [ -n "$_f" ] && [ -f "$_f" ] || continue
-  _count="$(awk '
-    { line = $0; sub(/\/\/.*/, "", line)
-      if (line ~ /(ColorFade|MotionBehavior|Disclosure)[[:space:]]+on[[:space:]]/) n++ }
-    END { print n + 0 }
-  ' "$_f")"
-  pooled_animation_count=$((pooled_animation_count + _count))
-  # buffered, not getline: a getline here consumes the following line and would skip
-  # a second animation declared directly beneath the first
-  _hits="$(awk '
-    { raw[FNR] = $0; n = FNR }
-    END {
-      for (i = 1; i <= n; i++) {
-        line = raw[i]; sub(/\/\/.*/, "", line)
-        if (line !~ /(ColorFade|MotionBehavior|Disclosure)[[:space:]]+on[[:space:]]/) continue
-        if (line ~ /gate:/) continue
-        nxt = (i < n) ? raw[i + 1] : ""
-        sub(/\/\/.*/, "", nxt)
-        if (nxt ~ /gate:/) continue
-        print FILENAME ":" i ":" line
-      }
-    }
-  ' "$_f" || true)"
-  [ -n "$_hits" ] && pooled_ungated="$pooled_ungated$_hits"$'\n'
-  # a gate that no pool or reuse ever closes is not a gate
-  if [ "$_count" -gt 0 ] \
-     && ! grep -qE 'ListView\.on(Pooled|Reused)' "$_f"; then
-    pooled_unhooked="$pooled_unhooked  $_f"$'\n'
-  fi
-done <<EOF
-$(_pooled_file_list | sort -u)
-EOF
-
-if [ "$pooled_animation_count" -eq 0 ]; then
-  fail "pooling scan inspected no delegate animations"
-elif [ -n "$pooled_ungated" ] || [ -n "$pooled_unhooked" ]; then
-  if [ -n "$pooled_ungated" ]; then
-    fail "animations in a pooled delegate must carry a gate closed by onPooled/onReused:"
-    printf '%s' "$pooled_ungated"
-  fi
-  if [ -n "$pooled_unhooked" ]; then
-    fail "these pooled files animate but never close a gate on ListView.onPooled/onReused:"
-    printf '%s' "$pooled_unhooked"
+# Inspect delegate scopes and their component files; a view's header and disclosure
+# animations are never pooled and must not be required to carry a reuse gate.
+if command -v python3 >/dev/null 2>&1 && [ -f scripts/check-pooled-motion.py ]; then
+  if pooled_errors="$(python3 scripts/check-pooled-motion.py)"; then
+    ok "pooling" "every animation in a pooled delegate is gated"
+  else
+    fail "pooled delegate motion checks failed:"
+    printf '%s\n' "$pooled_errors"
   fi
 else
-  ok "pooling" "every animation in a pooled delegate is gated"
+  structural_skip "pooling" "python3 or scripts/check-pooled-motion.py missing"
 fi
 
 section "pooled view transitions"
@@ -921,12 +858,13 @@ fi
 
 section "installer environment defaults"
 if ! grep -qF '${MALLOC_CONF-' scripts/silere \
-    && ! grep -qF 'QSG_TRANSIENT_IMAGES' scripts/silere scripts/install.sh \
-    && grep -qF 'exec qs --no-duplicate -p "$ROOT/shell.qml"' scripts/silere \
-    && grep -qF 'LAUNCH_CMD="exec \"\$(printf' scripts/install.sh \
+    && grep -qF 'unset QSG_TRANSIENT_IMAGES' scripts/silere \
+    && ! grep -qE 'QSG_TRANSIENT_IMAGES[[:space:]]*=' scripts/silere scripts/install.sh \
+    && grep -qF 'exec qs --no-duplicate "${detail[@]}" -p "$ROOT/shell.qml"' scripts/silere \
+    && grep -qF 'LAUNCH_CMD="exec $ROOT_EXEC/scripts/silere\" run --startup"' scripts/install.sh \
     && grep -qF 'set -- run "$@"' scripts/silere \
     && [ "$(grep -Fc 'ln -s "/usr/share/$_pkgname/scripts/silere"' packaging/aur/PKGBUILD)" -eq 2 ]; then
-  ok "launcher" "one exec path preserves the user environment and refuses duplicates"
+  ok "launcher" "shared exec path clears transient images and refuses duplicates"
 else
   fail "source, compositor, and packaged launchers must share silere run"
 fi
@@ -1482,13 +1420,8 @@ else
     fail "config writes must track directory waits, recheck failures, and preserve setup exit status"
 fi
 
-# Text.HorizontalFit shrinks rather than truncates, so probe-fit's Text.truncated scan
-# cannot see a chip row whose cap stopped growing with the type
-if grep -qF 'Math.max(236, Settings.fontLabel * 22)' modules/menu/controls/ChoiceChipRow.qml; then
-    ok "chip width" "the segmented-control cap grows with its label font"
-else
-    fail "ChoiceChipRow's width cap must scale with Settings.fontLabel, or its chips lose their padding at the largest type"
-fi
+# Choice-chip sizing is exercised by the responsive layout fixture in probe-fit:
+# measured labels determine wrapping instead of a fixed, font-scaled width cap.
 
 if grep -qF 'function onScanRevisionChanged() { root._syncSourceBackend() }' services/Updates.qml; then
     ok "update backend" "package checks follow coherent optional-tool rescans"
@@ -1990,6 +1923,18 @@ else
   ok "scroll" "every list and flickable inherits one scroll feel"
 fi
 
+section "atlas textures"
+# mipmap moves an image out of the texture atlas, and on Qt 6.11 that path SEGV'd the
+# render thread (QSGRhiAtlasTexture::removedFromAtlas) while a tray tile was hidden.
+# Load icons at their device size instead.
+mipmapped="$(grep -rn -E '(^|[^A-Za-z_])mipmap:[[:space:]]*true' --include='*.qml' services modules config || true)"
+if [ -n "$mipmapped" ]; then
+  fail "load the image at its device size instead of mipmapping it:"
+  while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$mipmapped"
+else
+  ok "atlas" "no image leaves the texture atlas"
+fi
+
 section "static text"
 # Transforms apply to surfaces, never to text. A scaled Text node is rasterised at its
 # own size and then resampled, so a hover scale softens a label for as long as the
@@ -2006,6 +1951,7 @@ if command -v python3 >/dev/null 2>&1 && [ -f scripts/check-text-scale.py ]; the
 else
   structural_skip "static text" "python3 or scripts/check-text-scale.py missing; text scale check skipped"
 fi
+
 
 section "inert compositor events"
 # Every Hyprland event that is not denylisted bumps the layout tick, which rebuilds the
@@ -2343,6 +2289,39 @@ check_grid modules/notifications/NotificationCard.qml 'height:.*contentCol\.impl
 check_grid modules/osd/OsdWindow.qml 'readonly property int pillW' "floating OSD pill width"
 if [ "$grid_bad" -eq 0 ]; then
   ok "pixel grid" "every content-sized popup surface lands on the 4px grid"
+fi
+
+section "test side effects"
+# the smoke shells share the live display: a mapped bar reserves its exclusive zone on the user's
+# screen, and an unmapped one stalls under qt's elapsed-time animation driver
+if grep -qF 'export SILERE_UNMAPPED_BARS=1 QSG_USE_SIMPLE_ANIMATION_DRIVER=0' scripts/check.sh \
+    && grep -qF 'visible: !root.unmappedBars' shell.qml; then
+  ok "smoke bars" "check.sh's smoke shells build their bars unmapped"
+else
+  fail "check.sh's smoke shells must build their bars unmapped (SILERE_UNMAPPED_BARS) under the default animation driver"
+fi
+# probes load fresh temp copies, so their compiled units could only pile up in ~/.cache
+if grep -qx 'export QML_DISABLE_DISK_CACHE=1' scripts/probe-lib.sh; then
+  ok "qml cache" "probes from temp copies leave no compiled QML behind"
+else
+  fail "scripts/probe-lib.sh must export QML_DISABLE_DISK_CACHE=1, or every probe run leaves its compiled QML in ~/.cache/quickshell"
+fi
+# probes flip settings whose handlers clear caches, and an unset cache home is the live shell's
+cache_leaks=""
+for _probe_script in scripts/test-*.sh; do
+  grep -qF 'scripts/probe-lib.sh' "$_probe_script" || continue
+  grep -qF 'XDG_CACHE_HOME=' "$_probe_script" || cache_leaks="$cache_leaks $_probe_script"
+done
+if [ -z "$cache_leaks" ]; then
+  ok "probe cache" "probes keep their caches out of ~/.cache"
+else
+  fail "these probe scripts must set XDG_CACHE_HOME, or a setting flipped in a probe clears the live shell's cache:$cache_leaks"
+fi
+# a test copy of this checkout matches the unit as well, and the unit probe arms both restart paths
+if grep -qF '|| Quickshell.env("SILERE_SANDBOX") === "1") return' services/CompositorHyprland.qml; then
+  ok "unit restarts" "sandboxed shells never restart the live one"
+else
+  fail "services/CompositorHyprland.qml must skip its unit probe under SILERE_SANDBOX=1, or a test shell can restart the live one"
 fi
 
 section "portability regressions"

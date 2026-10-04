@@ -249,6 +249,41 @@ test_uninstall_targets_and_backups() (
         "uninstaller receipt mode"
 )
 
+test_uninstall_empty_optional_paths() (
+    local fixture="$TMP/uninstall-optional" mode home out
+    mkdir -p "$fixture/scripts/lib" "$fixture/stubs"
+    cp "$ROOT/scripts/uninstall.sh" "$fixture/scripts/uninstall.sh"
+    cp "$ROOT/scripts/lib/"*.sh "$fixture/scripts/lib/"
+    # Discovery and service commands must stay within this fixture.
+    printf '#!/bin/sh\nexit 0\n' > "$fixture/scripts/install.sh"
+    printf '#!/bin/sh\nexit 0\n' > "$fixture/stubs/systemctl"
+    chmod +x "$fixture/stubs/systemctl"
+
+    for mode in absent managed; do
+        home="$fixture/$mode"
+        mkdir -p "$home/.config/hypr" "$home/.config/systemd/user" "$home/.local/state"
+        printf '%s\n' before '# silere-shell begin' owned '# silere-shell end' after \
+            > "$home/.config/hypr/hyprland.conf"
+        printf 'keep\n' > "$home/.config/hypr/unrelated.conf"
+        : > "$home/.config/systemd/user/silere-update.timer"
+        : > "$home/.config/systemd/user/silere-update.service"
+        if [ "$mode" = managed ]; then _mark_managed_install "$fixture" "$home"; fi
+        if ! out="$(HOME="$home" XDG_CONFIG_HOME="$home/.config" \
+                XDG_STATE_HOME="$home/.local/state" XDG_DATA_HOME="$home/.local/share" \
+                SILERE_ASSUME_YES=1 PATH="$fixture/stubs:$PATH" \
+                bash "$fixture/scripts/uninstall.sh" 2>&1)"; then
+            fail "uninstaller with $mode receipt and empty optional paths failed: $out"
+        fi
+        assert_eq $'before\nafter' "$(<"$home/.config/hypr/hyprland.conf")" \
+            "uninstaller $mode receipt removes owned block"
+        assert_eq keep "$(<"$home/.config/hypr/unrelated.conf")" \
+            "uninstaller $mode receipt preserves unrelated config"
+        [ ! -e "$home/.config/systemd/user/silere-update.timer" ] \
+            && [ ! -e "$home/.config/systemd/user/silere-update.service" ] \
+            || fail "uninstaller $mode receipt stopped before timer cleanup"
+    done
+)
+
 test_qml_module_lookup() (
     local imports="$TMP/qml-imports"
     mkdir -p "$imports/Silere/TestModule"
@@ -429,6 +464,30 @@ test_dry_run_writes_nothing() (
         *"nothing was written"*) ;;
         *) fail "dry run did not report that it wrote nothing" ;;
     esac
+)
+
+test_autostart_line_runs() (
+    local home line out stub
+    for home in "$TMP/autostart home" "$TMP/autostart-plain"; do
+        mkdir -p "$home/.config/hypr" "$home/.config/silere-shell/scripts"
+        printf 'monitor=,preferred,auto,1\n' > "$home/.config/hypr/hyprland.conf"
+        out="$(HOME="$home" XDG_CONFIG_HOME="$home/.config" \
+            SILERE_HYPR_CONFIG="$home/.config/hypr/hyprland.conf" \
+            bash "$ROOT/scripts/install.sh" --dry-run </dev/null 2>&1)" \
+            || fail "autostart dry run exited non-zero"
+        line="$(printf '%s\n' "$out" | sed -n 's/.*: exec-once = //p' | head -n 1)"
+        case "$home" in
+            *" "*) case "$line" in *"printf '%b'"*) ;;
+                   *) fail "an install path with a space was written without byte encoding" ;; esac
+                   case "$line" in *"$home"*) fail "an install path with a space was written raw" ;; esac ;;
+            *) assert_eq "exec \"$home/.config/silere-shell/scripts/silere\" run --startup" "$line" \
+                   "an ordinary install path is written readably" ;;
+        esac
+        stub="$home/.config/silere-shell/scripts/silere"
+        printf '#!/bin/sh\nprintf "%%s\\n" "$*"\n' > "$stub"
+        chmod +x "$stub"
+        assert_eq "run --startup" "$(sh -c "$line")" "the planned autostart line launches silere run"
+    done
 )
 
 test_install_path_safety() (
@@ -764,6 +823,7 @@ test_shared_launcher() (
     mkdir -p "$stub_dir"
     printf '%s\n' \
         '#!/bin/sh' \
+        'for arg do [ "$arg" = "${SILERE_STUB_REJECT-}" ] && exit 109; done' \
         ': > "$SILERE_LAUNCH_CAPTURE"' \
         'printf "malloc=%s\nimages=%s\negl=%s\nlocale=%s\numask=%s\nwatch=%s\n" "${MALLOC_CONF-}" "${QSG_TRANSIENT_IMAGES-}" "${__EGL_VENDOR_LIBRARY_FILENAMES-}" "${LC_ALL-<unset>}" "$(umask)" "${SILERE_WATCH_FILES-}" >> "$SILERE_LAUNCH_CAPTURE"' \
         'for arg do printf "arg=%s\n" "$arg" >> "$SILERE_LAUNCH_CAPTURE"; done' \
@@ -787,15 +847,22 @@ test_shared_launcher() (
         || fail "shared launcher changed the user's umask"
     grep -qFx 'watch=0' "$capture" \
         || fail "shared launcher did not disable reload during managed updates"
-    expected_args=$'arg=--no-duplicate\narg=-p\narg='"$ROOT"$'/shell.qml\narg=--verbose'
+    expected_args=$'arg=--no-duplicate\narg=--no-detailed-logs\narg=-p\narg='"$ROOT"$'/shell.qml\narg=--verbose'
     assert_eq "$expected_args" "$(grep '^arg=' "$capture")" "shared launcher argv"
+    # a quickshell without the hidden flag must still start
+    env PATH="$stub_dir:$PATH" SILERE_LAUNCH_CAPTURE="$capture" SILERE_STUB_REJECT=--no-detailed-logs \
+        bash "$ROOT/scripts/silere" run --verbose
+    expected_args=$'arg=--no-duplicate\narg=-p\narg='"$ROOT"$'/shell.qml\narg=--verbose'
+    assert_eq "$expected_args" "$(grep '^arg=' "$capture")" "shared launcher argv without --no-detailed-logs"
     assert_eq "644" "$(stat -c '%a' "$capture")" "shared launcher state umask"
 
     capture="$TMP/launcher-overrides.out"
-    MALLOC_CONF='' SILERE_WATCH_FILES=1 \
+    MALLOC_CONF='' SILERE_WATCH_FILES=1 QSG_TRANSIENT_IMAGES=1 \
         LC_ALL=C PATH="$stub_dir:$PATH" SILERE_LAUNCH_CAPTURE="$capture" \
         __EGL_VENDOR_LIBRARY_FILENAMES='' \
         bash "$ROOT/scripts/silere" run
+    grep -qFx 'images=' "$capture" \
+        || fail "shared launcher inherited QSG_TRANSIENT_IMAGES from a legacy service"
     grep -qFx 'malloc=' "$capture" \
         || fail "shared launcher did not preserve an empty allocator override"
     grep -qFx 'egl=' "$capture" \
@@ -811,7 +878,7 @@ test_shared_launcher() (
         PATH="$stub_dir:$PATH" SILERE_LAUNCH_CAPTURE="$capture" \
         __EGL_VENDOR_LIBRARY_FILENAMES='' \
         "$stub_dir/silere-shell" --verbose
-    expected_args=$'arg=--no-duplicate\narg=-p\narg='"$ROOT"$'/shell.qml\narg=--verbose'
+    expected_args=$'arg=--no-duplicate\narg=--no-detailed-logs\narg=-p\narg='"$ROOT"$'/shell.qml\narg=--verbose'
     assert_eq "$expected_args" "$(grep '^arg=' "$capture")" \
         "packaged launcher name dispatch"
 )
@@ -1953,7 +2020,7 @@ test_unit_identity() (
     ln -s "$root/scripts/silere" "$link"
     source "$ROOT/scripts/lib/unit.sh"
     unit_says() {
-        printf '#!/bin/sh\nprintf "%%s\\n" "%s"\n' "$1" > "$stubs/systemctl"
+        printf '#!/usr/bin/env bash\nprintf "%%s\\n" %q\n' "$1" > "$stubs/systemctl"
         chmod +x "$stubs/systemctl"
     }
     for exec_start in "qs -p $root/shell.qml" "qs -n -p $root/shell.qml" "qs -p $root" \
@@ -1968,6 +2035,17 @@ test_unit_identity() (
         PATH="$stubs:$PATH" _silere_unit_runs_checkout "$root" \
             && fail "a unit running '$exec_start' was taken for this checkout"
     done
+    for exec_start in 'QSG_TRANSIENT_IMAGES=1' 'QSG_TRANSIENT_IMAGES=0' \
+            'QSG_TRANSIENT_IMAGES=' 'PATH=/usr/bin "QSG_TRANSIENT_IMAGES=1"'; do
+        unit_says "$exec_start"
+        PATH="$stubs:$PATH" _silere_unit_uses_transient_images \
+            || fail "transient image setting '$exec_start' was not diagnosed"
+    done
+    for exec_start in '' 'PATH=/usr/bin' 'OTHER_QSG_TRANSIENT_IMAGES=1'; do
+        unit_says "$exec_start"
+        PATH="$stubs:$PATH" _silere_unit_uses_transient_images \
+            && fail "environment '$exec_start' was diagnosed as transient images"
+    done
     return 0
 )
 
@@ -1981,6 +2059,7 @@ test_cli_restart_and_log() (
         '    list) [ -s "$state" ] && printf "Instance t:\n  Process ID: %s\n" "$(cat "$state")"; exit 0 ;;' \
         '    kill) : > "$state"; echo kill >> "$state.calls"; exit 0 ;;' \
         '    log) echo "log $*" >> "$state.calls"; exit 0 ;;' \
+        '    --no-detailed-logs) exit 0 ;;' \
         '    *) echo "launch $* locale=${LC_ALL-<unset>}" >> "$state.calls"; echo 777 > "$state" ;;' \
         'esac' > "$stubs/qs"
     # never the real systemctl: it would restart the live shell of whoever runs the tests
@@ -2001,7 +2080,7 @@ test_cli_restart_and_log() (
     echo 4242 > "$state"; : > "$state.calls"
     out="$(WAYLAND_DISPLAY=wayland-test cli restart)" || fail "restart without a unit failed"
     assert_eq "Silere restarted (pid 777)" "$out" "restart without a unit"
-    assert_eq $'kill\nlaunch --no-duplicate -p '"$ROOT"$'/shell.qml --daemonize locale=<unset>' \
+    assert_eq $'kill\nlaunch --no-duplicate --no-detailed-logs -p '"$ROOT"$'/shell.qml --daemonize locale=<unset>' \
         "$(grep -v '^systemctl' "$state.calls")" "restart stops, then relaunches detached"
 
     echo 4242 > "$state"; : > "$state.calls"
@@ -2032,6 +2111,87 @@ test_cli_restart_and_log() (
         "log argv drops color when not writing to a terminal"
 )
 
+test_pooled_motion_scope() (
+    command -v python3 >/dev/null 2>&1 || return 0
+    local fixture="$TMP/pooled-motion" output
+    mkdir -p "$fixture/modules"
+    cat > "$fixture/modules/Picker.qml" <<'QML'
+Item {
+    MotionBehavior on opacity { NumberAnimation {} }
+    ListView {
+        reuseItems: true
+        delegate: OptionRow {
+            property string label: "a } brace and // comment in a label"
+        }
+    }
+}
+QML
+    cat > "$fixture/modules/OptionRow.qml" <<'QML'
+Item {
+    ListView.onPooled: motionReady = false
+    ListView.onReused: motionReady = true
+    ColorFade on color { gate: motionReady }
+}
+QML
+    python3 "$ROOT/scripts/check-pooled-motion.py" "$fixture" \
+        || fail "pooling lint mistook picker chrome for a recycled delegate"
+    sed -i 's/gate: motionReady//' "$fixture/modules/OptionRow.qml"
+    if output="$(python3 "$ROOT/scripts/check-pooled-motion.py" "$fixture")"; then
+        fail "pooling lint accepted an ungated external delegate"
+    fi
+    [[ "$output" == *'OptionRow.qml:4: recycled delegate animation needs a gate'* ]] \
+        || fail "pooling lint did not identify the ungated delegate"
+    sed -i 's/ColorFade on color { }/ColorFade on color { gate: motionReady }/; /onReused/d' \
+        "$fixture/modules/OptionRow.qml"
+    if python3 "$ROOT/scripts/check-pooled-motion.py" "$fixture" >/dev/null; then
+        fail "pooling lint accepted a delegate without a reuse handler"
+    fi
+)
+
+test_benchmark_json() (
+    [ -r "/proc/$BASHPID/stat" ] || return 0
+    local stubs="$TMP/bench-stubs" out expected
+    mkdir -p "$stubs"
+    cat > "$stubs/qs" <<'SH'
+#!/usr/bin/env bash
+if [ "${1:-}" = list ]; then
+    printf '  Process ID: %s\n  Config path: %s/shell.qml\n' \
+        "$SILERE_TEST_BENCH_PID" "$SILERE_TEST_BENCH_ROOT"
+elif [ "${1:-}" = ipc ]; then
+    printf '%s\n' "$*" >> "$SILERE_TEST_BENCH_CALLS"
+    if [[ "$*" == *'call menu tab 0' ]]; then printf '%s\n' "${SILERE_TEST_BENCH_REPLY:-ok}"; fi
+else
+    printf 'Quickshell benchmark fixture\n'
+fi
+SH
+    chmod +x "$stubs/qs"
+    export SILERE_TEST_BENCH_PID="$BASHPID" SILERE_TEST_BENCH_ROOT="$ROOT"
+    out="$(PATH="$stubs:$PATH" XDG_CONFIG_HOME="$TMP/bench-config" \
+        bash "$ROOT/scripts/bench.sh" 1 --json \
+        --label $'release\nline\t"quote"\\slash\r\b\f\v\001\037 λ 🐚')" \
+        || fail "benchmark fixture failed"
+    expected='release\u000aline\u0009\"quote\"\\slash\u000d\u0008\u000c\u000b\u0001\u001f λ 🐚'
+    [[ "$out" == *",\"label\":\"$expected\""* ]] \
+        || fail "benchmark JSON did not preserve and escape its free-form label"
+    [[ "$out" != *$'\n'* ]] || fail "benchmark JSON contains a raw newline"
+
+    # Keep this fixture quick while exercising the actual warm-up IPC path.
+    printf '#!/bin/sh\nexit 0\n' > "$stubs/sleep"
+    chmod +x "$stubs/sleep"
+    export SILERE_TEST_BENCH_CALLS="$TMP/bench-calls"
+    out="$(PATH="$stubs:$PATH" XDG_CONFIG_HOME="$TMP/bench-config" \
+        bash "$ROOT/scripts/bench.sh" 1 --warm --json)" || fail "warm benchmark fixture failed"
+    assert_eq $'ipc -p '"$ROOT"$'/shell.qml call menu tab 0\nipc -p '"$ROOT"$'/shell.qml call menu close' \
+        "$(<"$SILERE_TEST_BENCH_CALLS")" "benchmark warms Home even if a menu is already open"
+    [[ "$out" == *'"state":"warm"'* ]] || fail "warm benchmark did not report its state"
+    if out="$(PATH="$stubs:$PATH" SILERE_TEST_BENCH_REPLY='error: idle' \
+            bash "$ROOT/scripts/bench.sh" 1 --warm --json 2>&1)"; then
+        fail "benchmark accepted a refused warm-up"
+    fi
+    [[ "$out" == *'could not open Home: error: idle'* ]] \
+        || fail "benchmark did not explain a refused warm-up"
+)
+
 if [ "${SILERE_TEST_LIB_ONLY:-0}" = 1 ]; then
     return 0 2>/dev/null || exit 0
 fi
@@ -2041,6 +2201,7 @@ test_fresh_install_permissions
 test_existing_checkout_installer_update
 test_marker_removal
 test_uninstall_targets_and_backups
+test_uninstall_empty_optional_paths
 test_qml_module_lookup
 test_quickshell_version_after_qt_warning
 test_qml_type_floor
@@ -2050,6 +2211,7 @@ test_assume_yes_prompts
 test_install_path_safety
 test_install_transaction_and_receipt
 test_dry_run_writes_nothing
+test_autostart_line_runs
 test_menu_keybind_plan
 test_plain_copy_is_not_package_managed
 test_unit_identity
@@ -2058,6 +2220,8 @@ test_niri_config_discovery
 test_atomic_units
 test_shared_launcher
 test_cli_restart_and_log
+test_pooled_motion_scope
+test_benchmark_json
 test_hook_timeout_contains_tree
 test_repair_workflow
 

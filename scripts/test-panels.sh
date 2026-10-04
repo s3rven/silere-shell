@@ -34,6 +34,8 @@ if [ "$#" -gt 0 ]; then
 else
     list="$(grep -rlE '^ {0,4}required property ShellScreen targetScreen' \
         --include='*.qml' modules | sort -u)"
+    list="$list
+scripts/probe-popup-interactions.qml"
 fi
 count="$(printf '%s\n' "$list" | grep -c . || true)"
 if [ "$count" -eq 0 ]; then
@@ -57,7 +59,7 @@ mkdir -p "$probe_cfg/silere-shell"
 
 # XDG_RUNTIME_DIR is deliberately inherited: it is where the Wayland socket lives.
 # Never pkill — a name match would take down the user's shell.
-XDG_CONFIG_HOME="$probe_cfg" XDG_STATE_HOME="$probe_cfg" \
+XDG_CONFIG_HOME="$probe_cfg" XDG_STATE_HOME="$probe_cfg" XDG_CACHE_HOME="$probe_cfg/cache" \
     SILERE_PROBE_ROOT="$ROOT" SILERE_PROBE_LIST="$list" \
     QT_FORCE_STDERR_LOGGING=1 \
     qs -p "$PROBE" --no-color >"$log" 2>&1 &
@@ -78,6 +80,13 @@ if ! grep -q 'PROBE-PANELS built' "$log" 2>/dev/null; then
     exit 1
 fi
 
+if [[ "$list" == *"scripts/probe-popup-interactions.qml"* ]] \
+    && ! grep -q 'PROBE-POPUP-INTERACTIONS checked' "$log"; then
+    cat "$log" >&2
+    echo "FAIL: popup interaction checks did not run" >&2
+    exit 1
+fi
+
 failed=0
 if grep -q 'PROBE-FAIL' "$log"; then
     grep 'PROBE-FAIL' "$log" | sed 's/^.*PROBE-FAIL/  /' >&2
@@ -95,3 +104,4 @@ fi
 
 printf 'panel probe passed (%s)\n' \
     "$(grep -oE 'PROBE-PANELS built [0-9]+/[0-9]+' "$log" | tail -1 | sed 's/PROBE-PANELS built //')"
+grep -oE 'PROBE-POPUP-INTERACTIONS checked [0-9]+ behaviors' "$log" || true

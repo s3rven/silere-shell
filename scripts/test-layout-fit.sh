@@ -60,7 +60,8 @@ list="$list
 modules/menu/RecentPage.qml|332
 modules/menu/PowerRailContent.qml|332
 modules/menu/VitalsStrip.qml|332
-modules/menu/SettingsNav.qml|160"
+modules/menu/SettingsNav.qml|160
+scripts/probe-responsive-layouts.qml"
 
 scratch="$(mktemp -d)"
 probe_pid=""

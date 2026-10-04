@@ -31,6 +31,13 @@ ShellRoot {
         height: 6000
     }
 
+    function _forceLayouts(item): void {
+        if (!item) return
+        // offscreen, nothing polishes positioners, so flush child layouts before measuring
+        for (const child of item.children || []) root._forceLayouts(child)
+        if (typeof item.forceLayout === "function") item.forceLayout()
+    }
+
     function _scan(item, path: string, depth: int, clipItem): void {
         if (!item || depth > 40) return
         const kids = item.children
@@ -144,11 +151,18 @@ ShellRoot {
     Timer { id: _step; interval: 30; onTriggered: root._next() }
     Timer {
         id: _settle
-        // one interval, not a frame callback: a section's rows size off font metrics
-        // and a collapsing group, both of which settle after the first paint
+        // one interval, not a frame callback: a section's rows size off font metrics and a collapsing group, both of which settle after the first paint
         interval: 260
         onTriggered: {
+            root._forceLayouts(root.object)
             root._scan(root.object, root.paths[root.index - 1], 0, null)
+            if (root.object && typeof root.object.layoutFailures === "function") {
+                const failures = root.object.layoutFailures()
+                for (const failure of failures) {
+                    console.warn("FIT-FAIL " + root.paths[root.index - 1] + " :: " + failure)
+                    root.findings++
+                }
+            }
             _step.restart()
         }
     }

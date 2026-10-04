@@ -46,7 +46,7 @@ ShellRoot {
 
         function _checkWarmMenuReopen(obj): void {
             const MenuState = host._menuState()
-            const panel = host._retentionPanel(obj.contentItem)
+            const panel = host._retentionPanel(obj.popupCard || obj.contentItem)
             if (!panel) {
                 console.warn("PROBE-FAIL MenuWindow :: retention panel missing")
                 root._failed++
@@ -100,8 +100,7 @@ ShellRoot {
                 Qt.callLater(host._buildNext)
                 return
             }
-            // assigning visible here replaces the declared binding, so a surface whose
-            // state singleton says open still cannot map
+            // assigning visible here replaces the declared binding, so a surface whose state singleton says open still cannot map
             const obj = c.createObject(null, {
                 targetScreen: Quickshell.screens[0] ?? null,
                 visible: false

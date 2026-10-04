@@ -100,6 +100,9 @@ cp -R "$ROOT/assets" "$ROOT/config" "$ROOT/modules" "$ROOT/services" "$CHECK_ROO
 cp "$ROOT/shell.qml" "$CHECK_ROOT/shell.qml"
 had_failure=0
 jobs_n="$(nproc 2>/dev/null || echo 4)"
+# A high CPU count in a memory-limited container can launch enough Qt tools to
+# exhaust its memory before any file has been checked.
+if (( jobs_n > 16 )); then jobs_n=16; fi
 
 # paths never contain newlines here, so one per line round-trips into the workers
 printf '%s\n' "${qml_import_args[@]}" > "$tmp/import-args"

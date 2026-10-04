@@ -3,6 +3,8 @@ set -eu
 export LC_ALL=C
 # every shell this launches must leave the desktop's night light and alerts alone
 export SILERE_SANDBOX=1
+# qt sends its startup warnings (the LC_ALL=C one above) to the user's journal once stderr is redirected
+export QT_FORCE_STDERR_LOGGING=1
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT/scripts/lib/xdg.sh"
@@ -31,7 +33,7 @@ fail() { printf 'fail %-15s %s\n' "$1" "$2" >&2; status=1; }
 # fails describing whatever it was testing instead of the runtime that never ran
 qs_usable=0
 qs_probe=""
-if command -v qs >/dev/null 2>&1 && qs_probe="$(qs --version 2>&1)"; then
+if command -v qs >/dev/null 2>&1 && qs_probe="$(env -u LC_ALL qs --version 2>&1)"; then
   qs_usable=1
 fi
 
@@ -107,7 +109,7 @@ else
 fi
 
 if command -v qs >/dev/null 2>&1; then
-  info "quickshell" "$(qs --version 2>&1 | _first_line)"
+  info "quickshell" "$(env -u LC_ALL qs --version 2>&1 | _first_line)"
 else
   info "quickshell" "not in PATH"
 fi
@@ -553,6 +555,13 @@ if [ "$qs_usable" = 1 ]; then
     warn "startup" "timeout --kill-after unsupported; runtime smoke test skipped"
   else
     code=0
+    # these shells share the live display, so their bars stay unmapped; qt's elapsed-time
+    # animation driver stalls the event loop of a window that never maps
+    export SILERE_UNMAPPED_BARS=1 QSG_USE_SIMPLE_ANIMATION_DRIVER=0
+    export QML_DISABLE_DISK_CACHE=1
+    # the detailed log is ~150 KB per shell in the RAM-backed runtime dir, kept until logout
+    smoke_flags=()
+    env -u LC_ALL qs --no-detailed-logs --version >/dev/null 2>&1 && smoke_flags=(--no-detailed-logs)
     smoke_log="$scratch/smoke.log"
     # The real settings decide whether this installation starts, so the dwell runs on a
     # copy of them: a whole shell sitting at the live config writes its state files back,
@@ -582,7 +591,7 @@ if [ "$qs_usable" = 1 ]; then
       mkdir -p "$par_dir/$1/silere-shell"
       printf '%s' "$2" > "$par_dir/$1/silere-shell/settings.json"
       _case_code=0
-      XDG_CONFIG_HOME="$par_dir/$1" XDG_STATE_HOME="$par_dir/$1" timeout --kill-after=2s 5s qs -p shell.qml --no-color \
+      XDG_CONFIG_HOME="$par_dir/$1" XDG_STATE_HOME="$par_dir/$1" XDG_CACHE_HOME="$par_dir/$1/cache" timeout --kill-after=2s 5s qs "${smoke_flags[@]}" -p shell.qml --no-color \
         >"$par_dir/$1.log" 2>&1 || _case_code=$?
       printf '%s' "$_case_code" > "$par_dir/$1.code"
     }
@@ -600,8 +609,8 @@ if [ "$qs_usable" = 1 ]; then
         grep -lzxF "SILERE_EXIT_TAG=$_tag" /proc/[0-9]*/environ 2>/dev/null \
           | sed 's#^/proc/##; s#/environ$##' || true
       }
-      SILERE_EXIT_TAG="$_tag" XDG_CONFIG_HOME="$par_dir/exit" XDG_STATE_HOME="$par_dir/exit" \
-        qs -p shell.qml --no-color >"$par_dir/exit.log" 2>&1 &
+      SILERE_EXIT_TAG="$_tag" XDG_CONFIG_HOME="$par_dir/exit" XDG_STATE_HOME="$par_dir/exit" XDG_CACHE_HOME="$par_dir/exit/cache" \
+        qs "${smoke_flags[@]}" -p shell.qml --no-color >"$par_dir/exit.log" 2>&1 &
       _qs=$!
       _i=0
       while [ "$_i" -lt 20 ] && ! grep -q 'Configuration Loaded' "$par_dir/exit.log" 2>/dev/null; do
@@ -653,7 +662,7 @@ if [ "$qs_usable" = 1 ]; then
     # the startup dwell runs beside the cases below instead of ahead of them; they only
     # report once it has passed, so a shell that cannot start still fails just once
     ( _main_code=0
-      XDG_CONFIG_HOME="$smoke_home" XDG_STATE_HOME="$smoke_home" timeout --kill-after=2s 5s qs -p shell.qml --no-color \
+      XDG_CONFIG_HOME="$smoke_home" XDG_STATE_HOME="$smoke_home" XDG_CACHE_HOME="$smoke_home/cache" timeout --kill-after=2s 5s qs "${smoke_flags[@]}" -p shell.qml --no-color \
         >"$smoke_log" 2>&1 || _main_code=$?
       printf '%s' "$_main_code" > "$scratch/smoke.code" ) &
     smoke_pids="$smoke_pids $!"

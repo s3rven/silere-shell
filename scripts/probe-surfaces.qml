@@ -63,8 +63,7 @@ ShellRoot {
         }
 
         function _settleCurrent(): void {
-            // Three turns exercise zero-delay timers, Qt.callLater work, deferred
-            // Loader bindings, and the layout pass after text metrics settle.
+            // three turns exercise zero-delay timers, Qt.callLater work, deferred Loader bindings, and the layout pass after text metrics settle
             root._settleTurn++
             if (root._settleTurn < 3) Qt.callLater(host._settleCurrent)
             else host._finishCurrent()

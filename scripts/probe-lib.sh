@@ -10,6 +10,8 @@ SILERE_PROBE_ERRORS='Unable to assign .*|Cannot assign .*|is not a type|Referenc
 
 # pgrep/pkill match the live night light by name; see NightLight._sandboxed
 export SILERE_SANDBOX=1
+# probes load fresh temp copies, whose compiled units would pile up in ~/.cache/quickshell/qmlcache forever
+export QML_DISABLE_DISK_CACHE=1
 
 _probe_require_qs() {
     if ! command -v qs >/dev/null 2>&1; then

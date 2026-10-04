@@ -49,7 +49,7 @@ for ((i = 0; i < shards; i++)); do
     chmod 0700 "$d/runtime"
     printf '{"__version":1}\n' > "$d/cfg/silere-shell/settings.json"
     _probe_project "$ROOT" "$PROBE_SOURCE" "$d/project"
-    XDG_CONFIG_HOME="$d/cfg" XDG_STATE_HOME="$d/cfg" XDG_RUNTIME_DIR="$d/runtime" \
+    XDG_CONFIG_HOME="$d/cfg" XDG_STATE_HOME="$d/cfg" XDG_CACHE_HOME="$d/cfg/cache" XDG_RUNTIME_DIR="$d/runtime" \
         SILERE_PROBE_ROOT="$ROOT" SILERE_PROBE_LIST="$list" SILERE_PROBE_SHARD="$i/$shards" \
         QT_FORCE_STDERR_LOGGING=1 QT_QPA_PLATFORM=offscreen \
         qs -p "$d/project/probe-mutate.qml" --no-color >"$d/log" 2>&1 &

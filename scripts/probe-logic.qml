@@ -4,6 +4,9 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Bluetooth as Bt
+import Quickshell.Services.Mpris as Mp
+import Quickshell.Services.SystemTray as St
+import Quickshell.Services.UPower as Up
 import "config"
 import "services"
 import "modules/bar"
@@ -24,6 +27,7 @@ ShellRoot {
     property int _failures: 0
     property int _checks: 0
     property string _sentInlineReply: ""
+    property int _confirmActions: 0
 
     QtObject {
         id: probeAnchor
@@ -48,8 +52,35 @@ ShellRoot {
         }
     }
     Component { id: sliderTrackFactory; SliderTrack {} }
+    Component {
+        id: confirmButtonFactory
+        ConfirmButton { label: "Probe confirm"; onConfirmed: root._confirmActions++ }
+    }
     Component { id: gradientSliderFactory; GradientSlider {} }
+    Component { id: toggleRowFactory; ToggleRow { width: 320; label: "Probe toggle" } }
+    Component { id: controlRowFactory; ControlRow { width: 320; title: "Probe control" } }
+    Component { id: inlineOptionFactory; InlineOptionRow { width: 320; label: "Probe option" } }
+    Component { id: swatchRowFactory; SwatchRow { options: [{ name: "Probe accent" }] } }
+    Component {
+        id: choiceChipFactory
+        ChoiceChipRow {
+            width: 320
+            label: "Probe choice"
+            currentValue: "a"
+            model: [{ value: "a", label: "A" }, { value: "b", label: "B" }]
+        }
+    }
+    Component { id: quickSliderFactory; QuickSlider { width: 320; accessibleName: "Audio" } }
+    Component {
+        id: scrollListFactory
+        ShellListView {
+            width: 100; height: 96
+            model: 20
+            delegate: Rectangle { width: 100; height: 24 }
+        }
+    }
     Component { id: boundedProcessFactory; BoundedProcess {} }
+    Component { id: persistedFileFactory; PersistedFile { writeAllowed: false } }
     Component { id: niriBackendFactory; CompositorNiri {} }
     Component { id: processFactory; Process {} }
     Component {
@@ -66,6 +97,9 @@ ShellRoot {
     }
     Component { id: supervisedProcessFactory; SupervisedProcess {} }
     Component { id: barUnderlineFactory; BarUnderline {} }
+    Component { id: barLeftFactory; Item { property bool show: true; implicitWidth: 240; implicitHeight: 24 } }
+    Component { id: barCenterFactory; Item { property bool show: true; implicitWidth: 120; implicitHeight: 24 } }
+    Component { id: barRightFactory; Item { property bool show: true; implicitWidth: 60; implicitHeight: 24 } }
     Component {
         id: selectRowFactory
         SelectRow {
@@ -81,6 +115,51 @@ ShellRoot {
     Component { id: rollingTextFactory; RollingText { visible: true; text: "one" } }
     Component { id: collapsingTextFactory; CollapsingText { animate: false; tabularDigits: true; reserveText: ":00" } }
     Component { id: clockFactory; Clock { screen: null } }
+    Component { id: updatesWidgetFactory; UpdatesWidget { screen: null } }
+    Component {
+        id: trayItemFactory
+        QtObject {
+            property string id: ""
+            property string title: ""
+            property string tooltipTitle: ""
+            property string tooltipDescription: "Probe tooltip"
+            property string icon: ""
+            property int status: St.Status.Active
+            property bool onlyMenu: false
+            property bool hasMenu: false
+            property QtObject menu: null
+            property int activations: 0
+            function activate(): void { activations++ }
+            function secondaryActivate(): void {}
+            function scroll(delta: int, horizontal: bool): void {}
+        }
+    }
+    Component {
+        id: trayWidgetFactory
+        TrayWidget { trayModel: root._trayProbeItems; barActive: false; height: 36 }
+    }
+    FileView {
+        id: trayIconFixture
+        path: ConfigStore.directory + "/tray-probe.svg"
+        blockWrites: true
+        printErrors: false
+    }
+    FileView {
+        id: notificationDiskFixture
+        path: ConfigStore.notificationsPath
+        blockLoading: true
+        blockAllReads: true
+        blockWrites: true
+        printErrors: false
+    }
+    FileView {
+        id: persistenceGuardFixture
+        path: ConfigStore.directory + "/persistence-guard-probe.json"
+        blockLoading: true
+        blockAllReads: true
+        blockWrites: true
+        printErrors: false
+    }
     Component { id: pulseLoopFactory; PulseLoop {} }
     Component {
         id: windowTitleFactory
@@ -109,7 +188,6 @@ ShellRoot {
             shown: true
             inSpecial: false
             urgent: false
-            menuTargets: false
             barActive: true
             paging: false
             monitorReady: true
@@ -189,7 +267,175 @@ ShellRoot {
         return false
     }
 
+    function _checkAccessibleControls(): void {
+        const secondsWas = ShellSettings.showSeconds
+        ShellSettings.setValue("showSeconds", false)
+        const toggle = toggleRowFactory.createObject(root, { key: "showSeconds" })
+        toggle.Accessible.toggleAction()
+        root._check(ShellSettings.showSeconds && toggle.checked && toggle.Accessible.checked,
+            "accessible checkbox toggles persist through the settings setter")
+        toggle.enabled = false
+        toggle.Accessible.toggleAction()
+        root._check(ShellSettings.showSeconds,
+            "a disabled checkbox rejects accessible toggle actions")
+        toggle.enabled = true
+        toggle.available = false
+        toggle.Accessible.toggleAction()
+        root._check(!ShellSettings.showSeconds && !toggle.checked,
+            "an unavailable checked setting can still be switched off accessibly")
+        toggle.Accessible.toggleAction()
+        root._check(!ShellSettings.showSeconds,
+            "an unavailable unchecked setting cannot be switched on accessibly")
+        toggle.available = true
+        toggle.Accessible.pressAction()
+        root._check(ShellSettings.showSeconds && toggle.checked,
+            "accessible checkbox press and toggle actions share the settings path")
+        toggle.destroy()
+        ShellSettings.setValue("showSeconds", secondsWas)
+
+        const control = controlRowFactory.createObject(root, { showSwitch: true })
+        let activations = 0
+        control.activated.connect(() => { activations++; control.active = !control.active })
+        control.Accessible.toggleAction()
+        root._check(activations === 1 && control.active && control.Accessible.checked,
+            "accessible switch toggles call the control's activation handler")
+        control.enabled = false
+        control.Accessible.toggleAction()
+        control.enabled = true
+        control.available = false
+        control.Accessible.toggleAction()
+        control.available = true
+        control.passive = true
+        control.Accessible.toggleAction()
+        root._check(activations === 1,
+            "disabled, unavailable and passive switches reject accessible toggles")
+        control.passive = false
+        control.showSwitch = false
+        control.Accessible.toggleAction()
+        root._check(activations === 1,
+            "a button control does not respond to checkbox toggle actions")
+        control.Accessible.pressAction()
+        root._check(activations === 2,
+            "a button control remains accessible through its press action")
+        control.badgeCount = 2
+        let badgeActions = 0
+        control.badgeActivated.connect(() => badgeActions++)
+        const badge = root._findTrayNode(control, item =>
+            item.Accessible.name === "2 missed notifications")
+        root._check(badge !== null, "a notification badge exposes its accessible action")
+        if (badge !== null) {
+            badge.Accessible.pressAction()
+            root._check(badgeActions === 1, "an enabled notification badge opens its destination")
+            control.enabled = false
+            badge.Accessible.pressAction()
+            control.enabled = true
+            control.available = false
+            badge.Accessible.pressAction()
+            control.available = true
+            control.passive = true
+            badge.Accessible.pressAction()
+            root._check(badgeActions === 1,
+                "disabled, unavailable and passive rows reject accessible badge actions")
+            control.passive = false
+            control.badgeCount = 0
+            badge.Accessible.pressAction()
+            root._check(badgeActions === 1,
+                "a removed notification badge rejects its retained accessible action")
+        }
+        control.destroy()
+
+        const option = inlineOptionFactory.createObject(root, { accessiblePrefix: "Probe choice" })
+        let selections = 0
+        option.triggered.connect(() => { selections++; option.selected = true })
+        option.Accessible.toggleAction()
+        root._check(selections === 1 && option.selected && option.Accessible.checked,
+            "accessible radio toggles select an inline option")
+        option.Accessible.toggleAction()
+        root._check(selections === 1 && option.selected,
+            "toggling a selected inline radio does not deselect or retrigger it")
+        option.selected = false
+        option.enabled = false
+        option.Accessible.toggleAction()
+        option.enabled = true
+        option.interactive = false
+        option.Accessible.toggleAction()
+        option.interactive = true
+        option.accessiblePrefix = ""
+        option.Accessible.toggleAction()
+        root._check(selections === 1 && !option.selected,
+            "disabled, non-interactive and button options reject radio toggles")
+        option.destroy()
+
+        const swatches = swatchRowFactory.createObject(root)
+        let picks = 0
+        swatches.picked.connect(index => { picks++; swatches.activeIndex = index })
+        const swatch = root._findTrayNode(swatches, item => item.name === "Probe accent")
+        root._check(swatch !== null, "the accent fixture creates an accessible swatch")
+        if (swatch !== null) {
+            swatch.Accessible.toggleAction()
+            root._check(picks === 1 && swatches.activeIndex === 0 && swatch.Accessible.checked,
+                "accessible radio toggles select an accent swatch")
+            swatch.Accessible.toggleAction()
+            swatches.activeIndex = -1
+            swatches.enabled = false
+            swatch.Accessible.toggleAction()
+            root._check(picks === 1 && swatches.activeIndex === -1,
+                "selected and disabled swatches reject additional toggle actions")
+        }
+        swatches.destroy()
+
+        const choices = choiceChipFactory.createObject(root)
+        let choicesMade = 0
+        choices.chosen.connect(value => { choicesMade++; choices.currentValue = value })
+        const chip = root._findTrayNode(choices, item => item.optionLabel === "B")
+        root._check(chip !== null, "the accessible choice chip fixture creates its options")
+        if (chip !== null) {
+            chip.Accessible.toggleAction()
+            root._check(choicesMade === 1 && choices.currentValue === "b" && chip.Accessible.checked,
+                "accessible radio toggles select a choice chip")
+            chip.Accessible.toggleAction()
+            choices.currentValue = "a"
+            choices.enabled = false
+            chip.Accessible.toggleAction()
+            root._check(choicesMade === 1 && choices.currentValue === "a",
+                "selected and disabled choice chips reject additional toggle actions")
+        }
+        choices.destroy()
+
+        const quick = quickSliderFactory.createObject(root, { expandable: true })
+        let expansions = 0
+        quick.expandToggled.connect(() => { expansions++; quick.expanded = !quick.expanded })
+        const chevron = root._findTrayNode(quick, item => item.Accessible.name === "Show audio options")
+        root._check(chevron !== null, "quick slider expansion has a named accessible button")
+        if (chevron !== null) {
+            chevron.Accessible.pressAction()
+            root._check(expansions === 1 && quick.expanded
+                    && chevron.Accessible.name === "Hide audio options",
+                "accessible quick slider expansion updates the action name")
+            quick.enabled = false
+            chevron.Accessible.pressAction()
+            quick.enabled = true
+            quick.expandable = false
+            chevron.Accessible.pressAction()
+            root._check(expansions === 1,
+                "disabled and non-expandable quick sliders reject accessible expansion")
+        }
+        quick.destroy()
+    }
+
     function _run(): void {
+        root._checkAccessibleControls()
+        const pageMovedWas = Scroll._page.movedAt
+        const scrollList = scrollListFactory.createObject(root)
+        Scroll._page.movedAt = 0
+        scrollList.contentY = 24
+        root._check(Scroll.wheelBelongsToPage(0),
+            "scrolling a nested list keeps the gesture on the page when a slider passes under the pointer")
+        Scroll._page.movedAt = Date.now() - Scroll.pageLatchMs - 1
+        root._check(!Scroll.wheelBelongsToPage(0),
+            "a settled list releases its scroll gesture for deliberate slider adjustment")
+        scrollList.destroy()
+        Scroll._page.movedAt = pageMovedWas
         const palette = MatugenTheme._parsePalette(
             "{\"background\":\"#101116\",\"surface\":\"#1d1f26\","
             + "\"text\":\"#e9eaf0\",\"subtext\":\"#a0a4b0\","
@@ -404,11 +650,30 @@ ShellRoot {
             "a reversed jump staggers by distance travelled, not by index")
         root._check(workspaceStrip._handoffDelayAt(50, 50, 50) === 0,
             "a hand-off with no distance to cover waits for nothing")
+        const targetPage = workspaceStrip.visibleIds.join(",")
+        workspaceStrip._displayIds = [999999]
+        workspaceStrip._displayActiveId = 999999
+        root._check(workspaceStrip._displayIdsKey === "999999"
+                && workspaceStrip._displayIndexById[999999] === 0
+                && workspaceStrip.activeIndex === 0
+                && workspaceStrip.visibleIds.join(",") === targetPage,
+            "workspace page keeps its drawn cells and marker separate from the incoming page")
+        workspaceStrip._initialized = true
+        workspaceStrip._displayIds = workspaceStrip.visibleIds.slice(0, 1)
+        workspaceStrip._displayActiveId = 999999
+        workspaceStrip.visibleIdsChanged()
+        root._check(workspaceStrip._displayIdsKey === targetPage
+                && workspaceStrip._displayActiveId === workspaceStrip.activeId,
+            "a page that grows without changing its first workspace also commits the active marker")
+        workspaceStrip._displayIds = [999999]
+        workspaceStrip._displayActiveId = 999999
         workspaceStrip.opacity = 0.4
         workspaceStrip._pageShift = 8
         workspaceStrip._settleGroupMotion()
-        root._check(workspaceStrip.opacity === 1 && workspaceStrip._pageShift === 0,
-            "retiring workspace page motion restores the settled layout")
+        root._check(workspaceStrip.opacity === 1 && workspaceStrip._pageShift === 0
+                && workspaceStrip._displayIdsKey === targetPage
+                && workspaceStrip._displayActiveId === workspaceStrip.activeId,
+            "retiring workspace page motion restores the target page and settled layout")
         MenuState.requestWarm(workspaceStrip, null)
         root._check(MenuState.warmRequested
                 && MenuState.warmSource === workspaceStrip,
@@ -591,6 +856,18 @@ ShellRoot {
         root._check(!barClock._calendarOpen, "closing the calendar clears the clock's active state")
         barClock.destroy()
 
+        const updateBadge = updatesWidgetFactory.createObject(root)
+        updateBadge.show = true
+        updateBadge.busy = true
+        root._check(updateBadge.interactive,
+            "package details remain reachable while an update check is running")
+        updateBadge.activated()
+        root._check(MenuState.settingsActive && MenuState.settingsSection === "updates"
+                && MenuState.anchorSource === updateBadge,
+            "the system updates badge opens its details anchored to the triggering widget")
+        MenuState.close()
+        updateBadge.destroy()
+
         const underline = barUnderlineFactory.createObject(root)
         root._check(underline !== null, "the reactive underline builds")
         if (underline) {
@@ -643,6 +920,28 @@ ShellRoot {
                 && !OsdBarState._kindAllowedByFilter("microphone", "brightness"),
             "microphone feedback follows the volume filter")
 
+        const holdOpenWas = OverlayCoordinator._openCount
+        const holdListWas = Notifications.list
+        const holdCriticalWas = Notifications.lastCritical
+        Notifications.list = []
+        OverlayCoordinator._openCount = 1
+        const heldWhileEmpty = OverlayCoordinator.notificationsHeld
+        Notifications.list = [{ notification: { id: 91 }, id: 91, time: 1000 }]
+        const heldOnArrival = OverlayCoordinator.notificationsHeld
+        OverlayCoordinator._openCount = 0
+        const releasedOnClose = !OverlayCoordinator.notificationsHeld
+        OverlayCoordinator._openCount = 1
+        const showingStays = !OverlayCoordinator.notificationsHeld
+        Notifications.list = []
+        const heldAfterLast = OverlayCoordinator.notificationsHeld
+        Notifications.lastCritical = true
+        const criticalReleases = !OverlayCoordinator.notificationsHeld
+        Notifications.lastCritical = holdCriticalWas
+        OverlayCoordinator._openCount = holdOpenWas
+        Notifications.list = holdListWas
+        root._check(heldWhileEmpty && heldOnArrival && releasedOnClose && showingStays
+                && heldAfterLast && criticalReleases,
+            "a new notification waits for an open popup unless cards are already showing or it is critical")
         root._check(!OverlayCoordinator._environmentBlocksControls(false, false)
                 && OverlayCoordinator._environmentBlocksControls(true, false)
                 && OverlayCoordinator._environmentBlocksControls(false, true),
@@ -677,6 +976,16 @@ ShellRoot {
         root._check(settingsNav !== null,
             "the internal settings navigation is available to the behavior probe")
         if (settingsNav !== null) {
+            const navPinnedWas = ShellSettings.settingsNavPinned
+            ShellSettings.settingsNavPinned = false
+            settingsNav._expandedGroup = 0
+            const openHeight = settingsNav.implicitHeight
+            let heightAtSignal = -1
+            settingsNav.groupToggled.connect(() => heightAtSignal = settingsNav.implicitHeight)
+            settingsNav._toggleGroup(0)
+            root._check(heightAtSignal === openHeight
+                    && settingsNav.implicitHeight < openHeight,
+                "settings navigation arms panel motion before collapsing a group")
             settingsNav._expandedGroup = 0
             settingsNav._syncExpansionMode(false, "updates")
             root._check(settingsNav._expandedGroup
@@ -686,6 +995,7 @@ ShellRoot {
             settingsNav._queueReveal(-1)
             root._check(settingsNav._pendingRevealGroup === 3,
                 "viewport resize frames preserve an explicit settings group reveal")
+            ShellSettings.settingsNavPinned = navPinnedWas
             settingsNav.destroy()
         }
         settingsNavComponent.destroy()
@@ -717,6 +1027,43 @@ ShellRoot {
         if (firstSelect) firstSelect.destroy()
         if (secondSelect) secondSelect.destroy()
 
+        const confirmButton = confirmButtonFactory.createObject(root)
+        root._confirmActions = 0
+        confirmButton.request()
+        root._check(confirmButton.armed && root._confirmActions === 0,
+            "a confirmation button arms before running its action")
+        confirmButton.request()
+        root._check(confirmButton.armed && root._confirmActions === 0,
+            "a double-click cannot confirm a destructive action")
+        confirmButton._armedAtMs = Date.now() - Metrics.confirmGuardMs - 1
+        confirmButton.request()
+        root._check(!confirmButton.armed && root._confirmActions === 1,
+            "a deliberate second request confirms exactly once")
+        confirmButton.shown = false
+        confirmButton.request()
+        root._check(!confirmButton.armed && !confirmButton._interactive
+                && root._confirmActions === 1,
+            "a fading-out confirmation button rejects accessibility activation")
+        confirmButton.shown = true
+        confirmButton.visible = false
+        confirmButton.request()
+        root._check(!confirmButton.armed && !confirmButton._interactive
+                && root._confirmActions === 1,
+            "an invisible confirmation button cannot arm through accessibility")
+        confirmButton.visible = true
+        confirmButton.request()
+        confirmButton.busy = true
+        confirmButton.request()
+        root._check(!confirmButton.armed && root._confirmActions === 1,
+            "a busy confirmation button disarms and rejects new requests")
+        confirmButton.busy = false
+        confirmButton.request()
+        confirmButton.enabled = false
+        confirmButton.request()
+        root._check(!confirmButton.armed && root._confirmActions === 1,
+            "a disabled confirmation button disarms and rejects new requests")
+        confirmButton.destroy()
+
         // available is temp>0, which drops to 0 every time the service is
         // released; a control gated on it flickers on every menu open
         const tempPathWas = CpuTemp._sensorPath
@@ -746,6 +1093,32 @@ ShellRoot {
             === ":/sys/class/hwmon/hwmon1/temp1_input:/sys/class/thermal/thermal_zone0/temp:",
             "every failed sensor stays skipped, so two bad sensors cannot ping-pong")
         CpuTemp._badSensorPaths = badSensorsWas
+
+        const tempStartedWas = CpuTemp._started
+        const tempGenerationWas = CpuTemp._detectGeneration
+        const tempWarningWas = ShellSettings.osdTempWarn
+        CpuTemp._started = false
+        CpuTemp._sensorPath = ""
+        CpuTemp._probeComplete = true
+        CpuTemp._rejectSensor("/sys/class/hwmon/hwmon1/temp1_input")
+        root._check(!CpuTemp._sensorRetry.running,
+            "missing CPU sensors do not poll while temperature monitoring is inactive")
+        CpuTemp._sensorRetry.triggered()
+        root._check(CpuTemp.sensorMissing && CpuTemp._badSensorPaths === "",
+            "a delayed sensor retry reconsiders failed paths without flashing temperature controls")
+        ShellSettings.osdTempWarn = true
+        CpuTemp._started = true
+        root._check(CpuTemp._sensorRetry.running,
+            "missing CPU sensors schedule recovery while temperature warnings need readings")
+        CpuTemp._started = false
+        root._check(!CpuTemp._sensorRetry.running,
+            "stopping temperature monitoring cancels the sensor recovery timer")
+        CpuTemp._sensorPath = tempPathWas
+        CpuTemp._probeComplete = tempProbeWas
+        CpuTemp._badSensorPaths = badSensorsWas
+        CpuTemp._detectGeneration = tempGenerationWas
+        ShellSettings.osdTempWarn = tempWarningWas
+        CpuTemp._started = tempStartedWas
 
         const shiftWas = ShellSettings.workspaceShift
         const reduceMotionWas = ShellSettings.reduceMotion
@@ -1002,9 +1375,9 @@ ShellRoot {
         ShellSettings.barFloating = false
         ShellSettings.dotStyle = "none"
         root._check(ShellSettings._dotHidden("surface", "barWidth") === true
-                && ShellSettings._dotHidden("separators", "dotOpacity") === true
+                && ShellSettings._dotHidden("separators", "barSeparatorMode") === true
                 && ShellSettings._dotHidden("separators", "dotStyle") === false,
-            "a docked bar hides its width and dots set to none hide their opacity")
+            "a docked bar hides its width and dots set to none hide their placement")
         ShellSettings.barFloating = savedFloating
         ShellSettings.dotStyle = savedDots
 
@@ -1044,6 +1417,20 @@ ShellRoot {
         root._check(ShellSettings.showSeconds === savedSeconds
                 && ShellSettings.showWindowTitle === savedTitle,
             "a key removed by hand falls back to its default")
+        ShellSettings._applyText("{unfinished settings edit")
+        root._check(ShellSettings._readError.length > 0
+                && !ShellSettings.flushForUpdate()
+                && ShellSettings.showSeconds === savedSeconds,
+            "a malformed settings edit keeps current values and pauses saving")
+        ShellSettings.setValue("showSeconds", !savedSeconds)
+        ShellSettings._applyText(beforeEdit)
+        root._check(ShellSettings._readError.length === 0
+                && ShellSettings.showSeconds === savedSeconds,
+            "restoring the exact previous settings file clears its error and reapplies disk values")
+        root._check(ShellSettings.flushForUpdate(),
+            "restoring the exact previous settings file re-enables saving")
+        // recover the remaining probe even if the unchanged-file shortcut failed
+        ShellSettings._applyText(beforeEdit.slice(0, -1) + "\n}")
         ShellSettings._loaded = savedLoaded
 
         // the visualizer table drives a live cava config; a wrong cell is a silent cost change
@@ -1497,15 +1884,6 @@ ShellRoot {
         root._checkCoerce("calendarWeekStart", "bad", "monday", "invalid calendar week starts reset")
         root._checkCoerce("calendarWeekNumbers", false, false, "calendar week numbers can be hidden")
 
-        root._check(CalendarState._canonicalMarkKey("2024-2-29") === "2024-2-29",
-            "calendar accepts leap day")
-        root._check(CalendarState._canonicalMarkKey("2023-2-29") === "",
-            "calendar rejects non-leap day")
-        root._check(CalendarState._canonicalMarkKey("2024-13-1") === "",
-            "calendar rejects invalid month")
-        root._check(CalendarState._canonicalMarkKey("2026-09-05") === CalendarState.markKey(2026, 8, 5),
-            "a zero-padded mark still names the day the calendar draws")
-
         CalendarState.toggleAt(probeAnchor.menuAnchorX, null, probeAnchor)
         root._check(CalendarState.effectiveAnchorX === 42,
             "calendar reads its live popup anchor")
@@ -1672,6 +2050,37 @@ ShellRoot {
                 && Compositor.windowTitle("* notes") === "* notes"
                 && Compositor.windowTitle("\u2733") === "\u2733",
             "unsaved markers and a lone glyph stay in the window title")
+        const hypr = Compositor.isHyprland ? Compositor._be : null
+        if (hypr) {
+            const seqWas = hypr._eventSeq
+            hypr._seqAtFlip = -1
+            hypr._silentFlips = 0
+            for (let i = 0; i < 4; i++) {
+                hypr._eventSeq++
+                hypr._noteFocusFlip()
+            }
+            const liveOk = !hypr._socketDead
+            for (let i = 0; i < 3; i++) hypr._noteFocusFlip()
+            root._check(liveOk && hypr._socketDead,
+                "focus flips with socket events stay healthy; three silent flips mark the event socket dead")
+            hypr._socketDead = false
+            hypr._silentFlips = 0
+            hypr._seqAtFlip = -1
+            hypr._eventSeq = seqWas
+            const tickWas = hypr._layoutTick
+            hypr._eventConn.onRawEvent({ name: "workspace", data: "1" })
+            const afterV1 = hypr._layoutTick
+            hypr._eventConn.onRawEvent({ name: "workspacev2", data: "1,1" })
+            root._check(afterV1 === tickWas && hypr._layoutTick === tickWas + 1,
+                "a workspace switch rebuilds the models once, on the v2 event only")
+            hypr._eventSeq = seqWas
+            root._check(hypr._wsNumber({ id: 3, name: "3" }) === 3
+                    && hypr._wsNumber({ id: -98, name: "special:magic" }) === -98
+                    && hypr._wsNumber({ address: "4", name: "4" }) === 4
+                    && hypr._wsNumber({ address: "special:magic", name: "special:magic" }) === -1
+                    && hypr._wsNumber(null) === -1,
+                "a window's workspace resolves from a numeric id or a 0.57 numbered address")
+        }
         root._check(SafeText.lastNonEmptyLine("warning: retrying\n\nfatal: no route\n\n", "fallback") === "fatal: no route",
             "lastNonEmptyLine skips trailing blank lines")
         root._check(SafeText.lastNonEmptyLine("", "fallback") === "fallback"
@@ -1742,6 +2151,20 @@ ShellRoot {
         root._check(Media.artSource("http://example.invalid/cover.jpg") === "",
             "plaintext artwork urls are refused at either setting")
         ShellSettings.mediaRemoteArt = remoteArtWas
+        root._check(/^[0-9a-f]{32}\.img$/.test(Media.remoteArtName("https://example.invalid/a b.jpg")),
+            "a saved cover is named by the url's hash, never by the url")
+        const artFilesWas = Media._artFiles
+        Media._artFetched("https://example.invalid/fetched.jpg", true)
+        const savedArt = Media._artFiles["https://example.invalid/fetched.jpg"] ?? ""
+        root._check(savedArt.startsWith("file://")
+                && savedArt.endsWith("/" + Media.remoteArtName("https://example.invalid/fetched.jpg")),
+            "remote artwork reaches the view only as the file curl saved")
+        Media._artFetched("https://example.invalid/next.jpg", true,
+            [Media.remoteArtName("https://example.invalid/fetched.jpg")])
+        root._check(Media._artFiles["https://example.invalid/fetched.jpg"] === undefined
+                && Media._artFiles["https://example.invalid/next.jpg"] !== undefined,
+            "evicted cover art loses its cached URL so revisiting it can fetch again")
+        Media._artFiles = artFilesWas
         root._check(Media.artSource("file://example.invalid/cover.jpg") === "",
             "media service rejects remote file artwork")
         root._check(Media.artSource("https://example.invalid/bad\ncover.jpg") === "",
@@ -1794,6 +2217,22 @@ ShellRoot {
                 && !Media.positionDemand(false, true, true)
                 && Media.positionDemand(true, false, true),
             "media progress pauses with a concealed bar but stays live for the menu")
+        const emptyPlayer = { dbusName: "browser", playbackState: Mp.MprisPlaybackState.Stopped,
+            trackTitle: "" }
+        const loadedPlayer = { dbusName: "music", playbackState: Mp.MprisPlaybackState.Stopped,
+            trackTitle: "Ready to resume" }
+        const pausedPlayer = { dbusName: "video", playbackState: Mp.MprisPlaybackState.Paused,
+            trackTitle: "" }
+        const playable = Media.playablePlayers([null, emptyPlayer, loadedPlayer, pausedPlayer])
+        root._check(playable.length === 2 && playable[0] === loadedPlayer
+                && playable[1] === pausedPlayer,
+            "the media switcher retains a stopped player with a loaded track but skips empty stopped players")
+        const mirrorPlayer = { dbusName: "org.mpris.MediaPlayer2.playerctld",
+            playbackState: Mp.MprisPlaybackState.Playing, trackTitle: "Mirror" }
+        root._check(Media.playablePlayers([mirrorPlayer, loadedPlayer])[0] === loadedPlayer
+                && Media.playablePlayers([mirrorPlayer]).length === 1
+                && Media.playablePlayers([]).length === 0,
+            "the media switcher hides duplicate mirrors while retaining a mirror-only session")
         root._check(Audio._out._clampVolume(NaN) === 0
                 && Audio._out._clampVolume(Infinity) === 0
                 && Audio._out._clampVolume(1.5) === 1,
@@ -1826,12 +2265,28 @@ ShellRoot {
         root._check(track._posToVal(0) === 0 && track._posToVal(100) === 1,
             "slider inset endpoints preserve the full range")
         track.min = 0.5; track.max = 3; track.step = 0.05
+        root._check(track.minimumValue === 0.5 && track.maximumValue === 3
+                && track.stepSize === 0.05,
+            "slider accessibility exposes its live bounds and increment")
         root._check(String(track._snap(1.9)) === "1.9" && String(track._snap(0.96)) === "0.95",
             "slider steps land on the grid without float residue")
         track.min = 0; track.max = 1; track.step = 0.1
+        track.Accessible.increaseAction()
+        root._check(track.shownValue === 0.1 && trackChanged === 0.1,
+            "accessible slider increase uses the configured increment")
+        track.Accessible.decreaseAction()
+        root._check(track.shownValue === 0 && trackChanged === 0,
+            "accessible slider decrease uses the configured increment")
+        track.step = 0
+        track.max = 200
+        track.Accessible.increaseAction()
+        root._check(track.stepSize === 2 && track.shownValue === 2 && trackChanged === 2,
+            "continuous slider accessibility reports the effective nudge increment")
+        track.Accessible.decreaseAction()
+        track.max = 1; track.step = 0.1
         track.enabled = false
         trackChanged = -1
-        track.nudge(1, 1)
+        track.Accessible.increaseAction()
         root._check(track.shownValue === 0 && trackChanged === -1,
             "disabled slider ignores accessibility and programmatic nudges")
         track.enabled = true
@@ -1852,6 +2307,23 @@ ShellRoot {
         root._check(Math.abs(gradient._clamped(2) - 359 / 360) < 0.000001
                 && gradient._clamped(-1) === 0,
             "wrapping colour slider clamps to its last distinct value")
+        root._check(gradient.minimumValue === 0 && gradient.maximumValue === 359
+                && gradient.stepSize === 1,
+            "hue slider accessibility exposes distinct degree bounds")
+        gradient.position = 359 / 360
+        gradient.Accessible.increaseAction()
+        root._check(near(picked, 0),
+            "accessible hue increase wraps past the final degree")
+        gradient.wraps = false; gradient.displayScale = 100; gradient.position = 0.99
+        gradient.Accessible.increaseAction()
+        root._check(gradient.maximumValue === 100 && near(picked, 1),
+            "non-wrapping colour slider accessibility reaches its inclusive maximum")
+        gradient.enabled = false
+        picked = -1
+        gradient.Accessible.decreaseAction()
+        root._check(picked === -1,
+            "disabled colour sliders reject accessible changes")
+        gradient.enabled = true
         gradient.interactive = false
         picked = -1
         gradient._nudge(1, 1)
@@ -1997,11 +2469,63 @@ ShellRoot {
         SysInfo._applyCpuStat("cpu  150 0 150 900 0 0 0 0 900 900\n")
         root._check(Math.abs(SysInfo.cpuPct - 0.5) < 0.001,
             "cpu load leaves out guest time already counted in user")
+        SysInfo._applyCpuStat("cpu  1 0 1 8 0 0 0 0\n")
+        root._check(!SysInfo.cpuReady && SysInfo.cpuPct === 0,
+            "CPU counter rollback discards the stale percentage and re-primes")
+        SysInfo._applyCpuStat("cpu  2 0 2 16 0 0 0 0\n")
+        root._check(SysInfo.cpuReady && Math.abs(SysInfo.cpuPct - 0.2) < 0.001,
+            "CPU readings recover after a counter reset")
+        SysInfo._applyCpuStat("cpu  4 0 4 15 0 0 0 0\n")
+        root._check(!SysInfo.cpuReady && SysInfo.cpuPct === 0,
+            "an idle-counter rollback cannot flash a bogus 100 percent CPU load")
+        SysInfo._applyCpuStat("cpu  broken 0 3 14 0 0 0 0\n")
+        root._check(!SysInfo.cpuReady && SysInfo._lastCpuTotal === 0,
+            "malformed CPU counters clear the sample rather than partially parsing it")
+        SysInfo._applyCpuStat("cpu  10 0 10 80 0 0 0 0\n")
+        root._check(!SysInfo.cpuReady,
+            "the first valid CPU sample after a failed read is a baseline")
         SysInfo._lastCpuTotal = cpuTotalWas
         SysInfo._lastCpuIdle = cpuIdleWas
         SysInfo.cpuPct = cpuPctWas
         SysInfo.cpuReady = cpuReadyWas
         SysInfo._active = cpuActiveWas
+
+        const memTotalWas = SysInfo.memTotalKb, memAvailWas = SysInfo.memAvailKb
+        SysInfo._active = true
+        SysInfo._applyMeminfo("MemTotal: 100 kB\nMemAvailable: 150 kB\n")
+        root._check(SysInfo.memPct === 0 && SysInfo.memAvailKb === 100,
+            "inconsistent memory samples cannot produce a negative percentage")
+        SysInfo._applyMeminfo("MemTotal: 100 kB\n")
+        root._check(SysInfo.memTotalKb === 0 && SysInfo.memPct === 0,
+            "missing memory fields retire the previous reading")
+        SysInfo.memTotalKb = memTotalWas
+        SysInfo.memAvailKb = memAvailWas
+        SysInfo._active = cpuActiveWas
+
+        const brightnessToolsWas = SystemTools._tools
+        const brightnessErrorWas = Brightness.lastError
+        const brightnessQueuedWas = Brightness._applyQueued
+        SystemTools._tools = Object.assign({}, brightnessToolsWas, { brightnessctl: true })
+        Brightness.lastError = "Current display error"
+        Brightness._applyQueued = true
+        Brightness._acceptWriteResult(Brightness._device + "-old", 1, false, "Old display error")
+        root._check(Brightness.lastError === "Current display error" && Brightness._applyQueued,
+            "a completed write to the old display cannot overwrite the new display's status")
+        Brightness._acceptWriteResult(Brightness._device + "-old", -1, true, "")
+        root._check(Brightness.lastError === "Current display error" && Brightness._applyQueued,
+            "an old display's timeout preserves the new display's queued brightness write")
+        Brightness._acceptWriteResult(Brightness._device, 1, false, "Permission denied\n")
+        root._check(Brightness.lastError === "Permission denied",
+            "brightness failures on the current display remain visible")
+        Brightness._acceptWriteResult(Brightness._device, -1, true, "")
+        root._check(Brightness.lastError === "Brightness write timed out",
+            "a timeout on the current display remains a failure")
+        Brightness._acceptWriteResult(Brightness._device, 0, false, "")
+        root._check(Brightness.lastError === "",
+            "a successful write on the current display clears its previous error")
+        Brightness.lastError = brightnessErrorWas
+        Brightness._applyQueued = brightnessQueuedWas
+        SystemTools._tools = brightnessToolsWas
 
         const niri = niriBackendFactory.createObject(root)
         niri._onLine(JSON.stringify({ WorkspacesChanged: { workspaces: [
@@ -2196,6 +2720,36 @@ ShellRoot {
             "two half-notches accumulate into one step")
         root._check(Scroll._processDelta(600, wheelKey, 120, 2, 0) === 2,
             "one wheel burst emits at most the step ceiling")
+        root._check(Scroll._processDelta(1, wheelKey, 120, 2, 0) === 0,
+            "a capped wheel burst leaves no queued whole steps for the next movement")
+        const remainderKey = "probe-scroll-remainder"
+        root._check(Scroll._processDelta(660, remainderKey, 120, 2, 0) === 2
+                && Scroll._processDelta(59, remainderKey, 120, 2, 0) === 0
+                && Scroll._processDelta(1, remainderKey, 120, 2, 0) === 1,
+            "a capped wheel burst retains its fractional notch")
+        const negativeKey = "probe-scroll-negative"
+        root._check(Scroll._processDelta(-660, negativeKey, 120, 2, 0) === -2
+                && Scroll._processDelta(-59, negativeKey, 120, 2, 0) === 0
+                && Scroll._processDelta(-1, negativeKey, 120, 2, 0) === -1,
+            "negative wheel bursts discard excess whole steps and retain their fraction")
+        const reverseKey = "probe-scroll-reverse"
+        root._check(Scroll._processDelta(60, reverseKey, 60, 1, 0) === 1,
+            "a touchpad can emit a complete notch with no remainder")
+        Scroll._lastSteps[reverseKey] = Date.now()
+        root._check(Scroll._processDelta(-60, reverseKey, 60, 1, 1000) === -1,
+            "a touchpad direction reversal bypasses throttling even with no remainder")
+        Scroll._lastSteps[reverseKey] = Date.now()
+        root._check(Scroll._processDelta(20, reverseKey, 60, 1, 1000) === 0
+                && Scroll._processDelta(40, reverseKey, 60, 1, 1000) === 1,
+            "a touchpad reversal split across events bypasses the previous direction's throttle")
+        const throttleKey = "probe-scroll-throttle"
+        Scroll._lastSteps[throttleKey] = Date.now()
+        root._check(Scroll._processDelta(180, throttleKey, 60, 1, 1000) === 0,
+            "touchpad input respects the interval between steps")
+        Scroll._lastSteps[throttleKey] = Date.now() - 2000
+        root._check(Scroll._processDelta(1, throttleKey, 60, 1, 1000) === 1
+                && Scroll._accums[throttleKey] === 1,
+            "a throttled touchpad burst resumes with one step and no whole-step backlog")
         const notchUp = inverted => ({ angleDelta: { x: 0, y: 120 }, inverted: inverted })
         root._check(Scroll.processLevelWheel(notchUp(false), "probe-level-a") === 1
                 && Scroll.processLevelWheel(notchUp(true), "probe-level-b") === -1
@@ -2503,6 +3057,20 @@ ShellRoot {
         root._check(!NightLight._parseCoord("+9001+18000")
                 && !NightLight._parseCoord("+9000+18001"),
             "night light rejects coordinates beyond the latitude and longitude poles")
+        root._check(NightLight.offStatusAt(NightLight.sunsetHour + 0.5, -5).startsWith("Sunrise ")
+                && NightLight.offStatusAt(NightLight.sunriseHour - 0.5, -5).startsWith("Sunrise ")
+                && NightLight.offStatusAt(NightLight.sunsetHour - 0.25, 3).startsWith("Sunset ")
+                && NightLight.offStatusAt(NightLight._solarNoon, 40) === "",
+            "night light off names the next sun event, sunrise once the sun has set")
+        const vitals = Qt.createComponent("modules/menu/VitalsStrip.qml").createObject(root, { active: false })
+        root._check(vitals !== null
+                && vitals.sizeText(5 * 1048576) === "5.0G"
+                && vitals.sizeText(5.6 * 1048576) === "5.6G"
+                && vitals.sizeText(786 * 1048576) === "786G"
+                && vitals.sizeText(1.2 * 1073741824) === "1.2T"
+                && vitals.sizeText(0) === "" && vitals.sizeText(NaN) === "",
+            "the vitals strip writes sizes in binary units with one decimal below ten")
+        if (vitals) vitals.destroy()
         root._check(NightLight._probeState(0, false, false) === 1
                 && NightLight._probeState(1, false, false) === 0
                 && NightLight._probeState(1, false, true) === 1
@@ -2567,6 +3135,17 @@ ShellRoot {
                 && Battery.normalizedPercent(140, true) === 100
                 && Battery.normalizedPercent(-1, false) === 0,
             "battery percentage normalization is stable before its scale latch and stays bounded")
+        root._check(Battery.statusFor(true, Up.UPowerDeviceState.PendingCharge, false, false) === "not charging"
+                && Battery.statusFor(true, Up.UPowerDeviceState.Discharging, false, false) === "discharging"
+                && Battery.statusFor(true, Up.UPowerDeviceState.Unknown, false, false) === "on AC",
+            "AC power alone does not claim the battery is charging")
+        root._check(Battery.statusFor(true, Up.UPowerDeviceState.FullyCharged, false, false) === "charged"
+                && Battery.statusFor(false, Up.UPowerDeviceState.Charging, false, false) === "",
+            "battery status respects fully charged and absent devices")
+        root._check(Battery.timeText(25, false) === "1m"
+                && Battery.timeText(3601, true) === "+ 1h 1m"
+                && Battery.timeText(Infinity, true) === "" && Battery.timeText(-1, false) === "",
+            "battery estimates round up to a useful minute and reject invalid times")
         root._check(SystemAlerts.batteryWarningLevel(true, true) === "critical"
                 && SystemAlerts.batteryWarningLevel(true, false) === "low"
                 && SystemAlerts.batteryWarningLevel(false, false) === "",
@@ -2741,6 +3320,20 @@ ShellRoot {
             "a widget-order IPC write restores missing keys and removes duplicates")
         ShellSettings.setBarWidgetLayout(ipcLeftWas, ipcCenterWas, ipcRightWas)
 
+        const trayHiddenWas = ShellSettings.trayHidden
+        ShellSettings.trayHidden = ""
+        ShellSettings.setTrayItemHidden("vicinae", true)
+        ShellSettings.setTrayItemHidden("chrome_status,1", true)
+        root._check(ShellSettings.trayItemHidden("chrome_status,1")
+                && ShellSettings.trayHiddenIds.length === 2
+                && ShellSettings.setValue("trayHidden", ShellSettings.trayHidden),
+            "a hidden tray id holding a comma round-trips and passes the schema")
+        ShellSettings.setTrayItemHidden("vicinae", false)
+        root._check(!ShellSettings.trayItemHidden("vicinae")
+                && ShellSettings.trayHiddenIds.length === 1,
+            "showing a tray item removes only that id")
+        ShellSettings.trayHidden = trayHiddenWas
+
         root._check(ShellSettings.constraintOf("barShowClock") === "true|false",
             "a bool key states its constraint")
         root._check(ShellSettings.constraintOf("barSpacing") === "4..24",
@@ -2782,6 +3375,8 @@ ShellRoot {
         NotifWatch.recheck()
         root._check(NotifWatch.conflict === "",
             "a notification-owner recheck clears stale conflict state immediately")
+        root._check(NotifWatch._sandboxed && !NotifWatch._checked,
+            "a sandboxed shell does not report the desktop notification owner as a conflict")
 
         const hues = [0, 30, 90, 150, 210, 270, 330]
         for (let i = 0; i < hues.length; i++) {
@@ -2828,6 +3423,22 @@ ShellRoot {
         root._check(greyAccent.C < 4 && greyBalanced.C < 4
                 && Math.abs(greyBalanced.L - greyAccent.L) < 0.001,
             "a palette with no accent hue is left alone rather than invented")
+
+        const accentBalanceWas = ShellSettings.matugenAccentBalance
+        const sampleAccent = Qt.color("#ff5c1a")
+        ShellSettings.matugenAccentBalance = false
+        const unbalancedSource = Theme.sourcedAccent(sampleAccent)
+        root._check(Math.abs(unbalancedSource.r - sampleAccent.r) < 0.000001
+                && Math.abs(unbalancedSource.g - sampleAccent.g) < 0.000001
+                && Math.abs(unbalancedSource.b - sampleAccent.b) < 0.000001,
+            "wallpaper accent swatches keep the source color when balance is off")
+        ShellSettings.matugenAccentBalance = true
+        const balancedSource = Theme.sourcedAccent(sampleAccent)
+        root._check(Math.abs(balancedSource.r - balancedOnce.r) < 0.000001
+                && Math.abs(balancedSource.g - balancedOnce.g) < 0.000001
+                && Math.abs(balancedSource.b - balancedOnce.b) < 0.000001,
+            "wallpaper accent swatches use the applied color when balance is on")
+        ShellSettings.matugenAccentBalance = accentBalanceWas
 
         root._check(Network._linkPriority(true, true) > Network._linkPriority(false, undefined)
                 && Network._linkPriority(true, undefined) > Network._linkPriority(false, undefined),
@@ -2917,7 +3528,9 @@ ShellRoot {
                 && Notifications.updateTimeFor(53) === 2400,
             "a notification update records its card timestamp without cloning the map")
 
-        const replacementNotification = { id: 53, tracked: true }
+        const replacementNotification = { id: 53, tracked: true, transient: false,
+            appName: "Probe", summary: "Replacement", body: "", urgency: 1,
+            appIcon: "", desktopEntry: "" }
         const replacementIsNew = Notifications._upsertActiveNotification(
             replacementNotification, 2500)
         root._check(replacementIsNew
@@ -2930,6 +3543,16 @@ ShellRoot {
         Notifications._seen = { "53": true }
         Notifications._times = { "53": 2300 }
         Notifications._updateTimes = { "53": 2500 }
+        const replacementList = Notifications.list
+        Notifications._onClosed(53, liveNotification)
+        Notifications._onClosed(53, liveNotification)
+        Notifications._onClosed(53, { id: 53 })
+        root._check(Notifications.list === replacementList
+                && Notifications._seen["53"] === true
+                && Notifications._times["53"] === 2300
+                && Notifications._updateTimes["53"] === 2500
+                && Notifications.historyCount === 0,
+            "late, duplicate and unknown closes cannot retire a replacement notification or its state")
         Notifications._prependHistory({
             id: 53, appName: "Probe", appIcon: "", desktopEntry: "",
             summary: "Old instance", body: "", urgency: 1, time: 2200
@@ -2940,6 +3563,14 @@ ShellRoot {
                 && Notifications._times["53"] === 2300
                 && Notifications._updateTimes["53"] === 2500,
             "deleting old history preserves state for a live notification with a reused id")
+        Notifications._onClosed(53, replacementNotification)
+        root._check(Notifications.activeCount === 0 && Notifications.historyCount === 1
+                && Notifications.historyModel.get(0).summary === "Replacement",
+            "closing the current notification still archives and retires it")
+        Notifications._onClosed(53, replacementNotification)
+        root._check(Notifications.historyCount === 1,
+            "repeating a current notification's close cannot duplicate its history")
+        Notifications.clearHistory()
         Notifications.list = []
         Notifications._forgetState(53)
 
@@ -2970,6 +3601,45 @@ ShellRoot {
         root._check(Notifications.historyCount === 2,
             "a batched popup clear archives every notification")
         Notifications.clearHistory()
+
+        const scanAdapterWas = Bluetooth._scanAdapter
+        const scanRequestedWas = Bluetooth._scanRequested
+        const firstRadio = { enabled: true, discovering: false }
+        const secondRadio = { enabled: true, discovering: false }
+        Bluetooth._scanAdapter = null
+        Bluetooth._scanRequested = true
+        Bluetooth._syncDiscovery(firstRadio)
+        root._check(firstRadio.discovering && Bluetooth._scanAdapter === firstRadio,
+            "opening Bluetooth discovery starts the requested adapter")
+        Bluetooth._syncDiscovery(secondRadio)
+        root._check(!firstRadio.discovering && secondRadio.discovering
+                && Bluetooth._scanAdapter === secondRadio,
+            "Bluetooth discovery follows an adapter change even when both adapters are enabled")
+        Bluetooth._syncDiscovery(null)
+        root._check(!secondRadio.discovering && Bluetooth._scanAdapter === null,
+            "losing an adapter releases its discovery session")
+        Bluetooth._syncDiscovery(secondRadio)
+        root._check(secondRadio.discovering,
+            "a requested Bluetooth scan recovers when its adapter returns")
+        secondRadio.enabled = false
+        Bluetooth._syncDiscovery(secondRadio)
+        root._check(!secondRadio.discovering && Bluetooth._scanAdapter === null,
+            "disabling a Bluetooth adapter stops its discovery session")
+        Bluetooth._scanRequested = false
+        const otherOwnerRadio = { enabled: true, discovering: true }
+        Bluetooth._syncDiscovery(otherOwnerRadio)
+        root._check(otherOwnerRadio.discovering,
+            "an idle Bluetooth picker leaves another owner's discovery untouched")
+        Bluetooth._scanRequested = true
+        Bluetooth._syncDiscovery(otherOwnerRadio)
+        root._check(otherOwnerRadio.discovering && Bluetooth._scanAdapter === null,
+            "opening the Bluetooth picker does not claim another owner's discovery")
+        Bluetooth._scanRequested = false
+        Bluetooth._syncDiscovery(otherOwnerRadio)
+        root._check(otherOwnerRadio.discovering,
+            "closing the Bluetooth picker leaves another owner's discovery running")
+        Bluetooth._scanAdapter = scanAdapterWas
+        Bluetooth._scanRequested = scanRequestedWas
 
         const closedAdapter = { pairable: false, pairableTimeout: 0 }
         Bluetooth._armPairable(closedAdapter)
@@ -3088,7 +3758,537 @@ ShellRoot {
         Hooks._queued = ({})
         Hooks._queueOrder = []
 
-        root._startHistoryPageProbe()
+        root._startSelectFadeProbe()
+    }
+
+    property var _barLayoutProbe: null
+
+    function _startBarLayoutProbe(): void {
+        const settings = {}
+        for (const key of ["reduceMotion", "barCompact", "barAutoCompact", "barCenterInGap",
+                "osdEnabled", "osdBarIntegrated", "barShowClock", "barShowVolume"])
+            settings[key] = ShellSettings[key]
+        const osd = {}
+        for (const key of ["showing", "kind", "label", "muted", "icon", "nextIcon", "value"])
+            osd[key] = OsdBarState[key]
+        ShellSettings.reduceMotion = true
+        ShellSettings.barCompact = false
+        ShellSettings.barAutoCompact = true
+        ShellSettings.barCenterInGap = true
+        ShellSettings.osdEnabled = true
+        ShellSettings.osdBarIntegrated = true
+        ShellSettings.barShowClock = true
+        ShellSettings.barShowVolume = true
+        OsdBarState.showing = false
+        const component = Qt.createComponent("modules/bar/BarContent.qml")
+        const bar = component.createObject(root, {
+            screen: Quickshell.screens[0] ?? null, width: 330, fitWidth: 330, height: 36
+        })
+        component.destroy()
+        root._check(bar !== null, "responsive bar fixture builds")
+        if (!bar) {
+            for (const key of Object.keys(settings)) ShellSettings[key] = settings[key]
+            for (const key of Object.keys(osd)) OsdBarState[key] = osd[key]
+            root._startTrayProbe()
+            return
+        }
+        const zones = bar.children.filter(item => item.orderKeys !== undefined)
+        zones[0].widgetComponents = { workspaces: barLeftFactory }
+        zones[0].orderKeys = ["workspaces"]
+        zones[1].widgetComponents = { volume: barCenterFactory }
+        zones[1].orderKeys = []
+        zones[2].widgetComponents = { clock: barRightFactory }
+        zones[2].orderKeys = ["clock"]
+        // The offscreen platform has no ShellScreen. Exercise the real loader's
+        // geometry while bypassing only its monitor-selection gate.
+        const loader = bar.children.find(item => item.sourceComponent !== undefined && item.z === 2)
+        loader.active = true
+        root._barLayoutProbe = { step: 0, bar: bar, zones: zones, settings: settings, osd: osd }
+        _barLayoutSettle.start()
+    }
+
+    Timer {
+        id: _barLayoutSettle
+        interval: 100
+        onTriggered: {
+            const s = root._barLayoutProbe
+            const bar = s.bar
+            const loader = bar.children.find(item => item.item && item.item._shouldShow !== undefined)
+            const osd = loader ? loader.item : null
+            switch (s.step++) {
+            case 0:
+                root._check(!bar.effectiveCompact && !bar.centerHasWidgets,
+                    "an empty middle does not force a fitting bar into compact mode")
+                bar.width = 600
+                bar.fitWidth = 600
+                s.zones[1].orderKeys = ["volume"]
+                OsdBarState.kind = "volume"
+                OsdBarState.label = "Volume"
+                OsdBarState.icon = "V"
+                OsdBarState.nextIcon = "V"
+                OsdBarState.value = 1
+                OsdBarState.muted = false
+                OsdBarState.showing = true
+                break
+            case 1:
+                root._check(osd && osd.state === "visible",
+                    "the integrated OSD shows when enabled")
+                root._check(loader && loader.x >= bar.titleFreeLeft
+                        && loader.x + loader.width <= bar.titleFreeRight + 0.5,
+                    "an integrated OSD stays clear of uneven side zones")
+                ShellSettings.barCenterInGap = false
+                bar.width = 440
+                bar.fitWidth = 440
+                break
+            case 2: {
+                // the side zones carry the live window title, so a fixed width can leave the gap uncrowded; narrow until it is
+                const room = osd ? osd._availableWidth - osd._labelWidth : 0
+                if (room >= 80 && (s.crowds || 0) < 3) {
+                    s.crowds = (s.crowds || 0) + 1
+                    bar.width = Math.max(1, bar.width - (room - 40))
+                    bar.fitWidth = bar.width
+                    s.step--
+                    restart()
+                    return
+                }
+                root._check(loader && loader.x >= bar.titleFreeLeft
+                        && loader.x + loader.width <= bar.titleFreeRight + 0.5,
+                    "a screen-centred OSD shifts into the available gap when crowded")
+                const track = root._findTrayNode(osd, item => item.radius === 1.5
+                    && item.height === 3)
+                root._check(track && track.width > 0 && track.width < 80,
+                    "a crowded integrated volume track contracts while retaining its reading")
+                s.track = track
+                OsdBarState.value = 0.01
+                bar.width = 300 + bar.gap * 2 + osd._iconWidth + osd._labelWidth + 17
+                bar.fitWidth = bar.width
+                break
+            }
+            case 3:
+                // The compact transition also changes divider widths. Trim
+                // the measured remainder after those widths have settled.
+                if (s.track && s.track.width > 1.5 && (s.trims || 0) < 3) {
+                    s.trims = (s.trims || 0) + 1
+                    bar.width = Math.max(1, bar.width + 1 - s.track.width)
+                    bar.fitWidth = bar.width
+                    s.step--
+                    restart()
+                    return
+                }
+                root._check(s.track && Math.abs(s.track.width - 1) < 0.5
+                        && s.track.children[0].width <= s.track.width,
+                    "a nearly squeezed-out volume track keeps its fill within its bounds")
+                bar.width = 1
+                bar.fitWidth = 1
+                break
+            case 4:
+                root._check(osd && osd.width === 0 && osd.clip,
+                    "an OSD with no free space clips its content instead of covering side widgets")
+                OsdBarState.kind = "temp"
+                OsdBarState.label = "A very long thermal warning ".repeat(20)
+                bar.width = 600
+                bar.fitWidth = 600
+                break
+            case 5: {
+                const label = root._findTrayNode(osd, item => item.text === OsdBarState.label)
+                root._check(osd && osd._labelWidth <= 240 * ShellSettings.uiScale
+                        && label && label.truncated,
+                    "long OSD alerts elide within a bounded width")
+                root._check(osd && osd.Accessible.name === OsdBarState.label,
+                    "an elided OSD alert retains its full accessible description")
+                ShellSettings.osdEnabled = false
+                root._check(osd && osd.state === "hidden" && !osd.visible,
+                    "disabling OSD presentation hides a displayed integrated alert immediately")
+                break
+            }
+            case 6:
+                bar.destroy()
+                for (const key of Object.keys(s.settings)) ShellSettings[key] = s.settings[key]
+                for (const key of Object.keys(s.osd)) OsdBarState[key] = s.osd[key]
+                root._barLayoutProbe = null
+                root._startTrayProbe()
+                return
+            }
+            restart()
+        }
+    }
+
+    property var _selectFadeProbe: null
+    property bool _selectReduceWas: false
+
+    function _startSelectFadeProbe(): void {
+        root._selectReduceWas = ShellSettings.reduceMotion
+        ShellSettings.reduceMotion = false
+        root._selectFadeProbe = selectRowFactory.createObject(root)
+        root._selectFadeProbe._setOpen(true)
+        _selectFadeSettle.start()
+    }
+
+    Timer {
+        id: _selectFadeSettle
+        interval: 300
+        onTriggered: {
+            const select = root._selectFadeProbe
+            const option = root._findTrayNode(select, item =>
+                typeof item.trigger === "function" && item.previewValue === "b")
+            root._check(option !== null, "an open dropdown builds its option controls")
+            if (option) {
+                let choices = 0
+                select.chosen.connect(function() { choices++ })
+                select._setOpen(false)
+                root._check(!option.enabled,
+                    "closing a dropdown disables its retained option controls immediately")
+                option.trigger()
+                root._check(choices === 0,
+                    "a fading dropdown option rejects accessibility activation")
+                option.triggered()
+                root._check(choices === 0,
+                    "a late option signal cannot change a closed dropdown's setting")
+                select._setOpen(true)
+                option.trigger()
+                root._check(choices === 1 && !select._open,
+                    "a reopened dropdown accepts one choice and closes")
+            }
+            select.destroy()
+            root._selectFadeProbe = null
+            ShellSettings.reduceMotion = root._selectReduceWas
+            root._startResourceProbe()
+        }
+    }
+
+    property var _resourceProbe: null
+
+    function _optionRows(item): var {
+        let rows = item && item.optionFont !== undefined ? [item] : []
+        for (const child of item?.children || []) rows = rows.concat(root._optionRows(child))
+        return rows
+    }
+
+    function _startResourceProbe(): void {
+        const state = { step: 0, reduce: ShellSettings.reduceMotion, open: MenuState.open }
+        root._resourceProbe = state
+        ShellSettings.reduceMotion = true
+        MenuState.close()
+        MenuState.requestWarm(probeAnchor, null)
+        MenuState.requestWarm(invalidProbeAnchor, null)
+        MenuState.cancelWarm(probeAnchor)
+        state.select = selectRowFactory.createObject(root, {
+            model: Array.from({ length: 1000 }, (_, i) => ({ value: "v" + i, label: "Option " + i })),
+            currentValue: "v999"
+        })
+        state.select._setOpen(true)
+        _resourceSettle.interval = 150
+        _resourceSettle.restart()
+    }
+
+    Timer {
+        id: _resourceSettle
+        onTriggered: {
+            const s = root._resourceProbe
+            const select = s.select
+            const rows = root._optionRows(select)
+            switch (s.step++) {
+            case 0: {
+                const selected = rows.find(row => row.previewValue === "v999")
+                const point = selected ? selected.mapToItem(select, 0, 0) : null
+                root._check(rows.length > 0 && rows.length <= 16,
+                    "a thousand-choice dropdown builds only its viewport and reuse pool")
+                root._check(point && point.y >= select._headerH - 0.5
+                        && point.y + selected.height <= select.height + 0.5,
+                    "opening a long dropdown reveals the selected option at the end")
+                select._revealOption(0)
+                break
+            }
+            case 1:
+                root._check(rows.some(row => row.previewValue === "v0") && rows.length <= 24,
+                    "scrolling a long dropdown creates the first option with a bounded reuse pool")
+                select._revealOption(999)
+                break
+            case 2: {
+                const selected = rows.find(row => row.previewValue === "v999")
+                let chosen = ""
+                select.chosen.connect(value => { chosen = value })
+                if (selected) selected.trigger()
+                root._check(chosen === "v999" && !select._open,
+                    "a recycled dropdown option chooses its current value and closes")
+                break
+            }
+            case 3:
+                root._check(rows.length === 0,
+                    "closing a long dropdown releases its rows and reuse pool")
+                _resourceSettle.interval = 2600
+                break
+            case 4:
+                root._check(!MenuState.warmRequested && MenuState.warmScreen === null,
+                    "an unused workspace hover releases the prepared menu after its warm budget")
+                select.destroy()
+                ShellSettings.reduceMotion = s.reduce
+                MenuState.open = s.open
+                root._resourceProbe = null
+                root._startBarLayoutProbe()
+                return
+            }
+            restart()
+        }
+    }
+
+    property var _trayProbeItems: []
+    property var _trayProbe: null
+
+    function _findTrayNode(item, predicate): var {
+        if (!item) return null
+        if (predicate(item)) return item
+        const children = item.children || []
+        for (let i = 0; i < children.length; i++) {
+            const found = root._findTrayNode(children[i], predicate)
+            if (found) return found
+        }
+        return null
+    }
+
+    function _checkWidgetAccessibility(settings): void {
+        const parentToggle = root._findTrayNode(settings, item =>
+            item.Accessible.role === Accessible.CheckBox
+                && item.Accessible.name === ShellSettings.barWidgetMeta.tray.label)
+        const appToggle = root._findTrayNode(settings, item => item.modelData === "probe-a"
+            && typeof item.toggleShown === "function")
+        root._check(parentToggle !== null && appToggle !== null,
+            "widget settings expose both parent and per-app checkbox controls")
+        if (parentToggle === null || appToggle === null) return
+        root._check(parentToggle.Accessible.checkable && appToggle.Accessible.checkable,
+            "widget settings checkboxes advertise that their states can be changed")
+        parentToggle.Accessible.pressAction()
+        root._check(!ShellSettings.trayWidget,
+            "accessible widget checkbox press updates its configured visibility")
+        parentToggle.Accessible.toggleAction()
+        root._check(ShellSettings.trayWidget,
+            "accessible widget checkbox toggle restores its configured visibility")
+        settings.enabled = false
+        parentToggle.Accessible.toggleAction()
+        appToggle.Accessible.toggleAction()
+        root._check(ShellSettings.trayWidget && !ShellSettings.trayItemHidden("probe-a"),
+            "disabled widget settings reject accessible parent and per-app toggles")
+        settings.enabled = true
+        // recover the fixture even if the disabled-state assertion failed
+        ShellSettings.trayWidget = true
+        ShellSettings.setTrayItemHidden("probe-a", false)
+        appToggle.Accessible.pressAction()
+        root._check(ShellSettings.trayItemHidden("probe-a"),
+            "accessible per-app checkbox press hides its tray icon")
+        appToggle.Accessible.toggleAction()
+        root._check(!ShellSettings.trayItemHidden("probe-a"),
+            "accessible per-app checkbox toggle shows its tray icon")
+        settings._setTrayOpen(false)
+        appToggle.Accessible.toggleAction()
+        root._check(!ShellSettings.trayItemHidden("probe-a"),
+            "a closed tray disclosure rejects retained accessible checkbox actions")
+        settings._setTrayOpen(true)
+        settings._beginDrag("clock")
+        parentToggle.Accessible.toggleAction()
+        appToggle.Accessible.toggleAction()
+        root._check(ShellSettings.trayWidget && !ShellSettings.trayItemHidden("probe-a"),
+            "widget reordering cannot change visibility through accessible toggle actions")
+        settings._finishDrag("clock")
+        ShellSettings.trayWidget = true
+        ShellSettings.setTrayItemHidden("probe-a", false)
+    }
+
+    function _startTrayProbe(): void {
+        const state = {
+            step: 0, enabled: ShellSettings.trayWidget, hidden: ShellSettings.trayHidden,
+            reduce: ShellSettings.reduceMotion,
+            layout: [ShellSettings.barWidgetOrderLeft, ShellSettings.barWidgetOrderCenter,
+                ShellSettings.barWidgetOrderRight]
+        }
+        root._trayProbe = state
+        ShellSettings.reduceMotion = true
+        ShellSettings.trayWidget = true
+        ShellSettings.trayHidden = ""
+        trayIconFixture.setText('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><rect width="16" height="16" fill="#ff6600"/></svg>')
+        const source = "file://" + trayIconFixture.path
+        state.first = trayItemFactory.createObject(root, { id: "probe-a", title: "First app", icon: source })
+        state.second = trayItemFactory.createObject(root, { id: "probe-b", title: "Second app", icon: source })
+        root._trayProbeItems = [state.first, state.second]
+        const zoneComponent = Qt.createComponent("modules/bar/BarZone.qml")
+        state.zone = zoneComponent.createObject(root, {
+            orderKeys: ["tray"], widgetComponents: { tray: trayWidgetFactory },
+            compact: true, height: 36
+        })
+        const settingsComponent = Qt.createComponent("modules/menu/settings/DraggableWidgetList.qml")
+        state.settings = settingsComponent.createObject(root, {
+            width: 320, trayItems: Qt.binding(() => root._trayProbeItems)
+        })
+        state.settings._setTrayOpen(true)
+        _trayProbeSettle.restart()
+    }
+
+    Timer {
+        id: _trayProbeSettle
+        interval: 100
+        onTriggered: {
+            const s = root._trayProbe
+            const tile = root._findTrayNode(s.zone, item => typeof item.syncMenuAnchor === "function"
+                && item.modelData === s.first)
+            const icon = root._findTrayNode(tile, item => item.backer !== undefined)
+            const widget = root._findTrayNode(s.zone, item => item.trayModel !== undefined)
+            // Image decoding is asynchronous; a busy test host can take longer
+            // than one tick even for this local SVG. Keep a bound so a broken
+            // fixture still fails, and do not wait past an explicit image error.
+            if (s.step === 0 && (!tile || !icon || icon.status === Image.Loading)
+                    && (s.readyTicks ?? 0) < 20) {
+                s.readyTicks = (s.readyTicks ?? 0) + 1
+                _trayProbeSettle.restart()
+                return
+            }
+            switch (s.step++) {
+            case 0:
+                s.tile = tile
+                root._check(tile && icon && icon.status === Image.Ready && s.zone.implicitWidth > 0,
+                    "a tray icon renders in its real bar zone")
+                root._checkWidgetAccessibility(s.settings)
+                s.settings._setTrayItemShown("probe-a", false)
+                break
+            case 1:
+                root._check(tile === s.tile && tile.hidden && !tile.visible
+                        && s.zone.implicitWidth > 0,
+                    "hiding one tray app preserves its delegate and the other icon")
+                s.settings._setTrayItemShown("probe-a", true)
+                break
+            case 2:
+                root._check(tile === s.tile && tile.visible && icon && icon.status === Image.Ready,
+                    "showing a hidden tray app reloads its icon without recreating its delegate")
+                ShellSettings.setTrayItemHidden("probe-a", true)
+                ShellSettings.setTrayItemHidden("probe-b", true)
+                _trayProbeSettle.interval = 300
+                break
+            case 3:
+                root._check(widget && !widget.show && widget.implicitWidth === 0
+                        && s.zone.visibleKeys.length === 0,
+                    "hiding every tray app removes the tray and its divider from the bar")
+                s.settings._setTrayItemShown("probe-a", true)
+                _trayProbeSettle.interval = 100
+                break
+            case 4:
+                root._check(tile && tile.visible && icon && icon.status === Image.Ready
+                        && s.zone.implicitWidth > 0 && s.zone.visibleKeys[0] === "tray"
+                        && ShellSettings.trayItemHidden("probe-b"),
+                    "showing an app restores an entirely hidden tray without unhiding other apps")
+                ShellSettings.trayWidget = false
+                break
+            case 5:
+                root._check(tile === s.tile && widget && !widget.show,
+                    "a brief tray disable retains its delegates during the bar's unload delay")
+                ShellSettings.trayWidget = true
+                break
+            case 6:
+                root._check(tile === s.tile && tile.visible && icon && icon.status === Image.Ready,
+                    "a quick tray off/on restores the same rendered icon")
+                ShellSettings.trayWidget = false
+                _trayProbeSettle.interval = 400
+                break
+            case 7:
+                root._check(tile === null, "a persistently disabled tray releases its bar widget")
+                ShellSettings.trayWidget = true
+                _trayProbeSettle.interval = 100
+                break
+            case 8: {
+                root._check(tile && tile.visible && icon && icon.status === Image.Ready
+                        && s.zone.implicitWidth > 0,
+                    "enabling an unloaded tray rebuilds its icons")
+                ShellSettings.trayWidget = false
+                const row = root._findTrayNode(s.settings, item => item.modelData === "probe-a"
+                    && typeof item.toggleShown === "function")
+                root._check(row && row.statusText === "Tray off" && !row.Accessible.checked,
+                    "tray settings distinguish a saved visibility preference from the tray being off")
+                if (row) row.toggleShown()
+                root._check(ShellSettings.trayWidget && !ShellSettings.trayItemHidden("probe-a"),
+                    "showing an app from its settings row also enables the tray")
+                ShellSettings.setTrayItemHidden("probe-a", true)
+                ShellSettings.setTrayItemHidden("stopped-app", true)
+                s.settings._showAllTrayItems()
+                root._check(ShellSettings.trayWidget && ShellSettings.trayHiddenIds.length === 0
+                        && s.settings._trayIds.indexOf("stopped-app") >= 0
+                        && s.layout[0] === ShellSettings.barWidgetOrderLeft
+                        && s.layout[1] === ShellSettings.barWidgetOrderCenter
+                        && s.layout[2] === ShellSettings.barWidgetOrderRight,
+                    "show all restores running and stopped app preferences without resetting bar layout")
+                const stopped = root._findTrayNode(s.settings, item => item.modelData === "stopped-app"
+                    && item.statusText !== undefined)
+                root._check(stopped && stopped.statusText === "Not running",
+                    "restoring a stopped tray app explains why its icon is absent")
+
+                const popup = TrayMenuState
+                const handle = selectStubFactory.createObject(root)
+                popup.toggleAt(17, null, handle, false, tile, s.first)
+                popup.toggleAt(33, null, null, false, tile, s.second)
+                root._check(popup.open && popup.sourceItem === s.second && popup.menuHandle === null,
+                    "switching to a menu-less tray app keeps its own hide menu and source")
+                popup.toggleAt(33, null, null, false, tile, s.second)
+                root._check(!popup.open, "clicking the same tray menu's source closes it")
+                popup.toggleAt(17, null, handle, false, tile, s.first)
+                popup.menuHandle = null
+                root._check(!popup.open, "a tray app losing its live menu closes the popup")
+                popup.toggleAt(33, null, null, false, tile, s.second)
+                popup.sourceItem = null
+                root._check(!popup.open, "a menu-less app disappearing also closes its popup")
+                popup.toggleAt(17, null, null, false, tile, s.first)
+                ShellSettings.setTrayItemHidden("probe-a", true)
+                root._check(!popup.open,
+                    "hiding an app while its tray menu is open also closes that menu")
+                ShellSettings.trayHidden = ""
+                s.first.onlyMenu = true
+                if (widget && tile) widget._activateItem(s.first, tile)
+                root._check(popup.open && popup.sourceItem === s.first && s.first.activations === 0,
+                    "a menu-only tray item's primary action always opens its menu")
+                popup.close()
+                handle.destroy()
+                s.first.onlyMenu = false
+                s.first.icon = ""
+                root._check(tile && tile.fallbackVisible,
+                    "a tray app without an icon shows its initial immediately")
+                break
+            }
+            case 9: {
+                root._check(tile && tile.visible && tile.fallbackVisible && s.zone.implicitWidth > 0,
+                    "an icon-less app keeps a visible tray button and its bar slot")
+                const initial = root._findTrayNode(tile, item => item.text === "F")
+                root._check(initial && initial.visible && initial.parent.visible,
+                    "the tray fallback contains the app's initial")
+                if (widget && tile) widget._activateItem(s.first, tile)
+                root._check(s.first.activations === 1,
+                    "an icon-less tray app still responds to its primary action")
+                const row = root._findTrayNode(s.settings, item => item.modelData === "probe-a"
+                    && item.statusText !== undefined)
+                const settingsInitial = root._findTrayNode(row, item => item.text === "F")
+                root._check(row && row.statusText === "Shown" && settingsInitial && settingsInitial.visible,
+                    "tray settings show a fallback without changing the app's visibility preference")
+                s.first.icon = "file://" + ConfigStore.directory + "/missing-tray-icon.png"
+                break
+            }
+            case 10:
+                root._check(tile && tile.fallbackVisible && tile._providedIconFailed,
+                    "a failed tray image falls back instead of leaving an empty button")
+                s.first.icon = "file://" + trayIconFixture.path
+                break
+            case 11: {
+                root._check(tile && icon && icon.status === Image.Ready
+                        && !tile.fallbackVisible && !tile._providedIconFailed,
+                    "a tray app gaining a valid icon replaces its fallback")
+                s.zone.destroy()
+                s.settings.destroy()
+                root._trayProbeItems = []
+                s.first.destroy()
+                s.second.destroy()
+                ShellSettings.trayHidden = s.hidden
+                ShellSettings.trayWidget = s.enabled
+                ShellSettings.reduceMotion = s.reduce
+                root._trayProbe = null
+                root._startHistoryPageProbe()
+                return
+            }
+            }
+            _trayProbeSettle.restart()
+        }
     }
 
     property var _historyPage: null
@@ -3311,20 +4511,24 @@ ShellRoot {
                 restart()
                 break
             case 1:
-                root._check(page.opacity === 0 && Math.abs(page._pageShift) > 0,
-                    "a departing page completes its fade and slide")
+                root._check(page.opacity === 0 && Math.abs(page._pageShift) > 0
+                        && page._pageLift < 0,
+                    "a departing page completes its fade and two-axis movement")
                 MenuState.close()
                 MenuState.open = true
                 page.active = true
-                root._check(page.opacity === 1 && page._pageShift === 0,
+                root._check(page.opacity === 1 && page._pageShift === 0
+                        && page._pageLift === 0,
                     "reopening a retained page resets the completed exit offset")
                 page._menuOpenSettled = true
                 page.active = false
                 ShellSettings.reduceMotion = true
-                root._check(page.opacity === 0 && page._pageShift === 0,
+                root._check(page.opacity === 0 && page._pageShift === 0
+                        && page._pageLift === 0,
                     "enabling reduced motion settles an interrupted page exit")
                 page.active = true
-                root._check(page.opacity === 1 && page._pageShift === 0,
+                root._check(page.opacity === 1 && page._pageShift === 0
+                        && page._pageLift === 0,
                     "reduced-motion page entry has no lingering offset")
                 ShellSettings.reduceMotion = false
                 root._motionSettings = settingsPageFactory.createObject(root, {
@@ -3355,11 +4559,13 @@ ShellRoot {
                 const detail = settings.children[0]
                 const revealed = settings.contentReady && !settings._awaitingSectionEnter
                         && detail.opacity === 1 && detail._shift === 0
+                        && detail._lift === 0
                 if (root._motionNotYet(revealed)) break
                 root._check(revealed, "a ready settings section completes its reveal")
                 MenuState.close()
                 MenuState.setSettingsSection("clock")
-                root._check(settings._shownSection === "clock" && detail.opacity === 1,
+                root._check(settings._shownSection === "clock" && detail.opacity === 1
+                        && detail._lift === 0,
                     "a settings change while the menu is closed settles without a fade")
 
                 // README promises Escape steps back before it closes; Home and the
@@ -3488,8 +4694,195 @@ ShellRoot {
             root._missingSupervised.superviseWhen = false
             root._missingSupervised.destroy()
             root._missingSupervised = null
-            Qt.callLater(root._finish)
+            Qt.callLater(root._startHistoryPersistenceProbe)
         }
+    }
+
+    property int _historyDiskCase: 0
+    readonly property var _historyDiskCases: [
+        { raw: '{"__version":2,"history":[],"futureField":"keep"}', name: "a newer-version history file" },
+        { raw: '[{"summary":"keep malformed root"}]', name: "an array history root" },
+        { raw: 'null', name: "a null history root" },
+        { raw: '{"__version":1,"history":{"summary":"keep malformed history"}}', name: "a non-array history payload" }
+    ]
+
+    function _startHistoryPersistenceProbe(): void {
+        root._historyDiskCase = 0
+        root._prepareHistoryDiskCase()
+    }
+
+    function _prepareHistoryDiskCase(): void {
+        // begin with saving enabled: a protected read must revoke earlier write permission
+        Notifications._restoreFromDisk('{"__version":1,"history":[]}')
+        const test = root._historyDiskCases[root._historyDiskCase]
+        notificationDiskFixture.setText(test.raw)
+        Notifications._restoreFromDisk(test.raw)
+        root._check(Notifications.storeError.length > 0,
+            test.name + " reports why persistence is paused")
+        Notifications._prependHistory({ id: 9910 + root._historyDiskCase, appName: "Probe",
+            summary: "Arrival after protected read " + root._historyDiskCase, time: 9910 + root._historyDiskCase })
+        Notifications._saveHistory()
+        _historyDiskSettle.restart()
+    }
+
+    Timer {
+        id: _historyDiskSettle
+        interval: 600
+        onTriggered: _historyDiskReader.running = true
+    }
+
+    BoundedProcess {
+        id: _historyDiskReader
+        command: ["cat", ConfigStore.notificationsPath]
+        timeoutMs: 2000
+        stdout: StdioCollector { id: _historyDiskText }
+        onExited: code => {
+            root._check(code === 0, "the history persistence probe reads its file from disk")
+            if (root._historyDiskCase < root._historyDiskCases.length) {
+                const test = root._historyDiskCases[root._historyDiskCase]
+                root._check(_historyDiskText.text === test.raw,
+                    test.name + " remains untouched by a queued history save")
+                root._historyDiskCase++
+                if (root._historyDiskCase < root._historyDiskCases.length) {
+                    root._prepareHistoryDiskCase()
+                    return
+                }
+                const valid = '{"__version":1,"history":[]}'
+                notificationDiskFixture.setText(valid)
+                Notifications._restoreFromDisk(valid)
+                Notifications._prependHistory({ id: 9901, appName: "Probe", summary: "History saving recovered", time: 9901 })
+                Notifications._saveHistory()
+                _historyDiskSettle.restart()
+                return
+            }
+            const saved = JSON.parse(_historyDiskText.text)
+            root._check(Notifications.storeError.length === 0
+                    && saved.history.some(entry => entry.summary === "History saving recovered"),
+                "a valid history file restores saving after a protected or malformed read")
+            Qt.callLater(root._startNotificationTimingProbe)
+        }
+    }
+
+    property var _notificationTimingCards: []
+    property bool _notificationTimingReduceWas: false
+
+    function _notificationExpiryTimer(card): var {
+        const objects = card.data
+        for (let i = 0; i < objects.length; i++)
+            if (objects[i].fullInterval !== undefined) return objects[i]
+        return null
+    }
+
+    function _startNotificationTimingProbe(): void {
+        root._notificationTimingReduceWas = ShellSettings.reduceMotion
+        ShellSettings.reduceMotion = true
+        const template = {
+            actions: [], hints: ({}), appIcon: "", image: "", appName: "Probe",
+            desktopEntry: "", summary: "Timing probe", body: "", urgency: 1,
+            expireTimeout: 350, resident: false, transient: false, hasInlineReply: false
+        }
+        root._notificationTimingCards = [
+            notificationCardFactory.createObject(root, { notification: template }),
+            notificationCardFactory.createObject(root, {
+                notification: template, stackHovered: true
+            }),
+            notificationCardFactory.createObject(root, {
+                notification: Object.assign({}, template, { expireTimeout: 0 })
+            }),
+            notificationCardFactory.createObject(root, {
+                notification: Object.assign({}, template, { urgency: 2, expireTimeout: -1 })
+            })
+        ]
+        _notificationTimingReplace.start()
+        _notificationTimingBefore.start()
+        _notificationTimingAfter.start()
+    }
+
+    Timer {
+        id: _notificationTimingReplace
+        interval: 350
+        onTriggered: {
+            const cards = root._notificationTimingCards
+            for (let i = 0; i < cards.length; i++) {
+                const timer = root._notificationExpiryTimer(cards[i])
+                root._check(timer !== null, "a notification exposes its expiry timer to the timing probe")
+                if (!timer) continue
+                const before = timer.interval
+                // the 400 ms minimum display interval holds for this short sender timeout
+                cards[i].timeoutStartedAt = Date.now()
+                if (i < 2)
+                    root._check(timer.interval === before,
+                        "a replacement can leave its notification timeout interval unchanged")
+            }
+            root._check(!root._notificationExpiryTimer(cards[2]).running
+                    && !root._notificationExpiryTimer(cards[3]).running,
+                "updating persistent and default-critical notifications keeps their timers stopped")
+        }
+    }
+
+    Timer {
+        id: _notificationTimingBefore
+        interval: 600
+        onTriggered: {
+            const cards = root._notificationTimingCards
+            root._check(cards[0].enabled,
+                "updated notification content survives the original expiry deadline")
+            root._check(cards[1].enabled,
+                "updating a hovered notification keeps its timeout paused")
+            cards[1].stackHovered = false
+        }
+    }
+
+    Timer {
+        id: _notificationTimingAfter
+        interval: 1200
+        onTriggered: {
+            const cards = root._notificationTimingCards
+            root._check(!cards[0].enabled,
+                "an updated notification expires at its replacement deadline")
+            root._check(!cards[1].enabled,
+                "a notification updated while hovered expires after the pointer leaves")
+            root._check(cards[2].enabled && cards[3].enabled,
+                "persistent and default-critical notifications survive a content update")
+            for (let i = 0; i < cards.length; i++) cards[i].destroy()
+            root._notificationTimingCards = []
+            ShellSettings.reduceMotion = root._notificationTimingReduceWas
+            Qt.callLater(root._runPersistenceGuardsProbe)
+        }
+    }
+
+    function _runPersistenceGuardsProbe(): void {
+        const externalText = '{"source":"external edit"}'
+        const sessionText = '{"source":"session"}'
+        persistenceGuardFixture.setText(externalText)
+        const store = persistedFileFactory.createObject(root, {
+            path: persistenceGuardFixture.path,
+            serialize: function() { return sessionText }
+        })
+        store.writeAllowed = true
+        // hold the fileChanged-to-loaded window: a shutdown flush must not beat the owner's read
+        store._reloading = true
+        store.flush(true)
+        persistenceGuardFixture.reload()
+        root._check(persistenceGuardFixture.text() === externalText,
+            "a forced flush preserves an external edit whose reload is still pending")
+        root._check(store.lastSavedText.length === 0,
+            "a protected flush does not claim stale in-memory text was saved")
+        store._reloading = false
+        store.flush(true)
+        persistenceGuardFixture.reload()
+        root._check(persistenceGuardFixture.text().trim() === sessionText,
+            "a forced flush still saves when the file has no unresolved reload")
+        store._pendingForDir = true
+        store.stop()
+        root._check(!store.pending,
+            "stopping a writer cancels a deferred directory-ready save")
+        store.queue()
+        root._check(store.pending, "a stopped writer accepts a new save request")
+        store.stop()
+        root._check(!store.pending, "stopping a writer also cancels its debounce timer")
+        store.destroy()
+        Qt.callLater(root._finish)
     }
 
     function _finish(): void {
