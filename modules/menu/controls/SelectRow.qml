@@ -54,18 +54,10 @@ Item {
 
     // opening a dropdown has to show the current choice, which may sit below the cap
     function _revealOption(index: int): void {
-        if (!_open || _optRepeater.count <= 0) return
-        const i = Math.max(0, Math.min(_optRepeater.count - 1, index))
-        const item = _optRepeater.itemAt(i)
-        if (item) {
-            const viewportH = Math.min(_optCol.implicitHeight, root._optionsCapH)
-            if (item.y < _options.contentY + 4)
-                _options.contentY = Math.max(0, item.y - 4)
-            else if (item.y + item.height > _options.contentY + viewportH - 4)
-                _options.contentY = Math.min(
-                    Math.max(0, _options.contentHeight - viewportH),
-                    item.y + item.height - viewportH + 4)
-        }
+        if (!_open || _options.count <= 0) return
+        const i = Math.max(0, Math.min(_options.count - 1, index))
+        _options.forceLayout()
+        _options.positionViewAtIndex(i, ListView.Contain)
     }
 
     function _revealActiveOption(): void {
@@ -272,75 +264,69 @@ Item {
         }
     }
 
-    ShellFlickable {
+    ShellListView {
         id: _options
-        anchors.top:  parent.top; anchors.topMargin: root._headerH
+        anchors.top: parent.top; anchors.topMargin: root._headerH
         anchors.left: parent.left
         anchors.right: parent.right
 
-        height: root._open
-            ? Math.min(_optCol.implicitHeight, root._optionsCapH)
-            : 0
-        contentWidth: width
-        contentHeight: _optCol.implicitHeight
+        // Only the viewport's options need objects or font previews. A Repeater
+        // loads every installed font even when all but seven rows are clipped.
+        height: root._open ? Math.min(root._optionCount * root._optionH
+            + (headerItem ? headerItem.height : 2) + 2, root._optionsCapH) : 0
         interactive: contentHeight > height + 1
         visible: height > 0.5
+        cacheBuffer: 0
+        reuseItems: true
+        model: root._open || height > 0.5 ? root.model : []
+        opacity: root._open ? 1.0 : 0.0
 
         Disclosure on height {}
+        MotionBehavior on opacity {
+            id: _optFade
+            NumberAnimation {
+                duration: Motion.fast
+                easing.type: _optFade.targetValue > 0.5 ? Easing.OutCubic : Easing.InCubic
+            }
+        }
 
-        Column {
-            id: _optCol
-            width: parent.width
-            y: 0
-            opacity: root._open ? 1.0 : 0.0
-            bottomPadding: 2
-
+        header: Item {
+            width: _options.width
+            height: _optionDivider.implicitHeight + 1
             Hairline {
+                id: _optionDivider
                 x: 14
                 width: parent.width - 28
                 color: Theme.menuDivider
             }
-            Item { width: parent.width; height: 1 }
+        }
+        footer: Item { width: _options.width; height: 2 }
 
-            MotionBehavior on opacity {
-                id: _optFade
-                NumberAnimation {
-                    duration: Motion.fast
-                    easing.type: _optFade.targetValue > 0.5 ? Easing.OutCubic : Easing.InCubic
-                }
-            }
+        delegate: InlineOptionRow {
+            id: _opt
+            required property var modelData
+            required property int index
+            bottomRadius: _opt.index === _options.count - 1 ? root.bottomRadius : 0
+            readonly property bool active: root.currentValue === modelData.value
+            readonly property string optionFont:
+                (modelData.fontFamily !== undefined && modelData.fontFamily !== null
+                    && String(modelData.fontFamily).length > 0)
+                ? String(modelData.fontFamily) : Settings.font
 
-            Repeater {
-                id: _optRepeater
-                model: root._open || _options.height > 0.5 ? root.model : []
-                delegate: InlineOptionRow {
-                    id: _opt
-                    required property var modelData
-                    required property int index
-                    bottomRadius: _opt.index === _optRepeater.count - 1
-                        ? root.bottomRadius : 0
-                    readonly property bool active: root.currentValue === modelData.value
-                    readonly property string optionFont:
-                        (modelData.fontFamily !== undefined && modelData.fontFamily !== null
-                            && String(modelData.fontFamily).length > 0)
-                        ? String(modelData.fontFamily) : Settings.font
+            width: _options.width
+            enabled: root.enabled && root._open
+            label: String(modelData.label ?? "")
+            accessiblePrefix: root.label
+            labelFontFamily: optionFont
+            preview: root.optionPreview
+            previewValue: modelData.value
+            selected: active
+            accentColor: root.accentColor
 
-                    width: _optCol.width
-                    enabled: root.enabled && root._open
-                    label: String(modelData.label ?? "")
-                    accessiblePrefix: root.label
-                    labelFontFamily: optionFont
-                    preview: root.optionPreview
-                    previewValue: modelData.value
-                    selected: active
-                    accentColor: root.accentColor
-
-                    onTriggered: {
-                        if (!root.enabled || !root._open) return
-                        root.chosen(_opt.modelData.value)
-                        root._setOpen(false)
-                    }
-                }
+            onTriggered: {
+                if (!root.enabled || !root._open) return
+                root.chosen(_opt.modelData.value)
+                root._setOpen(false)
             }
         }
     }

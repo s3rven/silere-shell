@@ -43,12 +43,22 @@ AnchoredPopupState {
         if (!source || root.open) return
         root.warmSource = source
         root.warmScreen = screen ?? null
+        _warmExpiry.restart()
     }
 
     function cancelWarm(source): void {
         if (root.warmSource !== source) return
+        _warmExpiry.stop()
         root.warmSource = null
         root.warmScreen = null
+    }
+
+    // A pointer parked on the active workspace is only a speculative open.
+    // Release the prepared window if no click follows; a later click can load it.
+    Timer {
+        id: _warmExpiry
+        interval: 2500
+        onTriggered: root.cancelWarm(root.warmSource)
     }
 
     property string settingsSection: "theme"
