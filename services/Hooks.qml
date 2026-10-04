@@ -34,8 +34,7 @@ Singleton {
     readonly property string _groupWaitScript: '"$@"; code=$?; '
         + 'IFS= read -r own < /proc/self/stat || exit "$code"; '
         + 'self=${own%% *}; rest=${own##*) }; set -- $rest; group=$3; outer=$PPID; '
-        // the containing deadline already bounds the run, so poll slowly: /proc churn
-        // here scales with every process on the box, times four runners
+        // the containing deadline already bounds the run, so poll slowly: /proc churn here scales with every process on the box, times four runners
         + 'while :; do alive=false; for stat in /proc/[0-9]*/stat; do '
         + '[ -r "$stat" ] || continue; IFS= read -r line < "$stat" || continue; '
         + 'pid=${line%% *}; rest=${line##*) }; set -- $rest; '
@@ -69,8 +68,7 @@ Singleton {
         return true
     }
 
-    // a flood must not swallow a critical battery crossing, so it draws on a small
-    // separate allowance when the shared bucket is spent
+    // a flood must not swallow a critical battery crossing, so it draws on a small separate allowance when the shared bucket is spent
     function _criticalAllows(): bool {
         const now = Date.now()
         const recent = []

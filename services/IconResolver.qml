@@ -59,6 +59,11 @@ Singleton {
         return root.iconSource(value)
     }
 
+    function trayAppIconSource(raw, identity): string {
+        const source = root.trayIconSource(raw)
+        return source.length > 0 ? source : (root.appMeta(identity)?.icon ?? "")
+    }
+
     // Icon and image fields can originate in any notification or StatusNotifier
     // sender. Keep local files and Qt's internal providers, but never let a label
     // silently turn the shell into a network client or feed it an unbounded data URI.
@@ -83,8 +88,7 @@ Singleton {
     function iconSource(raw): string {
         const value = String(raw ?? "").trim()
         if (value.length === 0 || value.length > root.maxSourceChars) return ""
-        // raw text skips the theme-existence check iconPath() applies below, so an
-        // image: URI only passes here as Quickshell's safe in-memory handle
+        // raw text skips the theme-existence check iconPath() applies below, so an image: URI only passes here as Quickshell's safe in-memory handle
         if (value.startsWith("/") || root._scheme.test(value))
             return root.safeLocalSource(value)
         return root.localSource(Quickshell.iconPath(value, true))

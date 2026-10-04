@@ -41,12 +41,14 @@ Scope {
     function stop(): void {
         _debounce.stop()
         _retry.stop()
+        root._pendingForDir = false
     }
 
     function flush(force: bool): void {
         if (!root.writeAllowed || !root.serialize) return
-        if (!force && root._reloading) {
-            _debounce.restart()
+        // a forced save may skip the directory wait, never an unread external edit
+        if (root._reloading) {
+            if (!force) _debounce.restart()
             return
         }
         if (!force && !ConfigStore.ready) {

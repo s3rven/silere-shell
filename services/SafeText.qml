@@ -100,8 +100,7 @@ Singleton {
         return root._clip(text, cap)
     }
 
-    // stderr from a package helper or gamma tool is often several lines of
-    // noise; the last non-empty one is usually the actual failure
+    // stderr from a package helper or gamma tool is often several lines of noise; the last non-empty one is usually the actual failure
     function lastNonEmptyLine(value, fallback: string, limit): string {
         const lines = String(value ?? "").split(/\r?\n/)
         for (let i = lines.length - 1; i >= 0; i--) {

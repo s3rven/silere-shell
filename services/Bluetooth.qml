@@ -10,8 +10,7 @@ Singleton {
     readonly property var adapter: Bt.Bluetooth.defaultAdapter
     readonly property bool available: adapter !== null
     readonly property bool enabled:   adapter ? adapter.enabled : false
-    // a hardware switch puts the adapter in Blocked; writing enabled is refused, so the
-    // controls have to say why instead of flipping nothing
+    // a hardware switch puts the adapter in Blocked; writing enabled is refused, so the controls have to say why instead of flipping nothing
     readonly property bool hardBlocked: adapter
         ? adapter.state === Bt.BluetoothAdapterState.Blocked : false
 
@@ -130,21 +129,34 @@ Singleton {
     }
 
     property bool _scanRequested: false
+    property var _scanAdapter: null
     function setScan(on: bool): void {
-        const want = !!(on && adapter && adapter.enabled)
         // coalesce: onOpenChanged and Component.onCompleted can request the same state in one pass and BlueZ answers "Operation already in progress"
-        _scanRequested = want
+        _scanRequested = !!on
         if (!_scanSync.running) _scanSync.restart()
+    }
+
+    function _syncDiscovery(target): void {
+        const previous = root._scanAdapter
+        if (previous && previous !== target && previous.discovering)
+            previous.discovering = false
+        const want = !!(root._scanRequested && target && target.enabled)
+        const owned = !!(target && (previous === target || (want && !target.discovering)))
+        root._scanAdapter = want && owned ? target : null
+        // only stop discovery on an adapter this picker started
+        if (owned && target.discovering !== want)
+            target.discovering = want
+    }
+
+    onAdapterChanged: {
+        root.abandonAttempt()
+        _scanSync.restart()
     }
 
     Timer {
         id: _scanSync
         interval: 0
-        onTriggered: {
-            if (!root.adapter) return
-            const want = root._scanRequested && root.adapter.enabled
-            if (root.adapter.discovering !== want) root.adapter.discovering = want
-        }
+        onTriggered: root._syncDiscovery(root.adapter)
     }
 
     // BlueZ signals a refused connect or pair only by dropping back to idle, so an attempt is tracked until it lands

@@ -18,6 +18,39 @@ QtObject {
 
     readonly property real stepPct: 0.05
 
+    // quickshell 0.3.1 drops a volume write on a bluetooth route without hardware volume yet reports it applied; wireplumber writes it either way
+    readonly property bool _viaWpctl: node !== null && SystemTools.hasWpctl
+        && String(node.properties["device.api"] ?? "") === "bluez5"
+    // one process per drag frame is most of a core; a spaced write still lands the newest target
+    property bool _wpctlAgain: false
+    readonly property BoundedProcess _wpctl: BoundedProcess { timeoutMs: 3000 }
+    readonly property Timer _wpctlGap: Timer {
+        interval: 80
+        onTriggered: {
+            if (!ctl._wpctlAgain) return
+            if (ctl._wpctl.running) { ctl._wpctlGap.restart(); return }
+            ctl._wpctlAgain = false
+            ctl._apply(ctl.targetVolume)
+        }
+    }
+
+    function _apply(v: real): void {
+        const a = ready ? audio : null
+        if (!a) return
+        v = ctl._clampVolume(v)
+        if (!ctl._viaWpctl) {
+            a.volume = v
+            return
+        }
+        if (ctl._wpctl.running || ctl._wpctlGap.running) {
+            ctl._wpctlAgain = true
+            return
+        }
+        ctl._wpctl.command = ["wpctl", "set-volume", String(ctl.node.id), v.toFixed(4)]
+        ctl._wpctl.running = true
+        ctl._wpctlGap.restart()
+    }
+
     property real targetVolume: ready ? ctl._clampVolume(audio.volume) : 0
     property bool pendingApply: false
     property bool _componentReady: false
@@ -123,7 +156,7 @@ QtObject {
             const a = ctl.audio
             if (!a) return
             if (!ctl._volumeMatches(a.volume, ctl.targetVolume))
-                a.volume = Math.max(0, Math.min(1.0, ctl.targetVolume))
+                ctl._apply(ctl.targetVolume)
         }
     }
 
@@ -139,7 +172,7 @@ QtObject {
                     return
                 }
                 ctl._volRetries++
-                a.volume = Math.max(0, Math.min(1.0, ctl.targetVolume))
+                ctl._apply(ctl.targetVolume)
                 ctl._pendingSafety.restart()
             } else {
                 ctl._acceptVolume(actual)
@@ -199,7 +232,7 @@ QtObject {
         pendingApply = true
 
         if (!ctl._writeThrottle.running) {
-            a.volume = v
+            ctl._apply(v)
             ctl._writeThrottle.restart()
         }
         _volRetries = 0

@@ -29,7 +29,7 @@ Singleton {
     property bool _probeComplete: false
     property string _badSensorPaths: ""
     property int _detectGeneration: 0
-    // available drops to false whenever the service is released, so a control gated on it flickers on every menu open; sensors do not come and go
+    // keeps the discovery result when demand stops, so gated controls do not flicker on every menu open
     readonly property bool sensorMissing: _probeComplete && _sensorPath.length === 0
 
     property int _hotCount:      0
@@ -46,11 +46,24 @@ Singleton {
     readonly property int pulseDuration: critical ? Motion.ms(650) : Motion.ms(2000)
     property real alertPulse: 0
 
+    // announces each crossing and rests: a game can hold the cpu hot for hours
+    property bool _alertSettled: false
+    onHotChanged:      if (root.hot) root._alertSettled = false
+    onCriticalChanged: if (root.critical) root._alertSettled = false
+
     PulseLoop {
         target:         root
         targetProperty: "alertPulse"
         duration:       root.pulseDuration
-        active:         root.hot && MenuState.homeActive && !Idle.isQuiet
+        active:         root.hot && MenuState.homeActive
+            && !root._alertSettled && !Idle.isQuiet
+    }
+
+    Timer {
+        interval: 15000
+        running: root.hot && MenuState.homeActive && !root._alertSettled
+            && !Idle.isQuiet && !ShellSettings.reduceMotion
+        onTriggered: root._alertSettled = true
     }
 
     function _sample(t: real): void {
@@ -130,6 +143,22 @@ Singleton {
 
     function _needsSensorDetection(): bool {
         return root._sensorPath.length === 0 && !root._probeComplete
+    }
+
+    function _retryMissingSensor(): void {
+        if (!root.sensorMissing || _detectProc.running) return
+        // a driver can come back at the same path after suspend; exclusions belong to one discovery pass
+        root._badSensorPaths = ""
+        root._detectGeneration++
+        // leave the missing result up until discovery succeeds, or the control flashes on every retry
+        root._startSensorDetection()
+    }
+
+    property Timer _sensorRetry: Timer {
+        interval: 60000
+        repeat: true
+        running: root._wanted && root.sensorMissing
+        onTriggered: root._retryMissingSensor()
     }
 
     on_WantedChanged: {

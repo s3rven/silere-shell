@@ -18,8 +18,7 @@ Singleton {
     property string lastError: ""
     property real lastCheckMs: 0
     property bool _discardResult: false
-    // a check fails for a night offline as readily as for a wedged package database;
-    // only a failure that outlives a retry says the checker itself is broken
+    // a check fails for a night offline as readily as for a wedged package database; only a failure that outlives a retry says the checker itself is broken
     property int  _failStreak: 0
     property real _nowMs: 0
     property string _sourceKey: ""
@@ -66,7 +65,7 @@ Singleton {
         case "zypper": return "zypper"
         case "xbps":   return "xbps"
         }
-        return SystemTools.ready ? "Unsupported" : "Detecting..."
+        return SystemTools.ready ? "Unsupported" : "Detecting…"
     }
     readonly property string statusText: isChecking ? "Checking"
         : lastFailed ? "Check failed"

@@ -122,8 +122,7 @@ QtObject {
 
     readonly property var workspaces: {
         const src = root._wsRaw
-        // an active window is not occupancy: a workspace holding only unfocused windows
-        // reports none, so count real windows the way the hyprland backend does
+        // an active window is not occupancy: a workspace holding only unfocused windows reports none, so count real windows the way the hyprland backend does
         const winCount = {}
         const wins = root._winRaw
         for (let i = 0; i < wins.length; i++) {
@@ -290,8 +289,7 @@ QtObject {
         if (!timer.running) timer.start()
     }
 
-    // a title-only change edits the row in place: rebuilding the list for every keystroke
-    // in a browser address bar wakes every consumer of the window model
+    // a title-only change edits the row in place: rebuilding the list for every keystroke in a browser address bar wakes every consumer of the window model
     function _applyWindowOpenedOrChanged(w): void {
         const current = root._winRaw
         const at = NiriEvents.indexOfWindow(current, w.id)

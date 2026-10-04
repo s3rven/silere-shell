@@ -191,8 +191,7 @@ Singleton {
         return Number(candidate.signalStrength || 0) > Number(current.signalStrength || 0)
     }
 
-    // by the tier the row draws, not the raw percentage: signal drifts a few points
-    // between scans and neighbouring networks traded places under the pointer
+    // by the tier the row draws, not the raw percentage: signal drifts a few points between scans and neighbouring networks traded places under the pointer
     function _compareWifi(A, B): int {
         if (A.active !== B.active) return A.active ? -1 : 1
         // a saved network joins without a password, so it outranks a stronger stranger
@@ -222,8 +221,7 @@ Singleton {
                 const security = network.security
                 const passwordless = security === WifiSecurityType.Open
                     || security === WifiSecurityType.Owe
-                // connectWithPsk accepts only these three; every other secured type
-                // has to join from a stored profile or not at all
+                // connectWithPsk accepts only these three; every other secured type has to join from a stored profile or not at all
                 const psk = security === WifiSecurityType.WpaPsk
                     || security === WifiSecurityType.Wpa2Psk
                     || security === WifiSecurityType.Sae
@@ -535,8 +533,7 @@ Singleton {
 
     Timer {
         id: _vpnFallbackPoll
-        // the link signature covers device transitions; this is only a net for a
-        // VPN toggled outside the shell that left it unchanged
+        // the link signature covers device transitions; this is only a net for a VPN toggled outside the shell that left it unchanged
         interval: 900000
         repeat: true
         running: root._vpnWanted

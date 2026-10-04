@@ -360,7 +360,7 @@ Singleton {
     property bool _fullAnnounced: false
     function _alertBatteryFull(): void {
         if (!Battery.available) return
-        if (!Battery.full || !Battery.charging) {
+        if (!Battery.full || !Battery.onAc) {
             root._fullAnnounced = false
             return
         }
@@ -378,8 +378,7 @@ Singleton {
         root.showAlert("temp", "󰔏", Math.min(1.0, (CpuTemp.temp - 50) / 65),
             "CPU Critical · " + Math.round(CpuTemp.temp) + "°", Theme.error)
     }
-    // the watchers carry their osdEnabled gate in their target binding, so the replay
-    // has to apply it itself
+    // the watchers carry their osdEnabled gate in their target binding, so the replay has to apply it itself
     function _replayAlerts(): void {
         if (!ShellSettings.osdEnabled) return
         if (Battery.critical) root._alertBatteryCritical()

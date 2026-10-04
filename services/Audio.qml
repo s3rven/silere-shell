@@ -150,8 +150,7 @@ Singleton {
     readonly property int sourceCount: sources.length
     readonly property var sourceModel: sources.map(n => ({ value: n, label: root.sinkLabel(n) }))
 
-    // type only, like _inputStreams below: this is what gets tracked, and filtering the
-    // tracked set on a property is a binding loop through PwObjectTracker
+    // type only, like _inputStreams below: this is what gets tracked, and filtering the tracked set on a property is a binding loop through PwObjectTracker
     readonly property var _outputStreams: {
         const out = []
         const all = root._nodes
@@ -160,8 +159,7 @@ Singleton {
         return out
     }
 
-    // a stream with no application behind it is PipeWire routing of its own — a loopback,
-    // a combine sink — and has no place in a list of apps
+    // a stream with no application behind it is PipeWire routing of its own — a loopback, a combine sink — and has no place in a list of apps
     function isAppStream(props): bool {
         const p = props || ({})
         return String(p["application.name"] || "").length > 0

@@ -49,14 +49,18 @@ Singleton {
     readonly property bool _validReading: available && pct > 0
     readonly property bool low: _validReading && pct < ShellSettings.batteryLowThreshold && onBattery
     readonly property bool critical: _validReading && pct < _critPct && onBattery
-    readonly property bool charging: available && !onBattery
-    readonly property bool full:     available && pct >= 99
+    readonly property int state: upowerReady ? UPower.displayDevice.state : UPowerDeviceState.Unknown
+    readonly property bool onAc: available && !onBattery
+    readonly property bool charging: available && state === UPowerDeviceState.Charging
+    readonly property bool full: available && (pct >= 99 || state === UPowerDeviceState.FullyCharged)
     readonly property int pulseDuration: critical ? Motion.ms(650) : Motion.ms(2000)
     property real alertPulse: 0
 
     readonly property color iconColor: {
         if (!available || !_validReading)             return Theme.subtext
-        if (charging)                                 return full ? Theme.success : held ? Theme.subtext : Theme.accent
+        if (onAc && full)                             return Theme.success
+        if (held)                                     return Theme.subtext
+        if (charging)                                 return Theme.accent
         if (pct < _critPct)                           return Theme.error
         if (pct < ShellSettings.batteryLowThreshold)  return Theme.warning
         return Theme.accent
@@ -65,7 +69,7 @@ Singleton {
     readonly property string icon: {
         if (!available || !_validReading)  return "󰂎"
         if (held)                          return "󰚥"
-        if (!onBattery) {
+        if (charging) {
             if (pct >= 95)   return "󰂅"
             if (pct >= 90)   return "󰂋"
             if (pct >= 80)   return "󰂊"
@@ -122,22 +126,37 @@ Singleton {
     readonly property real   timeToEmpty: upowerReady ? UPower.displayDevice.timeToEmpty : 0
     readonly property real   timeToFull:  upowerReady ? UPower.displayDevice.timeToFull  : 0
     readonly property string timeLabel: {
-        const secs = onBattery ? timeToEmpty : timeToFull
-        if (!available || secs <= 0) return ""
-        const h = Math.floor(secs / 3600)
-        const m = Math.floor((secs % 3600) / 60)
-        const time = h > 0 ? `${h}h ${m}m` : `${m}m`
-        return onBattery ? time : `+ ${time}`
+        if (!available) return ""
+        if (charging) return root.timeText(timeToFull, true)
+        if (state === UPowerDeviceState.Discharging || onBattery)
+            return root.timeText(timeToEmpty, false)
+        return ""
+    }
+
+    function timeText(seconds: real, charging: bool): string {
+        if (!isFinite(seconds) || seconds <= 0) return ""
+        const minutes = Math.ceil(seconds / 60)
+        const h = Math.floor(minutes / 60), m = minutes % 60
+        const text = h > 0 ? `${h}h ${m}m` : `${m}m`
+        return charging ? `+ ${text}` : text
     }
 
     // a charge limit (Lenovo conservation mode, ThinkPad thresholds) parks the battery on AC
-    readonly property bool held: available && !onBattery
+    readonly property bool held: onAc
         && UPower.displayDevice.state === UPowerDeviceState.PendingCharge
 
-    readonly property string statusLabel: {
-        if (!available)  return ""
-        if (!onBattery)  return full ? "charged" : held ? "not charging" : "charging"
-        return "discharging"
+    readonly property string statusLabel: root.statusFor(available, state, onBattery, full)
+
+    function statusFor(present: bool, deviceState: int, onBattery: bool, full: bool): string {
+        if (!present) return ""
+        if (full && !onBattery) return "charged"
+        if (deviceState === UPowerDeviceState.FullyCharged) return "charged"
+        if (deviceState === UPowerDeviceState.Charging) return "charging"
+        if (deviceState === UPowerDeviceState.Discharging) return "discharging"
+        if (deviceState === UPowerDeviceState.Empty) return "empty"
+        if (deviceState === UPowerDeviceState.PendingCharge) return "not charging"
+        if (deviceState === UPowerDeviceState.PendingDischarge) return "not discharging"
+        return onBattery ? "on battery" : "on AC"
     }
 
     // the glyph already carries the level in warning then error, so the pulse is emphasis

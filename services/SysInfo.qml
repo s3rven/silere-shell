@@ -96,6 +96,7 @@ Singleton {
         blockAllReads: false
         printErrors: false
         onLoaded: root._applyMeminfo(_meminfoFile.text())
+        onLoadFailed: if (root._active) { root.memTotalKb = 0; root.memAvailKb = 0 }
     }
 
     FileView {
@@ -119,6 +120,7 @@ Singleton {
         blockAllReads: false
         printErrors: false
         onLoaded: root._applyCpuStat(_statFile.text())
+        onLoadFailed: if (root._active) root._clearCpuSample()
     }
 
     function _refreshFast(): void {
@@ -131,10 +133,11 @@ Singleton {
         if (!root._active) return
         const total = mem.match(/^MemTotal:\s+(\d+)/m)
         const avail = mem.match(/^MemAvailable:\s+(\d+)/m)
-        if (total && avail) {
-            root.memTotalKb = parseInt(total[1]) || 0
-            root.memAvailKb = parseInt(avail[1]) || 0
-        }
+        const totalKb = total ? Number(total[1]) : 0
+        const availKb = avail ? Number(avail[1]) : NaN
+        root.memTotalKb = isFinite(totalKb) && totalKb > 0 && isFinite(availKb) ? totalKb : 0
+        root.memAvailKb = root.memTotalKb > 0
+            ? Math.max(0, Math.min(root.memTotalKb, availKb)) : 0
     }
 
     function _applyUptime(raw: string): void {
@@ -146,6 +149,13 @@ Singleton {
         _uptimePoll.restart()
     }
 
+    function _clearCpuSample(): void {
+        root.cpuReady = false
+        root.cpuPct = 0
+        root._lastCpuTotal = 0
+        root._lastCpuIdle = 0
+    }
+
     function _applyCpuStat(_cpuRaw: string): void {
         if (!root._active) return
         const _cpuNl  = _cpuRaw.indexOf('\n')
@@ -153,17 +163,34 @@ Singleton {
         const p = cpuLine.trim().split(/\s+/)
         if (p.length >= 9 && p[0] === "cpu") {
             const vals = []
-            for (let i = 1; i <= 8; i++) vals.push(parseInt(p[i]) || 0)
+            for (let i = 1; i <= 8; i++) {
+                const value = Number(p[i])
+                if (!/^[0-9]+$/.test(p[i]) || !isFinite(value)) {
+                    root._clearCpuSample()
+                    return
+                }
+                vals.push(value)
+            }
             const idle  = vals[3] + vals[4]
             const total = vals.reduce((s, v) => s + v, 0)
+            if (!isFinite(total) || !isFinite(idle)) {
+                root._clearCpuSample()
+                return
+            }
             if (root._lastCpuTotal > 0 && total > root._lastCpuTotal) {
                 const dTotal = total - root._lastCpuTotal
                 const dIdle  = idle  - root._lastCpuIdle
-                root.cpuPct = Math.max(0, Math.min(1, (dTotal - dIdle) / dTotal))
-                root.cpuReady = true
+                // hotplug and counter resets move the totals backwards; re-prime instead of keeping a stale or 100% reading
+                root.cpuReady = dIdle >= 0 && dIdle <= dTotal
+                root.cpuPct = root.cpuReady ? (dTotal - dIdle) / dTotal : 0
+            } else {
+                root.cpuReady = false
+                root.cpuPct = 0
             }
             root._lastCpuTotal = total
             root._lastCpuIdle  = idle
+        } else {
+            root._clearCpuSample()
         }
     }
 

@@ -13,8 +13,7 @@ Singleton {
     property bool scanning: false
     property string lastError: ""
     property bool _scanned: false
-    // fc-list is a startup process spawn the default font does not need; run it only
-    // once something on screen asks for the list
+    // fc-list is a startup process spawn the default font does not need; run it only once something on screen asks for the list
     property bool _wanted: false
 
     function scan(force: bool): void {
@@ -33,8 +32,7 @@ Singleton {
     Connections {
         target: SystemTools
         function onReadyChanged() { if (SystemTools.ready && root._wanted) root.scan(false) }
-        // a completed tool probe can change fc-list availability, but it does not
-        // invalidate a list already collected
+        // a completed tool probe can change fc-list availability, but it does not invalidate a list already collected
         function onCheckingChanged() {
             if (!SystemTools.checking && SystemTools.ready && root._wanted) root.scan(false)
         }

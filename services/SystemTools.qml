@@ -12,8 +12,7 @@ Singleton {
     property string lastError: ""
     property var _tools: ({})
     property string packageFamily: ""
-    // ready stays true during a refresh so controls do not disappear. Consumers
-    // that need to redo work after a coherent scan use this completion edge.
+    // ready stays true during a refresh so controls do not disappear; consumers that need to redo work after a coherent scan use this completion edge
     property int _scanRevision: 0
     readonly property int scanRevision: _scanRevision
 
@@ -49,6 +48,8 @@ Singleton {
     readonly property bool hasFcList:        _tools["fc-list"] ?? false
     readonly property bool hasPwvucontrol:   _tools.pwvucontrol ?? false
     readonly property bool hasPavucontrol:   _tools.pavucontrol ?? false
+    readonly property bool hasWpctl:         _tools.wpctl ?? false
+    readonly property bool hasCurl:          _tools.curl ?? false
 
     // "" | working | done | failed
     property string matugenRepairState: ""
@@ -144,8 +145,7 @@ Singleton {
         }
     }
 
-    // opening a section re-runs the full probe; only do that when the last answer
-    // is stale, while the Refresh control still forces one
+    // opening a section re-runs the full probe; only do that when the last answer is stale, while the Refresh control still forces one
     function refreshIfStale(maxAgeMs: int): void {
         if (root._lastScanMs > 0 && Date.now() - root._lastScanMs < maxAgeMs) return
         root.refresh()
@@ -173,7 +173,7 @@ Singleton {
             "net.hadess.PowerProfiles /net/hadess/PowerProfiles net.hadess.PowerProfiles ActiveProfile " +
             ">/dev/null 2>&1 && echo @powerprofiles; " +
             "for t in brightnessctl inotifywait nmcli cava matugen hyprsunset wlsunset hyprlock swaylock gtklock systemctl loginctl hyprctl pgrep pkill notify-send " +
-            "busctl checkupdates paru yay timeout apt dnf zypper xbps-install powerprofilesctl fc-list pwvucontrol pavucontrol; do " +
+            "busctl checkupdates paru yay timeout apt dnf zypper xbps-install powerprofilesctl fc-list pwvucontrol pavucontrol wpctl curl; do " +
             "  command -v \"$t\" >/dev/null 2>&1 && echo \"$t\"; " +
             // the last lookup is optional; do not inherit its `command -v` status and discard every tool found before it
             "done; exit 0"])

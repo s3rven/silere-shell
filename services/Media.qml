@@ -18,8 +18,8 @@ Singleton {
         return isFinite(number) && number > 0 ? number : 0
     }
 
-    // any process on the bus can set artUrl, and Qt loads a remote one on the pixmap
-    // thread, where a QNetworkAccessManager first use has crashed the shell in OpenSSL
+    // any process on the bus can set artUrl, and a remote one loaded by Qt goes through the pixmap
+    // thread, where a QNetworkAccessManager first use has crashed the shell in OpenSSL; curl fetches it instead
     function artSource(raw): string {
         const value = String(raw ?? "").trim()
         if (value.length === 0 || value.length > root.maxArtSourceChars) return ""
@@ -33,20 +33,22 @@ Singleton {
     // ephemeral by design: players come and go, so a pinned choice is dropped the moment its player leaves the bus
     property string preferredPlayer: ""
 
-    readonly property var playerList: {
+    function playablePlayers(values): var {
         const out = []
-        const players = Mpris.players.values ?? []
+        const players = values ?? []
         for (let i = 0; i < players.length; i++)
             if (players[i]) out.push(players[i])
         // playerctld only mirrors the real players; keep it solely when nothing else is on the bus
         const real = out.filter(p => (p.dbusName || "").indexOf("playerctld") < 0)
         const pool = real.length > 0 ? real : out
         // browsers leave the MPRIS service registered after the tab goes, stopped and with no
-        // metadata: counting those offers a switcher that cycles onto an empty card. Stopped
-        // only - a paused player is one the user may well want to come back to
-        const live = pool.filter(p => p.playbackState !== MprisPlaybackState.Stopped)
+        // metadata: counting those offers a switcher that cycles onto an empty card; a stopped
+        // player that still holds a track stays, since it can resume
+        const live = pool.filter(p => p.playbackState !== MprisPlaybackState.Stopped
+            || SafeText.singleLineText(p.trackTitle, root.maxMetadataChars).trim().length > 0)
         return live.length > 0 ? live : pool
     }
+    readonly property var playerList: root.playablePlayers(Mpris.players.values)
     readonly property int playerCount: playerList.length
 
     onPlayerListChanged: {
@@ -268,11 +270,13 @@ Singleton {
         "front.jpg", "AlbumArt.jpg"
     ]
 
-    // remote art is allowed on purpose where notification icons are denied: mpris art genuinely is a url
+    // remote art is allowed on purpose where notification icons are denied: mpris art genuinely is a url,
+    // but it reaches the view only as a file curl already saved, never as a url for Qt to fetch in-process
     readonly property var artCandidates: {
         const out = []
         function offer(value) {
-            const source = root.artSource(value)
+            let source = root.artSource(value)
+            if (/^https:\/\//i.test(source)) source = root._artFiles[source] ?? ""
             if (source.length > 0 && out.indexOf(source) < 0) out.push(source)
         }
         const reported = root.normalizedArtUrl(root.player ? root.player.trackArtUrl : "")
@@ -283,6 +287,97 @@ Singleton {
             for (let i = 0; i < root.sidecarArtNames.length; i++)
                 offer(directory + "/" + root.sidecarArtNames[i])
         return out
+    }
+
+    readonly property bool remoteArtAvailable: SystemTools.hasCurl && root._artCacheDir.length > 0
+    readonly property string _artCacheDir: XdgPaths.cacheHome.length > 0
+        ? XdgPaths.cacheHome + "/silere-shell/art" : ""
+    // url -> file url of the saved cover; misses are remembered so a dead url is tried once per session
+    property var _artFiles: ({})
+    property var _artMisses: ({})
+    property string _artFetching: ""
+
+    function remoteArtName(url: string): string {
+        return Qt.md5(url) + ".img"
+    }
+
+    readonly property var _remoteArtWanted: {
+        if (!ShellSettings.mediaRemoteArt || !root.remoteArtAvailable) return []
+        const out = []
+        const reported = root.normalizedArtUrl(root.player ? root.player.trackArtUrl : "")
+        const urls = [root.upscaledArtUrl(reported), reported]
+        for (let i = 0; i < urls.length; i++) {
+            const source = root.artSource(urls[i])
+            if (/^https:\/\//i.test(source) && out.indexOf(source) < 0) out.push(source)
+        }
+        return out
+    }
+    on_RemoteArtWantedChanged: root._fetchNextArt()
+
+    function _fetchNextArt(): void {
+        if (_artFetch.running) return
+        const wanted = root._remoteArtWanted
+        for (let i = 0; i < wanted.length; i++) {
+            const url = wanted[i]
+            if (root._artFiles[url] !== undefined || root._artMisses[url] === true) continue
+            root._artFetching = url
+            _artFetch.exec(["sh", "-c", root._artFetchScript, "silere-art",
+                root._artCacheDir, root.remoteArtName(url), url])
+            return
+        }
+    }
+
+    function _artFetched(url: string, ok: bool, removed): void {
+        const files = Object.assign({}, root._artFiles)
+        const pruned = removed ?? []
+        for (const cachedUrl of Object.keys(files))
+            if (pruned.indexOf(root.remoteArtName(cachedUrl)) >= 0) delete files[cachedUrl]
+        if (ok) {
+            files[url] = IconResolver.safeLocalSource(root._artCacheDir + "/" + root.remoteArtName(url))
+        } else {
+            const misses = Object.keys(root._artMisses).length > 200 ? ({}) : Object.assign({}, root._artMisses)
+            misses[url] = true
+            root._artMisses = misses
+        }
+        root._artFiles = files
+    }
+
+    // -q skips ~/.curlrc; https-only redirects and size and time caps keep a hostile player from filling the disk or holding the fetch
+    readonly property string _artFetchScript:
+        'd=$1; f=$2; u=$3; mkdir -p -m 700 -- "$d" || exit 1; ' +
+        'if [ -s "$d/$f" ]; then touch -- "$d/$f"; exit 0; fi; ' +
+        'curl -q -fsS --proto =https --proto-redir =https -L --max-redirs 3 ' +
+        '--connect-timeout 5 --max-time 10 --max-filesize 10485760 -o "$d/.$f.part" -- "$u" ' +
+        '&& mv -f -- "$d/.$f.part" "$d/$f"; rc=$?; rm -f -- "$d/.$f.part"; ' +
+        'ls -1t -- "$d" | tail -n +97 | while IFS= read -r old; do ' +
+        'rm -f -- "$d/$old" && printf "%s\\n" "$old"; done; exit $rc'
+
+    BoundedProcess {
+        id: _artFetch
+        timeoutMs: 15000
+        stdout: StdioCollector { id: _artFetchOut }
+        onExited: code => {
+            const url = root._artFetching
+            root._artFetching = ""
+            if (!ShellSettings.mediaRemoteArt) {
+                Quickshell.execDetached(["rm", "-rf", "--", root._artCacheDir])
+                return
+            }
+            if (url.length > 0) root._artFetched(url, code === 0 && !_artFetch.timedOut,
+                _artFetchOut.text.trim().split(/\s+/))
+            Qt.callLater(root._fetchNextArt)
+        }
+    }
+
+    // off drops the covers already saved, the same way history off drops saved text
+    Connections {
+        target: ShellSettings
+        function onMediaRemoteArtChanged() {
+            if (ShellSettings.mediaRemoteArt || root._artCacheDir.length === 0) return
+            root._artFiles = ({})
+            root._artMisses = ({})
+            Quickshell.execDetached(["rm", "-rf", "--", root._artCacheDir])
+        }
     }
 
     readonly property string artKey: root.artCandidates.join("\u0000")
@@ -312,8 +407,7 @@ Singleton {
             _staleArtClear.stop()
             root.stableArtUrl = ""
         } else if (root.stableArtUrl.length > 0) {
-            // MPRIS properties often arrive in separate D-Bus updates. Keep the
-            // old cover briefly, but do not show it forever for a track with no art.
+            // MPRIS properties often arrive in separate D-Bus updates; keep the old cover briefly, but do not show it forever for a track with no art
             _staleArtClear.restart()
         }
     }

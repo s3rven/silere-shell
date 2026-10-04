@@ -69,8 +69,7 @@ Singleton {
         superviseWhen: SystemTools.ready && SystemTools.hasInotifywait
             && ShellSettings.underlineGlow && ShellSettings.underlineScreenshotGlow
         restartDelay: 60000
-        // exit 3 means no screenshot directory exists; immediate respawns cannot fix that,
-        // but a later explicit tool recheck retries after the user creates one
+        // exit 3 means no screenshot directory exists; immediate respawns cannot fix that, but a later explicit tool recheck retries after the user creates one
         giveUpCodes: [3]
         command: ["bash", "-c",
             "dirs=(); " +

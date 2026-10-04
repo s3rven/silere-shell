@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
+import Quickshell.Wayland
 import "../config"
 
 QtObject {
@@ -56,8 +57,7 @@ QtObject {
             "  fi; " +
             "  unit=silere-shell.service; " +
             "  systemctl --user is-active --quiet \"$unit\" || continue; " +
-            // the user manager is shared: a throwaway checkout running this file must
-            // not restart the shell the unit actually starts
+            // the user manager is shared: a throwaway checkout running this file must not restart the shell the unit actually starts
             "  . \"$root/scripts/lib/unit.sh\" 2>/dev/null && _silere_unit_runs_checkout \"$root\" || continue; " +
             "  systemctl --user restart \"$unit\"; " +
             "done)",
@@ -66,6 +66,35 @@ QtObject {
 
     function retryWatcher(): void {
         if (_restartWatch.gaveUp) _restartWatch.retry()
+    }
+
+    // quickshell 0.3.1 never reconnects a dropped event socket while hyprland keeps running, so the watcher above never fires; wayland focus flips with no socket event between them prove it dead
+    property int _eventSeq: 0
+    property int _seqAtFlip: -1
+    property int _silentFlips: 0
+    property bool _socketDead: false
+    property Connections _socketWatch: Connections {
+        target: ToplevelManager
+        function onActiveToplevelChanged() {
+            if (ToplevelManager.activeToplevel) root._noteFocusFlip()
+        }
+    }
+    function _noteFocusFlip(): void {
+        if (root._socketDead) return
+        root._silentFlips = root._eventSeq === root._seqAtFlip ? root._silentFlips + 1 : 0
+        root._seqAtFlip = root._eventSeq
+        if (root._silentFlips >= 3) root._eventSocketDead()
+    }
+    property BoundedProcess _socketRestart: BoundedProcess {
+        timeoutMs: 5000
+        command: ["systemctl", "--user", "--no-block", "restart", "silere-shell.service"]
+    }
+    function _eventSocketDead(): void {
+        root._socketDead = true
+        const restart = root._unitRunsHere
+        console.warn("silere-shell: the hyprland event socket went silent"
+            + (restart ? "; restarting the shell" : "; restart the shell to recover"))
+        if (restart) _socketRestart.running = true
     }
 
     property Binding _luaDispatch: Binding {
@@ -83,7 +112,9 @@ QtObject {
         onExited: code => root._unitRunsHere = code === 0
     }
     function _probeUnit(): void {
-        if (!SystemTools.ready || !SystemTools.hasSystemctl || _unitProbe.running) return
+        // a test copy of this checkout matches the unit too
+        if (!SystemTools.ready || !SystemTools.hasSystemctl || _unitProbe.running
+                || Quickshell.env("SILERE_SANDBOX") === "1") return
         _unitProbe.running = true
     }
     property Connections _unitProbeRearm: Connections {
@@ -269,6 +300,14 @@ QtObject {
     readonly property bool overviewActive: false
     readonly property var specialOutputs: Object.keys(root._specialOn)
 
+    // hyprland 0.57 replaces a window's workspace id with a string address; like quickshell, only a numbered one keeps its id
+    function _wsNumber(ws): int {
+        if (!ws) return -1
+        if (typeof ws.id === "number") return ws.id
+        const addr = String(ws.address ?? "")
+        return /^-?[0-9]+$/.test(addr) ? Number(addr) : -1
+    }
+
     readonly property var workspaces: {
         root._layoutTick
         const mons = Hyprland.monitors ? (Hyprland.monitors.values ?? []) : []
@@ -284,7 +323,7 @@ QtObject {
         for (let i = 0; i < tops.length; i++) {
             const c = tops[i] ? tops[i].lastIpcObject : null
             if (!c || !c.address) continue
-            const id = c.workspace ? (c.workspace.id ?? -1) : -1
+            const id = root._wsNumber(c.workspace)
             if (id > 0) winCount[id] = (winCount[id] ?? 0) + 1
         }
         const vals = Hyprland.workspaces ? (Hyprland.workspaces.values ?? []) : []
@@ -318,7 +357,7 @@ QtObject {
             const t = tops[i]
             const c = t ? t.lastIpcObject : null
             if (!c || !c.address) continue
-            const wsId = c.workspace ? (c.workspace.id ?? -1) : -1
+            const wsId = root._wsNumber(c.workspace)
             out.push({
                 appId: root._identity((t.wayland && t.wayland.appId)
                     || c.class || c.initialClass),
@@ -365,8 +404,7 @@ QtObject {
         })
     }
 
-    // quickshell never clears activeToplevel: hyprland reports unfocus as an empty
-    // activewindowv2 address and its parser bails out before the assignment
+    // quickshell never clears activeToplevel: hyprland reports unfocus as an empty activewindowv2 address and its parser bails out before the assignment
     readonly property var activeToplevel: {
         if (root._unfocused) return null
         const t = Hyprland.activeToplevel
@@ -400,6 +438,7 @@ QtObject {
     property Connections _eventConn: Connections {
         target: Hyprland
         function onRawEvent(event) {
+            root._eventSeq++
             const n = event.name
             // hyprland pairs each event with its v2 form; only v2 carries the title
             if (n === "windowtitle") return
@@ -413,6 +452,8 @@ QtObject {
             }
             // none of these touch the workspace, monitor or toplevel lists: no floating, group, pin or minimize state is modelled (changefloatingmode alone fired 420 times in two hours)
             if (root._inertEvents[n] === true) return
+            // twins of workspacev2, createworkspacev2, destroyworkspacev2 and movewindowv2 (hyprland 0.33+): handling both rebuilt the models twice per switch
+            if (n === "workspace" || n === "createworkspace" || n === "destroyworkspace" || n === "movewindow") return
             // activewindow refires per title frame; only v2's address distinguishes a real focus change
             if (n === "activewindowv2") {
                 const addr = String(event.data ?? "")
@@ -428,7 +469,7 @@ QtObject {
                 root._layoutTick++
                 return
             }
-            if (n === "openwindow" || n === "closewindow" || n === "movewindow" || n === "movewindowv2"
+            if (n === "openwindow" || n === "closewindow" || n === "movewindowv2"
                 || n === "fullscreen")
                 root.refreshToplevels()
             // a window that never retitles after opening has no windowtitlev2 to arm this on
@@ -438,7 +479,7 @@ QtObject {
                 root._updateSpecial(event.data)
             if (n === "scrolloverview")
                 root.overviewRaw(event.data === "1")
-            if (n === "workspace" || n === "workspacev2" || n === "focusedmon"
+            if (n === "workspacev2" || n === "focusedmon"
                 || n === "focusedmonv2" || n === "activemon")
                 root.workspaceActivated(root.focusedMonitor)
             root._layoutTick++

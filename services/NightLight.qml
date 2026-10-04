@@ -14,8 +14,7 @@ Singleton {
     property bool _pendingEnable: false
     property int _stateGeneration: 0
     property bool _probeFailed:   false
-    // the gamma tool is whichever one the compositor can drive; the process this
-    // instance actually launched is what a stop has to name, not the current pick
+    // the gamma tool is whichever one the compositor can drive; the process this instance actually launched is what a stop has to name, not the current pick
     readonly property string tool: Settings.nightLightTool
     property string _runningTool: ""
     readonly property string _killTarget: _runningTool.length > 0 ? _runningTool : tool
@@ -114,10 +113,11 @@ Singleton {
     }
 
     // sentence case like the row's other statuses; phaseLabel is a caption inside the arc and stays lowercase
-    readonly property string offStatus: {
+    readonly property string offStatus: root.offStatusAt(nowHour, _elevation)
+    function offStatusAt(hour: real, elevation: real): string {
         if (_halfDay <= 0 || _halfDay >= 12) return ""
-        if (nowHour < sunriseHour) return "Sunrise " + sunriseLabel
-        if (nowHour >= _solarNoon && _elevation < 12) return "Sunset " + sunsetLabel
+        if (hour < sunriseHour || hour > sunsetHour) return "Sunrise " + sunriseLabel
+        if (hour >= _solarNoon && elevation < 12) return "Sunset " + sunsetLabel
         return ""
     }
 
@@ -347,8 +347,7 @@ Singleton {
         }
     }
 
-    // -1 means the probe itself failed; otherwise answer the state without
-    // making an old no-match override the daemon this instance just started.
+    // -1 means the probe itself failed; otherwise answer the state without making an old no-match override the daemon this instance just started
     function _probeState(code: int, timedOut: bool, selfRunning: bool): int {
         if (timedOut || (code !== 0 && code !== 1)) return -1
         return code === 0 || selfRunning ? 1 : 0
@@ -489,8 +488,7 @@ Singleton {
                 root.lastError = ""
                 return
             }
-            // pkill exit 1 just means nothing matched — the common case when no
-            // external tool is running. Only 2 (usage) and 3 (fatal) are real errors
+            // pkill exit 1 just means nothing matched — the common case when no external tool is running; only 2 (usage) and 3 (fatal) are real errors
             if (_killProc.timedOut || code === 2 || code === 3) {
                 root._pendingEnable = false
                 root.lastError = "Could not stop the external night light"
