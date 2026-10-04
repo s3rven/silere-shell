@@ -1,5 +1,12 @@
 # shellcheck shell=bash
 
+# Qt checks whether this variable exists, including empty and zero values.
+_silere_unit_uses_transient_images() {
+    local unit_env
+    unit_env="$(systemctl --user show silere-shell.service -p Environment --value 2>/dev/null)" || return 1
+    [[ "$unit_env" =~ (^|[[:space:]\"])QSG_TRANSIENT_IMAGES= ]]
+}
+
 # systemd prints ExecStart as "{ path=... ; argv[]=prog args ; ... }"; a `silere` link resolves via readlink
 _silere_unit_runs_checkout() {
     local root="$1" exec_start argv prog

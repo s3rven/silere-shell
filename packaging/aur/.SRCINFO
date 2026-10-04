@@ -1,5 +1,5 @@
 pkgbase = silere-shell-git
-	pkgdesc = Quiet by default, yours by choice. A Quickshell bar for Hyprland and niri with nothing running behind your back
+	pkgdesc = Quickshell desktop shell for Hyprland and niri: bar, notifications, OSD and tray in one process
 	pkgver = 1.2.0.r0.ga8e18a9
 	pkgrel = 1
 	url = https://github.com/s3rven/silere-shell
@@ -35,6 +35,7 @@ pkgbase = silere-shell-git
 	optdepends = fakeroot: package update badge (checkupdates needs it)
 	optdepends = paru: AUR update count
 	optdepends = yay: AUR update count
+	optdepends = curl: cover art from the web
 	provides = silere-shell
 	conflicts = silere-shell
 	source = silere-shell::git+https://github.com/s3rven/silere-shell.git

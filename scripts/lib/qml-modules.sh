@@ -17,8 +17,8 @@ SILERE_MIN_QT="6.9"
 # Prints nothing when the binary is missing or the format is one we don't know.
 _silere_quickshell_version() {
     command -v qs >/dev/null 2>&1 || return 1
-    # Qt prints a locale warning ahead of the version on a terminal under LC_ALL=C, so match the line, not line one
-    qs --version 2>&1 | sed -n '/^[[:space:]]*[Qq]uickshell[[:space:]]/{s/.*[Qq]uickshell[[:space:]]\+v\?\([0-9]\+\(\.[0-9]\+\)*\).*/\1/p;q;}'
+    # under LC_ALL=C, Qt logs a locale warning (to the journal unless stderr is a terminal); match the line, not line one
+    env -u LC_ALL qs --version 2>&1 | sed -n '/^[[:space:]]*[Qq]uickshell[[:space:]]/{s/.*[Qq]uickshell[[:space:]]\+v\?\([0-9]\+\(\.[0-9]\+\)*\).*/\1/p;q;}'
 }
 
 # 0 when $1 is at least $2, comparing dot-separated numbers left to right.

@@ -58,16 +58,21 @@ pid="$(find_pid)" || true
     exit 1
 }
 
-# the first menu open builds pages the process keeps for life: ~30 MB, and bounded
+# Load Home deterministically; toggling an already open menu would only close it.
 warm_menu() {
     command -v qs >/dev/null 2>&1 || {
         echo "bench: --warm needs qs on PATH" >&2
         exit 1
     }
-    qs ipc -p "$repo/shell.qml" call menu toggle >/dev/null 2>&1 || {
+    local result
+    result="$(qs ipc -p "$repo/shell.qml" call menu tab 0 2>/dev/null)" || {
         echo "bench: --warm could not reach the menu over IPC" >&2
         exit 1
     }
+    if [ "$result" != ok ]; then
+        printf 'bench: --warm could not open Home: %s\n' "$result" >&2
+        exit 1
+    fi
     sleep 2
     qs ipc -p "$repo/shell.qml" call menu close >/dev/null 2>&1 || true
     # let the allocator's dirty decay hand back what the cycle freed before sampling
@@ -312,8 +317,24 @@ for _other in $(pgrep -x quickshell 2>/dev/null || true) $(pgrep -x qs 2>/dev/nu
 done
 
 if $want_json; then
-    # only the free-form fields can carry a quote or a backslash
-    esc() { printf '%s' "${1-}" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'; }
+    # Free-form labels and host metadata can include control characters. Escape
+    # bytes under C locale so UTF-8 passes through while JSON stays on one line.
+    esc() {
+        local LC_ALL=C value="${1-}" ch code i
+        for ((i = 0; i < ${#value}; i++)); do
+            ch="${value:i:1}"
+            case "$ch" in
+                '"') printf '\\"' ;;
+                '\') printf '\\\\' ;;
+                *)
+                    printf -v code '%d' "'$ch"
+                    if [ "$code" -lt 32 ]; then printf '\\u%04x' "$code"
+                    else printf '%s' "$ch"
+                    fi
+                    ;;
+            esac
+        done
+    }
     num() { case "${1-}" in ''|*[!0-9]*) printf 'null' ;; *) printf '%s' "$1" ;; esac; }
     printf '{'
     printf '"schema":1'

@@ -72,9 +72,16 @@ run_shell() {
     fi
 
     restore_locale
+    # Qt discards the cached image after its first texture upload with this set.
+    # A second window (or a rebuilt tray) can then receive an empty texture.
+    unset QSG_TRANSIENT_IMAGES
     # an update rewrites qml files one by one, so a reload mid-update loads a mixed tree
     export SILERE_WATCH_FILES="${SILERE_WATCH_FILES-0}"
-    exec qs --no-duplicate -p "$ROOT/shell.qml" "$@"
+    # the detailed log keeps every debug line in the RAM-backed runtime dir, about 3 MB an hour; warnings still land
+    # the flag is hidden, and an unknown flag stops qs from starting, so probe it first
+    local detail=()
+    qs --no-detailed-logs --version >/dev/null 2>&1 && detail=(--no-detailed-logs)
+    exec qs --no-duplicate "${detail[@]}" -p "$ROOT/shell.qml" "$@"
 }
 
 # LC_ALL=C is for this script's parsing; programs the shell launches get the user's locale
@@ -86,10 +93,15 @@ restore_locale() {
     fi
 }
 
+# under LC_ALL=C, qs logs a locale warning straight to the journal, past any stderr redirect
+user_qs() {
+    (restore_locale; exec qs "$@")
+}
+
 running_pid() {
     local pid=""
     command -v qs >/dev/null 2>&1 || return 1
-    pid="$(qs list -p "$ROOT/shell.qml" 2>/dev/null \
+    pid="$(user_qs list -p "$ROOT/shell.qml" 2>/dev/null \
         | sed -n 's/^  Process ID: \([0-9][0-9]*\)$/\1/p')" || true
     pid="${pid%%$'\n'*}"
     [ -n "$pid" ] || return 1
@@ -128,7 +140,7 @@ await_shell() {
 stop_stray_shell() {
     local pid="$1"
     [ -n "$pid" ] || return 0
-    qs kill -p "$ROOT/shell.qml" >/dev/null 2>&1 || true
+    user_qs kill -p "$ROOT/shell.qml" >/dev/null 2>&1 || true
     await_exit || die "the running shell (pid $pid) did not stop"
 }
 

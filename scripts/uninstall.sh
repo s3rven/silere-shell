@@ -269,6 +269,7 @@ _append_hypr_config_targets "$ACTIVE_HYPR_CONFIG"
 found_any=false
 declare -A _seen_autostart=()
 for f in "${AUTOSTART_FILES[@]}"; do
+    [ -n "$f" ] || continue
     [ -n "${_seen_autostart[$f]:-}" ] && continue
     _seen_autostart[$f]=1
     has_block=false

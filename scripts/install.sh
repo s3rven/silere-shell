@@ -939,6 +939,8 @@ _optdep pkill         "optional night light external stop fallback"
 _optdep powerprofilesctl "power profile selector"
 _optdep_any "lock screen" "lock action" hyprlock swaylock gtklock
 _optdep_any "sound settings" "per-app routing hand-off" pwvucontrol pavucontrol
+_optdep wpctl         "bluetooth output volume"
+_optdep curl          "web cover art + installer downloads"
 _optdep_any "power actions" "suspend / reboot / shutdown" systemctl loginctl
 _optdep notify-send   "low-battery + hot-CPU alerts"
 _optdep timeout       "bounded update checks"
@@ -1122,7 +1124,7 @@ elif [ -e "$INSTALL_DIR" ] || [ -L "$INSTALL_DIR" ]; then
     if _dry; then
         _would "move $INSTALL_DIR aside and clone $REPO_URL in its place"
         [ "$INSTALL_DIR" != "$CONFIG_HOME/silere-shell" ] \
-            || _would "carry settings, notification history, calendar marks and hooks into the clone"
+            || _would "carry settings, notification history and hooks into the clone"
         fresh_clone=true
     elif _ask "Path exists but is not a git repo. Move it aside and clone fresh?"; then
         install_backup="$(_move_aside_path "$INSTALL_DIR")" \
@@ -1193,6 +1195,12 @@ did_tmpl=false did_toml=false did_autostart=false did_update=false did_cli=false
 did_keybind=false
 autostart_ready=false
 ROOT_PRINTF_BYTES="$(_shell_quote "$(_shell_printf_bytes "$ROOT")")"
+# compositor lines spell out an ordinary path; one holding anything hyprlang or sh would reinterpret (#, $, quotes, spaces) is written byte-encoded
+if [[ "$ROOT" =~ ^[A-Za-z0-9/._-]+$ ]]; then
+    ROOT_EXEC="\"$ROOT"
+else
+    ROOT_EXEC="\"\$(printf '%b' $ROOT_PRINTF_BYTES)"
+fi
 MATUGEN_OUTPUT_TOML="$(_toml_basic_string "$CONFIG_HOME/matugen/silere-shell.json")"
 MATUGEN_INPUT_TOML="$(_toml_basic_string "$CONFIG_HOME/matugen/templates/silere-shell/Theme.json")"
 
@@ -1330,9 +1338,9 @@ fi
 # duplicate guard. Keeping compositor config this small means a later update can
 # improve startup without rewriting the user's Hyprland or niri file.
 # --startup retains the one-second Wayland-socket grace needed at compositor boot.
-LAUNCH_CMD="exec \"\$(printf '%b' $ROOT_PRINTF_BYTES)/scripts/silere\" run --startup"
+LAUNCH_CMD="exec $ROOT_EXEC/scripts/silere\" run --startup"
 LAUNCH_CMD_LUA="$(_lua_string "$LAUNCH_CMD")"
-# what the installer writes stays byte-encoded; a line printed for someone to copy uses a plain quoted path
+# a line printed for someone to copy always uses a plain quoted path
 LAUNCH_SHOWN="exec $(_shell_quote "$ROOT/scripts/silere") run --startup"
 LAUNCH_SHOWN_LUA="$(_lua_string "$LAUNCH_SHOWN")"
 
@@ -1515,7 +1523,7 @@ MENU_BIND_KEY="${SILERE_MENU_BIND_KEY:-slash}"
     || _die "menu keybind modifiers contain unsupported characters"
 [[ "$MENU_BIND_KEY" =~ ^[A-Za-z0-9_:-]+$ ]] \
     || _die "menu keybind key contains unsupported characters"
-MENU_BIND_CMD="qs ipc -p \"\$(printf '%b' $ROOT_PRINTF_BYTES)/shell.qml\" call menu toggle"
+MENU_BIND_CMD="qs ipc -p $ROOT_EXEC/shell.qml\" call menu toggle"
 MENU_BIND_SHOWN="qs ipc -p $(_shell_quote "$ROOT/shell.qml") call menu toggle"
 HYPR_BIND="bind = $MENU_BIND_MODS, $MENU_BIND_KEY, exec, $MENU_BIND_CMD"
 HYPR_BIND_SHOWN="bind = $MENU_BIND_MODS, $MENU_BIND_KEY, exec, $MENU_BIND_SHOWN"
@@ -1543,7 +1551,7 @@ elif _menu_bind_taken; then
     _warn "re-run with SILERE_MENU_BIND_KEY set to a free key, or add manually:"
     _warn "  $HYPR_BIND_SHOWN"
 elif _dry; then
-    _would "append to $HYPR_CONFIG: $HYPR_BIND_SHOWN"
+    _would "append to $HYPR_CONFIG: $HYPR_BIND"
 elif _ask "Bind $MENU_BIND_MODS + $MENU_BIND_KEY to open the Silere menu?"; then
     _reject_unsafe_path "$HYPR_CONFIG"
     _backup "$HYPR_CONFIG"
@@ -1604,8 +1612,25 @@ if ! $has_qs; then
 elif ! $qs_modules_ok; then
     printf "  ${YELLOW}install a complete current Quickshell build${R}\n"
 fi
+started=false
+if $has_qs && $qs_modules_ok && [ -n "${WAYLAND_DISPLAY:-}" ] && [ -f "$ROOT/scripts/silere" ] \
+        && [ "${SILERE_ASSUME_YES:-0}" != "1" ] && [ "${SILERE_SANDBOX:-0}" != "1" ]; then
+    # another quickshell config (an older silere elsewhere, or another shell) would end up beside this one
+    qs_configs="$(env -u LC_ALL qs list --all 2>/dev/null | sed -n 's/^  Config path: //p')" || qs_configs=""
+    other_configs="$(printf '%s\n' "$qs_configs" | grep -Fxv -e "$ROOT/shell.qml" -e '')" || other_configs=""
+    if [ -z "$other_configs" ]; then
+        start_prompt="Start silere now?"
+        [ -n "$qs_configs" ] && start_prompt="Restart silere now to load this version?"
+        if _ask "$start_prompt"; then
+            bash "$ROOT/scripts/silere" restart && started=true
+        fi
+        printf '\n'
+    fi
+fi
 if $autostart_ready; then
-    printf "  restart your compositor to launch silere\n"
+    $started || printf "  restart your compositor to launch silere\n"
+elif $started; then
+    printf "  ${YELLOW}autostart is not set up${R} — add the line above to your Hyprland or niri config so silere starts at login\n"
 else
     printf "  ${YELLOW}autostart is not set up${R} — silere will not start on its own\n"
     printf "  add the line above to your Hyprland or niri config, or run it now:\n"

@@ -4,7 +4,7 @@ pkgname=silere-shell-git
 _pkgname=silere-shell
 pkgver=1.2.0.r0.ga8e18a9
 pkgrel=1
-pkgdesc="Quiet by default, yours by choice. A Quickshell bar for Hyprland and niri with nothing running behind your back"
+pkgdesc="Quickshell desktop shell for Hyprland and niri: bar, notifications, OSD and tray in one process"
 arch=('any')
 url="https://github.com/s3rven/silere-shell"
 license=('MIT')
@@ -38,6 +38,7 @@ optdepends=(
     'fakeroot: package update badge (checkupdates needs it)'
     'paru: AUR update count'
     'yay: AUR update count'
+    'curl: cover art from the web'
 )
 provides=("$_pkgname")
 conflicts=("$_pkgname")

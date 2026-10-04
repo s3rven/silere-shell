@@ -8,6 +8,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT/scripts/lib/xdg.sh"
 source "$ROOT/scripts/lib/qml-modules.sh"
 source "$ROOT/scripts/lib/ui.sh"
+source "$ROOT/scripts/lib/unit.sh"
 
 if [ "$#" -gt 0 ]; then
     if [ "$#" -eq 1 ] && [[ "$1" = -h || "$1" = --help ]]; then
@@ -70,6 +71,7 @@ _package_for() {
         apt:nmcli)          printf 'network-manager' ;;
         dnf:nmcli|zypper:nmcli) printf 'NetworkManager' ;;
         *:pwvucontrol) printf 'pavucontrol' ;;
+        *:wpctl)       printf 'wireplumber' ;;
         pacman:hyprsunset|pacman:matugen) printf '%s' "$tool" ;;
         *:wireplumber|*:pipewire|*:upower|*:brightnessctl|*:cava|*:pavucontrol|*:wlsunset)
             printf '%s' "$tool" ;;
@@ -158,7 +160,7 @@ fi
 qs_usable=0
 if ! command -v qs >/dev/null 2>&1; then
     fail "Quickshell" "runtime is required"
-elif qs_text="$(qs --version 2>&1)"; then
+elif qs_text="$(env -u LC_ALL qs --version 2>&1)"; then
     qs_usable=1
     qs_version="$(_silere_quickshell_version || true)"
     if [ -z "$qs_version" ]; then
@@ -179,6 +181,14 @@ fi
 if [ "$compositor" = Hyprland ]; then
     if command -v hyprctl >/dev/null 2>&1 && hyprctl monitors >/dev/null 2>&1; then
         ok "compositor" "Hyprland IPC reachable"
+        hypr_version="$(hyprctl version -j 2>/dev/null \
+            | sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([0-9.]*\)".*/\1/p' | head -n 1)"
+        # 0.57 sends workspace addresses, which Quickshell 0.3.1 reads as id 0
+        if [ -n "$hypr_version" ] && [ -n "${qs_version:-}" ] \
+            && _silere_version_at_least "$hypr_version" 0.57 \
+            && ! _silere_version_at_least "$qs_version" 0.3.2; then
+            fail "workspaces" "Hyprland $hypr_version needs a Quickshell newer than $qs_version"
+        fi
     else fail "compositor" "Hyprland session detected but IPC is unavailable"
     fi
 elif [ "$compositor" = niri ]; then
@@ -207,9 +217,9 @@ esac
 
 if [ "$qs_usable" -eq 1 ]; then
     if command -v timeout >/dev/null 2>&1; then
-        ipc_probe=(timeout 5 qs ipc -p "$ROOT/shell.qml" show)
+        ipc_probe=(timeout 5 env -u LC_ALL qs ipc -p "$ROOT/shell.qml" show)
     else
-        ipc_probe=(qs ipc -p "$ROOT/shell.qml" show)
+        ipc_probe=(env -u LC_ALL qs ipc -p "$ROOT/shell.qml" show)
     fi
     if "${ipc_probe[@]}" >/dev/null 2>&1; then ok "shell IPC" "Silere is running and answers"
     else warn "shell IPC" "Silere from $ROOT is not running or does not answer"
@@ -270,6 +280,8 @@ else optional_any "night light" "warm display" hyprsunset wlsunset
 fi
 optional_any "screen lock" "lock action" hyprlock swaylock gtklock loginctl
 optional_any "sound settings" "per-app routing UI" pwvucontrol pavucontrol
+optional_tool wpctl "bluetooth output volume"
+optional_tool curl "cover art from the web + installer downloads"
 optional_tool cava "audio visualizer"
 optional_tool notify-send "desktop alerts"
 optional_tool fc-list "font verification"
@@ -370,6 +382,9 @@ fi
 
 if command -v systemctl >/dev/null 2>&1 \
         && systemctl --user show-environment >/dev/null 2>&1; then
+    if _silere_unit_uses_transient_images; then
+        warn "tray rendering" "remove QSG_TRANSIENT_IMAGES from silere-shell.service, use silere run, then reload the unit and restart Silere"
+    fi
     if systemctl --user is-enabled --quiet silere-update.timer 2>/dev/null; then
         ok "update timer" "enabled"
     else info "update timer" "disabled (optional)"
