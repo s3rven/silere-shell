@@ -194,10 +194,53 @@ Item {
         TrayMenuState.close()
     }
 
+    // the oversized MouseArea a popup keeps for clicks hyprland routes to its exclusive-focus window
+    function _offMonitorCatcher(scope): var {
+        return root._find(scope, item => item.pressAndHoldInterval !== undefined
+            && item.acceptedButtons !== undefined && item.width > 20000)
+    }
+
+    function _catchesEveryButton(area): bool {
+        return (area.acceptedButtons & Qt.LeftButton) !== 0
+            && (area.acceptedButtons & Qt.RightButton) !== 0
+            && (area.acceptedButtons & Qt.MiddleButton) !== 0
+    }
+
+    function _checkDismissal(): void {
+        const fitted = [
+            { name: "calendar", popup: calendar, state: CalendarState },
+            { name: "quick actions", popup: actions, state: QuickActionsState }
+        ]
+        for (const f of fitted) {
+            const card = f.popup.popupCard
+            const stage = card.parent
+            const catcher = root._offMonitorCatcher(stage)
+            const origin = catcher ? catcher.mapToItem(stage, 0, 0) : Qt.point(0, 0)
+            root._check(catcher !== null && origin.x < -10000 && origin.y < -10000
+                    && catcher.width > stage.width + 20000 && catcher.height > stage.height + 20000
+                    && root._catchesEveryButton(catcher),
+                f.name + " catches clicks of every button, also those offset onto another monitor")
+            f.state.open = true
+            const centre = Qt.point(card.x + card.width / 2, card.y + card.height / 2)
+            f.popup._closeIfOutside(centre)
+            root._check(f.state.open && !f.popup._outsideCard(centre),
+                "a click on the " + f.name + " card keeps it open")
+            f.popup._closeIfOutside(Qt.point(-5000, 40))
+            root._check(!f.state.open, "a click on another monitor closes " + f.name)
+        }
+
+        const trayCatcher = root._offMonitorCatcher(tray.contentItem)
+        const trayOrigin = trayCatcher ? trayCatcher.mapToItem(tray.contentItem, 0, 0) : Qt.point(0, 0)
+        root._check(trayCatcher !== null && trayOrigin.x < -10000 && trayOrigin.y < -10000
+                && root._catchesEveryButton(trayCatcher),
+            "the tray menu catches clicks of every button offset onto another monitor")
+    }
+
     function _run(): void {
         root._checkCalendar()
         root._checkActions()
         root._checkTray()
+        root._checkDismissal()
         console.warn("PROBE-POPUP-INTERACTIONS checked " + root._checks + " behaviors")
     }
 

@@ -136,6 +136,7 @@ PanelWindow {
     TapHandler {
         id: _dismiss
         enabled: TrayMenuState.open
+        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
         // a TapHandler keeps a passive grab, so this fires for taps on rows too
         onTapped: {
             if (_tapGuard.ignoring) return
@@ -145,6 +146,20 @@ PanelWindow {
                 p.y < card.y || p.y > card.y + card.height)
                 TrayMenuState.close()
         }
+    }
+
+    // hyprland hands this exclusive-focus window every click, one on another monitor too, offset by the layout; the TapHandler above drops points outside the window
+    MouseArea {
+        id: _offScreenCatch
+        anchors.fill: parent
+        anchors.margins: -16384
+        enabled: TrayMenuState.open
+        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+        onPressed: mouse => {
+            const p = _offScreenCatch.mapToItem(win.contentItem, mouse.x, mouse.y)
+            mouse.accepted = p.x < 0 || p.y < 0 || p.x >= win.width || p.y >= win.height
+        }
+        onClicked: if (!_tapGuard.ignoring) TrayMenuState.close()
     }
 
     Component {

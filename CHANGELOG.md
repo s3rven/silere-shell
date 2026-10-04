@@ -38,6 +38,7 @@ settings file carries its own `__version` and migrates separately.
 - `install.sh --dry-run` says that settings, notification history and hooks carry over when it replaces a config folder that is not a checkout.
 - `silere` and `silere doctor` color their status words in a terminal, using its own palette; `NO_COLOR` turns this off, as it now does for the installer.
 - A critical notification stays in the popup stack instead of folding behind Show more when newer ones arrive.
+- A right or middle click outside the menu, calendar, quick actions or a tray menu closes it, as a left click does, and so does a click on another monitor.
 - When a Bluetooth device fails to connect, the list suggests forgetting it and pairing it again.
 - Hover highlight, Reveal values on hover and Level bars moved from Settings › Widgets › Indicators to Settings › Bar › Layout.
 - With automatic night light on, its Home row shows Auto beside the temperature.

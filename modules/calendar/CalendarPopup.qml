@@ -52,16 +52,20 @@ PanelWindow {
     // an empty region, not none: the silere-calendar layer rule would otherwise blur the whole screen behind this window
     BackgroundEffect.blurRegion: Region { item: null }
 
+    function _outsideCard(p: point): bool {
+        return p.x < card.x || p.x > card.x + card.width ||
+            p.y < card.y || p.y > card.y + card.height
+    }
+
+    function _closeIfOutside(p: point): void {
+        if (!_tapGuard.ignoring && _outsideCard(p)) CalendarState.close()
+    }
+
     TapHandler {
         id: _dismiss
         enabled: CalendarState.open
-        onTapped: {
-            if (_tapGuard.ignoring) return
-            const p = _dismiss.point.position
-            if (p.x < card.x || p.x > card.x + card.width ||
-                p.y < card.y || p.y > card.y + card.height)
-                CalendarState.close()
-        }
+        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+        onTapped: win._closeIfOutside(_dismiss.point.position)
     }
 
     PanelWindow {
@@ -106,6 +110,17 @@ PanelWindow {
             x: -cardWin._left
             width: cardWin._screenW
             height: parent.height
+
+            // hyprland hands every click to the exclusive-focus surface, so one outside the card lands here, not on the window below; a MouseArea because pointer handlers drop points outside their window, oversized because a click on another monitor arrives offset by the layout
+            MouseArea {
+                id: _outsideCatch
+                anchors.fill: parent
+                anchors.margins: -16384
+                enabled: CalendarState.open
+                acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+                onPressed: mouse => mouse.accepted = win._outsideCard(_outsideCatch.mapToItem(_stage, mouse.x, mouse.y))
+                onClicked: mouse => win._closeIfOutside(_outsideCatch.mapToItem(_stage, mouse.x, mouse.y))
+            }
 
             PopupShadow { card: card }
 

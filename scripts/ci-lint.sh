@@ -2124,6 +2124,26 @@ else
   ok "bar edge" "every popup latching the bar edge closes when the bar moves"
 fi
 
+section "popup dismissal"
+# Hyprland routes every click to the layer holding exclusive keyboard focus: outside a fitted
+# card it lands on the card's own window, and on another monitor it arrives offset by the
+# layout. Pointer handlers drop points outside their window, so an oversized MouseArea has to.
+undismissable_popups=""
+for f in modules/*/*.qml; do
+  grep -qF 'OutsideTapGuard' "$f" && grep -qF 'WlrKeyboardFocus.Exclusive' "$f" || continue
+  if [ "$(grep -cE '^[[:space:]]*PanelWindow[[:space:]]*\{' "$f")" -ge 2 ] &&
+     ! grep -qE 'onPressed:.*mouse\.accepted = win\._outsideCard\(' "$f"; then
+    undismissable_popups="$undismissable_popups $(basename "$f")"
+  elif ! grep -qE '^[[:space:]]*anchors\.margins:[[:space:]]*-16384$' "$f"; then
+    undismissable_popups="$undismissable_popups $(basename "$f")"
+  fi
+done
+if [ -n "$undismissable_popups" ]; then
+  fail "these popups take exclusive focus but miss an outside or other-monitor click:$undismissable_popups"
+else
+  ok "popup dismissal" "every exclusive-focus popup closes on a click outside it, on any monitor"
+fi
+
 section "boot arming"
 # A singleton is only created once something reads a member of it, so a watcher nothing
 # else references never starts and its events are silently lost. The armed marker is how
