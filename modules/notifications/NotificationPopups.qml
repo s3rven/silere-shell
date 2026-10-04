@@ -15,9 +15,9 @@ PanelWindow {
 
     WlrLayershell.namespace: "silere-notifications"
     WlrLayershell.layer: WlrLayer.Overlay
-    // on demand, not exclusive: exclusive routes every key in the session to this layer and the user cannot click away from it
-    WlrLayershell.keyboardFocus: win._replyOwner
-        ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    // a reply starts exclusive, then drops to on demand: a mapped layer turning on demand gets no keys until the pointer moves, and exclusive alone takes every key and click in the session
+    WlrLayershell.keyboardFocus: !win._replyOwner ? WlrKeyboardFocus.None
+        : _replyGrab.running ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.OnDemand
 
     screen:         targetScreen
     color:          "transparent"
@@ -29,18 +29,24 @@ PanelWindow {
 
     function _setReplyFocus(owner, active: bool): void {
         if (!active) {
-            if (win._replyOwner === owner) win._replyOwner = null
+            if (win._replyOwner !== owner) return
+            _replyGrab.stop()
+            win._replyOwner = null
             return
         }
         const previous = win._replyOwner
         if (previous && previous !== owner) previous.cancelReply()
+        _replyGrab.restart()
         win._replyOwner = owner
-        // a PanelWindow has no requestActivate(); the on-demand keyboard focus above hands the layer the keys
+        // a PanelWindow has no requestActivate(); the keyboard focus above hands the layer the keys
         Qt.callLater(function() {
             if (win._replyOwner !== owner) return
             owner.focusReplyInput()
         })
     }
+
+    // long enough for a frame to commit the exclusive state before on demand replaces it
+    Timer { id: _replyGrab; interval: 200 }
 
     readonly property int _shadowPad: ShellSettings.barShadow ? 16 : 0
     // the body wraps at 3 lines collapsed, so a card pinned at one width elides sooner as type grows

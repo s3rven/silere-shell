@@ -2,9 +2,11 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
+import Quickshell.Wayland
 import "../config"
 import "../services"
 import "../modules/calendar"
+import "../modules/notifications"
 import "../modules/quickactions"
 import "../modules/traymenu"
 
@@ -17,6 +19,7 @@ Item {
     CalendarPopup { id: calendar; targetScreen: root.targetScreen; visible: false }
     QuickActionsPopup { id: actions; targetScreen: root.targetScreen; visible: false }
     TrayMenuPopup { id: tray; targetScreen: root.targetScreen; visible: false }
+    NotificationPopups { id: notificationPopups; targetScreen: root.targetScreen; visible: false }
     QtObject { id: traySource; property string id: "popup-probe-tray" }
     QtObject { id: anonymousTraySource; property string id: "" }
 
@@ -236,11 +239,40 @@ Item {
             "the tray menu catches clicks of every button offset onto another monitor")
     }
 
+    function _checkReplyFocus(): void {
+        const popups = notificationPopups
+        const focus = () => popups.WlrLayershell.keyboardFocus
+        const owner = name => ({
+            name: name, cancelled: 0,
+            cancelReply: function() { this.cancelled++; popups._setReplyFocus(this, false) },
+            focusReplyInput: function() {}
+        })
+        const first = owner("first")
+        const second = owner("second")
+        root._check(focus() === WlrKeyboardFocus.None, "notifications take no keys without a reply")
+        popups._setReplyFocus(first, true)
+        root._check(focus() === WlrKeyboardFocus.Exclusive,
+            "starting a reply takes the keys at once, without waiting for the pointer to move")
+        popups._setReplyFocus(second, true)
+        const grab = (popups.contentItem.data || []).find(o => o && o.interval === 200 && o.running === true)
+        root._check(first.cancelled === 1 && focus() === WlrKeyboardFocus.Exclusive && grab !== undefined,
+            "a second reply cancels the first and takes the keys again")
+        if (grab) grab.stop()
+        root._check(focus() === WlrKeyboardFocus.OnDemand,
+            "after the grab a reply is on demand, so clicking another window still works")
+        popups._setReplyFocus(first, false)
+        root._check(focus() === WlrKeyboardFocus.OnDemand,
+            "a cancelled reply cannot release the keys of the reply that replaced it")
+        popups._setReplyFocus(second, false)
+        root._check(focus() === WlrKeyboardFocus.None, "closing the reply hands the keys back")
+    }
+
     function _run(): void {
         root._checkCalendar()
         root._checkActions()
         root._checkTray()
         root._checkDismissal()
+        root._checkReplyFocus()
         console.warn("PROBE-POPUP-INTERACTIONS checked " + root._checks + " behaviors")
     }
 
