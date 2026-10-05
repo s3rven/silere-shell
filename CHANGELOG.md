@@ -15,6 +15,10 @@ settings file carries its own `__version` and migrates separately.
 
 - The edge gap of a floating bar now only spaces it from the screen edge, so windows sit as far below it as below a docked bar.
 
+### Fixed
+
+- A floating bar at 100% width keeps the edge gap at its sides too, instead of pressing its rounded corners against the screen sides.
+
 ## Releases
 
 - [1.3.0](docs/releases/1.3.0.md) — 2026-10-05

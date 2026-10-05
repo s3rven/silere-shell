@@ -34,7 +34,8 @@ PanelWindow {
     readonly property real configuredSurfaceWidth: {
         if (!ShellSettings.barFloating) return width
         const rawGap = width * (1.0 - ShellSettings.barWidth)
-        return width - 8 * Math.round(rawGap / 8)
+        // never nearer the sides than the edge gap, or 100% presses the rounded corners into the screen sides
+        return width - Math.max(8 * Math.round(rawGap / 8), 8 * Math.ceil(ShellSettings.barGap / 4))
     }
     property real _contentFloorWidth: 0
     // grow by shrinking the side gap in 8px steps; snapping the width puts the centered x off the 4px grid on odd output widths
