@@ -67,7 +67,8 @@ PanelWindow {
 
     screen:        bar.targetScreen
     color:         "transparent"
-    readonly property int _targetCoreHeight: ShellSettings.barHeight + bar.surfaceInset * 2
+    // the edge gap is reserved once: the compositor's own gap already spaces windows from the bar, as it does when docked
+    readonly property int _targetCoreHeight: ShellSettings.barHeight + bar.surfaceInset
     property real surfaceHeight: ShellSettings.barHeight
     MotionBehavior on surfaceHeight {
         NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }

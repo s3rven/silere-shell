@@ -11,7 +11,9 @@ settings file carries its own `__version` and migrates separately.
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed
+
+- The edge gap of a floating bar now only spaces it from the screen edge, so windows sit as far below it as below a docked bar.
 
 ## Releases
 
