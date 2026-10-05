@@ -1415,8 +1415,8 @@ fi
 
 if grep -qF 'root._pendingForDir || _debounce.running || _retry.running' config/PersistedFile.qml \
     && grep -qF 'ConfigStore.ensureDirectory(true)' config/PersistedFile.qml \
-    && grep -qF 'mkdir -m 0700 -p -- \"$d\" || exit $?' services/ConfigStore.qml \
-    && grep -qF 'chmod 0700 -- \"$d\" || exit $?' services/ConfigStore.qml; then
+    && grep -qF 'mkdir -m 0700 -p -- \"$1\" || exit $?' services/ConfigStore.qml \
+    && grep -qF 'chmod 0700 -- \"$1\" || exit $?' services/ConfigStore.qml; then
     ok "config recovery" "waiting writes and failed directory setup stay failed until repaired"
 else
     fail "config writes must track directory waits, recheck failures, and preserve setup exit status"

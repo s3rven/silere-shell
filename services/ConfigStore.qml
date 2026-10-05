@@ -75,15 +75,15 @@ Singleton {
         timeoutMs: 10000
         command: ["bash", "-c",
             // without the exits, the trailing file check's status hides a failed mkdir
-            "umask 077; for d in \"$1\" \"$2\"; do [ -n \"$d\" ] || continue; " +
-            "[ ! -L \"$d\" ] || exit 1; " +
-            "mkdir -m 0700 -p -- \"$d\" || exit $?; " +
-            "chmod 0700 -- \"$d\" || exit $?; done; " +
-            // history used to live in the config folder; a failed move leaves that file where it is and starts a fresh one
-            "if [ -n \"$4\" ] && [ -f \"$5\" ] && [ ! -L \"$5\" ] && [ ! -e \"$4\" ] && [ ! -L \"$4\" ]; then " +
-            "mv -- \"$5\" \"$4\" || true; fi; " +
-            "for f in \"$3\" \"$4\"; do [ -n \"$f\" ] || continue; " +
-            "[ ! -e \"$f\" ] || [ -L \"$f\" ] || chmod 0600 -- \"$f\" || exit $?; done",
+            "umask 077; [ ! -L \"$1\" ] || exit 1; " +
+            "mkdir -m 0700 -p -- \"$1\" || exit $?; " +
+            "chmod 0700 -- \"$1\" || exit $?; " +
+            "[ ! -e \"$3\" ] || [ -L \"$3\" ] || chmod 0600 -- \"$3\" || exit $?; " +
+            // the state folder only holds history: a failure there stops history saving, never settings.
+            // History used to live in the config folder; a failed move leaves it there and starts a fresh one
+            "if [ -n \"$2\" ] && [ ! -L \"$2\" ] && mkdir -m 0700 -p -- \"$2\" && chmod 0700 -- \"$2\"; then " +
+            "if [ -f \"$5\" ] && [ ! -L \"$5\" ] && [ ! -e \"$4\" ] && [ ! -L \"$4\" ]; then mv -- \"$5\" \"$4\" || true; fi; " +
+            "[ ! -e \"$4\" ] || [ -L \"$4\" ] || chmod 0600 -- \"$4\" || true; fi",
             "bash", root.directory, root.stateDirectory, root.settingsPath,
             root.notificationsPath, root._legacyNotificationsPath]
         onExited: code => {
