@@ -57,6 +57,7 @@ settings file carries its own `__version` and migrates separately.
 
 - The workspace marker's Menu open pulse.
 - The settings for workspace dot opacity, app icon opacity, monochrome app icons, visualizer opacity, separator opacity and Mark changed pages. Each keeps its former default.
+- The battery widget's `upower` check when the battery reads full. Quickshell already reports the charge in one scale.
 
 ### Fixed
 

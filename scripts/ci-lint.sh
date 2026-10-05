@@ -301,7 +301,6 @@ check_qml_locale_count() {
     fail "$file has $actual locale-stable parser process(es), expected at least $expected"
   fi
 }
-check_qml_locale_count services/Battery.qml 1
 check_qml_locale_count services/CpuTemp.qml 1
 check_qml_locale_count services/Network.qml 1
 check_qml_locale_count services/PowerProfiles.qml 1

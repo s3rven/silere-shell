@@ -3141,27 +3141,12 @@ ShellRoot {
             "a canceled CPU sensor discovery cannot publish into a newer request")
         CpuTemp._detectGeneration = cpuDetectGenerationWas
 
-        // the probe budget belongs to one ambiguous spell, or a reading that leaves and
-        // re-enters ambiguity reuses a spent budget and the percentage the last spell resolved
-        const scaleWas = Battery._scale100
-        const attemptsWas = Battery._ambiguousAttempts
-        const overrideWas = Battery._pctOverride
-        Battery._ambiguousAttempts = 3
-        Battery._pctOverride = 42
-        Battery._clearAmbiguityProbe()
-        root._check(Battery._ambiguousAttempts === 0 && Battery._pctOverride === -1,
-            "battery clears both the probe budget and its answer, not just one")
-        // _raw is UPower's own reading, so the spell can only be ended here through the
-        // latch: whenever the scale is resolved the reading is no longer ambiguous
-        Battery._scale100 = true
-        root._check(!Battery._ambiguousRawOne,
-            "battery leaves ambiguity for good once the percentage scale is known")
-        root._check(Battery.normalizedPercent(0.64, false) === 64
-                && Battery.normalizedPercent(64, false) === 64
-                && Battery.normalizedPercent(64, true) === 64
-                && Battery.normalizedPercent(140, true) === 100
-                && Battery.normalizedPercent(-1, false) === 0,
-            "battery percentage normalization is stable before its scale latch and stays bounded")
+        root._check(Battery.normalizedPercent(0.64) === 64
+                && Battery.normalizedPercent(1) === 100
+                && Battery.normalizedPercent(1.4) === 100
+                && Battery.normalizedPercent(-1) === 0
+                && Battery.normalizedPercent(NaN) === 0,
+            "battery percentage reads quickshell's 0-1 charge and stays bounded")
         root._check(Battery.statusFor(true, Up.UPowerDeviceState.PendingCharge, false, false) === "not charging"
                 && Battery.statusFor(true, Up.UPowerDeviceState.Discharging, false, false) === "discharging"
                 && Battery.statusFor(true, Up.UPowerDeviceState.Unknown, false, false) === "on AC",
@@ -3205,9 +3190,6 @@ ShellRoot {
         ShellSettings.underlineBattGlow = battGlowWas
         MenuState.open = battMenuWas
 
-        Battery._scale100 = scaleWas
-        Battery._ambiguousAttempts = attemptsWas
-        Battery._pctOverride = overrideWas
 
         // the inner shell keeps timeout alive after a hook entrypoint backgrounds work and exits
         const hookArgv = ["/hooks/notification", "arg"]
