@@ -256,6 +256,7 @@ PanelWindow {
                 property bool _settingsNavRetained: false
 
                 Component.onCompleted: {
+                    panel._shownH = panel.targetPanelH
                     if (activeTab !== 0) _loadedDeferred = true
                     if (activeTab === 1) _settingsNavRetained = true
                     panel._syncPageRetention()
@@ -474,7 +475,7 @@ PanelWindow {
                 }
 
                 width:  panelW
-                height: targetPanelH
+                height: _shownH
 
                 // must match railW's curve, or the panel's outer edge and the rail's inner edge disagree mid-motion
                 MotionBehavior on width {
@@ -489,19 +490,61 @@ PanelWindow {
                     }
                 }
                 // home sections animate their own height, so the panel follows it live instead of easing twice; tab swaps still animate here
-                MotionBehavior on height {
-                    id: _heightMotion
-                    gate: panel._geometryReady && panel.open
-                        && (panel._transitionReady || panel._outerHeightMotion)
-                        && (panel.activeTab !== 0 || panel._outerHeightMotion)
-                        && panel.height <= panel._availablePanelH + 1
-                    NumberAnimation {
-                        duration: _heightMotion.targetValue >= panel.height
-                            ? Motion.panelResize : Motion.panelCollapse
-                        easing.type: Easing.BezierSpline
-                        easing.bezierCurve: _heightMotion.targetValue >= panel.height
-                            ? Motion.emphasizedDecel : Motion.emphasizedAccel
+                readonly property bool _heightGlides: panel._geometryReady && panel.open
+                    && (panel._transitionReady || panel._outerHeightMotion)
+                    && (panel.activeTab !== 0 || panel._outerHeightMotion)
+                    && panel._shownH <= panel._availablePanelH + 1
+                    && !ShellSettings.reduceMotion && !Idle.isIdle
+                // a page reflowing at the live width moves the target 4 px at a time; restarting the ease on every step stalled the edge, so a run keeps its clock and small steps only move its end
+                property real _shownH: 0
+                property real _heightFrom: 0
+                property real _heightTo: 0
+                property real _heightEase: 1
+                property bool _heightGrows: true
+
+                function _placeHeight(): void {
+                    panel._shownH = panel._heightFrom + (panel.targetPanelH - panel._heightFrom) * panel._heightEase
+                }
+
+                onTargetPanelHChanged: {
+                    const to = panel.targetPanelH
+                    if (!panel._heightGlides) {
+                        _heightRun.stop()
+                        panel._shownH = to
+                        return
                     }
+                    // re-based so the edge stays put and the run still lands on time; late in a run that would whip, so a fresh nudge takes over
+                    const e = panel._heightEase
+                    if (_heightRun.running && Math.abs(to - panel._heightTo) <= 16 && e < 0.75) {
+                        panel._heightFrom = (panel._shownH - to * e) / (1 - e)
+                        panel._heightTo = to
+                        return
+                    }
+                    _heightRun.stop()
+                    panel._heightFrom = panel._shownH
+                    panel._heightTo = to
+                    // a nudge eases out like a growth: easing in from rest reads as a pause before a few px
+                    panel._heightGrows = to >= panel._shownH || Math.abs(to - panel._shownH) <= 16
+                    panel._heightEase = 0
+                    _heightRun.start()
+                }
+                on_HeightEaseChanged: if (_heightRun.running) panel._placeHeight()
+                on_HeightGlidesChanged: {
+                    if (panel._heightGlides || !_heightRun.running) return
+                    _heightRun.stop()
+                    panel._shownH = panel.targetPanelH
+                }
+
+                NumberAnimation {
+                    id: _heightRun
+                    target: panel
+                    property: "_heightEase"
+                    from: 0
+                    to: 1
+                    duration: panel._heightGrows ? Motion.panelResize : Motion.panelCollapse
+                    easing.type: Easing.BezierSpline
+                    easing.bezierCurve: panel._heightGrows ? Motion.emphasizedDecel : Motion.emphasizedAccel
+                    onFinished: panel._shownH = panel.targetPanelH
                 }
 
                 onFullyShownChanged: {

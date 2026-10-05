@@ -65,6 +65,7 @@ settings file carries its own `__version` and migrates separately.
 - `scripts/bench.sh --warm` opens Home consistently even when the menu is already open, and refuses a sample if the menu cannot open.
 - Notifications arriving while the Recent page is open no longer slide in on top of older ones, and removing one no longer overlaps its neighbours.
 - Tray, tray menu, notification and Recent page icons sit on whole device pixels at fractional scaling instead of looking blurred.
+- Switching the menu to Settings no longer holds its height and then snaps it shorter; the menu shrinks as the page settles.
 - A longer window title no longer shows cut off with an ellipsis while the title box widens.
 - Sliders reach their exact limits when their range does not divide evenly into the step size.
 - Tray apps with no icon, or a failed icon, try their installed app icon before showing an initial. Missing icons show the initial immediately, and settings use the same fallback.
