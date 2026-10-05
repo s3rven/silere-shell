@@ -183,7 +183,7 @@ package badge in the bar counts pending system updates, and Silere never install
 
 ## Performance
 
-Version 1.2.0 measured about 88 MB with only the bar drawn and 96 MB after opening the
+Version 1.3.0 measured about 83 MB with only the bar drawn and 91 MB after opening the
 menu, as PSS on the reference machine; your fonts and widgets change that. `btop` and `top`
 show RSS, which also counts the Qt and graphics libraries every Qt app shares and reads
 about twice as high. Idle CPU stays well under 1% of one core, and animations and the
