@@ -151,6 +151,12 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 0
 
+            CollapsingText {
+                text:     "󰂛 "
+                color:    root._cSub
+                animate:  root._animatable
+                expanded: Notifications.effectiveDnd
+            }
             RollingText {
                 tabularDigits: true
                 reserveText: "00"
@@ -188,6 +194,7 @@ Item {
     readonly property string accessibleName: "Clock, " + DateTime.cachedHour + ":" + DateTime.cachedMinute
         + (DateTime.cachedAmPm.length > 0 ? " " + DateTime.cachedAmPm : "")
         + ", " + DateTime.cachedWeekday + " " + DateTime.cachedMonthDay
+        + (Notifications.effectiveDnd ? ", Do Not Disturb" : "")
     Accessible.role: Accessible.Button
     Accessible.name: root.accessibleName
     Accessible.focusable: root.show
