@@ -349,5 +349,5 @@ fi
 
 # ── done ─────────────────────────────────────────────────────────────────────────
 printf "\n${BOLD}==> done${R}\n"
-_warn "the Silere checkout, settings, and installed font were kept"
+_warn "the Silere checkout, settings, notification history, and installed font were kept"
 printf "  checkout: ${DIM}%s${R}\n\n" "$(cd "$SCRIPT_DIR/.." && pwd)"

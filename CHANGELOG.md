@@ -14,6 +14,7 @@ settings file carries its own `__version` and migrates separately.
 ### Changed
 
 - The edge gap of a floating bar now only spaces it from the screen edge, so windows sit as far below it as below a docked bar.
+- Notification history is saved in `~/.local/state/silere-shell` instead of the config folder, so a dotfiles repo that tracks `~/.config` no longer picks up message text. An existing history moves there on the next start.
 
 ### Fixed
 

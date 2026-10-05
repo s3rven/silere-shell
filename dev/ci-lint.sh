@@ -1415,8 +1415,8 @@ fi
 
 if grep -qF 'root._pendingForDir || _debounce.running || _retry.running' config/PersistedFile.qml \
     && grep -qF 'ConfigStore.ensureDirectory(true)' config/PersistedFile.qml \
-    && grep -qF 'mkdir -m 0700 -p -- \"$1\" || exit $?' services/ConfigStore.qml \
-    && grep -qF 'chmod 0700 -- \"$1\" || exit $?' services/ConfigStore.qml; then
+    && grep -qF 'mkdir -m 0700 -p -- \"$d\" || exit $?' services/ConfigStore.qml \
+    && grep -qF 'chmod 0700 -- \"$d\" || exit $?' services/ConfigStore.qml; then
     ok "config recovery" "waiting writes and failed directory setup stay failed until repaired"
 else
     fail "config writes must track directory waits, recheck failures, and preserve setup exit status"
@@ -2365,6 +2365,17 @@ if [ -z "$cache_leaks" ]; then
   ok "probe cache" "probes keep their caches out of ~/.cache"
 else
   fail "these probe scripts must set XDG_CACHE_HOME, or a setting flipped in a probe clears the live shell's cache:$cache_leaks"
+fi
+# notification history lives in the state home, and a probe that leaves it unset writes over the user's
+state_leaks=""
+for _probe_script in dev/test-*.sh; do
+  grep -qF 'dev/probe-lib.sh' "$_probe_script" || continue
+  grep -qF 'XDG_STATE_HOME=' "$_probe_script" || state_leaks="$state_leaks $_probe_script"
+done
+if [ -z "$state_leaks" ]; then
+  ok "probe state" "probes keep notification history out of ~/.local/state"
+else
+  fail "these probe scripts must set XDG_STATE_HOME, or a probe writes over the user's notification history:$state_leaks"
 fi
 # a test copy of this checkout matches the unit as well, and the unit probe arms both restart paths
 if grep -qF '|| Quickshell.env("SILERE_SANDBOX") === "1") return' services/CompositorHyprland.qml; then

@@ -366,9 +366,17 @@ Singleton {
     }
 
     // PersistentProperties survives a config reload but not a restart, so the history "Keep after restart" promises has to reach disk on its own
+    // read only once the store has run: that run moves an older history out of the config folder, and a read before it would start empty and save over it
+    property bool _storeOpened: false
+    Connections {
+        target: ConfigStore
+        function onReadyChanged() {
+            if (ConfigStore.ready) root._storeOpened = true
+        }
+    }
     PersistedFile {
         id: _diskStore
-        path: ConfigStore.notificationsPath
+        path: root._storeOpened ? ConfigStore.notificationsPath : ""
         writeAllowed: false
         serialize: () => root._serializeDisk()
         onLoaded: raw => {
@@ -773,6 +781,7 @@ Singleton {
     }
 
     Component.onCompleted: {
+        if (ConfigStore.ready) root._storeOpened = true
         if (FullscreenState.wanted) Compositor.refreshToplevels()
     }
 

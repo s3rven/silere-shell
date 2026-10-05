@@ -23,6 +23,8 @@ Singleton {
         Quickshell.env("XDG_CONFIG_HOME"), Quickshell.env("HOME"), ".config")
     readonly property string cacheHome: root.resolveHome(
         Quickshell.env("XDG_CACHE_HOME"), Quickshell.env("HOME"), ".cache")
+    readonly property string stateHome: root.resolveHome(
+        Quickshell.env("XDG_STATE_HOME"), Quickshell.env("HOME"), ".local/state")
     readonly property string runtimeDir: root.resolveAbsolute(
         Quickshell.env("XDG_RUNTIME_DIR"))
 }

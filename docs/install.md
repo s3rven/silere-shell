@@ -164,7 +164,7 @@ leaves `~/.config/cava` untouched.
 
 Run `bash scripts/uninstall.sh` from the installed checkout. That clears autostart, the
 menu keybind, theme and update-timer integrations, but keeps the checkout, your settings,
-and the installed font.
+your notification history and the installed font.
 
 A package install has no `uninstall.sh`. Remove the package instead; it prints what is
 left in your home directory to clean up by hand.

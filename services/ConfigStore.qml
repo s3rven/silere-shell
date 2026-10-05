@@ -10,7 +10,12 @@ Singleton {
         ? XdgPaths.configHome + "/silere-shell" : ""
     readonly property string settingsPath: directory.length > 0
         ? directory + "/settings.json" : ""
-    readonly property string notificationsPath: directory.length > 0
+    // history is message text, not configuration, so it stays out of a config folder kept in a dotfiles repo
+    readonly property string stateDirectory: XdgPaths.stateHome.length > 0
+        ? XdgPaths.stateHome + "/silere-shell" : ""
+    readonly property string notificationsPath: stateDirectory.length > 0
+        ? stateDirectory + "/notifications.json" : ""
+    readonly property string _legacyNotificationsPath: directory.length > 0
         ? directory + "/notifications.json" : ""
 
     property bool ready: false
@@ -70,12 +75,17 @@ Singleton {
         timeoutMs: 10000
         command: ["bash", "-c",
             // without the exits, the trailing file check's status hides a failed mkdir
-            "umask 077; [ ! -L \"$1\" ] || exit 1; " +
-            "mkdir -m 0700 -p -- \"$1\" || exit $?; " +
-            "chmod 0700 -- \"$1\" || exit $?; " +
-            "for f in \"$2\" \"$3\"; do " +
+            "umask 077; for d in \"$1\" \"$2\"; do [ -n \"$d\" ] || continue; " +
+            "[ ! -L \"$d\" ] || exit 1; " +
+            "mkdir -m 0700 -p -- \"$d\" || exit $?; " +
+            "chmod 0700 -- \"$d\" || exit $?; done; " +
+            // history used to live in the config folder; a failed move leaves that file where it is and starts a fresh one
+            "if [ -n \"$4\" ] && [ -f \"$5\" ] && [ ! -L \"$5\" ] && [ ! -e \"$4\" ] && [ ! -L \"$4\" ]; then " +
+            "mv -- \"$5\" \"$4\" || true; fi; " +
+            "for f in \"$3\" \"$4\"; do [ -n \"$f\" ] || continue; " +
             "[ ! -e \"$f\" ] || [ -L \"$f\" ] || chmod 0600 -- \"$f\" || exit $?; done",
-            "bash", root.directory, root.settingsPath, root.notificationsPath]
+            "bash", root.directory, root.stateDirectory, root.settingsPath,
+            root.notificationsPath, root._legacyNotificationsPath]
         onExited: code => {
             if (code === 0) {
                 _mkdirRetry.stop()

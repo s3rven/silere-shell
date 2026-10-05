@@ -53,7 +53,8 @@ post_remove() {
       ~/.config/matugen/templates/silere-shell/ and
       ~/.config/matugen/silere-shell.json
 
-  settings stay in ~/.config/silere-shell in case you come back.
+  settings stay in ~/.config/silere-shell and notification history in
+  ~/.local/state/silere-shell, in case you come back.
 
 EOF
 }

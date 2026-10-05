@@ -596,6 +596,19 @@ if [ "$qs_usable" = 1 ]; then
       printf '%s' "$_case_code" > "$par_dir/$1.code"
     }
 
+    # notification history moved from the config folder to the state folder; an older
+    # file has to arrive there before the first read, or a fresh history saves over it.
+    # The spaced JSON comes back compact only if the shell read the file and saved it again
+    _history_move_case() {
+      mkdir -p "$par_dir/move/config/silere-shell"
+      printf '{ "__version": 1, "history": [ { "id": 7, "appName": "probe", "summary": "carried across", "urgency": 1, "time": 1 } ] }' \
+        > "$par_dir/move/config/silere-shell/notifications.json"
+      XDG_CONFIG_HOME="$par_dir/move/config" XDG_STATE_HOME="$par_dir/move/state" XDG_CACHE_HOME="$par_dir/move/cache" \
+        timeout --kill-after=2s 5s qs "${smoke_flags[@]}" -p shell.qml --no-color >"$par_dir/move.log" 2>&1 || true
+    }
+    _history_move_case &
+    smoke_pids="$smoke_pids $!"
+
     # timeout above signals the whole group, which hides a helper that outlives the shell.
     # This one signals qs alone, as a crash or a manual restart does, then looks for
     # anything still carrying its tag.
@@ -722,6 +735,15 @@ if [ "$qs_usable" = 1 ]; then
         fail "bad settings" "a malformed settings.json took the shell down"
       else
         ok "bad settings" "$bad_n malformed settings files each left the shell running"
+      fi
+
+      if [ -e "$par_dir/move/config/silere-shell/notifications.json" ]; then
+        fail "history move" "an older notification history stayed in the config folder"
+      elif ! grep -qF '"summary":"carried across"' "$par_dir/move/state/silere-shell/notifications.json" 2>/dev/null; then
+        cat "$par_dir/move.log"
+        fail "history move" "an older notification history was lost on its way to the state folder"
+      else
+        ok "history move" "an older notification history moved to the state folder intact"
       fi
 
       if [ "$exit_probe" = 0 ]; then
