@@ -108,6 +108,9 @@ Item {
             ColorAnimation { duration: Motion.ms(350) }
         }
         property real _sweepSpread: 0.28
+        // a flash gathers its band to a point before bursting; with the idle floor lit that snap is a visible collapse, so it eases instead
+        property int _gatherMs: 0
+        function _armGather(): void { _lineEffect._gatherMs = _lineEffect._combined > 0.02 ? Motion.ms(70) : 0 }
         property real _bloomBoost:  0.0
         property real _screenshotSweepCenter: 0.50
         function _widgetSweep(key: string): real {
@@ -158,6 +161,7 @@ Item {
             _sweepSpread = 0.28
             _screenshotSweepCenter = 0.50
             if (!_lineEffect._canRunEventMotion()) return
+            _lineEffect._armGather()
             if (ShellSettings.screenshotGlowSweep)
                 _screenshotSweep.restart()
             else
@@ -184,9 +188,9 @@ Item {
             id: _screenshotPulse
             ScriptAction { script: {
                 _lineEffect._screenshotSweepCenter = 0.50
-                _lineEffect._sweepSpread = 0.16
                 _lineEffect._bloomBoost = 0
             } }
+            NumberAnimation { target: _lineEffect; property: "_sweepSpread"; to: 0.16; duration: _lineEffect._gatherMs; easing.type: Easing.InOutQuad }
             ParallelAnimation {
                 NumberAnimation { target: _lineEffect; property: "_screenshotGlow"; to: 1.0; duration: Motion.ms(100); easing.type: Easing.OutCubic }
                 NumberAnimation { target: _lineEffect; property: "_sweepSpread"; to: 0.38; duration: Motion.ms(260); easing.type: Easing.OutCubic }
@@ -269,6 +273,7 @@ Item {
                     _lineEffect._skipNextNotif = false
                 } else if (ShellSettings.underlineNotifGlow && incoming
                         && _lineEffect._canRunEventMotion()) {
+                    _lineEffect._armGather()
                     _notifFlash.restart()
                 }
                 _lineEffect._prevNotifCount = Notifications.activeCount
@@ -277,7 +282,7 @@ Item {
 
         SequentialAnimation {
             id: _notifFlash
-            ScriptAction { script: { _lineEffect._sweepSpread = 0.02 } }
+            NumberAnimation { target: _lineEffect; property: "_sweepSpread"; to: 0.02; duration: _lineEffect._gatherMs; easing.type: Easing.InOutQuad }
             ParallelAnimation {
                 NumberAnimation { target: _lineEffect; property: "_notifGlow";   to: Notifications.lastCritical ? 0.58 : 0.40; duration: Motion.ms(120); easing.type: Easing.OutCubic }
                 NumberAnimation { target: _lineEffect; property: "_sweepSpread"; to: 0.34; duration: Motion.ms(380); easing.type: Easing.OutCubic }
@@ -367,7 +372,10 @@ Item {
         Timer {
             id: _previewTimer
             interval: 180
-            onTriggered: if (_lineEffect._canPreview()) _notifFlash.restart()
+            onTriggered: if (_lineEffect._canPreview()) {
+                _lineEffect._armGather()
+                _notifFlash.restart()
+            }
         }
         Timer {
             id: _screenshotPreviewTimer
@@ -389,6 +397,7 @@ Item {
 
             if (_lastNetConnected && disconnected && ShellSettings.underlineNetGlow
                     && _lineEffect._canRunEventMotion()) {
+                _lineEffect._armGather()
                 _netLossFlash.restart()
             } else if (currentConnected || !Network.available) {
                 _lineEffect._clearNetLossFlash()
@@ -413,7 +422,7 @@ Item {
 
         SequentialAnimation {
             id: _netLossFlash
-            ScriptAction { script: { _lineEffect._sweepSpread = 0.04 } }
+            NumberAnimation { target: _lineEffect; property: "_sweepSpread"; to: 0.04; duration: _lineEffect._gatherMs; easing.type: Easing.InOutQuad }
             ParallelAnimation {
                 NumberAnimation { target: _lineEffect; property: "_networkGlow";  to: 0.42; duration: Motion.ms(130); easing.type: Easing.OutQuad  }
                 NumberAnimation { target: _lineEffect; property: "_sweepSpread";  to: 0.34; duration: Motion.ms(500); easing.type: Easing.OutCubic }

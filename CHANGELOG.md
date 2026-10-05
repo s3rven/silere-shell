@@ -83,6 +83,7 @@ settings file carries its own `__version` and migrates separately.
 - Calendar date targets grow with interface scaling, and adjacent dates announce their actual month and year to assistive readers.
 - Starting an inline reply in a notification popup no longer stops on a script error before it focuses the reply field.
 - Typing right after clicking Reply on a notification goes into the reply field, without moving the pointer first.
+- With the underline's idle glow on, a notification, screenshot or network flash no longer collapses the lit line for a frame before it bursts.
 - With week numbers off, the calendar's side borders draw at the same weight on a 125% display.
 - The update card in Settings grows with the interface scale instead of keeping a fixed height.
 - The divider after the workspace dots sits centred between them and the next widget, like every other divider on the bar.
