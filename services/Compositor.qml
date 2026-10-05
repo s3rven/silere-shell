@@ -41,6 +41,12 @@ Singleton {
     readonly property bool activeFullscreen: isNiri ? !!(_be && _be.activeFullscreen)
         : !!(activeToplevel && activeToplevel.fullscreen)
 
+    // why a translucent surface would show no blur, empty when nothing is known to stop it; niri has no check
+    readonly property string blurBlocker: _be && _be.blurBlocker !== undefined ? _be.blurBlocker : ""
+    function checkBlur(): void {
+        if (root._be && root._be.checkBlur) root._be.checkBlur()
+    }
+
     signal workspaceActivated(string output)
     signal overviewRaw(bool open)
 

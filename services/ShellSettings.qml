@@ -123,6 +123,7 @@ Singleton {
     property real   barShadowStrength:   1.0
     property string barPosition:         "top"
     property real   barOpacity:          0.88
+    property bool   surfaceBlur:         true
     property bool   popupMatchBarOpacity: false
     property string barDisabledMonitors: ""
     property string overlayMonitor:      ""
@@ -407,6 +408,7 @@ Singleton {
         { k: "barShadowStrength",   t: "real", min: 0.3,  max: 1.6, sec: "theme" },
         { k: "barPosition",         t: "enum", vals: ["top", "bottom"], sec: "surface" },
         { k: "barOpacity",          t: "real", min: 0.4,  max: 1.0, sec: "theme" },
+        { k: "surfaceBlur",         t: "bool", sec: "theme" },
         { k: "popupMatchBarOpacity", t: "bool", sec: "theme" },
         { k: "barDisabledMonitors", t: "re",   re: /^[A-Za-z0-9._,-]*$/, sec: "interface" },
         { k: "overlayMonitor",      t: "re",   re: /^[A-Za-z0-9._-]*$/, sec: "interface" },

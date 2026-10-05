@@ -88,7 +88,8 @@ PanelWindow {
                     : Math.min(Theme.radiusPanel, pillH / 2)
                 readonly property real _hiddenSlide: osd._bottom ? 7 : -7
                 readonly property Region blurShape: Region {
-                    item: card.hasBar && Theme.panelOpacity < 1 && card._op > 0 ? _blurBox : null
+                    item: ShellSettings.surfaceBlur && card.hasBar && Theme.panelOpacity < 1 && card._op > 0
+                        ? _blurBox : null
                     radius: Math.round(card.pillRadius)
                 }
                 // a region follows only its own item, and the pill moves by transform in a moving column

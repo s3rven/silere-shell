@@ -2062,6 +2062,14 @@ ShellRoot {
             "unsaved markers and a lone glyph stay in the window title")
         const hypr = Compositor.isHyprland ? Compositor._be : null
         if (hypr) {
+            root._check(hypr.blurBlockerFrom('{"version": "0.55.4"}{"bool": true}') === "Needs Hyprland 0.56"
+                    && hypr.blurBlockerFrom('{"tag": "v0.54.0"}') === "Needs Hyprland 0.56",
+                "a Hyprland without the blur protocol is named on the blur row")
+            root._check(hypr.blurBlockerFrom('{"version": "0.56.2"}{"option": "decoration:blur:enabled", "bool": false}') === "Off in Hyprland"
+                    && hypr.blurBlockerFrom('{"version": "0.56.2"}{"bool": true}') === ""
+                    && hypr.blurBlockerFrom('{"version": "1.0.0"}{"bool": true}') === ""
+                    && hypr.blurBlockerFrom("") === "",
+                "Hyprland's own blur switch is read, and an unreadable answer blames nothing")
             const seqWas = hypr._eventSeq
             hypr._seqAtFlip = -1
             hypr._silentFlips = 0

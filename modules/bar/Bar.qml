@@ -81,7 +81,7 @@ PanelWindow {
     mask: Region { item: bar.concealed ? null : surface }
     // blur with no tint over it reads as a frosted slab, so it waits for the fade's midpoint
     BackgroundEffect.blurRegion: Region {
-        item: Theme.panelOpacity < 1 && contents.opacity >= 0.5 ? surface : null
+        item: ShellSettings.surfaceBlur && Theme.panelOpacity < 1 && contents.opacity >= 0.5 ? surface : null
         topLeftRadius:     Math.round(bar.atBottom ? surface.innerRadius : surface.outerRadius)
         topRightRadius:    Math.round(bar.atBottom ? surface.innerRadius : surface.outerRadius)
         bottomLeftRadius:  Math.round(bar.atBottom ? surface.outerRadius : surface.innerRadius)

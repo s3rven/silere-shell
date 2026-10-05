@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
+import Quickshell.Io
 import Quickshell.Wayland
 import "../config"
 
@@ -121,6 +122,25 @@ QtObject {
         target: SystemTools
         function onReadyChanged() { root._probeUnit() }
         function onScanRevisionChanged() { root._probeUnit() }
+    }
+
+    // a blur request does nothing before 0.56, which lacks the protocol, or with decoration:blur:enabled off.
+    // read when settings ask, not at startup: nothing else needs it
+    property string blurBlocker: ""
+    property BoundedProcess _blurProbe: BoundedProcess {
+        timeoutMs: 3000
+        command: ["sh", "-c", "hyprctl -j version && hyprctl -j getoption decoration:blur:enabled"]
+        stdout: StdioCollector { id: _blurOut }
+        onExited: code => root.blurBlocker = code === 0 ? root.blurBlockerFrom(_blurOut.text) : ""
+    }
+    function blurBlockerFrom(out: string): string {
+        const v = /"(?:version|tag)":\s*"v?(\d+)\.(\d+)/.exec(out)
+        if (v && Number(v[1]) === 0 && Number(v[2]) < 56) return "Needs Hyprland 0.56"
+        return /"bool":\s*false/.test(out) ? "Off in Hyprland" : ""
+    }
+    // hyprctl ships with Hyprland, and a missing one only fails the probe, which blames nothing
+    function checkBlur(): void {
+        if (!_blurProbe.running) _blurProbe.running = true
     }
 
     property Connections _restartWatchRetry: Connections {

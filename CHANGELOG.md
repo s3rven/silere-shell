@@ -11,6 +11,10 @@ settings file carries its own `__version` and migrates separately.
 
 ## [Unreleased]
 
+### Added
+
+- Settings › Theme › Background blur turns blur off or on for the bar and translucent popups, and names what is stopping it when Hyprland is older than 0.56 or has blur turned off. `silere doctor` reports the same.
+
 ### Changed
 
 - The edge gap of a floating bar now only spaces it from the screen edge, so windows sit as far below it as below a docked bar.

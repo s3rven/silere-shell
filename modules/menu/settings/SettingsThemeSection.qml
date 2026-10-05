@@ -23,6 +23,9 @@ Column {
                         ? "This palette has no accent color of its own, so accented controls read as plain text."
                         : ""
 
+    // the blur row names what stops it, read fresh each visit since a compositor config can change underneath
+    Component.onCompleted: Compositor.checkBlur()
+
     function _hex2(v): string {
         const s = Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16)
         return s.length < 2 ? "0" + s : s
@@ -376,6 +379,16 @@ Column {
             glyph: "󱡓"; label: "Popups match bar opacity"
             description: "Notifications, calendar, tray and quick actions"
             key: "popupMatchBarOpacity"
+        }
+        CollapsibleSection {
+            expanded: Theme.panelOpacity < 1
+            ToggleRow {
+                glyph: "󰂵"; label: "Background blur"
+                description: "Frost what shows through"
+                key: "surfaceBlur"
+                available: Compositor.blurBlocker.length === 0
+                dependsNote: Compositor.blurBlocker
+            }
         }
         SliderRow {
             glyph: "󰃇"; label: "Outline strength"

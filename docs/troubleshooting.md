@@ -97,7 +97,14 @@ hl.layer_rule({ name = "silere-no-anim", match = { namespace = "^silere-.*$" }, 
 ## No blur behind the bar
 
 Blur needs Hyprland 0.56 or niri 26.04 or newer, and a translucent bar: lower Settings ›
-Appearance › Theme › Bar opacity below 100%.
+Appearance › Theme › Bar opacity below 100%. Background blur then appears under it; when
+that row is dimmed, it names what is stopping the blur, and `silere doctor` reports the same.
+
+Silere tells the compositor where to blur, so it needs no layer rules, but Hyprland's
+`decoration:blur:enabled = false` still turns blur off everywhere. How soft the blur looks
+comes from the compositor: on Hyprland, `size` and `passes` under `decoration:blur`.
+Notifications, the calendar, tray menus and quick actions blur too once Popups match bar
+opacity is on.
 
 ## Brightness controls the wrong screen
 

@@ -189,6 +189,16 @@ if [ "$compositor" = Hyprland ]; then
             && ! _silere_version_at_least "$qs_version" 0.3.2; then
             warn "workspaces" "Quickshell $qs_version may mix up special and named workspaces on Hyprland $hypr_version"
         fi
+        # translucent surfaces ask Hyprland to blur behind them; these are the two things that quietly stop it
+        blur_opt="$(hyprctl -j getoption decoration:blur:enabled 2>/dev/null || true)"
+        if [ -n "$hypr_version" ] && ! _silere_version_at_least "$hypr_version" 0.56; then
+            info "blur" "needs Hyprland 0.56; translucent surfaces show what is behind them unblurred"
+        else
+            case "$blur_opt" in
+                *'"bool": false'*|*'"bool":false'*) info "blur" "off in Hyprland (decoration:blur:enabled)" ;;
+                *) ok "blur" "Hyprland blurs behind translucent surfaces" ;;
+            esac
+        fi
     else fail "compositor" "Hyprland session detected but IPC is unavailable"
     fi
 elif [ "$compositor" = niri ]; then
