@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import Quickshell.Widgets
 import "../../config"
 import "../../services"
@@ -18,7 +19,7 @@ ClippingRectangle {
 
     // 4px multiple: an odd height lands the bottom border on a half physical pixel and doubles it
     height: 4 * Math.ceil(Math.max(172,
-        20 + _mediaCol.implicitHeight + 18 + _controlsRow.height + 26 + root._timeRowHeight) / 4)
+        20 + _header.height + 18 + _controlsRow.height + 26 + root._timeRowHeight) / 4)
     radius: Theme.radiusCard
     color: Theme.menuCard
     opacity: Media.shown ? 1.0 : 0.0
@@ -176,10 +177,11 @@ ClippingRectangle {
             anchors.fill: parent
             fillMode: Image.PreserveAspectCrop
             asynchronous: true
-            // uncached: caching keeps every past track's 512² decode for the whole session
+            // uncached: caching keeps every past track's decode for the whole session
             cache: false
-            sourceSize.width:  512
-            sourceSize.height: 512
+            // a tiny decode stretched across the card is a free blur: the cover itself sits sharp in _cover
+            sourceSize.width:  32
+            sourceSize.height: 32
             opacity: 0
             visible: opacity > 0.01
             onStatusChanged: status === Image.Error ? _art._failed(_artA) : _art._promote(_artA, true)
@@ -190,8 +192,8 @@ ClippingRectangle {
             fillMode: Image.PreserveAspectCrop
             asynchronous: true
             cache: false
-            sourceSize.width:  512
-            sourceSize.height: 512
+            sourceSize.width:  32
+            sourceSize.height: 32
             opacity: 0
             visible: opacity > 0.01
             onStatusChanged: status === Image.Error ? _art._failed(_artB) : _art._promote(_artB, false)
@@ -212,24 +214,6 @@ ClippingRectangle {
         color: Theme.withAlpha(Theme.menuCardSolid, 0.72)
     }
 
-    Rectangle {
-        visible: Media.metadataPrivacyProtected && Media.stableArtUrl.length === 0
-        anchors {
-            top: parent.top; topMargin: 16
-            right: parent.right; rightMargin: 18
-        }
-        width: 64; height: 64
-        radius: width / 2
-        color: Theme.withAlpha(Theme.accent, 0.06)
-
-        ShellText {
-            anchors.centerIn: parent
-            text: "󰌾"
-            color: Theme.withAlpha(Theme.accent, 0.22)
-            font.pixelSize: Settings.fontSize + 24
-        }
-    }
-
     // the art is the jump target and fills the card; later siblings take their own clicks
     MouseArea {
         id: _playerTarget
@@ -238,12 +222,80 @@ ClippingRectangle {
         onClicked: root._focusPlayer()
     }
 
+    // the cover and the text centre on each other, whichever is taller sets the height
+    Item {
+        id: _header
+        anchors {
+            left: parent.left; right: parent.right
+            bottom: _controlsRow.top; bottomMargin: 18
+        }
+        height: Math.max(_mediaCol.implicitHeight, _cover.height)
+    }
+
+    // the cover sharp at its own size; the backdrop only carries its colour. The two layers follow the
+    // backdrop's, so a track change crossfades here on the same curve
+    ClippingRectangle {
+        id: _cover
+        readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+        readonly property int _decode: Math.ceil(width * _dpr)
+        readonly property real _shown: Math.max(_coverA.opacity, _coverB.opacity)
+        anchors {
+            left: parent.left; leftMargin: 16
+            verticalCenter: _header.verticalCenter
+        }
+        width: 56; height: 56
+        radius: Theme.radiusControl
+        color: Theme.menuControl
+        transform: PixelSnap { item: _cover; dpr: _cover._dpr }
+
+        ShellText {
+            anchors.centerIn: parent
+            opacity: 1 - _cover._shown
+            visible: opacity > 0.01
+            text: Media.metadataPrivacyProtected ? "󰌾" : "󰝚"
+            color: Theme.withAlpha(Theme.subtext, 0.55)
+            font.pixelSize: Settings.fontSize + 8
+        }
+        Image {
+            id: _coverA
+            anchors.fill: parent
+            source: _artA.source
+            z: _artA.z
+            fillMode: Image.PreserveAspectCrop
+            asynchronous: true
+            cache: false
+            sourceSize.width: _cover._decode
+            sourceSize.height: _cover._decode
+            opacity: status === Image.Ready ? Math.min(1, _artA.opacity / _art.maxAlpha) : 0
+            visible: opacity > 0.01
+        }
+        Image {
+            id: _coverB
+            anchors.fill: parent
+            source: _artB.source
+            z: _artB.z
+            fillMode: Image.PreserveAspectCrop
+            asynchronous: true
+            cache: false
+            sourceSize.width: _cover._decode
+            sourceSize.height: _cover._decode
+            opacity: status === Image.Ready ? Math.min(1, _artB.opacity / _art.maxAlpha) : 0
+            visible: opacity > 0.01
+        }
+        OutlineBorder {
+            z: 2
+            radius: _cover.radius
+            outlineWidth: 1
+            outlineColor: Theme.menuControlLine
+        }
+    }
+
     Column {
         id: _mediaCol
         anchors {
-            left: parent.left; leftMargin: 16
+            left: _cover.right; leftMargin: 12
             right: parent.right; rightMargin: 16
-            bottom: _controlsRow.top; bottomMargin: 18
+            verticalCenter: _header.verticalCenter
         }
         spacing: 2
         opacity: 1.0
