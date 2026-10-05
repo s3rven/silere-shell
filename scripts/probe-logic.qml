@@ -2088,6 +2088,25 @@ ShellRoot {
                     && hypr._wsNumber({ address: "special:magic", name: "special:magic" }) === -1
                     && hypr._wsNumber(null) === -1,
                 "a window's workspace resolves from a numeric id or a 0.57 numbered address")
+            root._check(hypr._missingWorkspaceId([{ id: 1 }, { id: 2 }],
+                        [{ lastIpcObject: { workspace: { id: 2 } } },
+                         { lastIpcObject: { workspace: { address: "4", name: "4" } } }]) === 4
+                    && hypr._missingWorkspaceId([{ id: 1 }, { id: 4 }],
+                        [{ lastIpcObject: { workspace: { id: 4 } } },
+                         { lastIpcObject: { workspace: { id: -98, name: "special:magic" } } }, null]) === -1,
+                "a window on a numbered workspace the model lacks is found; known and special ones are not")
+            const refreshKeyWas = hypr._workspaceRefreshKey
+            const refreshTriesWas = hypr._workspaceRefreshTries
+            hypr._workspaceRefreshKey = ""
+            hypr._eventConn.onRawEvent({ name: "changeworkspaceid", data: "3,5" })
+            const idChangeRefreshes = hypr._workspaceRefreshKey === "id:3,5"
+                && hypr._workspaceRefreshTries === 1
+            for (let i = 0; i < 4; i++) hypr._requestWorkspaceRefresh("id:3,5")
+            root._check(idChangeRefreshes && hypr._workspaceRefreshTries === 3,
+                "a workspace id change asks for a fresh workspace list, at most three times for one gap")
+            hypr._workspaceRefreshKey = refreshKeyWas
+            hypr._workspaceRefreshTries = refreshTriesWas
+            hypr._eventSeq = seqWas
         }
         root._check(SafeText.lastNonEmptyLine("warning: retrying\n\nfatal: no route\n\n", "fallback") === "fatal: no route",
             "lastNonEmptyLine skips trailing blank lines")

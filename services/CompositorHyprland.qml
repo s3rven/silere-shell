@@ -233,6 +233,10 @@ QtObject {
             root._layoutTick++
             root._syncLiveTitles()
             root._syncActiveTitle()
+            const missing = root._missingWorkspaceId(Hyprland.workspaces ? (Hyprland.workspaces.values ?? []) : [],
+                Hyprland.toplevels ? (Hyprland.toplevels.values ?? []) : [])
+            if (missing > 0) root._requestWorkspaceRefresh("missing:" + missing)
+            else root._workspaceRefreshKey = ""
             if (!root._refreshAgain) return
             root._refreshAgain = false
             Hyprland.refreshToplevels()
@@ -299,6 +303,31 @@ QtObject {
     // hyprland has no compositor-side overview; OverviewState drives its own (overviewIsLive is false)
     readonly property bool overviewActive: false
     readonly property var specialOutputs: Object.keys(root._specialOn)
+
+    // quickshell 0.3.1 prunes a workspace created while its startup snapshot is in flight and ignores hyprland 0.57 id changes; a window still names the workspace either way
+    property string _workspaceRefreshKey: ""
+    property int _workspaceRefreshTries: 0
+    function _missingWorkspaceId(workspaces, toplevels): int {
+        const known = {}
+        for (let i = 0; i < workspaces.length; i++)
+            if (workspaces[i]) known[workspaces[i].id] = true
+        for (let i = 0; i < toplevels.length; i++) {
+            const c = toplevels[i] ? toplevels[i].lastIpcObject : null
+            const id = root._wsNumber(c ? c.workspace : null)
+            if (id > 0 && !known[id]) return id
+        }
+        return -1
+    }
+    // a request made while quickshell's own is in flight is dropped, so a gap that outlives one gets a few more
+    function _requestWorkspaceRefresh(key: string): void {
+        if (key !== root._workspaceRefreshKey) {
+            root._workspaceRefreshKey = key
+            root._workspaceRefreshTries = 0
+        }
+        if (root._workspaceRefreshTries >= 3) return
+        root._workspaceRefreshTries++
+        Hyprland.refreshWorkspaces()
+    }
 
     // hyprland 0.57 replaces a window's workspace id with a string address; like quickshell, only a numbered one keeps its id
     function _wsNumber(ws): int {
@@ -479,6 +508,8 @@ QtObject {
                 root._updateSpecial(event.data)
             if (n === "scrolloverview")
                 root.overviewRaw(event.data === "1")
+            if (n === "changeworkspaceid")
+                root._requestWorkspaceRefresh("id:" + String(event.data ?? ""))
             if (n === "workspacev2" || n === "focusedmon"
                 || n === "focusedmonv2" || n === "activemon")
                 root.workspaceActivated(root.focusedMonitor)
