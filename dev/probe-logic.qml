@@ -1391,6 +1391,23 @@ ShellRoot {
         ShellSettings.barFloating = savedFloating
         ShellSettings.dotStyle = savedDots
 
+        const savedSide = [ShellSettings.barFloating, ShellSettings.barWidth, ShellSettings.barGap]
+        ShellSettings.barFloating = true
+        ShellSettings.barWidth = 0.72
+        ShellSettings.barGap = 4
+        const sideAt72 = Metrics.barSideGap(2048)
+        ShellSettings.barWidth = 1.0
+        ShellSettings.barGap = 12
+        const sideFull = Metrics.barSideGap(2048)
+        ShellSettings.barFloating = false
+        const sideDocked = Metrics.barSideGap(2048)
+        ShellSettings.barFloating = savedSide[0]
+        ShellSettings.barWidth = savedSide[1]
+        ShellSettings.barGap = savedSide[2]
+        root._check(sideAt72 === 288 && sideFull === 12 && sideDocked === 0,
+            "the bar and notifications share one side gap: 288 at 72%, the edge gap at 100%, none docked (got "
+                + sideAt72 + ", " + sideFull + ", " + sideDocked + ")")
+
         const savedNight = ShellSettings.nightLightTemp
         ShellSettings.nightLightTemp = savedNight === 4000 ? 3500 : 4000
         root._check(ShellSettings.modifiedCount === 0

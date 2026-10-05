@@ -32,10 +32,7 @@ PanelWindow {
     readonly property bool wrapUnderline: floatingProgress > 0.001
     // multiple of 8 so the segment x lands on the 4px grid and an integer output pixel at 2.5x, else a subpixel bleed line at the left edge
     readonly property real configuredSurfaceWidth: {
-        if (!ShellSettings.barFloating) return width
-        const rawGap = width * (1.0 - ShellSettings.barWidth)
-        // never nearer the sides than the edge gap, or 100% presses the rounded corners into the screen sides
-        return width - Math.max(8 * Math.round(rawGap / 8), 8 * Math.ceil(ShellSettings.barGap / 4))
+        return width - 2 * Metrics.barSideGap(width)
     }
     property real _contentFloorWidth: 0
     // grow by shrinking the side gap in 8px steps; snapping the width puts the centered x off the 4px grid on odd output widths

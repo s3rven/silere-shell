@@ -54,9 +54,7 @@ PanelWindow {
         Metrics.snap4(400 * Settings.fontSize / 12),
         targetScreen ? targetScreen.width - 24 - _shadowPad : 400))
     readonly property bool _hasBar: Metrics.barPresent(targetScreen)
-    readonly property real _barSideGap: ShellSettings.barFloating && _hasBar && targetScreen
-        ? 4 * Math.round(targetScreen.width * (1.0 - ShellSettings.barWidth) / 8)
-        : 0
+    readonly property real _barSideGap: _hasBar && targetScreen ? Metrics.barSideGap(targetScreen.width) : 0
     readonly property real _edgeMargin: ShellSettings.barFloating && _hasBar ? Math.max(0, _barSideGap) : 10
     readonly property int _barClearance: Metrics.popupClearanceOn(targetScreen, 6)
     readonly property int _availableH: targetScreen

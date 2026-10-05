@@ -82,6 +82,13 @@ Singleton {
     readonly property int barEdgeInset: ShellSettings.barFloating ? ShellSettings.barGap : 0
     readonly property bool barAtBottom: ShellSettings.barPosition === "bottom"
 
+    // a floating bar's gap to each screen side. On the 4px grid, and never under the edge gap, or a full-width bar presses its rounded corners into the screen sides
+    function barSideGap(screenWidth: real): int {
+        if (!ShellSettings.barFloating) return 0
+        return Math.max(4 * Math.round(screenWidth * (1.0 - ShellSettings.barWidth) / 8),
+            4 * Math.ceil(ShellSettings.barGap / 4))
+    }
+
     function popupClearance(extraGap: real): real {
         return root.barEdgeInset + ShellSettings.barHeight + Math.max(0, extraGap)
     }
