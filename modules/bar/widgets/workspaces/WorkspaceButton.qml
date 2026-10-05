@@ -296,7 +296,6 @@ Item {
                 WorkspaceAppIcons {
                     apps: root.compact ? root.apps.slice(0, 1) : root.apps
                     iconSize: root.iconSize
-                    hoverFx: root._hoverFx
                     pulseOpacity: root._pulseOpacity
                 }
             }

@@ -1,7 +1,6 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Effects
 import "../../../../config"
 import "../../../common"
 
@@ -10,16 +9,11 @@ Row {
 
     required property var apps
     required property int iconSize
-    required property bool hoverFx
     required property real pulseOpacity
 
-    readonly property bool _mono: !hoverFx
-
     spacing: 4
+    // already eased by the urgent pulse; a second animation here only lags it
     opacity: pulseOpacity
-    MotionBehavior on opacity {
-        NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
-    }
 
     Repeater {
         model: root.apps
@@ -30,6 +24,7 @@ Row {
             width: root.iconSize
             height: root.iconSize
 
+            // in the app's own colours, like the tray: a muted icon only reads as a disabled one
             Image {
                 id: _iconSrc
                 anchors.fill: parent
@@ -39,23 +34,6 @@ Row {
                 sourceSize.height: root.iconSize * 2
                 fillMode: Image.PreserveAspectFit
                 asynchronous: true
-                visible: false
-            }
-
-            Loader {
-                anchors.fill: _iconSrc
-                active: _iconSrc.status === Image.Ready
-                sourceComponent: MultiEffect {
-                    source: _iconSrc
-                    opacity: root.hoverFx ? 1.0 : 0.68
-                    saturation: root._mono ? -1.0 : 0.0
-                    MotionBehavior on opacity {
-                        NumberAnimation { duration: Motion.fast }
-                    }
-                    MotionBehavior on saturation {
-                        NumberAnimation { duration: Motion.fast }
-                    }
-                }
             }
 
             Rectangle {
