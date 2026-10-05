@@ -92,7 +92,16 @@ QtObject {
                 count: 1
             })
         }
-        root.workspaceApps = map
+        // a fresh array rebuilds that workspace's icon delegates, which reload and blink; keep every one that did not change
+        const previous = root.workspaceApps
+        const ids = Object.keys(map)
+        let changed = ids.length !== Object.keys(previous).length
+        for (let i = 0; i < ids.length; i++) {
+            const old = previous[ids[i]]
+            if (old !== undefined && JSON.stringify(old) === JSON.stringify(map[ids[i]])) map[ids[i]] = old
+            else changed = true
+        }
+        if (changed) root.workspaceApps = map
     }
 
     function appsFor(id: int): var { return root.workspaceApps[id] ?? [] }

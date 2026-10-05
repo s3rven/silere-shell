@@ -214,8 +214,9 @@ Item {
         }
         return btnW
     }
+    // untrimmed: the trim eases, and feeding it into the marker's target restarts the slide every frame; the marker takes it as an offset instead
     function _cellCenterX(wsId: int): real {
-        let acc = -_leadTrim
+        let acc = 0
         const ids = root._displayIds
         for (let i = 0; i < ids.length; i++) {
             if (ids[i] === wsId) return acc + _btnW(ids[i]) / 2
@@ -522,6 +523,7 @@ Item {
         rowHeight: root.btnH
         cellWidth: root._btnW(root._displayActiveId)
         targetX: root.activeIndex >= 0 ? root._markerX(marker.markerWidth) : 0
+        layoutOffsetX: -root._leadTrim
         shown: root.monitorReady && root.activeIndex >= 0
         inSpecial: root.inSpecial
         urgent: root.urgent(root._displayActiveId)

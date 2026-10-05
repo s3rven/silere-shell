@@ -28,6 +28,8 @@ settings file carries its own `__version` and migrates separately.
 - A floating bar with no edge gap squares the corners against the screen edge instead of leaving notches beside them.
 - A bar height or edge gap set over IPC or by hand rounds to the 4 px steps the menu uses, so the bar outline stays sharp at fractional scaling.
 - Notification popups keep the same side gap as a full-width floating bar instead of touching the screen edge.
+- The workspace marker no longer restarts its slide while the first workspace changes width, and quick repeated switches no longer snap its bounce back.
+- A workspace leaving the bar no longer shows -1 while it fades, and opening or closing a window no longer reloads the app icons of other workspaces.
 
 ## Releases
 

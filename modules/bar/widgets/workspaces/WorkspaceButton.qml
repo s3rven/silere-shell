@@ -65,8 +65,19 @@ Item {
         NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
     }
 
+    // a slot fading out has already lost its workspace; it keeps showing the number it had
+    property int _paintedWsId: 0
+    onWsIdChanged: if (root.wsId >= 0) root._paintedWsId = root.wsId
+
+    // the reveal and the urgent pulse animate on their own; only the blanking step needs easing here
+    property real _numberShown: _blanked ? 0 : 1
+    MotionBehavior on _numberShown {
+        NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
+    }
+
     Component.onCompleted: {
         _dotFade = _blanked ? 0 : 1
+        if (root.wsId >= 0) root._paintedWsId = root.wsId
     }
     Component.onDestruction: if (root.hovered) root.hoverReported(root.wsId, false)
 
@@ -107,7 +118,7 @@ Item {
             if (button === Qt.MiddleButton) {
                 if (!Compositor.activeToplevel) return
                 root.moveWindowRequested()
-                if (root._motionAllowed()) _dropPulse.restart()
+                if (root._motionAllowed() && !_dropPulse.running) _dropPulse.start()
                 return
             }
             if (button === Qt.RightButton) {
@@ -245,11 +256,11 @@ Item {
         ShellText {
             anchors.centerIn: parent
             transform: Translate { x: root._shakeX }
-            text:    root.wsId
+            text:    root._paintedWsId
             opacity: (root._showIcons
                     ? root._revealAmt
                     : Math.max(ShellSettings.wsShowNumbers ? 1 : 0, root._revealAmt))
-                * (root._blanked ? 0 : 1) * root._pulseOpacity
+                * root._numberShown * root._pulseOpacity
             scale:   root._blanked ? 0.6 : (root._hoverFx ? 1.12 : 1)
             color:   root.urgent
                 ? Theme.warning
@@ -260,7 +271,6 @@ Item {
                     : (root._hoverFx ? Theme.withAlpha(Theme.accent, 0.65) : Theme.withAlpha(Theme.subtext, 0.45)))
             font.pixelSize: Settings.fontLabel
 
-            MotionBehavior on opacity {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
             MotionBehavior on scale   {NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
             ColorFade on color {}
         }

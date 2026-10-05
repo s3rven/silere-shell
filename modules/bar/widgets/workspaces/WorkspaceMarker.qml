@@ -27,7 +27,10 @@ Item {
     readonly property bool _bar: style === "bar"
     readonly property int travelDuration: 190
 
-    readonly property real centerX: x + width / 2
+    // the row's leading trim, applied as a shift so it moves with the cells without retargeting the slide
+    property real layoutOffsetX: 0
+    transform: Translate { x: root.layoutOffsetX }
+    readonly property real centerX: x + width / 2 + layoutOffsetX
     readonly property color tint: root.urgent ? Theme.warning : Theme.accent
 
     function _motionAllowed(): bool {
@@ -44,7 +47,8 @@ Item {
     }
     function pulse(): void {
         if (!root._motionAllowed()) return
-        _tapPulse.restart()
+        // a restart lands the scale on rest before rising again; a quick second tap rides the first
+        if (!_tapPulse.running) _tapPulse.start()
         glint()
     }
     function glint(): void {
@@ -216,7 +220,8 @@ Item {
                 x: {
                     const t = (root._glint + 1.15) / 2.3
                     const p = root._glintDir >= 0 ? t : 1 - t
-                    return Math.round(p * (parent.width + width)) - width
+                    // fractional on purpose: rounded, a 25 px sweep holds each pixel for several frames on a fast panel
+                    return p * (parent.width + width) - width
                 }
                 y: -4
                 rotation: root._bar ? 0 : -18
@@ -263,7 +268,7 @@ Item {
 
     onInSpecialChanged: {
         if (!root.inSpecial || !root._motionAllowed()) return
-        _specialPulse.restart()
+        if (!_specialPulse.running) _specialPulse.start()
         root.glint()
     }
 
@@ -291,7 +296,7 @@ Item {
         onTriggered: {
             if (!root.monitorReady || root.paging || !root.shiftEnabled
                     || !root._motionAllowed() || Math.abs(root.targetX - root.x) < 2) return
-            _moveAnim.restart()
+            if (!_moveAnim.running) _moveAnim.start()
         }
     }
 
