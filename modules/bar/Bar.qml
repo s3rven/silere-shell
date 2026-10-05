@@ -82,7 +82,10 @@ PanelWindow {
     // blur with no tint over it reads as a frosted slab, so it waits for the fade's midpoint
     BackgroundEffect.blurRegion: Region {
         item: Theme.panelOpacity < 1 && contents.opacity >= 0.5 ? surface : null
-        radius: Math.round(surface.radius)
+        topLeftRadius:     Math.round(bar.atBottom ? surface.innerRadius : surface.outerRadius)
+        topRightRadius:    Math.round(bar.atBottom ? surface.innerRadius : surface.outerRadius)
+        bottomLeftRadius:  Math.round(bar.atBottom ? surface.outerRadius : surface.innerRadius)
+        bottomRightRadius: Math.round(bar.atBottom ? surface.outerRadius : surface.innerRadius)
     }
 
     anchors {
@@ -107,9 +110,28 @@ PanelWindow {
         }
 
         readonly property real radius: Math.min(bar.cornerRadius, width / 2)
+        readonly property bool edgeFlush: bar.visualSurfaceInset < 0.5
+        readonly property bool sidesFlush: width > bar.width - 0.5
+        // whatever traces the outline runs on past an edge the bar touches, so its rounded corners never notch the screen edge
+        readonly property int _bleed: bar.wrapUnderline ? Math.ceil(radius) + 2 : 0
+        readonly property int bleedTop:    !bar.atBottom && edgeFlush ? _bleed : 0
+        readonly property int bleedBottom: bar.atBottom && edgeFlush ? _bleed : 0
+        readonly property int bleedSide:   sidesFlush ? _bleed : 0
+        // the blur cannot run past the surface, so it squares those corners instead
+        readonly property real outerRadius: edgeFlush || sidesFlush ? 0 : radius
+        readonly property real innerRadius: sidesFlush ? 0 : radius
+
+        Item {
+            id: _backdrop
+            anchors.fill: parent
+            anchors.topMargin:    -surface.bleedTop
+            anchors.bottomMargin: -surface.bleedBottom
+            anchors.leftMargin:   -surface.bleedSide
+            anchors.rightMargin:  -surface.bleedSide
+        }
 
         Loader {
-            anchors.fill: parent
+            anchors.fill: _backdrop
             active: bar.shadowOn
             opacity: contents.opacity * bar.shadowProgress
             sourceComponent: FloatingShadow {
@@ -122,7 +144,7 @@ PanelWindow {
         }
 
         Rectangle {
-            anchors.fill: parent
+            anchors.fill: _backdrop
             radius: surface.radius
             antialiasing: surface.radius > 0
             color: Theme.panel
@@ -130,7 +152,7 @@ PanelWindow {
         }
 
         Loader {
-            anchors.fill: parent
+            anchors.fill: _backdrop
             active: bar.wrapUnderline && (bar.shadowOn || ShellSettings.barBorderVisible)
             opacity: contents.opacity * bar.floatingProgress
             visible: active && opacity > 0.001
@@ -251,9 +273,18 @@ PanelWindow {
                 }
             }
 
+            Item {
+                id: _outlineBox
+                anchors.fill: parent
+                anchors.topMargin:    -surface.bleedTop
+                anchors.bottomMargin: -surface.bleedBottom
+                anchors.leftMargin:   -surface.bleedSide
+                anchors.rightMargin:  -surface.bleedSide
+            }
+
             Loader {
                 id: _underline
-                anchors.fill: parent
+                anchors.fill: _outlineBox
                 active: ShellSettings.underlineGlow && contents.opacity > 0.001 && !bar.concealed
                 sourceComponent: Component {
                     BarUnderline {
@@ -265,7 +296,7 @@ PanelWindow {
             }
 
             Loader {
-                anchors.fill: parent
+                anchors.fill: _outlineBox
                 active: ShellSettings.mediaVisualizerPosition === "underline"
                     && contents.opacity > 0.001 && !bar.concealed
                 sourceComponent: Component {
@@ -301,7 +332,7 @@ PanelWindow {
         }
 
         Loader {
-            anchors.fill: parent
+            anchors.fill: _backdrop
             active: bar.wrapUnderline && ShellSettings.barBorderVisible
             opacity: contents.opacity * bar.floatingProgress
             visible: active && opacity > 0.001
