@@ -1351,13 +1351,17 @@ else
 fi
 
 section "bar widget layout API"
-# The settings key list, settings metadata, and runtime component registry are
-# three views of one widget catalog. A widget is incomplete if any view drifts.
-widget_keys="$(awk '/barWidgetKeys:[[:space:]]*\[/{take=1} take{print; if ($0 ~ /\]/) exit}' \
-  services/ShellSettings.qml | grep -oE '"[A-Za-z][A-Za-z0-9]*"' | tr -d '"' | sort)"
-widget_meta="$(awk '/barWidgetMeta:[[:space:]]*\(\{/{take=1; next} \
-  take && /^[[:space:]]*\}\)/{exit} take{print}' services/ShellSettings.qml \
+# barWidgetMeta is the widget catalog (keys, defaults, labels) and _widgetComponents
+# is the bar's runtime view of it. A widget is incomplete if the two drift.
+widget_meta_block="$(awk '/barWidgetMeta:[[:space:]]*\(\{/{take=1; next} \
+  take && /^[[:space:]]*\}\)/{exit} take{print}' services/ShellSettings.qml)"
+widget_meta="$(printf '%s\n' "$widget_meta_block" \
   | sed -nE 's/^[[:space:]]*([A-Za-z][A-Za-z0-9]*):.*/\1/p' | sort)"
+# a missing or misspelled zone quietly falls back to the right end of the bar
+widget_unzoned="$(printf '%s\n' "$widget_meta_block" \
+  | grep -E '^[[:space:]]*[A-Za-z][A-Za-z0-9]*:' \
+  | grep -vE 'zone: "(left|center|right)"' \
+  | sed -nE 's/^[[:space:]]*([A-Za-z][A-Za-z0-9]*):.*/\1/p' | tr '\n' ' ' || true)"
 widget_components="$(awk '/_widgetComponents:[[:space:]]*\(\{/{take=1; next} \
   take && /^[[:space:]]*\}\)/{exit} take{print}' modules/bar/BarContent.qml \
   | grep -oE '[A-Za-z][A-Za-z0-9]*[[:space:]]*:' | tr -d ': ' | sort)"
@@ -1372,20 +1376,19 @@ while IFS= read -r wsetting; do
   grep -E "\{ k: \"$wsetting\"," services/ShellSettings.qml \
     | grep -qE 'sec: "[^"]*widgets' \
     || widget_unattributed="$widget_unattributed $wsetting"
-done <<< "$(awk '/barWidgetMeta:[[:space:]]*\(\{/{take=1; next} \
-  take && /^[[:space:]]*\}\)/{exit} take{print}' services/ShellSettings.qml \
+done <<< "$(printf '%s\n' "$widget_meta_block" \
   | sed -nE 's/.*setting: "([A-Za-z][A-Za-z0-9]*)".*/\1/p')"
-if [ -z "$widget_keys" ] || [ "$widget_keys" != "$widget_meta" ] \
-        || [ "$widget_keys" != "$widget_components" ]; then
-    fail "barWidgetKeys, barWidgetMeta, and _widgetComponents must be nonempty and identical"
-    printf 'keys:\n%s\nmeta:\n%s\ncomponents:\n%s\n' \
-      "$widget_keys" "$widget_meta" "$widget_components"
+if [ -z "$widget_meta" ] || [ "$widget_meta" != "$widget_components" ]; then
+    fail "barWidgetMeta and _widgetComponents must be nonempty and name the same widgets"
+    printf 'meta:\n%s\ncomponents:\n%s\n' "$widget_meta" "$widget_components"
+elif [ -n "$widget_unzoned" ]; then
+    fail "bar widget metadata needs zone: \"left\", \"center\" or \"right\": $widget_unzoned"
 elif [ -n "$widget_orphan" ]; then
     fail "bar widget metadata names settings the schema does not have:$widget_orphan"
 elif [ -n "$widget_unattributed" ]; then
     fail "bar widget settings must attribute changes to the widgets page:$widget_unattributed"
 else
-    ok "bar widgets" "keys, metadata, and components agree"
+    ok "bar widgets" "catalog and components agree"
 fi
 
 # The three persisted order strings form one logical layout. Let ShellSettings

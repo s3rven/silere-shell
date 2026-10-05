@@ -127,11 +127,33 @@ Singleton {
     property string barDisabledMonitors: ""
     property string overlayMonitor:      ""
 
-    readonly property var barWidgetKeys: ["workspaces", "windowTitle", "shellUpdate", "tray", "updates", "network", "bluetooth", "volume", "microphone", "brightness", "battery", "media", "clock"]
+    readonly property var barWidgetMeta: ({
+        // no setting: the diamond is the only way into the menu, so this one cannot be hidden
+        workspaces:  { glyph: "󰕰", label: "Workspaces",      group: "workspaces",  zone: "left",   setting: "" },
+        windowTitle: { glyph: "󰖯", label: "Window title",    group: "windowTitle", zone: "center", setting: "showWindowTitle" },
+        shellUpdate: { glyph: "󰑐", label: "Shell update",    group: "updates",     zone: "right",  setting: "barShowShellUpdate" },
+        tray:        { glyph: "󰇘", label: "System tray",     group: "tray",        zone: "right",  setting: "trayWidget" },
+        updates:     { glyph: "󰚰", label: "Package updates", group: "updates",     zone: "right",  setting: "updatesWidget" },
+        network:     { glyph: "󰛳", label: "Network",         group: "network",     zone: "right",  setting: "barShowNetwork" },
+        bluetooth:   { glyph: "󰂯", label: "Bluetooth",       group: "network",     zone: "right",  setting: "barShowBluetooth" },
+        volume:      { glyph: "󰕾", label: "Volume",          group: "levels",      zone: "right",  setting: "barShowVolume" },
+        microphone:  { glyph: "󰍬", label: "Microphone",      group: "levels",      zone: "right",  setting: "barShowMic" },
+        brightness:  { glyph: "󰃟", label: "Brightness",      group: "levels",      zone: "right",  setting: "barShowBrightness" },
+        battery:     { glyph: "󰂄", label: "Battery",         group: "power",       zone: "right",  setting: "barShowBattery" },
+        media:       { glyph: "󰝚", label: "Media",           group: "media",       zone: "left",   setting: "barShowMedia" },
+        clock:       { glyph: "󰅐", label: "Clock",           group: "clock",       zone: "right",  setting: "barShowClock" }
+    })
 
-    property string barWidgetOrderLeft:  "workspaces,media"
-    property string barWidgetOrderCenter: "windowTitle"
-    property string barWidgetOrderRight: "shellUpdate,tray,updates,network,bluetooth,volume,microphone,brightness,battery,clock"
+    // catalog order is the default order within each zone
+    readonly property var barWidgetKeys: Object.keys(root.barWidgetMeta)
+
+    function _defaultZoneOrder(zone: string): string {
+        return root.barWidgetKeys.filter(k => root.barWidgetMeta[k].zone === zone).join(",")
+    }
+
+    property string barWidgetOrderLeft:   root._defaultZoneOrder("left")
+    property string barWidgetOrderCenter: root._defaultZoneOrder("center")
+    property string barWidgetOrderRight:  root._defaultZoneOrder("right")
 
     function _widgetKeyList(value): var {
         const raw = Array.isArray(value) ? value : String(value || "").split(",")
@@ -156,15 +178,14 @@ Singleton {
                 zones[zone].push(key)
             }
         }
+        const names = ["left", "center", "right"]
         for (let i = 0; i < all.length; i++) {
             const k = all[i]
             if (seen[k]) continue
-            if (k === "workspaces") left.push(k)
-            else if (k === "windowTitle") center.push(k)
-            else right.push(k)
+            const home = names.indexOf(root.barWidgetMeta[k].zone)
+            zones[home < 0 ? 2 : home].push(k)
         }
         const loc = {}
-        const names = ["left", "center", "right"]
         for (let zone = 0; zone < zones.length; zone++)
             for (let i = 0; i < zones[zone].length; i++)
                 loc[zones[zone][i]] = { zone: names[zone], index: i }
@@ -238,23 +259,6 @@ Singleton {
         if (hidden) ids.push(id)
         root.trayHidden = ids.map(k => encodeURIComponent(k)).join(",")
     }
-
-    readonly property var barWidgetMeta: ({
-        // no setting: the diamond is the only way into the menu, so this one cannot be hidden
-        workspaces:  { glyph: "󰕰", label: "Workspaces",      group: "workspaces", setting: "" },
-        windowTitle: { glyph: "󰖯", label: "Window title",    group: "windowTitle", setting: "showWindowTitle" },
-        shellUpdate: { glyph: "󰑐", label: "Shell update",    group: "updates", setting: "barShowShellUpdate" },
-        tray:        { glyph: "󰇘", label: "System tray",     group: "tray",    setting: "trayWidget" },
-        updates:     { glyph: "󰚰", label: "Package updates", group: "updates", setting: "updatesWidget" },
-        network:     { glyph: "󰛳", label: "Network",         group: "network", setting: "barShowNetwork" },
-        bluetooth:   { glyph: "󰂯", label: "Bluetooth",       group: "network", setting: "barShowBluetooth" },
-        volume:      { glyph: "󰕾", label: "Volume",          group: "levels", setting: "barShowVolume" },
-        microphone:  { glyph: "󰍬", label: "Microphone",      group: "levels", setting: "barShowMic" },
-        brightness:  { glyph: "󰃟", label: "Brightness",      group: "levels", setting: "barShowBrightness" },
-        battery:     { glyph: "󰂄", label: "Battery",         group: "power",  setting: "barShowBattery" },
-        media:       { glyph: "󰝚", label: "Media",           group: "media",  setting: "barShowMedia" },
-        clock:       { glyph: "󰅐", label: "Clock",           group: "clock",  setting: "barShowClock" }
-    })
 
     function barWidgetConfiguredVisible(key: string): bool {
         const meta = root.barWidgetMeta[key]

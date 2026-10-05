@@ -612,6 +612,14 @@ ShellRoot {
         root._check(legacyLayout.center.length === 1
                 && legacyLayout.center[0] === "windowTitle",
             "an older saved widget layout migrates the new window title to its center default")
+        const homeLayout = ShellSettings._normaliseBarWidgetLayout("workspaces", "windowTitle", "clock")
+        root._check(homeLayout.loc.media.zone === "left" && homeLayout.loc.battery.zone === "right",
+            "a widget missing from every zone returns to its catalog zone")
+        root._check(ShellSettings._defaults.barWidgetOrderLeft === "workspaces,media"
+                && ShellSettings._defaults.barWidgetOrderCenter === "windowTitle"
+                && ShellSettings._defaults.barWidgetOrderRight
+                    === "shellUpdate,tray,updates,network,bluetooth,volume,microphone,brightness,battery,clock",
+            "the widget catalog derives the shipped default layout")
 
         const workspaceStrip = workspaceStripFactory.createObject(root)
         const forwardCrossing = workspaceStrip._intermediateIndexes(0, 2)
