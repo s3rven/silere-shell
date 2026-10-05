@@ -193,6 +193,7 @@ PanelWindow {
                         active: ShellSettings.barShadow
                         anchors.fill: parent
                         sourceComponent: FloatingShadow {
+                            hollow: _osdPillFill.color.a < 0.999
                             radius: card.pillRadius
                             atBottom: osd._bottom
                         }

@@ -363,6 +363,7 @@ Item {
         opacity: cardRect.opacity
         z: -1
         sourceComponent: FloatingShadow {
+            hollow: cardRect.color.a < 0.999
             radius: card._cardRadius
             atBottom: ShellSettings.barPosition === "bottom"
         }

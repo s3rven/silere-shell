@@ -23,6 +23,7 @@ Loader {
         }
     ]
     sourceComponent: FloatingShadow {
+        hollow: root.card.color.a < 0.999
         radius: root.card.radius
         atBottom: root.card.barBottom
     }

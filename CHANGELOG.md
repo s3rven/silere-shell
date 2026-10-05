@@ -39,6 +39,7 @@ settings file carries its own `__version` and migrates separately.
 - `silere` and `silere doctor` color their status words in a terminal, using its own palette; `NO_COLOR` turns this off, as it now does for the installer.
 - A critical notification stays in the popup stack instead of folding behind Show more when newer ones arrive.
 - A right or middle click outside the menu, calendar, quick actions or a tray menu closes it, as a left click does, and so does a click on another monitor.
+- A translucent bar, popup, notification or OSD shows the opacity it is set to: its shadow no longer darkens the glass behind it, so it reads lighter than before at the same setting.
 - Gliding selections (the menu rail, choice chips and color swatches) move on every frame of a high refresh rate display instead of at 62 fps, and settle sooner.
 - The menu no longer has the compositor blur the desktop behind it; it is opaque, so that blur was never visible.
 - When a Bluetooth device fails to connect, the list suggests forgetting it and pairing it again.

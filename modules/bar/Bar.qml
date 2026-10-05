@@ -111,6 +111,7 @@ PanelWindow {
             active: bar.shadowOn
             opacity: contents.opacity * bar.shadowProgress
             sourceComponent: FloatingShadow {
+                hollow: Theme.panel.a < 0.999
                 radius: surface.radius
                 atBottom: bar.atBottom
                 blur: 18
