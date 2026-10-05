@@ -96,7 +96,12 @@ A checkout the installer marked as a development install — or any checkout not
 
 Bootstrapping from a dotfiles script or a container? `SILERE_ASSUME_YES=1` answers the
 `[Y/n]` prompts and installs to the default path. It still backs up every file it edits,
-and still stops on a compositor it does not support.
+and still stops on a compositor it does not support. With the one-line install, set it on
+`bash`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/s3rven/silere-shell/main/scripts/install.sh | SILERE_ASSUME_YES=1 bash
+```
 
 ## Fonts
 
