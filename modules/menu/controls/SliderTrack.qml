@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import "../../../config"
 import "../../../services"
 import "../../common"
@@ -34,10 +35,17 @@ Item {
     property real thumbHeight: 14
     property real railHeight: 6
 
-    readonly property real _railInset: root.showThumb ? root.thumbWidth / 2 : 0
-    readonly property real _railWidth: Math.max(1, root.width - root._railInset * 2)
+    // rail and handle on whole device pixels: at 1.25 a 14px handle and a 6px rail land on half pixels and fringe
+    readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+    readonly property real _thumbW: Metrics.devicePx(root.thumbWidth, _dpr)
+    readonly property real _thumbH: Metrics.devicePx(root.thumbHeight, _dpr)
+    readonly property real _railH: Metrics.devicePx(root.railHeight, _dpr)
+    readonly property real _railInset: root.showThumb ? Metrics.devicePx(root._thumbW / 2, _dpr) : 0
+    readonly property real _railWidth: Math.max(1, Metrics.devicePx(root.width, _dpr) - root._railInset * 2)
+    readonly property real _thumbCenter: root._railInset + root._railWidth * root._ratio
 
-    implicitHeight: Math.max(root.railHeight, root.thumbHeight)
+    implicitHeight: Math.max(root._railH, root._thumbH)
+    transform: PixelSnap { item: root; dpr: root._dpr }
 
     readonly property real shownValue: _shownValue
     readonly property bool dragging: _ma.pressed
@@ -90,16 +98,16 @@ Item {
     Rectangle {
         id: _rail
         x: root._railInset
-        anchors.verticalCenter: parent.verticalCenter
+        y: Metrics.devicePx((root.height - root._railH) / 2, root._dpr)
         width: root._railWidth
-        height: root.railHeight
+        height: root._railH
         radius: 3; antialiasing: true
         color: root.trackColor
         ColorFade on color { gate: root.animate }
 
         Rectangle {
-            // whole logical px, or the fill edge slides out from under the rounded handle x
-            width: Math.round(parent.width * root._ratio)
+            // whole device px, or the fill edge slides out from under the rounded handle x
+            width: Metrics.devicePx(parent.width * root._ratio, root._dpr)
             height: parent.height
             radius: parent.radius
             antialiasing: true
@@ -122,9 +130,9 @@ Item {
 
     SliderHandle {
         visible: root.showThumb
-        width: root.thumbWidth; height: root.thumbHeight
-        anchors.verticalCenter: parent.verticalCenter
-        x: Math.round(root._railInset + root._railWidth * root._ratio - width / 2)
+        width: root._thumbW; height: root._thumbH
+        y: Metrics.devicePx((root.height - height) / 2, root._dpr)
+        x: Metrics.devicePx(root._thumbCenter - width / 2, root._dpr)
         hovered: _ma.containsMouse
         pressed: _ma.pressed
         hoverGrow: root.hoverGrow

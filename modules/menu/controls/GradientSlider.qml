@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import "../../../config"
 import "../../../services"
 import "../../common"
@@ -39,6 +40,10 @@ Item {
     width: parent ? parent.width : 0
     implicitHeight: 20
     height: implicitHeight
+    // rail and handle on whole device pixels, like SliderTrack
+    readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+    readonly property real _thumbCenter: _track.x + root._clamped(root.position) * _track.width
+    transform: PixelSnap { item: root; dpr: root._dpr }
     opacity: root.enabled && root.interactive ? 1.0 : Theme.disabledOpacity
 
     function _wrapped(p: real): real {
@@ -59,10 +64,10 @@ Item {
 
     Rectangle {
         id: _track
-        x: _thumb.width / 2
-        anchors.verticalCenter: parent.verticalCenter
-        width: Math.max(1, parent.width - _thumb.width)
-        height: 6
+        x: Metrics.devicePx(_thumb.width / 2, root._dpr)
+        y: Metrics.devicePx((parent.height - height) / 2, root._dpr)
+        width: Math.max(1, Metrics.devicePx(parent.width, root._dpr) - 2 * x)
+        height: Metrics.devicePx(6, root._dpr)
         radius: 3
         antialiasing: true
         gradient: root.trackGradient
@@ -79,11 +84,10 @@ Item {
 
     SliderHandle {
         id: _thumb
-        width: 16
-        height: 16
-        y: (parent.height - height) / 2
-        x: Math.round(_track.x + root._clamped(root.position) * _track.width
-            - width / 2)
+        width: Metrics.devicePx(16, root._dpr)
+        height: width
+        y: Metrics.devicePx((parent.height - height) / 2, root._dpr)
+        x: Metrics.devicePx(root._thumbCenter - width / 2, root._dpr)
         fillColor: root.thumbColor
         // the fill is the colour beneath it, so only a solid ring separates the handle from the rail
         outlineWidth: 2
