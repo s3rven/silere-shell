@@ -43,6 +43,8 @@ Item {
     readonly property real _railInset: root.showThumb ? Metrics.devicePx(root._thumbW / 2, _dpr) : 0
     readonly property real _railWidth: Math.max(1, Metrics.devicePx(root.width, _dpr) - root._railInset * 2)
     readonly property real _thumbCenter: root._railInset + root._railWidth * root._ratio
+    // where on the handle the press landed, so grabbing it off centre does not jump the value
+    property real _grab: 0
 
     implicitHeight: Math.max(root._railH, root._thumbH)
     transform: PixelSnap { item: root; dpr: root._dpr }
@@ -89,6 +91,14 @@ Item {
         if (Math.abs(next - _shownValue) < 0.000001) return
         _shownValue = next
         if (!(commitOnRelease && _ma.pressed)) changed(next)
+    }
+    function _press(px: real): void {
+        const off = px - root._thumbCenter
+        root._grab = root.showThumb && Math.abs(off) <= root._thumbW / 2 + 2 ? off : 0
+        root._setFromUser(root._posToVal(px - root._grab))
+    }
+    function _drag(px: real): void {
+        root._setFromUser(root._posToVal(px - root._grab))
     }
     function nudge(dir: int, mult: int): void {
         if (!root.enabled || !root.interactive) return
@@ -155,8 +165,8 @@ Item {
         cursorShape: Qt.PointingHandCursor
         // hold the grab or the Flickable steals a quick press and snaps the value to the edge
         preventStealing: true
-        onPressed: (mouse) => root._setFromUser(root._posToVal(mouse.x))
-        onPositionChanged: (mouse) => { if (pressed) root._setFromUser(root._posToVal(mouse.x)) }
+        onPressed: (mouse) => root._press(mouse.x)
+        onPositionChanged: (mouse) => { if (pressed) root._drag(mouse.x) }
         onReleased:        if (root.commitOnRelease) root.changed(root._shownValue)
         onCanceled:        root._shownValue = root.value
         onContainsMouseChanged: if (containsMouse) root._hoveredSince = Date.now()

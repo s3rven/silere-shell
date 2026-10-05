@@ -43,6 +43,7 @@ Item {
     // rail and handle on whole device pixels, like SliderTrack
     readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
     readonly property real _thumbCenter: _track.x + root._clamped(root.position) * _track.width
+    property real _grab: 0
     transform: PixelSnap { item: root; dpr: root._dpr }
     opacity: root.enabled && root.interactive ? 1.0 : Theme.disabledOpacity
 
@@ -123,8 +124,10 @@ Item {
         }
 
         onPressed: mouse => {
-            _set(mouse.x)
+            const off = mouse.x - root._thumbCenter
+            root._grab = Math.abs(off) <= _thumb.width / 2 + 2 ? off : 0
+            _set(mouse.x - root._grab)
         }
-        onPositionChanged: mouse => { if (pressed) _set(mouse.x) }
+        onPositionChanged: mouse => { if (pressed) _set(mouse.x - root._grab) }
     }
 }

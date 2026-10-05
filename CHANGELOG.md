@@ -34,6 +34,7 @@ settings file carries its own `__version` and migrates separately.
 - Workspace app icons stay sharp at fractional scales such as 125%.
 - An app with no icon shows its own initial in the workspace bar instead of a version digit, such as Minecraft's 1.
 - Toggles and sliders sit on whole device pixels at fractional scales such as 125%, so knobs and handles keep sharp edges, and hovering a toggle no longer blurs its outline.
+- Pressing a slider's handle slightly off centre no longer nudges its value.
 
 ## Releases
 

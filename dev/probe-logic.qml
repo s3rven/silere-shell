@@ -2351,6 +2351,15 @@ ShellRoot {
             "slider scroll steps stop at the minimum")
         root._check(track._posToVal(0) === 0 && track._posToVal(100) === 1,
             "slider inset endpoints preserve the full range")
+        track.nudge(1, 5)
+        track._press(track._thumbCenter + 5)
+        const heldOnGrab = track.shownValue === 0.5
+        track._drag(track._thumbCenter + 5 + 8.6)
+        const draggedFromGrab = track.shownValue === 0.6
+        track._press(95)
+        root._check(heldOnGrab && draggedFromGrab && track.shownValue === 1,
+            "pressing the slider handle off centre holds its value, and a press on the rail still jumps")
+        track.nudge(-1, 10)
         track.min = 0.5; track.max = 3; track.step = 0.05
         root._check(track.minimumValue === 0.5 && track.maximumValue === 3
                 && track.stepSize === 0.05,
