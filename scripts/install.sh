@@ -895,34 +895,39 @@ fi
 # Each one lights up a single feature; a missing tool just hides it.
 _section "optional tools"
 
-_optdep() {
-    if command -v "$1" >/dev/null 2>&1; then
-        printf "    ${GREEN}ok${R}      %-28s ${DIM}%s${R}\n" "$1" "$2"
+_optdeps_found=0
+_optdeps_missing=0
+_optdep_result() {
+    if [ "$1" = found ]; then
+        _optdeps_found=$((_optdeps_found + 1))
     else
-        printf "    ${DIM}–       %-28s %s${R}\n" "$1" "$2"
+        _optdeps_missing=$((_optdeps_missing + 1))
+        printf "    ${DIM}–       %-28s %s${R}\n" "$2" "$3"
+    fi
+}
+
+_optdep() {
+    if command -v "$1" >/dev/null 2>&1; then _optdep_result found "$1" "$2"
+    else _optdep_result missing "$1" "$2"
     fi
 }
 
 _optdep_any() {
-    local label="$1" desc="$2" tool found=""
+    local label="$1" desc="$2" tool
     shift 2
     for tool in "$@"; do
         if command -v "$tool" >/dev/null 2>&1; then
-            found="$tool"
-            break
+            _optdep_result found "$label" "$desc"
+            return 0
         fi
     done
-    if [ -n "$found" ]; then
-        printf "    ${GREEN}ok${R}      %-28s ${DIM}%s${R}\n" "$label ($found)" "$desc"
-    else
-        printf "    ${DIM}–       %-28s %s${R}\n" "$label" "$desc"
-    fi
+    _optdep_result missing "$label" "$desc"
 }
 
 if _qml_module_available Quickshell.Services.Pipewire; then
-    printf "    ${GREEN}ok${R}      %-28s ${DIM}%s${R}\n" "pipewire" "volume + sound popup"
+    _optdep_result found "pipewire" "volume + sound popup"
 else
-    printf "    ${DIM}–       %-28s %s${R}\n" "pipewire" "volume + sound popup"
+    _optdep_result missing "pipewire" "volume + sound popup"
 fi
 _optdep fc-list       "font picker + font checks"
 _optdep brightnessctl "brightness control + popup"
@@ -945,6 +950,11 @@ _optdep_any "power actions" "suspend / reboot / shutdown" systemctl loginctl
 _optdep notify-send   "low-battery + hot-CPU alerts"
 _optdep timeout       "bounded update checks"
 _optdep ssh-keygen    "signed shell updates"
+if [ "$_optdeps_missing" -eq 0 ]; then
+    printf "    ${GREEN}ok${R}      all %d found\n" "$_optdeps_found"
+else
+    printf "    ${GREEN}ok${R}      %d others found; each missing tool only hides its feature\n" "$_optdeps_found"
+fi
 
 # ── compositor ───────────────────────────────────────────────────────────────────
 # The whole install can succeed on a session Silere cannot run on: every step
