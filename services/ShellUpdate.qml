@@ -7,6 +7,8 @@ import Quickshell.Io
 Singleton {
     id: root
 
+    readonly property bool armed: true
+
     readonly property int maxCommitDetail: 80
     readonly property int maxCommitSubjectChars: 512
     readonly property int maxPendingCount: 100000

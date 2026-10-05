@@ -28,6 +28,12 @@ ShellRoot {
     // is whichever one has focus — including one the user turned the bar off on
     readonly property ShellScreen anchoredPopupScreen: smokeTest ? null : Monitors.overlayBarScreen
 
+    // auto night light tracks the sun, and one left on returns after a restart; otherwise lazy
+    function armNightLightIfNeeded(): void {
+        if (ShellSettings.nightLightAuto || ShellSettings.nightLightOn)
+            void NightLight.armed
+    }
+
     function armSystemAlertsIfNeeded(): void {
         if (ShellSettings.osdBatteryWarn || ShellSettings.osdTempWarn)
             void SystemAlerts.armed
@@ -38,40 +44,36 @@ ShellRoot {
         function onReloadCompleted() { Quickshell.inhibitReloadPopup() }
     }
 
-    // reading a member instantiates a lazy singleton; these watchers must arm before the user opens a panel
+    // reading a member instantiates a lazy singleton; every service declaring `armed` is read here or in an arm function above
     Component.onCompleted: {
         if (root.smokeTest) return
         void NotifWatch.armed
-        // PowerProfiles reads when a panel opens: created lazily it misses the first open and the row sits on "Unavailable"
-        void PowerProfiles.available
+        // the profile arrives over D-Bus ~300ms after the first read; armed on first open, the row shows the default
+        void PowerProfiles.armed
         // documented as always callable (`ipc call screenshot flash`), so it can't wait on the underline
         void Screenshot.armed
         // same trap: nothing else references ShellUpdate until the Updates page builds, after open
-        void ShellUpdate.pending
+        void ShellUpdate.armed
         void OverlayCoordinator.armed
-        void ControlSurfaces.anyOpen
+        void ControlSurfaces.armed
         // the anchored popup states own the documented IPC targets and the shared control rows, so they cannot wait on the panel that happens to host them
         void MenuState.armed
         void CalendarState.armed
         void TrayMenuState.armed
         void QuickActionsState.armed
-        // auto night light tracks the sun, and one left on returns after a restart; otherwise lazy
-        if (ShellSettings.nightLightAuto || ShellSettings.nightLightOn) void NightLight.toolAvailable
         // nothing else references Hooks: unarmed it never scans, and no hook ever fires
         void Hooks.armed
+        root.armNightLightIfNeeded()
         root.armSystemAlertsIfNeeded()
     }
 
     Connections {
         target: ShellSettings
-        function onOsdBatteryWarnChanged() { if (!root.smokeTest) root.armSystemAlertsIfNeeded() }
-        function onOsdTempWarnChanged() { if (!root.smokeTest) root.armSystemAlertsIfNeeded() }
-        function onNightLightAutoChanged() {
-            if (!root.smokeTest && ShellSettings.nightLightAuto) void NightLight.toolAvailable
-        }
-        function onNightLightOnChanged() {
-            if (!root.smokeTest && ShellSettings.nightLightOn) void NightLight.toolAvailable
-        }
+        enabled: !root.smokeTest
+        function onOsdBatteryWarnChanged() { root.armSystemAlertsIfNeeded() }
+        function onOsdTempWarnChanged() { root.armSystemAlertsIfNeeded() }
+        function onNightLightAutoChanged() { root.armNightLightIfNeeded() }
+        function onNightLightOnChanged() { root.armNightLightIfNeeded() }
     }
 
     Variants {

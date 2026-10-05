@@ -9,6 +9,8 @@ import Quickshell.Services.UPower as UPower
 Singleton {
     id: root
 
+    readonly property bool armed: true
+
     // the service pushes reads; powerprofilesctl writes where installed, so a refusal reports stderr
     readonly property bool available: SystemTools.hasPowerProfilesCtl
         || SystemTools.hasPowerProfilesService

@@ -8,6 +8,8 @@ import "../config"
 Singleton {
     id: root
 
+    readonly property bool armed: true
+
     property bool enabled:        false
     property string lastError:    ""
     property bool _stopping:      false

@@ -2159,10 +2159,27 @@ for f in services/*.qml; do
     unarmed_services="$unarmed_services $svc"
   fi
 done
+# an IPC target only registers once its singleton exists, so a service holding one cannot
+# wait to be read; ShellSettings is exempt because every surface reads it at startup
+unmarked_ipc=""
+for f in services/*.qml; do
+  grep -q 'IpcHandler' "$f" || continue
+  [ "$f" = services/ShellSettings.qml ] && continue
+  grep -qE '^[[:space:]]*readonly property bool armed' "$f" \
+    || unmarked_ipc="$unmarked_ipc $(basename "$f" .qml)"
+done
+# a bare read of any other member arms a service this rule cannot see
+stray_arming="$(grep -nE 'void[[:space:]]+[A-Z][A-Za-z0-9_]*\.[A-Za-z_]' shell.qml \
+  | grep -vE 'void[[:space:]]+[A-Z][A-Za-z0-9_]*\.armed([^A-Za-z0-9_]|$)' || true)"
 if [ -n "$unarmed_services" ]; then
   fail "these services declare an armed marker shell.qml never reads:$unarmed_services"
+elif [ -n "$stray_arming" ]; then
+  fail "shell.qml arms a service through a member other than armed:"
+  printf '%s\n' "$stray_arming"
+elif [ -n "$unmarked_ipc" ]; then
+  fail "these services hold an IPC target but declare no armed marker:$unmarked_ipc"
 else
-  ok "arming" "every armed service is read at startup"
+  ok "arming" "every armed service and IPC target is read at startup"
 fi
 
 section "pointer-only interaction"

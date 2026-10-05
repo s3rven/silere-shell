@@ -6,6 +6,8 @@ import Quickshell
 Singleton {
     id: root
 
+    readonly property bool armed: true
+
     // one list, so a row reused in another panel does not leave its service keyed to the first
     readonly property bool anyOpen: {
         const list = OverlayCoordinator.popups
