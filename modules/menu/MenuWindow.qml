@@ -734,13 +734,17 @@ PanelWindow {
                             onTapped: panel.switchTab(2)
 
                             Rectangle {
+                                id: _railBadge
                                 readonly property bool _show: Notifications.hasHistory && !_railRecent.active
+                                readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 anchors.horizontalCenterOffset: 8
                                 anchors.verticalCenter: parent.verticalCenter
                                 anchors.verticalCenterOffset: -8
-                                width: Math.max(height, _railBadgeCount.implicitWidth + 7)
-                                height: 14; radius: height / 2
+                                // whole device pixels at a snapped position, like the rail selection beside it
+                                width: Metrics.devicePx(Math.max(height, _railBadgeCount.implicitWidth + 7), _dpr)
+                                height: Metrics.devicePx(14, _dpr); radius: height / 2
+                                transform: PixelSnap { item: _railBadge; dpr: _railBadge._dpr }
                                 color: Theme.accent; antialiasing: true
                                 opacity: _show ? 1.0 : 0.0
                                 scale:   _show ? 1.0 : 0.5

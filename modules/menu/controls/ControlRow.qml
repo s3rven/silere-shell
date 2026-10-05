@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import "../../../config"
 import "../../../services"
 import "../../common"
@@ -116,9 +117,12 @@ MenuRow {
             anchors.verticalCenter:   parent.top
             anchors.horizontalCenterOffset: -2
             anchors.verticalCenterOffset:    1
-            width:  Math.max(15, _badgeTxt.implicitWidth + 7)
-            height: 15
-            radius: 7.5
+            // whole device pixels at a snapped position: 15px is 18.75 at 1.25 and blurs one side
+            readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+            width:  Metrics.devicePx(Math.max(height, _badgeTxt.implicitWidth + 7), _dpr)
+            height: Metrics.devicePx(15, _dpr)
+            radius: height / 2
+            transform: PixelSnap { item: _badge; dpr: _badge._dpr }
             antialiasing: true
             z: 2
 

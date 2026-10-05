@@ -34,7 +34,7 @@ settings file carries its own `__version` and migrates separately.
 - A workspace leaving the bar no longer shows -1 while it fades, and opening or closing a window no longer reloads the app icons of other workspaces.
 - Workspace app icons stay sharp at fractional scales such as 125%.
 - An app with no icon shows its own initial in the workspace bar instead of a version digit, such as Minecraft's 1.
-- Toggles, sliders, colour swatches and the menu rail's selection sit on whole device pixels at fractional scales such as 125%, so their edges stay sharp and even on both sides, and hovering a toggle no longer blurs its outline.
+- Toggles, sliders, colour swatches, notification count badges and the menu rail's selection sit on whole device pixels at fractional scales such as 125%, so their edges stay sharp and even on both sides, and hovering a toggle no longer blurs its outline.
 - Pressing a slider's handle slightly off centre no longer nudges its value.
 
 ## Releases
