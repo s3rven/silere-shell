@@ -49,16 +49,21 @@ Item {
 
     Rectangle {
         id: _chip
-        anchors.centerIn: parent; width: 22; height: 22; radius: 11
+        // whole device pixels at a snapped position: on a 26px pitch every other chip sat on a half pixel at 1.25 with one soft side
+        anchors.centerIn: parent
+        width: Metrics.devicePx(22, _dpr); height: width; radius: width / 2
         antialiasing: true
         color: root.spectrum ? "transparent" : root.chipColor
         readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
-        transform: PixelScale {
-            item: _chip
-            dpr: _chip._dpr
-            factor: _t.pressed ? 0.90 : _h.hovered ? 1.04 : 1.0
-            hoverFactor: 1.04
-        }
+        transform: [
+            PixelScale {
+                item: _chip
+                dpr: _chip._dpr
+                factor: _t.pressed ? 0.90 : _h.hovered ? 1.04 : 1.0
+                hoverFactor: 1.04
+            },
+            PixelSnap { item: _chip; dpr: _chip._dpr }
+        ]
 
         // only the custom chip pays for a canvas; the presets stay a flat fill
         Loader {

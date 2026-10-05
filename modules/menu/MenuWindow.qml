@@ -689,9 +689,12 @@ PanelWindow {
                         x: _railNav.x + (panel.railCollapsedW - width) / 2
                         y: _railNav.y + (_railHome.height - height) / 2
                             + _slot * (_railHome.height + _railNav.spacing)
-                        width: 30; height: 30; radius: 9
+                        // 30px is 37.5 device px at 1.25; whole pixels at a snapped position keep its outline even
+                        readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+                        width: Metrics.devicePx(30, _dpr); height: width; radius: 9
                         antialiasing: true
                         color: Theme.menuControl
+                        transform: PixelSnap { item: _railSelection; dpr: _railSelection._dpr }
                         OutlineBorder {
                             radius: _railSelection.radius
                             outlineColor: Theme.menuControlLine

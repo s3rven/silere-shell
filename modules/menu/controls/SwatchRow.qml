@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import "../../../config"
 import "../../common"
 
@@ -85,15 +86,18 @@ Item {
                     }
                 }
                 Rectangle {
+                    id: _edge
                     anchors.centerIn: parent
-                    width: 22
+                    // matches AccentSwatch's chip, snapped the same way so the two stay concentric
+                    width: Metrics.devicePx(22, root._dpr)
                     height: width
                     radius: width / 2
                     antialiasing: true
                     color: "transparent"
+                    transform: PixelSnap { item: _edge; dpr: root._dpr }
 
                     OutlineBorder {
-                        radius: 11
+                        radius: _edge.radius
                         outlineWidth: 1
                         outlineColor: Theme.withAlpha(Theme.subtext, 0.24)
                     }
@@ -108,10 +112,13 @@ Item {
     readonly property real _slot: _slotGlide.value
     SpringGlide { id: _slotGlide; target: root._slotTarget }
 
+    readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
     Rectangle {
         id: _selection
-        width: 28
+        // the chip plus a whole-device-pixel gap each side: an odd difference cannot centre on the grid
+        width: Metrics.devicePx(22, root._dpr) + 2 * Metrics.devicePx(3, root._dpr)
         height: width
+        transform: PixelSnap { item: _selection; dpr: root._dpr }
         radius: width / 2
         antialiasing: true
         color: "transparent"
