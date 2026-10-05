@@ -76,9 +76,9 @@ Rectangle {
     // mix, not withAlpha: the notification popup window is transparent, so an alpha tint
     // would let the desktop through where the menu's opaque backdrop hides it
     color: root._armedFace
-        ? Theme.mix(Theme.menuControl, root.tint, _tap.pressed ? 0.28 : 0.16)
-        : _tap.pressed ? Theme.mix(Theme.menuControl, root.tint, 0.20)
-        : _hover.hovered ? Theme.mix(Theme.menuControl, Theme.subtext, 0.16) : Theme.menuControl
+        ? Theme.blend(Theme.menuControl, root.tint, _tap.pressed ? 0.28 : 0.16)
+        : _tap.pressed ? Theme.blend(Theme.menuControl, root.tint, 0.20)
+        : _hover.hovered ? Theme.blend(Theme.menuControl, Theme.subtext, 0.16) : Theme.menuControl
 
     opacity: root._reveal * root._dim
 

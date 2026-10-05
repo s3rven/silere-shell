@@ -130,7 +130,7 @@ MenuRow {
             OutlineBorder {
                 radius: _badge.radius
                 outlineWidth: 1
-                outlineColor: Theme.mix(Theme.menuCard, root.accentColor, _badgeMouse.containsMouse ? 0.42 : 0.55)
+                outlineColor: Theme.blend(Theme.menuCard, root.accentColor, _badgeMouse.containsMouse ? 0.42 : 0.55)
                 ColorFade on outlineColor {}
             }
 

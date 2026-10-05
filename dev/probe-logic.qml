@@ -1391,6 +1391,25 @@ ShellRoot {
         ShellSettings.barFloating = savedFloating
         ShellSettings.dotStyle = savedDots
 
+        const opaqueA = Qt.rgba(0.1, 0.2, 0.3, 1), opaqueB = Qt.rgba(0.9, 0.5, 0.1, 1)
+        const mixed = Theme.mix(opaqueA, opaqueB, 0.3), blended = Theme.blend(opaqueA, opaqueB, 0.3)
+        const tinted = Theme.blend(Qt.rgba(1, 1, 1, 0.04), opaqueB, 0.25)
+        root._check(Math.abs(mixed.r - blended.r) < 0.002 && Math.abs(mixed.g - blended.g) < 0.002
+                && blended.a === 1 && tinted.a < 0.3 && tinted.r > 0.9,
+            "blend matches mix for opaque colours and keeps a tint over glass a tint")
+        const savedGlass = [ShellSettings.popupMatchBarOpacity, ShellSettings.barOpacity]
+        ShellSettings.popupMatchBarOpacity = true
+        ShellSettings.barOpacity = 0.62
+        const glassOn = Theme.glass && Theme.menuCard.a < 0.2 && Theme.menuPane.a < 0.2
+            && Theme.menuControl.a < 0.2 && Theme.menuCardSolid.a === 1
+            && Theme.controlKnobFill(Theme.accent, false, false, false).a === 1
+        ShellSettings.barOpacity = 1.0
+        const glassOffOpaque = !Theme.glass && Theme.menuCard.a === 1 && Theme.menuControl.a === 1
+        ShellSettings.popupMatchBarOpacity = savedGlass[0]
+        ShellSettings.barOpacity = savedGlass[1]
+        root._check(glassOn && glassOffOpaque,
+            "a translucent bar with matching popups turns the menu to tints, knobs and hover labels stay solid, and an opaque bar keeps it solid")
+
         const savedSide = [ShellSettings.barFloating, ShellSettings.barWidth, ShellSettings.barGap]
         ShellSettings.barFloating = true
         ShellSettings.barWidth = 0.72

@@ -377,7 +377,7 @@ Column {
         }
         ToggleRow {
             glyph: "󱡓"; label: "Popups match bar opacity"
-            description: "Notifications, calendar, tray and quick actions"
+            description: "Menu, notifications, calendar, tray and more"
             key: "popupMatchBarOpacity"
         }
         CollapsibleSection {

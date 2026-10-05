@@ -398,7 +398,7 @@ Item {
                                     ? (_headerTap.pressed ? Theme.withAlpha(Theme.accent, 0.12)
                                         : _headerHover.hovered
                                         ? Theme.withAlpha(Theme.text, 0.035) : "transparent")
-                                    : Theme.mix(Theme.menuControl, Theme.accent,
+                                    : Theme.blend(Theme.menuControl, Theme.accent,
                                         ShellSettings.highContrast
                                             ? (_headerTap.pressed ? 0.30
                                                 : _headerHover.hovered ? 0.24 : 0.16)

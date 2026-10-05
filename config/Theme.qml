@@ -138,9 +138,22 @@ Singleton {
     readonly property color panel: withAlpha(background, panelOpacity)
     readonly property color popup: ShellSettings.popupMatchBarOpacity ? panel : background
 
-    readonly property color menuPane:        _n ? mix(background, text, _elevK * (_hc ? 0.050 : 0.030))
-                                                : mix(background, _hc ? text : surface, _elevK * (_hc ? 0.055 : 0.18))
-    readonly property color menuCard:        _n ? mix(background, text, _elevK * (_hc ? 0.090 : 0.060))
+    // when popups match a translucent bar the menu turns to glass with them: its pane, cards and controls
+    // become tints over the one translucent fill, so the blur reads through every layer instead of
+    // stopping at solid slabs. Each tint is the opaque step it replaces, taken over the layer below
+    readonly property bool glass: ShellSettings.popupMatchBarOpacity && panelOpacity < 1
+    function _over(total: real, under: real): real { return 1 - (1 - total) / (1 - under) }
+    readonly property real _paneK: _elevK * (_n ? (_hc ? 0.050 : 0.030) : (_hc ? 0.055 : 0.020))
+    readonly property real _cardK: _elevK * (_n ? (_hc ? 0.090 : 0.060) : (_hc ? 0.100 : 0.070))
+    readonly property real _controlK: _elevK * (_n ? (_hc ? 0.125 : 0.090) : (_hc ? 0.130 : 0.100))
+
+    readonly property color menuPane:        glass
+        ? (_n || _hc ? withAlpha(text, _paneK) : withAlpha(surface, _elevK * 0.18))
+        : _n ? mix(background, text, _elevK * (_hc ? 0.050 : 0.030))
+             : mix(background, _hc ? text : surface, _elevK * (_hc ? 0.055 : 0.18))
+    readonly property color menuCard:        glass ? withAlpha(text, _over(_cardK, _paneK)) : menuCardSolid
+    // for what floats over content, like a hover label, and must not let the content show through
+    readonly property color menuCardSolid:   _n ? mix(background, text, _elevK * (_hc ? 0.090 : 0.060))
                                                 : mix(background, text, _elevK * (_hc ? 0.100 : 0.07))
     readonly property color menuCardBorder:  _hc ? withAlpha(text, lineAlpha(0.22))
                                                 : _n ? withAlpha(_lineBase, lineAlpha(0.105))
@@ -151,8 +164,9 @@ Singleton {
     readonly property color menuHover:       accent
     // wallpaper's card sits a step higher than neutral's, so its control needs a wider mix to hold
     // the same ~3 L* separation above the card that neutral gets from 0.060 -> 0.090
-    readonly property color menuControl:     _n ? mix(background, text, _elevK * (_hc ? 0.125 : 0.090))
-                                                : mix(background, text, _elevK * (_hc ? 0.130 : 0.100))
+    readonly property color menuControl:     glass ? withAlpha(text, _over(_controlK, _cardK)) : menuControlSolid
+    readonly property color menuControlSolid: _n ? mix(background, text, _elevK * (_hc ? 0.125 : 0.090))
+                                                 : mix(background, text, _elevK * (_hc ? 0.130 : 0.100))
     readonly property color menuControlLine: _hc ? withAlpha(text, lineAlpha(0.24))
                                                 : _n ? withAlpha(_lineBase, lineAlpha(0.115))
                                                      : withAlpha(_lineBase, lineAlpha(0.135))
@@ -191,8 +205,8 @@ Singleton {
         return menuControlLine
     }
     function emphasisButtonFill(c: color, hovered: bool, pressed: bool): color {
-        if (_hc) return mix(menuControl, c, pressed ? 0.54 : hovered ? 0.48 : 0.42)
-        return mix(menuControl, c, pressed ? 0.40 : hovered ? 0.34 : 0.28)
+        if (_hc) return blend(menuControl, c, pressed ? 0.54 : hovered ? 0.48 : 0.42)
+        return blend(menuControl, c, pressed ? 0.40 : hovered ? 0.34 : 0.28)
     }
 
     function controlTrackFill(c: color, active: bool,
@@ -203,9 +217,9 @@ Singleton {
                       : (pressed ? 0.85 : hovered ? 0.79 : 0.73))
                 : (_n ? (pressed ? 0.60 : hovered ? 0.54 : 0.48)
                       : (pressed ? 0.64 : hovered ? 0.58 : 0.52))
-            return mix(menuControl, c, k)
+            return blend(menuControl, c, k)
         }
-        return mix(menuControl, text,
+        return blend(menuControl, text,
             pressed ? 0.14 : hovered ? 0.085 : 0.035)
     }
     function controlTrackLine(c: color, active: bool,
@@ -222,10 +236,10 @@ Singleton {
     function switchTrackFill(c: color, checked: bool,
                              hovered: bool, pressed: bool): color {
         if (checked) {
-            if (_hc) return mix(menuControl, c, pressed ? 0.85 : hovered ? 0.79 : 0.73)
-            return mix(menuControl, c, pressed ? 0.32 : hovered ? 0.27 : 0.22)
+            if (_hc) return blend(menuControl, c, pressed ? 0.85 : hovered ? 0.79 : 0.73)
+            return blend(menuControl, c, pressed ? 0.32 : hovered ? 0.27 : 0.22)
         }
-        return mix(menuControl, text, pressed ? 0.14 : hovered ? 0.085 : 0.035)
+        return blend(menuControl, text, pressed ? 0.14 : hovered ? 0.085 : 0.035)
     }
 
     // a slider knob rides its own filled track, so it reads as the accent with a lift; the
@@ -244,7 +258,8 @@ Singleton {
             return mix(subtext, text, pressed ? 0.28 : hovered ? 0.23 : 0.18)
         }
         if (active) return mix(c, text, pressed ? 0.22 : hovered ? 0.12 : 0.0)
-        return mix(menuControl, text, pressed ? 0.42 : hovered ? 0.36 : 0.30)
+        // solid even over glass: a see-through knob shows its own track through it
+        return mix(menuControlSolid, text, pressed ? 0.42 : hovered ? 0.36 : 0.30)
     }
 
     readonly property int radiusPanel:   14
@@ -274,6 +289,17 @@ Singleton {
             base.b * (1 - a) + tint.b * a,
             1.0
         )
+    }
+
+    // mix() for colours that may be translucent: weighs each by its own alpha and keeps the result's,
+    // so a tint over glass stays a tint. Identical to mix() when both are opaque
+    function blend(base: color, tint: color, a: real): color {
+        const wb = base.a * (1 - a)
+        const wt = tint.a * a
+        const out = wb + wt
+        if (out <= 0) return Qt.rgba(0, 0, 0, 0)
+        return Qt.rgba((base.r * wb + tint.r * wt) / out, (base.g * wb + tint.g * wt) / out,
+            (base.b * wb + tint.b * wt) / out, out)
     }
 
     function _unlin(c: real): real {
@@ -340,7 +366,7 @@ Singleton {
     }
 
     function rowFill(hovered: bool, pressed: bool): color {
-        return pressed ? mix(menuCard, accent, 0.085 * _elevK)
-            : hovered ? mix(menuCard, text, 0.045 * _elevK) : menuCard
+        return pressed ? blend(menuCard, accent, 0.085 * _elevK)
+            : hovered ? blend(menuCard, text, 0.045 * _elevK) : menuCard
     }
 }

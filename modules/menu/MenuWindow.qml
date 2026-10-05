@@ -151,8 +151,8 @@ PanelWindow {
                 win: win
                 open: MenuState.open
                 anchorX: MenuState.effectiveAnchorX
-                // the rail and pane fills cover every pixel of the card, so a translucent fill here bought only a blur pass nothing shows
-                color: Theme.background
+                // glass makes the rail and pane tints over this, so the blur reads through; opaque, they cover every pixel and a translucent fill would only buy a blur pass nothing shows
+                color: Theme.glass ? Theme.popup : Theme.background
                 barBottom: Metrics.barAtBottom
                 targetWidth: placementW
                 animateScale: true
@@ -582,7 +582,7 @@ PanelWindow {
                             width: Math.max(0, parent.width - x)
                             anchors.top: parent.top
                             anchors.bottom: parent.bottom
-                            color: Theme.mix(Theme.menuPane, Theme.menuControl, 0.14)
+                            color: Theme.blend(Theme.menuPane, Theme.menuControl, 0.14)
                             visible: parent.width > panel.railCollapsedW + 0.5
                         }
 

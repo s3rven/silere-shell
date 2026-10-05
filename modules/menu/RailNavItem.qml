@@ -74,7 +74,7 @@ Item {
         width: 30; height: 30; radius: 9
         antialiasing: true
         color: _tap.pressed
-            ? Theme.mix(Theme.menuControl, root.accentColor, 0.10)
+            ? Theme.blend(Theme.menuControl, root.accentColor, 0.10)
             : root._ownsActive ? Theme.menuControl
             : root._hot && !root.active ? Theme.withAlpha(Theme.text, 0.050) : "transparent"
         scale: _tap.pressed ? 0.94 : (root.active || root._hot ? 1.0 : 0.90)
@@ -120,7 +120,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         width: _pillLabel.implicitWidth + 18
         height: 22; radius: Theme.radiusInline
-        color: Theme.menuCard
+        color: Theme.menuCardSolid
         antialiasing: true
         opacity: _show ? 1.0 : 0.0
         scale:   _show ? 1.0 : 0.96
