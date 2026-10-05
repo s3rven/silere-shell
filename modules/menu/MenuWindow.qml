@@ -151,6 +151,8 @@ PanelWindow {
                 win: win
                 open: MenuState.open
                 anchorX: MenuState.effectiveAnchorX
+                // the rail and pane fills cover every pixel of the card, so a translucent fill here bought only a blur pass nothing shows
+                color: Theme.background
                 barBottom: Metrics.barAtBottom
                 targetWidth: placementW
                 animateScale: true
