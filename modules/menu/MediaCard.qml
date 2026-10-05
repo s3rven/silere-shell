@@ -205,10 +205,11 @@ ClippingRectangle {
         NumberAnimation { id: _artInScale; property: "scale";   to: 1.0;           duration: Motion.ms(520); easing.type: Easing.OutCubic }
     }
 
+    // the solid card, not root.color: a glass card is a light tint, and 72% of it washed every cover white
     Rectangle {
         anchors.fill: parent
         visible: _art.shownAlpha > 0.01
-        color: Theme.withAlpha(root.color, 0.72)
+        color: Theme.withAlpha(Theme.menuCardSolid, 0.72)
     }
 
     Rectangle {
