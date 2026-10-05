@@ -120,8 +120,9 @@ example `before_sleep_cmd = loginctl lock-session` in hypridle.
 With Quickshell 0.3.1, the network widget and Wi-Fi list can keep showing old devices after
 NetworkManager restarts. Restart Silere.
 
-## Workspaces break after a Hyprland update
+## Special or named workspaces misbehave after a Hyprland update
 
-Hyprland 0.57 changes how it names workspaces, and Quickshell 0.3.1 cannot read the new form.
-Stay on Hyprland 0.56 until a Quickshell release after 0.3.1 ships, or build Quickshell from
-its main branch. `silere doctor` reports this pairing.
+Hyprland 0.57 changes how it names special and named workspaces, and Quickshell 0.3.1 reads
+them all as the same workspace. Numbered workspaces are not affected. If you rely on the others,
+stay on Hyprland 0.56 until a Quickshell release after 0.3.1 ships, or build Quickshell from its
+main branch. `silere doctor` warns about this pairing.

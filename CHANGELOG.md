@@ -51,7 +51,7 @@ settings file carries its own `__version` and migrates separately.
 - Tray menu rows, the notification close button and notification cards respond while pressed.
 - A notification that arrives while the menu, calendar, quick actions or a tray menu is open waits until it closes instead of appearing on top of it, and then shows for its full time. Critical notifications still appear at once.
 - Low battery warnings are on by default: an alert at the Low below threshold and again at half of it. Settings › Feedback › Alerts turns them off.
-- `silere doctor` fails when Hyprland 0.57 or later runs with Quickshell 0.3.1, which cannot read its workspaces.
+- `silere doctor` warns when Hyprland 0.57 or later runs with Quickshell 0.3.1, which mixes up special and named workspaces.
 
 ### Removed
 

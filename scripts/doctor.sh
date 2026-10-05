@@ -183,11 +183,11 @@ if [ "$compositor" = Hyprland ]; then
         ok "compositor" "Hyprland IPC reachable"
         hypr_version="$(hyprctl version -j 2>/dev/null \
             | sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([0-9.]*\)".*/\1/p' | head -n 1)"
-        # 0.57 sends workspace addresses, which Quickshell 0.3.1 reads as id 0
+        # 0.57 gives only numbered workspaces an id; Quickshell 0.3.1 reads special and named ones as id 0
         if [ -n "$hypr_version" ] && [ -n "${qs_version:-}" ] \
             && _silere_version_at_least "$hypr_version" 0.57 \
             && ! _silere_version_at_least "$qs_version" 0.3.2; then
-            fail "workspaces" "Hyprland $hypr_version needs a Quickshell newer than $qs_version"
+            warn "workspaces" "Quickshell $qs_version may mix up special and named workspaces on Hyprland $hypr_version"
         fi
     else fail "compositor" "Hyprland session detected but IPC is unavailable"
     fi
