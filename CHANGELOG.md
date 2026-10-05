@@ -32,6 +32,7 @@ settings file carries its own `__version` and migrates separately.
 - The workspace marker no longer restarts its slide while the first workspace changes width, and quick repeated switches no longer snap its bounce back.
 - A workspace leaving the bar no longer shows -1 while it fades, and opening or closing a window no longer reloads the app icons of other workspaces.
 - Workspace app icons stay sharp at fractional scales such as 125%.
+- An app with no icon shows its own initial in the workspace bar instead of a version digit, such as Minecraft's 1.
 
 ## Releases
 

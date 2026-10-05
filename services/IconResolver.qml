@@ -140,8 +140,10 @@ Singleton {
         const noDesktop = original.toLowerCase().endsWith(".desktop")
             ? original.slice(0, -8) : original
         const lower = noDesktop.toLowerCase()
-        const parts = lower.split(".").filter(Boolean)
-        const tail = parts.length > 0 ? parts[parts.length - 1] : lower
+        // only a reverse-DNS id (org.gnome.Nautilus) names the app in its last part; "Minecraft* 1.21.1" would name it "1"
+        const tailOf = s => /^[a-z][a-z0-9-]*(\.[a-z0-9_-]+){2,}$/i.test(s)
+            ? s.slice(s.lastIndexOf(".") + 1) : s.replace(/\.exe$/i, "")
+        const tail = tailOf(lower)
         const entry = DesktopEntries.heuristicLookup(original)
             || DesktopEntries.heuristicLookup(noDesktop)
         const candidates = [
@@ -154,7 +156,7 @@ Singleton {
         for (let i = 0; i < candidates.length && icon.length === 0; i++)
             if (candidates[i]) icon = root.iconSource(candidates[i])
 
-        const name = SafeText.singleLineText((entry && entry.name) || tail || noDesktop, 128)
+        const name = SafeText.singleLineText((entry && entry.name) || tailOf(noDesktop) || noDesktop, 128)
         return { icon: icon, name: name, fallback: SafeText.initial(name, "?") }
     }
 }

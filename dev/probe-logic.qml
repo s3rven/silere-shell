@@ -2015,6 +2015,10 @@ ShellRoot {
         root._check(IconResolver.senderImageSource("image://icon/x?path=/etc/passwd") === ""
                 && IconResolver.senderIconSource("image://icon/x?path=/etc/passwd") === "",
             "notification images and icons cannot reach the filesystem-backed icon provider")
+        const mc = IconResolver.appMeta("Minecraft* 1.21.1"), rdns = IconResolver.appMeta("org.silere.ProbeTool")
+        const wine = IconResolver.appMeta("ProbeTool.exe")
+        root._check(mc.fallback === "M" && rdns.name === "ProbeTool" && wine.name === "ProbeTool",
+            "an app without an icon is named by a reverse-DNS id's last part, never by a version or .exe")
         root._check(IconResolver.senderIconSource("IMAGE://icon/x?path=/etc/passwd") === ""
                 && IconResolver.iconSource("Image://Icon/x?path=/etc/passwd") === "",
             "the icon provider guard holds when the sender varies the scheme's case")
