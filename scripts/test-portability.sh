@@ -1607,6 +1607,17 @@ test_update_rejects_broken_stage() (
     [ -f "$test_home/cache/silere-shell/update-pending" ] \
         || fail "rollback cleared the pending update flag"
 
+    printf '#!/bin/sh\nexit 127\n' > "$stub_dir/qs"
+    if out="$(HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" \
+            bash "$client/scripts/update.sh" --apply 2>&1)"; then
+        fail "an update was applied while qs cannot start"
+    fi
+    case "$out" in
+        *"Quickshell cannot start"*) ;;
+        *) fail "an update with a qs that cannot start blamed something else: $out" ;;
+    esac
+    printf '#!/bin/sh\nexit 0\n' > "$stub_dir/qs"
+
     # positive control: the same path must still apply when the merged tree loads,
     # or a gate that always failed would satisfy every assertion above
     cat > "$seed/scripts/test-qml-headless.sh" <<'EOF'
@@ -2060,6 +2071,7 @@ test_cli_restart_and_log() (
         '    kill) : > "$state"; echo kill >> "$state.calls"; exit 0 ;;' \
         '    log) echo "log $*" >> "$state.calls"; exit 0 ;;' \
         '    --no-detailed-logs) exit 0 ;;' \
+        '    --version) [ -z "${SILERE_TEST_QS_BROKEN-}" ] || { echo "qs: symbol lookup error" >&2; exit 127; }; exit 0 ;;' \
         '    *) echo "launch $* locale=${LC_ALL-<unset>}" >> "$state.calls"; echo 777 > "$state" ;;' \
         'esac' > "$stubs/qs"
     # never the real systemctl: it would restart the live shell of whoever runs the tests
@@ -2096,6 +2108,17 @@ test_cli_restart_and_log() (
     grep -qFx 'systemctl --user restart silere-shell.service' "$state.calls" \
         || fail "restart did not go through the user unit"
     ! grep -qx 'kill' "$state.calls" || fail "restart killed the unit's shell behind systemd"
+
+    echo 4242 > "$state"; : > "$state.calls"
+    if out="$(SILERE_TEST_UNIT=1 SILERE_TEST_QS_BROKEN=1 cli restart 2>&1)"; then
+        fail "restart claimed success with a qs that cannot start"
+    fi
+    case "$out" in
+        *"Quickshell cannot start, so the running shell was left alone: qs: symbol lookup error"*) ;;
+        *) fail "restart with a qs that cannot start said: $out" ;;
+    esac
+    assert_eq 4242 "$(cat "$state")" "restart with a qs that cannot start left the shell running"
+    assert_eq "" "$(cat "$state.calls")" "restart with a qs that cannot start touched nothing"
 
     echo 4242 > "$state"; : > "$state.calls"
     out="$(cli run)" || fail "run beside a running shell failed"

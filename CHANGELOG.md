@@ -78,6 +78,7 @@ settings file carries its own `__version` and migrates separately.
 - Clicking a tray submenu already opened by hover keeps it open, and menu-only tray icons always open their menu on a primary click.
 - Tray menu widths and click targets grow with interface scaling, and fading menu actions cannot fire after the popup closes.
 - A delayed or repeated notification close cannot remove a newer notification that reused its ID, or duplicate its history.
+- `silere restart` and applying an update stop with a message when Quickshell cannot start, as can happen after a Qt upgrade, and leave the running shell alone.
 - Bluetooth discovery follows changes of adapter, releases the previous adapter, and leaves another application's discovery alone when the picker opens or closes.
 - Revisiting cover art removed by cache cleanup downloads it again instead of keeping a link to the deleted file.
 - The media player switcher keeps stopped players with a track ready to resume, while skipping empty browser sessions.

@@ -907,6 +907,10 @@ if [ "${1:-}" = "--apply" ]; then
     if _has_local_changes; then
         _fail "local changes block the update — run: bash $ROOT/scripts/repair.sh --apply"
     fi
+    # after a Qt upgrade qs can fail to start, and the gate below would blame the release
+    if command -v qs >/dev/null 2>&1 && ! env -u LC_ALL qs --version >/dev/null 2>&1; then
+        _fail "Quickshell cannot start; update or reinstall it, then apply the update again"
+    fi
     _create_candidate_stage \
         || _fail "could not create a detached staging worktree for $release_tag"
     if ! _candidate_tree_loads "$STAGE_DIR"; then

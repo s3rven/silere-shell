@@ -145,9 +145,12 @@ stop_stray_shell() {
 }
 
 restart_shell() {
-    local old_pid pid
+    local old_pid pid qs_error
     [ -f "$ROOT/shell.qml" ] || die "shell.qml is missing from $ROOT"
     command -v qs >/dev/null 2>&1 || die "Quickshell is not installed"
+    # after a Qt upgrade qs can fail to start while the running shell still works; stopping it would leave no UI
+    qs_error="$(user_qs --version 2>&1 >/dev/null)" \
+        || die "Quickshell cannot start, so the running shell was left alone: ${qs_error%%$'\n'*}"
     old_pid="$(running_pid)" || old_pid=""
     if unit_runs_shell; then
         systemctl --user is-active --quiet silere-shell.service 2>/dev/null \
