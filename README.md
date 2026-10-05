@@ -24,10 +24,9 @@ Silere gives you a bar, notifications, an OSD, a calendar, a tray and a menu tha
 quick controls and every setting, all running in one Quickshell process. It's built to
 cost almost nothing while you're not using it:
 
-- Version 1.2.0 measured about 88 MB PSS with only the bar drawn, and about 96 MB after
-  opening the menu ([reference measurements](#performance)).
-- It idles at well under 1% of one CPU core. After 10 minutes without input, it also
-  pauses its periodic readings and checks; the clock keeps updating once a minute.
+- It uses about 90 MB of memory and idles at well under 1% of one CPU core
+  ([measurements](#performance)). After 10 minutes without input it also pauses its
+  periodic readings and checks.
 - The media visualizer, package update checks, network speed, temperature alerts, seconds
   on the clock and the underline effects all start switched off.
 - Quickshell is the only package it needs to run. Night light, the visualizer and the
@@ -99,30 +98,23 @@ cd silere-shell
 bash scripts/install.sh
 ```
 
-The installer sets Silere up in `~/.config/silere-shell` unless you choose another folder.
-It backs up every file it edits and asks before adding autostart. To see what it would do
-without changing anything, run it with `--dry-run`.
-
-It also offers to add a `silere` command to `~/.local/bin`. If you skip that, use
-`~/.config/silere-shell/scripts/silere` wherever this README says `silere`; running it
-with `link` adds the command later.
-
-The installer offers to start Silere when it finishes. Otherwise restart your compositor,
-or run `silere run`.
+The installer sets Silere up in `~/.config/silere-shell` unless you choose another folder,
+backs up every file it edits and asks before adding autostart; `--dry-run` only shows what
+it would do. It also offers to add a `silere` command to `~/.local/bin` and to start Silere
+when it finishes, or you can run `silere run` yourself. Without the command, use
+`~/.config/silere-shell/scripts/silere` wherever this README says `silere`.
 
 A widget that needs a tool you don't have stays hidden. `silere doctor` lists the missing
-tools and checks the install without changing anything. `silere log --follow` shows the
-running shell's log, and `silere restart` restarts it.
-
-[docs/install.md](docs/install.md) covers fonts, optional tools, unattended installs,
-Matugen and removal, and [docs/troubleshooting.md](docs/troubleshooting.md) covers common
-problems.
+tools and checks the install, `silere log --follow` shows the log, and `silere restart`
+restarts the shell. [docs/install.md](docs/install.md) covers fonts, optional tools,
+unattended installs, Matugen and removal, and [docs/troubleshooting.md](docs/troubleshooting.md)
+covers common problems.
 
 ## Usage
 
-Open the menu with **Super + /**, if you let the installer add that keybind, or by
-clicking the active workspace. On niri, or with a Hyprland config written in Lua, the
-installer prints the keybind with your full path for you to add yourself. It runs:
+Open the menu by clicking the active workspace or with **Super + /**. The installer offers
+to add that keybind on Hyprland, and prints it for you to add on niri or with a config
+written in Lua. It runs:
 
 ```bash
 qs ipc -p ~/.config/silere-shell/shell.qml call menu toggle
@@ -157,9 +149,9 @@ the notification history, and text fields.
 
 ## Settings and scripting
 
-Every setting is in the menu and applies as soon as you change it. Settings are saved to
-`$XDG_CONFIG_HOME/silere-shell/settings.json`, usually `~/.config/silere-shell/settings.json`,
-and the file holds only what you changed from the defaults.
+Every setting is in the menu and applies as soon as you change it. They're saved to
+`~/.config/silere-shell/settings.json` (or under `$XDG_CONFIG_HOME`), which holds only what
+you changed from the defaults.
 
 To reset everything, use **Settings › System › Maintenance** or replace the file's
 contents with `{ "__version": 1 }`. Deleting a single key resets that one setting.
@@ -190,13 +182,12 @@ package badge in the bar counts pending system updates, and Silere never install
 
 ## Performance
 
-Version 1.2.0 measured about 88 MB with only the bar drawn, and about 96 MB after opening
-the menu on the reference machine. Your checkout, fonts and enabled widgets can change
-that footprint. Those are PSS figures: `btop` and `top` show RSS, which also counts the Qt and
-graphics libraries every Qt app shares, and reads about twice as high. It idles at well under 1%
-of one CPU core; animations and the media visualizer use more while they run.
-[docs/performance.md](docs/performance.md) explains how that's measured and how to check your own
-setup.
+Version 1.2.0 measured about 88 MB with only the bar drawn and 96 MB after opening the
+menu, as PSS on the reference machine; your fonts and widgets change that. `btop` and `top`
+show RSS, which also counts the Qt and graphics libraries every Qt app shares and reads
+about twice as high. Idle CPU stays well under 1% of one core, and animations and the
+visualizer use more while they run. [docs/performance.md](docs/performance.md) explains
+how to measure your own setup.
 
 ## Documentation
 
@@ -211,8 +202,7 @@ setup.
 
 Pull requests of any size are welcome, from typo fixes to new widgets.
 [CONTRIBUTING.md](CONTRIBUTING.md) has the details, and questions and ideas go in
-[Discussions](https://github.com/s3rven/silere-shell/discussions). If you want to build
-your own version, [docs/forking.md](docs/forking.md) maps the code.
+[Discussions](https://github.com/s3rven/silere-shell/discussions).
 
 ## On AI assistance
 
