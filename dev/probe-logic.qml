@@ -1215,6 +1215,8 @@ ShellRoot {
         root._checkCoerce("barHeight", 99999, 60, "an over-range int clamps to its maximum")
         root._checkCoerce("barHeight", -5, 24, "an under-range int clamps to its minimum")
         root._checkCoerce("barHeight", "tall", 36, "a non-numeric int is refused")
+        root._checkCoerce("barHeight", 30, 32, "a stepped int snaps to its grid")
+        root._checkCoerce("barGap", 5, 4, "the edge gap snaps to the 4px grid")
         root._checkCoerce("uiScale", 9e99, 1.15, "an over-range real clamps to its maximum")
         root._checkCoerce("uiScale", null, 1.0, "a null real is refused")
         root._checkCoerce("barPosition", "sideways", "top", "an unknown enum value is refused")
@@ -3347,6 +3349,8 @@ ShellRoot {
             "a bool key states its constraint")
         root._check(ShellSettings.constraintOf("barSpacing") === "4..24",
             "an int key states its range")
+        root._check(ShellSettings.constraintOf("barGap") === "0..24 in steps of 4",
+            "a stepped int key states its step")
         root._check(ShellSettings.constraintOf("baseTone") === "black|charcoal|graphite",
             "an enum key states its vocabulary")
         root._check(ShellSettings.constraintOf("noSuchSetting") === "",

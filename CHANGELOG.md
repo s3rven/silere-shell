@@ -20,6 +20,7 @@ settings file carries its own `__version` and migrates separately.
 
 - A floating bar at 100% width keeps the edge gap at its sides too, instead of pressing its rounded corners against the screen sides.
 - A floating bar with no edge gap squares the corners against the screen edge instead of leaving notches beside them.
+- A bar height or edge gap set over IPC or by hand rounds to the 4 px steps the menu uses, so the bar outline stays sharp at fractional scaling.
 
 ## Releases
 

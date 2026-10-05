@@ -396,10 +396,11 @@ Singleton {
         { k: "barCompact",          t: "bool", sec: "separators" },
         { k: "barCenterInGap",      t: "bool", sec: "separators" },
         { k: "barHoverHighlight",   t: "bool", sec: "surface" },
-        { k: "barHeight",           t: "int",  min: 24,   max: 60, sec: "surface" },
+        // stepped like their controls: the bar edge has to stay on the 4px grid for hairlines to land on whole pixels
+        { k: "barHeight",           t: "int",  min: 24,   max: 60, step: 4, sec: "surface" },
         { k: "barIconSize",        t: "int",  min: 10,   max: 20, sec: "interface" },
         { k: "barFloating",         t: "bool", sec: "surface" },
-        { k: "barGap",              t: "int",  min: 0,    max: 24, sec: "surface" },
+        { k: "barGap",              t: "int",  min: 0,    max: 24, step: 4, sec: "surface" },
         { k: "barWidth",            t: "real", min: 0.5,  max: 1.0, sec: "surface" },
         { k: "barRadius",           t: "int",  min: 0,    max: 22, sec: "surface" },
         { k: "barShadow",           t: "bool", sec: "theme" },
@@ -460,7 +461,8 @@ Singleton {
         case "int": {
             const n = (typeof v === "number" || (typeof v === "string" && v.trim().length > 0)) ? Number(v) : NaN
             if (!isFinite(n)) return { ok: false }
-            return { ok: true, value: Math.max(s.min, Math.min(s.max, Math.round(n))) }
+            const whole = s.step ? s.step * Math.round(n / s.step) : Math.round(n)
+            return { ok: true, value: Math.max(s.min, Math.min(s.max, whole)) }
         }
         case "real": {
             const n = (typeof v === "number" || (typeof v === "string" && v.trim().length > 0)) ? Number(v) : NaN
@@ -486,7 +488,7 @@ Singleton {
         switch (s.t) {
         case "bool": return "true|false"
         case "int":
-        case "real": return s.min + ".." + s.max
+        case "real": return s.min + ".." + s.max + (s.step ? " in steps of " + s.step : "")
         case "enum": return s.vals.join("|")
         case "re":   return String(s.re)
         }
