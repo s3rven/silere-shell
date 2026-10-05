@@ -125,7 +125,7 @@ QtObject {
     }
 
     // a blur request does nothing before 0.56, which lacks the protocol, or with decoration:blur:enabled off.
-    // read when settings ask, not at startup: nothing else needs it
+    // read once at startup and again on a config reload: popups turn solid while nothing frosts them
     property string blurBlocker: ""
     property BoundedProcess _blurProbe: BoundedProcess {
         timeoutMs: 3000
@@ -447,6 +447,7 @@ QtObject {
 
     Component.onCompleted: {
         root._probeUnit()
+        root.checkBlur()
         Qt.callLater(function() {
             root._syncLiveTitles()
             root._syncActiveTitle()
@@ -530,6 +531,8 @@ QtObject {
                 root.overviewRaw(event.data === "1")
             if (n === "changeworkspaceid")
                 root._requestWorkspaceRefresh("id:" + String(event.data ?? ""))
+            if (n === "configreloaded")
+                root.checkBlur()
             if (n === "workspacev2" || n === "focusedmon"
                 || n === "focusedmonv2" || n === "activemon")
                 root.workspaceActivated(root.focusedMonitor)

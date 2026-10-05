@@ -88,7 +88,7 @@ PanelWindow {
                     : Math.min(Theme.radiusPanel, pillH / 2)
                 readonly property real _hiddenSlide: osd._bottom ? 7 : -7
                 readonly property Region blurShape: Region {
-                    item: ShellSettings.surfaceBlur && card.hasBar && Theme.panelOpacity < 1 && card._op > 0
+                    item: Theme.frosted && card.hasBar && Theme.panelOpacity < 1 && card._op > 0
                         ? _blurBox : null
                     radius: Math.round(card.pillRadius)
                 }
@@ -205,7 +205,8 @@ PanelWindow {
                         anchors.fill: parent
                         radius: card.pillRadius
                         antialiasing: true
-                        color: card.hasBar ? Theme.panel : Theme.surface
+                        // it floats over windows, so unfrosted it turns solid like the popups do
+                        color: !card.hasBar ? Theme.surface : Theme.frosted ? Theme.panel : Theme.background
 
                         readonly property color _outlineColor: !card.hasBar
                             ? Theme.withAlpha(card.fillColor, 0.55)

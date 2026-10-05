@@ -136,12 +136,15 @@ Singleton {
     readonly property real panelOpacity: _hc ? Math.max(0.90, ShellSettings.barOpacity)
                                              : ShellSettings.barOpacity
     readonly property color panel: withAlpha(background, panelOpacity)
-    readonly property color popup: ShellSettings.popupMatchBarOpacity ? panel : background
+    // what floats over windows stays see-through only while blur frosts it: unblurred, the text under
+    // a popup reads as sharply as the popup's own. The bar sits over the wallpaper and keeps its setting
+    readonly property bool frosted: ShellSettings.surfaceBlur && Compositor.blurBlocker.length === 0
+    readonly property color popup: ShellSettings.popupMatchBarOpacity && frosted ? panel : background
 
     // when popups match a translucent bar the menu turns to glass with them: its pane, cards and controls
     // become tints over the one translucent fill, so the blur reads through every layer instead of
     // stopping at solid slabs. Each tint is the opaque step it replaces, taken over the layer below
-    readonly property bool glass: ShellSettings.popupMatchBarOpacity && panelOpacity < 1
+    readonly property bool glass: popup.a < 1
     function _over(total: real, under: real): real { return 1 - (1 - total) / (1 - under) }
     readonly property real _paneK: _elevK * (_n ? (_hc ? 0.050 : 0.030) : (_hc ? 0.055 : 0.020))
     readonly property real _cardK: _elevK * (_n ? (_hc ? 0.090 : 0.060) : (_hc ? 0.100 : 0.070))

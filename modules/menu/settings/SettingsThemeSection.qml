@@ -375,11 +375,6 @@ Column {
             step: 0.02
             displayValue: Math.round(Theme.panelOpacity * 100) + "%"
         }
-        ToggleRow {
-            glyph: "󱡓"; label: "Popups match bar opacity"
-            description: "Menu, notifications, calendar, tray and more"
-            key: "popupMatchBarOpacity"
-        }
         CollapsibleSection {
             expanded: Theme.panelOpacity < 1
             ToggleRow {
@@ -388,6 +383,14 @@ Column {
                 key: "surfaceBlur"
                 available: Compositor.blurBlocker.length === 0
                 dependsNote: Compositor.blurBlocker
+            }
+            ToggleRow {
+                glyph: "󱡓"; label: "Popups match bar opacity"
+                // the note alone: appended to the list it wraps the row to two lines
+                description: Theme.frosted ? "Menu, notifications, calendar, tray and more" : ""
+                key: "popupMatchBarOpacity"
+                available: Theme.frosted
+                dependsNote: "Needs background blur"
             }
         }
         SliderRow {

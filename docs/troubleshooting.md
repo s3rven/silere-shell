@@ -104,7 +104,8 @@ Silere tells the compositor where to blur, so it needs no layer rules, but Hyprl
 `decoration:blur:enabled = false` still turns blur off everywhere. How soft the blur looks
 comes from the compositor: on Hyprland, `size` and `passes` under `decoration:blur`.
 Notifications, the calendar, tray menus and quick actions blur too once Popups match bar
-opacity is on.
+opacity is on. Without blur they stay solid, since a window under them would show through sharp
+and drown their text.
 
 ## Brightness controls the wrong screen
 

@@ -1397,18 +1397,28 @@ ShellRoot {
         root._check(Math.abs(mixed.r - blended.r) < 0.002 && Math.abs(mixed.g - blended.g) < 0.002
                 && blended.a === 1 && tinted.a < 0.3 && tinted.r > 0.9,
             "blend matches mix for opaque colours and keeps a tint over glass a tint")
-        const savedGlass = [ShellSettings.popupMatchBarOpacity, ShellSettings.barOpacity]
+        const savedGlass = [ShellSettings.popupMatchBarOpacity, ShellSettings.barOpacity, ShellSettings.surfaceBlur]
         ShellSettings.popupMatchBarOpacity = true
         ShellSettings.barOpacity = 0.62
-        const glassOn = Theme.glass && Theme.menuCard.a < 0.2 && Theme.menuPane.a < 0.2
+        ShellSettings.surfaceBlur = true
+        // a machine whose compositor blocks blur never frosts, so only the solid half applies there
+        const glassOn = Compositor.blurBlocker.length > 0 || Theme.glass
+            && Theme.menuCard.a < 0.2 && Theme.menuPane.a < 0.2
             && Theme.menuControl.a < 0.2 && Theme.menuCardSolid.a === 1
             && Theme.controlKnobFill(Theme.accent, false, false, false).a === 1
+        ShellSettings.surfaceBlur = false
+        const unfrostedSolid = !Theme.frosted && !Theme.glass && Theme.popup.a === 1
+            && Theme.menuCard.a === 1 && Theme.panel.a < 1
+        ShellSettings.surfaceBlur = true
         ShellSettings.barOpacity = 1.0
         const glassOffOpaque = !Theme.glass && Theme.menuCard.a === 1 && Theme.menuControl.a === 1
         ShellSettings.popupMatchBarOpacity = savedGlass[0]
         ShellSettings.barOpacity = savedGlass[1]
+        ShellSettings.surfaceBlur = savedGlass[2]
         root._check(glassOn && glassOffOpaque,
             "a translucent bar with matching popups turns the menu to tints, knobs and hover labels stay solid, and an opaque bar keeps it solid")
+        root._check(unfrostedSolid,
+            "with blur off popups and the menu stay solid while the bar keeps its own opacity")
 
         const savedSide = [ShellSettings.barFloating, ShellSettings.barWidth, ShellSettings.barGap]
         ShellSettings.barFloating = true
