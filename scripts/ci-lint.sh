@@ -2141,8 +2141,18 @@ for f in modules/*/*.qml; do
     undismissable_popups="$undismissable_popups $(basename "$f")"
   fi
 done
+# where the compositor routes pointer events normally (niri, hyprland 0.57), only a
+# catcher on the other monitors sees that click, and it has to know every popup's screen
+open_screen_binding="$(awk '/readonly property ShellScreen openPopupScreen:/{take=1} take{print} take && /: null[[:space:]]*$/{exit}' shell.qml)"
+unscreened_popups=""
+for popup_state in MenuState CalendarState TrayMenuState QuickActionsState; do
+  grep -qE "${popup_state}\.open \?" <<< "$open_screen_binding" \
+    || unscreened_popups="$unscreened_popups $popup_state"
+done
 if [ -n "$undismissable_popups" ]; then
   fail "these popups take exclusive focus but miss an outside or other-monitor click:$undismissable_popups"
+elif [ -n "$unscreened_popups" ] || ! grep -qE 'component: ScreenDismiss \{' shell.qml; then
+  fail "a click on another monitor must close every popup; openPopupScreen or its ScreenDismiss misses:${unscreened_popups:- the catcher}"
 else
   ok "popup dismissal" "every exclusive-focus popup closes on a click outside it, on any monitor"
 fi

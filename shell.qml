@@ -13,6 +13,7 @@ import "modules/menu"
 import "modules/calendar"
 import "modules/traymenu"
 import "modules/quickactions"
+import "modules/common"
 import "services"
 import "config"
 
@@ -27,6 +28,12 @@ ShellRoot {
     // bar-anchored popups open with no trigger screen over IPC, and the overlay screen
     // is whichever one has focus — including one the user turned the bar off on
     readonly property ShellScreen anchoredPopupScreen: smokeTest ? null : Monitors.overlayBarScreen
+    // only one popup is open at a time; the others' screens get a catcher for the closing click
+    readonly property ShellScreen openPopupScreen: MenuState.open ? _menuPopup.latchedScreen
+        : CalendarState.open ? _calendarPopup.latchedScreen
+        : TrayMenuState.open ? _trayPopup.latchedScreen
+        : QuickActionsState.open ? _quickActionsPopup.latchedScreen
+        : null
 
     // auto night light tracks the sun, and one left on returns after a restart; otherwise lazy
     function armNightLightIfNeeded(): void {
@@ -237,5 +244,18 @@ ShellRoot {
         wantOpen: !root.smokeTest && QuickActionsState.open
         requestedScreen: root.smokeTest ? null : QuickActionsState.triggerScreen ?? root.anchoredPopupScreen
         surface: Component { QuickActionsPopup { targetScreen: _quickActionsPopup.latchedScreen } }
+    }
+
+    Variants {
+        model: root.smokeTest ? [] : Quickshell.screens
+        delegate: Scope {
+            id: _dismissScope
+            required property ShellScreen modelData
+
+            LazyLoader {
+                active: root.openPopupScreen !== null && _dismissScope.modelData !== root.openPopupScreen
+                component: ScreenDismiss { targetScreen: _dismissScope.modelData }
+            }
+        }
     }
 }
