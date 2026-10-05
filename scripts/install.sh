@@ -3,7 +3,20 @@ set -euo pipefail
 export LC_ALL=C
 
 REPO_URL="https://github.com/s3rven/silere-shell.git"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-}")" && pwd)"
+# piped from curl there is no checkout beside the script; the braces make bash read this whole block before running it
+if [ ! -f "$SCRIPT_DIR/lib/xdg.sh" ] || [ ! -f "$SCRIPT_DIR/../shell.qml" ]; then
+    {
+        command -v git >/dev/null 2>&1 || { printf 'silere: git is required to install\n' >&2; exit 1; }
+        _bootstrap_dir="$(mktemp -d "${TMPDIR:-/tmp}/silere-install.XXXXXX")" || exit 1
+        trap 'rm -rf -- "$_bootstrap_dir"' EXIT
+        printf 'Fetching the Silere installer...\n'
+        GIT_TERMINAL_PROMPT=0 git clone --quiet --depth 1 "$REPO_URL" "$_bootstrap_dir/silere-shell" </dev/null \
+            || { printf 'silere: could not download Silere, check your connection\n' >&2; exit 1; }
+        bash "$_bootstrap_dir/silere-shell/scripts/install.sh" "$@" </dev/null
+        exit
+    }
+fi
 source "$SCRIPT_DIR/lib/xdg.sh"
 source "$SCRIPT_DIR/lib/completions.sh"
 CONFIG_HOME="$(_silere_xdg_home "${XDG_CONFIG_HOME:-}" .config)" || {

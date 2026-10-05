@@ -93,16 +93,17 @@ Qt 6.9. On Arch, `sudo pacman -S --needed quickshell git` installs both. For oth
 distributions, see [Quickshell's install guide](https://quickshell.org/docs/v0.3.1/guide/install-setup/).
 
 ```bash
-git clone https://github.com/s3rven/silere-shell
-cd silere-shell
-bash scripts/install.sh
+curl -fsSL https://raw.githubusercontent.com/s3rven/silere-shell/main/scripts/install.sh | bash
 ```
 
+To read the installer first, clone the repository and run `bash scripts/install.sh` from it
+instead. Add `-s -- --dry-run` after `bash` to see what it would change without writing anything.
+
 The installer sets Silere up in `~/.config/silere-shell` unless you choose another folder,
-backs up every file it edits and asks before adding autostart; `--dry-run` only shows what
-it would do. It also offers to add a `silere` command to `~/.local/bin` and to start Silere
-when it finishes, or you can run `silere run` yourself. Without the command, use
-`~/.config/silere-shell/scripts/silere` wherever this README says `silere`.
+backs up every file it edits and asks before adding autostart. It also offers to add a
+`silere` command to `~/.local/bin` and to start Silere when it finishes, or you can run
+`silere run` yourself. Without the command, use `~/.config/silere-shell/scripts/silere`
+wherever this README says `silere`.
 
 A widget that needs a tool you don't have stays hidden. `silere doctor` lists the missing
 tools and checks the install, `silere log --follow` shows the log, and `silere restart`

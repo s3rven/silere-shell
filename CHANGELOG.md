@@ -18,6 +18,7 @@ settings file carries its own `__version` and migrates separately.
 - Log out in the power menu, confirmed with a second press like Reboot and Power off. On Hyprland it goes through `hyprshutdown` when that is installed, so apps close first.
 - Tray apps can be hidden from the bar with Hide from bar in their right-click menu, and shown again from the tray row in Settings › Widgets.
 - The bar clock shows a muted bell while Do Not Disturb or quiet hours hold notifications back.
+- Silere installs with one command: `curl -fsSL https://raw.githubusercontent.com/s3rven/silere-shell/main/scripts/install.sh | bash`.
 
 ### Changed
 

@@ -466,6 +466,39 @@ test_dry_run_writes_nothing() (
     esac
 )
 
+test_piped_installer_bootstraps() (
+    local src="$TMP/bootstrap-src" stubs="$TMP/bootstrap-stubs" tmp="$TMP/bootstrap-tmp" out
+    mkdir -p "$src/scripts" "$stubs" "$tmp"
+    cp -a "$ROOT/scripts/install.sh" "$ROOT/scripts/lib" "$src/scripts/"
+    : > "$src/shell.qml"
+    # never the network: a clone copies the fixture checkout
+    printf '%s\n' '#!/bin/sh' \
+        '[ "$1" = clone ] && [ -z "${SILERE_TEST_CLONE_FAILS-}" ] || exit 128' \
+        'for dest do :; done' \
+        'cp -a "$SILERE_TEST_SRC" "$dest"' > "$stubs/git"
+    chmod +x "$stubs/git"
+
+    out="$(cd "$tmp" && env TMPDIR="$tmp" PATH="$stubs:$PATH" SILERE_TEST_SRC="$src" \
+        bash -s -- --help < "$ROOT/scripts/install.sh" 2>&1)" || fail "piped installer exited non-zero"
+    case "$out" in
+        *"Fetching the Silere installer"*"Usage:"*) ;;
+        *) fail "piped installer did not run the fetched copy: $out" ;;
+    esac
+    [ -z "$(find "$tmp" -mindepth 1 -maxdepth 1 -name 'silere-install.*')" ] \
+        || fail "piped installer left its download behind"
+
+    if out="$(cd "$tmp" && env TMPDIR="$tmp" PATH="$stubs:$PATH" SILERE_TEST_SRC="$src" \
+            SILERE_TEST_CLONE_FAILS=1 bash -s < "$ROOT/scripts/install.sh" 2>&1)"; then
+        fail "piped installer claimed success without a download"
+    fi
+    case "$out" in
+        *"could not download Silere"*) ;;
+        *) fail "piped installer hid a failed download: $out" ;;
+    esac
+    [ -z "$(find "$tmp" -mindepth 1 -maxdepth 1 -name 'silere-install.*')" ] \
+        || fail "a failed download left its directory behind"
+)
+
 test_autostart_line_runs() (
     local home line out stub
     for home in "$TMP/autostart home" "$TMP/autostart-plain"; do
@@ -2231,6 +2264,7 @@ test_qml_type_floor
 test_headless_qml_import_roots
 test_font_archive_selection
 test_assume_yes_prompts
+test_piped_installer_bootstraps
 test_install_path_safety
 test_install_transaction_and_receipt
 test_dry_run_writes_nothing

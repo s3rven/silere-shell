@@ -5,6 +5,13 @@ Qt 6.9. On Arch and its derivatives, `sudo pacman -S --needed quickshell git` in
 both. For other distributions, see [Quickshell's install guide](https://quickshell.org/docs/v0.3.1/guide/install-setup/).
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/s3rven/silere-shell/main/scripts/install.sh | bash
+```
+
+Piped like this, the installer downloads a temporary copy of Silere, runs its installer and
+deletes the copy afterwards. To read it first, run it from a clone instead:
+
+```bash
 git clone https://github.com/s3rven/silere-shell
 cd silere-shell
 bash scripts/install.sh
