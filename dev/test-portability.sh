@@ -2189,17 +2189,17 @@ Item {
     ColorFade on color { gate: motionReady }
 }
 QML
-    python3 "$ROOT/scripts/check-pooled-motion.py" "$fixture" \
+    python3 "$ROOT/dev/check-pooled-motion.py" "$fixture" \
         || fail "pooling lint mistook picker chrome for a recycled delegate"
     sed -i 's/gate: motionReady//' "$fixture/modules/OptionRow.qml"
-    if output="$(python3 "$ROOT/scripts/check-pooled-motion.py" "$fixture")"; then
+    if output="$(python3 "$ROOT/dev/check-pooled-motion.py" "$fixture")"; then
         fail "pooling lint accepted an ungated external delegate"
     fi
     [[ "$output" == *'OptionRow.qml:4: recycled delegate animation needs a gate'* ]] \
         || fail "pooling lint did not identify the ungated delegate"
     sed -i 's/ColorFade on color { }/ColorFade on color { gate: motionReady }/; /onReused/d' \
         "$fixture/modules/OptionRow.qml"
-    if python3 "$ROOT/scripts/check-pooled-motion.py" "$fixture" >/dev/null; then
+    if python3 "$ROOT/dev/check-pooled-motion.py" "$fixture" >/dev/null; then
         fail "pooling lint accepted a delegate without a reuse handler"
     fi
 )

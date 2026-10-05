@@ -89,13 +89,13 @@ _report() { # $1 = job, $2 = label, $3 = failure, $4 = pattern for the ok line
   fi
 }
 
-_start lint scripts/ci-lint.sh
+_start lint dev/ci-lint.sh
 if [ "$qs_usable" = 1 ]; then
-  _start logic scripts/test-logic.sh
-  _start surfaces scripts/test-surfaces.sh
-  _start panels scripts/test-panels.sh
-  _start mutate scripts/test-mutate.sh
-  _start fit scripts/test-layout-fit.sh
+  _start logic dev/test-logic.sh
+  _start surfaces dev/test-surfaces.sh
+  _start panels dev/test-panels.sh
+  _start mutate dev/test-mutate.sh
+  _start fit dev/test-layout-fit.sh
 fi
 
 section "versions"
@@ -150,7 +150,7 @@ fi
 
 section "structural lint"
 _join lint
-if [ ! -f scripts/ci-lint.sh ]; then
+if [ ! -f dev/ci-lint.sh ]; then
   info "ci-lint" "developer tooling, not in this install"
 elif [ "$job_code" -eq 0 ]; then
   ok "ci-lint" "structural checks passed"

@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
-source "$ROOT/scripts/probe-lib.sh"
+source "$ROOT/dev/probe-lib.sh"
 
 trap 'exit 130' INT TERM
 
@@ -20,7 +20,7 @@ trap 'exit 130' INT TERM
 # Qt reports a bad property type as a non-fatal "Unable to assign X to Y"
 # warning: the object is still created and the exit code stays 0, so the log has
 # to be scanned as well as the build count.
-PROBE="scripts/probe-surfaces.qml"
+PROBE="dev/probe-surfaces.qml"
 
 _probe_require_qs
 # No display check on purpose: the offscreen QPA plugin needs neither Wayland

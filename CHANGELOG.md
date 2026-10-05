@@ -55,6 +55,7 @@ settings file carries its own `__version` and migrates separately.
 - Low battery warnings are on by default: an alert at the Low below threshold and again at half of it. Settings › Feedback › Alerts turns them off.
 - `silere doctor` warns when Hyprland 0.57 or later runs with Quickshell 0.3.1, which mixes up special and named workspaces.
 - The installer lists only the optional tools that are missing, and counts the ones it found.
+- Developer checks, tests and probes moved from `scripts/` to `dev/`, so `scripts/` holds only what an installed copy runs.
 
 ### Removed
 

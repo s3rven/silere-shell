@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Reuse the fixture helpers without making updater state transitions a hidden
 # subset of the broad portability run.
-SILERE_TEST_LIB_ONLY=1 source "$ROOT/scripts/test-portability.sh"
+SILERE_TEST_LIB_ONLY=1 source "$ROOT/dev/test-portability.sh"
 
 if ! command -v git >/dev/null 2>&1 || ! command -v ssh-keygen >/dev/null 2>&1; then
     if [ "${SILERE_REQUIRE_GIT_TESTS:-0}" = 1 ]; then

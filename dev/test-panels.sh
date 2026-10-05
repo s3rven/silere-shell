@@ -3,11 +3,11 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
-source "$ROOT/scripts/probe-lib.sh"
+source "$ROOT/dev/probe-lib.sh"
 
 trap 'exit 130' INT TERM
 
-PROBE="scripts/probe-panels.qml"
+PROBE="dev/probe-panels.qml"
 
 _probe_require_qs
 
@@ -35,7 +35,7 @@ else
     list="$(grep -rlE '^ {0,4}required property ShellScreen targetScreen' \
         --include='*.qml' modules | sort -u)"
     list="$list
-scripts/probe-popup-interactions.qml"
+dev/probe-popup-interactions.qml"
 fi
 count="$(printf '%s\n' "$list" | grep -c . || true)"
 if [ "$count" -eq 0 ]; then
@@ -80,7 +80,7 @@ if ! grep -q 'PROBE-PANELS built' "$log" 2>/dev/null; then
     exit 1
 fi
 
-if [[ "$list" == *"scripts/probe-popup-interactions.qml"* ]] \
+if [[ "$list" == *"dev/probe-popup-interactions.qml"* ]] \
     && ! grep -q 'PROBE-POPUP-INTERACTIONS checked' "$log"; then
     cat "$log" >&2
     echo "FAIL: popup interaction checks did not run" >&2

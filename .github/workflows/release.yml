@@ -34,7 +34,7 @@ jobs:
           set -euo pipefail
           version="${GITHUB_REF_NAME#v}"
           # fails when the tag has no changelog section, so notes can never be invented here
-          bash scripts/release-notes.sh "$version" > "$RUNNER_TEMP/notes.md"
+          bash dev/release-notes.sh "$version" > "$RUNNER_TEMP/notes.md"
           echo "version=$version" >> "$GITHUB_ENV"
 
       # gh ships on the runner, so no third-party action handles the release token

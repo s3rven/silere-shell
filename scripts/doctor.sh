@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Read-only installation diagnostics. Keep this focused on a running install;
-# scripts/check.sh owns developer lint and regression probes.
+# dev/check.sh owns developer lint and regression probes.
 set -u
 export LC_ALL=C
 

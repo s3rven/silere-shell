@@ -46,15 +46,15 @@ structural_skip() {
   fi
 }
 fail() { printf 'fail %s\n' "$*" >&2; status=1; }
-script_files=(scripts/*.sh scripts/silere scripts/lib/*.sh scripts/completions/silere.bash)
+script_files=(scripts/*.sh dev/*.sh scripts/silere scripts/lib/*.sh scripts/completions/silere.bash)
 
 # the two regression suites are over half of this lint's time and touch only their own
 # temp dirs, so they run beside every check below and report at the end
 portability_log="$(mktemp "${TMPDIR:-/tmp}/silere-portability.XXXXXX.log")"
 update_log="$(mktemp "${TMPDIR:-/tmp}/silere-update-test.XXXXXX.log")"
-bash scripts/test-portability.sh >"$portability_log" 2>&1 &
+bash dev/test-portability.sh >"$portability_log" 2>&1 &
 portability_pid=$!
-bash scripts/test-update.sh >"$update_log" 2>&1 &
+bash dev/test-update.sh >"$update_log" 2>&1 &
 update_pid=$!
 
 section "merge conflict markers"
@@ -283,14 +283,14 @@ for f in "${script_files[@]}"; do
 done
 
 section "locale-stable parsers"
-for f in scripts/check.sh scripts/doctor.sh scripts/install.sh scripts/update.sh scripts/uninstall.sh; do
+for f in dev/check.sh scripts/doctor.sh scripts/install.sh scripts/update.sh scripts/uninstall.sh; do
   if grep -q '^export LC_ALL=C$' "$f"; then ok "$f"; else fail "$f must set LC_ALL=C"; fi
 done
-if grep -qF '_silere_xdg_home "${XDG_DATA_HOME:-}" .local/share' scripts/check.sh \
-    && ! grep -qF '${XDG_DATA_HOME:-$HOME' scripts/check.sh; then
-  ok "scripts/check.sh" "XDG data path uses the shared absolute-path fallback"
+if grep -qF '_silere_xdg_home "${XDG_DATA_HOME:-}" .local/share' dev/check.sh \
+    && ! grep -qF '${XDG_DATA_HOME:-$HOME' dev/check.sh; then
+  ok "dev/check.sh" "XDG data path uses the shared absolute-path fallback"
 else
-  fail "scripts/check.sh must resolve XDG_DATA_HOME through scripts/lib/xdg.sh"
+  fail "dev/check.sh must resolve XDG_DATA_HOME through scripts/lib/xdg.sh"
 fi
 check_qml_locale_count() {
   local file="$1" expected="$2" actual
@@ -467,15 +467,15 @@ fi
 section "pooled delegate motion"
 # Inspect delegate scopes and their component files; a view's header and disclosure
 # animations are never pooled and must not be required to carry a reuse gate.
-if command -v python3 >/dev/null 2>&1 && [ -f scripts/check-pooled-motion.py ]; then
-  if pooled_errors="$(python3 scripts/check-pooled-motion.py)"; then
+if command -v python3 >/dev/null 2>&1 && [ -f dev/check-pooled-motion.py ]; then
+  if pooled_errors="$(python3 dev/check-pooled-motion.py)"; then
     ok "pooling" "every animation in a pooled delegate is gated"
   else
     fail "pooled delegate motion checks failed:"
     printf '%s\n' "$pooled_errors"
   fi
 else
-  structural_skip "pooling" "python3 or scripts/check-pooled-motion.py missing"
+  structural_skip "pooling" "python3 or dev/check-pooled-motion.py missing"
 fi
 
 section "pooled view transitions"
@@ -828,15 +828,15 @@ fi
 # member is the same again, read as undefined. Only targets whose whole chain is
 # local files ending at Singleton are checked; anything rooted in an external
 # type inherits members this cannot see.
-if command -v python3 >/dev/null 2>&1 && [ -f scripts/check-connections.py ]; then
-  if orphan_handlers="$(python3 scripts/check-connections.py)"; then
+if command -v python3 >/dev/null 2>&1 && [ -f dev/check-connections.py ]; then
+  if orphan_handlers="$(python3 dev/check-connections.py)"; then
     ok "handlers" "every Connections handler and singleton member resolves"
   else
     fail "these name nothing on their singleton:"
     printf '%s\n' "$orphan_handlers"
   fi
 else
-  structural_skip "handlers" "python3 or scripts/check-connections.py missing; Connections check skipped"
+  structural_skip "handlers" "python3 or dev/check-connections.py missing; Connections check skipped"
 fi
 
 # A component that decides its own visibility from one setting, but is only ever
@@ -844,15 +844,15 @@ fi
 # own setting is offered in Settings and does nothing in every state the host gate
 # excludes. The underline audio visualizer shipped this way - it drew only while the
 # underline was in Reactive mode, a switch on another page entirely.
-if command -v python3 >/dev/null 2>&1 && [ -f scripts/check-gate-inheritance.py ]; then
-  if borrowed_gates="$(python3 scripts/check-gate-inheritance.py)"; then
+if command -v python3 >/dev/null 2>&1 && [ -f dev/check-gate-inheritance.py ]; then
+  if borrowed_gates="$(python3 dev/check-gate-inheritance.py)"; then
     ok "gates" "no component inherits a gate stricter than its own setting"
   else
     fail "these components are unreachable in states their own setting allows:"
     printf '%s\n' "$borrowed_gates"
   fi
 else
-  structural_skip "gates" "python3 or scripts/check-gate-inheritance.py missing; gate check skipped"
+  structural_skip "gates" "python3 or dev/check-gate-inheritance.py missing; gate check skipped"
 fi
 
 section "installer environment defaults"
@@ -1021,7 +1021,7 @@ else
     && payload_extra="$payload_extra scripts/(whole directory)"
 
   # scripts/lib is copied wholesale by name, so its own tracked contents are the allowlist:
-  # anything landing there ships, which is why the probe harness lives in scripts/ instead
+  # anything landing there ships, which is why the probe harness lives in dev/ instead
   lib_extra="$(git ls-files scripts/lib | sed 's|^scripts/lib/||' \
     | grep -vxE 'xdg\.sh|qml-modules\.sh|ui\.sh|unit\.sh|completions\.sh')"
   [ -n "$lib_extra" ] && payload_extra="$payload_extra scripts/lib/{$(printf '%s' "$lib_extra" | tr '\n' ',')}"
@@ -1070,7 +1070,7 @@ while IFS= read -r f; do
   # cannot fail to resolve; the qmldir-references-missing-files check above owns that case
   [ -f "$f" ] || continue
   dir="$(dirname "$f")"
-  case "$dir" in .|./scripts|scripts) continue ;; esac
+  case "$dir" in .|./dev|dev) continue ;; esac
   [ -f "$dir/qmldir" ] || { unpackaged="$unpackaged $f(no-qmldir)"; continue; }
   awk -v n="$(basename "$f")" 'NF>=2 && $NF == n { found=1 } END { exit !found }' \
     "$dir/qmldir" || unpackaged="$unpackaged $f"
@@ -1737,7 +1737,7 @@ while IFS='|' read -r version archive; do
   elif [ "$(sed -n '1p' "$archive")" != "# Silere Shell $version" ]; then
     fail "$archive has the wrong release heading"
     release_archive_failed=1
-  elif ! notes="$(bash scripts/release-notes.sh "$version")" || [ -z "$notes" ]; then
+  elif ! notes="$(bash dev/release-notes.sh "$version")" || [ -z "$notes" ]; then
     fail "$archive cannot produce publishable release notes"
     release_archive_failed=1
   fi
@@ -1800,8 +1800,8 @@ if [ -n "$missing_compare" ]; then
   fail "a release archive must end with its compare link:$missing_compare"
   release_archive_failed=1
 fi
-if bash scripts/release-notes.sh Unreleased >/dev/null 2>&1 \
-    || bash scripts/release-notes.sh 999.999.999 >/dev/null 2>&1; then
+if bash dev/release-notes.sh Unreleased >/dev/null 2>&1 \
+    || bash dev/release-notes.sh 999.999.999 >/dev/null 2>&1; then
   fail "release notes must reject Unreleased and unknown versions"
   release_archive_failed=1
 fi
@@ -1943,15 +1943,15 @@ section "static text"
 # pointer rests on it and a fractional resting scale softens it permanently. These
 # outputs already resample every buffer once on the way to a fractional scale; a second
 # pass on top of that is what made button labels look wrong.
-if command -v python3 >/dev/null 2>&1 && [ -f scripts/check-text-scale.py ]; then
-  if text_scaled="$(python3 scripts/check-text-scale.py)"; then
+if command -v python3 >/dev/null 2>&1 && [ -f dev/check-text-scale.py ]; then
+  if text_scaled="$(python3 dev/check-text-scale.py)"; then
     ok "static text" "no visible text sits inside a scale transform"
   else
     fail "these transforms resample text; scale the surface instead:"
     printf '%s\n' "$text_scaled"
   fi
 else
-  structural_skip "static text" "python3 or scripts/check-text-scale.py missing; text scale check skipped"
+  structural_skip "static text" "python3 or dev/check-text-scale.py missing; text scale check skipped"
 fi
 
 
@@ -2099,8 +2099,8 @@ section "settings row glyphs"
 # A card gives a toggle and the value it governs the same glyph on purpose, so an adjacent
 # repeat is deliberate pairing. A repeat with unrelated rows between them is two settings
 # wearing one icon, which is how "Date" and "Week starts" ended up identical.
-if command -v python3 >/dev/null 2>&1 && [ -f scripts/check-row-glyphs.py ]; then
-  if shared_glyphs="$(python3 scripts/check-row-glyphs.py)"; then
+if command -v python3 >/dev/null 2>&1 && [ -f dev/check-row-glyphs.py ]; then
+  if shared_glyphs="$(python3 dev/check-row-glyphs.py)"; then
     ok "row glyphs" "no two unrelated settings rows share an icon"
   else
     fail "these settings rows share an icon without being a pair:"
@@ -2343,22 +2343,22 @@ fi
 section "test side effects"
 # the smoke shells share the live display: a mapped bar reserves its exclusive zone on the user's
 # screen, and an unmapped one stalls under qt's elapsed-time animation driver
-if grep -qF 'export SILERE_UNMAPPED_BARS=1 QSG_USE_SIMPLE_ANIMATION_DRIVER=0' scripts/check.sh \
+if grep -qF 'export SILERE_UNMAPPED_BARS=1 QSG_USE_SIMPLE_ANIMATION_DRIVER=0' dev/check.sh \
     && grep -qF 'visible: !root.unmappedBars' shell.qml; then
   ok "smoke bars" "check.sh's smoke shells build their bars unmapped"
 else
   fail "check.sh's smoke shells must build their bars unmapped (SILERE_UNMAPPED_BARS) under the default animation driver"
 fi
 # probes load fresh temp copies, so their compiled units could only pile up in ~/.cache
-if grep -qx 'export QML_DISABLE_DISK_CACHE=1' scripts/probe-lib.sh; then
+if grep -qx 'export QML_DISABLE_DISK_CACHE=1' dev/probe-lib.sh; then
   ok "qml cache" "probes from temp copies leave no compiled QML behind"
 else
-  fail "scripts/probe-lib.sh must export QML_DISABLE_DISK_CACHE=1, or every probe run leaves its compiled QML in ~/.cache/quickshell"
+  fail "dev/probe-lib.sh must export QML_DISABLE_DISK_CACHE=1, or every probe run leaves its compiled QML in ~/.cache/quickshell"
 fi
 # probes flip settings whose handlers clear caches, and an unset cache home is the live shell's
 cache_leaks=""
-for _probe_script in scripts/test-*.sh; do
-  grep -qF 'scripts/probe-lib.sh' "$_probe_script" || continue
+for _probe_script in dev/test-*.sh; do
+  grep -qF 'dev/probe-lib.sh' "$_probe_script" || continue
   grep -qF 'XDG_CACHE_HOME=' "$_probe_script" || cache_leaks="$cache_leaks $_probe_script"
 done
 if [ -z "$cache_leaks" ]; then

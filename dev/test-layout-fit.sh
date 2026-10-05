@@ -4,7 +4,7 @@ export LC_ALL=C
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
-source "$ROOT/scripts/probe-lib.sh"
+source "$ROOT/dev/probe-lib.sh"
 
 trap 'exit 130' INT TERM
 
@@ -20,7 +20,7 @@ trap 'exit 130' INT TERM
 # width holds across the range; the rail below is probed at its base 160, which
 # measures a narrower column than the shell draws there.
 CONTENT_WIDTH="${FIT_W:-388}"
-PROBE="scripts/probe-fit.qml"
+PROBE="dev/probe-fit.qml"
 
 _probe_require_qs
 [ -f "$PROBE" ] || { echo "FAIL: $PROBE missing" >&2; exit 1; }
@@ -61,7 +61,7 @@ modules/menu/RecentPage.qml|332
 modules/menu/PowerRailContent.qml|332
 modules/menu/VitalsStrip.qml|332
 modules/menu/SettingsNav.qml|160
-scripts/probe-responsive-layouts.qml"
+dev/probe-responsive-layouts.qml"
 
 scratch="$(mktemp -d)"
 probe_pid=""

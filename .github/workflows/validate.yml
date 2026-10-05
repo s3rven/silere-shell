@@ -76,7 +76,7 @@ jobs:
       # shell: bash sets pipefail, so the tee cannot hide a failing suite
       - name: Structural and portability validation
         shell: bash
-        run: SILERE_REQUIRE_GIT_TESTS=1 SILERE_REQUIRE_TOOLS=1 bash scripts/ci-lint.sh 2>&1 | tee /tmp/count-lint.log
+        run: SILERE_REQUIRE_GIT_TESTS=1 SILERE_REQUIRE_TOOLS=1 bash dev/ci-lint.sh 2>&1 | tee /tmp/count-lint.log
 
       - name: Quickshell package compatibility
         shell: bash
@@ -98,24 +98,24 @@ jobs:
 
       - name: Behavioral logic probe
         shell: bash
-        run: bash scripts/test-logic.sh 2>&1 | tee /tmp/count-logic.log
+        run: bash dev/test-logic.sh 2>&1 | tee /tmp/count-logic.log
 
       - name: Settings surface build probe
         # offscreen QPA needs no display; catches runtime-only errors in the
         # lazily-loaded settings pages that qmlcachegen and qmllint cannot see
-        run: bash scripts/test-surfaces.sh
+        run: bash dev/test-surfaces.sh
 
       - name: Live settings change sweep
         # drives the whole schema against surfaces that already exist; the passes
         # above only ever fix the settings before a surface is built
         shell: bash
-        run: bash scripts/test-mutate.sh 2>&1 | tee /tmp/count-sweep.log
+        run: bash dev/test-mutate.sh 2>&1 | tee /tmp/count-sweep.log
 
       - name: Settings layout fit probe
         # a section can build and still lose its labels; Qt elides and reports success
         env:
           FIT_REQUIRE_FONT: "1"
-        run: bash scripts/test-layout-fit.sh
+        run: bash dev/test-layout-fit.sh
 
       # the README badge reads this notice back through the API; see badge.yml
       - name: Count the checks

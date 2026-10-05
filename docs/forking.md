@@ -1,7 +1,7 @@
 # Forking Silere
 
 Fork it, strip it, rebrand it. Most changes touch two or three files, and
-`bash scripts/check.sh` tells you if you missed one — you don't need to know the
+`bash dev/check.sh` tells you if you missed one — you don't need to know the
 whole shell to change part of it.
 
 ## Where things are
@@ -9,7 +9,9 @@ whole shell to change part of it.
 - `config/` — colours, durations, sizes
 - `services/` — settings and system state, no UI
 - `modules/` — one folder per surface: `bar/`, `menu/`, `notifications/`, `osd/`, …
-- `scripts/` — install, update, checks and command completions
+- `scripts/` — what an installed copy runs: the `silere` command, install, update, repair,
+  doctor and command completions
+- `dev/` — checks, tests, probes and release tooling; none of it ships in the package
 - `packaging/aur/` — the package recipe and its generated `.SRCINFO`
 - `security/` — the release signer list used by installed updaters
 - `docs/` — user guides and archived release notes
@@ -74,7 +76,7 @@ The name appears a few hundred times, nearly all of it cosmetic. Four matter:
 
 ## Before you push
 
-`bash scripts/check.sh` runs the type check, the probes and the structural rules, and
+`bash dev/check.sh` runs the type check, the probes and the structural rules, and
 names anything it doesn't like. Two of those rules catch people out early: use
 `MotionBehavior` rather than a bare `Behavior` (it carries the reduce-motion gate),
 and size rows with `Metrics.rowHeightFor()` rather than a number.

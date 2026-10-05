@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
-source "$ROOT/scripts/probe-lib.sh"
+source "$ROOT/dev/probe-lib.sh"
 
 trap 'exit 130' INT TERM
 
@@ -12,7 +12,7 @@ trap 'exit 130' INT TERM
 # setting while a surface is alive, so a binding that only breaks on the change
 # itself — a cleared model, a stale cached index, a divide by a now-zero size —
 # passes both. This drives the whole schema against surfaces that already exist.
-PROBE_SOURCE="$ROOT/scripts/probe-mutate.qml"
+PROBE_SOURCE="$ROOT/dev/probe-mutate.qml"
 
 _probe_require_qs
 
