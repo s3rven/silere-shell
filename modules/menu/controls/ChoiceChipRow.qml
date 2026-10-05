@@ -70,14 +70,10 @@ MenuRow {
 
     readonly property int _activeIndex: root.model.findIndex(o => o.value === root.currentValue)
     // separate row and column coordinates keep the selection inside a wrapped group
-    property real _selectionColumn: Math.max(0, root._activeIndex) % _choiceGroup.columns
-    property real _selectionRow: Math.floor(Math.max(0, root._activeIndex) / _choiceGroup.columns)
-    MotionBehavior on _selectionColumn {
-        SpringAnimation { spring: 4.4; damping: 0.62; epsilon: 0.002 }
-    }
-    MotionBehavior on _selectionRow {
-        SpringAnimation { spring: 4.4; damping: 0.62; epsilon: 0.002 }
-    }
+    readonly property real _selectionColumn: _columnGlide.value
+    readonly property real _selectionRow: _rowGlide.value
+    SpringGlide { id: _columnGlide; target: Math.max(0, root._activeIndex) % _choiceGroup.columns }
+    SpringGlide { id: _rowGlide; target: Math.floor(Math.max(0, root._activeIndex) / _choiceGroup.columns) }
 
     height: root._stacked ? root._stackedH : root._inlineH
     // the settings pane width animates when the nav rail expands, and crossing the

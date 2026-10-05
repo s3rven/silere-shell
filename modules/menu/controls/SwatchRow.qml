@@ -103,11 +103,10 @@ Item {
     }
 
     // travels by slot, not pixels: a relayout moves it with the swatches instead of chasing them
-    property real _slot: Math.max(0, root.activeIndex)
-    onActiveIndexChanged: if (root.activeIndex >= 0) root._slot = root.activeIndex
-    MotionBehavior on _slot {
-        SpringAnimation { spring: 4.4; damping: 0.62; epsilon: 0.002 }
-    }
+    property real _slotTarget: Math.max(0, root.activeIndex)
+    onActiveIndexChanged: if (root.activeIndex >= 0) root._slotTarget = root.activeIndex
+    readonly property real _slot: _slotGlide.value
+    SpringGlide { id: _slotGlide; target: root._slotTarget }
 
     Rectangle {
         id: _selection

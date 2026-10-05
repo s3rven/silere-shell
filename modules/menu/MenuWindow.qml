@@ -639,9 +639,8 @@ PanelWindow {
                         // strip order is Home, Notifications, Settings; tabs are numbered 0, 2, 1
                         readonly property int _slotIndex: panel.activeTab === 2 ? 1
                             : panel.activeTab === 1 ? 2 : 0
-                        property real _slot: _slotIndex
-                        on_SlotIndexChanged: _slot = _slotIndex
-                        MotionBehavior on _slot { SpringAnimation { spring: 4.4; damping: 0.62; epsilon: 0.002 } }
+                        readonly property real _slot: _slotGlide.value
+                        SpringGlide { id: _slotGlide; target: _railSelection._slotIndex }
                         x: _railNav.x + (panel.railCollapsedW - width) / 2
                         y: _railNav.y + (_railHome.height - height) / 2
                             + _slot * (_railHome.height + _railNav.spacing)
