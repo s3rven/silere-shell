@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import "../../../../config"
 import "../../../common"
 
@@ -12,6 +13,7 @@ Row {
     required property real pulseOpacity
 
     spacing: 4
+    readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
     // already eased by the urgent pulse; a second animation here only lags it
     opacity: pulseOpacity
 
@@ -29,11 +31,12 @@ Row {
                 id: _iconSrc
                 anchors.fill: parent
                 source: appIcon.modelData.icon
-                // exactly the 2x buffer size; a larger texture gets resampled twice and turns to mush
-                sourceSize.width: root.iconSize * 2
-                sourceSize.height: root.iconSize * 2
+                // decoded at the device size and placed on whole device pixels, like the tray: any other size is resampled soft
+                sourceSize.width: Math.ceil(root.iconSize * root._dpr)
+                sourceSize.height: Math.ceil(root.iconSize * root._dpr)
                 fillMode: Image.PreserveAspectFit
                 asynchronous: true
+                transform: PixelSnap { item: _iconSrc; dpr: root._dpr }
             }
 
             Rectangle {
