@@ -241,6 +241,7 @@ Item {
                             IconImage {
                                 id: _rowIcon
                                 anchors.centerIn: parent
+                                anchors.alignWhenCentered: false
                                 readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
                                 transform: PixelSnap { item: _rowIcon; dpr: _rowIcon._dpr }
                                 width: 16

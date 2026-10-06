@@ -66,6 +66,7 @@ Item {
                 : root._style === "◦" ? (root.compact ? 4 : 5)
                 : (root.compact ? 2 : 3))
             anchors.centerIn: parent
+            anchors.alignWhenCentered: false
             width: diameter
             height: diameter
             radius: diameter / 2
@@ -83,6 +84,7 @@ Item {
             id: _stroke
             visible: !root._isDot
             anchors.centerIn: parent
+            anchors.alignWhenCentered: false
             width: root._roundedSize(root.compact ? 1.5 : 2)
             height: root._roundedSize(Settings.capHeight * root._strokeScale)
             transform: PixelSnap { item: _stroke; dpr: root._dpr }

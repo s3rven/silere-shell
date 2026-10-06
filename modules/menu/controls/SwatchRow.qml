@@ -64,6 +64,8 @@ Item {
                 id: _sw
                 required property var modelData
                 required property int index
+                // on the row's centre, unrounded, like the ring: rounding either one alone set the chip a device pixel off it
+                y: (_chipRow.height - height) / 2
                 chipColor: root.colorAt(index)
                 name:      modelData.name ?? ""
                 accessiblePrefix: root.accessiblePrefix
@@ -88,6 +90,7 @@ Item {
                 Rectangle {
                     id: _edge
                     anchors.centerIn: parent
+                    anchors.alignWhenCentered: false
                     // matches AccentSwatch's chip, snapped the same way so the two stay concentric
                     width: Metrics.devicePx(22, root._dpr)
                     height: width
@@ -123,7 +126,7 @@ Item {
         antialiasing: true
         color: "transparent"
         x: _chipRow.x + root._slot * (26 + _chipRow.spacing) + 13 - width / 2
-        y: Math.round((root.height - height) / 2)
+        y: (root.height - height) / 2
         opacity: root.activeIndex >= 0 ? 1 : 0
         MotionBehavior on opacity {
             NumberAnimation { duration: Motion.fast }

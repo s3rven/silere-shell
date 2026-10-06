@@ -1954,6 +1954,17 @@ else
   structural_skip "static text" "python3 or dev/check-text-scale.py missing; text scale check skipped"
 fi
 
+if command -v python3 >/dev/null 2>&1 && [ -f dev/check-snap-centering.py ]; then
+  if snap_centred="$(python3 dev/check-snap-centering.py)"; then
+    ok "snap centring" "pixel-snapped items centre on device pixels, not logical ones"
+  else
+    fail "these pixel-snapped items round to logical pixels before PixelSnap rounds to device ones:"
+    printf '%s\n' "$snap_centred"
+  fi
+else
+  structural_skip "snap centring" "python3 or dev/check-snap-centering.py missing; centring check skipped"
+fi
+
 
 section "inert compositor events"
 # Every Hyprland event that is not denylisted bumps the layout tick, which rebuilds the

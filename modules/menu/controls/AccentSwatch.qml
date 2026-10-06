@@ -51,6 +51,7 @@ Item {
         id: _chip
         // whole device pixels at a snapped position: on a 26px pitch every other chip sat on a half pixel at 1.25 with one soft side
         anchors.centerIn: parent
+        anchors.alignWhenCentered: false
         width: Metrics.devicePx(22, _dpr); height: width; radius: width / 2
         antialiasing: true
         color: root.spectrum ? "transparent" : root.chipColor
