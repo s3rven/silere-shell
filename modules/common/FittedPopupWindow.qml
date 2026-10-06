@@ -77,6 +77,15 @@ PanelWindow {
         return false
     }
 
+    // such an item brings its own blurShape region for what shows through it
+    readonly property var _surfaceBlurShapes: {
+        const shapes = []
+        const kids = _stage.children
+        for (let i = 0; i < kids.length; i++)
+            if (kids[i] && kids[i].blurShape) shapes.push(kids[i].blurShape)
+        return shapes
+    }
+
     function _overSurface(p: point): bool {
         const kids = _stage.children
         for (let i = 0; i < kids.length; i++) {
@@ -139,9 +148,10 @@ PanelWindow {
         BackgroundEffect.blurRegion: Region {
             item: win.popupCard ? win.popupCard.blurItem : null
             radius: win.popupCard ? Math.round(win.popupCard.radius) : 0
-            // a region rebuilds only when one of its own items moves, and the stage carries every card x shift
-            Region { item: _stage; intersection: Intersection.Intersect }
+            regions: win._surfaceBlurShapes.concat([_stageClip])
         }
+        // a region rebuilds only when one of its own items moves, and the stage carries every card x shift
+        Region { id: _stageClip; item: _stage; intersection: Intersection.Intersect }
 
         // screen coordinates: the card places itself as it did in a full-screen window
         Item {

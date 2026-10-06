@@ -290,6 +290,10 @@ FittedPopupWindow {
                 parent: win.stage
                 property bool opened: false
                 readonly property bool popupSurface: opened
+                readonly property Region blurShape: Region {
+                    item: ShellSettings.surfaceBlur && _flyout.color.a < 1 && _flyout.visible ? _flyout : null
+                    radius: Math.round(_flyout.radius)
+                }
                 readonly property Item parentFlyout: _entry.ownerFlyout
                 readonly property bool hovered: _flyHover.hovered
                 readonly property real _closedShift: _flip ? 5 : -5

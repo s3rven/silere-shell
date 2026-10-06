@@ -250,7 +250,12 @@ Item {
 
     Component {
         id: fakeSubmenu
-        Item { property bool opened: true; readonly property bool popupSurface: opened }
+        Item {
+            id: fake
+            property bool opened: true
+            readonly property bool popupSurface: opened
+            readonly property Region blurShape: Region { item: fake }
+        }
     }
 
     // submenus sit beside the card in the fitted strip, so the strip must reach them and a click on one is not outside
@@ -279,6 +284,8 @@ Item {
             "a click on an open submenu keeps the tray menu open")
         root._check(card.placementSpan.x - tray.reachLeft <= sub.x,
             "the tray strip grows to reach a submenu past its two reserved levels")
+        root._check(tray._surfaceBlurShapes.indexOf(sub.blurShape) >= 0,
+            "a submenu's own blur shape joins the tray card's blur region")
         sub.opened = false
         sub.visible = false
         root._check(card.placementSpan.x - tray.reachLeft <= 40,
