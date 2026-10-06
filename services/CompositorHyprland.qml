@@ -195,7 +195,7 @@ QtObject {
     }
 
     function _syncLiveTitles(): void {
-        const tops = Hyprland.toplevels ? (Hyprland.toplevels.values ?? []) : []
+        const tops = root._liveToplevels()
         const next = Object.create(null)
         for (let i = 0; i < tops.length; i++) {
             const t = tops[i]
@@ -254,7 +254,7 @@ QtObject {
             root._syncLiveTitles()
             root._syncActiveTitle()
             const missing = root._missingWorkspaceId(Hyprland.workspaces ? (Hyprland.workspaces.values ?? []) : [],
-                Hyprland.toplevels ? (Hyprland.toplevels.values ?? []) : [])
+                root._liveToplevels())
             if (missing > 0) root._requestWorkspaceRefresh("missing:" + missing)
             else root._workspaceRefreshKey = ""
             if (!root._refreshAgain) return
@@ -331,6 +331,33 @@ QtObject {
     }
     readonly property var specialOutputs: Object.keys(root._specialOn)
 
+    // quickshell #1268: a j/clients reply still in flight when a window closes brings it back for good, so an address hyprland closed stays out until it opens one again
+    property var _closedAddrs: ({})
+    function _setClosed(data, closed: bool): void {
+        const addr = root._titleEventAddress(data)
+        if (addr.length === 0) return
+        const key = "0x" + addr
+        if ((root._closedAddrs[key] === true) === closed) return
+        const next = Object.assign({}, root._closedAddrs)
+        if (closed) {
+            next[key] = true
+            const keys = Object.keys(next)
+            if (keys.length > 64) delete next[keys[0]]
+        } else {
+            delete next[key]
+        }
+        root._closedAddrs = next
+    }
+    function _withoutClosed(tops, closed): var {
+        return tops.filter(t => {
+            const c = t ? t.lastIpcObject : null
+            return !(c && closed[c.address] === true)
+        })
+    }
+    function _liveToplevels(): var {
+        return root._withoutClosed(Hyprland.toplevels ? (Hyprland.toplevels.values ?? []) : [], root._closedAddrs)
+    }
+
     // quickshell 0.3.1 prunes a workspace created while its startup snapshot is in flight and ignores hyprland 0.57 id changes; a window still names the workspace either way
     property string _workspaceRefreshKey: ""
     property int _workspaceRefreshTries: 0
@@ -374,7 +401,7 @@ QtObject {
         }
         // hyprland keeps a workspace object alive after its last window closes, so existence is
         // not occupancy; count real toplevels or an emptied workspace stays lit like a full one
-        const tops = Hyprland.toplevels ? (Hyprland.toplevels.values ?? []) : []
+        const tops = root._liveToplevels()
         const winCount = {}
         for (let i = 0; i < tops.length; i++) {
             const c = tops[i] ? tops[i].lastIpcObject : null
@@ -407,7 +434,7 @@ QtObject {
             const ws = wsVals[i]
             if (ws) wsOut[ws.id] = ws.monitor ? (ws.monitor.name ?? "") : ""
         }
-        const tops = Hyprland.toplevels ? (Hyprland.toplevels.values ?? []) : []
+        const tops = root._liveToplevels()
         const out = []
         for (let i = 0; i < tops.length; i++) {
             const t = tops[i]
@@ -526,6 +553,7 @@ QtObject {
                 root._layoutTick++
                 return
             }
+            if (n === "openwindow" || n === "closewindow") root._setClosed(event.data, n === "closewindow")
             if (n === "openwindow" || n === "closewindow" || n === "movewindowv2"
                 || n === "fullscreen")
                 root.refreshToplevels()

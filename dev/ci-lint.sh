@@ -1972,6 +1972,15 @@ else
   ok "inert events" "the event denylist still covers every measured no-op"
 fi
 
+# quickshell #1268 resurrects a window closed while a client snapshot is in flight; every
+# model must read toplevels through the filter that drops them, or a ghost icon stays
+toplevel_reads="$(grep -c 'Hyprland\.toplevels' services/CompositorHyprland.qml || true)"
+if [ "$toplevel_reads" != "1" ] || ! grep -qE '_withoutClosed\(Hyprland\.toplevels' services/CompositorHyprland.qml; then
+  fail "services/CompositorHyprland.qml must read Hyprland.toplevels only in _liveToplevels(), which drops closed windows"
+else
+  ok "closed windows" "toplevel models skip windows hyprland already closed"
+fi
+
 # Quickshell's Hyprland bindings do not always mirror the compositor: hyprland reports
 # unfocus as an empty activewindowv2 address, quickshell's parser bails on it, and
 # Hyprland.activeToplevel then keeps the last focused window forever. The Hyprland

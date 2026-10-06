@@ -41,6 +41,7 @@ settings file carries its own `__version` and migrates separately.
 - Pressing a slider's handle slightly off centre no longer nudges its value.
 - A nested tray submenu keeps opening on the side its parent opened to, instead of turning back over the tray menu.
 - With Popups match bar opacity on, tray submenus blur what is behind them like the tray menu itself, instead of showing it sharp.
+- A window that closes while the bar is refreshing its window list no longer stays behind as an app icon or a lit workspace until the shell restarts.
 
 ## Releases
 

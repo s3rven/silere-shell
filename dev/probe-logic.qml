@@ -2161,6 +2161,24 @@ ShellRoot {
                         [{ lastIpcObject: { workspace: { id: 4 } } },
                          { lastIpcObject: { workspace: { id: -98, name: "special:magic" } } }, null]) === -1,
                 "a window on a numbered workspace the model lacks is found; known and special ones are not")
+            const closedWas = hypr._closedAddrs
+            hypr._closedAddrs = ({})
+            hypr._eventConn.onRawEvent({ name: "closewindow", data: "5561ab" })
+            const ghost = { lastIpcObject: { address: "0x5561ab", workspace: { id: 2 } } }
+            const live = { lastIpcObject: { address: "0x77aa", workspace: { id: 1 } } }
+            const kept = hypr._withoutClosed([ghost, live], hypr._closedAddrs)
+            root._check(kept.length === 1 && kept[0] === live
+                    && hypr._missingWorkspaceId([{ id: 1 }], hypr._withoutClosed([ghost, live], hypr._closedAddrs)) === -1,
+                "a window hyprland closed stays off the bar when a stale client snapshot brings it back")
+            hypr._eventConn.onRawEvent({ name: "openwindow", data: "5561ab,2,kitty,title" })
+            root._check(hypr._withoutClosed([ghost], hypr._closedAddrs).length === 1,
+                "a new window at a closed window's address shows again")
+            for (let i = 0; i < 70; i++) hypr._eventConn.onRawEvent({ name: "closewindow", data: "f" + i })
+            root._check(Object.keys(hypr._closedAddrs).length === 64
+                    && hypr._closedAddrs["0xf69"] === true && hypr._closedAddrs["0xf0"] === undefined,
+                "closed windows are remembered up to the newest 64")
+            hypr._closedAddrs = closedWas
+            hypr._eventSeq = seqWas
             const refreshKeyWas = hypr._workspaceRefreshKey
             const refreshTriesWas = hypr._workspaceRefreshTries
             hypr._workspaceRefreshKey = ""
