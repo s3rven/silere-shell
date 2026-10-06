@@ -2379,6 +2379,18 @@ ShellRoot {
                 && Media.playablePlayers([mirrorPlayer]).length === 1
                 && Media.playablePlayers([]).length === 0,
             "the media switcher hides duplicate mirrors while retaining a mirror-only session")
+        const pausedState = Mp.MprisPlaybackState.Paused, playingState = Mp.MprisPlaybackState.Playing
+        const music = { dbusName: "music", isPlaying: false, playbackState: pausedState }
+        const video = { dbusName: "video", isPlaying: false, playbackState: pausedState }
+        const radio = { dbusName: "radio", isPlaying: true, playbackState: playingState }
+        const stream = { dbusName: "stream", isPlaying: true, playbackState: playingState }
+        root._check(Media.pickPlayer([music, video], "", {}) === music
+                && Media.pickPlayer([music, video], "", { music: 1, video: 2 }) === video
+                && Media.pickPlayer([music, radio], "", { music: 5, radio: 1 }) === radio
+                && Media.pickPlayer([radio, stream], "", { radio: 1, stream: 2 }) === stream
+                && Media.pickPlayer([radio, video], "video", {}) === video
+                && Media.pickPlayer([null, loadedPlayer], "", {}) === loadedPlayer,
+            "the media card follows the most recently active player, like the media keys, unless one is pinned")
         root._check(Audio._out._clampVolume(NaN) === 0
                 && Audio._out._clampVolume(Infinity) === 0
                 && Audio._out._clampVolume(1.5) === 1,

@@ -67,28 +67,45 @@ Singleton {
         root.preferredPlayer = players[(idx + 1) % players.length].dbusName
     }
 
-    readonly property var player: {
-        const players = root.playerList
-        let fallback = null
+    // the media keys go to playerctld's most recently active player, so among equals the card follows the last one to start or stop
+    property var _lastActive: ({})
+    property var _wasPlaying: ({})
+    property int _activeSeq: 0
+    readonly property var _playingNames: root.playerList.filter(p => p && p.isPlaying).map(p => p.dbusName)
+    on_PlayingNamesChanged: {
+        const now = {}
+        for (const name of root._playingNames) now[name] = true
+        const changed = []
+        for (const name in now) if (!root._wasPlaying[name]) changed.push(name)
+        for (const name in root._wasPlaying) if (!now[name]) changed.push(name)
+        root._wasPlaying = now
+        if (changed.length === 0) return
+        const next = {}
+        for (const p of root.playerList)
+            if (p && root._lastActive[p.dbusName] !== undefined)
+                next[p.dbusName] = root._lastActive[p.dbusName]
+        for (const name of changed) next[name] = ++root._activeSeq
+        root._lastActive = next
+    }
 
-        if (root.preferredPlayer.length > 0) {
+    function pickPlayer(players, preferred: string, lastActive): var {
+        if (preferred.length > 0)
             for (let i = 0; i < players.length; i++)
-                if (players[i].dbusName === root.preferredPlayer) return players[i]
-        }
-
+                if (players[i] && players[i].dbusName === preferred) return players[i]
+        let best = null, bestRank = -1, bestSeq = -1
         for (let i = 0; i < players.length; i++) {
             const p = players[i]
             if (!p) continue
-            if (p.isPlaying) return p
-            if (p.playbackState !== MprisPlaybackState.Stopped) {
-                if (!fallback || fallback.playbackState === MprisPlaybackState.Stopped) fallback = p
-            } else if (!fallback) {
-                fallback = p
+            const rank = p.isPlaying ? 2 : p.playbackState !== MprisPlaybackState.Stopped ? 1 : 0
+            const seq = lastActive[p.dbusName] ?? 0
+            if (rank > bestRank || (rank === bestRank && seq > bestSeq)) {
+                best = p; bestRank = rank; bestSeq = seq
             }
         }
-
-        return fallback
+        return best
     }
+
+    readonly property var player: root.pickPlayer(root.playerList, root.preferredPlayer, root._lastActive)
 
     readonly property bool available: player !== null
         && (player.playbackState !== MprisPlaybackState.Stopped || title.length > 0)
