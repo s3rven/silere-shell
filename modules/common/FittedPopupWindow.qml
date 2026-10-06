@@ -13,6 +13,11 @@ PanelWindow {
     property string layerNamespace: "silere-popup"
     property FloatingPopupCard popupCard: null
     default property alias stageData: _stage.data
+    // screen coordinates, for anything placed beside the card such as submenus
+    readonly property Item stage: _stage
+    // room the strip keeps past the card on each side, for what opens beside it
+    property real reachLeft: 0
+    property real reachRight: 0
 
     signal dismissed()
     signal escapePressed()
@@ -56,10 +61,29 @@ PanelWindow {
     // an empty region, not none: the popup's layer rule would otherwise blur the whole screen behind this window
     BackgroundEffect.blurRegion: Region { item: null }
 
+    // a stage item beside the card that a click may land on marks itself popupSurface, as a submenu does
+    readonly property bool _surfaceOpen: {
+        const kids = _stage.children
+        for (let i = 0; i < kids.length; i++)
+            if (kids[i] && kids[i].popupSurface === true) return true
+        return false
+    }
+
+    function _overSurface(p: point): bool {
+        const kids = _stage.children
+        for (let i = 0; i < kids.length; i++) {
+            const k = kids[i]
+            if (!k || k.popupSurface !== true) continue
+            const local = k.mapFromItem(_stage, p.x, p.y)
+            if (local.x >= 0 && local.x <= k.width && local.y >= 0 && local.y <= k.height) return true
+        }
+        return false
+    }
+
     function _outsideCard(p: point): bool {
         const c = win.popupCard
-        return !c || p.x < c.x || p.x > c.x + c.width ||
-            p.y < c.y || p.y > c.y + c.height
+        if (c && p.x >= c.x && p.x <= c.x + c.width && p.y >= c.y && p.y <= c.y + c.height) return false
+        return !win._overSurface(p)
     }
 
     function _closeIfOutside(p: point): void {
@@ -82,9 +106,9 @@ PanelWindow {
         readonly property point _span: win.popupCard ? win.popupCard.placementSpan : Qt.point(0, 0)
         readonly property real _targetW: win.popupCard ? win.popupCard.targetWidth : 0
         readonly property int _left: Math.max(0,
-            64 * Math.floor((cardWin._span.x - _slack) / 64))
+            64 * Math.floor((cardWin._span.x - _slack - win.reachLeft) / 64))
         readonly property int _right: Math.min(Math.ceil(_screenW),
-            64 * Math.ceil((cardWin._span.y + cardWin._targetW + _slack) / 64))
+            64 * Math.ceil((cardWin._span.y + cardWin._targetW + _slack + win.reachRight) / 64))
 
         screen:        win.screen
         color:         "transparent"
@@ -99,9 +123,9 @@ PanelWindow {
         margins.left: cardWin._left
         implicitWidth: Math.max(1, cardWin._right - cardWin._left)
 
-        // the card alone: anywhere else in the strip has to fall through to the closing window below
+        // the card alone: anywhere else in the strip has to fall through to the closing window below. With a surface open beside it the whole strip, so a gap between the two still reaches the outside catch
         mask: Region {
-            item: win.open ? win.popupCard : null
+            item: !win.open ? null : win._surfaceOpen ? _stage : win.popupCard
             Region { item: _stage; intersection: Intersection.Intersect }
         }
         BackgroundEffect.blurRegion: Region {

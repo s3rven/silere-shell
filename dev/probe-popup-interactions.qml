@@ -145,7 +145,7 @@ Item {
         ShellSettings.trayHidden = ""
         ShellSettings.reduceMotion = true
         TrayMenuState.toggleAt(100, root.targetScreen, null, false, null, traySource)
-        const hideRow = root._find(tray.contentItem,
+        const hideRow = root._find(tray.popupCard,
             item => item.trayId === traySource.id && typeof item.hide === "function")
         root._check(hideRow !== null && hideRow.enabled,
             "a menu-less app has its own enabled hide action")
@@ -212,7 +212,8 @@ Item {
     function _checkDismissal(): void {
         const fitted = [
             { name: "calendar", popup: calendar, state: CalendarState },
-            { name: "quick actions", popup: actions, state: QuickActionsState }
+            { name: "quick actions", popup: actions, state: QuickActionsState },
+            { name: "tray menu", popup: tray, state: TrayMenuState }
         ]
         for (const f of fitted) {
             const card = f.popup.popupCard
@@ -231,12 +232,47 @@ Item {
             f.popup._closeIfOutside(Qt.point(-5000, 40))
             root._check(!f.state.open, "a click on another monitor closes " + f.name)
         }
+    }
 
-        const trayCatcher = root._offMonitorCatcher(tray.contentItem)
-        const trayOrigin = trayCatcher ? trayCatcher.mapToItem(tray.contentItem, 0, 0) : Qt.point(0, 0)
-        root._check(trayCatcher !== null && trayOrigin.x < -10000 && trayOrigin.y < -10000
-                && root._catchesEveryButton(trayCatcher),
-            "the tray menu catches clicks of every button offset onto another monitor")
+    Component {
+        id: fakeSubmenu
+        Item { property bool opened: true; readonly property bool popupSurface: opened }
+    }
+
+    // submenus sit beside the card in the fitted strip, so the strip must reach them and a click on one is not outside
+    function _checkTraySubmenus(): void {
+        ShellSettings.reduceMotion = true
+        const card = tray.popupCard
+        const winW = card.winW
+        const step = tray.menuWidth + 12
+        let covered = 0
+        for (const anchorX of [0, winW * 0.25, winW * 0.5, winW * 0.75, winW - 200, winW]) {
+            TrayMenuState.toggleAt(anchorX, root.targetScreen, null, false, null, traySource)
+            const l1 = Metrics.flyoutX(card.x + card.pad, tray.menuWidth, step, winW)
+            const l2 = Metrics.flyoutX(l1 + 6, tray.menuWidth, step, winW)
+            const lo = Math.min(l1, l2), hi = Math.max(l1, l2) + step
+            if (card.placementSpan.x - tray.reachLeft <= lo
+                    && card.placementSpan.y + card.targetWidth + tray.reachRight >= hi) covered++
+            TrayMenuState.close()
+        }
+        root._check(covered === 6, "the tray strip keeps room for two submenu levels wherever the card sits")
+
+        TrayMenuState.toggleAt(winW - 200, root.targetScreen, null, false, null, traySource)
+        const sub = fakeSubmenu.createObject(tray.stage, { x: 40, y: card.y, width: step, height: 120 })
+        const inside = Qt.point(sub.x + 10, sub.y + 10)
+        tray._closeIfOutside(inside)
+        root._check(TrayMenuState.open && !tray._outsideCard(inside) && tray._surfaceOpen,
+            "a click on an open submenu keeps the tray menu open")
+        root._check(card.placementSpan.x - tray.reachLeft <= sub.x,
+            "the tray strip grows to reach a submenu past its two reserved levels")
+        sub.opened = false
+        sub.visible = false
+        root._check(card.placementSpan.x - tray.reachLeft <= 40,
+            "the tray strip keeps its width while the menu stays open after a deeper submenu fades")
+        tray._closeIfOutside(inside)
+        root._check(!TrayMenuState.open && !tray._surfaceOpen,
+            "a click where a submenu has closed closes the tray menu")
+        sub.destroy()
     }
 
     function _checkReplyFocus(): void {
@@ -272,6 +308,7 @@ Item {
         root._checkActions()
         root._checkTray()
         root._checkDismissal()
+        root._checkTraySubmenus()
         root._checkReplyFocus()
         console.warn("PROBE-POPUP-INTERACTIONS checked " + root._checks + " behaviors")
     }

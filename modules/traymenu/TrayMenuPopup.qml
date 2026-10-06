@@ -3,17 +3,19 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Widgets
-import Quickshell.Wayland
 import "../../config"
 import "../../services"
 import "../common"
 
-PanelWindow {
+FittedPopupWindow {
     id: win
 
-    required property ShellScreen targetScreen
+    open: TrayMenuState.open
+    layerNamespace: "silere-traymenu"
+    popupCard: card
+    onDismissed: TrayMenuState.close()
+    onEscapePressed: TrayMenuState.close()
 
-    readonly property string _output: Compositor.monitorName(win.screen)
     readonly property int menuWidth: Metrics.snap4Up(220
         + Math.max(0, Settings.capHeight - Settings.capHeightBase) * 6)
 
@@ -44,14 +46,14 @@ PanelWindow {
         win._activeMenu = handle
     }
     function _closeFlyouts(): void {
-        const kids = win.contentItem.children
+        const kids = win.stage.children
         for (let i = 0; i < kids.length; i++) {
             const k = kids[i]
             if (k && k.opened === true) k.opened = false
         }
     }
     function _closeFlyoutBranch(flyout): void {
-        const kids = win.contentItem.children
+        const kids = win.stage.children
         for (let i = 0; i < kids.length; i++) {
             const k = kids[i]
             if (k && k.parentFlyout === flyout && k.opened === true)
@@ -60,7 +62,11 @@ PanelWindow {
         flyout.opened = false
     }
 
-    onVisibleChanged: if (!visible) win._setActiveMenu(null)
+    onVisibleChanged: if (!visible) {
+        win._setActiveMenu(null)
+        win._heldLeft = 0
+        win._heldRight = 0
+    }
     // the handle is set before this popup exists, so seed from the current state on creation
     Component.onCompleted: if (TrayMenuState.menuHandle !== null) win._setActiveMenu(TrayMenuState.menuHandle)
     Connections {
@@ -74,32 +80,8 @@ PanelWindow {
     }
 
     Connections {
-        target: Compositor
-        function onWorkspaceActivated(output) {
-            if (output === win._output && TrayMenuState.open) TrayMenuState.close()
-        }
-    }
-    Connections {
         target: ShellSettings
         function onBarPositionChanged() { if (TrayMenuState.open) TrayMenuState.close() }
-    }
-
-    screen:        targetScreen
-    color:         "transparent"
-    exclusiveZone: -1
-    WlrLayershell.namespace: "silere-traymenu"
-    WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: TrayMenuState.open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
-
-    visible: TrayMenuState.open || card.opacity > 0.001
-
-    anchors { top: true; left: true; right: true; bottom: true }
-
-    Shortcut { sequence: "Escape"; context: Qt.ApplicationShortcut; enabled: TrayMenuState.open; onActivated: TrayMenuState.close() }
-
-    OutsideTapGuard {
-        id: _tapGuard
-        open: TrayMenuState.open
     }
 
     Connections {
@@ -116,51 +98,29 @@ PanelWindow {
         menu: win._activeMenu
     }
 
-    Item { id: _fillArea; anchors.fill: parent }
-    mask: Region { item: TrayMenuState.open ? _fillArea : null }
-    BackgroundEffect.blurRegion: Region { item: card.blurItem; radius: Math.round(card.radius) }
-
-    // submenu flyouts sit outside the card, as siblings of it under contentItem
-    function _overFlyout(p: point): bool {
-        const kids = win.contentItem.children
+    // submenus open beside the card: the strip keeps two levels of them on the side they open to, so opening one never moves it under the card, and grows only for a deeper one
+    readonly property real _flyoutStep: win.menuWidth + 2 * 6 + 4
+    readonly property bool _opensLeft: card.placementSpan.y + card.targetWidth + 4 + win._flyoutStep > card.winW
+    readonly property point _flyoutSpan: {
+        let lo = Infinity, hi = -Infinity
+        const kids = win.stage.children
         for (let i = 0; i < kids.length; i++) {
             const k = kids[i]
-            if (!k || k.opened !== true || !k.visible) continue
-            const local = k.mapFromItem(win.contentItem, p.x, p.y)
-            if (local.x >= 0 && local.x <= k.width &&
-                local.y >= 0 && local.y <= k.height) return true
+            if (!k || k.opened === undefined || !k.visible) continue
+            lo = Math.min(lo, k.x)
+            hi = Math.max(hi, k.x + k.width)
         }
-        return false
+        return lo <= hi ? Qt.point(lo, hi) : Qt.point(card.placementSpan.x, card.placementSpan.x)
     }
-
-    TapHandler {
-        id: _dismiss
-        enabled: TrayMenuState.open
-        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-        // a TapHandler keeps a passive grab, so this fires for taps on rows too
-        onTapped: {
-            if (_tapGuard.ignoring) return
-            const p = _dismiss.point.position
-            if (win._overFlyout(p)) return
-            if (p.x < card.x || p.x > card.x + card.width ||
-                p.y < card.y || p.y > card.y + card.height)
-                TrayMenuState.close()
-        }
-    }
-
-    // hyprland hands this exclusive-focus window every click, one on another monitor too, offset by the layout; the TapHandler above drops points outside the window
-    MouseArea {
-        id: _offScreenCatch
-        anchors.fill: parent
-        anchors.margins: -16384
-        enabled: TrayMenuState.open
-        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-        onPressed: mouse => {
-            const p = _offScreenCatch.mapToItem(win.contentItem, mouse.x, mouse.y)
-            mouse.accepted = p.x < 0 || p.y < 0 || p.x >= win.width || p.y >= win.height
-        }
-        onClicked: if (!_tapGuard.ignoring) TrayMenuState.close()
-    }
+    readonly property real _needLeft: card.placementSpan.x - win._flyoutSpan.x
+    readonly property real _needRight: win._flyoutSpan.y - card.placementSpan.y - card.targetWidth
+    // a resize under the pointer drops its hover, so a strip that shrank as a deeper submenu closed could reopen and close it in a loop: it only grows until the menu is gone
+    property real _heldLeft: 0
+    property real _heldRight: 0
+    on_NeedLeftChanged: win._heldLeft = Math.max(win._heldLeft, win._needLeft)
+    on_NeedRightChanged: win._heldRight = Math.max(win._heldRight, win._needRight)
+    reachLeft: Math.max(win._opensLeft ? 2 * win._flyoutStep : 0, win._heldLeft, win._needLeft)
+    reachRight: Math.max(win._opensLeft ? 0 : 2 * win._flyoutStep, win._heldRight, win._needRight)
 
     Component {
         id: _rowDelegate
@@ -168,7 +128,7 @@ PanelWindow {
         Item {
             id: _entry
             required property var modelData
-            // flyouts live at the window root so the scroll clip cannot cut them off
+            // flyouts live on the stage so the scroll clip cannot cut them off
             property Item ownerFlyout: null
             property Flickable ownerScroll: null
             property int menuDepth: 0
@@ -325,9 +285,10 @@ PanelWindow {
 
             Rectangle {
                 id: _flyout
-                // reparented to the window root: inside the clipped row Flickable the submenu would be scissored away
-                parent: win.contentItem
+                // reparented to the stage: inside the clipped row Flickable the submenu would be scissored away
+                parent: win.stage
                 property bool opened: false
+                readonly property bool popupSurface: opened
                 readonly property Item parentFlyout: _entry.ownerFlyout
                 readonly property bool hovered: _flyHover.hovered
                 readonly property real _closedShift: _flip ? 5 : -5
@@ -346,7 +307,7 @@ PanelWindow {
                     + (_entry.ownerFlyout ? _entry.ownerFlyout.x + _entry.ownerFlyout.y : 0)
                 on_OriginTickChanged: if (_flyout.visible) _flyout._syncOrigin()
                 function _syncOrigin(): void {
-                    _flyout._origin = _entry.mapToItem(null, 0, 0)
+                    _flyout._origin = _entry.mapToItem(win.stage, 0, 0)
                 }
                 readonly property bool  _flip: _origin.x + _entry.width + 4 + _w > card.winW - 4
                 readonly property real _panelH: Metrics.snap4Up(
@@ -378,7 +339,7 @@ PanelWindow {
                     id: _flyClose
                     interval: 180
                     running: _flyout.opened && !_rowHover.hovered
-                        && !TrayMenuState.branchHovered(_flyout, win.contentItem.children)
+                        && !TrayMenuState.branchHovered(_flyout, win.stage.children)
                     onTriggered: _entry.closeFlyout()
                 }
 
