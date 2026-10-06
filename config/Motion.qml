@@ -61,7 +61,6 @@ Singleton {
     readonly property int panelCollapse: _rm ? 0 : 150
     // quiet window a viewport must hold before scroll affordances trust it (see ScrollSettle)
     readonly property int panelSettle:   _rm ? 0 : 180
-    readonly property real panelVelocity: 1500
     // never shorter than panelResize, or content lands opaque inside a still-resizing panel
     readonly property int pageIn:      _rm ? 0 : panelResize
     readonly property int pageOut:     _rm ? 0 : 120
