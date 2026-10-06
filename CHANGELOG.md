@@ -26,6 +26,7 @@ settings file carries its own `__version` and migrates separately.
 - Cover art from the web downloads Spotify's 300 px cover, about a third the size of the 640 px one, and fetches a second size only when the first fails.
 - Tray menus animate with far fewer dropped frames on high refresh rate displays, like the menu and calendar.
 - On Hyprland, opening and closing the menu and popups takes about a fifth less GPU time.
+- The selected accent swatch is ringed in its own colour, like the Base swatches are in the accent, instead of near white, and colour swatches no longer carry a grey rim that dulled their edges.
 
 ### Fixed
 

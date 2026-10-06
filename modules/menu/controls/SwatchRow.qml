@@ -87,24 +87,6 @@ Item {
                         Rectangle { width: 4; height: 4; radius: 2; color: Qt.rgba(0, 0, 0, 0.35) }
                     }
                 }
-                Rectangle {
-                    id: _edge
-                    anchors.centerIn: parent
-                    anchors.alignWhenCentered: false
-                    // matches AccentSwatch's chip, snapped the same way so the two stay concentric
-                    width: Metrics.devicePx(22, root._dpr)
-                    height: width
-                    radius: width / 2
-                    antialiasing: true
-                    color: "transparent"
-                    transform: PixelSnap { item: _edge; dpr: root._dpr }
-
-                    OutlineBorder {
-                        radius: _edge.radius
-                        outlineWidth: 1
-                        outlineColor: Theme.withAlpha(Theme.subtext, 0.24)
-                    }
-                }
             }
         }
     }
@@ -132,11 +114,11 @@ Item {
             NumberAnimation { duration: Motion.fast }
         }
 
+        // the chosen colour itself, not a whitened mix of it: on an accent row that is the accent, which a row of dark swatches passes as ringColor, so every swatch row marks its choice alike
         OutlineBorder {
             radius: _selection.radius
             outlineWidth: 2
-            outlineColor: root.ringColor.a > 0 ? root.ringColor
-                : Theme.mix(root.colorAt(root.activeIndex), Theme.text, 0.68)
+            outlineColor: root.ringColor.a > 0 ? root.ringColor : root.colorAt(root.activeIndex)
             ColorFade on outlineColor {}
         }
     }
