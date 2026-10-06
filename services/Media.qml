@@ -246,12 +246,11 @@ Singleton {
             .replace("https://open.spotify.com/image/", "https://i.scdn.co/image/")
     }
 
-    // i.scdn.co spells the edge length into the id prefix and publishes all three sizes
-    // for every cover; clients that hand over the 64px form leave the tile a blur
-    function upscaledArtUrl(raw): string {
+    // the id prefix spells the edge, and every cover exists at 64, 300 and 640: 64 blurs the 56px tile at fractional scale, 640 only costs download
+    function sizedArtUrl(raw): string {
         const match = String(raw ?? "").match(
-            /^(https:\/\/i\.scdn\.co\/image\/)ab67616d(?:00004851|00001e02)([0-9a-f]{8,})$/i)
-        return match ? match[1] + "ab67616d0000b273" + match[2] : ""
+            /^(https:\/\/i\.scdn\.co\/image\/)ab67616d(?:00004851|0000b273)([0-9a-f]{8,})$/i)
+        return match ? match[1] + "ab67616d00001e02" + match[2] : ""
     }
 
     // the directory holding a locally played track, for the covers that sit beside it
@@ -280,7 +279,7 @@ Singleton {
             if (source.length > 0 && out.indexOf(source) < 0) out.push(source)
         }
         const reported = root.normalizedArtUrl(root.player ? root.player.trackArtUrl : "")
-        offer(root.upscaledArtUrl(reported))
+        offer(root.sizedArtUrl(reported))
         offer(reported)
         const directory = root.trackDirectory(root.trackUrl)
         if (directory.length > 0)
@@ -305,7 +304,7 @@ Singleton {
         if (!ShellSettings.mediaRemoteArt || !root.remoteArtAvailable) return []
         const out = []
         const reported = root.normalizedArtUrl(root.player ? root.player.trackArtUrl : "")
-        const urls = [root.upscaledArtUrl(reported), reported]
+        const urls = [root.sizedArtUrl(reported), reported]
         for (let i = 0; i < urls.length; i++) {
             const source = root.artSource(urls[i])
             if (/^https:\/\//i.test(source) && out.indexOf(source) < 0) out.push(source)
@@ -314,17 +313,23 @@ Singleton {
     }
     on_RemoteArtWantedChanged: root._fetchNextArt()
 
-    function _fetchNextArt(): void {
-        if (_artFetch.running) return
-        const wanted = root._remoteArtWanted
+    function nextArtFetch(wanted, files, misses): string {
         for (let i = 0; i < wanted.length; i++) {
             const url = wanted[i]
-            if (root._artFiles[url] !== undefined || root._artMisses[url] === true) continue
-            root._artFetching = url
-            _artFetch.exec(["sh", "-c", root._artFetchScript, "silere-art",
-                root._artCacheDir, root.remoteArtName(url), url])
-            return
+            // a later url is only the fallback for one that failed to download
+            if (files[url] !== undefined) return ""
+            if (misses[url] !== true) return url
         }
+        return ""
+    }
+
+    function _fetchNextArt(): void {
+        if (_artFetch.running) return
+        const url = root.nextArtFetch(root._remoteArtWanted, root._artFiles, root._artMisses)
+        if (url.length === 0) return
+        root._artFetching = url
+        _artFetch.exec(["sh", "-c", root._artFetchScript, "silere-art",
+            root._artCacheDir, root.remoteArtName(url), url])
     }
 
     function _artFetched(url: string, ok: bool, removed): void {

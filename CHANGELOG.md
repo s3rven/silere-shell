@@ -23,6 +23,7 @@ settings file carries its own `__version` and migrates separately.
 - The edge gap of a floating bar now only spaces it from the screen edge, so windows sit as far below it as below a docked bar.
 - Notification history is saved in `~/.local/state/silere-shell` instead of the config folder, so a dotfiles repo that tracks `~/.config` no longer picks up message text. An existing history moves there on the next start.
 - The media card on the Now page shows the album cover sharp beside the track, with only a soft blur of its colours behind the text, where the cover itself used to show through the title.
+- Cover art from the web downloads Spotify's 300 px cover, about a third the size of the 640 px one, and fetches a second size only when the first fails.
 
 ### Fixed
 

@@ -2252,6 +2252,12 @@ ShellRoot {
                 && Media._artFiles["https://example.invalid/next.jpg"] !== undefined,
             "evicted cover art loses its cached URL so revisiting it can fetch again")
         Media._artFiles = artFilesWas
+        const wantedArt = ["https://example.invalid/300.jpg", "https://example.invalid/640.jpg"]
+        root._check(Media.nextArtFetch(wantedArt, {}, {}) === wantedArt[0]
+                && Media.nextArtFetch(wantedArt, { [wantedArt[0]]: "file:///a" }, {}) === ""
+                && Media.nextArtFetch(wantedArt, {}, { [wantedArt[0]]: true }) === wantedArt[1]
+                && Media.nextArtFetch(wantedArt, {}, { [wantedArt[0]]: true, [wantedArt[1]]: true }) === "",
+            "a cover's fallback url is downloaded only when the preferred one failed")
         root._check(Media.artSource("file://example.invalid/cover.jpg") === "",
             "media service rejects remote file artwork")
         root._check(Media.artSource("https://example.invalid/bad\ncover.jpg") === "",
@@ -2264,13 +2270,16 @@ ShellRoot {
         root._check(Media.normalizedArtUrl("https://open.spotify.com/image/abc")
                 === "https://i.scdn.co/image/abc",
             "media artwork rewrites Spotify's dead image host")
-        root._check(Media.upscaledArtUrl(
+        root._check(Media.sizedArtUrl(
                     "https://i.scdn.co/image/ab67616d00004851deadbeef")
-                === "https://i.scdn.co/image/ab67616d0000b273deadbeef"
-                && Media.upscaledArtUrl(
-                    "https://i.scdn.co/image/ab67616d0000b273deadbeef") === ""
-                && Media.upscaledArtUrl("https://example.invalid/cover.jpg") === "",
-            "media artwork asks Spotify for the full-size cover of a thumbnail")
+                === "https://i.scdn.co/image/ab67616d00001e02deadbeef"
+                && Media.sizedArtUrl(
+                    "https://i.scdn.co/image/ab67616d0000b273deadbeef")
+                === "https://i.scdn.co/image/ab67616d00001e02deadbeef"
+                && Media.sizedArtUrl(
+                    "https://i.scdn.co/image/ab67616d00001e02deadbeef") === ""
+                && Media.sizedArtUrl("https://example.invalid/cover.jpg") === "",
+            "media artwork asks Spotify for the 300px cover the tile needs, not a thumbnail or the 640px original")
         root._check(Media.trackDirectory("file:///home/u/Music/A%20B/song.mp3")
                 === "/home/u/Music/A B"
                 && Media.trackDirectory("https://example.invalid/song.mp3") === ""
