@@ -157,7 +157,8 @@ Item {
 
     function _syncUrgentOffPage(): void {
         let next = 0
-        const vals = root._workspaceIndex.own
+        const index = root._workspaceIndex
+        const vals = index ? index.own : []
         for (let i = 0; i < vals.length; i++) {
             const ws = vals[i]
             if (ws.urgent && ws.wsId > 0
