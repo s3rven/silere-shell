@@ -1909,6 +1909,12 @@ ShellRoot {
         root._check(edgeShift(14, 1.18, 1.25) > edgeShift(14, 1.06, 1.25)
                 && edgeShift(14, 1.06, 1.25) > 0,
             "a held slider thumb still lifts past its hover size")
+        // a 232 px submenu from a row at x 1460 on a 2048 px screen fits either side
+        root._check(Metrics.flyoutX(1460, 220, 232, 2048, true) === 1224
+                && Metrics.flyoutX(1460, 220, 232, 2048, false) === 1684
+                && Metrics.flyoutX(100, 220, 232, 2048, true) === 324
+                && Metrics.flyoutX(1900, 220, 232, 2048, false) === 1664,
+            "a nested submenu keeps opening the way its parent did and turns only at the screen edge")
 
         const weekStartWas = ShellSettings.calendarWeekStart
         root._check(CalendarState.weekStartFor("monday", 0) === 1

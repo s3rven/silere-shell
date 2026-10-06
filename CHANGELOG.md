@@ -38,6 +38,7 @@ settings file carries its own `__version` and migrates separately.
 - An app with no icon shows its own initial in the workspace bar instead of a version digit, such as Minecraft's 1.
 - Toggles, sliders, colour swatches, notification count badges and the menu rail's selection sit on whole device pixels at fractional scales such as 125%, so their edges stay sharp and even on both sides, and hovering a toggle no longer blurs its outline.
 - Pressing a slider's handle slightly off centre no longer nudges its value.
+- A nested tray submenu keeps opening on the side its parent opened to, instead of turning back over the tray menu.
 
 ## Releases
 

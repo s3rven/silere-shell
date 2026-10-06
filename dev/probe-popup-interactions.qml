@@ -248,8 +248,8 @@ Item {
         let covered = 0
         for (const anchorX of [0, winW * 0.25, winW * 0.5, winW * 0.75, winW - 200, winW]) {
             TrayMenuState.toggleAt(anchorX, root.targetScreen, null, false, null, traySource)
-            const l1 = Metrics.flyoutX(card.x + card.pad, tray.menuWidth, step, winW)
-            const l2 = Metrics.flyoutX(l1 + 6, tray.menuWidth, step, winW)
+            const l1 = Metrics.flyoutX(card.x + card.pad, tray.menuWidth, step, winW, false)
+            const l2 = Metrics.flyoutX(l1 + 6, tray.menuWidth, step, winW, l1 < card.x)
             const lo = Math.min(l1, l2), hi = Math.max(l1, l2) + step
             if (card.placementSpan.x - tray.reachLeft <= lo
                     && card.placementSpan.y + card.targetWidth + tray.reachRight >= hi) covered++

@@ -63,10 +63,12 @@ Singleton {
         return 1 + 2 * Math.round((scale - 1) * size / 2 * dpr) / (dpr * size)
     }
 
-    function flyoutX(origin: real, rowWidth: real, popupWidth: real, screenWidth: real): real {
+    // a nested submenu keeps the side its parent opened to while it fits there, instead of turning back over the menu
+    function flyoutX(origin: real, rowWidth: real, popupWidth: real, screenWidth: real, preferLeft: bool): real {
         const right = origin + rowWidth + 4
-        const target = right + popupWidth <= screenWidth - 4
-            ? right : origin - popupWidth - 4
+        const left = origin - popupWidth - 4
+        const fitsRight = right + popupWidth <= screenWidth - 4
+        const target = (preferLeft ? left >= 4 || !fitsRight : !fitsRight) ? left : right
         return Math.max(4, Math.min(target, screenWidth - popupWidth - 4))
     }
 

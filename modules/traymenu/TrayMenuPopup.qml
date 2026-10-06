@@ -130,6 +130,7 @@ FittedPopupWindow {
             required property var modelData
             // flyouts live on the stage so the scroll clip cannot cut them off
             property Item ownerFlyout: null
+            property bool ownerOpensLeft: false
             property Flickable ownerScroll: null
             property int menuDepth: 0
 
@@ -309,11 +310,11 @@ FittedPopupWindow {
                 function _syncOrigin(): void {
                     _flyout._origin = _entry.mapToItem(win.stage, 0, 0)
                 }
-                readonly property bool  _flip: _origin.x + _entry.width + 4 + _w > card.winW - 4
+                readonly property bool  _flip: x < _origin.x
                 readonly property real _panelH: Metrics.snap4Up(
                     Math.min(_subCol.implicitHeight + pad * 2, Math.max(48, card.winH - 8)))
                 readonly property real _targetY: Math.max(4 - _origin.y, Math.min(-pad, card.winH - 4 - _origin.y - _panelH))
-                x: Metrics.flyoutX(_origin.x, _entry.width, _w, card.winW)
+                x: Metrics.flyoutX(_origin.x, _entry.width, _w, card.winW, _entry.ownerOpensLeft)
                 y: _origin.y + _targetY
                 width:  _w
                 height: _panelH
@@ -363,6 +364,7 @@ FittedPopupWindow {
                             delegate: _rowDelegate
                             onItemAdded: (index, item) => {
                                 item.ownerFlyout = _flyout
+                                item.ownerOpensLeft = Qt.binding(() => _flyout._flip)
                                 item.ownerScroll = _subScroll
                                 item.menuDepth = _entry.menuDepth + 1
                             }
