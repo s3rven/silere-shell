@@ -1422,7 +1422,8 @@ ShellRoot {
         const glassOn = Compositor.blurBlocker.length > 0 || Theme.glass
             && Theme.menuCard.a < 0.2 && Theme.menuPane.a < 0.2
             && Theme.menuControl.a < 0.2 && Theme.menuCardSolid.a === 1
-            && Theme.controlKnobFill(Theme.accent, false, false, false).a === 1
+            && Theme.controlKnobFill(Theme.accent, false, false, false).a < 0.5
+            && Theme.controlKnobFill(Theme.accent, true, false, false).a === 1
         ShellSettings.surfaceBlur = false
         const unfrostedSolid = !Theme.frosted && !Theme.glass && Theme.popup.a === 1
             && Theme.menuCard.a === 1 && Theme.panel.a < 1
@@ -1433,7 +1434,7 @@ ShellRoot {
         ShellSettings.barOpacity = savedGlass[1]
         ShellSettings.surfaceBlur = savedGlass[2]
         root._check(glassOn && glassOffOpaque,
-            "a translucent bar with matching popups turns the menu to tints, knobs and hover labels stay solid, and an opaque bar keeps it solid")
+            "a translucent bar with matching popups turns the menu and off switch knobs to tints, on knobs and hover labels stay solid, and an opaque bar keeps it solid")
         root._check(unfrostedSolid,
             "with blur off popups and the menu stay solid while the bar keeps its own opacity")
 

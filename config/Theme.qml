@@ -269,8 +269,9 @@ Singleton {
             return mix(subtext, text, pressed ? 0.28 : hovered ? 0.23 : 0.18)
         }
         if (active) return mix(c, text, pressed ? 0.22 : hovered ? 0.12 : 0.0)
-        // solid even over glass: a see-through knob shows its own track through it
-        return mix(menuControlSolid, text, pressed ? 0.42 : hovered ? 0.36 : 0.30)
+        const k = pressed ? 0.42 : hovered ? 0.36 : 0.30
+        // a tint over glass: a fixed grey matches its track once the wallpaper behind is mid-light and vanishes
+        return glass ? withAlpha(text, k) : mix(menuControlSolid, text, k)
     }
 
     readonly property int radiusPanel:   14

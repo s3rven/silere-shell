@@ -45,6 +45,7 @@ settings file carries its own `__version` and migrates separately.
 - A window that closes while the bar is refreshing its window list no longer stays behind as an app icon or a lit workspace until the shell restarts.
 - Turning Background blur on or off with Popups match bar opacity on no longer flashes the menu's sliders and switches light grey.
 - The selected colour swatch sits evenly inside its ring at fractional scales such as 125%, where it sat a pixel to one side.
+- With Popups match bar opacity on, a switch that is off keeps its knob visible over a light wallpaper instead of fading into its track.
 
 ## Releases
 
