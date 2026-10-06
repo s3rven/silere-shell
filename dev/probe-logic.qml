@@ -1603,6 +1603,14 @@ ShellRoot {
                 && Notifications.historyRevision !== revAtCap,
             "a full history reports a revision even when its count cannot move")
         Notifications.clearHistory()
+        Notifications._prependHistory({ id: 251, appName: "Chat", summary: "third", time: 30 })
+        Notifications._prependHistory({ id: 250, appName: "Chat", summary: "second", time: 20 })
+        Notifications._prependHistory({ id: 249, appName: "Chat", summary: "first", time: 10 })
+        Notifications._prependHistory({ id: 252, appName: "Chat", summary: "fourth", time: 30 })
+        root._check(["fourth", "third", "second", "first"].every((s, i) =>
+                Notifications.historyModel.get(i).summary === s),
+            "history lists a burst by arrival even when its popups close newest first")
+        Notifications.clearHistory()
         Notifications._prependHistory({ id: 201, appName: "Alpha", summary: "a1", time: 1 })
         Notifications._prependHistory({ id: 202, appName: "Beta",  summary: "b1", time: 1 })
         Notifications._prependHistory({ id: 203, appName: "Alpha", summary: "a2", time: 1 })

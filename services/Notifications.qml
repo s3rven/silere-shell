@@ -146,10 +146,13 @@ Singleton {
         if (cutUpdates) root._updateTimes = updates
     }
 
+    // by arrival, not by close: the popup stack shows the newest first, so a burst closes newest first
     function _prependHistory(entry): void {
         const e = root._normalizeEntry(entry)
         if (!e) return
-        _history.insert(0, e)
+        let at = 0
+        while (at < _history.count && _history.get(at).time > e.time) at++
+        _history.insert(at, e)
         root.historyRevision++
         root._trimHistory()
     }

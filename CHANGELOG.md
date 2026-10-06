@@ -46,6 +46,7 @@ settings file carries its own `__version` and migrates separately.
 - Turning Background blur on or off with Popups match bar opacity on no longer flashes the menu's sliders and switches light grey.
 - The selected colour swatch sits evenly inside its ring at fractional scales such as 125%, where it sat a pixel to one side.
 - With Popups match bar opacity on, a switch that is off keeps its knob visible over a light wallpaper instead of fading into its track.
+- Notification history keeps messages that arrive together in the order they came, instead of listing the ones that waited behind other popups as the newest.
 
 ## Releases
 
