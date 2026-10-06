@@ -36,11 +36,12 @@ _probe_project() { # $1 = repo root, $2 = probe source, $3 = destination dir
 }
 
 # A root-level required property is the one thing a probe cannot supply, so it is
-# the filter; a delegate declares its own indented well past this, and PanelWindow
-# roots drop out the same way since they all require a screen.
+# the filter; a delegate declares its own indented well past this. A window root
+# needs the Wayland backend these offscreen probes lack, and one built on
+# FittedPopupWindow inherits its required screen, so window roots drop out by name.
 _probe_standalone() { # $1 = directory
     find "$1" -maxdepth 1 -name '*.qml' \
-        ! -exec grep -qE '^ {0,4}required property' {} \; -print
+        ! -exec grep -qE '^ {0,4}required property|^(PanelWindow|FittedPopupWindow) \{' {} \; -print
 }
 
 # Neither Qt.exit() nor Quickshell.exit() ends a Quickshell process, so a probe

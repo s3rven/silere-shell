@@ -27,12 +27,12 @@ if [ ! -S "$wayland_socket" ]; then
     exit 0
 fi
 
-# Every surface requiring a targetScreen, so a new one is covered without editing
-# this list.
+# Every surface requiring a targetScreen, itself or through FittedPopupWindow, so a
+# new one is covered without editing this list.
 if [ "$#" -gt 0 ]; then
     list="$(printf '%s\n' "$@")"
 else
-    list="$(grep -rlE '^ {0,4}required property ShellScreen targetScreen' \
+    list="$(grep -rlE '^ {0,4}required property ShellScreen targetScreen|^FittedPopupWindow \{' \
         --include='*.qml' modules | sort -u)"
     list="$list
 dev/probe-popup-interactions.qml"

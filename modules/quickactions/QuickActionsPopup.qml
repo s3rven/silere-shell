@@ -1,46 +1,19 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import Quickshell
-import Quickshell.Wayland
 import "../../config"
 import "../../services"
 import "../common"
 
-PanelWindow {
+FittedPopupWindow {
     id: win
 
-    required property ShellScreen targetScreen
-    readonly property var popupCard: card
+    open: QuickActionsState.open
+    layerNamespace: "silere-quickactions"
+    popupCard: card
+    onDismissed: QuickActionsState.close()
+    onEscapePressed: QuickActionsState.close()
 
-    readonly property string _output: Compositor.monitorName(win.screen)
-
-    screen:        targetScreen
-    color:         "transparent"
-    exclusiveZone: -1
-    WlrLayershell.namespace: "silere-quickactions"
-    WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-
-    // full screen only to catch the closing click: the compositor recomposites every pixel of a surface Qt redraws, so the card animates in its own narrow window
-    visible: QuickActionsState.open || cardWin.visible
-    // layer surfaces stack in map order: mapped after the card, this window would cover it and take its clicks
-    property bool _cardMayMap: false
-    onVisibleChanged: {
-        if (visible) Qt.callLater(() => win._cardMayMap = win.visible)
-        else win._cardMayMap = false
-    }
-
-    anchors { top: true; left: true; right: true; bottom: true }
-
-    Shortcut { sequence: "Escape"; context: Qt.ApplicationShortcut; enabled: QuickActionsState.open; onActivated: QuickActionsState.close() }
-
-    Connections {
-        target: Compositor
-        function onWorkspaceActivated(output) {
-            if (output === win._output && QuickActionsState.open) QuickActionsState.close()
-        }
-    }
     Connections {
         target: ShellSettings
         function onBarPositionChanged() { if (QuickActionsState.open) QuickActionsState.close() }
@@ -51,33 +24,6 @@ PanelWindow {
             if (QuickActionsState.open) card.forceActiveFocus()
         }
     }
-
-    OutsideTapGuard {
-        id: _tapGuard
-        open: QuickActionsState.open
-    }
-
-    Item { id: _fillArea; anchors.fill: parent }
-    mask: Region { item: QuickActionsState.open ? _fillArea : null }
-    // an empty region, not none: the silere-quickactions layer rule would otherwise blur the whole screen behind this window
-    BackgroundEffect.blurRegion: Region { item: null }
-
-    function _outsideCard(p: point): bool {
-        return p.x < card.x || p.x > card.x + card.width ||
-            p.y < card.y || p.y > card.y + card.height
-    }
-
-    function _closeIfOutside(p: point): void {
-        if (!_tapGuard.ignoring && _outsideCard(p)) QuickActionsState.close()
-    }
-
-    TapHandler {
-        id: _dismiss
-        enabled: QuickActionsState.open
-        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-        onTapped: win._closeIfOutside(_dismiss.point.position)
-    }
-
 
     component QuickActionRow: Item {
         id: _row
@@ -215,160 +161,104 @@ PanelWindow {
         }
     }
 
-    PanelWindow {
-        id: cardWin
+    PopupShadow { card: card }
 
-        // room for the shadow; snapped so a moving anchor rarely reconfigures the surface
-        readonly property int _slack: 48
-        readonly property real _screenW: win.screen ? win.screen.width : 0
-        readonly property int _left: Math.max(0,
-            64 * Math.floor((card.placementSpan.x - _slack) / 64))
-        readonly property int _right: Math.min(Math.ceil(_screenW),
-            64 * Math.ceil((card.placementSpan.y + card.targetWidth + _slack) / 64))
+    FloatingPopupCard {
+        id: card
+        win: win
+        open: QuickActionsState.open
+        anchorX: QuickActionsState.effectiveAnchorX
+        barBottom: QuickActionsState.barBottom
 
-        screen:        win.screen
-        color:         "transparent"
-        exclusiveZone: -1
-        WlrLayershell.namespace: "silere-quickactions"
-        WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.keyboardFocus: QuickActionsState.open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
-
-        visible: (QuickActionsState.open || card.opacity > 0.001) && win._cardMayMap
-
-        anchors { top: true; bottom: true; left: true }
-        margins.left: cardWin._left
-        implicitWidth: Math.max(1, cardWin._right - cardWin._left)
-
-        // the card alone: anywhere else in the strip has to fall through to the closing window below
-        mask: Region {
-            item: QuickActionsState.open ? card : null
-            Region { item: _stage; intersection: Intersection.Intersect }
-        }
-        BackgroundEffect.blurRegion: Region {
-            item: card.blurItem
-            radius: Math.round(card.radius)
-            // a region rebuilds only when one of its own items moves, and the stage carries every card x shift
-            Region { item: _stage; intersection: Intersection.Intersect }
+        readonly property int pad: 6
+        // label and state pill both grow with the font, so a fixed width elides three of the
+        // four rows at raised uiScale. never below 236: the pill's padding and floor do not
+        // shrink with the font, so scaling down costs the label more than it saves
+        readonly property int contentW: Math.max(236,
+            Metrics.snap4(236 * Settings.fontSize / 12))
+        width: contentW + pad * 2
+        height: Metrics.snap4Up(_rows.implicitHeight + pad * 2)
+        // a row can appear or disappear (radios toggled, a profile daemon starting) while the card is open
+        MotionBehavior on height {
+            gate: card.geometryMotionReady
+            NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
         }
 
-        // screen coordinates: the card places itself as it did in a full-screen window
-        Item {
-            id: _stage
-            x: -cardWin._left
-            width: cardWin._screenW
-            height: parent.height
+        Component.onCompleted: if (QuickActionsState.open) card.forceActiveFocus()
 
-            // hyprland hands every click to the exclusive-focus surface, so one outside the card lands here, not on the window below; a MouseArea because pointer handlers drop points outside their window, oversized because a click on another monitor arrives offset by the layout
-            MouseArea {
-                id: _outsideCatch
-                anchors.fill: parent
-                anchors.margins: -16384
-                enabled: QuickActionsState.open
-                acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-                onPressed: mouse => mouse.accepted = win._outsideCard(_outsideCatch.mapToItem(_stage, mouse.x, mouse.y))
-                onClicked: mouse => win._closeIfOutside(_outsideCatch.mapToItem(_stage, mouse.x, mouse.y))
+        Column {
+            id: _rows
+            x: card.pad; y: card.pad
+            width: card.contentW
+            spacing: 1
+
+            QuickActionRow {
+                glyph: Notifications.silencingActive ? "󰂛" : "󰂚"
+                label: "Do Not Disturb"
+                active: Notifications.dnd
+                highlighted: Notifications.silencingActive
+                stateText: Notifications.dnd ? "On"
+                    : Notifications.effectiveDnd ? "Quiet hours"
+                    : Notifications.fullscreenSilenced ? "Fullscreen" : "Off"
+                onTriggered: Notifications.toggleDnd()
             }
-
-            PopupShadow { card: card }
-
-            FloatingPopupCard {
-                id: card
-                win: win
-                open: QuickActionsState.open
-                anchorX: QuickActionsState.effectiveAnchorX
-                barBottom: QuickActionsState.barBottom
-
-                readonly property int pad: 6
-                // label and state pill both grow with the font, so a fixed width elides three of the
-                // four rows at raised uiScale. never below 236: the pill's padding and floor do not
-                // shrink with the font, so scaling down costs the label more than it saves
-                readonly property int contentW: Math.max(236,
-                    Metrics.snap4(236 * Settings.fontSize / 12))
-                width: contentW + pad * 2
-                height: Metrics.snap4Up(_rows.implicitHeight + pad * 2)
-                // a row can appear or disappear (radios toggled, a profile daemon starting) while the card is open
-                MotionBehavior on height {
-                    gate: card.geometryMotionReady
-                    NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
-                }
-
-                Component.onCompleted: if (QuickActionsState.open) card.forceActiveFocus()
-
-                Column {
-                    id: _rows
-                    x: card.pad; y: card.pad
-                    width: card.contentW
-                    spacing: 1
-
-                    QuickActionRow {
-                        glyph: Notifications.silencingActive ? "󰂛" : "󰂚"
-                        label: "Do Not Disturb"
-                        active: Notifications.dnd
-                        highlighted: Notifications.silencingActive
-                        stateText: Notifications.dnd ? "On"
-                            : Notifications.effectiveDnd ? "Quiet hours"
-                            : Notifications.fullscreenSilenced ? "Fullscreen" : "Off"
-                        onTriggered: Notifications.toggleDnd()
-                    }
-                    QuickActionRow {
-                        visible: NightLight.toolAvailable
-                        glyph: "󰖔"
-                        label: "Night Light"
-                        active: NightLight.enabled
-                        error: NightLight.lastError.length > 0
-                        detailText: NightLight.lastError
-                        stateText: NightLight.lastError.length > 0 ? "Failed"
-                            : NightLight.enabled ? "On" : "Off"
-                        onTriggered: NightLight.toggle()
-                    }
-                    QuickActionRow {
-                        visible: PowerProfiles.available
-                        glyph: PowerProfiles.glyph.length > 0 ? PowerProfiles.glyph : "󰾅"
-                        label: "Power Mode"
-                        checkable: false
-                        enabled: PowerProfiles.profile.length > 0 && !PowerProfiles.changing
-                        active: PowerProfiles.profile === "performance"
-                        error: PowerProfiles.lastError.length > 0
-                        warning: PowerProfiles.degraded
-                        detailText: PowerProfiles.lastError.length > 0 ? PowerProfiles.lastError
-                            : PowerProfiles.degraded ? "Performance is limited by the system" : ""
-                        stateText: PowerProfiles.changing ? "Changing…"
-                                 : PowerProfiles.lastError.length > 0 ? "Failed"
-                                 : PowerProfiles.label.length > 0 ? PowerProfiles.label
-                                 : "Unavailable"
-                        onTriggered: PowerProfiles.cycle()
-                    }
-                    QuickActionRow {
-                        visible: Network.toolAvailable && Network.hasWifiDevice
-                        enabled: QuickActionsState.wifiControllable
-                        glyph: Network.wifiEnabled ? "󰤨" : "󰤭"
-                        label: "Wi-Fi"
-                        active: Network.wifiEnabled
-                        warning: Network.wifiHardBlocked
-                        stateText: Network.wifiHardBlocked ? "Blocked" : Network.wifiEnabled ? "On" : "Off"
-                        detailText: Network.wifiHardBlocked ? "Blocked by the hardware switch" : ""
-                        onTriggered: Network.toggleWifi()
-                    }
-                    QuickActionRow {
-                        visible: Bluetooth.available
-                        enabled: QuickActionsState.btControllable
-                        glyph: Bluetooth.enabled ? "󰂯" : "󰂲"
-                        label: "Bluetooth"
-                        active: Bluetooth.enabled
-                        warning: Bluetooth.hardBlocked
-                        stateText: Bluetooth.hardBlocked ? "Blocked" : Bluetooth.enabled ? "On" : "Off"
-                        detailText: Bluetooth.hardBlocked ? "Blocked by the hardware switch" : ""
-                        onTriggered: Bluetooth.toggle()
-                    }
-                    QuickActionRow {
-                        visible: QuickActionsState.airplaneAvailable
-                        glyph: "󰀝"
-                        label: "Airplane Mode"
-                        active: !QuickActionsState.radiosOn
-                        stateText: QuickActionsState.radiosOn ? "Off" : "On"
-                        onTriggered: QuickActionsState.toggleAirplane()
-                    }
-                }
+            QuickActionRow {
+                visible: NightLight.toolAvailable
+                glyph: "󰖔"
+                label: "Night Light"
+                active: NightLight.enabled
+                error: NightLight.lastError.length > 0
+                detailText: NightLight.lastError
+                stateText: NightLight.lastError.length > 0 ? "Failed"
+                    : NightLight.enabled ? "On" : "Off"
+                onTriggered: NightLight.toggle()
+            }
+            QuickActionRow {
+                visible: PowerProfiles.available
+                glyph: PowerProfiles.glyph.length > 0 ? PowerProfiles.glyph : "󰾅"
+                label: "Power Mode"
+                checkable: false
+                enabled: PowerProfiles.profile.length > 0 && !PowerProfiles.changing
+                active: PowerProfiles.profile === "performance"
+                error: PowerProfiles.lastError.length > 0
+                warning: PowerProfiles.degraded
+                detailText: PowerProfiles.lastError.length > 0 ? PowerProfiles.lastError
+                    : PowerProfiles.degraded ? "Performance is limited by the system" : ""
+                stateText: PowerProfiles.changing ? "Changing…"
+                         : PowerProfiles.lastError.length > 0 ? "Failed"
+                         : PowerProfiles.label.length > 0 ? PowerProfiles.label
+                         : "Unavailable"
+                onTriggered: PowerProfiles.cycle()
+            }
+            QuickActionRow {
+                visible: Network.toolAvailable && Network.hasWifiDevice
+                enabled: QuickActionsState.wifiControllable
+                glyph: Network.wifiEnabled ? "󰤨" : "󰤭"
+                label: "Wi-Fi"
+                active: Network.wifiEnabled
+                warning: Network.wifiHardBlocked
+                stateText: Network.wifiHardBlocked ? "Blocked" : Network.wifiEnabled ? "On" : "Off"
+                detailText: Network.wifiHardBlocked ? "Blocked by the hardware switch" : ""
+                onTriggered: Network.toggleWifi()
+            }
+            QuickActionRow {
+                visible: Bluetooth.available
+                enabled: QuickActionsState.btControllable
+                glyph: Bluetooth.enabled ? "󰂯" : "󰂲"
+                label: "Bluetooth"
+                active: Bluetooth.enabled
+                warning: Bluetooth.hardBlocked
+                stateText: Bluetooth.hardBlocked ? "Blocked" : Bluetooth.enabled ? "On" : "Off"
+                detailText: Bluetooth.hardBlocked ? "Blocked by the hardware switch" : ""
+                onTriggered: Bluetooth.toggle()
+            }
+            QuickActionRow {
+                visible: QuickActionsState.airplaneAvailable
+                glyph: "󰀝"
+                label: "Airplane Mode"
+                active: !QuickActionsState.radiosOn
+                stateText: QuickActionsState.radiosOn ? "Off" : "On"
+                onTriggered: QuickActionsState.toggleAirplane()
             }
         }
     }
