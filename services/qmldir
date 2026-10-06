@@ -12,6 +12,7 @@ singleton SysInfo       1.0 SysInfo.qml
 singleton Compositor    1.0 Compositor.qml
 CompositorHyprland      1.0 CompositorHyprland.qml
 CompositorNiri          1.0 CompositorNiri.qml
+CompositorHyprlandGrab  1.0 CompositorHyprlandGrab.qml
 singleton WindowActions 1.0 WindowActions.qml
 singleton HyprDispatch  1.0 HyprDispatch.qml
 singleton IconResolver  1.0 IconResolver.qml

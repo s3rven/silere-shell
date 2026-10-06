@@ -37,6 +37,7 @@ Singleton {
     readonly property string focusedMonitor:  _be ? _be.focusedMonitor : ""
     readonly property int focusedWorkspaceRef: _be ? _be.focusedWorkspaceRef : -1
     readonly property bool overviewActive:    _be ? _be.overviewActive : false
+    readonly property Component popupGrab:    _be ? _be.popupGrab : null
     readonly property var specialOutputs:     _be ? _be.specialOutputs : []
     readonly property bool activeFullscreen: isNiri ? !!(_be && _be.activeFullscreen)
         : !!(activeToplevel && activeToplevel.fullscreen)

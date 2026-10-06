@@ -18,6 +18,7 @@ PanelWindow {
     // room the strip keeps past the card on each side, for what opens beside it
     property real reachLeft: 0
     property real reachRight: 0
+    readonly property PanelWindow cardWindow: cardWin
 
     signal dismissed()
     signal escapePressed()
@@ -31,7 +32,12 @@ PanelWindow {
         }
     }
 
-    // full screen only to catch the closing click: the compositor recomposites every pixel of a surface Qt redraws, so the card animates in its own narrow window
+    // a compositor that grabs outside clicks for the card window needs no full-screen catcher
+    readonly property bool _grabsClicks: Compositor.popupGrab !== null
+    property QtObject _grab: null
+    Component.onCompleted: if (Compositor.popupGrab) win._grab = Compositor.popupGrab.createObject(win, { popup: win })
+
+    // full screen only to catch the closing click, and otherwise an input-less pixel that keeps the card's map order: every window redraws while any animation runs, and the compositor recomposites every pixel of a surface Qt redraws, which is also why the card animates in its own narrow window
     screen:        targetScreen
     color:         "transparent"
     exclusiveZone: -1
@@ -47,7 +53,9 @@ PanelWindow {
         else win._cardMayMap = false
     }
 
-    anchors { top: true; left: true; right: true; bottom: true }
+    anchors { top: true; left: true; right: !win._grabsClicks; bottom: !win._grabsClicks }
+    implicitWidth: 1
+    implicitHeight: 1
 
     Shortcut { sequence: "Escape"; context: Qt.ApplicationShortcut; enabled: win.open; onActivated: win.escapePressed() }
 
@@ -57,7 +65,7 @@ PanelWindow {
     }
 
     Item { id: _fillArea; anchors.fill: parent }
-    mask: Region { item: win.open ? _fillArea : null }
+    mask: Region { item: win.open && !win._grabsClicks ? _fillArea : null }
     // an empty region, not none: the popup's layer rule would otherwise blur the whole screen behind this window
     BackgroundEffect.blurRegion: Region { item: null }
 
@@ -123,7 +131,7 @@ PanelWindow {
         margins.left: cardWin._left
         implicitWidth: Math.max(1, cardWin._right - cardWin._left)
 
-        // the card alone: anywhere else in the strip has to fall through to the closing window below. With a surface open beside it the whole strip, so a gap between the two still reaches the outside catch
+        // the card alone: anywhere else in the strip has to fall through, to the closing window or the compositor's grab. With a surface open beside it the whole strip, so a gap between the two still reaches the outside catch
         mask: Region {
             item: !win.open ? null : win._surfaceOpen ? _stage : win.popupCard
             Region { item: _stage; intersection: Intersection.Intersect }

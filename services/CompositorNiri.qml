@@ -118,6 +118,8 @@ QtObject {
     }
 
     readonly property bool overviewActive: root._overview
+    // niri hands a click outside a popup to whatever is under it, so popups keep their full-screen dismiss windows
+    readonly property Component popupGrab: null
     readonly property var specialOutputs: []
 
     readonly property var workspaces: {

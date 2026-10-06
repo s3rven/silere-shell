@@ -416,7 +416,7 @@ section "compositor backend contract"
 compositor_contract_missing=""
 for member in workspaces toplevels workspaceToplevels activeToplevel focusedMonitor \
               focusedWorkspaceRef overviewActive specialOutput monitorName focusWorkspace \
-              moveActiveToWorkspace focusToplevel refreshToplevels; do
+              moveActiveToWorkspace focusToplevel refreshToplevels popupGrab; do
   grep -qE "^[[:space:]]*(readonly[[:space:]]+)?(property[[:space:]]+[A-Za-z<>]+[[:space:]]+|function[[:space:]]+)${member}\b" \
     services/Compositor.qml || continue
   for adapter in services/CompositorHyprland.qml services/CompositorNiri.qml; do
@@ -1979,10 +1979,15 @@ fi
 # silently gets stale focus back.
 facade_leaks="$(grep -rln 'import Quickshell\.Hyprland' --include='*.qml' \
   modules config services shell.qml 2>/dev/null \
-  | grep -v '^services/CompositorHyprland\.qml$' || true)"
+  | grep -vE '^services/CompositorHyprland(Grab)?\.qml$' || true)"
+# focus grabbing is an optional Quickshell plugin: declared in the adapter itself, a build
+# without it would fail the whole adapter instead of only popup dismissal
+inline_grab="$(grep -lE 'HyprlandFocusGrab[[:space:]]*\{' services/CompositorHyprland.qml || true)"
 if [ -n "$facade_leaks" ]; then
-  fail "only services/CompositorHyprland.qml may import Quickshell.Hyprland:"
+  fail "only services/CompositorHyprland.qml and its grab may import Quickshell.Hyprland:"
   while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$facade_leaks"
+elif [ -n "$inline_grab" ]; then
+  fail "HyprlandFocusGrab belongs in services/CompositorHyprlandGrab.qml, loaded by Qt.createComponent, so a Quickshell built without it still loads the adapter"
 else
   ok "compositor facade" "Quickshell.Hyprland stays behind the Hyprland adapter"
 fi
@@ -2140,8 +2145,9 @@ for f in modules/*/*.qml; do
     undismissable_popups="$undismissable_popups $(basename "$f")"
   fi
 done
-# where the compositor routes pointer events normally (niri, hyprland 0.57), only a
-# catcher on the other monitors sees that click, and it has to know every popup's screen
+# where the compositor routes pointer events normally (niri, hyprland 0.57 without its
+# popup grab), only a catcher on the other monitors sees that click, and it has to know
+# every popup's screen
 open_screen_binding="$(awk '/readonly property ShellScreen openPopupScreen:/{take=1} take{print} take && /: null[[:space:]]*$/{exit}' shell.qml)"
 unscreened_popups=""
 for popup_state in MenuState CalendarState TrayMenuState QuickActionsState; do

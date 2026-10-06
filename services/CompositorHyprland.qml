@@ -322,6 +322,13 @@ QtObject {
 
     // hyprland has no compositor-side overview; OverviewState drives its own (overviewIsLive is false)
     readonly property bool overviewActive: false
+    // 0.56 hands a click outside a popup to its exclusive card window; from 0.57 it goes to whatever is under it, and this grab closes the popup instead, on any monitor. Without it popups keep their full-screen dismiss windows
+    readonly property Component popupGrab: {
+        const grab = Qt.createComponent("CompositorHyprlandGrab.qml")
+        if (grab.status === Component.Ready) return grab
+        console.warn("silere-shell: Quickshell has no Hyprland focus grab; popups fall back to a full-screen dismiss window:", grab.errorString())
+        return null
+    }
     readonly property var specialOutputs: Object.keys(root._specialOn)
 
     // quickshell 0.3.1 prunes a workspace created while its startup snapshot is in flight and ignores hyprland 0.57 id changes; a window still names the workspace either way

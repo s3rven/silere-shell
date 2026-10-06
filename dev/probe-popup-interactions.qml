@@ -231,6 +231,20 @@ Item {
                 "a click on the " + f.name + " card keeps it open")
             f.popup._closeIfOutside(Qt.point(-5000, 40))
             root._check(!f.state.open, "a click on another monitor closes " + f.name)
+
+            const grab = f.popup._grab
+            const grabbed = Compositor.popupGrab !== null
+            root._check(grabbed === Compositor.isHyprland
+                    && f.popup.anchors.right === !grabbed && f.popup.anchors.bottom === !grabbed
+                    && (grab !== null) === grabbed,
+                f.name + " covers the screen to catch outside clicks only off hyprland, which has a focus grab instead")
+            if (grab) {
+                f.state.open = true
+                root._check(grab.windows.length === 1 && grab.windows[0] === f.popup.cardWindow,
+                    "the " + f.name + " focus grab keeps the pointer for the card window")
+                grab.cleared()
+                root._check(!f.state.open, "a cleared focus grab closes " + f.name)
+            }
         }
     }
 

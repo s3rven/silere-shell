@@ -246,8 +246,9 @@ ShellRoot {
         surface: Component { QuickActionsPopup { targetScreen: _quickActionsPopup.latchedScreen } }
     }
 
+    // a click on another monitor closes the popup; a compositor with a popup grab already hands it to the popup
     Variants {
-        model: root.smokeTest ? [] : Quickshell.screens
+        model: root.smokeTest || Compositor.popupGrab !== null ? [] : Quickshell.screens
         delegate: Scope {
             id: _dismissScope
             required property ShellScreen modelData
