@@ -89,7 +89,7 @@ AnchoredPopupState {
     readonly property var settingsTree: [
         { glyph: "󰉦", label: "Appearance", children: [
             { glyph: "󰉦", label: "Theme",       section: "theme",
-              description: "Colors, opacity, and outlines" },
+              description: "Colors, opacity, blur, and shadows" },
             { glyph: "󰍉", label: "Interface", section: "interface",
               description: "Font, scale, contrast, motion, and displays" }
         ]},
