@@ -33,6 +33,13 @@ ShellRoot {
         id: probeAnchor
         property real menuAnchorX: 42
     }
+    // a faded control fill, as on a slider or switch track
+    Rectangle {
+        id: glassFadeProbe
+        visible: false
+        color: Theme.menuControl
+        ColorFade on color {}
+    }
     QtObject {
         id: invalidProbeAnchor
         property string menuAnchorX: "not-a-number"
@@ -1398,9 +1405,19 @@ ShellRoot {
                 && blended.a === 1 && tinted.a < 0.3 && tinted.r > 0.9,
             "blend matches mix for opaque colours and keeps a tint over glass a tint")
         const savedGlass = [ShellSettings.popupMatchBarOpacity, ShellSettings.barOpacity, ShellSettings.surfaceBlur]
-        ShellSettings.popupMatchBarOpacity = true
+        const reduceGlassWas = ShellSettings.reduceMotion
+        ShellSettings.reduceMotion = false
         ShellSettings.barOpacity = 0.62
+        ShellSettings.surfaceBlur = false
+        ShellSettings.popupMatchBarOpacity = true
+        // a string, not the colour: a value-type read stays tied to the property and would follow it
+        const solidFill = String(glassFadeProbe.color)
         ShellSettings.surfaceBlur = true
+        // a fade between an opaque slab and a see-through tint passes through a half-opaque grey
+        root._check(Theme.glass && Qt.colorEqual(glassFadeProbe.color, Theme.menuControl)
+                && !Qt.colorEqual(solidFill, Theme.menuControl),
+            "turning blur on switches faded control fills to glass at once instead of fading through a light grey")
+        ShellSettings.reduceMotion = reduceGlassWas
         // a machine whose compositor blocks blur never frosts, so only the solid half applies there
         const glassOn = Compositor.blurBlocker.length > 0 || Theme.glass
             && Theme.menuCard.a < 0.2 && Theme.menuPane.a < 0.2

@@ -144,7 +144,15 @@ Singleton {
     // when popups match a translucent bar the menu turns to glass with them: its pane, cards and controls
     // become tints over the one translucent fill, so the blur reads through every layer instead of
     // stopping at solid slabs. Each tint is the opaque step it replaces, taken over the layer below
-    readonly property bool glass: popup.a < 1
+    // latched behind the shift window: a colour fade from an opaque slab to a see-through tint
+    // passes through a half-opaque grey, which flashed every faded control on a blur toggle
+    readonly property bool _glassWanted: popup.a < 1
+    property bool glass: false
+    Component.onCompleted: root.glass = root._glassWanted
+    on_GlassWantedChanged: {
+        _shiftWindow.restart()
+        root.glass = root._glassWanted
+    }
     function _over(total: real, under: real): real { return 1 - (1 - total) / (1 - under) }
     readonly property real _paneK: _elevK * (_n ? (_hc ? 0.050 : 0.030) : (_hc ? 0.055 : 0.020))
     readonly property real _cardK: _elevK * (_n ? (_hc ? 0.090 : 0.060) : (_hc ? 0.100 : 0.070))

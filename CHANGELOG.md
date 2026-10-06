@@ -42,6 +42,7 @@ settings file carries its own `__version` and migrates separately.
 - A nested tray submenu keeps opening on the side its parent opened to, instead of turning back over the tray menu.
 - With Popups match bar opacity on, tray submenus blur what is behind them like the tray menu itself, instead of showing it sharp.
 - A window that closes while the bar is refreshing its window list no longer stays behind as an app icon or a lit workspace until the shell restarts.
+- Turning Background blur on or off with Popups match bar opacity on no longer flashes the menu's sliders and switches light grey.
 
 ## Releases
 
