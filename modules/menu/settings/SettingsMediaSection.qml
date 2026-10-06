@@ -71,12 +71,6 @@ Column {
             }
             // the preset names say nothing about what they cost; the shape changes both
             HintText { text: Media.visualizerLabel + ". Eco uses the least CPU." }
-            CollapsibleSection {
-                expanded: ShellSettings.reduceMotion
-                HintText {
-                    text: "Reduce motion is on, so the visualizer stays off."
-                }
-            }
         }
     }
 }
