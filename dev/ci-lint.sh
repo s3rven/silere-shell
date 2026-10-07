@@ -205,6 +205,11 @@ for pair in $shadow_pairs; do
   module="${pair#*:}"
   while IFS= read -r f; do
     [ "$f" = "./services/$local_name.qml" ] && continue
+    # an aliased import cannot shadow the local singleton
+    awk -v module="$module" '
+      $1 == "import" && $2 == module && $3 != "as" && $4 != "as" { found=1 }
+      END { exit !found }
+    ' "$f" || continue
     grep -qE '^import "(\.\./)*services"' "$f" \
       && shadowed="$shadowed  $f imports $module beside the services directory, shadowing $local_name"$'\n'
   done < <(grep -rlF "import $module" --include='*.qml' --exclude-dir='.?*' . || true)
