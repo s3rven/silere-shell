@@ -1,7 +1,6 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import Quickshell
 import "../../config"
 import "../../services"
 import "../common"
@@ -39,11 +38,6 @@ Item {
 
     function _runAction(command, title: string): void {
         MenuState.close()
-        // a test copy must never lock, suspend or end the real session
-        if (Quickshell.env("SILERE_SANDBOX") === "1") {
-            console.info("silere-shell: sandboxed power action skipped:", command.join(" "))
-            return
-        }
         SystemTools.runOrNotify(command, title)
     }
 

@@ -99,6 +99,11 @@ Singleton {
 
     function runOrNotify(command, failTitle: string): void {
         if (!command || command.length === 0) return
+        // a test copy must never lock, suspend or end the real session
+        if (Quickshell.env("SILERE_SANDBOX") === "1") {
+            console.info("silere-shell: sandboxed power action skipped:", command.join(" "))
+            return
+        }
         if (!root.hasNotifySend) {
             Quickshell.execDetached(command)
             return
