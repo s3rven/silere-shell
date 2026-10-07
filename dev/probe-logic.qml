@@ -3369,6 +3369,12 @@ ShellRoot {
         HyprDispatch.useLua = false
         root._check(HyprDispatch.exitCommand()[4] === "exit",
             "a classic config logs out with the exit dispatcher")
+        root._check(HyprDispatch._text("exec", "'a b'") === "exec 'a b'",
+            "a classic config launches through the exec dispatcher")
+        HyprDispatch.useLua = true
+        root._check(HyprDispatch._text("exec", "'q\"x' 'back\\slash'\n")
+                === "hl.dsp.exec_cmd(\"'q\\\"x' 'back\\\\slash'\\n\")",
+            "a Lua launch escapes quotes, backslashes and newlines for the Lua string")
         HyprDispatch.useLua = luaWas
 
         const spacing = ShellSettings.schemaFor("barSpacing")

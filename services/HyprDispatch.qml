@@ -10,7 +10,7 @@ Singleton {
     property bool useLua: false
 
     function _quote(value): string {
-        return "\"" + String(value).replace(/\\/g, "\\\\").replace(/"/g, "\\\"") + "\""
+        return "\"" + String(value).replace(/\\/g, "\\\\").replace(/"/g, "\\\"").replace(/\n/g, "\\n") + "\""
     }
 
     function _value(value): string {
@@ -29,6 +29,8 @@ Singleton {
             return "hl.dsp.focus({ window = " + root._quote(args) + " })"
         if (dispatcher === "exit")
             return "hl.dsp.exit()"
+        if (dispatcher === "exec")
+            return "hl.dsp.exec_cmd(" + root._quote(args) + ")"
         return ""
     }
 
@@ -60,6 +62,17 @@ Singleton {
     function exitCommand(): var {
         return ["sh", "-c", "command -v hyprshutdown >/dev/null 2>&1 && exec hyprshutdown; exec hyprctl dispatch \"$1\"",
             "sh", root._text("exit", "")]
+    }
+
+    // hyprland runs exec through sh -c, so every word is quoted for that shell; a refused dispatch starts it here instead
+    function launch(argv): void {
+        if (!SystemTools.ready || !SystemTools.hasHyprctl) {
+            Quickshell.execDetached(argv)
+            return
+        }
+        const words = argv.map(w => "'" + String(w).replace(/'/g, "'\\''") + "'")
+        Quickshell.execDetached(["sh", "-c", "hyprctl dispatch \"$1\" >/dev/null 2>&1 || { shift; exec \"$@\"; }",
+            "sh", root._text("exec", words.join(" "))].concat(argv))
     }
 
     // chain in one sh: detached hyprctl processes land out of order, and --batch mangles the quoted lua-framework calls

@@ -264,7 +264,7 @@ Singleton {
     function openSoundSettings(): bool {
         const argv = Settings.soundSettingsCommand
         if (argv.length === 0) return false
-        Quickshell.execDetached(argv)
+        Compositor.launch(argv)
         return true
     }
     readonly property bool hasSoundSettings: Settings.soundSettingsCommand.length > 0

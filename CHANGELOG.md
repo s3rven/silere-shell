@@ -49,6 +49,7 @@ settings file carries its own `__version` and migrates separately.
 - With Popups match bar opacity on, a switch that is off keeps its knob visible over a light wallpaper instead of fading into its track.
 - Notification history keeps messages that arrive together in the order they came, instead of listing the ones that waited behind other popups as the newest.
 - With more than one media player open, the media card and bar show the one you used last, the same one the media keys control, instead of whichever opened first.
+- The lock screen and the sound mixer opened from Silere keep running when the shell restarts, updates or crashes, instead of closing with it.
 
 ## Releases
 

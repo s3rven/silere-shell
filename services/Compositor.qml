@@ -82,6 +82,17 @@ Singleton {
         if (root._be) root._be.refreshToplevels()
     }
 
+    // apps start in the session, not in this service: a shell restart or crash would close them, the lock screen included
+    function launch(argv): void {
+        if (!argv || argv.length === 0) return
+        const words = []
+        for (let i = 0; i < argv.length; i++) words.push(String(argv[i]))
+        if (root.isHyprland) HyprDispatch.launch(words)
+        else if (root.isNiri)
+            Quickshell.execDetached(["sh", "-c", "niri msg action spawn -- \"$@\" >/dev/null 2>&1 || exec \"$@\"", "sh"].concat(words))
+        else Quickshell.execDetached(words)
+    }
+
     // the adapter is built with the facade, not on first read: its event socket and
     // rawEvent subscription have to be live before anything asks for a workspace
     Loader {
