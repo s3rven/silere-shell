@@ -51,12 +51,13 @@ QtObject {
         ctl._wpctlGap.restart()
     }
 
-    property real targetVolume: ready ? ctl._clampVolume(audio.volume) : 0
+    // audio can notify null before ready re-evaluates, so guard it directly
+    property real targetVolume: ready && audio ? ctl._clampVolume(audio.volume) : 0
     property bool pendingApply: false
     property bool _componentReady: false
 
     readonly property real effectiveVolume: ctl._clampVolume(
-        pendingApply ? targetVolume : (ready ? audio.volume : 0))
+        pendingApply ? targetVolume : (ready && audio ? audio.volume : 0))
     property bool _pendingMuted: false
     property bool _desiredMuted: false
     property bool _muteWritePending: false
