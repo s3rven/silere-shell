@@ -152,6 +152,12 @@ Item {
             spacing: 0
 
             CollapsingText {
+                text:     "󰅶 "
+                color:    root._cSub
+                animate:  root._animatable
+                expanded: Idle.keepAwake
+            }
+            CollapsingText {
                 text:     "󰂛 "
                 color:    root._cSub
                 animate:  root._animatable
@@ -194,6 +200,7 @@ Item {
     readonly property string accessibleName: "Clock, " + DateTime.cachedHour + ":" + DateTime.cachedMinute
         + (DateTime.cachedAmPm.length > 0 ? " " + DateTime.cachedAmPm : "")
         + ", " + DateTime.cachedWeekday + " " + DateTime.cachedMonthDay
+        + (Idle.keepAwake ? ", Keep Awake" : "")
         + (Notifications.effectiveDnd ? ", Do Not Disturb" : "")
     Accessible.role: Accessible.Button
     Accessible.name: root.accessibleName

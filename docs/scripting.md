@@ -19,7 +19,7 @@ the same calls without the path: `silere ipc menu toggle`, and `silere ipc` alon
 | `menu tab <n>` | the menu on `0` Home, `1` Settings or `2` Notifications |
 | `menu settings <name>` | Settings on one page — names below |
 | `calendar toggle` | the calendar |
-| `quickActions toggle` | Do Not Disturb, night light, power mode, Wi-Fi, Bluetooth and airplane mode |
+| `quickActions toggle` | Do Not Disturb, keep awake, night light, power mode, Wi-Fi, Bluetooth and airplane mode |
 
 `menu`, `calendar` and `quickActions` each take `close` as well as `toggle`, for a keybind
 that dismisses without opening anything.
@@ -35,6 +35,7 @@ without a panel appearing.
 | call | does |
 |---|---|
 | `quickActions dnd` | turns Do Not Disturb on or off |
+| `quickActions keepAwake` | holds off idle dimming, locking and sleep until called again or the shell restarts |
 | `quickActions nightLight` | turns night light on or off |
 | `quickActions powerMode` | steps to the next power profile |
 | `quickActions wifi` | turns Wi-Fi on or off |

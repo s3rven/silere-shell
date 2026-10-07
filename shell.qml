@@ -246,6 +246,11 @@ ShellRoot {
         surface: Component { QuickActionsPopup { targetScreen: _quickActionsPopup.latchedScreen } }
     }
 
+    LazyLoader {
+        active: Idle.keepAwake && !root.smokeTest
+        component: KeepAwakeSurface {}
+    }
+
     // a click on another monitor closes the popup; a compositor with a popup grab already hands it to the popup
     Variants {
         model: root.smokeTest || Compositor.popupGrab !== null ? [] : Quickshell.screens

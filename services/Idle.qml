@@ -26,4 +26,8 @@ Singleton {
         timeout: 600              // seconds — aligned with hypridle's screen-blank stage
         respectInhibitors: true
     }
+
+    // session only: a restart or a crash must never leave the screen awake; shell.qml holds the inhibitor
+    property bool keepAwake: false
+    function toggleKeepAwake(): void { root.keepAwake = !root.keepAwake }
 }

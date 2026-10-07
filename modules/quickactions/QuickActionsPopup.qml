@@ -203,6 +203,13 @@ FittedPopupWindow {
                 onTriggered: Notifications.toggleDnd()
             }
             QuickActionRow {
+                glyph: Idle.keepAwake ? "󰅶" : "󰛊"
+                label: "Keep Awake"
+                active: Idle.keepAwake
+                stateText: Idle.keepAwake ? "On" : "Off"
+                onTriggered: Idle.toggleKeepAwake()
+            }
+            QuickActionRow {
                 visible: NightLight.toolAvailable
                 glyph: "󰖔"
                 label: "Night Light"

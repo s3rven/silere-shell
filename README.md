@@ -43,8 +43,8 @@ cost almost nothing while you're not using it:
   package and Silere updates. It sits on the top or bottom edge, docked or floating, and
   Settings lets you drag its widgets between the left, centre and right.
 - The menu has three pages. Home holds media controls, volume and brightness, Wi-Fi and
-  Bluetooth, night light, Do Not Disturb, power mode, the lock button, and CPU, memory,
-  disk and battery readouts. Settings holds every option, and the third page is your
+  Bluetooth, night light, Do Not Disturb, keep awake, power mode, the lock button, and CPU,
+  memory, disk and battery readouts. Settings holds every option, and the third page is your
   notification history. The Power button under the page buttons offers sleep, log out,
   reboot and power off; the last three need a second press.
 - Notifications support actions, images, inline replies and progress bars. Do Not Disturb
@@ -53,8 +53,8 @@ cost almost nothing while you're not using it:
 - The OSD shows volume, brightness and microphone mute, either as a popup or in the middle
   of the bar.
 - Quick actions, opened by right-clicking the active workspace, switch Do Not Disturb,
-  night light, power mode, Wi-Fi, Bluetooth and airplane mode. Blocked radios and failed
-  actions show an explanation beside their control.
+  keep awake, night light, power mode, Wi-Fi, Bluetooth and airplane mode. Blocked radios
+  and failed actions show an explanation beside their control.
 - The calendar opens from the clock. It can show week numbers, start the week on Monday,
   Sunday or your locale's first day, and open an adjacent month when you click one of its dates.
 - Night light uses hyprsunset on Hyprland and wlsunset on niri. In automatic mode it

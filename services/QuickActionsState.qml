@@ -34,6 +34,11 @@ AnchoredPopupState {
             return Notifications.dnd ? "on" : "off"
         }
 
+        function keepAwake(): string {
+            Idle.toggleKeepAwake()
+            return Idle.keepAwake ? "on" : "off"
+        }
+
         function nightLight(): string {
             // the optional-tool scan runs at startup; before it lands no tool looks installed
             if (!SystemTools.ready) return "error: still looking for a night light tool"

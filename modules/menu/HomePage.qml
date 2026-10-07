@@ -349,6 +349,15 @@ PageShell {
             }
 
             ControlRow {
+                id: _awakeRow
+                active: Idle.keepAwake
+                glyph: Idle.keepAwake ? "󰅶" : "󰛊"
+                title: "Keep Awake"
+                showSwitch: true
+                onActivated: Idle.toggleKeepAwake()
+            }
+
+            ControlRow {
                 id: _powerRow
                 visible: PowerProfiles.available
                 available: PowerProfiles.profile !== "" && !PowerProfiles.changing
