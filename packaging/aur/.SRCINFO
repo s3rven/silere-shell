@@ -36,6 +36,7 @@ pkgbase = silere-shell-git
 	optdepends = paru: AUR update count
 	optdepends = yay: AUR update count
 	optdepends = curl: cover art from the web
+	optdepends = xdg-utils: open a network sign-in page
 	provides = silere-shell
 	conflicts = silere-shell
 	source = silere-shell::git+https://github.com/s3rven/silere-shell.git

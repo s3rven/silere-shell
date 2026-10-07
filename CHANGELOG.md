@@ -14,6 +14,7 @@ settings file carries its own `__version` and migrates separately.
 ### Added
 
 - Keep Awake on the Home page and in quick actions holds off idle dimming, locking and sleep, with a cup beside the bar clock while it is on. It lasts until switched off or the shell restarts, and `silere ipc quickActions keepAwake` toggles it.
+- The network icon in the bar shows a warning mark when NetworkManager finds no internet or a sign-in page, its hover text and the Wi-Fi row say which, and a Sign in row on the Home page opens the login page.
 - Settings › Theme › Background blur turns blur off or on for the bar and translucent popups, and names what is stopping it when Hyprland is older than 0.56 or has blur turned off. `silere doctor` reports the same.
 
 ### Changed

@@ -50,6 +50,7 @@ Singleton {
     readonly property bool hasPavucontrol:   _tools.pavucontrol ?? false
     readonly property bool hasWpctl:         _tools.wpctl ?? false
     readonly property bool hasCurl:          _tools.curl ?? false
+    readonly property bool hasXdgOpen:       _tools["xdg-open"] ?? false
 
     // "" | working | done | failed
     property string matugenRepairState: ""
@@ -178,7 +179,7 @@ Singleton {
             "net.hadess.PowerProfiles /net/hadess/PowerProfiles net.hadess.PowerProfiles ActiveProfile " +
             ">/dev/null 2>&1 && echo @powerprofiles; " +
             "for t in brightnessctl inotifywait nmcli cava matugen hyprsunset wlsunset hyprlock swaylock gtklock systemctl loginctl hyprctl pgrep pkill notify-send " +
-            "busctl checkupdates paru yay timeout apt dnf zypper xbps-install powerprofilesctl fc-list pwvucontrol pavucontrol wpctl curl; do " +
+            "busctl checkupdates paru yay timeout apt dnf zypper xbps-install powerprofilesctl fc-list pwvucontrol pavucontrol wpctl curl xdg-open; do " +
             "  command -v \"$t\" >/dev/null 2>&1 && echo \"$t\"; " +
             // the last lookup is optional; do not inherit its `command -v` status and discard every tool found before it
             "done; exit 0"])

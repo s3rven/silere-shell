@@ -71,6 +71,7 @@ Singleton {
     }
     Component.onCompleted: {
         root.available = root._rawAvailable
+        if (root._rawConnectivityIssue.length > 0) _issueSettle.restart()
         root._publishWifiNetworks(root._wifiCandidate)
     }
     readonly property bool connected: _linkState.best !== null
@@ -122,8 +123,64 @@ Singleton {
 
     readonly property string icon: {
         if (!connected) return "󰤭"
+        if (connectivityIssue.length > 0) return issueGlyph(isWifi, signalStrength)
         if (hasVpn) return "󰦝"
         return underlyingIcon
+    }
+
+    // NetworkManager fetches a known page itself: a portal answers it with a sign-in page, a dead uplink not at all
+    function connectivityIssueFor(linked: bool, state: int): string {
+        if (!linked) return ""
+        if (state === NetworkConnectivity.Portal) return "portal"
+        if (state === NetworkConnectivity.Limited) return "limited"
+        return ""
+    }
+
+    function issueGlyph(wifi: bool, strength: int): string {
+        return wifi ? ["󰤠", "󰤣", "󰤦", "󰤩"][signalTier(strength)] : "󰪎"
+    }
+
+    readonly property string _rawConnectivityIssue: toolAvailable
+        ? connectivityIssueFor(connected, Networking.connectivity) : ""
+    // held briefly so a network that is still coming up never flashes a warning
+    property string connectivityIssue: ""
+    on_RawConnectivityIssueChanged: {
+        if (root._rawConnectivityIssue.length === 0) {
+            _issueSettle.stop()
+            root.connectivityIssue = ""
+        } else _issueSettle.restart()
+    }
+    Timer {
+        id: _issueSettle
+        interval: 2000
+        onTriggered: root.connectivityIssue = root._rawConnectivityIssue
+    }
+    readonly property bool signInNeeded: connectivityIssue === "portal"
+    readonly property string connectivityText: connectivityIssue === "portal" ? "Sign in needed"
+        : connectivityIssue === "limited" ? "No internet" : ""
+
+    function recheckInternet(): void {
+        if (root.toolAvailable && Networking.canCheckConnectivity) Networking.checkConnectivity()
+    }
+    // NetworkManager backs off to one check every five minutes, so a finished sign-in would otherwise show late
+    Timer {
+        interval: 30000
+        repeat: true
+        running: root.connectivityIssue.length > 0 && !Idle.isIdle
+        onTriggered: root.recheckInternet()
+    }
+    Connections {
+        target: MenuState
+        function onOpenChanged() { if (MenuState.open && root.connectivityIssue.length > 0) root.recheckInternet() }
+    }
+
+    readonly property bool canOpenSignIn: SystemTools.hasBusctl && SystemTools.hasXdgOpen
+    // the check page is plain http, so opening it is what lets the portal redirect to its sign-in page
+    function openSignIn(): void {
+        if (!root.canOpenSignIn) return
+        Compositor.launch(["sh", "-c", "u=$(busctl --system --timeout=2 get-property org.freedesktop.NetworkManager "
+            + "/org/freedesktop/NetworkManager org.freedesktop.NetworkManager ConnectivityCheckUri "
+            + "| sed -n 's/^s \"\\(http[^\"]*\\)\"$/\\1/p'); [ -n \"$u\" ] && exec xdg-open \"$u\""])
     }
 
     function toggleWifi(): void {

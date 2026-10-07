@@ -292,6 +292,7 @@ optional_any "screen lock" "lock action" hyprlock swaylock gtklock loginctl
 optional_any "sound settings" "per-app routing UI" pwvucontrol pavucontrol
 optional_tool wpctl "bluetooth output volume"
 optional_tool curl "cover art from the web + installer downloads"
+optional_tool xdg-open "network sign-in page"
 optional_tool cava "audio visualizer"
 optional_tool notify-send "desktop alerts"
 optional_tool fc-list "font verification"

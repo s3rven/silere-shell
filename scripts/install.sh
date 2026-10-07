@@ -959,6 +959,7 @@ _optdep_any "lock screen" "lock action" hyprlock swaylock gtklock
 _optdep_any "sound settings" "per-app routing hand-off" pwvucontrol pavucontrol
 _optdep wpctl         "bluetooth output volume"
 _optdep curl          "web cover art + installer downloads"
+_optdep xdg-open      "network sign-in page"
 _optdep_any "power actions" "suspend / reboot / shutdown" systemctl loginctl
 _optdep notify-send   "low-battery + hot-CPU alerts"
 _optdep timeout       "bounded update checks"

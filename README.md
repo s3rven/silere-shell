@@ -41,7 +41,8 @@ cost almost nothing while you're not using it:
 - The bar can show workspaces, the focused window's title, what's playing, network,
   Bluetooth, volume, microphone, brightness, battery, the clock, the tray, and badges for
   package and Silere updates. It sits on the top or bottom edge, docked or floating, and
-  Settings lets you drag its widgets between the left, centre and right.
+  Settings lets you drag its widgets between the left, centre and right. The network icon
+  warns when the connection has no internet or is waiting at a sign-in page.
 - The menu has three pages. Home holds media controls, volume and brightness, Wi-Fi and
   Bluetooth, night light, Do Not Disturb, keep awake, power mode, the lock button, and CPU,
   memory, disk and battery readouts. Settings holds every option, and the third page is your

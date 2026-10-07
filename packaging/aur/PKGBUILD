@@ -39,6 +39,7 @@ optdepends=(
     'paru: AUR update count'
     'yay: AUR update count'
     'curl: cover art from the web'
+    'xdg-utils: open a network sign-in page'
 )
 provides=("$_pkgname")
 conflicts=("$_pkgname")

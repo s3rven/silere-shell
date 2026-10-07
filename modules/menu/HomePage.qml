@@ -33,6 +33,7 @@ PageShell {
     readonly property int _itemGap: 8
     readonly property bool _wifiAvailable: Network.toolAvailable && Network.hasWifiDevice
     readonly property bool _btAvailable: Bluetooth.available
+    readonly property bool _signInShown: Network.signInNeeded && Network.canOpenSignIn
     readonly property bool _brightnessAvailable: Brightness.controllable
     readonly property bool _wifiPickerOpen: _picker === "wifi"
     readonly property bool _btPickerOpen: _picker === "bt"
@@ -197,10 +198,10 @@ PageShell {
         }
         SectionLabel {
             label: "Connectivity"
-            visible: root._wifiAvailable || root._btAvailable
+            visible: root._wifiAvailable || root._btAvailable || root._signInShown
         }
         SettingsCard {
-            visible: root._wifiAvailable || root._btAvailable
+            visible: root._wifiAvailable || root._btAvailable || root._signInShown
 
             ControlRow {
                 id: _wifiRow
@@ -208,20 +209,26 @@ PageShell {
                 readonly property bool _ethActive: Network.connected && Network.deviceType === "ethernet"
                 active: Network.wifiEnabled
                 glyph: Network.wifiEnabled
-                    ? (Network.isWifi && Network.connected ? Network.signalGlyph(Network.signalStrength) : "󰤨")
+                    ? (!Network.isWifi || !Network.connected ? "󰤨"
+                        : Network.connectivityIssue.length > 0 ? Network.issueGlyph(true, Network.signalStrength)
+                        : Network.signalGlyph(Network.signalStrength))
                     : "󰤭"
                 title: "Wi-Fi"
                 status: Network.wifiHardBlocked ? "Blocked by the hardware switch"
                       : Network.wifiConnecting.length > 0 ? "Connecting to " + SafeText.singleLineText(Network.wifiConnecting, 128)
                       : Network.wifiError.length > 0 ? "Couldn't connect to " + SafeText.singleLineText(Network.wifiError, 128)
-                      : Network.wifiEnabled && Network.isWifi && Network.connected ? Network.connectionName
-                      : _ethActive ? "Ethernet active"
+                      : Network.wifiEnabled && Network.isWifi && Network.connected ? _withIssue(Network.connectionName)
+                      : _ethActive ? _withIssue("Ethernet active")
                       : Network.wifiEnabled ? "Not connected"
                       : "Off"
                 statusColor: Network.wifiHardBlocked ? Theme.warning
                     : Network.wifiConnecting.length > 0 ? Theme.accent
                     : Network.wifiError.length > 0 ? Theme.error
+                    : Network.connectivityText.length > 0 ? Theme.warning
                     : "transparent"
+                function _withIssue(link: string): string {
+                    return Network.connectivityText.length > 0 ? link + " · " + Network.connectivityText : link
+                }
                 showSwitch: true
                 available: !Network.wifiHardBlocked
                 expandable: Network.wifiEnabled
@@ -238,6 +245,18 @@ PageShell {
                         width: parent.width
                         open: root._wifiPickerOpen
                     }
+                }
+            }
+
+            ControlRow {
+                id: _signInRow
+                visible: root._signInShown
+                glyph: "󰖟"
+                title: "Sign in to this network"
+                status: "Opens its login page in your browser"
+                onActivated: {
+                    MenuState.close()
+                    Network.openSignIn()
                 }
             }
 

@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Bluetooth as Bt
+import Quickshell.Networking as Net
 import Quickshell.Services.Mpris as Mp
 import Quickshell.Services.SystemTray as St
 import Quickshell.Services.UPower as Up
@@ -3602,6 +3603,20 @@ ShellRoot {
             "a wired link outranks Wi-Fi, and an unreported link counts as up")
         root._check(Network._linkPriority(false, undefined) > Network._linkPriority(true, false),
             "Wi-Fi outranks a wired device with no carrier")
+
+        root._check(Network.connectivityIssueFor(true, Net.NetworkConnectivity.Portal) === "portal"
+                && Network.connectivityIssueFor(true, Net.NetworkConnectivity.Limited) === "limited",
+            "a captive portal and a dead uplink each surface as a connectivity issue")
+        root._check(Network.connectivityIssueFor(true, Net.NetworkConnectivity.Full) === ""
+                && Network.connectivityIssueFor(true, Net.NetworkConnectivity.Unknown) === ""
+                && Network.connectivityIssueFor(false, Net.NetworkConnectivity.Portal) === "",
+            "full, unchecked or unlinked connectivity raises no issue")
+        let alertTiers = true
+        for (const strength of [10, 40, 60, 90])
+            alertTiers = alertTiers && Network.issueGlyph(true, strength).codePointAt(0)
+                === Network.signalGlyph(strength).codePointAt(0) + 1
+        root._check(alertTiers && Network.issueGlyph(false, 0) === "󰪎",
+            "a Wi-Fi issue keeps its signal tier with the alert mark, and wired shows the crossed globe")
 
         const keptOff = QuickActionsState._airplaneRestore(true, true, false)
         root._check(keptOff.wifi && !keptOff.bt,

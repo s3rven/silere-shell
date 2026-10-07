@@ -128,6 +128,13 @@ example `before_sleep_cmd = loginctl lock-session` in hypridle.
 With Quickshell 0.3.1, the network widget and Wi-Fi list can keep showing old devices after
 NetworkManager restarts. Restart Silere.
 
+## The network icon warns of no internet while pages load
+
+The warning comes from NetworkManager's connectivity check, which fetches one page, such as
+`ping.archlinux.org` on Arch. If a firewall or DNS blocklist stops that page, NetworkManager
+reports no internet. Allow the address, or turn the check off with `enabled=false` under
+`[connectivity]` in a file in `/etc/NetworkManager/conf.d/`.
+
 ## Special or named workspaces misbehave after a Hyprland update
 
 Hyprland 0.57 changes how it names special and named workspaces, and Quickshell 0.3.1 reads

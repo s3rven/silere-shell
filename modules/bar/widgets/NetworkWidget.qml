@@ -48,6 +48,7 @@ Pill {
                 ? root._physical + " " + root._signal
                 : root._physical)
         }
+        parts.push(Network.connectivityText)
         return root._join(parts)
     }
     readonly property string _detailText: {
@@ -63,6 +64,7 @@ Pill {
                 : root._physical
             parts.push(physical)
         }
+        parts.push(Network.connectivityText)
         if (Network.trafficActive) parts.push(Network.trafficLabel)
         return root._join(parts)
     }
