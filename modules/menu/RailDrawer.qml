@@ -15,6 +15,20 @@ Item {
     readonly property bool _contentReady: _loader.status === Loader.Ready
     readonly property bool _present: root.shown && root._contentReady
         && root.revealedWidth >= Math.min(root.width, 28)
+    property real _heldWidth: 0
+    property bool _holdLayout: false
+
+    function holdLayout(): void {
+        if (root._holdLayout) return
+        root._heldWidth = _loader.width
+        root._holdLayout = true
+    }
+
+    onShownChanged: {
+        if (root.shown) root._holdLayout = false
+        else root.holdLayout()
+    }
+    Component.onCompleted: if (!root.shown) root.holdLayout()
 
     property real _slide: root._present ? 0 : -Motion.pageOffset
     opacity: root._present ? 1 : 0
@@ -26,9 +40,7 @@ Item {
         id: _drawerFade
         NumberAnimation {
             duration: _drawerFade.targetValue > 0.5 ? Motion.pageIn : Motion.pageOut
-            easing.type: Easing.BezierSpline
-            easing.bezierCurve: _drawerFade.targetValue > 0.5
-                ? Motion.standardDecel : Motion.standardAccel
+            easing.type: _drawerFade.targetValue > 0.5 ? Easing.OutQuad : Easing.InQuad
         }
     }
     MotionBehavior on _slide {
@@ -42,9 +54,16 @@ Item {
     }
     Loader {
         id: _loader
-        anchors.fill: parent
+        anchors.left: parent.left
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        // Keep the departing labels at their old wrap width while the outer
+        // rail clips them away. Reflow only when the drawer returns.
+        width: root._holdLayout ? root._heldWidth : root.width
         active: root.retained
-        asynchronous: !root.shown
+        // Showing an in-progress hover preload must not force its remaining
+        // incubation onto the first frame of the panel transition.
+        asynchronous: true
         sourceComponent: root.content
     }
 }

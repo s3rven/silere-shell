@@ -32,11 +32,11 @@ Pill {
     MotionBehavior on _baseOpacity {NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
 
     WheelHandler {
-        enabled: root.canControl
+        enabled: root.canControl && root.hoverEnabled
         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
         onWheel: (event) => {
             event.accepted = true
-            if (!root.canControl) return
+            if (!root.canControl || !root.hoverEnabled) return
             const n = Scroll.processLevelWheel(event, "brightness")
             if (n !== 0) Brightness.bumpBy(n * Brightness.stepPct)
         }

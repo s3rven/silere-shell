@@ -42,7 +42,7 @@ Pill {
     pressed: _tap.pressed
     TapHandler {
         id: _tap
-        enabled: root.interactive
+        enabled: root.canActivate
         acceptedButtons: Qt.LeftButton
         onTapped: root.activated()
     }

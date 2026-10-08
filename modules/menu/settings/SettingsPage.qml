@@ -16,6 +16,7 @@ PageShell {
     readonly property bool contentReady: _detailBody.status === Loader.Ready
         || _detailBody.status === Loader.Error
     readonly property bool contentError: _detailBody.status === Loader.Error
+    revealReady: contentReady
 
     // the arranger scrolls this while a row is dragged past the viewport edge
     property Flickable scroller: null
@@ -79,8 +80,7 @@ PageShell {
         workspaces: _secWorkspaces, media: _secMedia, indicators: _secIndicators,
         widgets: _secWidgets,
         popups: _secPopups, osd: _secOsd, warnings: _secWarnings,
-        interface: _secInterface, updates: _secUpdates,
-        maintenance: _secMaintenance
+        interface: _secInterface, updates: _secUpdates
     })
 
     readonly property var _sectionMeta: {
@@ -115,6 +115,10 @@ PageShell {
         property real _shift: 0
         property real _lift: 0
         transform: Translate { x: _detail._shift; y: _detail._lift }
+        // The outgoing controls stay painted for the exit, but must not change
+        // settings after the sidebar has selected a different section.
+        enabled: root._shownSection === MenuState.settingsSection
+            && root.contentReady && !root._awaitingSectionEnter
 
         readonly property int _bodyGap: 8
 
@@ -132,7 +136,16 @@ PageShell {
                 root._awaitingSectionEnter = false
                 _sectionEnterDefer.stop()
                 _detailEnter.stop()
-                _detailSwap.restart()
+                // Returning before the fade-out completed keeps the existing
+                // body and reverses its reveal instead of unloading it again.
+                if (root._shownSection === MenuState.settingsSection) {
+                    _detailSwap.stop()
+                    _detailEnter.restart()
+                } else if (!_detailSwap.running) {
+                    // The swap reads the latest destination when the exit ends.
+                    // Keep its clock running through successive sidebar clicks.
+                    _detailSwap.start()
+                }
             }
         }
 
@@ -374,15 +387,19 @@ PageShell {
 
         Component {
             id: _secUpdates
-            SettingsUpdatesSection {
-                animationActive: root.active && root._shownSection === "updates"
-                    && !root.powerOpen && !Idle.isIdle
+            Column {
+                width: _detailBody.width
+                spacing: 0
+                SettingsUpdatesSection {
+                    animationActive: root.active && root._shownSection === "updates"
+                        && !root.powerOpen && !Idle.isIdle
+                }
+                SettingsMaintenanceSection {
+                    firstSection: false
+                    animationActive: root.active && root._shownSection === "updates"
+                        && !root.powerOpen && !Idle.isIdle
+                }
             }
-        }
-
-        Component {
-            id: _secMaintenance
-            SettingsMaintenanceSection {}
         }
     }
 }

@@ -174,7 +174,7 @@ Column {
                     horizontalAlignment:    Text.AlignRight
                     text:           _accentPicker._shownName
                     color:          ShellSettings.highContrast
-                        ? Theme.withAlpha(Theme.subtext, 0.7)
+                        ? Theme.menuTextDetail
                         : Theme.mix(Theme.subtext, _accentPicker._shownColor, 0.62)
                     ColorFade on color {}
                     font.pixelSize: Settings.fontCaption
@@ -192,13 +192,35 @@ Column {
                     contentHeight: height
                     flickableDirection: Flickable.HorizontalFlick
                     interactive: contentWidth > width + 1
+                    property bool _revealPending: false
+
+                    function requestReveal(): void {
+                        _revealPending = true
+                        _revealDefer.restart()
+                    }
+                    onWidthChanged: requestReveal()
+                    onContentWidthChanged: requestReveal()
+                    onMovementEnded: if (_revealPending) _revealDefer.restart()
+
+                    Timer {
+                        id: _revealDefer
+                        interval: 0
+                        onTriggered: {
+                            if (_swatchViewport.moving) return
+                            _swatchViewport._revealPending = false
+                            _swatchViewport.revealIndex(_swatchRow.activeIndex)
+                        }
+                    }
 
                     function revealIndex(index: int): void {
-                        if (!interactive || index < 0) return
+                        const maximum = Math.max(0, contentWidth - width)
+                        let target = Math.max(0, Math.min(maximum, contentX))
+                        if (!interactive || index < 0) { contentX = target; return }
                         const left = _swatchRow.itemLeft(index) - _swatchRow.edgePadding
                         const right = _swatchRow.itemRight(index) + _swatchRow.edgePadding
-                        if (left < contentX) contentX = left
-                        else if (right > contentX + width) contentX = right - width
+                        if (left < target) target = left
+                        else if (right > target + width) target = right - width
+                        contentX = Math.max(0, Math.min(maximum, target))
                     }
 
                     SwatchRow {
@@ -211,12 +233,7 @@ Column {
                         colors:  _accentPicker._swColors
                         activeIndex: _accentPicker._activeIndex
                         // timer, not Qt.callLater: this dies with the section, where a deferred call survives the swap and fires against a destroyed viewport
-                        onActiveIndexChanged: _revealDefer.restart()
-                        Timer {
-                            id: _revealDefer
-                            interval: 0
-                            onTriggered: _swatchViewport.revealIndex(_swatchRow.activeIndex)
-                        }
+                        onActiveIndexChanged: _swatchViewport.requestReveal()
                         onPicked: (i) => {
                             const opt = _accentPicker._options[i]
                             _accentPicker._customPinned = !!opt.custom
@@ -387,7 +404,10 @@ Column {
             ToggleRow {
                 glyph: "󱡓"; label: "Popups match bar opacity"
                 // the note alone: appended to the list it wraps the row to two lines
-                description: Theme.frosted ? "Menu, notifications, calendar, tray and more" : ""
+                description: !Theme.frosted ? ""
+                    : ShellSettings.popupMatchBarOpacity && Theme.panelOpacity < Theme.glassFloor
+                        ? "Held at " + Math.round(Theme.glassFloor * 100) + "% so text stays readable"
+                        : "Menu, notifications, calendar, tray and more"
                 key: "popupMatchBarOpacity"
                 available: Theme.frosted
                 dependsNote: "Needs background blur"

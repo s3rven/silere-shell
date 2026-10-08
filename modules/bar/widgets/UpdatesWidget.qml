@@ -18,11 +18,11 @@ StatusActionPill {
     text: expanded ? (Updates.lastFailed ? Updates.statusText + " · " + Updates.lastError : Updates.statusText)
         : Updates.count > 0 ? String(Updates.count) : ""
 
-    onActivated: MenuState.showSettingsAt("updates", root, root.screen)
+    onActivated: if (root.canActivate) MenuState.showSettingsAt("updates", root, root.screen)
 
     TapHandler {
-        enabled: root.show && !root.busy
+        enabled: root.canActivate && !root.busy
         acceptedButtons: Qt.RightButton
-        onTapped: Updates.refresh()
+        onTapped: if (root.canActivate && !root.busy) Updates.refresh()
     }
 }

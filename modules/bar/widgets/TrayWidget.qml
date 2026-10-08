@@ -20,6 +20,7 @@ Item {
     readonly property bool show: ShellSettings.trayWidget
         && root._trayItems.some(i => i && !ShellSettings.trayItemHidden(i.id))
     readonly property bool contentVisible: root.show
+    readonly property bool _canInteract: root.enabled && root.show && root.barActive && !Idle.isIdle
     readonly property bool layoutVisible: show || implicitWidth > 0.5
     // the bar height is a ceiling, not the source: the old barHeight*0.44 ignored uiScale
     // entirely, so tray icons were the one thing that could not follow the interface scale
@@ -51,6 +52,7 @@ Item {
 
     // an item without its own menu still opens one, holding only the hide entry
     function _openMenu(item, tile): void {
+        if (!root._canInteract || !item || ShellSettings.trayItemHidden(item.id)) return
         tile.syncMenuAnchor()
         TrayMenuState.toggleAt(
             tile.menuAnchorX,
@@ -63,7 +65,7 @@ Item {
     }
 
     function _activateItem(item, tile): void {
-        if (!root.show || !item || ShellSettings.trayItemHidden(item.id)) return
+        if (!root._canInteract || !item || ShellSettings.trayItemHidden(item.id)) return
         if (item.onlyMenu) root._openMenu(item, tile)
         else if (!WindowActions.focusTrayItem(item.id, item.title, item.tooltipTitle))
             item.activate()
@@ -116,7 +118,7 @@ Item {
                 Accessible.role: Accessible.Button
                 Accessible.name: _tile.label
                 Accessible.description: SafeText.singleLineText(modelData.tooltipDescription, 256)
-                Accessible.focusable: root.show && !_tile.hidden
+                Accessible.focusable: root._canInteract && !_tile.hidden
                 Accessible.onPressAction: root._activateItem(_tile.modelData, _tile)
 
                 width: root.iconSize + (_hoverLabel.width > 0 ? _hoverLabel.width + 5 : 0)
@@ -158,7 +160,16 @@ Item {
                            : 0.0
                     visible: opacity > 0.001
 
-                    MotionBehavior on opacity {NumberAnimation { duration: Motion.color } }
+                    // Attention already has a pulse driver; easing every pulse
+                    // sample again makes its highlight trail the icon.
+                    MotionBehavior on opacity {
+                        id: _attentionFade
+                        gate: !_tile.needsAttention
+                        NumberAnimation {
+                            duration: _attentionFade.targetValue > 0.5 ? Motion.hoverIn : Motion.hoverOut
+                            easing.type: Easing.OutCubic
+                        }
+                    }
                     ColorFade on color {}
                 }
 
@@ -242,6 +253,7 @@ Item {
 
                 HoverHandler {
                     id: _iconHover
+                    enabled: root._canInteract && !_tile.hidden
                     onHoveredChanged: {
                         if (hovered) {
                             _labelDwell.restart()
@@ -255,11 +267,12 @@ Item {
                 MouseArea {
                     id: _ma
                     anchors.fill: parent
-                    enabled: root.show
+                    enabled: root._canInteract && !_tile.hidden
                     // MouseArea overrides the cursor beneath it, so the pointer shape must live here not on the HoverHandler
                     cursorShape: Qt.PointingHandCursor
                     acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
                     onClicked: (mouse) => {
+                        if (!root._canInteract || _tile.hidden) return
                         const it = _tile.modelData
                         if (mouse.button === Qt.RightButton)
                             root._openMenu(it, _tile)
@@ -268,6 +281,7 @@ Item {
                         else root._activateItem(it, _tile)
                     }
                     onWheel: (wheel) => {
+                        if (!root._canInteract || _tile.hidden) { wheel.accepted = false; return }
                         wheel.accepted = true
                         const r = Scroll.processTrayWheel(wheel, "tray:" + _tile.modelData.id)
                         if (r.steps !== 0) _tile.modelData.scroll(r.steps * Scroll.notch, r.horizontal)

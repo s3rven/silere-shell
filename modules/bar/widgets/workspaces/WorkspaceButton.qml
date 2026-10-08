@@ -34,6 +34,7 @@ Item {
     readonly property bool _hoverFx: hovered && ShellSettings.barHoverHighlight
     // a slot with no workspace behind it collapses instead of being destroyed, so the strip can grow and shrink without the row rebuilding under the motion
     readonly property bool present: wsId >= 0
+    readonly property bool canActivate: root.enabled && root.present && root.barActive && !Idle.isIdle
     // an underline marker leaves the cell centre free, so the active workspace keeps its own content
     readonly property bool _blanked: active && markerCovers
     readonly property bool _iconCell: ShellSettings.wsShowAppIcons && apps.length > 0
@@ -91,6 +92,7 @@ Item {
     // the menu is not a compositor feature, and this is the only pointer path into it:
     // gating it on live workspace data strands every setting when that data is absent
     function _activate(): void {
+        if (!root.canActivate) return
         if (!root.monitorReady) {
             root.anchorMenuRequested()
             return
@@ -106,15 +108,17 @@ Item {
     Accessible.role: Accessible.Button
     Accessible.name: "Workspace " + root.wsId
     Accessible.selected: root.active
-    Accessible.focusable: true
+    Accessible.focusable: root.canActivate
     Accessible.onPressAction: root._activate()
 
-    HoverHandler { id: _hover; cursorShape: Qt.PointingHandCursor }
+    HoverHandler { id: _hover; enabled: root.canActivate; cursorShape: Qt.PointingHandCursor }
     onHoveredChanged: root.hoverReported(root.wsId, root.hovered)
 
     TapHandler {
+        enabled: root.canActivate
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
         onTapped: (eventPoint, button) => {
+            if (!root.canActivate) return
             if (button === Qt.MiddleButton) {
                 if (!Compositor.activeToplevel) return
                 root.moveWindowRequested()

@@ -87,9 +87,10 @@ PanelWindow {
                     ? Math.min(ShellSettings.barRadius, pillH / 2)
                     : Math.min(Theme.radiusPanel, pillH / 2)
                 readonly property real _hiddenSlide: osd._bottom ? 7 : -7
+                readonly property Item blurItem: Theme.frosted
+                    && _osdPillFill.color.a < 1 && card._op > 0 ? _blurBox : null
                 readonly property Region blurShape: Region {
-                    item: Theme.frosted && card.hasBar && Theme.panelOpacity < 1 && card._op > 0
-                        ? _blurBox : null
+                    item: card.blurItem
                     radius: Math.round(card.pillRadius)
                 }
                 // a region follows only its own item, and the pill moves by transform in a moving column
@@ -205,8 +206,8 @@ PanelWindow {
                         anchors.fill: parent
                         radius: card.pillRadius
                         antialiasing: true
-                        // it floats over windows, so unfrosted it turns solid like the popups do
-                        color: !card.hasBar ? Theme.surface : Theme.frosted ? Theme.panel : Theme.background
+                        // Every OSD follows the same opacity and blur policy as the popups.
+                        color: Theme.popup
 
                         readonly property color _outlineColor: !card.hasBar
                             ? Theme.withAlpha(card.fillColor, 0.55)

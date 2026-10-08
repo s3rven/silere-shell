@@ -10,44 +10,13 @@ Column {
     width: parent ? parent.width : 0
     spacing: 0
 
-    readonly property var _nightLightChoices: {
-        const auto = Settings.autoNightLightProvider
-        const out = [{ value: "auto",
-            label: auto.length > 0 ? "Automatic (" + auto + ")" : "Automatic (none found)" }]
-        const named = [
-            { value: "hyprsunset", label: "hyprsunset",
-              ok: Compositor.isHyprland && SystemTools.hasHyprsunset },
-            { value: "wlsunset",   label: "wlsunset",   ok: SystemTools.hasWlsunset   }
-        ]
-        for (let i = 0; i < named.length; i++) {
-            if (named[i].value === "hyprsunset" && !Compositor.isHyprland) continue
-            out.push({ value: named[i].value,
-                label: named[i].ok ? named[i].label : named[i].label + " (not installed)" })
-        }
-        return out
-    }
-
-    readonly property var _lockChoices: {
-        const auto = Settings.autoLockProvider
-        const out = [{ value: "auto",
-            label: auto.length > 0 ? "Automatic (" + auto + ")" : "Automatic (none found)" }]
-        const named = [
-            { value: "hyprlock", label: "hyprlock",             ok: SystemTools.hasHyprlock },
-            { value: "swaylock", label: "swaylock",             ok: SystemTools.hasSwaylock },
-            { value: "gtklock",  label: "gtklock",              ok: SystemTools.hasGtklock  },
-            { value: "loginctl", label: "loginctl lock-session", ok: SystemTools.hasLoginctl }
-        ]
-        for (let i = 0; i < named.length; i++)
-            out.push({ value: named[i].value,
-                label: named[i].ok ? named[i].label : named[i].label + " (not installed)" })
-        out.push({ value: "custom", label: "Custom command" })
-        return out
-    }
-
+    property bool firstSection: true
+    property bool animationActive: true
+    property bool _optionalExpanded: false
     property bool _armed: false
     property real _armedAtMs: 0
 
-    // reopening Maintenance re-detects tools installed or removed while the shell is
+    // reopening Diagnostics re-detects tools installed or removed while the shell is
     // running, but a recent answer still stands; Refresh on the page forces one
     Component.onCompleted: {
         SystemTools.refreshIfStale(60000)
@@ -68,12 +37,12 @@ Column {
     Connections {
         target: MenuState
         function onSettingsSectionChanged() { root._disarm() }
-        function onOpenChanged() { if (!MenuState.open) root._disarm() }
+        function onSettingsActiveChanged() { if (!MenuState.settingsActive) root._disarm() }
     }
 
-    // the whole section only instantiates while it is the open page; the probe runs once on entry and never polls in the background
+    // Check on construction or refresh; cached pages never poll in the background.
     // Missing optional tools are useful information, but they are not a broken
-    // shell. Keep them out of the attention count so Maintenance does not read
+    // shell. Keep them out of the attention count so Diagnostics does not read
     // like an error page on a deliberately minimal installation.
     readonly property var _health: {
         const attention = []
@@ -92,16 +61,16 @@ Column {
                 "Cannot check installed fonts", "fontconfig", true)
         else if (FontScan.lastError.length > 0)
             add(attention, "󰈵", "Font check", FontScan.lastError,
-                "fc-list", false, "", Theme.warning)
+                "Fonts", false, "interface", Theme.warning)
         else if (FontScan.scanned && FontScan.families.length === 0)
             add(attention, "󰈵", "Icon font missing",
-                "Bar and menu icons may not render", "nerd-fonts", true,
-                "", Theme.warning)
+                "Bar and menu icons may not render", "Choose font", false,
+                "interface", Theme.warning)
         else if (FontScan.scanned && ShellSettings.fontFamily.length > 0
                  && FontScan.families.indexOf(ShellSettings.fontFamily) < 0)
             add(attention, "󰈵", "Chosen font unavailable",
-                "Using " + Settings.font + " instead", "Fallback", false,
-                "", Theme.warning)
+                "Using " + Settings.font + " instead", "Choose font", false,
+                "interface", Theme.warning)
 
         // wallpaper theming degrades instead of hiding, so it reads as working while the palette silently stays bundled — both causes need naming
         if (!SystemTools.hasMatugen)
@@ -137,13 +106,26 @@ Column {
         const tool = (g, n, v) => add(optional, g, n,
             "Not installed", v, true)
         if (!SystemTools.hasBrightnessctl)     tool("󰃟", "Brightness control", "brightnessctl")
-        if (Settings.autoNightLightProvider.length === 0)
-            tool("󰖙", "Night light", Compositor.isHyprland ? "hyprsunset" : "wlsunset")
+        if (Settings.nightLightTool.length === 0) {
+            if (ShellSettings.nightLightProvider === "auto")
+                tool("󰖙", "Night light", Compositor.isHyprland ? "hyprsunset" : "wlsunset")
+            else
+                add(attention, "󰖙", "Night light unavailable",
+                    "Selected program cannot run", "Choose", false, "interface", Theme.warning)
+        }
         if (Settings.soundSettingsCommand.length === 0)
             tool("󰕾", "Sound settings", "pwvucontrol")
         if (!SystemTools.hasCava)              tool("󰝚", "Audio visualizer", "cava")
         if (!PowerProfiles.available)          tool("󰾅", "Power profiles", "power-profiles-daemon")
-        if (Settings.lockCommand.length === 0)  tool("󰌾", "Screen lock", "hyprlock")
+        if (Settings.lockCommand.length === 0) {
+            if (ShellSettings.lockProvider === "auto")
+                tool("󰌾", "Screen lock", Compositor.isHyprland ? "hyprlock" : "swaylock")
+            else
+                add(attention, "󰌾", "Screen lock unavailable",
+                    ShellSettings.lockProvider === "custom" ? "Custom command is empty or invalid"
+                        : "Selected program is not installed",
+                    "Choose", false, "interface", Theme.warning)
+        }
         if (!SystemTools.hasCheckupdates && !SystemTools.hasParu && !SystemTools.hasYay
                 && SystemTools.packageFamily === "pacman")
             tool("󰚰", "Update checks", "pacman-contrib")
@@ -172,23 +154,19 @@ Column {
             return root._attentionIssues.length
                 + (root._attentionIssues.length === 1
                     ? " item needs attention" : " items need attention")
-        if (root._optionalIssues.length > 0)
-            return root._optionalIssues.length
-                + (root._optionalIssues.length === 1
-                    ? " optional feature missing" : " optional features missing")
-        return "Installed features are ready"
+        return "No issues found"
     }
     readonly property string _healthDetail: {
         if (SystemTools.probeFailed) return SystemTools.lastError
         if (root._healthBusy) return "The last confirmed results stay visible while Silere checks again."
         if (root._attentionIssues.length > 0)
-            return "Review the items below. Optional packages are listed separately."
+            return "Review the items below. Expand Optional features to see available add-ons."
         if (root._optionalIssues.length > 0)
-            return "Silere is healthy. Install an optional package only if you want that feature."
+            return "Expand Optional features to see packages you can add when you want them."
         return "All checked tools and integrations are available."
     }
 
-    SectionLabel { label: "HEALTH"; first: true }
+    SectionLabel { label: "HEALTH"; first: root.firstSection }
     SettingsCard {
         UpdateStatusCard {
             glyph: root._healthBusy ? "󰑐"
@@ -202,7 +180,7 @@ Column {
                 : root._attentionIssues.length > 0 ? Theme.warning
                 : root._healthBusy ? Theme.accent : Theme.success
             busy: root._healthBusy
-            animationActive: MenuState.settingsActive && !Idle.isIdle
+            animationActive: root.animationActive && MenuState.settingsActive && !Idle.isIdle
             primaryLabel: root._healthBusy ? "Refreshing" : "Refresh"
             primaryGlyph: "󰑐"
             primaryEnabled: !root._healthBusy
@@ -232,66 +210,15 @@ Column {
                 statusColor: modelData.c
                 passive: !modelData.a
                 valueIsAction: modelData.a.length > 0
-                onActivated: if (modelData.a === "matugen") SystemTools.repairMatugen()
+                onActivated: {
+                    if (modelData.a === "matugen") SystemTools.repairMatugen()
+                    else if (modelData.a === "interface") MenuState.setSettingsSection("interface")
+                }
             }
         }
         HintText {
             visible: root._attentionIssues.some(i => i.p === true)
             text: "The value on the right is the package or fallback involved."
-        }
-    }
-
-    SectionLabel {
-        visible: SystemTools.ready && !SystemTools.probeFailed
-            && root._optionalIssues.length > 0
-        label: "OPTIONAL FEATURES"
-    }
-    SettingsCard {
-        visible: SystemTools.ready && !SystemTools.probeFailed
-            && root._optionalIssues.length > 0
-        Repeater {
-            model: root._optionalIssues
-            ControlRow {
-                required property var modelData
-                glyph: modelData.g
-                title: modelData.n
-                status: modelData.s
-                valueText: modelData.v
-                passive: true
-            }
-        }
-        HintText {
-            text: "These are add-ons or informational checks, not shell failures. Add only the features you want."
-        }
-    }
-
-    SectionLabel { label: "PROGRAMS" }
-    SettingsCard {
-        SelectRow {
-            key: "lockProvider"
-            glyph: "󰌾"; label: "Screen lock"
-            model: root._lockChoices
-        }
-        HintText {
-            visible: ShellSettings.lockProvider === "custom"
-                && Settings.customLockCommand.length === 0
-            text: "No command set yet. Run: silere ipc settings set lockCommandCustom \"swaylock -f\""
-        }
-        HintText {
-            visible: ShellSettings.lockProvider !== "custom"
-                && Settings.lockCommand.length === 0
-            text: "The chosen lock program is not installed, so the lock action stays off."
-        }
-        SelectRow {
-            key: "nightLightProvider"
-            glyph: "󰖙"; label: "Night light"
-            model: root._nightLightChoices
-        }
-        HintText {
-            visible: Settings.nightLightTool.length === 0
-            text: Compositor.isHyprland
-                ? "Neither program is installed, so night light stays off."
-                : "hyprsunset needs Hyprland. On this compositor install wlsunset instead."
         }
     }
 
@@ -323,7 +250,43 @@ Column {
             }
         }
         HintText {
-            text: "Wallpaper colors stay unchanged."
+            text: "Resets appearance, widget order, program choices, and other preferences. Wallpaper colors and notification history stay unchanged."
+        }
+    }
+    SectionLabel {
+        visible: SystemTools.ready && !SystemTools.probeFailed
+            && root._optionalIssues.length > 0
+        label: "OPTIONAL FEATURES"
+    }
+    SettingsCard {
+        visible: SystemTools.ready && !SystemTools.probeFailed
+            && root._optionalIssues.length > 0
+        ControlRow {
+            glyph: "󰀻"
+            title: "Optional features"
+            status: root._optionalIssues.length + (root._optionalIssues.length === 1
+                ? " add-on or check available" : " add-ons or checks available")
+            expandable: true
+            expanded: root._optionalExpanded
+            onActivated: root._optionalExpanded = !root._optionalExpanded
+            onExpandToggled: root._optionalExpanded = !root._optionalExpanded
+        }
+        CollapsibleSection {
+            expanded: root._optionalExpanded
+            Repeater {
+                model: root._optionalIssues
+                ControlRow {
+                    required property var modelData
+                    glyph: modelData.g
+                    title: modelData.n
+                    status: modelData.s
+                    valueText: modelData.v
+                    passive: true
+                }
+            }
+            HintText {
+                text: "Install only the features you want. The value on the right names the package or integration involved."
+            }
         }
     }
 }

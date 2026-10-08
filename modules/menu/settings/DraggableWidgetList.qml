@@ -110,7 +110,7 @@ Item {
     function _noteFor(key: string): string {
         switch (key) {
         case "battery":
-            if (Battery.upowerReady && !Battery.available) return "No battery"
+            if (Battery.upowerReady && !Battery.present) return "No battery"
             return ShellSettings.batteryAutoHide ? "When unplugged" : ""
         case "bluetooth":
             return Bluetooth.available ? "" : "No adapter"

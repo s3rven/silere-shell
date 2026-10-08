@@ -16,5 +16,5 @@ StatusActionPill {
         ? "Silere update, " + ShellUpdate.statusText : "Silere update"
     text:  expanded ? ShellUpdate.statusText : ""
 
-    onActivated: MenuState.showSettingsAt("updates", root, root.screen)
+    onActivated: if (root.canActivate) MenuState.showSettingsAt("updates", root, root.screen)
 }

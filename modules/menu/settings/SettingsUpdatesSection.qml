@@ -69,7 +69,8 @@ Column {
 
     Connections {
         target: MenuState
-        function onOpenChanged() { if (!MenuState.open) root._disarmInstall() }
+        function onSettingsActiveChanged() { if (!MenuState.settingsActive) root._disarmInstall() }
+        function onSettingsSectionChanged() { root._disarmInstall() }
     }
     Connections {
         target: ShellUpdate

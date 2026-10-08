@@ -1,14 +1,35 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import "../../config"
 import "../../services"
 import "../common"
+import "controls"
 
-// static layout + in-place bindings: no Repeater model or Canvas that would rebuild every 60fps alert poll
-Rectangle {
+// static rows + in-place bindings: no Repeater model or Canvas that would rebuild every 60fps alert poll
+SettingsCard {
     id: root
 
     property bool active: true
-    readonly property int _pad: 7
+    readonly property bool _motionAllowed: root.active
+        && Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)
+    on_MotionAllowedChanged: if (!root._motionAllowed) {
+        for (const row of [_cpu, _memory, _disk, _battery]) row.settleIntro()
+    }
+    // only as the menu opens: any running animation redraws the whole window at the display rate, so a replay on every tab switch doubled what the switch cost
+    Component.onCompleted: if (root.active) root._introRows()
+    Connections {
+        target: MenuState
+        function onOpenChanged() {
+            if (MenuState.open && MenuState.activeTab === MenuState.homeTab) root._introRows()
+        }
+    }
+    function _introRows(): void {
+        // the page is still faded out when it turns active, so effective visibility cannot pick the rows
+        const rows = Battery.available ? [_cpu, _memory, _disk, _battery] : [_cpu, _memory, _disk]
+        for (let i = 0; i < rows.length; i++) rows[i].intro(Motion.ms(40 + 35 * i))
+    }
+    readonly property int _rowH: Metrics.rowHeightFor(48)
 
     function sizeText(kb: real): string {
         if (!isFinite(kb) || kb <= 0) return ""
@@ -19,16 +40,14 @@ Rectangle {
         return (tenths < 10 ? tenths.toFixed(1) : String(Math.round(v))) + units[i]
     }
 
-    width: parent ? parent.width : 0
-    implicitHeight: _grid.implicitHeight + 2 * _pad
-    height: implicitHeight
-    radius: Theme.radiusCard
-    antialiasing: true
-    color: Theme.menuCard
-
-    OutlineBorder {
-        radius: root.radius
-        outlineColor: Theme.menuCardBorder
+    function batteryDetail(): string {
+        if (!Battery.available) return ""
+        if (Battery.timeLabel.length === 0) {
+            const s = Battery.statusLabel
+            return s.length > 0 ? s.charAt(0).toUpperCase() + s.slice(1) : ""
+        }
+        return Battery.charging ? "Full in " + Battery.timeText(Battery.timeToFull, false)
+            : Battery.timeLabel + " left"
     }
 
     component Vital: Item {
@@ -38,27 +57,47 @@ Rectangle {
         property string label: ""
         property string value: ""
         property string sub: ""
-        property string reserveSub: ""
         property real   progress: 0
         property int    status: 0
         property real   pulse: 0
         property bool   live: true
-        property bool   divider: true
-        readonly property int padL: divider ? 18 : 14
-        property int          padR: 18
 
         readonly property color tint: status === 2 ? Theme.error
                                     : status === 1 ? Theme.warning
                                     : Theme.menuTextMuted
 
-        height: Metrics.rowHeightFor(70)
-        // reserve the widest readings so 99 -> 100 never changes the column count
-        implicitWidth: 36 + Math.max(_labelRow.implicitWidth,
-            _valueMetrics.advanceWidth + (tile.sub.length > 0
-                ? 4 + Math.max(_subMetrics.advanceWidth, _sub.implicitWidth) : 0))
+        width: parent ? parent.width : 0
+        height: root._rowH
+        implicitHeight: height
+        Accessible.role: Accessible.StaticText
+        Accessible.name: tile.label + " " + tile.value
+        Accessible.description: tile.sub
 
-        TextMetrics { id: _valueMetrics; font: _val.font; text: "100%" }
-        TextMetrics { id: _subMetrics; font: _sub.font; text: tile.reserveSub }
+        // the bar grows in from empty each time the page shows; a one-shot, never a loop
+        property real _grow: 1
+        function settleIntro(): void {
+            _introRun.stop()
+            tile._grow = 1
+        }
+        function intro(delay: int): void {
+            _introRun.stop()
+            if (!Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)) {
+                tile._grow = 1
+                return
+            }
+            tile._grow = 0
+            _introDelay.duration = delay
+            _introRun.restart()
+        }
+        SequentialAnimation {
+            id: _introRun
+            PauseAnimation { id: _introDelay; duration: Motion.ms(0) }
+            NumberAnimation {
+                target: tile; property: "_grow"; to: 1
+                duration: Motion.ms(420)
+                easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.emphasizedDecel
+            }
+        }
 
         // whole percent like the readout: every poll's fraction ran the glide, and a running glide redraws every window
         readonly property real _p: Math.round(Math.max(0, Math.min(1, progress)) * 100) / 100
@@ -70,165 +109,135 @@ Rectangle {
             NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
         }
 
-        Rectangle {
-            visible: tile.divider
-            x: 0
-            anchors.verticalCenter: parent.verticalCenter
-            width: 1
-            height: Math.round(parent.height * 0.52)
-            color: Theme.withAlpha(Theme.subtext, 0.10)
-        }
-
-        Row {
-            id: _labelRow
+        Item {
+            id: _iconSlot
             anchors.left: parent.left
-            anchors.leftMargin: tile.padL
-            y: 11
-            spacing: 4
+            anchors.leftMargin: 14
+            anchors.verticalCenter: parent.verticalCenter
+            width: 18; height: 18
 
             ShellText {
-                id: _gl
+                anchors.centerIn: parent
                 text: tile.glyph
                 color: tile.pulse > 0.001
-                    ? Theme.mix(Theme.menuTextMuted, tile.tint, 0.36 + tile.pulse * 0.38)
-                    : Theme.withAlpha(Theme.menuTextMuted, 0.82)
-                font.pixelSize: Settings.fontMicro
+                    ? Theme.mix(Theme.subtext, tile.tint, 0.36 + tile.pulse * 0.38)
+                    : tile.status > 0 ? Theme.mix(Theme.subtext, tile.tint, 0.55)
+                    : Theme.withAlpha(Theme.subtext, 0.85)
+                font.pixelSize: Settings.iconSize + 2
             }
+        }
+
+        Column {
+            id: _textCol
+            anchors.left: _iconSlot.right
+            anchors.leftMargin: 10
+            anchors.right: _bar.left
+            anchors.rightMargin: 12
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 1
+
             ShellText {
-                anchors.baseline: _gl.baseline
+                width: parent.width
                 text: tile.label
-                color: Theme.withAlpha(Theme.menuTextMuted, 0.82)
-                font.pixelSize: Settings.fontMicro
-                font.letterSpacing: 0.4
+                color: Theme.withAlpha(Theme.text, 0.85)
+                font.pixelSize: Settings.fontSize
                 font.weight: Font.DemiBold
-                font.capitalization: Font.AllUppercase
-            }
-        }
-
-        Row {
-            id: _valueRow
-            anchors.left: parent.left
-            anchors.leftMargin: tile.padL
-            anchors.top: _labelRow.bottom
-            anchors.topMargin: 3
-            spacing: 4
-
-            ShellText {
-                id: _val
-                text: tile.value
-                color: tile.pulse > 0.001
-                    ? Theme.mix(Theme.text, tile.tint, tile.pulse * 0.5)
-                    : tile.status > 0
-                        ? Theme.mix(Theme.text, tile.tint, 0.45)
-                        : Theme.withAlpha(Theme.text, 0.92)
-                font.pixelSize: Settings.fontSize + 4
-                font.weight: Font.DemiBold
+                elide: Text.ElideRight
             }
             ShellText {
-                id: _sub
-                visible: tile.sub !== ""
-                anchors.baseline: _val.baseline
+                visible: tile.sub.length > 0
+                width: parent.width
                 text: tile.sub
-                color: tile.pulse > 0.001
-                    ? Theme.mix(Theme.menuTextMuted, tile.tint, tile.pulse * 0.6)
-                    : Theme.withAlpha(Theme.menuTextMuted, 0.85)
-                font.pixelSize: Settings.fontLabel
+                color: tile.status > 0 ? Theme.mix(Theme.menuTextDetail, tile.tint, 0.5)
+                    : Theme.menuTextDetail
+                font.pixelSize: Settings.fontCaption
+                font.weight: Font.Medium
+                elide: Text.ElideRight
             }
         }
 
-        Rectangle {
-            anchors.left: parent.left;   anchors.leftMargin: tile.padL
-            anchors.right: parent.right; anchors.rightMargin: tile.padR
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: 10
-            height: 4
-            radius: 2
-            antialiasing: true
-            color: Theme.menuTrack
+        WaveLine {
+            id: _bar
+            anchors.right: _val.left
+            anchors.rightMargin: 10
+            anchors.verticalCenter: parent.verticalCenter
+            width: Metrics.snap4(Math.min(136, Math.max(48, tile.width * 0.38)))
+            height: implicitHeight
+            value: tile._disp
+            reveal: tile._grow
+            thickness: 3
+            amplitude: 2
+            wavelength: 12
+            trackColor: Theme.menuTrack
+            color: tile.status > 0 ? Theme.withAlpha(tile.tint, 0.85) : Theme.withAlpha(Theme.accent, 0.55)
+            ColorFade on color {}
+        }
 
-            Rectangle {
-                width: tile._disp <= 0 ? 0 : Math.max(parent.height, Math.round(parent.width * tile._disp))
-                height: parent.height
-                radius: parent.radius
-                antialiasing: true
-                color: tile.status > 0 ? tile.tint : Theme.withAlpha(Theme.accent, 0.70)
-                ColorFade on color {}
-            }
+        // reserved at "100%" so 99 -> 100 never shifts the bar; measured as text, not TextMetrics,
+        // since distance-field glyphs lay out a fraction wider than their advance
+        ShellText { id: _valReserve; visible: false; text: "100%"; font: _val.font }
+        ShellText {
+            id: _val
+            anchors.right: parent.right
+            anchors.rightMargin: 12
+            anchors.verticalCenter: parent.verticalCenter
+            width: Math.ceil(_valReserve.implicitWidth)
+            horizontalAlignment: Text.AlignRight
+            text: tile.value
+            color: tile.pulse > 0.001
+                ? Theme.mix(Theme.text, tile.tint, tile.pulse * 0.5)
+                : tile.status > 0
+                    ? Theme.mix(Theme.text, tile.tint, 0.45)
+                    : Theme.withAlpha(Theme.text, 0.92)
+            font.pixelSize: Settings.fontSize
+            font.weight: Font.DemiBold
         }
     }
 
-    Grid {
-        id: _grid
-        y: root._pad
-        width: parent.width
-        readonly property int naturalCells: Battery.available ? 4 : 3
-        readonly property int minCellW: Metrics.snap4Up(Math.max(80,
-            _cpu.implicitWidth, _memory.implicitWidth, _disk.implicitWidth,
-            _battery.visible ? _battery.implicitWidth : 0))
-        readonly property int cells: width >= naturalCells * minCellW ? naturalCells
-            : width >= 2 * minCellW ? 2 : 1
-        readonly property real cellW: width / cells
-        columns: cells
+    Vital {
+        id: _cpu
+        live: root.active
+        glyph: "󰔏"
+        label: "CPU"
+        value: SysInfo.cpuReady ? Math.round(SysInfo.cpuPct * 100) + "%" : "—"
+        sub: CpuTemp.available ? Math.round(CpuTemp.temp) + "°" : ""
+        progress: SysInfo.cpuReady ? SysInfo.cpuPct : 0
+        status: CpuTemp.critical ? 2 : (CpuTemp.hot ? 1 : 0)
+        pulse: CpuTemp.alertPulse
+    }
 
-        Vital {
-            id: _cpu
-            width: _grid.cellW
-            live: root.active
-            divider: false
-            glyph: "󰔏"
-            label: "CPU"
-            value: SysInfo.cpuReady ? Math.round(SysInfo.cpuPct * 100) + "%" : "—"
-            sub: CpuTemp.available ? Math.round(CpuTemp.temp) + "°" : ""
-            reserveSub: "125°"
-            progress: SysInfo.cpuReady ? SysInfo.cpuPct : 0
-            status: CpuTemp.critical ? 2 : (CpuTemp.hot ? 1 : 0)
-            pulse: CpuTemp.alertPulse
-        }
+    Vital {
+        id: _memory
+        live: root.active
+        glyph: "󰘚"
+        label: "Memory"
+        value: SysInfo.memTotalKb > 0 ? Math.round(SysInfo.memPct * 100) + "%" : "—"
+        sub: SysInfo.memTotalKb > 0 ? root.sizeText(SysInfo.memTotalKb - SysInfo.memAvailKb) + " used" : ""
+        progress: SysInfo.memPct
+        status: SysInfo.memPct > 0.9 ? 2 : (SysInfo.memPct > 0.75 ? 1 : 0)
+    }
 
-        Vital {
-            id: _memory
-            width: _grid.cellW
-            live: root.active
-            divider: _grid.cells > 1
-            glyph: "󰘚"
-            label: "Mem"
-            value: SysInfo.memTotalKb > 0 ? Math.round(SysInfo.memPct * 100) + "%" : "—"
-            sub: SysInfo.memTotalKb > 0 ? root.sizeText(SysInfo.memTotalKb - SysInfo.memAvailKb) : ""
-            reserveSub: "999G"
-            progress: SysInfo.memPct
-            status: SysInfo.memPct > 0.9 ? 2 : (SysInfo.memPct > 0.75 ? 1 : 0)
-        }
+    Vital {
+        id: _disk
+        live: root.active
+        glyph: "󰋊"
+        label: "Disk"
+        value: SysInfo.diskTotalKb > 0 ? Math.round(SysInfo.diskPct * 100) + "%" : "—"
+        sub: SysInfo.diskTotalKb > 0 && SysInfo.diskAvailKb > 0 ? root.sizeText(SysInfo.diskAvailKb) + " free" : ""
+        progress: SysInfo.diskPct
+        status: SysInfo.diskPct > 0.9 ? 2 : (SysInfo.diskPct > 0.75 ? 1 : 0)
+    }
 
-        Vital {
-            id: _disk
-            width: _grid.cellW
-            live: root.active
-            padR: Battery.available ? 18 : 14
-            divider: _grid.cells > 2
-            glyph: "󰋊"
-            label: "Disk"
-            value: SysInfo.diskTotalKb > 0 ? Math.round(SysInfo.diskPct * 100) + "%" : "—"
-            sub: SysInfo.diskTotalKb > 0 && SysInfo.diskAvailKb > 0 ? root.sizeText(SysInfo.diskAvailKb) + " free" : ""
-            reserveSub: "999G free"
-            progress: SysInfo.diskPct
-            status: SysInfo.diskPct > 0.9 ? 2 : (SysInfo.diskPct > 0.75 ? 1 : 0)
-        }
-
-        Vital {
-            id: _battery
-            width: _grid.cellW
-            live: root.active
-            visible: Battery.available
-            divider: _grid.cells > 1
-            padR: 14
-            glyph: Battery.icon
-            label: "Batt"
-            value: Battery.available ? Battery.label : "—"
-            sub: Battery.timeLabel
-            reserveSub: "+ 9h 59m"
-            progress: Battery.available ? Math.min(Battery.pct / 100, 1.0) : 0
-            status: Battery.critical ? 2 : (Battery.low ? 1 : 0)
-            pulse: Battery.alertPulse
-        }
+    Vital {
+        id: _battery
+        live: root.active
+        visible: Battery.available
+        glyph: Battery.icon
+        label: "Battery"
+        value: Battery.available ? Battery.label : "—"
+        sub: root.batteryDetail()
+        progress: Battery.available ? Math.min(Battery.pct / 100, 1.0) : 0
+        status: Battery.critical ? 2 : (Battery.low ? 1 : 0)
+        pulse: Battery.alertPulse
     }
 }

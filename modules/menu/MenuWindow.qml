@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
+import Quickshell.Widgets
 import "../../config"
 import "../../services"
 import "../common"
@@ -21,6 +22,7 @@ FittedPopupWindow {
         } else if (panel.activeTab === 0 && homeLoader.item && homeLoader.item.dismissInline()) {
         } else if (panel.activeTab === 1 && settingsLoader.item && settingsLoader.item.dismissInline()) {
         } else if (panel.activeTab === 2 && recentLoader.item && recentLoader.item.dismissInline()) {
+        } else if (panel.activeTab === MenuState.mediaTab && mediaLoader.item && mediaLoader.item.dismissInline()) {
         } else {
             MenuState.close()
         }
@@ -86,26 +88,33 @@ FittedPopupWindow {
             return Math.max(0, Math.min(_navMaxW, desired, detailSafe, sidebarFit))
         }
         readonly property int railExpandedW: railCollapsedW + navW
-        // animated here, not on the rail Item: the content pane derives its x and width from this, and easing only the rail leaves the content snapping ahead of it
-        property int railW: _railExpanded ? railExpandedW : railCollapsedW
-        MotionBehavior on railW {
-            id: _railMotion
-            gate: panel._geometryReady && panel.open
-            NumberAnimation {
-                duration: _railMotion.targetValue > panel.railCollapsedW
-                    ? Motion.panelResize : Motion.panelCollapse
-                easing.type: Easing.BezierSpline
-                easing.bezierCurve: _railMotion.targetValue > panel.railCollapsedW
-                    ? Motion.emphasizedDecel : Motion.emphasizedAccel
-            }
+        // Width, rail and padding use the same response. Retargeting a quick
+        // tab reversal preserves velocity instead of restarting three eases.
+        readonly property bool _horizontalMotion: panel._geometryReady && panel.open
+        readonly property real railW: _railGlide.value
+        SmoothGlide {
+            id: _railGlide
+            target: panel._railExpanded ? panel.railExpandedW : panel.railCollapsedW
+            gate: panel._horizontalMotion
         }
         // live width, not the target: the page reflows ahead of the outer edge otherwise
-        readonly property int contentW: Math.max(1, Math.round(width - railW))
-        readonly property int contentPad: activeTab === 1
+        readonly property real contentW: Math.max(1, width - railW)
+        readonly property real _targetContentPad: activeTab === 1
             ? Math.max(12, Math.min(20,
-                Metrics.snap4(12 + (width - _compactW) * 8 / (_settingsW - _compactW))))
-            : _railExpanded && width >= 460 ? 18 : 12
-        readonly property int innerW: Math.max(1, contentW - contentPad * 2)
+                12 + (panelW - _compactW) * 8 / (_settingsW - _compactW)))
+            : _railExpanded && panelW >= 460 ? 18 : 12
+        readonly property real contentPad: _paddingGlide.value
+        SmoothGlide {
+            id: _paddingGlide
+            target: panel._targetContentPad
+            gate: panel._horizontalMotion
+        }
+        readonly property real innerW: Math.max(1, contentW - contentPad * 2)
+        readonly property real pageLayoutW: Math.max(1, panelW
+            - (_railExpanded ? railExpandedW : railCollapsedW) - _targetContentPad * 2)
+        // Reveal when nearly all of the incoming layout fits. Width and rail
+        // can keep settling behind it without clipping the first visible frame.
+        readonly property bool pageViewportReady: innerW >= pageLayoutW - 12
         readonly property int idealMinH: activeTab === 2 ? 440 : 360
         readonly property int minRailFitH: 252
         readonly property int pageTopInset: 12
@@ -121,7 +130,7 @@ FittedPopupWindow {
         readonly property int _resolvedPanelH: Math.max(1,
             Math.min(contentPane.targetH, _availablePanelH))
         // a lazy page reports its placeholder height first; holding the edge gives a tab switch one destination instead of shrinking then growing
-        readonly property int targetPanelH: _tabHeightHeld
+        readonly property real targetPanelH: _tabHeightHeld
             ? Math.max(1, Math.min(_tabHeldH, _availablePanelH))
             : _resolvedPanelH
 
@@ -132,14 +141,14 @@ FittedPopupWindow {
         property bool _geometryReady:  false
         property bool _outerHeightMotion: false
         property bool _tabHeightHeld: false
-        property int  _tabHeldH: idealMinH
+        property real _tabHeldH: idealMinH
         property bool _homeRetained:    false
         property bool _settingsRetained: false
         property bool _recentRetained:  false
+        property bool _mediaRetained:   false
         property bool _settingsNavRetained: false
 
         Component.onCompleted: {
-            panel._shownH = panel.targetPanelH
             if (activeTab !== 0) _loadedDeferred = true
             if (activeTab === 1) _settingsNavRetained = true
             panel._syncPageRetention()
@@ -179,6 +188,13 @@ FittedPopupWindow {
             } else if (_recentRetained) {
                 _recentUnload.restart()
             }
+
+            if (activeTab === MenuState.mediaTab) {
+                _mediaUnload.stop()
+                _mediaRetained = true
+            } else if (_mediaRetained) {
+                _mediaUnload.restart()
+            }
         }
 
         on_LoadedDeferredChanged: _syncPageRetention()
@@ -197,6 +213,7 @@ FittedPopupWindow {
             if (homeLoader.item) homeLoader.item.settleVisual(activeTab === 0)
             if (settingsLoader.item) settingsLoader.item.settleVisual(activeTab === 1)
             if (recentLoader.item) recentLoader.item.settleVisual(activeTab === 2)
+            if (mediaLoader.item) mediaLoader.item.settleVisual(activeTab === MenuState.mediaTab)
         }
 
         onCloseFinished: {
@@ -206,16 +223,17 @@ FittedPopupWindow {
         }
 
         function switchTab(idx: int): void {
-            const tab = Math.max(0, Math.min(2, idx))
+            const tab = Math.max(0, Math.min(MenuState.mediaTab, idx))
+            const sameTab = tab === activeTab
             if (powerOpen) powerOpen = false
             if (tab !== activeTab) panel._beginTabHeightHold()
             MenuState.selectTab(tab)
-            contentFlick.contentY = 0
+            if (sameTab) contentFlick.scrollToTop()
         }
 
         function _beginTabHeightHold(): void {
             if (!panel.open || ShellSettings.reduceMotion) return
-            panel._tabHeldH = Math.max(4, Metrics.snap4Up(panel.height))
+            panel._tabHeldH = Math.max(4, panel.height)
             panel._tabHeightHeld = true
         }
 
@@ -230,6 +248,8 @@ FittedPopupWindow {
                 return recentLoader.status === Loader.Ready
                     && recentLoader.item?.contentReady === true
             }
+            if (panel.activeTab === MenuState.mediaTab)
+                return mediaLoader.status === Loader.Ready || mediaLoader.status === Loader.Error
             return homeLoader.status === Loader.Ready || homeLoader.status === Loader.Error
         }
 
@@ -252,9 +272,16 @@ FittedPopupWindow {
             }
             function onTabChanging() {
                 if (!panel._tabHeightHeld) panel._beginTabHeightHold()
+                // Snapshot before activeTab changes its dependent geometry.
+                homeLoader.holdLayout()
+                settingsLoader.holdLayout()
+                recentLoader.holdLayout()
+                mediaLoader.holdLayout()
+                _settingsDrawer.holdLayout()
+                _recentDrawer.holdLayout()
             }
             function onActiveTabChanged() {
-                contentFlick.contentY = 0
+                contentFlick.scrollToTop()
                 if (panel.activeTab !== 0) panel._loadedDeferred = true
                 panel._syncPageRetention()
                 panel._scheduleTabHeightRelease()
@@ -269,11 +296,13 @@ FittedPopupWindow {
                     panel._syncPageRetention()
                     // closeFinished is canceled when a close animation reverses; transient drawer state must not depend on that callback
                     panel.powerOpen = false
+                    if (panel.activeTab === MenuState.mediaTab && !Media.shown)
+                        MenuState.selectTab(MenuState.homeTab)
                     panel._outerHeightMotion = false
                     panel._tabHeightHeld = false
                     _tabHeightRelease.stop()
                     _outerHeightMotionHold.stop()
-                    contentFlick.contentY = 0
+                    contentFlick.scrollToTop()
                 } else {
                     _settingsWarmDelay.stop()
                     _closedUnload.restart()
@@ -283,7 +312,8 @@ FittedPopupWindow {
 
         Timer {
             id: _homeUnload
-            interval: Math.max(Motion.pageOut, Motion.ms(100)) + 30
+            // a return within seconds skips the ~8 ms rebuild that lands on the switch's first frame
+            interval: 8000
             onTriggered: if (panel.activeTab !== 0) panel._homeRetained = false
         }
 
@@ -317,6 +347,12 @@ FittedPopupWindow {
         }
 
         Timer {
+            id: _mediaUnload
+            interval: Math.max(Motion.pageOut, Motion.ms(100)) + 30
+            onTriggered: if (panel.activeTab !== MenuState.mediaTab) panel._mediaRetained = false
+        }
+
+        Timer {
             id: _closedUnload
             interval: Math.max(Motion.pageOut, Motion.ms(100)) + 120
             onTriggered: {
@@ -325,8 +361,10 @@ FittedPopupWindow {
                 _settingsWarmUnload.stop()
                 _settingsUnload.stop()
                 _recentUnload.stop()
+                _mediaUnload.stop()
                 panel._settingsRetained = false
                 panel._recentRetained = false
+                panel._mediaRetained = false
                 panel._settingsNavRetained = false
             }
         }
@@ -348,6 +386,14 @@ FittedPopupWindow {
         }
 
         Connections {
+            target: Media
+            function onShownChanged() {
+                if (!Media.shown && panel.activeTab === MenuState.mediaTab)
+                    panel.switchTab(MenuState.homeTab)
+            }
+        }
+
+        Connections {
             target: ShellSettings
             function onReduceMotionChanged() {
                 if (!ShellSettings.reduceMotion) return
@@ -357,20 +403,13 @@ FittedPopupWindow {
             }
         }
 
-        width:  panelW
+        width: Math.max(1, Math.min(_widthGlide.value, _availablePanelW))
         height: _shownH
 
-        // must match railW's curve, or the panel's outer edge and the rail's inner edge disagree mid-motion
-        MotionBehavior on width {
-            id: _widthMotion
-            gate: panel._geometryReady && panel.open
-            NumberAnimation {
-                duration: _widthMotion.targetValue >= panel.width
-                    ? Motion.panelResize : Motion.panelCollapse
-                easing.type: Easing.BezierSpline
-                easing.bezierCurve: _widthMotion.targetValue >= panel.width
-                    ? Motion.emphasizedDecel : Motion.emphasizedAccel
-            }
+        SmoothGlide {
+            id: _widthGlide
+            target: panel.panelW
+            gate: panel._horizontalMotion
         }
         // home sections animate their own height, so the panel follows it live instead of easing twice; tab swaps still animate here
         readonly property bool _heightGlides: panel._geometryReady && panel.open
@@ -378,56 +417,14 @@ FittedPopupWindow {
             && (panel.activeTab !== 0 || panel._outerHeightMotion)
             && panel._shownH <= panel._availablePanelH + 1
             && !ShellSettings.reduceMotion && !Idle.isIdle
-        // a page reflowing at the live width moves the target 4 px at a time; restarting the ease on every step stalled the edge, so a run keeps its clock and small steps only move its end
-        property real _shownH: 0
-        property real _heightFrom: 0
-        property real _heightTo: 0
-        property real _heightEase: 1
-        property bool _heightGrows: true
-
-        function _placeHeight(): void {
-            panel._shownH = panel._heightFrom + (panel.targetPanelH - panel._heightFrom) * panel._heightEase
-        }
-
-        onTargetPanelHChanged: {
-            const to = panel.targetPanelH
-            if (!panel._heightGlides) {
-                _heightRun.stop()
-                panel._shownH = to
-                return
-            }
-            // re-based so the edge stays put and the run still lands on time; late in a run that would whip, so a fresh nudge takes over
-            const e = panel._heightEase
-            if (_heightRun.running && Math.abs(to - panel._heightTo) <= 16 && e < 0.75) {
-                panel._heightFrom = (panel._shownH - to * e) / (1 - e)
-                panel._heightTo = to
-                return
-            }
-            _heightRun.stop()
-            panel._heightFrom = panel._shownH
-            panel._heightTo = to
-            // a nudge eases out like a growth: easing in from rest reads as a pause before a few px
-            panel._heightGrows = to >= panel._shownH || Math.abs(to - panel._shownH) <= 16
-            panel._heightEase = 0
-            _heightRun.start()
-        }
-        on_HeightEaseChanged: if (_heightRun.running) panel._placeHeight()
-        on_HeightGlidesChanged: {
-            if (panel._heightGlides || !_heightRun.running) return
-            _heightRun.stop()
-            panel._shownH = panel.targetPanelH
-        }
-
-        NumberAnimation {
-            id: _heightRun
-            target: panel
-            property: "_heightEase"
-            from: 0
-            to: 1
-            duration: panel._heightGrows ? Motion.panelResize : Motion.panelCollapse
-            easing.type: Easing.BezierSpline
-            easing.bezierCurve: panel._heightGrows ? Motion.emphasizedDecel : Motion.emphasizedAccel
-            onFinished: panel._shownH = panel.targetPanelH
+        // Reflow can change the destination every frame. Keep velocity across
+        // those updates, and drive geometry once rather than easing each nudge.
+        readonly property real _shownH: Math.max(1,
+            Math.min(_heightGlide.value, panel._availablePanelH))
+        SmoothGlide {
+            id: _heightGlide
+            target: panel.targetPanelH
+            gate: panel._heightGlides
         }
 
         onFullyShownChanged: {
@@ -482,13 +479,14 @@ FittedPopupWindow {
                     content: Component {
                         SettingsNav {
                             powerOpen: panel.powerOpen
-                            onCurrentPageRetapped: contentFlick.contentY = 0
+                            onCurrentPageRetapped: contentFlick.scrollToTop()
                             onGroupToggled: panel._armOuterHeightMotion()
                         }
                     }
                 }
 
                 RailDrawer {
+                    id: _recentDrawer
                     x: panel.railCollapsedW
                     width: panel.navW
                     revealedWidth: Math.max(0, panel.railW - panel.railCollapsedW)
@@ -499,7 +497,7 @@ FittedPopupWindow {
                         || (MenuState.open && panel.activeTab === 2)
                     content: Component {
                         RecentNav {
-                            onFilterPicked: contentFlick.contentY = 0
+                            onFilterPicked: contentFlick.scrollToTop()
                         }
                     }
                 }
@@ -565,10 +563,16 @@ FittedPopupWindow {
             Rectangle {
                 id: _railSelection
                 // strip order is Home, Notifications, Settings; tabs are numbered 0, 2, 1
-                readonly property int _slotIndex: panel.activeTab === 2 ? 1
+                readonly property int _slotIndex: panel.activeTab === MenuState.mediaTab ? 3
+                    : panel.activeTab === 2 ? 1
                     : panel.activeTab === 1 ? 2 : 0
                 readonly property real _slot: _slotGlide.value
-                SpringGlide { id: _slotGlide; target: _railSelection._slotIndex }
+                SmoothGlide {
+                    id: _slotGlide
+                    target: _railSelection._slotIndex
+                    precision: 0.001
+                    gate: panel._horizontalMotion
+                }
                 x: _railNav.x + (panel.railCollapsedW - width) / 2
                 y: _railNav.y + (_railHome.height - height) / 2
                     + _slot * (_railHome.height + _railNav.spacing)
@@ -667,6 +671,72 @@ FittedPopupWindow {
                     onHoveredChanged: {
                         if (hovered) _settingsWarmDelay.restart()
                         else _settingsWarmDelay.stop()
+                    }
+                }
+
+                RailNavItem {
+                    id: _railMedia
+                    readonly property string _title: Media.displayTitle.length > 0
+                        ? Media.displayTitle : "Now Playing"
+                    visible: opacity > 0.01
+                    enabled: Media.shown
+                    opacity: Media.shown ? 1 : 0
+                    scale: Media.shown ? 1 : 0.8
+                    MotionBehavior on opacity { NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+                    MotionBehavior on scale { NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
+                    labels: _railLabels
+                    glidingSelection: true
+                    railW: panel.railCollapsedW
+                    label: _title.length > 32 ? _title.slice(0, 31) + "…" : _title
+                    labelPillEnabled: !panel._railExpanded
+                        || panel.navW < panel._navMinW
+                    active: panel.activeTab === MenuState.mediaTab
+                    onTapped: panel.switchTab(MenuState.mediaTab)
+
+                    ClippingRectangle {
+                        id: _railCover
+                        readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+                        anchors.centerIn: parent
+                        anchors.alignWhenCentered: false
+                        width: Metrics.devicePx(22, _dpr); height: width
+                        radius: 6
+                        color: Theme.menuControl
+                        opacity: Media.playing ? 1 : 0.55
+                        transform: PixelSnap { item: _railCover; dpr: _railCover._dpr }
+                        MotionBehavior on opacity { NumberAnimation { duration: Motion.medium } }
+
+                        ShellText {
+                            anchors.centerIn: parent
+                            opacity: 1 - _railArt.opacity
+                            visible: opacity > 0.01
+                            text: Media.metadataPrivacyProtected ? "󰌾" : "󰝚"
+                            color: Theme.withAlpha(Theme.subtext, 0.70)
+                            font.pixelSize: Settings.iconSize
+                        }
+                        Image {
+                            id: _railArt
+                            // the last cover stays up while the next one decodes, instead of blinking to the glyph
+                            property bool _shown: false
+                            anchors.fill: parent
+                            source: _railMedia.visible ? Media.stableArtUrl : ""
+                            onSourceChanged: if (String(source).length === 0) _shown = false
+                            onStatusChanged: if (status === Image.Ready) _shown = true
+                            retainWhileLoading: true
+                            fillMode: Image.PreserveAspectCrop
+                            asynchronous: true
+                            cache: false
+                            sourceSize.width: Math.ceil(_railCover.width * _railCover._dpr)
+                            sourceSize.height: Math.ceil(_railCover.width * _railCover._dpr)
+                            opacity: _shown ? 1 : 0
+                            visible: opacity > 0.01
+                            MotionBehavior on opacity { NumberAnimation { duration: Motion.fast } }
+                        }
+                        OutlineBorder {
+                            z: 2
+                            radius: _railCover.radius
+                            outlineWidth: 1
+                            outlineColor: Theme.menuControlLine
+                        }
                     }
                 }
             }
@@ -839,6 +909,7 @@ FittedPopupWindow {
                         onTriggered: tabContent._pageSlow = tabContent._pagePending
                     }
                     height: panel.activeTab === 0 ? (homeLoader.item?.implicitHeight ?? 0)
+                          : panel.activeTab === MenuState.mediaTab ? (mediaLoader.item?.implicitHeight ?? 0)
                           : panel.activeTab === 1 ? (settingsLoader.item?.implicitHeight
                                 ?? _pagePlaceholder.implicitHeight)
                           : (recentLoader.item?.implicitHeight ?? _pagePlaceholder.implicitHeight)
@@ -924,11 +995,13 @@ FittedPopupWindow {
                         }
                     }
 
-                    Loader {
+                    PageLoader {
                         id: homeLoader
-                        width: parent.width
+                        layoutWidth: panel.pageLayoutW
+                        shown: panel.activeTab === 0 && MenuState.open
+                        scrollOffset: contentFlick.contentY
                         active: panel._homeRetained
-                        asynchronous: false
+                        asynchronous: panel.fullyShown
                         onStatusChanged: panel._scheduleTabHeightRelease()
                         sourceComponent: Component {
                             HomePage {
@@ -936,13 +1009,16 @@ FittedPopupWindow {
                                 active: panel.activeTab === 0 && MenuState.open
                                 powerOpen: panel.powerOpen
                                 animateOnCreate: panel.fullyShown
+                                viewportReady: panel.pageViewportReady
                             }
                         }
                     }
 
-                    Loader {
+                    PageLoader {
                         id: settingsLoader
-                        width: parent.width
+                        layoutWidth: panel.pageLayoutW
+                        shown: panel.activeTab === 1 && MenuState.open
+                        scrollOffset: contentFlick.contentY
                         active: panel._loadedDeferred && panel._settingsRetained
                         asynchronous: true
                         onStatusChanged: panel._scheduleTabHeightRelease()
@@ -952,16 +1028,19 @@ FittedPopupWindow {
                                 active: panel.activeTab === 1 && MenuState.open
                                 powerOpen: panel.powerOpen
                                 animateOnCreate: panel.fullyShown
+                                viewportReady: panel.pageViewportReady
                                 scroller: contentFlick
                                 onContentReadyChanged: panel._scheduleTabHeightRelease()
-                                onSectionSwapped: contentFlick.contentY = 0
+                                onSectionSwapped: contentFlick.scrollToTop()
                             }
                         }
                     }
 
-                    Loader {
+                    PageLoader {
                         id: recentLoader
-                        width: parent.width
+                        layoutWidth: panel.pageLayoutW
+                        shown: panel.activeTab === 2 && MenuState.open
+                        scrollOffset: contentFlick.contentY
                         active: panel._loadedDeferred && panel._recentRetained
                         asynchronous: true
                         onStatusChanged: panel._scheduleTabHeightRelease()
@@ -969,11 +1048,31 @@ FittedPopupWindow {
                             RecentPage {
                                 width: parent.width
                                 viewportHeight: panel.recentViewportH
-                                thumbOutset: panel.contentPad
+                                thumbOutset: Math.round(panel.contentPad)
                                 onContentReadyChanged: panel._scheduleTabHeightRelease()
                                 active: panel.activeTab === 2 && MenuState.open
                                 powerOpen: panel.powerOpen
                                 animateOnCreate: panel.fullyShown
+                                viewportReady: panel.pageViewportReady
+                            }
+                        }
+                    }
+
+                    PageLoader {
+                        id: mediaLoader
+                        layoutWidth: panel.pageLayoutW
+                        shown: panel.activeTab === MenuState.mediaTab && MenuState.open
+                        scrollOffset: contentFlick.contentY
+                        active: panel._mediaRetained
+                        asynchronous: panel.fullyShown
+                        onStatusChanged: panel._scheduleTabHeightRelease()
+                        sourceComponent: Component {
+                            MediaPage {
+                                width: parent.width
+                                active: panel.activeTab === MenuState.mediaTab && MenuState.open
+                                powerOpen: panel.powerOpen
+                                animateOnCreate: panel.fullyShown
+                                viewportReady: panel.pageViewportReady
                             }
                         }
                     }

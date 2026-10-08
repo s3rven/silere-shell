@@ -147,12 +147,13 @@ Singleton {
     property real  _anchorPos:  0
     property real  _anchorMs:   0
     property real  positionNow: 0
+    property int trackRevision: 0
     readonly property real positionRatio: length > 0 ? Math.max(0, Math.min(1, positionNow / length)) : 0
-    function positionDemand(homeActive: bool, barVisible: bool, overview: bool): bool {
-        return homeActive || (barVisible && !overview)
+    function positionDemand(pageShown: bool, barVisible: bool, overview: bool): bool {
+        return pageShown || (barVisible && !overview)
     }
     readonly property bool positionVisible: root.positionDemand(
-        MenuState.homeActive,
+        MenuState.mediaActive,
         ShellSettings.barShowMedia && root.shown && ShellSettings.mediaWidgetHelper,
         OverviewState.active)
 
@@ -192,12 +193,17 @@ Singleton {
         const ss = String(s % 60).padStart(2, "0")
         return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`
     }
+    function formatElapsed(secs: real, total: real): string {
+        const t = root.formatTime(secs)
+        return total >= 3600 && t.split(":").length < 3 ? "0:" + t.padStart(5, "0") : t
+    }
 
     Connections {
         target: root.player
         enabled: root.player !== null
         function onPositionChanged() { root._reanchor() }
         function onRateChanged() { root._reanchor() }
+        function onTrackChanged() { root.trackRevision++; root._reanchor() }
     }
     onPositionVisibleChanged: if (positionVisible) root._reanchor()
     Timer {
@@ -207,7 +213,7 @@ Singleton {
         onTriggered: root._recompute()
     }
 
-    onPlayerChanged: _reanchor()
+    onPlayerChanged: { root.trackRevision++; root._reanchor() }
     readonly property string artist: SafeText.singleLineText(
         player ? player.trackArtist : "", root.maxMetadataChars)
     readonly property string title: SafeText.singleLineText(
@@ -306,12 +312,55 @@ Singleton {
     }
 
     readonly property bool remoteArtAvailable: SystemTools.hasCurl && root._artCacheDir.length > 0
+    function artDemand(available: bool, barVisible: bool, overview: bool,
+            menuOpen: bool, quiet: bool): bool {
+        return available && !quiet && (menuOpen || (barVisible && !overview))
+    }
+    readonly property bool _artWanted: root.artDemand(root.available,
+        ShellSettings.barShowMedia && root.shown, OverviewState.active,
+        MenuState.open, Idle.isQuiet)
+    on_ArtWantedChanged: if (root._artWanted) root._fetchNextArt()
     readonly property string _artCacheDir: XdgPaths.cacheHome.length > 0
         ? XdgPaths.cacheHome + "/silere-shell/art" : ""
-    // url -> file url of the saved cover; misses are remembered so a dead url is tried once per session
+    // url -> file url of the saved cover; misses wait for a reconnect or retryArt()
     property var _artFiles: ({})
     property var _artMisses: ({})
     property string _artFetching: ""
+    property bool _artRetryPending: false
+
+    function _clearArtMisses(wanted): bool {
+        const misses = Object.assign({}, root._artMisses)
+        let changed = false
+        for (const url of wanted) {
+            if (misses[url] !== true) continue
+            delete misses[url]
+            changed = true
+        }
+        if (changed) root._artMisses = misses
+        return changed
+    }
+
+    function _retryRemoteArt(): void {
+        if (!ShellSettings.mediaRemoteArt) return
+        if (_artFetch.running) {
+            root._artRetryPending = true
+            return
+        }
+        if (root._clearArtMisses(root._remoteArtWanted)) root._fetchNextArt()
+    }
+
+    function _finishArtRetry(wanted): void {
+        if (!root._artRetryPending) return
+        root._artRetryPending = false
+        root._clearArtMisses(wanted)
+    }
+
+    Connections {
+        target: Network
+        function onConnectedChanged() {
+            if (Network.connected) root._retryRemoteArt()
+        }
+    }
 
     function remoteArtName(url: string): string {
         return Qt.md5(url) + ".img"
@@ -341,7 +390,7 @@ Singleton {
     }
 
     function _fetchNextArt(): void {
-        if (_artFetch.running) return
+        if (!root._artWanted || _artFetch.running) return
         const url = root.nextArtFetch(root._remoteArtWanted, root._artFiles, root._artMisses)
         if (url.length === 0) return
         root._artFetching = url
@@ -382,11 +431,13 @@ Singleton {
             const url = root._artFetching
             root._artFetching = ""
             if (!ShellSettings.mediaRemoteArt) {
+                root._artRetryPending = false
                 Quickshell.execDetached(["rm", "-rf", "--", root._artCacheDir])
                 return
             }
             if (url.length > 0) root._artFetched(url, code === 0 && !_artFetch.timedOut,
                 _artFetchOut.text.trim().split(/\s+/))
+            root._finishArtRetry(root._remoteArtWanted)
             Qt.callLater(root._fetchNextArt)
         }
     }
@@ -398,6 +449,7 @@ Singleton {
             if (ShellSettings.mediaRemoteArt || root._artCacheDir.length === 0) return
             root._artFiles = ({})
             root._artMisses = ({})
+            root._artRetryPending = false
             Quickshell.execDetached(["rm", "-rf", "--", root._artCacheDir])
         }
     }
@@ -418,7 +470,10 @@ Singleton {
         if (url !== root.artUrl) return
         if (root._artCandidate + 1 < root.artCandidates.length) root._artCandidate++
     }
-    function retryArt(): void { root._artCandidate = 0 }
+    function retryArt(): void {
+        root._artCandidate = 0
+        root._retryRemoteArt()
+    }
 
     property string stableArtUrl: ""
     function _syncStableArt(): void {
@@ -681,6 +736,30 @@ Singleton {
     function togglePlay(): void {
         if (!canTogglePlaying) return
         player.togglePlaying()
+    }
+
+    readonly property string displayAlbum: root.metadataPrivacyProtected ? ""
+        : SafeText.singleLineText(player ? player.trackAlbum : "", root.maxMetadataChars)
+    readonly property bool canShuffle: player !== null && player.canControl && player.shuffleSupported
+    readonly property bool shuffle: player !== null && player.shuffle
+    readonly property bool canLoop: player !== null && player.canControl && player.loopSupported
+    readonly property int loopState: player ? player.loopState : MprisLoopState.None
+
+    function toggleShuffle(): void {
+        if (!canShuffle) return
+        player.shuffle = !player.shuffle
+    }
+
+    // off, then the whole list, then the one track, like most players' own button
+    function nextLoopState(current: int): int {
+        if (current === MprisLoopState.None) return MprisLoopState.Playlist
+        if (current === MprisLoopState.Playlist) return MprisLoopState.Track
+        return MprisLoopState.None
+    }
+
+    function cycleLoop(): void {
+        if (!canLoop) return
+        player.loopState = root.nextLoopState(player.loopState)
     }
 
     function next(): void {

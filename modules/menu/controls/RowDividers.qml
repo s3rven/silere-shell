@@ -9,6 +9,7 @@ Repeater {
 
     required property Item column
     property color lineColor: Theme.menuDivider
+    property real indent: 14
     readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
 
     function present(item): bool {
@@ -43,12 +44,12 @@ Repeater {
 
         visible: row !== null && (row.layoutPresent ?? row.visible) && hasRowAbove
               && !(row.suppressDividerAbove ?? false) && opacity > 0.01
-        x: (root.column ? root.column.x : 0) + 14
+        x: (root.column ? root.column.x : 0) + root.indent
         // whole logical px, not 1/dpr: dpr is 2 while the output scale is 1.25, so a half-logical
         // grid lands on 0.625 output px and gives neighbouring dividers different weights
         y: Math.round((root.column ? root.column.y : 0) + (row ? row.y : 0))
         width: root.column
-            ? Math.max(0, root.column.width - 28)
+            ? Math.max(0, root.column.width - root.indent - 14)
             : 0
         height: Math.max(1, Math.ceil(root._dpr - 0.5)) / root._dpr
         opacity: row

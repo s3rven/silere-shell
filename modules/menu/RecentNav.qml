@@ -251,12 +251,12 @@ Item {
                                 asynchronous: true
                                 property bool _fellBack: false
                                 readonly property string _primary: {
-                                    Notifications.entriesTick
+                                    void Notifications.entriesTick
                                     return _row.isAll ? "" : Notifications.appIconSource(
                                         _row.appIcon, _row.desktopEntry, _row.label)
                                 }
                                 readonly property string _fallback: {
-                                    Notifications.entriesTick
+                                    void Notifications.entriesTick
                                     return _row.isAll ? "" : Notifications.entryIconSource(
                                         _row.desktopEntry, _row.label)
                                 }

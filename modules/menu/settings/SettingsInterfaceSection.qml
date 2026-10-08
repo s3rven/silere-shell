@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
+import "../../../config"
 import "../../../services"
 import "../controls"
 
@@ -14,10 +15,48 @@ Column {
     readonly property bool _hasBrightnessChoice: Brightness.devices.length > 1
         || ShellSettings.brightnessDevice.length > 0
     readonly property bool _hasMultiScreen: Quickshell.screens.length > 1
-    readonly property bool _hasRouting: _hasBrightnessChoice || _hasMultiScreen
+    readonly property bool _hasOverlayChoice: _hasMultiScreen
+        || ShellSettings.overlayMonitor.length > 0
+    readonly property bool _hasRouting: _hasBrightnessChoice || _hasOverlayChoice
 
-    // the picker is the only consumer that needs the installed list
-    Component.onCompleted: FontScan.requestScan()
+    readonly property var _nightLightChoices: {
+        const auto = Settings.autoNightLightProvider
+        const out = [{ value: "auto",
+            label: auto.length > 0 ? "Automatic (" + auto + ")" : "Automatic (none found)" }]
+        const named = [
+            { value: "hyprsunset", label: "hyprsunset",
+              ok: Compositor.isHyprland && SystemTools.hasHyprsunset },
+            { value: "wlsunset",   label: "wlsunset",   ok: SystemTools.hasWlsunset   }
+        ]
+        for (let i = 0; i < named.length; i++) {
+            if (named[i].value === "hyprsunset" && !Compositor.isHyprland) continue
+            out.push({ value: named[i].value,
+                label: named[i].ok ? named[i].label : named[i].label + " (not installed)" })
+        }
+        return out
+    }
+
+    readonly property var _lockChoices: {
+        const auto = Settings.autoLockProvider
+        const out = [{ value: "auto",
+            label: auto.length > 0 ? "Automatic (" + auto + ")" : "Automatic (none found)" }]
+        const named = [
+            { value: "hyprlock", label: "hyprlock",             ok: SystemTools.hasHyprlock },
+            { value: "swaylock", label: "swaylock",             ok: SystemTools.hasSwaylock },
+            { value: "gtklock",  label: "gtklock",              ok: SystemTools.hasGtklock  },
+            { value: "loginctl", label: "loginctl lock-session", ok: SystemTools.hasLoginctl }
+        ]
+        for (let i = 0; i < named.length; i++)
+            out.push({ value: named[i].value,
+                label: named[i].ok ? named[i].label : named[i].label + " (not installed)" })
+        out.push({ value: "custom", label: "Custom command" })
+        return out
+    }
+
+    Component.onCompleted: {
+        SystemTools.refreshIfStale(60000)
+        FontScan.requestScan()
+    }
 
     SectionLabel { label: "TEXT & ACCESSIBILITY"; first: true }
     SettingsCard {
@@ -118,7 +157,7 @@ Column {
             }
 
             CollapsibleSection {
-                expanded: root._hasMultiScreen
+                expanded: root._hasOverlayChoice
                 SelectRow {
                     key: "overlayMonitor"
                     glyph: "󰍹"; label: "Overlay display"
@@ -151,6 +190,38 @@ Column {
                     }
                 }
             }
+        }
+    }
+
+    SectionLabel { label: "SYSTEM PROGRAMS" }
+    SettingsCard {
+        SelectRow {
+            key: "lockProvider"
+            glyph: "󰌾"; label: "Screen lock"
+            model: root._lockChoices
+        }
+        HintText {
+            visible: ShellSettings.lockProvider === "custom"
+                && Settings.customLockCommand.length === 0
+            text: "No command set yet. Run: silere ipc settings set lockCommandCustom \"swaylock -f\""
+        }
+        HintText {
+            visible: ShellSettings.lockProvider !== "custom"
+                && Settings.lockCommand.length === 0
+            text: "The chosen lock program is not installed, so the lock action stays off."
+        }
+        SelectRow {
+            key: "nightLightProvider"
+            glyph: "󰖙"; label: "Night light"
+            model: root._nightLightChoices
+        }
+        HintText {
+            visible: Settings.nightLightTool.length === 0
+            text: ShellSettings.nightLightProvider !== "auto"
+                ? "The chosen program is unavailable. Choose Automatic or install a compatible program."
+                : Compositor.isHyprland
+                    ? "Install hyprsunset or wlsunset to enable night light."
+                    : "Install wlsunset to enable night light on this compositor."
         }
     }
 }

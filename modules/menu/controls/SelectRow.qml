@@ -71,6 +71,7 @@ Item {
             return
         }
         _revealDefer.stop()
+        _options.cancelFlick()
         if (next) MenuState.claimSettingsSelect(root)
         else MenuState.releaseSettingsSelect(root)
         _open = next
@@ -274,13 +275,20 @@ Item {
         height: root._open ? Math.min(root._optionCount * root._optionH
             + (headerItem ? headerItem.height : 2) + 2, root._optionsCapH) : 0
         interactive: contentHeight > height + 1
+            && root._open && !_optionsDisclosure.running
         visible: height > 0.5
         cacheBuffer: 0
         reuseItems: true
         model: root._open || height > 0.5 ? root.model : []
         opacity: root._open ? 1.0 : 0.0
 
-        Disclosure on height {}
+        Disclosure on height {
+            id: _optionsDisclosure
+            onRunningChanged: if (!running && root._open) _revealDefer.restart()
+        }
+        // Position against the growing viewport until the selected row really
+        // fits. Stop after the reveal so ordinary list scrolling stays free.
+        onHeightChanged: if (root._open && _optionsDisclosure.running) _revealDefer.restart()
         MotionBehavior on opacity {
             id: _optFade
             NumberAnimation {

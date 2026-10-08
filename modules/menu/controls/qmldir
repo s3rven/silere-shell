@@ -3,6 +3,7 @@ CollapsibleSection 1.0 CollapsibleSection.qml
 EntryList          1.0 EntryList.qml
 InlinePicker       1.0 InlinePicker.qml
 PageShell          1.0 PageShell.qml
+PageLoader         1.0 PageLoader.qml
 SettingsCard       1.0 SettingsCard.qml
 
 # rows and inputs

@@ -10,17 +10,16 @@ Item {
     property int rowHeight: 28
     property bool shown: true
     // the owner maps these slots to rows, so a relayout under the selection never leaves it behind
-    readonly property real slot: root._slot
+    readonly property real slot: _slotGlide.value
     property real rowTop: 0
 
-    property real _slot: Math.max(0, root.index)
-    onIndexChanged: {
-        if (root.index < 0) return
-        root._slot = root.index
-    }
-    MotionBehavior on _slot {
+    property real _slotTarget: Math.max(0, root.index)
+    onIndexChanged: if (root.index >= 0) root._slotTarget = root.index
+    SmoothGlide {
+        id: _slotGlide
+        target: root._slotTarget
+        precision: 0.001
         gate: root.shown
-        NumberAnimation { duration: Motion.panelResize; easing.type: Easing.OutCubic }
     }
 
     y: root.rowTop

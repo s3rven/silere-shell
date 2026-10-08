@@ -177,11 +177,12 @@ FittedPopupWindow {
         readonly property int contentW: Math.max(236,
             Metrics.snap4(236 * Settings.fontSize / 12))
         width: contentW + pad * 2
-        height: Metrics.snap4Up(_rows.implicitHeight + pad * 2)
-        // a row can appear or disappear (radios toggled, a profile daemon starting) while the card is open
-        MotionBehavior on height {
+        height: _heightGlide.value
+        SmoothGlide {
+            id: _heightGlide
+            target: Metrics.snap4Up(_rows.implicitHeight + card.pad * 2)
             gate: card.geometryMotionReady
-            NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
+            duration: Motion.normal
         }
 
         Component.onCompleted: if (QuickActionsState.open) card.forceActiveFocus()

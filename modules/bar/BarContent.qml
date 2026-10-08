@@ -42,12 +42,15 @@ Item {
     readonly property real titleAvailableWidth: Math.max(0, titleFreeRight - titleFreeLeft)
 
     // animate the axis, not the zone's x: a title resize recentres at once while a side-widget change still carries the whole middle group
-    property real centerAxis: ShellSettings.barCenterInGap
-        ? (titleFreeLeft + titleFreeRight) / 2 : width / 2
-    // only the gap axis needs easing; width/2 rides the surface's own morph
-    MotionBehavior on centerAxis {
-        gate: ShellSettings.barCenterInGap
-        NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
+    readonly property real centerAxis: _centerGlide.value
+    // Preserve velocity as several side widgets resize at once. The screen
+    // centre already rides the surface's own morph and needs no extra easing.
+    SmoothGlide {
+        id: _centerGlide
+        target: ShellSettings.barCenterInGap
+            ? (root.titleFreeLeft + root.titleFreeRight) / 2 : root.width / 2
+        duration: Motion.width
+        gate: root.barActive && ShellSettings.barCenterInGap
     }
 
     readonly property bool _compact: effectiveCompact

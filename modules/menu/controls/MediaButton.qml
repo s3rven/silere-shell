@@ -8,6 +8,7 @@ Item {
     property string glyph:     ""
     property string accessibleName: ""
     property bool   available: false
+    property bool   lit: false
     readonly property bool interactive: root.enabled && root.available
 
     signal triggered()
@@ -40,8 +41,8 @@ Item {
     ShellText {
         anchors.centerIn: parent
         text: root.glyph
-        color: _hover.hovered || _tap.pressed
-            ? Theme.withAlpha(Theme.text, 0.92) : Theme.withAlpha(Theme.text, 0.55)
+        color: root.lit ? (_hover.hovered || _tap.pressed ? Theme.mix(Theme.accent, Theme.text, 0.35) : Theme.accent)
+            : _hover.hovered || _tap.pressed ? Theme.withAlpha(Theme.text, 0.92) : Theme.withAlpha(Theme.text, 0.55)
         font.pixelSize: Settings.fontSize + 9
         ColorFade on color {}
     }

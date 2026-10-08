@@ -51,11 +51,18 @@ MenuRow {
                                : Metrics.rowHeightFor(44)
     // a live dependsNote lengthens the detail text mid-interaction (toggling the update
     // timer appends "Working"), which can rewrap and change this height under the cursor
+    // armed a tick late, or every row animates its first layout when a page opens
+    property bool _heightReady: false
+    Timer { interval: 0; running: true; onTriggered: root._heightReady = true }
+    Component.onCompleted: _textCol.forceLayout()
     MotionBehavior on height {
+        gate: root._heightReady
         NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
     }
 
-    opacity: root.enabled && root.available ? 1.0 : (_canToggle ? 0.72 : Theme.disabledOpacity)
+    readonly property real _controlOpacity: root.enabled && root.available
+        ? 1.0 : (_canToggle ? 0.72 : Theme.disabledOpacity)
+    opacity: root._showDependsNote ? 1.0 : root._controlOpacity
     MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
 
     Accessible.role: Accessible.CheckBox
@@ -84,6 +91,7 @@ MenuRow {
         width: 18
         horizontalAlignment: Text.AlignHCenter
         text:           root.glyph
+        opacity: root._showDependsNote ? root._controlOpacity : 1.0
         color:          root.checked
             ? Theme.withAlpha(Theme.accent, 0.9)
             : Theme.withAlpha(Theme.subtext, 0.85)
@@ -104,6 +112,7 @@ MenuRow {
             id: _label
             width: parent.width
             text:           root.label
+            opacity: root._showDependsNote ? root._controlOpacity : 1.0
             elide:          Text.ElideRight
             color:          root.checked
                 ? Theme.text
@@ -117,11 +126,11 @@ MenuRow {
             visible: root._hasDetail
             width:   parent.width
             text:           root._detailText
-            wrapMode:       Text.WordWrap
-            maximumLineCount: 2
+            wrapMode:       Text.WrapAtWordBoundaryOrAnywhere
+            maximumLineCount: root._showDependsNote ? 2147483647 : 2
             elide:          Text.ElideRight
             color:          root._showDependsNote
-                ? Theme.withAlpha(Theme.mix(Theme.subtext, Theme.warning, 0.30), 0.72)
+                ? Theme.menuTextWarning
                 : Theme.menuTextDetail
             font.pixelSize: Settings.fontCaption
             lineHeight:     1.1
@@ -143,6 +152,7 @@ MenuRow {
             width: 36
             height: 20
             checked: root.checked
+            opacity: root._showDependsNote ? root._controlOpacity : 1.0
             highlighted: _hover.hovered && root._canToggle
             pressed: _tap.pressed
         }

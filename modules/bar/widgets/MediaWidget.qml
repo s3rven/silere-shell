@@ -19,6 +19,7 @@ Item {
 
     property var screen: null
     property bool barActive: true
+    readonly property bool _canInteract: root.enabled && root.show && root.barActive && !Idle.isIdle
     readonly property bool _onActiveBar: Monitors.isActive(root.screen)
     readonly property bool _visualizerActive: ShellSettings.mediaProgress
         && ShellSettings.mediaVisualizerPosition === "media"
@@ -231,27 +232,34 @@ Item {
     Accessible.name: Media.label.length > 0
         ? (Media.playing ? "Pause " : "Play ") + Media.label
         : (Media.playing ? "Pause" : "Play")
-    Accessible.focusable: root.show
-    Accessible.onPressAction: Media.togglePlay()
+    Accessible.focusable: root._canInteract
+    Accessible.onPressAction: if (root._canInteract) Media.togglePlay()
 
     HoverHandler {
         id: _rootHover
+        enabled: root._canInteract
         cursorShape: Qt.PointingHandCursor
     }
 
     TapHandler {
-        acceptedButtons: Qt.LeftButton | Qt.MiddleButton
+        enabled: root._canInteract
+        acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
         onTapped: (eventPoint, button) => {
+            if (!root._canInteract) return
             if (button === Qt.MiddleButton)
                 WindowActions.focusMediaPlayer(Media.playerName, Media.title)
+            else if (button === Qt.RightButton)
+                MenuState.toggleMediaAt(root, root.screen)
             else
                 Media.togglePlay()
         }
     }
 
     WheelHandler {
+        enabled: root._canInteract
         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
         onWheel: (event) => {
+            if (!root._canInteract) { event.accepted = false; return }
             event.accepted = true
             const n = Scroll.processControlWheel(event, "media")
             if (n > 0)      Media.next()

@@ -291,7 +291,7 @@ FittedPopupWindow {
                 property bool opened: false
                 readonly property bool popupSurface: opened
                 readonly property Region blurShape: Region {
-                    item: ShellSettings.surfaceBlur && _flyout.color.a < 1 && _flyout.visible ? _flyout : null
+                    item: Theme.frosted && _flyout.color.a < 1 && _flyout.visible ? _flyout : null
                     radius: Math.round(_flyout.radius)
                 }
                 readonly property Item parentFlyout: _entry.ownerFlyout
@@ -398,11 +398,12 @@ FittedPopupWindow {
         readonly property real _maxContentH: Math.max(48, winH - _edgeY - pad * 2 - 8)
 
         width:  win.menuWidth + pad * 2
-        height: Metrics.snap4Up(Math.min(_col.implicitHeight, _maxContentH) + pad * 2)
-        // a different tray icon's menu can swap in at a different row count while the card stays open
-        MotionBehavior on height {
+        height: _heightGlide.value
+        SmoothGlide {
+            id: _heightGlide
+            target: Metrics.snap4Up(Math.min(_col.implicitHeight, card._maxContentH) + card.pad * 2)
             gate: card.geometryMotionReady
-            NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
+            duration: Motion.normal
         }
 
         Connections {

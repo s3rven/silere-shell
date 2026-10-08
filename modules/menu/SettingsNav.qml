@@ -348,8 +348,8 @@ Item {
 
             RailSelection {
                 id: _selection
-                x: _groupColumn.x + 6
-                width: _groupColumn.width - 6
+                x: _groupColumn.x
+                width: _groupColumn.width
                 index: root._activeOrdinal
                 rowHeight: root._navRowH
                 rowTop: root._slotTop(_selection.slot)
@@ -498,9 +498,8 @@ Item {
 
                             Column {
                                 id: _leafColumn
-                                x: 6
                                 y: root._childrenPad
-                                width: parent.width - 6
+                                width: parent.width
                                 spacing: root._navRowGap
                                 opacity: _grp.expanded ? 1 : 0
 
@@ -565,7 +564,7 @@ Item {
                                             id: _leafGlyph
                                             visible: !root.compact
                                             anchors.left: parent.left
-                                            anchors.leftMargin: 9
+                                            anchors.leftMargin: 15
                                             anchors.verticalCenter: parent.verticalCenter
                                             // the rail cap is fixed while the label grows with uiScale, so the slot beside it has to give the type its width back
                                             width: Metrics.iconCellFor(Settings.fontLabel)
@@ -595,7 +594,7 @@ Item {
 
                                         ShellText {
                                             anchors.left: _leafGlyph.visible ? _leafGlyph.right : parent.left
-                                            anchors.leftMargin: _leafGlyph.visible ? 7 : 12
+                                            anchors.leftMargin: _leafGlyph.visible ? 7 : 18
                                             anchors.right: _leafDot.visible ? _leafDot.left : parent.right
                                             anchors.rightMargin: _leafDot.visible ? 5 : 6
                                             anchors.verticalCenter: parent.verticalCenter

@@ -31,9 +31,19 @@ Item {
         bottomRightRadius: _botR
         antialiasing:      _topR > 0 || _botR > 0
 
-        color: Theme.withAlpha(root.fillColor,
-            root.pressed ? Math.max(root.fillOpacity, root.pressOpacity)
-                : root.active ? root.fillOpacity : 0)
+        color: root.fillColor
+        opacity: root.pressed ? Math.max(root.fillOpacity, root.pressOpacity)
+            : root.active ? root.fillOpacity : 0
+        MotionBehavior on opacity {
+            id: _feedback
+            NumberAnimation {
+                duration: _feedback.targetValue > root.fillOpacity
+                    ? Motion.press : _feedback.targetValue > 0
+                    ? Motion.hoverIn : Motion.hoverOut
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Motion.emphasizedDecel
+            }
+        }
         ColorFade on color {}
     }
 }

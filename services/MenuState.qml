@@ -13,6 +13,7 @@ AnchoredPopupState {
     readonly property int homeTab: 0
     readonly property int settingsTab: 1
     readonly property int recentTab: 2
+    readonly property int mediaTab: 3
     property int _activeTab: homeTab
     property int _previousTab: homeTab
     readonly property int activeTab: _activeTab
@@ -24,6 +25,7 @@ AnchoredPopupState {
     readonly property bool homeActive: open && activeTab === homeTab
     readonly property bool settingsActive: open && activeTab === settingsTab
     readonly property bool recentActive: open && activeTab === recentTab
+    readonly property bool mediaActive: open && activeTab === mediaTab
 
     // empty means every app; the rail owns the value, the page only reads it
     property string recentFilter: ""
@@ -91,7 +93,7 @@ AnchoredPopupState {
             { glyph: "󰉦", label: "Theme",       section: "theme",
               description: "Colors, opacity, blur, and shadows" },
             { glyph: "󰍉", label: "Interface", section: "interface",
-              description: "Font, scale, contrast, motion, and displays" }
+              description: "Text, accessibility, displays, and programs" }
         ]},
         { glyph: "󰕮", label: "Bar", children: [
             { glyph: "󰍹", label: "Layout",    section: "surface",
@@ -122,10 +124,8 @@ AnchoredPopupState {
               description: "Battery and temperature limits" }
         ]},
         { glyph: "󰒓", label: "System", children: [
-            { glyph: "󰚰", label: "Updates", section: "updates",
-              description: "Shell releases and system packages" },
-            { glyph: "󰦛", label: "Maintenance", section: "maintenance",
-              description: "Defaults and dependencies" }
+            { glyph: "󰒓", label: "Overview", section: "updates",
+              description: "Updates, diagnostics, and recovery" }
         ]}
     ]
 
@@ -140,7 +140,9 @@ AnchoredPopupState {
     }
 
     function setSettingsSection(s: string): void {
-        const next = root._flatSections.indexOf(s) >= 0 ? s : "theme"
+        // Keep callers of the former diagnostics page on the combined overview.
+        const requested = s === "maintenance" ? "updates" : s
+        const next = root._flatSections.indexOf(requested) >= 0 ? requested : "theme"
         if (next !== settingsSection) {
             root.closeSettingsSelect()
             settingsSection = next
@@ -155,6 +157,7 @@ AnchoredPopupState {
     function _ipcSection(name: string): string {
         const fold = root._foldName(name)
         if (fold.length === 0) return name
+        if (fold === "maintenance" || fold === "diagnostics" || fold === "system") return "updates"
         for (let i = 0; i < root._flatSections.length; i++)
             if (root._foldName(root._flatSections[i]) === fold) return root._flatSections[i]
         for (let i = 0; i < settingsTree.length; i++) {
@@ -170,13 +173,14 @@ AnchoredPopupState {
     signal tabChanging(int index)
 
     function _validTab(index: int): int {
-        return Math.max(homeTab, Math.min(recentTab, index))
+        return Math.max(homeTab, Math.min(mediaTab, index))
     }
 
     // Match the rail's visual order rather than the internal numeric ids.
     function tabPosition(index: int): int {
         if (index === homeTab) return 0
         if (index === recentTab) return 1
+        if (index === mediaTab) return 3
         return 2
     }
 
@@ -206,12 +210,24 @@ AnchoredPopupState {
         tabRequested(tab)
     }
 
-    function showSettingsAt(section: string, source, screen): void {
+    function showTabAt(tab: int, source, screen): void {
         const point = source ? source.mapToItem(null, source.width / 2, 0) : null
-        root.setSettingsSection(section)
-        root.selectTab(root.settingsTab)
+        root.selectTab(tab)
         root.openAt(point && isFinite(point.x) ? point.x : 10, screen, source)
-        root.tabRequested(root.settingsTab)
+        root.tabRequested(tab)
+    }
+
+    function showSettingsAt(section: string, source, screen): void {
+        root.setSettingsSection(section)
+        root.showTabAt(root.settingsTab, source, screen)
+    }
+
+    function toggleMediaAt(source, screen): void {
+        if (root.open && root.activeTab === root.mediaTab) {
+            root.close()
+            return
+        }
+        root.showTabAt(root.mediaTab, source, screen)
     }
 
     readonly property string _refusedText: "error: the menu stays closed while the session is idle or the overview is open"
@@ -227,8 +243,10 @@ AnchoredPopupState {
         }
         function close(): void { root.close() }
         function tab(index: int): string {
-            if (index < root.homeTab || index > root.recentTab)
-                return "error: unknown menu tab " + index + "; valid: 0 (home), 1 (settings), 2 (notifications)"
+            if (index < root.homeTab || index > root.mediaTab)
+                return "error: unknown menu tab " + index + "; valid: 0 (home), 1 (settings), 2 (notifications), 3 (now playing)"
+            if (index === root.mediaTab && !Media.shown)
+                return "error: nothing is playing"
             root._unanchor()
             root.showTab(index)
             return root.open ? "ok" : root._refusedText

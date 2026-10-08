@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import "../../config"
 import "../common"
 
@@ -70,8 +71,12 @@ Item {
 
     Rectangle {
         id: _activeBg
+        // the gliding selection is snapped to device pixels, so this square has to match it edge for edge
+        readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
         anchors.centerIn: parent
-        width: 30; height: 30; radius: 9
+        anchors.alignWhenCentered: false
+        width: Metrics.devicePx(30, _dpr); height: width; radius: 9
+        transform: PixelSnap { item: _activeBg; dpr: _activeBg._dpr }
         antialiasing: true
         color: _tap.pressed
             ? Theme.blend(Theme.menuControl, root.accentColor, 0.10)

@@ -34,32 +34,33 @@ Pill {
     levelColor: Audio.muted ? Theme.subtext : Theme.accent
 
     WheelHandler {
-        enabled: Audio.ready
+        enabled: Audio.ready && root.hoverEnabled
         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
         onWheel: (event) => {
             event.accepted = true
-            if (!Audio.ready) return
+            if (!Audio.ready || !root.hoverEnabled) return
             const n = Scroll.processLevelWheel(event, "audio")
             if (n !== 0) Audio.bumpBy(n * Audio.stepPct)
         }
     }
 
     pressed: _tap.pressed && Audio.ready
-    onActivated: Audio.toggleMute()
+    onActivated: if (root.canActivate) Audio.toggleMute()
 
     TapHandler {
         id: _tap
-        enabled: root.interactive
+        enabled: root.canActivate
         acceptedButtons: Qt.LeftButton
         onTapped: root.activated()
     }
 
     TapHandler {
-        enabled: root.interactive && (Audio.hasSoundSettings || root._canSwitch)
+        enabled: root.canActivate && (Audio.hasSoundSettings || root._canSwitch)
         acceptedButtons: (Audio.hasSoundSettings ? Qt.RightButton : Qt.NoButton)
             | (root._canSwitch ? Qt.MiddleButton : Qt.NoButton)
         gesturePolicy: TapHandler.ReleaseWithinBounds
         onSingleTapped: (point, button) => {
+            if (!root.canActivate) return
             if (button === Qt.RightButton) Audio.openSoundSettings()
             else Audio.cycleSink()
         }

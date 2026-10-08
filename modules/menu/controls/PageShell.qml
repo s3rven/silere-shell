@@ -9,6 +9,12 @@ Item {
     required property bool powerOpen
 
     property bool animateOnCreate: false
+    // A page with an asynchronous body begins its reveal when that body is
+    // ready, so the fade does not finish over an empty header.
+    property bool revealReady: true
+    // A widening panel can have its body ready before there is room to paint it.
+    property bool viewportReady: true
+    property bool _awaitingEnter: false
 
     signal pageShown()
     signal pageHidden()
@@ -39,11 +45,31 @@ Item {
     function settleVisual(shown: bool): void {
         _enter.stop()
         _exit.stop()
+        root._awaitingEnter = false
         root.opacity = shown ? 1.0 : 0.0
         root._pageShift = 0
         root._pageLift = 0
         if (!MenuState.open) root._announceHidden()
     }
+
+    function _startEnter(): void {
+        if (!root._awaitingEnter || !root.revealReady || !root.viewportReady || !root.active) return
+        root._awaitingEnter = false
+        if (!MenuState.open || !root._motionAllowed) root.settleVisual(root.active)
+        else _enter.restart()
+    }
+
+    function _prepareEnter(): void {
+        if (root.opacity < 0.01) {
+            root._pageShift = Motion.pageOffset * root._transitionDirection
+            root._pageLift = Motion.pageLift
+        }
+        root._awaitingEnter = true
+        root._startEnter()
+    }
+
+    onRevealReadyChanged: if (root.revealReady) root._startEnter()
+    onViewportReadyChanged: if (root.viewportReady) root._startEnter()
 
     property bool _menuOpenSettled: false
     Connections {
@@ -65,7 +91,7 @@ Item {
         root._pageLift = enterNow ? Motion.pageLift : 0
         if (MenuState.open) Qt.callLater(() => root._menuOpenSettled = MenuState.open)
         if (enterNow) Qt.callLater(function() {
-            if (root.active && MenuState.open && root._motionAllowed) _enter.restart()
+            if (root.active && MenuState.open && root._motionAllowed) root._prepareEnter()
             else root.settleVisual(root.active)
         })
         Qt.callLater(root._announceShown)
@@ -76,18 +102,16 @@ Item {
             ? 1 : MenuState.tabDirection
         if (root.active) {
             _exit.stop()
+            // PageShown can select another body on a retained settings page.
+            // Announce first, then test whether that body is ready to reveal.
+            root._announceShown()
             if (!root._menuOpenSettled || !root._motionAllowed) {
                 root.settleVisual(true)
-                root._announceShown()
                 return
             }
-            if (root.opacity < 0.01) {
-                root._pageShift = Motion.pageOffset * root._transitionDirection
-                root._pageLift = Motion.pageLift
-            }
-            _enter.restart()
-            root._announceShown()
+            root._prepareEnter()
         } else {
+            root._awaitingEnter = false
             _enter.stop()
             if (!MenuState.open) {
                 return

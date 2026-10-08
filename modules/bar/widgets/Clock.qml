@@ -9,6 +9,7 @@ Item {
     property var screen: null
     property bool compact: ShellSettings.barCompact
     property bool barActive: true
+    readonly property bool _canInteract: root.enabled && root.show && root.barActive && !Idle.isIdle
     readonly property bool _animatable: root.barActive && !Idle.isIdle
     property real menuAnchorX: 0
     readonly property int _horizontalPadding: Metrics.pillPadFor(compact)
@@ -67,7 +68,7 @@ Item {
 
     HoverHandler {
         id: _hover
-        enabled: root.enabled && root.visible && root.barActive
+        enabled: root._canInteract
         cursorShape: Qt.PointingHandCursor
         onHoveredChanged: {
             root._datePeek = false
@@ -78,7 +79,12 @@ Item {
 
     property bool _datePeek: false
     readonly property bool _dateRevealed: root._datePeek && _hover.hovered
-        && ShellSettings.valuesOnHover && !Idle.isIdle
+        && ShellSettings.valuesOnHover && root._canInteract
+
+    on_CanInteractChanged: if (!root._canInteract) {
+        _datePeekDelay.stop()
+        root._datePeek = false
+    }
 
     Timer {
         id: _datePeekDelay
@@ -87,6 +93,7 @@ Item {
     }
 
     function _openCalendar(): void {
+        if (!root._canInteract) return
         root._syncMenuAnchor()
         CalendarState.toggleAt(root.menuAnchorX, root.screen, root)
     }
@@ -204,12 +211,12 @@ Item {
         + (Notifications.effectiveDnd ? ", Do Not Disturb" : "")
     Accessible.role: Accessible.Button
     Accessible.name: root.accessibleName
-    Accessible.focusable: root.show
+    Accessible.focusable: root._canInteract
     Accessible.onPressAction: root._openCalendar()
 
     TapHandler {
         id: _calTap
-        enabled: root.show && root.barActive
+        enabled: root._canInteract
         gesturePolicy: TapHandler.ReleaseWithinBounds
         acceptedButtons: Qt.LeftButton
         onTapped: root._openCalendar()
@@ -217,10 +224,11 @@ Item {
 
     TapHandler {
         id: _cycleTap
-        enabled: root.show && root.barActive
+        enabled: root._canInteract
         gesturePolicy: TapHandler.ReleaseWithinBounds
         acceptedButtons: Qt.MiddleButton
         onTapped: {
+            if (!root._canInteract) return
             // a peeked date would hide the step that turns the date off
             root._datePeek = false
             ShellSettings.batch(() => {

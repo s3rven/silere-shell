@@ -8,6 +8,8 @@ Rectangle {
     id: root
 
     default property alias rows: col.data
+    // where row dividers start; a card whose rows all lead with a glyph starts them at the text
+    property real dividerIndent: 14
 
     width:  parent ? parent.width : 0
     implicitHeight: col.implicitHeight
@@ -28,7 +30,7 @@ Rectangle {
         spacing: 0
     }
 
-    RowDividers { id: _dividers; column: col }
+    RowDividers { id: _dividers; column: col; indent: root.dividerIndent }
 
     function _edgeEl(container, first): var {
         const ch = container.children

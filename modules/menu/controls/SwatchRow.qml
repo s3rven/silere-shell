@@ -32,13 +32,13 @@ Item {
     }
 
     function itemLeft(i: int): real {
-        root._rev
+        void root._rev
         const item = i >= 0 && i < _rep.count ? _rep.itemAt(i) : null
         return item ? _chipRow.x + item.x : 0
     }
 
     function itemRight(i: int): real {
-        root._rev
+        void root._rev
         const item = i >= 0 && i < _rep.count ? _rep.itemAt(i) : null
         return item ? _chipRow.x + item.x + item.width : 0
     }
