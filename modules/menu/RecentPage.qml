@@ -27,6 +27,7 @@ PageShell {
     // rows land a frame before the list lays them out; the menu holds its height until then
     readonly property bool contentReady: _filtered.active && (root.rowCount === 0
         || (_historyList.count === root.rowCount && _historyList.contentHeight > 0))
+    revealReady: contentReady
     onPageShown: root._touchNow()
 
     readonly property string filter: MenuState.recentFilter
@@ -371,6 +372,7 @@ PageShell {
 
             Column {
                 anchors.centerIn: parent
+                width: Math.max(0, parent.width - 24)
                 spacing: 7
 
                 Rectangle {
@@ -397,7 +399,9 @@ PageShell {
                 Item { width: 1; height: 2 }
 
                 ShellText {
-                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: parent.width
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                     text: root.searching ? "No matches" : "All caught up"
                     color: Theme.withAlpha(Theme.text, 0.78)
                     font.pixelSize: Settings.fontSize + 1
@@ -405,7 +409,9 @@ PageShell {
                 }
 
                 ShellText {
-                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: parent.width
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                     text: root.searching ? "Try different search terms"
                         : root.filter.length > 0 ? "No notifications from this app"
                         : "New notifications will appear here"
@@ -445,12 +451,12 @@ PageShell {
                     readonly property bool _groupEnd: modelData.groupEnd === true
 
                     readonly property string _appIconSource: {
-                        Notifications.entriesTick
+                        void Notifications.entriesTick
                         return _entry._showHeader ? Notifications.appIconSource(
                             modelData.appIcon, modelData.desktopEntry, modelData.appName) : ""
                     }
                     readonly property string _appIconFallback: {
-                        Notifications.entriesTick
+                        void Notifications.entriesTick
                         return _entry._showHeader ? Notifications.entryIconSource(
                             modelData.desktopEntry, modelData.appName) : ""
                     }
@@ -558,7 +564,7 @@ PageShell {
                             anchors.left:           parent.left
                             anchors.leftMargin:     4
                             anchors.verticalCenter: parent.verticalCenter
-                            text: { root._timeTick; return root.sectionLabel(_entry.modelData.time) }
+                            text: { void root._timeTick; return root.sectionLabel(_entry.modelData.time) }
                             color: Theme.withAlpha(Theme.mix(Theme.subtext, Theme.accent, 0.22), 0.88)
                             font.pixelSize: Settings.fontMicro
                             font.weight: Font.DemiBold
@@ -757,7 +763,7 @@ PageShell {
                                 id: _entryTime
                                 anchors.right: parent.right
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: { root._timeTick; return root.formatTime(_entry.modelData.time) }
+                                text: { void root._timeTick; return root.formatTime(_entry.modelData.time) }
                                 color: Theme.withAlpha(Theme.subtext, 0.78)
                                 font.pixelSize: Settings.fontMicro
                                 opacity: _entryHover.hovered ? 0 : 1

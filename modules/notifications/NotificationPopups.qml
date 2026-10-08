@@ -7,6 +7,7 @@ import Quickshell.Services.Notifications
 import "../../config"
 import "../../services"
 import "../common"
+import "StackLayout.js" as StackLayout
 
 PanelWindow {
     id: win
@@ -81,28 +82,21 @@ PanelWindow {
         return stack.count - _visibleCards
     }
 
-    // a Column can only follow the model's order, so each card sums the cards in front of it.
-    // count moves before the delegates exist, so the sums re-read on their arrival instead
+    // Share one layout pass across all cards; count moves before delegates exist,
+    // so re-read on their arrival as well as on height and visibility changes.
     property int _slotsRevision: 0
+    readonly property var _slotLayout: {
+        void win._slotsRevision
+        return StackLayout.measure(stack, win._newestFirst)
+    }
     function _slotTop(index: int): real {
-        void win._slotsRevision
-        let y = 0
-        for (let i = 0; i < stack.count; i++) {
-            if (win._newestFirst ? i <= index : i >= index) continue
-            const slot = stack.itemAt(i)
-            if (slot && slot.shouldLoad) y += slot.height
-        }
-        return y
+        // Removed delegates briefly have index -1 while their gap closes.
+        if (index < 0) return win._newestFirst ? win._slotLayout.height : 0
+        if (index >= win._slotLayout.tops.length)
+            return win._newestFirst ? 0 : win._slotLayout.height
+        return win._slotLayout.tops[index] ?? 0
     }
-    readonly property real _stackHeight: {
-        void win._slotsRevision
-        let h = 0
-        for (let i = 0; i < stack.count; i++) {
-            const slot = stack.itemAt(i)
-            if (slot && slot.shouldLoad) h += slot.height
-        }
-        return h
-    }
+    readonly property real _stackHeight: win._slotLayout.height
 
     function _alignedX(containerWidth: real, itemWidth: real): real {
         if (win._left) return 0

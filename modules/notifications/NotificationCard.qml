@@ -20,18 +20,20 @@ Item {
     signal leaving()
     signal replyFocusRequested(var owner, bool active)
 
-    // the countdown rings are the frame budget, and a ring that stops ticking for one collapse is invisible
+    // Leaving cards briefly pause the rim while the stack closes its gaps.
     property bool quietPaint: false
 
-    // one short dashed path per tick, so the stack scales linearly; past a couple of cards nobody reads the arc that closely
+    // Only the countdown rim changes; a stack needs fewer redraws as it grows.
     property int stackSize: 1
-    readonly property int _ringTickMs: card.stackSize <= 2 ? 33
-        : card.stackSize <= 4 ? 50 : 66
+    function countdownInterval(count: int): int {
+        return count <= 2 ? 50 : count <= 4 ? 80 : 100
+    }
+    readonly property int _ringTickMs: card.countdownInterval(card.stackSize)
 
     property bool _expired: false
     property bool _leaving: false
     // null while opaque or gone: an empty region still overrides compositor blur rules
-    readonly property Rectangle blurItem: ShellSettings.surfaceBlur && Theme.popup.a < 1 && cardRect.opacity > 0
+    readonly property Rectangle blurItem: Theme.frosted && cardRect.color.a < 1 && cardRect.opacity > 0
         ? cardRect : null
     // dismiss-all clears this: every card is leaving, so collapsing heights only drags the lower ones through their own exit
     property bool collapseOnDismiss: true
@@ -47,7 +49,7 @@ Item {
     readonly property var _defaultAction: {
         const acts = notification.actions ?? []
         for (let i = 0; i < acts.length && i < 64; i++)
-            if (acts[i] && Notifications.identityText(acts[i].identifier).toLowerCase() === "default") return acts[i]
+            if (acts[i] && acts[i].identifier === "default") return acts[i]
         return null
     }
     readonly property var actionList: {
@@ -56,7 +58,7 @@ Item {
         for (let i = 0; i < acts.length && i < 64 && out.length < 4; i++) {
             const a = acts[i]
             if (!a) continue
-            if (Notifications.identityText(a.identifier).toLowerCase() === "default") continue
+            if (a.identifier === "default") continue
             if (card._actionText(a).length === 0) continue
             out.push(a)
         }
@@ -64,12 +66,12 @@ Item {
     }
 
     readonly property string appIconSource: {
-        Notifications.entriesTick
+        void Notifications.entriesTick
         return Notifications.appIconSource(
             notification.appIcon, notification.desktopEntry, card.appNameText)
     }
     readonly property string entryIconSource: {
-        Notifications.entriesTick
+        void Notifications.entriesTick
         return Notifications.entryIconSource(notification.desktopEntry, card.appNameText)
     }
     readonly property string notificationImageSource:
@@ -105,6 +107,7 @@ Item {
     property bool _replyOpen: false
 
     readonly property real _cardRadius: Theme.surfaceRadius
+    readonly property real _borderWidth: card.isCritical ? 2.5 : 1.5
 
     function dismiss(expired): void {
         if (!card.enabled) return
@@ -144,6 +147,19 @@ Item {
 
     function _actionText(action): string {
         return Notifications.plainText(action?.text, 256).trim()
+    }
+
+    function actionColumns(availableWidth: real, preferredWidth: real, count: int): int {
+        if (count <= 0) return 1
+        const fit = Math.max(1, Math.min(count,
+            Math.floor((Math.max(0, availableWidth) + 7) / (Math.max(1, preferredWidth) + 7))))
+        return Math.ceil(count / Math.ceil(count / fit))
+    }
+
+    // the last row stretches its buttons instead of leaving a gap
+    function actionsInRow(index: int, count: int, columns: int): int {
+        const lastStart = Math.floor((count - 1) / columns) * columns
+        return index >= lastStart ? count - lastStart : columns
     }
 
     function beginReply(): void {
@@ -206,6 +222,7 @@ Item {
     readonly property real _createdAt: card.createdAt
     property string _timeLabel: "just now"
     property bool   _timeLive:  true
+    property int _timeUpdateMs: 60000
 
     function _updateTime(): void {
         const secs = (Date.now() - card._createdAt) / 1000
@@ -215,6 +232,8 @@ Item {
             _timeLabel = DateTime.clockText(new Date(card._createdAt))
             _timeLive = false
         }
+        if (_timeLive) card._timeUpdateMs = Math.max(1000,
+            Math.ceil((60 - Math.max(0, secs) % 60) * 1000))
     }
 
     Component.onCompleted: {
@@ -228,7 +247,7 @@ Item {
 
     Timer {
         id: _timeUpdate
-        interval: 30000
+        interval: card._timeUpdateMs
         running:  card.visible && ShellSettings.notifPopupEnabled
             && card.enabled && card._timeLive && !Idle.isIdle
         repeat:   true
@@ -279,7 +298,6 @@ Item {
     }
 
     property real _timeoutProgress: 1.0
-    property real _countdownPulse:  1.0
     readonly property bool _showCountdown: card.visible && card.enabled
         && _autoClose.shouldRun
         && Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)
@@ -299,14 +317,6 @@ Item {
         running: card._showCountdown && !card._paused && !card.quietPaint
         triggeredOnStart: true
         onTriggered: card._syncCountdown()
-    }
-
-    PulseLoop {
-        active: card._showCountdown && card._timeoutProgress < 0.18
-            && !card._paused && !card.quietPaint
-        target: card; targetProperty: "_countdownPulse"
-        peak: 0.5; floor: 1.0; restValue: 1.0
-        duration: Motion.ms(420)
     }
 
     HoverHandler { id: _cardHover }
@@ -336,19 +346,20 @@ Item {
             _autoClose.restart()
     }
 
+    function _handleIdle(idle: bool): void {
+        if (idle) {
+            card.cancelReply()
+            // this can remove the delegate synchronously: keep it last
+            if (_autoClose.shouldRun) card.dismiss(true)
+            return
+        }
+        card._updateTime()
+        card._syncCountdown()
+    }
+
     Connections {
         target: Idle
-        function onIsIdleChanged() {
-            // an open reply holds the countdown, so nothing else would ever retire this card
-            if (Idle.isIdle) {
-                card.cancelReply()
-                // this can remove the delegate synchronously: keep it last
-                card.dismiss(true)
-                return
-            }
-            card._updateTime()
-            card._syncCountdown()
-        }
+        function onIsIdleChanged() { card._handleIdle(Idle.isIdle) }
     }
 
     Connections {
@@ -569,22 +580,36 @@ Item {
                 }
             }
 
-            Row {
+            Flow {
+                id: _actionsFlow
                 visible: card.actionList.length > 0
                 width: parent.width
                 topPadding: 4
                 bottomPadding: 2
                 spacing: 7
+                readonly property real _preferredButtonWidth: {
+                    let widest = 64
+                    for (const child of _actionsFlow.children)
+                        if (child.preferredWidth !== undefined)
+                            widest = Math.max(widest, child.preferredWidth)
+                    return widest
+                }
+                readonly property int columns: card.actionColumns(
+                    width, _preferredButtonWidth, card.actionList.length)
 
                 Repeater {
                     model: card.actionList
                     delegate: Rectangle {
                         id: _actBtn
                         required property var modelData
+                        required property int index
                         readonly property color _tint: card.isCritical ? Theme.error : Theme.accent
-                        readonly property int _n: Math.max(1, card.actionList.length)
+                        readonly property real preferredWidth: Math.ceil(_actionMetrics.advanceWidth) + 24
+                        readonly property int _inRow: card.actionsInRow(
+                            index, card.actionList.length, _actionsFlow.columns)
 
-                        width: (contentCol.width - 7 * (_n - 1)) / _n
+                        width: Math.max(0, Math.floor((_actionsFlow.width
+                            - _actionsFlow.spacing * (_inRow - 1)) / _inRow))
                         height: Metrics.rowHeightFor(30)
                         radius: Theme.radiusInline
                         antialiasing: true
@@ -592,6 +617,14 @@ Item {
                              : _actMa.containsMouse ? Theme.withAlpha(_tint, 0.13)
                              :                        Theme.menuControl
                         ColorFade on color {}
+
+                        TextMetrics {
+                            id: _actionMetrics
+                            font.family: Settings.font
+                            font.pixelSize: Settings.fontLabel
+                            font.weight: Font.Medium
+                            text: card._actionText(_actBtn.modelData)
+                        }
 
                         OutlineBorder {
                             radius: _actBtn.radius
@@ -819,7 +852,7 @@ Item {
         OutlineBorder {
             radius: cardRect.radius
             // two device pixels at 1.25: one reads as a broken hairline over whatever is behind a floating card
-            outlineWidth: card.isCritical ? 2.5 : 1.5
+            outlineWidth: card._borderWidth
             outlineColor: card.isCritical
                 ? Theme.withAlpha(Theme.error,  0.62)
                 : Theme.outline
@@ -829,16 +862,19 @@ Item {
         }
     }
 
-    PerimeterProgress {
+    Loader {
         anchors.fill: cardRect
-        visible: card._showCountdown
-        paused:  card.quietPaint
-        opacity: cardRect.opacity * card._countdownPulse
-        inset:        4
-        cornerRadius: cardRect.radius
-        progress:     card._timeoutProgress
-        trackColor:   "transparent"
-        arcColor:     card.isCritical ? Theme.error
-                    : (card._timeoutProgress < 0.30 ? Theme.warning : Theme.accent)
+        active: card._showCountdown
+        opacity: cardRect.opacity
+        sourceComponent: PerimeterProgress {
+            paused: card.quietPaint
+            // Follow the outline instead of drawing a second ring inside it.
+            inset: card._borderWidth / 2
+            arcWidth: card._borderWidth
+            cornerRadius: cardRect.radius
+            progress: card._timeoutProgress
+            arcColor: Theme.withAlpha(card.isCritical ? Theme.error
+                : (card._timeoutProgress < 0.30 ? Theme.warning : Theme.accent), 0.80)
+        }
     }
 }

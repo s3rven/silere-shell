@@ -34,6 +34,8 @@ Item {
     // keyed by content, not position: an id and a time both survive an in-place update,
     // so a row whose text changed has to miss the match and be rebuilt on its own
     function _key(e): string {
+        // stored rows are replaced, never edited in place, so their key stays valid
+        if (e && typeof e.contentKey === "string") return e.contentKey
         return e ? [e.id, e.time, e.urgency, e.appName, e.appIcon,
                     e.desktopEntry, e.summary, e.body].join("\u0001") : ""
     }
@@ -45,8 +47,9 @@ Item {
     }
 
     // on the row, not the delegate: a neighbour read through get() never reports its changes
-    function _row(e): var {
+    function _row(e, key: string): var {
         const r = root._copy(e)
+        r.contentKey = key
         r.first = false
         r.showSection = false
         r.groupStart = false
@@ -116,7 +119,7 @@ Item {
         }
         for (let i = 0; i < rows.length; i++) {
             if (i < _rows.count && root._key(_rows.get(i)) === keys[i]) continue
-            _rows.insert(i, root._row(rows[i]))
+            _rows.insert(i, root._row(rows[i], keys[i]))
             root.inserts++
         }
         while (_rows.count > rows.length) {

@@ -48,7 +48,7 @@ Singleton {
     // history is newest-first, so first-seen order is recency order: the app that spoke
     // last leads the rail. Rebuilt on revision, not count, for the reason above
     readonly property var historyApps: {
-        root.historyRevision
+        void root.historyRevision
         const order = []
         const byName = Object.create(null)
         for (let i = 0; i < _history.count; i++) {
@@ -73,7 +73,7 @@ Singleton {
     }
 
     // roles are fixed by the first insert, so every entry (incl. one revived from JSON) needs the full shape
-    function _normalizeEntry(e): var {
+    function _normalizeEntry(e, storedText): var {
         if (!e || typeof e !== "object") return null
         const rawId = Number(e.id ?? -1)
         const rawUrgency = Number(e.urgency ?? 1)
@@ -84,8 +84,10 @@ Singleton {
             appName:      root.identityText(e.appName),
             appIcon:      SafeText.boundedText(e.appIcon, root._maxSourceChars),
             desktopEntry: root.identityText(e.desktopEntry),
-            summary:      root.plainText(e.summary, root._maxSummaryChars),
-            body:         root.plainText(e.body, root._maxBodyChars),
+            summary:      storedText === true ? root._boundedPlainText(e.summary, root._maxSummaryChars)
+                : root.plainText(e.summary, root._maxSummaryChars),
+            body:         storedText === true ? root._boundedPlainText(e.body, root._maxBodyChars)
+                : root.plainText(e.body, root._maxBodyChars),
             urgency:      isFinite(rawUrgency)
                 ? Math.max(0, Math.min(2, Math.round(rawUrgency))) : 1,
             time:         isFinite(rawTime) && rawTime >= 0 && rawTime <= 8.64e15
@@ -96,15 +98,16 @@ Singleton {
     }
 
     function _trimHistory(): void {
+        const excess = _history.count - root._historyCapacity
+        if (excess <= 0) return
         const dropped = []
-        let removed = 0
-        while (_history.count > root._historyCapacity) {
-            const id = _history.get(_history.count - 1).id
+        for (let i = root._historyCapacity; i < _history.count; i++) {
+            const id = _history.get(i).id
             if (id !== undefined) dropped.push(String(id))
-            _history.remove(_history.count - 1)
-            removed++
         }
-        if (removed > 0) root.historyRevision++
+        // One model edit also lets views reconcile a reduced limit in one pass.
+        _history.remove(root._historyCapacity, excess)
+        root.historyRevision++
         root._forgetTrimmed(dropped)
     }
 
@@ -157,8 +160,24 @@ Singleton {
         root._trimHistory()
     }
 
+    property int _serializedHistoryRevision: -1
+
     function _saveHistory(): void {
         if (!root._persistentReady) return
+        // With persistence off, history stays in memory and needs no row scan.
+        // Invalidate the cache so enabling it later captures the current rows.
+        if (!ShellSettings.notifHistoryPersistent) {
+            root._serializedHistoryRevision = -1
+            _persist.historyJson = "[]"
+            root._queueDiskSave()
+            return
+        }
+        // A settings change can reach both capacity and limit handlers. Serialize
+        // a revision once, but still let disk restore/retry request its write.
+        if (root._serializedHistoryRevision === root.historyRevision) {
+            root._queueDiskSave()
+            return
+        }
         const out = []
         for (let i = 0; i < _history.count; i++) {
             const h = _history.get(i)
@@ -167,8 +186,8 @@ Singleton {
                 summary: h.summary, body: h.body, urgency: h.urgency, time: h.time
             })
         }
-        _persist.historyJson = ShellSettings.notifHistoryPersistent
-            ? JSON.stringify(out) : "[]"
+        _persist.historyJson = JSON.stringify(out)
+        root._serializedHistoryRevision = root.historyRevision
         root._queueDiskSave()
     }
 
@@ -236,7 +255,7 @@ Singleton {
         _history.clear()
         if (Array.isArray(savedHistory)) {
             for (let i = 0; i < savedHistory.length && i < root._historyCapacity; i++) {
-                const e = root._normalizeEntry(savedHistory[i])
+                const e = root._normalizeEntry(savedHistory[i], true)
                 if (e) {
                     // ids restart with the server, so a saved one names nothing this session
                     e.sessionCurrent = false
@@ -433,7 +452,7 @@ Singleton {
                 // the cap is the most this session can hold, so a pathological file cannot freeze startup normalizing rows the trim would drop anyway
                 const limit = _history.count + root._historyCapacity
                 for (let i = 0; i < j.history.length && _history.count < limit; i++) {
-                    const e = root._normalizeEntry(j.history[i])
+                    const e = root._normalizeEntry(j.history[i], true)
                     if (!e) continue
                     const key = String(e.id) + "\u0001" + String(e.time)
                     if (present[key]) continue
@@ -531,11 +550,12 @@ Singleton {
         if (!notification || notification.transient) return null
         return {
             id:      id,
-            appName: root.identityText(notification.appName),
-            appIcon: SafeText.boundedText(notification.appIcon, root._maxSourceChars),
-            desktopEntry: root.identityText(notification.desktopEntry),
-            summary: root.plainText(notification.summary, root._maxSummaryChars),
-            body:    root.plainText(notification.body),
+            // _prependHistory bounds and normalizes this snapshot once.
+            appName: notification.appName,
+            appIcon: notification.appIcon,
+            desktopEntry: notification.desktopEntry,
+            summary: notification.summary,
+            body:    notification.body,
             urgency: notification.urgency,
             time:    time,
             sessionCurrent: true
@@ -630,6 +650,11 @@ Singleton {
         if (list.length === 0 && lastCritical) lastCritical = false
     }
 
+    function _boundedPlainText(value, limit: int): string {
+        return SafeText.boundedText(SafeText.boundedText(value, limit * 2)
+            .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u061C\u200B\u200E\u200F\u202A-\u202E\u2066-\u206F]/g, ""), limit)
+    }
+
     function plainText(s, maxChars): string {
         if (!s) return ""
         const requested = Number(maxChars)
@@ -647,8 +672,7 @@ Singleton {
             })
             .replace(/&nbsp;/g, " ").replace(/&hellip;/g, "…")
             .replace(/&amp;/g, "&")
-            .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u061C\u200B\u200E\u200F\u202A-\u202E\u2066-\u206F]/g, "")
-        return SafeText.boundedText(plain, limit)
+        return root._boundedPlainText(plain, limit)
     }
 
     function notificationImageSource(raw): string {
