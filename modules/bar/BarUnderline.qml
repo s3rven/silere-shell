@@ -40,7 +40,6 @@ Item {
                : (Battery.low   ? 0.44 - Battery.alertPulse * 0.20 : 0))
             : 0
         property real _networkGlow: 0
-        property bool _netKnown: false
         property bool _lastNetConnected: false
         readonly property real _tempGlowBase: (_tempGlowEnabled && CpuTemp.hot && !CpuTemp.critical) ? 0.32 : 0
         property real _tempPulseGlow: 0
@@ -299,6 +298,7 @@ Item {
         property bool _settingsReady: false
         Component.onCompleted: {
             _prevNotifCount = Notifications.activeCount
+            _lastNetConnected = Network.available && Network.connected
             Qt.callLater(() => {
                 if (!_lineEffect) return
                 _lineEffect._settingsReady = true
@@ -316,6 +316,7 @@ Item {
             _screenshotSweep.stop()
             _notifFlash.stop()
             _netLossFlash.stop()
+            _netGlowAnim.stop()
             _screenshotGlow = 0
             _notifGlow = 0
             _networkGlow = 0
@@ -339,6 +340,8 @@ Item {
                 }
             }
             function onUnderlineNetGlowChanged() {
+                // Changes while this source is disabled must not replay on re-enable.
+                _lineEffect._lastNetConnected = Network.available && Network.connected
                 if (!ShellSettings.underlineNetGlow) {
                     _lineEffect._stopTransient()
                 } else if (_lineEffect._canPreview()) {
@@ -384,25 +387,24 @@ Item {
                 _lineEffect._playScreenshot()
         }
 
-        function _updateNetGlow(): void {
-            const currentConnected = Network.available && Network.connected
-            const disconnected = Network.available && !Network.connected
-
-            if (!_netKnown) {
-                _netKnown = true
-                _lastNetConnected = currentConnected
-                _networkGlow = 0
-                return
-            }
+        function _updateNetGlow(available: bool, connected: bool): void {
+            const currentConnected = available && connected
+            const disconnected = available && !connected
 
             if (_lastNetConnected && disconnected && ShellSettings.underlineNetGlow
                     && _lineEffect._canRunEventMotion()) {
+                _netGlowAnim.stop()
                 _lineEffect._armGather()
                 _netLossFlash.restart()
-            } else if (currentConnected || !Network.available) {
+            } else if (currentConnected || !available) {
                 _lineEffect._clearNetLossFlash()
-                _netGlowAnim.to = 0
-                _netGlowAnim.restart()
+                _netGlowAnim.stop()
+                if (_networkGlow > 0 && _lineEffect._canRunEventMotion()) {
+                    _netGlowAnim.to = 0
+                    _netGlowAnim.restart()
+                } else {
+                    _networkGlow = 0
+                }
             }
 
             _lastNetConnected = currentConnected
@@ -410,18 +412,20 @@ Item {
 
         Connections {
             target: _lineEffect._networkGlowEnabled ? Network : null
-            function onConnectedChanged() { _lineEffect._updateNetGlow() }
-            function onAvailableChanged()  { _lineEffect._updateNetGlow() }
+            function onConnectedChanged() { _lineEffect._updateNetGlow(Network.available, Network.connected) }
+            function onAvailableChanged() { _lineEffect._updateNetGlow(Network.available, Network.connected) }
         }
 
         NumberAnimation {
             id: _netGlowAnim
+            objectName: "networkFade"
             target: _lineEffect; property: "_networkGlow"
             duration: Motion.medium; easing.type: Easing.OutCubic
         }
 
         SequentialAnimation {
             id: _netLossFlash
+            objectName: "networkFlash"
             NumberAnimation { target: _lineEffect; property: "_sweepSpread"; to: 0.04; duration: _lineEffect._gatherMs; easing.type: Easing.InOutQuad }
             ParallelAnimation {
                 NumberAnimation { target: _lineEffect; property: "_networkGlow";  to: 0.42; duration: Motion.ms(130); easing.type: Easing.OutQuad  }

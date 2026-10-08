@@ -1579,6 +1579,42 @@ ShellRoot {
             root._check(lineEffect !== undefined,
                 "the reactive underline exposes its network flash reset")
             if (lineEffect) {
+                const networkFlash = lineEffect.resources.find(r => r.objectName === "networkFlash")
+                const networkFade = lineEffect.resources.find(r => r.objectName === "networkFade")
+                root._check(networkFlash !== undefined && networkFade !== undefined,
+                    "network glow animations can be inspected independently")
+                const netGlowWas = ShellSettings.underlineNetGlow
+                const netReduceWas = ShellSettings.reduceMotion
+                ShellSettings.underlineNetGlow = true
+                ShellSettings.reduceMotion = false
+                lineEffect._lastNetConnected = true
+                lineEffect._updateNetGlow(true, false)
+                root._check(networkFlash.running,
+                    "the first disconnect after a connected startup flashes immediately")
+                lineEffect._stopTransient()
+                lineEffect._networkGlow = 0.3
+                lineEffect._updateNetGlow(true, true)
+                root._check(networkFade.running,
+                    "reconnecting fades a visible network glow")
+                lineEffect._stopTransient()
+                root._check(!networkFlash.running && !networkFade.running
+                        && lineEffect._networkGlow === 0,
+                    "settling transient glows also stops the reconnect fade")
+                lineEffect._updateNetGlow(true, true)
+                root._check(!networkFade.running,
+                    "an already dark network glow starts no reconnect animation")
+                ShellSettings.reduceMotion = true
+                lineEffect._networkGlow = 0.3
+                lineEffect._updateNetGlow(true, true)
+                root._check(lineEffect._networkGlow === 0 && !networkFade.running,
+                    "reduced motion settles a reconnect without animating")
+                ShellSettings.underlineNetGlow = false
+                lineEffect._lastNetConnected = true
+                ShellSettings.underlineNetGlow = true
+                root._check(lineEffect._lastNetConnected === (Network.available && Network.connected),
+                    "re-enabling network feedback seeds the current connection state")
+                ShellSettings.underlineNetGlow = netGlowWas
+                ShellSettings.reduceMotion = netReduceWas
                 lineEffect._sweepSpread = 0.19
                 lineEffect._bloomBoost = 0.14
                 lineEffect._clearNetLossFlash()

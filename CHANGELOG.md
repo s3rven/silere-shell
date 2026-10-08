@@ -17,6 +17,11 @@ settings file carries its own `__version` and migrates separately.
   and notification countdowns; floating glow rims now keep a consistent thickness
   on fractional scales and clamp their corners to the available space.
 
+### Fixed
+
+- Catch the first network disconnect after a connected startup, clear every network
+  glow animation when motion stops, and skip reconnect fades when the glow is dark.
+
 ## Releases
 
 - [1.4.0](docs/releases/1.4.0.md) — 2026-10-09
