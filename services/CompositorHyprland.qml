@@ -311,12 +311,12 @@ QtObject {
     }
 
     readonly property string focusedMonitor: {
-        root._layoutTick
+        void root._layoutTick
         return Hyprland.focusedMonitor ? (Hyprland.focusedMonitor.name ?? "") : ""
     }
 
     readonly property int focusedWorkspaceRef: {
-        root._layoutTick
+        void root._layoutTick
         return Hyprland.focusedWorkspace ? (Hyprland.focusedWorkspace.id ?? -1) : -1
     }
 
@@ -392,7 +392,7 @@ QtObject {
     }
 
     readonly property var workspaces: {
-        root._layoutTick
+        void root._layoutTick
         const mons = Hyprland.monitors ? (Hyprland.monitors.values ?? []) : []
         const activeByOutput = {}
         for (let i = 0; i < mons.length; i++) {
@@ -427,7 +427,7 @@ QtObject {
 
     // shared layout base built once; the title-facing list below only overlays the sampled strings
     readonly property var workspaceToplevels: {
-        root._layoutTick
+        void root._layoutTick
         const wsOut = {}
         const wsVals = Hyprland.workspaces ? (Hyprland.workspaces.values ?? []) : []
         for (let i = 0; i < wsVals.length; i++) {

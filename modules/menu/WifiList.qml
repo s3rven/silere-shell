@@ -16,6 +16,9 @@ Item {
     implicitHeight: _col.implicitHeight
 
     property string _selected: ""
+    // held here, not in the delegate: a recycled row would lose it
+    property string _passwordDraft: ""
+    property bool _passwordVisible: false
     property string _armedSsid: ""
     property string _forgetSsid: ""
     // the model is a held snapshot: any content change in Network.wifiNetworks destroys every delegate, and with it the password field being typed into
@@ -48,7 +51,11 @@ Item {
         }
     }
 
-    on_SelectedChanged: _syncNetworks()
+    on_SelectedChanged: {
+        root._passwordDraft = ""
+        root._passwordVisible = false
+        _syncNetworks()
+    }
     onOpenChanged: {
         if (open) _syncScanState()
         else      {
@@ -75,6 +82,12 @@ Item {
     Connections {
         target: Network
         function onWifiNetworksChanged() { root._syncNetworks() }
+        function onWifiErrorChanged() {
+            if (Network.wifiError === root._selected) {
+                root._passwordDraft = ""
+                root._passwordVisible = false
+            }
+        }
         function onWifiConnectingChanged() {
             if (Network.wifiConnecting === "" && Network.wifiError === "") root._selected = ""
         }
@@ -142,13 +155,14 @@ Item {
                 readonly property bool _failed:     Network.wifiError === modelData.ssid
 
                 function _submitPassword(): void {
-                    if (_entry._connecting) return
-                    const secret = _pw.text
-                    _pw.text = ""
+                    if (!_entry._sel || _entry._connecting) return
+                    const secret = root._passwordDraft
+                    root._passwordDraft = ""
+                    root._passwordVisible = false
                     if (secret.length > 0) Network.connectWifi(modelData.ssid, secret)
                 }
 
-                on_SelChanged: if (!_sel) { _pw.text = ""; _pw.focus = false }
+                on_SelChanged: if (!_sel) _pw.focus = false
 
                 function _revealField(): void {
                     if (_entry._sel) _list.positionViewAtIndex(_entry.index, ListView.Contain)
@@ -164,7 +178,7 @@ Item {
                         : _entry._armed ? "Disconnect?"
                         : _entry.modelData.active ? "Connected"
                         : _entry._connecting ? "Connecting…"
-                        : _entry._failed ? (Network.wifiErrorNeedsSecret ? "Wrong password" : "Failed")
+                        : _entry._failed ? Network.wifiErrorText
                         : _entry._sel ? "Password"
                         : _entry.modelData.known ? "Saved"
                         : _entry.modelData.profileOnly ? "Not supported"
@@ -175,6 +189,7 @@ Item {
                     motionReady: _entry.motionReady
                     warning: _entry._armed || _entry._forgetArmed
                     failed:  _entry._failed
+                    busy: _entry._connecting
                     interactive: !_entry._connecting
                         && (!_entry.modelData.profileOnly || _entry.modelData.known
                             || _entry.modelData.active)
@@ -268,23 +283,19 @@ Item {
                             ColorFade on outlineColor { gate: _entry.motionReady }
                         }
 
-                        Connections {
-                            target: Network
-                            function onWifiErrorChanged() {
-                                if (_entry._failed) _pw.text = ""
-                            }
-                        }
-
                         TextInput {
                             id: _pw
                             anchors.left: parent.left; anchors.leftMargin: 12
-                            anchors.right: _join.left; anchors.rightMargin: 8
+                            anchors.right: _revealPassword.left; anchors.rightMargin: 8
                             anchors.verticalCenter: parent.verticalCenter
-                            echoMode: TextInput.Password
+                            echoMode: root._passwordVisible ? TextInput.Normal : TextInput.Password
+                            readOnly: _entry._connecting
                             passwordCharacter: "•"
+                            text: _entry._sel ? root._passwordDraft : ""
+                            onTextEdited: if (_entry._sel) root._passwordDraft = text
                             // echoMode alone leaves inputMethodHints at 0: an IME still capitalises the first letter of a case-sensitive WPA key
                             inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText
-                                | Qt.ImhNoAutoUppercase
+                                | Qt.ImhNoAutoUppercase | (root._passwordVisible ? 0 : Qt.ImhHiddenText)
                             Accessible.name: "Wi-Fi password"
                             color: Theme.text
                             selectionColor: Theme.withAlpha(Theme.accent, 0.4)
@@ -297,11 +308,28 @@ Item {
                                 anchors.fill: parent
                                 verticalAlignment: Text.AlignVCenter
                                 visible: _pw.text.length === 0
-                                text: !_entry._failed ? "Password"
-                                    : Network.wifiErrorNeedsSecret ? "Wrong password" : "Connection failed"
+                                text: _entry._connecting ? "Connecting…"
+                                    : !_entry._failed ? "Password" : Network.wifiErrorText
                                 color: _entry._failed ? Theme.withAlpha(Theme.error, 0.7)
                                                       : Theme.withAlpha(Theme.subtext, 0.45)
                                 font.pixelSize: Settings.fontSize
+                            }
+                        }
+
+                        IconButton {
+                            id: _revealPassword
+                            anchors.right: _join.left
+                            anchors.rightMargin: 4
+                            anchors.verticalCenter: parent.verticalCenter
+                            buttonSize: 28
+                            glyph: root._passwordVisible ? "󰈉" : "󰈈"
+                            accessibleName: root._passwordVisible ? "Hide Wi-Fi password" : "Show Wi-Fi password"
+                            enabled: _entry._sel && !_entry._connecting && root._passwordDraft.length > 0
+                            Accessible.checkable: true
+                            Accessible.checked: root._passwordVisible
+                            onTriggered: {
+                                root._passwordVisible = !root._passwordVisible
+                                _pw.forceActiveFocus()
                             }
                         }
 

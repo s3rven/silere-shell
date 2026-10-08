@@ -133,6 +133,9 @@ Item {
                 selected: modelData.connected
                 warning: _armed || _forgetArmed || modelData.pairing
                 failed:  _failed
+                busy: !modelData.pairing
+                    && (modelData.state === Bt.BluetoothDeviceState.Connecting
+                        || modelData.state === Bt.BluetoothDeviceState.Disconnecting)
                 interactive: modelData.pairing
                     || (modelData.state !== Bt.BluetoothDeviceState.Connecting
                         && modelData.state !== Bt.BluetoothDeviceState.Disconnecting)

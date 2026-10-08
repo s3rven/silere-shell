@@ -40,7 +40,7 @@ Singleton {
     property int _solarTick: 0
     // noaa's fractional-year series: declination in radians and the equation of time in minutes
     readonly property real _yearAngle: {
-        root._solarTick
+        void root._solarTick
         const d = new Date()
         // counted in utc: a local-midnight difference is an hour short across a dst change
         const n = Math.round((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())
@@ -59,7 +59,7 @@ Singleton {
             - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g))
     }
     readonly property real _elevation: {
-        root._solarTick
+        void root._solarTick
         const d    = new Date()
         const decl = root._declRad
         const h    = ((d.getUTCHours() + d.getUTCMinutes() / 60 + root._useLon / 15
@@ -77,7 +77,7 @@ Singleton {
     }
 
     readonly property real _solarNoon: {
-        root._solarTick
+        void root._solarTick
         return 12 - root._useLon / 15 - root._eqTimeMin / 60 - (new Date()).getTimezoneOffset() / 60
     }
     // -0.833°: refraction plus the sun's radius, so the times match published ones
@@ -90,7 +90,7 @@ Singleton {
     }
     readonly property real sunriseHour: _solarNoon - _halfDay
     readonly property real sunsetHour:  _solarNoon + _halfDay
-    readonly property real nowHour: { root._solarTick; const d = new Date(); return d.getHours() + d.getMinutes() / 60 }
+    readonly property real nowHour: { void root._solarTick; const d = new Date(); return d.getHours() + d.getMinutes() / 60 }
     // a midnight sun's day wraps past 24:00, which the window below cannot express
     readonly property bool isDaytime: _halfDay >= 12
         || (_halfDay > 0 && nowHour >= sunriseHour && nowHour <= sunsetHour)
@@ -106,7 +106,7 @@ Singleton {
         return hh > 0 ? (hh + "h " + (mm < 10 ? "0" : "") + mm + "m") : (mm + "m")
     }
     readonly property string phaseLabel: {
-        root._solarTick
+        void root._solarTick
         if (_halfDay <= 0)  return "polar night"
         if (_halfDay >= 12) return "midnight sun"
         if (isDaytime)            return _dur((sunsetHour - nowHour) * 60) + " of daylight"

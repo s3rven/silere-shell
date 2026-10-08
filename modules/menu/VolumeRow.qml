@@ -136,7 +136,9 @@ Item {
         wheelKey: "volume"
         value: Audio.uiVolume
         valueText: Audio.label
-        glyphClickable: true
+        adjustable: Audio.ready
+        glyphClickable: Audio.ready
+        muted: Audio.muted
         expandable: root._canExpand
         expanded: root.open
         reserveExpandSlot: root.reserveExpandSlot
@@ -209,7 +211,9 @@ Item {
                     wheelKey: "microphone"
                     value: Audio.micVolume
                     valueText: Audio.micLabel
-                    glyphClickable: true
+                    adjustable: Audio.micReady
+                    glyphClickable: Audio.micReady
+                    muted: Audio.micMuted
                     reserveExpandSlot: true
                     onGlyphClicked: Audio.toggleMicMute()
                     onMoved: (v) => Audio.setMicVolume(v)
@@ -278,7 +282,9 @@ Item {
                             wheelKey: "appvolume"
                             value: _app.ctl.uiVolume
                             valueText: Math.round(_app.ctl.uiVolume * 100) + "%"
-                            glyphClickable: true
+                            adjustable: _app.ctl.ready
+                            glyphClickable: _app.ctl.ready
+                            muted: _app.ctl.muted
                             reserveExpandSlot: true
                             onGlyphClicked: _app.ctl.toggleMute()
                             onMoved: (v) => _app.ctl.setVolume(v)

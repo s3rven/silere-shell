@@ -46,6 +46,7 @@ Item {
         wheelKey: "brightness"
         value: Brightness.pendingPercent / 100
         valueText: Brightness.pendingPercent + "%"
+        adjustable: Brightness.controllable
         expandable: Brightness.devices.length > 1
         expanded: root.open
         reserveExpandSlot: root.reserveExpandSlot

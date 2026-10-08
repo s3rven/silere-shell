@@ -11,9 +11,9 @@ Singleton {
 
     readonly property bool armed: true
 
-    // the service pushes reads; powerprofilesctl writes where installed, so a refusal reports stderr
+    // the service pushes reads; writes run a command on either backend so a refusal reports stderr
     readonly property bool available: SystemTools.hasPowerProfilesCtl
-        || SystemTools.hasPowerProfilesService
+        || (SystemTools.hasPowerProfilesService && SystemTools.hasBusctl)
     // a set returns in ~85ms, so only a daemon slow enough to notice shows an in-between state
     readonly property bool changing: _set.running && root._setIsSlow
     property bool _setIsSlow: false
@@ -78,17 +78,20 @@ Singleton {
         }))
     }
 
+    function commandFor(name: string, hasCli: bool, hasBus: bool): var {
+        if (hasCli) return ["powerprofilesctl", "set", name]
+        if (hasBus) return ["busctl", "--system", "--timeout=5", "set-property",
+            "net.hadess.PowerProfiles", "/net/hadess/PowerProfiles",
+            "net.hadess.PowerProfiles", "ActiveProfile", "s", name]
+        return []
+    }
+
     function setProfile(name: string): void {
         if (!root.available || _set.running) return
         const want = String(name)
         if (root._cycleOrder.indexOf(want) < 0 || want === root.profile) return
         root.lastError = ""
-        if (SystemTools.hasPowerProfilesCtl) {
-            _set.exec(["powerprofilesctl", "set", want])
-            return
-        }
-        UPower.PowerProfiles.profile = want === "performance" ? UPower.PowerProfile.Performance
-            : want === "power-saver" ? UPower.PowerProfile.PowerSaver : UPower.PowerProfile.Balanced
+        _set.exec(root.commandFor(want, SystemTools.hasPowerProfilesCtl, SystemTools.hasBusctl))
     }
 
     function nextProfile(current: string, order: var): string {
@@ -106,6 +109,13 @@ Singleton {
         return next
     }
 
+    function _acceptSetResult(code: int, timedOut: bool, error: string): void {
+        if (!root.available) return
+        root.lastError = timedOut ? "Power mode change timed out"
+            : code === 0 ? "" : SafeText.lastNonEmptyLine(
+                error, "Could not change the power mode", 160)
+    }
+
     onAvailableChanged: if (!root.available) {
         if (_set.running) _set.running = false
         root.lastError = ""
@@ -121,12 +131,8 @@ Singleton {
             if (running) _slowSet.restart()
             else _slowSet.stop()
         }
-        onTimeoutReached: root.lastError = "Power mode change timed out"
-        onExited: (code) => {
-            if (!root.available || timedOut) return
-            root.lastError = code === 0 ? "" : SafeText.lastNonEmptyLine(
-                _setErr.text, "Could not change the power mode", 160)
-        }
+        onTimeoutReached: root._acceptSetResult(-1, true, "")
+        onExited: code => root._acceptSetResult(code, timedOut, _setErr.text)
     }
 
     Timer {

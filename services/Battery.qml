@@ -9,7 +9,7 @@ Singleton {
     id: root
 
     readonly property bool upowerReady: UPower.displayDevice && UPower.displayDevice.ready
-    readonly property bool available: upowerReady && UPower.displayDevice.isPresent
+    readonly property bool present: upowerReady && UPower.displayDevice.isPresent
     // quickshell scales upower's 0-100 to 0-1 as it reads it
     readonly property real _raw: upowerReady ? UPower.displayDevice.percentage : 0
 
@@ -20,12 +20,16 @@ Singleton {
     }
 
     readonly property real pct: root.normalizedPercent(_raw)
+    // 0% is UPower's placeholder until upowerd reads the battery, sent with an inferred Empty or Charging
+    function validReading(isPresent: bool, level: real): bool {
+        return isPresent && isFinite(level) && level > 0
+    }
+    readonly property bool available: root.validReading(present, pct)
     readonly property bool onBattery: available ? UPower.onBattery : false
     readonly property int  _critPct: Math.max(5, Math.round(ShellSettings.batteryLowThreshold / 2))
-    // pct==0 is UPower's uninitialised reading at startup; would fire a bogus critical alert
-    readonly property bool _validReading: available && pct > 0
-    readonly property bool low: _validReading && pct < ShellSettings.batteryLowThreshold && onBattery
-    readonly property bool critical: _validReading && pct < _critPct && onBattery
+    // pct > 0 again here: a gate on a sibling binding can run a step behind pct and pass the placeholder
+    readonly property bool low: available && pct > 0 && pct < ShellSettings.batteryLowThreshold && onBattery
+    readonly property bool critical: available && pct > 0 && pct < _critPct && onBattery
     readonly property int state: upowerReady ? UPower.displayDevice.state : UPowerDeviceState.Unknown
     readonly property bool onAc: available && !onBattery
     readonly property bool charging: available && state === UPowerDeviceState.Charging
@@ -34,7 +38,7 @@ Singleton {
     property real alertPulse: 0
 
     readonly property color iconColor: {
-        if (!available || !_validReading)             return Theme.subtext
+        if (!available)                               return Theme.subtext
         if (onAc && full)                             return Theme.success
         if (held)                                     return Theme.subtext
         if (charging)                                 return Theme.accent
@@ -44,7 +48,7 @@ Singleton {
     }
 
     readonly property string icon: {
-        if (!available || !_validReading)  return "󰂎"
+        if (!available)                    return "󰂎"
         if (held)                          return "󰚥"
         if (charging) {
             if (pct >= 95)   return "󰂅"
@@ -70,7 +74,7 @@ Singleton {
         return "󰁺"
     }
 
-    readonly property string label: _validReading ? `${Math.round(pct)}%` : ""
+    readonly property string label: available ? `${Math.round(pct)}%` : ""
 
     readonly property real   timeToEmpty: upowerReady ? UPower.displayDevice.timeToEmpty : 0
     readonly property real   timeToFull:  upowerReady ? UPower.displayDevice.timeToFull  : 0
@@ -103,9 +107,77 @@ Singleton {
         if (deviceState === UPowerDeviceState.Charging) return "charging"
         if (deviceState === UPowerDeviceState.Discharging) return "discharging"
         if (deviceState === UPowerDeviceState.Empty) return "empty"
-        if (deviceState === UPowerDeviceState.PendingCharge) return "not charging"
+        if (deviceState === UPowerDeviceState.PendingCharge) return onBattery ? "not charging" : "charge limit"
         if (deviceState === UPowerDeviceState.PendingDischarge) return "not discharging"
         return onBattery ? "on battery" : "on AC"
+    }
+
+    // Share one settled reading between desktop notifications and the OSD. The
+    // first valid reading is a baseline, even when UPower arrives late at login.
+    property var _notificationState: null
+    readonly property string alertWarning: _notificationState ? _notificationState.warning : ""
+    readonly property int chargeRevision: _notificationState ? _notificationState.chargeRevision : 0
+    readonly property bool chargeComplete: _notificationState ? _notificationState.chargeComplete : false
+
+    function notificationStateFor(previous, available: bool, pct: real,
+            onBattery: bool, charging: bool, full: bool,
+            lowThreshold: real, criticalThreshold: real): var {
+        if (!available || !isFinite(pct) || pct <= 0) return previous
+        const low = onBattery && pct < lowThreshold
+        const critical = onBattery && pct < criticalThreshold
+        if (!previous) {
+            return { lowSeen: low, criticalSeen: critical, warning: "",
+                chargeObserved: charging && !full && !onBattery,
+                fullSeen: full, chargeRevision: 0, chargeComplete: false }
+        }
+
+        let lowSeen = previous.lowSeen && onBattery && pct < lowThreshold + 2
+        let criticalSeen = previous.criticalSeen && onBattery && pct < criticalThreshold + 2
+        let warning = critical ? previous.warning : low && previous.warning === "low" ? "low" : ""
+        if (critical && !criticalSeen) warning = "critical"
+        else if (low && !lowSeen) warning = "low"
+        // A jump directly into critical counts as both crossings.
+        lowSeen = lowSeen || low
+        criticalSeen = criticalSeen || critical
+
+        let fullSeen = previous.fullSeen && !onBattery && pct >= 97
+        let chargeObserved = previous.chargeObserved && !onBattery
+        let chargeRevision = previous.chargeRevision
+        let chargeComplete = previous.chargeComplete && full && !onBattery
+        if (charging && !full && !onBattery && !fullSeen) chargeObserved = true
+        if (full && !onBattery) {
+            if (chargeObserved && !fullSeen) {
+                chargeRevision++
+                chargeComplete = true
+            }
+            fullSeen = true
+            chargeObserved = false
+        }
+        return { lowSeen: lowSeen, criticalSeen: criticalSeen, warning: warning,
+            chargeObserved: chargeObserved, fullSeen: fullSeen,
+            chargeRevision: chargeRevision, chargeComplete: chargeComplete }
+    }
+
+    function _updateNotificationState(): void {
+        if (!ShellSettings.ready) return
+        root._notificationState = root.notificationStateFor(root._notificationState,
+            root.available, root.pct, root.onBattery, root.charging, root.full,
+            ShellSettings.batteryLowThreshold, root._critPct)
+    }
+
+    // UPower's percentage, power source and state can update in one event turn.
+    // Reading them together avoids transient low/critical pairs and AC alerts.
+    onAvailableChanged: Qt.callLater(root._updateNotificationState)
+    onPctChanged: Qt.callLater(root._updateNotificationState)
+    onOnBatteryChanged: Qt.callLater(root._updateNotificationState)
+    onChargingChanged: Qt.callLater(root._updateNotificationState)
+    onFullChanged: Qt.callLater(root._updateNotificationState)
+    Component.onCompleted: Qt.callLater(root._updateNotificationState)
+
+    Connections {
+        target: ShellSettings
+        function onReadyChanged(): void { Qt.callLater(root._updateNotificationState) }
+        function onBatteryLowThresholdChanged(): void { Qt.callLater(root._updateNotificationState) }
     }
 
     // the glyph already carries the level in warning then error, so the pulse is emphasis

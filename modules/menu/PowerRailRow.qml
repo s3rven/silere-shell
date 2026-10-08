@@ -22,6 +22,7 @@ Rectangle {
 
     signal triggered()
 
+    readonly property bool _canActivate: root.enabled && root.visible && root.interactive
     readonly property bool _hot: root.enabled && root.interactive && (_hover.hovered)
     readonly property bool _showValue: root.value.length > 0 && !root.armed
     // the rail's width is fixed while its text grows, so at raised uiScale the value crowded
@@ -66,7 +67,7 @@ Rectangle {
     Accessible.role: root.interactive ? Accessible.Button : Accessible.StaticText
     Accessible.name: root.armed ? root.confirmLabel : root.label
     Accessible.description: root.value
-    Accessible.focusable: root.enabled && root.interactive
+    Accessible.focusable: root._canActivate
     Accessible.onPressAction: root.activate()
 
     OutlineBorder {
@@ -78,10 +79,11 @@ Rectangle {
 
     function disarm(): void {
         root.armed = false
+        _armTimer.stop()
     }
 
     function activate(): void {
-        if (!root.enabled || !root.interactive) return
+        if (!root._canActivate) return
         if (!root.confirm || root.armed) {
             // TapHandler fires once per tap, so a double-click would arm and confirm in one gesture
             if (root.armed && Date.now() - root._confirmStartedMs < Metrics.confirmGuardMs) return
@@ -94,6 +96,7 @@ Rectangle {
     }
 
     onEnabledChanged: if (!root.enabled) root.disarm()
+    onVisibleChanged: if (!root.visible) root.disarm()
     onInteractiveChanged: if (!root.interactive) root.disarm()
     onConfirmChanged: if (!root.confirm) root.disarm()
 
@@ -125,6 +128,16 @@ Rectangle {
         to: 0.0
         duration: Math.max(1, root.confirmTimeout)
         easing.type: Easing.Linear
+    }
+
+    Connections {
+        target: ShellSettings
+        function onReduceMotionChanged(): void {
+            if (ShellSettings.reduceMotion) {
+                _confirmDrain.stop()
+                root._confirmProgress = 0
+            }
+        }
     }
 
     PerimeterProgress {

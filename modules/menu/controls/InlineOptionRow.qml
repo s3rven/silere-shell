@@ -16,6 +16,7 @@ Item {
     property bool warning: false
     property bool failed: false
     property bool interactive: true
+    property bool busy: false
     // same contract as MenuRow: the container says which end of the card this row is at,
     // and the highlight takes that corner instead of inventing one of its own
     property real topRadius: 0
@@ -37,17 +38,18 @@ Item {
     Timer { id: _settle; interval: 0; onTriggered: root.motionReady = true }
     Component.onDestruction: _settle.stop()
     readonly property bool _hot: _hover.hovered || _tap.pressed
+    readonly property bool _canActivate: root.enabled && root.interactive && !root.busy
     readonly property bool  _attentive: root.warning || root.failed
     readonly property color _attention: root.failed ? Theme.error : Theme.warning
 
     function trigger(): void {
-        if (root.enabled && root.interactive) root.triggered()
+        if (root._canActivate) root.triggered()
     }
 
     width: parent ? parent.width : 0
     implicitHeight: rowHeight
     height: implicitHeight
-    opacity: root.enabled && root.interactive ? 1.0 : Theme.disabledOpacity
+    opacity: root.enabled && (root.interactive || root.busy) ? 1.0 : Theme.disabledOpacity
     MotionBehavior on opacity { gate: root.motionReady; NumberAnimation { duration: Motion.medium } }
 
     Accessible.role: root.accessiblePrefix.length > 0
@@ -55,7 +57,7 @@ Item {
     Accessible.name: root.accessiblePrefix.length > 0
         ? root.accessiblePrefix + ": " + root.label : root.label
     Accessible.description: root.status
-    Accessible.focusable: root.enabled && root.interactive
+    Accessible.focusable: root._canActivate
     Accessible.checkable: root.accessiblePrefix.length > 0
     Accessible.checked: root.accessiblePrefix.length > 0 && root.selected
     Accessible.selected: root.selected
@@ -65,12 +67,12 @@ Item {
 
     HoverHandler {
         id: _hover
-        enabled: root.enabled && root.interactive
+        enabled: root._canActivate
         cursorShape: Qt.PointingHandCursor
     }
     TapHandler {
         id: _tap
-        enabled: root.enabled && root.interactive
+        enabled: root._canActivate
         onTapped: {
             root.trigger()
         }

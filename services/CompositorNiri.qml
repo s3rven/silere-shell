@@ -168,7 +168,7 @@ QtObject {
     }
 
     readonly property var toplevels: {
-        root._titleTick
+        void root._titleTick
         const wins = root._winRaw
         const ws = root._wsRaw
         const byId = {}
@@ -195,7 +195,7 @@ QtObject {
     }
 
     readonly property var activeToplevel: {
-        root._activeTitleTick
+        void root._activeTitleTick
         const wins = root._winRaw
         const ws = root._wsRaw
         let focused = null

@@ -19,10 +19,15 @@ Item {
     property string wheelKey: ""
     property bool wheelNeedsRest: false
     property bool commitOnRelease: false
+    // Changing the device or track invalidates an unfinished gesture.
+    property string interactionKey: ""
     property bool interactive: true
     property bool showThumb: true
     property bool hoverGrow: true
     property bool animate: true
+    property bool wavy: false
+    property bool waveFlowing: false
+    property real waveAmplitude: 2.5
     property color trackColor: Theme.controlTrackFill(Theme.accent, false,
         _ma.containsMouse, _ma.pressed)
     property color trackOutlineColor: Theme.controlTrackLine(Theme.accent, false,
@@ -50,7 +55,9 @@ Item {
     transform: PixelSnap { item: root; dpr: root._dpr }
 
     readonly property real shownValue: _shownValue
-    readonly property bool dragging: _ma.pressed
+    readonly property bool dragging: root._gestureActive
+    property bool _gestureActive: false
+    readonly property bool _canInteract: root.enabled && root.visible && root.interactive
     property real _shownValue: value
     property real _hoveredSince: 0
 
@@ -59,11 +66,20 @@ Item {
     Accessible.role: Accessible.Slider
     Accessible.name: root.accessibleName
     Accessible.description: root.accessibleValueText
-    Accessible.focusable: root.enabled && root.interactive
+    Accessible.focusable: root._canInteract
     Accessible.onIncreaseAction: root.nudge(1, 1)
     Accessible.onDecreaseAction: root.nudge(-1, 1)
 
-    onValueChanged: if (!_ma.pressed) _shownValue = value
+    onValueChanged: if (!root.dragging) _shownValue = value
+    onInteractionKeyChanged: root.cancelInteraction()
+    on_CanInteractChanged: if (!root._canInteract) root.cancelInteraction()
+
+    function cancelInteraction(): void {
+        if (!root.dragging) return
+        root._gestureActive = false
+        root._grab = 0
+        root._shownValue = root.value
+    }
 
     readonly property real _ratio: max > min
         ? Math.max(0, Math.min(1, (_shownValue - min) / (max - min))) : 0
@@ -90,23 +106,50 @@ Item {
         const next = _clamp(_snap(v))
         if (Math.abs(next - _shownValue) < 0.000001) return
         _shownValue = next
-        if (!(commitOnRelease && _ma.pressed)) changed(next)
+        if (!(commitOnRelease && root.dragging)) changed(next)
     }
     function _press(px: real): void {
+        if (!root._canInteract) return
+        root._gestureActive = true
         const off = px - root._thumbCenter
         root._grab = root.showThumb && Math.abs(off) <= root._thumbW / 2 + 2 ? off : 0
         root._setFromUser(root._posToVal(px - root._grab))
     }
     function _drag(px: real): void {
+        if (!root.dragging || !root._canInteract) return
         root._setFromUser(root._posToVal(px - root._grab))
     }
+    function _release(): void {
+        if (!root.dragging) return
+        root._gestureActive = false
+        if (root.commitOnRelease && root._canInteract) root.changed(root._shownValue)
+    }
     function nudge(dir: int, mult: int): void {
-        if (!root.enabled || !root.interactive) return
+        if (!root._canInteract || root.dragging) return
         _setFromUser(_shownValue + dir * root.stepSize * mult)
+    }
+
+    WaveLine {
+        visible: root.wavy
+        x: root._railInset
+        width: root._railWidth
+        // fixed, so the amplitude easing to flat never resizes the faded layer
+        height: Metrics.snap4Up(root._railH + 7)
+        y: Math.round((root.height - height) / 2)
+        value: root._ratio
+        endInset: root.showThumb ? root._thumbW / 2 + 3 : 0
+        thickness: root._railH
+        amplitude: root.waveAmplitude
+        wavelength: 16
+        waveOpacity: 0.85
+        flowing: root.waveFlowing
+        color: Theme.controlTrackFill(Theme.accent, true, _ma.containsMouse, _ma.pressed)
+        trackColor: root.trackColor
     }
 
     Rectangle {
         id: _rail
+        visible: !root.wavy
         x: root._railInset
         y: Metrics.devicePx((root.height - root._railH) / 2, root._dpr)
         width: root._railWidth
@@ -157,7 +200,7 @@ Item {
 
     MouseArea {
         id: _ma
-        enabled: root.interactive
+        enabled: root._canInteract
         anchors.fill: parent
         anchors.topMargin:    -root.hitPad
         anchors.bottomMargin: -root.hitPad
@@ -167,8 +210,8 @@ Item {
         preventStealing: true
         onPressed: (mouse) => root._press(mouse.x)
         onPositionChanged: (mouse) => { if (pressed) root._drag(mouse.x) }
-        onReleased:        if (root.commitOnRelease) root.changed(root._shownValue)
-        onCanceled:        root._shownValue = root.value
+        onReleased:        root._release()
+        onCanceled:        root.cancelInteraction()
         onContainsMouseChanged: if (containsMouse) root._hoveredSince = Date.now()
         onWheel: (wheel) => {
             const since = !root.wheelNeedsRest ? 0

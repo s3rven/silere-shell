@@ -211,8 +211,8 @@ QtObject {
 
     function bumpBy(delta: real): void {
         const a = ready ? audio : null
-        if (!a || delta === 0) return
-        if (_pendingMuted) unmute()
+        if (!a || !isFinite(delta) || delta === 0) return
+        if (_pendingMuted && delta > 0) unmute()
         const v = pendingApply ? targetVolume : _clampVolume(a.volume)
         _writeVolume(ctl._stepFrom(v, delta))
     }

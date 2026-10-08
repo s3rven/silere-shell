@@ -70,7 +70,10 @@ AnchoredPopupState {
         }
 
         function bluetooth(): string {
-            if (!root.btControllable) return "error: no Bluetooth adapter"
+            if (!root.btControllable)
+                return Bluetooth.hardBlocked
+                    ? "error: the Bluetooth radio is blocked in hardware"
+                    : "error: no Bluetooth adapter"
             const next = !Bluetooth.enabled
             Bluetooth.toggle()
             return next ? "on" : "off"

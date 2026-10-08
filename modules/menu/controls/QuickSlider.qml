@@ -10,15 +10,17 @@ MenuRow {
     property string wheelKey:  "quickslider"
     property string accessibleName: ""
     property bool   glyphClickable: false
+    property bool   muted: false
     property bool   expandable: false
     property bool   expanded:   false
+    property bool   adjustable: true
     // hold the chevron gutter open on a non-expandable row so stacked sliders keep one track length
     property bool   reserveExpandSlot: false
     readonly property bool _hasChevSlot: root.expandable || root.reserveExpandSlot
 
     rowHovered:     _rowHover.hovered
     rowPressed:     _track.dragging
-    rowInteractive: root.enabled
+    rowInteractive: root.enabled && (root.adjustable || root.glyphClickable || root.expandable)
 
     signal moved(real value)
     signal glyphClicked()
@@ -61,7 +63,7 @@ MenuRow {
         Accessible.role: root.glyphClickable
             ? Accessible.Button : Accessible.StaticText
         Accessible.name: root.glyphClickable
-            ? "Mute " + root.accessibleName.toLowerCase() : ""
+            ? (root.muted ? "Unmute " : "Mute ") + root.accessibleName.toLowerCase() : ""
         Accessible.focusable: root.enabled && root.glyphClickable
         Accessible.onPressAction: if (root.enabled && root.glyphClickable)
             root.glyphClicked()
@@ -124,7 +126,9 @@ MenuRow {
         anchors.verticalCenter: parent.verticalCenter
         height: 20
 
-        interactive: root.enabled
+        interactive: root.enabled && root.adjustable
+        opacity: root.adjustable ? 1.0 : Theme.disabledOpacity
+        MotionBehavior on opacity { NumberAnimation { duration: Motion.fast } }
         accessibleName: root.accessibleName
         accessibleValueText: root.valueText
         value: root.value

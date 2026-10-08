@@ -13,11 +13,6 @@ Singleton {
     property bool _battCritSent: false
     property bool _cpuCritSent:  false
 
-    function batteryWarningLevel(low: bool, critical: bool): string {
-        if (critical) return "critical"
-        return low ? "low" : ""
-    }
-
     function _send(summary: string, body: string, urgency: string): bool {
         if (!SystemTools.ready || !SystemTools.hasNotifySend
                 || Quickshell.env("SILERE_SANDBOX") === "1") return false
@@ -34,7 +29,7 @@ Singleton {
 
     function _checkBattLow(): void {
         // one backend update can cross both thresholds; critical wins so the jump sends one
-        if (root.batteryWarningLevel(Battery.low, Battery.critical) === "low"
+        if (Battery.available && Battery.low && Battery.alertWarning === "low"
                 && ShellSettings.osdBatteryWarn && !_battLowSent) {
             if (_send("Battery Low",
                 Math.round(Battery.pct) + "% remaining — consider plugging in",
@@ -42,7 +37,8 @@ Singleton {
         }
     }
     function _checkBattCrit(): void {
-        if (Battery.critical && ShellSettings.osdBatteryWarn && !_battCritSent) {
+        if (Battery.available && Battery.critical && Battery.alertWarning === "critical"
+                && ShellSettings.osdBatteryWarn && !_battCritSent) {
             if (_send("Battery Critical",
                 Math.round(Battery.pct) + "% — plug in now",
                 "critical")) _battCritSent = true
@@ -57,7 +53,7 @@ Singleton {
     }
 
     function _checkCurrentWarnings(): void {
-        const level = root.batteryWarningLevel(Battery.low, Battery.critical)
+        const level = Battery.alertWarning
         if (level === "critical") _checkBattCrit()
         else if (level === "low") _checkBattLow()
         _checkCpuCrit()
@@ -78,19 +74,15 @@ Singleton {
     Connections {
         target: Battery
 
-        function onLowChanged(): void {
-            if (Battery.low) root._checkBattLow()
-            else root._rearmBattery()
-        }
-
-        function onCriticalChanged(): void {
-            if (Battery.critical) root._checkBattCrit()
-            else root._rearmBattery()
+        function onAlertWarningChanged(): void {
+            root._rearmBattery()
+            root._checkCurrentWarnings()
         }
 
         function onPctChanged(): void {
-            if (root._battLowSent || root._battCritSent) root._rearmBattery()
+            Qt.callLater(root._rearmBattery)
         }
+        function onOnBatteryChanged(): void { Qt.callLater(root._rearmBattery) }
     }
 
     // a reading that wobbles across the threshold must not send the warning again
@@ -125,7 +117,7 @@ Singleton {
         target: ShellSettings
 
         function onOsdBatteryWarnChanged(): void {
-            if (Battery.critical) root._checkBattCrit()
+            if (Battery.alertWarning === "critical") root._checkBattCrit()
             else root._checkBattLow()
         }
         function onOsdTempWarnChanged(): void {

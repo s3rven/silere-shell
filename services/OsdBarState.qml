@@ -345,28 +345,29 @@ Singleton {
     // crossed during idle is never delivered; the wake replay re-runs these, and each
     // guard re-reads its own state so only what is still true is shown
     function _alertBatteryLow(): void {
-        if (!Battery.low || !ShellSettings.osdBatteryWarn) return
+        if (!Battery.available || !Battery.low || Battery.alertWarning !== "low"
+                || !ShellSettings.osdBatteryWarn) return
         const label = "Low Battery · " + Math.round(Battery.pct) + "%"
             + (Battery.timeLabel ? "  " + Battery.timeLabel : "")
         root.showAlert("battery", Battery.icon, Battery.pct / 100, label, Theme.warning)
     }
     function _alertBatteryCritical(): void {
-        if (!Battery.critical || !ShellSettings.osdBatteryWarn) return
+        if (!Battery.available || !Battery.critical || Battery.alertWarning !== "critical"
+                || !ShellSettings.osdBatteryWarn) return
         const label = "Critical Battery · " + Math.round(Battery.pct) + "%"
             + (Battery.timeLabel ? "  " + Battery.timeLabel : "")
         root.showAlert("battery", Battery.icon, Battery.pct / 100, label, Theme.error)
     }
-    // once per charge, and a full battery seen before arming counts, so login stays quiet
-    property bool _fullAnnounced: false
+    // Only a charge observed during this session can complete. Keep it pending
+    // while idle or disabled, so waking can still show a completed charge once.
+    property int _lastChargeRevision: 0
     function _alertBatteryFull(): void {
-        if (!Battery.available) return
-        if (!Battery.full || !Battery.onAc) {
-            root._fullAnnounced = false
-            return
-        }
-        if (!ShellSettings.osdChargedNotify || root._fullAnnounced) return
-        root._fullAnnounced = true
-        root.showAlert("battery", Battery.icon, 1.0, "Fully charged · 100%", Theme.success)
+        if (!Battery.available || !Battery.full || !Battery.onAc || !Battery.chargeComplete
+                || Battery.chargeRevision <= root._lastChargeRevision
+                || !ShellSettings.osdChargedNotify || !root._armed
+                || !root._presentationAllowed(Idle.isIdle, ShellSettings.osdEnabled)) return
+        root._lastChargeRevision = Battery.chargeRevision
+        root.showAlert("battery", Battery.icon, 1.0, "Fully charged · " + Battery.label, Theme.success)
     }
     function _alertTempHot(): void {
         if (!CpuTemp.hot || !ShellSettings.osdTempWarn) return
@@ -379,21 +380,23 @@ Singleton {
             "CPU Critical · " + Math.round(CpuTemp.temp) + "°", Theme.error)
     }
     // the watchers carry their osdEnabled gate in their target binding, so the replay has to apply it itself
-    function _replayAlerts(): void {
+    function _replayBatteryAlerts(): void {
         if (!ShellSettings.osdEnabled) return
-        if (Battery.critical) root._alertBatteryCritical()
+        if (Battery.alertWarning === "critical") root._alertBatteryCritical()
         else root._alertBatteryLow()
         root._alertBatteryFull()
+    }
+    function _replayAlerts(): void {
+        if (!ShellSettings.osdEnabled) return
+        root._replayBatteryAlerts()
         if (CpuTemp.critical) root._alertTempCritical()
         else root._alertTempHot()
     }
 
     Connections {
         target: root._batteryWatcherWanted ? Battery : null
-        function onLowChanged() { root._alertBatteryLow() }
-        function onCriticalChanged() { root._alertBatteryCritical() }
-        function onFullChanged() { root._alertBatteryFull() }
-        function onChargingChanged() { root._alertBatteryFull() }
+        function onAlertWarningChanged() { Qt.callLater(root._replayBatteryAlerts) }
+        function onChargeRevisionChanged() { Qt.callLater(root._replayBatteryAlerts) }
     }
 
     Connections {
@@ -422,7 +425,10 @@ Singleton {
         target: ShellSettings
         function onOsdEnabledChanged() {
             if (!ShellSettings.osdEnabled) root._clearEntries()
+            else Qt.callLater(root._replayAlerts)
         }
+        function onOsdBatteryWarnChanged() { Qt.callLater(root._replayBatteryAlerts) }
+        function onOsdChargedNotifyChanged() { Qt.callLater(root._replayBatteryAlerts) }
         // a live volume entry must not reappear after changing the filter to brightness (or vice versa). The next accepted input starts fresh
         function onOsdKindFilterChanged() { root._clearEntries() }
     }
