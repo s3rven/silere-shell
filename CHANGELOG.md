@@ -51,6 +51,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- Home's system-reading captions take space before their progress bars, preventing battery time estimates from being clipped at narrow widths or larger text sizes.
 - Validation probes leave process shutdown to their harness so Quickshell 0.3.2 teardown warnings cannot turn completed checks into failures. Runtime failures retain their QML filename and line number.
 - Output, microphone and per-app mute buttons announce Unmute while their audio is muted, matching the action they perform.
 - Calendar weekday labels use the system locale, and weekend shading follows its working week instead of always treating Saturday and Sunday as days off. Long labels stay within their cells and expose their full names to accessibility tools.

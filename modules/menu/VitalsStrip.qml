@@ -66,6 +66,14 @@ SettingsCard {
                                     : status === 1 ? Theme.warning
                                     : Theme.menuTextMuted
 
+        TextMetrics {
+            id: _detailMetrics
+            font.family: Settings.font
+            font.pixelSize: Settings.fontCaption
+            font.weight: Font.Medium
+            text: tile.sub
+        }
+
         width: parent ? parent.width : 0
         height: root._rowH
         implicitHeight: height
@@ -161,7 +169,10 @@ SettingsCard {
             anchors.right: _val.left
             anchors.rightMargin: 10
             anchors.verticalCenter: parent.verticalCenter
-            width: Metrics.snap4(Math.min(136, Math.max(48, tile.width * 0.38)))
+            // Give the reading's caption room before sizing its progress bar.
+            // Rounding up the text and down the bar avoids fractional elision.
+            width: Metrics.snap4Down(Math.max(48, Math.min(136, tile.width * 0.38,
+                _val.x - 64 - Math.max(96, Math.ceil(_detailMetrics.advanceWidth) + 1))))
             height: implicitHeight
             value: tile._disp
             reveal: tile._grow

@@ -26,9 +26,13 @@ Item {
         item.active = false
         for (const row of item.rows) {
             if (row.value === undefined) continue
+            // CI has no battery; still measure a long battery time caption.
+            row.visible = true
             row.value = "100%"
             if (row.label === "CPU") row.sub = "125°"
+            if (row.label === "Memory") row.sub = "999G used"
             if (row.label === "Disk") row.sub = "999G free"
+            if (row.label === "Battery") row.sub = "Full in 12h 59m"
         }
     }
 
@@ -44,6 +48,7 @@ Item {
         for (const loader of [narrowVitals, wideVitals]) {
             if (!loader.item) { failures.push("vitals fixture did not load"); continue }
             const rows = loader.item.rows.filter(child => child.value !== undefined && child.visible)
+            if (rows.length !== 4) failures.push("vitals fixture must measure all four readings")
             for (const row of rows) {
                 const names = row.children.find(child => child.spacing !== undefined)
                 const value = row.children.find(child => child.horizontalAlignment === Text.AlignRight)
