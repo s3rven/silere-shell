@@ -102,10 +102,13 @@ Singleton {
 
     // stderr from a package helper or gamma tool is often several lines of noise; the last non-empty one is usually the actual failure
     function lastNonEmptyLine(value, fallback: string, limit): string {
-        const lines = String(value ?? "").split(/\r?\n/)
-        for (let i = lines.length - 1; i >= 0; i--) {
-            const line = lines[i].trim()
-            if (line.length > 0) return root.singleLineText(line, limit)
+        const text = String(value ?? "")
+        let end = text.length
+        while (end > 0) {
+            const start = text.lastIndexOf("\n", end - 1) + 1
+            const line = root.singleLineText(text.slice(start, end).trim(), limit)
+            if (line.length > 0) return line
+            end = start - 1
         }
         return fallback
     }

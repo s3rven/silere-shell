@@ -3341,6 +3341,14 @@ ShellRoot {
         }
         root._check(SafeText.lastNonEmptyLine("warning: retrying\n\nfatal: no route\n\n", "fallback") === "fatal: no route",
             "lastNonEmptyLine skips trailing blank lines")
+        root._check(SafeText.lastNonEmptyLine("fatal: no route\n\u202E\u0000\n", "fallback") === "fatal: no route"
+                && SafeText.lastNonEmptyLine("\u202E\u0000", "fallback") === "fallback",
+            "error summaries skip lines that become empty after sanitizing control characters")
+        root._check(SafeText.lastNonEmptyLine("old\r\n  failed\r\n\t\r\n", "fallback") === "failed"
+                && SafeText.lastNonEmptyLine("failed", "fallback") === "failed",
+            "error summaries preserve Windows line endings and an unterminated final line")
+        root._check(SafeText.lastNonEmptyLine("noise\n".repeat(10000) + "final failure\n", "fallback") === "final failure",
+            "a long tool log still reports its final non-empty error")
         root._check(SafeText.lastNonEmptyLine("", "fallback") === "fallback"
                 && SafeText.lastNonEmptyLine("   \n  \n", "fallback") === "fallback",
             "lastNonEmptyLine falls back on blank output")

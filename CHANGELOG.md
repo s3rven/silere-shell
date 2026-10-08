@@ -13,6 +13,8 @@ settings file carries its own `__version` and migrates separately.
 
 ### Changed
 
+- Summarize tool errors by scanning backward to the last useful line, avoiding a
+  split of the whole log.
 - Document control ownership and target-change regression checks for contributors.
 
 - Smooth the reactive underline's glow shoulders with bounded, alpha-preserving
@@ -25,13 +27,14 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- Cancel Bluetooth fallback volume processes and queued writes when their audio
+  route is resynchronized.
 - Cancel menu volume, microphone, app-volume, and brightness drags when their
   target changes; give each target its own wheel state and discard stale remainders.
 - Reject input on hidden color sliders and menu mute/expand controls, clearing
   unfinished wheel gestures when their controls stop being interactive.
-
-- Cancel Bluetooth fallback volume processes and queued writes when their audio
-  route is resynchronized.
+- Skip error lines that contain only stripped control characters, preserving the
+  earlier useful error or the fallback text.
 
 - Keep notification, network, and screenshot glow envelopes independent, so
   overlapping events and individual toggles cannot reset one another's geometry.
