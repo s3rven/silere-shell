@@ -3680,6 +3680,35 @@ ShellRoot {
         SysInfo.memAvailKb = memAvailWas
         SysInfo._active = cpuActiveWas
 
+        const diskWas = [SysInfo.diskTotalKb, SysInfo.diskUsedKb, SysInfo.diskAvailKb,
+            SysInfo._lastDiskReadMs]
+        SysInfo._active = true
+        root._check(SysInfo._applyDiskStat("Filesystem 1024-blocks Used Available Capacity Mounted on\n"
+                + "/dev/root 1000 200 750 22% /\n")
+                && SysInfo.diskTotalKb === 1000 && SysInfo.diskUsedKb === 200
+                && SysInfo.diskAvailKb === 750
+                && Math.abs(SysInfo.diskPct - 200 / 950) < 0.0001,
+            "disk readings preserve reserved blocks when parsing df directly")
+        root._check(SysInfo._applyDiskStat("device with spaces 5000000000 3000000000 1900000000 62% /\n")
+                && SysInfo.diskTotalKb === 5000000000 && SysInfo.diskUsedKb === 3000000000
+                && SysInfo.diskAvailKb === 1900000000,
+            "disk readings accept large filesystems and device names with spaces")
+        const diskReadAt = SysInfo._lastDiskReadMs
+        root._check(!SysInfo._applyDiskStat("/dev/root 1000 broken 750 22% /\n")
+                && !SysInfo._applyDiskStat("/dev/root 1000 200 750 22% /home\n")
+                && !SysInfo._applyDiskStat("")
+                && SysInfo.diskTotalKb === 5000000000 && SysInfo._lastDiskReadMs === diskReadAt,
+            "failed or unrelated disk samples leave the last valid reading and freshness intact")
+        SysInfo._active = false
+        root._check(!SysInfo._applyDiskStat("/dev/root 1000 200 750 22% /\n")
+                && SysInfo.diskTotalKb === 5000000000,
+            "a disk result arriving after Home closes cannot update its cached sample")
+        SysInfo.diskTotalKb = diskWas[0]
+        SysInfo.diskUsedKb = diskWas[1]
+        SysInfo.diskAvailKb = diskWas[2]
+        SysInfo._lastDiskReadMs = diskWas[3]
+        SysInfo._active = cpuActiveWas
+
         const brightnessToolsWas = SystemTools._tools
         const brightnessErrorWas = Brightness.lastError
         const brightnessQueuedWas = Brightness._applyQueued

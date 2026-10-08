@@ -203,32 +203,37 @@ Singleton {
             return
         }
         _slowPoll.interval = root._diskRefreshMs
-        _slowProc.exec(["bash", "-c",
-            // -P keeps a long device name on one line; read from the right so its spaces cannot shift the columns
-            "df -Pk / 2>/dev/null | awk '" +
-            "NF >= 6 && $(NF-4) ~ /^[0-9]+$/ && $(NF-3) ~ /^[0-9]+$/ && $(NF-2) ~ /^[0-9]+$/ { " +
-            "printf \"d%s %s %s\\n\", $(NF-3), $(NF-4), $(NF-2); exit }'"])
+        _slowProc.exec(["df", "-Pk", "/"])
+    }
+
+    function _applyDiskStat(raw: string): bool {
+        if (!root._active) return false
+        // -P keeps the device on one line. Read from the right to allow spaces in it.
+        const lines = raw.trim().split(/\r?\n/)
+        for (let i = 0; i < lines.length; i++) {
+            const fields = lines[i].trim().split(/\s+/)
+            const n = fields.length
+            if (n < 6 || fields[n - 1] !== "/") continue
+            const values = fields.slice(n - 5, n - 2)
+            if (!values.every(value => /^[0-9]+$/.test(value) && isFinite(Number(value)))) continue
+            root.diskTotalKb = Number(values[0])
+            root.diskUsedKb = Number(values[1])
+            root.diskAvailKb = Number(values[2])
+            root._lastDiskReadMs = Date.now()
+            _slowPoll.interval = root._diskRefreshMs
+            _slowPoll.restart()
+            return true
+        }
+        return false
     }
 
     BoundedProcess {
         id: _slowProc
         timeoutMs: 5000
         environment: ({ "LC_ALL": "C" })
-        stdout: SplitParser {
-            onRead: (line) => {
-                if (!root._active) return
-                if (line.startsWith("d")) {
-                    const p = line.slice(1).trim().split(/\s+/)
-                    if (p.length >= 3) {
-                        root.diskUsedKb  = parseInt(p[0]) || 0
-                        root.diskTotalKb = parseInt(p[1]) || 0
-                        root.diskAvailKb = parseInt(p[2]) || 0
-                        root._lastDiskReadMs = Date.now()
-                        _slowPoll.interval = root._diskRefreshMs
-                        _slowPoll.restart()
-                    }
-                }
-            }
+        stdout: StdioCollector { id: _diskOut }
+        onExited: code => {
+            if (code === 0 && !_slowProc.timedOut) root._applyDiskStat(_diskOut.text)
         }
         Component.onDestruction: running = false
     }
