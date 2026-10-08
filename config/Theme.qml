@@ -39,7 +39,9 @@ Singleton {
 
     readonly property color _tBackground: _n ? _pal.background : _matuBg
     readonly property color _tText:       _hc ? "#ffffff" : _textBase
-    readonly property color _tSubtext:    _hc ? mix(_subtextBase, _tText, 0.32) : _subtextBase
+    readonly property color _tSubtextSolid: _hc ? mix(_subtextBase, _tText, 0.32) : _subtextBase
+    readonly property color _tSubtext:    popupOpacity < 1
+        ? root.readableText(_tSubtextSolid, _glassWorst, 3.0) : _tSubtextSolid
     readonly property color _tSurface:    _hc ? mix(_surfaceBase, _tText, 0.035) : _surfaceBase
 
     // one eased source instead of one fade per call site: everything below is a plain
@@ -88,6 +90,7 @@ Singleton {
 
     readonly property string _paletteKey: "" + _tBackground + _tSurface + _tText
         + _tSubtext + _tAccent + _tError + _tWarning + _tSuccess + _tLineBase
+        + _tMenuTextDetail + _tMenuTextWarning
     readonly property bool paletteShifting: _shiftWindow.running
     on_PaletteKeyChanged: {
         if (!root._paletteReady
@@ -112,14 +115,17 @@ Singleton {
         return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
     }
     readonly property real _baseL: _labOf(background).L
-    readonly property real _elevK: Math.min(1.33, Math.max(1.0, 1.0 + 0.098 * (3.36 - _baseL)))
+    function _elevationForLightness(lightness: real): real {
+        return Math.min(1.33, Math.max(1.0, 1.0 + 0.098 * (3.36 - lightness)))
+    }
+    readonly property real _elevK: root._elevationForLightness(_baseL)
 
     readonly property real _lineK: ShellSettings.outlineStrength
     function lineAlpha(a: real): real { return Math.min(1, a * _lineK) }
 
     // borders and dividers are not text: they must not inherit the hierarchy sink _subtextBase
     // applies, or fixing text contrast quietly washes out every line in the shell
-    readonly property color _tLineBase: _hc ? _tSubtext : (_n ? _pal.subtext : MatugenTheme.subtext)
+    readonly property color _tLineBase: _hc ? _tSubtextSolid : (_n ? _pal.subtext : MatugenTheme.subtext)
     property color _lineBase: root._tLineBase
     PaletteFade on _lineBase { gate: root._paletteReady }
 
@@ -139,7 +145,26 @@ Singleton {
     // what floats over windows stays see-through only while blur frosts it: unblurred, the text under
     // a popup reads as sharply as the popup's own. The bar sits over the wallpaper and keeps its setting
     readonly property bool frosted: ShellSettings.surfaceBlur && Compositor.blurBlocker.length === 0
-    readonly property color popup: ShellSettings.popupMatchBarOpacity && frosted ? panel : background
+    // popups follow a translucent bar only down to where a label still reads with a white window behind it
+    readonly property real glassFloor: root._solveGlassFloor(_tBackground, _tText, 4.5)
+    readonly property real popupOpacity: ShellSettings.popupMatchBarOpacity && frosted
+        ? Math.max(panelOpacity, glassFloor) : 1
+    readonly property color popup: withAlpha(background, popupOpacity)
+    // the lightest glass layer, a control, over a white backdrop: what text on glass has to survive
+    function _controlOverWhite(base: color, ink: color, alpha: real): color {
+        return mix(mix(Qt.rgba(1, 1, 1, 1), base, alpha), ink,
+            root._elevationForLightness(_labOf(base).L) * _controlMix)
+    }
+    readonly property color _glassWorst: root._controlOverWhite(_tBackground, _tText, popupOpacity)
+    function _solveGlassFloor(base: color, ink: color, minimum: real): real {
+        let low = 0, high = 1
+        for (let i = 0; i < 10; i++) {
+            const middle = (low + high) / 2
+            if (root.contrastRatio(ink, root._controlOverWhite(base, ink, middle)) >= minimum) high = middle
+            else low = middle
+        }
+        return Math.ceil(high * 100) / 100
+    }
 
     // when popups match a translucent bar the menu turns to glass with them: its pane, cards and controls
     // become tints over the one translucent fill, so the blur reads through every layer instead of
@@ -156,7 +181,8 @@ Singleton {
     function _over(total: real, under: real): real { return 1 - (1 - total) / (1 - under) }
     readonly property real _paneK: _elevK * (_n ? (_hc ? 0.050 : 0.030) : (_hc ? 0.055 : 0.020))
     readonly property real _cardK: _elevK * (_n ? (_hc ? 0.090 : 0.060) : (_hc ? 0.100 : 0.070))
-    readonly property real _controlK: _elevK * (_n ? (_hc ? 0.125 : 0.090) : (_hc ? 0.130 : 0.100))
+    readonly property real _controlMix: _n ? (_hc ? 0.125 : 0.090) : (_hc ? 0.130 : 0.100)
+    readonly property real _controlK: _elevK * _controlMix
 
     readonly property color menuPane:        glass
         ? (_n || _hc ? withAlpha(text, _paneK) : withAlpha(surface, _elevK * 0.18))
@@ -176,8 +202,7 @@ Singleton {
     // wallpaper's card sits a step higher than neutral's, so its control needs a wider mix to hold
     // the same ~3 L* separation above the card that neutral gets from 0.060 -> 0.090
     readonly property color menuControl:     glass ? withAlpha(text, _over(_controlK, _cardK)) : menuControlSolid
-    readonly property color menuControlSolid: _n ? mix(background, text, _elevK * (_hc ? 0.125 : 0.090))
-                                                 : mix(background, text, _elevK * (_hc ? 0.130 : 0.100))
+    readonly property color menuControlSolid: mix(background, text, _controlK)
     readonly property color menuControlLine: _hc ? withAlpha(text, lineAlpha(0.24))
                                                 : _n ? withAlpha(_lineBase, lineAlpha(0.115))
                                                      : withAlpha(_lineBase, lineAlpha(0.135))
@@ -195,7 +220,42 @@ Singleton {
     readonly property color swatchEdge:      withAlpha(text, _hc ? 0.34 : 0.20)
     readonly property color menuTextMuted:   mix(subtext, text, _hc ? 0.45 : (_n ? 0.30 : 0.24))
     readonly property color menuTextFaint:   mix(subtext, text, _hc ? 0.25 : (_n ? 0.15 : 0.10))
-    readonly property color menuTextDetail:  withAlpha(subtext, _hc ? 1.0 : 0.85)
+    // solved on the target palette and faded, not re-solved every frame; glass asks less, or detail outshines labels
+    readonly property real _detailMinimum: popupOpacity < 1 ? 3.0 : 4.5
+    readonly property color _tMenuTextDetail: root.readableText(
+        withAlpha(_tSubtext, _hc ? 1.0 : 0.85), _glassWorst, _detailMinimum)
+    readonly property color _tMenuTextWarning: root.readableText(
+        withAlpha(mix(_tSubtext, _tWarning, 0.30), _hc ? 1.0 : 0.85), _glassWorst, _detailMinimum)
+    property color menuTextDetail: _tMenuTextDetail
+    property color menuTextWarning: _tMenuTextWarning
+    PaletteFade on menuTextDetail  { gate: root._paletteReady }
+    PaletteFade on menuTextWarning { gate: root._paletteReady }
+
+    function luminance(c: color): real {
+        return 0.2126 * _lin(c.r) + 0.7152 * _lin(c.g) + 0.0722 * _lin(c.b)
+    }
+
+    // background must be opaque: over glass the real contrast depends on the desktop
+    function contrastRatio(foreground: color, background: color): real {
+        const front = root.luminance(mix(background, foreground, foreground.a))
+        const back = root.luminance(background)
+        return (Math.max(front, back) + 0.05) / (Math.min(front, back) + 0.05)
+    }
+
+    function readableText(foreground: color, background: color, minimum: real): color {
+        if (root.contrastRatio(foreground, background) >= minimum) return foreground
+        const white = Qt.rgba(1, 1, 1, 1), black = Qt.rgba(0, 0, 0, 1)
+        const target = root.contrastRatio(white, background) >= root.contrastRatio(black, background)
+            ? white : black
+        let low = 0, high = 1
+        for (let i = 0; i < 10; i++) {
+            const middle = (low + high) / 2
+            if (root.contrastRatio(blend(foreground, target, middle), background) >= minimum)
+                high = middle
+            else low = middle
+        }
+        return blend(foreground, target, high)
+    }
 
     // shared focus-ring weight: button-family controls (2px) vs embedded row/track indicators (1px)
     // high contrast re-bases every other line onto white text; the ring keeps its accent, so it buys the contrast in alpha

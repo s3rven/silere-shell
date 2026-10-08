@@ -17,6 +17,7 @@ PixelScale 1.0 PixelScale.qml
 PixelSnap 1.0 PixelSnap.qml
 PulseLoop 1.0 PulseLoop.qml
 SpringGlide 1.0 SpringGlide.qml
+SmoothGlide 1.0 SmoothGlide.qml
 SupervisedProcess 1.0 SupervisedProcess.qml
 
 # helper-only implementation types

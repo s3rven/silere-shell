@@ -10,6 +10,7 @@ MotionBehavior {
     property var exitCurve: Motion.emphasizedAccel
     // a mutually-exclusive pair must share one curve in both directions, or the expanding sibling outruns the collapsing one and their summed height bulges
     property bool symmetric: false
+    readonly property bool running: _animation.running
     readonly property bool _enter: root.symmetric || Math.abs(root.targetValue - root.closedValue) > 1e-6
     property bool _geometryReady: false
     property Timer _geometrySettle: Timer {
@@ -23,6 +24,7 @@ MotionBehavior {
     Component.onDestruction: root._geometrySettle.stop()
 
     NumberAnimation {
+        id: _animation
         duration: root._enter ? Motion.medium : Motion.fast
         easing.type: root._enter ? root.enterEasing : root.exitEasing
         easing.bezierCurve: root._enter ? root.enterCurve : root.exitCurve

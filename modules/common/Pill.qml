@@ -36,6 +36,7 @@ Item {
     property bool   hoverActive: false
     readonly property bool hoverEnabled: root.enabled && root.visible && root.barActive
         && !root.collapsed && !Idle.isIdle
+    readonly property bool canActivate: root.interactive && root.hoverEnabled
     readonly property bool hovered: root.hoverEnabled && _pillHover.hovered
     readonly property bool expanded: root.hoverEnabled && hoverActive
 
@@ -48,8 +49,8 @@ Item {
 
     Accessible.role: root.interactive ? Accessible.Button : Accessible.StaticText
     Accessible.name: root.accessibleName
-    Accessible.focusable: root.interactive
-    Accessible.onPressAction: if (root.interactive) root.activated()
+    Accessible.focusable: root.canActivate
+    Accessible.onPressAction: if (root.canActivate) root.activated()
 
     readonly property int  pillH:   Metrics.barRowHeight
     readonly property bool hasText: text.length > 0
@@ -59,7 +60,14 @@ Item {
     property real _minW: 0
     // whole px: a fractional text width puts the pill and every widget after it off-pixel
     readonly property real rowWidth: Math.ceil(row.implicitWidth)
-    implicitWidth:  collapsed ? 0 : Math.max(rowWidth, _minW) + horizontalPadding * 2
+    implicitWidth: _widthGlide.value
+    SmoothGlide {
+        id: _widthGlide
+        target: root.collapsed ? 0
+            : Math.max(root.rowWidth, root._minW) + root.horizontalPadding * 2
+        duration: Motion.width
+        gate: root._ready && root.barActive
+    }
 
     onRowWidthChanged: {
         if (shrinkDelay <= 0 || !root.hoverEnabled) {
@@ -135,12 +143,6 @@ Item {
         }
     }
 
-    MotionBehavior on implicitWidth {
-        // not visible: it reads through the parent, so a collapsing pill turns its own
-        // gate off partway and the signal means "my zone is showing", not "I am open"
-        gate: root._ready
-        NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
-    }
     implicitHeight: Math.max(pillH, parent ? parent.height : 0)
     // only while it eases open into wider text, or the scan sweeps in from off-pill; a standing clip node breaks batching
     clip: _contentScan.active || row.width > width
@@ -282,7 +284,7 @@ Item {
                         root._settleAnimatedContent()
                         return
                     }
-                    _textSwap.restart()
+                    if (!_textSwap.running) _textSwap.start()
                 }
             }
 
@@ -291,6 +293,7 @@ Item {
                 NumberAnimation { target: _textEl; property: "opacity"; to: 0;   duration: Motion.instant; easing.type: Easing.InCubic  }
                 ScriptAction    { script: _textEl._shown = root.text }
                 NumberAnimation { target: _textEl; property: "opacity"; to: 1.0; duration: Motion.fast;    easing.type: Easing.OutCubic }
+                onFinished: if (root.motionActive && _textEl._shown !== root.text) _textSwap.start()
             }
         }
     }

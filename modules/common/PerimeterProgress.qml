@@ -11,6 +11,7 @@ Shape {
     property color trackColor: "transparent"
     property color arcColor: "transparent"
     property bool  paused: false
+    property real arcWidth: 1.5
 
     property real _shownProgress: 0
 
@@ -22,7 +23,7 @@ Shape {
         return (Math.round(root.inset * root._dpr - half) + half) / root._dpr
     }
     readonly property real _trackStroke: root._snapStroke(1)
-    readonly property real _arcStroke: root._snapStroke(1.5)
+    readonly property real _arcStroke: root._snapStroke(root.arcWidth)
     readonly property real _trackInset: root._snapInset(root._trackStroke)
     readonly property real _arcInset: root._snapInset(root._arcStroke)
 

@@ -21,3 +21,4 @@ ShellListView 1.0 ShellListView.qml
 ScreenDismiss 1.0 ScreenDismiss.qml
 KeepAwakeSurface 1.0 KeepAwakeSurface.qml
 FittedPopupWindow 1.0 FittedPopupWindow.qml
+WaveLine 1.0 WaveLine.qml
