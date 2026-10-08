@@ -33,6 +33,8 @@ Canvas {
     onWaveDataChanged:  if (_paintable) requestPaint()
     onWidthChanged:     if (_paintable) requestPaint()
     onHeightChanged:    if (_paintable) requestPaint()
+    onEdgeFadeMaxChanged: if (_paintable) requestPaint()
+    onBarWidthMaxChanged: if (_paintable) requestPaint()
     onVisibleChanged:   if (_paintable) requestPaint()
     on_PaintableChanged: {
         _syncRegistration()
@@ -45,6 +47,11 @@ Canvas {
         function onMediaVisualizerStyleChanged() { if (_viz._paintable) _viz.requestPaint() }
     }
 
+    Connections {
+        target: Theme
+        function onAccentChanged() { if (_viz._paintable) _viz.requestPaint() }
+    }
+
     property var   _fill:   null
     property var   _edgeL:  null
     property var   _edgeR:  null
@@ -53,6 +60,7 @@ Canvas {
     property real  _fillG:  -1
     property real  _fillB:  -1
     property real  _edgeW:  -1
+    property real  _edgeFadeW: -1
     property var   _cy:     []
     property var   _pulseFills: []
     property real  _pulseH: -1
@@ -102,14 +110,14 @@ Canvas {
     function _fadeEdges(ctx) {
         var fadeW = Math.min(width * 0.18, edgeFadeMax)
         if (fadeW <= 0.5) return
-        if (!_edgeL || Math.round(_edgeW) !== Math.round(width)) {
+        if (!_edgeL || _edgeW !== width || _edgeFadeW !== fadeW) {
             var l = ctx.createLinearGradient(0, 0, fadeW, 0)
             l.addColorStop(0.0, "black")
             l.addColorStop(1.0, "transparent")
             var r = ctx.createLinearGradient(width - fadeW, 0, width, 0)
             r.addColorStop(0.0, "transparent")
             r.addColorStop(1.0, "black")
-            _edgeL = l; _edgeR = r; _edgeW = width
+            _edgeL = l; _edgeR = r; _edgeW = width; _edgeFadeW = fadeW
         }
         ctx.globalCompositeOperation = "destination-out"
         ctx.fillStyle = _edgeL

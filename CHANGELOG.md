@@ -26,6 +26,8 @@ settings file carries its own `__version` and migrates separately.
 - Keep notification, network, and screenshot glow envelopes independent, so
   overlapping events and individual toggles cannot reset one another's geometry.
   Critical notification flashes retain their semantic color during screenshots.
+- Refresh audio visualizer gradients when their edge fade width or exact bounds
+  change, and repaint active visualizers when the theme accent changes.
 
 - Catch the first network disconnect after a connected startup, clear every network
   glow animation when motion stops, and skip reconnect fades when the glow is dark.

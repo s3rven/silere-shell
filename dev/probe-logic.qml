@@ -123,6 +123,7 @@ ShellRoot {
         }
     }
     Component { id: smoothGlideFactory; SmoothGlide { target: 0 } }
+    Component { id: mediaVisualizerFactory; MediaVisualizer { presentationActive: false } }
     Component { id: waveLineFactory; WaveLine { width: 200; height: 16; value: 0.75; flowing: true } }
     Component { id: boundedProcessFactory; BoundedProcess {} }
     Component { id: persistedFileFactory; PersistedFile { writeAllowed: false } }
@@ -1676,6 +1677,33 @@ ShellRoot {
             }
         }
         underline.destroy()
+
+        const visualizer = mediaVisualizerFactory.createObject(root, { width: 200, height: 20 })
+        const edgeGradients = []
+        const edgeContext = {
+            createLinearGradient: function(x0, y0, x1, y1) {
+                const gradient = { start: x0, end: x1, addColorStop: function() {} }
+                edgeGradients.push(gradient)
+                return gradient
+            },
+            fillRect: function() {}
+        }
+        visualizer._fadeEdges(edgeContext)
+        visualizer._fadeEdges(edgeContext)
+        root._check(edgeGradients.length === 2,
+            "the audio visualizer reuses unchanged edge-fade gradients")
+        visualizer.edgeFadeMax = 30
+        visualizer._fadeEdges(edgeContext)
+        root._check(edgeGradients.length === 4 && edgeGradients[2].end === 30
+                && edgeGradients[3].start === 170,
+            "changing the audio fade width invalidates both cached gradients")
+        visualizer.width = 200.25
+        visualizer._fadeEdges(edgeContext)
+        root._check(edgeGradients.length === 6 && edgeGradients[5].end === 200.25,
+            "a fractional visualizer resize cannot reuse gradients from the old bounds")
+        root._check(edgeContext.globalCompositeOperation === "source-over",
+            "audio edge fading restores the normal compositing mode")
+        visualizer.destroy()
 
         const glowComponent = Qt.createComponent("modules/bar/GlowLine.qml")
         root._check(glowComponent.status === Component.Ready, "the glow gradient builds")
