@@ -23,6 +23,9 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- Cancel Bluetooth fallback volume processes and queued writes when their audio
+  route is resynchronized.
+
 - Keep notification, network, and screenshot glow envelopes independent, so
   overlapping events and individual toggles cannot reset one another's geometry.
   Critical notification flashes retain their semantic color during screenshots.

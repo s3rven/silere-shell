@@ -31,6 +31,8 @@ ShellRoot {
     property int _checks: 0
     property string _sentInlineReply: ""
     property int _confirmActions: 0
+    property PwVolumeControl _volumeCancelProbe: null
+    property bool _volumeCancelDone: false
 
     QtObject {
         id: probeAnchor
@@ -125,6 +127,7 @@ ShellRoot {
     Component { id: smoothGlideFactory; SmoothGlide { target: 0 } }
     Component { id: mediaVisualizerFactory; MediaVisualizer { presentationActive: false } }
     Component { id: waveLineFactory; WaveLine { width: 200; height: 16; value: 0.75; flowing: true } }
+    Component { id: volumeControlFactory; PwVolumeControl {} }
     Component { id: boundedProcessFactory; BoundedProcess {} }
     Component { id: persistedFileFactory; PersistedFile { writeAllowed: false } }
     Component { id: niriBackendFactory; CompositorNiri {} }
@@ -3644,6 +3647,18 @@ ShellRoot {
                 && Audio._out._clampVolume(Infinity) === 0
                 && Audio._out._clampVolume(1.5) === 1,
             "audio service normalizes non-finite backend volume")
+        const volumeControl = volumeControlFactory.createObject(root)
+        volumeControl._wpctl.command = ["sleep", "5"]
+        volumeControl._wpctl.running = true
+        volumeControl._wpctlAgain = true
+        volumeControl._wpctlGap.start()
+        volumeControl.pendingApply = true
+        volumeControl.sync()
+        root._check(!volumeControl._wpctlAgain && !volumeControl._wpctlGap.running
+                && !volumeControl.pendingApply,
+            "resynchronizing audio cancels the old route's process and queued fallback writes")
+        root._volumeCancelProbe = volumeControl
+        _volumeCancelCheck.restart()
         const near = (a, b) => Math.abs(a - b) < 0.0001
         root._check(near(Audio._out._stepFrom(0.43, 0.05), 0.45)
                 && near(Audio._out._stepFrom(0.43, -0.05), 0.40)
@@ -6831,7 +6846,25 @@ ShellRoot {
         Qt.callLater(root._finish)
     }
 
+    Timer {
+        id: _volumeCancelCheck
+        interval: 120
+        onTriggered: {
+            const control = root._volumeCancelProbe
+            root._check(control && !control._wpctl.running,
+                "an invalidated audio route leaves no fallback process running")
+            if (control) {
+                control._wpctl.running = false
+                control._wpctlGap.stop()
+                control.destroy()
+            }
+            root._volumeCancelProbe = null
+            root._volumeCancelDone = true
+        }
+    }
+
     function _finish(): void {
+        root._check(root._volumeCancelDone, "the audio route cleanup check completes")
         root._runSettingsDiagnosticsProbe()
         ShellSettings.dnd = true
         ShellSettings.showSeconds = !ShellSettings._defaults.showSeconds

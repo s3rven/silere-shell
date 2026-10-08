@@ -97,6 +97,11 @@ QtObject {
         ctl._writeThrottle.stop()
         ctl._pendingSafety.stop()
         ctl._muteSafety.stop()
+        // A route/availability change invalidates both the outstanding command
+        // and the target that the Bluetooth fallback planned to replay.
+        ctl._wpctlGap.stop()
+        ctl._wpctlAgain = false
+        if (ctl._wpctl.running) ctl._wpctl.running = false
         pendingApply = false
         const a = ready ? audio : null
         targetVolume = a ? _clampVolume(a.volume) : 0
