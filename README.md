@@ -6,39 +6,37 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/s3rven/silere-shell/releases"><img src="https://img.shields.io/github/v/release/s3rven/silere-shell?style=flat-square&labelColor=0f1013&color=2a2d33" alt="Latest release"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2a2d33?style=flat-square&labelColor=0f1013" alt="MIT license"/></a>
+  <a href="https://github.com/s3rven/silere-shell/releases"><img src="https://img.shields.io/github/v/release/s3rven/silere-shell?style=flat-square&labelColor=0f1013&color=2a2d33&logo=github&logoColor=9a9ca1" alt="latest release"/></a>
+  <a href="https://github.com/s3rven/silere-shell/actions/workflows/validate.yml"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fs3rven%2Fsilere-shell%2Fbadges%2Fchecks.json&style=flat-square" alt="checks passed on main"/></a>
+  <a href="#performance"><img src="https://img.shields.io/badge/idle-under%201%25%20CPU-2a2d33?style=flat-square&labelColor=0f1013" alt="Reference idle CPU: under 1%"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2a2d33?style=flat-square&labelColor=0f1013" alt="license: MIT"/></a>
+  <a href="https://quickshell.org/"><img src="https://img.shields.io/badge/built%20on-Quickshell-2a2d33?style=flat-square&labelColor=0f1013" alt="built on Quickshell"/></a>
+  <img src="https://img.shields.io/badge/runs%20on-Hyprland%20%C2%B7%20niri-2a2d33?style=flat-square&labelColor=0f1013&logo=hyprland&logoColor=9a9ca1" alt="runs on Hyprland and niri"/>
 </p>
 
-<p align="center">A desktop shell for <b>Hyprland</b> and <b>niri</b>.</p>
-<p align="center"><a href="#install">Install</a> · <a href="#use">First steps</a> · <a href="docs/usage.md">Controls</a> · <a href="#help">Help</a></p>
+<p align="center">A quiet, lightweight desktop shell for <b>Hyprland</b> and <b>niri</b>.</p>
 
-Silere runs in your existing desktop session. It combines a bar, notifications,
-calendar, system tray and quick controls in one interface built with Quickshell.
-Change its layout and appearance from the menu.
-
-The visualizer, network speed readings and clock seconds start switched off.
-[See the performance measurements](docs/performance.md).
+Silere gives you a bar, notifications, an OSD, a calendar, a tray and a menu for
+everyday controls, all in one Quickshell process. Adjust your sound and display,
+connect to Wi-Fi or Bluetooth, control your music and change every shell setting
+from the menu.
 
 <p align="center">
-  <img src="assets/shot-surfaces.gif" alt="Silere's Home, Now Playing and Settings pages" width="480"/>
-  <br/>
-  <sub><a href="assets/shot-surfaces.webp">View the still preview</a></sub>
+  <img src="assets/shot-desktop.webp" alt="Silere's floating bar on the desktop" width="960"/>
 </p>
 
-- Arrange your bar and choose the widgets you need.
-- Control audio, brightness, Wi-Fi, Bluetooth and power from one menu.
-- Search past notifications and control your music in Now Playing.
-- Pick your colours, use a wallpaper palette, and adjust the font, scale and motion.
+Quiet by default means a compact bar, subtle feedback and optional effects you choose
+to turn on. The visualizer, network speed readings, clock seconds and underline effects
+start switched off. System readings and animations pause when the session becomes idle.
 
-<details>
-<summary>Desktop, popups and themes</summary>
+- Arrange the bar and choose the widgets you need.
+- Keep notifications in a searchable history, with actions and replies when apps support them.
+- Use Now Playing for cover art, seeking, player switching, shuffle and repeat.
+- Pick a custom accent or use your wallpaper's colours, with font, scale and motion settings.
 
-<p align="center"><img src="assets/shot-desktop.webp" alt="Silere's floating bar on the desktop" width="960"/></p>
-<p align="center"><img src="assets/shot-popups.webp" alt="Notifications, calendar, volume display and quick actions" width="960"/></p>
-<p align="center"><img src="assets/shot-themes.webp" alt="Custom accent and wallpaper colours" width="720"/></p>
-
-</details>
+<p align="center">
+  <img src="assets/shot-surfaces.webp" alt="Silere's Home, Now Playing and Settings panels" width="960"/>
+</p>
 
 ## Install
 
@@ -96,6 +94,10 @@ Open **Settings** to change the shell. Changes apply immediately.
 Silere verifies release signatures and asks for confirmation in the menu.
 [Updating and rolling back](docs/usage.md#updates).
 
+<p align="center">
+  <img src="assets/shot-themes.png" alt="Silere with a custom accent and colours taken from the wallpaper" width="720"/>
+</p>
+
 <details>
 <summary>Config files and scripting</summary>
 
@@ -105,6 +107,13 @@ To reset the file, replace its contents with `{ "__version": 1 }`.
 [The scripting guide](docs/scripting.md) lists IPC calls and event hooks.
 
 </details>
+
+## Performance
+
+On the reference machine, release **1.3.0** measured about **83 MB PSS** with the bar
+and **91 MB** after opening the menu, with idle CPU under **1% of one core**.
+Your hardware, fonts and enabled features affect the result.
+[Measurements and benchmarking](docs/performance.md).
 
 ## Help
 

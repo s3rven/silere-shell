@@ -20,7 +20,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Changed
 
-- The README explains the shell, presents installation in three steps, and links directly to first-use controls, updates and help. The surface animation has a still preview, the other screenshots stay in a folded gallery, and detailed controls live in a separate usage guide.
+- The README describes Silere’s quiet defaults, presents installation in three steps, and keeps detailed controls in a separate usage guide. Its previews show the desktop, Home / Now Playing / Settings panels, and themes as still images.
 - Remote cover art downloads wait until the media widget or menu is visible and pause during quiet idle. Hidden Now Playing pages stop cover decoding and retries.
 - Menu width, sidebar, and padding now glide together and keep momentum through quick tab reversals. Pages use their destination layout width instead of wrapping their text again on every resize frame.
 - Cold Home and Now Playing pages load asynchronously during tab switches, and revealing a preloaded Settings drawer no longer forces its remaining construction onto the first animation frame.
