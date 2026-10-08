@@ -16,10 +16,10 @@ Singleton {
     readonly property int  pageLatchMs: 400
     readonly property int  sliderRestMs: 300
 
-    property var _accums: ({})
-    property var _timers: ({})
-    property var _lastSteps: ({})
-    property var _directions: ({})
+    property var _accums: Object.create(null)
+    property var _expires: Object.create(null)
+    property var _lastSteps: Object.create(null)
+    property var _directions: Object.create(null)
     // a plain field, so stamping it on every scrolled frame notifies nothing
     readonly property var _page: ({ movedAt: 0 })
 
@@ -77,6 +77,9 @@ Singleton {
     function _processDelta(deltaY: real, key: string, threshold: real, maxSteps: int, minStepMs: int): int {
         if (!deltaY) return 0
         const now = Date.now()
+        // A busy event loop can deliver input before the cleanup timer fires.
+        // Expired gestures must still start without the previous remainder.
+        if (_expires[key] !== undefined && _expires[key] <= now) _forgetKey(key)
         const previous = _accums[key] || 0
         // a complete notch leaves no remainder, so direction must survive separately
         const reversed = (_directions[key] || 0) * deltaY < 0
@@ -121,30 +124,39 @@ Singleton {
     }
 
     function _restartTimer(key: string): void {
-        let t = _timers[key]
-        if (!t) { t = timerComp.createObject(root, { key: key }); _timers[key] = t }
-        t.restart()
-    }
-
-    Component {
-        id: timerComp
-        Timer {
-            property string key: ""
-            interval: root.resetMs; repeat: false
-            onTriggered: {
-                // reap every per-key entry, not just the timer — a deleted key reads as 0 in _processDelta, so the maps don't accrue dead entries
-                delete root._accums[key]
-                delete root._lastSteps[key]
-                delete root._directions[key]
-                delete root._timers[key]
-                destroy()
-            }
+        root._expires[key] = Date.now() + root.resetMs
+        if (!_cleanup.running) {
+            _cleanup.interval = root.resetMs
+            _cleanup.start()
         }
     }
 
-    Component.onDestruction: {
-        for (const key in _timers) {
-            if (_timers[key]) _timers[key].destroy()
+    function _forgetKey(key: string): void {
+        delete root._accums[key]
+        delete root._lastSteps[key]
+        delete root._directions[key]
+        delete root._expires[key]
+    }
+
+    // Return the time until the next expiry; zero means there is no work left.
+    function _expireKeys(now: real): int {
+        let next = Infinity
+        for (const key in root._expires) {
+            const expiry = root._expires[key]
+            if (expiry <= now) root._forgetKey(key)
+            else next = Math.min(next, expiry)
+        }
+        return isFinite(next) ? Math.max(1, Math.ceil(next - now)) : 0
+    }
+
+    Timer {
+        id: _cleanup
+        onTriggered: {
+            const delay = root._expireKeys(Date.now())
+            if (delay > 0) {
+                interval = delay
+                start()
+            }
         }
     }
 }

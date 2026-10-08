@@ -4130,6 +4130,36 @@ ShellRoot {
         root._check(Scroll._processDelta(1, throttleKey, 60, 1, 1000) === 1
                 && Scroll._accums[throttleKey] === 1,
             "a throttled touchpad burst resumes with one step and no whole-step backlog")
+        const expiredKey = "probe-scroll-expired"
+        Scroll._processDelta(60, expiredKey, 120, 2, 0)
+        Scroll._expires[expiredKey] = Date.now() - 1
+        root._check(Scroll._processDelta(60, expiredKey, 120, 2, 0) === 0,
+            "input arriving before a delayed cleanup does not reuse an expired half-notch")
+        const cleanupTime = Date.now()
+        const retainedKey = "probe-scroll-retained"
+        Scroll._processDelta(40, retainedKey, 120, 2, 0)
+        Scroll._expires[expiredKey] = cleanupTime
+        Scroll._expires[retainedKey] = cleanupTime + 1000
+        root._check(Scroll._expireKeys(cleanupTime) > 0
+                && Scroll._accums[expiredKey] === undefined
+                && Scroll._directions[expiredKey] === undefined
+                && Scroll._lastSteps[expiredKey] === undefined
+                && Scroll._expires[expiredKey] === undefined
+                && Scroll._accums[retainedKey] === 40,
+            "wheel cleanup removes expired state while preserving another control's gesture")
+        root._check(Scroll._processDelta(80, retainedKey, 120, 2, 0) === 1,
+            "a gesture retained by shared cleanup finishes its own notch")
+        for (const reservedKey of ["__proto__", "constructor", "toString"]) {
+            root._check(Scroll._processDelta(60, reservedKey, 120, 2, 0) === 0
+                    && Scroll._processDelta(60, reservedKey, 120, 2, 0) === 1,
+                "wheel keys remain independent for " + reservedKey)
+        }
+        Scroll._expireKeys(Date.now() + 2000)
+        root._check(Object.keys(Scroll._expires).length === 0
+                && Object.keys(Scroll._accums).length === 0
+                && Object.keys(Scroll._directions).length === 0
+                && Object.keys(Scroll._lastSteps).length === 0,
+            "completed wheel gestures leave no retained control state")
         const notchUp = inverted => ({ angleDelta: { x: 0, y: 120 }, inverted: inverted })
         root._check(Scroll.processLevelWheel(notchUp(false), "probe-level-a") === 1
                 && Scroll.processLevelWheel(notchUp(true), "probe-level-b") === -1

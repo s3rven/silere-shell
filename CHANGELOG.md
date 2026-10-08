@@ -16,11 +16,14 @@ settings file carries its own `__version` and migrates separately.
 - Share device-pixel stroke sizing between control outlines, dividers, glow rims,
   and notification countdowns; floating glow rims now keep a consistent thickness
   on fractional scales and clamp their corners to the available space.
+- Use one wheel-gesture cleanup timer instead of creating a timer for each control.
 
 ### Fixed
 
 - Catch the first network disconnect after a connected startup, clear every network
   glow animation when motion stops, and skip reconnect fades when the glow is dark.
+- Reset expired wheel gestures before accepting new input, even if the event loop
+  has delayed cleanup; keep gesture keys independent of JavaScript object names.
 
 ## Releases
 
