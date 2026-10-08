@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Shapes
 import Quickshell
+import "../../config/PixelGeometry.js" as PixelGeometry
 
 Shape {
     id: root
@@ -17,10 +18,9 @@ Shape {
 
     // whole device pixels with both edges on the grid; at 1.25 a 1.5px arc smeared across three pixels
     readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
-    function _snapStroke(w: real): real { return Math.max(1, Math.ceil(w * root._dpr - 0.5)) / root._dpr }
+    function _snapStroke(w: real): real { return PixelGeometry.stroke(w, root._dpr) }
     function _snapInset(stroke: real): real {
-        const half = stroke * root._dpr / 2
-        return (Math.round(root.inset * root._dpr - half) + half) / root._dpr
+        return PixelGeometry.inset(root.inset, stroke, root._dpr)
     }
     readonly property real _trackStroke: root._snapStroke(1)
     readonly property real _arcStroke: root._snapStroke(root.arcWidth)

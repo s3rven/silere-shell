@@ -9,6 +9,7 @@ import Quickshell.Services.Mpris as Mp
 import Quickshell.Services.SystemTray as St
 import Quickshell.Services.UPower as Up
 import "config"
+import "config/PixelGeometry.js" as PixelGeometry
 import "services"
 import "modules/bar"
 import "modules/common"
@@ -77,6 +78,7 @@ ShellRoot {
         }
     }
     Component { id: sliderTrackFactory; SliderTrack {} }
+    Component { id: fadingRimFactory; FadingRim {} }
     Component { id: perimeterFactory; PerimeterProgress { width: 320; height: 100 } }
     Component {
         id: confirmButtonFactory
@@ -1586,6 +1588,31 @@ ShellRoot {
             }
         }
         underline.destroy()
+
+        for (const dpr of [1, 1.25, 1.5, 1.75, 2, 2.5]) {
+            for (const width of [1, 1.5, 2]) {
+                const stroke = PixelGeometry.stroke(width, dpr)
+                const inset = PixelGeometry.inset(1, stroke, dpr)
+                root._check(Math.abs(stroke * dpr - Math.round(stroke * dpr)) < 1e-6
+                        && Math.abs((inset - stroke / 2) * dpr
+                            - Math.round((inset - stroke / 2) * dpr)) < 1e-6,
+                    "outline and countdown edges share the device pixel grid at " + dpr + "x")
+            }
+        }
+        root._check(PixelGeometry.stroke(1, 1.5) === 1 / 1.5
+                && PixelGeometry.stroke(0, 1.25) === 0,
+            "thin strokes round half pixels down and zero width stays disabled")
+        const fadingRim = fadingRimFactory.createObject(root, {
+            width: 100, height: 40, radius: 50, band: 1.25, rimColor: "white"
+        })
+        root._check(fadingRim._band === 1 && fadingRim._radius === 20,
+            "a floating glow rim snaps its band and clamps oversized corners")
+        fadingRim.band = 0
+        root._check(!fadingRim.visible, "a zero-width glow rim is not drawn")
+        fadingRim.band = 100
+        root._check(fadingRim._band === 20,
+            "an oversized glow band cannot invert its inner rectangle")
+        fadingRim.destroy()
 
         const notificationCard = notificationCardFactory.createObject(root)
         root._check(notificationCard.countdownInterval(1) === 50

@@ -1,5 +1,7 @@
 import QtQuick
 import QtQuick.Shapes
+import Quickshell
+import "../../config/PixelGeometry.js" as PixelGeometry
 
 Shape {
     id: root
@@ -10,8 +12,14 @@ Shape {
     // flat stops ring the whole bar; the default fade leaves the top edge unlit
     property bool uniform: false
 
+    readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+    readonly property real _band: Math.min(PixelGeometry.stroke(root.band, root._dpr),
+        Math.max(0, Math.min(root.width, root.height) / 2))
+    readonly property real _radius: Math.max(0,
+        Math.min(root.radius, Math.min(root.width, root.height) / 2))
+
     anchors.fill: parent
-    visible: opacity > 0.001
+    visible: opacity > 0.001 && rimColor.a > 0 && _band > 0
     // without it Shape tessellates the corner arcs and a 1px ring facets visibly there — same reason OutlineBorder and PerimeterProgress set it
     preferredRendererType: Shape.CurveRenderer
 
@@ -35,13 +43,13 @@ Shape {
         }
         PathRectangle {
             width: root.width; height: root.height
-            radius: root.radius
+            radius: root._radius
         }
         PathRectangle {
-            x: root.band; y: root.band
-            width: Math.max(0, root.width - root.band * 2)
-            height: Math.max(0, root.height - root.band * 2)
-            radius: Math.max(0, root.radius - root.band)
+            x: root._band; y: root._band
+            width: Math.max(0, root.width - root._band * 2)
+            height: Math.max(0, root.height - root._band * 2)
+            radius: Math.max(0, root._radius - root._band)
         }
     }
 }
