@@ -31,7 +31,8 @@ Item {
         id: _lineEffect
         anchors.fill: parent
 
-        property real _notifGlow:   0
+        readonly property real _notifGlow: _notifFlash.glow
+        property bool _notifCritical: false
         readonly property bool _batteryGlowEnabled: ShellSettings.underlineBattGlow
         readonly property bool _tempGlowEnabled: ShellSettings.underlineTempGlow
         readonly property bool _networkGlowEnabled: ShellSettings.underlineNetGlow
@@ -39,7 +40,7 @@ Item {
             ? (Battery.critical ? 0.64 - Battery.alertPulse * 0.26
                : (Battery.low   ? 0.44 - Battery.alertPulse * 0.20 : 0))
             : 0
-        property real _networkGlow: 0
+        property alias _networkGlow: _netLossFlash.glow
         property bool _lastNetConnected: false
         readonly property real _tempGlowBase: (_tempGlowEnabled && CpuTemp.hot && !CpuTemp.critical) ? 0.32 : 0
         property real _tempPulseGlow: 0
@@ -80,11 +81,10 @@ Item {
         readonly property bool _tempCritical: _tempGlowEnabled && CpuTemp.critical
 
         readonly property color _effectColorTarget: {
-            if (_tempCritical) return Theme.error
+            if (_tempCritical || (_notifFlash.running && _notifCritical)) return Theme.error
             if (_batteryCritical) return Theme.error
             if (_batteryGlowEnabled && Battery.low)       return Theme.warning
             if (_shotActive)                              return _screenshotColor
-            if (Notifications.lastCritical && _notifFlash.running) return Theme.error
             if (_notifFlash.running)                      return Theme.accent
             if (_tempGlowEnabled && CpuTemp.hot)          return Theme.warning
             return Theme.accent
@@ -106,11 +106,14 @@ Item {
         MotionBehavior on _stopColorMid {
             ColorAnimation { duration: Motion.ms(350) }
         }
-        property real _sweepSpread: 0.28
+        readonly property real _sweepSpread: _notifFlash.running ? _notifFlash.spread
+            : _shotActive ? _screenshotSpread : _netLossFlash.spread
+        property real _screenshotSpread: 0.28
         // a flash gathers its band to a point before bursting; with the idle floor lit that snap is a visible collapse, so it eases instead
-        property int _gatherMs: 0
-        function _armGather(): void { _lineEffect._gatherMs = _lineEffect._combined > 0.02 ? Motion.ms(70) : 0 }
-        property real _bloomBoost:  0.0
+        function _gatherDuration(): int { return _lineEffect._combined > 0.02 ? Motion.ms(70) : 0 }
+        property int _screenshotGatherMs: 0
+        readonly property real _bloomBoost: Math.max(_notifFlash.bloom, _screenshotBloom, _netLossFlash.bloom)
+        property real _screenshotBloom: 0
         property real _screenshotSweepCenter: 0.50
         function _widgetSweep(key: string): real {
             const zone = ShellSettings.barWidgetLocate(key).zone
@@ -152,15 +155,20 @@ Item {
             return Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)
         }
 
-        function _playScreenshot(): void {
+        function _stopScreenshot(): void {
+            _screenshotPreviewTimer.stop()
             _screenshotPulse.stop()
             _screenshotSweep.stop()
             _screenshotGlow = 0
-            _bloomBoost = 0
-            _sweepSpread = 0.28
+            _screenshotBloom = 0
+            _screenshotSpread = 0.28
             _screenshotSweepCenter = 0.50
+        }
+
+        function _playScreenshot(): void {
+            _lineEffect._stopScreenshot()
             if (!_lineEffect._canRunEventMotion()) return
-            _lineEffect._armGather()
+            _screenshotGatherMs = _lineEffect._gatherDuration()
             if (ShellSettings.screenshotGlowSweep)
                 _screenshotSweep.restart()
             else
@@ -187,13 +195,13 @@ Item {
             id: _screenshotPulse
             ScriptAction { script: {
                 _lineEffect._screenshotSweepCenter = 0.50
-                _lineEffect._bloomBoost = 0
+                _lineEffect._screenshotBloom = 0
             } }
-            NumberAnimation { target: _lineEffect; property: "_sweepSpread"; to: 0.16; duration: _lineEffect._gatherMs; easing.type: Easing.InOutQuad }
+            NumberAnimation { target: _lineEffect; property: "_screenshotSpread"; to: 0.16; duration: _lineEffect._screenshotGatherMs; easing.type: Easing.InOutQuad }
             ParallelAnimation {
                 NumberAnimation { target: _lineEffect; property: "_screenshotGlow"; to: 1.0; duration: Motion.ms(100); easing.type: Easing.OutCubic }
-                NumberAnimation { target: _lineEffect; property: "_sweepSpread"; to: 0.38; duration: Motion.ms(260); easing.type: Easing.OutCubic }
-                NumberAnimation { target: _lineEffect; property: "_bloomBoost"; to: 0.30 * _lineEffect._screenshotStrength; duration: Motion.ms(120); easing.type: Easing.OutCubic }
+                NumberAnimation { target: _lineEffect; property: "_screenshotSpread"; to: 0.38; duration: Motion.ms(260); easing.type: Easing.OutCubic }
+                NumberAnimation { target: _lineEffect; property: "_screenshotBloom"; to: 0.30 * _lineEffect._screenshotStrength; duration: Motion.ms(120); easing.type: Easing.OutCubic }
             }
             PauseAnimation { duration: Math.max(50, _lineEffect._screenshotDuration * 0.10) }
             ParallelAnimation {
@@ -204,13 +212,13 @@ Item {
                     easing.type: Easing.OutCubic
                 }
                 NumberAnimation {
-                    target: _lineEffect; property: "_sweepSpread"
+                    target: _lineEffect; property: "_screenshotSpread"
                     to: 0.28
                     duration: Math.max(220, _lineEffect._screenshotDuration * 0.65)
                     easing.type: Easing.OutCubic
                 }
                 NumberAnimation {
-                    target: _lineEffect; property: "_bloomBoost"
+                    target: _lineEffect; property: "_screenshotBloom"
                     to: 0.0
                     duration: Math.max(260, _lineEffect._screenshotDuration * 0.70)
                     easing.type: Easing.OutCubic
@@ -223,8 +231,8 @@ Item {
 
             ScriptAction { script: {
                 _lineEffect._screenshotSweepCenter = 0.04
-                _lineEffect._sweepSpread = 0.045
-                _lineEffect._bloomBoost = 0
+                _lineEffect._screenshotSpread = 0.045
+                _lineEffect._screenshotBloom = 0
             } }
 
             NumberAnimation {
@@ -243,17 +251,17 @@ Item {
                 }
             }
             SequentialAnimation {
-                NumberAnimation { target: _lineEffect; property: "_sweepSpread"; to: 0.10; duration: Motion.ms(180); easing.type: Easing.OutCubic }
+                NumberAnimation { target: _lineEffect; property: "_screenshotSpread"; to: 0.10; duration: Motion.ms(180); easing.type: Easing.OutCubic }
                 NumberAnimation {
-                    target: _lineEffect; property: "_sweepSpread"; to: 0.28
+                    target: _lineEffect; property: "_screenshotSpread"; to: 0.28
                     duration: Math.max(300, _lineEffect._screenshotDuration - Motion.ms(180))
                     easing.type: Easing.InOutCubic
                 }
             }
             SequentialAnimation {
-                NumberAnimation { target: _lineEffect; property: "_bloomBoost"; to: 0.06 * _lineEffect._screenshotStrength; duration: Motion.ms(100); easing.type: Easing.OutCubic }
+                NumberAnimation { target: _lineEffect; property: "_screenshotBloom"; to: 0.06 * _lineEffect._screenshotStrength; duration: Motion.ms(100); easing.type: Easing.OutCubic }
                 NumberAnimation {
-                    target: _lineEffect; property: "_bloomBoost"; to: 0.0
+                    target: _lineEffect; property: "_screenshotBloom"; to: 0.0
                     duration: Math.max(300, _lineEffect._screenshotDuration - Motion.ms(100))
                     easing.type: Easing.InCubic
                 }
@@ -272,27 +280,21 @@ Item {
                     _lineEffect._skipNextNotif = false
                 } else if (ShellSettings.underlineNotifGlow && incoming
                         && _lineEffect._canRunEventMotion()) {
-                    _lineEffect._armGather()
-                    _notifFlash.restart()
+                    _lineEffect._playNotification(Notifications.lastCritical)
                 }
                 _lineEffect._prevNotifCount = Notifications.activeCount
             }
         }
 
-        SequentialAnimation {
+        function _playNotification(critical: bool): void {
+            _notifCritical = critical
+            _notifFlash.play(_lineEffect._gatherDuration())
+        }
+
+        EventGlow {
             id: _notifFlash
-            NumberAnimation { target: _lineEffect; property: "_sweepSpread"; to: 0.02; duration: _lineEffect._gatherMs; easing.type: Easing.InOutQuad }
-            ParallelAnimation {
-                NumberAnimation { target: _lineEffect; property: "_notifGlow";   to: Notifications.lastCritical ? 0.58 : 0.40; duration: Motion.ms(120); easing.type: Easing.OutCubic }
-                NumberAnimation { target: _lineEffect; property: "_sweepSpread"; to: 0.34; duration: Motion.ms(380); easing.type: Easing.OutCubic }
-                NumberAnimation { target: _lineEffect; property: "_bloomBoost";  to: 0.30; duration: Motion.ms(120); easing.type: Easing.OutCubic }
-            }
-            PauseAnimation { duration: Motion.ms(220) }
-            ParallelAnimation {
-                NumberAnimation { target: _lineEffect; property: "_notifGlow";   to: 0.0;  duration: Motion.ms(1200); easing.type: Easing.OutCubic }
-                NumberAnimation { target: _lineEffect; property: "_sweepSpread"; to: 0.28; duration: Motion.ms(800);  easing.type: Easing.OutCubic }
-                NumberAnimation { target: _lineEffect; property: "_bloomBoost";  to: 0.0;  duration: Motion.ms(900);  easing.type: Easing.OutCubic }
-            }
+            objectName: "notificationFlash"
+            peak: _lineEffect._notifCritical ? 0.58 : 0.40
         }
 
         property bool _settingsReady: false
@@ -311,30 +313,20 @@ Item {
         }
         function _stopTransient(): void {
             _previewTimer.stop()
-            _screenshotPreviewTimer.stop()
-            _screenshotPulse.stop()
-            _screenshotSweep.stop()
-            _notifFlash.stop()
-            _netLossFlash.stop()
+            _lineEffect._stopScreenshot()
+            _notifFlash.reset()
             _netGlowAnim.stop()
-            _screenshotGlow = 0
-            _notifGlow = 0
-            _networkGlow = 0
-            _bloomBoost = 0
-            _sweepSpread = 0.28
-            _screenshotSweepCenter = 0.50
+            _netLossFlash.reset()
         }
         function _clearNetLossFlash(): void {
-            _netLossFlash.stop()
-            _sweepSpread = 0.28
-            _bloomBoost = 0
+            _netLossFlash.settleGeometry()
         }
         Connections {
             target: ShellSettings
             function onUnderlineNotifGlowChanged() {
                 if (!ShellSettings.underlineNotifGlow) {
-                    // event effects share sweep geometry; settling them together avoids leaving a stopped effect's bloom behind another one
-                    _lineEffect._stopTransient()
+                    _previewTimer.stop()
+                    _notifFlash.reset()
                 } else if (_lineEffect._canPreview()) {
                     _previewTimer.restart()
                 }
@@ -343,7 +335,9 @@ Item {
                 // Changes while this source is disabled must not replay on re-enable.
                 _lineEffect._lastNetConnected = Network.available && Network.connected
                 if (!ShellSettings.underlineNetGlow) {
-                    _lineEffect._stopTransient()
+                    _previewTimer.stop()
+                    _netGlowAnim.stop()
+                    _netLossFlash.reset()
                 } else if (_lineEffect._canPreview()) {
                     _previewTimer.restart()
                 }
@@ -353,7 +347,7 @@ Item {
             }
             function onUnderlineScreenshotGlowChanged() {
                 if (!ShellSettings.underlineScreenshotGlow) {
-                    _lineEffect._stopTransient()
+                    _lineEffect._stopScreenshot()
                 } else if (_lineEffect._canPreview()) {
                     _screenshotPreviewTimer.restart()
                 }
@@ -376,8 +370,7 @@ Item {
             id: _previewTimer
             interval: 180
             onTriggered: if (_lineEffect._canPreview()) {
-                _lineEffect._armGather()
-                _notifFlash.restart()
+                _lineEffect._playNotification(false)
             }
         }
         Timer {
@@ -394,8 +387,7 @@ Item {
             if (_lastNetConnected && disconnected && ShellSettings.underlineNetGlow
                     && _lineEffect._canRunEventMotion()) {
                 _netGlowAnim.stop()
-                _lineEffect._armGather()
-                _netLossFlash.restart()
+                _netLossFlash.play(_lineEffect._gatherDuration())
             } else if (currentConnected || !available) {
                 _lineEffect._clearNetLossFlash()
                 _netGlowAnim.stop()
@@ -419,25 +411,21 @@ Item {
         NumberAnimation {
             id: _netGlowAnim
             objectName: "networkFade"
-            target: _lineEffect; property: "_networkGlow"
+            target: _netLossFlash; property: "glow"
             duration: Motion.medium; easing.type: Easing.OutCubic
         }
 
-        SequentialAnimation {
+        EventGlow {
             id: _netLossFlash
             objectName: "networkFlash"
-            NumberAnimation { target: _lineEffect; property: "_sweepSpread"; to: 0.04; duration: _lineEffect._gatherMs; easing.type: Easing.InOutQuad }
-            ParallelAnimation {
-                NumberAnimation { target: _lineEffect; property: "_networkGlow";  to: 0.42; duration: Motion.ms(130); easing.type: Easing.OutQuad  }
-                NumberAnimation { target: _lineEffect; property: "_sweepSpread";  to: 0.34; duration: Motion.ms(500); easing.type: Easing.OutCubic }
-                NumberAnimation { target: _lineEffect; property: "_bloomBoost";   to: 0.22; duration: Motion.ms(130); easing.type: Easing.OutQuad  }
-            }
-            PauseAnimation  { duration: Motion.ms(220) }
-            ParallelAnimation {
-                NumberAnimation { target: _lineEffect; property: "_networkGlow";  to: 0.0;  duration: Motion.ms(1400); easing.type: Easing.OutCubic }
-                NumberAnimation { target: _lineEffect; property: "_sweepSpread";  to: 0.28; duration: Motion.ms(900);  easing.type: Easing.OutCubic }
-                NumberAnimation { target: _lineEffect; property: "_bloomBoost";   to: 0.0;  duration: Motion.ms(1000); easing.type: Easing.OutCubic }
-            }
+            peak: 0.42
+            gatherSpread: 0.04
+            bloomPeak: 0.22
+            riseMs: 130
+            expandMs: 500
+            fadeMs: 1400
+            spreadFallMs: 900
+            bloomFallMs: 1000
         }
 
         readonly property int  _tempPulseDur: Motion.ms(700)

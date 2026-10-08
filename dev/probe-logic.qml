@@ -1615,12 +1615,57 @@ ShellRoot {
                     "re-enabling network feedback seeds the current connection state")
                 ShellSettings.underlineNetGlow = netGlowWas
                 ShellSettings.reduceMotion = netReduceWas
-                lineEffect._sweepSpread = 0.19
-                lineEffect._bloomBoost = 0.14
+                networkFlash.spread = 0.19
+                networkFlash.bloom = 0.14
                 lineEffect._clearNetLossFlash()
-                root._check(lineEffect._sweepSpread === 0.28
-                        && lineEffect._bloomBoost === 0,
+                root._check(networkFlash.spread === 0.28
+                        && networkFlash.bloom === 0,
                     "a canceled network flash restores its spread and bloom")
+                const notificationFlash = lineEffect.resources.find(r => r.objectName === "notificationFlash")
+                const notifGlowWas = ShellSettings.underlineNotifGlow
+                const screenshotGlowWas = ShellSettings.underlineScreenshotGlow
+                const screenshotSweepWas = ShellSettings.screenshotGlowSweep
+                ShellSettings.reduceMotion = false
+                ShellSettings.underlineNotifGlow = true
+                ShellSettings.underlineNetGlow = true
+                ShellSettings.underlineScreenshotGlow = true
+                ShellSettings.screenshotGlowSweep = true
+                lineEffect._playNotification(true)
+                notificationFlash.spread = 0.19
+                notificationFlash.bloom = 0.14
+                lineEffect._lastNetConnected = true
+                lineEffect._updateNetGlow(true, false)
+                lineEffect._playScreenshot()
+                root._check(notificationFlash.running && networkFlash.running
+                        && notificationFlash.spread === 0.19 && notificationFlash.bloom === 0.14,
+                    "network and screenshot arrivals preserve an active notification envelope")
+                root._check(lineEffect._notifCritical
+                        && lineEffect._effectColorTarget === Theme.error,
+                    "a critical notification keeps its semantic color during a screenshot")
+                lineEffect._clearNetLossFlash()
+                root._check(notificationFlash.running && lineEffect._sweepSpread === 0.19
+                        && lineEffect._bloomBoost >= 0.14,
+                    "canceling a network pulse does not reset notification geometry")
+                ShellSettings.underlineScreenshotGlow = false
+                root._check(notificationFlash.running && notificationFlash.bloom === 0.14,
+                    "disabling screenshot feedback preserves the other event envelopes")
+                networkFlash.play(0)
+                networkFlash.glow = 0.42
+                networkFlash.bloom = 0.22
+                ShellSettings.underlineNotifGlow = false
+                root._check(!notificationFlash.running && networkFlash.running
+                        && lineEffect._networkGlow === 0.42 && networkFlash.bloom === 0.22,
+                    "disabling notification feedback preserves an active network pulse")
+                lineEffect._stopTransient()
+                root._check(!notificationFlash.running && !networkFlash.running
+                        && notificationFlash.glow === 0 && networkFlash.glow === 0
+                        && lineEffect._bloomBoost === 0 && lineEffect._sweepSpread === 0.28,
+                    "settling all event envelopes leaves no geometry or glow behind")
+                ShellSettings.underlineNotifGlow = notifGlowWas
+                ShellSettings.underlineNetGlow = netGlowWas
+                ShellSettings.underlineScreenshotGlow = screenshotGlowWas
+                ShellSettings.screenshotGlowSweep = screenshotSweepWas
+                ShellSettings.reduceMotion = netReduceWas
             }
         }
         underline.destroy()

@@ -6,3 +6,4 @@ internal BarContent BarContent.qml
 internal BarSpectrum BarSpectrum.qml
 internal BarZone BarZone.qml
 internal GlowLine GlowLine.qml
+internal EventGlow EventGlow.qml

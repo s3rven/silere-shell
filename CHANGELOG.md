@@ -20,6 +20,10 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- Keep notification, network, and screenshot glow envelopes independent, so
+  overlapping events and individual toggles cannot reset one another's geometry.
+  Critical notification flashes retain their semantic color during screenshots.
+
 - Catch the first network disconnect after a connected startup, clear every network
   glow animation when motion stops, and skip reconnect fades when the glow is dark.
 - Reset expired wheel gestures before accepting new input, even if the event loop
