@@ -35,6 +35,30 @@ isn't on.
 **A new component** must be listed in its folder's `qmldir`. Forget it and it fails
 only when running, as `X is not a type` — that one confuses everybody once.
 
+**Controls that change targets.** The service owns the confirmed value and its
+write queue; a slider owns only the unfinished gesture. Bind `interactionKey` to
+the actual device or track, so changing it cancels the old drag. For example:
+
+```qml
+QuickSlider {
+    wheelKey: "volume"
+    interactionKey: Audio.sink ? String(Audio.sink.id) : ""
+    value: Audio.uiVolume
+    onMoved: next => Audio.setVolume(next)
+}
+```
+
+`QuickSlider` includes that identity in its wheel key, keeping different app
+streams from sharing a touchpad remainder. `SliderTrack` also clears wheel state
+when its target changes or it stops being interactive. Send pointer and
+accessibility actions through the same guarded methods.
+
+A service resync must retire the old target's queued writes, processes, and retry
+timers before adopting the new value. Regression checks should start a gesture or
+write, change its target, then deliver a late drag, release, or timer callback.
+Those checks belong in `dev/probe-logic.qml` and must use fixtures rather than
+writing to the user's hardware.
+
 **A new bar widget** goes in four places, five if it can be hidden:
 
 1. `modules/bar/widgets/MyThing.qml` — start from `Volume.qml`, it is the smallest

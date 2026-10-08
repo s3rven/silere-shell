@@ -3734,7 +3734,11 @@ ShellRoot {
         track._press(85)
         root._check(track.dragging && trackChanged === -1 && track.shownValue > 0.8,
             "a playback seek previews its destination without changing playback before release")
+        track.wheelKey = "probe-slider-target"
+        Scroll._processDelta(60, track.wheelKey, 120, 2, 0)
         track.interactionKey = "next track"
+        root._check(Scroll._processDelta(60, track.wheelKey, 120, 2, 0) === 0,
+            "changing a slider target also discards the previous wheel remainder")
         track._drag(95)
         track._release()
         root._check(!track.dragging && trackChanged === -1 && track.shownValue === track.value,
@@ -3758,7 +3762,62 @@ ShellRoot {
             "losing seek capability cancels its preview without committing")
         track.destroy()
 
-        const gradient = gradientSliderFactory.createObject(root, {
+        const deviceSlider = quickSliderFactory.createObject(barFixtureHost, {
+            width: 320, value: 0.25, accessibleName: "Probe device"
+        })
+        const deviceTrack = deviceSlider.children.find(child => typeof child._press === "function")
+        let deviceMoves = 0
+        deviceSlider.moved.connect(value => { deviceMoves++; deviceSlider.value = value })
+        const hasInteractionKey = typeof deviceSlider.interactionKey === "string"
+        if (hasInteractionKey) deviceSlider.interactionKey = "device-a"
+        deviceTrack._press(deviceTrack.width * 0.8)
+        root._check(deviceTrack.dragging && deviceMoves > 0,
+            "a device slider accepts a drag on the original target")
+        deviceMoves = 0
+        deviceSlider.value = 0.1
+        if (hasInteractionKey) deviceSlider.interactionKey = "device-b"
+        deviceTrack._drag(deviceTrack.width * 0.9)
+        deviceTrack._release()
+        root._check(deviceMoves === 0 && !deviceTrack.dragging
+                && Math.abs(deviceTrack.shownValue - 0.1) < 0.0001,
+            "a device change through the menu wrapper cancels the old drag")
+        let glyphActions = 0, expandActions = 0
+        deviceSlider.glyphClickable = true
+        deviceSlider.expandable = true
+        deviceSlider.glyphClicked.connect(() => glyphActions++)
+        deviceSlider.expandToggled.connect(() => expandActions++)
+        const deviceGlyph = deviceSlider.children.find(child =>
+            child.Accessible.name === "Mute probe device")
+        deviceSlider.visible = false
+        if (deviceGlyph) deviceGlyph.Accessible.pressAction()
+        deviceSlider._requestExpand()
+        root._check(deviceGlyph && !deviceGlyph.Accessible.focusable
+                && glyphActions === 0 && expandActions === 0,
+            "hidden device controls reject mute and expansion actions")
+        deviceSlider.visible = true
+        if (deviceGlyph) deviceGlyph.Accessible.pressAction()
+        deviceSlider._requestExpand()
+        root._check(glyphActions === 1 && expandActions === 1,
+            "showing device controls restores their guarded actions")
+        deviceSlider.destroy()
+        const appSliderA = quickSliderFactory.createObject(barFixtureHost, {
+            width: 320, wheelKey: "appvolume", interactionKey: "app-a"
+        })
+        const appSliderB = quickSliderFactory.createObject(barFixtureHost, {
+            width: 320, wheelKey: "appvolume", interactionKey: "app-b"
+        })
+        const appTrackA = appSliderA.children.find(child => typeof child._press === "function")
+        const appTrackB = appSliderB.children.find(child => typeof child._press === "function")
+        root._check(appTrackA.wheelKey !== appTrackB.wheelKey
+                && Scroll._processDelta(30, appTrackA.wheelKey, 60, 1, 0) === 0
+                && Scroll._processDelta(30, appTrackB.wheelKey, 60, 1, 0) === 0
+                && Scroll._processDelta(30, appTrackA.wheelKey, 60, 1, 0) === 1
+                && Scroll._processDelta(30, appTrackB.wheelKey, 60, 1, 0) === 1,
+            "each app slider accumulates touchpad steps only for its own target")
+        appSliderA.destroy()
+        appSliderB.destroy()
+
+        const gradient = gradientSliderFactory.createObject(barFixtureHost, {
             width: 100, position: 0.5, displayScale: 360, wraps: true
         })
         let picked = -1
@@ -3791,6 +3850,22 @@ ShellRoot {
         gradient._nudge(1, 1)
         root._check(picked === -1,
             "non-interactive colour slider ignores scroll steps")
+        gradient.interactive = true
+        gradient.visible = false
+        picked = -1
+        Scroll._processDelta(60, gradient.wheelKey, 120, 2, 0)
+        gradient.visible = true
+        gradient.visible = false
+        gradient.Accessible.increaseAction()
+        gradient._pickAt(50)
+        root._check(Scroll._accums[gradient.wheelKey] === undefined,
+            "hiding a color slider discards its unfinished wheel gesture")
+        root._check(picked === -1 && !gradient.Accessible.focusable,
+            "hidden color sliders reject accessibility changes and leave the focus order")
+        gradient.visible = true
+        gradient.Accessible.decreaseAction()
+        root._check(picked >= 0,
+            "a color slider becomes interactive again when it is shown")
         gradient.destroy()
 
         const toolsWas = SystemTools._tools

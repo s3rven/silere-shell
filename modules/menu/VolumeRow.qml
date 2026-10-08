@@ -134,6 +134,7 @@ Item {
         glyph: Audio.icon
         accessibleName: "Volume"
         wheelKey: "volume"
+        interactionKey: Audio.sink ? String(Audio.sink.id) : ""
         value: Audio.uiVolume
         valueText: Audio.label
         adjustable: Audio.ready
@@ -209,6 +210,7 @@ Item {
                     glyph: Audio.micIcon
                     accessibleName: "Microphone"
                     wheelKey: "microphone"
+                    interactionKey: Audio.source ? String(Audio.source.id) : ""
                     value: Audio.micVolume
                     valueText: Audio.micLabel
                     adjustable: Audio.micReady
@@ -280,6 +282,7 @@ Item {
                             glyph: _app.ctl.muted ? "󰝟" : "󰝚"
                             accessibleName: _app.modelData.label
                             wheelKey: "appvolume"
+                            interactionKey: _app.ctl.node ? String(_app.ctl.node.id) : ""
                             value: _app.ctl.uiVolume
                             valueText: Math.round(_app.ctl.uiVolume * 100) + "%"
                             adjustable: _app.ctl.ready

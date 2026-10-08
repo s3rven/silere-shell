@@ -131,6 +131,10 @@ Singleton {
         }
     }
 
+    function resetControl(key: string): void {
+        if (key.length > 0) root._forgetKey(key)
+    }
+
     function _forgetKey(key: string): void {
         delete root._accums[key]
         delete root._lastSteps[key]

@@ -26,6 +26,7 @@ Item {
     readonly property real minimumValue: 0
     readonly property real maximumValue: root.wraps ? root.displayScale - 1 : root.displayScale
     readonly property bool dragging: _mouse.pressed
+    readonly property bool _canInteract: root.enabled && root.visible && root.interactive
     property real _hoveredSince: 0
 
     signal picked(real position)
@@ -33,7 +34,7 @@ Item {
     Accessible.role: Accessible.Slider
     Accessible.name: root.accessibleName
     Accessible.description: root.accessibleValueText
-    Accessible.focusable: root.enabled && root.interactive
+    Accessible.focusable: root._canInteract
     Accessible.onIncreaseAction: root._nudge(1, 1)
     Accessible.onDecreaseAction: root._nudge(-1, 1)
 
@@ -55,12 +56,22 @@ Item {
         return Math.max(0, Math.min(top, p))
     }
     function _nudge(dir: int, mult: int): void {
-        if (!root.enabled || !root.interactive) return
+        if (!root._canInteract || root.dragging) return
         const next = root.position + dir * root.stepSize * mult / root.displayScale
         root.picked(root.wraps ? root._wrapped(next) : root._clamped(next))
     }
     MotionBehavior on opacity {
         NumberAnimation { duration: Motion.fast }
+    }
+
+    on_CanInteractChanged: if (!root._canInteract) {
+        root._grab = 0
+        Scroll.resetControl(root.wheelKey)
+    }
+
+    function _pickAt(mx: real): void {
+        if (!root._canInteract) return
+        root.picked(root._clamped((mx - _track.x) / Math.max(1, _track.width)))
     }
 
     Rectangle {
@@ -102,7 +113,7 @@ Item {
 
     MouseArea {
         id: _mouse
-        enabled: root.enabled && root.interactive
+        enabled: root._canInteract
         anchors.fill: parent
         anchors.topMargin: -8
         anchors.bottomMargin: -8
@@ -118,16 +129,11 @@ Item {
             if (n !== 0) root._nudge(n, 1)
         }
 
-        function _set(mx: real): void {
-            root.picked(root._clamped(
-                (mx - _track.x) / Math.max(1, _track.width)))
-        }
-
         onPressed: mouse => {
             const off = mouse.x - root._thumbCenter
             root._grab = Math.abs(off) <= _thumb.width / 2 + 2 ? off : 0
-            _set(mouse.x - root._grab)
+            root._pickAt(mouse.x - root._grab)
         }
-        onPositionChanged: mouse => { if (pressed) _set(mouse.x - root._grab) }
+        onPositionChanged: mouse => { if (pressed) root._pickAt(mouse.x - root._grab) }
     }
 }

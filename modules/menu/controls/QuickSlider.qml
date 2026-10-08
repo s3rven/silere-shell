@@ -8,6 +8,7 @@ MenuRow {
     property real   value:     0
     property string valueText: ""
     property string wheelKey:  "quickslider"
+    property alias interactionKey: _track.interactionKey
     property string accessibleName: ""
     property bool   glyphClickable: false
     property bool   muted: false
@@ -17,22 +18,27 @@ MenuRow {
     // hold the chevron gutter open on a non-expandable row so stacked sliders keep one track length
     property bool   reserveExpandSlot: false
     readonly property bool _hasChevSlot: root.expandable || root.reserveExpandSlot
+    readonly property bool _canInteract: root.enabled && root.visible
 
     rowHovered:     _rowHover.hovered
     rowPressed:     _track.dragging
-    rowInteractive: root.enabled && (root.adjustable || root.glyphClickable || root.expandable)
+    rowInteractive: root._canInteract && (root.adjustable || root.glyphClickable || root.expandable)
 
     signal moved(real value)
     signal glyphClicked()
     signal expandToggled()
 
+    function _requestGlyph(): void {
+        if (root._canInteract && root.glyphClickable) root.glyphClicked()
+    }
+
     function _requestExpand(): void {
-        if (root.enabled && root.expandable) root.expandToggled()
+        if (root._canInteract && root.expandable) root.expandToggled()
     }
 
     height: Metrics.rowHeightFor(48)
 
-    HoverHandler { id: _rowHover; enabled: root.enabled }
+    HoverHandler { id: _rowHover; enabled: root._canInteract }
 
     Item {
         id: _g
@@ -50,23 +56,20 @@ MenuRow {
             ColorFade on color {}
         }
 
-        HoverHandler { id: _glyphHover; enabled: root.enabled && root.glyphClickable; cursorShape: Qt.PointingHandCursor }
+        HoverHandler { id: _glyphHover; enabled: root._canInteract && root.glyphClickable; cursorShape: Qt.PointingHandCursor }
         TapHandler {
             id: _glyphTap
-            enabled: root.enabled && root.glyphClickable
+            enabled: root._canInteract && root.glyphClickable
             margin: 6
-            onTapped: {
-                root.glyphClicked()
-            }
+            onTapped: root._requestGlyph()
         }
 
         Accessible.role: root.glyphClickable
             ? Accessible.Button : Accessible.StaticText
         Accessible.name: root.glyphClickable
             ? (root.muted ? "Unmute " : "Mute ") + root.accessibleName.toLowerCase() : ""
-        Accessible.focusable: root.enabled && root.glyphClickable
-        Accessible.onPressAction: if (root.enabled && root.glyphClickable)
-            root.glyphClicked()
+        Accessible.focusable: root._canInteract && root.glyphClickable
+        Accessible.onPressAction: root._requestGlyph()
     }
 
     TextMetrics { id: _vm; font.family: Settings.font; font.pixelSize: Settings.fontLabel; text: "100%" }
@@ -93,14 +96,14 @@ MenuRow {
         Accessible.role: Accessible.Button
         Accessible.name: (root.expanded ? "Hide " : "Show ")
             + root.accessibleName.toLowerCase() + " options"
-        Accessible.focusable: root.enabled && root.expandable
+        Accessible.focusable: root._canInteract && root.expandable
         Accessible.onPressAction: root._requestExpand()
         opacity: (_chevHover.hovered) ? 1.0 : 0.7
         MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
 
-        HoverHandler { id: _chevHover; enabled: root.enabled && root.expandable; cursorShape: Qt.PointingHandCursor }
+        HoverHandler { id: _chevHover; enabled: root._canInteract && root.expandable; cursorShape: Qt.PointingHandCursor }
         TapHandler {
-            enabled: root.enabled && root.expandable
+            enabled: root._canInteract && root.expandable
             onTapped: {
                 root._requestExpand()
             }
@@ -126,13 +129,14 @@ MenuRow {
         anchors.verticalCenter: parent.verticalCenter
         height: 20
 
-        interactive: root.enabled && root.adjustable
+        interactive: root._canInteract && root.adjustable
         opacity: root.adjustable ? 1.0 : Theme.disabledOpacity
         MotionBehavior on opacity { NumberAnimation { duration: Motion.fast } }
         accessibleName: root.accessibleName
         accessibleValueText: root.valueText
         value: root.value
         wheelKey: "qslider:" + root.wheelKey
+            + (root.interactionKey.length > 0 ? ":" + root.interactionKey : "")
         onChanged: value => root.moved(value)
     }
 }

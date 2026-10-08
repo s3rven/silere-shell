@@ -10,6 +10,7 @@ Singleton {
     property int currentBrightness: 0
     property int maxBrightness:     0
     property string _device:        ""
+    readonly property string deviceName: root._device
     property var devices:           []
     property bool ready:            false
     readonly property bool toolAvailable:  SystemTools.hasBrightnessctl

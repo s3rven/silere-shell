@@ -13,6 +13,8 @@ settings file carries its own `__version` and migrates separately.
 
 ### Changed
 
+- Document control ownership and target-change regression checks for contributors.
+
 - Smooth the reactive underline's glow shoulders with bounded, alpha-preserving
   gradient stops and derive all its colors from one theme-aware fade.
 
@@ -22,6 +24,11 @@ settings file carries its own `__version` and migrates separately.
 - Use one wheel-gesture cleanup timer instead of creating a timer for each control.
 
 ### Fixed
+
+- Cancel menu volume, microphone, app-volume, and brightness drags when their
+  target changes; give each target its own wheel state and discard stale remainders.
+- Reject input on hidden color sliders and menu mute/expand controls, clearing
+  unfinished wheel gestures when their controls stop being interactive.
 
 - Cancel Bluetooth fallback volume processes and queued writes when their audio
   route is resynchronized.

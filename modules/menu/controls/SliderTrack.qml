@@ -72,9 +72,11 @@ Item {
 
     onValueChanged: if (!root.dragging) _shownValue = value
     onInteractionKeyChanged: root.cancelInteraction()
+    onWheelKeyChanged: root.cancelInteraction()
     on_CanInteractChanged: if (!root._canInteract) root.cancelInteraction()
 
     function cancelInteraction(): void {
+        Scroll.resetControl(root.wheelKey)
         if (!root.dragging) return
         root._gestureActive = false
         root._grab = 0

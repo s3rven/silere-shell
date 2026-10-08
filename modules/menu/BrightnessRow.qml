@@ -44,6 +44,7 @@ Item {
         glyph: Brightness.icon
         accessibleName: "Brightness"
         wheelKey: "brightness"
+        interactionKey: Brightness.deviceName
         value: Brightness.pendingPercent / 100
         valueText: Brightness.pendingPercent + "%"
         adjustable: Brightness.controllable
