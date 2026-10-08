@@ -74,10 +74,18 @@ FittedPopupWindow {
             _gridSwap.stop(); _grid.opacity = 1; _grid.xOff = 0
         }
         function _go(y: int, m: int, dir: int): void {
+            if (!CalendarState.open) return
             navDir = dir
             dispYear = y; dispMonth = m
-            if (ShellSettings.reduceMotion) { _gridSwap.stop(); shownYear = y; shownMonth = m; _grid.opacity = 1; _grid.xOff = 0; return }
+            if (ShellSettings.reduceMotion) { card._settleMonth(); return }
             _gridSwap.restart()
+        }
+        function _settleMonth(): void {
+            _gridSwap.stop()
+            shownYear = dispYear
+            shownMonth = dispMonth
+            _grid.opacity = 1
+            _grid.xOff = 0
         }
         function _step(delta: int): void {
             let m = dispMonth + delta, y = dispYear
@@ -99,6 +107,12 @@ FittedPopupWindow {
                     card._snapToday()
                     card.forceActiveFocus()
                 } else _gridSwap.stop()
+            }
+        }
+        Connections {
+            target: ShellSettings
+            function onReduceMotionChanged(): void {
+                if (ShellSettings.reduceMotion) card._settleMonth()
             }
         }
         Connections {
@@ -133,14 +147,16 @@ FittedPopupWindow {
         }
 
         width:  panelW
-        height: 4 * Math.ceil((_col.implicitHeight + pad * 2) / 4)
-        // a month with a sixth week row resizes the card while it stays open
-        MotionBehavior on height {
+        height: _heightGlide.value
+        SmoothGlide {
+            id: _heightGlide
+            target: 4 * Math.ceil((_col.implicitHeight + card.pad * 2) / 4)
             gate: card.geometryMotionReady
-            NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
+            duration: Motion.normal
         }
 
         WheelHandler {
+            enabled: CalendarState.open
             acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
             onWheel: (e) => {
                 const n = Scroll.processControlWheel(e, "calendar")
@@ -167,7 +183,7 @@ FittedPopupWindow {
 
                     Accessible.role: Accessible.Button
                     Accessible.name: "Today"
-                    Accessible.focusable: true
+                    Accessible.focusable: CalendarState.open
                     Accessible.onPressAction: card._goToday()
 
                     HoverHandler { id: _todayH; cursorShape: Qt.PointingHandCursor }
@@ -226,11 +242,12 @@ FittedPopupWindow {
 
             Item {
                 width: parent.width
-                height: 30
+                height: Metrics.rowHeightFor(30)
 
                 IconButton {
                     id: _prevButton
-                    buttonSize: 26
+                    enabled: CalendarState.open
+                    buttonSize: Metrics.rowHeightFor(26)
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
                     glyph: "󰅁"
@@ -243,10 +260,13 @@ FittedPopupWindow {
                     anchors.centerIn: parent
                     // the grid it names starts a week column in, so centring on the row leaves it visibly left of the days
                     anchors.horizontalCenterOffset: Math.round(card.weekCol / 2)
-                    width: _mLabel.implicitWidth + 16; height: 26
+                    width: Math.max(0, Math.min(_mLabel.implicitWidth + 16,
+                        parent.width - _prevButton.width - _nextButton.width - card.weekCol - 24))
+                    height: Metrics.rowHeightFor(26)
                     Accessible.role: Accessible.Button
                     Accessible.name: "Return to current month"
-                    Accessible.focusable: true
+                    Accessible.description: "Showing " + card.monthLabel
+                    Accessible.focusable: CalendarState.open
                     Accessible.onPressAction: card._goToday()
                     // distinct from the today pill's: two controls reading "Jump to today" are indistinguishable by voice
                     HoverHandler { id: _mH; cursorShape: Qt.PointingHandCursor }
@@ -270,6 +290,9 @@ FittedPopupWindow {
                     ShellText {
                         id: _mLabel
                         anchors.centerIn: parent
+                        width: Math.max(0, parent.width - 16)
+                        horizontalAlignment: Text.AlignHCenter
+                        elide: Text.ElideRight
                         text: card.monthLabel
                         color: (_mH.hovered) ? Theme.text : Theme.withAlpha(Theme.text, 0.9)
                         font.pixelSize: Settings.fontSize + 1; font.weight: Font.DemiBold
@@ -279,7 +302,8 @@ FittedPopupWindow {
 
                 IconButton {
                     id: _nextButton
-                    buttonSize: 26
+                    enabled: CalendarState.open
+                    buttonSize: Metrics.rowHeightFor(26)
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     glyph: "󰅂"
@@ -310,11 +334,17 @@ FittedPopupWindow {
                         id: dayHdr
                         required property int index
                         readonly property int weekday: CalendarState.weekdayAt(index)
+                        readonly property bool weekend: CalendarState.isWeekend(dayHdr.weekday)
                         width: card.cell; height: 20
+                        Accessible.role: Accessible.StaticText
+                        Accessible.name: Qt.locale().standaloneDayName(dayHdr.weekday, Locale.LongFormat)
                         ShellText {
                             anchors.centerIn: parent
-                            text: ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"][dayHdr.weekday]
-                            color: Theme.withAlpha(Theme.subtext, dayHdr.weekday === 0 || dayHdr.weekday === 6 ? 0.78 : 0.92)
+                            width: parent.width - 4
+                            horizontalAlignment: Text.AlignHCenter
+                            elide: Text.ElideRight
+                            text: CalendarState.weekdayLabelFor(dayHdr.weekday, Qt.locale())
+                            color: Theme.withAlpha(Theme.subtext, dayHdr.weekend ? 0.78 : 0.92)
                             font.pixelSize: Settings.fontMicro
                             font.weight: Font.Medium; font.capitalization: Font.AllUppercase
                         }
@@ -379,7 +409,7 @@ FittedPopupWindow {
                             readonly property bool cur:   index >= card._lead && index < card._lead + card._daysThis
                             readonly property bool today: index === card._todayCell
                             readonly property int weekday: CalendarState.weekdayAt(index % 7)
-                            readonly property bool weekend: weekday === 0 || weekday === 6
+                            readonly property bool weekend: CalendarState.isWeekend(weekday)
                             readonly property var date: card._dateForCell(index)
                             readonly property int dayNum: date.getDate()
 

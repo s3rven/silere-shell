@@ -36,6 +36,19 @@ AnchoredPopupState {
 
     function weekdayAt(column: int): int { return (firstWeekday + column) % 7 }
 
+    readonly property var workingDays: Qt.locale().weekDays
+
+    function weekdayLabelFor(day: int, locale): string {
+        return locale.standaloneDayName(day, Locale.ShortFormat)
+    }
+
+    function weekendFor(day: int, weekdays): bool {
+        if (!Array.isArray(weekdays) || weekdays.length === 0) return day === 0 || day === 6
+        return weekdays.indexOf(day) < 0
+    }
+
+    function isWeekend(day: int): bool { return root.weekendFor(day, root.workingDays) }
+
     function leadingDays(year: int, month: int): int {
         return (new Date(year, month, 1).getDay() - firstWeekday + 7) % 7
     }
