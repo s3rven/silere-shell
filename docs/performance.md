@@ -8,17 +8,17 @@ until you come back.
 
 ## Reference numbers
 
-These are the 1.3.0 release measurements on reference machine A in
+These are the 1.4.0 release measurements on reference machine A in
 [performance history](perf-history.md), not a memory limit for the current checkout.
 
 | State | PSS | What it is |
 |---|---|---|
-| cold | ~83 MB | Freshly started, menu never opened. Only the bar has drawn. |
-| warm | ~91 MB | The same session after the menu has been opened once. |
+| cold | ~91 MB | Freshly started, menu never opened. Only the bar has drawn. |
+| warm | ~100 MB | The same session after the menu has been opened once. |
 
 Menu and popup instances unload after closing. The first open also loads code, font and
 driver caches that can remain warm, so closing a menu does not return the process to its
-startup footprint. An empty Quickshell panel measures about 57 MB on the same machine.
+startup footprint. An earlier empty Quickshell panel measurement was about 57 MB on the same machine.
 
 Dropdown rows are created around the visible viewport and reused while scrolling. A
 workspace hover can prepare the menu for 2.5 seconds; leaving it unused releases that
@@ -29,7 +29,7 @@ pause during quiet idle. A hidden Now Playing page also stops cover decoding, re
 and unfinished animations.
 
 Read PSS, not RSS. `top` and `htop` show RSS, which counts shared Qt, Mesa and font pages in
-full and reads about 175 to 185 MB for the same session.
+full and reads about 175 to 190 MB for the same session.
 
 Results vary with hardware, drivers, fonts and which widgets you enable. To measure your own
 setup, close other heavy programs first:

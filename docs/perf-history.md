@@ -38,5 +38,19 @@ Hardware not already listed takes a new letter.
 | 1.2.0 | 2026-09-27 | A | warm | 96 MB | 186 MB | 0.2% | 21 | 52 |
 | 1.3.0 | 2026-10-05 | A | cold | 83 MB | 174 MB | 0.4% | 21 | 50 |
 | 1.3.0 | 2026-10-05 | A | warm | 91 MB | 184 MB | 0.5% | 21 | 50 |
+| 1.4.0 | 2026-10-09 | A | cold | 91 MB | 177 MB | 1.0% | 21 | 50 |
+| 1.4.0 | 2026-10-09 | A | warm | 100 MB | 188 MB | 0.8% | 21 | 50 |
 
 A dash means that release was not measured.
+
+The 1.4.0 runs use the same reference-A hardware with kernel `7.2.9-1-cachyos`,
+Quickshell 0.3.1, Qt 6.12.0, and the display at 60 Hz / 125% scale. Earlier rows
+used the environment listed above; this is not a controlled comparison of code changes
+alone. Both 30-second samples were classified as steady, with a per-second CPU median
+of 1.0% of one core, 21 threads and 50 file descriptors. The cold descriptor count stayed
+flat; the warm count fell by three during its run. The visualizer
+was stopped, and no second Quickshell instance was running.
+
+Raw reports: [cold](perf/1.4.0-cold.json) · [warm](perf/1.4.0-warm.json). They were collected
+from runtime commit `11ea599` while the release metadata and notes were being prepared,
+so their Git description still names the preceding tag.

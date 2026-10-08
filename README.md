@@ -8,7 +8,7 @@
 <p align="center">
   <a href="https://github.com/s3rven/silere-shell/releases"><img src="https://img.shields.io/github/v/release/s3rven/silere-shell?style=flat-square&labelColor=0f1013&color=2a2d33&logo=github&logoColor=9a9ca1" alt="latest release"/></a>
   <a href="https://github.com/s3rven/silere-shell/actions/workflows/validate.yml"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fs3rven%2Fsilere-shell%2Fbadges%2Fchecks.json&style=flat-square" alt="checks passed on main"/></a>
-  <a href="#performance"><img src="https://img.shields.io/badge/idle-under%201%25%20CPU-2a2d33?style=flat-square&labelColor=0f1013" alt="Reference idle CPU: under 1%"/></a>
+  <a href="#performance"><img src="https://img.shields.io/badge/idle-about%201%25%20CPU-2a2d33?style=flat-square&labelColor=0f1013" alt="Reference idle CPU: about 1%"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2a2d33?style=flat-square&labelColor=0f1013" alt="license: MIT"/></a>
   <a href="https://quickshell.org/"><img src="https://img.shields.io/badge/built%20on-Quickshell-2a2d33?style=flat-square&labelColor=0f1013" alt="built on Quickshell"/></a>
   <img src="https://img.shields.io/badge/runs%20on-Hyprland%20%C2%B7%20niri-2a2d33?style=flat-square&labelColor=0f1013&logo=hyprland&logoColor=9a9ca1" alt="runs on Hyprland and niri"/>
@@ -116,8 +116,8 @@ To reset the file, replace its contents with `{ "__version": 1 }`.
 
 ## Performance
 
-On the reference machine, release **1.3.0** measured about **83 MB PSS** with the bar
-and **91 MB** after opening the menu, with idle CPU under **1% of one core**.
+On the reference machine, release **1.4.0** measured about **91 MB PSS** with the bar
+and **100 MB** after opening the menu, with idle CPU around **1% of one core**.
 Your hardware, fonts and enabled features affect the result.
 [Measurements and benchmarking](docs/performance.md).
 
