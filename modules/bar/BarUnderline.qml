@@ -90,22 +90,12 @@ Item {
             return Theme.accent
         }
         property color _effectColor: _effectColorTarget
-        MotionBehavior on _effectColor {
-            ColorAnimation { duration: Motion.ms(350) }
-        }
+        ColorFade on _effectColor {}
 
-        property color _stopColor: Qt.rgba(
-            _effectColorTarget.r, _effectColorTarget.g, _effectColorTarget.b, 0.9
-        )
-        MotionBehavior on _stopColor {
-            ColorAnimation { duration: Motion.ms(350) }
-        }
-        property color _stopColorMid: Qt.rgba(
-            _effectColorTarget.r, _effectColorTarget.g, _effectColorTarget.b, 0.45
-        )
-        MotionBehavior on _stopColorMid {
-            ColorAnimation { duration: Motion.ms(350) }
-        }
+        // The rim and every gradient stop share one eased color. During a palette
+        // transition ColorFade stands down so these follow the theme's own curve.
+        readonly property color _stopColor: Theme.withAlpha(_effectColor, 0.9)
+        readonly property color _stopColorMid: Theme.withAlpha(_effectColor, 0.45)
         readonly property real _sweepSpread: _notifFlash.running ? _notifFlash.spread
             : _shotActive ? _screenshotSpread : _netLossFlash.spread
         property real _screenshotSpread: 0.28

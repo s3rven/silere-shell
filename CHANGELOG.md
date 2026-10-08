@@ -13,6 +13,9 @@ settings file carries its own `__version` and migrates separately.
 
 ### Changed
 
+- Smooth the reactive underline's glow shoulders with bounded, alpha-preserving
+  gradient stops and derive all its colors from one theme-aware fade.
+
 - Share device-pixel stroke sizing between control outlines, dividers, glow rims,
   and notification countdowns; floating glow rims now keep a consistent thickness
   on fractional scales and clamp their corners to the available space.

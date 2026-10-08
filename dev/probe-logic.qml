@@ -1665,10 +1665,69 @@ ShellRoot {
                 ShellSettings.underlineNetGlow = netGlowWas
                 ShellSettings.underlineScreenshotGlow = screenshotGlowWas
                 ShellSettings.screenshotGlowSweep = screenshotSweepWas
+                ShellSettings.reduceMotion = true
+                lineEffect._effectColor = Qt.rgba(0.25, 0.5, 0.75, 1)
+                root._check(Math.abs(lineEffect._stopColor.r - lineEffect._effectColor.r) < 0.002
+                        && Math.abs(lineEffect._stopColorMid.b - lineEffect._effectColor.b) < 0.002
+                        && Math.abs(lineEffect._stopColor.a - 0.9) < 0.002
+                        && Math.abs(lineEffect._stopColorMid.a - 0.45) < 0.002,
+                    "every underline stop derives its RGB from the same eased effect color")
                 ShellSettings.reduceMotion = netReduceWas
             }
         }
         underline.destroy()
+
+        const glowComponent = Qt.createComponent("modules/bar/GlowLine.qml")
+        root._check(glowComponent.status === Component.Ready, "the glow gradient builds")
+        const glowLine = glowComponent.createObject(root, {
+            width: 200, peak: Qt.rgba(0.8, 0.6, 0.2, 0.9), edge: Qt.rgba(0.2, 0.4, 0.8, 0.45)
+        })
+        for (const bounds of [[0.02, 0.98], [-0.5, 1.5], [0.8, 0.2], [1, 1], [-1, -1]]) {
+            glowLine.loClamp = bounds[0]
+            glowLine.hiClamp = bounds[1]
+            for (const center of [-1, 0, 0.01, 0.5, 0.99, 1, 2]) {
+                glowLine.center = center
+                for (const spread of [-1, 0, 0.02, 0.28, 1, 2]) {
+                    glowLine.spread = spread
+                    const stops = glowLine.gradient.stops
+                    let ordered = true, previous = 0
+                    for (let i = 0; i < stops.length; i++) {
+                        const position = stops[i].position
+                        if (!isFinite(position) || position < previous || position > 1) ordered = false
+                        previous = position
+                    }
+                    root._check(ordered,
+                        "glow stops stay ordered and bounded for " + bounds + "/" + center + "/" + spread)
+                }
+            }
+        }
+        root._check(glowLine._shoulderLow.a > glowLine.edge.a
+                && glowLine._shoulderHigh.a < glowLine.peak.a
+                && glowLine._edgeLow.a < glowLine._edgeHigh.a
+                && glowLine._edgeHigh.a < glowLine.edge.a,
+            "smooth glow shoulders preserve the translucent color hierarchy")
+        glowLine.loClamp = 0.02
+        glowLine.hiClamp = 0.98
+        glowLine.center = 0.5
+        glowLine.spread = 0.28
+        const smoothStops = glowLine.gradient.stops
+        let smoothEnergy = 0
+        for (let i = 1; i < smoothStops.length; i++) {
+            smoothEnergy += (smoothStops[i].position - smoothStops[i - 1].position)
+                * (smoothStops[i].color.a + smoothStops[i - 1].color.a) / 2
+        }
+        const linearEnergy = glowLine.edge.a * (glowLine._l + 1 - glowLine._r) / 2
+            + (glowLine.edge.a + glowLine.peak.a) * (glowLine._r - glowLine._l) / 2
+        root._check(Math.abs(smoothEnergy - linearEnergy) < 0.002,
+            "smoothing a glow preserves its integrated opacity instead of making it brighter")
+        const halfGlow = glowLine._mixColor(glowLine.edge, glowLine.peak, 0.5)
+        root._check(Math.abs(halfGlow.a - 0.675) < 0.002
+                && Math.abs(halfGlow.r - 0.5) < 0.002,
+            "glow color interpolation preserves alpha together with RGB")
+        glowLine.peak = "transparent"
+        glowLine.edge = "transparent"
+        root._check(!glowLine.visible, "a fully transparent glow gradient does not render")
+        glowLine.destroy()
 
         for (const dpr of [1, 1.25, 1.5, 1.75, 2, 2.5]) {
             for (const width of [1, 1.5, 2]) {
