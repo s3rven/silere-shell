@@ -24,6 +24,10 @@ Dropdown rows are created around the visible viewport and reused while scrolling
 workspace hover can prepare the menu for 2.5 seconds; leaving it unused releases that
 instance. The logic suite checks both lifetimes, including a thousand-option dropdown.
 
+Remote cover downloads begin only while the media widget or menu can use them, and
+pause during quiet idle. A hidden Now Playing page also stops cover decoding, retries
+and unfinished animations.
+
 Read PSS, not RSS. `top` and `htop` show RSS, which counts shared Qt, Mesa and font pages in
 full and reads about 175 to 185 MB for the same session.
 

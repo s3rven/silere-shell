@@ -16,7 +16,7 @@ the same calls without the path: `silere ipc menu toggle`, and `silere ipc` alon
 | call | opens |
 |---|---|
 | `menu toggle` | the menu |
-| `menu tab <n>` | the menu on `0` Home, `1` Settings or `2` Notifications |
+| `menu tab <n>` | the menu on `0` Home, `1` Settings, `2` Notifications or `3` Now Playing (only while something plays) |
 | `menu settings <name>` | Settings on one page — names below |
 | `calendar toggle` | the calendar |
 | `quickActions toggle` | Do Not Disturb, keep awake, night light, power mode, Wi-Fi, Bluetooth and airplane mode |
@@ -88,9 +88,9 @@ For `menu settings <name>` and `settings list <name>`, use a page's label as Set
 it, or its id:
 
 `theme`, `interface`, `surface`, `underline`, `separators`, `widgets`, `workspaces`,
-`clock`, `media`, `indicators`, `popups`, `osd`, `warnings`, `updates`, `maintenance`
+`clock`, `media`, `indicators`, `popups`, `osd`, `warnings`, `updates`
 
-Five ids differ from their labels:
+Six ids differ from their labels:
 
 | label | id |
 |---|---|
@@ -99,6 +99,10 @@ Five ids differ from their labels:
 | Show & order | `widgets` |
 | Notifications | `popups` |
 | Alerts | `warnings` |
+| Overview | `updates` |
+
+System › Overview combines updates and diagnostics. The former `maintenance` id and
+Diagnostics label still open this page; `system` works too.
 
 Names match without case, spaces or punctuation, so `show-order` works. An unknown one falls
 back to `theme`, so an out-of-date keybind still opens Settings.
@@ -116,7 +120,7 @@ Silere runs a command of your own when something happens. Drop an executable fil
 | `update-available` | count |
 | `workspace-changed` | workspace id |
 
-`update-available` fires when the count rises, and only while Settings › System › Updates tracks package updates.
+`update-available` fires when the count rises, and only while Settings › System › Overview tracks package updates.
 `notification` fires only for notifications that show a popup, not for ones silenced by
 Do Not Disturb, a fullscreen window or turned-off popups.
 
