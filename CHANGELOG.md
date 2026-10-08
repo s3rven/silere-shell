@@ -20,6 +20,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Changed
 
+- Workspace paging calculates page offsets from actual monitor exclusions instead of scanning every number up to the active workspace. Workspace icons ignore hidden-page changes, use one rebuild trigger, and compare their fields without serializing JSON.
 - Removed the unused media-player cycling helper; Now Playing continues to select players directly.
 - Notification history skips grouping work when filtered results stay unchanged and computes changed groups in one pass. The app rail shares a sender index for its count and icon lookups.
 - Home reads disk usage directly from `df`, avoiding a shell and an `awk` process on each refresh while preserving cached readings and reserved-block accounting.

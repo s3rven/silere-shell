@@ -41,22 +41,29 @@ QtObject {
         return root.visibleIndexById[wsId] !== undefined
     }
 
-    // Niri refreshes its whole window snapshot on a title change; key off identity.
+    // Only identities on the drawn page can change these icons.
     readonly property string _workspaceAppsKey: {
         if (!ShellSettings.wsShowAppIcons) return ""
         const parts = [root._generation, root.monitorName, root.visibleIdsKey]
         const tops = root.workspaceToplevels
         for (let i = 0; i < tops.length; i++) {
             const t = tops[i]
-            if (!t || t.output !== root.monitorName) continue
+            if (!t || t.output !== root.monitorName || !root._isVisible(t.wsId ?? 0)) continue
             parts.push((t.wsId ?? 0) + ":" + SafeText.singleLineText(
                 t.appId, Compositor.maxWindowIdentityChars))
         }
         return parts.join("|")
     }
     on_WorkspaceAppsKeyChanged: root.rebuild()
-    onVisibleIndexByIdChanged: if (root.workspaceToplevels && root.visibleIndexById)
-        root.rebuild()
+
+    function _sameApps(a, b): bool {
+        if (!a || a.length !== b.length) return false
+        for (let i = 0; i < a.length; i++) {
+            if (a[i].icon !== b[i].icon || a[i].name !== b[i].name
+                    || a[i].fallback !== b[i].fallback || a[i].count !== b[i].count) return false
+        }
+        return true
+    }
 
     function rebuild(): void {
         const map = Object.create(null)
@@ -98,7 +105,7 @@ QtObject {
         let changed = ids.length !== Object.keys(previous).length
         for (let i = 0; i < ids.length; i++) {
             const old = previous[ids[i]]
-            if (old !== undefined && JSON.stringify(old) === JSON.stringify(map[ids[i]])) map[ids[i]] = old
+            if (root._sameApps(old, map[ids[i]])) map[ids[i]] = old
             else changed = true
         }
         if (changed) root.workspaceApps = map

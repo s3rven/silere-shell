@@ -225,6 +225,16 @@ ShellRoot {
     }
     Component { id: workspaceStripFactory; Workspaces { screen: null } }
     Component {
+        id: workspaceSlotModelFactory
+        WorkspaceSlotModel {
+            monitorName: "DP-1"
+            activeId: 1
+            effectiveWsCount: 4
+            perOutputWorkspaceIds: false
+            workspaces: []
+        }
+    }
+    Component {
         id: workspaceAppModelFactory
         WorkspaceAppModel {
             monitorName: "DP-1"
@@ -1216,6 +1226,50 @@ ShellRoot {
                 && workspaceStrip._visibleIndex(workspaceStrip.visibleIds[0]) === 0
                 && workspaceStrip._visibleIndex(999999) === -1,
             "workspace page IDs resolve through the shared index")
+        const slots = workspaceSlotModelFactory.createObject(root)
+        let pageCasesMatch = true
+        for (let scenario = 0; scenario < 120; scenario++) {
+            const rows = []
+            for (let id = 1; id <= 16; id++) {
+                if ((id * 7 + scenario) % 5 === 0) continue
+                rows.push({ wsId: id, output: (id + scenario) % 3 === 0 ? "HDMI-A-1" : "DP-1" })
+            }
+            slots.workspaces = rows
+            slots.activeId = scenario % 19 + 1
+            slots.effectiveWsCount = scenario % 5 + 1
+            slots.perOutputWorkspaceIds = scenario % 2 === 0
+            slots.monitorName = scenario % 11 === 0 ? "" : "DP-1"
+            const own = rows.filter(row => row.output === slots.monitorName)
+            const anchor = Math.min(slots.activeId, ...own.map(row => row.wsId))
+            const cap = slots.perOutputWorkspaceIds && own.length > 0
+                ? Math.max(...own.map(row => row.wsId)) : 0
+            const allowed = []
+            for (let id = anchor; id <= (cap || 40); id++) {
+                if (!slots.perOutputWorkspaceIds && slots.monitorName.length > 0
+                        && rows.some(row => row.wsId === id && row.output !== slots.monitorName)) continue
+                allowed.push(id)
+            }
+            // Count the uncapped positions before active, including when it exceeds the cap.
+            let before = 0
+            for (let id = anchor; id < slots.activeId; id++) {
+                if (!slots.perOutputWorkspaceIds && slots.monitorName.length > 0
+                        && rows.some(row => row.wsId === id && row.output !== slots.monitorName)) continue
+                before++
+            }
+            const start = Math.floor(before / slots.effectiveWsCount) * slots.effectiveWsCount
+            const expected = allowed.slice(start, start + slots.effectiveWsCount).join(",")
+            if (slots.visibleIdsKey !== expected) pageCasesMatch = false
+        }
+        root._check(pageCasesMatch,
+            "workspace page arithmetic preserves output ownership, gaps, caps and slot counts")
+        slots.monitorName = "DP-1"
+        slots.perOutputWorkspaceIds = false
+        slots.effectiveWsCount = 4
+        slots.workspaces = [{ wsId: 1, output: "DP-1" }, { wsId: 2, output: "HDMI-A-1" }]
+        slots.activeId = 1000000
+        root._check(slots.visibleIdsKey === "999998,999999,1000000,1000001",
+            "high workspace IDs resolve directly without scanning the intervening integers")
+        slots.destroy()
         const appIconsWere = ShellSettings.wsShowAppIcons
         ShellSettings.wsShowAppIcons = true
         const workspaceApps = workspaceAppModelFactory.createObject(root, { workspaceToplevels: [
@@ -1226,6 +1280,26 @@ ShellRoot {
         root._check(workspaceApps.appsFor(1).length === 1 && workspaceApps.appsFor(5).length === 0
                 && workspaceApps.appsFor(2).length === 0,
             "workspace app icons cover only this output's visible workspaces")
+        const iconsBefore = workspaceApps.workspaceApps
+        const visibleKeyBefore = workspaceApps._workspaceAppsKey
+        workspaceApps.workspaceToplevels = workspaceApps.workspaceToplevels.concat([
+            { output: "DP-1", wsId: 5, appId: "hidden app" }])
+        root._check(workspaceApps._workspaceAppsKey === visibleKeyBefore
+                && workspaceApps.workspaceApps === iconsBefore,
+            "a window on a hidden workspace cannot rebuild the drawn workspace icons")
+        workspaceApps.visibleIdsKey = "5"
+        workspaceApps.visibleIndexById = ({ 5: 0 })
+        root._check(workspaceApps.appsFor(1).length === 0 && workspaceApps.appsFor(5).length === 2,
+            "switching workspace pages picks up identities deferred while their page was hidden")
+        const pageIconsBefore = workspaceApps.appsFor(5)
+        workspaceApps.rebuild()
+        root._check(workspaceApps.appsFor(5) === pageIconsBefore,
+            "equal workspace icon fields retain their existing delegates")
+        workspaceApps.workspaceToplevels = workspaceApps.workspaceToplevels.concat([
+            { output: "DP-1", wsId: 5, appId: "foot" }])
+        root._check(workspaceApps.appsFor(5)[0].count === 2
+                && workspaceApps.appsFor(5) !== pageIconsBefore,
+            "a visible app count change refreshes its workspace icons")
         workspaceApps.destroy()
         ShellSettings.wsShowAppIcons = appIconsWere
 

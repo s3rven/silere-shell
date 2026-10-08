@@ -60,17 +60,21 @@ QtObject {
         const anchor = Math.max(1, root.monitorAnchorId)
         const active = Math.max(anchor, root.activeId)
         const cap = root.idCap
-        let activeLogicalIndex = 0
-        for (let id = anchor; id < active; id++)
-            if (!root.knownOnOtherMonitor(id)) activeLogicalIndex++
+        // Count real exclusions, rather than walking every integer up to a high id.
+        const blocked = root.monitorName.length === 0 ? [] : Object.keys(root.workspaceOwners)
+            .map(id => Number(id))
+            .filter(id => id >= anchor && root.knownOnOtherMonitor(id))
+            .sort((a, b) => a - b)
+        let activeLogicalIndex = active - anchor
+        for (let i = 0; i < blocked.length && blocked[i] < active; i++) activeLogicalIndex--
         const pageStart = Math.floor(activeLogicalIndex / root.effectiveWsCount)
             * root.effectiveWsCount
-        let logicalIndex = 0
-        for (let id = anchor; ids.length < root.effectiveWsCount; id++) {
+        let first = anchor + pageStart
+        for (let i = 0; i < blocked.length && blocked[i] <= first; i++) first++
+        for (let id = first; ids.length < root.effectiveWsCount; id++) {
             if (cap > 0 && id > cap) break
             if (root.knownOnOtherMonitor(id)) continue
-            if (logicalIndex >= pageStart) ids.push(id)
-            logicalIndex++
+            ids.push(id)
         }
         return ids.join(",")
     }
