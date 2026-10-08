@@ -20,6 +20,13 @@ Item {
     implicitHeight: root._navTop + _rowColumn.implicitHeight + 10
 
     property var _names: [""]
+    // One index per history revision, shared by every row's count and icon bindings.
+    readonly property var _appsByName: {
+        const index = Object.create(null)
+        const apps = Notifications.historyApps
+        for (let i = 0; i < apps.length; i++) index[apps[i].appName] = apps[i]
+        return index
+    }
 
     function _syncNames(apps): void {
         const names = [""]
@@ -36,10 +43,7 @@ Item {
     }
 
     function _appFor(name: string): var {
-        const apps = Notifications.historyApps
-        for (let i = 0; i < apps.length; i++)
-            if (apps[i].appName === name) return apps[i]
-        return null
+        return root._appsByName[name] ?? null
     }
     function _labelFor(name: string): string {
         return name.length === 0 ? "All" : name

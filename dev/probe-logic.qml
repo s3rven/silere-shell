@@ -2409,6 +2409,15 @@ ShellRoot {
                 if (typeof model[i] !== "string") allStrings = false
             root._check(allStrings,
                 "the app rail's model carries identities, not rows that bake in a count")
+            root._check(Object.getPrototypeOf(nav._appsByName) === null
+                    && nav._appFor("constructor") === null,
+                "the app rail index cannot mistake a JavaScript built-in for a sender")
+            nav._appsByName["constructor"] = { appName: "constructor", count: 7 }
+            nav._appsByName["__proto__"] = { appName: "__proto__", count: 3 }
+            root._check(nav._countFor("constructor") === 7
+                    && nav._countFor("__proto__") === 3
+                    && nav._appFor("missing sender") === null,
+                "indexed app counts preserve literal sender identities and missing results")
             nav.destroy()
         }
 
@@ -2600,6 +2609,14 @@ ShellRoot {
             filtered.revision = Notifications.historyRevision
             root._check(flagsOf() === "FS<> --<- ---> --<> -S<>",
                 "a critical row stands alone and demotes the old first row without a rebuild")
+            filtered.sync()
+            root._check(flagsOf() === "FS<> --<- ---> --<> -S<>",
+                "an unchanged history keeps critical and day boundaries intact")
+            Notifications._prependHistory({ id: 906, appName: "Chat", summary: "second alert",
+                urgency: 2, time: today + 1000 })
+            filtered.revision = Notifications.historyRevision
+            root._check(flagsOf().startsWith("FS<> --<> --<- --->"),
+                "consecutive critical notifications each keep a separate card")
             filtered.destroy()
         }
 

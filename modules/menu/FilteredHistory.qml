@@ -62,28 +62,34 @@ Item {
         return d.getFullYear() * 10000 + d.getMonth() * 100 + d.getDate()
     }
 
-    function _flag(i: int, role: string, value: bool): void {
-        if (_rows.get(i)[role] !== value) _rows.setProperty(i, role, value)
+    function _flag(row, i: int, role: string, value: bool): void {
+        if (row[role] !== value) _rows.setProperty(i, role, value)
     }
 
     // a critical row stands alone so its red outline is never shared with a run
     function _syncFlags(): void {
         const n = _rows.count
-        const starts = []
+        let prev = null
+        let prevDay = 0
+        let prevName = ""
+        let prevCritical = false
         for (let i = 0; i < n; i++) {
             const e = _rows.get(i)
-            const prev = i > 0 ? _rows.get(i - 1) : null
-            const section = !prev || root._dayKey(prev.time) !== root._dayKey(e.time)
-            starts.push(section
-                || root.identityOf(prev.appName) !== root.identityOf(e.appName)
-                || Number(e.urgency) === 2 || Number(prev.urgency) === 2)
-            root._flag(i, "first", i === 0)
-            root._flag(i, "showSection", section)
+            const day = root._dayKey(e.time)
+            const name = root.identityOf(e.appName)
+            const critical = Number(e.urgency) === 2
+            const section = !prev || prevDay !== day
+            const start = section || prevName !== name || critical || prevCritical
+            root._flag(e, i, "first", i === 0)
+            root._flag(e, i, "showSection", section)
+            root._flag(e, i, "groupStart", start)
+            if (prev) root._flag(prev, i - 1, "groupEnd", start)
+            prev = e
+            prevDay = day
+            prevName = name
+            prevCritical = critical
         }
-        for (let i = 0; i < n; i++) {
-            root._flag(i, "groupStart", starts[i])
-            root._flag(i, "groupEnd", i === n - 1 || starts[i + 1])
-        }
+        if (prev) root._flag(prev, n - 1, "groupEnd", true)
     }
 
     function snapshot(): var {
@@ -112,21 +118,26 @@ Item {
         const live = Object.create(null)
         for (let i = 0; i < keys.length; i++) live[keys[i]] = true
 
+        let changed = false
         for (let i = _rows.count - 1; i >= 0; i--) {
             if (live[root._key(_rows.get(i))]) continue
             _rows.remove(i)
             root.removes++
+            changed = true
         }
         for (let i = 0; i < rows.length; i++) {
             if (i < _rows.count && root._key(_rows.get(i)) === keys[i]) continue
             _rows.insert(i, root._row(rows[i], keys[i]))
             root.inserts++
+            changed = true
         }
         while (_rows.count > rows.length) {
             _rows.remove(_rows.count - 1)
             root.removes++
+            changed = true
         }
-        root._syncFlags()
+        // Excluded arrivals and an unchanged query leave every grouping flag valid.
+        if (changed) root._syncFlags()
     }
 
     onSourceChanged: root.sync()
