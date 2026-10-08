@@ -14,18 +14,18 @@
   <img src="https://img.shields.io/badge/runs%20on-Hyprland%20%C2%B7%20niri-2a2d33?style=flat-square&labelColor=0f1013&logo=hyprland&logoColor=9a9ca1" alt="runs on Hyprland and niri"/>
 </p>
 
-<p align="center">A quiet, lightweight desktop shell for <b>Hyprland</b> and <b>niri</b>.</p>
-
-Silere gives you a bar, notifications, an OSD, a calendar, a tray and a menu for
-everyday controls, all in one Quickshell process. Adjust your sound and display,
-connect to Wi-Fi or Bluetooth, control your music and change every shell setting
-from the menu.
+Silere is a quiet, lightweight desktop shell for **Hyprland** and **niri**, built with
+**Quickshell**. It brings your bar, notifications, OSD, calendar, tray and everyday
+controls together. Open the menu to adjust sound and brightness, connect devices,
+control music and change the shell’s settings.
 
 <p align="center">
   <img src="assets/shot-desktop.webp" alt="Silere's floating bar on the desktop" width="960"/>
 </p>
 
-Quiet by default means a compact bar, subtle feedback and optional effects you choose
+## Quiet by default
+
+A compact bar, subtle feedback and optional effects you choose
 to turn on. The visualizer, network speed readings, clock seconds and underline effects
 start switched off. System readings and animations pause when the session becomes idle.
 
@@ -89,14 +89,20 @@ in **Settings › Appearance › Interface**.
 The installer offers **Super + /** as a menu shortcut on Hyprland. Press **Escape**
 to step back or close a popup. [All controls and shortcuts](docs/usage.md).
 
-Open **Settings** to change the shell. Changes apply immediately.
-**System › Overview** holds updates, diagnostics and restore defaults.
-Silere verifies release signatures and asks for confirmation in the menu.
-[Updating and rolling back](docs/usage.md#updates).
+### Make it yours
+
+Open **Settings** to change the bar layout, colours, font, scale and motion. Changes
+apply immediately. Choose a custom accent or use a wallpaper palette through Matugen.
 
 <p align="center">
   <img src="assets/shot-themes.png" alt="Silere with a custom accent and colours taken from the wallpaper" width="720"/>
 </p>
+
+### Updates and recovery
+
+**Settings › System › Overview** holds updates, diagnostics and restore defaults.
+Silere verifies release signatures and asks for confirmation before installing from
+the menu. [Updating and rolling back](docs/usage.md#updates).
 
 <details>
 <summary>Config files and scripting</summary>
