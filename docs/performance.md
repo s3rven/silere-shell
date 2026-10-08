@@ -73,6 +73,13 @@ load every installed family.
 
 ## Animation driver
 
+Keep Awake uses a transparent, input-free pixel on the overlay layer. A background
+pixel can be covered by the wallpaper and receive delayed frame callbacks, slowing
+other animated windows in the same Qt process. A small render probe on the 240 Hz
+reference display measured median animation intervals of 8 ms with the covered
+background pixel and 4 ms with the overlay pixel. This isolates frame pacing; it is
+not a measurement of every shell animation or its CPU cost.
+
 Silere defaults to Qt's elapsed-time animation driver. Qt otherwise moves regular QML
 animations to a roughly 16 ms timer when the bar and a popup are visible as separate
 windows, making a high-refresh display look like 60 Hz. Launch with

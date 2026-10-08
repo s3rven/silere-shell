@@ -9,7 +9,10 @@ PanelWindow {
     color:         "transparent"
     exclusionMode: ExclusionMode.Ignore
     WlrLayershell.namespace: "silere-keepawake"
-    WlrLayershell.layer: WlrLayer.Background
+    // A background surface is covered by the wallpaper. Its delayed frame
+    // callbacks can stall Qt's other windows while their animations run.
+    // Keep this transparent, input-free pixel above them so it stays paced.
+    WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
     anchors { top: true; left: true }
     implicitWidth: 1
