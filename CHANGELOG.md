@@ -20,6 +20,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Changed
 
+- Removed the unused media-player cycling helper; Now Playing continues to select players directly.
 - Notification history skips grouping work when filtered results stay unchanged and computes changed groups in one pass. The app rail shares a sender index for its count and icon lookups.
 - Home reads disk usage directly from `df`, avoiding a shell and an `awk` process on each refresh while preserving cached readings and reserved-block accounting.
 - The README describes Silere’s quiet defaults, presents installation in three steps, and keeps detailed controls in a separate usage guide. Its previews show the desktop, Home / Now Playing / Settings panels, and themes as still images.

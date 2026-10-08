@@ -58,15 +58,6 @@ Singleton {
         root.preferredPlayer = ""
     }
 
-    function cyclePlayer(): void {
-        const players = root.playerList
-        if (players.length < 2) return
-        let idx = -1
-        for (let i = 0; i < players.length; i++)
-            if (players[i] === root.player) { idx = i; break }
-        root.preferredPlayer = players[(idx + 1) % players.length].dbusName
-    }
-
     // the media keys go to playerctld's most recently active player, so among equals the card follows the last one to start or stop
     property var _lastActive: ({})
     property var _wasPlaying: ({})
