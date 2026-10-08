@@ -44,8 +44,9 @@ _probe_standalone() { # $1 = directory
         ! -exec grep -qE '^ {0,4}required property|^(PanelWindow|FittedPopupWindow) \{' {} \; -print
 }
 
-# Neither Qt.exit() nor Quickshell.exit() ends a Quickshell process, so a probe
-# cannot quit itself: wait for its sentinel, then kill the pid it started on.
+# Keep the QML engine alive until its result and runtime errors are collected.
+# Qt.exit() can tear down bindings before the harness reads the log; terminate
+# only the process started by this harness after validating its sentinel.
 _probe_wait() { # $1 = log, $2 = pid, $3 = sentinel, $4 = ticks, $5 = seconds per tick
     local waited=0
     while [ "$waited" -lt "$4" ]; do
@@ -60,7 +61,9 @@ _probe_wait() { # $1 = log, $2 = pid, $3 = sentinel, $4 = ticks, $5 = seconds pe
 # grep is line-oriented, so [^\n] here would mean "not backslash or n" and truncate
 # "Cannot assign to non-existent..." at the first n. Use .* instead.
 _probe_errors() { # $1 = log
-    grep -oE "$SILERE_PROBE_ERRORS" "$1" | sort -u | head -10 || true
+    # Keep the QML filename and line number: stripping the matched phrase hid
+    # the source of CI-only warnings such as assigning undefined to a bool.
+    grep -E "$SILERE_PROBE_ERRORS" "$1" | sort -u | head -10 || true
 }
 
 _probe_stop() { # $1 = pid

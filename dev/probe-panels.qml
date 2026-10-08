@@ -117,7 +117,8 @@ ShellRoot {
             if (root._index >= root._paths.length) {
                 console.warn("PROBE-PANELS built "
                     + (root._paths.length - root._failed) + "/" + root._paths.length)
-                Qt.exit(root._failed === 0 ? 0 : 1)
+                // The harness validates this log before terminating the process.
+                // Qt.exit starts teardown too early on newer Quickshell versions.
                 return
             }
 

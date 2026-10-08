@@ -123,7 +123,8 @@ ShellRoot {
             console.warn("FIT-DONE built " + root.built + " of " + root.paths.length
                 + " texts " + root.texts + " clipped " + root.clipped
                 + ", findings " + root.findings)
-            Qt.exit(root.findings > 0 ? 1 : 0)
+            // The harness validates this log before terminating the process.
+            // Qt.exit starts teardown too early on newer Quickshell versions.
             return
         }
         const entry = root.paths[root.index++]

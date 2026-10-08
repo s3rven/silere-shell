@@ -124,7 +124,8 @@ ShellRoot {
                     _step.stop()
                     console.warn("PROBE-MUTATE swept " + root.steps.length + " states over "
                         + root.objects.length + " surfaces")
-                    Qt.exit(root.failed === 0 ? 0 : 1)
+                    // The harness validates this log before terminating the process.
+                    // Qt.exit starts teardown too early on newer Quickshell versions.
                     return
                 }
                 const step = root.steps[root.index]

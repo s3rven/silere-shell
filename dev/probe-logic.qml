@@ -6498,7 +6498,8 @@ ShellRoot {
             console.warn("PROBE-LOGIC passed " + root._checks + " checks")
         else
             console.warn("PROBE-LOGIC failed " + root._failures + "/" + root._checks + " checks")
-        Qt.exit(root._failures === 0 ? 0 : 1)
+        // The harness validates this log before terminating the process.
+        // Qt.exit starts teardown too early on newer Quickshell versions.
     }
 
     Component.onCompleted: Qt.callLater(root._run)
