@@ -144,6 +144,9 @@ ShellRoot {
             _step.restart()
             return
         }
+        // Diagnostics folds optional packages by default. Measure the open list
+        // too, including on the bare-install pass that supplies no tools.
+        if (root.object._optionalExpanded !== undefined) root.object._optionalExpanded = true
         root.built++
         _settle.restart()
     }

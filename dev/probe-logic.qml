@@ -19,6 +19,7 @@ import "modules/menu/settings"
 import "modules/notifications"
 import "services/SettingsMigrations.js" as SettingsMigrations
 import "services/NiriEvents.js" as NiriEvents
+import "modules/notifications/StackLayout.js" as StackLayout
 
 // Small behavioral assertions for pure logic that a type-check or construction
 // probe cannot validate. Keep this free of compositor and hardware dependencies.
@@ -34,6 +35,9 @@ ShellRoot {
         id: probeAnchor
         property real menuAnchorX: 42
     }
+    // Controls that start hidden need a graphical parent for Qt's effective
+    // visibility to update when the probe reveals them.
+    Item { id: barFixtureHost }
     // a faded control fill, as on a slider or switch track
     Rectangle {
         id: glassFadeProbe
@@ -51,6 +55,19 @@ ShellRoot {
     }
 
     Component { id: pageShellFactory; PageShell {} }
+    Component { id: drawerContentFactory; Item { implicitHeight: 100 } }
+    Component {
+        id: flickableFactory
+        ShellFlickable { width: 100; height: 100; contentWidth: 100; contentHeight: 1000 }
+    }
+    Component {
+        id: pageLoaderFactory
+        PageLoader {
+            layoutWidth: 332
+            shown: true
+            sourceComponent: PageShell { active: true; powerOpen: false }
+        }
+    }
     Component { id: settingsPageFactory; SettingsPage {} }
     Component {
         id: selectStubFactory
@@ -60,6 +77,7 @@ ShellRoot {
         }
     }
     Component { id: sliderTrackFactory; SliderTrack {} }
+    Component { id: perimeterFactory; PerimeterProgress { width: 320; height: 100 } }
     Component {
         id: confirmButtonFactory
         ConfirmButton { label: "Probe confirm"; onConfirmed: root._confirmActions++ }
@@ -80,6 +98,21 @@ ShellRoot {
     }
     Component { id: quickSliderFactory; QuickSlider { width: 320; accessibleName: "Audio" } }
     Component {
+        id: bluetoothDeviceFixture
+        QtObject {
+            property string address: "__silere_pairing_probe__"
+            property string name: "Pairing probe"
+            property string deviceName: name
+            property string icon: ""
+            property bool batteryAvailable: false
+            property real battery: 0
+            property bool paired: false
+            property bool connected: false
+            property bool pairing: true
+            property int state: Bt.BluetoothDeviceState.Connecting
+        }
+    }
+    Component {
         id: scrollListFactory
         ShellListView {
             width: 100; height: 96
@@ -87,9 +120,23 @@ ShellRoot {
             delegate: Rectangle { width: 100; height: 24 }
         }
     }
+    Component { id: smoothGlideFactory; SmoothGlide { target: 0 } }
+    Component { id: waveLineFactory; WaveLine { width: 200; height: 16; value: 0.75; flowing: true } }
     Component { id: boundedProcessFactory; BoundedProcess {} }
     Component { id: persistedFileFactory; PersistedFile { writeAllowed: false } }
     Component { id: niriBackendFactory; CompositorNiri {} }
+    Component {
+        id: notificationSlotFactory
+        QtObject { property real height: 0; property bool shouldLoad: true }
+    }
+    QtObject {
+        id: stackLayoutProbe
+        property var slots: []
+        readonly property int count: slots.length
+        property bool newestFirst: true
+        readonly property var layout: StackLayout.measure(stackLayoutProbe, newestFirst)
+        function itemAt(index: int): var { return slots[index] }
+    }
     Component { id: processFactory; Process {} }
     Component {
         id: keptNotificationFactory
@@ -144,7 +191,7 @@ ShellRoot {
     }
     Component {
         id: trayWidgetFactory
-        TrayWidget { trayModel: root._trayProbeItems; barActive: false; height: 36 }
+        TrayWidget { trayModel: root._trayProbeItems; height: 36 }
     }
     FileView {
         id: trayIconFixture
@@ -294,6 +341,16 @@ ShellRoot {
         toggle.Accessible.toggleAction()
         root._check(!ShellSettings.showSeconds,
             "an unavailable unchecked setting cannot be switched on accessibly")
+        toggle.dependsNote = "Install the missing helper to enable this setting"
+        const dependencyMotionWas = ShellSettings.reduceMotion
+        ShellSettings.reduceMotion = true
+        const dependency = root._findTrayNode(toggle, item => item.text === toggle._detailText)
+        root._check(toggle.opacity === 1 && dependency !== null
+                && dependency.opacity === 1 && !toggle._canToggle,
+            "an unavailable setting keeps its dependency explanation readable without enabling the control")
+        root._check(dependency.maximumLineCount > 2,
+            "dependency explanations can wrap beyond two lines instead of losing their reason")
+        ShellSettings.reduceMotion = dependencyMotionWas
         toggle.available = true
         toggle.Accessible.pressAction()
         root._check(ShellSettings.showSeconds && toggle.checked,
@@ -372,6 +429,17 @@ ShellRoot {
         option.Accessible.toggleAction()
         root._check(selections === 1 && !option.selected,
             "disabled, non-interactive and button options reject radio toggles")
+        const optionMotionWas = ShellSettings.reduceMotion
+        ShellSettings.reduceMotion = true
+        option.interactive = true
+        option.busy = true
+        option.trigger()
+        root._check(option.opacity === 1 && selections === 1,
+            "a busy inline row keeps progress readable without accepting another action")
+        option.enabled = false
+        root._check(option.opacity === Theme.disabledOpacity,
+            "a busy row still respects a disabled parent control")
+        ShellSettings.reduceMotion = optionMotionWas
         option.destroy()
 
         const swatches = swatchRowFactory.createObject(root)
@@ -428,11 +496,518 @@ ShellRoot {
             root._check(expansions === 1,
                 "disabled and non-expandable quick sliders reject accessible expansion")
         }
+        let levelChanges = 0
+        let muteActions = 0
+        quick.glyphClickable = true
+        quick.glyphClicked.connect(() => { muteActions++; quick.muted = !quick.muted })
+        const muteButton = root._findTrayNode(quick, item => item.Accessible.name === "Mute audio")
+        root._check(muteButton !== null, "a quick slider exposes its named mute action")
+        if (muteButton) {
+            muteButton.Accessible.pressAction()
+            root._check(muteActions === 1 && quick.muted
+                    && muteButton.Accessible.name === "Unmute audio",
+                "muting a device changes its accessible action to unmute")
+            muteButton.Accessible.pressAction()
+            root._check(muteActions === 2 && !quick.muted
+                    && muteButton.Accessible.name === "Mute audio",
+                "unmuting restores the mute action name")
+            quick.enabled = false
+            muteButton.Accessible.pressAction()
+            quick.enabled = true
+            quick.glyphClickable = false
+            muteButton.Accessible.pressAction()
+            root._check(muteActions === 2,
+                "disabled or unavailable audio still rejects accessible mute actions")
+        }
+        quick.moved.connect(() => { levelChanges++ })
+        quick.adjustable = false
+        quick.expandable = true
+        const level = root._findTrayNode(quick, item => typeof item.nudge === "function")
+        root._check(level !== null, "a quick slider exposes its level control")
+        if (level) {
+            level.nudge(1, 1)
+            root._check(!level.interactive && levelChanges === 0,
+                "an unavailable device rejects level changes")
+            quick._requestExpand()
+            root._check(expansions === 2,
+                "an unavailable level still permits opening its device picker")
+            quick.adjustable = true
+            level.nudge(1, 1)
+            root._check(level.interactive && levelChanges === 1,
+                "a recovered device immediately accepts level changes again")
+        }
         quick.destroy()
     }
 
+    function _checkWifiDraft(): void {
+        const motionWas = ShellSettings.reduceMotion
+        const errorWas = Network.wifiError
+        const reasonWas = Network.wifiErrorReason
+        const scannerWas = Network._scannerWanted
+        const connectingWas = Network.wifiConnecting
+        ShellSettings.reduceMotion = true
+        const component = Qt.createComponent("modules/menu/WifiList.qml")
+        const picker = component.status === Component.Ready
+            ? component.createObject(root, { width: 320, open: true }) : null
+        root._check(picker !== null, "the Wi-Fi picker builds for draft retention checks")
+        if (picker) {
+            const row = { ssid: "__silere_draft_probe__", label: "Draft probe", glyph: "",
+                secured: true, psk: true, passwordless: false, profileOnly: false,
+                active: false, known: false }
+            picker._selected = row.ssid
+            picker._networks = [row]
+            picker._passwordDraft = "draft before scrolling"
+            const list = root._findTrayNode(picker, item => typeof item.forceLayout === "function")
+            if (list) list.forceLayout()
+            let entry = root._findTrayNode(picker, item => item.index === 0 && item._sel === true)
+            let input = root._findTrayNode(entry, item => item.echoMode === TextInput.Password)
+            root._check(input !== null && input.text === "draft before scrolling",
+                "the selected Wi-Fi row displays its picker's password draft")
+            if (input) {
+                input.clear()
+                input.insert(0, "typed draft")
+                root._check(picker._passwordDraft === "typed draft",
+                    "editing a Wi-Fi password updates the draft outside its delegate")
+            }
+            picker._networks = []
+            if (list) list.forceLayout()
+            picker._networks = [Object.assign({}, row)]
+            if (list) list.forceLayout()
+            entry = root._findTrayNode(picker, item => item.index === 0 && item._sel === true)
+            input = root._findTrayNode(entry, item => item.echoMode === TextInput.Password)
+            root._check(input !== null && input.text === "typed draft",
+                "recreating a scrolled Wi-Fi row restores the typed password")
+            const reveal = root._findTrayNode(entry, item => item.Accessible.name === "Show Wi-Fi password")
+            root._check(reveal !== null, "the Wi-Fi password field offers an accessible reveal control")
+            if (reveal && input) {
+                reveal.Accessible.pressAction()
+                root._check(input.echoMode === TextInput.Normal && input.text === "typed draft"
+                        && picker._passwordVisible && reveal.Accessible.checked,
+                    "revealing a Wi-Fi password preserves its draft and reports its state")
+                reveal.Accessible.pressAction()
+                root._check(input.echoMode === TextInput.Password && !picker._passwordVisible,
+                    "the Wi-Fi password can be masked again")
+                Network.wifiConnecting = row.ssid
+                reveal.Accessible.pressAction()
+                root._check(input.readOnly && !picker._passwordVisible,
+                    "an in-progress Wi-Fi connection freezes password edits and revelation")
+                Network.wifiConnecting = ""
+                picker._selected = row.ssid
+                picker._networks = [row]
+                if (list) list.forceLayout()
+                entry = root._findTrayNode(picker, item => item.index === 0 && item._sel === true)
+                picker._passwordDraft = "typed draft"
+                picker._passwordVisible = true
+            }
+            Network.wifiError = row.ssid
+            root._check(picker._passwordDraft === "" && !picker._passwordVisible,
+                "a failed Wi-Fi attempt clears and remasks its selected password draft")
+            picker._passwordDraft = "another draft"
+            picker._selected = "another network"
+            root._check(picker._passwordDraft === "",
+                "selecting another Wi-Fi network clears the previous password draft")
+            picker._passwordDraft = "new network draft"
+            if (entry) entry._submitPassword()
+            root._check(picker._passwordDraft === "new network draft",
+                "a stale Wi-Fi row cannot consume another network's password draft")
+            picker._passwordDraft = "closing draft"
+            picker.open = false
+            root._check(picker._passwordDraft === "" && picker._selected === "",
+                "closing the Wi-Fi picker clears both its draft and selection")
+            picker.destroy()
+        }
+        component.destroy()
+        if (scannerWas) Network.scanWifi(false)
+        Network.wifiError = errorWas
+        Network.wifiErrorReason = reasonWas
+        Network.wifiConnecting = connectingWas
+        ShellSettings.reduceMotion = motionWas
+    }
+
+    function _checkMenuContrast(): void {
+        root._check(Math.abs(Theme.contrastRatio(Qt.color("white"), Qt.color("black")) - 21) < 0.001
+                && Math.abs(Theme.contrastRatio(Qt.rgba(1, 1, 1, 0), Qt.color("black")) - 1) < 0.001,
+            "menu contrast measurement composites translucent text over its reference surface")
+        root._check(Qt.colorEqual(Theme.readableText(Qt.color("white"), Qt.color("black"), 4.5), Qt.color("white")),
+            "already legible menu text keeps its exact color")
+        for (const surface of [Qt.color("#111111"), Qt.color("#eeeeee")]) {
+            const readable = Theme.readableText(surface, surface, 4.5)
+            root._check(Theme.contrastRatio(readable, surface) >= 4.5,
+                "low-contrast text gains only the contrast it needs on light and dark surfaces")
+        }
+        const saved = [ShellSettings.neutralTheme, ShellSettings.highContrast,
+            ShellSettings.baseTone, ShellSettings.matugenDepth, ShellSettings.reduceMotion]
+        ShellSettings.reduceMotion = true
+        for (const neutral of [true, false]) {
+            ShellSettings.neutralTheme = neutral
+            for (const hc of [false, true]) {
+                ShellSettings.highContrast = hc
+                for (let i = 0; i < 3; i++) {
+                    ShellSettings.baseTone = ["black", "charcoal", "graphite"][i]
+                    ShellSettings.matugenDepth = ["deeper", "deep", "none"][i]
+                    root._check(Theme.contrastRatio(Theme.menuTextDetail, Theme.menuControlSolid) >= 4.5
+                            && Theme.contrastRatio(Theme.menuTextDetail, Theme.menuCardSolid) >= 4.5
+                            && Theme.contrastRatio(Theme.menuTextWarning, Theme.menuControlSolid) >= 4.5,
+                        "menu caption and dependency contrast holds for " + (neutral ? "neutral" : "wallpaper")
+                            + " depth " + i + (hc ? " with high contrast" : ""))
+                }
+            }
+        }
+        ShellSettings.neutralTheme = saved[0]
+        ShellSettings.highContrast = saved[1]
+        ShellSettings.baseTone = saved[2]
+        ShellSettings.matugenDepth = saved[3]
+        ShellSettings.reduceMotion = saved[4]
+    }
+
+    function _checkPowerRail(): void {
+        const component = Qt.createComponent("modules/menu/PowerRailRow.qml")
+        const host = barLeftFactory.createObject(null)
+        const row = component.status === Component.Ready
+            ? component.createObject(host, { width: 196, confirm: true, label: "Reboot" }) : null
+        root._check(row !== null, "the power rail builds for confirmation lifecycle checks")
+        const motionWas = ShellSettings.reduceMotion
+        if (row) {
+            let actions = 0
+            row.triggered.connect(() => actions++)
+            ShellSettings.reduceMotion = false
+            row.activate()
+            root._check(row.armed && actions === 0,
+                "a power action arms without running its command")
+            row.activate()
+            root._check(row.armed && actions === 0,
+                "a double-click cannot confirm a power action")
+            ShellSettings.reduceMotion = true
+            root._check(row.armed && row._confirmProgress === 0,
+                "enabling reduce motion stops a power confirmation's countdown animation")
+            row.visible = false
+            row.Accessible.pressAction()
+            root._check(!row.armed && actions === 0,
+                "hiding a power row disarms it and blocks accessible activation")
+            row.visible = true
+            row.activate()
+            host.visible = false
+            row.activate()
+            root._check(!row.armed && actions === 0,
+                "a hidden parent disarms its power confirmations too")
+            row.destroy()
+            const reopened = component.createObject(root, { width: 196, confirm: true, label: "Reboot" })
+            reopened.triggered.connect(() => actions++)
+            reopened.activate()
+            reopened._confirmStartedMs = Date.now() - Metrics.confirmGuardMs - 1
+            reopened.activate()
+            root._check(!reopened.armed && actions === 1,
+                "a newly opened power row still requires a deliberate second press")
+            reopened.destroy()
+        }
+        ShellSettings.reduceMotion = motionWas
+        host.destroy()
+        component.destroy()
+    }
+
+    function _checkBluetoothPairing(): void {
+        const component = Qt.createComponent("modules/menu/BluetoothList.qml")
+        const picker = component.status === Component.Ready
+            ? component.createObject(root, { width: 320 }) : null
+        const device = bluetoothDeviceFixture.createObject(root)
+        root._check(picker !== null, "the Bluetooth picker builds for pairing cancellation checks")
+        if (picker) {
+            const list = root._findTrayNode(picker, item => item.model !== undefined
+                && typeof item.forceLayout === "function")
+            if (list) {
+                list.visible = true
+                list.model = [device]
+                list.forceLayout()
+            }
+            const row = root._findTrayNode(picker, item => item.modelData === device)
+            root._check(row !== null, "a pairing Bluetooth device creates an actionable row")
+            if (row) {
+                let actions = 0
+                row.triggered.connect(() => actions++)
+                row.Accessible.pressAction()
+                root._check(row.status === "Cancel?" && !row.busy && actions === 1,
+                    "a device pairing while connecting still accepts its cancel action")
+                device.pairing = false
+                row.Accessible.pressAction()
+                root._check(row.busy && actions === 1,
+                    "an ordinary Bluetooth connection still blocks repeat actions")
+            }
+            picker.destroy()
+        }
+        device.destroy()
+        component.destroy()
+    }
+
+    function _checkSmoothGlide(): void {
+        const reduceWas = ShellSettings.reduceMotion
+        ShellSettings.reduceMotion = false
+        const wave = waveLineFactory.createObject(barFixtureHost)
+        root._check(wave.flowAllowed(false, false)
+                && !wave.flowAllowed(true, false) && !wave.flowAllowed(false, true),
+            "continuous slider waves stop during quiet idle and reduced motion")
+        wave.visible = false
+        root._check(!wave.flowAllowed(false, false), "a hidden slider wave never starts its timer")
+        wave.visible = true
+        wave.waveOpacity = 0
+        root._check(!wave.flowAllowed(false, false), "a transparent slider wave never starts its timer")
+        wave.waveOpacity = 1
+        wave.reveal = 0
+        root._check(!wave.flowAllowed(false, false), "a fully clipped slider wave never starts its timer")
+        wave.reveal = 1
+        wave.flowing = false
+        for (const phase of [0, 0.27, 0.91]) {
+            wave.phase = phase
+            const values = wave._path.match(/-?\d+(?:\.\d+)?/g).map(Number)
+            let matchesSine = true
+            // Every cubic endpoint must land on the intended sine, including
+            // the final partial wavelength. This catches drift in the recurrence.
+            for (let i = 6; i < values.length; i += 6) {
+                const x = values[i], y = values[i + 1]
+                const expected = wave.height / 2 + wave._amp * Math.sin(
+                    (x - wave.thickness / 2) * 2 * Math.PI / wave._waveLength - phase * 2 * Math.PI)
+                matchesSine = matchesSine && Math.abs(y - expected) < 0.002
+            }
+            root._check(matchesSine, "slider wave endpoints keep their sine shape at phase " + phase)
+        }
+        wave.value = 0.04
+        root._check(wave._path.indexOf(" H ") > 0, "a short slider level keeps its simple straight path")
+        wave.destroy()
+        const glide = smoothGlideFactory.createObject(root, { target: 360, duration: 240 })
+        root._check(glide.value === 360 && !glide.running,
+            "a newly built panel glide starts at its destination")
+        glide.target = 600
+        let monotonic = true
+        for (let i = 0; i < 12; i++) {
+            const before = glide.value
+            glide._advance(1 / 240)
+            monotonic = monotonic && glide.value > before && glide.value < 600
+        }
+        root._check(monotonic, "panel geometry advances every high-refresh frame without overshoot")
+        const slowFrames = smoothGlideFactory.createObject(root, { target: 0, duration: 240 })
+        const fastFrames = smoothGlideFactory.createObject(root, { target: 0, duration: 240 })
+        slowFrames.target = 240
+        fastFrames.target = 240
+        for (let i = 0; i < 12; i++) slowFrames._advance(1 / 60)
+        for (let i = 0; i < 48; i++) fastFrames._advance(1 / 240)
+        root._check(Math.abs(slowFrames.value - fastFrames.value) < 0.000001
+                && Math.abs(slowFrames._velocity - fastFrames._velocity) < 0.000001,
+            "panel timing is the same at 60 Hz and 240 Hz")
+        slowFrames.destroy()
+        fastFrames.destroy()
+        const interruptedValue = glide.value
+        const interruptedVelocity = glide._velocity
+        glide.target = 612
+        root._check(glide.value === interruptedValue && glide._velocity === interruptedVelocity,
+            "content reflow retargets a panel without resetting its position or velocity")
+        glide._advance(1 / 240)
+        root._check(glide.value > interruptedValue && glide._velocity > 0,
+            "a retargeted growing panel continues moving on the next frame")
+        glide.target = 400
+        for (let i = 0; i < 240; i++) glide._advance(1 / 240)
+        root._check(glide.value === 400 && glide._velocity === 0 && !glide.running,
+            "a reversed panel glide settles exactly without a bouncing edge")
+        glide.target = 800
+        glide._advance(1 / 60)
+        ShellSettings.reduceMotion = true
+        root._check(glide.value === 800 && glide._velocity === 0 && !glide.running,
+            "reduced motion settles an interrupted panel glide immediately")
+        ShellSettings.reduceMotion = false
+        glide.target = 900
+        glide._advance(1 / 60)
+        glide.gate = false
+        root._check(glide.value === 900 && !glide.running,
+            "closing or hiding a panel settles its geometry and stops the frame loop")
+        glide.target = 1000
+        root._check(glide.value === 1000 && !glide.running,
+            "hidden panel geometry follows new content without animating")
+        glide.gate = true
+        glide.duration = 0
+        glide.target = 1100
+        root._check(glide.value === 1100 && !glide.running,
+            "a zero-duration panel glide is immediate and never divides by zero")
+        glide.destroy()
+        const slot = smoothGlideFactory.createObject(root, { precision: 0.001 })
+        slot.target = 1
+        for (let i = 0; i < 5; i++) slot._advance(0.05)
+        root._check(slot.running && slot.value < 1 && slot.value > 0.99,
+            "a normalized selection glide keeps its final pixels smooth instead of snapping a tenth of a row")
+        for (let i = 0; i < 20; i++) slot._advance(0.05)
+        root._check(slot.value === 1 && !slot.running,
+            "a selection glide still settles exactly at its row")
+        slot.destroy()
+        ShellSettings.reduceMotion = reduceWas
+    }
+
+    function _checkPageLayout(): void {
+        const loader = pageLoaderFactory.createObject(root)
+        root._check(loader.item !== null && loader.item.width === 332,
+            "a page loader sizes its page to the settled content width")
+        // MenuState announces the departure before changing shared geometry.
+        loader.scrollOffset = 240
+        loader.holdLayout()
+        loader.shown = false
+        for (let i = 0; i < 60; i++) loader.layoutWidth = 388 - i / 4
+        root._check(loader.width === 332 && loader.item.width === 332,
+            "a departing page does not reflow during the viewport's resize")
+        loader.scrollOffset = 0
+        root._check(loader.y === -240,
+            "a departing page keeps its visible rows when the shared scroll resets")
+        loader.holdLayout()
+        root._check(loader.y === -240,
+            "taking another departure snapshot preserves an already held scroll position")
+        loader.layoutWidth = 388
+        loader.shown = true
+        root._check(loader.width === 388 && loader.item.width === 388 && loader.y === 0,
+            "returning to a retained page restores its current layout width")
+        loader.layoutWidth = 280
+        root._check(loader.item.width === 280,
+            "a visible page follows later screen or interface-size changes")
+        loader.shown = false
+        loader.layoutWidth = 240
+        root._check(loader.item.width === 280,
+            "hiding a loader preserves layout even without a pre-change snapshot")
+        loader.destroy()
+        const drawerFactory = Qt.createComponent("modules/menu/RailDrawer.qml")
+        const drawer = drawerFactory.createObject(barFixtureHost, {
+            shown: true, retained: true, width: 160, height: 200, content: drawerContentFactory
+        })
+        const drawerLoader = drawer.children.find(item => item.sourceComponent !== undefined)
+        drawerLoader.asynchronous = false
+        drawer.holdLayout()
+        drawer.shown = false
+        drawer.width = 112
+        root._check(drawerLoader.item && drawerLoader.item.width === 160,
+            "an outgoing sidebar preserves its label layout while the panel contracts")
+        drawer.shown = true
+        root._check(drawerLoader.item && drawerLoader.item.width === 112,
+            "a returning sidebar reflows to the current panel width")
+        drawer.destroy()
+        drawerFactory.destroy()
+        const flick = flickableFactory.createObject(root)
+        flick.contentY = 400
+        flick.flick(0, -1200)
+        root._check(flick.flicking, "the scroll-reset probe starts with live flick momentum")
+        flick.scrollToTop()
+        root._check(!flick.flicking && flick.contentY === flick.originY,
+            "returning to the top stops momentum before the next page can inherit it")
+        flick.destroy()
+    }
+
+    function _runSettingsDiagnosticsProbe(): void {
+        const toolsWas = SystemTools._tools
+        const readyWas = SystemTools.ready
+        const errorWas = SystemTools.lastError
+        const lockWas = ShellSettings.lockProvider
+        const customWas = ShellSettings.lockCommandCustom
+        const nightWas = ShellSettings.nightLightProvider
+        const overlayWas = ShellSettings.overlayMonitor
+        const tabWas = MenuState.activeTab
+        const openWas = MenuState.open
+        const sectionWas = MenuState.settingsSection
+        // No selected provider is installed; availability must reflect the choice,
+        // even when another compatible provider would work automatically.
+        SystemTools._tools = ({ "notify-send": true, wlsunset: true })
+        SystemTools.ready = true
+        SystemTools.lastError = ""
+        ShellSettings.lockProvider = "custom"
+        ShellSettings.lockCommandCustom = ""
+        ShellSettings.nightLightProvider = "hyprsunset"
+        const diagnosticsComponent = Qt.createComponent("modules/menu/settings/SettingsMaintenanceSection.qml")
+        const diagnostics = diagnosticsComponent.status === Component.Ready
+            ? diagnosticsComponent.createObject(root, { width: 360 }) : null
+        root._check(diagnostics !== null, "diagnostics builds for behavioral checks")
+        if (diagnostics) {
+            root._check(diagnostics._attentionIssues.some(issue =>
+                    issue.n === "Screen lock unavailable" && issue.a === "interface")
+                    && diagnostics._attentionIssues.some(issue =>
+                        issue.n === "Night light unavailable" && issue.a === "interface"),
+                "unavailable selected programs link to the page that can fix them")
+            ShellSettings.lockProvider = "auto"
+            ShellSettings.nightLightProvider = "auto"
+            root._check(!diagnostics._attentionIssues.some(issue =>
+                    issue.n === "Screen lock unavailable" || issue.n === "Night light unavailable")
+                    && diagnostics._optionalIssues.some(issue => issue.n === "Screen lock")
+                    && !diagnostics._optionalIssues.some(issue => issue.n === "Night light"),
+                "automatic providers keep missing add-ons optional and use installed alternatives")
+            const disclosure = root._findTrayNode(diagnostics, item =>
+                item.title === "Optional features" && typeof item._activate === "function")
+            root._check(disclosure !== null && !diagnostics._optionalExpanded,
+                "optional diagnostics start folded")
+            if (disclosure) {
+                disclosure._activate()
+                root._check(diagnostics._optionalExpanded, "the optional-features row opens its list")
+                disclosure._toggleExpanded()
+                root._check(!diagnostics._optionalExpanded, "the optional-features chevron folds its list")
+            }
+            MenuState.setSettingsSection("maintenance")
+            MenuState.selectTab(MenuState.settingsTab)
+            MenuState.open = true
+            diagnostics._armed = true
+            MenuState.selectTab(MenuState.homeTab)
+            root._check(!diagnostics._armed, "leaving a cached diagnostics page disarms restore defaults")
+            diagnostics.destroy()
+        }
+        diagnosticsComponent.destroy()
+
+        const updatesComponent = Qt.createComponent("modules/menu/settings/SettingsUpdatesSection.qml")
+        const updatesPage = updatesComponent.status === Component.Ready
+            ? updatesComponent.createObject(root, { width: 360, animationActive: false }) : null
+        root._check(updatesPage !== null, "update controls build for confirmation lifecycle checks")
+        if (updatesPage) {
+            MenuState.selectTab(MenuState.settingsTab)
+            MenuState.open = true
+            MenuState.setSettingsSection("updates")
+            updatesPage._installArmed = true
+            MenuState.setSettingsSection("clock")
+            root._check(!updatesPage._installArmed,
+                "leaving the system overview cancels an update-install confirmation")
+            updatesPage._installArmed = true
+            MenuState.selectTab(MenuState.homeTab)
+            root._check(!updatesPage._installArmed,
+                "leaving cached settings cancels an update-install confirmation")
+            updatesPage.destroy()
+        }
+        updatesComponent.destroy()
+
+        ShellSettings.overlayMonitor = "disconnected-probe-monitor"
+        const interfaceComponent = Qt.createComponent("modules/menu/settings/SettingsInterfaceSection.qml")
+        const interfacePage = interfaceComponent.status === Component.Ready
+            ? interfaceComponent.createObject(root, { width: 360 }) : null
+        root._check(interfacePage !== null, "interface builds for display recovery checks")
+        if (interfacePage) {
+            const picker = root._findTrayNode(interfacePage, item => item.key === "overlayMonitor")
+            root._check(picker !== null && picker.enabled
+                    && picker.model.some(choice => choice.value === ""),
+                "a disconnected overlay display stays editable with a Follow focus choice")
+            ShellSettings.overlayMonitor = ""
+            root._check(interfacePage._hasOverlayChoice === interfacePage._hasMultiScreen,
+                "clearing display routing hides the unnecessary single-display picker")
+            root._check(root._findTrayNode(interfacePage, item => item.key === "lockProvider") !== null
+                    && root._findTrayNode(interfacePage, item => item.key === "nightLightProvider") !== null,
+                "system program choices live on Interface")
+            interfacePage.destroy()
+        }
+        interfaceComponent.destroy()
+        SystemTools._tools = toolsWas
+        SystemTools.ready = readyWas
+        SystemTools.lastError = errorWas
+        ShellSettings.lockProvider = lockWas
+        ShellSettings.lockCommandCustom = customWas
+        ShellSettings.nightLightProvider = nightWas
+        ShellSettings.overlayMonitor = overlayWas
+        MenuState.selectTab(tabWas)
+        MenuState.open = openWas
+        MenuState.setSettingsSection(sectionWas)
+    }
+
     function _run(): void {
+        root._checkSmoothGlide()
+        root._checkPageLayout()
         root._checkAccessibleControls()
+        root._checkWifiDraft()
+        root._checkPowerRail()
+        root._checkBluetoothPairing()
+        root._checkMenuContrast()
         const pageMovedWas = Scroll._page.movedAt
         const scrollList = scrollListFactory.createObject(root)
         Scroll._page.movedAt = 0
@@ -799,6 +1374,11 @@ ShellRoot {
 
         const pill = pillFactory.createObject(root)
         pill._ready = true
+        pill.interactive = true
+        let activations = 0
+        pill.activated.connect(() => activations++)
+        pill.Accessible.pressAction()
+        root._check(activations === 1, "an awake bar pill accepts its accessible action")
         root._check(pill !== null && pill.motionActive,
             "an awake pill on a visible bar permits content motion")
         pill.glyph = "b"
@@ -806,6 +1386,9 @@ ShellRoot {
             "an awake pill animates a glyph swap instead of jumping to it")
         pill.hoverActive = true
         pill.barActive = false
+        pill.Accessible.pressAction()
+        root._check(activations === 1 && !pill.Accessible.focusable,
+            "a sleeping bar pill rejects accessible activation")
         root._check(!pill.motionActive && pill._shownGlyph === "b",
             "a sleeping bar lands the pending glyph without animating")
         root._check(!pill.hoverEnabled && !pill.expanded && !pill.hoverActive,
@@ -813,11 +1396,16 @@ ShellRoot {
         pill.barActive = true
         pill.hoverActive = true
         pill.collapsed = true
+        pill.Accessible.pressAction()
+        root._check(activations === 1,
+            "a fading bar pill rejects activation before its width finishes collapsing")
         root._check(!pill.hoverEnabled && !pill.expanded && !pill.motionActive,
             "a collapsing pill stops revealing values and animating content")
         pill.collapsed = false
         pill.hoverActive = true
         pill.enabled = false
+        pill.Accessible.pressAction()
+        root._check(activations === 1, "a disabled bar pill rejects accessible activation")
         root._check(!pill.hoverEnabled && !pill.hoverActive,
             "a disabled pill clears hover state even without a pointer exit")
         pill.enabled = true
@@ -829,6 +1417,16 @@ ShellRoot {
         pill.animateGlyph = false
         root._check(pill._shownGlyph === "c",
             "disabling glyph motion settles the latest icon")
+        const label = root._findTrayNode(pill, item => item._hasShownText !== undefined
+            && item._shown !== undefined)
+        const swap = label?.parent.data.find(item => item.animations?.length === 3)
+        let swaps = 0
+        if (swap) swap.started.connect(() => swaps++)
+        pill.text = "First reading"
+        pill.text = "Second reading"
+        pill.text = "Latest reading"
+        root._check(swap && swaps === 1,
+            "rapid pill readings share a text fade instead of postponing it with every update")
         pill.destroy()
 
         const rolling = rollingTextFactory.createObject(root)
@@ -870,9 +1468,18 @@ ShellRoot {
             "the clock reflects its open calendar even without pointer hover")
         CalendarState.close()
         root._check(!barClock._calendarOpen, "closing the calendar clears the clock's active state")
+        barClock._datePeek = true
+        barClock.barActive = false
+        barClock.Accessible.pressAction()
+        root._check(!CalendarState.open && !barClock._datePeek,
+            "a sleeping clock clears its date peek and rejects opening the calendar")
+        barClock.barActive = true
+        barClock.enabled = false
+        barClock.Accessible.pressAction()
+        root._check(!CalendarState.open, "a disabled clock rejects opening the calendar")
         barClock.destroy()
 
-        const updateBadge = updatesWidgetFactory.createObject(root)
+        const updateBadge = updatesWidgetFactory.createObject(barFixtureHost)
         updateBadge.show = true
         updateBadge.busy = true
         root._check(updateBadge.interactive,
@@ -882,6 +1489,10 @@ ShellRoot {
                 && MenuState.anchorSource === updateBadge,
             "the system updates badge opens its details anchored to the triggering widget")
         MenuState.close()
+        updateBadge.barActive = false
+        updateBadge.activated()
+        root._check(!MenuState.open,
+            "a sleeping update badge rejects a late activation signal")
         updateBadge.destroy()
 
         const underline = barUnderlineFactory.createObject(root)
@@ -903,7 +1514,34 @@ ShellRoot {
         underline.destroy()
 
         const notificationCard = notificationCardFactory.createObject(root)
+        root._check(notificationCard.countdownInterval(1) === 50
+                && notificationCard.countdownInterval(3) === 80
+                && notificationCard.countdownInterval(8) === 100,
+            "notification countdown updates slow down as the visible stack grows")
+        const rim = perimeterFactory.createObject(root, {
+            arcWidth: notificationCard._borderWidth, inset: notificationCard._borderWidth / 2,
+            cornerRadius: 15, progress: 0.5
+        })
+        root._check(Math.abs(rim._arcInset - rim._arcStroke / 2) < 0.001
+                && rim._pathWidth === rim.width - rim._arcStroke,
+            "the countdown follows the same inset and width as the notification outline")
+        rim.destroy()
+        notificationCard._updateTime()
+        root._check(notificationCard._timeUpdateMs > 30000 && notificationCard._timeUpdateMs <= 60000,
+            "a new notification schedules its age label for the next minute boundary")
         root._check(notificationCard !== null, "a notification card builds")
+        root._check(notificationCard.actionColumns(400, 80, 4) === 4
+                && notificationCard.actionColumns(232, 90, 4) === 2
+                && notificationCard.actionColumns(160, 120, 3) === 1
+                && notificationCard.actionColumns(0, 120, 4) === 1
+                && notificationCard.actionColumns(400, 90, 0) === 1,
+            "notification actions use only as many columns as their labels and card width allow")
+        root._check(notificationCard.actionColumns(330, 90, 4) === 2
+                && notificationCard.actionsInRow(0, 3, 2) === 2
+                && notificationCard.actionsInRow(2, 3, 2) === 1
+                && notificationCard.actionsInRow(3, 4, 2) === 2
+                && notificationCard.actionsInRow(0, 1, 1) === 1,
+            "wrapped notification actions balance their rows and stretch a short last row")
         root._sentInlineReply = ""
         root._check(notificationCard.hasInlineReply
                 && notificationCard._sendInlineReply("  hello  ")
@@ -913,6 +1551,58 @@ ShellRoot {
         root._check(!notificationCard._sendInlineReply("   ")
                 && root._sentInlineReply.length === 0,
             "an empty inline notification reply is not sent")
+        const upperAction = { identifier: "Default", text: "Capitalized action", invoke: function() {} }
+        const exactAction = { identifier: "default", text: "Open", invoke: function() {} }
+        const actionCard = notificationCardFactory.createObject(root, {
+            notification: Object.assign({}, notificationCard.notification, {
+                actions: [upperAction, exactAction], expireTimeout: 0, resident: true
+            })
+        })
+        root._check(actionCard._defaultAction.identifier === "default"
+                && actionCard.actionList.length === 1
+                && actionCard.actionList[0].identifier === "Default",
+            "only the exact default action key is reserved for clicking the notification")
+        actionCard.notification = Object.assign({}, actionCard.notification, { actions: [upperAction] })
+        root._check(actionCard._defaultAction === null && actionCard.actionList.length === 1,
+            "a capitalized action key remains a visible button without becoming the primary action")
+        actionCard.destroy()
+
+        const idleMotionWas = ShellSettings.reduceMotion
+        ShellSettings.reduceMotion = true
+        const idleTemplate = Object.assign({}, notificationCard.notification, { expireTimeout: 0 })
+        const persistentIdleCard = notificationCardFactory.createObject(root, { notification: idleTemplate })
+        const criticalIdleCard = notificationCardFactory.createObject(root, {
+            notification: Object.assign({}, idleTemplate, { urgency: 2, expireTimeout: -1 })
+        })
+        const ordinaryIdleCard = notificationCardFactory.createObject(root, {
+            notification: Object.assign({}, idleTemplate, { expireTimeout: 5000 })
+        })
+        const timedCriticalIdleCard = notificationCardFactory.createObject(root, {
+            notification: Object.assign({}, idleTemplate, { urgency: 2, expireTimeout: 5000 })
+        })
+        let persistentIdleDismissals = 0
+        let timedIdleDismissals = 0
+        persistentIdleCard.dismissRequested.connect(() => { persistentIdleDismissals++ })
+        criticalIdleCard.dismissRequested.connect(() => { persistentIdleDismissals++ })
+        ordinaryIdleCard.dismissRequested.connect((id, note, expired) => { if (expired) timedIdleDismissals++ })
+        timedCriticalIdleCard.dismissRequested.connect((id, note, expired) => { if (expired) timedIdleDismissals++ })
+        persistentIdleCard.beginReply()
+        criticalIdleCard.beginReply()
+        for (const item of [persistentIdleCard, criticalIdleCard, ordinaryIdleCard, timedCriticalIdleCard])
+            item._handleIdle(true)
+        root._check(persistentIdleCard.enabled && criticalIdleCard.enabled && persistentIdleDismissals === 0,
+            "entering idle preserves zero-timeout and default-critical notifications")
+        root._check(!persistentIdleCard._replyOpen && !criticalIdleCard._replyOpen,
+            "persistent notifications release an abandoned reply when the session goes idle")
+        root._check(!ordinaryIdleCard.enabled && !timedCriticalIdleCard.enabled && timedIdleDismissals === 2,
+            "idle still expires ordinary notifications and critical alerts with an explicit timeout")
+        persistentIdleCard._handleIdle(false)
+        criticalIdleCard._handleIdle(false)
+        root._check(persistentIdleCard.enabled && criticalIdleCard.enabled,
+            "persistent notifications remain available when the session wakes")
+        for (const item of [persistentIdleCard, criticalIdleCard, ordinaryIdleCard, timedCriticalIdleCard])
+            item.destroy()
+        ShellSettings.reduceMotion = idleMotionWas
         let dismissCompletions = 0
         notificationCard.dismissRequested.connect(function() { dismissCompletions++ })
         notificationCard._leaving = true
@@ -1173,6 +1863,21 @@ ShellRoot {
                 && crossingCell.scale === 1
                 && crossingCell._dotFade === 1,
             "a sleeping workspace cell retires transient motion at its bound state")
+        let menuRequests = 0
+        crossingCell.anchorMenuRequested.connect(() => menuRequests++)
+        crossingCell.active = true
+        crossingCell.Accessible.pressAction()
+        root._check(menuRequests === 0,
+            "a sleeping workspace cell rejects its accessible menu action")
+        crossingCell.barActive = true
+        crossingCell.wsId = -1
+        crossingCell.Accessible.pressAction()
+        root._check(menuRequests === 0,
+            "a fading empty workspace slot cannot open a menu")
+        crossingCell.wsId = 2
+        crossingCell.Accessible.pressAction()
+        root._check(menuRequests === 1,
+            "a restored workspace cell accepts its menu action again")
         crossingCell.destroy()
         ShellSettings.workspaceShift = shiftWas
         ShellSettings.reduceMotion = reduceMotionWas
@@ -1327,6 +2032,13 @@ ShellRoot {
         root._check(ShellSettings.modifiedSections.theme === undefined,
             "restoring a setting clears its page")
 
+        const lockBeforeAttribution = ShellSettings.lockProvider
+        ShellSettings.lockProvider = "custom"
+        root._check(ShellSettings.modifiedSections.interface === true
+                && ShellSettings.modifiedSections.maintenance === undefined,
+            "program preferences mark Interface rather than Diagnostics")
+        ShellSettings.lockProvider = lockBeforeAttribution
+
         const savedBattGlow = ShellSettings.underlineBattGlow
         const savedGlow = ShellSettings.underlineGlow
         const savedBorder = ShellSettings.barBorderVisible
@@ -1436,6 +2148,28 @@ ShellRoot {
         ShellSettings.surfaceBlur = savedGlass[2]
         root._check(glassOn && glassOffOpaque,
             "a translucent bar with matching popups turns the menu and off switch knobs to tints, on knobs and hover labels stay solid, and an opaque bar keeps it solid")
+        const floorWas = [ShellSettings.popupMatchBarOpacity, ShellSettings.barOpacity, ShellSettings.surfaceBlur]
+        ShellSettings.popupMatchBarOpacity = true
+        ShellSettings.surfaceBlur = true
+        ShellSettings.barOpacity = 0.4
+        const heldAt = Theme.popupOpacity
+        const heldWorst = Theme._controlOverWhite(Theme._tBackground, Theme._tText, heldAt)
+        const labelHolds = Theme.contrastRatio(Theme._tText, heldWorst) >= 4.5
+        const subtextLifted = Theme.contrastRatio(Theme._tSubtext, heldWorst) >= 2.99
+            && !Qt.colorEqual(Theme._tSubtext, Theme._tSubtextSolid)
+        const detailBelowLabel = Theme.contrastRatio(Theme._tMenuTextDetail, heldWorst)
+            < Theme.contrastRatio(Theme._tText, heldWorst)
+        ShellSettings.barOpacity = 0.95
+        const followsAbove = Math.abs(Theme.popupOpacity - 0.95) < 0.001
+            && Qt.colorEqual(Theme._tSubtext, Theme._tSubtextSolid)
+        ShellSettings.popupMatchBarOpacity = false
+        const opaqueUntouched = Theme.popupOpacity === 1 && Qt.colorEqual(Theme._tSubtext, Theme._tSubtextSolid)
+        ShellSettings.popupMatchBarOpacity = floorWas[0]
+        ShellSettings.barOpacity = floorWas[1]
+        ShellSettings.surfaceBlur = floorWas[2]
+        root._check(heldAt === Theme.glassFloor && heldAt > 0.5 && heldAt < 0.8 && labelHolds
+                && subtextLifted && detailBelowLabel && followsAbove && opaqueUntouched,
+            "popups under a very translucent bar hold at the floor where labels read over white, secondary text lifts only there, and detail stays below labels")
         root._check(unfrostedSolid,
             "with blur off popups and the menu stay solid while the bar keeps its own opacity")
 
@@ -1550,6 +2284,16 @@ ShellRoot {
         root._check(Notifications._normalizeEntry({ body: "line1\nline2" }).body
                 === "line1\nline2",
             "history text keeps the newlines a multi-line body needs")
+        const escapedHistory = Notifications._normalizeEntry({
+            summary: "&lt;b&gt;literal&lt;/b&gt;", body: "&amp;amp;\nsecond line"
+        })
+        const restoredEscapedHistory = Notifications._normalizeEntry(escapedHistory, true)
+        root._check(escapedHistory.summary === "<b>literal</b>"
+                && restoredEscapedHistory.summary === escapedHistory.summary
+                && restoredEscapedHistory.body === "&amp;\nsecond line",
+            "restoring stored plain text preserves literal markup and entities without decoding again")
+        root._check(Notifications._normalizeEntry({ body: "a\u202Eb" }, true).body === "ab",
+            "stored plain text is still stripped of misleading direction controls")
         const safeHistoryNumbers = Notifications._normalizeEntry({
             id: "not-a-number", urgency: Infinity, time: "Infinity"
         })
@@ -1756,6 +2500,23 @@ ShellRoot {
             root._check(filtered.count === 0, "unmatched history search leaves an empty result")
             filtered.query = "  \t "
             root._check(filtered.count === 3, "whitespace-only search shows all history")
+            const stableContentKey = filtered.model.get(0).contentKey
+            filtered.sync()
+            root._check(typeof stableContentKey === "string"
+                    && filtered.model.get(0).contentKey === stableContentKey
+                    && filtered.snapshot()[0].contentKey === undefined,
+                "history caches row keys without exposing them in clear snapshots")
+            const originalSearchBody = Notifications.historyModel.get(0).body
+            Notifications.historyModel.setProperty(0, "body", "Updated searchable marker")
+            filtered.revision++
+            filtered.query = "searchable marker"
+            root._check(filtered.count === 1
+                    && filtered.model.get(0).id === 803
+                    && filtered.model.get(0).contentKey !== stableContentKey,
+                "an in-place source update refreshes the cached key and search results")
+            Notifications.historyModel.setProperty(0, "body", originalSearchBody)
+            filtered.revision++
+            filtered.query = ""
             filtered.active = false
             filtered.query = "release"
             root._check(filtered.count === 3, "hidden history defers search reconciliation")
@@ -1850,6 +2611,14 @@ ShellRoot {
             transient: false, appName: "Probe", appIcon: "", desktopEntry: "",
             summary: "Current session", body: "", urgency: 1
         }
+        const escapedNotification = Object.assign({}, archivedNotification, {
+            summary: "&lt;b&gt;literal&lt;/b&gt;", body: "&amp;amp;"
+        })
+        Notifications._archiveNotification(escapedNotification, 72, 2, false)
+        root._check(Notifications.historyModel.get(0).summary === "<b>literal</b>"
+                && Notifications.historyModel.get(0).body === "&amp;",
+            "archiving sender text bounds and decodes it only once")
+        Notifications.removeFromHistory(0)
         const firstArchive = Notifications._archiveNotification(
             archivedNotification, 71, 2, false)
         archivedNotification.summary = "Current session update"
@@ -1865,11 +2634,43 @@ ShellRoot {
         ShellSettings.notifHistoryLimit = 20
         for (let i = 0; i < 15; i++)
             Notifications._prependHistory({ id: 100 + i, appName: "probe", summary: "t" + i, time: 1 })
+        let trimCountChanges = 0
+        const noteTrim = () => { trimCountChanges++ }
+        Notifications.historyModel.countChanged.connect(noteTrim)
         ShellSettings.notifHistoryLimit = 7
+        Notifications.historyModel.countChanged.disconnect(noteTrim)
         root._check(Notifications.historyCount === 7,
             "lowering the limit trims history that is already stored")
+        root._check(trimCountChanges === 1,
+            "lowering the history limit removes the excess rows in one model edit")
         Notifications.clearHistory()
         ShellSettings.notifHistoryLimit = savedLimit
+
+        const historyPersistentWas = ShellSettings.notifHistoryPersistent
+        ShellSettings.notifHistoryPersistent = false
+        Notifications._prependHistory({ id: 9901, appName: "Probe",
+            summary: "Memory only", time: 9901 })
+        Notifications._saveHistory()
+        root._check(Notifications.historyCount === 1
+                && JSON.parse(Notifications._serializeDisk()).history.length === 0,
+            "history remains in memory without putting notification text into the disk payload")
+        ShellSettings.notifHistoryPersistent = true
+        const historyPayload = Notifications._serializeDisk()
+        root._check(JSON.parse(historyPayload).history[0].summary === "Memory only",
+            "enabling history persistence captures rows accumulated while it was off")
+        Notifications._saveHistory()
+        root._check(Notifications._serializeDisk() === historyPayload,
+            "saving an unchanged history keeps the same payload")
+        Notifications._prependHistory({ id: 9902, appName: "Probe",
+            summary: "New revision", time: 9902 })
+        Notifications._saveHistory()
+        root._check(JSON.parse(Notifications._serializeDisk()).history[0].summary === "New revision",
+            "a changed history refreshes the serialized payload")
+        ShellSettings.notifHistoryPersistent = false
+        root._check(Notifications.historyCount === 0
+                && JSON.parse(Notifications._serializeDisk()).history.length === 0,
+            "disabling history persistence clears the previously serialized text")
+        ShellSettings.notifHistoryPersistent = historyPersistentWas
 
         const savedDnd = ShellSettings.dndSchedule
         const savedFrom = ShellSettings.dndFrom
@@ -1897,6 +2698,15 @@ ShellRoot {
                 && MenuState._ipcSection("show-order") === "widgets"
                 && MenuState._ipcSection("layout") === "surface",
             "ipc accepts the page labels the rail shows")
+        root._check(MenuState._ipcSection("Diagnostics") === "updates"
+                && MenuState._ipcSection("maintenance") === "updates"
+                && MenuState._ipcSection("Overview") === "updates"
+                && MenuState._ipcSection("system") === "updates",
+            "the system overview accepts both combined and former page names")
+        MenuState.setSettingsSection("maintenance")
+        root._check(MenuState.settingsSection === "updates"
+                && MenuState._flatSections.indexOf("maintenance") < 0,
+            "the former diagnostics id selects the one combined settings page")
         root._check(MenuState._ipcSection("nosuchpage") === "nosuchpage",
             "an unknown ipc page name is left alone for the caller's message")
         MenuState.setSettingsSection("Surface")
@@ -1944,6 +2754,21 @@ ShellRoot {
             "a nested submenu keeps opening the way its parent did and turns only at the screen edge")
 
         const weekStartWas = ShellSettings.calendarWeekStart
+        root._check(CalendarState.weekdayLabelFor(0, Qt.locale("en_US")).toLowerCase().indexOf("sun") === 0
+                && CalendarState.weekdayLabelFor(0, Qt.locale("fr_FR")).toLowerCase().indexOf("dim") === 0,
+            "calendar weekday captions follow the requested locale instead of fixed English initials")
+        root._check(CalendarState.weekendFor(0, [1, 2, 3, 4, 5])
+                && CalendarState.weekendFor(6, [1, 2, 3, 4, 5])
+                && !CalendarState.weekendFor(5, [1, 2, 3, 4, 5]),
+            "calendar weekend shading respects a Monday-to-Friday working week")
+        root._check(CalendarState.weekendFor(5, [0, 1, 2, 3, 4])
+                && CalendarState.weekendFor(6, [0, 1, 2, 3, 4])
+                && !CalendarState.weekendFor(0, [0, 1, 2, 3, 4]),
+            "a Sunday-to-Thursday working week shades Friday and Saturday instead of Sunday")
+        root._check(CalendarState.weekendFor(5, [0, 1, 2, 3, 4, 6])
+                && !CalendarState.weekendFor(6, [0, 1, 2, 3, 4, 6])
+                && CalendarState.weekendFor(0, null) && CalendarState.weekendFor(6, []),
+            "calendar weekends support a single rest day and retain a fallback for unavailable locale data")
         root._check(CalendarState.weekStartFor("monday", 0) === 1
                 && CalendarState.weekStartFor("sunday", 1) === 0
                 && CalendarState.weekStartFor("locale", 6) === 6
@@ -2017,6 +2842,12 @@ ShellRoot {
             "popup placement stays finite")
         root._check(topPopupY + bottomPopupY + 200 === 1000,
             "top and bottom popup placement is symmetric")
+        const anchoredBottom = bottomPopupY + 200
+        root._check(Metrics.popupY(1000, 200.25, true, popupEdge) + 200.25 === anchoredBottom
+                && Metrics.popupY(1000, 201.75, true, popupEdge) + 201.75 === anchoredBottom,
+            "bottom-anchored popups keep their edge fixed through fractional resize frames")
+        root._check(Metrics.popupY(1000, 204, true, popupEdge) % 4 === 0,
+            "a settled bottom popup still lands on the shared pixel grid")
 
         root._check(Metrics.centeredSpanX(500, 200, 100, 900) === 400,
             "a span that fits the free gap centres on its axis")
@@ -2279,6 +3110,15 @@ ShellRoot {
         root._check(Media.artSource("data:image/png;base64,AAAA") === "",
             "media service rejects inline artwork data")
         const remoteArtWas = ShellSettings.mediaRemoteArt
+        root._check(!Media.artDemand(true, false, false, false, false)
+                && !Media.artDemand(true, true, true, false, false),
+            "remote covers are not fetched for a hidden media widget or a concealed bar")
+        root._check(Media.artDemand(true, true, false, false, false)
+                && Media.artDemand(true, false, true, true, false),
+            "a visible media widget or menu resumes cover fetching")
+        root._check(!Media.artDemand(true, true, false, true, true)
+                && !Media.artDemand(false, true, false, true, false),
+            "quiet idle and an absent player suspend cover requests")
         ShellSettings.mediaRemoteArt = false
         root._check(Media.artSource("https://example.invalid/cover.jpg") === "",
             "remote artwork stays unfetched while the setting is off")
@@ -2309,6 +3149,30 @@ ShellRoot {
                 && Media.nextArtFetch(wantedArt, {}, { [wantedArt[0]]: true }) === wantedArt[1]
                 && Media.nextArtFetch(wantedArt, {}, { [wantedArt[0]]: true, [wantedArt[1]]: true }) === "",
             "a cover's fallback url is downloaded only when the preferred one failed")
+        const artMissesWas = Media._artMisses
+        const artRetryWas = Media._artRetryPending
+        const unrelatedArt = "https://example.invalid/old-track.jpg"
+        Media._artMisses = { [wantedArt[0]]: true, [wantedArt[1]]: true, [unrelatedArt]: true }
+        root._check(Media._clearArtMisses(wantedArt)
+                && Media.nextArtFetch(wantedArt, {}, Media._artMisses) === wantedArt[0]
+                && Media._artMisses[unrelatedArt] === true,
+            "an artwork retry reopens the current cover without retrying unrelated dead URLs")
+        root._check(!Media._clearArtMisses(wantedArt) && !Media._clearArtMisses([]),
+            "an artwork retry with no relevant misses leaves the cache unchanged")
+        Media._artRetryPending = true
+        Media._artFetched(wantedArt[0], false)
+        Media._finishArtRetry(wantedArt)
+        root._check(!Media._artRetryPending
+                && Media.nextArtFetch(wantedArt, {}, Media._artMisses) === wantedArt[0]
+                && Media._artMisses[unrelatedArt] === true,
+            "a reconnect during a failing download retains its retry until after the failure is recorded")
+        Media._artMisses = { [wantedArt[0]]: true }
+        Media._finishArtRetry(wantedArt)
+        root._check(Media._artMisses[wantedArt[0]] === true,
+            "a consumed artwork retry does not reopen the same failed URL repeatedly")
+        Media._artMisses = artMissesWas
+        Media._artFiles = artFilesWas
+        Media._artRetryPending = artRetryWas
         root._check(Media.artSource("file://example.invalid/cover.jpg") === "",
             "media service rejects remote file artwork")
         root._check(Media.artSource("https://example.invalid/bad\ncover.jpg") === "",
@@ -2364,6 +3228,104 @@ ShellRoot {
                 && !Media.positionDemand(false, true, true)
                 && Media.positionDemand(true, false, true),
             "media progress pauses with a concealed bar but stays live for the menu")
+        root._check(Media.formatElapsed(66, 3725) === "0:01:06"
+                && Media.formatElapsed(600, 3725) === "0:10:00"
+                && Media.formatElapsed(3725, 3725) === "1:02:05"
+                && Media.formatElapsed(136, 302) === "2:16"
+                && Media.formatElapsed(NaN, 0) === "0:00",
+            "elapsed time takes the total's shape so both ends of the seek bar match")
+        const mediaPageComponent = Qt.createComponent("modules/menu/MediaPage.qml")
+        const mediaPage = mediaPageComponent.status === Component.Ready
+            ? mediaPageComponent.createObject(root, { width: 332, active: false, powerOpen: false }) : null
+        root._check(mediaPage !== null && mediaPage.implicitHeight > 332,
+            "the now playing page builds around a full-width cover")
+        if (mediaPage) {
+            const tabWas = MenuState.activeTab
+            const openWas = MenuState.open
+            const motionWas = ShellSettings.reduceMotion
+            ShellSettings.reduceMotion = false
+            MenuState.selectTab(MenuState.mediaTab)
+            MenuState.open = true
+            mediaPage.active = true
+            const textSwap = mediaPage.data.find(item => item.animations?.length === 3)
+            const playGlyph = root._findTrayNode(mediaPage, item => item.target !== undefined
+                && item.shown !== undefined && item._ready !== undefined)
+            const playStamp = playGlyph?.data.find(item => item.animations?.length === 3)
+            root._check(mediaPage._coverWanted && textSwap && playStamp,
+                "an active now playing page requests its cover and exposes its playback animations")
+            if (textSwap && playStamp) {
+                textSwap.restart()
+                playStamp.restart()
+                root._check(textSwap.running && playStamp.running,
+                    "the media motion probe begins with active animation work")
+                mediaPage.active = false
+                root._check(!textSwap.running && !playStamp.running
+                        && mediaPage._textOpacity === 1 && mediaPage._textSlide === 0
+                        && playGlyph.scale === 1 && playGlyph.shown === playGlyph.target,
+                    "leaving now playing stops ongoing animations and settles the current playback icon")
+                root._check(!mediaPage._coverWanted,
+                    "a departing media page stops cover decoding and retries")
+            }
+            ShellSettings.reduceMotion = motionWas
+            MenuState.selectTab(tabWas)
+            MenuState.open = openWas
+            mediaPage.destroy()
+        }
+        const homeComponent = Qt.createComponent("modules/menu/HomePage.qml")
+        const home = homeComponent.status === Component.Ready
+            ? homeComponent.createObject(root, { width: 332, active: false, powerOpen: false }) : null
+        root._check(home !== null && home.implicitHeight > 0,
+            "the home page builds as one column")
+        if (home) home.destroy()
+        root._check(MenuState.tabPosition(MenuState.mediaTab) === 3
+                && MenuState._validTab(MenuState.mediaTab) === MenuState.mediaTab
+                && MenuState.mediaActive === (MenuState.open && MenuState.activeTab === MenuState.mediaTab)
+                && Media.positionDemand(true, false, true) && !Media.positionDemand(false, false, false),
+            "the now playing page sits after Settings in the rail and keeps the seek bar live while shown")
+        const waveComponent = Qt.createComponent("modules/common/WaveLine.qml")
+        const shortWave = waveComponent.status === Component.Ready
+            ? waveComponent.createObject(root, { width: 120, height: 10, value: 0.06 }) : null
+        const longWave = waveComponent.status === Component.Ready
+            ? waveComponent.createObject(root, { width: 120, height: 10, value: 0.9 }) : null
+        root._check(shortWave !== null && shortWave._path.length > 0 && shortWave._amp === 0
+                && longWave !== null && longWave._amp > 0 && longWave._path.indexOf(" C ") > 0
+                && longWave._endX <= 120 * 0.9,
+            "a wave level stays flat while shorter than a wavelength and never runs past its level")
+        if (shortWave && longWave) {
+            const reduceWas = ShellSettings.reduceMotion
+            ShellSettings.reduceMotion = false
+            shortWave.flowing = true
+            longWave.flowing = true
+            root._check(!shortWave._flowing && shortWave._path.includes(" H ")
+                    && longWave._flowing,
+                "flat short waves use a line and do not wake a flow timer")
+            longWave.flowMs = 0
+            root._check(!longWave._flowing,
+                "a zero wave period stops flow instead of dividing by zero")
+            longWave.flowMs = 1600
+            longWave.visible = false
+            root._check(!longWave._flowing, "a concealed wave stops its flow timer")
+            longWave.visible = true
+            longWave.reveal = 0
+            root._check(!longWave._flowing, "an unrevealed wave does not keep ticking")
+            longWave.reveal = 1
+            ShellSettings.reduceMotion = true
+            root._check(!longWave._flowing, "reduced motion stops a running wave")
+            longWave.amplitude = 0
+            root._check(longWave._path.includes(" H ") && !longWave._path.includes(" C "),
+                "a paused flat wave uses one straight segment")
+            longWave.wavelength = 0
+            root._check(isFinite(longWave._amp) && !longWave._path.includes("NaN"),
+                "a zero wavelength keeps the wave geometry finite")
+            ShellSettings.reduceMotion = reduceWas
+        }
+        if (shortWave) shortWave.destroy()
+        if (longWave) longWave.destroy()
+        const L = Mp.MprisLoopState
+        root._check(Media.nextLoopState(L.None) === L.Playlist
+                && Media.nextLoopState(L.Playlist) === L.Track
+                && Media.nextLoopState(L.Track) === L.None,
+            "repeat cycles off, all, then one track")
         const emptyPlayer = { dbusName: "browser", playbackState: Mp.MprisPlaybackState.Stopped,
             trackTitle: "" }
         const loadedPlayer = { dbusName: "music", playbackState: Mp.MprisPlaybackState.Stopped,
@@ -2431,6 +3393,7 @@ ShellRoot {
         track._press(95)
         root._check(heldOnGrab && draggedFromGrab && track.shownValue === 1,
             "pressing the slider handle off centre holds its value, and a press on the rail still jumps")
+        track._release()
         track.nudge(-1, 10)
         track.min = 0.5; track.max = 3; track.step = 0.05
         root._check(track.minimumValue === 0.5 && track.maximumValue === 3
@@ -2462,6 +3425,36 @@ ShellRoot {
         track.nudge(1, 1)
         root._check(track.shownValue === 0,
             "non-interactive slider ignores scroll steps")
+        track.interactive = true
+        track.commitOnRelease = true
+        track.value = 0.25
+        trackChanged = -1
+        track.interactionKey = "first track"
+        track._press(85)
+        root._check(track.dragging && trackChanged === -1 && track.shownValue > 0.8,
+            "a playback seek previews its destination without changing playback before release")
+        track.interactionKey = "next track"
+        track._drag(95)
+        track._release()
+        root._check(!track.dragging && trackChanged === -1 && track.shownValue === track.value,
+            "changing tracks cancels a seek so its release cannot reposition the new track")
+        track._press(85)
+        track._release()
+        root._check(trackChanged > 0.8 && !track.dragging,
+            "a fresh seek after a track change commits normally")
+        trackChanged = -1
+        track._press(85)
+        track.visible = false
+        track._release()
+        track.nudge(1, 1)
+        root._check(!track.dragging && trackChanged === -1,
+            "hiding a slider cancels unfinished input and rejects accessibility changes")
+        track.visible = true
+        track._press(85)
+        track.interactive = false
+        track._release()
+        root._check(trackChanged === -1 && track.shownValue === track.value,
+            "losing seek capability cancels its preview without committing")
         track.destroy()
 
         const gradient = gradientSliderFactory.createObject(root, {
@@ -2870,6 +3863,42 @@ ShellRoot {
             "a visible Wi-Fi tier change publishes a fresh model")
         Network._publishedWifiNetworks = publishedWifiWas
 
+        const wifiConnectingWas = Network.wifiConnecting
+        const wifiErrorWas = Network.wifiError
+        const wifiReasonWas = Network.wifiErrorReason
+        Network.wifiError = "probe failure"
+        Network.wifiErrorReason = Net.ConnectionFailReason.WifiAuthTimeout
+        root._check(Network.wifiErrorText === "Wrong password" && Network.wifiErrorNeedsSecret,
+            "an authentication timeout offers a password retry")
+        Network.wifiErrorReason = Net.ConnectionFailReason.NoSecrets
+        root._check(Network.wifiErrorText === "Wrong password" && Network.wifiErrorNeedsSecret,
+            "a refused key reads as a wrong password, the way NetworkManager reports a mistyped one")
+        Network.wifiErrorReason = Net.ConnectionFailReason.WifiNetworkLost
+        root._check(Network.wifiErrorText === "Out of range" && !Network.wifiErrorNeedsSecret,
+            "a lost Wi-Fi network says it is out of range rather than offering a password retry")
+        Network.wifiErrorReason = Net.ConnectionFailReason.WifiClientDisconnected
+        root._check(Network.wifiErrorText === "Failed" && !Network.wifiErrorNeedsSecret,
+            "an interrupted Wi-Fi connection reports a plain failure")
+        Network.clearWifiError()
+        root._check(Network.wifiErrorText === "" && !Network.wifiErrorNeedsSecret,
+            "clearing a Wi-Fi error also removes its status")
+        Network.wifiConnecting = "probe replacement AP"
+        Network.wifiError = "old failure"
+        root._check(!Network._acceptWifiLink({ name: "another network", connected: true })
+                && !Network._acceptWifiLink({ name: "probe replacement AP", connected: false })
+                && !Network._acceptWifiLink(null)
+                && Network.wifiConnecting === "probe replacement AP",
+            "an unrelated, disconnected or missing access point cannot finish a Wi-Fi attempt")
+        root._check(Network._acceptWifiLink({ name: "probe replacement AP", connected: true })
+                && Network.wifiConnecting === "" && Network.wifiError === ""
+                && Network._pendingNetwork === null,
+            "a replacement access point confirms Wi-Fi success and clears stale errors")
+        root._check(!Network._acceptWifiLink({ name: "probe replacement AP", connected: true }),
+            "a settled Wi-Fi attempt cannot be completed twice")
+        Network.wifiConnecting = wifiConnectingWas
+        Network.wifiError = wifiErrorWas
+        Network.wifiErrorReason = wifiReasonWas
+
         const vpnStateWas = Network._vpnState
         Network._vpnState = ({ active: true, name: "stale probe VPN" })
         Network._vpnCandidateActive = true
@@ -3079,6 +4108,36 @@ ShellRoot {
                     PowerProfiles.cycleOrder(true, false)) === ""
                 && PowerProfiles.nextProfile("balanced", []) === "",
             "a power mode outside the offered cycle names no successor")
+        root._check(JSON.stringify(PowerProfiles.commandFor("balanced", true, true))
+                === JSON.stringify(["powerprofilesctl", "set", "balanced"]),
+            "power mode prefers its dedicated CLI when both write tools are present")
+        root._check(JSON.stringify(PowerProfiles.commandFor("power-saver", false, true))
+                === JSON.stringify(["busctl", "--system", "--timeout=5", "set-property",
+                    "net.hadess.PowerProfiles", "/net/hadess/PowerProfiles",
+                    "net.hadess.PowerProfiles", "ActiveProfile", "s", "power-saver"])
+                && PowerProfiles.commandFor("balanced", false, false).length === 0,
+            "the power-mode fallback bounds its system-bus write and preserves the profile argument")
+        const profileToolsWas = SystemTools._tools
+        const profileErrorWas = PowerProfiles.lastError
+        SystemTools._tools = { busctl: true, "@powerprofiles": true }
+        root._check(PowerProfiles.available, "a daemon and busctl support power changes without the dedicated CLI")
+        PowerProfiles._acceptSetResult(1, false, "details\nPermission denied\n")
+        root._check(PowerProfiles.lastError === "Permission denied",
+            "a failed power-mode fallback exposes the command's useful error")
+        PowerProfiles._acceptSetResult(0, true, "")
+        root._check(PowerProfiles.lastError === "Power mode change timed out",
+            "a timed-out power change cannot be accepted as successful")
+        PowerProfiles._acceptSetResult(1, false, "")
+        root._check(PowerProfiles.lastError === "Could not change the power mode",
+            "a power-mode failure without stderr still has an explanation")
+        PowerProfiles._acceptSetResult(0, false, "old error")
+        root._check(PowerProfiles.lastError === "", "a successful power change clears its previous error")
+        SystemTools._tools = { "@powerprofiles": true }
+        root._check(!PowerProfiles.available, "a detected daemon without a write tool does not advertise a usable control")
+        PowerProfiles._acceptSetResult(1, false, "late failure")
+        root._check(PowerProfiles.lastError === "", "a retired power service ignores a late command result")
+        SystemTools._tools = profileToolsWas
+        PowerProfiles.lastError = profileErrorWas
 
         // _onLine is replayed above; these reach the transforms behind it directly, where
         // the rebuild-don't-mutate contract and the empty cases are visible
@@ -3106,11 +4165,21 @@ ShellRoot {
             "a niri workspace transform leaves the list it was given untouched")
         root._check(NiriEvents.workspacesWithActivated(wsRows, 99, false).output === "",
             "activating a niri workspace that is gone names no output")
+        root._check(NiriEvents.workspacesWithActivated(wsRows, 99, true).workspaces === wsRows,
+            "a stale focused activation preserves the current workspace focus and model")
+        root._check(NiriEvents.workspacesWithActivated(wsRows, 1, true).workspaces === wsRows,
+            "a duplicate workspace activation leaves the model unchanged")
+        root._check(NiriEvents.workspacesWithActivated(wsRows, 2, false).workspaces[2] === wsRows[2],
+            "activating one output preserves the other output's workspace objects")
 
         const wsUrgent = NiriEvents.workspacesWithUrgency(wsRows, 2, true)
         root._check(wsUrgent[1].is_urgent === true && wsUrgent[0].is_urgent === undefined
                 && wsRows[1].is_urgent === undefined,
             "niri urgency marks one workspace without rewriting the others")
+        root._check(NiriEvents.workspacesWithUrgency(wsUrgent, 2, true) === wsUrgent
+                && NiriEvents.workspacesWithUrgency(wsRows, 99, true) === wsRows
+                && NiriEvents.workspacesWithUrgency(wsRows, 2, false) === wsRows,
+            "duplicate, absent and already-clear urgency events leave the model unchanged")
 
         const winRows = [
             { id: 10, title: "one", is_focused: true },
@@ -3120,6 +4189,8 @@ ShellRoot {
         root._check(winOpened.length === 3 && winOpened[2].id === 12
                 && !winOpened[0].is_focused && !winOpened[1].is_focused,
             "a focused niri window arriving unfocuses every window already open")
+        root._check(winOpened[1] === winRows[1] && winRows[0].is_focused,
+            "opening a focused window preserves unfocused objects and the previous snapshot")
         const winReplaced = NiriEvents.windowsWithUpsert(winRows, { id: 11, title: "again", is_focused: false })
         root._check(winReplaced.length === 2 && winReplaced[1].title === "again"
                 && winReplaced[0].is_focused === true,
@@ -3132,14 +4203,69 @@ ShellRoot {
         const winFocused = NiriEvents.windowsWithFocus(winRows, 11)
         root._check(!winFocused[0].is_focused && winFocused[1].is_focused,
             "a niri focus change leaves exactly one window focused")
+        root._check(NiriEvents.windowsWithFocus(winFocused, 11) === winFocused
+                && NiriEvents.windowsWithout(winRows, 99) === winRows,
+            "duplicate focus and late close events leave the window model unchanged")
+        const noFocusedWindows = NiriEvents.windowsWithFocus(winFocused, null)
+        root._check(!noFocusedWindows[0].is_focused && !noFocusedWindows[1].is_focused
+                && NiriEvents.windowsWithFocus(noFocusedWindows, null) === noFocusedWindows,
+            "clearing window focus updates it once and then leaves the model unchanged")
         const winStamped = NiriEvents.windowsWithFocusStamp(winRows, 11, { secs: 7, nanos: 3 })
         root._check(winStamped[1].focus_timestamp.secs === 7
                 && winStamped[0].focus_timestamp === undefined,
             "a niri focus timestamp lands on the window it names")
+        root._check(NiriEvents.windowsWithFocusStamp(winStamped, 11, { secs: 7, nanos: 3 }) === winStamped
+                && NiriEvents.windowsWithFocusStamp(winRows, 99, { secs: 7, nanos: 3 }) === winRows,
+            "duplicate timestamps and timestamps for closed windows leave the model unchanged")
+        const stampCleared = NiriEvents.windowsWithFocusStamp(winStamped, 11, null)
+        root._check(stampCleared[1].focus_timestamp === null
+                && winStamped[1].focus_timestamp.secs === 7,
+            "clearing a timestamp leaves the previous snapshot untouched")
         root._check(NiriEvents.indexOfWindow(winRows, 11) === 1
                 && NiriEvents.indexOfWindow(winRows, 99) === -1
                 && NiriEvents.indexOfWindow([null, { id: 5 }], 5) === 1,
             "a niri window lookup skips holes and reports a miss")
+
+        for (const count of [0, 1, 5, 50]) {
+            const slots = []
+            for (let i = 0; i < count; i++)
+                slots.push(i % 7 === 3 ? null : { shouldLoad: i % 3 !== 1, height: 40 + i * 0.5 })
+            for (const newestFirst of [false, true]) {
+                let reads = 0
+                const stack = { count: count, itemAt: index => { reads++; return slots[index] } }
+                const measured = StackLayout.measure(stack, newestFirst)
+                let positionsMatch = true
+                for (let i = 0; i < count; i++) {
+                    let expected = 0
+                    for (let j = 0; j < count; j++)
+                        if ((newestFirst ? j > i : j < i) && slots[j] && slots[j].shouldLoad)
+                            expected += slots[j].height
+                    if (measured.tops[i] !== expected) positionsMatch = false
+                }
+                const expectedHeight = slots.reduce((sum, slot) =>
+                    sum + (slot && slot.shouldLoad ? slot.height : 0), 0)
+                root._check(positionsMatch && measured.height === expectedHeight && reads === count,
+                    "notification layout reads " + count + " slots once with newest-first=" + newestFirst)
+            }
+        }
+        const firstSlot = notificationSlotFactory.createObject(root, { height: 80 })
+        const secondSlot = notificationSlotFactory.createObject(root, { height: 120 })
+        stackLayoutProbe.slots = [firstSlot, secondSlot]
+        root._check(stackLayoutProbe.layout.tops[0] === 120 && stackLayoutProbe.layout.height === 200,
+            "the shared popup layout places newest notifications first")
+        secondSlot.height = 144.5
+        root._check(stackLayoutProbe.layout.tops[0] === 144.5 && stackLayoutProbe.layout.height === 224.5,
+            "animated card heights invalidate the shared popup layout")
+        secondSlot.shouldLoad = false
+        root._check(stackLayoutProbe.layout.tops[0] === 0 && stackLayoutProbe.layout.height === 80,
+            "folding a card removes its height from the shared popup layout")
+        secondSlot.shouldLoad = true
+        stackLayoutProbe.newestFirst = false
+        root._check(stackLayoutProbe.layout.tops[1] === 80 && stackLayoutProbe.layout.height === 224.5,
+            "a bottom bar reverses popup order without changing the total height")
+        stackLayoutProbe.slots = []
+        firstSlot.destroy()
+        secondSlot.destroy()
 
         // qt reads the 12-hour clock off the whole format string: an hour formatted on its
         // own still comes back 0-23 and lands beside a PM that contradicts it
@@ -3238,7 +4364,25 @@ ShellRoot {
                 && vitals.sizeText(1.2 * 1073741824) === "1.2T"
                 && vitals.sizeText(0) === "" && vitals.sizeText(NaN) === "",
             "the vitals strip writes sizes in binary units with one decimal below ten")
-        if (vitals) vitals.destroy()
+        if (vitals) {
+            const reduceWas = ShellSettings.reduceMotion
+            ShellSettings.reduceMotion = false
+            vitals.active = true
+            vitals._introRows()
+            const row = root._findTrayNode(vitals, item => typeof item.settleIntro === "function")
+            root._check(row !== null && row._grow === 0,
+                "the home vitals intro starts while its page is active")
+            vitals.active = false
+            root._check(row !== null && row._grow === 1,
+                "leaving home settles its intro instead of animating a cached page")
+            vitals.active = true
+            vitals._introRows()
+            ShellSettings.reduceMotion = true
+            root._check(row !== null && row._grow === 1,
+                "enabling reduced motion settles an in-progress vitals intro")
+            ShellSettings.reduceMotion = reduceWas
+            vitals.destroy()
+        }
         root._check(NightLight._probeState(0, false, false) === 1
                 && NightLight._probeState(1, false, false) === 0
                 && NightLight._probeState(1, false, true) === 1
@@ -3288,7 +4432,15 @@ ShellRoot {
                 && Battery.normalizedPercent(-1) === 0
                 && Battery.normalizedPercent(NaN) === 0,
             "battery percentage reads quickshell's 0-1 charge and stays bounded")
-        root._check(Battery.statusFor(true, Up.UPowerDeviceState.PendingCharge, false, false) === "not charging"
+        root._check(Battery.validReading(true, 0.01) && Battery.validReading(true, 0.72),
+            "a battery with any charge keeps its readout and warning eligibility")
+        root._check(!Battery.validReading(true, 0)
+                && !Battery.validReading(false, 0.5)
+                && !Battery.validReading(true, NaN)
+                && !Battery.validReading(true, -1),
+            "the boot placeholder, an absent or an invalid battery is neither drawn nor warned about")
+        root._check(Battery.statusFor(true, Up.UPowerDeviceState.PendingCharge, false, false) === "charge limit"
+                && Battery.statusFor(true, Up.UPowerDeviceState.PendingCharge, true, false) === "not charging"
                 && Battery.statusFor(true, Up.UPowerDeviceState.Discharging, false, false) === "discharging"
                 && Battery.statusFor(true, Up.UPowerDeviceState.Unknown, false, false) === "on AC",
             "AC power alone does not claim the battery is charging")
@@ -3299,10 +4451,77 @@ ShellRoot {
                 && Battery.timeText(3601, true) === "+ 1h 1m"
                 && Battery.timeText(Infinity, true) === "" && Battery.timeText(-1, false) === "",
             "battery estimates round up to a useful minute and reject invalid times")
-        root._check(SystemAlerts.batteryWarningLevel(true, true) === "critical"
-                && SystemAlerts.batteryWarningLevel(true, false) === "low"
-                && SystemAlerts.batteryWarningLevel(false, false) === "",
-            "a critical battery reading suppresses the duplicate low-battery alert")
+        let batteryNotice = Battery.notificationStateFor(null, false, 0,
+            false, false, false, 20, 10)
+        root._check(batteryNotice === null,
+            "an unavailable startup battery cannot seed notification state")
+        batteryNotice = Battery.notificationStateFor(batteryNotice, true, 8,
+            true, false, false, 20, 10)
+        root._check(batteryNotice.warning === "" && batteryNotice.lowSeen && batteryNotice.criticalSeen,
+            "a late initial critical reading stays quiet at login")
+        batteryNotice = Battery.notificationStateFor(batteryNotice, true, 7,
+            true, false, false, 20, 10)
+        root._check(batteryNotice.warning === "",
+            "an initial critical level stays quiet until it has recovered")
+        batteryNotice = Battery.notificationStateFor(batteryNotice, true, 50,
+            true, false, false, 20, 10)
+        batteryNotice = Battery.notificationStateFor(batteryNotice, true, 19,
+            true, false, false, 20, 10)
+        root._check(batteryNotice.warning === "low",
+            "a real low-battery crossing after login raises a warning")
+        batteryNotice = Battery.notificationStateFor(batteryNotice, true, 20,
+            true, false, false, 20, 10)
+        batteryNotice = Battery.notificationStateFor(batteryNotice, true, 19,
+            true, false, false, 20, 10)
+        root._check(batteryNotice.warning === "",
+            "a reading that wobbles around the low threshold does not repeat its alert")
+        batteryNotice = Battery.notificationStateFor(batteryNotice, true, 9,
+            true, false, false, 20, 10)
+        root._check(batteryNotice.warning === "critical",
+            "an existing low warning can still escalate to critical")
+        const batteryNoticeBeforeDropout = batteryNotice
+        batteryNotice = Battery.notificationStateFor(batteryNotice, false, 0,
+            false, false, false, 20, 10)
+        root._check(batteryNotice === batteryNoticeBeforeDropout,
+            "a backend dropout preserves battery notification state")
+        batteryNotice = Battery.notificationStateFor(batteryNotice, true, 9,
+            false, true, false, 20, 10)
+        root._check(batteryNotice.warning === "" && !batteryNotice.lowSeen && !batteryNotice.criticalSeen,
+            "plugging in below both thresholds clears warnings and rearms them")
+        batteryNotice = Battery.notificationStateFor(batteryNotice, true, 9,
+            true, false, false, 20, 10)
+        root._check(batteryNotice.warning === "critical" && batteryNotice.lowSeen,
+            "a jump directly to critical raises only the critical warning")
+        const startupFull = Battery.notificationStateFor(null, true, 100,
+            false, false, true, 20, 10)
+        root._check(startupFull.chargeRevision === 0 && !startupFull.chargeComplete,
+            "an initially full battery never announces a completed charge")
+        let chargeNotice = Battery.notificationStateFor(null, true, 80,
+            false, true, false, 20, 10)
+        chargeNotice = Battery.notificationStateFor(chargeNotice, true, 99,
+            false, true, true, 20, 10)
+        root._check(chargeNotice.chargeRevision === 1 && chargeNotice.chargeComplete,
+            "a charge observed after login announces completion")
+        chargeNotice = Battery.notificationStateFor(chargeNotice, true, 98,
+            false, true, false, 20, 10)
+        chargeNotice = Battery.notificationStateFor(chargeNotice, true, 99,
+            false, true, true, 20, 10)
+        root._check(chargeNotice.chargeRevision === 1 && !chargeNotice.chargeComplete,
+            "full-charge jitter neither repeats an alert nor revives an expired completion")
+        chargeNotice = Battery.notificationStateFor(chargeNotice, true, 96,
+            true, false, false, 20, 10)
+        chargeNotice = Battery.notificationStateFor(chargeNotice, true, 96,
+            false, true, false, 20, 10)
+        chargeNotice = Battery.notificationStateFor(chargeNotice, true, 100,
+            false, false, true, 20, 10)
+        root._check(chargeNotice.chargeRevision === 2 && chargeNotice.chargeComplete,
+            "a later charge cycle can announce completion again")
+        let plugFull = Battery.notificationStateFor(null, true, 100,
+            true, false, true, 20, 10)
+        plugFull = Battery.notificationStateFor(plugFull, true, 100,
+            false, false, true, 20, 10)
+        root._check(plugFull.chargeRevision === 0 && !plugFull.chargeComplete,
+            "plugging in an already-full battery is not a completed charge")
         const dropout = SystemAlerts.batteryRearmState(false, false, 0, 20, 10, true, true)
         const plugged = SystemAlerts.batteryRearmState(true, false, 0, 20, 10, true, true)
         root._check(dropout.low && dropout.critical
@@ -4139,7 +5358,7 @@ ShellRoot {
     function _startResourceProbe(): void {
         const state = { step: 0, reduce: ShellSettings.reduceMotion, open: MenuState.open }
         root._resourceProbe = state
-        ShellSettings.reduceMotion = true
+        ShellSettings.reduceMotion = false
         MenuState.close()
         MenuState.requestWarm(probeAnchor, null)
         MenuState.requestWarm(invalidProbeAnchor, null)
@@ -4149,7 +5368,7 @@ ShellRoot {
             currentValue: "v999"
         })
         state.select._setOpen(true)
-        _resourceSettle.interval = 150
+        _resourceSettle.interval = Motion.medium + 150
         _resourceSettle.restart()
     }
 
@@ -4167,7 +5386,7 @@ ShellRoot {
                     "a thousand-choice dropdown builds only its viewport and reuse pool")
                 root._check(point && point.y >= select._headerH - 0.5
                         && point.y + selected.height <= select.height + 0.5,
-                    "opening a long dropdown reveals the selected option at the end")
+                    "an animated long dropdown keeps its selected option visible after expansion")
                 select._revealOption(0)
                 break
             }
@@ -4178,11 +5397,16 @@ ShellRoot {
                 break
             case 2: {
                 const selected = rows.find(row => row.previewValue === "v999")
+                const list = root._findTrayNode(select, item =>
+                    typeof item.positionViewAtIndex === "function")
                 let chosen = ""
                 select.chosen.connect(value => { chosen = value })
+                if (list) list.flick(0, 800)
                 if (selected) selected.trigger()
                 root._check(chosen === "v999" && !select._open,
                     "a recycled dropdown option chooses its current value and closes")
+                root._check(list && !list.flicking && !list.interactive,
+                    "closing a dropdown stops its inertia and releases wheel input during the fade")
                 break
             }
             case 3:
@@ -4440,6 +5664,13 @@ ShellRoot {
             case 10:
                 root._check(tile && tile.fallbackVisible && tile._providedIconFailed,
                     "a failed tray image falls back instead of leaving an empty button")
+                if (widget && tile) {
+                    widget.barActive = false
+                    widget._activateItem(s.first, tile)
+                    widget._openMenu(s.first, tile)
+                }
+                root._check(s.first.activations === 1 && !TrayMenuState.open,
+                    "a sleeping tray rejects both app activation and menu opening")
                 s.first.icon = "file://" + trayIconFixture.path
                 break
             case 11: {
@@ -4533,7 +5764,78 @@ ShellRoot {
             MenuState.setRecentFilter("")
             ShellSettings.reduceMotion = root._historyReduceWas
             Notifications.clearHistory()
+            root._startAccentResizeProbe()
+        }
+    }
+
+    property var _accentResizeState: null
+
+    function _startAccentResizeProbe(): void {
+        const saved = [ShellSettings.neutralTheme, ShellSettings.neutralAccentAuto, ShellSettings.reduceMotion]
+        ShellSettings.neutralTheme = true
+        ShellSettings.neutralAccentAuto = false
+        ShellSettings.reduceMotion = true
+        const component = Qt.createComponent("modules/menu/settings/SettingsThemeSection.qml")
+        const section = component.status === Component.Ready
+            ? component.createObject(root, { width: 520 }) : null
+        const viewport = root._findTrayNode(section, item => typeof item.revealIndex === "function")
+        const swatches = root._findTrayNode(section, item => typeof item.itemRight === "function"
+            && item.accessiblePrefix === "Accent")
+        const picker = root._findTrayNode(section, item => item._customPinned !== undefined)
+        root._check(viewport !== null && swatches !== null && picker !== null,
+            "theme controls expose the accent viewport for resize checks")
+        if (!viewport || !swatches || !picker) {
+            if (section) section.destroy()
+            component.destroy()
+            ShellSettings.neutralTheme = saved[0]
+            ShellSettings.neutralAccentAuto = saved[1]
+            ShellSettings.reduceMotion = saved[2]
             root._startDirectAnchorProbe()
+            return
+        }
+        picker._customPinned = true
+        root._accentResizeState = { saved: saved, component: component, section: section,
+            viewport: viewport, swatches: swatches, step: 0 }
+        _accentResizeTick.restart()
+    }
+
+    Timer {
+        id: _accentResizeTick
+        interval: 40
+        onTriggered: {
+            const s = root._accentResizeState
+            if (s.step === 0) {
+                root._check(!s.viewport.interactive && s.viewport.contentX === 0,
+                    "a wide accent picker shows all its swatches without a scroll offset")
+                s.section.width = 240
+            } else if (s.step === 1) {
+                const left = s.swatches.itemLeft(s.swatches.activeIndex) - s.swatches.edgePadding
+                const right = s.swatches.itemRight(s.swatches.activeIndex) + s.swatches.edgePadding
+                root._check(s.viewport.interactive && s.viewport.contentX > 0
+                        && left >= s.viewport.contentX - 0.5
+                        && right <= s.viewport.contentX + s.viewport.width + 0.5,
+                    "shrinking a theme pane reveals the selected accent even when its index did not change")
+                s.viewport.contentX = 0
+                s.viewport.movementEnded()
+            } else if (s.step === 2) {
+                root._check(s.viewport.contentX === 0,
+                    "scrolling the accent picker without a pending resize does not snap back to its selection")
+                s.viewport.contentX = 24
+                s.section.width = 520
+            } else {
+                root._check(!s.viewport.interactive && s.viewport.contentX === 0,
+                    "expanding the theme pane clears an obsolete horizontal scroll offset")
+                s.section.destroy()
+                s.component.destroy()
+                ShellSettings.neutralTheme = s.saved[0]
+                ShellSettings.neutralAccentAuto = s.saved[1]
+                ShellSettings.reduceMotion = s.saved[2]
+                root._accentResizeState = null
+                root._startDirectAnchorProbe()
+                return
+            }
+            s.step++
+            restart()
         }
     }
 
@@ -4643,6 +5945,8 @@ ShellRoot {
 
     property var _motionPage: null
     property var _motionSettings: null
+    property var _motionBodyItem: null
+    property int _motionSectionSwaps: 0
     property bool _motionReduceWas: false
     property int _motionStep: 0
     property int _motionWaits: 0
@@ -4752,7 +6056,132 @@ ShellRoot {
                         && !MenuState.settingsSelectOpen,
                     "escape on settings folds an open dropdown instead of closing the menu")
                 selectStub.destroy()
-
+                MenuState.setSettingsSection("updates")
+                interval = 500
+                restart()
+                break
+            }
+            case 4: {
+                const settings = root._motionSettings
+                if (root._motionNotYet(settings.contentReady)) break
+                root._check(root._findTrayNode(settings, item => item.title === "Silere Shell") !== null
+                        && root._findTrayNode(settings, item => item.title === "Feature readiness") !== null
+                        && root._findTrayNode(settings, item => item.key === "updatesWidget") !== null,
+                    "the system overview builds update controls and diagnostics in one page")
+                const detail = settings.children[0]
+                const body = detail.children.find(child => child.sourceComponent !== undefined)
+                root._motionBodyItem = body.item
+                root._motionSectionSwaps = 0
+                settings.sectionSwapped.connect(() => root._motionSectionSwaps++)
+                MenuState.open = true
+                MenuState.setSettingsSection("clock")
+                MenuState.setSettingsSection("updates")
+                interval = Motion.pageOut + Motion.pageIn + 80
+                restart()
+                break
+            }
+            case 5: {
+                const settings = root._motionSettings
+                const detail = settings.children[0]
+                const body = detail.children.find(child => child.sourceComponent !== undefined)
+                root._check(root._motionSectionSwaps === 0 && body.item === root._motionBodyItem
+                        && detail.opacity === 1 && detail._shift === 0 && detail._lift === 0,
+                    "returning mid-fade keeps the settings body and reverses to a settled reveal")
+                const exit = detail.data.find(item => item.animations?.length === 2)
+                let exits = 0
+                if (exit) exit.started.connect(() => exits++)
+                const toggle = root._findTrayNode(settings, item => item.key === "updatesWidget")
+                const checked = ShellSettings.updatesWidget
+                MenuState.setSettingsSection("clock")
+                if (toggle) toggle._activate()
+                root._check(toggle && !toggle.enabled && ShellSettings.updatesWidget === checked,
+                    "a departing settings section rejects changes from its retained controls")
+                MenuState.setSettingsSection("theme")
+                MenuState.setSettingsSection("separators")
+                root._check(exit && exits === 1,
+                    "successive settings selections share one exit instead of restarting its fade")
+                // Return to the retained body before continuing the page checks.
+                MenuState.setSettingsSection("updates")
+                root._check(detail.enabled,
+                    "returning to the displayed settings section restores its controls")
+                root._motionBodyItem = null
+                page.active = false
+                page.settleVisual(false)
+                page.revealReady = false
+                page._menuOpenSettled = true
+                page.active = true
+                interval = Motion.pageIn + 80
+                restart()
+                break
+            }
+            case 6:
+                root._check(page._awaitingEnter && page.opacity === 0,
+                    "a page with a pending body does not spend its fade on empty content")
+                page.viewportReady = false
+                page.revealReady = true
+                root._check(page._awaitingEnter && page.opacity === 0,
+                    "a ready page waits for the widening panel to make room for its reveal")
+                page.active = false
+                page.viewportReady = true
+                root._check(!page._awaitingEnter && page.opacity === 0,
+                    "body readiness cannot revive a page after another tab was selected")
+                page.revealReady = false
+                page.active = true
+                ShellSettings.reduceMotion = true
+                root._check(page.opacity === 1 && !page._awaitingEnter,
+                    "reduced motion clears a pending reveal without leaving a page invisible")
+                ShellSettings.reduceMotion = false
+                page.active = false
+                page.settleVisual(false)
+                page.active = true
+                page.revealReady = true
+                interval = Motion.pageIn + 80
+                restart()
+                break
+            case 7:
+                root._check(page.opacity === 1 && page._pageShift === 0
+                        && page._pageLift === 0 && !page._awaitingEnter,
+                    "a retained page completes its reveal after its body becomes ready")
+                root._motionPage.destroy()
+                root._motionPage = pageShellFactory.createObject(root, {
+                    active: true, powerOpen: false, animateOnCreate: true,
+                    revealReady: true, viewportReady: false
+                })
+                interval = Motion.pageIn + 80
+                restart()
+                break
+            case 8:
+                root._check(page.opacity === 0 && page._awaitingEnter,
+                    "a newly loaded page also waits for its panel viewport")
+                page.active = false
+                page.viewportReady = true
+                interval = Motion.pageOut + 80
+                restart()
+                break
+            case 9:
+                root._check(page.opacity === 0 && !page._awaitingEnter,
+                    "a cold page stays hidden when its body finishes after departure")
+                MenuState.setSettingsSection("surface")
+                MenuState.setSettingsSection("separators")
+                MenuState.setSettingsSection("workspaces")
+                interval = Motion.pageOut + Motion.pageIn + 180
+                restart()
+                break
+            case 10: {
+                const settings = root._motionSettings
+                const detail = settings.children[0]
+                const settled = settings.contentReady && !settings._awaitingSectionEnter
+                    && detail.opacity === 1 && detail._shift === 0 && detail._lift === 0
+                if (root._motionNotYet(settled)) break
+                root._check(settled && settings._shownSection === "workspaces"
+                        && root._motionSectionSwaps === 1 && detail.enabled,
+                    "a rapid settings sequence reveals only its latest destination")
+                MenuState.setSettingsSection("clock")
+                ShellSettings.reduceMotion = true
+                root._check(settings._shownSection === "clock" && detail.opacity === 1
+                        && detail._shift === 0 && detail._lift === 0,
+                    "reduced motion settles an interrupted settings transition at its destination")
+                MenuState.close()
                 root._motionPage.destroy()
                 root._motionSettings.destroy()
                 root._motionPage = null
@@ -5058,6 +6487,7 @@ ShellRoot {
     }
 
     function _finish(): void {
+        root._runSettingsDiagnosticsProbe()
         ShellSettings.dnd = true
         ShellSettings.showSeconds = !ShellSettings._defaults.showSeconds
         ShellSettings.resetToDefaults()

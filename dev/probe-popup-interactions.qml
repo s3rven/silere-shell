@@ -9,6 +9,7 @@ import "../modules/calendar"
 import "../modules/notifications"
 import "../modules/quickactions"
 import "../modules/traymenu"
+import "../modules/osd"
 
 // run through test-panels.sh: real layer-shell backends, private settings, no mapped windows
 Item {
@@ -20,6 +21,7 @@ Item {
     QuickActionsPopup { id: actions; targetScreen: root.targetScreen; visible: false }
     TrayMenuPopup { id: tray; targetScreen: root.targetScreen; visible: false }
     NotificationPopups { id: notificationPopups; targetScreen: root.targetScreen; visible: false }
+    OsdWindow { id: osd; targetScreen: root.targetScreen; visible: false }
     QtObject { id: traySource; property string id: "popup-probe-tray" }
     QtObject { id: anonymousTraySource; property string id: "" }
 
@@ -82,6 +84,11 @@ Item {
             "a date cannot retarget navigation while the grid is changing months")
         ShellSettings.reduceMotion = true
 
+        const grid = root._find(card, item => item.xOff !== undefined)
+        root._check(card.shownYear === 2024 && card.shownMonth === 2
+                && grid !== null && grid.opacity === 1 && grid.xOff === 0,
+            "enabling reduce motion settles a pending month change immediately")
+
         ShellSettings.calendarWeekStart = "sunday"
         card._go(2026, 0, 1)
         root._check(root._isDate(card._dateForCell(0), 2025, 11, 28),
@@ -90,13 +97,33 @@ Item {
         card._activateDay(card._rowCount * 7)
         CalendarState.open = false
         card._activateDay(card._lead)
+        card._step(1)
+        card._goToday()
+        card._go(2030, 5, 1)
         root._check(card.dispYear === 2026 && card.dispMonth === 0,
-            "invalid indices and closed calendars cannot navigate")
+            "invalid indices and closed calendars reject day, month and today navigation")
+
+        const monthButton = root._find(card, item => item.Accessible.name === "Return to current month")
+        const monthLabel = monthButton ? root._find(monthButton, item => item.text === card.monthLabel
+            && item.contentWidth !== undefined) : null
+        root._check(monthButton !== null && monthLabel !== null,
+            "calendar month navigation exposes its current month to accessibility tools")
+        if (monthButton && monthLabel) {
+            monthLabel.text = "A very long localized month name 2026"
+            root._check(monthButton.width < monthButton.parent.width
+                    && monthLabel.width <= monthButton.width && monthLabel.elide === Text.ElideRight
+                    && monthButton.Accessible.description === "Showing " + card.monthLabel,
+                "a long month title gives way to navigation buttons while preserving its full accessible name")
+            monthLabel.text = Qt.binding(() => card.monthLabel)
+        }
 
         const baseCell = card.cell
+        const baseMonthHeight = monthButton ? monthButton.height : 0
         ShellSettings.uiScale = ShellSettings.schemaFor("uiScale").max
         root._check(card.cell > baseCell && card.gridW === card.weekCol + card.cell * 7,
             "date targets and grid width grow with interface scaling")
+        root._check(monthButton !== null && monthButton.height > baseMonthHeight,
+            "month navigation targets also grow with interface scaling")
         ShellSettings.uiScale = 1
     }
 
@@ -324,6 +351,51 @@ Item {
         root._check(focus() === WlrKeyboardFocus.None, "closing the reply hands the keys back")
     }
 
+    function _checkPopupOpacity(): void {
+        const saved = [ShellSettings.popupMatchBarOpacity, ShellSettings.barOpacity,
+            ShellSettings.surfaceBlur, ShellSettings.reduceMotion, ShellSettings.osdEnabled,
+            ShellSettings.osdBarIntegrated]
+        ShellSettings.reduceMotion = true
+        ShellSettings.osdEnabled = true
+        ShellSettings.osdBarIntegrated = false
+        ShellSettings.barOpacity = 0.74
+        ShellSettings.surfaceBlur = true
+        ShellSettings.popupMatchBarOpacity = false
+        // Populate the model before the service's startup guard has elapsed.
+        OsdBarState._upsertEntry("volume", "󰕾", 0.48, "48%", false, Theme.accent)
+        OsdBarState._upsertEntry("temp", "󰔏", 0, "72°", false, Theme.warning)
+        root._checkPopupOpacityEntries()
+        ShellSettings.popupMatchBarOpacity = true
+        root._checkPopupOpacityEntries()
+        ShellSettings.barOpacity = 0.25
+        root._checkPopupOpacityEntries()
+        ShellSettings.surfaceBlur = false
+        root._checkPopupOpacityEntries()
+        OsdBarState._clearEntries()
+        ShellSettings.popupMatchBarOpacity = saved[0]
+        ShellSettings.barOpacity = saved[1]
+        ShellSettings.surfaceBlur = saved[2]
+        ShellSettings.reduceMotion = saved[3]
+        ShellSettings.osdEnabled = saved[4]
+        ShellSettings.osdBarIntegrated = saved[5]
+    }
+
+    function _checkPopupOpacityEntries(): void {
+        for (const kind of ["volume", "temp"]) {
+            const entry = root._find(osd.contentItem,
+                item => item.kind === kind && item.blurShape !== undefined)
+            root._check(entry !== null, kind + " OSD is available to the opacity probe")
+            if (!entry) continue
+            entry._op = 1
+            const fill = root._find(entry, item => item.color !== undefined
+                && item._outlineColor !== undefined)
+            root._check(fill !== null && Qt.colorEqual(fill.color, Theme.popup),
+                kind + " OSD uses the popup fill and effective opacity")
+            root._check((entry.blurItem !== null) === (Theme.frosted && Theme.popup.a < 1),
+                kind + " OSD blurs exactly when its popup fill is translucent")
+        }
+    }
+
     function _run(): void {
         root._checkCalendar()
         root._checkActions()
@@ -331,6 +403,7 @@ Item {
         root._checkDismissal()
         root._checkTraySubmenus()
         root._checkReplyFocus()
+        root._checkPopupOpacity()
         console.warn("PROBE-POPUP-INTERACTIONS checked " + root._checks + " behaviors")
     }
 

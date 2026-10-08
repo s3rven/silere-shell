@@ -31,7 +31,8 @@ XDG_CONFIG_HOME="$cfg" XDG_STATE_HOME="$cfg" XDG_CACHE_HOME="$cfg/cache" XDG_RUN
     qs -p "$probe_project/probe-logic.qml" --no-color >"$log" 2>&1 &
 probe_pid=$!
 
-_probe_wait "$log" "$probe_pid" 'PROBE-LOGIC' 80 0.25 || true
+# Animation and asynchronous-loader regressions need their full settle windows.
+_probe_wait "$log" "$probe_pid" 'PROBE-LOGIC' 120 0.25 || true
 
 if ! grep -q 'PROBE-LOGIC passed' "$log" 2>/dev/null; then
     cat "$log" >&2

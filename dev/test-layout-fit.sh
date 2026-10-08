@@ -86,7 +86,8 @@ for scale in "${scales[@]}"; do
     runtime="$conf/runtime"
     mkdir -p "$conf/silere-shell" "$conf/cache" "$conf/state" "$runtime"
     chmod 0700 "$runtime"
-    printf '{ "__version": 1, "uiScale": %s }\n' "$scale" > "$conf/silere-shell/settings.json"
+    # fit is a property of the layout at rest; an intro reveal clipped mid-run is not a truncation
+    printf '{ "__version": 1, "uiScale": %s, "reduceMotion": true }\n' "$scale" > "$conf/silere-shell/settings.json"
 
     # Capture to a regular file, not command substitution. A component may launch
     # a detached helper which inherits stdout; that helper can keep a capture pipe
@@ -154,7 +155,7 @@ mkdir -p "$bare_conf/silere-shell" "$bare_conf/cache" "$bare_conf/state" \
     "$bare_conf/runtime" "$bare_bin"
 chmod 0700 "$bare_conf/runtime"
 # the tighter end of the type range only: this pass measures rows, not the range
-printf '{ "__version": 1, "uiScale": 1.15 }\n' > "$bare_conf/silere-shell/settings.json"
+printf '{ "__version": 1, "uiScale": 1.15, "reduceMotion": true }\n' > "$bare_conf/silere-shell/settings.json"
 qs_bin="$(command -v qs)"
 ln -s "$(command -v bash)" "$bare_bin/bash"
 bare_list="modules/menu/settings/SettingsMaintenanceSection.qml

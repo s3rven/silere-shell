@@ -11,13 +11,24 @@ Item {
         { value: "compact", label: "Sep 30" }
     ]
 
+    function notificationFixture(): var {
+        return { actions: [
+                { identifier: "open", text: "Open", invoke: function() {} },
+                { identifier: "remind", text: "Remind me", invoke: function() {} },
+                { identifier: "dismiss", text: "Dismiss", invoke: function() {} },
+                { identifier: "read", text: "Mark read", invoke: function() {} }
+            ], hints: ({}), appIcon: "", image: "", appName: "Probe", desktopEntry: "",
+            summary: "Action layout", body: "", urgency: 1, expireTimeout: 0,
+            resident: true, transient: false, hasInlineReply: false }
+    }
+
     function fillVitals(item): void {
         item.active = false
-        const grid = item.children.find(child => child.cells !== undefined)
-        for (const tile of grid.children) {
-            if (tile.value === undefined) continue
-            tile.value = "100%"
-            if (tile.label === "CPU") tile.sub = "125°"
+        for (const row of item.rows) {
+            if (row.value === undefined) continue
+            row.value = "100%"
+            if (row.label === "CPU") row.sub = "125°"
+            if (row.label === "Disk") row.sub = "999G free"
         }
     }
 
@@ -30,18 +41,17 @@ Item {
 
     function layoutFailures(): var {
         const failures = []
-        for (const loader of [narrowVitals, singleVitals, wideVitals]) {
+        for (const loader of [narrowVitals, wideVitals]) {
             if (!loader.item) { failures.push("vitals fixture did not load"); continue }
-            const grid = loader.item.children.find(child => child.cells !== undefined)
-            const tiles = grid.children.filter(child => child.value !== undefined && child.visible)
-            for (const tile of tiles) {
-                const rows = tile.children.filter(child => child.spacing !== undefined)
-                for (const row of rows)
-                    if (row.x < tile.padL - 0.5
-                            || row.x + row.implicitWidth > tile.width - tile.padR + 0.5)
-                        failures.push(tile.label + " reading invades its tile padding at " + loader.width + "px")
-                if (tile.y > 0 && tile.x < 0.5 && tile.divider)
-                    failures.push("a wrapped first-column vital keeps an interior divider")
+            const rows = loader.item.rows.filter(child => child.value !== undefined && child.visible)
+            for (const row of rows) {
+                const names = row.children.find(child => child.spacing !== undefined)
+                const value = row.children.find(child => child.horizontalAlignment === Text.AlignRight)
+                if (!names || !value) { failures.push("a vital row lost its name or value"); continue }
+                if (value.implicitWidth > value.width + 0.5)
+                    failures.push(row.label + " reading overflows its reserved width at " + loader.width + "px")
+                if (names.width < 64)
+                    failures.push(row.label + " name has no room beside its bar at " + loader.width + "px")
             }
         }
         for (const choices of [narrowDate, wideDate, warnings, tabs]) {
@@ -82,15 +92,83 @@ Item {
             if (Math.abs(wideDateText.y - wideUptime.y) > 0.5)
                 failures.push("wide home metadata unnecessarily takes two lines")
         }
+        if (!narrowHistory.item) failures.push("narrow history fixture did not load")
+        else {
+            const messages = root.descendants(narrowHistory.item,
+                item => item.text === "All caught up" || item.text === "New notifications will appear here")
+            for (const message of messages) {
+                const p = message.mapToItem(narrowHistory.item, 0, 0)
+                if (p.x < -0.5 || p.x + message.width > narrowHistory.width + 0.5
+                        || message.contentWidth > message.width + 0.5)
+                    failures.push("history empty-state text escapes the narrow pane")
+            }
+            if (messages.length !== 2) failures.push("narrow history fixture lacks its empty-state messages")
+        }
+        for (const loader of [narrowNotification, wideNotification]) {
+            if (!loader.item) { failures.push("notification action fixture did not load"); continue }
+            const buttons = root.descendants(loader.item, item => item.preferredWidth !== undefined)
+            if (buttons.length !== 4) failures.push("notification fixture does not show all four actions")
+            const rows = new Set()
+            for (const button of buttons) {
+                const p = button.mapToItem(loader.item, 0, 0)
+                rows.add(Math.round(p.y))
+                if (p.x < -0.5 || p.x + button.width > loader.width + 0.5)
+                    failures.push("notification action escapes its card")
+                for (const label of root.descendants(button, item => typeof item.text === "string"))
+                    if (label.truncated === true)
+                        failures.push("notification action label is truncated: " + label.text)
+            }
+            if (loader === narrowNotification && rows.size < 2)
+                failures.push("narrow notification keeps squeezing four actions into one row")
+            if (loader === wideNotification && rows.size !== 1)
+                failures.push("wide notification unnecessarily wraps compact actions")
+        }
+        const dependency = root.descendants(blockedSetting, item => item.text === blockedSetting._detailText)[0]
+        if (!dependency || dependency.truncated || dependency.contentWidth > dependency.width + 0.5)
+            failures.push("the unavailable setting's explanation is clipped in a narrow pane")
+        else if (blockedSetting.height < dependency.height + 24)
+            failures.push("the unavailable setting does not grow to fit its explanation: row "
+                + blockedSetting.height + ", detail " + dependency.height)
         return failures
     }
 
     Column {
         id: cases
         spacing: 8
+        ToggleRow {
+            id: blockedSetting
+            width: 232
+            label: "Background blur"
+            description: "Frost what shows through"
+            available: false
+            dependsNote: "The compositor cannot enable this setting. Check the configuration in /home/user/"
+                + "a".repeat(70) + "/configuration.conf and try again."
+        }
+        Loader {
+            id: narrowHistory
+            width: 232; height: 320
+            Component.onCompleted: setSource("../modules/menu/RecentPage.qml", {
+                width: 232, viewportHeight: 320, active: false, powerOpen: false
+            })
+        }
+        Loader {
+            id: narrowNotification
+            width: 232
+            Component.onCompleted: setSource("../modules/notifications/NotificationCard.qml", {
+                width: 232, notification: root.notificationFixture(),
+                notifId: 2147483645, createdAt: Date.now()
+            })
+        }
+        Loader {
+            id: wideNotification
+            width: 520
+            Component.onCompleted: setSource("../modules/notifications/NotificationCard.qml", {
+                width: 520, notification: root.notificationFixture(),
+                notifId: 2147483644, createdAt: Date.now()
+            })
+        }
 
-        Loader { id: narrowVitals; width: 272; source: "../modules/menu/VitalsStrip.qml"; onLoaded: root.fillVitals(item) }
-        Loader { id: singleVitals; width: 188; source: "../modules/menu/VitalsStrip.qml"; onLoaded: root.fillVitals(item) }
+        Loader { id: narrowVitals; width: 332; source: "../modules/menu/VitalsStrip.qml"; onLoaded: root.fillVitals(item) }
         Loader { id: wideVitals; width: 388; source: "../modules/menu/VitalsStrip.qml"; onLoaded: root.fillVitals(item) }
         ChoiceChipRow {
             id: narrowDate

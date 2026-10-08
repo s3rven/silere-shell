@@ -35,17 +35,18 @@ ShellRoot {
         }
 
         // the surface's own import resolves by file url, so only a file-url import reaches its singleton
-        function _menuState(): var {
+        function _service(name: string): var {
             const bridge = Qt.createQmlObject('import QtQuick\nimport "file://'
-                + root._probeRoot + '/services"\nQtObject { readonly property var state: MenuState }',
-                host, "menu-state-bridge")
+                + root._probeRoot + '/services"\nQtObject { readonly property var state: ' + name + ' }',
+                host, "panel-service-bridge")
             const state = bridge.state
             bridge.destroy()
             return state
         }
 
         function _checkWarmMenuReopen(obj): void {
-            const MenuState = host._menuState()
+            const MenuState = host._service("MenuState")
+            const settings = host._service("ShellSettings")
             const panel = host._retentionPanel(obj.popupCard || obj.contentItem)
             if (!panel) {
                 console.warn("PROBE-FAIL MenuWindow :: retention panel missing")
@@ -54,6 +55,8 @@ ShellRoot {
             }
             const previousTab = MenuState._activeTab
             const previousOpen = MenuState.open
+            const previousReduceMotion = settings.reduceMotion
+            const geometryReady = panel._geometryReady
             MenuState.open = false
             MenuState._activeTab = MenuState.settingsTab
             panel._settingsRetained = false
@@ -62,7 +65,35 @@ ShellRoot {
                 console.warn("PROBE-FAIL MenuWindow :: warm reopen did not retain the active page")
                 root._failed++
             }
+            // Exercise the actual width, rail and padding together, without
+            // mapping a test window onto the user's desktop.
             MenuState.open = false
+            settings.reduceMotion = false
+            MenuState.selectTab(MenuState.homeTab)
+            const initialInner = panel.innerW
+            panel._geometryReady = true
+            MenuState.open = true
+            MenuState.selectTab(MenuState.settingsTab)
+            if (panel.pageLayoutW > initialInner + 12 && panel.pageViewportReady) {
+                console.warn("PROBE-FAIL MenuWindow :: incoming page revealed before its viewport widened")
+                root._failed++
+            }
+            const glides = panel.data.filter(item => typeof item._advance === "function")
+            for (let frame = 0; frame < 12; frame++)
+                for (const glide of glides) glide._advance(1 / 240)
+            MenuState.selectTab(MenuState.homeTab)
+            MenuState.selectTab(MenuState.settingsTab)
+            for (let frame = 0; frame < 240; frame++)
+                for (const glide of glides) glide._advance(1 / 240)
+            if (Math.abs(panel.width - panel.panelW) > 0.1
+                    || Math.abs(panel.railW - panel.railExpandedW) > 0.1
+                    || !panel.pageViewportReady) {
+                console.warn("PROBE-FAIL MenuWindow :: rapid tab reversals did not settle the viewport")
+                root._failed++
+            }
+            MenuState.open = false
+            panel._geometryReady = geometryReady
+            settings.reduceMotion = previousReduceMotion
             MenuState._activeTab = previousTab
             MenuState.open = previousOpen
         }

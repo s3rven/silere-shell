@@ -2360,10 +2360,10 @@ check_grid() {
 }
 check_grid modules/menu/MenuWindow.qml 'readonly property int targetH' "menu content height" 5
 check_grid modules/menu/MenuWindow.qml 'readonly property int _availablePanelH' "menu screen cap"
-check_grid modules/calendar/CalendarPopup.qml '_col\.implicitHeight \+ pad \* 2' "calendar card height"
+check_grid modules/calendar/CalendarPopup.qml '_col\.implicitHeight \+ card\.pad \* 2' "calendar card height"
 check_grid modules/calendar/CalendarPopup.qml 'readonly property int  panelW' "calendar card width"
-check_grid modules/quickactions/QuickActionsPopup.qml '_rows\.implicitHeight \+ pad \* 2' "quick actions card height"
-check_grid modules/traymenu/TrayMenuPopup.qml '_col\.implicitHeight, _maxContentH' "tray menu card height"
+check_grid modules/quickactions/QuickActionsPopup.qml '_rows\.implicitHeight \+ card\.pad \* 2' "quick actions card height"
+check_grid modules/traymenu/TrayMenuPopup.qml '_col\.implicitHeight, card\._maxContentH' "tray menu card height"
 check_grid modules/traymenu/TrayMenuPopup.qml 'readonly property real _panelH' "tray submenu flyout height"
 check_grid modules/notifications/NotificationCard.qml 'height:.*contentCol\.implicitHeight' "notification card height"
 check_grid modules/osd/OsdWindow.qml 'readonly property int pillW' "floating OSD pill width"
