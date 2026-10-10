@@ -173,7 +173,29 @@ ShellRoot {
                 if (!wantOpen) _plUnload.restart()
             }
         }
-        onRequestedScreenChanged: if (warm && !wantOpen) _pl._ensureWarm()
+        // The compositor closes a layer surface for good when its output goes
+        // away, and the latched screen reads null from then on. A popup that is
+        // still wanted, like a persistent notification, reopens on the screen
+        // that took over instead of staying unmapped until it is dismissed.
+        function _recoverLostScreen(): void {
+            if (_pl._latchedScreen || !_pl.requestedScreen) return
+            if (_plLoader.active) {
+                _plUnload.stop()
+                _plLoader.active = false
+                Qt.callLater(function() {
+                    if (_pl.wantOpen) _pl._ensureLoaded()
+                    else if (_pl.warm) _pl._ensureWarm()
+                })
+            } else if (_plLoader.loading) {
+                _plLoader.loading = false
+                _pl._ensureWarm()
+            }
+        }
+        on_LatchedScreenChanged: _pl._recoverLostScreen()
+        onRequestedScreenChanged: {
+            _pl._recoverLostScreen()
+            if (warm && !wantOpen) _pl._ensureWarm()
+        }
         LazyLoader {
             id: _plLoader
             active: false
@@ -246,9 +268,15 @@ ShellRoot {
         surface: Component { QuickActionsPopup { targetScreen: _quickActionsPopup.latchedScreen } }
     }
 
-    LazyLoader {
-        active: Idle.keepAwake && !root.smokeTest
-        component: KeepAwakeSurface {}
+    // any one screen holds the inhibitor; when that output goes away the surface is rebuilt on the next
+    Variants {
+        id: _keepAwakeSurfaces
+        model: Idle.keepAwake && !root.smokeTest && Quickshell.screens.length > 0
+            ? [Quickshell.screens[0]] : []
+        delegate: KeepAwakeSurface {
+            required property ShellScreen modelData
+            targetScreen: modelData
+        }
     }
 
     // a click on another monitor closes the popup; a compositor with a popup grab already hands it to the popup

@@ -6,6 +6,11 @@ import Quickshell.Wayland
 PanelWindow {
     id: win
 
+    // pinned by shell.qml: an output that goes away closes its surface for good,
+    // which would drop the inhibitor while the clock's cup still says Keep Awake
+    required property ShellScreen targetScreen
+    screen: targetScreen
+
     color:         "transparent"
     exclusionMode: ExclusionMode.Ignore
     WlrLayershell.namespace: "silere-keepawake"
