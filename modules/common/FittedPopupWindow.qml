@@ -37,7 +37,10 @@ PanelWindow {
     property QtObject _grab: null
     Component.onCompleted: if (Compositor.popupGrab) win._grab = Compositor.popupGrab.createObject(win, { popup: win })
 
-    // full screen only to catch the closing click, and otherwise an input-less pixel that keeps the card's map order: every window redraws while any animation runs, and the compositor recomposites every pixel of a surface Qt redraws, which is also why the card animates in its own narrow window
+    // open, or the card still fading out
+    readonly property bool shown: win.open || cardWin.visible
+
+    // full screen only to catch the closing click; with a compositor grab it stays unmapped, since every mapped window redraws and re-runs every running animation while any animation runs, which is also why the card animates in its own narrow window
     screen:        targetScreen
     color:         "transparent"
     exclusiveZone: -1
@@ -45,7 +48,7 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
-    visible: win.open || cardWin.visible
+    visible: !win._grabsClicks && win.shown
     // layer surfaces stack in map order: mapped after the card, this window would cover it and take its clicks
     property bool _cardMayMap: false
     onVisibleChanged: {
@@ -56,8 +59,6 @@ PanelWindow {
     anchors { top: true; left: true; right: !win._grabsClicks; bottom: !win._grabsClicks }
     implicitWidth: 1
     implicitHeight: 1
-
-    Shortcut { sequence: "Escape"; context: Qt.ApplicationShortcut; enabled: win.open; onActivated: win.escapePressed() }
 
     OutsideTapGuard {
         id: _tapGuard
@@ -134,7 +135,10 @@ PanelWindow {
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.keyboardFocus: win.open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
-        visible: (win.open || (win.popupCard !== null && win.popupCard.opacity > 0.001)) && win._cardMayMap
+        visible: (win.open || (win.popupCard !== null && win.popupCard.opacity > 0.001))
+            && (win._grabsClicks || win._cardMayMap)
+
+        Shortcut { sequence: "Escape"; context: Qt.ApplicationShortcut; enabled: win.open; onActivated: win.escapePressed() }
 
         anchors { top: true; bottom: true; left: true }
         margins.left: cardWin._left

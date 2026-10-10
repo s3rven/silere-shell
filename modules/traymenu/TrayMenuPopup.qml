@@ -62,7 +62,7 @@ FittedPopupWindow {
         flyout.opened = false
     }
 
-    onVisibleChanged: if (!visible) {
+    onShownChanged: if (!shown) {
         win._setActiveMenu(null)
         win._heldLeft = 0
         win._heldRight = 0

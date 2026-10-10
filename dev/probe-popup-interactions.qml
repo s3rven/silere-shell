@@ -321,6 +321,13 @@ Item {
         root._check(!TrayMenuState.open && !tray._surfaceOpen,
             "a click where a submenu has closed closes the tray menu")
         sub.destroy()
+
+        TrayMenuState.toggleAt(winW / 2, root.targetScreen, null, false, null, traySource)
+        root._check(tray.shown, "an open tray menu reports itself shown")
+        tray._heldLeft = 37
+        TrayMenuState.close()
+        root._check(!tray.shown && tray._heldLeft === 0,
+            "a closed tray menu stops being shown and forgets its held submenu room")
     }
 
     function _checkReplyFocus(): void {
