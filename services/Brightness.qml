@@ -55,13 +55,24 @@ Singleton {
     property int pendingPercent: percent
     onPercentChanged: pendingPercent = percent
 
-    // like volume, a notch lands on the step grid rather than keeping an odd starting level
+    // like volume, a notch lands on the step grid rather than keeping an odd starting level; under 20 levels a 5% notch can round onto the level already set, so it moves at least one
+    function notchLevel(percent: int, level: int, maxLevel: int, delta: int): int {
+        const notches = Math.round(delta / root.stepPct)
+        const base = notches > 0 ? Math.floor(percent / root.stepPct)
+            : Math.ceil(percent / root.stepPct)
+        const target = notches === 0 ? percent + delta : (base + notches) * root.stepPct
+        let next = Math.max(1, Math.round(maxLevel * Math.max(1, Math.min(100, target)) / 100))
+        if (delta > 0 && next <= level) next = level + 1
+        else if (delta < 0 && next >= level) next = level - 1
+        return Math.max(1, Math.min(maxLevel, next))
+    }
+
     function bumpBy(delta: int): void {
-        const notches = Math.round(delta / stepPct)
-        if (notches === 0) { setPercent(pendingPercent + delta); return }
-        const base = notches > 0 ? Math.floor(pendingPercent / stepPct)
-            : Math.ceil(pendingPercent / stepPct)
-        setPercent((base + notches) * stepPct)
+        if (!controllable || delta === 0) return
+        const next = root.notchLevel(pendingPercent, currentBrightness, maxBrightness, delta)
+        if (next === currentBrightness) return
+        currentBrightness = next
+        _applyDebounce.restart()
     }
 
     function setPercent(p: real): void {
