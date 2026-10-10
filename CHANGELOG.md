@@ -11,44 +11,9 @@ settings file carries its own `__version` and migrates separately.
 
 ## [Unreleased]
 
-### Changed
-
-- Summarize tool errors by scanning backward to the last useful line, avoiding a
-  split of the whole log.
-- Document control ownership and target-change regression checks for contributors.
-
-- Smooth the reactive underline's glow shoulders with bounded, alpha-preserving
-  gradient stops and derive all its colors from one theme-aware fade.
-
-- Share device-pixel stroke sizing between control outlines, dividers, glow rims,
-  and notification countdowns; floating glow rims now keep a consistent thickness
-  on fractional scales and clamp their corners to the available space.
-- Use one wheel-gesture cleanup timer instead of creating a timer for each control.
-
-### Fixed
-
-- Cancel Bluetooth fallback volume processes and queued writes when their audio
-  route is resynchronized.
-- Cancel menu volume, microphone, app-volume, and brightness drags when their
-  target changes; give each target its own wheel state and discard stale remainders.
-- Reject input on hidden color sliders and menu mute/expand controls, clearing
-  unfinished wheel gestures when their controls stop being interactive.
-- Skip error lines that contain only stripped control characters, preserving the
-  earlier useful error or the fallback text.
-
-- Keep notification, network, and screenshot glow envelopes independent, so
-  overlapping events and individual toggles cannot reset one another's geometry.
-  Critical notification flashes retain their semantic color during screenshots.
-- Refresh audio visualizer gradients when their edge fade width or exact bounds
-  change, and repaint active visualizers when the theme accent changes.
-
-- Catch the first network disconnect after a connected startup, clear every network
-  glow animation when motion stops, and skip reconnect fades when the glow is dark.
-- Reset expired wheel gestures before accepting new input, even if the event loop
-  has delayed cleanup; keep gesture keys independent of JavaScript object names.
-
 ## Releases
 
+- [1.4.1](docs/releases/1.4.1.md) — 2026-10-10
 - [1.4.0](docs/releases/1.4.0.md) — 2026-10-09
 - [1.3.0](docs/releases/1.3.0.md) — 2026-10-05
 - [1.2.0](docs/releases/1.2.0.md) — 2026-09-27
