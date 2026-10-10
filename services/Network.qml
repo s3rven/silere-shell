@@ -611,10 +611,56 @@ Singleton {
 
     Timer {
         id: _vpnFallbackPoll
-        // the link signature covers device transitions; this is only a net for a VPN toggled outside the shell that left it unchanged
+        // the interface list covers tunnels; this is only a net for a VPN with no interface of its own
         interval: 900000
         repeat: true
         running: root._vpnWanted
+        onTriggered: root._queueVpnRefresh()
+    }
+
+    // quickshell models only wifi and wired devices, so a tunnel coming or going never moves the link signature
+    property string _interfaceNames: ""
+
+    function interfaceNames(raw: string): string {
+        const names = []
+        const lines = String(raw || "").split("\n")
+        for (let i = 0; i < lines.length; i++) {
+            const sep = lines[i].indexOf(":")
+            if (sep > 0) names.push(lines[i].slice(0, sep).trim())
+        }
+        return names.sort().join(" ")
+    }
+
+    function _applyInterfaceNames(raw: string): void {
+        const next = root.interfaceNames(raw)
+        if (next.length === 0 || next === root._interfaceNames) return
+        const first = root._interfaceNames.length === 0
+        root._interfaceNames = next
+        if (first) return
+        root._queueVpnRefresh()
+        // networkmanager hears of a new tunnel only after the kernel lists it
+        _vpnSettle.restart()
+    }
+
+    FileView {
+        id: _interfaceFile
+        path: root._vpnWanted ? "/proc/net/dev" : ""
+        blockLoading: false
+        blockAllReads: false
+        printErrors: false
+        onLoaded: root._applyInterfaceNames(_interfaceFile.text())
+    }
+
+    Timer {
+        interval: 5000
+        repeat: true
+        running: root._vpnWanted
+        onTriggered: _interfaceFile.reload()
+    }
+
+    property Timer _vpnSettleTimer: Timer {
+        id: _vpnSettle
+        interval: 3000
         onTriggered: root._queueVpnRefresh()
     }
 
