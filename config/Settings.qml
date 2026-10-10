@@ -64,11 +64,17 @@ Singleton {
         return ""
     }
 
+    // hyprsunset's kelvin curve still cuts blue about 2% at 6500, where wlsunset is white; only its identity matrix is neutral
+    function hyprsunsetNeutral(temp: int): bool {
+        return Math.round(temp) >= 6500
+    }
+
     function nightLightProviderArgv(name: string, temp: int): var {
         const t = Math.max(1000, Math.min(20000, Math.round(temp)))
         if (name === "hyprsunset")
-            return Compositor.isHyprland && SystemTools.hasHyprsunset
-                ? ["hyprsunset", "-t", String(t)] : []
+            return !Compositor.isHyprland || !SystemTools.hasHyprsunset ? []
+                : root.hyprsunsetNeutral(t) ? ["hyprsunset", "-i"]
+                : ["hyprsunset", "-t", String(t)]
         // wlsunset interpolates between an unequal day and night pair and exits on an equal
         // one, so hold a value with a day that spans the clock and sits one step above night
         if (name === "wlsunset") {

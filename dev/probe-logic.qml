@@ -1115,9 +1115,15 @@ ShellRoot {
                 ? hs.length === 3 && hs[0] === "hyprsunset" && hs[2] === "3400"
                 : hs.length === 0,
             "a named night light provider resolves only when that program is installed")
-        root._check(Settings.nightLightProviderArgv("hyprsunset", 99999).length === 0
-                || Settings.nightLightProviderArgv("hyprsunset", 99999)[2] === "20000",
+        root._check(Settings.nightLightProviderArgv("hyprsunset", 10).length === 0
+                || Settings.nightLightProviderArgv("hyprsunset", 10)[2] === "1000",
             "a night light temperature is clamped before it reaches the command")
+        root._check(Settings.hyprsunsetNeutral(6500) && Settings.hyprsunsetNeutral(99999)
+                && !Settings.hyprsunsetNeutral(6499) && !Settings.hyprsunsetNeutral(3400),
+            "daylight runs hyprsunset's identity matrix, every warmer step a temperature")
+        const hsDay = Settings.nightLightProviderArgv("hyprsunset", 6500)
+        root._check(hsDay.length === 0 || (hsDay.length === 2 && hsDay[1] === "-i"),
+            "night light starts hyprsunset neutral at daylight")
         root._check(Settings.nightLightProviderArgv("nonesuch", 4000).length === 0,
             "an unknown night light provider resolves to no command")
         const wlFloor = Settings.nightLightProviderArgv("wlsunset", 1000)

@@ -229,8 +229,9 @@ Singleton {
         if (_tempProc.running) return
         _tempProc._targetTemp = root.temperature
         _tempProc._generation = root._stateGeneration
-        _tempProc.exec(["hyprctl", "hyprsunset", "temperature",
-            String(_tempProc._targetTemp)])
+        _tempProc.exec(Settings.hyprsunsetNeutral(_tempProc._targetTemp)
+            ? ["hyprctl", "hyprsunset", "identity"]
+            : ["hyprctl", "hyprsunset", "temperature", String(_tempProc._targetTemp)])
     }
 
     function _temperatureUpdateSucceeded(code: int, timedOut: bool, response: string): bool {
