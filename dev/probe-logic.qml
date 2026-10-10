@@ -3140,19 +3140,15 @@ ShellRoot {
         MenuState.toggleAt(probeAnchor.menuAnchorX, null, probeAnchor)
         // a destroyed widget nulls the property with no assignment behind it
         MenuState.anchorSource = null
-        root._check(MenuState.open && MenuState.anchorSource !== null
-                && !MenuState._anchorClosing,
+        root._check(MenuState.open && MenuState.anchorSource !== null,
             "a vacant anchor is claimed by a live widget instead of closing the menu")
         MenuState.adoptAnchor(probeAnchor)
         root._check(MenuState.anchorSource !== probeAnchor,
             "a widget cannot take an anchor another one already holds")
         MenuState._setAnchor(null)
-        root._check(MenuState.open && MenuState.anchorSource === null
-                && !MenuState._anchorClosing,
-            "deliberately clearing the anchor is not reclaimed and arms no close")
+        root._check(MenuState.open && MenuState.anchorSource === null,
+            "deliberately clearing the anchor is not reclaimed")
         MenuState.close()
-        root._check(!MenuState.open && !MenuState._anchorClosing,
-            "closing the menu leaves no pending anchor close")
 
         const popupEdge = Metrics.popupClearance(8)
         const topPopupY = Metrics.popupY(1000, 200, false, popupEdge)
@@ -6361,6 +6357,33 @@ ShellRoot {
         onTriggered: {
             root._check(!TrayMenuState.open && TrayMenuState.anchorSource === null,
                 "an open popup closes when no widget reclaims its dropped anchor")
+            TrayMenuState.openAt(17, null, probeAnchor)
+            TrayMenuState._setAnchor(null)
+            _anchorHoldSettle.restart()
+        }
+    }
+
+    // the regrab timer stays private, so its effect is what gets read: a stray close lands within its 150 ms
+    property int _anchorHoldStep: 0
+    Timer {
+        id: _anchorHoldSettle
+        interval: 220
+        onTriggered: {
+            const popup = TrayMenuState
+            if (root._anchorHoldStep === 0) {
+                root._check(popup.open && popup.anchorSource === null,
+                    "deliberately clearing a popup anchor arms no close")
+                popup._setAnchor(probeAnchor)
+                popup.anchorSource = null
+                popup.close()
+                popup.openUnanchored()
+                root._anchorHoldStep = 1
+                restart()
+                return
+            }
+            root._check(popup.open,
+                "closing a popup cancels the close its dropped anchor armed")
+            popup.close()
             root._startAnchorTeardown()
         }
     }
