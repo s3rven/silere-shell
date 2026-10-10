@@ -20,8 +20,8 @@ MotionBehavior {
 
     // a fresh Column/Loader reports 0 before its first implicitHeight; arm a pass later or first use plays a fake reveal
     gate: root._geometryReady
-    Component.onCompleted: root._geometrySettle.start()
-    Component.onDestruction: root._geometrySettle.stop()
+    Component.onCompleted: root._geometrySettle?.start()
+    Component.onDestruction: root._geometrySettle?.stop()
 
     NumberAnimation {
         id: _animation
