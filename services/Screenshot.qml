@@ -17,7 +17,8 @@ Singleton {
 
     function flash(): void {
         const now = Date.now()
-        if (now - root._lastFlashTime < 300) return
+        const since = now - root._lastFlashTime
+        if (since >= 0 && since < 300) return
         root._lastFlashTime = now
         root.flashed()
     }
@@ -44,7 +45,8 @@ Singleton {
         if (root._pictureRoots.indexOf(f.slice(0, slash + 1)) >= 0
                 && !root._screenshotName(f.slice(slash + 1))) return
         const now = Date.now()
-        if (f === root._lastFile && now - root._lastTime < 1500) return
+        const since = now - root._lastTime
+        if (f === root._lastFile && since >= 0 && since < 1500) return
         root._lastFile = f
         root._lastTime = now
         root.flash()

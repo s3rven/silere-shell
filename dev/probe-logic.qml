@@ -1897,6 +1897,19 @@ ShellRoot {
                 && OsdBarState._kindAllowedByFilter("microphone", "volume")
                 && !OsdBarState._kindAllowedByFilter("microphone", "brightness"),
             "microphone feedback follows the volume filter")
+        const stepNow = Date.now()
+        const steppedAhead = stepNow + 3 * 3600 * 1000
+        root._check(OsdBarState._due(stepNow, stepNow) && !OsdBarState._due(stepNow + 500, stepNow)
+                && OsdBarState._due(steppedAhead, stepNow),
+            "an OSD deadline set before the wall clock stepped back is due rather than hours away")
+        const steppedCard = notificationCardFactory.createObject(root, {
+            notification: Object.assign({}, idleTemplate, { expireTimeout: 5000 })
+        })
+        steppedCard.timeoutStartedAt = steppedAhead
+        const steppedTimer = root._notificationExpiryTimer(steppedCard)
+        root._check(steppedTimer !== null && steppedTimer.interval <= 5000,
+            "a notification stamped before the wall clock stepped back keeps its own timeout")
+        steppedCard.destroy()
 
         const holdOpenWas = OverlayCoordinator._openCount
         const holdListWas = Notifications.list
@@ -5177,6 +5190,9 @@ ShellRoot {
             if (Hooks._budgetAllows()) hookRunsAllowed++
         root._check(hookRunsAllowed === Hooks.maxRunsPerSecond,
             "an event storm stops at " + Hooks.maxRunsPerSecond + " hook runs a second")
+        Hooks._runTimes = Array(Hooks.maxRunsPerSecond).fill(Date.now() + 3 * 3600 * 1000)
+        root._check(Hooks._budgetAllows(),
+            "hook runs stamped before the wall clock stepped back do not hold the budget")
         Hooks._runTimes = []
 
         const supervised = supervisedProcessFactory.createObject(root, {

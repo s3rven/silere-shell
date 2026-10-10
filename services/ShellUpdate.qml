@@ -581,7 +581,8 @@ Singleton {
     }
     function _probeIfVisible(): void {
         if (!MenuState.settingsActive || MenuState.settingsSection !== "updates") return
-        if (root._lastProbeMs > 0 && Date.now() - root._lastProbeMs < 60000) return
+        const age = Date.now() - root._lastProbeMs
+        if (root._lastProbeMs > 0 && age >= 0 && age < 60000) return
         _probe()
     }
     Connections {

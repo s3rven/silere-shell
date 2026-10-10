@@ -277,7 +277,7 @@ Item {
         if (card._paused) {
             card._hoverStartMs = Date.now()
         } else if (card._hoverStartMs > 0) {
-            card._hoverPausedMs += Date.now() - card._hoverStartMs
+            card._hoverPausedMs += Math.max(0, Date.now() - card._hoverStartMs)
             card._hoverStartMs = 0
         }
     }
@@ -292,10 +292,13 @@ Item {
             // a sender's own request is capped at 30 s, not discarded
             return t > 0 ? Math.min(t, 30000) : ShellSettings.notifDefaultTimeout
         }
-        interval: Math.max(400, fullInterval - (Date.now() - card.timeoutStartedAt) + card._hoverPausedMs)
+        interval: Math.max(400, fullInterval - card._shownMs() + card._hoverPausedMs)
         running:  shouldRun && !card._paused
         onTriggered: card.dismiss(true)
     }
+
+    // a start stamped before the wall clock stepped back reads as just shown, not hours away
+    function _shownMs(): real { return Math.max(0, Date.now() - card.timeoutStartedAt) }
 
     property real _timeoutProgress: 1.0
     readonly property bool _showCountdown: card.visible && card.enabled
@@ -305,7 +308,7 @@ Item {
     function _syncCountdown(): void {
         const full = _autoClose.fullInterval
         if (full <= 0) { card._timeoutProgress = 0; return }
-        const left = full - (Date.now() - card.timeoutStartedAt) + card._hoverPausedMs
+        const left = full - card._shownMs() + card._hoverPausedMs
         card._timeoutProgress = Math.max(0, Math.min(1, left / full))
     }
 

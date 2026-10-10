@@ -421,7 +421,8 @@ Singleton {
                 _reconnect.restart()
                 return
             }
-            if (Date.now() - root.lastCheckMs >= _poll.interval) root._refreshBackground()
+            const age = Date.now() - root.lastCheckMs
+            if (age < 0 || age >= _poll.interval) root._refreshBackground()
         }
     }
 

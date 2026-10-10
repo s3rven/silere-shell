@@ -53,12 +53,15 @@ Singleton {
         return root._present[event] === true
     }
 
+    // a negative age is a run stamped before the wall clock stepped back, not a recent one
+    function _recent(ageMs: real): bool { return ageMs >= 0 && ageMs < 1000 }
+
     // a notification flood or a workspace event storm reaches here once per event; without a ceiling each one is another spawn
     function _budgetAllows(): bool {
         const now = Date.now()
         const recent = []
         for (let i = 0; i < root._runTimes.length; i++)
-            if (now - root._runTimes[i] < 1000) recent.push(root._runTimes[i])
+            if (root._recent(now - root._runTimes[i])) recent.push(root._runTimes[i])
         if (recent.length >= root.maxRunsPerSecond) {
             root._runTimes = recent
             return false
@@ -73,7 +76,7 @@ Singleton {
         const now = Date.now()
         const recent = []
         for (let i = 0; i < root._criticalTimes.length; i++)
-            if (now - root._criticalTimes[i] < 1000) recent.push(root._criticalTimes[i])
+            if (root._recent(now - root._criticalTimes[i])) recent.push(root._criticalTimes[i])
         if (recent.length >= root.maxCriticalRunsPerSecond) {
             root._criticalTimes = recent
             return false

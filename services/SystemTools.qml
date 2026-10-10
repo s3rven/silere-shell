@@ -153,7 +153,8 @@ Singleton {
 
     // opening a section re-runs the full probe; only do that when the last answer is stale, while the Refresh control still forces one
     function refreshIfStale(maxAgeMs: int): void {
-        if (root._lastScanMs > 0 && Date.now() - root._lastScanMs < maxAgeMs) return
+        const age = Date.now() - root._lastScanMs
+        if (root._lastScanMs > 0 && age >= 0 && age < maxAgeMs) return
         root.refresh()
     }
 

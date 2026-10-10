@@ -63,6 +63,12 @@ Singleton {
     property var _commitClose: ({})
     readonly property int _removeDelay: Motion.ms(170) + 70
     readonly property int _commitCloseWindow: Motion.ms(220) + 80
+    // a deadline further out than any span set here means the wall clock stepped back
+    readonly property int _maxSpanMs: Math.max(500, ShellSettings.osdTimeout) + 1000
+
+    function _due(t: real, now: real): bool {
+        return t <= now || t - now > root._maxSpanMs
+    }
 
     function _sig(kind: string, value: real, muted: bool): string {
         return kind + ":" + Math.round(value * 100) + (muted ? ":m" : "")
@@ -202,7 +208,7 @@ Singleton {
         const idx = _entryIndex(kind)
         const live = idx >= 0 && !_entries.get(idx).closing
         if (!live && _closingSig[kind] === _sig(kind, value, muted)
-            && (_commitClose[kind] || 0) > Date.now()) return false
+            && !_due(_commitClose[kind] || 0, Date.now())) return false
         if (!_upsertEntry(kind, icon, value, label, muted, color)) return false
         if (live && !root.rapid && !ShellSettings.reduceMotion && !Idle.isIdle) {
             root.bumped()
@@ -247,7 +253,8 @@ Singleton {
             _entrySweep.stop()
             return
         }
-        _entrySweep.interval = Math.max(1, next - Date.now())
+        const now = Date.now()
+        _entrySweep.interval = _due(next, now) ? 1 : next - now
         _entrySweep.restart()
     }
 
@@ -256,13 +263,13 @@ Singleton {
         for (let i = _entries.count - 1; i >= 0; i--) {
             const e = _entries.get(i)
             if (e.closing) {
-                if ((_removeAt[e.kind] || 0) <= now) {
+                if (_due(_removeAt[e.kind] || 0, now)) {
                     delete _expiresAt[e.kind];  _expiresAt = _expiresAt
                     delete _removeAt[e.kind];   _removeAt = _removeAt
                     _entries.remove(i)
                 }
                 // _commitClose and _closingSig outlive removal — the echo can land after the entry's gone, so the guard must persist
-            } else if ((_expiresAt[e.kind] || 0) <= now) {
+            } else if (_due(_expiresAt[e.kind] || 0, now)) {
                 _closeEntry(i)
             }
         }
