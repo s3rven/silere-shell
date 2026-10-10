@@ -94,6 +94,7 @@ if [ "$qs_usable" = 1 ]; then
   _start logic dev/test-logic.sh
   _start surfaces dev/test-surfaces.sh
   _start panels dev/test-panels.sh
+  _start screens dev/test-screens.sh
   _start mutate dev/test-mutate.sh
   _start fit dev/test-layout-fit.sh
 fi
@@ -776,6 +777,10 @@ section "layer-shell build"
 # The surface pass above cannot reach these: every layer-shell root requires a
 # targetScreen, and a PanelWindow has no backend under the offscreen platform.
 _report panels panels "a layer-shell surface failed to build"
+
+section "screen removal"
+# only a real compositor takes an output away, and a surface left on it stays unmapped
+_report screens screens "a surface was lost when its screen went away"
 
 section "live settings changes"
 # Every pass above fixes the settings before the surface exists. A binding that
