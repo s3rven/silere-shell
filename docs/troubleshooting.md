@@ -38,7 +38,7 @@ revision, and restarts the shell when a systemd user unit runs it.
 ## Notifications never appear
 
 Another daemon already owns `org.freedesktop.Notifications`. Silere names it in an alert a
-few seconds after start and under Settings › System › Maintenance, and `silere doctor`
+few seconds after start and under Settings › System › Overview, and `silere doctor`
 reports it too. Stop that daemon and run `silere restart`.
 
 Sandboxed tests skip this conflict alert because the desktop's running shell is expected
@@ -52,7 +52,7 @@ Install a Nerd Font such as `ttf-jetbrains-mono-nerd`, then refresh the font cac
 
 ## Tray icons disappear when shown again
 
-First check Settings › Widgets › Tray: the tray must be enabled and the app must say
+First check Settings › Widgets › Show & order: the tray must be enabled and the app must say
 Shown. Show all apps restores hidden apps without resetting the bar layout.
 
 Older user services may set `QSG_TRANSIENT_IMAGES`. [Qt's texture factory](https://github.com/qt/qtdeclarative/blob/6.11/src/quick/util/qquickpixmapcache.cpp#L125-L131)
