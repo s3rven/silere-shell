@@ -32,8 +32,11 @@ Singleton {
     property real _autoLat: 0
     property real _autoLon: 0
     readonly property real _useLat: _geoResolved ? _autoLat : 45.0
-    readonly property real _useLon: _geoResolved ? _autoLon
-                                                 : -(new Date().getTimezoneOffset()) / 4
+    readonly property real _useLon: _geoResolved ? _autoLon : root.standardOffsetLon(new Date().getFullYear())
+    // summer time moves the clock, not the sun: guess the longitude from the standard offset, the later of january's and july's
+    function standardOffsetLon(year: int): real {
+        return -Math.max(new Date(year, 0, 1).getTimezoneOffset(), new Date(year, 6, 1).getTimezoneOffset()) / 4
+    }
     readonly property string locationLabel:
         Math.abs(_useLat).toFixed(0) + "°" + (_useLat >= 0 ? "N" : "S")
 

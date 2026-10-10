@@ -4793,6 +4793,10 @@ ShellRoot {
         SystemTools.ready = nightReadyWas
 
         const geoResolvedWas = NightLight._geoResolved
+        const winterLon = -new Date(2026, 0, 1).getTimezoneOffset() / 4
+        const summerLon = -new Date(2026, 6, 1).getTimezoneOffset() / 4
+        root._check(NightLight.standardOffsetLon(2026) === Math.min(winterLon, summerLon),
+            "the fallback longitude follows standard time, not summer time")
         const autoLatWas = NightLight._autoLat
         const autoLonWas = NightLight._autoLon
         root._check(NightLight._parseCoord("+5657+02406")
