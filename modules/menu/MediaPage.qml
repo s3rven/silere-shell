@@ -121,7 +121,7 @@ PageShell {
             ShellText {
                 id: _source
                 anchors { top: _heading.bottom; topMargin: 2; left: parent.left; right: _open.left; rightMargin: 12 }
-                text: Media.sourceLabel + (Media.playing ? "" : " · Paused")
+                text: [Media.sourceLabel, Media.playing ? "" : "Paused"].filter(s => s.length > 0).join(" · ")
                 color: Theme.withAlpha(Theme.subtext, 0.78)
                 font.pixelSize: Settings.fontLabel
                 font.weight: Font.Medium
