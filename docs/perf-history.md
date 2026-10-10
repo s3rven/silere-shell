@@ -40,6 +40,8 @@ Hardware not already listed takes a new letter.
 | 1.3.0 | 2026-10-05 | A | warm | 91 MB | 184 MB | 0.5% | 21 | 50 |
 | 1.4.0 | 2026-10-09 | A | cold | 91 MB | 177 MB | 1.0% | 21 | 50 |
 | 1.4.0 | 2026-10-09 | A | warm | 100 MB | 188 MB | 0.8% | 21 | 50 |
+| 1.4.1 | 2026-10-10 | A | cold | 98 MB | 185 MB | 0.2% | 26 | 54 |
+| 1.4.1 | 2026-10-10 | A | warm | 106 MB | 193 MB | 0.0% | 27 | 54 |
 
 A dash means that release was not measured.
 
@@ -54,3 +56,14 @@ was stopped, and no second Quickshell instance was running.
 Raw reports: [cold](perf/1.4.0-cold.json) · [warm](perf/1.4.0-warm.json). They were collected
 from runtime commit `11ea599` while the release metadata and notes were being prepared,
 so their Git description still names the preceding tag.
+
+The 1.4.1 runs use reference-A hardware with kernel `7.2.9-2-cachyos`, Quickshell 0.3.2,
+Qt 6.12.0, and the display at 60 Hz / 125% scale. Quickshell and the kernel changed since
+1.4.0, so this is not a controlled comparison of code changes alone. Both 30-second samples
+were steady, with a per-second CPU median of 0.0% of one core, and both descriptor counts
+stayed flat. One of the extra threads is the Qt pool thread that the five-second interface
+check for the VPN indicator keeps alive. The visualizer was stopped, and no second
+Quickshell instance was running.
+
+Raw reports: [cold](perf/1.4.1-cold.json) · [warm](perf/1.4.1-warm.json). They were collected
+from runtime commit `d1b3154` while the release metadata and notes were being prepared.
