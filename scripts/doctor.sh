@@ -231,7 +231,13 @@ if [ "$qs_usable" -eq 1 ]; then
     else
         ipc_probe=(env -u LC_ALL qs ipc -p "$ROOT/shell.qml" show)
     fi
-    if "${ipc_probe[@]}" >/dev/null 2>&1; then ok "shell IPC" "Silere is running and answers"
+    if "${ipc_probe[@]}" >/dev/null 2>&1; then
+        ok "shell IPC" "Silere is running and answers"
+        # the stale build only says so in its own log, so read it while the shell runs
+        qt_drift="$(_silere_quickshell_qt_drift "$ROOT/shell.qml" || true)"
+        if [ -n "$qt_drift" ]; then
+            warn "Qt build" "Quickshell was built for Qt ${qt_drift% *} but runs on ${qt_drift#* }; update or rebuild it"
+        fi
     else warn "shell IPC" "Silere from $ROOT is not running or does not answer"
     fi
 fi

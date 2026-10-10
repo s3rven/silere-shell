@@ -314,6 +314,20 @@ test_quickshell_version_after_qt_warning() (
     assert_eq 0.3.1 "$(_silere_quickshell_version)" "the Quickshell version is read past Qt's locale warning"
 )
 
+test_quickshell_qt_drift() (
+    local stub="$TMP/qs-log-stub"
+    mkdir -p "$stub"
+    printf '#!/bin/sh\n[ "$1" = log ] || exit 2\nprintf "%%b\\n" "$SILERE_TEST_QS_LOG"\n' > "$stub/qs"
+    chmod +x "$stub/qs"
+    PATH="$stub:$PATH"
+    source "$ROOT/scripts/lib/qml-modules.sh"
+    export SILERE_TEST_QS_LOG='  INFO: Launching config\n\033[33m  WARN\033[0m: \033[31mQuickshell was built against Qt 6.11.2 but the system has updated to Qt 6.12.0 without rebuilding the package.'
+    assert_eq "6.11.2 6.12.0" "$(_silere_quickshell_qt_drift "$ROOT/shell.qml")" \
+        "a Quickshell build for an older Qt is read from its colored log line"
+    export SILERE_TEST_QS_LOG='  INFO: Configuration Loaded'
+    assert_eq "" "$(_silere_quickshell_qt_drift "$ROOT/shell.qml")" "a log without the warning reports no drift"
+)
+
 test_qml_type_floor() (
     local older="$TMP/qml-qt68" newer="$TMP/qml-qt69" bare="$TMP/qml-bare" rc
     mkdir -p "$older/QtQuick/Effects" "$newer/QtQuick/Effects" "$bare/QtQuick/Effects"
@@ -2260,6 +2274,7 @@ test_uninstall_targets_and_backups
 test_uninstall_empty_optional_paths
 test_qml_module_lookup
 test_quickshell_version_after_qt_warning
+test_quickshell_qt_drift
 test_qml_type_floor
 test_headless_qml_import_roots
 test_font_archive_selection

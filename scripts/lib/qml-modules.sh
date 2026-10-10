@@ -21,6 +21,14 @@ _silere_quickshell_version() {
     env -u LC_ALL qs --version 2>&1 | sed -n '/^[[:space:]]*[Qq]uickshell[[:space:]]/{s/.*[Qq]uickshell[[:space:]]\+v\?\([0-9]\+\(\.[0-9]\+\)*\).*/\1/p;q;}'
 }
 
+# "<built> <running>" Qt versions when the shell at $1 logged that its Quickshell
+# was built against another Qt; empty otherwise. Quickshell uses Qt's private API,
+# so a build left over from before a Qt upgrade still starts but is prone to crashing.
+_silere_quickshell_qt_drift() {
+    command -v qs >/dev/null 2>&1 || return 1
+    env -u LC_ALL qs log -p "$1" 2>/dev/null | sed -n '/built against Qt/{s/.*built against Qt \([0-9][0-9.]*\) but the system has updated to Qt \([0-9][0-9.]*\) .*/\1 \2/p;q;}'
+}
+
 # 0 when $1 is at least $2, comparing dot-separated numbers left to right.
 # Pure bash rather than `sort -V`: that flag is a GNU extension, and on a host
 # without it the comparison fails silently instead of erroring.
