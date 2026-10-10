@@ -4911,14 +4911,21 @@ ShellRoot {
             false, false, false, 20, 10)
         root._check(batteryNotice === null,
             "an unavailable startup battery cannot seed notification state")
+        const loginLow = Battery.notificationStateFor(null, true, 15,
+            true, false, false, 20, 10)
+        root._check(loginLow.warning === "" && loginLow.lowSeen && !loginLow.criticalSeen,
+            "a low battery at login is a quiet baseline")
+        root._check(Battery.notificationStateFor(loginLow, true, 9,
+                true, false, false, 20, 10).warning === "critical",
+            "a low login baseline still warns when it turns critical")
         batteryNotice = Battery.notificationStateFor(batteryNotice, true, 8,
             true, false, false, 20, 10)
-        root._check(batteryNotice.warning === "" && batteryNotice.lowSeen && batteryNotice.criticalSeen,
-            "a late initial critical reading stays quiet at login")
+        root._check(batteryNotice.warning === "critical" && batteryNotice.lowSeen && batteryNotice.criticalSeen,
+            "a critical battery at login warns even when UPower reports late")
         batteryNotice = Battery.notificationStateFor(batteryNotice, true, 7,
             true, false, false, 20, 10)
-        root._check(batteryNotice.warning === "",
-            "an initial critical level stays quiet until it has recovered")
+        root._check(batteryNotice.warning === "critical",
+            "a critical warning holds steady while the level keeps falling")
         batteryNotice = Battery.notificationStateFor(batteryNotice, true, 50,
             true, false, false, 20, 10)
         batteryNotice = Battery.notificationStateFor(batteryNotice, true, 19,

@@ -112,8 +112,7 @@ Singleton {
         return onBattery ? "on battery" : "on AC"
     }
 
-    // Share one settled reading between desktop notifications and the OSD. The
-    // first valid reading is a baseline, even when UPower arrives late at login.
+    // one settled reading shared by desktop notifications and the OSD; the first valid one is the baseline
     property var _notificationState: null
     readonly property string alertWarning: _notificationState ? _notificationState.warning : ""
     readonly property int chargeRevision: _notificationState ? _notificationState.chargeRevision : 0
@@ -125,8 +124,9 @@ Singleton {
         if (!available || !isFinite(pct) || pct <= 0) return previous
         const low = onBattery && pct < lowThreshold
         const critical = onBattery && pct < criticalThreshold
+        // a login below the low threshold stays quiet, but critical still needs plugging in now
         if (!previous) {
-            return { lowSeen: low, criticalSeen: critical, warning: "",
+            return { lowSeen: low, criticalSeen: critical, warning: critical ? "critical" : "",
                 chargeObserved: charging && !full && !onBattery,
                 fullSeen: full, chargeRevision: 0, chargeComplete: false }
         }
