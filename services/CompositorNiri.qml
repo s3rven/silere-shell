@@ -357,6 +357,14 @@ QtObject {
         }
     }
 
+    function _resetDisconnectedState(): void {
+        _titleSync.stop()
+        _backgroundTitleSync.stop()
+        root._overview = false
+        root._winRaw = []
+        root._wsRaw = []
+    }
+
     // Socket.connected is both the current state and the connect request. A
     // compositor restart drops it to false, so retry until the replacement
     // niri socket accepts the event stream again.
@@ -387,6 +395,7 @@ QtObject {
                 write("\"EventStream\"\n")
                 flush()
             } else {
+                root._resetDisconnectedState()
                 _reconnect.restart()
             }
         }

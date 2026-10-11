@@ -4539,6 +4539,27 @@ ShellRoot {
         root._check(overviewOpened && !niri.overviewActive,
             "the niri overview flag follows the event both ways")
 
+        niri._overview = true
+        niri._titleSyncTimer.start()
+        niri._backgroundTitleSyncTimer.start()
+        niri._resetDisconnectedState()
+        root._check(niri.workspaces.length === 0 && niri.toplevels.length === 0
+                && niri.workspaceToplevels.length === 0 && niri.activeToplevel === null
+                && niri.focusedMonitor === "" && niri.focusedWorkspaceRef === -1
+                && !niri.overviewActive,
+            "a dropped niri socket clears stale windows, workspaces and overview state")
+        root._check(!niri._titleSyncTimer.running && !niri._backgroundTitleSyncTimer.running,
+            "a dropped niri socket cancels queued title snapshots")
+        niri._onLine(JSON.stringify({ WorkspacesChanged: { workspaces: [
+            { id: 30, idx: 1, output: "DP-2", is_active: true, is_focused: true }
+        ]}}))
+        niri._onLine(JSON.stringify({ WindowsChanged: { windows: [
+            { id: 92, workspace_id: 30, app_id: "probe.reconnected", is_focused: true }
+        ]}}))
+        root._check(niri.workspaces.length === 1 && niri.workspaces[0].occupied
+                && niri.activeToplevel.ref === 92 && niri.focusedMonitor === "DP-2",
+            "fresh niri snapshots repopulate state after a disconnect")
+
         niri.destroy()
 
         // nmcli -t escapes a colon inside a name; the VPN row is the only reader left
