@@ -2235,6 +2235,9 @@ else
 fi
 SH
     chmod +x "$stubs/qs"
+    # Linux permits spaces and closing parentheses in comm. The benchmark must
+    # still identify this short-lived process and read the correct CPU fields.
+    printf 'bench ) fixture\n' > "/proc/$BASHPID/comm"
     export SILERE_TEST_BENCH_PID="$BASHPID" SILERE_TEST_BENCH_ROOT="$ROOT"
     out="$(PATH="$stubs:$PATH" XDG_CONFIG_HOME="$TMP/bench-config" \
         bash "$ROOT/scripts/bench.sh" 1 --json \
@@ -2244,6 +2247,13 @@ SH
     [[ "$out" == *",\"label\":\"$expected\""* ]] \
         || fail "benchmark JSON did not preserve and escape its free-form label"
     [[ "$out" != *$'\n'* ]] || fail "benchmark JSON contains a raw newline"
+    local uptime elapsed
+    uptime="$(printf '%s\n' "$out" | sed -n 's/.*"process_uptime_seconds":\([0-9][0-9]*\).*/\1/p')"
+    [[ "$uptime" =~ ^[0-9]+$ ]] && [ "$uptime" -lt 60 ] \
+        || fail "benchmark read the wrong start time from a process name containing spaces and ')'"
+    elapsed="$(printf '%s\n' "$out" | sed -n 's/.*"elapsed_seconds":\([0-9][0-9]*\.[0-9][0-9]*\).*/\1/p')"
+    awk -v elapsed="$elapsed" 'BEGIN { exit !(elapsed >= 1) }' \
+        || fail "benchmark did not record its actual sampling duration"
 
     # Keep this fixture quick while exercising the actual warm-up IPC path.
     printf '#!/bin/sh\nexit 0\n' > "$stubs/sleep"

@@ -87,11 +87,55 @@ if $want_warm; then
 fi
 
 clk="$(getconf CLK_TCK)"
-start_time="$(awk '{print $22}' "/proc/$pid/stat")"
+
+# comm is parenthesized and may itself contain spaces and ')'. Split after
+# the final closing parenthesis before counting the fixed numeric fields.
+proc_stat_fields() {
+    local line rest field
+    local -a fields
+    IFS= read -r line 2>/dev/null < "/proc/$1/stat" || return 1
+    rest="${line##*) }"
+    [ "$rest" != "$line" ] || return 1
+    read -r -a fields <<< "$rest"
+    [ "${#fields[@]}" -ge 20 ] || return 1
+    for field in 11 12 13 14 19; do
+        [[ "${fields[field]}" =~ ^[0-9]+$ ]] || return 1
+    done
+    printf '%s %s %s %s %s\n' "${fields[19]}" "${fields[11]}" "${fields[12]}" \
+        "${fields[13]}" "${fields[14]}"
+}
+
+start_time="$(proc_stat_fields "$pid")" || {
+    echo "cannot read process identity for qs $pid" >&2
+    exit 1
+}
+start_time="${start_time%% *}"
 
 process_alive() {
-    [ -r "/proc/$pid/stat" ] \
-        && [ "$(awk '{print $22}' "/proc/$pid/stat" 2>/dev/null)" = "$start_time" ]
+    local current
+    current="$(proc_stat_fields "$pid")" || return 1
+    [ "${current%% *}" = "$start_time" ]
+}
+
+# /proc/uptime supplies a monotonic clock. Measuring the actual interval keeps
+# slow memory/process-tree reads from inflating CPU percentages on busy hosts.
+monotonic_ms() {
+    local up whole fraction
+    read -r up _ < /proc/uptime || return 1
+    whole="${up%%.*}"
+    fraction="${up#*.}000"
+    printf '%s\n' "$((10#$whole * 1000 + 10#${fraction:0:3}))"
+}
+
+cpu_percent() {
+    awk -v ticks="$1" -v ms="$2" -v hz="$clk" \
+        'BEGIN { printf "%.1f", ticks / hz / (ms > 0 ? ms / 1000 : 0.001) * 100 }'
+}
+
+main_cpu_ticks() {
+    local _started user system child_user child_system
+    read -r _started user system child_user child_system < <(proc_stat_fields "$1") || return 1
+    printf '%s\n' "$((user + system))"
 }
 
 descendants() {
@@ -120,9 +164,12 @@ rollup_kb() {
 
 # include reaped-child ticks so an exiting helper cannot make the tree total go backwards
 accounted_cpu_ticks() {
-    local target="$1"
-    awk '{print ($14 + $15 + $16 + $17)}' "/proc/$target/stat" 2>/dev/null \
-        || printf '0\n'
+    local _started user system child_user child_system
+    if read -r _started user system child_user child_system < <(proc_stat_fields "$1"); then
+        printf '%s\n' "$((user + system + child_user + child_system))"
+    else
+        printf '0\n'
+    fi
 }
 
 # A shell that leaks descriptors climbs here while everything else looks flat.
@@ -143,7 +190,8 @@ tree_cpu_ticks() {
 }
 
 # Main-process CPU baseline before the sample window.
-read -r u1 s1 < <(awk '{print $14, $15}' "/proc/$pid/stat")
+sample_started_ms="$(monotonic_ms)"
+read -r _stat_start u1 s1 _child_u _child_s < <(proc_stat_fields "$pid")
 tree_ticks1="$(tree_cpu_ticks)"
 fds1="$(fd_count "$pid")"
 
@@ -154,7 +202,8 @@ rss_peak_kb=0
 tree_sum_kb=0
 tree_peak_kb=0
 n=0
-cpu_ticks_prev="$(awk '{print $14 + $15}' "/proc/$pid/stat")"
+cpu_ticks_prev="$((u1 + s1))"
+cpu_sample_ms="$sample_started_ms"
 cpu_samples=()
 for ((i = 0; i < secs; i++)); do
     process_alive || {
@@ -175,15 +224,25 @@ for ((i = 0; i < secs; i++)); do
     n=$((n + 1))
     sleep 1
 
-    cpu_ticks_now="$(awk '{print $14 + $15}' "/proc/$pid/stat" 2>/dev/null || echo "$cpu_ticks_prev")"
-    cpu_samples+=("$((cpu_ticks_now - cpu_ticks_prev))")
+    cpu_ticks_now="$(main_cpu_ticks "$pid" || echo "$cpu_ticks_prev")"
+    now_ms="$(monotonic_ms)"
+    cpu_samples+=("$(cpu_percent "$((cpu_ticks_now - cpu_ticks_prev))" "$((now_ms - cpu_sample_ms))")")
     cpu_ticks_prev="$cpu_ticks_now"
+    cpu_sample_ms="$now_ms"
 done
 
 process_alive || {
     echo "qs $pid exited or restarted at the end of the sample; discard it and retry" >&2
     exit 1
 }
+
+# Finish CPU collection before report-time memory and metadata reads.
+read -r _stat_start u2 s2 _child_u _child_s < <(proc_stat_fields "$pid")
+tree_ticks2="$(tree_cpu_ticks)"
+elapsed_ms=$(( $(monotonic_ms) - sample_started_ms ))
+elapsed_seconds="$(awk -v ms="$elapsed_ms" 'BEGIN { printf "%.3f", ms / 1000 }')"
+cpu="$(cpu_percent "$((u2 + s2 - u1 - s1))" "$elapsed_ms")"
+tree_cpu="$(cpu_percent "$((tree_ticks2 - tree_ticks1))" "$elapsed_ms")"
 
 rss_avg=$((rss_sum_kb / n / 1024))
 rss_peak=$((rss_peak_kb / 1024))
@@ -212,13 +271,6 @@ tree_pss="-"
 $tree_pss_known && tree_pss="$((tree_pss_kb / 1024))"
 
 vmpeak="$(awk '/^VmHWM:/{printf "%.0f", $2/1024; found=1; exit} END{if (!found) print "-"}' "/proc/$pid/status")"
-
-read -r u2 s2 < <(awk '{print $14, $15}' "/proc/$pid/stat")
-cpu="$(awk -v a="$u1" -v b="$s1" -v c="$u2" -v d="$s2" -v k="$clk" -v s="$secs" \
-    'BEGIN{printf "%.1f", ((c+d)-(a+b))/k/s*100}')"
-tree_ticks2="$(tree_cpu_ticks)"
-tree_cpu="$(awk -v a="$tree_ticks1" -v b="$tree_ticks2" -v k="$clk" -v s="$secs" \
-    'BEGIN{printf "%.1f", (b-a)/k/s*100}')"
 
 fds2="$(fd_count "$pid")"
 fd_delta=$((fds2 - fds1))
@@ -256,12 +308,11 @@ steadiness="unknown"
 if [ "${#cpu_samples[@]}" -gt 0 ]; then
     mapfile -t _sorted < <(printf '%s\n' "${cpu_samples[@]}" | sort -n)
     _mid=$(( ${#_sorted[@]} / 2 ))
-    _p50_ticks="${_sorted[$_mid]}"
-    _max_ticks="${_sorted[-1]}"
-    cpu_p50="$(awk -v t="$_p50_ticks" -v k="$clk" 'BEGIN{printf "%.1f", t / k * 100}')"
-    cpu_max="$(awk -v t="$_max_ticks" -v k="$clk" 'BEGIN{printf "%.1f", t / k * 100}')"
+    cpu_p50="${_sorted[$_mid]}"
+    cpu_max="${_sorted[-1]}"
     # a quiet session's worst second stays near its median; input makes it jump
-    if [ "$_max_ticks" -gt $(( _p50_ticks * 3 + 3 )) ]; then
+    if awk -v peak="$cpu_max" -v median="$cpu_p50" -v hz="$clk" \
+        'BEGIN { exit !(peak > median * 3 + 300 / hz) }'; then
         steadiness="noisy"
     else
         steadiness="steady"
@@ -270,7 +321,7 @@ fi
 
 # archived rows only compare within one machine, so record which one produced them
 first_line() { head -n 1 2>/dev/null || true; }
-uptime_secs="$(awk -v k="$clk" '{printf "%d", $22 / k}' "/proc/$pid/stat" 2>/dev/null || true)"
+uptime_secs=$((start_time / clk))
 boot_secs="$(awk '{printf "%d", $1}' /proc/uptime 2>/dev/null || true)"
 [ -n "${uptime_secs:-}" ] && [ -n "${boot_secs:-}" ] \
     && uptime_secs=$((boot_secs - uptime_secs)) || uptime_secs="-"
@@ -342,6 +393,7 @@ if $want_json; then
     printf ',"version":"%s"' "$(esc "$version")"
     printf ',"state":"%s"' "$(esc "$state")"
     printf ',"sample_seconds":%s' "$(num "$secs")"
+    printf ',"elapsed_seconds":%s' "$elapsed_seconds"
     printf ',"process_uptime_seconds":%s' "$(num "$uptime_secs")"
     printf ',"rss_avg_mb":%s' "$(num "$rss_avg")"
     printf ',"rss_peak_mb":%s' "$(num "$rss_peak")"
@@ -371,7 +423,7 @@ if $want_json; then
 fi
 
 printf '== silere bench ==\n'
-printf 'qs pid:     %s (%ss sample)\n' "$pid" "$secs"
+printf 'qs pid:     %s (%ss requested, %ss elapsed)\n' "$pid" "$secs" "$elapsed_seconds"
 printf 'state:      %s, up %ss\n' "$state" "$uptime_secs"
 [ -n "$label" ] && printf 'label:      %s\n' "$label"
 [ -n "$version" ] && printf 'version:    %s\n' "$version"

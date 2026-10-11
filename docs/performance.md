@@ -41,6 +41,9 @@ bash scripts/bench.sh 30 --warm     # after one menu open and close
 
 The number is how many seconds to sample. Quote the `per-second` median rather than the
 `cpu` average, which folds a single keystroke or menu open into the idle figure.
+CPU percentages use the measured elapsed time, including collection overhead, rather
+than assuming every sample takes exactly one second. JSON reports include both the
+requested `sample_seconds` and the measured `elapsed_seconds`.
 
 ## Development memory check
 
