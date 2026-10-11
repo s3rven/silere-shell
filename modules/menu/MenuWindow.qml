@@ -94,6 +94,7 @@ FittedPopupWindow {
         readonly property real railW: _railGlide.value
         SmoothGlide {
             id: _railGlide
+            holdsSnaps: true
             target: panel._railExpanded ? panel.railExpandedW : panel.railCollapsedW
             gate: panel._horizontalMotion
         }
@@ -106,6 +107,7 @@ FittedPopupWindow {
         readonly property real contentPad: _paddingGlide.value
         SmoothGlide {
             id: _paddingGlide
+            holdsSnaps: true
             target: panel._targetContentPad
             gate: panel._horizontalMotion
         }
@@ -408,6 +410,7 @@ FittedPopupWindow {
 
         SmoothGlide {
             id: _widthGlide
+            holdsSnaps: true
             target: panel.panelW
             gate: panel._horizontalMotion
         }
@@ -423,6 +426,7 @@ FittedPopupWindow {
             Math.min(_heightGlide.value, panel._availablePanelH))
         SmoothGlide {
             id: _heightGlide
+            holdsSnaps: true
             target: panel.targetPanelH
             gate: panel._heightGlides
         }

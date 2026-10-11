@@ -9,6 +9,10 @@ Singleton {
 
     function ms(base: int): int { return _rm ? 0 : base }
 
+    // panel geometry glides in flight; PixelSnap holds its offset until the last one settles
+    property int layoutGlides: 0
+    readonly property bool layoutGliding: layoutGlides > 0
+
     // idle and reduce motion both mean "no visible motion"; taking both as arguments keeps it testable without a live idle state
     function allowsMotion(idle: bool, reduceMotion: bool): bool { return !idle && !reduceMotion }
 

@@ -54,8 +54,24 @@ QtObject {
     on_MotionAllowedChanged: if (!root._motionAllowed) root._snap()
     Component.onCompleted: root._snap()
 
+    // only panel glides hold PixelSnap: bar layout follows text widths and need not settle on whole device pixels
+    property bool holdsSnaps: false
+    property bool _counted: false
+    function _syncCount(): void {
+        const moving = root.holdsSnaps && _tick.running
+        if (moving === root._counted) return
+        root._counted = moving
+        Motion.layoutGlides += root._counted ? 1 : -1
+    }
+    // a glide torn down mid-flight must not leave every PixelSnap holding
+    Component.onDestruction: if (root._counted) {
+        root._counted = false
+        Motion.layoutGlides--
+    }
+
     property FrameAnimation _tick: FrameAnimation {
         running: false
         onTriggered: root._advance(frameTime)
+        onRunningChanged: root._syncCount()
     }
 }

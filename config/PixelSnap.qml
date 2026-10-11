@@ -8,12 +8,23 @@ Translate {
     // QsWindow resolves only on an Item, so the snapped item passes its window's ratio in
     property real dpr: 1
 
-    readonly property point _offset: {
+    function _measure(): point {
         let sx = 0, sy = 0
         for (let it = root.item; it; it = it.parent) { sx += it.x; sy += it.y }
         const d = root.dpr
         return Qt.point((Math.round(sx * d) - sx * d) / d, (Math.round(sy * d) - sy * d) / d)
     }
+    property point _offset: root._measure()
+    // a binding that returns early still re-runs for every ancestor it once read, so a glide drops it and the settle restores it
+    function _followGlides(): void {
+        if (Motion.layoutGliding) root._offset = root._offset
+        else root._offset = Qt.binding(() => root._measure())
+    }
+    Component.onCompleted: {
+        Motion.layoutGlidingChanged.connect(root._followGlides)
+        if (Motion.layoutGliding) root._followGlides()
+    }
+    Component.onDestruction: Motion.layoutGlidingChanged.disconnect(root._followGlides)
 
     x: root._offset.x
     y: root._offset.y

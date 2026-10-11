@@ -21,7 +21,9 @@ own, base, singleton = {}, {}, set()
 for f, text in SOURCE.items():
     name = f.rsplit('/', 1)[-1][:-4]
     body = re.sub(r'//[^\n]*', '', text)
-    own[name] = (set(DECL.findall(text)) | set(SIGNAL.findall(text))
+    props = set(DECL.findall(text))
+    # every property carries its own change signal, which JavaScript reaches as member.connect
+    own[name] = (props | {p + 'Changed' for p in props} | set(SIGNAL.findall(text))
                  | set(FUNCTION.findall(text)))
     root = ROOT_TYPE.search(body)
     base[name] = root.group(1) if root else None

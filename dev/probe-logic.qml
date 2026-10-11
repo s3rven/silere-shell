@@ -126,6 +126,17 @@ ShellRoot {
         }
     }
     Component { id: smoothGlideFactory; SmoothGlide { target: 0 } }
+    Component { id: glideHostFactory; Item { property SmoothGlide glide: SmoothGlide { target: 0; duration: 240; holdsSnaps: true } } }
+    Component {
+        id: pixelSnapFactory
+        Item {
+            id: _snapFixture
+            readonly property PixelSnap snap: _snapFixtureOffset
+            x: 10.3
+            width: 10; height: 10
+            transform: PixelSnap { id: _snapFixtureOffset; item: _snapFixture; dpr: 1.25 }
+        }
+    }
     Component { id: mediaVisualizerFactory; MediaVisualizer { presentationActive: false } }
     Component { id: waveLineFactory; WaveLine { width: 200; height: 16; value: 0.75; flowing: true } }
     Component { id: volumeControlFactory; PwVolumeControl {} }
@@ -945,6 +956,33 @@ ShellRoot {
         root._check(slot.value === 1 && !slot.running,
             "a selection glide still settles exactly at its row")
         slot.destroy()
+        const glidesWas = Motion.layoutGlides
+        const barGlide = smoothGlideFactory.createObject(root, { target: 0, duration: 240 })
+        barGlide.target = 50
+        const barGlideCounted = Motion.layoutGlides !== glidesWas
+        barGlide.destroy()
+        root._check(!barGlideCounted,
+            "a bar glide keeps pixel snaps following it frame by frame")
+        const counted = smoothGlideFactory.createObject(root, { target: 0, duration: 240, holdsSnaps: true })
+        counted.target = 50
+        const countedWhileMoving = Motion.layoutGlides === glidesWas + 1 && Motion.layoutGliding
+        counted._snap()
+        root._check(countedWhileMoving && Motion.layoutGlides === glidesWas,
+            "a moving panel glide is counted until it settles")
+        const snapped = pixelSnapFactory.createObject(barFixtureHost)
+        const snappedAtRest = Math.abs(snapped.snap.x - 0.1) < 1e-6
+        counted.target = 80
+        snapped.x = 10.7
+        const heldWhileGliding = Math.abs(snapped.snap.x - 0.1) < 1e-6
+        counted._snap()
+        root._check(snappedAtRest && heldWhileGliding && Math.abs(snapped.snap.x + 0.3) < 1e-6,
+            "a pixel snap holds its offset through a glide and re-snaps once it settles")
+        snapped.destroy()
+        counted.destroy()
+        // torn down mid-flight with its owner, as a closing popup is; _finish reads the count once the deletion has run
+        const host = glideHostFactory.createObject(barFixtureHost)
+        host.glide.target = 120
+        host.destroy()
         ShellSettings.reduceMotion = reduceWas
     }
 
@@ -7323,6 +7361,8 @@ ShellRoot {
 
     function _finish(): void {
         root._check(root._volumeCancelDone, "the audio route cleanup check completes")
+        root._check(Motion.layoutGlides === 0 && !Motion.layoutGliding,
+            "every panel glide gives its count back, including one destroyed mid-flight")
         root._runSettingsDiagnosticsProbe()
         ShellSettings.dnd = true
         ShellSettings.showSeconds = !ShellSettings._defaults.showSeconds
