@@ -92,6 +92,7 @@ _report() { # $1 = job, $2 = label, $3 = failure, $4 = pattern for the ok line
 _start lint dev/ci-lint.sh
 if [ "$qs_usable" = 1 ]; then
   _start logic dev/test-logic.sh
+  _start ui_stress dev/test-ui-stress.sh
   _start surfaces dev/test-surfaces.sh
   _start panels dev/test-panels.sh
   _start screens dev/test-screens.sh
@@ -786,6 +787,9 @@ section "live settings changes"
 # Every pass above fixes the settings before the surface exists. A binding that
 # only breaks when the value changes under a built surface survives all of them.
 _report mutate mutate "a live settings change broke a surface" 'swept .*'
+
+section "extended UI interaction stress"
+_report ui_stress ui-stress "repeated UI interaction or reflow broke a control" 'PROBE-UI-STRESS passed [0-9]+ checks over [0-9]+ cycles'
 
 section "layout fit"
 # Building a section says nothing about whether its labels survive the width they

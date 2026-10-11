@@ -100,6 +100,10 @@ jobs:
         shell: bash
         run: bash dev/test-logic.sh 2>&1 | tee /tmp/count-logic.log
 
+      - name: Extended UI interaction stress
+        shell: bash
+        run: bash dev/test-ui-stress.sh
+
       - name: Settings surface build probe
         # offscreen QPA needs no display; catches runtime-only errors in the
         # lazily-loaded settings pages that qmlcachegen and qmllint cannot see
