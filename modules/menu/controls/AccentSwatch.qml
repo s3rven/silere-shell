@@ -17,7 +17,8 @@ Item {
     signal picked()
     signal hoverChanged(string name, bool hovered)
 
-    function _activate(): void { if (root.enabled) root.picked() }
+    readonly property bool _canActivate: root.enabled && root.visible
+    function _activate(): void { if (root._canActivate) root.picked() }
 
     implicitWidth: 26
     implicitHeight: 32
@@ -27,7 +28,7 @@ Item {
     Accessible.role: Accessible.RadioButton
     Accessible.name: root.accessiblePrefix.length > 0
         ? root.accessiblePrefix + ": " + root.name : root.name
-    Accessible.focusable: root.enabled
+    Accessible.focusable: root._canActivate
     Accessible.checkable: true
     Accessible.checked: root.active
     Accessible.onPressAction: root._activate()
@@ -35,13 +36,13 @@ Item {
 
     HoverHandler {
         id: _h
-        enabled: root.enabled
+        enabled: root._canActivate
         cursorShape: Qt.PointingHandCursor
         onHoveredChanged: root.hoverChanged(root.name, hovered)
     }
     TapHandler {
         id: _t
-        enabled: root.enabled
+        enabled: root._canActivate
         onTapped: {
             root._activate()
         }

@@ -28,15 +28,17 @@ Item {
     visible: opacity > 0.01
     MotionBehavior on opacity {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
 
-    function _jump(): void { if (shown) root.jumpRequested(targetWs) }
+    readonly property bool canActivate: root.enabled && root.visible && root.shown
+        && root.barActive && !Idle.isIdle
+    function _jump(): void { if (root.canActivate) root.jumpRequested(targetWs) }
 
     Accessible.role: Accessible.Button
     Accessible.name: "Go to workspace " + root.targetWs
-    Accessible.focusable: root.shown
+    Accessible.focusable: root.canActivate
     Accessible.onPressAction: root._jump()
 
-    HoverHandler { id: _tickHover; enabled: root.shown; cursorShape: Qt.PointingHandCursor }
-    TapHandler   { enabled: root.shown; onTapped: root._jump() }
+    HoverHandler { id: _tickHover; enabled: root.canActivate; cursorShape: Qt.PointingHandCursor }
+    TapHandler   { enabled: root.canActivate; onTapped: root._jump() }
 
     property real _pulse: 1.0
     property bool _pulseSettled: false

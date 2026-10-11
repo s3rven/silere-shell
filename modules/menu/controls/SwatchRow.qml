@@ -20,6 +20,8 @@ Item {
 
     onOptionsChanged: if (root.hoveredIndex >= root.options.length)
         root.hoveredIndex = -1
+    onVisibleChanged: if (!visible) root.hoveredIndex = -1
+    onEnabledChanged: if (!enabled) root.hoveredIndex = -1
 
     signal picked(int index)
 
@@ -94,8 +96,13 @@ Item {
     // travels by slot, not pixels: a relayout moves it with the swatches instead of chasing them
     property real _slotTarget: Math.max(0, root.activeIndex)
     onActiveIndexChanged: if (root.activeIndex >= 0) root._slotTarget = root.activeIndex
-    readonly property real _slot: _slotGlide.value
-    SpringGlide { id: _slotGlide; target: root._slotTarget }
+    readonly property real _slot: Math.max(0,
+        Math.min(root.options.length - 1, _slotGlide.value))
+    SpringGlide {
+        id: _slotGlide
+        target: Math.max(0, Math.min(root.options.length - 1, root._slotTarget))
+        gate: root.visible && root.enabled
+    }
 
     readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
     Rectangle {
@@ -109,7 +116,7 @@ Item {
         color: "transparent"
         x: _chipRow.x + root._slot * (26 + _chipRow.spacing) + 13 - width / 2
         y: (root.height - height) / 2
-        opacity: root.activeIndex >= 0 ? 1 : 0
+        opacity: root.activeIndex >= 0 && root.activeIndex < root.options.length ? 1 : 0
         MotionBehavior on opacity {
             NumberAnimation { duration: Motion.fast }
         }

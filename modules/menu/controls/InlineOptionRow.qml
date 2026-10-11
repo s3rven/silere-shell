@@ -38,7 +38,7 @@ Item {
     Timer { id: _settle; interval: 0; onTriggered: root.motionReady = true }
     Component.onDestruction: _settle.stop()
     readonly property bool _hot: _hover.hovered || _tap.pressed
-    readonly property bool _canActivate: root.enabled && root.interactive && !root.busy
+    readonly property bool _canActivate: root.enabled && root.visible && root.interactive && !root.busy
     readonly property bool  _attentive: root.warning || root.failed
     readonly property color _attention: root.failed ? Theme.error : Theme.warning
 

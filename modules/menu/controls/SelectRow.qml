@@ -65,7 +65,7 @@ Item {
     }
 
     function _setOpen(next: bool): void {
-        if (next && (!root.enabled || root._optionCount <= 0)) return
+        if (next && !root._canOpen) return
         if (_open === next) {
             if (_open) _revealDefer.restart()
             return
@@ -83,6 +83,7 @@ Item {
     }
 
     onEnabledChanged: if (!enabled) root._setOpen(false)
+    onVisibleChanged: if (!visible) root._setOpen(false)
     on_OptionCountChanged: if (root._optionCount <= 0) root._setOpen(false)
     on_ActiveIndexChanged: if (root._open) _revealDefer.restart()
     Component.onDestruction: MenuState.releaseSettingsSelect(root)
@@ -95,6 +96,7 @@ Item {
         }
     }
 
+    readonly property bool _canOpen: root.enabled && root.visible && root._optionCount > 0
     readonly property int _optionCount: model && model.length !== undefined
         ? model.length : 0
     readonly property int _activeIndex: model && model.findIndex
@@ -118,7 +120,7 @@ Item {
     Accessible.description: root.description.length > 0
         ? root.description + " · Current: " + root._activeLabel
         : "Current: " + root._activeLabel
-    Accessible.focusable: root.enabled && root._optionCount > 0
+    Accessible.focusable: root._canOpen
     Accessible.onPressAction: root._toggleOpen()
 
     Item {
@@ -128,12 +130,12 @@ Item {
 
         HoverHandler {
             id: _hov
-            enabled: root.enabled
+            enabled: root._canOpen
             cursorShape: root.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
         }
         TapHandler {
             id: _headerTap
-            enabled: root.enabled
+            enabled: root._canOpen
             onTapped: root._toggleOpen()
         }
     }

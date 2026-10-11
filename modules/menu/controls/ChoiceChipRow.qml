@@ -70,10 +70,22 @@ MenuRow {
 
     readonly property int _activeIndex: root.model.findIndex(o => o.value === root.currentValue)
     // separate row and column coordinates keep the selection inside a wrapped group
-    readonly property real _selectionColumn: _columnGlide.value
-    readonly property real _selectionRow: _rowGlide.value
-    SpringGlide { id: _columnGlide; target: Math.max(0, root._activeIndex) % _choiceGroup.columns }
-    SpringGlide { id: _rowGlide; target: Math.floor(Math.max(0, root._activeIndex) / _choiceGroup.columns) }
+    // A resize can remove columns while their spring still holds an old slot;
+    // keep the highlight inside the live grid, including spring overshoot.
+    readonly property real _selectionColumn: Math.max(0,
+        Math.min(_choiceGroup.columns - 1, _columnGlide.value))
+    readonly property real _selectionRow: Math.max(0,
+        Math.min(_choiceGroup.rows - 1, _rowGlide.value))
+    SpringGlide {
+        id: _columnGlide
+        target: Math.max(0, root._activeIndex) % _choiceGroup.columns
+        gate: root.visible && root.enabled
+    }
+    SpringGlide {
+        id: _rowGlide
+        target: Math.floor(Math.max(0, root._activeIndex) / _choiceGroup.columns)
+        gate: root.visible && root.enabled
+    }
 
     height: root._stacked ? root._stackedH : root._inlineH
     // the settings pane width animates when the nav rail expands, and crossing the
@@ -168,6 +180,10 @@ MenuRow {
                     required property int index
 
                     readonly property bool active: index === root._activeIndex
+                    readonly property bool _canChoose: root.enabled && root.visible && _option.visible
+                    function _choose(): void {
+                        if (_option._canChoose) root.chosen(_option.modelData.value)
+                    }
                     readonly property string optionLabel:
                         String(modelData.label ?? "")
                     readonly property string optionGlyph:
@@ -182,25 +198,23 @@ MenuRow {
                     Accessible.name: root.label.length > 0
                         ? root.label + ": " + _option.optionLabel
                         : _option.optionLabel
-                    Accessible.focusable: root.enabled
+                    Accessible.focusable: _option._canChoose
                     Accessible.checkable: true
                     Accessible.checked: _option.active
-                    Accessible.onPressAction: if (root.enabled)
-                        root.chosen(_option.modelData.value)
-                    Accessible.onToggleAction: if (root.enabled && !_option.active)
-                        root.chosen(_option.modelData.value)
+                    Accessible.onPressAction: _option._choose()
+                    Accessible.onToggleAction: if (!_option.active) _option._choose()
 
                     HoverHandler {
                         id: _hover
-                        enabled: root.enabled
+                        enabled: _option._canChoose
                         cursorShape: root.enabled
                             ? Qt.PointingHandCursor : Qt.ArrowCursor
                     }
                     TapHandler {
                         id: _tap
-                        enabled: root.enabled
+                        enabled: _option._canChoose
                         onTapped: {
-                            root.chosen(_option.modelData.value)
+                            _option._choose()
                         }
                     }
 

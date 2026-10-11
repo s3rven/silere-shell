@@ -27,7 +27,7 @@ MenuRow {
         }
     }
 
-    readonly property bool _canToggle: root.enabled && (root.available || root.checked)
+    readonly property bool _canToggle: root.enabled && root.visible && (root.available || root.checked)
     readonly property bool _showDependsNote: root.dependsNote.length > 0
                                             && (!root.enabled || !root.available)
     readonly property bool _hasDetail: root.description.length > 0
@@ -61,7 +61,7 @@ MenuRow {
     }
 
     readonly property real _controlOpacity: root.enabled && root.available
-        ? 1.0 : (_canToggle ? 0.72 : Theme.disabledOpacity)
+        ? 1.0 : (root.enabled && root.checked ? 0.72 : Theme.disabledOpacity)
     opacity: root._showDependsNote ? 1.0 : root._controlOpacity
     MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
 

@@ -11,8 +11,13 @@ settings file carries its own `__version` and migrates separately.
 
 ## [Unreleased]
 
+### Changed
+
+- Stop colour-selection springs while their settings controls are hidden or disabled.
+
 ### Fixed
 
+- Hidden colour swatches no longer accept accessibility actions, and selection rings stay inside their current options.
 - Preserve the last successful package update count when its checker exits with an error.
 
 ## Releases

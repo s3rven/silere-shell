@@ -30,7 +30,7 @@ MenuRow {
     signal expandToggled()
     signal badgeActivated()
 
-    readonly property bool _canTap: !root.passive && root.enabled && root.available
+    readonly property bool _canTap: !root.passive && root.enabled && root.visible && root.available
     function _activate(): void {
         if (!_canTap) return
         // animate the knob only on a real user flip, not section-driven re-checks
@@ -62,7 +62,8 @@ MenuRow {
 
     height:         Metrics.rowHeightFor(48)
 
-    opacity: root.passive ? 1.0 : (_canTap ? 1.0 : Theme.disabledOpacity)
+    // Visibility gates input, but should not change the resting appearance.
+    opacity: root.passive || (root.enabled && root.available) ? 1.0 : Theme.disabledOpacity
     MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
 
     Accessible.role: root.showSwitch ? Accessible.CheckBox
