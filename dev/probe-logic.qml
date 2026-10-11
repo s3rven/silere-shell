@@ -2130,6 +2130,16 @@ ShellRoot {
         confirmButton.request()
         root._check(confirmButton.armed && root._confirmActions === 0,
             "a double-click cannot confirm a destructive action")
+        confirmButton._armedAtMs = Date.now() - 3001
+        confirmButton.request()
+        root._check(confirmButton.armed && root._confirmActions === 0
+                && Date.now() - confirmButton._armedAtMs < Metrics.confirmGuardMs,
+            "an expired confirmation rearms when its cleanup timer has not fired yet")
+        confirmButton._armedAtMs = Date.now() + 1000
+        confirmButton.request()
+        root._check(confirmButton.armed && root._confirmActions === 0
+                && confirmButton._armedAtMs <= Date.now(),
+            "a backwards clock change restarts the confirmation window")
         confirmButton._armedAtMs = Date.now() - Metrics.confirmGuardMs - 1
         confirmButton.request()
         root._check(!confirmButton.armed && root._confirmActions === 1,
@@ -3902,6 +3912,21 @@ ShellRoot {
         track._release()
         root._check(trackChanged === -1 && track.shownValue === track.value,
             "losing seek capability cancels its preview without committing")
+        track.interactive = true
+        for (const rangeChange of [{ key: "max", value: 2 },
+                { key: "min", value: 0.1 }, { key: "step", value: 0.2 }]) {
+            trackChanged = -1
+            track._press(85)
+            Scroll._processDelta(60, track.wheelKey, 120, 2, 0)
+            track[rangeChange.key] = rangeChange.value
+            track._drag(95)
+            track._release()
+            root._check(!track.dragging && trackChanged === -1
+                    && track.shownValue === track.value
+                    && Scroll._processDelta(60, track.wheelKey, 120, 2, 0) === 0,
+                "changing slider " + rangeChange.key + " cancels its drag and wheel remainder")
+            Scroll.resetControl(track.wheelKey)
+        }
         track.destroy()
 
         const deviceSlider = quickSliderFactory.createObject(barFixtureHost, {

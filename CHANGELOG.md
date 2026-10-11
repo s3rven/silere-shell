@@ -19,6 +19,8 @@ settings file carries its own `__version` and migrates separately.
 
 - Hidden colour swatches no longer accept accessibility actions, and selection rings stay inside their current options.
 - Preserve the last successful package update count when its checker exits with an error.
+- Cancel unfinished slider gestures when their range or step changes.
+- Require a fresh confirmation after its time window expires, even when the cleanup timer is delayed.
 
 ## Releases
 

@@ -73,6 +73,9 @@ Item {
     onValueChanged: if (!root.dragging) _shownValue = value
     onInteractionKeyChanged: root.cancelInteraction()
     onWheelKeyChanged: root.cancelInteraction()
+    onMinChanged: root.cancelInteraction()
+    onMaxChanged: root.cancelInteraction()
+    onStepChanged: root.cancelInteraction()
     on_CanInteractChanged: if (!root._canInteract) root.cancelInteraction()
 
     function cancelInteraction(): void {
