@@ -29,6 +29,7 @@ settings file carries its own `__version` and migrates separately.
 - Stop colour-selection springs while their settings controls are hidden or disabled.
 - Switching menu tabs uses about 10% less CPU.
 - Round the notification search field and the calendar month button to match the round buttons beside them.
+- New icons for the Interface and Spacing settings pages.
 - The audio visualizer responds to quieter passages instead of sitting nearly flat.
 - The centered visualizer draws twice as many bars.
 - The visualizer setting says when it is paused by fullscreen or needs the media widget.

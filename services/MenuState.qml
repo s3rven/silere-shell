@@ -92,7 +92,7 @@ AnchoredPopupState {
         { glyph: "󰉦", label: "Appearance", children: [
             { glyph: "󰉦", label: "Theme",       section: "theme",
               description: "Colors, opacity, blur, and shadows" },
-            { glyph: "󰍉", label: "Interface", section: "interface",
+            { glyph: "󰛖", label: "Interface", section: "interface",
               description: "Text, accessibility, displays, and programs" }
         ]},
         { glyph: "󰕮", label: "Bar", children: [
@@ -100,7 +100,7 @@ AnchoredPopupState {
               description: "Position, size, shape, and hover" },
             { glyph: "󰍴", label: "Underline", section: "underline",
               description: "Line and event glow" },
-            { glyph: "󰻂", label: "Spacing",   section: "separators",
+            { glyph: "󰤼", label: "Spacing",   section: "separators",
               description: "Gaps and dividers" }
         ]},
         { glyph: "󰀻", label: "Widgets", children: [
