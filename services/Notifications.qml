@@ -558,7 +558,41 @@ Singleton {
 
     readonly property bool fullscreenSilenced: ShellSettings.notifFullscreenSilence
         && FullscreenState.active
-    function toggleDnd(): void { ShellSettings.dnd = !ShellSettings.dnd }
+    function toggleDnd(): void { root.setDnd(!ShellSettings.dnd, 0) }
+
+    function setDnd(on: bool, until: real): void {
+        ShellSettings.dndUntil = on ? Math.max(0, until) : 0
+        ShellSettings.dnd = on
+    }
+
+    readonly property real dndUntil: ShellSettings.dnd ? ShellSettings.dndUntil : 0
+    readonly property string dndUntilText: root.dndUntil > 0
+        ? "Until " + DateTime.clockText(new Date(root.dndUntil)) : ""
+
+    // whole minutes: the clock that ends it ticks on the minute
+    function dndEndFor(nowMs: real, minutes: int): real {
+        return Math.ceil((nowMs + minutes * 60000) / 60000) * 60000
+    }
+
+    function dndEndAtHour(nowMs: real, hour: int): real {
+        const end = new Date(nowMs)
+        end.setHours(hour, 0, 0, 0)
+        if (end.getTime() <= nowMs) end.setDate(end.getDate() + 1)
+        return end.getTime()
+    }
+
+    readonly property bool _dndElapsed: root.dndUntil > 0
+        && DateTime.currentDate.getTime() >= root.dndUntil
+    on_DndElapsedChanged: Qt.callLater(root._expireDnd)
+    Connections {
+        target: ShellSettings
+        function onDndChanged() {
+            if (!ShellSettings.dnd && ShellSettings.dndUntil !== 0) ShellSettings.dndUntil = 0
+        }
+    }
+    function _expireDnd(): void {
+        if (root.dndUntil > 0 && Date.now() >= root.dndUntil) root.setDnd(false, 0)
+    }
 
     readonly property bool _quietActive: {
         if (!ShellSettings.dndSchedule) return false

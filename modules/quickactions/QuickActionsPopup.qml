@@ -198,7 +198,8 @@ FittedPopupWindow {
                 label: "Do Not Disturb"
                 active: Notifications.dnd
                 highlighted: Notifications.silencingActive
-                stateText: Notifications.dnd ? "On"
+                stateText: Notifications.dndUntil > 0 ? Notifications.dndUntilText
+                    : Notifications.dnd ? "On"
                     : Notifications.effectiveDnd ? "Quiet hours"
                     : Notifications.fullscreenSilenced ? "Fullscreen" : "Off"
                 onTriggered: Notifications.toggleDnd()

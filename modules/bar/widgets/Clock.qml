@@ -209,6 +209,7 @@ Item {
         + ", " + DateTime.cachedWeekday + " " + DateTime.cachedMonthDay
         + (Idle.keepAwake ? ", Keep Awake" : "")
         + (Notifications.effectiveDnd ? ", Do Not Disturb" : "")
+        + (Notifications.dndUntil > 0 ? " until " + DateTime.clockText(new Date(Notifications.dndUntil)) : "")
     Accessible.role: Accessible.Button
     Accessible.name: root.accessibleName
     Accessible.focusable: root._canInteract

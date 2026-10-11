@@ -344,13 +344,48 @@ PageShell {
                     active: Notifications.dnd
                     glyph: Notifications.silencingActive ? "󰂛" : "󰂚"
                     title: "Do Not Disturb"
-                    status: Notifications.effectiveDnd && !Notifications.dnd ? "Quiet hours"
+                    status: Notifications.dndUntil > 0 ? Notifications.dndUntilText
+                        : Notifications.effectiveDnd && !Notifications.dnd ? "Quiet hours"
                         : Notifications.fullscreenSilenced ? "Fullscreen"
                         : ""
                     showSwitch: true
+                    expandable: true
+                    expanded: root._picker === "dnd"
                     badgeCount: Notifications.silencingActive ? Notifications.missedCount : 0
                     onActivated: Notifications.toggleDnd()
+                    onExpandToggled: root._togglePicker("dnd")
                     onBadgeActivated: MenuState.showTab(MenuState.recentTab)
+                }
+
+                InlinePicker {
+                    id: _dndPicker
+                    open: root._picker === "dnd"
+                    content: Component {
+                        Column {
+                            width: parent ? parent.width : 0
+                            spacing: 0
+
+                            InlineOptionRow {
+                                glyph: "󰔛"
+                                label: "For 1 hour"
+                                accessiblePrefix: "Do Not Disturb"
+                                onTriggered: {
+                                    Notifications.setDnd(true, Notifications.dndEndFor(Date.now(), 60))
+                                    root._closePicker()
+                                }
+                            }
+                            InlineOptionRow {
+                                glyph: "󰖔"
+                                label: "Until " + DateTime.hourText(ShellSettings.dndTo)
+                                accessiblePrefix: "Do Not Disturb"
+                                onTriggered: {
+                                    Notifications.setDnd(true,
+                                        Notifications.dndEndAtHour(Date.now(), ShellSettings.dndTo))
+                                    root._closePicker()
+                                }
+                            }
+                        }
+                    }
                 }
 
                 ControlRow {

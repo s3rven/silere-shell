@@ -5234,6 +5234,28 @@ ShellRoot {
                 && !TrayMenuState.siblingFlyoutOpen([trayRowA, trayRowB], trayRowA)
                 && !TrayMenuState.siblingFlyoutOpen([], trayRowB),
             "a tray submenu waits for a pause only while a sibling's submenu is open")
+        const dndAt = new Date(2026, 9, 11, 14, 31, 20).getTime()
+        root._check(Notifications.dndEndFor(dndAt, 60) === new Date(2026, 9, 11, 15, 32).getTime()
+                && Notifications.dndEndAtHour(dndAt, 8) === new Date(2026, 9, 12, 8, 0).getTime()
+                && Notifications.dndEndAtHour(new Date(2026, 9, 11, 2, 0).getTime(), 8)
+                    === new Date(2026, 9, 11, 8, 0).getTime(),
+            "timed Do Not Disturb ends on a whole minute, or at the next morning hour still ahead")
+        const dndWas = ShellSettings.dnd
+        const dndUntilWas = ShellSettings.dndUntil
+        Notifications.setDnd(true, Date.now() + 3600000)
+        const timedShown = Notifications.dndUntil > 0 && Notifications.dndUntilText.indexOf("Until ") === 0
+        ShellSettings.dnd = false
+        const clearedByOff = ShellSettings.dndUntil === 0
+        Notifications.setDnd(true, Date.now() - 1000)
+        Notifications._expireDnd()
+        const expired = !ShellSettings.dnd && ShellSettings.dndUntil === 0
+        Notifications.toggleDnd()
+        const manualOpenEnded = ShellSettings.dnd && Notifications.dndUntil === 0
+        root._check(timedShown && clearedByOff && expired && manualOpenEnded,
+            "Do Not Disturb for a while shows its end, expires, and leaves no stale end behind")
+        ShellSettings.dnd = dndWas
+        ShellSettings.dndUntil = dndUntilWas
+
         // a minute tick armed before suspend fires late after wake; catching up re-reads the wall clock
         DateTime._lastMinute = "190001010000"
         DateTime.catchUp()

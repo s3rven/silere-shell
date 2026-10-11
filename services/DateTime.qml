@@ -13,7 +13,8 @@ Singleton {
 
     readonly property bool _clockNeeded: root.clockNeeded(
         ShellSettings.barShowClock, OverviewState.active,
-        ShellSettings.dndSchedule, MenuState.homeActive, CalendarState.open)
+        ShellSettings.dndSchedule || Notifications.dndUntil > 0,
+        MenuState.homeActive, CalendarState.open)
 
     // a monotonic timer stops across suspend, so the next tick can land up to a minute after wake
     property bool _resync: false

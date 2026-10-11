@@ -279,6 +279,7 @@ Singleton {
     // runtime toggles kept across a restart; no page shows them
     property bool   nightLightOn:       false
     property bool   dnd:                false
+    property real   dndUntil:           0
 
     property int    wsMinVisible:        5
     property bool   wsShowNumbers:       false
@@ -422,6 +423,7 @@ Singleton {
         { k: "nightLightAuto",     t: "bool", sec: "-" },
         { k: "nightLightOn",        t: "bool", sec: "-" },
         { k: "dnd",                 t: "bool", sec: "-" },
+        { k: "dndUntil",            t: "real", min: 0, max: 9e15, sec: "-" },
         { k: "wsMinVisible",        t: "int",  min: 1,    max: 10, sec: "workspaces" },
         { k: "wsShowNumbers",       t: "bool", sec: "workspaces" },
         { k: "wsScrollSwitch",      t: "bool", sec: "workspaces" },
