@@ -296,7 +296,9 @@ PageShell {
             anchors.topMargin: visible ? 8 : 0
             visible: root.hasHistory
             height: visible ? Metrics.rowHeightFor(36) : 0
-            radius: Theme.radiusControl
+            // a capsule, so the round clear button sits concentric in its end cap; matches settings search
+            radius: height / 2
+            antialiasing: true
             color: Theme.menuControl
             enabled: visible && !root._clearing
 
@@ -310,18 +312,18 @@ PageShell {
 
             ShellText {
                 id: _searchGlyph
-                anchors.left: parent.left
-                anchors.leftMargin: 10
+                x: (_searchBox.height - implicitWidth) / 2
                 anchors.verticalCenter: parent.verticalCenter
                 text: "󰍉"
-                color: Theme.subtext
+                color: _searchInput.activeFocus ? Theme.accent : Theme.menuTextDetail
                 font.pixelSize: Settings.fontSize + 2
+                ColorFade on color { gate: root.active && MenuState.open }
             }
 
             TextInput {
                 id: _searchInput
-                anchors.left: _searchGlyph.right
-                anchors.leftMargin: 8
+                anchors.left: parent.left
+                anchors.leftMargin: _searchBox.height - 2
                 anchors.right: _resetSearch.left
                 anchors.rightMargin: 8
                 anchors.verticalCenter: parent.verticalCenter
@@ -340,7 +342,7 @@ PageShell {
                     verticalAlignment: Text.AlignVCenter
                     visible: _searchInput.text.length === 0
                     text: "Search notifications"
-                    color: Theme.subtext
+                    color: Theme.menuTextDetail
                     font.pixelSize: Settings.fontSize
                     elide: Text.ElideRight
                 }
@@ -349,7 +351,7 @@ PageShell {
             IconButton {
                 id: _resetSearch
                 anchors.right: parent.right
-                anchors.rightMargin: 4
+                anchors.rightMargin: (_searchBox.height - buttonSize) / 2
                 anchors.verticalCenter: parent.verticalCenter
                 visible: root.searchText.length > 0
                 buttonSize: Metrics.rowHeightFor(28)

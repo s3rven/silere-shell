@@ -275,7 +275,8 @@ FittedPopupWindow {
                     Rectangle {
                         id: _monthFill
                         anchors.fill: parent
-                        radius: Theme.radiusControl
+                        // a capsule between the round arrows, so the three read as one control row
+                        radius: height / 2
                         antialiasing: true
                         color: Theme.buttonFill(Theme.accent, _mH.hovered, _mT.pressed)
                         ColorFade on color {}
