@@ -33,7 +33,7 @@ history, and text fields. Controls also expose actions to accessibility tools.
 | vpn | appears in Connectivity while a VPN is up · **click** copies its address |
 | bluetooth list | **click** pairs or connects · **click** a connected device twice to disconnect · **right-click** or **middle-click** a paired device twice to forget it, unless it is connected |
 | menu | **Escape** steps back, then closes · **click** anywhere outside to close |
-| history | **type** in Search, or press **Ctrl+F** to get there, to find an app or message · **click** an app in the rail to show only its notifications · **click** an entry to read it in full · **Clear** removes what is shown, after a second click to confirm · **Escape** clears search, then closes |
+| history | **type** in Search, or press **Ctrl+F** to get there, to find an app or message · **click** an app in the rail to show only its notifications · **click** an entry to read it in full, **right-click** removes it, **middle-click** jumps to the app that sent it · **Clear** removes what is shown, after a second click to confirm · **Escape** clears search, then closes |
 
 ## Settings
 

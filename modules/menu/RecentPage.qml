@@ -542,6 +542,13 @@ PageShell {
                         NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
                     }
 
+                    function jumpToSource(): void {
+                        const source = { appName: modelData.appName, desktopEntry: modelData.desktopEntry }
+                        if (WindowActions.notificationSourceWorkspace(source) === -1) return
+                        MenuState.close()
+                        WindowActions.focusNotificationSource(source)
+                    }
+
                     function removeSelf(): void {
                         if (_removing || root._clearing) return
                         // persist immediately. A delegate-owned delay is lost if the user changes pages before its timer fires
@@ -640,10 +647,13 @@ PageShell {
                         TapHandler {
                             id: _entryTap
                             enabled: !root._clearing && !root._swapping && !_entry._removing
-                            onTapped: eventPoint => {
+                            acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+                            onTapped: (eventPoint, button) => {
                                 const p = _rightSlot.mapFromItem(_card, eventPoint.position.x, eventPoint.position.y)
                                 if (_rightSlot.contains(p)) return
-                                _entry._toggleExpand()
+                                if (button === Qt.RightButton) _entry.removeSelf()
+                                else if (button === Qt.MiddleButton) _entry.jumpToSource()
+                                else _entry._toggleExpand()
                             }
                         }
 
