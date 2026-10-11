@@ -2868,6 +2868,15 @@ ShellRoot {
             "history text drops a bidi override a sender embedded")
         root._check(Notifications.plainText("a\u061C\u200E\u206Ab", 32) === "ab",
             "notification body drops direction marks and deprecated bidi controls")
+        root._check(Notifications.plainText("**Done.** Two **files** changed", 64)
+                === "Done. Two files changed",
+            "markdown bold markers from a terminal agent are dropped")
+        root._check(Notifications.plainText("2**3 and 4**5, f(**kw) **open", 64)
+                === "2**3 and 4**5, f(**kw) **open",
+            "unpaired or mid-word asterisks stay as the sender wrote them")
+        root._check(Notifications.plainText("** spaced ** and ****", 64)
+                === "** spaced ** and ****",
+            "asterisks that do not hug a word are not treated as bold")
         root._check(Notifications._normalizeEntry({ body: "line1\nline2" }).body
                 === "line1\nline2",
             "history text keeps the newlines a multi-line body needs")

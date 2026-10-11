@@ -672,6 +672,7 @@ Singleton {
             })
             .replace(/&nbsp;/g, " ").replace(/&hellip;/g, "…")
             .replace(/&amp;/g, "&")
+            .replace(/(^|[^\w*])\*\*(?=[^*\s])([^*\n]*?[^*\s])\*\*(?![\w*])/g, "$1$2")
         return root._boundedPlainText(plain, limit)
     }
 
