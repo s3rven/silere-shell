@@ -33,8 +33,7 @@ Column {
     SettingsCard {
         ToggleRow {
             glyph: "󰱐"; label: "Audio visualizer"
-            description: ShellSettings.reduceMotion ? "Paused by Reduce motion"
-                : "Active during playback"
+            description: Media.visualizerStatus
             key: "mediaProgress"
             available: !SystemTools.ready || Media.cavaAvailable
             dependsNote: !SystemTools.ready ? "Checking"
@@ -70,7 +69,10 @@ Column {
                 ]
             }
             // the preset names say nothing about what they cost; the shape changes both
-            HintText { text: Media.visualizerLabel + ". Eco uses the least CPU." }
+            HintText {
+                text: Media.visualizerLabel + (Media.vizBatteryEco
+                    ? ", Eco while on battery." : ". Eco uses the least CPU.")
+            }
         }
     }
 }

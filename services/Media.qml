@@ -115,7 +115,13 @@ Singleton {
     }
 
     onAvailableChanged: { _syncShown(); _syncStableArt() }
-    onPlayingChanged:   { _syncShown(); _reanchor() }
+    onPlayingChanged:   {
+        _syncShown()
+        _reanchor()
+        if (playing) _cavaPlaying = true
+        else if (_cavaProc.running) _cavaPauseHold.restart()
+        else _cavaPlaying = false
+    }
     Component.onCompleted: { _syncShown(); _reanchor(); if (artUrl.length > 0) stableArtUrl = artUrl }
 
     Timer { id: _pauseTimer; interval: 5000;  onTriggered: _hideTimer.start() }
@@ -518,7 +524,7 @@ Singleton {
     ].join(":")
 
     function registerVisualizer(lowPower: bool): void {
-        const warmHandoff = _visualizerStopGrace.running
+        const warmHandoff = _visualizerStopGrace.running || _cavaProc.running
         if (_visualizerClients === 0 && !warmHandoff) _cavaConfigReady = false
         _visualizerDemand += lowPower ? 1 : 2
         _visualizerClients++
@@ -539,6 +545,13 @@ Singleton {
     }
 
     Timer { id: _visualizerStopGrace; interval: 150 }
+    // a fresh cava relearns its gain from silence for about two seconds, so a short pause keeps it asleep instead
+    property bool _cavaPlaying: playing
+    Timer {
+        id: _cavaPauseHold
+        interval: 8000
+        onTriggered: if (!root.playing) root._cavaPlaying = false
+    }
 
     // denser shapes get fewer bars and a lower frame rate; the derived form never once clamped
     readonly property var _vizProfiles: ({
@@ -553,27 +566,55 @@ Singleton {
         return row[preset] ?? row.balanced
     }
 
-    // the bar's row band caps the underline's height, so density is the only lever on the wave's slope
-    readonly property bool _vizWide: ShellSettings.mediaVisualizerPosition === "underline"
-    function vizBarCount(base: int, lowPower: bool): int {
-        return Math.min(96, Math.round(base * (root._vizWide && !lowPower ? 4 : 1)))
+    // the bar's row band caps the underline's height, so density is the only lever on the wave's slope;
+    // the centre span is two to three media pills wide and leaves the base count as sparse posts
+    function vizDensity(position: string): int {
+        return position === "underline" ? 4 : position === "center" ? 2 : 1
     }
+    function vizBarCount(base: int, lowPower: bool): int {
+        return Math.min(96, Math.round(base
+            * (lowPower ? 1 : root.vizDensity(ShellSettings.mediaVisualizerPosition))))
+    }
+
+    // autosens holds the loudest band near the top, so the rest idle near a sixth of full
+    // scale; a curve under 1 lifts them into view, and 64 steps keep it from opening with a jump
+    readonly property int _cavaRange: 64
+    function vizLevel(raw: real, range: int): real {
+        if (!(range > 0) || !isFinite(raw)) return 0
+        return Math.pow(Math.max(0, Math.min(1, raw / range)), 0.6)
+    }
+
+    readonly property string visualizerStatus: {
+        if (ShellSettings.reduceMotion) return "Paused by Reduce motion"
+        if (ShellSettings.mediaVisualizerPosition === "media" && !ShellSettings.barShowMedia)
+            return "Needs the media widget on the bar"
+        if (root._fsBlocked) return "Paused while a window is fullscreen"
+        return "Active during playback"
+    }
+
+    // battery time is worth more than frame rate; the chosen preset returns with the charger
+    function vizPresetFor(preset: string, onBattery: bool): string {
+        return onBattery ? "eco" : preset
+    }
+    readonly property string _vizPreset: root.vizPresetFor(
+        ShellSettings.mediaVisualizerPreset, Battery.onBattery)
+    readonly property bool vizBatteryEco: root._vizPreset !== ShellSettings.mediaVisualizerPreset
 
     // what the active bar runs at, so the settings hint does not have to restate the table
     readonly property string visualizerLabel: {
         const p = root.vizProfile(ShellSettings.mediaVisualizerStyle,
-            ShellSettings.mediaVisualizerPreset, false)
+            root._vizPreset, false)
         return root.vizBarCount(p.bars, false) + " bars at " + p.fps + " fps"
     }
 
     readonly property var _vizActive: root.vizProfile(
-        ShellSettings.mediaVisualizerStyle, ShellSettings.mediaVisualizerPreset,
+        ShellSettings.mediaVisualizerStyle, root._vizPreset,
         root._visualizerLowPowerOnly)
     readonly property int _cavaBars: root.vizBarCount(root._vizActive.bars,
         root._visualizerLowPowerOnly)
     readonly property int _cavaFps:  root._vizActive.fps
     readonly property real _cavaNoiseReduction: {
-        switch (ShellSettings.mediaVisualizerPreset) {
+        switch (root._vizPreset) {
         // Cava accepts a float from 0 (fast/noisy) to 1 (slow/smooth).
         case "eco":    return 0.72
         case "smooth": return 0.46
@@ -600,7 +641,7 @@ Singleton {
         "method = raw\n" +
         "raw_target = /dev/stdout\n" +
         "data_format = ascii\n" +
-        "ascii_max_range = 12\n" +
+        "ascii_max_range = " + _cavaRange + "\n" +
         "bar_delimiter = 59\n" +
         "frame_delimiter = 10\n" +
         "channels = mono\n" +
@@ -694,8 +735,8 @@ Singleton {
         id: _cavaProc
         command: ["cava", "-p", root._cavaConfigPath]
         superviseWhen: root._cavaConfigReady && root.cavaReady
-            && (root._visualizerClients > 0 || _visualizerStopGrace.running)
-            && root.available && root.playing && !Idle.isQuiet && !root._fsBlocked
+            && (root._visualizerClients > 0 || _visualizerStopGrace.running || _cavaPauseHold.running)
+            && root._cavaPlaying && root.available && !Idle.isQuiet && !root._fsBlocked
         restartDelay: 1000
         maxRestartDelay: 30000
         stableAfter: 20000
@@ -710,8 +751,7 @@ Singleton {
                     if (parts[i].length === 0) continue
                     const value = Number(parts[i])
                     if (isNaN(value)) continue
-                    const normalized = Math.max(0, Math.min(1, value / 12))
-                    result.push(Math.pow(normalized, 1.3))
+                    result.push(root.vizLevel(value, root._cavaRange))
                 }
                 if (result.length !== root._cavaBars) return
                 const prev = root.barHeights

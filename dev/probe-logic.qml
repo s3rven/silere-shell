@@ -3903,8 +3903,21 @@ ShellRoot {
                 && Media._cavaConfigText.includes("method = pipewire")
                 && Media._cavaConfigText.includes("method = raw")
                 && Media._cavaConfigText.includes("data_format = ascii")
-                && Media._cavaConfigText.includes("ascii_max_range = 12"),
+                && Media._cavaConfigText.includes("ascii_max_range = " + Media._cavaRange),
             "media service emits a valid bounded Cava raw-output profile")
+        root._check(Media.vizLevel(0, 64) === 0 && Media.vizLevel(64, 64) === 1
+                && Media.vizLevel(99, 64) === 1 && Media.vizLevel(-3, 64) === 0
+                && Media.vizLevel(NaN, 64) === 0 && Media.vizLevel(10, 0) === 0,
+            "visualizer levels stay inside the bar for any cava value")
+        root._check(Media.vizLevel(10, 64) > 0.3 && Media.vizLevel(1, 64) < 0.1,
+            "a typical cava band reads as a third of the bar while the first step stays small")
+        root._check(Media.vizDensity("underline") === 4 && Media.vizDensity("center") === 2
+                && Media.vizDensity("media") === 1 && Media.vizDensity("nonsense") === 1,
+            "wider visualizer positions get proportionally more bars")
+        root._check(Media.vizPresetFor("smooth", true) === "eco"
+                && Media.vizPresetFor("smooth", false) === "smooth"
+                && Media.vizPresetFor("eco", true) === "eco",
+            "the visualizer runs at Eco on battery and keeps the chosen preset on the charger")
         root._check(Media.finiteNonnegative(NaN) === 0
                 && Media.finiteNonnegative(Infinity) === 0
                 && Media.finiteNonnegative(12.5) === 12.5,

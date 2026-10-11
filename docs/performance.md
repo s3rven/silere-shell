@@ -90,3 +90,7 @@ windows, making a high-refresh display look like 60 Hz. Launch with
 Cava is the main optional CPU cost, and only while the visualizer is on screen. Silere
 creates its own temporary Cava profile at runtime, so it does not alter or depend on your
 personal Cava configuration.
+
+Cava stays asleep through a pause of up to eight seconds, so resuming does not restart it
+and its gain does not start over. A longer pause, idle or a fullscreen window stops it.
+On battery it runs at the Eco preset whatever preset is chosen.

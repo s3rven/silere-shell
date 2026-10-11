@@ -23,6 +23,10 @@ settings file carries its own `__version` and migrates separately.
 
 - Stop colour-selection springs while their settings controls are hidden or disabled.
 - Switching menu tabs uses about 10% less CPU.
+- The audio visualizer responds to quieter passages instead of sitting nearly flat.
+- The centered visualizer draws twice as many bars.
+- The visualizer setting says when it is paused by fullscreen or needs the media widget.
+- The audio visualizer runs at Eco while on battery and returns to its preset on the charger.
 
 ### Fixed
 
@@ -31,6 +35,7 @@ settings file carries its own `__version` and migrates separately.
 - Preserve the last successful package update count when its checker exits with an error.
 - Keep updated notification history entries when deletion uses an older snapshot.
 - Notifications from terminal agents no longer show literal `**` around bold words.
+- A short pause no longer restarts the visualizer and its warm-up.
 - Clicking a notification from an app with several windows, such as kitty, keeps the window the app brings forward instead of jumping to another.
 - A failed Bluetooth connection suggests checking that the device is on and nearby before forgetting it.
 - Clear stale windows, workspaces and overview state when niri disconnects.
