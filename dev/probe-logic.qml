@@ -6725,8 +6725,18 @@ ShellRoot {
     }
 
     function _runProcessChecks(): void {
+        const resultProbe = boundedProcessFactory.createObject(root)
+        root._check(resultProbe.completedSuccessfully(0)
+                && !resultProbe.completedSuccessfully(1)
+                && !resultProbe.completedSuccessfully(127),
+            "bounded process success requires a clean zero exit")
+        resultProbe.timedOut = true
+        root._check(!resultProbe.completedSuccessfully(0)
+                && !resultProbe.completedSuccessfully(1),
+            "timed-out bounded processes reject every exit status")
+        resultProbe.destroy()
         root._timeoutProbe = boundedProcessFactory.createObject(root, {
-            command: ["bash", "-c", "sleep 5"],
+            command: ["bash", "-c", "trap 'exit 0' TERM; while :; do sleep 0.02; done"],
             timeoutMs: 80
         })
         let timeoutSeen = false
@@ -6735,8 +6745,10 @@ ShellRoot {
                 "bounded process records its timeout")
             timeoutSeen = true
         })
-        root._timeoutProbe.exited.connect(function() {
+        root._timeoutProbe.exited.connect(function(code) {
             if (!timeoutSeen) return
+            root._check(code === 0 && !root._timeoutProbe.completedSuccessfully(code),
+                "a helper exiting zero after its timeout never reports successful completion")
             root._check(!root._timeoutProbe.running,
                 "bounded process stops a wedged helper")
             root._timeoutProbe.destroy()

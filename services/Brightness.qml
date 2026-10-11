@@ -216,7 +216,7 @@ Singleton {
             "done"]
         stdout: StdioCollector { id: _listOut }
         onExited: (code) => {
-            if (code !== 0) { root.ready = false; root._listed = false; return }
+            if (!_listProc.completedSuccessfully(code)) { root.ready = false; root._listed = false; return }
             const lines = (_listOut.text || "").split(/\r?\n/)
             const devices = []
             for (let i = 0; i < lines.length; i++) {

@@ -167,7 +167,10 @@ Singleton {
             "  [ -n \"$c\" ] && { printf '%s\\n' \"$c\"; break; }; " +
             "done"]
         stdout: StdioCollector { id: _geoOut }
-        onExited: if (!root._parseCoord(_geoOut.text)) root._geoStarted = false
+        onExited: code => {
+            if (!_geoProc.completedSuccessfully(code) || !root._parseCoord(_geoOut.text))
+                root._geoStarted = false
+        }
     }
 
     Timer {

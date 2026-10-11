@@ -228,7 +228,7 @@ Singleton {
                 return
             }
             if (!root._wanted) return
-            const path = code === 0 ? (_detectOut.text || "").trim() : ""
+            const path = _detectProc.completedSuccessfully(code) ? (_detectOut.text || "").trim() : ""
             root._sensorPath = path.startsWith("/sys/") ? path : ""
             if (root._sensorPath.length === 0) root._probeComplete = true
         }

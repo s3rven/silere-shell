@@ -65,9 +65,10 @@ Singleton {
                 root.lastError = ""
                 return
             }
-            if (code !== 0) {
+            if (!_proc.completedSuccessfully(code)) {
                 root._scanned = false
-                root.lastError = "Font scan failed (exit " + code + ")"
+                root.lastError = _proc.timedOut ? "Font scan timed out"
+                    : "Font scan failed (exit " + code + ")"
                 return
             }
             // font family aliases are external input; a null-prototype table keeps names such as "constructor" from colliding with JS built-ins

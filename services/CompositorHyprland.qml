@@ -110,7 +110,7 @@ QtObject {
         timeoutMs: 5000
         command: ["bash", "-c", ". \"$1/scripts/lib/unit.sh\" && _silere_unit_runs_checkout \"$1\"",
             "bash", Quickshell.shellDir]
-        onExited: code => root._unitRunsHere = code === 0
+        onExited: code => root._unitRunsHere = root._unitProbe.completedSuccessfully(code)
     }
     function _probeUnit(): void {
         // a test copy of this checkout matches the unit too
@@ -131,7 +131,7 @@ QtObject {
         timeoutMs: 3000
         command: ["sh", "-c", "hyprctl -j version && hyprctl -j getoption decoration:blur:enabled"]
         stdout: StdioCollector { id: _blurOut }
-        onExited: code => root.blurBlocker = code === 0 ? root.blurBlockerFrom(_blurOut.text) : ""
+        onExited: code => root.blurBlocker = root._blurProbe.completedSuccessfully(code) ? root.blurBlockerFrom(_blurOut.text) : ""
     }
     function blurBlockerFrom(out: string): string {
         const v = /"(?:version|tag)":\s*"v?(\d+)\.(\d+)/.exec(out)

@@ -87,7 +87,7 @@ Singleton {
             "bash", root.directory, root.stateDirectory, root.settingsPath,
             root.notificationsPath, root._legacyNotificationsPath]
         onExited: code => {
-            if (code === 0) {
+            if (_mkdir.completedSuccessfully(code)) {
                 _mkdirRetry.stop()
                 root._directoryFailures = 0
                 root.ready = true
