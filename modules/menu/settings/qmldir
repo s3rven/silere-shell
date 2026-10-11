@@ -2,6 +2,7 @@
 SettingsPage 1.0 SettingsPage.qml
 
 # settings-only implementation types
+internal SettingsSearch SettingsSearch.qml
 internal LockCommandEditor LockCommandEditor.qml
 internal DraggableWidgetList DraggableWidgetList.qml
 internal SettingsClockSection SettingsClockSection.qml

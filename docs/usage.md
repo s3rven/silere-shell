@@ -14,7 +14,7 @@ silere ipc menu toggle
 ## Controls
 
 Most controls use the pointer. The keyboard handles Escape, **Ctrl+F** in notification
-history, and text fields. Controls also expose actions to accessibility tools.
+history and Settings, and text fields. Controls also expose actions to accessibility tools.
 
 | area | pointer |
 |---|---|
@@ -40,6 +40,15 @@ history, and text fields. Controls also expose actions to accessibility tools.
 Open **Settings** in the menu. Most changes apply immediately and are saved to
 `~/.config/silere-shell/settings.json`, or the corresponding `$XDG_CONFIG_HOME` path.
 The file stores only values changed from the defaults.
+
+Click the **search icon** beside the section heading, or press **Ctrl+F**, to expand
+**Find a setting…** and find the section for a feature.
+Try `font`, `history retention`, `night light`, or `reset defaults`; configuration
+names such as `notifHistoryDays` also work. Click a result to open its section.
+When exactly one section matches, Enter opens it. The clear-query button keeps
+search open for another query; the close button folds it away. Hover the compact
+icon to see its label and Ctrl+F shortcut.
+Escape collapses search first, then closes the menu. Search resets when you leave Settings.
 
 - **Appearance**: colours, opacity, blur, font, interface scale and reduced motion.
 - **Bar**: position, width, widget placement, spacing and underline effects.

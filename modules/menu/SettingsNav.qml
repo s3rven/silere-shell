@@ -222,6 +222,7 @@ Item {
 
     function _activateSection(section: string): void {
         if (MenuState.settingsSection === section) {
+            MenuState.setSettingsSection(section)
             root.currentPageRetapped()
             return
         }

@@ -13,6 +13,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Added
 
+- Settings search by feature name or configuration key, with direct section links and Ctrl+F.
 - Optional notification history expiry after a day, week or month, with no background polling.
 - Drag a notification popup sideways to dismiss it.
 - Show an active VPN and its address in the Connectivity card and the network widget's hover text; click the card row to copy the address.
@@ -21,6 +22,9 @@ settings file carries its own `__version` and migrates separately.
 
 ### Changed
 
+- Keep settings search collapsed behind a compact heading icon until opened.
+- Refine search with stable input geometry, clear-query and close actions, match counts, grouped results and shortcut hints.
+- Settings search also finds a setting by the label it shows, names the setting each result opens, and scrolls to it with a brief highlight.
 - Edit custom screen-lock commands in Interface settings, with Save, Revert and input validation.
 - Stop colour-selection springs while their settings controls are hidden or disabled.
 - Switching menu tabs uses about 10% less CPU.

@@ -228,6 +228,23 @@ ShellRoot {
     }
     property var _barPointerWindow: null
     Component {
+        id: settingsSearchWindowFactory
+        Window {
+            visible: true
+            width: 380; height: 300
+            color: Theme.panel
+            property alias search: searchLoader.item
+            property alias input: inputDriver
+            Loader {
+                id: searchLoader
+                width: parent.width
+                source: "modules/menu/settings/SettingsSearch.qml"
+                onLoaded: item.sectionChosen.connect(section => MenuState.setSettingsSection(section))
+            }
+            TestCase { id: inputDriver; when: false }
+        }
+    }
+    Component {
         id: lockEditorWindowFactory
         Window {
             visible: true
@@ -3399,6 +3416,57 @@ ShellRoot {
         ShellSettings.dndSchedule = savedDnd
 
         const savedSection = MenuState.settingsSection
+        root._check(MenuState._settingsSearchEntries.length === MenuState._flatSections.length
+                && MenuState._settingsSearchEntries.every(row => MenuState._flatSections.indexOf(row.section) >= 0),
+            "settings search indexes each available section once without constructing pages")
+        root._check(MenuState.searchSettings("").length === 0
+                && MenuState.searchSettings("   ").length === 0
+                && MenuState.searchSettings("!!!").length === 0,
+            "empty and punctuation-only settings queries show no results")
+        root._check(MenuState.searchSettings("FONT").some(row => row.section === "interface")
+                && MenuState.searchSettings("transparency").some(row => row.section === "theme")
+                && MenuState.searchSettings("do not disturb").some(row => row.section === "popups")
+                && MenuState.searchSettings("reset defaults").some(row => row.section === "updates"),
+            "settings search recognizes common feature names and aliases")
+        root._check(MenuState.searchSettings("history retention").some(row => row.section === "popups")
+                && MenuState.searchSettings("brightness display").some(row => row.section === "interface")
+                && MenuState.searchSettings("night-light").some(row => row.section === "interface"),
+            "settings search matches all words and normalizes punctuation")
+        root._check(MenuState.searchSettings("notifHistoryDays").some(row => row.section === "popups")
+                && MenuState.searchSettings("calendarWeekStart").some(row => row.section === "clock")
+                && MenuState.searchSettings("fontFamily").some(row => row.section === "interface"),
+            "settings search accepts exact configuration names as well as plain-language queries")
+        root._check(MenuState.searchSettings("font battery").length === 0
+                && MenuState.searchSettings("no such feature qzx").length === 0,
+            "unrelated terms cannot produce a misleading settings match")
+        root._check(MenuState.searchSettings(" ".repeat(256) + "font").length === 0,
+            "settings queries have a bounded input budget")
+        const barMatches = MenuState.searchSettings("bar")
+        root._check(barMatches.length > 3 && barMatches.slice(0, 3).every(row => row.group === "Bar")
+                && barMatches[0].section === "surface"
+                && MenuState.searchSettings("media")[0].section === "media",
+            "visible section and group names outrank incidental configuration-key matches")
+        root._check(MenuState._settingsSearchEntries.map(row => row.section).join(",")
+                === MenuState._flatSections.join(","),
+            "ranking search results leaves the cached index in navigation order")
+        const keyedHit = MenuState.searchSettings("notifHistoryDays").find(row => row.section === "popups")
+        const quietHit = MenuState.searchSettings("dnd from").find(row => row.section === "popups")
+        const aliasHit = MenuState.searchSettings("quiet hours").find(row => row.section === "popups")
+        root._check(keyedHit && keyedHit.key === "notifHistoryDays"
+                && quietHit && quietHit.key === "dndFrom"
+                && aliasHit && aliasHit.key === ""
+                && MenuState._settingsSearchEntries.every(row => row.key === undefined),
+            "a settings result names the setting it matched without touching the cached index")
+        const labelHit = (query, section) => MenuState.searchSettings(query).find(row => row.section === section)
+        root._check(labelHit("keep after restart", "popups")?.key === "notifHistoryPersistent"
+                && labelHit("shell shadows", "theme")?.key === "barShadow"
+                && labelHit("network speed", "indicators")?.key === "networkTrafficStats"
+                && labelHit("switch animation", "workspaces")?.key === "workspaceShift",
+            "settings search finds a row by the label it shows, not only by its configuration name")
+        root._check(labelHit("track package updates", "updates")?.key === "updatesWidget"
+                && labelHit("track package updates", "widgets")?.key === "updatesWidget"
+                && labelHit("underlineTempGlow", "warnings")?.key === "underlineTempGlow",
+            "a setting shared by two sections is searchable from both")
         MenuState.setSettingsSection("popups")
         root._check(MenuState.settingsSection === "popups",
             "a known settings page is selected by name")
@@ -7164,6 +7232,203 @@ ShellRoot {
             MenuState.setSettingsSection(s.saved.section)
             MenuState.open = s.saved.open
             root._lockEditorProbe = null
+            root._startSettingsSearchProbe()
+        }
+    }
+
+    property var _settingsSearchProbe: null
+
+    function _startSettingsSearchProbe(): void {
+        const saved = { tab: MenuState.activeTab, open: MenuState.open,
+            section: MenuState.settingsSection, scale: ShellSettings.uiScale,
+            reduce: ShellSettings.reduceMotion }
+        MenuState.selectTab(MenuState.settingsTab)
+        MenuState.open = true
+        MenuState.setSettingsSection("theme")
+        ShellSettings.reduceMotion = true
+        root._settingsSearchProbe = { saved: saved,
+            window: settingsSearchWindowFactory.createObject(root) }
+        _settingsSearchSettle.restart()
+    }
+
+    Timer {
+        id: _settingsSearchSettle
+        interval: 150
+        onTriggered: {
+            const state = root._settingsSearchProbe
+            const f = state.window
+            const search = f.search
+            root._check(search !== null, "settings search builds in a real offscreen window")
+            if (search) {
+                const input = root._findTrayNode(search, item => item.maximumLength !== undefined)
+                const toggle = root._findTrayNode(search, item => item.accessibleName === "Search settings")
+                const close = root._findTrayNode(search, item => item.accessibleName === "Close settings search")
+                const clear = root._findTrayNode(search, item => item.accessibleName === "Clear settings query")
+                root._check(input && input.Accessible.name === "Search settings"
+                        && input.maximumLength === 256 && !search.searching,
+                    "settings search exposes a labelled, bounded text field")
+                root._check(toggle && toggle.visible && !search.expanded && !input.visible
+                        && search.height === search.toggleHeight,
+                    "settings search starts as a compact icon with its text field hidden")
+                f.requestActivate()
+                if (toggle) f.input.mouseMove(toggle)
+                f.input.wait(550)
+                const hint = root._findTrayNode(search, item => item.text === "Search settings · Ctrl+F")
+                root._check(hint && hint.parent.visible && toggle.Accessible.description.indexOf("Ctrl+F") >= 0,
+                    "the compact search icon reveals its purpose and shortcut on hover")
+                f.input.mouseMove(f.contentItem, 10, 290)
+                root._check(hint && !hint.parent.visible,
+                    "leaving the search icon dismisses its hover hint")
+                if (toggle) f.input.mouseClick(toggle)
+                root._check(input.width > 100 && input.activeFocus,
+                    "search input has usable geometry and focus on the first opening frame")
+                f.input.keyClick(Qt.Key_F)
+                f.input.wait(Motion.fast + 20)
+                root._check(search.expanded && input.visible && input.activeFocus
+                        && close && close.visible && !toggle.visible,
+                    "clicking the search icon expands and focuses its field")
+                root._check(search.query === "f", "typing immediately after opening search preserves the first character")
+                search.focusSearch()
+                f.input.keyClick(Qt.Key_F)
+                f.input.keyClick(Qt.Key_O)
+                f.input.keyClick(Qt.Key_N)
+                f.input.keyClick(Qt.Key_T)
+                f.input.wait(40)
+                root._check(search.query === "font" && search.results.some(row => row.section === "interface"),
+                    "real typing locates Interface through a font query")
+                const result = root._findTrayNode(search, item => item.title === "Interface")
+                root._check(result !== null, "a settings match creates a clickable section result")
+                if (result) f.input.mouseClick(result)
+                root._check(MenuState.settingsSection === "interface" && !search.searching
+                        && !search.expanded && !input.activeFocus,
+                    "clicking a settings result selects its section and releases text focus")
+                search.query = "bar"
+                root._check(search.results.length > 4,
+                    "a broad settings query retains matches beyond the visible result cap")
+                root._check(search.resultSummary.indexOf("Scroll for more") >= 0,
+                    "a capped settings result list explicitly announces additional matches")
+                search.choose("clock")
+                root._check(search.searching && MenuState.settingsSection === "interface",
+                    "a section outside the current results cannot be selected through search")
+                search.focusSearch()
+                f.input.keyClick(Qt.Key_Return)
+                root._check(search.searching && MenuState.settingsSection === "interface",
+                    "Enter leaves an ambiguous settings query open instead of choosing an arbitrary section")
+                f.input.wait(Motion.fast + 20)
+                if (clear) f.input.mouseClick(clear)
+                root._check(clear && search.expanded && search.query.length === 0
+                        && input.activeFocus && close.visible && search.results.length === 0,
+                    "clearing the query keeps search expanded and ready for another query")
+                f.input.keyClick(Qt.Key_Escape)
+                root._check(!search.searching && !search.expanded && !search.dismissInline(),
+                    "Escape collapses settings search once before allowing the popup to close")
+                search.query = "calendarWeekStart"
+                search.focusSearch()
+                root._check(search.resultSummary === "1 section · Enter to open",
+                    "a unique settings match advertises its Enter action")
+                f.input.keyClick(Qt.Key_Return)
+                root._check(MenuState.settingsSection === "clock" && !search.expanded && !input.activeFocus,
+                    "Enter opens a unique settings match and folds search away")
+                MenuState.setSettingsSection("interface")
+                search.query = "qzx nonexistent"
+                root._check(search.results.length === 0
+                        && root._findTrayNode(search, item => item.text === "No matching settings. Try a feature name.") !== null,
+                    "an unmatched settings query gives an explicit empty-state hint")
+                f.input.wait(Motion.fast + 20)
+                if (close) f.input.mouseClick(close)
+                root._check(!search.expanded && search.query.length === 0 && toggle.visible,
+                    "the search close button discards its query and restores the compact icon")
+                search.query = "font"
+                search.shown = false
+                search.choose("interface")
+                search.submit()
+                root._check(!search.searching && search.results.length === 0 && !input.activeFocus,
+                    "leaving settings clears its query, results and input focus")
+                search.shown = true
+                search.query = "font"
+                const beforeHiddenChoice = MenuState.settingsSection
+                search.visible = false
+                search.choose("interface")
+                root._check(!search.searching && MenuState.settingsSection === beforeHiddenChoice,
+                    "hidden settings search rejects navigation through an old result")
+                search.visible = true
+                search.query = "font"
+                MenuState.setSettingsSection("clock")
+                root._check(!search.searching,
+                    "a sidebar or IPC section request replaces the search with that section")
+                search.query = "font"
+                MenuState.setSettingsSection("clock")
+                root._check(!search.searching,
+                    "retapping the selected settings section also clears search")
+                ShellSettings.uiScale = 1.15
+                f.width = 232
+                search.query = "notifications"
+                f.input.wait(60)
+                const row = root._findTrayNode(search, item => item.title === "Notifications")
+                const title = root._findTrayNode(row, item => item.text === "Notifications")
+                root._check(row && title && !title.truncated
+                        && row.x + row.width <= search.width + 0.5
+                        && input.width > 100,
+                    "settings results and their input remain readable in a narrow pane at the largest scale")
+                search.visible = false
+                const page = settingsPageFactory.createObject(f.contentItem, {
+                    width: 232, active: true, powerOpen: false
+                })
+                const pageSearch = root._findTrayNode(page, item => typeof item.choose === "function")
+                const detail = page.children.find(child => child._bodyGap !== undefined)
+                root._check(pageSearch && detail, "Settings embeds search above its section body")
+                if (pageSearch && detail) {
+                    root._check(!pageSearch.expanded && detail.y === 0
+                            && page.implicitHeight === detail.height,
+                        "collapsed settings search occupies the existing heading without adding a row")
+                    const scroller = flickableFactory.createObject(root)
+                    scroller.interactive = Qt.binding(() => scroller.height < 150)
+                    page.scroller = scroller
+                    scroller.contentY = 200
+                    scroller.flick(0, -1000)
+                    const previousHeight = page.implicitHeight
+                    pageSearch.query = "font"
+                    root._check(!detail.visible && !detail.enabled && page.implicitHeight >= previousHeight,
+                        "search results replace section controls without shrinking the panel under the pointer")
+                    root._check(!scroller.interactive && !scroller.flicking && scroller.contentY === scroller.originY,
+                        "search results stop outer scroll momentum and keep the field out of blank held-height space")
+                    scroller.height = 160
+                    const stub = selectStubFactory.createObject(root)
+                    MenuState.claimSettingsSelect(stub)
+                    root._check(page.dismissInline() && stub.folded && pageSearch.searching,
+                        "an open settings dropdown is dismissed before the search query")
+                    stub.destroy()
+                    root._check(page.dismissInline() && !pageSearch.searching && detail.visible,
+                        "dismissing the settings search restores the current section")
+                    root._check(!scroller.interactive,
+                        "closing search restores the original scroll binding's current value")
+                    scroller.height = 100
+                    root._check(scroller.interactive,
+                        "the restored scroll binding continues responding to viewport changes")
+                    scroller.contentY = 300
+                    scroller.flick(0, -1000)
+                    f.input.keyClick(Qt.Key_F, Qt.ControlModifier)
+                    const pageInput = root._findTrayNode(pageSearch, item => item.maximumLength !== undefined)
+                    root._check(pageSearch.expanded && pageInput.activeFocus
+                            && !scroller.flicking && scroller.contentY === scroller.originY,
+                        "Ctrl+F stops scrolling and reveals the settings search field before focusing it")
+                    page.scroller = null
+                    scroller.destroy()
+                    pageSearch.query = "font"
+                    page.active = false
+                    root._check(!pageSearch.searching && !pageSearch.expanded && !pageInput.activeFocus,
+                        "switching away from Settings clears a cached page's search state")
+                }
+                page.destroy()
+            }
+            f.close()
+            f.destroy()
+            ShellSettings.uiScale = state.saved.scale
+            ShellSettings.reduceMotion = state.saved.reduce
+            MenuState.selectTab(state.saved.tab)
+            MenuState.setSettingsSection(state.saved.section)
+            MenuState.open = state.saved.open
+            root._settingsSearchProbe = null
             root._startDirectAnchorProbe()
         }
     }
@@ -7372,7 +7637,7 @@ ShellRoot {
             case 2: {
                 const settings = root._motionSettings
                 if (root._motionNotYet(settings.contentReady)) break
-                const detail = settings.children[0]
+                const detail = settings.children.find(child => child._bodyGap !== undefined)
                 const body = detail.children.find(child => child.sourceComponent !== undefined)
                 root._check(settings.contentReady, "settings content finishes its initial load")
                 body.active = false
@@ -7388,7 +7653,7 @@ ShellRoot {
             }
             case 3: {
                 const settings = root._motionSettings
-                const detail = settings.children[0]
+                const detail = settings.children.find(child => child._bodyGap !== undefined)
                 const revealed = settings.contentReady && !settings._awaitingSectionEnter
                         && detail.opacity === 1 && detail._shift === 0
                         && detail._lift === 0
@@ -7424,7 +7689,7 @@ ShellRoot {
                         && root._findTrayNode(settings, item => item.title === "Feature readiness") !== null
                         && root._findTrayNode(settings, item => item.key === "updatesWidget") !== null,
                     "the system overview builds update controls and diagnostics in one page")
-                const detail = settings.children[0]
+                const detail = settings.children.find(child => child._bodyGap !== undefined)
                 const body = detail.children.find(child => child.sourceComponent !== undefined)
                 root._motionBodyItem = body.item
                 root._motionSectionSwaps = 0
@@ -7438,7 +7703,7 @@ ShellRoot {
             }
             case 5: {
                 const settings = root._motionSettings
-                const detail = settings.children[0]
+                const detail = settings.children.find(child => child._bodyGap !== undefined)
                 const body = detail.children.find(child => child.sourceComponent !== undefined)
                 root._check(root._motionSectionSwaps === 0 && body.item === root._motionBodyItem
                         && detail.opacity === 1 && detail._shift === 0 && detail._lift === 0,
@@ -7525,7 +7790,7 @@ ShellRoot {
                 break
             case 10: {
                 const settings = root._motionSettings
-                const detail = settings.children[0]
+                const detail = settings.children.find(child => child._bodyGap !== undefined)
                 const settled = settings.contentReady && !settings._awaitingSectionEnter
                     && detail.opacity === 1 && detail._shift === 0 && detail._lift === 0
                 if (root._motionNotYet(settled)) break

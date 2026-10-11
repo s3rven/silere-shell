@@ -2139,6 +2139,19 @@ else
   structural_skip "row glyphs" "python3 or the row glyph check is unavailable"
 fi
 
+section "settings search labels"
+# search reads each schema entry's l: without building a page, so it must match the row's label
+if command -v python3 >/dev/null 2>&1 && [ -f dev/check-setting-labels.py ]; then
+  if label_drift="$(python3 dev/check-setting-labels.py)"; then
+    ok "search labels" "every labelled settings row is searchable by the label it shows"
+  else
+    fail "settings search labels drifted from the rows they name:"
+    printf '%s\n' "$label_drift"
+  fi
+else
+  structural_skip "search labels" "python3 or the search label check is unavailable"
+fi
+
 section "latched bar edge"
 # A popup that copies the bar edge at open time keeps drawing against it, so a bar that
 # moves underneath leaves the card hugging the edge the bar left. The popups that read

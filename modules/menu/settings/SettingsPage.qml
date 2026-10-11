@@ -9,7 +9,10 @@ import "../controls"
 PageShell {
     id: root
 
-    implicitHeight: _detail.height
+    implicitHeight: _search.expanded ? Math.max(root._searchHeldHeight, _search.height,
+        _search.searching ? 0 : _detail.height)
+        : _detail.height
+    property real _searchHeldHeight: 0
     // The outer SettingsPage can be Loader.Ready while its asynchronous section
     // body is still incubating. MenuWindow uses this to avoid sizing to that
     // short-lived header-only state during a tab transition.
@@ -20,6 +23,15 @@ PageShell {
 
     // the arranger scrolls this while a row is dragged past the viewport edge
     property Flickable scroller: null
+    // Keep the search field in view while results own scrolling. Restore the
+    // scroller's original binding when the query clears or this page leaves.
+    Binding {
+        target: root.scroller
+        property: "interactive"
+        value: false
+        when: root.active && _search.searching && root.scroller !== null
+        restoreMode: Binding.RestoreBindingOrValue
+    }
 
     property string _shownSection: MenuState.settingsSection
     // assigned once to drop the binding: live, it swaps the section the instant MenuState changes,
@@ -30,9 +42,147 @@ PageShell {
     signal sectionSwapped()
 
     function dismissInline(): bool {
-        if (!MenuState.settingsSelectOpen) return false
-        MenuState.closeSettingsSelect()
+        if (MenuState.settingsSelectOpen) {
+            MenuState.closeSettingsSelect()
+            return true
+        }
+        return _search.dismissInline()
+    }
+
+    SettingsSearch {
+        id: _search
+        width: root.width
+        y: expanded ? 0 : Math.max(0, (_detailHeader._mainH - toggleHeight) / 2)
+        z: 10
+        shown: root.active && MenuState.settingsActive && !root.powerOpen
+        onExpanding: {
+            root._searchHeldHeight = _detail.height
+            MenuState.closeSettingsSelect()
+        }
+        onSearchingChanged: if (searching) {
+            root._searchHeldHeight = Math.max(root._searchHeldHeight, _detail.height)
+            MenuState.closeSettingsSelect()
+            if (root.scroller) {
+                root.scroller.cancelFlick()
+                root.scroller.contentY = root.scroller.originY
+            }
+        }
+        onSectionChosen: (section, key) => {
+            root._revealSection = section
+            root._revealKey = key
+            const stay = section === root._shownSection && key !== ""
+            MenuState.setSettingsSection(section)
+            if (root.scroller && !stay) {
+                root.scroller.cancelFlick()
+                root.scroller.contentY = root.scroller.originY
+            }
+            _revealDelay.restart()
+        }
+    }
+    Shortcut {
+        sequence: "Ctrl+F"
+        context: Qt.ApplicationShortcut
+        enabled: _search.shown
+        onActivated: {
+            if (root.scroller) {
+                root.scroller.cancelFlick()
+                root.scroller.contentY = root.scroller.originY
+            }
+            _search.focusSearch()
+        }
+    }
+
+    property string _revealSection: ""
+    property string _revealKey: ""
+
+    // the loader reports Ready before its columns have laid out, so rows still read y 0
+    Timer {
+        id: _revealDelay
+        interval: 60
+        onTriggered: root._revealPending()
+    }
+
+    function _shownWithin(item, top): bool {
+        for (let it = item; it && it !== top; it = it.parent)
+            if (!it.visible || it.height < 1 || it.opacity < 0.01) return false
         return true
+    }
+
+    function _keyRow(top, key: string) {
+        const stack = [top]
+        while (stack.length > 0) {
+            const it = stack.pop()
+            if (it !== top && it.key === key && it.topRadius !== undefined) return it
+            const kids = it.children || []
+            for (let i = kids.length - 1; i >= 0; i--) stack.push(kids[i])
+        }
+        return null
+    }
+
+    function revealRowFor(section: string, key: string): string {
+        const gates = ShellSettings._sectionGates[section] || []
+        for (let i = 0; i < gates.length; i++)
+            if (gates[i].hides.indexOf(key) >= 0) return gates[i].master
+        return ""
+    }
+
+    function _revealPending(): void {
+        const top = _detailBody.item
+        if (root._revealKey === "" || root._revealSection !== root._shownSection
+                || !root.contentReady || !top || !root.scroller) return
+        let key = root._revealKey
+        root._revealKey = ""
+        let row = root._keyRow(top, key)
+        for (let hops = 0; hops < 3 && (!row || !root._shownWithin(row, top)); hops++) {
+            key = root.revealRowFor(root._revealSection, key)
+            row = key.length > 0 ? root._keyRow(top, key) : null
+        }
+        if (!row || !root._shownWithin(row, top)) return
+        root.scroller.cancelFlick()
+        root._revealY = row.mapToItem(root.scroller.contentItem, 0, 0).y - root.scroller.height / 3
+        _revealHold.restart()
+        root._applyRevealY()
+        const flash = _revealFlash.createObject(row, {
+            topRadius: row.topRadius, bottomRadius: row.bottomRadius, cardInset: row.cardInset
+        })
+        if (flash) flash.light()
+    }
+
+    // the pane is still growing into the new section, so a target clamped now falls short
+    property real _revealY: -1
+    function _applyRevealY(): void {
+        const s = root.scroller
+        if (root._revealY < 0 || !s) return
+        if (s.dragging || s.flicking) {
+            root._revealY = -1
+            return
+        }
+        const maxY = Math.max(s.originY, s.originY + s.contentHeight - s.height)
+        s.contentY = Math.max(s.originY, Math.min(maxY, root._revealY))
+    }
+    Timer { id: _revealHold; interval: 500; onTriggered: root._revealY = -1 }
+    Connections {
+        target: root._revealY >= 0 ? root.scroller : null
+        function onContentHeightChanged() { root._applyRevealY() }
+        function onHeightChanged() { root._applyRevealY() }
+        function onDraggingChanged() { root._revealY = -1 }
+    }
+
+    Component {
+        id: _revealFlash
+        RowHoverBg {
+            id: _flash
+            anchors.fill: parent
+            z: -1
+            fillColor: Theme.accent
+            fillOpacity: 0.14
+            function light(): void {
+                _flash.active = true
+                _hold.start()
+            }
+            Timer { id: _hold; interval: 1100; onTriggered: { _flash.active = false; _drop.start() } }
+            Timer { id: _drop; interval: Motion.hoverOut + 200; onTriggered: _flash.destroy() }
+        }
     }
 
     function _holdBodyHeight(): void {
@@ -61,7 +211,10 @@ PageShell {
         // keep the current opacity/offset while PageShell fades the whole page; restoring full opacity here produces a flash during a fast tab switch
     }
 
-    onPageHidden: root._pauseSectionVisual()
+    onPageHidden: {
+        root._revealKey = ""
+        root._pauseSectionVisual()
+    }
     onPageShown: root._settleSection()
     onPowerOpenChanged: {
         if (root.powerOpen) root._settleSection()
@@ -111,13 +264,14 @@ PageShell {
     Item {
         id: _detail
         width:  root.width
+        visible: !_search.searching
         height: _detailHeader.height + _bodyGap + _detailBody.height
         property real _shift: 0
         property real _lift: 0
         transform: Translate { x: _detail._shift; y: _detail._lift }
         // The outgoing controls stay painted for the exit, but must not change
         // settings after the sidebar has selected a different section.
-        enabled: root._shownSection === MenuState.settingsSection
+        enabled: !_search.searching && root._shownSection === MenuState.settingsSection
             && root.contentReady && !root._awaitingSectionEnter
 
         readonly property int _bodyGap: 8
@@ -125,6 +279,7 @@ PageShell {
         Connections {
             target: MenuState
             function onSettingsSectionChanged() {
+                if (MenuState.settingsSection !== root._revealSection) root._revealKey = ""
                 if (!root.active || !MenuState.open || root.powerOpen || !root._motionAllowed) {
                     root._settleSection()
                     return
@@ -186,7 +341,9 @@ PageShell {
         Connections {
             target: _detailBody
             function onStatusChanged() {
-                if (root.contentReady) _sectionEnterDefer.restart()
+                if (!root.contentReady) return
+                _sectionEnterDefer.restart()
+                if (root._revealKey !== "") _revealDelay.restart()
             }
         }
 
@@ -207,7 +364,8 @@ PageShell {
         Item {
             id: _detailHeader
             width: parent.width
-            readonly property real _mainH: Math.max(30, _hdrText.implicitHeight)
+            readonly property real _mainH: _search.expanded ? _search.fieldHeight
+                : Math.max(30, _hdrText.implicitHeight, _search.toggleHeight)
             readonly property real _contentBottom: _hdrError.visible
                 ? _mainH + 8 + _hdrError.height
                 : _mainH
@@ -217,6 +375,7 @@ PageShell {
 
             Item {
                 id: _hdrIconSlot
+                visible: !_search.expanded
                 anchors.left: parent.left
                 anchors.verticalCenter: _hdrText.verticalCenter
                 width: 22
@@ -233,9 +392,11 @@ PageShell {
 
             Column {
                 id: _hdrText
+                visible: !_search.expanded
                 anchors.left: _hdrIconSlot.right
                 anchors.leftMargin: 7
                 anchors.right: parent.right
+                anchors.rightMargin: _search.toggleHeight + 8
                 y: Math.round((_detailHeader._mainH - implicitHeight) / 2)
                 height: implicitHeight
                 spacing: 1
@@ -256,7 +417,7 @@ PageShell {
                     text: _detailHeader._meta.description
                     color: Theme.menuTextDetail
                     font.pixelSize: Settings.fontCaption
-                    elide: Text.ElideRight
+                    wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                 }
             }
 

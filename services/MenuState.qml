@@ -139,10 +139,99 @@ AnchoredPopupState {
         return out
     }
 
+    readonly property var _settingsSearchAliases: ({
+        theme: "accent wallpaper palette colors transparency frosted matugen dark black base border outline",
+        interface: "font typeface text icons scale accessibility animations display monitor brightness lock command hyprlock swaylock gtklock night light hyprsunset wlsunset",
+        surface: "bar position top bottom size shape corners rounded floating",
+        underline: "underline glow screenshot pulse activity",
+        separators: "spacing gaps dividers compact",
+        widgets: "widgets show hide arrange reorder left center right tray",
+        workspaces: "workspaces desktops markers numbers apps icons",
+        clock: "clock time date calendar week sunday monday seconds twelve hour twenty four hour 12h 24h am pm",
+        media: "music playback player tracks artwork spectrum visualizer cava audio",
+        indicators: "window title battery wifi network vpn bluetooth microphone status",
+        popups: "notifications popup history retention quiet hours do not disturb dnd critical",
+        osd: "on screen display volume sound audio brightness feedback integrated floating",
+        warnings: "battery cpu temperature hot critical alerts threshold",
+        updates: "updates version release install diagnostics health repair tools dependencies recovery reset defaults maintenance"
+    })
+
+    function _searchWords(text: string): string {
+        return text.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase()
+            .replace(/[^a-z0-9]+/g, " ").trim()
+    }
+
+    // Build once from section metadata and setting names. Searching never
+    // creates section components or starts their hardware/tool probes.
+    readonly property var _settingsSearchEntries: {
+        const keys = Object.create(null)
+        const labels = Object.create(null)
+        const keyWords = Object.create(null)
+        const schema = ShellSettings._schema
+        for (let i = 0; i < schema.length; i++) {
+            const entry = schema[i]
+            const label = entry.l || ""
+            const words = " " + root._searchWords(entry.k + " " + label) + " "
+            const sections = String(entry.sec).split(",")
+            for (let j = 0; j < sections.length; j++) {
+                const sec = sections[j]
+                keys[sec] = (keys[sec] || "") + " " + entry.k
+                labels[sec] = (labels[sec] || "") + " " + label
+                if (!keyWords[sec]) keyWords[sec] = []
+                keyWords[sec].push({ key: entry.k, label: label, words: words })
+            }
+        }
+        const rows = []
+        for (let g = 0; g < root.settingsTree.length; g++) {
+            const group = root.settingsTree[g]
+            const children = group.children || [group]
+            for (let i = 0; i < children.length; i++) {
+                const child = children[i]
+                rows.push({ section: child.section, label: child.label,
+                    glyph: child.glyph, group: group.label,
+                    order: rows.length,
+                    keys: keyWords[child.section] || [],
+                    labelWords: root._searchWords(child.label),
+                    groupWords: root._searchWords(group.label),
+                    featureWords: root._searchWords((child.description || "") + " "
+                        + (labels[child.section] || "") + " "
+                        + (root._settingsSearchAliases[child.section] || "")),
+                    words: root._searchWords(group.label + " " + child.label + " "
+                        + (child.description || "") + " " + (keys[child.section] || "")
+                        + " " + (labels[child.section] || "")
+                        + " " + (root._settingsSearchAliases[child.section] || "")) })
+            }
+        }
+        return rows
+    }
+
+    function searchSettings(query: string): var {
+        const words = root._searchWords(query.slice(0, 256))
+        if (words.length === 0) return []
+        const terms = words.split(" ")
+        const rank = row => terms.every(term => row.labelWords.indexOf(term) >= 0) ? 0
+            : terms.every(term => row.groupWords.indexOf(term) >= 0) ? 1
+            : terms.every(term => row.featureWords.indexOf(term) >= 0) ? 2 : 3
+        return root._settingsSearchEntries.filter(row => terms.every(term => row.words.indexOf(term) >= 0))
+            .sort((a, b) => rank(a) - rank(b) || a.order - b.order)
+            .map(row => {
+                const hit = root._matchedKey(row.keys, terms)
+                return Object.assign({}, row, { key: hit ? hit.key : "", keyLabel: hit ? hit.label : "" })
+            })
+    }
+
+    function _matchedKey(keys, terms): var {
+        for (let i = 0; i < keys.length; i++)
+            if (terms.every(term => keys[i].words.indexOf(term) >= 0)) return keys[i]
+        return null
+    }
+
+    signal settingsSectionRequested()
     function setSettingsSection(s: string): void {
         // Keep callers of the former diagnostics page on the combined overview.
         const requested = s === "maintenance" ? "updates" : s
         const next = root._flatSections.indexOf(requested) >= 0 ? requested : "theme"
+        root.settingsSectionRequested()
         if (next !== settingsSection) {
             root.closeSettingsSelect()
             settingsSection = next
