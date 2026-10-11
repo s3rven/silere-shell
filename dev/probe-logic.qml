@@ -2963,7 +2963,8 @@ ShellRoot {
         for (let i = 0; i < Notifications.historyCount; i++) {
             const row = Notifications.historyModel.get(i)
             if (row.appName === "Alpha") alphaRows.push({ id: row.id, time: row.time,
-                appName: row.appName, summary: row.summary, body: row.body })
+                appName: row.appName, appIcon: row.appIcon, desktopEntry: row.desktopEntry,
+                summary: row.summary, body: row.body, urgency: row.urgency })
         }
         Notifications.clearHistoryEntries(alphaRows)
         root._check(Notifications.historyCount === 1
@@ -3214,6 +3215,29 @@ ShellRoot {
             root._check(flagsOf().startsWith("FS<> --<> --<- --->"),
                 "consecutive critical notifications each keep a separate card")
             filtered.destroy()
+        }
+
+        // Individual deletion and Clear must both keep a row updated after its snapshot.
+        for (const changedRole of [{ key: "body", value: "Updated body" },
+                { key: "urgency", value: 2 }, { key: "appIcon", value: "updated-icon" },
+                { key: "desktopEntry", value: "org.example.Updated" }]) {
+            Notifications.clearHistory()
+            Notifications._prependHistory({ id: 70, time: 1,
+                appName: "Probe", summary: "Same summary", body: "Original body" })
+            const oldEntry = Notifications._normalizeEntry(Notifications.historyModel.get(0), true)
+            Notifications.historyModel.setProperty(0, changedRole.key, changedRole.value)
+            const revisionBeforeDelete = Notifications.historyRevision
+            Notifications.removeFromHistory(oldEntry)
+            Notifications.clearHistoryEntries([oldEntry])
+            root._check(Notifications.historyCount === 1
+                    && Notifications.historyRevision === revisionBeforeDelete,
+                "stale history deletion preserves an updated " + changedRole.key)
+            if (Notifications.historyCount > 0) {
+                const currentEntry = Notifications._normalizeEntry(Notifications.historyModel.get(0), true)
+                Notifications.removeFromHistory(currentEntry)
+            }
+            root._check(Notifications.historyCount === 0,
+                "a current history snapshot can delete the updated " + changedRole.key)
         }
 
         Notifications.clearHistory()

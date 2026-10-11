@@ -544,12 +544,10 @@ PageShell {
 
                     function removeSelf(): void {
                         if (_removing || root._clearing) return
-                        const entry = { id: modelData.id, time: modelData.time,
-                            appName: modelData.appName, summary: modelData.summary }
                         // persist immediately. A delegate-owned delay is lost if the user changes pages before its timer fires
                         _removing = true
                         root.setRowOpen(_entry._rowKey, false)
-                        Notifications.removeFromHistory(entry)
+                        Notifications.removeFromHistory(modelData)
                     }
 
                     Item {

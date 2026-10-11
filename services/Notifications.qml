@@ -509,7 +509,8 @@ Singleton {
     function isSeen(id: int):   bool { root._ensurePersistentState(); return !!_seen[id] }
 
     function _historySnapshotKey(entry): string {
-        return JSON.stringify([entry.id, entry.time, entry.appName, entry.summary, entry.body])
+        return JSON.stringify([entry.id, entry.time, entry.appName, entry.appIcon,
+            entry.desktopEntry, entry.summary, entry.body, entry.urgency])
     }
 
     function clearHistoryEntries(entries): void {
@@ -711,10 +712,10 @@ Singleton {
         if (typeof entry === "number") {
             idx = entry
         } else if (entry) {
+            const key = root._historySnapshotKey(entry)
             for (let i = 0; i < _history.count; i++) {
                 const h = _history.get(i)
-                if (h.id === entry.id && h.time === entry.time
-                        && h.appName === entry.appName && h.summary === entry.summary) {
+                if (root._historySnapshotKey(h) === key) {
                     idx = i
                     break
                 }
