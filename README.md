@@ -116,8 +116,8 @@ To reset the file, replace its contents with `{ "__version": 1 }`.
 
 ## Performance
 
-On the reference machine, release **1.4.1** measured about **98 MB PSS** with the bar
-and **106 MB** after opening the menu, with idle CPU under **1% of one core**.
+On the reference machine, release **1.4.2** measured about **84 MB PSS** with the bar
+and **95 MB** after opening the menu, with idle CPU under **1% of one core**.
 Your hardware, fonts and enabled features affect the result.
 [Measurements and benchmarking](docs/performance.md).
 

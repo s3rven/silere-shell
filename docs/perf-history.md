@@ -42,6 +42,8 @@ Hardware not already listed takes a new letter.
 | 1.4.0 | 2026-10-09 | A | warm | 100 MB | 188 MB | 0.8% | 21 | 50 |
 | 1.4.1 | 2026-10-10 | A | cold | 98 MB | 185 MB | 0.2% | 26 | 54 |
 | 1.4.1 | 2026-10-10 | A | warm | 106 MB | 193 MB | 0.0% | 27 | 54 |
+| 1.4.2 | 2026-10-11 | A | cold | 84 MB | 177 MB | 0.0% | 24 | 53 |
+| 1.4.2 | 2026-10-11 | A | warm | 95 MB | 189 MB | 0.0% | 24 | 53 |
 
 A dash means that release was not measured.
 
@@ -67,3 +69,11 @@ Quickshell instance was running.
 
 Raw reports: [cold](perf/1.4.1-cold.json) · [warm](perf/1.4.1-warm.json). They were collected
 from runtime commit `d1b3154` while the release metadata and notes were being prepared.
+
+The 1.4.2 runs use the same reference-A setup as 1.4.1: kernel `7.2.9-2-cachyos`, Quickshell
+0.3.2, Qt 6.12.0, and the display at 60 Hz / 125% scale. Both 30-second samples were steady,
+with a per-second CPU median of 0.0% of one core, and both descriptor counts stayed flat. The
+visualizer was stopped, and no second Quickshell instance was running.
+
+Raw reports: [cold](perf/1.4.2-cold.json) · [warm](perf/1.4.2-warm.json). They were collected
+from runtime commit `4e467c3` while the release metadata and notes were being prepared.
