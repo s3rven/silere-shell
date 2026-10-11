@@ -50,6 +50,11 @@ The file stores only values changed from the defaults.
 To reset one setting, delete its key from `settings.json`. To reset preferences together,
 use Restore defaults in Overview; it keeps notification history and wallpaper colours.
 
+Under **Feedback › Notifications › History**, **Keep history for** can remove entries older
+than a day, week, or month. **Until cleared** keeps the existing behavior, subject to
+the history count limit. Shortening the period removes older history immediately;
+active popups stay open. The period also applies when saved history is restored.
+
 [The scripting guide](scripting.md) lists IPC calls, setting names and event hooks.
 
 ## Updates

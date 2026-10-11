@@ -44,6 +44,75 @@ Singleton {
     // at capacity a new notification inserts and trims in one go, so count alone holds
     // still while the contents move. Anything deriving rows from history must watch this
     property int historyRevision: 0
+    onHistoryRevisionChanged: if (ShellSettings.notifHistoryDays > 0)
+        Qt.callLater(root._syncHistoryRetention)
+
+    function historyExpiredAt(time: real, days: int, now: real, settingsReady: bool): bool {
+        return settingsReady && days > 0 && isFinite(time) && isFinite(now)
+            && time <= now - days * 86400000
+    }
+
+    function _expireHistory(now: real): int {
+        const days = ShellSettings.notifHistoryDays
+        if (!ShellSettings.ready || days <= 0 || !isFinite(now)) return 0
+        const dropped = []
+        // A normally ordered history expires in one trailing run. Handle unsorted
+        // restored rows too, keeping retained delegates and active popups intact.
+        let end = _history.count - 1
+        while (end >= 0) {
+            if (!root.historyExpiredAt(_history.get(end).time, days, now, true)) {
+                end--
+                continue
+            }
+            let start = end
+            while (start > 0 && root.historyExpiredAt(_history.get(start - 1).time, days, now, true)) start--
+            for (let i = start; i <= end; i++) dropped.push(String(_history.get(i).id))
+            _history.remove(start, end - start + 1)
+            end = start - 1
+        }
+        if (dropped.length > 0) {
+            root.historyRevision++
+            root._forgetTrimmed(dropped)
+            root._saveHistory()
+        }
+        return dropped.length
+    }
+
+    function _historyExpiryDelay(now: real): int {
+        const days = ShellSettings.notifHistoryDays
+        if (!ShellSettings.ready || days <= 0 || !isFinite(now)) return 0
+        let next = Infinity
+        for (let i = 0; i < _history.count; i++)
+            next = Math.min(next, _history.get(i).time + days * 86400000)
+        // Qt timers use a signed 32-bit interval. A distant deadline needs a
+        // second one-shot wait, rather than overflow or a background poll.
+        return isFinite(next) ? Math.max(1, Math.min(2147483647, Math.ceil(next - now))) : 0
+    }
+
+    function _syncHistoryRetention(): void {
+        const now = Date.now()
+        root._expireHistory(now)
+        const delay = root._historyExpiryDelay(now)
+        if (delay <= 0) {
+            root._historyExpiryTimer.stop()
+            return
+        }
+        root._historyExpiryTimer.interval = delay
+        root._historyExpiryTimer.restart()
+    }
+
+    readonly property Timer _historyExpiryTimer: Timer {
+        onTriggered: root._syncHistoryRetention()
+    }
+
+    Connections {
+        target: MenuState
+        function onRecentActiveChanged() { if (MenuState.recentActive) root._syncHistoryRetention() }
+    }
+    Connections {
+        target: Idle
+        function onIsIdleChanged() { if (!Idle.isIdle) root._syncHistoryRetention() }
+    }
 
     // history is newest-first, so first-seen order is recency order: the app that spoke
     // last leads the rail. Rebuilt on revision, not count, for the reason above
@@ -153,6 +222,7 @@ Singleton {
     function _prependHistory(entry): void {
         const e = root._normalizeEntry(entry)
         if (!e) return
+        if (root.historyExpiredAt(e.time, ShellSettings.notifHistoryDays, Date.now(), ShellSettings.ready)) return
         let at = 0
         while (at < _history.count && _history.get(at).time > e.time) at++
         _history.insert(at, e)
@@ -286,6 +356,8 @@ Singleton {
             root._trimHistory()
             root._saveHistory()
         }
+        function onNotifHistoryDaysChanged() { root._syncHistoryRetention() }
+        function onReadyChanged() { root._syncHistoryRetention() }
         function onNotifHistoryPersistentChanged() {
             // privacy-first: turning persistence off removes text restored from an earlier session. New entries still form an in-memory history
             if (!ShellSettings.notifHistoryPersistent) {

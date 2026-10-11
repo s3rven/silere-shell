@@ -58,6 +58,22 @@ Column {
             key: "notifHistoryLimit"
             step: 5
         }
+        SelectRow {
+            key: "notifHistoryDays"
+            glyph: "󰥔"; label: "Keep history for"
+            fallbackLabel: ShellSettings.notifHistoryDays === 0 ? "Until cleared"
+                : ShellSettings.notifHistoryDays + " days"
+            model: [
+                { value: 0, label: "Until cleared" },
+                { value: 1, label: "1 day" },
+                { value: 7, label: "1 week" },
+                { value: 30, label: "1 month" }
+            ]
+        }
+        HintText {
+            visible: ShellSettings.notifHistoryDays > 0
+            text: "Older history is removed immediately when you shorten this period. Active popups stay open."
+        }
     }
 
     SectionLabel { label: "QUIET HOURS" }

@@ -6113,7 +6113,140 @@ ShellRoot {
         Hooks._queued = ({})
         Hooks._queueOrder = []
 
-        root._startSelectFadeProbe()
+        root._startHistoryRetentionProbe()
+    }
+
+    property var _retentionProbe: null
+
+    function _startHistoryRetentionProbe(): void {
+        const now = Date.now(), day = 86400000
+        root._retentionProbe = { days: ShellSettings.notifHistoryDays, ready: ShellSettings.ready,
+            seen: Notifications._seen, times: Notifications._times,
+            updates: Notifications._updateTimes, list: Notifications.list, phase: 0 }
+        root._check(ShellSettings._discreteKeys["notifHistoryDays"] === true,
+            "retention choices save immediately rather than waiting for a slider debounce")
+        root._check(!Notifications.historyExpiredAt(now - day, 0, now, true)
+                && !Notifications.historyExpiredAt(now - day, 1, now, false),
+            "history retention stays off by default and waits for settings to load")
+        root._check(Notifications.historyExpiredAt(now - day, 1, now, true)
+                && !Notifications.historyExpiredAt(now - day + 1, 1, now, true)
+                && !Notifications.historyExpiredAt(now + day, 1, now, true)
+                && !Notifications.historyExpiredAt(now, 1, NaN, true),
+            "history expires at its exact age boundary and leaves recent and future rows intact")
+        ShellSettings.notifHistoryDays = 0
+        Notifications.clearHistory()
+        Notifications.list = [{ id: 6201, time: now - day - 5, notification: { tracked: true } }]
+        Notifications._seen = { "6201": true, "6202": true }
+        Notifications._times = { "6201": now - day - 5, "6202": now - day - 10 }
+        Notifications._updateTimes = { "6201": now, "6202": now }
+        for (const entry of [{id: 6201, time: now - day - 5},
+                {id: 6202, time: now - day - 10}, {id: 6203, time: now - 1000},
+                {id: 6204, time: now - day + 5000}, {id: 6205, time: now + day}])
+            Notifications._prependHistory(Object.assign({appName: "Retention", summary: "Probe"}, entry))
+        Notifications.historyModel.move(4, 1, 1)
+        ShellSettings._loaded = false
+        ShellSettings.notifHistoryDays = 1
+        root._check(Notifications.historyCount === 5 && Notifications._expireHistory(now) === 0
+                && Notifications._historyExpiryDelay(now) === 0 && !Notifications._historyExpiryTimer.running,
+            "a partially loaded retention setting cannot prune restored history early")
+        const revision = Notifications.historyRevision
+        ShellSettings._loaded = true
+        root._check(Notifications.historyCount === 3 && Notifications.historyRevision === revision + 1
+                && Notifications.historyModel.get(0).id === 6205
+                && Notifications.historyModel.get(1).id === 6203
+                && Notifications.historyModel.get(2).id === 6204,
+            "loaded retention removes expired rows from an unsorted history in one revision")
+        root._check(Notifications.list.length === 1 && Notifications.list[0].notification.tracked
+                && Notifications._seen["6201"] && Notifications._times["6201"] !== undefined
+                && Notifications._updateTimes["6201"] !== undefined
+                && Notifications._seen["6202"] === undefined && Notifications._times["6202"] === undefined
+                && Notifications._updateTimes["6202"] === undefined,
+            "history expiry prunes orphan state while preserving an active popup with the same id")
+        root._check(JSON.parse(Notifications._serializeDisk()).history.length === 3,
+            "expired notification text is removed from the persisted history payload")
+        root._check(Notifications._historyExpiryTimer.running
+                && Notifications._historyExpiryDelay(now) === 5000,
+            "retention waits once for the earliest expiry instead of polling in the background")
+        const beforeOldInsert = Notifications.historyRevision
+        Notifications._prependHistory({ id: 6206, time: now - day - 1000, summary: "Old popup" })
+        root._check(Notifications.historyRevision === beforeOldInsert && Notifications.historyCount === 3,
+            "closing an old popup cannot reinsert history beyond the retention window")
+        root._check(Notifications._expireHistory(now + 5000) === 1
+                && Notifications.historyCount === 2 && Notifications._expireHistory(now + 5000) === 0,
+            "history expiry is idempotent and removes an entry exactly at its deadline")
+        ShellSettings.notifHistoryDays = 365
+        root._check(Notifications._historyExpiryDelay(now) === 2147483647
+                && Notifications._historyExpiryTimer.interval === 2147483647,
+            "long retention periods stay inside Qt's signed timer interval range")
+        ShellSettings.notifHistoryDays = 0
+        root._check(!Notifications._historyExpiryTimer.running && Notifications._historyExpiryDelay(now) === 0,
+            "disabling history expiry cancels its timer")
+        Notifications.clearHistory()
+        Notifications._prependHistory({ id: 6207, time: now - 10 * day, summary: "Keep indefinitely" })
+        root._check(Notifications._expireHistory(now) === 0 && Notifications.historyCount === 1,
+            "the default retention policy continues to keep older history")
+        Notifications.clearHistory()
+        for (let i = 0; i < 4; i++)
+            Notifications._prependHistory({ id: 6210 + i, time: now - 2 * day - i, summary: "Expire together" })
+        Notifications._prependHistory({ id: 6214, time: now, summary: "Keep" })
+        ShellSettings._loaded = false
+        ShellSettings.notifHistoryDays = 1
+        let removals = 0
+        const noteRemoval = () => { removals++ }
+        Notifications.historyModel.countChanged.connect(noteRemoval)
+        ShellSettings._loaded = true
+        Notifications.historyModel.countChanged.disconnect(noteRemoval)
+        root._check(removals === 1 && Notifications.historyCount === 1,
+            "a normally ordered history expires its old rows in one model edit")
+        Notifications.clearHistory()
+        ShellSettings.notifHistoryDays = 7
+        Notifications._prependHistory({ id: 6215, time: now - 2 * day, summary: "Two days old" })
+        root._check(Notifications.historyCount === 1, "a week of retention keeps a two-day-old notification")
+        ShellSettings.notifHistoryDays = 1
+        root._check(Notifications.historyCount === 0,
+            "shortening history retention immediately removes entries outside the new period")
+        Notifications._restoreFromDisk(JSON.stringify({__version: 1, history: [
+            {id: 6216, time: now - 2 * day, summary: "Expired on disk"},
+            {id: 6217, time: now, summary: "Current on disk"}]}))
+        Notifications._syncHistoryRetention()
+        root._check(Notifications.historyCount === 1 && Notifications.historyModel.get(0).id === 6217
+                && JSON.parse(Notifications._serializeDisk()).history.length === 1,
+            "history restored after a restart is pruned and persisted against the active retention policy")
+        // The earlier settings-file tests still have external-read callbacks queued.
+        // Let those settle before testing a deadline across event-loop turns.
+        _historyRetentionSettle.restart()
+    }
+
+    Timer {
+        id: _historyRetentionSettle
+        interval: 250
+        onTriggered: {
+            if (root._retentionProbe.phase === 0) {
+                root._retentionProbe.phase = 1
+                ShellSettings.notifHistoryDays = 1
+                Notifications.clearHistory()
+                const nearDeadline = Date.now() - 86400000 + 150
+                Notifications._prependHistory({ id: 6218, time: nearDeadline, summary: "Expire without interaction" })
+                Notifications._syncHistoryRetention()
+                root._check(Notifications._historyExpiryTimer.running
+                        && Notifications._historyExpiryTimer.interval > 0
+                        && Notifications._historyExpiryTimer.interval <= 150,
+                    "a newly archived row arms its own expiry deadline")
+                restart()
+                return
+            }
+            root._check(Notifications.historyCount === 0 && !Notifications._historyExpiryTimer.running,
+                "history expires automatically while the shell has no new user input")
+            const saved = root._retentionProbe
+            ShellSettings.notifHistoryDays = saved.days
+            ShellSettings._loaded = saved.ready
+            Notifications.list = saved.list
+            Notifications._seen = saved.seen
+            Notifications._times = saved.times
+            Notifications._updateTimes = saved.updates
+            root._retentionProbe = null
+            root._startSelectFadeProbe()
+        }
     }
 
     property var _barLayoutProbe: null

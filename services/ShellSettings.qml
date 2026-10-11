@@ -78,6 +78,7 @@ Singleton {
     property int    notifMaxVisible:     3
     property bool   notifHistoryPersistent: true
     property int    notifHistoryLimit:   20
+    property int    notifHistoryDays:    0
     property bool   dndSchedule:         false
     property int    dndFrom:             22
     property int    dndTo:               8
@@ -367,6 +368,7 @@ Singleton {
         { k: "notifMaxVisible",     t: "int",  min: 0, max: 20, sec: "popups" },
         { k: "notifHistoryPersistent", t: "bool", sec: "popups" },
         { k: "notifHistoryLimit",   t: "int",  min: 5, max: 100, sec: "popups" },
+        { k: "notifHistoryDays",    t: "int",  min: 0, max: 365, sec: "popups" },
         { k: "notifCriticalBypass", t: "bool", sec: "popups" },
         { k: "dndSchedule",         t: "bool", sec: "popups" },
         { k: "dndFrom",             t: "int",  min: 0, max: 23, sec: "popups" },
@@ -765,7 +767,8 @@ Singleton {
         for (let i = 0; i < _schema.length; i++) {
             const s = _schema[i]
             const key = s.k
-            if (s.t === "bool" || s.t === "enum") root._discreteKeys[key] = true
+            if (s.t === "bool" || s.t === "enum" || key === "notifHistoryDays")
+                root._discreteKeys[key] = true
             root[key + "Changed"].connect(function() { root._onSettingChanged(key) })
         }
         ConfigStore.ensureDirectory()

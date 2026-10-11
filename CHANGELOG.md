@@ -13,6 +13,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Added
 
+- Optional notification history expiry after a day, week or month, with no background polling.
 - Drag a notification popup sideways to dismiss it.
 - Show an active VPN and its address in the Connectivity card and the network widget's hover text; click the card row to copy the address.
 - Right-click a history entry to remove it, or middle-click it to jump to the app that sent it.
