@@ -98,11 +98,14 @@ Singleton {
         return Math.round(Math.max(0, Math.min(1, best.network.signalStrength || 0)) * 100)
     }
 
-    property var _vpnState: ({ active: false, name: "" })
+    property var _vpnState: ({ active: false, name: "", uuid: "" })
     readonly property bool hasVpn: _vpnState.active === true
     readonly property string vpnName: _vpnState.name || ""
     property bool _vpnCandidateActive: false
     property string _vpnCandidateName: ""
+    property string _vpnCandidateUuid: ""
+    property string vpnAddress: ""
+    property string _vpnAddressFor: ""
     property bool _vpnRefreshPending: false
     readonly property bool _vpnWanted: !Idle.isIdle && available
         && ShellSettings.barShowNetwork && SystemTools.hasNmcli
@@ -529,9 +532,25 @@ Singleton {
     function _clearVpnState(): void {
         root._vpnCandidateActive = false
         root._vpnCandidateName = ""
+        root._vpnCandidateUuid = ""
         if (root.hasVpn || root.vpnName.length > 0)
-            root._vpnState = ({ active: false, name: "" })
+            root._vpnState = ({ active: false, name: "", uuid: "" })
     }
+
+    function vpnAddressFrom(raw: string): string {
+        const address = String(raw || "").split(/[|\n]/)[0].trim().split("/")[0]
+        return /^\d{1,3}(\.\d{1,3}){3}$/.test(address) ? address : ""
+    }
+
+    function refreshVpnAddress(): void {
+        const uuid = root.hasVpn ? String(root._vpnState.uuid || "") : ""
+        if (uuid !== root._vpnAddressFor) root.vpnAddress = ""
+        if (_vpnAddressProc.running) return
+        root._vpnAddressFor = uuid
+        if (uuid.length > 0 && SystemTools.hasNmcli) _vpnAddressProc.running = true
+    }
+
+    on_VpnStateChanged: root.refreshVpnAddress()
 
     readonly property string _linkSignature: {
         const devices = root._devices
@@ -588,35 +607,58 @@ Singleton {
         id: _vpnProc
         timeoutMs: 15000
         environment: ({ "LC_ALL": "C" })
-        command: ["nmcli", "-t", "-f", "TYPE,NAME", "connection", "show", "--active"]
+        command: ["nmcli", "-t", "-f", "TYPE,UUID,NAME", "connection", "show", "--active"]
         onRunningChanged: if (running) {
             root._vpnCandidateActive = false
             root._vpnCandidateName = ""
+            root._vpnCandidateUuid = ""
         }
         stdout: SplitParser {
             onRead: line => {
                 if (root._vpnCandidateActive) return
                 const fields = root._splitNmcliLine(line)
-                if (fields.length >= 2
+                if (fields.length >= 3
                         && (fields[0] === "vpn" || fields[0] === "wireguard" || fields[0] === "tun")) {
                     root._vpnCandidateActive = true
+                    root._vpnCandidateUuid = fields[1]
                     root._vpnCandidateName = SafeText.singleLineText(
-                        fields.slice(1).join(":"), 128)
+                        fields.slice(2).join(":"), 128)
                 }
             }
         }
         onExited: (code) => {
             // hold the last known state through transient nmcli failures and publish one coherent update
-            if (code === 0 && (root.hasVpn !== root._vpnCandidateActive
-                    || root.vpnName !== root._vpnCandidateName)) {
+            if (_vpnProc.completedSuccessfully(code) && (root.hasVpn !== root._vpnCandidateActive
+                    || root.vpnName !== root._vpnCandidateName
+                    || root._vpnState.uuid !== root._vpnCandidateUuid)) {
                 root._vpnState = {
                     active: root._vpnCandidateActive,
-                    name: root._vpnCandidateName
+                    name: root._vpnCandidateName,
+                    uuid: root._vpnCandidateUuid
                 }
+            } else if (root.hasVpn && root.vpnAddress.length === 0) {
+                // a tunnel listed while still activating has no address yet, and finishing changes nothing above
+                root.refreshVpnAddress()
             }
             const refreshAgain = root._vpnRefreshPending && root._vpnWanted
             root._vpnRefreshPending = false
             if (refreshAgain) _vpnRefresh.restart()
+        }
+    }
+
+    BoundedProcess {
+        id: _vpnAddressProc
+        timeoutMs: 5000
+        environment: ({ "LC_ALL": "C" })
+        command: ["nmcli", "-t", "-g", "IP4.ADDRESS", "connection", "show", "uuid", root._vpnAddressFor]
+        stdout: StdioCollector { id: _vpnAddressOut }
+        onExited: (code) => {
+            if (root._vpnAddressFor !== (root.hasVpn ? String(root._vpnState.uuid || "") : "")) {
+                Qt.callLater(root.refreshVpnAddress)
+                return
+            }
+            if (_vpnAddressProc.completedSuccessfully(code))
+                root.vpnAddress = root.vpnAddressFrom(_vpnAddressOut.text)
         }
     }
 

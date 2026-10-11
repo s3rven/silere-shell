@@ -11,6 +11,10 @@ settings file carries its own `__version` and migrates separately.
 
 ## [Unreleased]
 
+### Added
+
+- Show an active VPN and its address in the Connectivity card and the network widget's hover text; click the card row to copy the address.
+
 ### Changed
 
 - Stop colour-selection springs while their settings controls are hidden or disabled.

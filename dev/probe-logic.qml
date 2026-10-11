@@ -4652,12 +4652,23 @@ ShellRoot {
         Network._vpnState = ({ active: true, name: "stale probe VPN" })
         Network._vpnCandidateActive = true
         Network._vpnCandidateName = "stale probe VPN"
+        const vpnAddressForWas = Network._vpnAddressFor
+        Network._vpnAddressFor = "probe-uuid"
+        Network.vpnAddress = "10.10.14.2"
         Network._clearVpnState()
         root._check(!Network.hasVpn && Network.vpnName.length === 0
                 && !Network._vpnCandidateActive
                 && Network._vpnCandidateName.length === 0,
             "losing VPN detection clears both published and in-flight state")
+        root._check(Network.vpnAddress.length === 0 && Network._vpnAddressFor.length === 0,
+            "a VPN going away takes its address off the Connectivity card")
         Network._vpnState = vpnStateWas
+        Network._vpnAddressFor = vpnAddressForWas
+        root._check(Network.vpnAddressFrom("10.10.14.23/23\n") === "10.10.14.23"
+                && Network.vpnAddressFrom("10.8.0.2/24 | 10.8.0.3/24") === "10.8.0.2"
+                && Network.vpnAddressFrom("") === ""
+                && Network.vpnAddressFrom("fe80::1/64") === "",
+            "the VPN row shows the tunnel's first IPv4 address without its prefix")
 
         const wheelKey = "probe-scroll"
         root._check(Scroll._processDelta(60, wheelKey, 120, 2, 0) === 0,

@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import "../../config"
 import "../../services"
 import "controls"
@@ -9,7 +10,9 @@ PageShell {
     id: root
 
     implicitHeight: _col.implicitHeight
+    onPageShown: if (Network.hasVpn) Network.refreshVpnAddress()
     onPageHidden: {
+        _vpnRow.copied = false
         _picker = ""
         _volumeRow.open = false
         _brightnessRow.open = false
@@ -17,7 +20,7 @@ PageShell {
 
     property string _picker: ""
     readonly property bool _avShown: Audio.ready || _brightnessAvailable
-    readonly property bool _connShown: _wifiAvailable || _btAvailable || _signInShown
+    readonly property bool _connShown: _wifiAvailable || _btAvailable || _signInShown || Network.hasVpn
     function _bottom(item, shown: bool): real {
         return item.y + (shown ? item.height : 0)
     }
@@ -214,6 +217,25 @@ PageShell {
                         MenuState.close()
                         Network.openSignIn()
                     }
+                }
+
+                ControlRow {
+                    id: _vpnRow
+                    visible: Network.hasVpn
+                    property bool copied: false
+                    active: true
+                    glyph: "󰦝"
+                    title: "VPN"
+                    status: copied ? "Address copied"
+                        : Network.vpnName.length > 0 ? Network.vpnName : "Connected"
+                    valueText: Network.vpnAddress
+                    passive: Network.vpnAddress.length === 0
+                    onActivated: {
+                        Quickshell.clipboardText = Network.vpnAddress
+                        copied = true
+                        _copiedHold.restart()
+                    }
+                    Timer { id: _copiedHold; interval: 1600; onTriggered: _vpnRow.copied = false }
                 }
 
                 ControlRow {

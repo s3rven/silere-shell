@@ -29,6 +29,8 @@ Pill {
             : Network.underlyingIcon + " " + root._physical
         return root._signal.length > 0 ? label + " " + root._signal : label
     }
+    readonly property string _vpnText: (Network.vpnName.length > 0 ? Network.vpnName : "VPN")
+        + (Network.vpnAddress.length > 0 ? " " + Network.vpnAddress : "")
     readonly property string _inlineText: {
         const parts = []
         if (root._showPhysicalLink) parts.push(Network.underlyingIcon)
@@ -42,7 +44,7 @@ Pill {
         if (!Network.connected) return "disconnected"
 
         const parts = []
-        if (Network.hasVpn) parts.push(Network.vpnName.length > 0 ? Network.vpnName : "VPN")
+        if (Network.hasVpn) parts.push(root._vpnText)
         if (root._showPhysicalLink || !Network.hasVpn) {
             parts.push(root._signal.length > 0
                 ? root._physical + " " + root._signal
@@ -56,7 +58,7 @@ Pill {
         if (!Network.connected) return "Disconnected"
 
         const parts = []
-        if (Network.hasVpn) parts.push(Network.vpnName.length > 0 ? Network.vpnName : "VPN")
+        if (Network.hasVpn) parts.push(root._vpnText)
         if (root._showPhysicalLink) parts.push(root._linkSummary)
         else if (!Network.hasVpn) {
             const physical = root._signal.length > 0
