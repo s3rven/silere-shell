@@ -3214,6 +3214,50 @@ ShellRoot {
             filtered.revision = Notifications.historyRevision
             root._check(flagsOf().startsWith("FS<> --<> --<- --->"),
                 "consecutive critical notifications each keep a separate card")
+            // Reconciliation should preserve rows when order changes, and batch
+            // adjacent removals instead of notifying the view once per entry.
+            filtered.query = ""
+            filtered.filter = ""
+            const beforeReorder = filtered.snapshot()
+            edits = filtered.inserts + filtered.removes
+            let countChanges = 0
+            const countChanged = () => { countChanges++ }
+            filtered.model.countChanged.connect(countChanged)
+            Notifications.historyModel.move(2, 0, 1)
+            filtered.revision++
+            root._check(filtered.model.get(0).id === beforeReorder[2].id
+                    && filtered.model.get(1).id === beforeReorder[0].id
+                    && filtered.inserts + filtered.removes === edits && countChanges === 0,
+                "reordering history moves existing rows without inserts, removals or count changes")
+            root._check(flagsOf() === "FS<> --<> --<> --<> --<>",
+                "moving a normal row between critical rows recomputes every group boundary")
+            Notifications.historyModel.move(0, 2, 1)
+            filtered.revision++
+            root._check(filtered.inserts + filtered.removes === edits && countChanges === 0
+                    && flagsOf().startsWith("FS<> --<> --<- --->"),
+                "restoring history order reuses every row and restores grouping")
+            const removedBefore = filtered.removes
+            countChanges = 0
+            filtered.query = "no matching history entries"
+            root._check(filtered.count === 0 && countChanges === 1
+                    && filtered.removes === removedBefore + beforeReorder.length,
+                "an empty search result removes a contiguous history in one model operation")
+            countChanges = 0
+            filtered.query = ""
+            root._check(filtered.count === beforeReorder.length && countChanges === 1,
+                "clearing search restores a contiguous history in one model operation")
+            countChanges = 0
+            filtered.query = "alert"
+            root._check(filtered.count === 2 && countChanges === 1
+                    && filtered.model.get(0).id === 906 && filtered.model.get(1).id === 905,
+                "search removes a trailing run together and keeps matching rows")
+            filtered.query = ""
+            countChanges = 0
+            filtered.query = "two"
+            root._check(filtered.count === 1 && countChanges === 2
+                    && filtered.model.get(0).id === 903 && flagsOf() === "FS<>",
+                "search batches removals on both sides of a retained row")
+            filtered.model.countChanged.disconnect(countChanged)
             filtered.destroy()
         }
 

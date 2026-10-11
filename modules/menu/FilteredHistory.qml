@@ -119,21 +119,57 @@ Item {
         for (let i = 0; i < keys.length; i++) live[keys[i]] = true
 
         let changed = false
-        for (let i = _rows.count - 1; i >= 0; i--) {
-            if (live[root._key(_rows.get(i))]) continue
-            _rows.remove(i)
-            root.removes++
+        const retained = Object.create(null)
+        // Removing a contiguous run in one operation avoids notifying the view
+        // once per row when a search or Clear hides most of the history.
+        let end = _rows.count - 1
+        while (end >= 0) {
+            const key = root._key(_rows.get(end))
+            if (live[key]) {
+                retained[key] = true
+                end--
+                continue
+            }
+            let start = end
+            while (start > 0 && !live[root._key(_rows.get(start - 1))]) start--
+            const count = end - start + 1
+            _rows.remove(start, count)
+            root.removes += count
             changed = true
+            end = start - 1
         }
         for (let i = 0; i < rows.length; i++) {
             if (i < _rows.count && root._key(_rows.get(i)) === keys[i]) continue
-            _rows.insert(i, root._row(rows[i], keys[i]))
-            root.inserts++
+            // A reordered source can reuse the existing row and its delegate.
+            // New arrivals skip the scan because their key was never retained.
+            let at = -1
+            if (retained[keys[i]]) {
+                for (let j = i + 1; j < _rows.count; j++) {
+                    if (root._key(_rows.get(j)) !== keys[i]) continue
+                    at = j
+                    break
+                }
+            }
+            if (at >= 0) _rows.move(at, i, 1)
+            else {
+                const additions = [root._row(rows[i], keys[i])]
+                // Restoring a cleared query often brings back an entire run.
+                while (i + additions.length < rows.length
+                        && !retained[keys[i + additions.length]]) {
+                    const next = i + additions.length
+                    additions.push(root._row(rows[next], keys[next]))
+                }
+                _rows.insert(i, additions)
+                root.inserts += additions.length
+                i += additions.length - 1
+            }
             changed = true
         }
-        while (_rows.count > rows.length) {
-            _rows.remove(_rows.count - 1)
-            root.removes++
+        // Identical entries may share a key; trim any surplus copies together.
+        if (_rows.count > rows.length) {
+            const excess = _rows.count - rows.length
+            _rows.remove(rows.length, excess)
+            root.removes += excess
             changed = true
         }
         // Excluded arrivals and an unchanged query leave every grouping flag valid.
