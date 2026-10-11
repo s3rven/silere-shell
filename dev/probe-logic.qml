@@ -3939,6 +3939,43 @@ ShellRoot {
                 && Updates._countFrom("-1") === -1
                 && Updates._countFrom("999999") === -1,
             "package updates reject malformed or implausible counts")
+        const updatesWidgetWas = ShellSettings.updatesWidget
+        // No package command should launch while exercising result publication.
+        SystemTools.ready = false
+        ShellSettings.updatesWidget = true
+        Updates._acceptCheckResult(0, "3\none 1 -> 2\n")
+        const lastGoodPackages = Updates.packages
+        root._check(Updates.count === 3 && Updates.packages.length === 1
+                && !Updates.lastFailed && Updates._failStreak === 0,
+            "a successful package checker publishes its count and details")
+        Updates._acceptCheckResult(9, "0\n")
+        root._check(Updates.count === 3 && Updates.packages === lastGoodPackages
+                && Updates.lastFailed && Updates._failStreak === 1
+                && Updates.lastError === "Package check failed (exit 9)",
+            "a failed package checker cannot replace good results with partial output")
+        Updates._acceptCheckResult(127, "")
+        root._check(Updates.count === 3 && Updates._failStreak === 2
+                && Updates.lastError === "Package check failed (exit 127)",
+            "a package checker that fails to start reports its exit status")
+        Updates._acceptCheckResult(0, "ERR helper unavailable\n")
+        root._check(Updates.count === 3 && Updates.lastFailed
+                && Updates.lastError === "helper unavailable",
+            "a wrapper's explicit package error remains a failure even with exit zero")
+        Updates._acceptCheckResult(0, "not a count\n")
+        root._check(Updates.count === 3 && Updates.lastFailed
+                && Updates.lastError === "Package check returned an invalid count",
+            "a successful package process still needs a valid count")
+        Updates._acceptCheckResult(0, "0\n")
+        root._check(Updates.count === 0 && Updates.packages.length === 0
+                && !Updates.lastFailed && Updates.lastError === ""
+                && Updates._failStreak === 0 && Updates.ready,
+            "a completed package check recovers from previous failures")
+        ShellSettings.updatesWidget = false
+        Updates._acceptCheckResult(0, "8\n")
+        root._check(Updates.count === 0 && !Updates.lastFailed,
+            "a late package result cannot repopulate a disabled widget")
+        ShellSettings.updatesWidget = updatesWidgetWas
+        SystemTools.ready = true
         SystemTools.packageFamily = "pacman"
         SystemTools._tools = { checkupdates: true, paru: true }
         ShellSettings.updatesIncludeAur = false

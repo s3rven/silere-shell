@@ -11,6 +11,10 @@ settings file carries its own `__version` and migrates separately.
 
 ## [Unreleased]
 
+### Fixed
+
+- Preserve the last successful package update count when its checker exits with an error.
+
 ## Releases
 
 - [1.4.1](docs/releases/1.4.1.md) — 2026-10-10

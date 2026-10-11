@@ -349,6 +349,35 @@ Singleton {
         root._backendChanged()
     }
 
+    function _acceptCheckResult(code: int, text: string): void {
+        root.lastCheckMs = Date.now()
+        root._touchNow()
+        if (!ShellSettings.updatesWidget) {
+            root._resetDisabledState()
+            return
+        }
+        const t = text.trim()
+        const n = root._countFrom(t)
+        if (code === 0 && !t.startsWith("ERR") && n >= 0) {
+            root.count = n
+            root._parseDetail(t)
+            root.lastFailed = false
+            root.lastError = ""
+            root._failStreak = 0
+            _retry.stop()
+            _reconnect.stop()
+        } else {
+            root.lastFailed = true
+            root._failStreak++
+            root.lastError = t.startsWith("ERR")
+                ? root._safeError(t.substring(3).trim())
+                : code !== 0 ? "Package check failed (exit " + code + ")"
+                : "Package check returned an invalid count"
+            _retry.restart()
+        }
+        root.ready = true
+    }
+
     BoundedProcess {
         id: _proc
         timeoutMs: 180000
@@ -363,38 +392,14 @@ Singleton {
             root.ready = true
             _retry.restart()
         }
-        onExited: {
+        onExited: code => {
             if (root._discardResult) {
                 root._discardResult = false
                 _sourceRefresh.restart()
                 return
             }
             if (_proc.timedOut) return
-            root.lastCheckMs = Date.now()
-            root._touchNow()
-            if (!ShellSettings.updatesWidget) {
-                root._resetDisabledState()
-                return
-            }
-            const t = (_out.text || "").trim()
-            const n = root._countFrom(t)
-            if (!t.startsWith("ERR") && n >= 0) {
-                root.count = n
-                root._parseDetail(t)
-                root.lastFailed = false
-                root.lastError = ""
-                root._failStreak = 0
-                _retry.stop()
-                _reconnect.stop()
-            } else {
-                root.lastFailed = true
-                root._failStreak++
-                root.lastError = t.startsWith("ERR")
-                    ? root._safeError(t.substring(3).trim())
-                    : "Package check returned an invalid count"
-                _retry.restart()
-            }
-            root.ready = true
+            root._acceptCheckResult(code, _out.text || "")
         }
     }
 
