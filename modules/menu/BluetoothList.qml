@@ -195,11 +195,13 @@ Item {
 
         HintText {
             visible: root.open && Bluetooth.errorAddr.length > 0
-            // a device that lost its pairing key refuses every reconnect until it is paired again
+            // the reason never reaches QML: a device that is off or out of range fails the same way
+            // as one that lost its pairing key, and only the second is fixed by pairing again
             text: Bluetooth.errorKind === "pair"
                 ? "If this device needs a passkey, start a Bluetooth pairing agent "
                     + "such as blueman-applet or bt-agent, then try again."
-                : "If it keeps failing, right-click the device twice to forget it, then pair it again."
+                : "Check that it is on and nearby. If it keeps failing, right-click it twice "
+                    + "to forget it, then pair it again."
         }
     }
 

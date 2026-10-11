@@ -168,9 +168,13 @@ Singleton {
     // only undo pairable when this service raised it. An adapter already made pairable by the user or another tool belongs to that owner
     property var    _pairableAdapter: null
     property int    _pairableTimeoutWas: 0
-    // BlueZ defaults PairableTimeout to 0, so a shell killed mid-attempt would leave the
-    // adapter pairable for good. Longer than _attemptGuard, so it never cuts an attempt short
-    readonly property int _pairableTimeoutSec: 60
+    // Include every passkey extension: a pairing can legitimately last three
+    // minutes. BlueZ still expires pairability if the shell dies mid-attempt.
+    readonly property int _attemptGuardMs: 20000
+    readonly property int _maxPairGuardExtensions: 8
+    readonly property int _maxConnectGuardExtensions: 2
+    readonly property int _pairableTimeoutSec:
+        Math.ceil(root._attemptGuardMs * (root._maxPairGuardExtensions + 2) / 1000)
 
     readonly property var _pendingDevice: {
         if (root._pendingAddr === "") return null
@@ -298,16 +302,16 @@ Singleton {
 
     function _extendAttemptGuard(kind: string, pairing: bool, state: int,
                                  extensions: int): bool {
-        if (kind === "pair") return pairing && extensions < 8
+        if (kind === "pair") return pairing && extensions < root._maxPairGuardExtensions
         // bluez can outlast one guard interval connecting a paired device; wait while it reports progress
         return kind === "connect" && state === Bt.BluetoothDeviceState.Connecting
-            && extensions < 2
+            && extensions < root._maxConnectGuardExtensions
     }
 
     // an attempt that never moves the device would otherwise hold the row on its in-progress label forever
     Timer {
         id: _attemptGuard
-        interval: 20000
+        interval: root._attemptGuardMs
         onTriggered: {
             if (root._pendingAddr === "") return
             // a passkey pairing can sit in progress well past 20s; that is not a stalled

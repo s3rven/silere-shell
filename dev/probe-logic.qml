@@ -5857,6 +5857,16 @@ ShellRoot {
         Bluetooth._scanAdapter = scanAdapterWas
         Bluetooth._scanRequested = scanRequestedWas
 
+        const maxPairWaitMs = Bluetooth._attemptGuardMs
+            * (Bluetooth._maxPairGuardExtensions + 1)
+        root._check(Bluetooth._pairableTimeoutSec * 1000 > maxPairWaitMs,
+            "Bluetooth pairability outlasts every allowed passkey guard extension")
+        root._check(Bluetooth._extendAttemptGuard("pair", true, 0,
+                    Bluetooth._maxPairGuardExtensions - 1)
+                && !Bluetooth._extendAttemptGuard("pair", true, 0,
+                    Bluetooth._maxPairGuardExtensions)
+                && !Bluetooth._extendAttemptGuard("pair", false, 0, 0),
+            "passkey pairing extends only while progressing and within its bounded limit")
         const closedAdapter = { pairable: false, pairableTimeout: 0 }
         Bluetooth._armPairable(closedAdapter)
         root._check(closedAdapter.pairable
