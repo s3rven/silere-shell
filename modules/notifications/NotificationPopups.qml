@@ -466,8 +466,15 @@ PanelWindow {
                                 || index >= stack.count - ShellSettings.notifMaxVisible
                                 || win._isCritical(modelData)
                             readonly property var cardItem: _cardLoader.item
+                            // a swiped card leaves its slot sideways; the slot only bounds the blur vertically
+                            Item {
+                                id: _blurBounds
+                                x: -win.width
+                                width: _slot.width + 2 * win.width
+                                height: _slot.height
+                            }
                             readonly property Region blurShape: Region {
-                                item: _slot
+                                item: _blurBounds
                                 Region {
                                     item: _slot.cardItem ? _slot.cardItem.blurItem : null
                                     radius: _slot.cardItem && _slot.cardItem.blurItem

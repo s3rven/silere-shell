@@ -113,12 +113,15 @@ Item {
         if (!card.enabled) return
         card.cancelReply()
         card._expired = expired === true
+        card._sweptOut = card._swiping
+        const inPlace = card._swiping && Math.sign(cardRect.x) !== card.slideDir
+        card._swiping = false
         card._leaving = true
         card.leaving()
         card._collapseBasis = cardRect.height
         _autoClose.stop()
         cardRect.opacity = 0
-        cardRect.x = card._hiddenX
+        if (!inPlace) cardRect.x = card._hiddenX
         card.enabled = false
         if (!Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)
                 || !card.visible) {
@@ -127,6 +130,63 @@ Item {
         }
         if (card.collapseOnDismiss) _collapseAnim.restart()
         _exitTimer.start()
+    }
+
+    property bool _swiping: false
+    property bool _sweptOut: false
+    property real _swipeOrigin: 0
+    property real _swipeDx: 0
+    property real _swipeVelocity: 0
+    property real _swipeStamp: 0
+    property real _swipeStampDx: 0
+
+    // the stack clips a card past its inner edge, so only the outward way travels freely
+    function swipeOffset(dx: real, outward: int): real {
+        if (outward !== 0 && Math.sign(dx) === outward) return dx
+        return Math.sign(dx) * 16 * (1 - Math.exp(-Math.abs(dx) / 48))
+    }
+
+    function swipeDismisses(dx: real, velocity: real, width: real): bool {
+        if (Math.abs(dx) >= width / 3) return true
+        return Math.abs(dx) >= 24 && Math.abs(velocity) >= 0.9
+            && Math.sign(velocity) === Math.sign(dx)
+    }
+
+    function _beginSwipe(x: real): void {
+        if (!card.enabled) return
+        card._swiping = true
+        card._swipeOrigin = x
+        card._swipeDx = 0
+        card._swipeVelocity = 0
+        card._swipeStamp = Date.now()
+        card._swipeStampDx = 0
+    }
+
+    function _moveSwipe(x: real): void {
+        if (!card._swiping) return
+        const now = Date.now()
+        const dx = x - card._swipeOrigin
+        const dt = now - card._swipeStamp
+        if (dt > 0) {
+            card._swipeVelocity = 0.6 * (dx - card._swipeStampDx) / dt + 0.4 * card._swipeVelocity
+            card._swipeStamp = now
+            card._swipeStampDx = dx
+        }
+        card._swipeDx = dx
+        cardRect.x = card.swipeOffset(dx, card.slideDir)
+        cardRect.opacity = 1 - 0.4 * Math.min(1, Math.abs(dx) / Math.max(1, card.width / 3))
+    }
+
+    function _endSwipe(release: bool): void {
+        if (!card._swiping) return
+        const velocity = Date.now() - card._swipeStamp > 80 ? 0 : card._swipeVelocity
+        if (release && card.swipeDismisses(card._swipeDx, velocity, card.width)) {
+            card.dismiss()
+            return
+        }
+        card._swiping = false
+        cardRect.x = 0
+        cardRect.opacity = 1
     }
 
     function activatePrimary(): void {
@@ -417,14 +477,14 @@ Item {
             }
         }
 
-        MotionBehavior on x       { gate: card.visible && cardRect._behaviorEnabled; NumberAnimation { duration: card._leaving ? Motion.ms(200) : Motion.ms(280); easing.type: card._leaving ? Easing.InCubic : Easing.OutCubic } }
+        MotionBehavior on x       { gate: card.visible && cardRect._behaviorEnabled && !card._swiping; NumberAnimation { duration: card._leaving ? Motion.ms(200) : Motion.ms(280); easing.type: card._leaving && !card._sweptOut ? Easing.InCubic : Easing.OutCubic } }
         // the fade must outlast the slide both ways: a 140ms fade against the 200ms exit is spent a third of the way out
-        MotionBehavior on opacity { gate: card.visible && cardRect._behaviorEnabled; NumberAnimation { duration: Motion.ms(200); easing.type: card._leaving ? Easing.InCubic : Easing.OutCubic } }
+        MotionBehavior on opacity { gate: card.visible && cardRect._behaviorEnabled && !card._swiping; NumberAnimation { duration: Motion.ms(200); easing.type: card._leaving ? Easing.InCubic : Easing.OutCubic } }
         MotionBehavior on height  { gate: card.visible && cardRect._behaviorEnabled; NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
 
         // urgency rides the outline, glyph and ring only: tinting the whole fill red drowns the text it is warning about
         // mix() returns alpha 1, so a translucent popup would snap opaque under the cursor
-        color: _bodyArea.pressed
+        color: _bodyArea.pressed && !card._swiping
             ? Theme.withAlpha(Theme.mix(Theme.popup, Theme.subtext, 0.11), Theme.popup.a)
             : card._expanded
             ? Theme.withAlpha(Theme.mix(Theme.popup, Theme.subtext, 0.06), Theme.popup.a)
@@ -794,7 +854,28 @@ Item {
             anchors.fill: parent
             acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
             cursorShape: Qt.PointingHandCursor
+            preventStealing: card._swiping
+            property point _press
+            property bool _swiped: false
+            onPressed: (mouse) => {
+                _swiped = false
+                _press = mapToItem(card, mouse.x, mouse.y)
+            }
+            onPositionChanged: (mouse) => {
+                if (!(pressedButtons & Qt.LeftButton)) return
+                const p = mapToItem(card, mouse.x, mouse.y)
+                if (!card._swiping) {
+                    const dx = Math.abs(p.x - _press.x)
+                    if (dx < Qt.styleHints.startDragDistance || dx < Math.abs(p.y - _press.y)) return
+                    _swiped = true
+                    card._beginSwipe(p.x)
+                }
+                card._moveSwipe(p.x)
+            }
+            onReleased: card._endSwipe(true)
+            onCanceled: card._endSwipe(false)
             onClicked: (mouse) => {
+                if (_swiped) return
                 if (mouse.button === Qt.RightButton) { card.dismiss(); return }
                 if (mouse.button === Qt.MiddleButton)
                     WindowActions.focusNotificationSource(card.notification)

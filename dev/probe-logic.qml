@@ -2049,6 +2049,42 @@ ShellRoot {
             "a capitalized action key remains a visible button without becoming the primary action")
         actionCard.destroy()
 
+        root._check(notificationCard.swipeOffset(120, 1) === 120
+                && notificationCard.swipeOffset(-120, -1) === -120
+                && notificationCard.swipeOffset(-400, 1) < 0
+                && notificationCard.swipeOffset(-400, 1) > -16
+                && Math.abs(notificationCard.swipeOffset(400, 0)) < 16
+                && notificationCard.swipeOffset(0, 1) === 0,
+            "a swiped notification follows the pointer freely only toward its own screen edge")
+        root._check(notificationCard.swipeDismisses(140, 0, 400)
+                && notificationCard.swipeDismisses(-140, 0, 400)
+                && !notificationCard.swipeDismisses(120, 0, 400)
+                && notificationCard.swipeDismisses(40, 1.2, 400)
+                && !notificationCard.swipeDismisses(40, -1.2, 400)
+                && !notificationCard.swipeDismisses(12, 2, 400),
+            "a swiped notification lets go past a third of its width or on a fling the same way")
+        const swipeMotionWas = ShellSettings.reduceMotion
+        ShellSettings.reduceMotion = true
+        const swipeCard = notificationCardFactory.createObject(root, {
+            width: 300, slideDir: 1,
+            notification: Object.assign({}, notificationCard.notification, { expireTimeout: 0 })
+        })
+        let swipeDismissals = 0
+        swipeCard.dismissRequested.connect((id, note, expired) => { if (!expired) swipeDismissals++ })
+        swipeCard._beginSwipe(0)
+        swipeCard._moveSwipe(60)
+        swipeCard._endSwipe(false)
+        root._check(swipeCard.enabled && !swipeCard._swiping && swipeDismissals === 0,
+            "a cancelled swipe returns the notification to the stack")
+        swipeCard._beginSwipe(0)
+        swipeCard._moveSwipe(-200)
+        swipeCard._swipeStamp = 0
+        swipeCard._endSwipe(true)
+        root._check(!swipeCard.enabled && !swipeCard._swiping && swipeDismissals === 1,
+            "a notification swiped past a third of its width is dismissed, not expired")
+        swipeCard.destroy()
+        ShellSettings.reduceMotion = swipeMotionWas
+
         const idleMotionWas = ShellSettings.reduceMotion
         ShellSettings.reduceMotion = true
         const idleTemplate = Object.assign({}, notificationCard.notification, { expireTimeout: 0 })
