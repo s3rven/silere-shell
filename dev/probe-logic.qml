@@ -660,6 +660,42 @@ ShellRoot {
         quick.destroy()
     }
 
+    function _checkWifiScanners(): void {
+        let writes = 0
+        const adapter = () => {
+            let scanning = false
+            return {
+                type: Net.DeviceType.Wifi,
+                get scannerEnabled() { return scanning },
+                set scannerEnabled(value) { scanning = value; writes++ }
+            }
+        }
+        const first = adapter()
+        const wired = { type: Net.DeviceType.Wired, scannerEnabled: false }
+        Network._applyScannerState([null, first, wired], true)
+        root._check(first.scannerEnabled && !wired.scannerEnabled && writes === 1,
+            "Wi-Fi discovery enables only Wi-Fi adapters")
+        Network._applyScannerState([first, wired], true)
+        root._check(writes === 1,
+            "re-enumerating an unchanged adapter avoids a repeated scanner write")
+        const second = adapter()
+        Network._applyScannerState([first, second, wired], true)
+        root._check(first.scannerEnabled && second.scannerEnabled && writes === 2,
+            "a second Wi-Fi adapter joins ongoing discovery without restarting the first")
+        const replacement = adapter()
+        Network._applyScannerState([replacement, second], true)
+        root._check(replacement.scannerEnabled && second.scannerEnabled && writes === 3,
+            "a replacement Wi-Fi adapter inherits ongoing discovery")
+        Network._applyScannerState([replacement, second, wired], false)
+        root._check(!replacement.scannerEnabled && !second.scannerEnabled && writes === 5,
+            "closing discovery stops every current Wi-Fi adapter")
+        Network._applyScannerState([replacement, second], false)
+        const closed = adapter()
+        Network._applyScannerState([replacement, second, closed], false)
+        root._check(writes === 5 && !closed.scannerEnabled,
+            "enumeration with discovery closed leaves scanners stopped without writes")
+    }
+
     function _checkWifiDraft(): void {
         const motionWas = ShellSettings.reduceMotion
         const errorWas = Network.wifiError
@@ -1152,6 +1188,7 @@ ShellRoot {
         root._checkSmoothGlide()
         root._checkPageLayout()
         root._checkAccessibleControls()
+        root._checkWifiScanners()
         root._checkWifiDraft()
         root._checkPowerRail()
         root._checkBluetoothPairing()

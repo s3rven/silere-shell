@@ -204,14 +204,26 @@ Singleton {
     property var _pendingNetwork: null
     readonly property bool wifiScanning: _scanWarmup.running
 
-    function _setScannerEnabled(enabled: bool): void {
-        const devices = root._devices
+    function _applyScannerState(devices, enabled: bool): void {
         for (let i = 0; i < devices.length; i++) {
             const device = devices[i]
-            if (device && device.type === DeviceType.Wifi)
+            if (device && device.type === DeviceType.Wifi && device.scannerEnabled !== enabled)
                 device.scannerEnabled = enabled
         }
     }
+
+    function _setScannerEnabled(enabled: bool): void {
+        root._applyScannerState(root._devices, enabled)
+    }
+
+    function _syncScanner(): void {
+        root._setScannerEnabled(root._scannerWanted && root.toolAvailable && root.wifiEnabled)
+    }
+
+    // Adding or replacing an adapter does not necessarily change hasWifiDevice.
+    // Read the latest demand after enumeration settles, so closing the picker
+    // before this callback runs cannot restart discovery.
+    on_DevicesChanged: if (root._scannerWanted) Qt.callLater(root._syncScanner)
 
     function scanWifi(forceRescan: bool): void {
         if (!toolAvailable || !wifiEnabled || !hasWifiDevice) {
@@ -223,7 +235,7 @@ Singleton {
         if (forceRescan) {
             _setScannerEnabled(false)
             Qt.callLater(() => {
-                if (root._scannerWanted) root._setScannerEnabled(true)
+                root._syncScanner()
             })
         } else {
             _setScannerEnabled(true)
@@ -475,7 +487,6 @@ Singleton {
 
     onHasWifiDeviceChanged: {
         if (!root.hasWifiDevice) root._cancelWifiConnect()
-        else if (_scannerWanted) Qt.callLater(() => root._setScannerEnabled(true))
     }
 
     Timer {
