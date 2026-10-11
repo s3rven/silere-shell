@@ -131,10 +131,12 @@ Item {
 
     function activatePrimary(): void {
         if (!card.enabled) return
-        if (card._defaultAction)
+        if (card._defaultAction) {
             card._defaultAction.invoke()
-
-        WindowActions.focusNotificationSource(card.notification)
+            WindowActions.focusNotificationSourceAfterAction(card.notification)
+        } else {
+            WindowActions.focusNotificationSource(card.notification)
+        }
         if (!card._defaultAction || !card.notification.resident)
             card.dismiss()
     }

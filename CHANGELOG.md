@@ -25,6 +25,7 @@ settings file carries its own `__version` and migrates separately.
 - Moving diagonally toward an open tray submenu no longer switches to another submenu passed on the way.
 - Hidden colour swatches no longer accept accessibility actions, and selection rings stay inside their current options.
 - Preserve the last successful package update count when its checker exits with an error.
+- Clicking a notification from an app with several windows, such as kitty, keeps the window the app brings forward instead of jumping to another.
 - A failed Bluetooth connection suggests checking that the device is on and nearby before forgetting it.
 - Clear stale windows, workspaces and overview state when niri disconnects.
 - Cancel unfinished slider gestures when their range or step changes.

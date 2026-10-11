@@ -243,6 +243,35 @@ Singleton {
         if (c) Compositor.focusToplevel(c)
     }
 
+    // an app that raises its own window from its default action (kitty requests its own
+    // activation token) knows which of its windows spoke; the match only knows the app, so
+    // with several windows it can land on the wrong one after the app got it right
+    function focusIsSourceApp(c, toplevels): bool {
+        if (!c) return false
+        const list = toplevels || []
+        for (let i = 0; i < list.length; i++) {
+            const t = list[i]
+            if (!t || !t.focused) continue
+            return (c.pid > 0 && t.pid === c.pid) || (!!c.cls && t.cls === c.cls)
+        }
+        return false
+    }
+
+    property var _pendingSource: null
+    readonly property Timer _sourceFallback: Timer {
+        interval: 250
+        onTriggered: {
+            const c = root._pendingSource
+            root._pendingSource = null
+            if (c && !root.focusIsSourceApp(c, Compositor.toplevels)) Compositor.focusToplevel(c)
+        }
+    }
+
+    function focusNotificationSourceAfterAction(notification): void {
+        root._pendingSource = root._matchNotificationClient(notification, true)
+        if (root._pendingSource) root._sourceFallback.restart()
+    }
+
     function notificationSourceWorkspace(notification): int {
         const c = root._matchNotificationClient(notification, false)
         return c ? (c.wsId ?? -1) : -1

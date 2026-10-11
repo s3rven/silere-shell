@@ -1558,6 +1558,16 @@ ShellRoot {
             "releasing the warm owner returns the menu loader to idle")
         workspaceStrip.destroy()
 
+        const kittyGuess = { pid: 1638, cls: "kitty", ref: "c" }
+        root._check(WindowActions.focusIsSourceApp(kittyGuess, [
+                    { pid: 1638, cls: "kitty", ref: "a", focused: false },
+                    { pid: 1638, cls: "kitty", ref: "b", focused: true }])
+                && !WindowActions.focusIsSourceApp(kittyGuess, [
+                    { pid: 1638, cls: "kitty", ref: "a", focused: false },
+                    { pid: 900, cls: "zen", ref: "z", focused: true }])
+                && !WindowActions.focusIsSourceApp(kittyGuess, [])
+                && !WindowActions.focusIsSourceApp(null, [{ pid: 1, cls: "x", focused: true }]),
+            "a notification click keeps the window the app raised itself instead of guessing another")
         root._check(WindowActions._norm("  Org.Example.App.desktop  ") === "org.example.app"
                 && WindowActions._norm(null) === "",
             "window matching normalizes desktop ids and empty hints")
