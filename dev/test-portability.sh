@@ -180,6 +180,18 @@ EOF
     assert_eq check "$(cat "$calls")" "installer leaves an up-to-date checkout alone"
 )
 
+test_lua_exec_return_guard() (
+    SILERE_SCRIPT_LIB_ONLY=1 source "$ROOT/scripts/install.sh"
+    local dir="$TMP/lua-return"
+    mkdir -p "$dir"
+    printf 'local M = {}\nfunction M.f()\n    return 1\nend\nreturn M\n' > "$dir/module.lua"
+    printf 'hl.exec_cmd("a")\nlocal function f()\n    return 1\nend\nlocal returned = f()\n' > "$dir/plain.lua"
+    _lua_ends_in_return "$dir/module.lua" \
+        || fail "installer would append autostart after a Lua module's top-level return"
+    ! _lua_ends_in_return "$dir/plain.lua" \
+        || fail "an indented return or a name starting with return blocked the Lua autostart"
+)
+
 test_marker_removal() (
     SILERE_SCRIPT_LIB_ONLY=1 source "$ROOT/scripts/uninstall.sh"
     local dir="$TMP/markers"
@@ -2279,6 +2291,7 @@ fi
 test_xdg_paths_and_timer_default
 test_fresh_install_permissions
 test_existing_checkout_installer_update
+test_lua_exec_return_guard
 test_marker_removal
 test_uninstall_targets_and_backups
 test_uninstall_empty_optional_paths

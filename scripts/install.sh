@@ -508,6 +508,11 @@ _replace_matugen_block() {
     fi
 }
 
+# Lua rejects any statement after a top-level return, so a module file cannot take an appended block
+_lua_ends_in_return() {
+    grep -qE '^return([^A-Za-z0-9_]|$)' "$1" 2>/dev/null
+}
+
 _owned_block_contains() {
     local file="$1" begin="$2" end="$3" needle="$4"
     [ -f "$file" ] || return 1
@@ -1468,6 +1473,10 @@ if [[ "$HYPR_CONFIG" == *.lua ]]; then
             _skip "kept the existing Silere autostart command"
         fi
         autostart_ready=true
+    elif [ -n "$LUA_EXEC_FILE" ] && _lua_ends_in_return "$LUA_EXEC_FILE"; then
+        _warn "$(_tilde "$LUA_EXEC_FILE") ends in a return, so a block appended after it would break the config"
+        _warn "add this before its return:"
+        _warn "  hl.on(\"hyprland.start\", function() hl.exec_cmd($LAUNCH_SHOWN_LUA) end)"
     elif [ -n "$LUA_EXEC_FILE" ] && _dry; then
         _would "append to $LUA_EXEC_FILE: hl.exec_cmd($LAUNCH_CMD_LUA)"
     elif [ -n "$LUA_EXEC_FILE" ]; then

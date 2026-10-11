@@ -49,6 +49,7 @@ settings file carries its own `__version` and migrates separately.
 - Clear stale windows, workspaces and overview state when niri disconnects.
 - Cancel unfinished slider gestures when their range or step changes.
 - Require a fresh confirmation after its time window expires, even when the cleanup timer is delayed.
+- The installer no longer adds autostart after the final `return` of a Lua exec file, which broke the Hyprland config.
 
 ## Releases
 
