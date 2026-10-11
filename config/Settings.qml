@@ -124,7 +124,8 @@ Singleton {
             } else if (c === "'" || c === "\"") {
                 quote = c
                 open = true
-            } else if (c === "\\" && i + 1 < text.length) {
+            } else if (c === "\\") {
+                if (i + 1 >= text.length) return []
                 word += text[++i]
                 open = true
             } else if (/\s/.test(c)) {
@@ -138,6 +139,7 @@ Singleton {
         }
         if (quote.length > 0) return []
         if (open) out.push(word)
+        if (out.length > 0 && out[0].length === 0) return []
         return out
     }
 

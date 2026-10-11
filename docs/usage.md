@@ -37,7 +37,7 @@ history, and text fields. Controls also expose actions to accessibility tools.
 
 ## Settings
 
-Open **Settings** in the menu. Changes apply immediately and are saved to
+Open **Settings** in the menu. Most changes apply immediately and are saved to
 `~/.config/silere-shell/settings.json`, or the corresponding `$XDG_CONFIG_HOME` path.
 The file stores only values changed from the defaults.
 
@@ -46,6 +46,16 @@ The file stores only values changed from the defaults.
 - **Widgets**: individual widget options, calendar, media and system indicators.
 - **Feedback**: notification history, Do Not Disturb, the OSD and alerts.
 - **System › Overview**: updates, diagnostics, repairs and restore defaults.
+
+Under **Appearance › Interface › Screen lock**, choose an installed lock program
+or **Custom command**. Enter the lock program and its arguments, then click **Save**
+or press Enter. **Revert** or Escape discards your draft; leaving the page also
+discards unsaved edits. Saving does not lock the screen.
+
+Quote arguments that contain spaces, for example `swaylock --image "/home/me/Lock screen.png"`.
+Custom commands run directly: use an absolute path instead of `~`, and use a script
+if you need shell operators or environment variable expansion. An empty saved command
+disables the lock action.
 
 To reset one setting, delete its key from `settings.json`. To reset preferences together,
 use Restore defaults in Overview; it keeps notification history and wallpaper colours.

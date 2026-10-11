@@ -21,6 +21,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Changed
 
+- Edit custom screen-lock commands in Interface settings, with Save, Revert and input validation.
 - Stop colour-selection springs while their settings controls are hidden or disabled.
 - Switching menu tabs uses about 10% less CPU.
 - The audio visualizer responds to quieter passages instead of sitting nearly flat.
@@ -32,6 +33,7 @@ settings file carries its own `__version` and migrates separately.
 
 - Moving diagonally toward an open tray submenu no longer switches to another submenu passed on the way.
 - Hidden colour swatches no longer accept accessibility actions, and selection rings stay inside their current options.
+- Reject incomplete command escapes and empty program names before enabling the lock action.
 - Preserve the last successful package update count when its checker exits with an error.
 - Keep updated notification history entries when deletion uses an older snapshot.
 - Notifications from terminal agents no longer show literal `**` around bold words.

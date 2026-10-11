@@ -227,6 +227,22 @@ ShellRoot {
         }
     }
     property var _barPointerWindow: null
+    Component {
+        id: lockEditorWindowFactory
+        Window {
+            visible: true
+            width: 380; height: 250
+            color: Theme.panel
+            property alias editor: editorLoader.item
+            property alias input: inputDriver
+            Loader {
+                id: editorLoader
+                width: parent.width
+                source: "modules/menu/settings/LockCommandEditor.qml"
+            }
+            TestCase { id: inputDriver; when: false }
+        }
+    }
     Component { id: pillFactory; Pill { visible: true; glyph: "a" } }
     Component { id: rollingTextFactory; RollingText { visible: true; text: "one" } }
     Component { id: collapsingTextFactory; CollapsingText { animate: false; tabularDigits: true; reserveText: ":00" } }
@@ -1276,6 +1292,14 @@ ShellRoot {
         ShellSettings.lockCommandCustom = "   "
         root._check(Settings.lockCommand.length === 0,
             "a blank custom lock command leaves the lock action off")
+        root._check(Settings.splitCommand('"" --flag').length === 0
+                && Settings.splitCommand("swaylock \\").length === 0
+                && Settings.splitCommand("swaylock 'unclosed").length === 0,
+            "empty program names and incomplete quoting never enable a lock command")
+        root._check(JSON.stringify(Settings.splitCommand('swaylock --image "/home/me/Lock screen.png"'))
+                === JSON.stringify(["swaylock", "--image", "/home/me/Lock screen.png"])
+                && JSON.stringify(Settings.splitCommand('program ""')) === JSON.stringify(["program", ""]),
+            "custom commands preserve quoted paths and intentional empty arguments")
         ShellSettings.lockCommandCustom = customWas
         ShellSettings.lockProvider = providerWas
 
@@ -7015,11 +7039,132 @@ ShellRoot {
                 ShellSettings.neutralAccentAuto = s.saved[1]
                 ShellSettings.reduceMotion = s.saved[2]
                 root._accentResizeState = null
-                root._startDirectAnchorProbe()
+                root._startLockEditorProbe()
                 return
             }
             s.step++
             restart()
+        }
+    }
+
+    property var _lockEditorProbe: null
+
+    function _startLockEditorProbe(): void {
+        const saved = { provider: ShellSettings.lockProvider, command: ShellSettings.lockCommandCustom,
+            tab: MenuState.activeTab, open: MenuState.open, section: MenuState.settingsSection,
+            scale: ShellSettings.uiScale, contrast: ShellSettings.highContrast }
+        ShellSettings.lockProvider = "custom"
+        ShellSettings.lockCommandCustom = "swaylock -f"
+        MenuState.selectTab(MenuState.settingsTab)
+        MenuState.setSettingsSection("interface")
+        MenuState.open = true
+        const window = lockEditorWindowFactory.createObject(root)
+        root._lockEditorProbe = { window: window, saved: saved }
+        _lockEditorSettle.restart()
+    }
+
+    Timer {
+        id: _lockEditorSettle
+        interval: 150
+        onTriggered: {
+            const s = root._lockEditorProbe
+            const f = s.window
+            const editor = f.editor
+            root._check(editor !== null, "the custom-lock editor builds in a real offscreen window")
+            if (editor) {
+                const field = root._findTrayNode(editor, item => item.maximumLength !== undefined)
+                const save = root._findTrayNode(editor, item => item.label === "Save")
+                const revert = root._findTrayNode(editor, item => item.label === "Revert")
+                root._check(field && save && revert && field.text === "swaylock -f"
+                        && field.Accessible.name === "Lock command" && !editor.dirty && !save.enabled,
+                    "the lock editor labels its saved command and starts without pending edits")
+                f.requestActivate()
+                field.forceActiveFocus()
+                field.cursorPosition = field.text.length
+                f.input.keyClick(Qt.Key_X)
+                root._check(editor.draft === "swaylock -fx" && editor.dirty
+                        && ShellSettings.lockCommandCustom === "swaylock -f",
+                    "real typing updates the lock draft without changing the saved command")
+                f.input.mouseClick(save)
+                root._check(ShellSettings.lockCommandCustom === "swaylock -fx"
+                        && !editor.dirty && !save.enabled,
+                    "clicking Save commits the custom lock command once")
+                editor.draft = "swaylock 'unfinished"
+                root._check(editor.validationMessage.length > 0 && !save.enabled,
+                    "an incomplete quoted lock command displays an error and disables Save")
+                editor.save()
+                root._check(ShellSettings.lockCommandCustom === "swaylock -fx",
+                    "invalid lock input cannot replace the saved command")
+                f.input.mouseClick(revert)
+                root._check(editor.draft === ShellSettings.lockCommandCustom
+                        && editor.validationMessage.length === 0,
+                    "Revert restores the previous command and clears its validation error")
+                editor.draft = "a".repeat(257)
+                root._check(editor.validationMessage.length > 0 && !save.enabled
+                        && field.text.length === 257,
+                    "an overlong command is visible as invalid rather than silently truncated")
+                editor.draft = "gtklock"
+                field.forceActiveFocus()
+                f.input.keyClick(Qt.Key_Escape)
+                root._check(!editor.dirty && field.text === ShellSettings.lockCommandCustom
+                        && !field.activeFocus,
+                    "Escape discards lock edits and releases the text field's focus")
+                editor.draft = "swaylock --image \"/home/me/Lock screen.png\""
+                field.forceActiveFocus()
+                f.input.keyClick(Qt.Key_Return)
+                root._check(!editor.dirty && Settings.customLockCommand.length === 3
+                        && Settings.customLockCommand[2] === "/home/me/Lock screen.png",
+                    "Enter saves a quoted command without executing it")
+                editor.draft = "unsaved"
+                MenuState.setSettingsSection("clock")
+                root._check(!editor.dirty, "leaving Interface discards its pending command edit")
+                MenuState.setSettingsSection("interface")
+                editor.draft = "unsaved"
+                MenuState.close()
+                root._check(!editor.dirty, "closing settings discards its pending command edit")
+                editor.draft = "unsaved"
+                ShellSettings.lockCommandCustom = "gtklock"
+                root._check(!editor.dirty && field.text === "gtklock",
+                    "external command changes replace a stale draft and keep the field in sync")
+                editor.draft = "unsaved"
+                editor.visible = false
+                editor.save()
+                root._check(!editor.dirty && ShellSettings.lockCommandCustom === "gtklock",
+                    "hidden command editors discard their draft and reject saves")
+                editor.visible = true
+                editor.draft = "unsaved"
+                ShellSettings.lockProvider = "auto"
+                editor.save()
+                root._check(!editor.dirty && ShellSettings.lockCommandCustom === "gtklock",
+                    "switching away from a custom provider cannot save an old draft")
+                ShellSettings.lockProvider = "custom"
+                editor.draft = ""
+                editor.save()
+                root._check(ShellSettings.lockCommandCustom === "" && Settings.lockCommand.length === 0,
+                    "saving an empty custom command deliberately disables the lock action")
+                ShellSettings.uiScale = 1.15
+                ShellSettings.highContrast = true
+                f.width = 232
+                f.input.wait(100)
+                let fits = true
+                for (const item of [field, save, revert]) {
+                    const p = item.mapToItem(editor, 0, 0)
+                    if (p.x < 0 || p.x + item.width > editor.width + 0.5) fits = false
+                }
+                root._check(fits && field.height >= field.implicitHeight - 0.5,
+                    "lock input and actions fit a narrow pane at the largest interface scale")
+            }
+            f.close()
+            f.destroy()
+            ShellSettings.lockProvider = s.saved.provider
+            ShellSettings.lockCommandCustom = s.saved.command
+            ShellSettings.uiScale = s.saved.scale
+            ShellSettings.highContrast = s.saved.contrast
+            MenuState.selectTab(s.saved.tab)
+            MenuState.setSettingsSection(s.saved.section)
+            MenuState.open = s.saved.open
+            root._lockEditorProbe = null
+            root._startDirectAnchorProbe()
         }
     }
 

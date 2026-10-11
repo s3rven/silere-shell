@@ -200,10 +200,9 @@ Column {
             glyph: "󰌾"; label: "Screen lock"
             model: root._lockChoices
         }
-        HintText {
-            visible: ShellSettings.lockProvider === "custom"
-                && Settings.customLockCommand.length === 0
-            text: "No command set yet. Run: silere ipc settings set lockCommandCustom \"swaylock -f\""
+        CollapsibleSection {
+            expanded: ShellSettings.lockProvider === "custom"
+            LockCommandEditor {}
         }
         HintText {
             visible: ShellSettings.lockProvider !== "custom"
