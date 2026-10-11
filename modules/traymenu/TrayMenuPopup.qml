@@ -150,8 +150,20 @@ FittedPopupWindow {
             width: win.menuWidth
             height: sep ? 11 : Metrics.rowHeightFor(32)
 
+            readonly property bool flyoutOpen: _flyout.opened
             function closeFlyout(): void {
                 if (_flyout.opened) win._closeFlyoutBranch(_flyout)
+            }
+            function _hoverFlyout(): void {
+                if (TrayMenuState.siblingFlyoutOpen(
+                        _entry.parent ? _entry.parent.children : [], _entry))
+                    _openIntent.restart()
+                else _entry._openFlyout()
+            }
+            Timer {
+                id: _openIntent
+                interval: 150
+                onTriggered: if (_rowHover.hovered) _entry._openFlyout()
             }
             function _openFlyout(): void {
                 if (!_entry.on || !_entry.sub || _flyout.opened) return
@@ -196,7 +208,10 @@ FittedPopupWindow {
                 id: _rowHover
                 enabled: _entry.on
                 cursorShape: Qt.PointingHandCursor
-                onHoveredChanged: if (hovered && _entry.sub) _entry._openFlyout()
+                onHoveredChanged: {
+                    if (!hovered) _openIntent.stop()
+                    else if (_entry.sub) _entry._hoverFlyout()
+                }
             }
             Accessible.role: _entry.sep ? Accessible.Separator
                 : _entry.checkable ? Accessible.CheckBox : Accessible.MenuItem

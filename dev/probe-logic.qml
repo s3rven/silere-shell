@@ -5105,6 +5105,12 @@ ShellRoot {
             "the clock sleeps behind overview unless a background consumer needs it")
         ShellSettings.clock12h = clock12Was
 
+        const trayRowA = { flyoutOpen: true }
+        const trayRowB = { flyoutOpen: false }
+        root._check(TrayMenuState.siblingFlyoutOpen([trayRowA, trayRowB, null], trayRowB)
+                && !TrayMenuState.siblingFlyoutOpen([trayRowA, trayRowB], trayRowA)
+                && !TrayMenuState.siblingFlyoutOpen([], trayRowB),
+            "a tray submenu waits for a pause only while a sibling's submenu is open")
         // a minute tick armed before suspend fires late after wake; catching up re-reads the wall clock
         DateTime._lastMinute = "190001010000"
         DateTime.catchUp()

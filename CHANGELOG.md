@@ -22,6 +22,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- Moving diagonally toward an open tray submenu no longer switches to another submenu passed on the way.
 - Hidden colour swatches no longer accept accessibility actions, and selection rings stay inside their current options.
 - Preserve the last successful package update count when its checker exits with an error.
 - A failed Bluetooth connection suggests checking that the device is on and nearby before forgetting it.

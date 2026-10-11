@@ -28,6 +28,15 @@ AnchoredPopupState {
         }
     }
 
+    // a diagonal move toward an open submenu crosses its siblings; only a pause there switches branches
+    function siblingFlyoutOpen(siblings, self): bool {
+        for (let i = 0; i < siblings.length; i++) {
+            const c = siblings[i]
+            if (c && c !== self && c.flyoutOpen === true) return true
+        }
+        return false
+    }
+
     function branchHovered(branch, flyouts): bool {
         for (let i = 0; i < flyouts.length; i++) {
             const child = flyouts[i]
