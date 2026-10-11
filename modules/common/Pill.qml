@@ -18,6 +18,18 @@ Item {
     property bool   compact: ShellSettings.barCompact
     readonly property int horizontalPadding: Metrics.pillPadFor(compact)
     property bool   barActive: true
+    // A scrollable pill names the controlled route/device so partial gestures
+    // cannot carry over when that target changes or the pill disappears.
+    property string wheelKey: ""
+    property string _previousWheelKey: ""
+    readonly property bool wheelEnabled: root.hoverEnabled && (root.interactive || root.adjustable)
+    function _resetWheel(): void { Scroll.resetControl(root.wheelKey) }
+    onWheelKeyChanged: {
+        Scroll.resetControl(root._previousWheelKey || "")
+        root._previousWheelKey = root.wheelKey
+    }
+    onWheelEnabledChanged: if (!root.wheelEnabled) root._resetWheel()
+    Component.onDestruction: root._resetWheel()
     readonly property bool motionActive: root.barActive && root.visible && !root.collapsed
         && !Idle.isIdle && !ShellSettings.reduceMotion
     property bool   animateGlyph: true

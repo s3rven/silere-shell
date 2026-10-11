@@ -176,6 +176,7 @@ Item {
             root._paging = true
             _pagingReset.restart()
         }
+        function onWsScrollSwitchChanged() { root._resetScroll() }
         function onWsMinVisibleChanged() {
             root._paging = true
             _pagingReset.restart()
@@ -197,6 +198,7 @@ Item {
         target: Idle
         function onIsIdleChanged() {
             if (Idle.isIdle) {
+                root._resetScroll()
                 root._clearWorkspaceHandoffs()
                 root._settleGroupMotion()
             }
@@ -286,7 +288,10 @@ Item {
         root._syncUrgentOffPage()
         root._reclaimPopupAnchors()
     }
-    Component.onDestruction: MenuState.cancelWarm(root)
+    Component.onDestruction: {
+        root._resetScroll()
+        MenuState.cancelWarm(root)
+    }
 
     onRawActiveIdChanged: {
         if (rawActiveId > 0) _lastNormalActiveId = rawActiveId
@@ -358,6 +363,7 @@ Item {
 
     onMonitorReadyChanged: {
         if (!monitorReady) {
+            root._resetScroll()
             root._clearWorkspaceHandoffs()
             root._settleGroupMotion()
             return
@@ -368,6 +374,7 @@ Item {
         _initialized = true
     }
     onBarActiveChanged: if (!root.barActive) {
+        root._resetScroll()
         root._clearWorkspaceHandoffs()
         root._settleGroupMotion()
     }
@@ -464,12 +471,21 @@ Item {
             Metrics.barAtBottom, root)
     }
 
+    // Each bar targets a different monitor; fractional touchpad input must
+    // never complete a gesture that began on another output.
+    readonly property string _wheelKey: "workspaces:" + root.monitorName
+    readonly property bool _scrollEnabled: root.enabled && root.visible && root.barActive
+        && !Idle.isIdle && root.monitorLive && ShellSettings.wsScrollSwitch
+    function _resetScroll(): void { Scroll.resetControl(root._wheelKey) }
+    on_ScrollEnabledChanged: if (!root._scrollEnabled) root._resetScroll()
+
     WheelHandler {
         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-        enabled: root.monitorLive && ShellSettings.wsScrollSwitch
+        enabled: root._scrollEnabled
         onWheel: (event) => {
+            if (!root._scrollEnabled) return
             event.accepted = true
-            const n = Scroll.processControlWheel(event, "workspaces")
+            const n = Scroll.processControlWheel(event, root._wheelKey)
             if (n !== 0) root.activate(root._scrollTarget(n))
         }
     }

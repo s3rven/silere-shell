@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtTest
 import Quickshell
 import Quickshell.Io
 import Quickshell.Bluetooth as Bt
@@ -175,6 +176,37 @@ ShellRoot {
     Component { id: iconButtonFactory; IconButton { accessibleName: "Probe icon" } }
     Component { id: workspaceButtonFactory; WorkspaceButton {} }
     Component { id: workspaceUrgentTickFactory; WorkspaceUrgentTick {} }
+    Component {
+        id: barPointerFactory
+        Window {
+            id: fixture
+            visible: true
+            width: 320; height: 100
+            color: Theme.panel
+            property alias cell: cell
+            property alias pill: hoverPill
+            property alias input: inputDriver
+            property var reports: []
+            WorkspaceButton {
+                id: cell
+                x: 12; y: 20
+                wsId: 2; monitorReady: true; active: false; occupied: true
+                urgent: false; apps: []; compact: false; iconSize: 12
+                cellWidth: 26; rowHeight: 24; barActive: true
+                initialized: true; paging: false; markerCovers: true
+                onHoverReported: (id, on) => fixture.reports = fixture.reports.concat(id + ":" + on)
+            }
+            Pill {
+                id: hoverPill
+                x: 80; y: 20
+                width: implicitWidth; height: 24
+                glyph: "V"; text: "42%"; interactive: true
+                wheelKey: "probe:hover-pill"
+            }
+            TestCase { id: inputDriver; when: false }
+        }
+    }
+    property var _barPointerWindow: null
     Component { id: pillFactory; Pill { visible: true; glyph: "a" } }
     Component { id: rollingTextFactory; RollingText { visible: true; text: "one" } }
     Component { id: collapsingTextFactory; CollapsingText { animate: false; tabularDigits: true; reserveText: ":00" } }
@@ -1300,6 +1332,20 @@ ShellRoot {
             "the widget catalog derives the shipped default layout")
 
         const workspaceStrip = workspaceStripFactory.createObject(root)
+        const workspaceScrollWas = ShellSettings.wsScrollSwitch
+        ShellSettings.wsScrollSwitch = true
+        root._check(workspaceStrip._wheelKey === "workspaces:" + workspaceStrip.monitorName,
+            "workspace scroll gestures are keyed by the targeted monitor")
+        Scroll._processDelta(30, workspaceStrip._wheelKey, 60, 1, 0)
+        workspaceStrip.barActive = false
+        root._check(!workspaceStrip._scrollEnabled && Scroll._accums[workspaceStrip._wheelKey] === undefined,
+            "concealing a workspace strip disables scrolling and clears its partial gesture")
+        workspaceStrip.barActive = true
+        Scroll._processDelta(30, workspaceStrip._wheelKey, 60, 1, 0)
+        ShellSettings.wsScrollSwitch = false
+        root._check(Scroll._accums[workspaceStrip._wheelKey] === undefined,
+            "disabling workspace scrolling forgets its unfinished touchpad gesture")
+        ShellSettings.wsScrollSwitch = workspaceScrollWas
         const forwardCrossing = workspaceStrip._intermediateIndexes(0, 2)
         const reverseCrossing = workspaceStrip._intermediateIndexes(3, 0)
         root._check(forwardCrossing.length === 1 && forwardCrossing[0] === 1
@@ -7206,7 +7252,10 @@ ShellRoot {
         store.stop()
         root._check(!store.pending, "stopping a writer also cancels its debounce timer")
         store.destroy()
-        Qt.callLater(root._finish)
+        root._barPointerWindow = barPointerFactory.createObject(root)
+        root._check(root._barPointerWindow !== null, "the bar pointer fixture creates an offscreen window")
+        if (root._barPointerWindow) _barPointerSettle.restart()
+        else Qt.callLater(root._finish)
     }
 
     Timer {
@@ -7223,6 +7272,52 @@ ShellRoot {
             }
             root._volumeCancelProbe = null
             root._volumeCancelDone = true
+        }
+    }
+
+    Timer {
+        id: _barPointerSettle
+        interval: 150
+        onTriggered: {
+            const f = root._barPointerWindow
+            f.requestActivate()
+            f.input.mouseMove(f.cell, 12, 12)
+            root._check(f.cell.hovered && f.reports.join(",") === "2:true",
+                "a real pointer entering a workspace reports its identity")
+            f.cell.wsId = 3
+            root._check(f.reports.join(",") === "2:true,2:false,3:true",
+                "reassigning a hovered workspace slot clears its old identity before reporting the new one")
+            f.cell.barActive = false
+            root._check(f.reports.join(",") === "2:true,2:false,3:true,3:false",
+                "concealing a hovered workspace clears the reported identity")
+            f.cell.barActive = true
+            f.input.mouseMove(f.contentItem, 260, 80)
+            root._check(f.cell._reportedHoverId === -1,
+                "leaving a reassigned workspace clears its hover identity")
+            f.input.mouseMove(f.pill, 12, 12)
+            f.input.wait(100)
+            root._check(f.pill.hovered && f.pill.expanded,
+                "a real pointer dwell reveals a bar pill")
+            Scroll._processDelta(30, f.pill.wheelKey, 60, 1, 0)
+            f.pill.barActive = false
+            root._check(!f.pill.hoverActive && !f.pill.expanded
+                    && Scroll._accums[f.pill.wheelKey] === undefined,
+                "concealing a hovered pill clears its reveal and partial wheel gesture")
+            f.pill.barActive = true
+            const oldKey = f.pill.wheelKey
+            Scroll._processDelta(30, oldKey, 60, 1, 0)
+            f.pill.wheelKey = "probe:replacement-route"
+            root._check(Scroll._accums[oldKey] === undefined,
+                "retargeting a pill forgets scroll input from the previous device")
+            Scroll._processDelta(30, f.pill.wheelKey, 60, 1, 0)
+            f.pill.collapsed = true
+            root._check(Scroll._accums[f.pill.wheelKey] === undefined,
+                "a collapsing pill discards its unfinished scroll gesture")
+            f.input.mouseMove(f.contentItem, 260, 80)
+            f.close()
+            f.destroy()
+            root._barPointerWindow = null
+            Qt.callLater(root._finish)
         }
     }
 

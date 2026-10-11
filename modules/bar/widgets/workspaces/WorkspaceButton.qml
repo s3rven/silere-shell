@@ -68,7 +68,10 @@ Item {
 
     // a slot fading out has already lost its workspace; it keeps showing the number it had
     property int _paintedWsId: 0
-    onWsIdChanged: if (root.wsId >= 0) root._paintedWsId = root.wsId
+    onWsIdChanged: {
+        if (root.wsId >= 0) root._paintedWsId = root.wsId
+        root._syncHoverReport()
+    }
 
     // the reveal and the urgent pulse animate on their own; only the blanking step needs easing here
     property real _numberShown: _blanked ? 0 : 1
@@ -80,7 +83,8 @@ Item {
         _dotFade = _blanked ? 0 : 1
         if (root.wsId >= 0) root._paintedWsId = root.wsId
     }
-    Component.onDestruction: if (root.hovered) root.hoverReported(root.wsId, false)
+    Component.onDestruction: if (root._reportedHoverId >= 0)
+        root.hoverReported(root._reportedHoverId, false)
 
     BumpAnimation {
         id: _dropPulse
@@ -112,7 +116,18 @@ Item {
     Accessible.onPressAction: root._activate()
 
     HoverHandler { id: _hover; enabled: root.canActivate; cursorShape: Qt.PointingHandCursor }
-    onHoveredChanged: root.hoverReported(root.wsId, root.hovered)
+    // Stable slots can change identity without the pointer moving. Clear the
+    // old identity before publishing the new one, including during teardown.
+    property int _reportedHoverId: -1
+    function _syncHoverReport(): void {
+        const next = root.hovered && root.canActivate && root.wsId >= 0 ? root.wsId : -1
+        if (next === root._reportedHoverId) return
+        if (root._reportedHoverId >= 0) root.hoverReported(root._reportedHoverId, false)
+        root._reportedHoverId = next
+        if (next >= 0) root.hoverReported(next, true)
+    }
+    onHoveredChanged: root._syncHoverReport()
+    onCanActivateChanged: root._syncHoverReport()
 
     TapHandler {
         enabled: root.canActivate

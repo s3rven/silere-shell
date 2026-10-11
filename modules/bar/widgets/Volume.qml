@@ -33,13 +33,15 @@ Pill {
     levelVisible: Audio.ready && ShellSettings.valuesOnHover && ShellSettings.hoverLevelBar && !expanded
     levelColor: Audio.muted ? Theme.subtext : Theme.accent
 
+    wheelKey: "audio:" + (Audio.sink ? String(Audio.sink.id) : "")
+
     WheelHandler {
         enabled: Audio.ready && root.hoverEnabled
         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
         onWheel: (event) => {
             event.accepted = true
             if (!Audio.ready || !root.hoverEnabled) return
-            const n = Scroll.processLevelWheel(event, "audio")
+            const n = Scroll.processLevelWheel(event, root.wheelKey)
             if (n !== 0) Audio.bumpBy(n * Audio.stepPct)
         }
     }

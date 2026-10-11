@@ -50,13 +50,15 @@ Pill {
         && ShellSettings.hoverLevelBar && !expanded
     levelColor: Audio.micMuted ? Theme.subtext : Theme.error
 
+    wheelKey: "microphone:" + (Audio.source ? String(Audio.source.id) : "")
+
     WheelHandler {
         enabled: Audio.micReady && root.hoverEnabled
         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
         onWheel: (event) => {
             event.accepted = true
             if (!Audio.micReady || !root.hoverEnabled) return
-            const n = Scroll.processLevelWheel(event, "microphone")
+            const n = Scroll.processLevelWheel(event, root.wheelKey)
             if (n !== 0) Audio.micBumpBy(n * Audio.stepPct)
         }
     }
