@@ -7039,6 +7039,18 @@ ShellRoot {
             serialize: function() { return sessionText }
         })
         store.writeAllowed = true
+        store.writePaused = true
+        store.queue()
+        store.flush(false)
+        store.flush(true)
+        persistenceGuardFixture.reload()
+        root._check(persistenceGuardFixture.text() === externalText
+                && store.lastSavedText.length === 0,
+            "a pending migration backup blocks ordinary and forced persistence without claiming a save")
+        store.stop()
+        root._check(store.writePaused,
+            "cancelling a debounce cannot lift a pending backup's persistence barrier")
+        store.writePaused = false
         // hold the fileChanged-to-loaded window: a shutdown flush must not beat the owner's read
         store._reloading = true
         store.flush(true)

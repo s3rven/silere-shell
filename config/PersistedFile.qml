@@ -17,6 +17,9 @@ Scope {
 
     // owners clear this on a bad read: a file we could not parse may still hold data this session never saw
     property bool writeAllowed: true
+    // Temporary prerequisites such as a migration backup may block saving even
+    // after the owner has successfully parsed the file.
+    property bool writePaused: false
     property int failureCount: 0
     property string lastSavedText: ""
     property bool _pendingForDir: false
@@ -45,7 +48,7 @@ Scope {
     }
 
     function flush(force: bool): void {
-        if (!root.writeAllowed || !root.serialize) return
+        if (!root.writeAllowed || root.writePaused || !root.serialize) return
         // a forced save may skip the directory wait, never an unread external edit
         if (root._reloading) {
             if (!force) _debounce.restart()

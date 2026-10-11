@@ -814,6 +814,10 @@ Singleton {
             _store.flush(false)
             return
         }
+        // A user edit can queue a debounce while cp is still running. Block
+        // even forced flushes until the original file's backup is confirmed.
+        _store.writePaused = true
+        _store.stop()
         root._migrationBackupSrc = src
         root._migrationBackupDst = dir + "/settings.pre-v" + version + ".bak.json"
         if (_migrationBackup.running) _migrationBackup.running = false
@@ -827,7 +831,8 @@ Singleton {
             "[ -e \"$1\" ] || exit 0; cp -- \"$1\" \"$2\"",
             "bash", root._migrationBackupSrc, root._migrationBackupDst]
         onExited: (code) => {
-            if (code === 0) {
+            _store.writePaused = false
+            if (_migrationBackup.completedSuccessfully(code)) {
                 _store.flush(false)
                 return
             }
