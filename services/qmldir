@@ -49,5 +49,7 @@ singleton TrayMenuState 1.0 TrayMenuState.qml
 singleton Updates       1.0 Updates.qml
 singleton XdgPaths      1.0 XdgPaths.qml
 
+StableObjectList        1.0 StableObjectList.qml
+
 # service-only implementation types
 internal AnchoredPopupState AnchoredPopupState.qml

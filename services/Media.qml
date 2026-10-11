@@ -48,7 +48,10 @@ Singleton {
             || SafeText.singleLineText(p.trackTitle, root.maxMetadataChars).trim().length > 0)
         return live.length > 0 ? live : pool
     }
-    readonly property var playerList: root.playablePlayers(Mpris.players.values)
+    readonly property StableObjectList _players: StableObjectList {
+        source: root.playablePlayers(Mpris.players.values)
+    }
+    readonly property var playerList: root._players.values
     readonly property int playerCount: playerList.length
 
     onPlayerListChanged: {

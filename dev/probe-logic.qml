@@ -183,6 +183,15 @@ ShellRoot {
                     { value: "b", label: "B" }]
         }
     }
+    Component { id: stableObjectListFactory; StableObjectList {} }
+    Component { id: stableListMemberFactory; QtObject { property bool playing: false } }
+    Component {
+        id: stableListObserverFactory
+        QtObject {
+            required property var model
+            readonly property int playingCount: model.values.filter(item => item.playing).length
+        }
+    }
     Component { id: actionButtonFactory; ActionButton { label: "Probe action" } }
     Component { id: iconButtonFactory; IconButton { accessibleName: "Probe icon" } }
     Component { id: workspaceButtonFactory; WorkspaceButton {} }
@@ -4024,6 +4033,49 @@ ShellRoot {
                 && Media.nextLoopState(L.Playlist) === L.Track
                 && Media.nextLoopState(L.Track) === L.None,
             "repeat cycles off, all, then one track")
+        const firstMember = stableListMemberFactory.createObject(root)
+        const secondMember = stableListMemberFactory.createObject(root)
+        const stablePlayers = stableObjectListFactory.createObject(root, {
+            source: [firstMember, secondMember]
+        })
+        const listObserver = stableListObserverFactory.createObject(root, { model: stablePlayers })
+        const originalPlayers = stablePlayers.values
+        let listChanges = 0
+        const noteListChange = () => listChanges++
+        stablePlayers.valuesChanged.connect(noteListChange)
+        for (let i = 0; i < 1000; i++) stablePlayers.source = [firstMember, secondMember]
+        root._check(stablePlayers.values === originalPlayers && listChanges === 0,
+            "a thousand unchanged player lists preserve one model snapshot without rebuilding rows")
+        firstMember.playing = true
+        root._check(listObserver.playingCount === 1 && listChanges === 0,
+            "player properties still update consumers without replacing the stable list")
+        stablePlayers.source = [secondMember, firstMember]
+        root._check(stablePlayers.values[0] === secondMember && listChanges === 1,
+            "reordering players publishes exactly one new model snapshot")
+        const replacementMember = stableListMemberFactory.createObject(root)
+        stablePlayers.source = [secondMember, replacementMember]
+        root._check(stablePlayers.values[1] === replacementMember && listChanges === 2
+                && listObserver.playingCount === 0,
+            "a replacement player updates the model even when its count stays unchanged")
+        const mutablePlayers = [firstMember]
+        stablePlayers.source = mutablePlayers
+        mutablePlayers.push(secondMember)
+        root._check(stablePlayers.values.length === 1,
+            "a caller's mutation cannot silently change a published player list")
+        stablePlayers.sync()
+        root._check(stablePlayers.values.length === 2 && listChanges === 4,
+            "explicit synchronization publishes an in-place source mutation once")
+        stablePlayers.source = null
+        root._check(stablePlayers.values.length === 0 && listChanges === 5,
+            "an absent player source clears the model")
+        stablePlayers.source = []
+        root._check(listChanges === 5, "an unchanged empty player list produces no notification")
+        stablePlayers.valuesChanged.disconnect(noteListChange)
+        listObserver.destroy()
+        stablePlayers.destroy()
+        firstMember.destroy()
+        secondMember.destroy()
+        replacementMember.destroy()
         const emptyPlayer = { dbusName: "browser", playbackState: Mp.MprisPlaybackState.Stopped,
             trackTitle: "" }
         const loadedPlayer = { dbusName: "music", playbackState: Mp.MprisPlaybackState.Stopped,
