@@ -21,6 +21,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- Settings search matches the start of words, so `lock` finds the screen lock instead of the clock.
 - A disconnect, forget, power or reset confirmation left armed across a suspend asks again
   instead of acting on the next click.
 

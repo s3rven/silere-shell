@@ -149,7 +149,7 @@ AnchoredPopupState {
         workspaces: "workspaces desktops markers numbers apps icons",
         clock: "clock time date calendar week sunday monday seconds twelve hour twenty four hour 12h 24h am pm",
         media: "music playback player tracks artwork spectrum visualizer cava audio",
-        indicators: "window title battery wifi network vpn bluetooth microphone status",
+        indicators: "window title battery wifi wi-fi network vpn bluetooth microphone status",
         popups: "notifications popup history retention quiet hours do not disturb dnd critical",
         osd: "on screen display volume sound audio brightness feedback integrated floating",
         warnings: "battery cpu temperature hot critical alerts threshold",
@@ -157,7 +157,7 @@ AnchoredPopupState {
     })
 
     function _searchWords(text: string): string {
-        return text.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase()
+        return text.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/([a-z])([0-9])/g, "$1 $2").toLowerCase()
             .replace(/[^a-z0-9]+/g, " ").trim()
     }
 
@@ -181,6 +181,8 @@ AnchoredPopupState {
             }
         }
         const rows = []
+        // a leading space lets a term match only where a word starts: "lock" must not find clock
+        const spaced = text => " " + root._searchWords(text)
         for (let g = 0; g < root.settingsTree.length; g++) {
             const group = root.settingsTree[g]
             const children = group.children || [group]
@@ -190,12 +192,12 @@ AnchoredPopupState {
                     glyph: child.glyph, group: group.label,
                     order: rows.length,
                     keys: keyWords[child.section] || [],
-                    labelWords: root._searchWords(child.label),
-                    groupWords: root._searchWords(group.label),
-                    featureWords: root._searchWords((child.description || "") + " "
+                    labelWords: spaced(child.label),
+                    groupWords: spaced(group.label),
+                    featureWords: spaced((child.description || "") + " "
                         + (labels[child.section] || "") + " "
                         + (root._settingsSearchAliases[child.section] || "")),
-                    words: root._searchWords(group.label + " " + child.label + " "
+                    words: spaced(group.label + " " + child.label + " "
                         + (child.description || "") + " " + (keys[child.section] || "")
                         + " " + (labels[child.section] || "")
                         + " " + (root._settingsSearchAliases[child.section] || "")) })
@@ -207,7 +209,7 @@ AnchoredPopupState {
     function searchSettings(query: string): var {
         const words = root._searchWords(query.slice(0, 256))
         if (words.length === 0) return []
-        const terms = words.split(" ")
+        const terms = words.split(" ").map(term => " " + term)
         const rank = row => terms.every(term => row.labelWords.indexOf(term) >= 0) ? 0
             : terms.every(term => row.groupWords.indexOf(term) >= 0) ? 1
             : terms.every(term => row.featureWords.indexOf(term) >= 0) ? 2 : 3

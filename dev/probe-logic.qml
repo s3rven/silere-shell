@@ -3599,6 +3599,12 @@ ShellRoot {
         root._check(MenuState.searchSettings("font battery").length === 0
                 && MenuState.searchSettings("no such feature qzx").length === 0,
             "unrelated terms cannot produce a misleading settings match")
+        const lockHits = MenuState.searchSettings("lock")
+        root._check(lockHits[0]?.section === "interface" && !lockHits.some(row => row.section === "clock")
+                && !MenuState.searchSettings("light").some(row => row.section === "surface")
+                && MenuState.searchSettings("wi-fi").some(row => row.section === "indicators")
+                && MenuState.searchSettings("12h")[0]?.key === "clock12h",
+            "settings search matches word starts, so lock finds the screen lock rather than the clock")
         root._check(MenuState.searchSettings(" ".repeat(256) + "font").length === 0,
             "settings queries have a bounded input budget")
         const barMatches = MenuState.searchSettings("bar")
