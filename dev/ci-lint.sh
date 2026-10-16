@@ -2139,6 +2139,19 @@ else
   structural_skip "row glyphs" "python3 or the row glyph check is unavailable"
 fi
 
+section "comment style"
+# comments drifted back to capitalised, full-stop prose after every cleanup that nothing checked
+if command -v python3 >/dev/null 2>&1 && [ -f dev/check-comment-style.py ]; then
+  if comment_drift="$(python3 dev/check-comment-style.py)"; then
+    ok "comments" "lowercase openers, no closing period"
+  else
+    fail "comments must open lowercase and end without a period:"
+    printf '%s\n' "$comment_drift"
+  fi
+else
+  structural_skip "comments" "python3 or the comment style check is unavailable"
+fi
+
 section "settings search labels"
 # search reads each schema entry's l: without building a page, so it must match the row's label
 if command -v python3 >/dev/null 2>&1 && [ -f dev/check-setting-labels.py ]; then
