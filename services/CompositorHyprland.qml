@@ -479,9 +479,45 @@ QtObject {
         return out
     }
 
+    // read only while the bar shows them; a switch or a config reload is the only thing that changes them
+    property var keyboardLayouts: []
+    property int keyboardLayoutIndex: -1
+    readonly property bool _layoutsWanted: ShellSettings.barShowKeyboardLayout
+    property bool _layoutsStale: false
+    on_LayoutsWantedChanged: {
+        if (root._layoutsWanted) root._readLayouts()
+        else { root.keyboardLayouts = []; root.keyboardLayoutIndex = -1 }
+    }
+    function _readLayouts(): void {
+        if (!root._layoutsWanted) return
+        if (_layoutProbe.running) root._layoutsStale = true
+        else _layoutProbe.running = true
+    }
+    function nextKeyboardLayout(): void {
+        Quickshell.execDetached(["hyprctl", "switchxkblayout", "all", "next"])
+    }
+    property BoundedProcess _layoutProbe: BoundedProcess {
+        id: _layoutProbe
+        timeoutMs: 5000
+        command: ["hyprctl", "-j", "devices"]
+        stdout: StdioCollector { id: _layoutOut }
+        onExited: (code) => {
+            if (code === 0 && root._layoutsWanted) {
+                const read = Compositor.keyboardLayoutsFromDevices(_layoutOut.text)
+                root.keyboardLayouts = read.layouts
+                root.keyboardLayoutIndex = read.index
+            }
+            if (root._layoutsStale) {
+                root._layoutsStale = false
+                Qt.callLater(root._readLayouts)
+            }
+        }
+    }
+
     Component.onCompleted: {
         root._probeUnit()
         root.checkBlur()
+        root._readLayouts()
         Qt.callLater(function() {
             root._syncLiveTitles()
             root._syncActiveTitle()
@@ -513,7 +549,7 @@ QtObject {
     }
 
     readonly property var _inertEvents: ({
-        "openlayer": true, "closelayer": true, "submap": true, "activelayout": true,
+        "openlayer": true, "closelayer": true, "submap": true,
         "screencast": true, "screencastv2": true, "changefloatingmode": true, "bell": true, "pin": true,
         "minimized": true, "togglegroup": true, "moveintogroup": true,
         "moveoutofgroup": true, "ignoregrouplock": true, "lockgroups": true
@@ -534,6 +570,7 @@ QtObject {
                 // title-only half of activewindowv2; the v2 event below carries the address
                 return
             }
+            if (n === "activelayout") { root._readLayouts(); return }
             // none of these touch the workspace, monitor or toplevel lists: no floating, group, pin or minimize state is modelled (changefloatingmode alone fired 420 times in two hours)
             if (root._inertEvents[n] === true) return
             // twins of workspacev2, createworkspacev2, destroyworkspacev2 and movewindowv2 (hyprland 0.33+): handling both rebuilt the models twice per switch
@@ -566,8 +603,10 @@ QtObject {
                 root.overviewRaw(event.data === "1")
             if (n === "changeworkspaceid")
                 root._requestWorkspaceRefresh("id:" + String(event.data ?? ""))
-            if (n === "configreloaded")
+            if (n === "configreloaded") {
                 root.checkBlur()
+                root._readLayouts()
+            }
             if (n === "workspacev2" || n === "focusedmon"
                 || n === "focusedmonv2" || n === "activemon")
                 root.workspaceActivated(root.focusedMonitor)

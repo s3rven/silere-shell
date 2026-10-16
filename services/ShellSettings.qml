@@ -48,6 +48,7 @@ Singleton {
     property bool   batteryAutoHide:     true
     property bool   barShowBattery:      true
     property bool   barShowMic:          true
+    property bool   barShowKeyboardLayout: true
     property bool   notifCriticalBypass: true
     property bool   barShowNetwork:      true
     property bool   barShowBluetooth:   false
@@ -136,6 +137,8 @@ Singleton {
         shellUpdate: { glyph: "󰑐", label: "Shell update",    group: "updates",     zone: "right",  setting: "barShowShellUpdate" },
         tray:        { glyph: "󰇘", label: "System tray",     group: "tray",        zone: "right",  setting: "trayWidget" },
         updates:     { glyph: "󰚰", label: "Package updates", group: "updates",     zone: "right",  setting: "updatesWidget" },
+        // shows itself only with two or more layouts configured
+        keyboardLayout: { glyph: "󰌌", label: "Keyboard layout", group: "keyboard", zone: "right", setting: "barShowKeyboardLayout" },
         network:     { glyph: "󰛳", label: "Network",         group: "network",     zone: "right",  setting: "barShowNetwork" },
         bluetooth:   { glyph: "󰂯", label: "Bluetooth",       group: "network",     zone: "right",  setting: "barShowBluetooth" },
         volume:      { glyph: "󰕾", label: "Volume",          group: "levels",      zone: "right",  setting: "barShowVolume" },
@@ -347,6 +350,7 @@ Singleton {
         { k: "barShowShellUpdate",  t: "bool", sec: "widgets" },
         { k: "barShowVolume",       t: "bool", sec: "widgets" },
         { k: "barShowMic",          t: "bool", sec: "widgets" },
+        { k: "barShowKeyboardLayout", t: "bool", sec: "widgets" },
         { k: "barShowBrightness",   t: "bool", sec: "widgets" },
         { k: "barShowMedia",        t: "bool", sec: "widgets" },
         { k: "osdEnabled",          t: "bool", sec: "osd", l: "On-screen display" },

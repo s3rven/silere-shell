@@ -25,6 +25,7 @@ history and Settings, and text fields. Controls also expose actions to accessibi
 | volume | **scroll** changes volume · **click** mutes · **middle-click** moves to the next output · **right-click** opens pwvucontrol or pavucontrol · in the menu, expand it for output, input and per-app levels |
 | microphone | **click** mutes · **scroll** changes the input level · **middle-click** moves to the next input · **right-click** opens pwvucontrol or pavucontrol · it appears while an app is listening |
 | brightness | **scroll** changes brightness |
+| keyboard layout | appears when two or more layouts are configured · **click** switches to the next one |
 | updates | **click** opens package details in Settings › System › Overview · **right-click** rechecks for packages |
 | shell update | **click** opens Settings › System › Overview |
 | tray | **click** opens a menu-only app's menu, otherwise jumps to its window or activates it · **right-click** opens its menu, with Hide from bar at the end · **middle-click** runs the app's secondary action · **scroll** is passed through to the app |

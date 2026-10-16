@@ -913,6 +913,29 @@ ShellRoot {
         component.destroy()
     }
 
+    function _checkKeyboardLayouts(): void {
+        const devices = JSON.stringify({ keyboards: [
+            { name: "headset", main: false, layout: "us", variant: "", active_layout_index: 0, active_keymap: "English (US)" },
+            { name: "laptop", main: true, layout: "us,de", variant: ",nodeadkeys", active_layout_index: 1, active_keymap: "German (no dead keys)" }] })
+        const read = Compositor.keyboardLayoutsFromDevices(devices)
+        root._check(read.layouts.length === 2 && read.index === 1 && read.layouts[1].code === "de"
+                && read.layouts[1].variant === "nodeadkeys" && read.layouts[1].name === "German (no dead keys)",
+            "keyboard layouts come from the main keyboard, not the first device listed")
+        root._check(Compositor.keyboardLayoutsFromDevices("not json").layouts.length === 0
+                && Compositor.keyboardLayoutsFromDevices(JSON.stringify({ keyboards: [{ main: true, layout: "us", active_layout_index: 4 }] })).index === -1,
+            "unreadable device output or an out-of-range index shows no layout")
+        root._check(Compositor.keyboardLayoutLabel({ code: "us" }) === "US"
+                && Compositor.keyboardLayoutLabel({ code: "", name: "English (US)" }) === "US"
+                && Compositor.keyboardLayoutLabel({ code: "", name: "Russian" }) === "RU"
+                && Compositor.keyboardLayoutLabel(null) === "",
+            "a layout reads as its xkb code, or as the short tag niri's name carries")
+        const twins = [{ code: "us", variant: "" }, { code: "de", variant: "" }, { code: "us", variant: "dvorak" }]
+        root._check(Compositor.keyboardLayoutLabel(twins[0], twins) === "US"
+                && Compositor.keyboardLayoutLabel(twins[1], twins) === "DE"
+                && Compositor.keyboardLayoutLabel(twins[2], twins) === "US₂",
+            "a second variant of the same layout is numbered instead of reading like the first")
+    }
+
     function _checkStackTags(): void {
         root._check(Notifications.stackTagOf({ hints: { "x-canonical-private-synchronous": "volume" } }) === "volume"
                 && Notifications.stackTagOf({ hints: { "x-dunst-stack-tag": "bright" } }) === "bright"
@@ -1403,6 +1426,7 @@ ShellRoot {
         root._checkPowerRail()
         root._checkPillTextBaseline()
         root._checkStackTags()
+        root._checkKeyboardLayouts()
         root._checkBluetoothPairing()
         root._checkConnectivityConfirmations()
         root._checkMenuContrast()
@@ -1624,7 +1648,7 @@ ShellRoot {
         root._check(ShellSettings._defaults.barWidgetOrderLeft === "workspaces,media"
                 && ShellSettings._defaults.barWidgetOrderCenter === "windowTitle"
                 && ShellSettings._defaults.barWidgetOrderRight
-                    === "shellUpdate,tray,updates,network,bluetooth,volume,microphone,brightness,battery,clock",
+                    === "shellUpdate,tray,updates,keyboardLayout,network,bluetooth,volume,microphone,brightness,battery,clock",
             "the widget catalog derives the shipped default layout")
 
         const workspaceStrip = workspaceStripFactory.createObject(root)

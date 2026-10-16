@@ -19,6 +19,10 @@ QtObject {
     property int _titleTick: 0
     property int _activeTitleTick: 0
     property bool _overview: false
+    // niri streams layout changes with every other event, so they cost nothing to follow
+    property var keyboardLayouts: []
+    property int keyboardLayoutIndex: -1
+    function nextKeyboardLayout(): void { root._action(["switch-layout", "next"]) }
     readonly property bool _liveTitlesWanted: ShellSettings.showWindowTitle
 
     function _identity(value): string {
@@ -355,12 +359,27 @@ QtObject {
             root._overview = !!ev.OverviewOpenedOrClosed.is_open
             return
         }
+        if (ev.KeyboardLayoutsChanged) {
+            const k = ev.KeyboardLayoutsChanged.keyboard_layouts || {}
+            const names = Array.isArray(k.names) ? k.names : []
+            root.keyboardLayouts = names.map(n => ({ code: "", variant: "", name: String(n ?? "").slice(0, 128) }))
+            const idx = Number(k.current_idx)
+            root.keyboardLayoutIndex = isFinite(idx) && idx >= 0 && idx < names.length ? idx : -1
+            return
+        }
+        if (ev.KeyboardLayoutSwitched) {
+            const idx = Number(ev.KeyboardLayoutSwitched.idx)
+            root.keyboardLayoutIndex = isFinite(idx) && idx >= 0 && idx < root.keyboardLayouts.length ? idx : -1
+            return
+        }
     }
 
     function _resetDisconnectedState(): void {
         _titleSync.stop()
         _backgroundTitleSync.stop()
         root._overview = false
+        root.keyboardLayouts = []
+        root.keyboardLayoutIndex = -1
         root._winRaw = []
         root._wsRaw = []
     }
