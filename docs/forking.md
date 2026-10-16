@@ -21,6 +21,18 @@ whole shell to change part of it.
 **Colours.** All of them live in `config/Theme.qml`. Change a token, the whole shell
 follows. Don't paste a hex into a widget.
 
+**Pixels.** Silere is drawn for fractional scales such as 1.25, where one logical pixel
+is 1.25 device pixels. Keep sizes and positions on the 4 px grid (`Metrics.snap4()` and
+friends), which lands on whole device pixels. Anything sized off that grid, like a 22 px
+swatch, takes `Metrics.devicePx()` for its size and a `PixelSnap` transform for its place.
+Draw rounded outlines with `OutlineBorder` rather than `Rectangle.border`, which thickens the
+corners, and give a new `Shape` `preferredRendererType: Shape.CurveRenderer`.
+
+**Motion.** Take durations from `Motion` or `Motion.ms()`, which reduce motion turns to zero.
+Anything that can be retargeted while it moves, like the workspace marker or a panel following
+its content, uses `SmoothGlide` (or `SpringGlide` for a selection) rather than a `MotionBehavior`:
+a restarted ease loses its speed and kicks.
+
 **A new setting** goes in four places:
 
 1. a property in `services/ShellSettings.qml` — its value there is the default
