@@ -47,7 +47,8 @@ FittedPopupWindow {
         readonly property int _todayCell:
             (_todayY === shownYear && _todayM === shownMonth) ? _lead + _todayD - 1 : -1
         readonly property int _rowCount: Math.ceil((_lead + _daysThis) / 7)
-        readonly property string monthLabel: Qt.formatDateTime(new Date(shownYear, shownMonth, 1), "MMMM yyyy")
+        // the target month, not the drawn one: fast scrolling keeps the grid mid-swap, and the label must not freeze with it
+        readonly property string monthLabel: Qt.formatDateTime(new Date(dispYear, dispMonth, 1), "MMMM yyyy")
 
         function _dateForCell(index: int): var {
             return new Date(card.shownYear, card.shownMonth, index - card._lead + 1)
@@ -78,7 +79,8 @@ FittedPopupWindow {
             navDir = dir
             dispYear = y; dispMonth = m
             if (ShellSettings.reduceMotion) { card._settleMonth(); return }
-            _gridSwap.restart()
+            // a restart per wheel notch never reaches the swap; a running one takes the latest month at its midpoint
+            if (!_gridSwap.running) _gridSwap.restart()
         }
         function _settleMonth(): void {
             _gridSwap.stop()
@@ -129,6 +131,8 @@ FittedPopupWindow {
 
         SequentialAnimation {
             id: _gridSwap
+            onFinished: if (CalendarState.open && (card.shownYear !== card.dispYear
+                    || card.shownMonth !== card.dispMonth)) _gridSwap.restart()
             ParallelAnimation {
                 NumberAnimation { target: _grid; property: "opacity"; to: 0;                duration: Motion.pageOut; easing.type: Easing.InCubic }
                 NumberAnimation { target: _grid; property: "xOff";    to: -card.navDir * 14; duration: Motion.pageOut; easing.type: Easing.InCubic }

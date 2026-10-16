@@ -89,6 +89,15 @@ Item {
                 && grid !== null && grid.opacity === 1 && grid.xOff === 0,
             "enabling reduce motion settles a pending month change immediately")
 
+        ShellSettings.reduceMotion = false
+        card._go(2024, 3, 1)
+        card._step(1)
+        card._step(1)
+        root._check(card.monthLabel === Qt.formatDateTime(new Date(2024, 5, 1), "MMMM yyyy")
+                && card.dispMonth === 5,
+            "fast month scrolling names the month it is heading to before the grid catches up")
+        ShellSettings.reduceMotion = true
+
         ShellSettings.calendarWeekStart = "sunday"
         card._go(2026, 0, 1)
         root._check(root._isDate(card._dateForCell(0), 2025, 11, 28),
