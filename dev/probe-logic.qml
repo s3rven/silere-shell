@@ -1741,6 +1741,25 @@ ShellRoot {
                 && WindowActions._toPid("not-a-pid") === -1,
             "window matching accepts only positive numeric process ids")
 
+        const parentCacheWas = WindowActions._parentPidCache
+        const parentNow = Date.now()
+        WindowActions._parentPidCache = {
+            future: { value: 7, time: parentNow + 60000 },
+            expired: { value: 8, time: parentNow - WindowActions._parentPidCacheTtlMs - 1 },
+            invalid: { value: 9, time: "not-a-time" },
+            recent: { value: 10, time: parentNow }
+        }
+        WindowActions._pruneParentPidCache(parentNow)
+        root._check(Object.keys(WindowActions._parentPidCache).join(",") === "recent",
+            "parent PID cache pruning drops expired, invalid and future timestamps")
+        // no linux pid reaches this value, so a fresh /proc lookup must miss
+        WindowActions._parentPidCache = {
+            "2147483647": { value: 77, time: parentNow + 60000 }
+        }
+        root._check(WindowActions._parentPid(2147483647) === -1,
+            "a backwards clock change cannot reuse a stale notification process parent")
+        WindowActions._parentPidCache = parentCacheWas
+
         const hereRef = WindowActions._hereWorkspaceRef()
         const elsewhereRef = hereRef === 2147483647 ? hereRef - 1 : hereRef + 1
         const matchingClients = [

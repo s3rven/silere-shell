@@ -91,7 +91,8 @@ Singleton {
         const keys = Object.keys(cache)
         for (let i = 0; i < keys.length; i++) {
             const item = cache[keys[i]]
-            if (!item || now - Number(item.time || 0) > root._parentPidCacheTtlMs)
+            const age = item ? now - Number(item.time || 0) : -1
+            if (!isFinite(age) || age < 0 || age > root._parentPidCacheTtlMs)
                 delete cache[keys[i]]
         }
 
@@ -107,7 +108,8 @@ Singleton {
         const now = Date.now()
         const key = String(p)
         const cached = root._parentPidCache[key]
-        if (cached && now - Number(cached.time || 0) <= root._parentPidCacheTtlMs)
+        const age = cached ? now - Number(cached.time || 0) : -1
+        if (cached && age >= 0 && age <= root._parentPidCacheTtlMs)
             return root._toPid(cached.value)
 
         const stat = root._readProcStat(p)
