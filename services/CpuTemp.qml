@@ -186,13 +186,13 @@ Singleton {
             "  local best=\"\" best_score=0 name n dir f lf lbl score type tf; " +
             "  for name in /sys/class/hwmon/hwmon*/name; do " +
             "    [ -r \"$name\" ] || continue; " +
-            "    n=$(cat \"$name\" 2>/dev/null); " +
+            "    n=; { IFS= read -r n < \"$name\"; } 2>/dev/null || true; " +
             "    dir=${name%/name}; " +
             "    for f in \"$dir\"/temp*_input; do " +
             "      [ -r \"$f\" ] || continue; " +
             "      case \"$SILERE_SKIP_SENSORS\" in *\":$f:\"*) continue ;; esac; " +
             "      lf=\"${f%_input}_label\"; lbl=\"\"; " +
-            "      [ -r \"$lf\" ] && lbl=$(cat \"$lf\" 2>/dev/null); " +
+            "      { IFS= read -r lbl < \"$lf\"; } 2>/dev/null || true; " +
             "      score=0; key=\"${n,,}:${lbl,,}\"; " +
             "      case \"$key\" in " +
             "        k10temp:*tdie*|zenpower:*tdie*|coretemp:*package*|coretemp:*physical*) score=100 ;; " +
@@ -210,7 +210,7 @@ Singleton {
             "  for tf in /sys/class/thermal/thermal_zone*/temp; do " +
             "    [ -r \"$tf\" ] || continue; " +
             "    case \"$SILERE_SKIP_SENSORS\" in *\":$tf:\"*) continue ;; esac; " +
-            "    type=\"\"; [ -r \"${tf%/temp}/type\" ] && type=$(cat \"${tf%/temp}/type\" 2>/dev/null); " +
+            "    type=\"\"; { IFS= read -r type < \"${tf%/temp}/type\"; } 2>/dev/null || true; " +
             "    case \"${type,,}\" in " +
             "      x86_pkg_temp|cpu_thermal|cpu-thermal|soc_thermal|bcm2835_thermal) score=50 ;; " +
             "      acpitz) score=10 ;; " +
