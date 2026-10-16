@@ -60,14 +60,22 @@ Item {
                                          : 2 * Math.round(rowHeight / 4)
     // settled width for the caller to centre on; feeding the animated one back into targetX restarts the slide every frame
     readonly property real markerWidth: _bar ? Math.max(14, cellWidth - 8) : _sprite
-    width:  markerWidth
+    width:  _bar ? root._widthGlide.value : markerWidth
     height: _bar ? 3 : _sprite
     // keep the line two pixels clear of the cell edge so its halo is not clipped by the bar
     y: _bar ? rowHeight - 5 : (rowHeight - height) / 2
     opacity: shown ? (_bar ? 0.98 : 0.92) : 0
     visible: opacity > 0.01
 
-    x: targetX
+    // a glide, not a restarted ease: a second switch mid-travel keeps the marker's speed instead of kicking it
+    x: root._travel.value
+    readonly property bool _travelAllowed: root.shiftEnabled && !root.paging && root._motionAllowed()
+    readonly property SmoothGlide _travel: SmoothGlide {
+        target: root.targetX; duration: root.travelDuration; gate: root._travelAllowed
+    }
+    readonly property SmoothGlide _widthGlide: SmoothGlide {
+        target: root.markerWidth; duration: root.travelDuration; gate: root._travelAllowed && root._bar
+    }
 
     property real _hoverScale: root.hovered ? 1.10 : 1.0
     property real _tapScale:     1.0
@@ -279,8 +287,6 @@ Item {
         _moveAnim.retire()
     }
 
-    MotionBehavior on x           { gate: root.shiftEnabled && !root.paging && root._motionAllowed(); NumberAnimation { duration: Motion.ms(root.travelDuration); easing.type: Easing.OutCubic } }
-    MotionBehavior on width       { gate: root.shiftEnabled && !root.paging && root._bar && root._motionAllowed(); NumberAnimation { duration: Motion.ms(root.travelDuration); easing.type: Easing.OutCubic } }
     MotionBehavior on opacity     {NumberAnimation { duration: Motion.ms(150) } }
     MotionBehavior on _hoverScale { gate: root._motionAllowed(); NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
 

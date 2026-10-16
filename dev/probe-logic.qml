@@ -1860,6 +1860,24 @@ ShellRoot {
             "retiring workspace effects restores every animated marker value")
         workspaceMarker.destroy()
 
+        const glideMarker = workspaceMarkerFactory.createObject(root)
+        const travel = glideMarker._travel
+        glideMarker.targetX = 100
+        root._check(travel.running && glideMarker.x === 0,
+            "a workspace switch glides the marker instead of jumping to the new cell")
+        for (let i = 0; i < 5; i++) travel._advance(1 / 240)
+        const outward = travel._velocity
+        glideMarker.targetX = 0
+        travel._advance(1 / 240)
+        root._check(outward > 0 && glideMarker.x > 0 && glideMarker.x < 100
+                && travel._velocity > -outward,
+            "switching back mid-travel slows the marker through the turn instead of reversing in one frame")
+        glideMarker.paging = true
+        glideMarker.targetX = 300
+        root._check(glideMarker.x === 300 && !travel.running,
+            "a page change still places the marker at once")
+        glideMarker.destroy()
+
         const pill = pillFactory.createObject(root)
         pill._ready = true
         pill.interactive = true
