@@ -39,41 +39,6 @@ Singleton {
     readonly property bool overviewActive:    _be ? _be.overviewActive : false
     readonly property Component popupGrab:    _be ? _be.popupGrab : null
     readonly property var specialOutputs:     _be ? _be.specialOutputs : []
-    readonly property var keyboardLayouts:    _be && _be.keyboardLayouts ? _be.keyboardLayouts : []
-    readonly property int keyboardLayoutIndex: _be && _be.keyboardLayoutIndex !== undefined ? _be.keyboardLayoutIndex : -1
-    function nextKeyboardLayout(): void { if (_be && _be.nextKeyboardLayout) _be.nextKeyboardLayout() }
-    // the main keyboard is the one a switch applies to; a virtual or headset "keyboard" lists the default layout
-    function keyboardLayoutsFromDevices(raw: string): var {
-        let devices
-        try { devices = JSON.parse(raw) } catch (e) { return { layouts: [], index: -1 } }
-        const boards = Array.isArray(devices?.keyboards) ? devices.keyboards : []
-        const main = boards.find(k => k && k.main) ?? boards[0]
-        if (!main) return { layouts: [], index: -1 }
-        const codes = String(main.layout ?? "").split(",")
-        const variants = String(main.variant ?? "").split(",")
-        const layouts = codes.map((c, i) => ({ code: c.trim(), variant: String(variants[i] ?? "").trim(),
-            name: i === Number(main.active_layout_index) ? String(main.active_keymap ?? "") : "" }))
-            .filter(l => l.code.length > 0)
-        const index = Number(main.active_layout_index)
-        return { layouts: layouts, index: isFinite(index) && index >= 0 && index < layouts.length ? index : -1 }
-    }
-    // an xkb code reads as is ("us" -> US); niri only names the layout, so use its bracketed variant or the first letters
-    function _keyboardLayoutBase(layout): string {
-        const code = String(layout?.code ?? "").trim()
-        if (code.length > 0) return code.slice(0, 4).toUpperCase()
-        const name = String(layout?.name ?? "").trim()
-        const tag = name.match(/\(([A-Za-z]{2,3})\)/)
-        return tag ? tag[1].toUpperCase() : name.slice(0, 2).toUpperCase()
-    }
-    // two variants of one layout (us and us dvorak) read alike, so later ones take a subscript as GNOME's do
-    function keyboardLayoutLabel(layout, layouts): string {
-        const base = root._keyboardLayoutBase(layout)
-        const list = Array.isArray(layouts) ? layouts : []
-        const at = list.indexOf(layout)
-        let rank = 1
-        for (let i = 0; i < at; i++) if (root._keyboardLayoutBase(list[i]) === base) rank++
-        return rank > 1 ? base + String(rank).replace(/[0-9]/g, d => "₀₁₂₃₄₅₆₇₈₉"[d]) : base
-    }
     readonly property bool activeFullscreen: isNiri ? !!(_be && _be.activeFullscreen)
         : !!(activeToplevel && activeToplevel.fullscreen)
 

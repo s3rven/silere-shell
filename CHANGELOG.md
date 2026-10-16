@@ -13,8 +13,6 @@ settings file carries its own `__version` and migrates separately.
 
 ### Added
 
-- A keyboard layout widget shows the active layout and switches to the next one on click. It
-  appears only when two or more layouts are configured, on Hyprland and niri.
 - Notifications tagged with `x-canonical-private-synchronous` or `x-dunst-stack-tag` replace the
   same app's earlier card with that tag, so volume and brightness scripts written for dunst, mako
   or swaync show one card instead of a stack.

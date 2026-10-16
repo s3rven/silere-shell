@@ -3,7 +3,6 @@ WindowTitle   1.0 WindowTitle.qml
 Clock         1.0 Clock.qml
 Volume        1.0 Volume.qml
 MicWidget     1.0 MicWidget.qml
-KeyboardLayoutWidget 1.0 KeyboardLayoutWidget.qml
 BatteryWidget     1.0 BatteryWidget.qml
 BrightnessWidget  1.0 BrightnessWidget.qml
 NetworkWidget 1.0 NetworkWidget.qml
