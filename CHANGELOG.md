@@ -11,6 +11,11 @@ settings file carries its own `__version` and migrates separately.
 
 ## [Unreleased]
 
+### Fixed
+
+- A disconnect, forget, power or reset confirmation left armed across a suspend asks again
+  instead of acting on the next click.
+
 ## Releases
 
 - [1.4.2](docs/releases/1.4.2.md) — 2026-10-11

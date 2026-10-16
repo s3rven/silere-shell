@@ -27,14 +27,19 @@ Column {
             ShellUpdate.check()
             return
         }
+        const now = Date.now()
+        const age = now - root._installArmedAtMs
+        // after a stall or resume the click can beat the overdue disarm timer
+        if (root._installArmed && (age < 0 || age >= _installConfirm.interval))
+            root._disarmInstall()
         if (!root._installArmed) {
             root._installArmed = true
-            root._installArmedAtMs = Date.now()
+            root._installArmedAtMs = now
             root._changesOpen = true
             _installConfirm.restart()
             return
         }
-        if (Date.now() - root._installArmedAtMs < Metrics.confirmGuardMs) return
+        if (age < Metrics.confirmGuardMs) return
         root._disarmInstall()
         if (!ShellSettings.flushForUpdate()) {
             ShellUpdate.lastApplyError = "Settings could not be saved before the update"

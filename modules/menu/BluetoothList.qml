@@ -142,6 +142,7 @@ Item {
 
                 function _activate(): void {
                     const addr = modelData.address
+                    const now = Date.now()
                     if (root._forgetAddr === addr) {
                         root._forgetAddr = ""
                         _disarmTimer.stop()
@@ -149,16 +150,17 @@ Item {
                     if (modelData.pairing) {
                         Bluetooth.cancelPair(addr)
                     } else if (modelData.connected) {
-                        if (root._armedAddr === addr) {
+                        const age = now - root._armedAtMs
+                        if (root._armedAddr === addr && age >= 0 && age < _disarmTimer.interval) {
                             // TapHandler fires once per tap, so a double-click would arm and confirm in one gesture
-                            if (Date.now() - root._armedAtMs < Metrics.confirmGuardMs) return
+                            if (age < Metrics.confirmGuardMs) return
                             root._armedAddr = ""
                             _disarmTimer.stop()
                             Bluetooth.disconnectDevice(addr)
                         } else {
                             root._armedAddr = addr
                             root._forgetAddr = ""
-                            root._armedAtMs = Date.now()
+                            root._armedAtMs = now
                             _disarmTimer.restart()
                         }
                     } else if (modelData.paired) {
@@ -173,15 +175,17 @@ Item {
                 function _forgetTap(): void {
                     if (!modelData.paired || modelData.connected) return
                     const addr = modelData.address
-                    if (root._forgetAddr === addr) {
-                        if (Date.now() - root._forgetAtMs < Metrics.confirmGuardMs) return
+                    const now = Date.now()
+                    const age = now - root._forgetAtMs
+                    if (root._forgetAddr === addr && age >= 0 && age < _disarmTimer.interval) {
+                        if (age < Metrics.confirmGuardMs) return
                         root._forgetAddr = ""
                         _disarmTimer.stop()
                         Bluetooth.forgetDevice(addr)
                     } else {
                         root._forgetAddr = addr
                         root._armedAddr = ""
-                        root._forgetAtMs = Date.now()
+                        root._forgetAtMs = now
                         _disarmTimer.restart()
                     }
                 }

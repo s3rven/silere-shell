@@ -876,6 +876,14 @@ ShellRoot {
             row.activate()
             root._check(row.armed && actions === 0,
                 "a double-click cannot confirm a power action")
+            for (const offset of [-row.confirmTimeout - 1, 1000]) {
+                row._confirmStartedMs = Date.now() + offset
+                row.activate()
+                root._check(row.armed && actions === 0
+                        && row._confirmStartedMs <= Date.now()
+                        && Date.now() - row._confirmStartedMs < Metrics.confirmGuardMs,
+                    "an expired or future-dated power confirmation rearms before an overdue timer runs")
+            }
             ShellSettings.reduceMotion = true
             root._check(row.armed && row._confirmProgress === 0,
                 "enabling reduce motion stops a power confirmation's countdown animation")
@@ -935,6 +943,61 @@ ShellRoot {
         }
         device.destroy()
         component.destroy()
+    }
+
+    function _checkConnectivityConfirmations(): void {
+        const device = bluetoothDeviceFixture.createObject(root, {
+            pairing: false, paired: true, connected: true, state: -1
+        })
+        const cases = [
+            { name: "Wi-Fi", path: "modules/menu/WifiList.qml", identity: "__silere_confirmation_probe__",
+                disconnectKey: "_armedSsid", forgetKey: "_forgetSsid" },
+            { name: "Bluetooth", path: "modules/menu/BluetoothList.qml", identity: device.address,
+                disconnectKey: "_armedAddr", forgetKey: "_forgetAddr" }
+        ]
+        for (const test of cases) {
+            const component = Qt.createComponent(test.path)
+            const picker = component.status === Component.Ready
+                ? component.createObject(root, { width: 320 }) : null
+            root._check(picker !== null, test.name + " builds for confirmation deadline checks")
+            if (picker) {
+                const list = root._findTrayNode(picker, item => item.model !== undefined
+                    && typeof item.forceLayout === "function")
+                for (const disconnect of [true, false]) {
+                    device.connected = disconnect
+                    const entry = test.name === "Bluetooth" ? device : {
+                        ssid: test.identity, label: "Confirmation probe", glyph: "",
+                        secured: true, psk: true, passwordless: false, profileOnly: false,
+                        active: disconnect, known: true
+                    }
+                    list.visible = true
+                    list.model = [entry]
+                    list.forceLayout()
+                    const row = root._findTrayNode(picker, item => typeof item._forgetTap === "function")
+                    root._check(row !== null, test.name + " creates its confirmation row")
+                    if (!row) continue
+                    const key = disconnect ? test.disconnectKey : test.forgetKey
+                    const timeKey = disconnect ? "_armedAtMs" : "_forgetAtMs"
+                    const request = () => disconnect ? row._activate() : row._forgetTap()
+                    const label = test.name + (disconnect ? " disconnect" : " forget")
+                    request()
+                    request()
+                    root._check(picker[key] === test.identity,
+                        label + " arms and rejects an immediate double-click")
+                    for (const offset of [-3001, 1000]) {
+                        picker[timeKey] = Date.now() + offset
+                        request()
+                        root._check(picker[key] === test.identity
+                                && picker[timeKey] <= Date.now()
+                                && Date.now() - picker[timeKey] < Metrics.confirmGuardMs,
+                            label + " rearms an expired or future-dated confirmation without running its action")
+                    }
+                }
+                picker.destroy()
+            }
+            component.destroy()
+        }
+        device.destroy()
     }
 
     function _checkSmoothGlide(): void {
@@ -1168,6 +1231,27 @@ ShellRoot {
             MenuState.setSettingsSection("maintenance")
             MenuState.selectTab(MenuState.settingsTab)
             MenuState.open = true
+            const restoreRow = root._findTrayNode(diagnostics, item =>
+                item.title === "Restore default settings" && typeof item._activate === "function")
+            root._check(restoreRow !== null, "diagnostics exposes the restore-defaults control")
+            if (restoreRow) {
+                ShellSettings.lockProvider = "custom"
+                restoreRow._activate()
+                restoreRow._activate()
+                root._check(diagnostics._armed && ShellSettings.lockProvider === "custom",
+                    "a double-click cannot restore settings")
+                diagnostics._armedAtMs = Date.now() - 3001
+                restoreRow._activate()
+                root._check(diagnostics._armed && ShellSettings.lockProvider === "custom"
+                        && Date.now() - diagnostics._armedAtMs < Metrics.confirmGuardMs,
+                    "an expired restore prompt rearms before a delayed timer can run")
+                diagnostics._armedAtMs = Date.now() + 60000
+                restoreRow._activate()
+                root._check(diagnostics._armed && diagnostics._armedAtMs <= Date.now()
+                        && ShellSettings.lockProvider === "custom",
+                    "a backwards clock change restarts the restore prompt")
+                diagnostics._disarm()
+            }
             diagnostics._armed = true
             MenuState.selectTab(MenuState.homeTab)
             root._check(!diagnostics._armed, "leaving a cached diagnostics page disarms restore defaults")
@@ -1183,6 +1267,29 @@ ShellRoot {
             MenuState.selectTab(MenuState.settingsTab)
             MenuState.open = true
             MenuState.setSettingsSection("updates")
+            const pendingWas = ShellUpdate.count
+            const verifiedWas = ShellUpdate.targetVerified
+            const applyErrorWas = ShellUpdate.lastApplyError
+            // keeps the backend unable to apply even if a guard regresses
+            ShellUpdate.targetVerified = false
+            ShellUpdate.count = 1
+            updatesPage._triggerShellAction()
+            updatesPage._triggerShellAction()
+            root._check(updatesPage._installArmed,
+                "a double-click cannot confirm a shell update")
+            updatesPage._installArmedAtMs = Date.now() - 10001
+            updatesPage._triggerShellAction()
+            root._check(updatesPage._installArmed
+                    && Date.now() - updatesPage._installArmedAtMs < Metrics.confirmGuardMs,
+                "an expired update prompt rearms before a delayed timer can run")
+            updatesPage._installArmedAtMs = Date.now() + 60000
+            updatesPage._triggerShellAction()
+            root._check(updatesPage._installArmed && updatesPage._installArmedAtMs <= Date.now(),
+                "a backwards clock change restarts the update prompt")
+            updatesPage._disarmInstall()
+            ShellUpdate.count = pendingWas
+            ShellUpdate.targetVerified = verifiedWas
+            ShellUpdate.lastApplyError = applyErrorWas
             updatesPage._installArmed = true
             MenuState.setSettingsSection("clock")
             root._check(!updatesPage._installArmed,
@@ -1234,6 +1341,7 @@ ShellRoot {
         root._checkWifiDraft()
         root._checkPowerRail()
         root._checkBluetoothPairing()
+        root._checkConnectivityConfirmations()
         root._checkMenuContrast()
         const pageMovedWas = Scroll._page.movedAt
         const scrollList = scrollListFactory.createObject(root)

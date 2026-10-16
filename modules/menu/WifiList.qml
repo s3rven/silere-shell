@@ -195,21 +195,23 @@ Item {
                             || _entry.modelData.active)
 
                     function _activate(): void {
+                        const now = Date.now()
                         if (root._forgetSsid === _entry.modelData.ssid) {
                             root._forgetSsid = ""
                             _disarmTimer.stop()
                         }
                         if (_entry.modelData.active) {
-                            if (_entry._armed) {
+                            const age = now - root._armedAtMs
+                            if (_entry._armed && age >= 0 && age < _disarmTimer.interval) {
                                 // TapHandler fires once per tap, so a double-click would arm and confirm in one gesture
-                                if (Date.now() - root._armedAtMs < Metrics.confirmGuardMs) return
+                                if (age < Metrics.confirmGuardMs) return
                                 root._armedSsid = ""
                                 _disarmTimer.stop()
                                 Network.disconnectWifi(_entry.modelData.ssid)
                             } else {
                                 root._armedSsid = _entry.modelData.ssid
                                 root._forgetSsid = ""
-                                root._armedAtMs = Date.now()
+                                root._armedAtMs = now
                                 _disarmTimer.restart()
                             }
                             return
@@ -236,15 +238,18 @@ Item {
                     // right- or middle-click forgets a saved profile; the first press only arms it
                     function _forgetTap(): void {
                         if (!_entry.modelData.known || _entry.modelData.active) return
-                        if (root._forgetSsid === _entry.modelData.ssid) {
-                            if (Date.now() - root._forgetAtMs < Metrics.confirmGuardMs) return
+                        const now = Date.now()
+                        const age = now - root._forgetAtMs
+                        if (root._forgetSsid === _entry.modelData.ssid
+                                && age >= 0 && age < _disarmTimer.interval) {
+                            if (age < Metrics.confirmGuardMs) return
                             root._forgetSsid = ""
                             _disarmTimer.stop()
                             Network.forgetWifi(_entry.modelData.ssid)
                         } else {
                             root._forgetSsid = _entry.modelData.ssid
                             root._armedSsid = ""
-                            root._forgetAtMs = Date.now()
+                            root._forgetAtMs = now
                             _disarmTimer.restart()
                         }
                     }

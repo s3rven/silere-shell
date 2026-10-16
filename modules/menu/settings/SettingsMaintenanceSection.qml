@@ -237,14 +237,17 @@ Column {
             active: root._armed
             available: ShellSettings.modifiedCount > 0
             onActivated: {
+                const now = Date.now()
+                const age = now - root._armedAtMs
+                if (root._armed && (age < 0 || age >= _armTimer.interval)) root._disarm()
                 if (root._armed) {
                     // TapHandler fires once per tap, so a double-click would arm and confirm in one gesture
-                    if (Date.now() - root._armedAtMs < Metrics.confirmGuardMs) return
+                    if (age < Metrics.confirmGuardMs) return
                     root._disarm()
                     ShellSettings.resetToDefaults()
                 } else {
                     root._armed = true
-                    root._armedAtMs = Date.now()
+                    root._armedAtMs = now
                     _armTimer.restart()
                 }
             }

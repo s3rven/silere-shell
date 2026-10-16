@@ -35,6 +35,12 @@ history and Settings, and text fields. Controls also expose actions to accessibi
 | menu | **Escape** steps back, then closes · **click** anywhere outside to close |
 | history | **type** in Search, or press **Ctrl+F** to get there, to find an app or message · **click** an app in the rail to show only its notifications · **click** an entry to read it in full, **right-click** removes it, **middle-click** jumps to the app that sent it · **Clear** removes what is shown, after a second click to confirm · **Escape** clears search, then closes |
 
+Disconnect, forget and power confirmations expire after three seconds. A later
+click starts a fresh confirmation.
+
+History search ignores case and accents: `cafe` finds `Café`. Words can match across
+the sender, title and message. Selecting an app in the rail further narrows the results.
+
 ## Settings
 
 Open **Settings** in the menu. Most changes apply immediately and are saved to

@@ -84,9 +84,12 @@ Rectangle {
 
     function activate(): void {
         if (!root._canActivate) return
+        const age = Date.now() - root._confirmStartedMs
+        // after a stall or resume the click can beat the overdue disarm timer
+        if (root.armed && (age < 0 || age >= root.confirmTimeout)) root.disarm()
         if (!root.confirm || root.armed) {
             // TapHandler fires once per tap, so a double-click would arm and confirm in one gesture
-            if (root.armed && Date.now() - root._confirmStartedMs < Metrics.confirmGuardMs) return
+            if (root.armed && age < Metrics.confirmGuardMs) return
             root.disarm()
             root.triggered()
         } else {
