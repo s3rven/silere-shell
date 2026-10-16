@@ -108,6 +108,44 @@ running_pid() {
     printf '%s\n' "$pid"
 }
 
+# the shell on screen may run from another copy, such as an installed one beside a dev checkout;
+# one other Silere is unambiguous, two are not
+other_shell() {
+    local paths p found=""
+    paths="$(user_qs list --all --json 2>/dev/null \
+        | sed -n 's/^ *"config_path": "\(.*\)",\{0,1\}$/\1/p')" || true
+    while IFS= read -r p; do
+        [ -n "$p" ] && [ "$p" != "$ROOT/shell.qml" ] && [ -x "$(dirname "$p")/scripts/silere" ] || continue
+        [ -z "$found" ] || return 1
+        found="$p"
+    done <<< "$paths"
+    [ -n "$found" ] || return 1
+    printf '%s\n' "$found"
+}
+
+IPC_QML="$ROOT/shell.qml"
+IPC_ERR=""
+# one round trip on the happy path, which keybinds pay for: only a call that found no shell looks further
+ipc_shell() {
+    local out rc=0 other
+    IPC_ERR="$(mktemp)"
+    out="$(user_qs ipc -p "$IPC_QML" "$@" 2>"$IPC_ERR")" || rc=$?
+    if [ "$rc" -ne 0 ] && grep -q '^No running instances' "$IPC_ERR" <(printf '%s\n' "$out"); then
+        if ! other="$(other_shell)"; then
+            rm -f "$IPC_ERR"
+            unit_runs_shell \
+                && die "Silere is not running; its last run is in journalctl --user -u silere-shell.service"
+            die "Silere is not running; start it with silere run"
+        fi
+        printf '%ssilere:%s using the shell running from %s\n' "$EYELLOW" "$ER" "$(dirname "$other")" >&2
+        IPC_QML="$other"
+        rc=0; out="$(user_qs ipc -p "$IPC_QML" "$@" 2>"$IPC_ERR")" || rc=$?
+    fi
+    cat "$IPC_ERR" >&2; rm -f "$IPC_ERR"
+    printf '%s' "$out"
+    return "$rc"
+}
+
 unit_runs_shell() {
     command -v systemctl >/dev/null 2>&1 || return 1
     systemctl --user is-active --quiet silere-shell.service 2>/dev/null \
@@ -358,19 +396,21 @@ case "$command_name" in
         # under this script's LC_ALL=C, Qt prints a locale warning ahead of every answer
         restore_locale
         if [ "$#" -eq 0 ] || { [ "$1" = show ] && [ "$#" -eq 1 ]; }; then
-            exec qs ipc -p "$ROOT/shell.qml" show
+            listing="$(ipc_shell show)" || exit $?
+            printf '%s\n' "$listing"
+            exit 0
         fi
         if [ "$#" -eq 1 ]; then
             # a target alone lists its calls rather than Quickshell's "Function required"
-            calls="$(qs ipc -p "$ROOT/shell.qml" show 2>/dev/null \
-                | awk -v t="$1" '/^target / { on = ($2 == t) } on')" || true
+            listing="$(ipc_shell show)" || exit $?
+            calls="$(printf '%s\n' "$listing" | awk -v t="$1" '/^target / { on = ($2 == t) } on')"
             [ -n "$calls" ] || die "no IPC target named $1; silere ipc lists them"
             printf '%s\n' "$calls"
             exit 0
         fi
         # a refused call still exits 0 with its reason on stdout: the shell's own "error:" line, or
         # Quickshell's for a target, function or argument it cannot match; scripts need a failure
-        rc=0; out="$(qs ipc -p "$ROOT/shell.qml" call "$@")" || rc=$?
+        rc=0; out="$(ipc_shell call "$@")" || rc=$?
         case "$out" in
             error:*|"Target not found."|"Function not found."|"Too few arguments provided"*\
                 |"Too many arguments provided"*|"Unable to parse argument"*)
@@ -445,7 +485,30 @@ case "$command_name" in
         ;;
     *)
         printf '%ssilere:%s unknown command: %s\n' "$ERED" "$ER" "$command_name" >&2
-        usage >&2
+        # within two edits of a real command is a typo, not a guess
+        near="$(printf '%s\n' run restart status log doctor ipc link update repair version uninstall help \
+            | awk -v w="$command_name" '
+                function dist(a, b,   i, j, m, n, d, c) {
+                    m = length(a); n = length(b)
+                    for (i = 0; i <= m; i++) d[i, 0] = i
+                    for (j = 0; j <= n; j++) d[0, j] = j
+                    for (i = 1; i <= m; i++) for (j = 1; j <= n; j++) {
+                        c = substr(a, i, 1) != substr(b, j, 1)
+                        d[i, j] = d[i-1, j] + 1
+                        if (d[i, j-1] + 1 < d[i, j]) d[i, j] = d[i, j-1] + 1
+                        if (d[i-1, j-1] + c < d[i, j]) d[i, j] = d[i-1, j-1] + c
+                        if (i > 1 && j > 1 && substr(a, i, 1) == substr(b, j-1, 1) && substr(a, i-1, 1) == substr(b, j, 1) \
+                            && d[i-2, j-2] + 1 < d[i, j]) d[i, j] = d[i-2, j-2] + 1
+                    }
+                    return d[m, n]
+                }
+                { x = dist(w, $0); if (best == "" || x < bestd) { best = $0; bestd = x } }
+                END { if (best != "" && bestd <= 2) print best }')"
+        if [ -n "$near" ]; then
+            printf 'Did you mean: silere %s\n' "$near" >&2
+        else
+            usage >&2
+        fi
         exit 2
         ;;
 esac

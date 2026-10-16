@@ -10,6 +10,8 @@ qs ipc -p "$SILERE_DIR/shell.qml" call menu toggle
 
 Run `qs ipc -p "$SILERE_DIR/shell.qml" show` for the current list. The `silere` command makes
 the same calls without the path: `silere ipc menu toggle`, and `silere ipc` alone for the list.
+When this copy is not the one running, such as a checkout beside an installed copy, `silere ipc`
+uses the single other Silere that is running and says so on stderr. With none running it exits 1.
 
 ## Surfaces
 

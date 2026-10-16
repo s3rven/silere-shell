@@ -35,6 +35,8 @@ settings file carries its own `__version` and migrates separately.
 
 - Tray icons of apps that start at login before the shell, such as KeePassXC, appear instead of
   staying missing until the app restarts.
+- `silere ipc` says Silere is not running instead of printing Quickshell's list of dead instances,
+  and reaches the shell when it runs from another copy. A mistyped command suggests the right one.
 - Settings search matches the start of words, so `lock` finds the screen lock instead of the clock.
 - Paired Bluetooth devices are trusted once they connect, from the menu or any other tool,
   so they can reconnect on their own when switched on.

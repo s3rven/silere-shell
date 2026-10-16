@@ -2193,6 +2193,47 @@ test_cli_restart_and_log() (
         "log argv drops color when not writing to a terminal"
 )
 
+test_cli_ipc_resolution() (
+    local stubs="$TMP/ipc-stubs" other="$TMP/ipc-other" out
+    mkdir -p "$stubs" "$other/scripts"
+    printf '#!/bin/sh\n' > "$other/scripts/silere"; chmod +x "$other/scripts/silere"
+    # this checkout never answers; the other copy answers when SILERE_TEST_OTHER is set
+    cat > "$stubs/qs" <<'STUB'
+#!/bin/sh
+case "$1" in
+    list) if [ -n "${SILERE_TEST_OTHER-}" ]; then
+              printf '[\n    {\n        "config_path": "%s/shell.qml",\n        "pid": 9\n    }\n]\n' "$SILERE_TEST_OTHER"
+          else echo "[]"; fi ;;
+    ipc)  [ "$3" = "${SILERE_TEST_OTHER-none}/shell.qml" ] || {
+              echo "No running instances for \"$3\""; echo "Dead instances:"; echo " - abc"; exit 255; }
+          case "$4" in
+              show) printf 'target menu\n  function toggle(): string\ntarget calendar\n  function close(): void\n' ;;
+              call) [ "$6" = toggle ] && echo opened || echo "Function not found." ;;
+          esac ;;
+esac
+STUB
+    chmod +x "$stubs/qs"
+    cli() { env -u LC_ALL PATH="$stubs:$PATH" bash "$ROOT/scripts/silere" "$@"; }
+
+    if out="$(cli ipc 2>&1)"; then fail "ipc claimed success with no shell running"; fi
+    case "$out" in *"Silere is not running"*) ;; *) fail "ipc without a shell said: $out" ;; esac
+    case "$out" in *"Dead instances"*) fail "ipc leaked Quickshell's dead instance list" ;; esac
+    if cli ipc menu toggle >/dev/null 2>&1; then fail "an ipc call reached no shell yet succeeded"; fi
+
+    out="$(SILERE_TEST_OTHER="$other" cli ipc 2>/dev/null)" || fail "ipc did not reach the copy that is running"
+    case "$out" in "target menu"*) ;; *) fail "ipc listing from the running copy: $out" ;; esac
+    assert_eq "opened" "$(SILERE_TEST_OTHER="$other" cli ipc menu toggle 2>/dev/null)" "ipc call through the running copy"
+    assert_eq "  function close(): void" "$(SILERE_TEST_OTHER="$other" cli ipc calendar 2>/dev/null | tail -1)" \
+        "a target alone lists its calls from the running copy"
+    if SILERE_TEST_OTHER="$other" cli ipc menu frob >/dev/null 2>&1; then fail "a refused call exited 0"; fi
+
+    out="$(cli restrat 2>&1)" && fail "a mistyped command succeeded"
+    case "$out" in *"Did you mean: silere restart"*) ;; *) fail "no suggestion for restrat: $out" ;; esac
+    out="$(cli frobnicate 2>&1)" && fail "an unknown command succeeded"
+    case "$out" in *"Did you mean"*) fail "a guess offered for frobnicate" ;; esac
+    true
+)
+
 test_pooled_motion_scope() (
     command -v python3 >/dev/null 2>&1 || return 0
     local fixture="$TMP/pooled-motion" output
@@ -2329,6 +2370,7 @@ test_niri_config_discovery
 test_atomic_units
 test_shared_launcher
 test_cli_restart_and_log
+test_cli_ipc_resolution
 test_pooled_motion_scope
 test_benchmark_json
 test_hook_timeout_contains_tree
