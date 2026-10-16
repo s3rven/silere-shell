@@ -19,6 +19,7 @@ settings file carries its own `__version` and migrates separately.
 
 - The workspace marker and the window title glide through quick successive switches instead of
   restarting their motion each time.
+- The OSD level follows a held volume or brightness key smoothly instead of jumping in steps.
 - The VPN row shows and copies an IPv6 address when the tunnel has no IPv4 one.
 
 ### Fixed

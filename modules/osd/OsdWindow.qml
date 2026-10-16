@@ -253,9 +253,14 @@ PanelWindow {
 
                                 Rectangle {
                                     id: _fill
-                                    width: {
+                                    readonly property real _target: {
                                         const v = card.clamped
                                         return v <= 0 ? 0 : Math.max(parent.radius * 2, parent.width * v)
+                                    }
+                                    // a glide follows held keys smoothly; a restarted ease kicked on every step
+                                    width: _fillGlide.value
+                                    readonly property SmoothGlide _fillGlide: SmoothGlide {
+                                        target: _fill._target; duration: Motion.normal; gate: !card.closing
                                     }
                                     height: parent.height
                                     radius: parent.radius
@@ -264,10 +269,6 @@ PanelWindow {
                                         ? Theme.withAlpha(Theme.subtext, 0.58)
                                         : Theme.withAlpha(card.fillColor, 0.88)
 
-                                    MotionBehavior on width {
-                                        gate: !card.closing && !OsdBarState.rapid
-                                        NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
-                                    }
                                 }
                             }
 
