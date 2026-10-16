@@ -25,7 +25,7 @@ Pill {
     textColor:      Battery.iconColor
     animateGlyph:   false
     shrinkDelay:    0
-    reserveText:    "100%"
+    reserveText:    "00%"
     levelValue:     Battery.pct > 0 ? Battery.pct / 100 : -1
     levelVisible:   Battery.pct > 0 && ShellSettings.valuesOnHover
                     && ShellSettings.hoverLevelBar && !expanded

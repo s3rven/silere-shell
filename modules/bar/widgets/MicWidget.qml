@@ -33,7 +33,7 @@ Pill {
     glyphColor: root._live ? Theme.error : Theme.subtext
     textColor:  Theme.subtext
     interactive: Audio.micReady
-    reserveText: "100%"
+    reserveText: "00%"
     accessibleName: {
         if (!Audio.micReady) return "Microphone"
         const parts = [Audio.micMuted ? "Microphone muted" : "Microphone in use"]

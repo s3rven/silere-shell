@@ -25,7 +25,8 @@ Pill {
     glyphColor: Audio.muted ? Theme.subtext : Theme.text
     textColor:  Theme.subtext
     interactive: Audio.ready
-    reserveText: "100%"
+    // two digits is the common case; reserving "100%" left half a character of air on each side of every reading
+    reserveText: "00%"
     text: !Audio.ready ? ""
         : (ShellSettings.valuesOnHover && !expanded) ? ""
         : (Math.round(Audio.effectiveVolume * 100) + "%")

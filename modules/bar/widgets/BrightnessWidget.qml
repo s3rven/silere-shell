@@ -18,7 +18,7 @@ Pill {
     accessibleName: root.canControl
         ? "Brightness " + Brightness.label : "Brightness unavailable"
     glyphColor:      canControl ? Theme.text : Theme.subtext
-    reserveText: "100%"
+    reserveText: "00%"
     text:        (ShellSettings.valuesOnHover && !expanded) ? ""
                  : (canControl ? Brightness.label : "—")
     textColor:   Theme.subtext

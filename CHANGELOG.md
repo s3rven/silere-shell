@@ -36,6 +36,8 @@ settings file carries its own `__version` and migrates separately.
 - Scrolling quickly through calendar months names the month you are heading to and keeps the
   grid changing, instead of fading it blank until you stop.
 - Values in the bar sit on the same line as the clock and window title instead of a pixel lower.
+- Volume, brightness, battery and microphone readings sit with their icons, without the spare half
+  character on each side that left the bar's dividers off-centre.
 - The multi-window badge on workspace app icons and the rail and search hover labels stay crisp
   on fractionally scaled displays.
 
