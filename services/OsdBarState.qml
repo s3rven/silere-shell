@@ -116,8 +116,13 @@ Singleton {
         return false
     }
 
+    // volume and brightness are glanced at; an alert is read, and a low battery has no other channel
+    function holdFor(kind: string, timeout: int): int {
+        return root._hasBarKind(kind) ? Math.max(500, timeout) : Math.max(5000, timeout)
+    }
+
     function _setExpiry(kind: string): void {
-        _expiresAt[kind] = Date.now() + Math.max(500, ShellSettings.osdTimeout)
+        _expiresAt[kind] = Date.now() + root.holdFor(kind, ShellSettings.osdTimeout)
         _expiresAt = _expiresAt
         delete _removeAt[kind];     _removeAt = _removeAt
         delete _closingSig[kind];   _closingSig = _closingSig

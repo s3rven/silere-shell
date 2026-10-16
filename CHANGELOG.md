@@ -24,6 +24,8 @@ settings file carries its own `__version` and migrates separately.
 
 - A battery or CPU warning arrives once: a low battery shows in the OSD only, and a critical battery
   or temperature sends a desktop notification instead of an OSD alert as well.
+- Battery and temperature alerts stay in the OSD for at least five seconds, so a short OSD timeout
+  set for volume and brightness no longer hides them before they can be read.
 - The wavy levels on the Home page and the Now Playing seek bar grow out of their track and land back
   on it, instead of breaking off at whatever height the level stops.
 - The notification countdown outline drains evenly from both sides toward the top edge, and

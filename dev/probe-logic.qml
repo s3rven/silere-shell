@@ -5936,6 +5936,9 @@ ShellRoot {
             false, false, true, 20, 10)
         root._check(plugFull.chargeRevision === 0 && !plugFull.chargeComplete,
             "plugging in an already-full battery is not a completed charge")
+        root._check(OsdBarState.holdFor("volume", 2000) === 2000 && OsdBarState.holdFor("battery", 2000) === 5000
+                && OsdBarState.holdFor("temp", 8000) === 8000 && OsdBarState.holdFor("brightness", 100) === 500,
+            "an alert stays up long enough to read while level feedback keeps the chosen timeout")
         root._check(SystemAlerts.criticalPopupFor(true, true, false, false)
                 && SystemAlerts.criticalPopupFor(true, true, true, true)
                 && !SystemAlerts.criticalPopupFor(true, true, false, true)
