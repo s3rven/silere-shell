@@ -748,9 +748,10 @@ Singleton {
         const value = Math.max(0, bps)
         let n = value
         let unit = "B/s"
-        if (value >= 1073741824)   { n = value / 1073741824; unit = "GB/s" }
-        else if (value >= 1048576) { n = value / 1048576;    unit = "MB/s" }
-        else if (value >= 1024)    { n = value / 1024;       unit = "KB/s" }
+        // by the value as printed: 1023.6 B/s rounds to "1024", which belongs to the next unit
+        if (value >= 1023.5 * 1048576)   { n = value / 1073741824; unit = "GB/s" }
+        else if (value >= 1023.5 * 1024) { n = value / 1048576;    unit = "MB/s" }
+        else if (value >= 1023.5)        { n = value / 1024;       unit = "KB/s" }
         // choose on the rounded value: 99.97 would print "100.0" and lose its leading digit
         const text = (n >= 99.95 || unit === "B/s") ? String(Math.round(n)) : n.toFixed(1)
         return ("    " + text).slice(-4) + " " + (unit + " ").slice(0, 4)

@@ -41,6 +41,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- The network speed readout moves to the next unit at the boundary instead of printing `1024 KB/s`.
 - Tray icons of apps that start at login before the shell, such as KeePassXC, appear instead of
   staying missing until the app restarts.
 - `silere ipc` says Silere is not running instead of printing Quickshell's list of dead instances.

@@ -5936,6 +5936,10 @@ ShellRoot {
             false, false, true, 20, 10)
         root._check(plugFull.chargeRevision === 0 && !plugFull.chargeComplete,
             "plugging in an already-full battery is not a completed charge")
+        root._check(Network.formatRate(1023.4) === "1023 B/s " && Network.formatRate(1023.6) === " 1.0 KB/s"
+                && Network.formatRate(1048575) === " 1.0 MB/s" && Network.formatRate(1073741823) === " 1.0 GB/s"
+                && Network.formatRate(102350) === " 100 KB/s" && Network.formatRate(0) === "   0 B/s ",
+            "a traffic rate that rounds up to 1024 moves to the next unit instead of printing 1024")
         root._check(SystemTools.versionAtLeast("0.3.2", "0.3.2") && SystemTools.versionAtLeast("0.4", "0.3.2")
                 && SystemTools.versionAtLeast("0.3.10", "0.3.2") && !SystemTools.versionAtLeast("0.3.1", "0.3.2")
                 && !SystemTools.versionAtLeast("", "0.3.2") && !SystemTools.versionAtLeast("git", "0.3.2"),
