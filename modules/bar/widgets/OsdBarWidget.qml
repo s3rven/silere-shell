@@ -129,9 +129,11 @@ Item {
         _alertWidth = OsdBarState.rapid ? Math.max(_alertWidth, w) : w
     }
 
+    // full height with the icon on Math.round, as Pill does, so the icon shares the pills' and dividers' centre line
     Row {
         id: _content
-        anchors.centerIn: parent
+        anchors.horizontalCenter: parent.horizontalCenter
+        height: parent.height
         spacing: 8
         opacity: root._op
         transform: [
@@ -144,7 +146,7 @@ Item {
 
         ShellText {
             id: _iconText
-            anchors.verticalCenter: parent.verticalCenter
+            y: Math.round((parent.height - height) / 2)
             width:               Math.min(root._iconWidth, root.width)
             horizontalAlignment: Text.AlignHCenter
             transformOrigin:     Item.Center

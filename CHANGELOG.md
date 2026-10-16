@@ -35,6 +35,7 @@ settings file carries its own `__version` and migrates separately.
 - The VPN row in Home appears even when the network widget is hidden from the bar.
 - Scrolling quickly through calendar months names the month you are heading to and keeps the
   grid changing, instead of fading it blank until you stop.
+- Values in the bar sit on the same line as the clock and window title instead of a pixel lower.
 - The multi-window badge on workspace app icons and the rail and search hover labels stay crisp
   on fractionally scaled displays.
 

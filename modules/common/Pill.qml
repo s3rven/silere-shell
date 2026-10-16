@@ -237,15 +237,18 @@ Item {
     readonly property color _hoverTextColor: _contentHot
         ? Theme.mix(textColor, Theme.accent, 0.16) : textColor
 
+    // full height, so glyph and text each centre once on the bar like the clock; centring a glyph-tall row
+    // first rounds twice and drops the text a pixel below every other label on the bar
     Row {
         id: row
         x: Math.round((parent.width - width) / 2)
-        y: Math.round((parent.height - height) / 2)
+        height: parent.height
         spacing: Metrics.pillGapFor(root.compact)
 
         Item {
             id: _glyphBox
-            anchors.verticalCenter: parent.verticalCenter
+            // Math.round, as the row did before it filled the pill: centre anchors round half down and lift the glyph
+            y: Math.round((parent.height - height) / 2)
             implicitWidth:  root._shownGlyph.length > 0 ? Metrics.iconCellFor(root.glyphPixelSize) : 0
             implicitHeight: _glyphText.implicitHeight
 
@@ -328,8 +331,9 @@ Item {
                 spacing: row.spacing
 
                 Item {
+                    y: _glyphBox.y
                     width: _glyphBox.width
-                    height: row.height
+                    height: _glyphBox.height
 
                     ShellText {
                         anchors.centerIn: parent

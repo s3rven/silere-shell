@@ -913,6 +913,23 @@ ShellRoot {
         component.destroy()
     }
 
+    function _checkPillTextBaseline(): void {
+        let mismatched = []
+        for (let h = 28; h <= 44; h++) {
+            const host = Qt.createQmlObject("import QtQuick; Item {}", barFixtureHost)
+            host.height = h
+            const pill = pillFactory.createObject(host, { text: "48%" })
+            pill.anchors.verticalCenter = host.verticalCenter
+            const label = Qt.createQmlObject("import \"modules/common\"; import \"config\"; ShellText { text: \"20:30\"; font.pixelSize: Settings.fontSize }", host)
+            label.anchors.verticalCenter = host.verticalCenter
+            const text = root._findTrayNode(pill, item => item !== pill && item.text === "48%")
+            if (!text || text.mapToItem(host, 0, 0).y !== label.mapToItem(host, 0, 0).y) mismatched.push(h)
+            host.destroy()
+        }
+        root._check(mismatched.length === 0,
+            "a pill's value sits on the same line as the clock at every bar height, mismatched at " + mismatched.join(","))
+    }
+
     function _checkBluetoothPairing(): void {
         const component = Qt.createComponent("modules/menu/BluetoothList.qml")
         const picker = component.status === Component.Ready
@@ -1361,6 +1378,7 @@ ShellRoot {
         root._checkWifiScanners()
         root._checkWifiDraft()
         root._checkPowerRail()
+        root._checkPillTextBaseline()
         root._checkBluetoothPairing()
         root._checkConnectivityConfirmations()
         root._checkMenuContrast()
