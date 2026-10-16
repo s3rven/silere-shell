@@ -30,7 +30,7 @@ history and Settings, and text fields. Controls also expose actions to accessibi
 | tray | **click** opens a menu-only app's menu, otherwise jumps to its window or activates it · **right-click** opens its menu, with Hide from bar at the end · **middle-click** runs the app's secondary action · **scroll** is passed through to the app |
 | notifications | **click** runs the default action · **right-click** or **drag sideways** dismisses · **middle-click** jumps to the app that sent it · a reply action opens an inline text field when the sender supports one |
 | wi-fi list | **click** joins a saved or open network, or opens a password field for a personal one; use the eye button to show or hide the password · **click** the connected network twice to disconnect · **right-click** or **middle-click** a saved network twice to forget it, unless you are connected to it |
-| vpn | appears in Connectivity while a VPN is up · **click** copies its address |
+| vpn | appears in Connectivity while a VPN is up · **click** copies its IPv4 address, or IPv6 address on an IPv6-only tunnel |
 | bluetooth list | **click** pairs or connects · **click** a connected device twice to disconnect · **right-click** or **middle-click** a paired device twice to forget it, unless it is connected |
 | menu | **Escape** steps back, then closes · **click** anywhere outside to close |
 | history | **type** in Search, or press **Ctrl+F** to get there, to find an app or message · **click** an app in the rail to show only its notifications · **click** an entry to read it in full, **right-click** removes it, **middle-click** jumps to the app that sent it · **Clear** removes what is shown, after a second click to confirm · **Escape** clears search, then closes |

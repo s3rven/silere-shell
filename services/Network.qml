@@ -538,8 +538,9 @@ Singleton {
     }
 
     function vpnAddressFrom(raw: string): string {
-        const address = String(raw || "").split(/[|\n]/)[0].trim().split("/")[0]
-        return /^\d{1,3}(\.\d{1,3}){3}$/.test(address) ? address : ""
+        const addresses = String(raw || "").split(/[|\r\n]/).map(entry => entry.trim().split("/")[0])
+        return addresses.find(a => /^\d{1,3}(\.\d{1,3}){3}$/.test(a))
+            ?? addresses.find(a => /^[0-9a-f.]*:[0-9a-f:.]*$/i.test(a) && !/^fe80:/i.test(a)) ?? ""
     }
 
     function refreshVpnAddress(): void {
@@ -650,7 +651,8 @@ Singleton {
         id: _vpnAddressProc
         timeoutMs: 5000
         environment: ({ "LC_ALL": "C" })
-        command: ["nmcli", "-t", "-g", "IP4.ADDRESS", "connection", "show", "uuid", root._vpnAddressFor]
+        command: ["nmcli", "-t", "--escape", "no", "-g", "IP4.ADDRESS,IP6.ADDRESS",
+            "connection", "show", "uuid", root._vpnAddressFor]
         stdout: StdioCollector { id: _vpnAddressOut }
         onExited: (code) => {
             if (root._vpnAddressFor !== (root.hasVpn ? String(root._vpnState.uuid || "") : "")) {

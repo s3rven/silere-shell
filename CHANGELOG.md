@@ -15,6 +15,10 @@ settings file carries its own `__version` and migrates separately.
 
 - History search ignores accents, so `cafe` finds `Café`.
 
+### Changed
+
+- The VPN row shows and copies an IPv6 address when the tunnel has no IPv4 one.
+
 ### Fixed
 
 - A disconnect, forget, power or reset confirmation left armed across a suspend asks again

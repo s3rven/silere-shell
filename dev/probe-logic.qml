@@ -5111,6 +5111,17 @@ ShellRoot {
                 && Network.vpnAddressFrom("") === ""
                 && Network.vpnAddressFrom("fe80::1/64") === "",
             "the VPN row shows the tunnel's first IPv4 address without its prefix")
+        root._check(Network.vpnAddressFrom("\nfd00:1234::2/64\n") === "fd00:1234::2"
+                && Network.vpnAddressFrom("2001:db8::1/128 | 2001:db8::2/64") === "2001:db8::1"
+                && Network.vpnAddressFrom("2001:db8:0:1:2:3:4:5/64") === "2001:db8:0:1:2:3:4:5"
+                && Network.vpnAddressFrom("::ffff:192.0.2.1/128") === "::ffff:192.0.2.1",
+            "IPv6-only VPNs expose compressed, full and IPv4-mapped tunnel addresses")
+        root._check(Network.vpnAddressFrom("fd00::2/64\n10.8.0.2/24\n") === "10.8.0.2"
+                && Network.vpnAddressFrom("10.8.0.2/24\nfd00::2/64\n") === "10.8.0.2",
+            "dual-stack VPNs keep their IPv4 address regardless of field order")
+        root._check(Network.vpnAddressFrom("not-an-address\nfd00::2/64\nfe80::1/64") === "fd00::2"
+                && Network.vpnAddressFrom("fe80::1/64\nfd00::2/64") === "fd00::2",
+            "a malformed line or a link-local address cannot hide the tunnel's routable address")
 
         const wheelKey = "probe-scroll"
         root._check(Scroll._processDelta(60, wheelKey, 120, 2, 0) === 0,
