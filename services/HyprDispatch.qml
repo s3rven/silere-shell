@@ -10,7 +10,7 @@ Singleton {
     property bool useLua: false
 
     function _quote(value): string {
-        return "\"" + String(value).replace(/\\/g, "\\\\").replace(/"/g, "\\\"").replace(/\n/g, "\\n") + "\""
+        return "\"" + String(value).replace(/\\/g, "\\\\").replace(/"/g, "\\\"").replace(/\n/g, "\\n").replace(/\r/g, "\\r") + "\""
     }
 
     function _value(value): string {
