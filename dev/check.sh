@@ -259,9 +259,17 @@ _wayland_socket() {
   esac
 }
 
+# a checkout beside an installed copy: the shell on screen is Silere, only not this one
+other_silere=""
 if [ "$qs_usable" = 1 ]; then
+  while IFS= read -r _cfg; do
+    [ -n "$_cfg" ] && [ "$_cfg" != "$ROOT/shell.qml" ] && [ -x "$(dirname "$_cfg")/scripts/silere" ] || continue
+    other_silere="$(dirname "$_cfg")"; break
+  done < <(qs list --all --json 2>/dev/null | sed -n 's/^ *"config_path": "\(.*\)",\{0,1\}$/\1/p')
   if timeout 5 qs ipc -p "$ROOT/shell.qml" show >/dev/null 2>&1; then
     ok "qs IPC" "this checkout's shell answers"
+  elif [ -n "$other_silere" ]; then
+    info "qs IPC" "Silere runs from $other_silere, not this checkout"
   else
     warn "qs IPC" "this checkout's shell is not running or does not answer"
   fi
@@ -285,6 +293,8 @@ if command -v busctl >/dev/null 2>&1; then
     warn "notifications" "no D-Bus notification owner"
   elif [ "$notif_comm" = qs ] && [[ "$notif_cmd" == *"$ROOT/shell.qml"* || "$notif_cmd" == *"$ROOT "* ]]; then
     ok "notifications" "served by this Silere"
+  elif [ "$notif_comm" = qs ] && [ -n "$other_silere" ] && [[ "$notif_cmd" == *"$other_silere/shell.qml"* ]]; then
+    ok "notifications" "served by Silere from $other_silere"
   else
     warn "notifications" "owned by ${notif_comm:-another process}, not this Silere"
   fi

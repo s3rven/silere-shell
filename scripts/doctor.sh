@@ -225,6 +225,16 @@ case "$qt_floor" in
     1) fail "Qt" "older than $SILERE_MIN_QT; the bar, OSD and popups cannot load" ;;
 esac
 
+# a dev checkout beside an installed copy: the shell on screen is Silere, just not this one
+other_silere=""
+if [ "$qs_usable" -eq 1 ]; then
+    while IFS= read -r _cfg; do
+        [ -n "$_cfg" ] && [ "$_cfg" != "$ROOT/shell.qml" ] && [ -x "$(dirname "$_cfg")/scripts/silere" ] || continue
+        other_silere="$(dirname "$_cfg")"; break
+    done < <(env -u LC_ALL qs list --all --json 2>/dev/null \
+        | sed -n 's/^ *"config_path": "\(.*\)",\{0,1\}$/\1/p')
+fi
+
 if [ "$qs_usable" -eq 1 ]; then
     if command -v timeout >/dev/null 2>&1; then
         ipc_probe=(timeout 5 env -u LC_ALL qs ipc -p "$ROOT/shell.qml" show)
@@ -238,6 +248,8 @@ if [ "$qs_usable" -eq 1 ]; then
         if [ -n "$qt_drift" ]; then
             warn "Qt build" "Quickshell was built for Qt ${qt_drift% *} but runs on ${qt_drift#* }; update or rebuild it"
         fi
+    elif [ -n "$other_silere" ]; then
+        info "shell IPC" "Silere is running from $other_silere, not this copy"
     else warn "shell IPC" "Silere from $ROOT is not running or does not answer"
     fi
 fi
@@ -261,6 +273,8 @@ if command -v busctl >/dev/null 2>&1; then
         warn "notifications" "no notification daemon is running"
     elif [ "$notif_comm" = qs ] && [[ "$notif_cmd" == *"$ROOT/shell.qml"* || "$notif_cmd" == *"$ROOT "* ]]; then
         ok "notifications" "served by Silere"
+    elif [ "$notif_comm" = qs ] && [ -n "$other_silere" ] && [[ "$notif_cmd" == *"$other_silere/shell.qml"* ]]; then
+        ok "notifications" "served by Silere from $other_silere"
     elif [ "$notif_comm" = qs ]; then
         warn "notifications" "owned by another Quickshell config; stop it to use Silere's notifications"
     else
