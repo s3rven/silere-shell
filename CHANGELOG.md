@@ -20,6 +20,8 @@ settings file carries its own `__version` and migrates separately.
 
 ### Changed
 
+- The notification countdown outline drains evenly from both sides toward the top edge, and
+  stays as smooth in a tall stack as it does on a single card.
 - The workspace marker and the window title glide through quick successive switches instead of
   restarting their motion each time.
 - The OSD level follows a held volume or brightness key smoothly instead of jumping in steps.

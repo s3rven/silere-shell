@@ -216,6 +216,18 @@ PanelWindow {
 
     property bool _quietPaint: false
 
+    QtObject {
+        id: _countdownClock
+        signal tick()
+    }
+    // one frame per tick for the whole stack; cards that are paused or done ignore it, so an idle tick draws nothing
+    Timer {
+        interval: 50
+        repeat: true
+        running: win.visible && Notifications.list.length > 0 && !Idle.isIdle
+        onTriggered: _countdownClock.tick()
+    }
+
     function _isCritical(n): bool {
         return !!n && n.urgency === NotificationUrgency.Critical
     }
@@ -542,7 +554,7 @@ PanelWindow {
                                     timeoutStartedAt: _slot.timeoutStartedAt
                                     slideDir: win._slideDir
                                     quietPaint: win._quietPaint
-                                    stackSize: win._visibleCards
+                                    countdownClock: _countdownClock
                                     stackHovered: _stackHover.hovered
 
                                     onLeaving: win._noteLeaving()

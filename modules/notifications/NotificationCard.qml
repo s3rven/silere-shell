@@ -23,12 +23,9 @@ Item {
     // leaving cards briefly pause the rim while the stack closes its gaps
     property bool quietPaint: false
 
-    // only the countdown rim changes; a stack needs fewer redraws as it grows
-    property int stackSize: 1
-    function countdownInterval(count: int): int {
-        return count <= 2 ? 50 : count <= 4 ? 80 : 100
-    }
-    readonly property int _ringTickMs: card.countdownInterval(card.stackSize)
+    // the stack's shared tick: cards on timers of their own each land on their own frame, and the
+    // window redrew once per card per tick. Without one, as in a standalone card, the card keeps its own
+    property QtObject countdownClock: null
 
     property bool _expired: false
     property bool _leaving: false
@@ -375,13 +372,18 @@ Item {
     }
 
     // measured: a 60fps NumberAnimation here cost ~15% of a core per card, re-running the arc colours, pulse gate and path every vsync
-    Timer {
-        id: _countdownTick
-        interval: card._ringTickMs
+    readonly property bool _countdownRunning: card._showCountdown && !card._paused && !card.quietPaint
+    on_CountdownRunningChanged: if (card._countdownRunning) card._syncCountdown()
+    readonly property Timer _ownCountdown: Timer {
+        interval: 50
         repeat:  true
-        running: card._showCountdown && !card._paused && !card.quietPaint
-        triggeredOnStart: true
+        running: card._countdownRunning && card.countdownClock === null
         onTriggered: card._syncCountdown()
+    }
+    Connections {
+        target: card.countdownClock
+        enabled: card._countdownRunning
+        function onTick() { card._syncCountdown() }
     }
 
     HoverHandler { id: _cardHover }

@@ -63,19 +63,19 @@ Shape {
         }
     }
 
-    ShapePath {
-        readonly property real _dashUnits: root._perimeter / Math.max(0.01, strokeWidth)
+    // centred on the top edge and shrinking evenly toward it; the path starts after the top-left corner. Full, it
+    // is drawn untrimmed: two translucent round caps meeting at the top would overlap into a brighter bead
+    readonly property real _topCentre: Math.max(0, _pathWidth / 2 - _pathRadius) / _perimeter
+    readonly property bool _full: _shownProgress >= 0.998
 
+    ShapePath {
         strokeWidth: root._arcStroke
         strokeColor: root._shownProgress <= 0.002 ? "transparent" : root.arcColor
-        strokeStyle: root._shownProgress >= 0.998
-            ? ShapePath.SolidLine : ShapePath.DashLine
-        dashPattern: [
-            Math.max(0.001, _dashUnits * root._shownProgress),
-            Math.max(0.001, _dashUnits * (1 - root._shownProgress))
-        ]
         capStyle: ShapePath.RoundCap
         fillColor: "transparent"
+        trim.start: 0
+        trim.end: root._full ? 1 : root._shownProgress
+        trim.offset: root._full ? 0 : ((root._topCentre - root._shownProgress / 2) % 1 + 1) % 1
 
         PathRectangle {
             x: root._arcInset

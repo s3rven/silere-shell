@@ -2254,10 +2254,16 @@ ShellRoot {
         fadingRim.destroy()
 
         const notificationCard = notificationCardFactory.createObject(root)
-        root._check(notificationCard.countdownInterval(1) === 50
-                && notificationCard.countdownInterval(3) === 80
-                && notificationCard.countdownInterval(8) === 100,
-            "notification countdown updates slow down as the visible stack grows")
+        const clock = Qt.createQmlObject("import QtQuick; QtObject { signal tick() }", root)
+        const ownWas = notificationCard._ownCountdown.running
+        notificationCard.countdownClock = clock
+        const ownWithClock = notificationCard._ownCountdown.running
+        notificationCard._timeoutProgress = 0.123
+        clock.tick()
+        root._check(ownWas && !ownWithClock && notificationCard._timeoutProgress !== 0.123,
+            "a card in a stack follows the shared countdown tick instead of a timer of its own")
+        notificationCard.countdownClock = null
+        clock.destroy()
         const rim = perimeterFactory.createObject(root, {
             arcWidth: notificationCard._borderWidth, inset: notificationCard._borderWidth / 2,
             cornerRadius: 15, progress: 0.5
@@ -2269,6 +2275,15 @@ ShellRoot {
         notificationCard._updateTime()
         root._check(notificationCard._timeUpdateMs > 30000 && notificationCard._timeUpdateMs <= 60000,
             "a new notification schedules its age label for the next minute boundary")
+        rim.width = 320; rim.height = 90
+        rim._shownProgress = 0.4
+        const arc = rim.data[1]
+        const mid = ((arc.trim.offset + arc.trim.end / 2) % 1 + 1) % 1
+        root._check(Math.abs(arc.trim.end - 0.4) < 1e-6 && Math.abs(mid - rim._topCentre) < 1e-6,
+            "the countdown arc stays centred on the top edge as it shrinks")
+        rim._shownProgress = 1
+        root._check(arc.trim.end === 1 && arc.trim.offset === 0,
+            "a full countdown ring is drawn untrimmed, so its translucent caps never overlap")
         root._check(notificationCard !== null, "a notification card builds")
         root._check(notificationCard.actionColumns(400, 80, 4) === 4
                 && notificationCard.actionColumns(232, 90, 4) === 2
