@@ -148,8 +148,8 @@ Column {
                         }
                         HintText {
                             text: ShellSettings.osdEnabled
-                                ? "Alert also appears in the shell OSD."
-                                : "Enable the global OSD to also show the shell alert."
+                                ? "Low levels show in the OSD; critical ones come here."
+                                : "Low levels need the OSD; critical ones come here."
                         }
                     }
                 }

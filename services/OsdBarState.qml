@@ -360,7 +360,7 @@ Singleton {
     }
     function _alertBatteryCritical(): void {
         if (!Battery.available || !Battery.critical || Battery.alertWarning !== "critical"
-                || !ShellSettings.osdBatteryWarn) return
+                || !ShellSettings.osdBatteryWarn || SystemAlerts.criticalPopsUp) return
         const label = "Critical Battery · " + Math.round(Battery.pct) + "%"
             + (Battery.timeLabel ? "  " + Battery.timeLabel : "")
         root.showAlert("battery", Battery.icon, Battery.pct / 100, label, Theme.error)
@@ -382,7 +382,7 @@ Singleton {
             "CPU Hot · " + Math.round(CpuTemp.temp) + "°", Theme.warning)
     }
     function _alertTempCritical(): void {
-        if (!CpuTemp.critical || !ShellSettings.osdTempWarn) return
+        if (!CpuTemp.critical || !ShellSettings.osdTempWarn || SystemAlerts.criticalPopsUp) return
         root.showAlert("temp", "󰔏", Math.min(1.0, (CpuTemp.temp - 50) / 65),
             "CPU Critical · " + Math.round(CpuTemp.temp) + "°", Theme.error)
     }

@@ -5936,6 +5936,14 @@ ShellRoot {
             false, false, true, 20, 10)
         root._check(plugFull.chargeRevision === 0 && !plugFull.chargeComplete,
             "plugging in an already-full battery is not a completed charge")
+        root._check(SystemAlerts.criticalPopupFor(true, true, false, false)
+                && SystemAlerts.criticalPopupFor(true, true, true, true)
+                && !SystemAlerts.criticalPopupFor(true, true, false, true)
+                && !SystemAlerts.criticalPopupFor(true, false, true, false)
+                && !SystemAlerts.criticalPopupFor(false, true, true, false),
+            "a critical alert takes the desktop popup only where one appears, and the OSD otherwise")
+        root._check(!SystemAlerts.criticalPopsUp,
+            "a sandboxed run never sends a desktop alert, so its critical alerts stay in the OSD")
         const dropout = SystemAlerts.batteryRearmState(false, false, 0, 20, 10, true, true)
         const plugged = SystemAlerts.batteryRearmState(true, false, 0, 20, 10, true, true)
         root._check(dropout.low && dropout.critical

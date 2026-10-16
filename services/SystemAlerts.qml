@@ -9,8 +9,16 @@ Singleton {
     // public so the shell root can force-instantiate: Quickshell lazy-loads singletons and nothing else reads SystemAlerts, so its watchers never arm otherwise
     readonly property bool armed: SystemTools.hasNotifySend
 
-    property bool _battLowSent:  false
     property bool _battCritSent: false
+
+    // one channel per alert: the OSD carries the low tiers, and a critical one comes here because it stays on screen and
+    // in history until dealt with. The OSD stands in only when this popup would not appear
+    function criticalPopupFor(canSend: bool, popupsOn: bool, bypass: bool, silenced: bool): bool {
+        return canSend && popupsOn && (bypass || !silenced)
+    }
+    readonly property bool criticalPopsUp: root.criticalPopupFor(
+        SystemTools.ready && SystemTools.hasNotifySend && Quickshell.env("SILERE_SANDBOX") !== "1",
+        ShellSettings.notifPopupEnabled, ShellSettings.notifCriticalBypass, Notifications.silencingActive)
     property bool _cpuCritSent:  false
 
     function _send(summary: string, body: string, urgency: string): bool {
@@ -27,15 +35,6 @@ Singleton {
         return true
     }
 
-    function _checkBattLow(): void {
-        // one backend update can cross both thresholds; critical wins so the jump sends one
-        if (Battery.available && Battery.low && Battery.alertWarning === "low"
-                && ShellSettings.osdBatteryWarn && !_battLowSent) {
-            if (_send("Battery Low",
-                Math.round(Battery.pct) + "% remaining — consider plugging in",
-                "normal")) _battLowSent = true
-        }
-    }
     function _checkBattCrit(): void {
         if (Battery.available && Battery.critical && Battery.alertWarning === "critical"
                 && ShellSettings.osdBatteryWarn && !_battCritSent) {
@@ -53,9 +52,7 @@ Singleton {
     }
 
     function _checkCurrentWarnings(): void {
-        const level = Battery.alertWarning
-        if (level === "critical") _checkBattCrit()
-        else if (level === "low") _checkBattLow()
+        if (Battery.alertWarning === "critical") _checkBattCrit()
         _checkCpuCrit()
     }
 
@@ -99,8 +96,7 @@ Singleton {
     function _rearmBattery(): void {
         const state = root.batteryRearmState(Battery.available, Battery.onBattery,
             Battery.pct, ShellSettings.batteryLowThreshold, Battery._critPct,
-            root._battLowSent, root._battCritSent)
-        root._battLowSent = state.low
+            false, root._battCritSent)
         root._battCritSent = state.critical
     }
 
@@ -118,7 +114,6 @@ Singleton {
 
         function onOsdBatteryWarnChanged(): void {
             if (Battery.alertWarning === "critical") root._checkBattCrit()
-            else root._checkBattLow()
         }
         function onOsdTempWarnChanged(): void {
             root._checkCpuCrit()
