@@ -12,6 +12,18 @@ Singleton {
     property string lastError: ""
     property var _tools: ({})
     property string packageFamily: ""
+    // the running binary's own version, so a workaround for an older Quickshell can stand down on a fixed one; empty until known
+    property string quickshellVersion: ""
+    function versionAtLeast(version: string, want: string): bool {
+        const a = String(version).split(".").map(Number), b = String(want).split(".").map(Number)
+        if (a.length < 2 || a.some(n => !isFinite(n))) return false
+        for (let i = 0; i < b.length; i++) {
+            const x = a[i] ?? 0
+            if (x !== b[i]) return x > b[i]
+        }
+        return true
+    }
+    function quickshellAtLeast(want: string): bool { return root.versionAtLeast(root.quickshellVersion, want) }
     // ready stays true during a refresh so controls do not disappear; consumers that need to redo work after a coherent scan use this completion edge
     property int _scanRevision: 0
     readonly property int scanRevision: _scanRevision
@@ -175,6 +187,9 @@ Singleton {
             "    esac; [ -n \"$family\" ] && break; " +
             "  done; " +
             "fi; [ -n \"$family\" ] && echo \"@family=$family\"; " +
+            // the parent is the qs that runs this shell, which a different qs on PATH would misreport
+            "qsv=$(\"$(readlink -f /proc/$PPID/exe)\" --version 2>/dev/null | sed -n 's/^Quickshell \\([0-9][0-9.]*\\).*/\\1/p'); " +
+            "[ -n \"$qsv\" ] && echo \"@qs=$qsv\"; " +
             // tuned-ppd serves the same bus API without shipping powerprofilesctl
             "command -v busctl >/dev/null 2>&1 && busctl --system --no-pager --timeout=2 get-property " +
             "net.hadess.PowerProfiles /net/hadess/PowerProfiles net.hadess.PowerProfiles ActiveProfile " +
@@ -202,15 +217,17 @@ Singleton {
             root._retryDelayMs = 0
             _retryTimer.stop()
             const found = {}
-            let family = ""
+            let family = "", qsVersion = ""
             const lines = (_checkOut.text || "").split(/\r?\n/)
             for (let i = 0; i < lines.length; i++) {
                 const name = lines[i].trim()
                 if (name.startsWith("@family=")) family = name.slice(8)
+                else if (name.startsWith("@qs=")) qsVersion = name.slice(4)
                 else if (name.length > 0) found[name] = true
             }
             root._tools = found
             root.packageFamily = family
+            root.quickshellVersion = qsVersion
             root.lastError = ""
             root.ready = true
             root.checking = false

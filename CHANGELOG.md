@@ -22,6 +22,8 @@ settings file carries its own `__version` and migrates separately.
 
 ### Changed
 
+- On Quickshell 0.3.2 and newer, Bluetooth headphone volume is set directly instead of through a
+  `wpctl` process for every scroll step. Older versions keep the `wpctl` path they need.
 - A battery or CPU warning arrives once: a low battery shows in the OSD only, and a critical battery
   or temperature sends a desktop notification instead of an OSD alert as well.
 - Battery and temperature alerts stay in the OSD for at least five seconds, so a short OSD timeout

@@ -18,9 +18,11 @@ QtObject {
 
     readonly property real stepPct: 0.05
 
-    // quickshell 0.3.1 drops a volume write on a bluetooth route without hardware volume yet reports it applied; wireplumber writes it either way
+    // quickshell 0.3.1 drops a volume write on a bluetooth route without hardware volume yet reports it applied; wireplumber writes it
+    // either way. 0.3.2 writes it natively (verified on a bluez5 headset), sparing a process per scroll step; an unknown version keeps wpctl
     readonly property bool _viaWpctl: node !== null && SystemTools.hasWpctl
         && String(node.properties["device.api"] ?? "") === "bluez5"
+        && !SystemTools.quickshellAtLeast("0.3.2")
     // one process per drag frame is most of a core; a spaced write still lands the newest target
     property bool _wpctlAgain: false
     readonly property BoundedProcess _wpctl: BoundedProcess { timeoutMs: 3000 }
