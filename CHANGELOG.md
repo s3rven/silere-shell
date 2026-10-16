@@ -29,6 +29,8 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- Tray icons of apps that start at login before the shell, such as KeePassXC, appear instead of
+  staying missing until the app restarts.
 - Settings search matches the start of words, so `lock` finds the screen lock instead of the clock.
 - Paired Bluetooth devices are trusted once they connect, from the menu or any other tool,
   so they can reconnect on their own when switched on.

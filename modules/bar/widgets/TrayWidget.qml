@@ -15,6 +15,7 @@ Item {
     property bool compact: ShellSettings.barCompact
     property bool barActive: true
     property var trayModel: SystemTray.items
+    Component.onCompleted: TrayMenuState.recoverOrphanItems()
     readonly property var _trayItems: root.trayModel
         ? (Array.isArray(root.trayModel) ? root.trayModel : (root.trayModel.values ?? [])) : []
     readonly property bool show: ShellSettings.trayWidget

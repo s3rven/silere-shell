@@ -1,6 +1,7 @@
 pragma Singleton
 
 import QtQuick
+import Quickshell
 
 AnchoredPopupState {
     id: root
@@ -26,6 +27,34 @@ AnchoredPopupState {
             if (root.sourceItem && ShellSettings.trayItemHidden(root.sourceItem.id))
                 root.close()
         }
+    }
+
+    // an app that autostarts before the tray's watcher exists registers into nothing and never retries; one pass
+    // once the watcher is up adopts those items, as KDE's own watcher does. Later apps find it and register themselves
+    property bool _orphanScanDone: false
+    function recoverOrphanItems(): void {
+        if (root._orphanScanDone || Quickshell.env("SILERE_SANDBOX") === "1") return
+        root._orphanScanDone = true
+        _orphanDelay.restart()
+    }
+    property Timer _orphanDelay: Timer {
+        id: _orphanDelay
+        interval: 1500
+        onTriggered: _orphanScan.running = true
+    }
+    property BoundedProcess _orphanScan: BoundedProcess {
+        id: _orphanScan
+        timeoutMs: 10000
+        environment: ({ "LC_ALL": "C" })
+        command: ["sh", "-c",
+            'command -v busctl >/dev/null 2>&1 || exit 0; w=org.kde.StatusNotifierWatcher; '
+            + 'reg=$(busctl --user get-property $w /StatusNotifierWatcher $w RegisteredStatusNotifierItems 2>/dev/null '
+            + '| tr " " "\\n" | tr -d "\\042" | sed "s|/.*||") || exit 0; '
+            + 'busctl --user list --no-legend --acquired 2>/dev/null | while read -r name rest; do '
+            + 'case $name in org.kde.StatusNotifierItem-*) ;; *) continue ;; esac; '
+            + 'printf "%s\\n" "$reg" | grep -qxF "$name" && continue; '
+            + 'busctl --user call $w /StatusNotifierWatcher $w RegisterStatusNotifierItem s "$name" >/dev/null 2>&1; '
+            + 'done']
     }
 
     // a diagonal move toward an open submenu crosses its siblings; only a pause there switches branches
