@@ -30,6 +30,7 @@ settings file carries its own `__version` and migrates separately.
 - A disconnect, forget, power or reset confirmation left armed across a suspend asks again
   instead of acting on the next click.
 - Tray menus no longer show stray separator lines left around entries the app hides.
+- The VPN row in Home appears even when the network widget is hidden from the bar.
 - Scrolling quickly through calendar months names the month you are heading to and keeps the
   grid changing, instead of fading it blank until you stop.
 - The multi-window badge on workspace app icons and the rail and search hover labels stay crisp

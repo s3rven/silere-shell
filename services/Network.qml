@@ -107,8 +107,9 @@ Singleton {
     property string vpnAddress: ""
     property string _vpnAddressFor: ""
     property bool _vpnRefreshPending: false
+    // the Home page lists the VPN too, so a hidden network pill must not hide the tunnel there
     readonly property bool _vpnWanted: !Idle.isIdle && available
-        && ShellSettings.barShowNetwork && SystemTools.hasNmcli
+        && (ShellSettings.barShowNetwork || MenuState.homeActive) && SystemTools.hasNmcli
 
     function signalTier(s: int): int {
         return s > 75 ? 3 : s > 50 ? 2 : s > 25 ? 1 : 0
