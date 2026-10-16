@@ -1,7 +1,7 @@
 .pragma library
 
-// Changed rows get a new object and list so bindings see them. Unchanged events keep
-// the original list, avoiding a rebuild of every workspace and window consumer.
+// changed rows get a new object and list so bindings see them. Unchanged events keep
+// the original list, avoiding a rebuild of every workspace and window consumer
 
 function focusedWorkspaceChangeOutput(previous, next) {
     let oldId = null
@@ -53,8 +53,7 @@ function indexOfWindow(current, id) {
     return -1
 }
 
-// a newly focused window unfocuses every other one in the same pass, so the model never
-// reports two focused windows between events
+// a newly focused window unfocuses every other one in the same pass, so the model never reports two focused windows between events
 function windowsWithUpsert(current, w) {
     const wins = current.slice()
     let found = false

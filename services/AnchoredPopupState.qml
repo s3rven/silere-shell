@@ -30,7 +30,7 @@ Singleton {
 
     // a destroyed widget nulls this with no assignment behind it. Reordering bar widgets
     // hands the zone's Repeater a new array, which rebuilds every delegate, so the anchor
-    // drops for a turn and comes straight back; only a bar that really went never returns.
+    // drops for a turn and comes straight back; only a bar that really went never returns
     property bool _anchorWriting: false
     function _setAnchor(source): void {
         _anchorRegrab.stop()

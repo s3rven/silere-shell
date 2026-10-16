@@ -62,7 +62,7 @@ MenuRow {
 
     height:         Metrics.rowHeightFor(48)
 
-    // Visibility gates input, but should not change the resting appearance.
+    // visibility gates input, but should not change the resting appearance
     opacity: root.passive || (root.enabled && root.available) ? 1.0 : Theme.disabledOpacity
     MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
 
@@ -212,7 +212,7 @@ MenuRow {
         readonly property real _valNatural: Math.ceil(_valMetrics.advanceWidth)
         // the title names the setting and the value only qualifies it, so a long value
         // gives way first: 42 of label inset + 22 of margins + the same 96 label floor
-        // SelectRow reserves. Uncapped, the value took its full width and elided the title.
+        // SelectRow reserves. Uncapped, the value took its full width and elided the title
         readonly property real _valMax: Math.max(0, root.width - 160 - _chevronW)
         readonly property real _ctrlW: root.showSwitch ? 36
             : root.valueText.length === 0 ? 0

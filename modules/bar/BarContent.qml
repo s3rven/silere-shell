@@ -43,8 +43,7 @@ Item {
 
     // animate the axis, not the zone's x: a title resize recentres at once while a side-widget change still carries the whole middle group
     readonly property real centerAxis: _centerGlide.value
-    // Preserve velocity as several side widgets resize at once. The screen
-    // centre already rides the surface's own morph and needs no extra easing.
+    // preserve velocity as several side widgets resize at once. The screen centre already rides the surface's own morph and needs no extra easing
     SmoothGlide {
         id: _centerGlide
         target: ShellSettings.barCenterInGap
@@ -72,9 +71,9 @@ Item {
         _lastCompactWidth = 0
     }
 
-    // Compact cannot measure what it is hiding: the expanded layout only exists while the
+    // compact cannot measure what it is hiding: the expanded layout only exists while the
     // bar is expanded. So it is captured on the way in and then carried by the change in
-    // compact width, never re-read directly.
+    // compact width, never re-read directly
     function _syncAutoCompact(): void {
         if (ShellSettings.barCompact || !ShellSettings.barAutoCompact || width <= 0) {
             _clearCompactMeasure()

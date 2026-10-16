@@ -77,8 +77,7 @@ Singleton {
     function _processDelta(deltaY: real, key: string, threshold: real, maxSteps: int, minStepMs: int): int {
         if (!deltaY) return 0
         const now = Date.now()
-        // A busy event loop can deliver input before the cleanup timer fires.
-        // Expired gestures must still start without the previous remainder.
+        // a busy event loop can deliver input before the cleanup timer fires. Expired gestures must still start without the previous remainder
         if (_expires[key] !== undefined && _expires[key] <= now) _forgetKey(key)
         const previous = _accums[key] || 0
         // a complete notch leaves no remainder, so direction must survive separately
@@ -142,7 +141,7 @@ Singleton {
         delete root._expires[key]
     }
 
-    // Return the time until the next expiry; zero means there is no work left.
+    // return the time until the next expiry; zero means there is no work left
     function _expireKeys(now: real): int {
         let next = Infinity
         for (const key in root._expires) {

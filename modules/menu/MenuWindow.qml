@@ -88,8 +88,7 @@ FittedPopupWindow {
             return Math.max(0, Math.min(_navMaxW, desired, detailSafe, sidebarFit))
         }
         readonly property int railExpandedW: railCollapsedW + navW
-        // Width, rail and padding use the same response. Retargeting a quick
-        // tab reversal preserves velocity instead of restarting three eases.
+        // width, rail and padding use the same response. Retargeting a quick tab reversal preserves velocity instead of restarting three eases
         readonly property bool _horizontalMotion: panel._geometryReady && panel.open
         readonly property real railW: _railGlide.value
         SmoothGlide {
@@ -114,8 +113,7 @@ FittedPopupWindow {
         readonly property real innerW: Math.max(1, contentW - contentPad * 2)
         readonly property real pageLayoutW: Math.max(1, panelW
             - (_railExpanded ? railExpandedW : railCollapsedW) - _targetContentPad * 2)
-        // Reveal when nearly all of the incoming layout fits. Width and rail
-        // can keep settling behind it without clipping the first visible frame.
+        // reveal when nearly all of the incoming layout fits. Width and rail can keep settling behind it without clipping the first visible frame
         readonly property bool pageViewportReady: innerW >= pageLayoutW - 12
         readonly property int idealMinH: activeTab === 2 ? 440 : 360
         readonly property int minRailFitH: 252
@@ -274,7 +272,7 @@ FittedPopupWindow {
             }
             function onTabChanging() {
                 if (!panel._tabHeightHeld) panel._beginTabHeightHold()
-                // Snapshot before activeTab changes its dependent geometry.
+                // snapshot before activeTab changes its dependent geometry
                 homeLoader.holdLayout()
                 settingsLoader.holdLayout()
                 recentLoader.holdLayout()
@@ -420,8 +418,7 @@ FittedPopupWindow {
             && (panel.activeTab !== 0 || panel._outerHeightMotion)
             && panel._shownH <= panel._availablePanelH + 1
             && !ShellSettings.reduceMotion && !Idle.isIdle
-        // Reflow can change the destination every frame. Keep velocity across
-        // those updates, and drive geometry once rather than easing each nudge.
+        // reflow can change the destination every frame. Keep velocity across those updates, and drive geometry once rather than easing each nudge
         readonly property real _shownH: Math.max(1,
             Math.min(_heightGlide.value, panel._availablePanelH))
         SmoothGlide {

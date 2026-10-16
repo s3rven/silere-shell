@@ -19,7 +19,7 @@ Item {
     property string wheelKey: ""
     property bool wheelNeedsRest: false
     property bool commitOnRelease: false
-    // Changing the device or track invalidates an unfinished gesture.
+    // changing the device or track invalidates an unfinished gesture
     property string interactionKey: ""
     property bool interactive: true
     property bool showThumb: true

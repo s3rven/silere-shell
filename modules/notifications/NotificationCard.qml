@@ -20,10 +20,10 @@ Item {
     signal leaving()
     signal replyFocusRequested(var owner, bool active)
 
-    // Leaving cards briefly pause the rim while the stack closes its gaps.
+    // leaving cards briefly pause the rim while the stack closes its gaps
     property bool quietPaint: false
 
-    // Only the countdown rim changes; a stack needs fewer redraws as it grows.
+    // only the countdown rim changes; a stack needs fewer redraws as it grows
     property int stackSize: 1
     function countdownInterval(count: int): int {
         return count <= 2 ? 50 : count <= 4 ? 80 : 100
@@ -386,10 +386,10 @@ Item {
 
     HoverHandler { id: _cardHover }
 
-    // Expanding grows the card, and the popup's implicitHeight is quantized, so each step
+    // expanding grows the card, and the popup's implicitHeight is quantized, so each step
     // reconfigures the layer surface and can drop the pointer for a frame. Collapsing on
     // that reading shrinks straight back under the cursor and the card oscillates. Plain
-    // ms, not a Motion token: those return 0 under reduce motion and re-open the trap.
+    // ms, not a Motion token: those return 0 under reduce motion and re-open the trap
     property bool _expanded: false
     Timer { id: _collapseHold; interval: 260; onTriggered: if (!card._replyOpen) card._expanded = false }
     Connections {
@@ -954,7 +954,7 @@ Item {
         opacity: cardRect.opacity
         sourceComponent: PerimeterProgress {
             paused: card.quietPaint
-            // Follow the outline instead of drawing a second ring inside it.
+            // follow the outline instead of drawing a second ring inside it
             inset: card._borderWidth / 2
             arcWidth: card._borderWidth
             cornerRadius: cardRect.radius

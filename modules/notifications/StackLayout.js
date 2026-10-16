@@ -1,7 +1,7 @@
 .pragma library
 
-// One pass serves every card's position and the viewport height. Reading the live
-// slots here lets the QML binding follow height changes throughout an animation.
+// one pass serves every card's position and the viewport height. Reading the live
+// slots here lets the QML binding follow height changes throughout an animation
 function measure(stack, newestFirst) {
     const tops = new Array(stack.count)
     let height = 0

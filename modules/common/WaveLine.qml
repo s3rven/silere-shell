@@ -51,8 +51,7 @@ Item {
         if (Math.abs(amp) < 0.001) return "M " + x0 + " " + mid + " H " + root._endX
         const n = Math.max(1, Math.ceil(len / (root._waveLength / 4)))
         const h = len / n
-        // Equal-length segments share one rotation. Carry the endpoint and
-        // tangent forward instead of evaluating five trig functions per segment.
+        // equal-length segments share one rotation. Carry the endpoint and tangent forward instead of evaluating five trig functions per segment
         const sinStep = Math.sin(h * k), cosStep = Math.cos(h * k)
         let sinA = Math.sin(-shift), cosA = Math.cos(-shift)
         let yA = mid + amp * sinA, dyA = amp * k * cosA

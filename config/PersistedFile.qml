@@ -17,8 +17,7 @@ Scope {
 
     // owners clear this on a bad read: a file we could not parse may still hold data this session never saw
     property bool writeAllowed: true
-    // Temporary prerequisites such as a migration backup may block saving even
-    // after the owner has successfully parsed the file.
+    // temporary prerequisites such as a migration backup may block saving even after the owner has successfully parsed the file
     property bool writePaused: false
     property int failureCount: 0
     property string lastSavedText: ""

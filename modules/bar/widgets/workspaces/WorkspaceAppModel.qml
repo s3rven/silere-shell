@@ -41,7 +41,7 @@ QtObject {
         return root.visibleIndexById[wsId] !== undefined
     }
 
-    // Only identities on the drawn page can change these icons.
+    // only identities on the drawn page can change these icons
     readonly property string _workspaceAppsKey: {
         if (!ShellSettings.wsShowAppIcons) return ""
         const parts = [root._generation, root.monitorName, root.visibleIdsKey]

@@ -57,12 +57,10 @@ Item {
         anchors.left: parent.left
         anchors.top: parent.top
         anchors.bottom: parent.bottom
-        // Keep the departing labels at their old wrap width while the outer
-        // rail clips them away. Reflow only when the drawer returns.
+        // keep the departing labels at their old wrap width while the outer rail clips them away. Reflow only when the drawer returns
         width: root._holdLayout ? root._heldWidth : root.width
         active: root.retained
-        // Showing an in-progress hover preload must not force its remaining
-        // incubation onto the first frame of the panel transition.
+        // showing an in-progress hover preload must not force its remaining incubation onto the first frame of the panel transition
         asynchronous: true
         sourceComponent: root.content
     }

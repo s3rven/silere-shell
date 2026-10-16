@@ -1,7 +1,7 @@
 //@ pragma UseQApplication
-// Regular Qt Quick animations fall back to a ~16 ms GUI timer while Silere's
+// regular Qt Quick animations fall back to a ~16 ms GUI timer while Silere's
 // bar and a popup are both visible. The elapsed-time driver avoids that
-// multi-window fallback; DefaultEnv still lets a user or driver override it.
+// multi-window fallback; DefaultEnv still lets a user or driver override it
 //@ pragma DefaultEnv QSG_USE_SIMPLE_ANIMATION_DRIVER = 1
 pragma ComponentBehavior: Bound
 import QtQuick
@@ -120,9 +120,9 @@ ShellRoot {
 
         function _ensureLoaded(): void {
             _plUnload.stop()
-            // A live layer-shell surface must stay on the screen it was
+            // a live layer-shell surface must stay on the screen it was
             // created for. A fast reopen on another output recreates it rather
-            // than remapping the still-exiting surface in place.
+            // than remapping the still-exiting surface in place
             if ((_plLoader.loading || _plLoader.active) && _pl._latchedScreen
                     && _pl.requestedScreen
                     && _pl._latchedScreen !== _pl.requestedScreen) {
@@ -137,7 +137,7 @@ ShellRoot {
                 })
                 return
             }
-            // Same-screen close/reopen can safely reverse the existing card.
+            // same-screen close/reopen can safely reverse the existing card
             if (!_plLoader.active) _pl._latchedScreen = _pl.requestedScreen
             _plLoader.active = true
         }
@@ -145,9 +145,9 @@ ShellRoot {
         function _ensureWarm(): void {
             if (!_pl.warm || _pl.wantOpen) return
             _plUnload.stop()
-            // An asynchronously prepared layer surface is still tied to its
+            // an asynchronously prepared layer surface is still tied to its
             // output. A hover that moves between bars must restart for the new
-            // screen instead of finishing a surface that cannot be remapped.
+            // screen instead of finishing a surface that cannot be remapped
             if ((_plLoader.loading || _plLoader.active)
                     && _pl._latchedScreen
                     && _pl.requestedScreen
@@ -173,10 +173,10 @@ ShellRoot {
                 if (!wantOpen) _plUnload.restart()
             }
         }
-        // The compositor closes a layer surface for good when its output goes
+        // the compositor closes a layer surface for good when its output goes
         // away, and the latched screen reads null from then on. A popup that is
         // still wanted, like a persistent notification, reopens on the screen
-        // that took over instead of staying unmapped until it is dismissed.
+        // that took over instead of staying unmapped until it is dismissed
         function _recoverLostScreen(): void {
             if (_pl._latchedScreen || !_pl.requestedScreen) return
             if (_plLoader.active) {

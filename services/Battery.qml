@@ -136,7 +136,7 @@ Singleton {
         let warning = critical ? previous.warning : low && previous.warning === "low" ? "low" : ""
         if (critical && !criticalSeen) warning = "critical"
         else if (low && !lowSeen) warning = "low"
-        // A jump directly into critical counts as both crossings.
+        // a jump directly into critical counts as both crossings
         lowSeen = lowSeen || low
         criticalSeen = criticalSeen || critical
 
@@ -166,7 +166,7 @@ Singleton {
     }
 
     // UPower's percentage, power source and state can update in one event turn.
-    // Reading them together avoids transient low/critical pairs and AC alerts.
+    // Reading them together avoids transient low/critical pairs and AC alerts
     onAvailableChanged: Qt.callLater(root._updateNotificationState)
     onPctChanged: Qt.callLater(root._updateNotificationState)
     onOnBatteryChanged: Qt.callLater(root._updateNotificationState)

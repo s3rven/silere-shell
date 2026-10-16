@@ -13,9 +13,9 @@ PageShell {
         _search.searching ? 0 : _detail.height)
         : _detail.height
     property real _searchHeldHeight: 0
-    // The outer SettingsPage can be Loader.Ready while its asynchronous section
+    // the outer SettingsPage can be Loader.Ready while its asynchronous section
     // body is still incubating. MenuWindow uses this to avoid sizing to that
-    // short-lived header-only state during a tab transition.
+    // short-lived header-only state during a tab transition
     readonly property bool contentReady: _detailBody.status === Loader.Ready
         || _detailBody.status === Loader.Error
     readonly property bool contentError: _detailBody.status === Loader.Error
@@ -23,8 +23,7 @@ PageShell {
 
     // the arranger scrolls this while a row is dragged past the viewport edge
     property Flickable scroller: null
-    // Keep the search field in view while results own scrolling. Restore the
-    // scroller's original binding when the query clears or this page leaves.
+    // keep the search field in view while results own scrolling. Restore the scroller's original binding when the query clears or this page leaves
     Binding {
         target: root.scroller
         property: "interactive"
@@ -269,8 +268,7 @@ PageShell {
         property real _shift: 0
         property real _lift: 0
         transform: Translate { x: _detail._shift; y: _detail._lift }
-        // The outgoing controls stay painted for the exit, but must not change
-        // settings after the sidebar has selected a different section.
+        // the outgoing controls stay painted for the exit, but must not change settings after the sidebar has selected a different section
         enabled: !_search.searching && root._shownSection === MenuState.settingsSection
             && root.contentReady && !root._awaitingSectionEnter
 
@@ -291,14 +289,12 @@ PageShell {
                 root._awaitingSectionEnter = false
                 _sectionEnterDefer.stop()
                 _detailEnter.stop()
-                // Returning before the fade-out completed keeps the existing
-                // body and reverses its reveal instead of unloading it again.
+                // returning before the fade-out completed keeps the existing body and reverses its reveal instead of unloading it again
                 if (root._shownSection === MenuState.settingsSection) {
                     _detailSwap.stop()
                     _detailEnter.restart()
                 } else if (!_detailSwap.running) {
-                    // The swap reads the latest destination when the exit ends.
-                    // Keep its clock running through successive sidebar clicks.
+                    // the swap reads the latest destination when the exit ends. Keep its clock running through successive sidebar clicks
                     _detailSwap.start()
                 }
             }

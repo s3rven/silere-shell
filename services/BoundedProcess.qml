@@ -10,8 +10,8 @@ Process {
 
     signal timeoutReached()
 
-    // A helper may handle TERM and exit zero after its deadline. Its result is
-    // still incomplete, so callers must not publish it as a successful probe.
+    // a helper may handle TERM and exit zero after its deadline. Its result is
+    // still incomplete, so callers must not publish it as a successful probe
     function completedSuccessfully(code: int): bool {
         return code === 0 && !root.timedOut
     }

@@ -20,7 +20,7 @@ Singleton {
     property bool _persistentReady: false
     // settings.json loads asynchronously: trimming to the default before it lands drops
     // rows a larger configured limit keeps, and the trim is written straight back.
-    // Arguments, not live state, so the rule is testable.
+    // Arguments, not live state, so the rule is testable
     function _capacityFor(limit: int, ceiling: int, settingsReady: bool): int {
         const configured = Math.max(5, limit)
         return settingsReady ? configured : Math.max(configured, ceiling)
@@ -56,8 +56,8 @@ Singleton {
         const days = ShellSettings.notifHistoryDays
         if (!ShellSettings.ready || days <= 0 || !isFinite(now)) return 0
         const dropped = []
-        // A normally ordered history expires in one trailing run. Handle unsorted
-        // restored rows too, keeping retained delegates and active popups intact.
+        // a normally ordered history expires in one trailing run. Handle unsorted
+        // restored rows too, keeping retained delegates and active popups intact
         let end = _history.count - 1
         while (end >= 0) {
             if (!root.historyExpiredAt(_history.get(end).time, days, now, true)) {
@@ -84,8 +84,7 @@ Singleton {
         let next = Infinity
         for (let i = 0; i < _history.count; i++)
             next = Math.min(next, _history.get(i).time + days * 86400000)
-        // Qt timers use a signed 32-bit interval. A distant deadline needs a
-        // second one-shot wait, rather than overflow or a background poll.
+        // Qt timers use a signed 32-bit interval. A distant deadline needs a second one-shot wait, rather than overflow or a background poll
         return isFinite(next) ? Math.max(1, Math.min(2147483647, Math.ceil(next - now))) : 0
     }
 
@@ -174,7 +173,7 @@ Singleton {
             const id = _history.get(i).id
             if (id !== undefined) dropped.push(String(id))
         }
-        // One model edit also lets views reconcile a reduced limit in one pass.
+        // one model edit also lets views reconcile a reduced limit in one pass
         _history.remove(root._historyCapacity, excess)
         root.historyRevision++
         root._forgetTrimmed(dropped)
@@ -234,16 +233,15 @@ Singleton {
 
     function _saveHistory(): void {
         if (!root._persistentReady) return
-        // With persistence off, history stays in memory and needs no row scan.
-        // Invalidate the cache so enabling it later captures the current rows.
+        // with persistence off, history stays in memory and needs no row scan. Invalidate the cache so enabling it later captures the current rows
         if (!ShellSettings.notifHistoryPersistent) {
             root._serializedHistoryRevision = -1
             _persist.historyJson = "[]"
             root._queueDiskSave()
             return
         }
-        // A settings change can reach both capacity and limit handlers. Serialize
-        // a revision once, but still let disk restore/retry request its write.
+        // a settings change can reach both capacity and limit handlers. Serialize
+        // a revision once, but still let disk restore/retry request its write
         if (root._serializedHistoryRevision === root.historyRevision) {
             root._queueDiskSave()
             return
@@ -657,7 +655,7 @@ Singleton {
         if (!notification || notification.transient) return null
         return {
             id:      id,
-            // _prependHistory bounds and normalizes this snapshot once.
+            // _prependHistory bounds and normalizes this snapshot once
             appName: notification.appName,
             appIcon: notification.appIcon,
             desktopEntry: notification.desktopEntry,
@@ -692,9 +690,9 @@ Singleton {
         return !replaced
     }
 
-    // Unloading the popup window destroys every card timer, but it does not
+    // unloading the popup window destroys every card timer, but it does not
     // untrack the notifications held by the server. If popups are enabled
-    // again those timerless cards otherwise return as stale notifications.
+    // again those timerless cards otherwise return as stale notifications
     function _retireActiveNotifications(): void {
         const active = Array.isArray(root.list) ? root.list.slice() : []
         if (active.length === 0) return
@@ -875,10 +873,10 @@ Singleton {
         root._saveHistory()
     }
 
-    // Closed by someone else: the sender withdrew it, or it answered our own
+    // closed by someone else: the sender withdrew it, or it answered our own
     // action.invoke() before the card's exit animation reached dismissObject.
     // Without archiving here the entry is dropped, so acting on a notification
-    // loses it from history while dismissing one keeps it.
+    // loses it from history while dismissing one keeps it
     function _onClosed(id: int, notification): void {
         if (root._consumeClosing(id, notification)) return
         const n = root.list.find(e => e.id === id && e.notification === notification)

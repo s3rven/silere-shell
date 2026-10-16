@@ -90,7 +90,7 @@ Column {
             onAccepted: root.save()
             Keys.onEscapePressed: event => { root.revert(); event.accepted = true }
             selectByMouse: true
-            // Keep a too-long paste visible for validation instead of silently saving a truncated command.
+            // keep a too-long paste visible for validation instead of silently saving a truncated command
             maximumLength: 4096
             verticalAlignment: TextInput.AlignVCenter
             color: Theme.text

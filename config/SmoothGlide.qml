@@ -1,15 +1,15 @@
 import QtQuick
 import "../services"
 
-// A critically damped glide keeps velocity when its destination moves. Advance
-// analytically per frame so panel reflow cannot restart the easing clock.
+// a critically damped glide keeps velocity when its destination moves. Advance
+// analytically per frame so panel reflow cannot restart the easing clock
 QtObject {
     id: root
 
     required property real target
     property real value: 0
     property int duration: Motion.panelResize
-    // Geometry is measured in pixels; selection slots need a finer tolerance.
+    // geometry is measured in pixels; selection slots need a finer tolerance
     property real precision: 0.1
     property bool gate: true
     property real _velocity: 0
@@ -25,8 +25,7 @@ QtObject {
 
     function _advance(seconds: real): void {
         if (!root._motionAllowed) { root._snap(); return }
-        // Limit catch-up after a blocked frame; the first rendered step should
-        // still be part of the glide rather than a jump to its end.
+        // limit catch-up after a blocked frame; the first rendered step should still be part of the glide rather than a jump to its end
         const dt = Math.max(0, Math.min(seconds, 0.05))
         if (dt === 0) return
         const omega = 8 / (root.duration / 1000)
@@ -35,8 +34,7 @@ QtObject {
         const decay = Math.exp(-omega * dt)
         const next = root.target + (offset + carry * dt) * decay
         const velocity = (root._velocity - omega * carry * dt) * decay
-        // A retarget can leave velocity pointing past the new destination.
-        // Stop on crossing it, so a resizing panel never bounces through it.
+        // a retarget can leave velocity pointing past the new destination. Stop on crossing it, so a resizing panel never bounces through it
         if ((next - root.target) * offset <= 0
                 || (Math.abs(next - root.target) < root.precision
                     && Math.abs(velocity) < root.precision * 10)) {

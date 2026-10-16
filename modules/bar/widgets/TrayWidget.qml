@@ -160,8 +160,7 @@ Item {
                            : 0.0
                     visible: opacity > 0.001
 
-                    // Attention already has a pulse driver; easing every pulse
-                    // sample again makes its highlight trail the icon.
+                    // attention already has a pulse driver; easing every pulse sample again makes its highlight trail the icon
                     MotionBehavior on opacity {
                         id: _attentionFade
                         gate: !_tile.needsAttention

@@ -169,8 +169,7 @@ SettingsCard {
             anchors.right: _val.left
             anchors.rightMargin: 10
             anchors.verticalCenter: parent.verticalCenter
-            // Give the reading's caption room before sizing its progress bar.
-            // Rounding up the text and down the bar avoids fractional elision.
+            // give the reading's caption room before sizing its progress bar. Rounding up the text and down the bar avoids fractional elision
             width: Metrics.snap4Down(Math.max(48, Math.min(136, tile.width * 0.38,
                 _val.x - 64 - Math.max(96, Math.ceil(_detailMetrics.advanceWidth) + 1))))
             height: implicitHeight

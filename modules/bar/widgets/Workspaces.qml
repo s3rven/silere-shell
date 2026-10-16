@@ -471,8 +471,7 @@ Item {
             Metrics.barAtBottom, root)
     }
 
-    // Each bar targets a different monitor; fractional touchpad input must
-    // never complete a gesture that began on another output.
+    // each bar targets a different monitor; fractional touchpad input must never complete a gesture that began on another output
     readonly property string _wheelKey: "workspaces:" + root.monitorName
     readonly property bool _scrollEnabled: root.enabled && root.visible && root.barActive
         && !Idle.isIdle && root.monitorLive && ShellSettings.wsScrollSwitch

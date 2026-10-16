@@ -46,7 +46,7 @@ Process {
         // status 0 is QProcess.NormalExit, which QML sees as a plain number because the
         // enum is not registered. A crash reports its signal number in code, so matching
         // giveUpCodes without this retires the process on a signal that shares a number
-        // with a real exit code.
+        // with a real exit code
         if (status === 0 && giveUpCodes.indexOf(code) >= 0) {
             proc._gaveUp = true
             return

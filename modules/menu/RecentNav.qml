@@ -20,7 +20,7 @@ Item {
     implicitHeight: root._navTop + _rowColumn.implicitHeight + 10
 
     property var _names: [""]
-    // One index per history revision, shared by every row's count and icon bindings.
+    // one index per history revision, shared by every row's count and icon bindings
     readonly property var _appsByName: {
         const index = Object.create(null)
         const apps = Notifications.historyApps

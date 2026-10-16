@@ -192,8 +192,7 @@ Column {
                 clip: true
                 Item {
                     id: _field
-                    // input and actions keep their full geometry from the first frame,
-                    // including rapid typing after opening; only the reveal moves
+                    // input and actions keep their full geometry from the first frame, including rapid typing after opening; only the reveal moves
                     x: _fieldViewport.width - width - _fieldClip.x
                     width: root.width
                     height: parent.height

@@ -127,7 +127,7 @@ Singleton {
 
     readonly property var sinks: {
         const out = []
-        // PipeWire briefly detaches its node model while reconnecting.
+        // PipeWire briefly detaches its node model while reconnecting
         const all = root._nodes
         for (let i = 0; i < all.length; i++) {
             const n = all[i]

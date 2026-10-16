@@ -29,7 +29,7 @@ Rectangle {
         if (!root._interactive) return
         const now = Date.now()
         const age = now - root._armedAtMs
-        // Input can reach a busy event loop before the expiry timer does.
+        // input can reach a busy event loop before the expiry timer does
         if (root._armed && (age < 0 || age >= _armTimer.interval)) root.disarm()
         if (root._armed) {
             // TapHandler fires once per tap, so a double-click would arm and confirm in one gesture
@@ -60,8 +60,7 @@ Rectangle {
     property real _armT: root._armedFace ? 1 : 0
     property real _reveal: root.shown ? 1 : 0
     property real _dim: root._interactive ? 1.0 : Theme.disabledOpacity
-    // the pinned widths keep the menu's button steady; max() only ever grows it, so a
-    // longer label cannot clip against them
+    // the pinned widths keep the menu's button steady; max() only ever grows it, so a longer label cannot clip against them
     property real _restW: Math.max(root.restWidth, _restRow.implicitWidth + 20)
     property real _armedW: Math.max(root.armedWidth, _armedRow.implicitWidth + 20)
 

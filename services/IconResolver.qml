@@ -64,9 +64,9 @@ Singleton {
         return source.length > 0 ? source : (root.appMeta(identity)?.icon ?? "")
     }
 
-    // Icon and image fields can originate in any notification or StatusNotifier
+    // icon and image fields can originate in any notification or StatusNotifier
     // sender. Keep local files and Qt's internal providers, but never let a label
-    // silently turn the shell into a network client or feed it an unbounded data URI.
+    // silently turn the shell into a network client or feed it an unbounded data URI
     function localSource(raw): string {
         const value = String(raw ?? "").trim()
         if (value.length === 0 || value.length > root.maxSourceChars) return ""

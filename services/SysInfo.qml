@@ -208,7 +208,7 @@ Singleton {
 
     function _applyDiskStat(raw: string): bool {
         if (!root._active) return false
-        // -P keeps the device on one line. Read from the right to allow spaces in it.
+        // -P keeps the device on one line. Read from the right to allow spaces in it
         const lines = raw.trim().split(/\r?\n/)
         for (let i = 0; i < lines.length; i++) {
             const fields = lines[i].trim().split(/\s+/)

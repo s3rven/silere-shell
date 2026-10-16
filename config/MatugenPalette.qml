@@ -5,8 +5,8 @@ import Quickshell
 import Quickshell.Io
 import "../services"
 
-// The singleton itself is shipped and immutable. Matugen writes only the small
-// per-user JSON palette below, which also works when Silere lives in /usr/share.
+// the singleton itself is shipped and immutable. Matugen writes only the small
+// per-user JSON palette below, which also works when Silere lives in /usr/share
 Singleton {
     id: root
 

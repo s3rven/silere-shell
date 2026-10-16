@@ -82,15 +82,15 @@ PanelWindow {
         return stack.count - _visibleCards
     }
 
-    // Share one layout pass across all cards; count moves before delegates exist,
-    // so re-read on their arrival as well as on height and visibility changes.
+    // share one layout pass across all cards; count moves before delegates exist,
+    // so re-read on their arrival as well as on height and visibility changes
     property int _slotsRevision: 0
     readonly property var _slotLayout: {
         void win._slotsRevision
         return StackLayout.measure(stack, win._newestFirst)
     }
     function _slotTop(index: int): real {
-        // Removed delegates briefly have index -1 while their gap closes.
+        // removed delegates briefly have index -1 while their gap closes
         if (index < 0) return win._newestFirst ? win._slotLayout.height : 0
         if (index >= win._slotLayout.tops.length)
             return win._newestFirst ? 0 : win._slotLayout.height

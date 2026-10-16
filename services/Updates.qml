@@ -133,7 +133,7 @@ Singleton {
                 ? "yay" : ""
             // paru/yay use rc 1 with no output for an empty result. Any other
             // non-zero exit (especially timeout's 124) is a failed source, not
-            // proof that the previously reported AUR updates disappeared.
+            // proof that the previously reported AUR updates disappeared
             const aur = aurTool.length > 0
                 ? "aurout=$(" + root._limit(60, aurTool + " -Qua") + " 2>/dev/null); aurrc=$?; "
                   + "if [ \"$aurrc\" -ne 0 ] && { [ \"$aurrc\" -ne 1 ] || [ -n \"$aurout\" ]; }; "

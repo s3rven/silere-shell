@@ -14,7 +14,7 @@ Singleton {
     readonly property bool hardBlocked: adapter
         ? adapter.state === Bt.BluetoothAdapterState.Blocked : false
 
-    // Backend models can be momentarily empty while BlueZ re-enumerates.
+    // backend models can be momentarily empty while BlueZ re-enumerates
     readonly property var _devices: (adapter && adapter.devices)
         ? (adapter.devices.values || []) : []
 
@@ -168,8 +168,7 @@ Singleton {
     // only undo pairable when this service raised it. An adapter already made pairable by the user or another tool belongs to that owner
     property var    _pairableAdapter: null
     property int    _pairableTimeoutWas: 0
-    // Include every passkey extension: a pairing can legitimately last three
-    // minutes. BlueZ still expires pairability if the shell dies mid-attempt.
+    // include every passkey extension: a pairing can legitimately last three minutes. BlueZ still expires pairability if the shell dies mid-attempt
     readonly property int _attemptGuardMs: 20000
     readonly property int _maxPairGuardExtensions: 8
     readonly property int _maxConnectGuardExtensions: 2

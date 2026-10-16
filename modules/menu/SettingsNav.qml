@@ -153,7 +153,7 @@ Item {
     }
 
     function _revealRange(top: real, bottom: real): void {
-        // implicitHeight already caches the same tree calculation for layout.
+        // implicitHeight already caches the same tree calculation for layout
         const contentH = root.implicitHeight
         const viewH = _navScroll.height
         if (contentH <= viewH + 1) {
@@ -233,9 +233,9 @@ Item {
     property int _pendingRevealGroup: -1
 
     function _queueReveal(index: int): void {
-        // Keep an explicit group target once one is queued. Viewport resize
+        // keep an explicit group target once one is queued. Viewport resize
         // notifications continue throughout the outer panel animation; replacing
-        // it with the selected-row fallback on every frame caused a second scroll.
+        // it with the selected-row fallback on every frame caused a second scroll
         if (index >= 0 || !_resizeSettle.running)
             root._pendingRevealGroup = index
         _resizeSettle.restart()

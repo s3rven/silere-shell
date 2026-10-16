@@ -1,7 +1,6 @@
 import QtQuick
 
-// The viewport animates around a stable page layout. Freeze the departing
-// loader too: Loader otherwise resizes its item even over the item's binding.
+// the viewport animates around a stable page layout. Freeze the departing loader too: Loader otherwise resizes its item even over the item's binding
 Loader {
     id: root
 
@@ -13,8 +12,7 @@ Loader {
     property bool _holdLayout: false
 
     width: root._holdLayout ? root._heldWidth : root.layoutWidth
-    // The shared scroller resets for the incoming page. Compensate only the
-    // departing page so its visible rows do not jump back to the top mid-fade.
+    // the shared scroller resets for the incoming page. Compensate only the departing page so its visible rows do not jump back to the top mid-fade
     y: root._holdLayout ? root.scrollOffset - root._heldScroll : 0
 
     function holdLayout(): void {

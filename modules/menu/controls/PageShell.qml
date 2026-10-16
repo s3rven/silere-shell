@@ -9,10 +9,9 @@ Item {
     required property bool powerOpen
 
     property bool animateOnCreate: false
-    // A page with an asynchronous body begins its reveal when that body is
-    // ready, so the fade does not finish over an empty header.
+    // a page with an asynchronous body begins its reveal when that body is ready, so the fade does not finish over an empty header
     property bool revealReady: true
-    // A widening panel can have its body ready before there is room to paint it.
+    // a widening panel can have its body ready before there is room to paint it
     property bool viewportReady: true
     property bool _awaitingEnter: false
 
@@ -102,8 +101,7 @@ Item {
             ? 1 : MenuState.tabDirection
         if (root.active) {
             _exit.stop()
-            // PageShown can select another body on a retained settings page.
-            // Announce first, then test whether that body is ready to reveal.
+            // PageShown can select another body on a retained settings page. Announce first, then test whether that body is ready to reveal
             root._announceShown()
             if (!root._menuOpenSettled || !root._motionAllowed) {
                 root.settleVisual(true)

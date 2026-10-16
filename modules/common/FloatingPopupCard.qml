@@ -36,7 +36,7 @@ Rectangle {
 
     // an unmapped layer surface reports Qt's placeholder size — 100 while hidden, 500 for the
     // turn after show — so clamping against the window collapses the card while it is closed and
-    // animates it back out on the next open. The screen stays correct the whole time.
+    // animates it back out on the next open. The screen stays correct the whole time
     readonly property real winW: win.screen ? win.screen.width : win.width
     readonly property real winH: win.screen ? win.screen.height : win.height
 
@@ -263,11 +263,11 @@ Rectangle {
         }
     }
 
-    // Let the new scene graph synchronize before revealing the card. A popup is a
+    // let the new scene graph synchronize before revealing the card. A popup is a
     // lazily-created window; starting its entrance in Component.onCompleted makes
     // construction and the first visible animation frame compete on the GUI thread.
     // Measured: construction lands a ~22ms frame and the next two still pace at 3-9ms
-    // while the graph uploads, so one frame of slack leaves the stutter inside the motion.
+    // while the graph uploads, so one frame of slack leaves the stutter inside the motion
     property int _warmupFrames: 0
     function _beginWarmup(): void {
         root._warmupFrames = 0

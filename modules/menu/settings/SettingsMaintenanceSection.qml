@@ -40,10 +40,10 @@ Column {
         function onSettingsActiveChanged() { if (!MenuState.settingsActive) root._disarm() }
     }
 
-    // Check on construction or refresh; cached pages never poll in the background.
+    // check on construction or refresh; cached pages never poll in the background.
     // Missing optional tools are useful information, but they are not a broken
     // shell. Keep them out of the attention count so Diagnostics does not read
-    // like an error page on a deliberately minimal installation.
+    // like an error page on a deliberately minimal installation
     readonly property var _health: {
         const attention = []
         const optional = []

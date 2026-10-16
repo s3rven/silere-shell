@@ -116,8 +116,7 @@ Item {
     Accessible.onPressAction: root._activate()
 
     HoverHandler { id: _hover; enabled: root.canActivate; cursorShape: Qt.PointingHandCursor }
-    // Stable slots can change identity without the pointer moving. Clear the
-    // old identity before publishing the new one, including during teardown.
+    // stable slots can change identity without the pointer moving. Clear the old identity before publishing the new one, including during teardown
     property int _reportedHoverId: -1
     function _syncHoverReport(): void {
         const next = root.hovered && root.canActivate && root.wsId >= 0 ? root.wsId : -1

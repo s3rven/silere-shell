@@ -365,8 +365,8 @@ Singleton {
             + (Battery.timeLabel ? "  " + Battery.timeLabel : "")
         root.showAlert("battery", Battery.icon, Battery.pct / 100, label, Theme.error)
     }
-    // Only a charge observed during this session can complete. Keep it pending
-    // while idle or disabled, so waking can still show a completed charge once.
+    // only a charge observed during this session can complete. Keep it pending
+    // while idle or disabled, so waking can still show a completed charge once
     property int _lastChargeRevision: 0
     function _alertBatteryFull(): void {
         if (!Battery.available || !Battery.full || !Battery.onAc || !Battery.chargeComplete

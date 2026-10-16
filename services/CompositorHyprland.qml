@@ -28,9 +28,9 @@ QtObject {
     readonly property string _runtimeHyprDir:
         XdgPaths.runtimeDir.length > 0 ? XdgPaths.runtimeDir + "/hypr" : ""
 
-    // A shell that survives a Hyprland restart goes blind: the event socket is bound to the
+    // a shell that survives a Hyprland restart goes blind: the event socket is bound to the
     // old instance and every dispatch keeps the stale signature. Watch the runtime directory
-    // for a new instance and let the user unit bring the shell back onto the fresh one.
+    // for a new instance and let the user unit bring the shell back onto the fresh one
     property SupervisedProcess _restartWatch: SupervisedProcess {
         id: _restartWatch
         superviseWhen: root._unitRunsHere && SystemTools.hasInotifywait

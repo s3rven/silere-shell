@@ -618,7 +618,7 @@ Singleton {
     readonly property int _cavaFps:  root._vizActive.fps
     readonly property real _cavaNoiseReduction: {
         switch (root._vizPreset) {
-        // Cava accepts a float from 0 (fast/noisy) to 1 (slow/smooth).
+        // Cava accepts a float from 0 (fast/noisy) to 1 (slow/smooth)
         case "eco":    return 0.72
         case "smooth": return 0.46
         default:       return 0.58

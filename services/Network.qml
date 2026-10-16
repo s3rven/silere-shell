@@ -14,7 +14,7 @@ Singleton {
 
     // NetworkManager routes over a live wired link before Wi-Fi, so ranking Wi-Fi first named
     // the idle interface on a docked laptop and sampled it for the traffic readout.
-    // hasLink is wired-only and absent on other backends: unknown counts as up.
+    // hasLink is wired-only and absent on other backends: unknown counts as up
     function _linkPriority(wired: bool, hasLink): int {
         if (!wired) return 2
         return hasLink === false ? 1 : 3
@@ -223,9 +223,9 @@ Singleton {
         root._setScannerEnabled(root._scannerWanted && root.toolAvailable && root.wifiEnabled)
     }
 
-    // Adding or replacing an adapter does not necessarily change hasWifiDevice.
+    // adding or replacing an adapter does not necessarily change hasWifiDevice.
     // Read the latest demand after enumeration settles, so closing the picker
-    // before this callback runs cannot restart discovery.
+    // before this callback runs cannot restart discovery
     on_DevicesChanged: if (root._scannerWanted) Qt.callLater(root._syncScanner)
 
     function scanWifi(forceRescan: bool): void {
@@ -413,9 +413,9 @@ Singleton {
         return root._acceptWifiLink(root._findWifiNetwork(root.wifiConnecting))
     }
 
-    // Disabling Wi-Fi tears down the backend-side request. Clear our local
+    // disabling Wi-Fi tears down the backend-side request. Clear our local
     // request too, otherwise its timeout reports a stale failure after Wi-Fi
-    // has already been turned off.
+    // has already been turned off
     function _cancelWifiConnect(): void {
         _connectTimeout.stop()
         wifiConnecting = ""

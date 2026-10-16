@@ -210,7 +210,7 @@ Singleton {
                                                    : _n ? withAlpha(_lineBase, lineAlpha(0.18))
                                                         : withAlpha(mix(_lineBase, accent, 0.18), lineAlpha(0.20))
     // selection has to out-weigh the accent hover line, or under high contrast the chip
-    // being hovered reads as the chosen one. Takes the caller's accent, not the theme's.
+    // being hovered reads as the chosen one. Takes the caller's accent, not the theme's
     function controlLineActive(c: color): color { return withAlpha(c, lineAlpha(_hc ? 0.60 : 0.32)) }
     readonly property color menuTrack:       _hc ? withAlpha(text, 0.22)
                                                 : _n ? withAlpha(_lineBase, 0.14)

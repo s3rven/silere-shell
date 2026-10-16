@@ -243,7 +243,7 @@ Column {
                                     return
                                 }
                                 ShellSettings.neutralAccentAuto = false
-                                // Custom opens on the colour already stored; only a preset overwrites it
+                                // custom opens on the colour already stored; only a preset overwrites it
                                 if (!opt.custom) ShellSettings.neutralAccent = opt.color
                             })
                         }
@@ -334,7 +334,7 @@ Column {
             }
         }
 
-        // Auto takes its colour from matugen on the custom side too, so a missing or stale
+        // auto takes its colour from matugen on the custom side too, so a missing or stale
         // palette has to be said there as well; inside the wallpaper group it never was
         HintText {
             visible: root._paletteNote.length > 0

@@ -18,8 +18,7 @@ Item {
     property bool   compact: ShellSettings.barCompact
     readonly property int horizontalPadding: Metrics.pillPadFor(compact)
     property bool   barActive: true
-    // A scrollable pill names the controlled route/device so partial gestures
-    // cannot carry over when that target changes or the pill disappears.
+    // a scrollable pill names the controlled route/device so partial gestures cannot carry over when that target changes or the pill disappears
     property string wheelKey: ""
     property string _previousWheelKey: ""
     readonly property bool wheelEnabled: root.hoverEnabled && (root.interactive || root.adjustable)

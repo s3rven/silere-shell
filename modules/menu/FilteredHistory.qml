@@ -120,8 +120,7 @@ Item {
 
         let changed = false
         const retained = Object.create(null)
-        // Removing a contiguous run in one operation avoids notifying the view
-        // once per row when a search or Clear hides most of the history.
+        // removing a contiguous run in one operation avoids notifying the view once per row when a search or Clear hides most of the history
         let end = _rows.count - 1
         while (end >= 0) {
             const key = root._key(_rows.get(end))
@@ -140,8 +139,7 @@ Item {
         }
         for (let i = 0; i < rows.length; i++) {
             if (i < _rows.count && root._key(_rows.get(i)) === keys[i]) continue
-            // A reordered source can reuse the existing row and its delegate.
-            // New arrivals skip the scan because their key was never retained.
+            // a reordered source can reuse the existing row and its delegate. New arrivals skip the scan because their key was never retained
             let at = -1
             if (retained[keys[i]]) {
                 for (let j = i + 1; j < _rows.count; j++) {
@@ -153,7 +151,7 @@ Item {
             if (at >= 0) _rows.move(at, i, 1)
             else {
                 const additions = [root._row(rows[i], keys[i])]
-                // Restoring a cleared query often brings back an entire run.
+                // restoring a cleared query often brings back an entire run
                 while (i + additions.length < rows.length
                         && !retained[keys[i + additions.length]]) {
                     const next = i + additions.length
@@ -165,14 +163,14 @@ Item {
             }
             changed = true
         }
-        // Identical entries may share a key; trim any surplus copies together.
+        // identical entries may share a key; trim any surplus copies together
         if (_rows.count > rows.length) {
             const excess = _rows.count - rows.length
             _rows.remove(rows.length, excess)
             root.removes += excess
             changed = true
         }
-        // Excluded arrivals and an unchanged query leave every grouping flag valid.
+        // excluded arrivals and an unchanged query leave every grouping flag valid
         if (changed) root._syncFlags()
     }
 

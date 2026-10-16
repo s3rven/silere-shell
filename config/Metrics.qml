@@ -113,8 +113,7 @@ Singleton {
     // snapped like every width: an unsnapped y puts the card's two horizontal edges on different
     // output-pixel phases, so one hairline rasterizes heavier than the other. The gap absorbs it
     function popupY(windowHeight: real, popupHeight: real, atBottom: bool, edge: real): real {
-        // Snap the anchored edge once. A live height carries fractional pixels
-        // during a resize; snapping y itself made the bottom edge jump by 4 px.
+        // snap the anchored edge once. A live height carries fractional pixels during a resize; snapping y itself made the bottom edge jump by 4 px
         return atBottom ? snap4Down(windowHeight - edge) - popupHeight : snap4Up(edge)
     }
 

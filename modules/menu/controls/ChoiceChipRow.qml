@@ -71,7 +71,7 @@ MenuRow {
     readonly property int _activeIndex: root.model.findIndex(o => o.value === root.currentValue)
     // separate row and column coordinates keep the selection inside a wrapped group
     // A resize can remove columns while their spring still holds an old slot;
-    // keep the highlight inside the live grid, including spring overshoot.
+    // keep the highlight inside the live grid, including spring overshoot
     readonly property real _selectionColumn: Math.max(0,
         Math.min(_choiceGroup.columns - 1, _columnGlide.value))
     readonly property real _selectionRow: Math.max(0,

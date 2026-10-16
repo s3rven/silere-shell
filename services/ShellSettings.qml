@@ -576,7 +576,7 @@ Singleton {
     // Quickshell exits hard on SIGTERM: neither Component.onDestruction nor
     // Qt.application.aboutToQuit runs, so anything still inside PersistedFile's
     // debounce window is lost on logout. Toggles and chips change at human pace,
-    // so they write straight through; sliders and the hue strip keep the debounce.
+    // so they write straight through; sliders and the hue strip keep the debounce
     property var _discreteKeys: Object.create(null)
     // reset assigns every key at once; one write at the end, not one per toggle
     property bool _bulkAssign: false
@@ -592,13 +592,13 @@ Singleton {
         return m
     }
 
-    // A row that collapses behind an off master has nothing on the page to clear it, so a
+    // a row that collapses behind an off master has nothing on the page to clear it, so a
     // changed value behind one must not dot the nav. Each rule pairs a master with the keys
     // that collapse with it: one page can have several independent masters, and OR-ing them
     // together left every glow key dotting Underline whenever the bar border alone was on.
     // A master, and anything that stays visible beside it, belongs in no rule. `negate` flips
     // a rule to fire while its master is ON, for a key nested behind "expanded: !master";
-    // `off` names the enum value that collapses the rule.
+    // `off` names the enum value that collapses the rule
     readonly property var _sectionGates: ({
         underline: [
             { master: "underlineGlow", hides: ["underlineIdleGlow", "underlineFullWidth",
@@ -811,16 +811,14 @@ Singleton {
     property string _migrationBackupDst: ""
     property int _migrationFromVersion: 0
 
-    // the migration rewrites the only copy of a legacy file, so keep the raw text it read
-    // before the debounced flush can replace it
+    // the migration rewrites the only copy of a legacy file, so keep the raw text it read before the debounced flush can replace it
     function _backupThenFlush(src: string, version: int): void {
         const dir = ConfigStore.directory
         if (dir.length === 0 || src.length === 0) {
             _store.flush(false)
             return
         }
-        // A user edit can queue a debounce while cp is still running. Block
-        // even forced flushes until the original file's backup is confirmed.
+        // a user edit can queue a debounce while cp is still running. Block even forced flushes until the original file's backup is confirmed
         _store.writePaused = true
         _store.stop()
         root._migrationBackupSrc = src

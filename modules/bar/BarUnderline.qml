@@ -92,8 +92,8 @@ Item {
         property color _effectColor: _effectColorTarget
         ColorFade on _effectColor {}
 
-        // The rim and every gradient stop share one eased color. During a palette
-        // transition ColorFade stands down so these follow the theme's own curve.
+        // the rim and every gradient stop share one eased color. During a palette
+        // transition ColorFade stands down so these follow the theme's own curve
         readonly property color _stopColor: Theme.withAlpha(_effectColor, 0.9)
         readonly property color _stopColorMid: Theme.withAlpha(_effectColor, 0.45)
         readonly property real _sweepSpread: _notifFlash.running ? _notifFlash.spread
@@ -322,7 +322,7 @@ Item {
                 }
             }
             function onUnderlineNetGlowChanged() {
-                // Changes while this source is disabled must not replay on re-enable.
+                // changes while this source is disabled must not replay on re-enable
                 _lineEffect._lastNetConnected = Network.available && Network.connected
                 if (!ShellSettings.underlineNetGlow) {
                     _previewTimer.stop()

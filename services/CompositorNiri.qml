@@ -367,7 +367,7 @@ QtObject {
 
     // Socket.connected is both the current state and the connect request. A
     // compositor restart drops it to false, so retry until the replacement
-    // niri socket accepts the event stream again.
+    // niri socket accepts the event stream again
     property int _reconnectFailures: 0
     property Timer _reconnectTimer: Timer {
         id: _reconnect

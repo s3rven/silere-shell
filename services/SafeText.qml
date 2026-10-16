@@ -85,10 +85,10 @@ Singleton {
         return root._clip(String(value ?? ""), root._cap(limit, root.maxIdentityChars))
     }
 
-    // Labels supplied by other processes belong on one visual/accessibility
+    // labels supplied by other processes belong on one visual/accessibility
     // line. C0/C1 controls can break layout, while bidi embedding/override
     // controls can make a title appear to say something other than its value.
-    // Natural RTL text still works without those explicit formatting controls.
+    // Natural RTL text still works without those explicit formatting controls
     function singleLineText(value, limit): string {
         const cap = root._cap(limit, root.maxIdentityChars)
         const raw = String(value ?? "")

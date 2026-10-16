@@ -35,9 +35,9 @@ Item {
         _glyph.implicitHeight + 12,
         root._controlH + 12) / 4)
 
-    // The value pill grows into whatever the label leaves free, keeping 96px for the
+    // the value pill grows into whatever the label leaves free, keeping 96px for the
     // label itself. A flat 148 cap truncated long values (font and display names)
-    // on a wide row while most of the middle sat empty.
+    // on a wide row while most of the middle sat empty
     readonly property int _leadW: root._hasLead ? 14 + 18 + 10 : 14
     readonly property int _pillMaxW: Math.max(92, root.width - root._leadW - 10 - 12 - 96)
 
@@ -288,8 +288,7 @@ Item {
             id: _optionsDisclosure
             onRunningChanged: if (!running && root._open) _revealDefer.restart()
         }
-        // Position against the growing viewport until the selected row really
-        // fits. Stop after the reveal so ordinary list scrolling stays free.
+        // position against the growing viewport until the selected row really fits. Stop after the reveal so ordinary list scrolling stays free
         onHeightChanged: if (root._open && _optionsDisclosure.running) _revealDefer.restart()
         MotionBehavior on opacity {
             id: _optFade

@@ -3,8 +3,8 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import "../../config"
 
-// Each event owns its envelope, so overlapping flashes never animate the same
-// property. The renderer chooses the position and combines their brightness.
+// each event owns its envelope, so overlapping flashes never animate the same
+// property. The renderer chooses the position and combines their brightness
 SequentialAnimation {
     id: root
 

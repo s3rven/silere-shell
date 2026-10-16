@@ -19,9 +19,9 @@ Rectangle {
     readonly property real _r:  Math.min(_hi, Math.max(_c, _c + Math.max(0, spread)))
     readonly property color _transparentEdge: Qt.rgba(edge.r, edge.g, edge.b, 0)
 
-    // Sample smoothstep(t) = t*t*(3-2*t) at 1/4 and 3/4. The fixed
+    // sample smoothstep(t) = t*t*(3-2*t) at 1/4 and 3/4. The fixed
     // stops soften each shoulder without a shader, Canvas, or per-frame arrays.
-    // Preserve alpha as well as RGB; Theme.mix intentionally returns opaque ink.
+    // Preserve alpha as well as RGB; Theme.mix intentionally returns opaque ink
     function _mixColor(a: color, b: color, t: real): color {
         return Qt.rgba(a.r + (b.r - a.r) * t,
             a.g + (b.g - a.g) * t, a.b + (b.b - a.b) * t,
@@ -32,7 +32,7 @@ Rectangle {
     readonly property color _shoulderLow: root._mixColor(edge, peak, 0.15625)
     readonly property color _shoulderHigh: root._mixColor(edge, peak, 0.84375)
 
-    // Glows are soft bands; structural outlines use snapped device-pixel strokes.
+    // glows are soft bands; structural outlines use snapped device-pixel strokes
     height: 1
     antialiasing: false
     visible: opacity > 0.001 && width > 0 && height > 0 && (peak.a > 0 || edge.a > 0)

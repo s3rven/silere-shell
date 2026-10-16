@@ -206,7 +206,7 @@ PanelWindow {
                         anchors.fill: parent
                         radius: card.pillRadius
                         antialiasing: true
-                        // Every OSD follows the same opacity and blur policy as the popups.
+                        // every OSD follows the same opacity and blur policy as the popups
                         color: Theme.popup
 
                         readonly property color _outlineColor: !card.hasBar

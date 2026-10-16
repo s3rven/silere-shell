@@ -33,10 +33,10 @@ AnchoredPopupState {
         root.recentFilter = String(name ?? "")
     }
 
-    // Hovering the active workspace is a strong signal that the menu is about
+    // hovering the active workspace is a strong signal that the menu is about
     // to open. Let the shell prepare its LazyLoader between frames, while
     // keeping ownership explicit so a rebuilt or second monitor cannot cancel
-    // another bar's request.
+    // another bar's request
     property QtObject warmSource: null
     property var warmScreen: null
     readonly property bool warmRequested: warmSource !== null
@@ -66,7 +66,7 @@ AnchoredPopupState {
 
     // SelectRow dropdowns are inline, so two open at once stack their option
     // lists and retarget the panel height twice. Keep one owner for the whole
-    // settings surface and ask the previous row to fold before the next opens.
+    // settings surface and ask the previous row to fold before the next opens
     property var _settingsSelectOwner: null
     readonly property bool settingsSelectOpen: _settingsSelectOwner !== null
     signal settingsSelectClaimed()
@@ -161,8 +161,7 @@ AnchoredPopupState {
             .replace(/[^a-z0-9]+/g, " ").trim()
     }
 
-    // Build once from section metadata and setting names. Searching never
-    // creates section components or starts their hardware/tool probes.
+    // build once from section metadata and setting names. Searching never creates section components or starts their hardware/tool probes
     readonly property var _settingsSearchEntries: {
         const keys = Object.create(null)
         const labels = Object.create(null)
@@ -228,7 +227,7 @@ AnchoredPopupState {
 
     signal settingsSectionRequested()
     function setSettingsSection(s: string): void {
-        // Keep callers of the former diagnostics page on the combined overview.
+        // keep callers of the former diagnostics page on the combined overview
         const requested = s === "maintenance" ? "updates" : s
         const next = root._flatSections.indexOf(requested) >= 0 ? requested : "theme"
         root.settingsSectionRequested()
@@ -265,7 +264,7 @@ AnchoredPopupState {
         return Math.max(homeTab, Math.min(mediaTab, index))
     }
 
-    // Match the rail's visual order rather than the internal numeric ids.
+    // match the rail's visual order rather than the internal numeric ids
     function tabPosition(index: int): int {
         if (index === homeTab) return 0
         if (index === recentTab) return 1
