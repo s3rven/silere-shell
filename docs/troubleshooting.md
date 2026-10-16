@@ -132,7 +132,7 @@ example `before_sleep_cmd = loginctl lock-session` in hypridle.
 ## The network widget stops updating
 
 With Quickshell 0.3.1, the network widget and Wi-Fi list can keep showing old devices after
-NetworkManager restarts. Restart Silere.
+NetworkManager restarts. Update Quickshell to 0.3.2 or newer, or restart Silere.
 
 ## The network icon warns of no internet while pages load
 
@@ -145,5 +145,4 @@ reports no internet. Allow the address, or turn the check off with `enabled=fals
 
 Hyprland 0.57 changes how it names special and named workspaces, and Quickshell 0.3.1 reads
 them all as the same workspace. Numbered workspaces are not affected. If you rely on the others,
-stay on Hyprland 0.56 until a Quickshell release after 0.3.1 ships, or build Quickshell from its
-main branch. `silere doctor` warns about this pairing.
+update Quickshell to 0.3.2 or newer. `silere doctor` warns about this pairing.
