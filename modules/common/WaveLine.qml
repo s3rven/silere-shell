@@ -41,7 +41,9 @@ Item {
     readonly property real _amp: root.amplitude
         * Math.max(0, Math.min(1, (root._len - root._waveLength * 0.5) / root._waveLength))
 
-    // a sine as cubic segments a quarter wave long, which the curve renderer draws exactly; a fine polyline left a joint every pixel or two
+    // a sine as cubic segments a quarter wave long, which the curve renderer draws exactly; a fine polyline left a joint every pixel or two.
+    // the amplitude tapers to nothing over half a wave at each end, so the line grows out of the track's centre and lands back on it
+    // wherever the level stops; a constant one broke off at whatever height the length happened to end on
     readonly property string _path: {
         const len = root._len
         if (len <= 0) return ""
@@ -51,17 +53,24 @@ Item {
         if (Math.abs(amp) < 0.001) return "M " + x0 + " " + mid + " H " + root._endX
         const n = Math.max(1, Math.ceil(len / (root._waveLength / 4)))
         const h = len / n
-        // equal-length segments share one rotation. Carry the endpoint and tangent forward instead of evaluating five trig functions per segment
+        const ramp = Math.min(root._waveLength / 2, len / 2)
+        // smoothstep in from both ends, with its slope so each segment's tangents stay continuous
+        const env = d => { const t = Math.max(0, Math.min(1, d / ramp)); return t * t * (3 - 2 * t) }
+        const slope = d => { const t = d / ramp; return t <= 0 || t >= 1 ? 0 : 6 * t * (1 - t) / ramp }
+        const taper = x => env(x) * env(len - x)
+        const taperSlope = x => slope(x) * env(len - x) - env(x) * slope(len - x)
+        // equal-length segments share one rotation. Carry sin and cos forward instead of evaluating them per segment
         const sinStep = Math.sin(h * k), cosStep = Math.cos(h * k)
         let sinA = Math.sin(-shift), cosA = Math.cos(-shift)
-        let yA = mid + amp * sinA, dyA = amp * k * cosA
+        let yA = mid, dyA = amp * (taperSlope(0) * sinA + taper(0) * k * cosA)
         const f = v => v.toFixed(3)
         let out = "M " + f(x0) + " " + f(yA)
         for (let i = 0; i < n; i++) {
             const a = i * h, b = a + h
             const sinB = sinA * cosStep + cosA * sinStep
             const cosB = cosA * cosStep - sinA * sinStep
-            const yB = mid + amp * sinB, dyB = amp * k * cosB
+            const yB = i === n - 1 ? mid : mid + amp * taper(b) * sinB
+            const dyB = amp * (taperSlope(b) * sinB + taper(b) * k * cosB)
             out += " C " + f(x0 + a + h / 3) + " " + f(yA + dyA * h / 3)
                 + " " + f(x0 + b - h / 3) + " " + f(yB - dyB * h / 3)
                 + " " + f(x0 + b) + " " + f(yB)

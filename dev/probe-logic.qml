@@ -1082,15 +1082,19 @@ ShellRoot {
             wave.phase = phase
             const values = wave._path.match(/-?\d+(?:\.\d+)?/g).map(Number)
             let matchesSine = true
-            // Every cubic endpoint must land on the intended sine, including
-            // the final partial wavelength. This catches drift in the recurrence.
+            // every cubic endpoint lands on the tapered sine, including the final partial wavelength; this catches drift in the recurrence
+            const ramp = Math.min(wave._waveLength / 2, wave._len / 2)
+            const env = d => { const t = Math.max(0, Math.min(1, d / ramp)); return t * t * (3 - 2 * t) }
             for (let i = 6; i < values.length; i += 6) {
-                const x = values[i], y = values[i + 1]
-                const expected = wave.height / 2 + wave._amp * Math.sin(
-                    (x - wave.thickness / 2) * 2 * Math.PI / wave._waveLength - phase * 2 * Math.PI)
+                const x = values[i], y = values[i + 1], d = x - wave.thickness / 2
+                const expected = wave.height / 2 + wave._amp * env(d) * env(wave._len - d) * Math.sin(
+                    d * 2 * Math.PI / wave._waveLength - phase * 2 * Math.PI)
                 matchesSine = matchesSine && Math.abs(y - expected) < 0.002
             }
             root._check(matchesSine, "slider wave endpoints keep their sine shape at phase " + phase)
+            root._check(Math.abs(values[1] - wave.height / 2) < 0.002
+                    && Math.abs(values[values.length - 1] - wave.height / 2) < 0.002,
+                "a slider wave starts and ends on the track's centre line at phase " + phase)
         }
         wave.value = 0.04
         root._check(wave._path.indexOf(" H ") > 0, "a short slider level keeps its simple straight path")
@@ -2271,10 +2275,6 @@ ShellRoot {
         root._check(Math.abs(rim._arcInset - rim._arcStroke / 2) < 0.001
                 && rim._pathWidth === rim.width - rim._arcStroke,
             "the countdown follows the same inset and width as the notification outline")
-        rim.destroy()
-        notificationCard._updateTime()
-        root._check(notificationCard._timeUpdateMs > 30000 && notificationCard._timeUpdateMs <= 60000,
-            "a new notification schedules its age label for the next minute boundary")
         rim.width = 320; rim.height = 90
         rim._shownProgress = 0.4
         const arc = rim.data[1]
@@ -2284,6 +2284,10 @@ ShellRoot {
         rim._shownProgress = 1
         root._check(arc.trim.end === 1 && arc.trim.offset === 0,
             "a full countdown ring is drawn untrimmed, so its translucent caps never overlap")
+        rim.destroy()
+        notificationCard._updateTime()
+        root._check(notificationCard._timeUpdateMs > 30000 && notificationCard._timeUpdateMs <= 60000,
+            "a new notification schedules its age label for the next minute boundary")
         root._check(notificationCard !== null, "a notification card builds")
         root._check(notificationCard.actionColumns(400, 80, 4) === 4
                 && notificationCard.actionColumns(232, 90, 4) === 2

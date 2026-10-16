@@ -20,6 +20,8 @@ settings file carries its own `__version` and migrates separately.
 
 ### Changed
 
+- The wavy levels on the Home page and the Now Playing seek bar grow out of their track and land back
+  on it, instead of breaking off at whatever height the level stops.
 - The notification countdown outline drains evenly from both sides toward the top edge, and
   stays as smooth in a tall stack as it does on a single card.
 - The workspace marker and the window title glide through quick successive switches instead of
