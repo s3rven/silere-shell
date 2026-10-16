@@ -112,6 +112,7 @@ ShellRoot {
             property bool batteryAvailable: false
             property real battery: 0
             property bool paired: false
+            property bool trusted: false
             property bool connected: false
             property bool pairing: true
             property int state: Bt.BluetoothDeviceState.Connecting
@@ -943,6 +944,26 @@ ShellRoot {
         }
         device.destroy()
         component.destroy()
+        const bonded = bluetoothDeviceFixture.createObject(root, {
+            paired: true, connected: true, pairing: false, state: -1 })
+        const stranger = bluetoothDeviceFixture.createObject(root, {
+            paired: false, connected: true, pairing: false, state: -1 })
+        Bluetooth._trustDevice(bonded, false)
+        Bluetooth._trustDevice(stranger, false)
+        root._check(bonded.trusted && !stranger.trusted,
+            "a successful connect trusts a paired device so it can reconnect by itself, never an unpaired one")
+        const elsewhere = bluetoothDeviceFixture.createObject(root, {
+            paired: true, connected: true, pairing: false, state: -1 })
+        const idle = bluetoothDeviceFixture.createObject(root, {
+            paired: true, connected: false, pairing: false, state: -1 })
+        stranger.trusted = false
+        Bluetooth._trustConnected([elsewhere, idle, stranger, null])
+        root._check(elsewhere.trusted && !idle.trusted && !stranger.trusted,
+            "a paired device connected by another tool is trusted, a disconnected or unpaired one is not")
+        elsewhere.destroy()
+        idle.destroy()
+        bonded.destroy()
+        stranger.destroy()
     }
 
     function _checkConnectivityConfirmations(): void {

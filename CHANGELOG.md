@@ -22,6 +22,8 @@ settings file carries its own `__version` and migrates separately.
 ### Fixed
 
 - Settings search matches the start of words, so `lock` finds the screen lock instead of the clock.
+- Paired Bluetooth devices are trusted once they connect, from the menu or any other tool,
+  so they can reconnect on their own when switched on.
 - A disconnect, forget, power or reset confirmation left armed across a suspend asks again
   instead of acting on the next click.
 

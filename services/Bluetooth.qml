@@ -281,21 +281,30 @@ Singleton {
             root.errorAddr = root._pendingAddr
             root.errorKind = root._pendingKind
         }
-        const pairedAddr = outcome === "ok" && root._pendingKind === "pair" ? root._pendingAddr : ""
+        const device = outcome === "ok" ? root._pendingDevice : null
+        const paired = root._pendingKind === "pair"
         root._endAttempt()
-        if (pairedAddr.length > 0) root._trustAndConnect(pairedAddr)
+        root._trustDevice(device, paired)
     }
 
-    // an untrusted device is refused when it reconnects by itself later
-    function _trustAndConnect(address: string): void {
-        for (let i = 0; i < _devices.length; i++) {
-            const d = _devices[i]
-            if (!d || d.address !== address) continue
-            d.trusted = true
-            if (!d.connected) root.connectDevice(address)
-            return
-        }
+    // an untrusted device is refused when it reconnects by itself later; a pairing made by
+    // another tool, or before pairing trusted, is trusted on its next connect from here
+    function _trustDevice(device, connect: bool): void {
+        if (!device || !device.paired) return
+        if (!device.trusted) device.trusted = true
+        if (connect && !device.connected) root.connectDevice(device.address)
     }
+
+    // a device connected by another tool (blueman, bluetoothctl) is trusted too, or its own reconnects stay refused.
+    // probes and the update smoke test share the real system bus, so a sandbox never writes device state
+    readonly property bool _sandboxed: Quickshell.env("SILERE_SANDBOX") === "1"
+    function _trustConnected(devices): void {
+        for (let i = 0; i < devices.length; i++)
+            if (devices[i] && devices[i].connected) root._trustDevice(devices[i], false)
+    }
+    readonly property var _untrustedConnected: root._sandboxed ? [] : _devices.filter(d => d && d.connected && d.paired && !d.trusted)
+    on_UntrustedConnectedChanged: Qt.callLater(root._trustConnected, root._untrustedConnected)
+    Component.onCompleted: root._trustConnected(root._untrustedConnected)
 
     property int _guardExtensions: 0
 

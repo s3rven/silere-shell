@@ -71,6 +71,12 @@ change the running process's environment.
 Silere needs a separate Bluetooth pairing agent for PIN entry or confirmation. Start
 `blueman-applet` or `bt-agent` in your session, then retry pairing.
 
+## Headphones do not reconnect when switched on
+
+BlueZ refuses a device that reconnects by itself unless it is trusted. Silere trusts a paired
+device the first time it connects, so connect it once by any means, or run
+`bluetoothctl trust <address>`.
+
 ## Night light is unavailable on niri
 
 Install `wlsunset`. `hyprsunset` needs Hyprland and cannot control niri's display gamma.
