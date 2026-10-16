@@ -2270,6 +2270,20 @@ SH
     # Keep this fixture quick while exercising the actual warm-up IPC path.
     printf '#!/bin/sh\nexit 0\n' > "$stubs/sleep"
     chmod +x "$stubs/sleep"
+    local seconds normalized
+    for seconds in 08 010; do
+        normalized="${seconds#0}"
+        out="$(PATH="$stubs:$PATH" XDG_CONFIG_HOME="$TMP/bench-config" \
+            bash "$ROOT/scripts/bench.sh" "$seconds" --json)" \
+            || fail "benchmark rejected a zero-padded duration"
+        [[ "$out" == *"\"sample_seconds\":$normalized,"* ]] \
+            || fail "benchmark did not interpret $seconds as decimal seconds"
+        [[ "$out" =~ \"rss_avg_mb\":[0-9]+, ]] \
+            || fail "benchmark skipped sampling for $seconds seconds"
+    done
+    if PATH="$stubs:$PATH" bash "$ROOT/scripts/bench.sh" 000 --json >/dev/null 2>&1; then
+        fail "benchmark accepted a zero-second duration"
+    fi
     export SILERE_TEST_BENCH_CALLS="$TMP/bench-calls"
     out="$(PATH="$stubs:$PATH" XDG_CONFIG_HOME="$TMP/bench-config" \
         bash "$ROOT/scripts/bench.sh" 1 --warm --json)" || fail "warm benchmark fixture failed"

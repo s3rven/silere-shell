@@ -37,6 +37,9 @@ secs="${secs:-10}"
 case "$secs" in
     ''|*[!0-9]*) usage ;;
 esac
+# strip leading zeros: bash reads 08 as octal and json rejects it
+secs="${secs#"${secs%%[!0]*}"}"
+secs="${secs:-0}"
 [ "$secs" -ge 1 ] || usage
 
 repo="$(cd "$(dirname "$0")/.." && pwd)"
