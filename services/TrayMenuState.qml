@@ -37,6 +37,14 @@ AnchoredPopupState {
         return false
     }
 
+    // quickshell drops hidden entries but keeps their separators: no rule leads, trails or doubles another
+    function strayRule(rows, index: int): bool {
+        if (index <= 0 || (rows[index - 1]?.isSeparator ?? false)) return true
+        for (let i = index + 1; i < rows.length; i++)
+            if (!(rows[i]?.isSeparator ?? false)) return false
+        return true
+    }
+
     function branchHovered(branch, flyouts): bool {
         for (let i = 0; i < flyouts.length; i++) {
             const child = flyouts[i]

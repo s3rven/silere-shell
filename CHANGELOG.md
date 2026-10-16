@@ -26,6 +26,7 @@ settings file carries its own `__version` and migrates separately.
   so they can reconnect on their own when switched on.
 - A disconnect, forget, power or reset confirmation left armed across a suspend asks again
   instead of acting on the next click.
+- Tray menus no longer show stray separator lines left around entries the app hides.
 
 ## Releases
 

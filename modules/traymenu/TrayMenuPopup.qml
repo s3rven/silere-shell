@@ -128,6 +128,9 @@ FittedPopupWindow {
         Item {
             id: _entry
             required property var modelData
+            required property int index
+            // the entry list this row came from, so a separator can see its neighbours
+            property var siblings: null
             // flyouts live on the stage so the scroll clip cannot cut them off
             property Item ownerFlyout: null
             property bool ownerOpensLeft: false
@@ -149,6 +152,8 @@ FittedPopupWindow {
 
             width: win.menuWidth
             height: sep ? 11 : Metrics.rowHeightFor(32)
+            visible: !_entry.sep || !_entry.siblings
+                || !TrayMenuState.strayRule(_entry.siblings.values ?? [], _entry.index)
 
             readonly property bool flyoutOpen: _flyout.opened
             function closeFlyout(): void {
@@ -385,6 +390,7 @@ FittedPopupWindow {
                                 item.ownerFlyout = _flyout
                                 item.ownerOpensLeft = Qt.binding(() => _flyout._flip)
                                 item.ownerScroll = _subScroll
+                                item.siblings = _subOpener.children
                                 item.menuDepth = _entry.menuDepth + 1
                             }
                         }
@@ -445,11 +451,15 @@ FittedPopupWindow {
                     id: _topRows
                     model: _opener.children
                     delegate: _rowDelegate
-                    onItemAdded: (index, item) => item.ownerScroll = _scroll
+                    onItemAdded: (index, item) => {
+                        item.ownerScroll = _scroll
+                        item.siblings = _opener.children
+                    }
                 }
 
                 Item {
-                    visible: _hideRow.visible && _topRows.count > 0
+                    visible: _hideRow.visible
+                        && (_opener.children?.values ?? []).some(entry => entry && !entry.isSeparator)
                     width: win.menuWidth
                     height: 11
 

@@ -5589,6 +5589,13 @@ ShellRoot {
                 && !TrayMenuState.siblingFlyoutOpen([trayRowA, trayRowB], trayRowA)
                 && !TrayMenuState.siblingFlyoutOpen([], trayRowB),
             "a tray submenu waits for a pause only while a sibling's submenu is open")
+        const rule = { isSeparator: true }
+        const item = { isSeparator: false }
+        const rows = [rule, item, rule, rule, item, rule, rule]
+        root._check(rows.map((row, i) => row.isSeparator ? (TrayMenuState.strayRule(rows, i) ? "x" : "-") : "a")
+                .join("") === "xa-xaxx"
+                && TrayMenuState.strayRule([rule, rule], 1) && TrayMenuState.strayRule([item, rule], 1),
+            "a tray menu draws one rule between entries and none leading, trailing or doubled")
         const dndAt = new Date(2026, 9, 11, 14, 31, 20).getTime()
         root._check(Notifications.dndEndFor(dndAt, 60) === new Date(2026, 9, 11, 15, 32).getTime()
                 && Notifications.dndEndAtHour(dndAt, 8) === new Date(2026, 9, 12, 8, 0).getTime()
