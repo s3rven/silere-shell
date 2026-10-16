@@ -13,6 +13,8 @@ settings file carries its own `__version` and migrates separately.
 
 ### Added
 
+- The mouse back button steps back through the menu and closes the calendar, quick actions and
+  tray menus, as Escape does.
 - Notifications tagged with `x-canonical-private-synchronous` or `x-dunst-stack-tag` replace the
   same app's earlier card with that tag, so volume and brightness scripts written for dunst, mako
   or swaync show one card instead of a stack.

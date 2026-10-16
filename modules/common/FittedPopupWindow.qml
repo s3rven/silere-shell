@@ -174,6 +174,13 @@ PanelWindow {
                 onPressed: mouse => mouse.accepted = win._outsideCard(_outsideCatch.mapToItem(_stage, mouse.x, mouse.y))
                 onClicked: mouse => win._closeIfOutside(_outsideCatch.mapToItem(_stage, mouse.x, mouse.y))
             }
+
+            // the shell is pointer-first, so a mouse's own back button steps back the way Escape does
+            TapHandler {
+                enabled: win.open
+                acceptedButtons: Qt.BackButton
+                onTapped: win.escapePressed()
+            }
         }
     }
 }
