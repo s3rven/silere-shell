@@ -107,6 +107,19 @@ Diagnostics label still open this page; `system` works too.
 Names match without case, spaces or punctuation, so `show-order` works. An unknown one falls
 back to `theme`, so an out-of-date keybind still opens Settings.
 
+## Notifications from scripts
+
+A script that reports a changing value can update one card instead of stacking a new one on
+every run. Tag its notifications the way dunst, mako and swaync expect:
+
+```bash
+notify-send -a volume -h string:x-canonical-private-synchronous:volume -h int:value:40 "Volume" "40%"
+```
+
+A new notification replaces the card from the same app with the same tag; `x-dunst-stack-tag`
+works too, and `int:value:` adds a progress bar. While popups are silenced, history keeps only
+the latest one.
+
 ## Hooks
 
 Silere runs a command of your own when something happens. Drop an executable file in

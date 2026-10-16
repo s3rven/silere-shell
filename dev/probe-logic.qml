@@ -913,6 +913,29 @@ ShellRoot {
         component.destroy()
     }
 
+    function _checkStackTags(): void {
+        root._check(Notifications.stackTagOf({ hints: { "x-canonical-private-synchronous": "volume" } }) === "volume"
+                && Notifications.stackTagOf({ hints: { "x-dunst-stack-tag": "bright" } }) === "bright"
+                && Notifications.stackTagOf({ hints: {} }) === "" && Notifications.stackTagOf(null) === "",
+            "the dunst and canonical stack tag hints name a notification's stack")
+        const make = (id, app, tag) => Qt.createQmlObject("import QtQuick; QtObject { property int id: " + id
+            + "; property string appName: \"" + app + "\"; property var hints: ({}); property bool tracked: true }", root)
+        const same = make(9001, "volscript", ""), plain = make(9002, "volscript", ""), other = make(9003, "elsewhere", "")
+        const next = make(9004, "volscript", "")
+        same.hints = { "x-canonical-private-synchronous": "volume" }
+        other.hints = { "x-canonical-private-synchronous": "volume" }
+        next.hints = { "x-dunst-stack-tag": "volume" }
+        const listWas = Notifications.list
+        Notifications.list = [same, plain, other].map(n => ({ notification: n, id: n.id, time: 1000 }))
+        const replaced = Notifications._retireStacked(next)
+        const kept = Notifications.list.map(e => e.id)
+        root._check(replaced && kept.length === 2 && kept[0] === 9002 && kept[1] === 9003 && !same.tracked && plain.tracked && other.tracked,
+            "a tagged notification replaces the same app's card with that tag and leaves every other card alone")
+        Notifications._consumeClosing(9001, same)
+        Notifications.list = listWas
+        for (const n of [same, plain, other, next]) n.destroy()
+    }
+
     function _checkPillTextBaseline(): void {
         let mismatched = []
         for (let h = 28; h <= 44; h++) {
@@ -1379,6 +1402,7 @@ ShellRoot {
         root._checkWifiDraft()
         root._checkPowerRail()
         root._checkPillTextBaseline()
+        root._checkStackTags()
         root._checkBluetoothPairing()
         root._checkConnectivityConfirmations()
         root._checkMenuContrast()

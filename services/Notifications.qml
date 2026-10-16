@@ -161,7 +161,8 @@ Singleton {
             time:         isFinite(rawTime) && rawTime >= 0 && rawTime <= 8.64e15
                 ? rawTime : 0,
             // coalesces replaces_id within one server lifetime; never persisted
-            sessionCurrent: e.sessionCurrent === true
+            sessionCurrent: e.sessionCurrent === true,
+            stackTag:     e.sessionCurrent === true ? SafeText.boundedText(e.stackTag ?? "", root._maxIdentityChars) : ""
         }
     }
 
@@ -663,8 +664,41 @@ Singleton {
             body:    notification.body,
             urgency: notification.urgency,
             time:    time,
-            sessionCurrent: true
+            sessionCurrent: true,
+            stackTag: root.stackTagOf(notification)
         }
+    }
+
+    // the dunst, mako and swaync convention: a sender replaces its earlier card by tag instead of by id, which
+    // volume and brightness scripts rely on to show one card instead of one per keypress
+    function stackTagOf(notification): string {
+        const hints = notification?.hints ?? {}
+        const tag = hints["x-canonical-private-synchronous"] ?? hints["x-dunst-stack-tag"] ?? hints["synchronous"]
+        return tag === undefined || tag === null ? "" : String(tag)
+    }
+
+    function _sameStack(a, b, tag: string): bool {
+        return tag.length > 0 && a !== b && root.stackTagOf(a) === tag
+            && String(a.appName || "") === String(b.appName || "")
+    }
+
+    function _retireStacked(notification): bool {
+        const tag = root.stackTagOf(notification)
+        if (tag.length === 0) return false
+        // a replaces_id update keeps its id and is already handled in place
+        const stale = root.list.filter(e => e.notification && e.id !== notification.id
+            && root._sameStack(e.notification, notification, tag))
+        if (stale.length === 0) return false
+        // no entrance: the replacement takes the card's place, as a replaces_id update does
+        root.markSeen(notification.id)
+        const ids = stale.map(e => String(e.id))
+        root._dropFromList(ids)
+        for (let i = 0; i < stale.length; i++) {
+            root._markClosing(stale[i].id, stale[i].notification)
+            stale[i].notification.tracked = false
+        }
+        root._forgetTrimmed(ids)
+        return true
     }
 
     function _historyEntry(e): var {
@@ -677,9 +711,11 @@ Singleton {
         const entry = root._notificationHistoryEntry(notification, id, time)
         if (!entry) return false
         let replaced = false
+        const app = root.identityText(notification.appName)
         for (let i = _history.count - 1; i >= 0; i--) {
             const previous = _history.get(i)
-            if (previous.id === id && previous.sessionCurrent === true) {
+            if (previous.sessionCurrent === true && (previous.id === id
+                    || (entry.stackTag.length > 0 && previous.stackTag === entry.stackTag && previous.appName === app))) {
                 _history.remove(i)
                 root.historyRevision++
                 replaced = true
@@ -990,11 +1026,13 @@ Singleton {
             root.lastCritical = n.urgency === NotificationUrgency.Critical
 
             root._recordUpdateTime(n.id, Date.now())
+            // an update like replaces_id: no hook run or arrival glow per keypress of a volume script
+            const restacked = root._retireStacked(n)
             const isNewObject = root._upsertActiveNotification(n, arrivalTime)
             // connect once per object — stacked handlers fire _onClosed twice
             if (isNewObject) root._watchNotification(n)
             n.tracked = true
-            if (!isNewObject) root.contentUpdated(n.id)
+            if (!isNewObject || restacked) root.contentUpdated(n.id)
             else root.notificationShown(String(n.appName || ""), String(n.summary || ""),
                 n.urgency === NotificationUrgency.Critical)
             root._retireOverflow()
