@@ -345,15 +345,21 @@ case "$command_name" in
             *) usage >&2; exit 2 ;;
         esac
         command -v qs >/dev/null 2>&1 || die "Quickshell is not installed"
+        log_qml="$ROOT/shell.qml"
         if ! running_pid >/dev/null; then
-            unit_runs_shell \
-                && die "Silere is not running; its last run is in journalctl --user -u silere-shell.service"
-            die "Silere is not running"
+            if other="$(other_shell)"; then
+                printf '%ssilere:%s using the shell running from %s\n' "$EYELLOW" "$ER" "$(dirname "$other")" >&2
+                log_qml="$other"
+            else
+                unit_runs_shell \
+                    && die "Silere is not running; its last run is in journalctl --user -u silere-shell.service"
+                die "Silere is not running"
+            fi
         fi
         color=()
         [ -t 1 ] || color=(--no-color)
         restore_locale
-        exec qs log "${color[@]}" -p "$ROOT/shell.qml" "${follow[@]}"
+        exec qs log "${color[@]}" -p "$log_qml" "${follow[@]}"
         ;;
     status)
         [ "$#" -eq 0 ] || { usage >&2; exit 2; }
@@ -361,6 +367,8 @@ case "$command_name" in
         human_version
         if shell_pid="$(running_pid)"; then
             printf 'Shell: %srunning%s (pid %s)\n' "$GREEN" "$R" "$shell_pid"
+        elif other="$(other_shell)"; then
+            printf 'Shell: %srunning from another copy%s, %s\n' "$YELLOW" "$R" "$(dirname "$other")"
         else
             printf 'Shell: %snot running%s\n' "$RED" "$R"
         fi
