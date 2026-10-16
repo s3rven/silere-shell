@@ -3244,8 +3244,8 @@ ShellRoot {
                 body: "Review the deployment notes", time: 1001 })
             Notifications._prependHistory({ id: 802, appName: "Chat", summary: "Release discussion",
                 body: "Bring the notes", time: 1002 })
-            Notifications._prependHistory({ id: 803, appName: "Mail", summary: "Lunch",
-                body: "Meet at 12:00 [cafe]", time: 1003 })
+            Notifications._prependHistory({ id: 803, appName: "Māil", summary: "Lunch in Rīga",
+                body: "Meet at 12:00 [cafe] Café re\u0301sume\u0301 Привет 👩‍💻", time: 1003 })
             filtered.revision = Notifications.historyRevision
             filtered.query = "  RELEASE   notes  "
             root._check(filtered.count === 2,
@@ -3260,6 +3260,26 @@ ShellRoot {
             filtered.query = "[cafe]"
             root._check(filtered.count === 1 && filtered.model.get(0).id === 803,
                 "history search treats punctuation as literal text")
+            edits = filtered.inserts + filtered.removes
+            filtered.query = "mail riga resume"
+            root._check(filtered.count === 1 && filtered.model.get(0).id === 803
+                    && filtered.model.get(0).appName === "Māil"
+                    && filtered.model.get(0).summary === "Lunch in Rīga"
+                    && filtered.inserts + filtered.removes === edits,
+                "history search folds accents across sender, title and combining-mark body text without rebuilding a matching row")
+            filtered.query = "RĪGA RÉSUMÉ"
+            root._check(filtered.count === 1 && filtered.model.get(0).id === 803,
+                "accented uppercase queries match composed and decomposed notification text")
+            filtered.filter = "Mail"
+            root._check(filtered.count === 0,
+                "accent-insensitive history search keeps the app filter's exact sender identity")
+            filtered.filter = "Māil"
+            root._check(filtered.count === 1 && filtered.model.get(0).id === 803,
+                "an exact accented sender filter intersects the normalized search")
+            filtered.filter = ""
+            filtered.query = "ПРИВЕТ 👩‍💻"
+            root._check(filtered.count === 1 && filtered.model.get(0).id === 803,
+                "history search preserves non-Latin text and joined emoji")
             filtered.query = "missing message"
             root._check(filtered.count === 0, "unmatched history search leaves an empty result")
             filtered.query = "  \t "
@@ -3271,7 +3291,11 @@ ShellRoot {
                     && filtered.snapshot()[0].contentKey === undefined,
                 "history caches row keys without exposing them in clear snapshots")
             const originalSearchBody = Notifications.historyModel.get(0).body
+            filtered.query = "searchable marker"
             Notifications.historyModel.setProperty(0, "body", "Updated searchable marker")
+            filtered.sync()
+            root._check(filtered.count === 1 && filtered.model.get(0).id === 803,
+                "a manual history sync searches the edited message text")
             filtered.revision++
             filtered.query = "searchable marker"
             root._check(filtered.count === 1
@@ -3416,6 +3440,15 @@ ShellRoot {
                     && filtered.model.get(0).id === 903 && flagsOf() === "FS<>",
                 "search batches removals on both sides of a retained row")
             filtered.model.countChanged.disconnect(countChanged)
+            const replacementSearchEntry = { id: 999, time: 100, urgency: 1,
+                appName: "Replacement", summary: "New source", body: "Fresh message",
+                appIcon: "", desktopEntry: "" }
+            filtered.source = { count: 1, get: function() { return replacementSearchEntry } }
+            filtered.query = "fresh message"
+            root._check(filtered.count === 1 && filtered.model.get(0).id === 999,
+                "replacing a history source searches the new source")
+            filtered.source = null
+            root._check(filtered.count === 0, "removing the history source clears its results")
             filtered.destroy()
         }
 

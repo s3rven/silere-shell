@@ -11,6 +11,10 @@ settings file carries its own `__version` and migrates separately.
 
 ## [Unreleased]
 
+### Added
+
+- History search ignores accents, so `cafe` finds `Café`.
+
 ### Fixed
 
 - A disconnect, forget, power or reset confirmation left armed across a suspend asks again

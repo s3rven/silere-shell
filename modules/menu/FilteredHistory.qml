@@ -31,6 +31,10 @@ Item {
         return trimmed.length > 0 ? trimmed : "Unknown"
     }
 
+    function _searchText(text: string): string {
+        return text.normalize("NFD").toLowerCase().replace(/[\u0300-\u036F]/g, "")
+    }
+
     // keyed by content, not position: an id and a time both survive an in-place update,
     // so a row whose text changed has to miss the match and be rebuilt on its own
     function _key(e): string {
@@ -102,14 +106,15 @@ Item {
         if (!root.active) return
         const src = root.source
         const want = root.filter
-        const terms = root.query.trim().toLowerCase().split(/\s+/).filter(t => t.length > 0)
+        const terms = root._searchText(root.query).trim().split(/\s+/).filter(t => t.length > 0)
         const rows = []
         for (let i = 0; src && i < src.count; i++) {
             const e = src.get(i)
             if (!e) continue
-            if (want.length > 0 && root.identityOf(e.appName) !== want) continue
+            const name = root.identityOf(e.appName)
+            if (want.length > 0 && name !== want) continue
             if (terms.length > 0) {
-                const text = [root.identityOf(e.appName), e.summary, e.body].join(" ").toLowerCase()
+                const text = root._searchText([name, e.summary, e.body].join(" "))
                 if (!terms.every(term => text.indexOf(term) >= 0)) continue
             }
             rows.push(e)
