@@ -55,16 +55,18 @@ Row {
             }
 
             Rectangle {
+                id: _countBadge
                 visible: appIcon.modelData.count > 1
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 anchors.rightMargin: -1
                 anchors.bottomMargin: -1
-                width: 6
-                height: 6
-                radius: 3
+                width: Metrics.devicePx(6, root._dpr)
+                height: width
+                radius: width / 2
                 antialiasing: true
                 color: Theme.accent
+                transform: PixelSnap { item: _countBadge; dpr: root._dpr }
                 OutlineBorder {
                     radius: parent.radius
                     outlineColor: Theme.surface

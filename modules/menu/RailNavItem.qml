@@ -123,14 +123,18 @@ Item {
 
         x: root.railW + 7
         anchors.verticalCenter: parent.verticalCenter
-        width: _pillLabel.implicitWidth + 18
-        height: 22; radius: Theme.radiusInline
+        readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+        width: Metrics.devicePx(_pillLabel.implicitWidth + 18, _dpr)
+        height: Metrics.devicePx(22, _dpr); radius: Theme.radiusInline
         color: Theme.menuCardSolid
         antialiasing: true
         opacity: _show ? 1.0 : 0.0
         scale:   _show ? 1.0 : 0.96
         property real _slide: _show ? 0 : -3
-        transform: Translate { x: _pill._slide }
+        transform: [
+            Translate { x: _pill._slide },
+            PixelSnap { item: _pill; dpr: _pill._dpr }
+        ]
 
         OutlineBorder {
             radius: _pill.radius

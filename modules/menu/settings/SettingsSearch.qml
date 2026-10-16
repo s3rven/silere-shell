@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import "../../../config"
 import "../../../services"
 import "../../common"
@@ -106,8 +107,9 @@ Column {
                 anchors.top: parent.bottom
                 anchors.topMargin: 5
                 anchors.right: parent.right
-                width: Math.min(root.width, _hintLabel.implicitWidth + 18)
-                height: 22
+                readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+                width: Metrics.devicePx(Math.min(root.width, _hintLabel.implicitWidth + 18), _dpr)
+                height: Metrics.devicePx(22, _dpr)
                 radius: Theme.radiusInline
                 antialiasing: true
                 color: Theme.menuCardSolid
@@ -115,7 +117,10 @@ Column {
                 scale: _show ? 1.0 : 0.96
                 transformOrigin: Item.TopRight
                 property real _slide: _show ? 0 : -3
-                transform: Translate { y: _hint._slide }
+                transform: [
+                    Translate { y: _hint._slide },
+                    PixelSnap { item: _hint; dpr: _hint._dpr }
+                ]
                 visible: opacity > 0.01
                 z: 20
                 MotionBehavior on opacity {

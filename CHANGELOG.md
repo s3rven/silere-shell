@@ -30,6 +30,8 @@ settings file carries its own `__version` and migrates separately.
 - A disconnect, forget, power or reset confirmation left armed across a suspend asks again
   instead of acting on the next click.
 - Tray menus no longer show stray separator lines left around entries the app hides.
+- The multi-window badge on workspace app icons and the rail and search hover labels stay crisp
+  on fractionally scaled displays.
 
 ## Releases
 
