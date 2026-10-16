@@ -237,10 +237,9 @@ Item {
 
     Loader {
         id: _centerVisualizer
-        anchors.verticalCenter: parent.verticalCenter
         x: root._centerVizX
         width: root._centerVizWidth
-        height: parent.height
+        height: parent.height - Metrics.visualizerLiftFor(QsWindow.window ? QsWindow.window.devicePixelRatio : 1)
         // unloading in the same frame the opacity drops leaves the fade animating an empty Loader
         readonly property bool _wanted: root._centerVizWanted && root._centerVizHasRoom
         active: _wanted || _vizHold.running

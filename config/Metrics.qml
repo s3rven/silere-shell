@@ -29,6 +29,15 @@ Singleton {
     }
 
     function pillPadFor(compact: bool): int { return compact ? 2 : 5 }
+
+    // a visualizer stands on the bar's bottom rim instead of painting over it, or the translucent stroke vanishes
+    // behind every bar; one device px, only where a line runs along that edge (a docked bottom bar draws its on top)
+    function visualizerLiftFor(dpr: real): real {
+        const top = ShellSettings.barPosition !== "bottom"
+        const rim = ShellSettings.barBorderVisible && (ShellSettings.barFloating || top)
+            || ShellSettings.underlineGlow && top
+        return rim && dpr > 0 ? 1 / dpr : 0
+    }
     function pillGapFor(compact: bool): int { return compact ? 3 : 5 }
 
     function hoverRadiusFor(size: real): real {

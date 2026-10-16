@@ -53,6 +53,11 @@ Canvas {
     }
 
     property var   _fill:   null
+    property var   _barFill: null
+    property real  _barFillH: -1
+    property real  _barFillR: -1
+    property real  _barFillG: -1
+    property real  _barFillB: -1
     property var   _edgeL:  null
     property var   _edgeR:  null
     property real  _fillH:  -1
@@ -170,7 +175,18 @@ Canvas {
         if (_style === "bars") {
             var barW = Math.max(2, Math.min(barWidthMax, slot * 0.46))
             var radius = Math.min(barW * 0.5, 3)
-            ctx.fillStyle = Qt.rgba(ac.r, ac.g, ac.b, 0.82)
+            // fade toward the top: a peak behind the media title would otherwise paint over its glyphs
+            if (!_barFill || _barFillH !== height || _barFillR !== ac.r || _barFillG !== ac.g || _barFillB !== ac.b) {
+                var bg = ctx.createLinearGradient(0, 0, 0, height)
+                bg.addColorStop(0.0, Qt.rgba(ac.r, ac.g, ac.b, 0.12))
+                bg.addColorStop(1.0, Qt.rgba(ac.r, ac.g, ac.b, 0.82))
+                _barFill = bg
+                _barFillH = height
+                _barFillR = ac.r
+                _barFillG = ac.g
+                _barFillB = ac.b
+            }
+            ctx.fillStyle = _barFill
             for (var b = 0; b < n; b++) {
                 var bh = Math.max(1.5, (h[b] ?? 0) * maxPx)
                 var x = Math.round(slot * b + (slot - barW) * 0.5)

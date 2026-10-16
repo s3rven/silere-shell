@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import "../../../config"
 import "../../../services"
 import "../../common"
@@ -92,6 +93,7 @@ Item {
         id: _vizLoader
         anchors.top: parent.top
         anchors.bottom: parent.bottom
+        anchors.bottomMargin: Metrics.visualizerLiftFor(QsWindow.window ? QsWindow.window.devicePixelRatio : 1)
         anchors.horizontalCenter: parent.horizontalCenter
         // snapped to an 8px grid: the Canvas backing this width drops and reallocates its texture on
         // every resize, and parent.width tracks root.implicitWidth's own MotionBehavior every frame

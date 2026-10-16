@@ -21,6 +21,8 @@ settings file carries its own `__version` and migrates separately.
   restarting their motion each time.
 - The OSD level follows a held volume or brightness key smoothly instead of jumping in steps.
 - The VPN row shows and copies an IPv6 address when the tunnel has no IPv4 one.
+- Visualizer bars fade toward their tops and stand on the bar's edge line, so loud peaks no longer
+  cover the media title or break the outline.
 
 ### Fixed
 
