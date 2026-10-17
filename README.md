@@ -14,29 +14,40 @@
   <img src="https://img.shields.io/badge/runs%20on-Hyprland%20%C2%B7%20niri-2a2d33?style=flat-square&labelColor=0f1013&logo=hyprland&logoColor=9a9ca1" alt="runs on Hyprland and niri"/>
 </p>
 
-Silere is a quiet, lightweight desktop shell for **Hyprland** and **niri**, built with
-**Quickshell**. It brings your bar, notifications, OSD, calendar, tray and everyday
-controls together. Open the menu to adjust sound and brightness, connect devices,
-control music and change the shell’s settings.
+<p align="center">
+  A desktop shell for <b>Hyprland</b> and <b>niri</b>. It replaces your bar, notification
+  daemon, OSD and tray with one <b>Quickshell</b> process that idles under 1% CPU.
+</p>
 
 <p align="center">
   <img src="assets/shot-desktop.webp" alt="Silere's floating bar on the desktop" width="960"/>
 </p>
 
-## Quiet by default
+## What you get
 
-A compact bar, subtle feedback and optional effects you choose
-to turn on. The visualizer, network speed readings, clock seconds and underline effects
-start switched off. System readings and animations pause when the session becomes idle.
-
-- Arrange the bar and choose the widgets you need.
-- Keep notifications in a searchable history, with actions and replies when apps support them.
-- Use Now Playing for cover art, seeking, player switching, shuffle and repeat.
-- Pick a custom accent or use your wallpaper's colours, with font, scale and motion settings.
+- A bar you arrange yourself: workspaces with app icons, window title, media, network,
+  volume, brightness, battery, tray, clock and more.
+- A menu one click away, with volume per output and per app, brightness, Wi-Fi,
+  Bluetooth, power mode, night light, Keep Awake and Do Not Disturb.
+- Notifications with actions, inline replies and a searchable history. Volume and
+  brightness scripts written for dunst or mako replace their card instead of stacking.
+- Now Playing with cover art, seeking, player switching and an optional visualizer.
+- An OSD for volume, brightness and battery warnings, floating or built into the bar.
+- Colours from your wallpaper through Matugen, or an accent you pick yourself.
+- Signed updates from the menu, and `silere update --rollback` if you don't like one.
 
 <p align="center">
   <img src="assets/shot-surfaces.webp" alt="Silere's Home, Now Playing and Settings panels" width="960"/>
 </p>
+
+## Lightweight
+
+Silere runs as one process, and Quickshell is its only required dependency. Tools like
+cava, Matugen or brightnessctl are optional. Without one, only its feature is unavailable,
+and Settings lists what is missing and what it adds.
+
+The visualizer, network speed readings, clock seconds and underline effects start
+switched off. System readings and animations pause when the session goes idle.
 
 ## Install
 
@@ -74,8 +85,11 @@ silere run
 ```
 
 If you skipped the command link, use `~/.config/silere-shell/scripts/silere run`.
-Keep your preferred launcher, wallpaper tools and lock screen; choose the lock command
-in **Settings › Appearance › Interface**.
+Keep your launcher, wallpaper tools and lock screen; choose the lock command in
+**Settings › Appearance › Interface**.
+
+To remove it, `silere uninstall` clears the autostart, shortcut and other integrations,
+and keeps your settings in case you come back.
 
 ## Use
 
@@ -92,25 +106,23 @@ to step back or close a popup. [All controls and shortcuts](docs/usage.md).
 ### Make it yours
 
 Open **Settings** to change the bar layout, colours, font, scale and motion. Changes
-apply immediately. Choose a custom accent or use a wallpaper palette through Matugen.
+apply immediately.
 
 <p align="center">
   <img src="assets/shot-themes.png" alt="Silere with a custom accent and colours taken from the wallpaper" width="720"/>
 </p>
 
-### Updates and recovery
-
-**Settings › System › Overview** holds updates, diagnostics and restore defaults.
-Silere verifies release signatures and asks for confirmation before installing from
-the menu. [Updating and rolling back](docs/usage.md#updates).
-
 <details>
-<summary>Config files and scripting</summary>
+<summary>Config files, scripting and updates</summary>
 
 Preferences are saved to `~/.config/silere-shell/settings.json`, or your
 `$XDG_CONFIG_HOME` path. Only changes from the defaults are stored.
 To reset the file, replace its contents with `{ "__version": 1 }`.
 [The scripting guide](docs/scripting.md) lists IPC calls and event hooks.
+
+**Settings › System › Overview** holds updates, diagnostics and restore defaults.
+Silere verifies release signatures and asks before installing from the menu.
+[Updating and rolling back](docs/usage.md#updates).
 
 </details>
 
@@ -126,15 +138,7 @@ Your hardware, fonts and enabled features affect the result.
 Start with `silere doctor` to check your setup. `silere log --follow` shows the log,
 and `silere restart` restarts the shell.
 
-[Common problems](docs/troubleshooting.md) · [Ask a question](https://github.com/s3rven/silere-shell/discussions) · [Report a bug](https://github.com/s3rven/silere-shell/issues/new?template=bug_report.yml)
-
-| Guide | What you'll find |
-|---|---|
-| [Installation](docs/install.md) | Fonts, optional tools, autostart and removal |
-| [Controls](docs/usage.md) | Widgets, settings and updates |
-| [Scripting](docs/scripting.md) | IPC calls and event hooks |
-| [Performance](docs/performance.md) | Measurements and benchmarking |
-| [Changelog](CHANGELOG.md) | Changes and release history |
+[Common problems](docs/troubleshooting.md) · [Ask a question](https://github.com/s3rven/silere-shell/discussions) · [Report a bug](https://github.com/s3rven/silere-shell/issues/new?template=bug_report.yml) · [Installation guide](docs/install.md) · [Performance details](docs/performance.md)
 
 ## Contributing
 
