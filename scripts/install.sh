@@ -7,6 +7,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-}")" && pwd)"
 # piped from curl there is no checkout beside the script; the braces make bash read this whole block before running it
 if [ ! -f "$SCRIPT_DIR/lib/xdg.sh" ] || [ ! -f "$SCRIPT_DIR/../shell.qml" ]; then
     {
+        # the rest of this script is still in the pipe; left unread, curl ends every install with "Failed writing body"
+        [ -t 0 ] || cat >/dev/null
         command -v git >/dev/null 2>&1 || { printf 'silere: git is required to install\n' >&2; exit 1; }
         _bootstrap_dir="$(mktemp -d "${TMPDIR:-/tmp}/silere-install.XXXXXX")" || exit 1
         trap 'rm -rf -- "$_bootstrap_dir"' EXIT

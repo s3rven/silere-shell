@@ -513,6 +513,13 @@ test_piped_installer_bootstraps() (
     [ -z "$(find "$tmp" -mindepth 1 -maxdepth 1 -name 'silere-install.*')" ] \
         || fail "piped installer left its download behind"
 
+    # curl reports whatever part of the script it could not hand over, so the bootstrap reads the pipe to its end;
+    # the rest arrives after the block has run, as it does over a network
+    (cd "$tmp" && { head -c 2000 "$ROOT/scripts/install.sh"; sleep 0.3; tail -c +2001 "$ROOT/scripts/install.sh"
+        echo "$?" > "$tmp/writer-rc"; } | env TMPDIR="$tmp" PATH="$stubs:$PATH" SILERE_TEST_SRC="$src" \
+        SILERE_TEST_CLONE_FAILS=1 bash >/dev/null 2>&1) || true
+    assert_eq "0" "$(cat "$tmp/writer-rc" 2>/dev/null)" "piped installer reads the whole script it was sent"
+
     if out="$(cd "$tmp" && env TMPDIR="$tmp" PATH="$stubs:$PATH" SILERE_TEST_SRC="$src" \
             SILERE_TEST_CLONE_FAILS=1 bash -s < "$ROOT/scripts/install.sh" 2>&1)"; then
         fail "piped installer claimed success without a download"
