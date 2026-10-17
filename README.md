@@ -128,8 +128,8 @@ Silere verifies release signatures and asks before installing from the menu.
 
 ## Performance
 
-On the reference machine, release **1.4.2** measured about **84 MB PSS** with the bar
-and **95 MB** after opening the menu, with idle CPU under **1% of one core**.
+On the reference machine, release **1.4.3** measured about **90 MB PSS** with the bar
+and **99 MB** after opening the menu, with idle CPU under **1% of one core**.
 Your hardware, fonts and enabled features affect the result.
 [Measurements and benchmarking](docs/performance.md).
 

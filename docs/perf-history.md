@@ -44,6 +44,8 @@ Hardware not already listed takes a new letter.
 | 1.4.1 | 2026-10-10 | A | warm | 106 MB | 193 MB | 0.0% | 27 | 54 |
 | 1.4.2 | 2026-10-11 | A | cold | 84 MB | 177 MB | 0.0% | 24 | 53 |
 | 1.4.2 | 2026-10-11 | A | warm | 95 MB | 189 MB | 0.0% | 24 | 53 |
+| 1.4.3 | 2026-10-18 | A | cold | 90 MB | 183 MB | 0.0% | 25 | 54 |
+| 1.4.3 | 2026-10-18 | A | warm | 99 MB | 193 MB | 0.0% | 26 | 55 |
 
 A dash means that release was not measured.
 
@@ -77,3 +79,15 @@ visualizer was stopped, and no second Quickshell instance was running.
 
 Raw reports: [cold](perf/1.4.2-cold.json) · [warm](perf/1.4.2-warm.json). They were collected
 from runtime commit `4e467c3` while the release metadata and notes were being prepared.
+
+The 1.4.3 runs use reference-A hardware with kernel `7.2.10-1-cachyos`, Quickshell 0.3.2,
+Qt 6.12.0, and the display at 60 Hz / 125% scale. Only the kernel changed since 1.4.2, and the
+window title widget was hidden in this bar, so this is not a controlled comparison of code
+changes alone. Each restart takes both samples, and three restarts were needed: the cold row
+comes from the second and the warm row from the third, since each other sample was noisy. Both
+recorded samples were steady, with a per-second CPU median of 0.0% of one core. The cold
+descriptor count stayed flat and the warm count fell by four. The visualizer was stopped, and
+no second Quickshell instance was running.
+
+Raw reports: [cold](perf/1.4.3-cold.json) · [warm](perf/1.4.3-warm.json). They were collected
+from runtime commit `15531e8` while the release metadata and notes were being prepared.
