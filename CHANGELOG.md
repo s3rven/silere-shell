@@ -11,6 +11,11 @@ settings file carries its own `__version` and migrates separately.
 
 ## [Unreleased]
 
+### Changed
+
+- The Notifications page and its app list are ready when you open them, instead of the list
+  arriving after the panel has widened.
+
 ### Fixed
 
 - Open Wi-Fi networks can be joined on Quickshell 0.3.1 instead of showing as not supported.

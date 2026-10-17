@@ -65,6 +65,13 @@ ShellRoot {
                 console.warn("PROBE-FAIL MenuWindow :: warm reopen did not retain the active page")
                 root._failed++
             }
+            MenuState.selectTab(MenuState.homeTab)
+            panel._recentRetained = false
+            panel.warmRecent()
+            if (!panel._recentRetained) {
+                console.warn("PROBE-FAIL MenuWindow :: hovering Notifications did not preload its page and app drawer")
+                root._failed++
+            }
             // Exercise the actual width, rail and padding together, without
             // mapping a test window onto the user's desktop.
             MenuState.open = false

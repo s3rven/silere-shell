@@ -183,6 +183,7 @@ FittedPopupWindow {
             }
 
             if (activeTab === 2) {
+                _recentWarmUnload.stop()
                 _recentUnload.stop()
                 _recentRetained = true
             } else if (_recentRetained) {
@@ -207,6 +208,14 @@ FittedPopupWindow {
             panel._settingsRetained = true
             panel._settingsNavRetained = true
             _settingsWarmUnload.restart()
+        }
+
+        // the history page and its app drawer rebuild otherwise on the tap, so the drawer arrived after the panel widened
+        function warmRecent(): void {
+            if (!MenuState.open || panel.activeTab === 2 || panel._recentRetained) return
+            panel._loadedDeferred = true
+            panel._recentRetained = true
+            _recentWarmUnload.restart()
         }
 
         function _settlePageVisuals(): void {
@@ -305,6 +314,7 @@ FittedPopupWindow {
                     contentFlick.scrollToTop()
                 } else {
                     _settingsWarmDelay.stop()
+                    _recentWarmDelay.stop()
                     _closedUnload.restart()
                 }
             }
@@ -342,8 +352,19 @@ FittedPopupWindow {
 
         Timer {
             id: _recentUnload
-            interval: Math.max(Motion.pageOut, Motion.ms(100)) + 30
+            // like Settings: a return within seconds finds the page and its app drawer built
+            interval: 8000
             onTriggered: if (panel.activeTab !== 2) panel._recentRetained = false
+        }
+
+        Timer {
+            id: _recentWarmUnload
+            interval: 2500
+            onTriggered: {
+                if (panel.activeTab === 2) return
+                _recentUnload.stop()
+                panel._recentRetained = false
+            }
         }
 
         Timer {
@@ -359,6 +380,8 @@ FittedPopupWindow {
                 if (MenuState.open) return
                 _settingsWarmDelay.stop()
                 _settingsWarmUnload.stop()
+                _recentWarmDelay.stop()
+                _recentWarmUnload.stop()
                 _settingsUnload.stop()
                 _recentUnload.stop()
                 _mediaUnload.stop()
@@ -555,6 +578,12 @@ FittedPopupWindow {
             RailLabelGroup { id: _railLabels }
 
             Timer {
+                id: _recentWarmDelay
+                interval: 90
+                onTriggered: if (_railRecent.hovered) panel.warmRecent()
+            }
+
+            Timer {
                 id: _settingsWarmDelay
                 // ignore incidental sweeps down the icon rail; this is input intent detection, not visual motion, so reduce-motion does not collapse the delay to zero
                 interval: 90
@@ -620,6 +649,10 @@ FittedPopupWindow {
                         || panel.navW < panel._navMinW
                     active: panel.activeTab === 2
                     onTapped: panel.switchTab(2)
+                    onHoveredChanged: {
+                        if (hovered) _recentWarmDelay.restart()
+                        else _recentWarmDelay.stop()
+                    }
 
                     Rectangle {
                         id: _railBadge
