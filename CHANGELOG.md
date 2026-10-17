@@ -11,59 +11,9 @@ settings file carries its own `__version` and migrates separately.
 
 ## [Unreleased]
 
-### Added
-
-- The mouse back button steps back through the menu and closes the calendar, quick actions and
-  tray menus, as Escape does.
-- Notifications tagged with `x-canonical-private-synchronous` or `x-dunst-stack-tag` replace the
-  same app's earlier card with that tag, so volume and brightness scripts written for dunst, mako
-  or swaync show one card instead of a stack.
-- History search ignores accents, so `cafe` finds `Café`.
-
-### Changed
-
-- On Quickshell 0.3.2 and newer, Bluetooth headphone volume is set directly instead of through a
-  `wpctl` process for every scroll step. Older versions keep the `wpctl` path they need.
-- A battery or CPU warning arrives once: a low battery shows in the OSD only, and a critical battery
-  or temperature sends a desktop notification instead of an OSD alert as well.
-- Battery and temperature alerts stay in the OSD for at least five seconds, so a short OSD timeout
-  set for volume and brightness no longer hides them before they can be read.
-- The wavy levels on the Home page and the Now Playing seek bar grow out of their track and land back
-  on it, instead of breaking off at whatever height the level stops.
-- The notification countdown outline drains evenly from both sides toward the top edge, and
-  stays as smooth in a tall stack as it does on a single card.
-- The workspace marker and the window title glide through quick successive switches instead of
-  restarting their motion each time.
-- The OSD level follows a held volume or brightness key smoothly instead of jumping in steps.
-- The VPN row shows and copies an IPv6 address when the tunnel has no IPv4 one.
-- Visualizer bars fade toward their tops and stand on the bar's edge line, so loud peaks no longer
-  cover the media title or break the outline.
-
-### Fixed
-
-- The network speed readout moves to the next unit at the boundary instead of printing `1024 KB/s`.
-- Tray icons of apps that start at login before the shell, such as KeePassXC, appear instead of
-  staying missing until the app restarts.
-- `silere ipc` says Silere is not running instead of printing Quickshell's list of dead instances.
-  It, `silere log`, `silere status` and `silere doctor` recognise a shell running from another copy,
-  and a mistyped command suggests the right one.
-- Settings search matches the start of words, so `lock` finds the screen lock instead of the clock.
-- Paired Bluetooth devices are trusted once they connect, from the menu or any other tool,
-  so they can reconnect on their own when switched on.
-- A disconnect, forget, power or reset confirmation left armed across a suspend asks again
-  instead of acting on the next click.
-- Tray menus no longer show stray separator lines left around entries the app hides.
-- The VPN row in Home appears even when the network widget is hidden from the bar.
-- Scrolling quickly through calendar months names the month you are heading to and keeps the
-  grid changing, instead of fading it blank until you stop.
-- Values in the bar sit on the same line as the clock and window title instead of a pixel lower.
-- Volume, brightness, battery and microphone readings sit with their icons, without the spare half
-  character on each side that left the bar's dividers off-centre.
-- The multi-window badge on workspace app icons and the rail and search hover labels stay crisp
-  on fractionally scaled displays.
-
 ## Releases
 
+- [1.4.3](docs/releases/1.4.3.md) — 2026-10-18
 - [1.4.2](docs/releases/1.4.2.md) — 2026-10-11
 - [1.4.1](docs/releases/1.4.1.md) — 2026-10-10
 - [1.4.0](docs/releases/1.4.0.md) — 2026-10-09
