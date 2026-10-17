@@ -13,6 +13,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- Open Wi-Fi networks can be joined on Quickshell 0.3.1 instead of showing as not supported.
 - Checking for a Silere update no longer fails now and then with an invalid compositor list.
 - An update blocked by many local files names the first one and how to clear it, instead of
   stopping without a reason.

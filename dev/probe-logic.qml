@@ -5940,6 +5940,9 @@ ShellRoot {
                 && Network.formatRate(1048575) === " 1.0 MB/s" && Network.formatRate(1073741823) === " 1.0 GB/s"
                 && Network.formatRate(102350) === " 100 KB/s" && Network.formatRate(0) === "   0 B/s ",
             "a traffic rate that rounds up to 1024 moves to the next unit instead of printing 1024")
+        root._check(Network.wifiPasswordless(Net.WifiSecurityType.Unknown, false) && !Network.wifiPasswordless(Net.WifiSecurityType.Unknown, true)
+                && Network.wifiPasswordless(Net.WifiSecurityType.Open, true) && !Network.wifiPasswordless(Net.WifiSecurityType.Wpa2Psk, false),
+            "an Unknown network joins without a password only where quickshell 0.3.1 mislabels open ones")
         root._check(SystemTools.versionAtLeast("0.3.2", "0.3.2") && SystemTools.versionAtLeast("0.4", "0.3.2")
                 && SystemTools.versionAtLeast("0.3.10", "0.3.2") && !SystemTools.versionAtLeast("0.3.1", "0.3.2")
                 && !SystemTools.versionAtLeast("", "0.3.2") && !SystemTools.versionAtLeast("git", "0.3.2"),

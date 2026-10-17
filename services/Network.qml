@@ -296,8 +296,7 @@ Singleton {
                 const existing = bySsid[ssid]
                 if (existing && !root._preferWifiNetwork(network, existing.network)) continue
                 const security = network.security
-                const passwordless = security === WifiSecurityType.Open
-                    || security === WifiSecurityType.Owe
+                const passwordless = root.wifiPasswordless(security, SystemTools.quickshellAtLeast("0.3.2"))
                 // connectWithPsk accepts only these three; every other secured type has to join from a stored profile or not at all
                 const psk = security === WifiSecurityType.WpaPsk
                     || security === WifiSecurityType.Wpa2Psk
@@ -444,6 +443,12 @@ Singleton {
             || security === WifiSecurityType.Sae
         if (password && password.length > 0 && psk) network.connectWithPsk(password)
         else network.connect()
+    }
+
+    // quickshell 0.3.1 reports open networks as Unknown; trying one costs nothing, since a secured network just fails to join
+    function wifiPasswordless(security: int, securityKnown: bool): bool {
+        return security === WifiSecurityType.Open || security === WifiSecurityType.Owe
+            || security === WifiSecurityType.Unknown && !securityKnown
     }
 
     function forgetWifi(ssid: string): void {
