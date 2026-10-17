@@ -310,7 +310,10 @@ else optional_any "night light" "warm display" hyprsunset wlsunset
 fi
 optional_any "screen lock" "lock action" hyprlock swaylock gtklock loginctl
 optional_any "sound settings" "per-app routing UI" pwvucontrol pavucontrol
-optional_tool wpctl "bluetooth output volume"
+# Quickshell 0.3.2 sets bluetooth volume itself, so only an older or unknown one needs wpctl
+if [ -z "${qs_version:-}" ] || ! _silere_version_at_least "$qs_version" 0.3.2; then
+    optional_tool wpctl "bluetooth volume on Quickshell 0.3.1"
+fi
 optional_tool curl "cover art from the web + installer downloads"
 optional_tool xdg-open "network sign-in page"
 optional_tool cava "audio visualizer"
