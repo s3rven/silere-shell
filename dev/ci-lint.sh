@@ -287,6 +287,25 @@ for f in "${script_files[@]}"; do
   if err=$(bash -n "$f" 2>&1); then ok "$f"; else fail "syntax error in $f"; printf '%s\n' "$err"; fi
 done
 
+section "early-exit greps under pipefail"
+# grep -q exits at its first match, and bash's printf writes a line per write(), so the writer can die of SIGPIPE
+# on a later line and pipefail fails the check that matched; the 1.4.3 release run lost its updater test this way
+early_exit_hits=""
+for f in "${script_files[@]}"; do
+  grep -Eq '^[[:space:]]*set [^#]*pipefail' "$f" || continue
+  early_exit_hits="$early_exit_hits$(awk '
+    { line = cont ? buf " " $0 : $0 }
+    /\\$/ { buf = substr(line, 1, length(line) - 1); cont = 1; next }
+    { cont = 0 }
+    line ~ /(printf \047%s\\n\047|echo) "\$[A-Za-z_]+"[[:space:]]*\|[[:space:]]*grep[[:space:]]+-[A-Za-z]*q/ { printf " %s:%d", FILENAME, FNR }
+  ' "$f" </dev/null)"
+done
+if [ -n "$early_exit_hits" ]; then
+  fail "pipe a variable into grep -q under pipefail and a match can still fail; use grep -q ... <<<\"\$var\":$early_exit_hits"
+else
+  ok "early exit" "no variable is piped into grep -q under pipefail"
+fi
+
 section "locale-stable parsers"
 for f in dev/check.sh scripts/doctor.sh scripts/install.sh scripts/update.sh scripts/uninstall.sh; do
   if grep -q '^export LC_ALL=C$' "$f"; then ok "$f"; else fail "$f must set LC_ALL=C"; fi

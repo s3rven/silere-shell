@@ -243,7 +243,7 @@ version_info() {
 }
 
 is_packaged() {
-    version_info 2>/dev/null | grep -q '^packaged=1$'
+    grep -q '^packaged=1$' <<<"$(version_info 2>/dev/null)"
 }
 
 print_update_status() {
@@ -274,16 +274,16 @@ print_update_status() {
 print_transaction_status() {
     local out phase tag
     if ! out="$(bash "$ROOT/scripts/update.sh" --transaction-status 2>/dev/null)"; then
-        if printf '%s\n' "$out" | grep -q '^pending=1$'; then
+        if grep -q '^pending=1$' <<<"$out"; then
             printf 'Update transaction: %srecovery state is damaged%s; run silere doctor\n' "$RED" "$R"
         fi
         return 0
     fi
-    if printf '%s\n' "$out" | grep -q '^quarantined=1$'; then
+    if grep -q '^quarantined=1$' <<<"$out"; then
         printf 'Update transaction: %sdamaged recovery state was preserved%s; run silere doctor\n' "$YELLOW" "$R"
         return 0
     fi
-    printf '%s\n' "$out" | grep -q '^pending=1$' || return 0
+    grep -q '^pending=1$' <<<"$out" || return 0
     phase="$(printf '%s\n' "$out" | sed -n 's/^phase=//p')"
     tag="$(printf '%s\n' "$out" | sed -n 's/^tag=//p')"
     if [ "$phase" = validated ]; then
@@ -372,7 +372,7 @@ case "$command_name" in
         else
             printf 'Shell: %snot running%s\n' "$RED" "$R"
         fi
-        if printf '%s\n' "$info" | grep -q '^packaged=1$'; then
+        if grep -q '^packaged=1$' <<<"$info"; then
             printf 'Updates: managed by %s; Silere self-update is disabled\n' "$(package_manager)"
         else
             branch="$(printf '%s\n' "$info" | sed -n 's/^branch=//p')"
@@ -388,7 +388,7 @@ case "$command_name" in
             print_transaction_status
             print_update_status
             timer="$(bash "$ROOT/scripts/update.sh" --timer-status 2>/dev/null || true)"
-            if printf '%s\n' "$timer" | grep -q '^enabled=1$'; then
+            if grep -q '^enabled=1$' <<<"$timer"; then
                 printf 'Update timer: enabled\n'
             else
                 printf 'Update timer: disabled or unavailable\n'

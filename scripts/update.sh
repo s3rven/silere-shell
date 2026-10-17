@@ -429,15 +429,14 @@ _check_release_manifest() {
         || _release_fail "$mode" "$release_tag has an invalid settings schema"
     [[ "$manifest_qs" =~ ^[0-9]+(\.[0-9]+)*$ ]] \
         || _release_fail "$mode" "$release_tag has an invalid Quickshell requirement"
-    printf '%s\n' "$release_manifest" \
-        | grep -Eq '^[[:space:]]*"compositors"[[:space:]]*:[[:space:]]*\[[[:space:]]*"(hyprland|niri)"([[:space:]]*,[[:space:]]*"(hyprland|niri)")*[[:space:]]*\][[:space:]]*,?[[:space:]]*$' \
+    # a here-string, not a pipe: grep -q stops at the match and printf's next line would die of SIGPIPE under pipefail
+    grep -Eq '^[[:space:]]*"compositors"[[:space:]]*:[[:space:]]*\[[[:space:]]*"(hyprland|niri)"([[:space:]]*,[[:space:]]*"(hyprland|niri)")*[[:space:]]*\][[:space:]]*,?[[:space:]]*$' <<<"$release_manifest" \
         || _release_fail "$mode" "$release_tag has an invalid compositor list"
 
     if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then compositor=hyprland
     elif [ -n "${NIRI_SOCKET:-}" ]; then compositor=niri
     fi
-    if [ -n "$compositor" ] && ! printf '%s\n' "$release_manifest" \
-            | grep -Eq "\"compositors\"[^]]*\"$compositor\""; then
+    if [ -n "$compositor" ] && ! grep -Eq "\"compositors\"[^]]*\"$compositor\"" <<<"$release_manifest"; then
         _release_fail "$mode" "$release_tag does not support the active $compositor session"
     fi
 

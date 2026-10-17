@@ -11,6 +11,10 @@ settings file carries its own `__version` and migrates separately.
 
 ## [Unreleased]
 
+### Fixed
+
+- Checking for a Silere update no longer fails now and then with an invalid compositor list.
+
 ## Releases
 
 - [1.4.3](docs/releases/1.4.3.md) — 2026-10-18

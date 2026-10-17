@@ -1434,8 +1434,8 @@ EOF
     assert_eq "false" "$(git -C "$client" rev-parse --is-shallow-repository)" \
         "update check expands an existing shallow clone"
     out="$(_run --version)"
-    printf '%s\n' "$out" | grep -qE '^sha=[0-9a-f]{7,}$' || fail "--version omitted the commit sha"
-    printf '%s\n' "$out" | grep -qE '^date=[0-9]{4}-[0-9]{2}-[0-9]{2}$' || fail "--version omitted the build date"
+    grep -qE '^sha=[0-9a-f]{7,}$' <<<"$out" || fail "--version omitted the commit sha"
+    grep -qE '^date=[0-9]{4}-[0-9]{2}-[0-9]{2}$' <<<"$out" || fail "--version omitted the build date"
     assert_eq "tag=v9.9.0" "$(printf '%s\n' "$out" | grep '^tag=')" "--version tag"
     assert_eq "ahead=1" "$(printf '%s\n' "$out" | grep '^ahead=')" "--version commits since tag"
     assert_eq "branch=main" "$(printf '%s\n' "$out" | grep '^branch=')" "--version branch"
@@ -1457,11 +1457,11 @@ EOF
     assert_eq "upstream update" "$(sed -n '3p' "$cache/update-pending" | cut -d' ' -f2-)" \
         "pending update summary"
     notes="$(cat "$cache/release-notes")"
-    printf '%s\n' "$notes" | grep -qF 'target v9.9.1' \
+    grep -qF 'target v9.9.1' <<<"$notes" \
         || fail "release notes cache does not name its verified target"
-    printf '%s\n' "$notes" | grep -qF $'Added\tA useful release summary that wraps onto one normalized cache row.' \
+    grep -qF $'Added\tA useful release summary that wraps onto one normalized cache row.' <<<"$notes" \
         || fail "release notes cache did not normalize a wrapped Added entry"
-    printf '%s\n' "$notes" | grep -qF $'Fixed\tA test fixture bug.' \
+    grep -qF $'Fixed\tA test fixture bug.' <<<"$notes" \
         || fail "release notes cache omitted a Fixed entry"
 
     _run --apply >/dev/null 2>&1
@@ -1561,7 +1561,7 @@ test_repair_workflow() (
     printf '{"barHeight":40}\n' > "$repo/settings.json"
 
     preview="$(bash "$repo/scripts/repair.sh")"
-    printf '%s\n' "$preview" | grep -qF 'Nothing was changed' \
+    grep -qF 'Nothing was changed' <<<"$preview" \
         || fail "repair preview did not state that it was side-effect free"
     assert_eq "customized" "$(<"$repo/tracked.qml")" "repair preview tracked file"
     [ -f "$repo/custom.qml" ] || fail "repair preview removed an untracked file"
@@ -1572,7 +1572,7 @@ test_repair_workflow() (
     assert_eq '{"barHeight":40}' "$(<"$repo/settings.json")" "repair apply personal settings"
     [ -z "$(git -C "$repo" status --short --untracked-files=normal)" ] \
         || fail "repair apply did not produce a clean checkout"
-    git -C "$repo" stash list | grep -qF 'silere-repair ' \
+    grep -qF 'silere-repair ' <<<"$(git -C "$repo" stash list)" \
         || fail "repair apply did not create a named stash"
 
     bash "$repo/scripts/repair.sh" --undo --yes >/dev/null
@@ -1584,7 +1584,7 @@ test_repair_workflow() (
     [ -f "$linked/.git" ] || fail "repair fixture did not create a linked worktree"
     printf 'linked customization\n' > "$linked/tracked.qml"
     preview="$(bash "$linked/scripts/repair.sh")"
-    printf '%s\n' "$preview" | grep -qF 'Nothing was changed' \
+    grep -qF 'Nothing was changed' <<<"$preview" \
         || fail "repair preview rejected a linked worktree"
     bash "$linked/scripts/repair.sh" --apply --yes >/dev/null
     assert_eq "shipped" "$(<"$linked/tracked.qml")" "linked repair apply tracked file"
@@ -1925,7 +1925,7 @@ test_update_apply_binds_to_confirmed_release() (
             bash "$client/scripts/update.sh" --apply 2>&1)"; then
         fail "apply installed a release withdrawn after confirmation"
     fi
-    printf '%s\n' "$out" | grep -q 'v1.0.1 was withdrawn upstream' \
+    grep -q 'v1.0.1 was withdrawn upstream' <<<"$out" \
         || fail "withdrawn release refusal was unclear: $out"
     assert_eq "$head_before" "$(git -C "$client" rev-parse HEAD)" \
         "withdrawn release leaves the checkout untouched"
@@ -1941,7 +1941,7 @@ test_update_apply_binds_to_confirmed_release() (
             bash "$client/scripts/update.sh" --apply 2>&1)"; then
         fail "apply accepted a pending update with no confirmed target"
     fi
-    printf '%s\n' "$out" | grep -q 'confirmed release is missing or malformed' \
+    grep -q 'confirmed release is missing or malformed' <<<"$out" \
         || fail "apply binding: malformed-target refusal was unclear: $out"
     assert_eq "$head_before" "$(git -C "$client" rev-parse HEAD)" \
         "a malformed confirmed target leaves the checkout untouched"
@@ -1959,7 +1959,7 @@ test_update_apply_binds_to_confirmed_release() (
             bash "$client/scripts/update.sh" --apply 2>&1)"; then
         fail "apply installed v1.0.2 when v1.0.1 was the confirmed release"
     fi
-    printf '%s\n' "$out" | grep -q 'is not the release that was confirmed' \
+    grep -q 'is not the release that was confirmed' <<<"$out" \
         || fail "apply binding: refusal did not name the confirmed release: $out"
     assert_eq "$head_before" "$(git -C "$client" rev-parse HEAD)" \
         "apply binding leaves the checkout untouched"

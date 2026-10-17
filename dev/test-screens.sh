@@ -36,7 +36,7 @@ if [ "${1:-}" = --inner ]; then
     qs_pid=$!
     state() { qs ipc -p "$TMP/copy/shell.qml" call screenprobe state 2>/dev/null || true; }
     for _ in $(seq 1 80); do
-        qs ipc -p "$TMP/copy/shell.qml" show 2>/dev/null | grep -q 'target screenprobe' && break
+        grep -q 'target screenprobe' <<<"$(qs ipc -p "$TMP/copy/shell.qml" show 2>/dev/null)" && break
         kill -0 "$qs_pid" 2>/dev/null || break
         sleep 0.1
     done
