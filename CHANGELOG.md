@@ -15,6 +15,8 @@ settings file carries its own `__version` and migrates separately.
 
 - The Notifications page and its app list are ready when you open them, instead of the list
   arriving after the panel has widened.
+- Returning to Now Playing within a few seconds shows the page and its cover at once instead of
+  building them again.
 
 ### Fixed
 

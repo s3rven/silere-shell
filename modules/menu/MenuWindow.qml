@@ -369,7 +369,8 @@ FittedPopupWindow {
 
         Timer {
             id: _mediaUnload
-            interval: Math.max(Motion.pageOut, Motion.ms(100)) + 30
+            // a hidden page keeps its decoded cover, so a return within seconds lands with the art already there
+            interval: 8000
             onTriggered: if (panel.activeTab !== MenuState.mediaTab) panel._mediaRetained = false
         }
 
