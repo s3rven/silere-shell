@@ -14,6 +14,8 @@ settings file carries its own `__version` and migrates separately.
 ### Fixed
 
 - Checking for a Silere update no longer fails now and then with an invalid compositor list.
+- An update blocked by many local files names the first one and how to clear it, instead of
+  stopping without a reason.
 
 ## Releases
 

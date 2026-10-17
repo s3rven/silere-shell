@@ -947,12 +947,12 @@ if [ "${1:-}" = "--apply" ]; then
         if [ "$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || true)" = "$local_rev" ]; then
             _clear_apply_transaction || true
         fi
-        merge_line="$(printf '%s\n' "$merge_err" \
-            | sed -n 's/^error: //p; s/^fatal: //p' | head -n1)"
+        # awk stops on the first match itself: past a pipe buffer of paths, head would leave sed to die of SIGPIPE
+        merge_line="$(awk 'sub(/^(error|fatal): /, "") { print; exit }' <<<"$merge_err")"
         [ -z "$merge_line" ] \
             && _fail "fast-forward merge failed — local branch diverged"
         # git lists offending paths tab-indented on the next lines
-        merge_file="$(printf '%s\n' "$merge_err" | sed -n 's/^\t//p' | head -n1)"
+        merge_file="$(awk 'sub(/^\t/, "") { print; exit }' <<<"$merge_err")"
         _fail "$merge_line${merge_file:+ $merge_file} — bash $ROOT/scripts/repair.sh --apply clears blocking files"
     fi
     # Retain the validated recovery journal until the moved checkout reaches
