@@ -39,7 +39,7 @@ DEFAULT_DIR="$(readlink -m -- "$CONFIG_HOME/silere-shell")" || {
 }
 
 source "$SCRIPT_DIR/lib/ui.sh"
-TTY_HINT="interactive install requires a TTY — clone the repo and run scripts/install.sh from a terminal"
+TTY_HINT="interactive install requires a TTY — run it from a terminal, or set SILERE_ASSUME_YES=1 to accept the defaults"
 
 _reject_unsafe_path() {
     if printf '%s' "$1" | LC_ALL=C grep -q '[[:cntrl:]]'; then
@@ -964,11 +964,11 @@ _optdep pkill         "optional night light external stop fallback"
 _optdep powerprofilesctl "power profile selector"
 _optdep_any "lock screen" "lock action" hyprlock swaylock gtklock
 _optdep_any "sound settings" "per-app routing hand-off" pwvucontrol pavucontrol
-_optdep wpctl         "bluetooth output volume"
+_optdep wpctl         "bluetooth volume on Quickshell 0.3.1"
 _optdep curl          "web cover art + installer downloads"
 _optdep xdg-open      "network sign-in page"
 _optdep_any "power actions" "suspend / reboot / shutdown" systemctl loginctl
-_optdep notify-send   "low-battery + hot-CPU alerts"
+_optdep notify-send   "critical battery, CPU and update alerts"
 _optdep timeout       "bounded update checks"
 _optdep ssh-keygen    "signed shell updates"
 if [ "$_optdeps_missing" -eq 0 ]; then

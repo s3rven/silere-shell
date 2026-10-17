@@ -129,7 +129,7 @@ hides that widget or marks it unavailable.
 | `matugen` | wallpaper theming |
 | `cava` | media visualizer |
 | `curl` | cover art from the web, when that setting is on |
-| `wpctl` | volume on Bluetooth outputs without hardware volume (part of WirePlumber) |
+| `wpctl` | Bluetooth volume on Quickshell 0.3.1 (part of WirePlumber) |
 | `powerprofilesctl` | power profiles; a daemon on the same D-Bus API, such as `tuned-ppd`, works without it |
 | `inotifywait` | screenshot feedback on the underline, and restarting the shell onto a restarted Hyprland when the systemd user service runs this checkout |
 | `checkupdates` / `apt` / `dnf` / `zypper` / `xbps-install` | package update badge; `checkupdates` also needs `fakeroot` |
