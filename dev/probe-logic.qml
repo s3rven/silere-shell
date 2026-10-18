@@ -2106,6 +2106,35 @@ ShellRoot {
                 ShellSettings.underlineNetGlow = true
                 ShellSettings.underlineScreenshotGlow = true
                 ShellSettings.screenshotGlowSweep = true
+                const arrivalCount = Notifications.activeCount
+                Notifications.notificationShown("Probe", "First arrival", false)
+                root._check(notificationFlash.running && !lineEffect._notifCritical
+                        && Notifications.activeCount === arrivalCount,
+                    "a notification arrival flashes without needing the active popup count to change")
+                lineEffect._stopTransient()
+                Notifications.notificationShown("Probe", "Critical arrival", true)
+                root._check(notificationFlash.running && lineEffect._notifCritical,
+                    "the arrival signal supplies the notification's own critical color")
+                const criticalWas = CpuTemp.critical
+                const tempGlowWas = ShellSettings.underlineTempGlow
+                ShellSettings.underlineTempGlow = true
+                CpuTemp.critical = true
+                underline.quiet = true
+                root._check(!notificationFlash.running && !networkFlash.running
+                        && lineEffect._tempSteady && lineEffect._tempGlow === 0.5,
+                    "quiet idle stops underline motion while retaining a steady critical temperature warning")
+                Notifications.notificationShown("Probe", "Quiet arrival", true)
+                Screenshot.flashed()
+                root._check(!notificationFlash.running && !lineEffect._shotActive
+                        && !lineEffect._skipNextNotif && !lineEffect._canRunEventMotion(),
+                    "quiet arrivals start no underline flash and leave no screenshot suppression behind")
+                underline.quiet = false
+                Notifications.notificationShown("Probe", "After quiet", false)
+                root._check(notificationFlash.running && !lineEffect._notifCritical,
+                    "the first arrival after quiet idle can flash immediately")
+                CpuTemp.critical = criticalWas
+                ShellSettings.underlineTempGlow = tempGlowWas
+                lineEffect._stopTransient()
                 lineEffect._playNotification(true)
                 notificationFlash.spread = 0.19
                 notificationFlash.bloom = 0.14
@@ -2137,6 +2166,19 @@ ShellRoot {
                         && notificationFlash.glow === 0 && networkFlash.glow === 0
                         && lineEffect._bloomBoost === 0 && lineEffect._sweepSpread === 0.28,
                     "settling all event envelopes leaves no geometry or glow behind")
+                const fullWidthWas = ShellSettings.underlineFullWidth
+                const softLayers = underline.children.filter(item => item.modelData !== undefined
+                    && item.center !== undefined)
+                ShellSettings.reduceMotion = true
+                lineEffect._sweepCenter = 0.2
+                ShellSettings.underlineFullWidth = true
+                root._check(softLayers.length === 6 && softLayers.every(layer => layer.center === 0.5
+                        && layer.spread === 0.46 && layer.edge === lineEffect._renderEdge),
+                    "full-width underline feedback spreads every soft layer across the bar")
+                ShellSettings.underlineFullWidth = false
+                root._check(softLayers.every(layer => layer.center === 0.2),
+                    "localized underline feedback keeps its event position when full width is turned off")
+                ShellSettings.underlineFullWidth = fullWidthWas
                 ShellSettings.underlineNotifGlow = notifGlowWas
                 ShellSettings.underlineNetGlow = netGlowWas
                 ShellSettings.underlineScreenshotGlow = screenshotGlowWas

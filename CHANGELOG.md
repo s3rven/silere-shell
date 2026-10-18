@@ -27,6 +27,8 @@ settings file carries its own `__version` and migrates separately.
   stopping without a reason.
 - The one-line install no longer ends with `curl: Failed writing body`.
 - Scrolling a volume or brightness control after a sideways touchpad swipe starts a fresh step.
+- The bar underline no longer flashes when a notification is replaced or restored, and stays still
+  during idle. Full-width underline effects spread their glow across the whole bar.
 
 ## Releases
 

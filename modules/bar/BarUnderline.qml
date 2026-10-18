@@ -12,6 +12,7 @@ Item {
     property var  screen: null
     property real floatingProgress: ShellSettings.barFloating ? 1.0 : 0.0
     property real wrapRadius: 0
+    property bool quiet: Idle.isQuiet
     readonly property real eventGlow: _lineEffect._eventGlow
 
     // a bottom bar mirrors the whole item vertically in one step; conditional anchor flips leave elements on the stale edge
@@ -47,7 +48,7 @@ Item {
         // a settled critical rests on the same steady 0.5 reduced motion already shows, so
         // the glow reads the same whether motion stopped it or the settle window below did
         property bool _tempSettled: false
-        readonly property bool _tempSteady: ShellSettings.reduceMotion || _tempSettled
+        readonly property bool _tempSteady: ShellSettings.reduceMotion || _ul.quiet || _tempSettled
         readonly property real _tempGlow: (_tempGlowEnabled && CpuTemp.critical && _tempSteady)
             ? 0.5
             : _tempGlowBase + _tempPulseGlow
@@ -63,6 +64,7 @@ Item {
             : (((_tempGlowEnabled && CpuTemp.critical) || (_batteryGlowEnabled && Battery.critical)) ? 0.74 : 0.62)
         property real _idleFloor: ShellSettings.underlineIdleGlow ? 0.20 : 0
         MotionBehavior on _idleFloor {
+            gate: !_ul.quiet
             NumberAnimation { duration: Motion.slow; easing.type: Easing.OutCubic }
         }
         readonly property real _activeGlowStrength: Math.min(1, 0.45 + 0.4 * ShellSettings.glowStrength)
@@ -72,6 +74,7 @@ Item {
         property real _mediaGlow: (Media.shown && Media.playing && Media.cavaReady
             && ShellSettings.mediaVisualizerPosition !== "underline") ? 0.18 : 0
         MotionBehavior on _mediaGlow {
+            gate: !_ul.quiet
             NumberAnimation { duration: Motion.slow; easing.type: Easing.OutCubic }
         }
         readonly property real _combined:    Math.min(_ceiling, Math.max(_idleFloor, _eventGlow, _mediaGlow))
@@ -90,7 +93,7 @@ Item {
             return Theme.accent
         }
         property color _effectColor: _effectColorTarget
-        ColorFade on _effectColor {}
+        ColorFade on _effectColor { gate: !_ul.quiet }
 
         // the rim and every gradient stop share one eased color. During a palette
         // transition ColorFade stands down so these follow the theme's own curve
@@ -134,7 +137,7 @@ Item {
         property real _sweepCenter: _sweepCenterTarget
         MotionBehavior on _sweepCenter {
             // sweep already animates this frame-by-frame, a second Behavior would lag behind it
-            gate: !(_lineEffect._shotActive && ShellSettings.screenshotGlowSweep)
+            gate: !_ul.quiet && !(_lineEffect._shotActive && ShellSettings.screenshotGlowSweep)
             NumberAnimation { duration: Motion.ms(400); easing.type: Easing.OutCubic }
         }
 
@@ -142,7 +145,7 @@ Item {
         readonly property bool _shotActive: _screenshotGlow > 0.001
 
         function _canRunEventMotion(): bool {
-            return Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)
+            return Motion.allowsMotion(_ul.quiet, ShellSettings.reduceMotion)
         }
 
         function _stopScreenshot(): void {
@@ -168,6 +171,7 @@ Item {
         Connections {
             target: Screenshot
             function onFlashed() {
+                if (!_lineEffect._canRunEventMotion()) return
                 _lineEffect._skipNextNotif = true
                 _skipResetTimer.restart()
                 if (ShellSettings.underlineScreenshotGlow)
@@ -258,25 +262,23 @@ Item {
             }
         }
 
-        // seeded, not bound: an overview toggle recreates this item and starting from 0 makes the next dismissal flash as an arrival
-        property int  _prevNotifCount: 0
         property bool _skipNextNotif: false
 
         Connections {
             target: Notifications
-            function onActiveCountChanged() {
-                const incoming = Notifications.activeCount > _lineEffect._prevNotifCount
-                if (incoming && _lineEffect._skipNextNotif) {
+            // activeCount also moves on replace, restore and dismiss, and stalls during overflow
+            function onNotificationShown(appName, summary, critical) {
+                if (_lineEffect._skipNextNotif) {
                     _lineEffect._skipNextNotif = false
-                } else if (ShellSettings.underlineNotifGlow && incoming
+                } else if (ShellSettings.underlineNotifGlow
                         && _lineEffect._canRunEventMotion()) {
-                    _lineEffect._playNotification(Notifications.lastCritical)
+                    _lineEffect._playNotification(critical)
                 }
-                _lineEffect._prevNotifCount = Notifications.activeCount
             }
         }
 
         function _playNotification(critical: bool): void {
+            if (!_lineEffect._canRunEventMotion()) return
             _notifCritical = critical
             _notifFlash.play(_lineEffect._gatherDuration())
         }
@@ -289,7 +291,6 @@ Item {
 
         property bool _settingsReady: false
         Component.onCompleted: {
-            _prevNotifCount = Notifications.activeCount
             _lastNetConnected = Network.available && Network.connected
             Qt.callLater(() => {
                 if (!_lineEffect) return
@@ -303,6 +304,8 @@ Item {
         }
         function _stopTransient(): void {
             _previewTimer.stop()
+            _skipResetTimer.stop()
+            _skipNextNotif = false
             _lineEffect._stopScreenshot()
             _notifFlash.reset()
             _netGlowAnim.stop()
@@ -351,9 +354,9 @@ Item {
             }
         }
         Connections {
-            target: Idle
-            function onIsIdleChanged() {
-                if (Idle.isIdle) _lineEffect._stopTransient()
+            target: _ul
+            function onQuietChanged() {
+                if (_ul.quiet) _lineEffect._stopTransient()
             }
         }
         Timer {
@@ -430,7 +433,7 @@ Item {
             floor:          _lineEffect._tempFloor
             duration:       _lineEffect._tempPulseDur
             active:         _lineEffect._tempGlowEnabled && CpuTemp.critical
-                && !_lineEffect._tempSettled && !Idle.isQuiet
+                && !_lineEffect._tempSettled && !_ul.quiet
         }
 
         // critical holds for as long as the machine stays pegged, and animating the glow that whole time repaints a bar on hardware already at its limit
@@ -443,7 +446,7 @@ Item {
         Timer {
             interval: 15000
             running: _lineEffect._tempGlowEnabled && CpuTemp.critical
-                && !_lineEffect._tempSettled && !Idle.isQuiet
+                && !_lineEffect._tempSettled && !_ul.quiet
                 && !ShellSettings.reduceMotion
             onTriggered: _lineEffect._tempSettled = true
         }
@@ -535,9 +538,9 @@ Item {
                 (_lineEffect._combined * modelData.c + _lineEffect._bloomBoost * modelData.b)
                 * ShellSettings.glowStrength)
             peak:   _lineEffect._stopColor
-            edge:   _lineEffect._stopColorMid
-            center: _lineEffect._sweepCenter
-            spread: Math.min(0.46, _lineEffect._sweepSpread * modelData.s)
+            edge:   _lineEffect._renderEdge
+            center: _lineEffect._renderCenter
+            spread: Math.min(0.46, _lineEffect._renderSpread * modelData.s)
         }
     }
 

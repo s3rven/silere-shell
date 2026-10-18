@@ -29,6 +29,9 @@ page, and pause during quiet idle. The bar's text and progress display needs no 
 downloads. A hidden Now Playing page also stops cover decoding, retries and unfinished
 animations.
 
+Underline event animations stop during quiet idle; a critical temperature warning
+stays lit but still.
+
 Read PSS, not RSS. `top` and `htop` show RSS, which counts shared Qt, Mesa and font pages in
 full and reads about 180 to 195 MB for the same session.
 
