@@ -28,6 +28,29 @@ Singleton {
         return Math.max(compact ? 6 : 9, widgetGapFor(compact))
     }
 
+    function barLayoutWidth(left: real, center: real, right: real,
+            hasCenter: bool, gap: real, centerInGap: bool): real {
+        if (!hasCenter) return left + right + gap
+        return center + (centerInGap ? left + right : 2 * Math.max(left, right)) + 2 * gap
+    }
+
+    // screen centring must clear both side zones, not their sum
+    function barTextFit(left, center, right, hasCenter: bool,
+            capacity: real, gap: real, centerInGap: bool): real {
+        let scale = 1
+        function constrain(fixed, flexible) {
+            if (flexible > 0) scale = Math.min(scale, (capacity - fixed) / flexible)
+        }
+        if (!hasCenter || centerInGap) {
+            constrain(left.fixed + center.fixed + right.fixed + gap * (hasCenter ? 2 : 1),
+                left.flexible + center.flexible + right.flexible)
+        } else {
+            constrain(2 * left.fixed + center.fixed + 2 * gap, 2 * left.flexible + center.flexible)
+            constrain(2 * right.fixed + center.fixed + 2 * gap, 2 * right.flexible + center.flexible)
+        }
+        return Math.max(0, Math.min(1, scale))
+    }
+
     function pillPadFor(compact: bool): int { return compact ? 2 : 5 }
 
     // a visualizer stands on the bar's bottom rim instead of painting over it, or the translucent stroke vanishes

@@ -32,6 +32,7 @@ Item {
 
     // a zone widget displaces its neighbours, so the cap tightens with the rest of the bar
     property real widthBudget: -1
+    property real layoutWidthLimit: -1
     readonly property real   _widthCap: {
         const span = root.widthBudget > 0 ? root.widthBudget
             : (root.screen ? root.screen.width : 0)
@@ -433,7 +434,8 @@ Item {
     }
 
     readonly property real _contentCap: Math.max(0,
-        root._widthCap - root._horizontalPadding * 2)
+        Math.min(root._widthCap, root.layoutWidthLimit >= 0 ? root.layoutWidthLimit : Infinity)
+            - root._horizontalPadding * 2)
     TextMetrics {
         id: _textMetrics
         font.family: Settings.font
@@ -442,8 +444,12 @@ Item {
     }
     readonly property real _measuredContentWidth: root._displayText.length > 0
         ? Math.ceil(Math.min(_textMetrics.advanceWidth, root._contentCap)) : 0
+    readonly property real preferredWidth: root._displayText.length > 0
+        ? Math.ceil(Math.min(_textMetrics.advanceWidth,
+            Math.max(0, root._widthCap - root._horizontalPadding * 2))) + root._horizontalPadding * 2 : 0
     readonly property real _naturalWidth: root._displayText.length > 0
-        ? root._measuredContentWidth + root._horizontalPadding * 2
+        ? Math.min(root._measuredContentWidth + root._horizontalPadding * 2,
+            root.layoutWidthLimit >= 0 ? root.layoutWidthLimit : Infinity)
         : 0
 
     // a zone widget shoves its neighbours when it resizes, and titles change on every navigation;

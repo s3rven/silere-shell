@@ -19,15 +19,20 @@ Item {
     property real _lastCompactWidth: 0
     readonly property bool effectiveCompact: ShellSettings.barCompact || _autoCompact
     readonly property int gap: Metrics.titleGapFor(effectiveCompact)
-    readonly property bool centerHasWidgets: centerZone.implicitWidth > 0.5
-    readonly property real _widgetLayoutWidth: centerHasWidgets
-        ? ShellSettings.barCenterInGap
-            ? leftZone.implicitWidth + centerZone.implicitWidth
-                + rightZone.implicitWidth + gap * 2
-            : centerZone.implicitWidth
-                + 2 * Math.max(leftZone.implicitWidth, rightZone.implicitWidth)
-                + gap * 2
-        : leftZone.implicitWidth + rightZone.implicitWidth + gap
+    readonly property bool centerHasWidgets:
+        centerZone.widthMetrics.fixed + centerZone.widthMetrics.flexible > 0.5
+    readonly property real _fitCapacity: fitWidth > 0 ? Math.min(fitWidth, width) : width
+    readonly property real textFitScale: Metrics.barTextFit(leftZone.widthMetrics,
+        centerZone.widthMetrics, rightZone.widthMetrics, centerHasWidgets,
+        Math.max(0, _fitCapacity), gap, ShellSettings.barCenterInGap)
+    readonly property real _preferredLayoutWidth: Metrics.barLayoutWidth(
+        leftZone.widthMetrics.fixed + leftZone.widthMetrics.flexible,
+        centerZone.widthMetrics.fixed + centerZone.widthMetrics.flexible,
+        rightZone.widthMetrics.fixed + rightZone.widthMetrics.flexible,
+        centerHasWidgets, gap, ShellSettings.barCenterInGap)
+    readonly property real _widgetLayoutWidth: Metrics.barLayoutWidth(
+        leftZone.implicitWidth, centerZone.implicitWidth, rightZone.implicitWidth,
+        centerHasWidgets, gap, ShellSettings.barCenterInGap)
     readonly property real _osdLayoutWidth: _osdBarShowing && _osdLoader.item
         ? _osdLoader.item.implicitWidth
             + (ShellSettings.barCenterInGap
@@ -82,8 +87,8 @@ Item {
         }
 
         // the title is a zone widget, so an empty centre needs no reserve of its own
-        const layoutW = _widgetLayoutWidth
-        const capacity = fitWidth > 0 ? Math.min(fitWidth, width) : width
+        const layoutW = _preferredLayoutWidth
+        const capacity = _fitCapacity
 
         if (!_autoCompact) {
             _expandedWidthEstimate = layoutW
@@ -111,6 +116,7 @@ Item {
 
     onWidthChanged: _queueAutoCompact()
     onFitWidthChanged: _queueAutoCompact()
+    on_PreferredLayoutWidthChanged: _queueAutoCompact()
 
     // entering or leaving the centre swaps _widgetLayoutWidth to the other formula, and
     // the delta estimate below would bank that step as if the content had resized
@@ -187,6 +193,7 @@ Item {
         orderKeys: ShellSettings.barWidgetOrderLeftKeys
         widgetComponents: root._widgetComponents
         compact: root.effectiveCompact
+        textFitScale: root.textFitScale
         onImplicitWidthChanged: root._queueAutoCompact()
     }
 
@@ -225,6 +232,7 @@ Item {
         orderKeys: ShellSettings.barWidgetOrderCenterKeys
         widgetComponents: root._widgetComponents
         compact: root.effectiveCompact
+        textFitScale: root.textFitScale
         opacity: root._osdBarShowing ? 0 : 1
         visible: opacity > 0.001
         enabled: !root._osdBarShowing
@@ -291,6 +299,7 @@ Item {
         orderKeys: ShellSettings.barWidgetOrderRightKeys
         widgetComponents: root._widgetComponents
         compact: root.effectiveCompact
+        textFitScale: root.textFitScale
         onImplicitWidthChanged: root._queueAutoCompact()
     }
 }

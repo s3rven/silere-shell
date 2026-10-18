@@ -91,6 +91,7 @@ Item {
     }
     onTextChanged: if (text.length === 0) { _minW = 0; _shrinkDelay.stop() }
     onShrinkDelayChanged: if (shrinkDelay <= 0) { _shrinkDelay.stop(); _minW = rowWidth }
+    onCompactChanged: { _shrinkDelay.stop(); _minW = 0 }
     onHoverEnabledChanged: if (!hoverEnabled) {
         _hoverRevealTimer.stop()
         _shrinkDelay.stop()

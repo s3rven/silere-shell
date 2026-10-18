@@ -175,6 +175,17 @@ ShellRoot {
     Component { id: barCenterFactory; Item { property bool show: true; implicitWidth: 120; implicitHeight: 24 } }
     Component { id: barRightFactory; Item { property bool show: true; implicitWidth: 60; implicitHeight: 24 } }
     Component {
+        id: barFlexibleFactory
+        Item {
+            property bool show: true
+            readonly property bool layoutVisible: implicitWidth > 0.5
+            property real preferredWidth: 180
+            property real layoutWidthLimit: -1
+            implicitWidth: layoutWidthLimit >= 0 ? Math.min(preferredWidth, layoutWidthLimit) : preferredWidth
+            implicitHeight: 24
+        }
+    }
+    Component {
         id: selectRowFactory
         SelectRow {
             width: 320
@@ -4194,8 +4205,60 @@ ShellRoot {
             root._check(titleWidget._widthCap === Metrics.windowTitleWidthFor(true)
                     && titleWidget._widthCap < Metrics.windowTitleWidthFor(false),
                 "compact mode gives the window title a smaller readable-width cap")
+            titleWidget.layoutWidthLimit = 32
+            root._check(titleWidget._naturalWidth <= 32 && titleWidget.preferredWidth > 32
+                    && titleWidget._spokenText.length > 0,
+                "a crowded title elides to its layout budget while retaining its natural width and accessible text")
+            titleWidget.layoutWidthLimit = 0
+            root._check(titleWidget._naturalWidth === 0 && titleWidget._measuredContentWidth === 0,
+                "a title can yield all of its space without retaining padding over adjacent controls")
             titleWidget.destroy()
         }
+
+        const mediaComponent = Qt.createComponent("modules/bar/widgets/MediaWidget.qml")
+        const mediaShownWas = Media.shown
+        const showMediaWas = ShellSettings.barShowMedia
+        const helperWas = ShellSettings.mediaWidgetHelper
+        const mediaReduceWas = ShellSettings.reduceMotion
+        ShellSettings.reduceMotion = true
+        ShellSettings.barShowMedia = true
+        ShellSettings.mediaWidgetHelper = true
+        Media.shown = true
+        const mediaWidget = mediaComponent.createObject(barFixtureHost, { height: 36 })
+        root._check(mediaWidget !== null, "the media widget builds for crowded layout checks")
+        if (mediaWidget) {
+            const clip = root._findTrayNode(mediaWidget, item => item.preferredMaxW !== undefined)
+            const contentRow = mediaWidget.children.find(item => typeof item.forceLayout === "function")
+            clip._shown = "A long track title for a crowded bar"
+            contentRow.forceLayout()
+            const preferred = mediaWidget.preferredWidth
+            mediaWidget.layoutWidthLimit = 48
+            contentRow.forceLayout()
+            root._check(mediaWidget.implicitWidth > 0 && mediaWidget.implicitWidth <= 48
+                    && mediaWidget.preferredWidth === preferred
+                    && clip.width <= 48 - mediaWidget._contentOverhead,
+                "media text contracts around its play control without feeding the fitted width back into measurement")
+            mediaWidget.layoutWidthLimit = 0
+            contentRow.forceLayout()
+            root._check(mediaWidget.implicitWidth === 0 && clip.width === 0,
+                "a media widget with no layout room keeps nonnegative clipped geometry")
+            mediaWidget.layoutWidthLimit = -1
+            contentRow.forceLayout()
+            root._check(clip.width > 0
+                    && Math.abs(contentRow.implicitWidth + mediaWidget._pillPad * 2 - preferred) < 1,
+                "removing a media layout limit restores the preferred text space")
+            mediaWidget.layoutWidthLimit = 0
+            contentRow.forceLayout()
+            ShellSettings.reduceMotion = false
+            root._check(!clip.needsScroll,
+                "a fully squeezed-out media label runs no invisible marquee animation")
+            mediaWidget.destroy()
+        }
+        mediaComponent.destroy()
+        Media.shown = mediaShownWas
+        ShellSettings.barShowMedia = showMediaWas
+        ShellSettings.mediaWidgetHelper = helperWas
+        ShellSettings.reduceMotion = mediaReduceWas
 
         const longMediaText = "m".repeat(Media.maxMetadataChars + 20)
         root._check(SafeText.singleLineText(longMediaText, Media.maxMetadataChars).length
@@ -6136,6 +6199,41 @@ ShellRoot {
             "compact widget gap never decreases as spacing increases")
         ShellSettings.barSpacing = spacingWas
 
+        let textFits = true, fitIsMonotonic = true
+        for (const centeredInGap of [false, true]) {
+            for (const hasCenter of [false, true]) {
+                for (let titleZone = 0; titleZone < 3; titleZone++) {
+                    const zones = [{ fixed: 80, flexible: 0 },
+                        { fixed: hasCenter ? 24 : 0, flexible: 0 },
+                        { fixed: 140, flexible: 0 }]
+                    if (!hasCenter && titleZone === 1) continue
+                    zones[titleZone].flexible = 180
+                    zones[titleZone === 2 ? 0 : 2].flexible += 120
+                    let previous = -1
+                    for (const capacity of [0, 240, 320, 400, 600, 900]) {
+                        const scale = Metrics.barTextFit(zones[0], zones[1], zones[2],
+                            hasCenter, capacity, 12, centeredInGap)
+                        const fixed = Metrics.barLayoutWidth(zones[0].fixed, zones[1].fixed,
+                            zones[2].fixed, hasCenter, 12, centeredInGap)
+                        const fitted = zones.map(zone => zone.fixed + zone.flexible * scale)
+                        const span = Metrics.barLayoutWidth(fitted[0], fitted[1], fitted[2],
+                            hasCenter, 12, centeredInGap)
+                        if (!isFinite(scale) || scale < 0 || scale > 1
+                                || (fixed <= capacity && span > capacity + 0.001)) textFits = false
+                        if (scale < previous) fitIsMonotonic = false
+                        previous = scale
+                    }
+                }
+            }
+        }
+        root._check(textFits,
+            "flexible bar text fits around controls in every zone under both centring modes")
+        root._check(fitIsMonotonic,
+            "widening a bar never reduces the space allocated to flexible text")
+        root._check(Metrics.barTextFit({ fixed: 100, flexible: 0 }, { fixed: 0, flexible: 0 },
+                { fixed: 100, flexible: 0 }, false, 0, 12, false) === 1,
+            "a bar without flexible text keeps finite budgets even with no available width")
+
         const originalLimit = ShellSettings.notifHistoryLimit
         ShellSettings._coerce({ k: "notifHistoryLimit", t: "int", min: 5, max: 100 }, 999)
         root._check(ShellSettings.notifHistoryLimit === 100,
@@ -6801,7 +6899,7 @@ ShellRoot {
     function _startBarLayoutProbe(): void {
         const settings = {}
         for (const key of ["reduceMotion", "barCompact", "barAutoCompact", "barCenterInGap",
-                "osdEnabled", "osdBarIntegrated", "barShowClock", "barShowVolume"])
+                "osdEnabled", "osdBarIntegrated", "barShowClock", "barShowVolume", "showWindowTitle"])
             settings[key] = ShellSettings[key]
         const osd = {}
         for (const key of ["showing", "kind", "label", "muted", "icon", "nextIcon", "value"])
@@ -6814,6 +6912,7 @@ ShellRoot {
         ShellSettings.osdBarIntegrated = true
         ShellSettings.barShowClock = true
         ShellSettings.barShowVolume = true
+        ShellSettings.showWindowTitle = true
         OsdBarState.showing = false
         const component = Qt.createComponent("modules/bar/BarContent.qml")
         const bar = component.createObject(root, {
@@ -6936,7 +7035,85 @@ ShellRoot {
                     "disabling OSD presentation hides a displayed integrated alert immediately")
                 break
             }
-            case 6:
+            case 6: {
+                const pill = pillFactory.createObject(barFixtureHost, {
+                    compact: false, glyph: "V", shrinkDelay: 2400, height: 24
+                })
+                pill.text = Qt.binding(() => pill.compact ? "Short" : "A much longer reading")
+                const row = pill.children.find(item => typeof item.forceLayout === "function")
+                row.forceLayout()
+                pill._minW = pill.rowWidth
+                s.pill = pill
+                s.expandedPillWidth = pill.implicitWidth
+                pill.compact = true
+                row.forceLayout()
+                // headless rows never polish, so their implicit widths stay stale without this
+                s.layout = () => s.zones.forEach(zone => {
+                    zone.children.forEach(slot => { if (slot.forceLayout) slot.forceLayout() })
+                    zone.forceLayout()
+                })
+                s.zones[1].widgetComponents = { windowTitle: barFlexibleFactory, volume: barCenterFactory }
+                s.zones[1].orderKeys = ["windowTitle"]
+                ShellSettings.barCenterInGap = true
+                bar.width = 400
+                bar.fitWidth = 400
+                break
+            }
+            case 7:
+                root._check(s.pill._minW <= s.pill.rowWidth
+                        && s.pill.implicitWidth < s.expandedPillWidth && s.pill.shrinkDelay === 2400,
+                    "compact mode releases a pill's old width without waiting for its reading-jitter delay")
+                s.layout()
+                root._check(bar.effectiveCompact && bar.textFitScale < 1
+                        && bar._widgetLayoutWidth <= bar.width + 0.5
+                        && s.zones[1].x >= bar.titleFreeLeft - 0.5
+                        && s.zones[1].x + s.zones[1].width <= bar.titleFreeRight + 0.5,
+                    "a crowded compact bar fits its middle title between controls instead of growing or overlapping")
+                bar.width = 600
+                bar.fitWidth = 600
+                break
+            case 8:
+                root._check(!bar.effectiveCompact && bar.textFitScale === 1,
+                    "a widened bar restores expanded widgets and their preferred text widths")
+                ShellSettings.barCenterInGap = false
+                break
+            case 9:
+                s.layout()
+                root._check(bar.textFitScale < 1 && bar._widgetLayoutWidth <= bar.width + 0.5
+                        && s.zones[1].x >= bar.titleFreeLeft - 0.5
+                        && s.zones[1].x + s.zones[1].width <= bar.titleFreeRight + 0.5,
+                    "screen-centred text budgets clear the wider side zone")
+                s.zones[0].widgetComponents = { workspaces: barLeftFactory, windowTitle: barFlexibleFactory }
+                s.zones[0].orderKeys = ["workspaces", "windowTitle"]
+                s.zones[1].orderKeys = ["volume"]
+                bar.width = 700
+                bar.fitWidth = 700
+                break
+            case 10:
+                s.layout()
+                root._check(bar.textFitScale < 1 && bar._widgetLayoutWidth <= bar.width + 0.5,
+                    "moving a long title to a side preserves space for screen-centred controls")
+                s.zones[0].orderKeys = ["workspaces"]
+                s.zones[2].widgetComponents = { clock: barRightFactory, windowTitle: barFlexibleFactory }
+                s.zones[2].orderKeys = ["clock", "windowTitle"]
+                break
+            case 11:
+                s.layout()
+                root._check(bar.textFitScale === 1 && bar._widgetLayoutWidth <= bar.width + 0.5,
+                    "moving flexible text to a roomier zone restores its preferred width")
+                bar.width = 1
+                bar.fitWidth = 1
+                break
+            case 12:
+                root._check(bar.textFitScale === 0 && s.zones[2].widthMetrics.flexible === 180,
+                    "a fully squeezed-out title remains measured without oscillating between visible and hidden")
+                bar.width = 900
+                bar.fitWidth = 900
+                break
+            case 13:
+                root._check(bar.textFitScale === 1 && s.zones[2].widthMetrics.flexible === 180,
+                    "a title with a zero-width slot reappears when space returns")
+                s.pill.destroy()
                 bar.destroy()
                 for (const key of Object.keys(s.settings)) ShellSettings[key] = s.settings[key]
                 for (const key of Object.keys(s.osd)) OsdBarState[key] = s.osd[key]

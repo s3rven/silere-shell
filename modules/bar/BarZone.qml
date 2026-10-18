@@ -10,6 +10,7 @@ Row {
     required property var orderKeys
     required property var widgetComponents
     required property bool compact
+    property real textFitScale: 1
 
     spacing: 0
 
@@ -30,6 +31,19 @@ Row {
     // rebuild off the rendered delegates: widgets only report real visibility once loaded, and per-key state goes stale on reorder
     property var _visibleKeys: []
     readonly property var visibleKeys: _visibleKeys
+
+    // never read the fitted widths here: this feeds the budget that fits them
+    readonly property var widthMetrics: {
+        void zone.visibleKeys
+        let fixed = 0, flexible = 0
+        for (let i = 0; i < widgetRepeater.count; i++) {
+            const slot = widgetRepeater.itemAt(i)
+            if (!slot || (slot.flexible ? slot.flexibleWidth <= 0 : !slot.show)) continue
+            fixed += slot.fixedWidth
+            flexible += slot.flexibleWidth
+        }
+        return { fixed: fixed, flexible: flexible }
+    }
 
     function _queueVisibilitySync(): void {
         _visibilitySync.restart()
@@ -77,6 +91,10 @@ Row {
                 && (_loader.item.contentVisible !== undefined
                     ? _loader.item.contentVisible
                     : show)
+            readonly property bool flexible: key === "windowTitle" || key === "media"
+            readonly property real flexibleWidth: flexible && _loader.item
+                ? Math.ceil(_loader.item.preferredWidth) : 0
+            readonly property real fixedWidth: _divider.implicitWidth + (flexible ? 0 : _loader.width)
             // per-slot primitives so a placement change invalidates one divider, not a map rebuilt for every widget
             readonly property int visibleIndex: zone.visibleKeys.indexOf(key)
             readonly property bool hasNext: visibleIndex >= 0
@@ -126,7 +144,15 @@ Row {
                 onLoaded: loadedKey = _slot.key
             }
 
+            Binding {
+                target: _slot.flexible ? _loader.item : null
+                property: "layoutWidthLimit"
+                value: Math.floor(_slot.flexibleWidth * zone.textFitScale)
+                when: _slot.flexible && _loader.item !== null
+            }
+
             BarDivider {
+                id: _divider
                 compact: zone.compact
                 hasNext: _slot.hasNext
                 marked: _slot.hasNext

@@ -18,6 +18,8 @@ settings file carries its own `__version` and migrates separately.
 - Returning to Now Playing within a few seconds shows the page and its cover at once instead of
   building them again.
 - Cover art downloads only while the menu shows it.
+- Long window and media titles shorten on a crowded bar instead of pushing controls aside, and
+  switching compact mode resizes widgets at once.
 
 ### Fixed
 

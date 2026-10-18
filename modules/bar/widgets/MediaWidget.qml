@@ -10,7 +10,8 @@ Item {
     id: root
 
     property bool compact: ShellSettings.barCompact
-    implicitWidth:  root.show ? _content.implicitWidth + root._pillPad * 2 : 0
+    implicitWidth: root.show ? Math.min(_content.implicitWidth + root._pillPad * 2,
+        root.layoutWidthLimit >= 0 ? root.layoutWidthLimit : Infinity) : 0
     implicitHeight: parent ? parent.height : ShellSettings.barHeight
     clip: true
     enabled: root.show
@@ -30,6 +31,10 @@ Item {
     readonly property bool _helperEnabled: ShellSettings.mediaWidgetHelper
     readonly property string _playGlyph: Media.playing ? "󰏤" : "󰐊"
     property real textBudget: -1
+    property real layoutWidthLimit: -1
+    readonly property real _contentOverhead: root._pillPad * 2 + (root._helperEnabled ? 19 : 0)
+    readonly property real preferredWidth: root.show
+        ? Math.ceil(Math.min(trackText.implicitWidth, textClip.preferredMaxW)) + root._contentOverhead : 0
     readonly property int _pillPad: Metrics.pillPadFor(compact)
 
     readonly property real _scrollSpeed:     38
@@ -148,12 +153,14 @@ Item {
         Item {
             id: textClip
             anchors.verticalCenter: parent.verticalCenter
-            readonly property int  maxW: Math.round(Math.max(52, Math.min(
+            readonly property int preferredMaxW: Math.round(Math.max(52, Math.min(
                 root.compact ? 120 : Metrics.mediaTrackWidth,
                 root.textBudget > 0 ? root.textBudget : 9999
             )))
+            readonly property real maxW: Math.min(preferredMaxW, root.layoutWidthLimit >= 0
+                ? Math.max(0, root.layoutWidthLimit - root._contentOverhead) : Infinity)
             readonly property bool needsScroll:
-                trackText.implicitWidth > maxW && !ShellSettings.reduceMotion
+                maxW > 0 && trackText.implicitWidth > maxW && !ShellSettings.reduceMotion
             readonly property real _overflow:   Math.max(0, trackText.implicitWidth - maxW)
             readonly property int  _slideMs:    Math.max(1800, Math.round(_overflow / root._scrollSpeed * 1000))
             readonly property int  _returnMs:   Math.max(1100, Math.round(_slideMs * 0.65))

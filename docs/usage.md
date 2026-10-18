@@ -56,6 +56,10 @@ search open for another query; the close button folds it away. Hover the compact
 icon to see its label and Ctrl+F shortcut.
 Escape collapses search first, then closes the menu. Search resets when you leave Settings.
 
+On a crowded bar, window and media titles shorten to leave room for controls and
+regain their width when space returns. **Compact widgets** and **Auto tighten**
+under **Bar › Spacing** control density.
+
 - **Appearance**: colours, opacity, blur, font, interface scale and reduced motion.
 - **Bar**: position, width, widget placement, spacing and underline effects.
 - **Widgets**: individual widget options, calendar, media and system indicators.
