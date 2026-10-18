@@ -46,10 +46,11 @@ Singleton {
         if (!event) return 0
         const touchpad = _isTouchpad(event)
         const axes = _wheelAxes(event, touchpad)
-        if (!axes.y) return 0
         if (Math.abs(axes.x) > Math.abs(axes.y) * horizontalRejectRatio) {
-            _accums[key] = 0; _restartTimer(key); return 0
+            _forgetKey(key)
+            return 0
         }
+        if (!axes.y) return 0
         return _processDelta(
             axes.y, key,
             touchpad ? controlTouchpadNotch : notch,

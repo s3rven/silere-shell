@@ -5322,6 +5322,24 @@ ShellRoot {
             "natural scrolling flips a level control but not content navigation")
         const pad = (x, y) => ({ angleDelta: { x: x, y: y }, pixelDelta: { x: x / 8, y: y / 8 },
             device: { type: PointerDevice.TouchPad } })
+        for (const axes of [[80, 0], [80, 10]]) {
+            const key = "probe-horizontal:" + axes[1]
+            Scroll.processControlWheel(pad(0, 40), key)
+            const rejected = Scroll.processControlWheel(pad(axes[0], axes[1]), key)
+            root._check(rejected === 0 && Scroll._accums[key] === undefined
+                    && Scroll._directions[key] === undefined && Scroll._lastSteps[key] === undefined
+                    && Scroll._expires[key] === undefined
+                    && Scroll.processControlWheel(pad(0, 20), key) === 0,
+                "a horizontal touchpad gesture discards the previous control remainder (vertical " + axes[1] + ")")
+            Scroll.resetControl(key)
+        }
+        const horizontalThrottleKey = "probe-horizontal-throttle"
+        Scroll.processControlWheel(pad(0, 60), horizontalThrottleKey)
+        Scroll._lastSteps[horizontalThrottleKey] = Date.now() + 1000
+        Scroll.processControlWheel(pad(80, 10), horizontalThrottleKey)
+        root._check(Scroll.processControlWheel(pad(0, 60), horizontalThrottleKey) === 1,
+            "returning from a horizontal gesture starts a new control step without the old throttle")
+        Scroll.resetControl(horizontalThrottleKey)
         let padSteps = 0
         for (let i = 0; i < 12; i++) padSteps += Scroll.processTrayWheel(pad(0, 12), "probe-tray-a").steps
         const trayNotch = Scroll.processTrayWheel(notchUp(false), "probe-tray-b")

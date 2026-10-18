@@ -25,6 +25,7 @@ settings file carries its own `__version` and migrates separately.
 - An update blocked by many local files names the first one and how to clear it, instead of
   stopping without a reason.
 - The one-line install no longer ends with `curl: Failed writing body`.
+- Scrolling a volume or brightness control after a sideways touchpad swipe starts a fresh step.
 
 ## Releases
 
