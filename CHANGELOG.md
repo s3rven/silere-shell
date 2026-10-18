@@ -17,6 +17,7 @@ settings file carries its own `__version` and migrates separately.
   arriving after the panel has widened.
 - Returning to Now Playing within a few seconds shows the page and its cover at once instead of
   building them again.
+- Cover art downloads only while the menu shows it.
 
 ### Fixed
 

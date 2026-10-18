@@ -312,12 +312,12 @@ Singleton {
     }
 
     readonly property bool remoteArtAvailable: SystemTools.hasCurl && root._artCacheDir.length > 0
-    function artDemand(available: bool, barVisible: bool, overview: bool,
+    function artDemand(available: bool, railVisible: bool, pageShown: bool,
             menuOpen: bool, quiet: bool): bool {
-        return available && !quiet && (menuOpen || (barVisible && !overview))
+        return available && !quiet && menuOpen && (railVisible || pageShown)
     }
     readonly property bool _artWanted: root.artDemand(root.available,
-        ShellSettings.barShowMedia && root.shown, OverviewState.active,
+        root.shown, MenuState.mediaActive,
         MenuState.open, Idle.isQuiet)
     on_ArtWantedChanged: if (root._artWanted) root._fetchNextArt()
     readonly property string _artCacheDir: XdgPaths.cacheHome.length > 0

@@ -4162,14 +4162,16 @@ ShellRoot {
         root._check(Media.artSource("data:image/png;base64,AAAA") === "",
             "media service rejects inline artwork data")
         const remoteArtWas = ShellSettings.mediaRemoteArt
-        root._check(!Media.artDemand(true, false, false, false, false)
-                && !Media.artDemand(true, true, true, false, false),
-            "remote covers are not fetched for a hidden media widget or a concealed bar")
-        root._check(Media.artDemand(true, true, false, false, false)
+        root._check(!Media.artDemand(true, true, false, false, false)
+                && !Media.artDemand(true, false, true, false, false),
+            "a closed menu does not download covers for the bar's text-only media widget")
+        root._check(Media.artDemand(true, true, false, true, false)
                 && Media.artDemand(true, false, true, true, false),
-            "a visible media widget or menu resumes cover fetching")
-        root._check(!Media.artDemand(true, true, false, true, true)
-                && !Media.artDemand(false, true, false, true, false),
+            "a visible media rail or Now Playing page resumes cover fetching")
+        root._check(!Media.artDemand(true, false, false, true, false),
+            "an open menu with no visible cover leaves artwork downloads asleep")
+        root._check(!Media.artDemand(true, true, true, true, true)
+                && !Media.artDemand(false, true, true, true, false),
             "quiet idle and an absent player suspend cover requests")
         ShellSettings.mediaRemoteArt = false
         root._check(Media.artSource("https://example.invalid/cover.jpg") === "",
