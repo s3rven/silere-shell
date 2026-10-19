@@ -6,14 +6,14 @@ import Quickshell
 Singleton {
     id: root
 
-    function clockNeeded(barClock: bool, overview: bool, dndSchedule: bool,
+    function clockNeeded(barClock: bool, overview: bool, scheduled: bool,
             homeActive: bool, calendarOpen: bool): bool {
-        return (barClock && !overview) || dndSchedule || homeActive || calendarOpen
+        return (barClock && !overview) || scheduled || homeActive || calendarOpen
     }
 
     readonly property bool _clockNeeded: root.clockNeeded(
         ShellSettings.barShowClock, OverviewState.active,
-        ShellSettings.dndSchedule || Notifications.dndUntil > 0,
+        ShellSettings.dndSchedule || Notifications.dndUntil > 0 || Idle.keepAwakeUntil > 0,
         MenuState.homeActive, CalendarState.open)
 
     // a monotonic timer stops across suspend, so the next tick can land up to a minute after wake

@@ -393,10 +393,39 @@ PageShell {
                     active: Idle.keepAwake
                     glyph: Idle.keepAwake ? "󰅶" : "󰛊"
                     title: "Keep Awake"
+                    status: Idle.keepAwakeUntilText
                     showSwitch: true
+                    expandable: true
+                    expanded: root._picker === "awake"
                     onActivated: Idle.toggleKeepAwake()
+                    onExpandToggled: root._togglePicker("awake")
                 }
 
+                InlinePicker {
+                    id: _awakePicker
+                    open: root._picker === "awake"
+                    content: Component {
+                        Column {
+                            width: parent ? parent.width : 0
+                            spacing: 0
+
+                            Repeater {
+                                model: [1, 2]
+
+                                InlineOptionRow {
+                                    required property int modelData
+                                    glyph: "󰔛"
+                                    label: "For " + modelData + (modelData === 1 ? " hour" : " hours")
+                                    accessiblePrefix: "Keep Awake"
+                                    onTriggered: {
+                                        Idle.keepAwakeFor(Date.now(), modelData * 60)
+                                        root._closePicker()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
 
                 ControlRow {
                     id: _powerRow

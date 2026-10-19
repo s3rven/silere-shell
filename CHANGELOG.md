@@ -11,6 +11,11 @@ settings file carries its own `__version` and migrates separately.
 
 ## [Unreleased]
 
+### Added
+
+- Keep Awake can switch itself off after one or two hours. Expand its row on Home to choose,
+  and the row shows when it ends.
+
 ### Changed
 
 - The Notifications page and its app list are ready when you open them, instead of the list

@@ -5822,6 +5822,21 @@ ShellRoot {
         ShellSettings.dnd = dndWas
         ShellSettings.dndUntil = dndUntilWas
 
+        const awakeWas = Idle.keepAwake
+        Idle.keepAwakeFor(dndAt, 60)
+        const awakeTimed = Idle.keepAwake && Idle.keepAwakeUntil === new Date(2026, 9, 11, 15, 32).getTime()
+            && Idle.keepAwakeUntilText.indexOf("Until ") === 0
+        Idle.keepAwake = false
+        const awakeClearedByOff = Idle.keepAwakeUntil === 0
+        Idle.setKeepAwake(true, Date.now() - 1000)
+        Idle._expireAwake()
+        const awakeExpired = !Idle.keepAwake && Idle.keepAwakeUntil === 0
+        Idle.toggleKeepAwake()
+        const awakeOpenEnded = Idle.keepAwake && Idle.keepAwakeUntil === 0
+        root._check(awakeTimed && awakeClearedByOff && awakeExpired && awakeOpenEnded,
+            "Keep Awake for a while ends on a whole minute, expires, and leaves no stale end behind")
+        Idle.setKeepAwake(awakeWas, 0)
+
         // a minute tick armed before suspend fires late after wake; catching up re-reads the wall clock
         DateTime._lastMinute = "190001010000"
         DateTime.catchUp()

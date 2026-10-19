@@ -208,7 +208,8 @@ FittedPopupWindow {
                 glyph: Idle.keepAwake ? "󰅶" : "󰛊"
                 label: "Keep Awake"
                 active: Idle.keepAwake
-                stateText: Idle.keepAwake ? "On" : "Off"
+                stateText: Idle.keepAwakeUntil > 0 ? Idle.keepAwakeUntilText
+                    : Idle.keepAwake ? "On" : "Off"
                 onTriggered: Idle.toggleKeepAwake()
             }
             QuickActionRow {
