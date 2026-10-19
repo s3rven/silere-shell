@@ -471,6 +471,13 @@ PageShell {
                                     onTriggered: PowerProfiles.setProfile(modelData.name)
                                 }
                             }
+                            ToggleRow {
+                                visible: Battery.available
+                                glyph: "󰚥"
+                                label: "Remember per power source"
+                                checked: ShellSettings.powerProfileRemember
+                                onToggled: nextChecked => ShellSettings.powerProfileRemember = nextChecked
+                            }
                         }
                     }
                 }

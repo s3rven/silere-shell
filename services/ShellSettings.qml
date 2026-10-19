@@ -277,6 +277,9 @@ Singleton {
 
     property int    nightLightTemp:      3500
     property bool   nightLightAuto:     false
+    property bool   powerProfileRemember: true
+    property string powerProfileAc:      ""
+    property string powerProfileBattery: ""
     // runtime toggles kept across a restart; no page shows them
     property bool   nightLightOn:       false
     property bool   dnd:                false
@@ -423,6 +426,9 @@ Singleton {
 
         { k: "nightLightTemp",      t: "int",  min: 1000, max: 6500, sec: "-" },
         { k: "nightLightAuto",     t: "bool", sec: "-" },
+        { k: "powerProfileRemember", t: "bool", sec: "-" },
+        { k: "powerProfileAc",      t: "enum", vals: ["", "power-saver", "balanced", "performance"], sec: "-" },
+        { k: "powerProfileBattery", t: "enum", vals: ["", "power-saver", "balanced", "performance"], sec: "-" },
         { k: "nightLightOn",        t: "bool", sec: "-" },
         { k: "dnd",                 t: "bool", sec: "-" },
         { k: "dndUntil",            t: "real", min: 0, max: 9e15, sec: "-" },

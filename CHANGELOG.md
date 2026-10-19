@@ -15,6 +15,8 @@ settings file carries its own `__version` and migrates separately.
 
 - On Hyprland, popups wait in history while the screen is shared, with a red mark by the clock
   until the share ends.
+- Power Mode remembers what you picked on battery and on the charger, and restores it when you
+  plug in or unplug.
 - Keep Awake can switch itself off after one or two hours. Expand its row on Home to choose,
   and the row shows when it ends.
 

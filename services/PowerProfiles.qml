@@ -89,9 +89,36 @@ Singleton {
     function setProfile(name: string): void {
         if (!root.available || _set.running) return
         const want = String(name)
-        if (root._cycleOrder.indexOf(want) < 0 || want === root.profile) return
+        if (root._cycleOrder.indexOf(want) < 0) return
+        if (ShellSettings.powerProfileRemember && Battery.available)
+            ShellSettings[Battery.onBattery ? "powerProfileBattery" : "powerProfileAc"] = want
+        if (want !== root.profile) root._apply(want)
+    }
+
+    function _apply(want: string): void {
         root.lastError = ""
         _set.exec(root.commandFor(want, SystemTools.hasPowerProfilesCtl, SystemTools.hasBusctl))
+    }
+
+    function profileForSource(onBattery: bool, ac: string, battery: string, current: string): string {
+        const want = onBattery ? battery : ac
+        return want.length > 0 && want !== current ? want : ""
+    }
+
+    // shortcut: a mode set outside silere (powerprofilesctl) is not remembered for its source
+    Connections {
+        target: Battery
+        function onOnBatteryChanged() { _sourceSettle.restart() }
+    }
+    Timer {
+        id: _sourceSettle
+        interval: 2000
+        onTriggered: {
+            if (!ShellSettings.powerProfileRemember || !root.available || !Battery.available || _set.running) return
+            const want = root.profileForSource(Battery.onBattery, ShellSettings.powerProfileAc,
+                ShellSettings.powerProfileBattery, root.profile)
+            if (root._cycleOrder.indexOf(want) >= 0) root._apply(want)
+        }
     }
 
     function nextProfile(current: string, order: var): string {

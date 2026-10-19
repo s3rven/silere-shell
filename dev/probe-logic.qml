@@ -5874,6 +5874,12 @@ ShellRoot {
         ShellSettings.notifScreenShareSilence = shareSilenceWas
         Compositor.screenSharing = shareWas
 
+        root._check(PowerProfiles.profileForSource(false, "balanced", "power-saver", "power-saver") === "balanced"
+                && PowerProfiles.profileForSource(true, "balanced", "power-saver", "balanced") === "power-saver"
+                && PowerProfiles.profileForSource(true, "balanced", "", "balanced") === ""
+                && PowerProfiles.profileForSource(false, "balanced", "power-saver", "balanced") === "",
+            "a power source restores the mode last picked on it, and leaves an unpicked source alone")
+
         // a minute tick armed before suspend fires late after wake; catching up re-reads the wall clock
         DateTime._lastMinute = "190001010000"
         DateTime.catchUp()
