@@ -39,16 +39,12 @@ Column {
         }
     }
 
-    SectionLabel { label: "INTERACTION" }
+    SectionLabel { label: "BEHAVIOR" }
     SettingsCard {
         ToggleRow {
             glyph: "󱕒"; label: "Scroll to switch"
             key: "wsScrollSwitch"
         }
-    }
-
-    SectionLabel { label: "MOTION" }
-    SettingsCard {
         ToggleRow {
             glyph: "󰗘"; label: "Switch animation"
             key: "workspaceShift"

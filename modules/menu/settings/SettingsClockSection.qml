@@ -18,8 +18,21 @@ Column {
     readonly property string _dayName: DateTime.cachedDayName.length > 0
         ? DateTime.cachedDayName : root._sample("ddd ")
 
-    SectionLabel { label: "DATE"; first: true }
+    SectionLabel { label: "TIME & DATE"; first: true }
     SettingsCard {
+        ChoiceChipRow {
+            glyph: "󰔟"; label: "Format"
+            currentValue: ShellSettings.clock12h ? "12h" : "24h"
+            model: [
+                { value: "24h", label: root._sample("HH:mm") },
+                { value: "12h", label: root._sample("h:mm AP") }
+            ]
+            onChosen: (v) => ShellSettings.clock12h = v === "12h"
+        }
+        ToggleRow {
+            glyph: "󱑂"; label: "Seconds"
+            key: "showSeconds"
+        }
         ToggleRow {
             glyph: "󰃭"; label: "Date"
             key: "clockShowDate"
@@ -35,23 +48,6 @@ Column {
                 ]
                 onChosen: (v) => ShellSettings.compactDate = v === "compact"
             }
-        }
-    }
-
-    SectionLabel { label: "TIME" }
-    SettingsCard {
-        ChoiceChipRow {
-            glyph: "󰔟"; label: "Format"
-            currentValue: ShellSettings.clock12h ? "12h" : "24h"
-            model: [
-                { value: "24h", label: root._sample("HH:mm") },
-                { value: "12h", label: root._sample("h:mm AP") }
-            ]
-            onChosen: (v) => ShellSettings.clock12h = v === "12h"
-        }
-        ToggleRow {
-            glyph: "󱑂"; label: "Seconds"
-            key: "showSeconds"
         }
     }
 
