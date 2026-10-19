@@ -19,8 +19,7 @@ Pill {
 
     glyph:      Audio.icon
     accessibleName: !Audio.ready ? "Volume"
-        : (Audio.muted ? "Volume muted, " : "Volume ")
-          + Math.round(Audio.effectiveVolume * 100) + "%"
+        : (Audio.muted ? "Volume muted" : "Volume " + Math.round(Audio.uiVolume * 100) + "%")
           + (Audio.sinkName.length > 0 ? ", " + Audio.sinkName : "")
     glyphColor: Audio.muted ? Theme.subtext : Theme.text
     textColor:  Theme.subtext
@@ -29,7 +28,7 @@ Pill {
     reserveText: "00%"
     text: !Audio.ready ? ""
         : (ShellSettings.valuesOnHover && !expanded) ? ""
-        : (Math.round(Audio.effectiveVolume * 100) + "%")
+        : (Math.round(Audio.uiVolume * 100) + "%")
     levelValue: Audio.ready ? Audio.uiVolume : -1
     levelVisible: Audio.ready && ShellSettings.valuesOnHover && ShellSettings.hoverLevelBar && !expanded
     levelColor: Audio.muted ? Theme.subtext : Theme.accent

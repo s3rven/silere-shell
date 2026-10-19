@@ -29,6 +29,8 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- The bar's volume reads 0% while muted, matching the menu, the OSD and the microphone, instead
+  of the level it returns to.
 - Open Wi-Fi networks can be joined on Quickshell 0.3.1 instead of showing as not supported.
 - Checking for a Silere update no longer fails now and then with an invalid compositor list.
 - An update blocked by many local files names the first one and how to clear it, instead of

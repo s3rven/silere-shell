@@ -29,7 +29,6 @@ Singleton {
     readonly property bool ready: _out.ready
     readonly property real targetVolume: _out.targetVolume
     readonly property bool pendingApply: _out.pendingApply
-    readonly property real effectiveVolume: _out.effectiveVolume
     readonly property bool muted: _out.muted
     readonly property real uiVolume: _out.uiVolume
 
