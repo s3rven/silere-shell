@@ -79,6 +79,10 @@ disables the lock action.
 To reset one setting, delete its key from `settings.json`. To reset preferences together,
 use Restore defaults in Overview; it keeps notification history and wallpaper colours.
 
+On Hyprland, popups wait in history while you share your screen or record it, and a red
+share mark sits beside the clock until the share ends. A screenshot does not count.
+Switch it off with **Hide while sharing screen** under **Feedback › Notifications**.
+
 Under **Feedback › Notifications › History**, **Keep history for** can remove entries older
 than a day, week, or month. **Until cleared** keeps the existing behavior, subject to
 the history count limit. Shortening the period removes older history immediately;

@@ -13,6 +13,8 @@ settings file carries its own `__version` and migrates separately.
 
 ### Added
 
+- On Hyprland, popups wait in history while the screen is shared, with a red mark by the clock
+  until the share ends.
 - Keep Awake can switch itself off after one or two hours. Expand its row on Home to choose,
   and the row shows when it ends.
 

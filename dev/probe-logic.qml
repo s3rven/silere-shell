@@ -5837,6 +5837,43 @@ ShellRoot {
             "Keep Awake for a while ends on a whole minute, expires, and leaves no stale end behind")
         Idle.setKeepAwake(awakeWas, 0)
 
+        // measured on hyprland 0.56: grim is one 250 ms burst, a recording a start per frame stopped 500 ms later
+        const castIdle = { casts: 0, since: 0, last: 0, sharing: false }
+        let shot = Compositor.castStep(castIdle, "start", 1000)
+        shot = Compositor.castStep(shot, "stop", 1250)
+        const shotHeld = Compositor.castStep(shot, "tick", 1750)
+        shot = Compositor.castStep(shotHeld, "tick", 2500)
+        shot = Compositor.castStep(shot, "tick", 4000)
+        root._check(!shotHeld.sharing && shotHeld.since === 1000 && !shot.sharing && shot.since === 0,
+            "a screenshot's single capture burst never reads as sharing the screen")
+        let cast = castIdle
+        let castAt = 16
+        for (; castAt <= 1600; castAt += 16) {
+            cast = Compositor.castStep(cast, "start", castAt)
+            if (castAt > 500) cast = Compositor.castStep(cast, "stop", castAt)
+        }
+        const castArmed = cast.sharing
+        while (cast.casts > 0) cast = Compositor.castStep(cast, "stop", castAt += 16)
+        const castDrained = cast.casts === 0 && cast.sharing
+        const castHeld = Compositor.castStep(cast, "tick", 3000).sharing
+        cast = Compositor.castStep(cast, "tick", 4200)
+        const castReleased = !cast.sharing && cast.since === 0
+        const stray = Compositor.castStep(castIdle, "stop", 10)
+        root._check(castArmed && castDrained && castHeld && castReleased
+                && stray.casts === 0 && !stray.sharing,
+            "a recording reads as sharing once it outlasts a screenshot and ends once its frames stop")
+        const shareWas = Compositor.screenSharing
+        const shareSilenceWas = ShellSettings.notifScreenShareSilence
+        Compositor.screenSharing = true
+        ShellSettings.notifScreenShareSilence = true
+        const shareSilenced = Notifications.screenShareSilenced && Notifications.silencingActive
+        ShellSettings.notifScreenShareSilence = false
+        const shareOptedOut = !Notifications.screenShareSilenced
+        root._check(shareSilenced && shareOptedOut,
+            "sharing the screen silences popups unless that is switched off")
+        ShellSettings.notifScreenShareSilence = shareSilenceWas
+        Compositor.screenSharing = shareWas
+
         // a minute tick armed before suspend fires late after wake; catching up re-reads the wall clock
         DateTime._lastMinute = "190001010000"
         DateTime.catchUp()

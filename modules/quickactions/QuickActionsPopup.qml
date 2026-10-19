@@ -201,7 +201,8 @@ FittedPopupWindow {
                 stateText: Notifications.dndUntil > 0 ? Notifications.dndUntilText
                     : Notifications.dnd ? "On"
                     : Notifications.effectiveDnd ? "Quiet hours"
-                    : Notifications.fullscreenSilenced ? "Fullscreen" : "Off"
+                    : Notifications.fullscreenSilenced ? "Fullscreen"
+                    : Notifications.screenShareSilenced ? "Sharing screen" : "Off"
                 onTriggered: Notifications.toggleDnd()
             }
             QuickActionRow {

@@ -557,6 +557,8 @@ Singleton {
 
     readonly property bool fullscreenSilenced: ShellSettings.notifFullscreenSilence
         && FullscreenState.active
+    readonly property bool screenShareSilenced: ShellSettings.notifScreenShareSilence
+        && Compositor.screenSharing
     function toggleDnd(): void { root.setDnd(!ShellSettings.dnd, 0) }
 
     function setDnd(on: bool, until: real): void {
@@ -601,7 +603,7 @@ Singleton {
         return from < to ? (h >= from && h < to) : (h >= from || h < to)
     }
     readonly property bool effectiveDnd: dnd || _quietActive
-    readonly property bool silencingActive: effectiveDnd || fullscreenSilenced
+    readonly property bool silencingActive: effectiveDnd || fullscreenSilenced || screenShareSilenced
     onSilencingActiveChanged: { if (!silencingActive && missedCount !== 0) missedCount = 0 }
     function markSeen(id: int): void {
         root._ensurePersistentState()
@@ -1011,7 +1013,7 @@ Singleton {
                 n.expire()
                 return
             }
-            if (root.fullscreenSilenced && !bypasses) {
+            if ((root.fullscreenSilenced || root.screenShareSilenced) && !bypasses) {
                 if (root._archiveNotification(n, n.id, Date.now()) || n.transient)
                     root.missedCount++
                 n.expire()

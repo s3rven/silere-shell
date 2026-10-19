@@ -51,6 +51,46 @@ Singleton {
     signal workspaceActivated(string output)
     signal overviewRaw(bool open)
 
+    // hyprland fires a start per shared frame but also a 250 ms start/stop burst per screenshot
+    readonly property int castArmMs: 1500
+    readonly property int castReleaseMs: 2000
+    readonly property int castForgetMs: 1000
+    function castStep(state, kind: string, nowMs: real): var {
+        let casts = state.casts, since = state.since, last = state.last, sharing = state.sharing
+        if (kind === "start") {
+            casts++
+            if (since === 0) since = nowMs
+            last = nowMs
+        } else if (kind === "stop") {
+            casts = Math.max(0, casts - 1)
+            last = nowMs
+        }
+        if (casts > 0) {
+            if (nowMs - since >= root.castArmMs) sharing = true
+        } else if (nowMs - last >= (sharing ? root.castReleaseMs : root.castForgetMs)) {
+            sharing = false
+            since = 0
+        }
+        return { casts: casts, since: since, last: last, sharing: sharing }
+    }
+
+    property bool screenSharing: false
+    // mutated in place: frames arrive at the display rate
+    readonly property var _castBox: ({ state: { casts: 0, since: 0, last: 0, sharing: false } })
+    property bool _castWatched: false
+    function _castApply(kind: string): void {
+        const next = root.castStep(root._castBox.state, kind, Date.now())
+        root._castBox.state = next
+        root.screenSharing = next.sharing
+        root._castWatched = next.since > 0 || next.sharing
+    }
+    Timer {
+        interval: 500
+        repeat: true
+        running: root._castWatched
+        onTriggered: root._castApply("tick")
+    }
+
     function monitorName(screen): string {
         if (!screen || !root._be) return ""
         return root._be.monitorName(screen)
@@ -106,5 +146,6 @@ Singleton {
         ignoreUnknownSignals: true
         function onWorkspaceActivated(output) { root.workspaceActivated(output) }
         function onOverviewRaw(open) { root.overviewRaw(open) }
+        function onScreencast(started) { root._castApply(started ? "start" : "stop") }
     }
 }

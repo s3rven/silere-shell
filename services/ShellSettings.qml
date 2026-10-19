@@ -74,6 +74,7 @@ Singleton {
 
     property bool   notifPopupEnabled:   true
     property bool   notifFullscreenSilence: true
+    property bool   notifScreenShareSilence: true
     property string notifPosition:       "top-right"
     property int    notifMaxVisible:     3
     property bool   notifHistoryPersistent: true
@@ -365,6 +366,7 @@ Singleton {
         { k: "fontFamily",          t: "re",   re: /^[^\u0000-\u001F\u007F]{0,128}$/, sec: "interface", l: "Font" },
         { k: "notifPopupEnabled",   t: "bool", sec: "popups", l: "Popup notifications" },
         { k: "notifFullscreenSilence", t: "bool", sec: "popups", l: "Hide in fullscreen" },
+        { k: "notifScreenShareSilence", t: "bool", sec: "popups", l: "Hide while sharing screen" },
         { k: "notifPosition",       t: "enum", vals: ["top-right", "top-left", "top-center"], sec: "popups", l: "Position" },
         { k: "notifMaxVisible",     t: "int",  min: 0, max: 20, sec: "popups", l: "Max shown" },
         { k: "notifHistoryPersistent", t: "bool", sec: "popups", l: "Keep after restart" },
@@ -613,7 +615,7 @@ Singleton {
             { master: "osdBarIntegrated", negate: true, hides: ["osdMatchBar"] }
         ],
         popups: [
-            { master: "notifPopupEnabled", hides: ["notifFullscreenSilence",
+            { master: "notifPopupEnabled", hides: ["notifFullscreenSilence", "notifScreenShareSilence",
                 "notifPosition", "notifMaxVisible", "notifDefaultTimeout"] },
             { master: "dndSchedule", hides: ["dndFrom", "dndTo"] }
         ],

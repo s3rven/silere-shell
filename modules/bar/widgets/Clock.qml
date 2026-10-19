@@ -159,6 +159,12 @@ Item {
             spacing: 0
 
             CollapsingText {
+                text:     "󱒃 "
+                color:    Theme.error
+                animate:  root._animatable
+                expanded: Compositor.screenSharing
+            }
+            CollapsingText {
                 text:     "󰅶 "
                 color:    root._cSub
                 animate:  root._animatable
@@ -207,6 +213,7 @@ Item {
     readonly property string accessibleName: "Clock, " + DateTime.cachedHour + ":" + DateTime.cachedMinute
         + (DateTime.cachedAmPm.length > 0 ? " " + DateTime.cachedAmPm : "")
         + ", " + DateTime.cachedWeekday + " " + DateTime.cachedMonthDay
+        + (Compositor.screenSharing ? ", Sharing screen" : "")
         + (Idle.keepAwake ? ", Keep Awake" : "")
         + (Notifications.effectiveDnd ? ", Do Not Disturb" : "")
         + (Notifications.dndUntil > 0 ? " until " + DateTime.clockText(new Date(Notifications.dndUntil)) : "")

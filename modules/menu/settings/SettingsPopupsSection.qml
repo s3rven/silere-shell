@@ -18,6 +18,10 @@ Column {
                 glyph: "󰊓"; label: "Hide in fullscreen"
                 key: "notifFullscreenSilence"
             }
+            ToggleRow {
+                glyph: "󱒃"; label: "Hide while sharing screen"
+                key: "notifScreenShareSilence"
+            }
             SliderRow {
                 glyph: "󰔛"; label: "Dismiss after"
                 displayValue: (ShellSettings.notifDefaultTimeout / 1000) + "s"

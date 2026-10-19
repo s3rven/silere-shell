@@ -12,6 +12,7 @@ QtObject {
 
     signal workspaceActivated(string output)
     signal overviewRaw(bool open)
+    signal screencast(bool started)
 
     property int _layoutTick: 0
     property var _liveTitles: ({})
@@ -514,7 +515,7 @@ QtObject {
 
     readonly property var _inertEvents: ({
         "openlayer": true, "closelayer": true, "submap": true, "activelayout": true,
-        "screencast": true, "screencastv2": true, "changefloatingmode": true, "bell": true, "pin": true,
+        "screencastv2": true, "changefloatingmode": true, "bell": true, "pin": true,
         "minimized": true, "togglegroup": true, "moveintogroup": true,
         "moveoutofgroup": true, "ignoregrouplock": true, "lockgroups": true
     })
@@ -532,6 +533,11 @@ QtObject {
             }
             if (n === "activewindow") {
                 // title-only half of activewindowv2; the v2 event below carries the address
+                return
+            }
+            // fires per captured frame: kept off the layout tick
+            if (n === "screencast") {
+                root.screencast(String(event.data ?? "").startsWith("1,"))
                 return
             }
             // none of these touch the workspace, monitor or toplevel lists: no floating, group, pin or minimize state is modelled (changefloatingmode alone fired 420 times in two hours)
