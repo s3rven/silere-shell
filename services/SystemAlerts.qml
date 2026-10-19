@@ -100,6 +100,43 @@ Singleton {
         root._battCritSent = state.critical
     }
 
+    readonly property int btLowPct: 20
+    readonly property int btRearmPct: 25
+    function btAlertStep(warned, readings, low: int, rearm: int): var {
+        const next = {}
+        const alerts = []
+        for (let i = 0; i < readings.length; i++) {
+            const r = readings[i]
+            if (r.pct >= rearm) continue
+            if (warned[r.address] === true) next[r.address] = true
+            else if (r.pct < low) {
+                next[r.address] = true
+                alerts.push(r)
+            }
+        }
+        return { warned: next, alerts: alerts }
+    }
+
+    property var _btWarned: ({})
+    readonly property var _btReadings: {
+        const out = []
+        const devs = Bluetooth._devices
+        for (let i = 0; i < devs.length; i++) {
+            const d = devs[i]
+            const pct = d && d.connected ? Bluetooth.batteryPercent(d) : -1
+            if (pct >= 0) out.push({ address: String(d.address), name: Bluetooth.deviceLabel(d), pct: pct })
+        }
+        return out
+    }
+    on_BtReadingsChanged: Qt.callLater(root._checkBtBatteries)
+    function _checkBtBatteries(): void {
+        if (!ShellSettings.osdBatteryWarn) return
+        const step = root.btAlertStep(root._btWarned, root._btReadings, root.btLowPct, root.btRearmPct)
+        root._btWarned = step.warned
+        for (let i = 0; i < step.alerts.length; i++)
+            root._send(step.alerts[i].name + " battery low", step.alerts[i].pct + "%", "normal")
+    }
+
     Connections {
         target: CpuTemp
 

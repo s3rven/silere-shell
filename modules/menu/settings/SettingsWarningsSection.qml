@@ -65,7 +65,11 @@ Column {
         }
         CollapsibleSection {
             expanded: root._battAlertMode !== "off"
-            HintText { text: "Escalates to critical at " + Math.max(5, Math.round(ShellSettings.batteryLowThreshold / 2)) + "%." }
+            HintText {
+                text: "Escalates to critical at " + Math.max(5, Math.round(ShellSettings.batteryLowThreshold / 2)) + "%."
+                    + (ShellSettings.osdBatteryWarn && Bluetooth.available
+                        ? " Bluetooth devices warn below " + SystemAlerts.btLowPct + "%." : "")
+            }
         }
         CollapsibleSection {
             expanded: ShellSettings.osdEnabled

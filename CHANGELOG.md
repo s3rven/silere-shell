@@ -17,6 +17,7 @@ settings file carries its own `__version` and migrates separately.
   until the share ends.
 - Power Mode remembers what you picked on battery and on the charger, and restores it when you
   plug in or unplug.
+- Connected Bluetooth devices send one alert when their battery drops below 20%.
 - Keep Awake can switch itself off after one or two hours. Expand its row on Home to choose,
   and the row shows when it ends.
 

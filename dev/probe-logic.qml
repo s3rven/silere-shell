@@ -5880,6 +5880,20 @@ ShellRoot {
                 && PowerProfiles.profileForSource(false, "balanced", "power-saver", "balanced") === "",
             "a power source restores the mode last picked on it, and leaves an unpicked source alone")
 
+        const bt = (pct) => [{ address: "AA", name: "Headset", pct: pct }]
+        let btStep = SystemAlerts.btAlertStep({}, bt(18), 20, 25)
+        const btFirst = btStep.alerts.length === 1 && btStep.alerts[0].name === "Headset"
+        btStep = SystemAlerts.btAlertStep(btStep.warned, bt(15), 20, 25)
+        const btOnce = btStep.alerts.length === 0
+        btStep = SystemAlerts.btAlertStep(btStep.warned, bt(22), 20, 25)
+        const btHeld = btStep.alerts.length === 0 && btStep.warned.AA === true
+        const btRearmed = SystemAlerts.btAlertStep(
+            SystemAlerts.btAlertStep(btStep.warned, bt(30), 20, 25).warned, bt(18), 20, 25).alerts.length === 1
+        const btReconnect = SystemAlerts.btAlertStep(
+            SystemAlerts.btAlertStep(btStep.warned, [], 20, 25).warned, bt(18), 20, 25).alerts.length === 1
+        root._check(btFirst && btOnce && btHeld && btRearmed && btReconnect,
+            "a bluetooth device warns once when low, and again only after charging or reconnecting")
+
         // a minute tick armed before suspend fires late after wake; catching up re-reads the wall clock
         DateTime._lastMinute = "190001010000"
         DateTime.catchUp()
