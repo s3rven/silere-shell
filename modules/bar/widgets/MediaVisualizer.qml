@@ -53,6 +53,7 @@ Canvas {
     }
 
     property var   _fill:   null
+    property var   _stroke: null
     property var   _barFill: null
     property real  _barFillH: -1
     property real  _barFillR: -1
@@ -239,6 +240,12 @@ Canvas {
             g.addColorStop(0.72, Qt.rgba(ac.r, ac.g, ac.b, 0.13))
             g.addColorStop(1.0,  Qt.rgba(ac.r, ac.g, ac.b, 0.32))
             _fill = g
+            // quiet through the text band: a full-strength crest behind the media title reads as a strikethrough
+            var sg = ctx.createLinearGradient(0, 0, 0, height)
+            sg.addColorStop(0.0,  Qt.rgba(ac.r, ac.g, ac.b, 0.10))
+            sg.addColorStop(0.62, Qt.rgba(ac.r, ac.g, ac.b, 0.28))
+            sg.addColorStop(1.0,  Qt.rgba(ac.r, ac.g, ac.b, 0.85))
+            _stroke = sg
             _fillH = height
             _fillR = ac.r
             _fillG = ac.g
@@ -258,7 +265,7 @@ Canvas {
         ctx.lineWidth   = 1.5
         ctx.lineJoin    = "round"
         ctx.lineCap     = "butt"
-        ctx.strokeStyle = Qt.rgba(ac.r, ac.g, ac.b, 0.85)
+        ctx.strokeStyle = _stroke
         ctx.stroke()
 
         ctx.lineTo(width - 1, height)

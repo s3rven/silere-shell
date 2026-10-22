@@ -35,6 +35,8 @@ settings file carries its own `__version` and migrates separately.
 - Cover art downloads only while the menu shows it.
 - Long window and media titles shorten on a crowded bar instead of pushing controls aside, and
   switching compact mode resizes widgets at once.
+- The wave visualizer's line fades as it rises, so loud passages no longer strike through the
+  media title.
 - Notifications show markdown code fences, inline code and links as plain text.
 - A notification that repeats the one before it word for word replaces it in history.
 - A notification with only a title shows up to three lines of it in the popup and two in history.
