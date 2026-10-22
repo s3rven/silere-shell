@@ -6703,6 +6703,12 @@ ShellRoot {
         Bluetooth._scanAdapter = scanAdapterWas
         Bluetooth._scanRequested = scanRequestedWas
 
+        root._check(Bluetooth._toggleStep(true, false, false) === "unblock"
+                && Bluetooth._toggleStep(true, true, false) === ""
+                && Bluetooth._toggleStep(false, false, false) === "on"
+                && Bluetooth._toggleStep(false, false, true) === "off",
+            "the bluetooth toggle lifts a soft rfkill block and leaves a hardware switch alone")
+
         const maxPairWaitMs = Bluetooth._attemptGuardMs
             * (Bluetooth._maxPairGuardExtensions + 1)
         root._check(Bluetooth._pairableTimeoutSec * 1000 > maxPairWaitMs,

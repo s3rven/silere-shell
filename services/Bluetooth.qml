@@ -10,9 +10,22 @@ Singleton {
     readonly property var adapter: Bt.Bluetooth.defaultAdapter
     readonly property bool available: adapter !== null
     readonly property bool enabled:   adapter ? adapter.enabled : false
-    // a hardware switch puts the adapter in Blocked; writing enabled is refused, so the controls have to say why instead of flipping nothing
-    readonly property bool hardBlocked: adapter
+    // bluez reports any rfkill block as Blocked; blueman powers off with a soft block, which only rfkill lifts, while a hardware switch refuses both
+    readonly property bool blocked: adapter
         ? adapter.state === Bt.BluetoothAdapterState.Blocked : false
+    property bool _switchOff: false
+    readonly property bool hardBlocked: blocked && _switchOff
+    // bluez powers back on by itself after an unblock; quickshell refuses an enable write until the state has left Blocked
+    property bool _unblockWanted: false
+    onBlockedChanged: {
+        if (blocked) {
+            _rfkillProbe.running = true
+            return
+        }
+        if (!_unblockWanted) return
+        _unblockWanted = false
+        if (adapter && adapter.state === Bt.BluetoothAdapterState.Disabled) adapter.enabled = true
+    }
 
     // backend models can be momentarily empty while BlueZ re-enumerates
     readonly property var _devices: (adapter && adapter.devices)
@@ -124,8 +137,34 @@ Singleton {
         return list
     }
 
+    function _toggleStep(blocked: bool, hard: bool, enabled: bool): string {
+        if (blocked) return hard ? "" : "unblock"
+        return enabled ? "off" : "on"
+    }
+
     function toggle(): void {
-        if (adapter) adapter.enabled = !adapter.enabled
+        if (!adapter) return
+        const step = root._toggleStep(root.blocked, root.hardBlocked, adapter.enabled)
+        if (step === "unblock") {
+            root._unblockWanted = true
+            _rfkillUnblock.running = true
+        } else if (step !== "") {
+            adapter.enabled = step === "on"
+        }
+    }
+
+    BoundedProcess {
+        id: _rfkillProbe
+        timeoutMs: 3000
+        command: ["sh", "-c", "for r in /sys/class/rfkill/rfkill*; do grep -qx bluetooth $r/type && grep -qx 1 $r/hard && exit 0; done; exit 1"]
+        onExited: code => root._switchOff = _rfkillProbe.completedSuccessfully(code)
+    }
+
+    BoundedProcess {
+        id: _rfkillUnblock
+        timeoutMs: 3000
+        command: ["rfkill", "unblock", "bluetooth"]
+        onExited: if (root.blocked) _rfkillProbe.running = true
     }
 
     property bool _scanRequested: false
@@ -304,7 +343,10 @@ Singleton {
     }
     readonly property var _untrustedConnected: root._sandboxed ? [] : _devices.filter(d => d && d.connected && d.paired && !d.trusted)
     on_UntrustedConnectedChanged: Qt.callLater(root._trustConnected, root._untrustedConnected)
-    Component.onCompleted: root._trustConnected(root._untrustedConnected)
+    Component.onCompleted: {
+        root._trustConnected(root._untrustedConnected)
+        if (root.blocked) _rfkillProbe.running = true
+    }
 
     property int _guardExtensions: 0
 
