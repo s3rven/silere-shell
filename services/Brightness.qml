@@ -245,27 +245,26 @@ Singleton {
         return !isNaN(value) && value >= 0 ? value : -1
     }
 
+    function _applyBrightnessRead(value: real): void {
+        // a refresh started before a drag or scroll can finish after it. Ignore
+        // that old read until the write completes and refreshes the actual level
+        if (_applyDebounce.running || _setProc.running) return
+        root._currentValid = value >= 0
+        if (root._currentValid) root.currentBrightness = value
+        else {
+            root.currentBrightness = 0
+            root._queueReprobe()
+        }
+        root._syncReady()
+    }
+
     FileView {
         id: _brightnessFile
         path: root._device.length > 0 ? "/sys/class/backlight/" + root._device + "/brightness" : ""
         watchChanges: root._device.length > 0
         printErrors: false
-        onLoaded: {
-            const value = root._readValue(_brightnessFile)
-            root._currentValid = value >= 0
-            if (root._currentValid) root.currentBrightness = value
-            else {
-                root.currentBrightness = 0
-                root._queueReprobe()
-            }
-            root._syncReady()
-        }
-        onLoadFailed: {
-            root._currentValid = false
-            root.currentBrightness = 0
-            root._syncReady()
-            root._queueReprobe()
-        }
+        onLoaded: root._applyBrightnessRead(root._readValue(_brightnessFile))
+        onLoadFailed: root._applyBrightnessRead(-1)
         // stale readback during a pending write would discard queued scroll steps
         onFileChanged: if (!_applyDebounce.running && !_setProc.running) reload()
     }
@@ -302,7 +301,7 @@ Singleton {
         onFileChanged: if (!_applyDebounce.running && !_setProc.running) _brightnessFile.reload()
     }
 
-    Timer {
+    property Timer _applyDebounceTimer: Timer {
         id: _applyDebounce
         interval: 50
         onTriggered: {

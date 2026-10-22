@@ -5053,6 +5053,32 @@ ShellRoot {
         SysInfo.diskAvailKb = diskWas[2]
         SysInfo._lastDiskReadMs = diskWas[3]
         SysInfo._active = cpuActiveWas
+        const brightnessReadWas = {
+            level: Brightness.currentBrightness, pending: Brightness.pendingPercent,
+            currentValid: Brightness._currentValid, maxValid: Brightness._maxValid,
+            ready: Brightness.ready, attempts: Brightness._reprobeAttempts
+        }
+        Brightness.currentBrightness = 50
+        Brightness._currentValid = true
+        Brightness._maxValid = true
+        Brightness._syncReady()
+        Brightness._applyDebounceTimer.restart()
+        Brightness._applyBrightnessRead(20)
+        root._check(Brightness.currentBrightness === 50 && Brightness.ready,
+            "an old brightness read cannot overwrite scroll steps waiting to be written")
+        Brightness._applyBrightnessRead(-1)
+        root._check(Brightness.currentBrightness === 50 && Brightness.ready,
+            "a late failed read cannot disable brightness while a new level is queued")
+        Brightness._applyDebounceTimer.stop()
+        Brightness._applyBrightnessRead(70)
+        root._check(Brightness.currentBrightness === 70 && Brightness.ready,
+            "brightness readback resumes once queued writes have finished")
+        Brightness.currentBrightness = brightnessReadWas.level
+        Brightness.pendingPercent = brightnessReadWas.pending
+        Brightness._currentValid = brightnessReadWas.currentValid
+        Brightness._maxValid = brightnessReadWas.maxValid
+        Brightness.ready = brightnessReadWas.ready
+        Brightness._reprobeAttempts = brightnessReadWas.attempts
 
         const brightnessToolsWas = SystemTools._tools
         const brightnessErrorWas = Brightness.lastError
