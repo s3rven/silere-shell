@@ -5981,6 +5981,31 @@ ShellRoot {
                 && ShellSettings.nightLightOn === nightOnWas
                 && NightLight._runningTool === "" && !NightLight._probedOnce,
             "a test copy of the shell never adopts, starts or stops the live night light")
+        const nightErrorWas = NightLight.lastError
+        for (const result of [
+            { code: 127, status: 0, timedOut: false },
+            { code: 1, status: 1, timedOut: false },
+            { code: 15, status: 1, timedOut: false },
+            { code: 0, status: 0, timedOut: true },
+            { code: 2, status: 0, timedOut: false }
+        ]) {
+            NightLight._runningTool = "wlsunset"
+            NightLight._pendingEnable = true
+            NightLight._acceptStopResult(result.code, result.status, result.timedOut)
+            root._check(NightLight.lastError === "Could not stop the external night light"
+                    && NightLight._runningTool === "wlsunset" && !NightLight._pendingEnable
+                    && !NightLight.enabled,
+                "a failed night-light stop preserves its source and cancels a queued replacement: "
+                    + JSON.stringify(result))
+        }
+        for (const code of [0, 1]) {
+            NightLight._acceptStopResult(code, 0, false)
+            root._check(NightLight.lastError === "" && NightLight._runningTool === "",
+                "a confirmed night-light stop or no-match clears its previous failure: " + code)
+            NightLight._runningTool = "wlsunset"
+        }
+        NightLight._runningTool = ""
+        NightLight.lastError = nightErrorWas
         ShellSettings.nightLightOn = nightOnWas
         ShellSettings.nightLightProvider = nightProviderWas
         SystemTools._tools = nightToolsWas
@@ -6037,13 +6062,16 @@ ShellRoot {
             ShellSettings.reduceMotion = reduceWas
             vitals.destroy()
         }
-        root._check(NightLight._probeState(0, false, false) === 1
-                && NightLight._probeState(1, false, false) === 0
-                && NightLight._probeState(1, false, true) === 1
-                && NightLight._probeState(0, true, true) === -1
-                && NightLight._probeState(2, false, false) === -1
-                && NightLight._probeState(-1, false, false) === -1,
+        root._check(NightLight._probeState(0, 0, false, false) === 1
+                && NightLight._probeState(1, 0, false, false) === 0
+                && NightLight._probeState(1, 0, false, true) === 1
+                && NightLight._probeState(0, 0, true, true) === -1
+                && NightLight._probeState(2, 0, false, false) === -1
+                && NightLight._probeState(-1, 0, false, false) === -1,
             "night light distinguishes an external daemon, no match, and a failed state probe")
+        root._check(NightLight._probeState(1, 1, false, false) === -1
+                && NightLight._probeState(1, 1, false, true) === -1,
+            "a crashed night-light state probe cannot claim the daemon is absent or trigger its restoration")
         root._check(NightLight._temperatureUpdateSucceeded(0, false, "ok\n")
                 && !NightLight._temperatureUpdateSucceeded(0, false, "unknown request\n")
                 && !NightLight._temperatureUpdateSucceeded(1, false, "ok\n")

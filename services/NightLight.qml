@@ -357,8 +357,8 @@ Singleton {
     }
 
     // -1 means the probe itself failed; otherwise answer the state without making an old no-match override the daemon this instance just started
-    function _probeState(code: int, timedOut: bool, selfRunning: bool): int {
-        if (timedOut || (code !== 0 && code !== 1)) return -1
+    function _probeState(code: int, status: int, timedOut: bool, selfRunning: bool): int {
+        if (timedOut || status !== 0 || (code !== 0 && code !== 1)) return -1
         return code === 0 || selfRunning ? 1 : 0
     }
 
@@ -407,15 +407,15 @@ Singleton {
         id: _checkProc
         property int _generation: -1
         timeoutMs: 5000
-        // pgrep answers "no match" with 1, so only 2+ or a timeout means the probe never ran
-        onExited: (code) => {
+        // pgrep's normal exit 1 means no match; a crash with signal 1 is a failed probe
+        onExited: (code, status) => {
             if (_checkProc._generation !== root._stateGeneration) {
                 if (root.toolAvailable) Qt.callLater(root._init)
                 return
             }
             if (!root.toolAvailable) return
             const state = root._probeState(
-                code, _checkProc.timedOut, _sunsetProc.running)
+                code, status, _checkProc.timedOut, _sunsetProc.running)
             if (state < 0) {
                 root._probeFailed = true
                 root.lastError = "could not check for a running " + root.tool
@@ -488,28 +488,31 @@ Singleton {
         }
     }
 
+    function _acceptStopResult(code: int, status: int, timedOut: bool): void {
+        if (!root.toolAvailable) {
+            root._pendingEnable = false
+            root.lastError = ""
+            return
+        }
+        // only a normal exit with 0 or 1 confirms the stop. A missing helper
+        // reports 127, and a crash can share its signal number with "no match"
+        if (timedOut || status !== 0 || (code !== 0 && code !== 1)) {
+            root._pendingEnable = false
+            root.lastError = "Could not stop the external night light"
+            root._init()
+            return
+        }
+        root.lastError = ""
+        root._runningTool = ""
+        if (root._pendingEnable) {
+            root._pendingEnable = false
+            root._startSunset()
+        }
+    }
+
     BoundedProcess {
         id: _killProc
         timeoutMs: 5000
-        onExited: (code) => {
-            if (!root.toolAvailable) {
-                root._pendingEnable = false
-                root.lastError = ""
-                return
-            }
-            // pkill exit 1 just means nothing matched — the common case when no external tool is running; only 2 (usage) and 3 (fatal) are real errors
-            if (_killProc.timedOut || code === 2 || code === 3) {
-                root._pendingEnable = false
-                root.lastError = "Could not stop the external night light"
-                root._init()
-                return
-            }
-            root.lastError = ""
-            root._runningTool = ""
-            if (root._pendingEnable) {
-                root._pendingEnable = false
-                root._startSunset()
-            }
-        }
+        onExited: (code, status) => root._acceptStopResult(code, status, _killProc.timedOut)
     }
 }

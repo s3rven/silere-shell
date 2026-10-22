@@ -36,6 +36,10 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- A missing or crashed night-light stop helper reports a failure and cancels a queued
+  replacement instead of treating the old night light as stopped.
+- A crashed night-light state check keeps the last known state instead of treating its
+  signal number as proof that no night light is running.
 - Brightness controls keep queued changes when an older refresh finishes during a drag or scroll.
 - A charger change during a slow power-mode command still restores the mode for the current
   power source once the command finishes.
