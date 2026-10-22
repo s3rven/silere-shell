@@ -1768,8 +1768,8 @@ while IFS='|' read -r version archive; do
     fail "$archive is missing its Upgrading line"
     release_archive_failed=1
   fi
-  # Benchmarks began with 0.9.0. The missing 1.1.1 run is recorded as a
-  # historical gap; later releases must carry measured values for both states.
+  # Benchmarks began with 0.9.0. The missing 1.1.1 and 1.4.4 runs are recorded as
+  # gaps; other releases must carry measured values for both states.
   if [ "$(printf '%s\n' 0.9.0 "$version" | sort -V | head -1)" = 0.9.0 ]; then
     for perf_state in cold warm; do
       if ! awk -F '|' -v wanted="$version" -v state="$perf_state" '
@@ -1778,7 +1778,7 @@ while IFS='|' read -r version archive; do
           gsub(/^[[:space:]]+|[[:space:]]+$/, "", version)
           gsub(/^[[:space:]]+|[[:space:]]+$/, "", mode)
           if (version == wanted && mode == state) {
-            if (version == "1.1.1" || ($6 ~ /[0-9]/ && $7 ~ /[0-9]/ && $8 ~ /[0-9]/ && $9 ~ /[0-9]/ && $10 ~ /[0-9]/)) found = 1
+            if (version == "1.1.1" || version == "1.4.4" || ($6 ~ /[0-9]/ && $7 ~ /[0-9]/ && $8 ~ /[0-9]/ && $9 ~ /[0-9]/ && $10 ~ /[0-9]/)) found = 1
           }
         }
         END { exit !found }
