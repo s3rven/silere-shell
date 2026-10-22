@@ -1026,6 +1026,47 @@ ShellRoot {
         for (let i = keys.length - 1; i >= 0; i--) ShellSettings[keys[i]] = saved[i]
     }
 
+    function _checkConnectivityBarActions(): void {
+        const was = { open: MenuState.open, tab: MenuState.activeTab, previous: MenuState.previousTab,
+            anchor: MenuState.anchorSource, x: MenuState.anchorX, screen: MenuState.triggerScreen }
+        const screen = Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
+        const wifiWas = Network.wifiEnabled
+        const btWas = Bluetooth.enabled
+        for (const name of ["NetworkWidget", "BluetoothWidget"]) {
+            const component = Qt.createComponent("modules/bar/widgets/" + name + ".qml")
+            const widget = component.status === Component.Ready
+                ? component.createObject(barFixtureHost, { screen: screen }) : null
+            root._check(widget !== null && widget.interactive === widget.show,
+                name + " offers its Home action whenever its status is shown")
+            if (widget) {
+                // exercise routing without requiring a physical Bluetooth adapter in CI
+                widget.interactive = true
+                widget.collapsed = false
+                widget.visible = true
+                MenuState.close()
+                MenuState.selectTab(MenuState.settingsTab)
+                widget.activated()
+                root._check(MenuState.open && MenuState.homeActive
+                        && MenuState.anchorSource === widget && MenuState.triggerScreen === screen
+                        && Network.wifiEnabled === wifiWas && Bluetooth.enabled === btWas,
+                    name + " opens Home on its own screen without changing either radio")
+                MenuState.close()
+                widget.barActive = false
+                widget.activated()
+                root._check(!MenuState.open, name + " rejects activation while its bar is inactive")
+                widget.barActive = true
+                widget.visible = false
+                widget.activated()
+                root._check(!MenuState.open, name + " rejects activation after it is hidden")
+                widget.destroy()
+            }
+            component.destroy()
+        }
+        MenuState.selectTab(was.tab)
+        MenuState._previousTab = was.previous
+        if (was.open) MenuState.openAt(was.x, was.screen, was.anchor)
+    }
+
     function _checkMenuContrast(): void {
         root._check(Math.abs(Theme.contrastRatio(Qt.color("white"), Qt.color("black")) - 21) < 0.001
                 && Math.abs(Theme.contrastRatio(Qt.rgba(1, 1, 1, 0), Qt.color("black")) - 1) < 0.001,
@@ -1615,6 +1656,7 @@ ShellRoot {
         root._checkConnectivityConfirmations()
         root._checkMenuContrast()
         root._checkAccentContrast()
+        root._checkConnectivityBarActions()
         const pageMovedWas = Scroll._page.movedAt
         const scrollList = scrollListFactory.createObject(root)
         Scroll._page.movedAt = 0

@@ -6,6 +6,8 @@ import "../../common"
 Pill {
     id: root
 
+    property var screen: null
+
     readonly property bool canRead: Network.toolAvailable
     readonly property bool show: ShellSettings.barShowNetwork
         && (canRead ? Network.available : true)
@@ -76,6 +78,15 @@ Pill {
     // the icon cell is a fixed width: one glyph fits, two overflow it
     glyph:          Network.icon
     accessibleName: "Network, " + root._accessibleDetail
+    interactive: root.show
+    pressed: _tap.pressed
+    onActivated: if (root.canActivate) MenuState.showTabAt(MenuState.homeTab, root, root.screen)
+
+    TapHandler {
+        id: _tap
+        enabled: root.canActivate
+        onTapped: root.activated()
+    }
     maxTextWidth:   compact ? 150 : 260
     // above the 2s traffic-stats poll: shrinkDelay:0 re-animated the pill's width on every single tick
     shrinkDelay:    2400

@@ -6,6 +6,8 @@ import "../../common"
 Pill {
     id: root
 
+    property var screen: null
+
     readonly property bool show: ShellSettings.barShowBluetooth && Bluetooth.available
     readonly property bool layoutVisible: show || opacity > 0.001
     readonly property bool _linked: Bluetooth.enabled && Bluetooth.connectedCount > 0
@@ -33,4 +35,13 @@ Pill {
 
     text: expanded ? Bluetooth.statusText : ""
     accessibleName: "Bluetooth, " + Bluetooth.statusText
+    interactive: root.show
+    pressed: _tap.pressed
+    onActivated: if (root.canActivate) MenuState.showTabAt(MenuState.homeTab, root, root.screen)
+
+    TapHandler {
+        id: _tap
+        enabled: root.canActivate
+        onTapped: root.activated()
+    }
 }
