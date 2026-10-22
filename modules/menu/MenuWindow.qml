@@ -1132,6 +1132,7 @@ FittedPopupWindow {
 
             MenuScrollThumb {
                 list: contentFlick
+                contextKey: _contentSettle.contextKey
                 shown: panel.open && !panel.powerOpen && panel.activeTab !== 2
                 z: 5
             }

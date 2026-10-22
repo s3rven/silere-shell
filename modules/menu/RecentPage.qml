@@ -855,6 +855,7 @@ PageShell {
 
         MenuScrollThumb {
             list: _historyList
+            contextKey: root._appliedFilter + "\u0001" + root.searchText
             fadeMultiplier: _historyList.opacity
             trackInset: 4
             rightInset: 3 - root.thumbOutset

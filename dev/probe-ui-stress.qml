@@ -103,14 +103,146 @@ ShellRoot {
                 model: [{value: "a", label: "A"}, {value: "b", label: "B"}]
                 currentValue: "a"
             }
+            ShellListView {
+                id: scrollList
+                x: 410; y: 240; width: 140; height: 200
+                model: scrollRows
+                delegate: ShellText {
+                    required property string label
+                    required property int index
+                    width: scrollList.width; height: 25 + (index % 4) * 15
+                    text: label
+                }
+            }
+            MenuScrollThumb {
+                id: scrollThumb
+                list: scrollList
+            }
         }
         TestCase { id: input; when: false }
+    }
+
+    ListModel {
+        id: scrollRows
+        Component.onCompleted: {
+            for (let i = 0; i < 40; i++) append({label: "Entry " + (i + 1)})
+        }
+    }
+
+    function checkScrollThumb(): void {
+        input.wait(Motion.panelSettle + 50)
+        root.check(scrollThumb.visible, "an overflowing list reveals its scrollbar")
+        let p = scrollThumb.mapToItem(window.contentItem, -4, scrollThumb.height / 2)
+        input.mouseMove(window.contentItem, p.x, p.y)
+        input.mouseWheel(window.contentItem, p.x, p.y, 0, -120)
+        input.wait(80)
+        root.check(scrollList.contentY > scrollList.originY,
+            "the scrollbar's wider hit area still passes wheel scrolling to the list")
+        scrollList.cancelFlick()
+        scrollList.positionViewAtBeginning()
+        input.wait(30)
+        const before = scrollList.contentY
+        p = scrollThumb.mapToItem(window.contentItem, -4, scrollThumb.height / 2)
+        input.mousePress(window.contentItem, p.x, p.y)
+        root.check(scrollThumb.dragging && Math.abs(scrollList.contentY - before) < 0.01,
+            "grabbing the wider scrollbar hit area preserves the current position")
+        input.mouseMove(window.contentItem, p.x, p.y + 60)
+        root.check(scrollList.contentY > before + 100,
+            "dragging the scrollbar scrolls the list")
+        input.mouseMove(window.contentItem, p.x, p.y + 60)
+        input.wait(30)
+        root.check(Math.abs(scrollThumb.y + scrollThumb._grabRatio * scrollThumb.height
+                - p.y - 60) < 1,
+            "a stationary pointer does not drift as the thumb moves beneath it")
+        input.mouseMove(window.contentItem, p.x, scrollList.y + scrollList.height + 50)
+        input.wait(30)
+        root.check(Math.abs(scrollList.contentY - scrollList.originY
+                - scrollList.contentHeight + scrollList.height) < 0.01,
+            "dragging past the track reaches the exact bottom")
+        input.mouseMove(window.contentItem, p.x, scrollList.y - 30)
+        input.wait(30)
+        root.check(Math.abs(scrollList.contentY - scrollList.originY) < 0.01,
+            "dragging above the track reaches the exact top")
+        input.mouseRelease(window.contentItem, p.x, scrollList.y - 30)
+        root.check(!scrollThumb.dragging, "releasing the scrollbar ends the drag")
+
+        // Removing rows above a retained viewport gives ListView a nonzero origin.
+        scrollList.contentY = 500
+        scrollRows.remove(0, 5)
+        scrollList.forceLayout()
+        input.wait(30)
+        root.check(scrollList.originY !== 0, "the recycled list fixture has a shifted origin")
+        p = scrollThumb.mapToItem(window.contentItem, -4, scrollThumb.height / 2)
+        input.mousePress(window.contentItem, p.x, p.y)
+        input.mouseMove(window.contentItem, p.x, scrollList.y + scrollList.height + 50)
+        input.wait(30)
+        root.check(scrollThumb.dragging && Math.abs(scrollList.contentY - scrollList.originY
+                - scrollList.contentHeight + scrollList.height) < 0.01,
+            "scrollbar dragging accounts for a recycled list's shifted origin")
+
+        scrollThumb.contextKey = "replacement page"
+        const canceledAt = scrollList.contentY
+        input.mouseMove(window.contentItem, p.x, scrollList.y)
+        input.mouseRelease(window.contentItem, p.x, scrollList.y)
+        root.check(!scrollThumb.dragging && scrollList.contentY === canceledAt,
+            "changing pages cancels a retained scrollbar drag")
+
+        input.wait(Motion.panelSettle + 50)
+        p = scrollThumb.mapToItem(window.contentItem, -4, scrollThumb.height / 2)
+        input.mousePress(window.contentItem, p.x, p.y)
+        root.check(scrollThumb.dragging, "the replacement page permits a fresh drag")
+        scrollList.interactive = false
+        input.mouseMove(window.contentItem, p.x, scrollList.y)
+        input.mouseRelease(window.contentItem, p.x, scrollList.y)
+        root.check(!scrollThumb.dragging && scrollList.contentY === canceledAt,
+            "a disabled list cancels dragging without further movement")
+        scrollList.interactive = true
+
+        p = scrollThumb.mapToItem(window.contentItem, -4, scrollThumb.height / 2)
+        input.mousePress(window.contentItem, p.x, p.y)
+        host.visible = false
+        input.mouseMove(window.contentItem, p.x, scrollList.y)
+        input.mouseRelease(window.contentItem, p.x, scrollList.y)
+        root.check(!scrollThumb.dragging && scrollList.contentY === canceledAt,
+            "hiding the menu cancels dragging without further movement")
+        host.visible = true
+
+        input.wait(Motion.panelSettle + 50)
+        p = scrollThumb.mapToItem(window.contentItem, -4, scrollThumb.height / 2)
+        input.mousePress(window.contentItem, p.x, p.y)
+        root.check(scrollThumb.dragging, "a revealed list permits another drag")
+        scrollList.height += 20
+        const resizedAt = scrollList.contentY
+        input.mouseMove(window.contentItem, p.x, scrollList.y)
+        input.mouseRelease(window.contentItem, p.x, scrollList.y)
+        root.check(!scrollThumb.dragging && scrollList.contentY === resizedAt,
+            "resizing the viewport cancels the old drag without moving its new contents")
+
+        p = scrollThumb.mapToItem(window.contentItem, -4, scrollThumb.height / 2)
+        input.mousePress(window.contentItem, p.x, p.y)
+        root.check(scrollThumb.dragging, "a resized list permits a fresh drag")
+        scrollRows.append({label: "New entry"})
+        scrollList.forceLayout()
+        input.wait(30)
+        root.check(scrollThumb.dragging
+                && Math.abs(scrollThumb.y + scrollThumb._grabRatio * scrollThumb.height - p.y) < 1,
+            "a changing scroll range keeps the grabbed thumb beneath the stationary pointer")
+        input.mouseRelease(window.contentItem, p.x, p.y)
+
+        scrollRows.clear()
+        scrollList.forceLayout()
+        input.wait(30)
+        root.check(!scrollThumb.visible && !scrollThumb.dragging,
+            "a list that no longer overflows hides its scrollbar")
     }
 
     Timer {
         interval: 150
         running: true
-        onTriggered: cycleTimer.start()
+        onTriggered: {
+            root.checkScrollThumb()
+            cycleTimer.start()
+        }
     }
     Timer {
         id: cycleTimer

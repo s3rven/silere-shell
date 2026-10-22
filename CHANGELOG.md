@@ -13,6 +13,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Added
 
+- Drag the scrollbar in menu pages, notification history and long dropdown lists to move through them.
 - Click the network or Bluetooth bar widget to open Home for connection and radio controls.
 - On Hyprland, popups wait in history while the screen is shared, with a red mark by the clock
   until the share ends.

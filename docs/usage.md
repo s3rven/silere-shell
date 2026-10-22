@@ -39,6 +39,9 @@ history and Settings, and text fields. Controls also expose actions to accessibi
 Disconnect, forget and power confirmations expire after three seconds. A later
 click starts a fresh confirmation.
 
+Drag the scrollbar at the right of a long menu page, history or dropdown list to
+scroll through it. Hovering it makes the handle wider and easier to grab.
+
 History search ignores case and accents: `cafe` finds `Café`. Words can match across
 the sender, title and message. Selecting an app in the rail further narrows the results.
 
