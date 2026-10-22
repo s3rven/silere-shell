@@ -37,6 +37,8 @@ settings file carries its own `__version` and migrates separately.
 ### Fixed
 
 - Brightness controls keep queued changes when an older refresh finishes during a drag or scroll.
+- A charger change during a slow power-mode command still restores the mode for the current
+  power source once the command finishes.
 - The bar's volume reads 0% while muted, matching the menu, the OSD and the microphone, instead
   of the level it returns to.
 - Bluetooth turned off by blueman or `rfkill` turns back on from Silere, instead of reading as

@@ -110,11 +110,15 @@ Singleton {
         target: Battery
         function onOnBatteryChanged() { _sourceSettle.restart() }
     }
-    Timer {
+    property Timer _sourceSettleTimer: Timer {
         id: _sourceSettle
         interval: 2000
         onTriggered: {
-            if (!ShellSettings.powerProfileRemember || !root.available || !Battery.available || _set.running) return
+            if (!ShellSettings.powerProfileRemember || !root.available) return
+            // a charger edge can land during a slow write. Keep the restore queued,
+            // then read the current source and preferences once the writer is free
+            if (_set.running) { restart(); return }
+            if (!Battery.available) return
             const want = root.profileForSource(Battery.onBattery, ShellSettings.powerProfileAc,
                 ShellSettings.powerProfileBattery, root.profile)
             if (root._cycleOrder.indexOf(want) >= 0) root._apply(want)
@@ -148,7 +152,7 @@ Singleton {
         root.lastError = ""
     }
 
-    BoundedProcess {
+    readonly property BoundedProcess _setter: BoundedProcess {
         id: _set
         timeoutMs: 8000
         environment: ({ "LC_ALL": "C" })

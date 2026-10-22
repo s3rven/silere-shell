@@ -5648,6 +5648,22 @@ ShellRoot {
         const profileErrorWas = PowerProfiles.lastError
         SystemTools._tools = { busctl: true, "@powerprofiles": true }
         root._check(PowerProfiles.available, "a daemon and busctl support power changes without the dedicated CLI")
+        const rememberProfileWas = ShellSettings.powerProfileRemember
+        ShellSettings.powerProfileRemember = true
+        PowerProfiles._sourceSettleTimer.stop()
+        PowerProfiles._setter.exec(["sleep", "2"])
+        root._check(PowerProfiles._setter.running,
+            "the power-mode timing probe starts its private writer without changing a hardware profile")
+        PowerProfiles._sourceSettleTimer.triggered()
+        root._check(PowerProfiles._sourceSettleTimer.running,
+            "a charger change during a busy power-mode write stays queued for restoration")
+        PowerProfiles._sourceSettleTimer.stop()
+        ShellSettings.powerProfileRemember = false
+        PowerProfiles._sourceSettleTimer.triggered()
+        root._check(!PowerProfiles._sourceSettleTimer.running,
+            "disabling remembered power modes cancels a delayed charger restore")
+        PowerProfiles._setter.running = false
+        ShellSettings.powerProfileRemember = rememberProfileWas
         PowerProfiles._acceptSetResult(1, false, "details\nPermission denied\n")
         root._check(PowerProfiles.lastError === "Permission denied",
             "a failed power-mode fallback exposes the command's useful error")
