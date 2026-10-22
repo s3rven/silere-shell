@@ -3431,6 +3431,17 @@ ShellRoot {
         root._check(Notifications.plainText("** spaced ** and ****", 64)
                 === "** spaced ** and ****",
             "asterisks that do not hug a word are not treated as bold")
+        root._check(Notifications.plainText("```text Add notes with a TCP checker ```", 128)
+                === "Add notes with a TCP checker",
+            "a code fence a terminal agent flattened onto one line drops with its language word")
+        root._check(Notifications.plainText("Done:\n```bash\nmake check\n```\nok", 128)
+                === "Done:\nmake check\nok",
+            "a fenced block on its own lines keeps the lines it wrapped")
+        root._check(Notifications.plainText("Run `make check` then [open the notes](/tmp/notes.md)", 128)
+                === "Run make check then open the notes",
+            "inline code and link markup show only the text a reader would see")
+        root._check(Notifications.plainText("it`s 3`4 and [a] (b)", 128) === "it`s 3`4 and [a] (b)",
+            "a stray backtick or bracket outside markdown syntax stays")
         root._check(Notifications._normalizeEntry({ body: "line1\nline2" }).body
                 === "line1\nline2",
             "history text keeps the newlines a multi-line body needs")

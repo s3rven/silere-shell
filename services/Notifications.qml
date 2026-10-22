@@ -816,6 +816,11 @@ Singleton {
             .replace(/&nbsp;/g, " ").replace(/&hellip;/g, "…")
             .replace(/&amp;/g, "&")
             .replace(/(^|[^\w*])\*\*(?=[^*\s])([^*\n]*?[^*\s])\*\*(?![\w*])/g, "$1$2")
+            // a sender that flattens newlines leaves "```lang text ```", so a fence takes its language word and the space with it
+            .replace(/[ \t]*```[\w+#.-]*(?=\s|$)[ \t]*(\n?)/g, (m, nl, at, s) =>
+                at === 0 || s[at - 1] === "\n" ? "" : nl || (at + m.length === s.length ? "" : " "))
+            .replace(/(^|[^\w`])`([^`\n]+)`(?![\w`])/g, "$1$2")
+            .replace(/!?\[([^\]\n]+)\]\([^)\s]+\)/g, "$1")
         return root._boundedPlainText(plain, limit)
     }
 
