@@ -3517,6 +3517,17 @@ ShellRoot {
                 Notifications.historyModel.get(i).summary === s),
             "history lists a burst by arrival even when its popups close newest first")
         Notifications.clearHistory()
+        Notifications._prependHistory({ id: 261, appName: "Agent", summary: "Approval requested", time: 10 })
+        Notifications._prependHistory({ id: 262, appName: "Agent", summary: "Approval requested", time: 20 })
+        Notifications._prependHistory({ id: 260, appName: "Agent", summary: "Approval requested", time: 5 })
+        root._check(Notifications.historyCount === 1 && Notifications.historyModel.get(0).id === 262,
+            "a sender repeating itself word for word keeps one row at its latest time")
+        Notifications._prependHistory({ id: 263, appName: "Agent", summary: "Approval requested", body: "make", time: 30 })
+        Notifications._prependHistory({ id: 264, appName: "Shell", summary: "Approval requested", time: 40 })
+        Notifications._prependHistory({ id: 265, appName: "Agent", summary: "Approval requested", time: 50 })
+        root._check([265, 264, 263, 262].every((id, i) => Notifications.historyModel.get(i).id === id),
+            "a repeat with another body, another sender or a row between them keeps its own row")
+        Notifications.clearHistory()
         Notifications._prependHistory({ id: 201, appName: "Alpha", summary: "a1", time: 1 })
         Notifications._prependHistory({ id: 202, appName: "Beta",  summary: "b1", time: 1 })
         Notifications._prependHistory({ id: 203, appName: "Alpha", summary: "a2", time: 1 })
@@ -7178,7 +7189,7 @@ ShellRoot {
         for (const entry of [{id: 6201, time: now - day - 5},
                 {id: 6202, time: now - day - 10}, {id: 6203, time: now - 1000},
                 {id: 6204, time: now - day + 5000}, {id: 6205, time: now + day}])
-            Notifications._prependHistory(Object.assign({appName: "Retention", summary: "Probe"}, entry))
+            Notifications._prependHistory(Object.assign({appName: "Retention", summary: "Probe " + entry.id}, entry))
         Notifications.historyModel.move(4, 1, 1)
         ShellSettings._loaded = false
         ShellSettings.notifHistoryDays = 1
