@@ -750,6 +750,56 @@ ShellRoot {
             "enumeration with discovery closed leaves scanners stopped without writes")
     }
 
+    function _checkOsdLifetime(): void {
+        const timeoutWas = ShellSettings.osdTimeout
+        for (const timeout of [500, 2000, 10000]) {
+            ShellSettings.osdTimeout = timeout
+            OsdBarState._clearEntries()
+            for (const kind of ["volume", "brightness", "battery", "temp", "notif"])
+                OsdBarState._upsertEntry(kind, "", 0.5, kind, false, Theme.accent)
+            const now = Date.now()
+            OsdBarState._sweepEntries()
+            let live = true
+            for (let i = 0; i < OsdBarState.entries.count; i++) {
+                const entry = OsdBarState.entries.get(i)
+                live = live && !entry.closing && !OsdBarState._due(OsdBarState._expiresAt[entry.kind], now)
+            }
+            root._check(live && OsdBarState.activeCount === 5,
+                "new level feedback and readable alerts survive their first expiry sweep at timeout " + timeout)
+            OsdBarState._expiresAt.volume = Date.now() - 1
+            OsdBarState._sweepEntries()
+            root._check(OsdBarState.entries.get(OsdBarState._entryIndex("volume")).closing
+                    && !OsdBarState.entries.get(OsdBarState._entryIndex("temp")).closing,
+                "expired volume feedback closes without dismissing a readable warning at timeout " + timeout)
+            OsdBarState._expiresAt.temp = Date.now() + 3600000
+            OsdBarState._sweepEntries()
+            root._check(OsdBarState.entries.get(OsdBarState._entryIndex("temp")).closing,
+                "a clock rollback still retires an impossible OSD deadline at timeout " + timeout)
+        }
+        OsdBarState._clearEntries()
+        ShellSettings.osdTimeout = timeoutWas
+
+        OsdBarState._upsertEntry("volume", "", 0.48, "Headset · 48%", false, Theme.accent)
+        OsdBarState._upsertEntry("brightness", "", 0.6, "60%", false, Theme.accent)
+        OsdBarState._showDeviceName = true
+        OsdBarState._hideDeviceName()
+        root._check(!OsdBarState._showDeviceName && OsdBarState.kind === "brightness"
+                && OsdBarState.label === "60%"
+                && OsdBarState.entries.get(OsdBarState._entryIndex("volume")).label === Audio.label,
+            "a volume device name expires even while brightness feedback is primary")
+        OsdBarState._closeEntry(OsdBarState._entryIndex("brightness"))
+        root._check(OsdBarState.kind === "volume" && OsdBarState.label === Audio.label,
+            "returning to volume feedback cannot bring back an expired device name")
+        OsdBarState._upsertEntry("volume", "", 0, "Muted", true, Theme.accent)
+        OsdBarState._hideDeviceName()
+        root._check(OsdBarState.label === "Muted",
+            "device-name expiry preserves muted volume feedback")
+        OsdBarState._clearEntries()
+        OsdBarState._hideDeviceName()
+        root._check(!OsdBarState.showing && OsdBarState.activeCount === 0,
+            "device-name expiry never resurrects dismissed volume feedback")
+    }
+
     function _checkWifiDraft(): void {
         const motionWas = ShellSettings.reduceMotion
         const errorWas = Network.wifiError
@@ -1414,6 +1464,7 @@ ShellRoot {
         root._checkPageLayout()
         root._checkAccessibleControls()
         root._checkWifiScanners()
+        root._checkOsdLifetime()
         root._checkWifiDraft()
         root._checkPowerRail()
         root._checkPillTextBaseline()

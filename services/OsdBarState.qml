@@ -64,7 +64,7 @@ Singleton {
     readonly property int _removeDelay: Motion.ms(170) + 70
     readonly property int _commitCloseWindow: Motion.ms(220) + 80
     // a deadline further out than any span set here means the wall clock stepped back
-    readonly property int _maxSpanMs: Math.max(500, ShellSettings.osdTimeout) + 1000
+    readonly property int _maxSpanMs: root.holdFor("battery", ShellSettings.osdTimeout) + 1000
 
     function _due(t: real, now: real): bool {
         return t <= now || t - now > root._maxSpanMs
@@ -290,13 +290,18 @@ Singleton {
         id: _deviceNameTimer
         interval: 3000
         repeat: false
-        onTriggered: {
-            root._showDeviceName = false
-            if (root.kind === "volume" && root.showing && !root.muted) {
-                root.label = Audio.label
-                root._setEntryProperty("volume", "label", Audio.label)
-            }
-        }
+        onTriggered: root._hideDeviceName()
+    }
+
+    function _hideDeviceName(): void {
+        root._showDeviceName = false
+        const index = root._entryIndex("volume")
+        if (index < 0) return
+        const entry = _entries.get(index)
+        // another kind can be primary when the name expires. Update the volume
+        // entry too, so bringing it forward cannot revive an expired device name
+        if (!entry.closing && !entry.muted)
+            root._setEntryProperty("volume", "label", Audio.label)
     }
 
     function _updateVolume(): void {

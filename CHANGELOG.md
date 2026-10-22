@@ -40,6 +40,9 @@ settings file carries its own `__version` and migrates separately.
   replacement instead of treating the old night light as stopped.
 - A crashed night-light state check keeps the last known state instead of treating its
   signal number as proof that no night light is running.
+- Battery and temperature warnings stay visible long enough to read at the default OSD timeout,
+  instead of disappearing almost immediately.
+- Volume feedback drops its temporary device name even when a newer brightness popup is showing.
 - Brightness controls keep queued changes when an older refresh finishes during a drag or scroll.
 - A charger change during a slow power-mode command still restores the mode for the current
   power source once the command finishes.
