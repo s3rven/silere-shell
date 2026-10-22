@@ -4598,6 +4598,14 @@ ShellRoot {
             "temperature polling sleeps for a hidden underline without silencing alerts")
         root._check(Audio.sinkLabel({ description: "s".repeat(300) }).length === 256,
             "audio service bounds PipeWire sink labels")
+        const btSink = profile => ({ description: "Q45", isSink: true,
+            properties: { "api.bluez5.profile": profile } })
+        root._check(Audio.sinkLabel(btSink("headset-head-unit")) === "Q45 · Call mode"
+                && Audio.sinkLabel(btSink("a2dp-sink")) === "Q45"
+                && Audio.sinkLabel({ description: "Q45", isSink: false,
+                    properties: { "api.bluez5.profile": "headset-head-unit" } }) === "Q45"
+                && Audio.sinkLabel({ description: "Speakers" }) === "Speakers",
+            "a bluetooth output on its hands-free profile is named as call mode, a microphone never is")
 
         const track = sliderTrackFactory.createObject(root, {
             width: 100, value: 0.5, min: 0, max: 1, step: 0.1

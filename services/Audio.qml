@@ -270,10 +270,13 @@ Singleton {
     readonly property string soundSettingsName: root.hasSoundSettings
         ? String(Settings.soundSettingsCommand[0]) : ""
 
+    // a headset an app's microphone moved onto hands-free keeps its name and drops to call quality; the suffix is what makes the osd say so
     function sinkLabel(node): string {
         if (!node) return ""
-        return SafeText.singleLineText(
+        const name = SafeText.singleLineText(
             node.description || node.nickname || node.name || "Output", 256)
+        const profile = String((node.properties || {})["api.bluez5.profile"] || "")
+        return node.isSink && profile.indexOf("headset") === 0 ? name + " · Call mode" : name
     }
 
     // a stream is named for the app behind it; its own description is the track or pipeline

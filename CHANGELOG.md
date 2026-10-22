@@ -18,6 +18,8 @@ settings file carries its own `__version` and migrates separately.
 - Power Mode remembers what you picked on battery and on the charger, and restores it when you
   plug in or unplug.
 - Connected Bluetooth devices send one alert when their battery drops below 20%.
+- A Bluetooth headset that an app's microphone switches to call quality shows "Call mode" in the
+  OSD and the output list.
 - Keep Awake can switch itself off after one or two hours. Expand its row on Home to choose,
   and the row shows when it ends.
 
