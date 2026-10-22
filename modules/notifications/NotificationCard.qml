@@ -577,7 +577,8 @@ Item {
                     font.pixelSize:   Settings.fontSize + 1
                     font.weight:      Font.DemiBold
                     wrapMode:         Text.Wrap
-                    maximumLineCount: card._expanded ? Notifications._maxSummaryChars : 1
+                    // a sender that puts its whole message in the summary gets the lines a body would have had
+                    maximumLineCount: card._expanded ? Notifications._maxSummaryChars : card.hasBody ? 1 : 3
                     elide:            card._expanded ? Text.ElideNone : Text.ElideRight
                     ColorFade on color {}
                 }

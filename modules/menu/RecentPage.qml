@@ -740,7 +740,7 @@ PageShell {
                                 font.weight: Font.DemiBold
                                 wrapMode: Text.Wrap
                                 // a line per stored character can never truncate the bounded title
-                                maximumLineCount: _entry._expanded ? Notifications._maxSummaryChars : 1
+                                maximumLineCount: _entry._expanded ? Notifications._maxSummaryChars : _body.visible ? 1 : 2
                                 elide: _entry._expanded ? Text.ElideNone : Text.ElideRight
                             }
 
