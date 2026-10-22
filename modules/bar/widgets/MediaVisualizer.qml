@@ -49,7 +49,7 @@ Canvas {
 
     Connections {
         target: Theme
-        function onAccentChanged() { if (_viz._paintable) _viz.requestPaint() }
+        function onBarAccentChanged() { if (_viz._paintable) _viz.requestPaint() }
     }
 
     property var   _fill:   null
@@ -167,7 +167,7 @@ Canvas {
 
         var slot  = width / n
         var maxPx = height * 0.75
-        var ac    = Theme.accent
+        var ac    = Theme.barAccent
 
         var cy = _cy
         if (cy.length !== n) { cy = new Array(n); _cy = cy }

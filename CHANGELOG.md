@@ -11,6 +11,10 @@ settings file carries its own `__version` and migrates separately.
 
 ## [Unreleased]
 
+### Fixed
+
+- The visualizer stays visible with a very dark custom accent, like the rest of the bar.
+
 ## Releases
 
 - [1.4.4](docs/releases/1.4.4.md) — 2026-10-22
