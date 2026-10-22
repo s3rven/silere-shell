@@ -885,6 +885,55 @@ ShellRoot {
         ShellSettings.reduceMotion = motionWas
     }
 
+    function _checkAccentContrast(): void {
+        const keys = ["reduceMotion", "neutralTheme", "neutralAccentAuto", "neutralAccent",
+            "highContrast", "baseTone", "barOpacity", "surfaceBlur", "popupMatchBarOpacity",
+            "matugenAccentBalance", "matugenAccentRole"]
+        const saved = keys.map(key => ShellSettings[key])
+        const paletteWas = MatugenTheme._palette
+        ShellSettings.reduceMotion = true
+        ShellSettings.neutralAccentAuto = false
+        ShellSettings.matugenAccentBalance = false
+        ShellSettings.matugenAccentRole = "primary"
+        ShellSettings.surfaceBlur = true
+        ShellSettings.popupMatchBarOpacity = true
+        const marker = workspaceMarkerFactory.createObject(barFixtureHost)
+        for (const neutral of [true, false]) for (const hc of [false, true])
+        for (const opacity of [1, 0.62]) for (const tone of ["black", "charcoal", "graphite"])
+        for (const color of ["#000000", "#111111", "#103323", "#23509a", "#9babe9", "#ffffff"]) {
+            ShellSettings.neutralTheme = neutral
+            ShellSettings.highContrast = hc
+            ShellSettings.barOpacity = opacity
+            ShellSettings.baseTone = tone
+            ShellSettings.neutralAccent = color
+            MatugenTheme._palette = Object.assign({}, paletteWas, { accent: color })
+            const context = [neutral, hc, opacity, tone, color].join("/")
+            root._check(Qt.colorEqual(Theme.accent, Qt.color(color))
+                    && Theme.contrastRatio(Theme.barAccent, Theme.background) >= (hc ? 6.99 : 4.49)
+                    && marker && Qt.colorEqual(marker.tint, Theme.barAccent),
+                "bar indicators stay readable without changing the chosen accent: " + context)
+            let lowest = Infinity
+            for (const hovered of [false, true]) for (const pressed of [false, true]) {
+                const knob = Theme.controlKnobFill(Theme.accent, true, hovered, pressed)
+                const track = Theme.switchTrackFill(Theme.accent, true, hovered, pressed)
+                for (const backdrop of ["#000000", "#ffffff"]) {
+                    const card = Theme.glass
+                        ? Theme.mix(Theme.mix(Qt.color(backdrop), Theme.background, Theme.popupOpacity),
+                            Theme.text, Theme._cardK)
+                        : Theme.menuCardSolid
+                    lowest = Math.min(lowest, Theme.contrastRatio(knob, Theme.mix(card, track, track.a)))
+                }
+            }
+            root._check(lowest >= 2.99,
+                "selected switch knobs survive hover, press and light or dark glass backdrops: "
+                    + context + " contrast " + lowest)
+        }
+        if (marker) marker.destroy()
+        MatugenTheme._palette = paletteWas
+        // restore motion last so returning to the original palette is immediate
+        for (let i = keys.length - 1; i >= 0; i--) ShellSettings[keys[i]] = saved[i]
+    }
+
     function _checkMenuContrast(): void {
         root._check(Math.abs(Theme.contrastRatio(Qt.color("white"), Qt.color("black")) - 21) < 0.001
                 && Math.abs(Theme.contrastRatio(Qt.rgba(1, 1, 1, 0), Qt.color("black")) - 1) < 0.001,
@@ -1472,6 +1521,7 @@ ShellRoot {
         root._checkBluetoothPairing()
         root._checkConnectivityConfirmations()
         root._checkMenuContrast()
+        root._checkAccentContrast()
         const pageMovedWas = Scroll._page.movedAt
         const scrollList = scrollListFactory.createObject(root)
         Scroll._page.movedAt = 0

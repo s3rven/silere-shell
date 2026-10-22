@@ -19,7 +19,7 @@ Pill {
     MotionBehavior on scale   {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutQuart } }
 
     glyphPixelSize: Settings.iconSize + 1
-    glyphColor:     Theme.accent
+    glyphColor:     Theme.barAccent
     textColor:      Theme.text
     interactive:    show && !busy
     animateGlyph:   false

@@ -31,7 +31,7 @@ Item {
     property real layoutOffsetX: 0
     transform: Translate { x: root.layoutOffsetX }
     readonly property real centerX: x + width / 2 + layoutOffsetX
-    readonly property color tint: root.urgent ? Theme.warning : Theme.accent
+    readonly property color tint: root.urgent ? Theme.warning : Theme.barAccent
 
     function _motionAllowed(): bool {
         return root.shown && root.barActive

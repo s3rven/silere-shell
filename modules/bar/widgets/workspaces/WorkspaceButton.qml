@@ -283,10 +283,10 @@ Item {
             color:   root.urgent
                 ? Theme.warning
                 : root.active
-                ? Theme.accent
+                ? Theme.barAccent
                 : (root.occupied
-                    ? (root._hoverFx ? Theme.accent : Theme.withAlpha(Theme.text, 0.85))
-                    : (root._hoverFx ? Theme.withAlpha(Theme.accent, 0.65) : Theme.withAlpha(Theme.subtext, 0.45)))
+                    ? (root._hoverFx ? Theme.barAccent : Theme.withAlpha(Theme.text, 0.85))
+                    : (root._hoverFx ? Theme.withAlpha(Theme.barAccent, 0.65) : Theme.withAlpha(Theme.subtext, 0.45)))
             font.pixelSize: Settings.fontLabel
 
             MotionBehavior on scale   {NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
@@ -306,7 +306,7 @@ Item {
                     : root._dotAlpha)
                 * root._pulseOpacity
             color: root.urgent ? Theme.warning
-                 : root.active ? Theme.accent
+                 : root.active ? Theme.barAccent
                  : Theme.withAlpha(Theme.subtext, 0.85)
             scale: root._hoverFx ? 1.2 : 1.0
 

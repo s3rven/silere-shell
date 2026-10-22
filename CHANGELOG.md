@@ -36,6 +36,8 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- Very dark custom accents keep workspace indicators, update icons and clock seconds readable.
+  Switch knobs keep their contrast against the selected track with custom colours and high contrast.
 - A missing or crashed night-light stop helper reports a failure and cancels a queued
   replacement instead of treating the old night light as stopped.
 - A crashed night-light state check keeps the last known state instead of treating its

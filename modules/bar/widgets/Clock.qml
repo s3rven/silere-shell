@@ -63,8 +63,8 @@ Item {
     readonly property color _cText:  _hov ? Theme.mix(Theme.text,    Theme.accent, 0.30) : Theme.text
     readonly property color _cFaint: _hov ? Theme.mix(Theme.withAlpha(Theme.text, 0.65), Theme.accent, 0.30)
                                           : Theme.withAlpha(Theme.text, 0.65)
-    readonly property color _cSec:   _hov ? Theme.mix(Theme.accent, Theme.text, 0.22)
-                                          : Theme.withAlpha(Theme.accent, 0.82)
+    readonly property color _cSec:   _hov ? Theme.mix(Theme.barAccent, Theme.text, 0.22)
+                                          : Theme.withAlpha(Theme.barAccent, 0.82)
 
     HoverHandler {
         id: _hover

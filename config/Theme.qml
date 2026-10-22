@@ -69,6 +69,11 @@ Singleton {
     readonly property color _tAccent:   _n ? (ShellSettings.neutralAccentAuto ? sourcedAccent(MatugenTheme.accent) : ShellSettings.neutralAccent) : sourcedAccent(_matuAccent)
     property color accent: root._tAccent
     PaletteFade on accent { gate: root._paletteReady }
+    // keep the chosen accent for fills, but lift very dark colours where the
+    // bar uses them as small text, glyphs or the active workspace marker
+    readonly property color _tBarAccent: root.readableText(_tAccent, _tBackground, _hc ? 7.0 : 4.5)
+    property color barAccent: root._tBarAccent
+    PaletteFade on barAccent { gate: root._paletteReady }
     // read off the target, not the eased value: a lerp between opposite hues passes through low chroma, and this must not flicker on the way
     readonly property bool accentColorless: lchOf(_tAccent).C < 4
     // matugen warning/success are M3 tertiary/secondary with no semantic meaning, so anchor the hue and let it tint; error is real
@@ -151,11 +156,16 @@ Singleton {
         ? Math.max(panelOpacity, glassFloor) : 1
     readonly property color popup: withAlpha(background, popupOpacity)
     // the lightest glass layer, a control, over a white backdrop: what text on glass has to survive
-    function _controlOverWhite(base: color, ink: color, alpha: real): color {
-        return mix(mix(Qt.rgba(1, 1, 1, 1), base, alpha), ink,
+    function _controlOverBackdrop(base: color, ink: color, alpha: real, backdrop: color): color {
+        return mix(mix(backdrop, base, alpha), ink,
             root._elevationForLightness(_labOf(base).L) * _controlMix)
     }
+    function _controlOverWhite(base: color, ink: color, alpha: real): color {
+        return root._controlOverBackdrop(base, ink, alpha, Qt.rgba(1, 1, 1, 1))
+    }
     readonly property color _glassWorst: root._controlOverWhite(_tBackground, _tText, popupOpacity)
+    readonly property color _glassDark: root._controlOverBackdrop(_tBackground, _tText,
+        popupOpacity, Qt.rgba(0, 0, 0, 1))
     function _solveGlassFloor(base: color, ink: color, minimum: real): real {
         let low = 0, high = 1
         for (let i = 0; i < 10; i++) {
@@ -257,6 +267,24 @@ Singleton {
         return blend(foreground, target, high)
     }
 
+    // a knob over glass has to survive both a dark wallpaper and a white window.
+    // Choosing the strongest ink on just one can make it vanish over the other
+    function _readableAcross(foreground: color, first: color, second: color, minimum: real): color {
+        function contrast(ink) {
+            return Math.min(root.contrastRatio(ink, first), root.contrastRatio(ink, second))
+        }
+        if (contrast(foreground) >= minimum) return foreground
+        const white = Qt.rgba(1, 1, 1, 1), black = Qt.rgba(0, 0, 0, 1)
+        const target = contrast(white) >= contrast(black) ? white : black
+        let low = 0, high = 1
+        for (let i = 0; i < 10; i++) {
+            const middle = (low + high) / 2
+            if (contrast(blend(foreground, target, middle)) >= minimum) high = middle
+            else low = middle
+        }
+        return blend(foreground, target, high)
+    }
+
     // shared focus-ring weight: button-family controls (2px) vs embedded row/track indicators (1px)
     // high contrast re-bases every other line onto white text; the ring keeps its accent, so it buys the contrast in alpha
     readonly property real focusRingAlpha:     _hc ? 0.92 : 0.72
@@ -304,12 +332,13 @@ Singleton {
     }
     // a switch is read at a glance, not aimed at, so its track sits far deeper than a
     // slider's fill; that is the room the accent knob needs to stay legible on top of it
+    function _switchTrackMix(hovered: bool, pressed: bool): real {
+        return _hc ? (pressed ? 0.85 : hovered ? 0.79 : 0.73)
+            : (pressed ? 0.32 : hovered ? 0.27 : 0.22)
+    }
     function switchTrackFill(c: color, checked: bool,
                              hovered: bool, pressed: bool): color {
-        if (checked) {
-            if (_hc) return blend(menuControl, c, pressed ? 0.85 : hovered ? 0.79 : 0.73)
-            return blend(menuControl, c, pressed ? 0.32 : hovered ? 0.27 : 0.22)
-        }
+        if (checked) return blend(menuControl, c, root._switchTrackMix(hovered, pressed))
         return blend(menuControl, text, pressed ? 0.14 : hovered ? 0.085 : 0.035)
     }
 
@@ -320,15 +349,22 @@ Singleton {
         return mix(c, text, pressed ? 0.30 : hovered ? 0.24 : 0.18)
     }
 
-    // the switch reads off its track, so the knob is a dark cap cut out of it rather than a
-    // white pill sitting on top; high contrast keeps the bright knob it needs
+    // keep the accent where it reads against the track; extreme colours need
+    // a lighter or darker knob that also survives the backdrop behind glass
     function controlKnobFill(c: color, active: bool,
                              hovered: bool, pressed: bool): color {
+        if (active) {
+            const preferred = _hc ? mix(text, c, pressed ? 0.13 : hovered ? 0.09 : 0.055)
+                : mix(c, text, pressed ? 0.22 : hovered ? 0.12 : 0.0)
+            const track = mix(glass ? _glassWorst : menuControlSolid, c,
+                root._switchTrackMix(hovered, pressed))
+            return glass ? root._readableAcross(preferred, track,
+                mix(_glassDark, c, root._switchTrackMix(hovered, pressed)), 3.0)
+                : root.readableText(preferred, track, 3.0)
+        }
         if (_hc) {
-            if (active) return mix(text, c, pressed ? 0.13 : hovered ? 0.09 : 0.055)
             return mix(subtext, text, pressed ? 0.28 : hovered ? 0.23 : 0.18)
         }
-        if (active) return mix(c, text, pressed ? 0.22 : hovered ? 0.12 : 0.0)
         const k = pressed ? 0.42 : hovered ? 0.36 : 0.30
         // a tint over glass: a fixed grey matches its track once the wallpaper behind is mid-light and vanishes
         return glass ? withAlpha(text, k) : mix(menuControlSolid, text, k)
