@@ -101,7 +101,6 @@ Singleton {
     property bool   underlineTempGlow:       false
     property bool   underlineScreenshotGlow: false
     property real   glowStrength:            1.0
-    property bool   screenshotGlowSweep:     false
 
     property string dotStyle:            "line"
     readonly property string dotTextGlyph: dotStyle === "|" || dotStyle === "line" ? "│"
@@ -393,9 +392,8 @@ Singleton {
         { k: "underlineBattGlow",   t: "bool", sec: "underline,warnings", l: "Battery low" },
         { k: "underlineNetGlow",    t: "bool", sec: "underline", l: "Network disconnect" },
         { k: "underlineTempGlow",   t: "bool", sec: "underline,warnings", l: "Temperature" },
-        { k: "underlineScreenshotGlow", t: "bool", sec: "underline" },
+        { k: "underlineScreenshotGlow", t: "bool", sec: "underline", l: "Screenshots" },
         { k: "glowStrength",        t: "real", min: 0.5, max: 1.75, sec: "underline" },
-        { k: "screenshotGlowSweep", t: "bool", sec: "underline" },
         { k: "dotStyle",            t: "enum", vals: ["·", "•", "◦", "|", "slash", "line", "none"], sec: "separators", l: "Style" },
         { k: "barSeparatorMode",    t: "enum", vals: ["groups", "widgets"], sec: "separators", l: "Placement" },
         { k: "barSpacing",          t: "int",  min: 4, max: 24, sec: "separators", l: "Widget gap" },
@@ -609,7 +607,7 @@ Singleton {
         underline: [
             { master: "underlineGlow", hides: ["underlineIdleGlow", "underlineFullWidth",
                 "underlineNotifGlow", "underlineBattGlow", "underlineNetGlow",
-                "underlineTempGlow", "underlineScreenshotGlow", "screenshotGlowSweep",
+                "underlineTempGlow", "underlineScreenshotGlow",
                 "glowStrength"] },
             { master: "barBorderVisible", hides: ["barLineStrength"] }
         ],

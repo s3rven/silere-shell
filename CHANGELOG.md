@@ -61,6 +61,8 @@ settings file carries its own `__version` and migrates separately.
 
 ### Removed
 
+- The Sweep style for screenshot underline feedback. Screenshots is now an on/off switch that
+  keeps the Flash style.
 - The OSD's Feedback for setting. The OSD shows both volume and brightness.
 
 ## Releases

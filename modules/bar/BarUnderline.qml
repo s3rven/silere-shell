@@ -52,15 +52,14 @@ Item {
         readonly property real _tempGlow: (_tempGlowEnabled && CpuTemp.critical && _tempSteady)
             ? 0.5
             : _tempGlowBase + _tempPulseGlow
-        readonly property real _screenshotStrength: ShellSettings.screenshotGlowSweep ? 1.1 : 1.0
-        readonly property int  _screenshotDuration: ShellSettings.screenshotGlowSweep ? 800 : 650
+        readonly property int  _screenshotDuration: 650
         readonly property real _screenshotEventGlow: ShellSettings.underlineScreenshotGlow
-            ? _screenshotGlow * (ShellSettings.screenshotGlowSweep ? 0.24 : 0.62) * _screenshotStrength : 0
+            ? _screenshotGlow * 0.62 : 0
         readonly property real _primaryGlow: Math.max(_notifGlow, _batteryGlow, _networkGlowEnabled ? _networkGlow : 0, _tempGlow, _screenshotEventGlow)
         readonly property real _stackedGlow: _notifGlow + _batteryGlow + (_networkGlowEnabled ? _networkGlow : 0) + _tempGlow + _screenshotEventGlow
         readonly property real _stackBonus:  Math.min(0.12, Math.max(0, _stackedGlow - _primaryGlow) * 0.18)
         readonly property real _ceiling:     _shotActive
-            ? Math.min(0.95, 0.70 + 0.10 * _screenshotStrength)
+            ? 0.80
             : (((_tempGlowEnabled && CpuTemp.critical) || (_batteryGlowEnabled && Battery.critical)) ? 0.74 : 0.62)
         property real _idleFloor: ShellSettings.underlineIdleGlow ? 0.20 : 0
         MotionBehavior on _idleFloor {
@@ -107,7 +106,6 @@ Item {
         property int _screenshotGatherMs: 0
         readonly property real _bloomBoost: Math.max(_notifFlash.bloom, _screenshotBloom, _netLossFlash.bloom)
         property real _screenshotBloom: 0
-        property real _screenshotSweepCenter: 0.50
         function _widgetSweep(key: string): real {
             const zone = ShellSettings.barWidgetLocate(key).zone
             return zone === "left" ? 0.32 : zone === "center" ? 0.50 : 0.68
@@ -117,9 +115,7 @@ Item {
             if (_batteryGlowEnabled && (Battery.low || Battery.critical))    return _widgetSweep("battery")
             // no bar widget shows temperature; its warning surfaces in the centred osd
             if (_tempGlowEnabled && (CpuTemp.hot || CpuTemp.critical))       return 0.50
-            if (ShellSettings.underlineScreenshotGlow
-                && _shotActive)                                              return ShellSettings.screenshotGlowSweep && !ShellSettings.reduceMotion
-                                                                                  ? _screenshotSweepCenter : 0.50
+            if (ShellSettings.underlineScreenshotGlow && _shotActive)        return 0.50
             if (_netLossFlash.running)                                       return _widgetSweep("network")
             return 0.50
         }
@@ -136,8 +132,7 @@ Item {
 
         property real _sweepCenter: _sweepCenterTarget
         MotionBehavior on _sweepCenter {
-            // sweep already animates this frame-by-frame, a second Behavior would lag behind it
-            gate: !_ul.quiet && !(_lineEffect._shotActive && ShellSettings.screenshotGlowSweep)
+            gate: !_ul.quiet
             NumberAnimation { duration: Motion.ms(400); easing.type: Easing.OutCubic }
         }
 
@@ -151,21 +146,16 @@ Item {
         function _stopScreenshot(): void {
             _screenshotPreviewTimer.stop()
             _screenshotPulse.stop()
-            _screenshotSweep.stop()
             _screenshotGlow = 0
             _screenshotBloom = 0
             _screenshotSpread = 0.28
-            _screenshotSweepCenter = 0.50
         }
 
         function _playScreenshot(): void {
             _lineEffect._stopScreenshot()
             if (!_lineEffect._canRunEventMotion()) return
             _screenshotGatherMs = _lineEffect._gatherDuration()
-            if (ShellSettings.screenshotGlowSweep)
-                _screenshotSweep.restart()
-            else
-                _screenshotPulse.restart()
+            _screenshotPulse.restart()
         }
 
         Connections {
@@ -187,15 +177,12 @@ Item {
 
         SequentialAnimation {
             id: _screenshotPulse
-            ScriptAction { script: {
-                _lineEffect._screenshotSweepCenter = 0.50
-                _lineEffect._screenshotBloom = 0
-            } }
+            ScriptAction { script: _lineEffect._screenshotBloom = 0 }
             NumberAnimation { target: _lineEffect; property: "_screenshotSpread"; to: 0.16; duration: _lineEffect._screenshotGatherMs; easing.type: Easing.InOutQuad }
             ParallelAnimation {
                 NumberAnimation { target: _lineEffect; property: "_screenshotGlow"; to: 1.0; duration: Motion.ms(100); easing.type: Easing.OutCubic }
                 NumberAnimation { target: _lineEffect; property: "_screenshotSpread"; to: 0.38; duration: Motion.ms(260); easing.type: Easing.OutCubic }
-                NumberAnimation { target: _lineEffect; property: "_screenshotBloom"; to: 0.30 * _lineEffect._screenshotStrength; duration: Motion.ms(120); easing.type: Easing.OutCubic }
+                NumberAnimation { target: _lineEffect; property: "_screenshotBloom"; to: 0.30; duration: Motion.ms(120); easing.type: Easing.OutCubic }
             }
             PauseAnimation { duration: Math.max(50, _lineEffect._screenshotDuration * 0.10) }
             ParallelAnimation {
@@ -216,48 +203,6 @@ Item {
                     to: 0.0
                     duration: Math.max(260, _lineEffect._screenshotDuration * 0.70)
                     easing.type: Easing.OutCubic
-                }
-            }
-        }
-
-        ParallelAnimation {
-            id: _screenshotSweep
-
-            ScriptAction { script: {
-                _lineEffect._screenshotSweepCenter = 0.04
-                _lineEffect._screenshotSpread = 0.045
-                _lineEffect._screenshotBloom = 0
-            } }
-
-            NumberAnimation {
-                target: _lineEffect; property: "_screenshotSweepCenter"
-                to: 0.96
-                duration: Math.max(480, _lineEffect._screenshotDuration)
-                easing.type: Easing.InOutCubic
-            }
-            SequentialAnimation {
-                NumberAnimation { target: _lineEffect; property: "_screenshotGlow"; to: 1.0; duration: Motion.ms(90); easing.type: Easing.OutCubic }
-                PauseAnimation { duration: Motion.ms(90) }
-                NumberAnimation {
-                    target: _lineEffect; property: "_screenshotGlow"; to: 0.0
-                    duration: Math.max(300, _lineEffect._screenshotDuration - Motion.ms(180))
-                    easing.type: Easing.InCubic
-                }
-            }
-            SequentialAnimation {
-                NumberAnimation { target: _lineEffect; property: "_screenshotSpread"; to: 0.10; duration: Motion.ms(180); easing.type: Easing.OutCubic }
-                NumberAnimation {
-                    target: _lineEffect; property: "_screenshotSpread"; to: 0.28
-                    duration: Math.max(300, _lineEffect._screenshotDuration - Motion.ms(180))
-                    easing.type: Easing.InOutCubic
-                }
-            }
-            SequentialAnimation {
-                NumberAnimation { target: _lineEffect; property: "_screenshotBloom"; to: 0.06 * _lineEffect._screenshotStrength; duration: Motion.ms(100); easing.type: Easing.OutCubic }
-                NumberAnimation {
-                    target: _lineEffect; property: "_screenshotBloom"; to: 0.0
-                    duration: Math.max(300, _lineEffect._screenshotDuration - Motion.ms(100))
-                    easing.type: Easing.InCubic
                 }
             }
         }
@@ -344,9 +289,6 @@ Item {
                 } else if (_lineEffect._canPreview()) {
                     _screenshotPreviewTimer.restart()
                 }
-            }
-            function onScreenshotGlowSweepChanged() {
-                if (_lineEffect._canPreview() && ShellSettings.underlineScreenshotGlow) _screenshotPreviewTimer.restart()
             }
             function onReduceMotionChanged() {
                 if (!ShellSettings.reduceMotion) return
@@ -541,31 +483,6 @@ Item {
             edge:   _lineEffect._renderEdge
             center: _lineEffect._renderCenter
             spread: Math.min(0.46, _lineEffect._renderSpread * modelData.s)
-        }
-    }
-
-    Rectangle {
-        id: _shotStreak
-        readonly property real _trackW: Math.max(0, parent.width - _ul.wrapRadius * 2)
-        readonly property real _streakW: Math.min(_trackW, Math.min(180, Math.max(64, _trackW * 0.16)))
-        readonly property color _edgeColor: Theme.withAlpha(_lineEffect._screenshotColor, 0)
-
-        x: Math.max(_ul.wrapRadius, Math.min(parent.width - _ul.wrapRadius - width,
-            _ul.wrapRadius + _lineEffect._screenshotSweepCenter * _trackW - width / 2))
-        anchors.bottom: parent.bottom
-        width: _streakW
-        height: 4
-        antialiasing: false
-        visible: ShellSettings.underlineScreenshotGlow
-            && ShellSettings.screenshotGlowSweep && _lineEffect._shotActive && _trackW > 1
-        opacity: Math.min(0.9,
-            _lineEffect._screenshotGlow * 0.72 * _lineEffect._screenshotStrength)
-
-        gradient: Gradient {
-            orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: _shotStreak._edgeColor }
-            GradientStop { position: 0.5; color: _lineEffect._screenshotColor }
-            GradientStop { position: 1.0; color: _shotStreak._edgeColor }
         }
     }
 

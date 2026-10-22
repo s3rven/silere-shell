@@ -12,10 +12,6 @@ Column {
 
     readonly property bool _enabled: ShellSettings.barBorderVisible || ShellSettings.underlineGlow
     readonly property string _style: ShellSettings.underlineGlow ? "glow" : "static"
-    readonly property string _screenshotStyle:
-        !ShellSettings.underlineScreenshotGlow ? "off"
-        : ShellSettings.screenshotGlowSweep ? "sweep"
-        : "flash"
     readonly property bool _hasReactiveSource:
         ShellSettings.underlineIdleGlow
         || ShellSettings.underlineNotifGlow
@@ -24,13 +20,6 @@ Column {
         || (!CpuTemp.sensorMissing && ShellSettings.underlineTempGlow)
         || (SystemTools.hasInotifywait && !Screenshot.watcherRetired
             && ShellSettings.underlineScreenshotGlow)
-
-    function _setScreenshotStyle(style) {
-        ShellSettings.batch(() => {
-            ShellSettings.underlineScreenshotGlow = style !== "off"
-            ShellSettings.screenshotGlowSweep = style === "sweep"
-        })
-    }
 
     function _setEnabled(enabled) {
         if (!enabled) {
@@ -141,16 +130,10 @@ Column {
                             key: "underlineTempGlow"
                             visible: !CpuTemp.sensorMissing
                         }
-                        ChoiceChipRow {
+                        ToggleRow {
                             glyph: "󰄀"; label: "Screenshots"
                             enabled: SystemTools.hasInotifywait
-                            currentValue: root._screenshotStyle
-                            model: [
-                                { value: "off",   label: "Off" },
-                                { value: "flash", label: "Flash" },
-                                { value: "sweep", label: "Sweep" }
-                            ]
-                            onChosen: (v) => root._setScreenshotStyle(v)
+                            key: "underlineScreenshotGlow"
                         }
                         HintText {
                             visible: !SystemTools.hasInotifywait

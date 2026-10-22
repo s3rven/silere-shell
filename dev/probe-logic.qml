@@ -2162,12 +2162,10 @@ ShellRoot {
                 const notificationFlash = lineEffect.resources.find(r => r.objectName === "notificationFlash")
                 const notifGlowWas = ShellSettings.underlineNotifGlow
                 const screenshotGlowWas = ShellSettings.underlineScreenshotGlow
-                const screenshotSweepWas = ShellSettings.screenshotGlowSweep
                 ShellSettings.reduceMotion = false
                 ShellSettings.underlineNotifGlow = true
                 ShellSettings.underlineNetGlow = true
                 ShellSettings.underlineScreenshotGlow = true
-                ShellSettings.screenshotGlowSweep = true
                 const arrivalCount = Notifications.activeCount
                 Notifications.notificationShown("Probe", "First arrival", false)
                 root._check(notificationFlash.running && !lineEffect._notifCritical
@@ -2244,7 +2242,6 @@ ShellRoot {
                 ShellSettings.underlineNotifGlow = notifGlowWas
                 ShellSettings.underlineNetGlow = netGlowWas
                 ShellSettings.underlineScreenshotGlow = screenshotGlowWas
-                ShellSettings.screenshotGlowSweep = screenshotSweepWas
                 ShellSettings.reduceMotion = true
                 lineEffect._effectColor = Qt.rgba(0.25, 0.5, 0.75, 1)
                 root._check(Math.abs(lineEffect._stopColor.r - lineEffect._effectColor.r) < 0.002
