@@ -42,9 +42,12 @@ Pill {
         if (Audio.sourceName.length > 0) parts.push(Audio.sourceName)
         return parts.join(", ")
     }
+    readonly property string _level: Math.round(Audio.micVolume * 100) + "%"
     text: !Audio.micReady ? ""
+        : expanded && Audio.captureSummary.length > 0 ? Audio.captureSummary + " · " + root._level
         : (ShellSettings.valuesOnHover && !expanded) ? ""
-        : (Math.round(Audio.micVolume * 100) + "%")
+        : root._level
+    maxTextWidth: compact ? 150 : 260
     levelValue: Audio.micReady ? Audio.micVolume : -1
     levelVisible: Audio.micReady && ShellSettings.valuesOnHover
         && ShellSettings.hoverLevelBar && !expanded

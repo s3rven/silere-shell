@@ -15,6 +15,7 @@ settings file carries its own `__version` and migrates separately.
 
 - Drag the scrollbar in menu pages, notification history and long dropdown lists to move through them.
 - Click the network or Bluetooth bar widget to open Home for connection and radio controls.
+- Hovering the microphone widget names the app that is recording.
 - On Hyprland, popups wait in history while the screen is shared, with a red mark by the clock
   until the share ends.
 - Power Mode remembers what you picked on battery and on the charger, and restores it when you
