@@ -32,15 +32,6 @@ Column {
                 key: "osdTimeout"
                 step: 500
             }
-            ChoiceChipRow {
-                key: "osdKindFilter"
-                glyph: "󰈶"; label: "Feedback for"
-                model: [
-                    { value: "both",       label: "Both" },
-                    { value: "volume",     label: "Volume" },
-                    { value: "brightness", label: "Bright" }
-                ]
-            }
         }
     }
 }

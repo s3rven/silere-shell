@@ -59,7 +59,6 @@ Singleton {
 
     property bool   osdEnabled:     true
     property int    osdTimeout:     2000
-    property string osdKindFilter:  "both"
     property bool   osdBatteryWarn: true
     property bool   osdTempWarn:    false
     property bool   osdChargedNotify: false
@@ -355,7 +354,6 @@ Singleton {
         { k: "barShowMedia",        t: "bool", sec: "widgets" },
         { k: "osdEnabled",          t: "bool", sec: "osd", l: "On-screen display" },
         { k: "osdTimeout",          t: "int",  min: 500,  max: 10000, sec: "osd", l: "Dismiss after" },
-        { k: "osdKindFilter",       t: "enum", vals: ["both", "volume", "brightness"], sec: "osd", l: "Feedback for" },
         { k: "osdBatteryWarn",      t: "bool", sec: "warnings" },
         { k: "osdTempWarn",         t: "bool", sec: "warnings" },
         { k: "osdChargedNotify",    t: "bool", sec: "warnings", l: "Fully charged alert" },
@@ -616,7 +614,7 @@ Singleton {
             { master: "barBorderVisible", hides: ["barLineStrength"] }
         ],
         osd: [
-            { master: "osdEnabled", hides: ["osdTimeout", "osdKindFilter",
+            { master: "osdEnabled", hides: ["osdTimeout",
                 "osdBarIntegrated", "osdMatchBar"] },
             { master: "osdBarIntegrated", negate: true, hides: ["osdMatchBar"] }
         ],

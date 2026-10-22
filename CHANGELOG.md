@@ -56,6 +56,10 @@ settings file carries its own `__version` and migrates separately.
 - The bar underline no longer flashes when a notification is replaced or restored, and stays still
   during idle. Full-width underline effects spread their glow across the whole bar.
 
+### Removed
+
+- The OSD's Feedback for setting. The OSD shows both volume and brightness.
+
 ## Releases
 
 - [1.4.3](docs/releases/1.4.3.md) — 2026-10-18

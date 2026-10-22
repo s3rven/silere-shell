@@ -2464,15 +2464,6 @@ ShellRoot {
                 && !OsdBarState._presentationAllowed(true, true)
                 && !OsdBarState._presentationAllowed(false, false),
             "OSD presentation is disabled while idle or globally switched off")
-        root._check(OsdBarState._kindAllowedByFilter("volume", "both")
-                && OsdBarState._kindAllowedByFilter("brightness", "both")
-                && OsdBarState._kindAllowedByFilter("volume", "volume")
-                && !OsdBarState._kindAllowedByFilter("brightness", "volume"),
-            "OSD input filtering admits only the selected feedback kind")
-        root._check(OsdBarState._kindAllowedByFilter("microphone", "both")
-                && OsdBarState._kindAllowedByFilter("microphone", "volume")
-                && !OsdBarState._kindAllowedByFilter("microphone", "brightness"),
-            "microphone feedback follows the volume filter")
         const stepNow = Date.now()
         const steppedAhead = stepNow + 3 * 3600 * 1000
         root._check(OsdBarState._due(stepNow, stepNow) && !OsdBarState._due(stepNow + 500, stepNow)

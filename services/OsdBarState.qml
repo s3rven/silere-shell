@@ -82,11 +82,6 @@ Singleton {
         return !idle && enabled
     }
 
-    function _kindAllowedByFilter(kind: string, filter: string): bool {
-        return filter === "both" || kind === filter
-            || (kind === "microphone" && filter === "volume")
-    }
-
     function _clearEntries(): void {
         _entrySweep.stop()
         _rapidTimer.stop()
@@ -227,7 +222,6 @@ Singleton {
         if (!root._presentationAllowed(Idle.isIdle, ShellSettings.osdEnabled)) return
         // only the home page carries the volume/brightness rows; elsewhere the menu replaces nothing
         if (MenuState.homeActive) return
-        if (!root._kindAllowedByFilter(kind, ShellSettings.osdKindFilter)) return
 
         const refreshFullscreen = ShellSettings.osdBarIntegrated && !root._hasActiveBarEntry()
         root.fillColor = Theme.accent
@@ -441,7 +435,5 @@ Singleton {
         }
         function onOsdBatteryWarnChanged() { Qt.callLater(root._replayBatteryAlerts) }
         function onOsdChargedNotifyChanged() { Qt.callLater(root._replayBatteryAlerts) }
-        // a live volume entry must not reappear after changing the filter to brightness (or vice versa). The next accepted input starts fresh
-        function onOsdKindFilterChanged() { root._clearEntries() }
     }
 }
