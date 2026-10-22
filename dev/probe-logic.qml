@@ -34,6 +34,7 @@ ShellRoot {
     property int _confirmActions: 0
     property PwVolumeControl _volumeCancelProbe: null
     property bool _volumeCancelDone: false
+    property real _volumeCancelDeadline: 0
 
     QtObject {
         id: probeAnchor
@@ -4830,6 +4831,7 @@ ShellRoot {
                 && !volumeControl.pendingApply,
             "resynchronizing audio cancels the old route's process and queued fallback writes")
         root._volumeCancelProbe = volumeControl
+        root._volumeCancelDeadline = Date.now() + 1000
         _volumeCancelCheck.restart()
         const near = (a, b) => Math.abs(a - b) < 0.0001
         root._check(near(Audio._out._stepFrom(0.43, 0.05), 0.45)
@@ -5299,6 +5301,7 @@ ShellRoot {
         SysInfo.diskAvailKb = diskWas[2]
         SysInfo._lastDiskReadMs = diskWas[3]
         SysInfo._active = cpuActiveWas
+
         const brightnessReadWas = {
             level: Brightness.currentBrightness, pending: Brightness.pendingPercent,
             currentValid: Brightness._currentValid, maxValid: Brightness._maxValid,
@@ -9099,6 +9102,12 @@ ShellRoot {
         interval: 120
         onTriggered: {
             const control = root._volumeCancelProbe
+            // child exit is asynchronous and parallel checks can delay delivery.
+            // Stay below the helper's 3s safety timeout so a missed cancel still fails
+            if (control && control._wpctl.running && Date.now() < root._volumeCancelDeadline) {
+                restart()
+                return
+            }
             root._check(control && !control._wpctl.running,
                 "an invalidated audio route leaves no fallback process running")
             if (control) {
