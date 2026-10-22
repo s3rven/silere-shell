@@ -53,10 +53,10 @@ FittedPopupWindow {
 
         // every panel width stays on the 4px grid, or the outline's right edge lands on a half output px at fractional scale and rasterizes wider than its left
         readonly property int _compactW: 400
-        readonly property int _powerW: 568
+        readonly property int _powerW: 572
         readonly property int _settingsW: 632 + _typeGain
         readonly property int _recentBaseW: 492 + _typeGain
-        readonly property int _recentW: _recentBaseW + _navMaxW + 12
+        readonly property int _recentW: _recentBaseW + _navMaxW + 16
         readonly property bool _settingsNavVisible:
             activeTab === 1 && !powerOpen
         // one app cannot be filtered against anything, so the drawer stays out of its way
@@ -100,9 +100,10 @@ FittedPopupWindow {
         // live width, not the target: the page reflows ahead of the outer edge otherwise
         readonly property real contentW: Math.max(1, width - railW)
         readonly property real _targetContentPad: activeTab === 1
-            ? Math.max(12, Math.min(20,
-                12 + (panelW - _compactW) * 8 / (_settingsW - _compactW)))
-            : _railExpanded && panelW >= 460 ? 18 : 12
+            ? Metrics.snap4(Math.max(12, Math.min(20,
+                12 + (panelW - _compactW) * 8 / (_settingsW - _compactW))))
+            // 4px steps: an 18px pad starts the pane half a device pixel off at 1.25 and softens every outline in it
+            : _railExpanded && panelW >= 460 ? 20 : 12
         readonly property real contentPad: _paddingGlide.value
         SmoothGlide {
             id: _paddingGlide

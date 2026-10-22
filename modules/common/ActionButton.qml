@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import "../../config"
 
 Item {
@@ -16,13 +17,17 @@ Item {
     readonly property bool pressed: _tap.pressed
     readonly property bool _canActivate: root.enabled && root.visible
 
-    // ceil: a fractional width lands the outline stroke off-pixel under fractional scaling
-    implicitWidth: Math.ceil(_row.implicitWidth) + 20
+    // 4px: any other width lands the outline stroke off-pixel under fractional scaling
+    implicitWidth: Metrics.snap4Up(_row.implicitWidth + 20)
     implicitHeight: Metrics.rowHeightFor(32)
     width: implicitWidth
     height: implicitHeight
-    // no scale anywhere: the surface already nudges a whole pixel on press and lifts one
+    // no scale anywhere: the surface already nudges a whole device pixel on press and lifts one
     // on hover, and scaling text resamples every glyph for as long as it lasts
+    readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+    readonly property real _nudge: Metrics.devicePx(1, root._dpr)
+    // rows centre it and cards stretch it, so its place and width snap here rather than at every caller
+    transform: PixelSnap { item: root; dpr: root._dpr }
     opacity: root.enabled ? 1.0 : Theme.disabledOpacity
     MotionBehavior on opacity {
         NumberAnimation { duration: Motion.fast }
@@ -51,9 +56,8 @@ Item {
 
     Rectangle {
         id: _surface
-        anchors.left: parent.left
-        anchors.right: parent.right
-        y: root.pressed ? 1 : _hover.hovered ? -1 : 0
+        width: Metrics.devicePx(root.width, root._dpr)
+        y: root.pressed ? root._nudge : _hover.hovered ? -root._nudge : 0
         height: parent.height - y
         MotionBehavior on y {
             id: _liftMotion

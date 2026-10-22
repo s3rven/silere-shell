@@ -35,7 +35,7 @@ MenuRow {
         _labelRow.height + 12, _choiceGroup.height + 12) / 4)
     readonly property int _stackedH: 4 * Math.ceil(Math.max(56,
         6 + _labelRow.height + 4 + _choiceGroup.height + 6) / 4)
-    readonly property int _chipGap: 5
+    readonly property int _chipGap: 4
     // detached chips size to the widest option so every chip in a row matches, instead of splitting a fixed track into equal cells
     FontMetrics {
         id: _chipFm
@@ -56,7 +56,8 @@ MenuRow {
         }
         return w
     }
-    readonly property int _chipW: Math.max(44, Math.ceil(root._widestOptionW) + 22)
+    // chips, gaps and the leftover share all step in 4px so every chip outline lands on whole device pixels at 1.25
+    readonly property int _chipW: Math.max(44, Metrics.snap4Up(root._widestOptionW + 22))
     // with nothing in the label column the row is a standalone control, not a setting:
     // holding it to the right cap leaves the gutter it would have used as dead space
     readonly property bool _headless: root.label.length === 0 && root.glyph.length === 0
@@ -145,8 +146,10 @@ MenuRow {
         x: root.width - 12 - width
         y: root._stacked
             ? root.height - 6 - height
-            : Math.round((root.height - height) / 2)
+            : (root.height - height) / 2
         width: Math.min(root._preferredControlW, Math.max(1, root.width - 28))
+        readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+        transform: PixelSnap { item: _choiceGroup; dpr: _choiceGroup._dpr }
         height: rows * root._controlH + (rows - 1) * root._chipGap
 
         readonly property int columns: {
@@ -159,10 +162,11 @@ MenuRow {
         readonly property int _gapTotal: root._chipGap * (columns - 1)
         readonly property int contentW: Math.max(1,
             Math.floor(width) - _gapTotal)
-        readonly property int cellW: Math.max(1,
-            Math.floor(contentW / columns))
+        readonly property int cellW: Math.max(4,
+            Metrics.snap4Down(contentW / columns))
+        // how many leading cells take an extra 4px
         readonly property int cellRemainder: Math.max(0,
-            contentW - cellW * columns)
+            Math.floor((contentW - cellW * columns) / 4))
 
         Grid {
             anchors.fill: parent
@@ -191,7 +195,7 @@ MenuRow {
                             ? "" : String(modelData.glyph)
 
                     width: _choiceGroup.cellW
-                        + (index % _choiceGroup.columns < _choiceGroup.cellRemainder ? 1 : 0)
+                        + (index % _choiceGroup.columns < _choiceGroup.cellRemainder ? 4 : 0)
                     height: root._controlH
 
                     Accessible.role: Accessible.RadioButton
@@ -299,9 +303,9 @@ MenuRow {
             id: _selection
             readonly property int _column: Math.round(root._selectionColumn)
             x: root._selectionColumn * (_choiceGroup.cellW + root._chipGap)
-                + Math.min(root._selectionColumn, _choiceGroup.cellRemainder)
+                + 4 * Math.min(root._selectionColumn, _choiceGroup.cellRemainder)
             y: root._selectionRow * (root._controlH + root._chipGap)
-            width: _choiceGroup.cellW + (_column < _choiceGroup.cellRemainder ? 1 : 0)
+            width: _choiceGroup.cellW + (_column < _choiceGroup.cellRemainder ? 4 : 0)
             height: root._controlH
             radius: Theme.radiusField
             antialiasing: true

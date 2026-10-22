@@ -39,6 +39,8 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- At fractional scales such as 1.25, outlines stay sharp on settings chips, dropdowns and
+  buttons, the side rail selection, the notification history with its app list, and popup buttons.
 - Hidden bars reject retained clock, media, tray and workspace actions and stop their
   media and workspace animations until shown again.
 - Very dark custom accents keep workspace indicators, update icons and clock seconds readable.

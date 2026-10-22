@@ -127,7 +127,7 @@ Column {
         Row {
             anchors.right: parent.right
             anchors.rightMargin: 12
-            spacing: 6
+            spacing: 8
             ActionButton {
                 label: "Revert"
                 enabled: root._canEdit && root.dirty

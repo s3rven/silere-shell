@@ -138,7 +138,7 @@ Rectangle {
                 anchors.right: parent.right
                 anchors.rightMargin: 12
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 6
+                spacing: 8
 
                 ActionButton {
                     visible: root.secondaryShown

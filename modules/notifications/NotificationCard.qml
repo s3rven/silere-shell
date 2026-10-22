@@ -654,7 +654,7 @@ Item {
                 width: parent.width
                 topPadding: 4
                 bottomPadding: 2
-                spacing: 7
+                spacing: 8
                 readonly property real _preferredButtonWidth: {
                     let widest = 64
                     for (const child of _actionsFlow.children)
@@ -676,8 +676,11 @@ Item {
                         readonly property int _inRow: card.actionsInRow(
                             index, card.actionList.length, _actionsFlow.columns)
 
+                        // whole device pixels, rounded down so a row never outgrows the flow and wraps
+                        readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+                        transform: PixelSnap { item: _actBtn; dpr: _actBtn._dpr }
                         width: Math.max(0, Math.floor((_actionsFlow.width
-                            - _actionsFlow.spacing * (_inRow - 1)) / _inRow))
+                            - _actionsFlow.spacing * (_inRow - 1)) / _inRow * _dpr) / _dpr)
                         height: Metrics.rowHeightFor(30)
                         radius: Theme.radiusInline
                         antialiasing: true
@@ -888,13 +891,16 @@ Item {
         }
 
         Item {
+            id: _closeDisc
             anchors.top:         parent.top
             anchors.right:       parent.right
             // the disc rides the content grid and centres on the summary's first line
-            anchors.topMargin:   13 + Math.round((_summary.contentHeight
-                / Math.max(1, _summary.lineCount) - height) / 2)
+            anchors.topMargin:   13 + (_summary.contentHeight
+                / Math.max(1, _summary.lineCount) - height) / 2
             anchors.rightMargin: 16
             width: 24; height: 24
+            readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+            transform: PixelSnap { item: _closeDisc; dpr: _closeDisc._dpr }
             opacity: card._expanded ? 1.0 : 0.48
 
             Rectangle {

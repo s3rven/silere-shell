@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import "../../../config"
 import "../../../services"
 import "../../common"
@@ -39,7 +40,7 @@ Item {
     // label itself. A flat 148 cap truncated long values (font and display names)
     // on a wide row while most of the middle sat empty
     readonly property int _leadW: root._hasLead ? 14 + 18 + 10 : 14
-    readonly property int _pillMaxW: Math.max(92, root.width - root._leadW - 10 - 12 - 96)
+    readonly property int _pillMaxW: Math.max(92, Metrics.snap4Down(root.width - root._leadW - 10 - 12 - 96))
 
     signal chosen(var value)
 
@@ -210,7 +211,11 @@ Item {
         id: _chevronSlot
         anchors.right:          parent.right; anchors.rightMargin: 12
         anchors.verticalCenter: _header.verticalCenter
-        width: Math.min(Math.max(92, _valText.implicitWidth + 34), root._pillMaxW)
+        // a 56px row centres the pill 14px down, half a device pixel off at 1.25
+        readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+        transform: PixelSnap { item: _chevronSlot; dpr: _chevronSlot._dpr }
+        // 4px: a text-sized pill puts its left outline edge between device pixels at 1.25
+        width: Math.min(Metrics.snap4Up(Math.max(92, _valText.implicitWidth + 34)), root._pillMaxW)
         height: root._controlH
 
         Rectangle {

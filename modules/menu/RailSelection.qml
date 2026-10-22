@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import "../../config"
 import "../../services"
 import "../common"
@@ -24,6 +25,9 @@ Item {
 
     y: root.rowTop
     height: root.rowHeight
+    // the nav sits 6px into the rail, half a device pixel off at 1.25, which softens both side edges of the outline
+    readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+    transform: PixelSnap { item: root; dpr: root._dpr }
     opacity: root.shown && root.index >= 0 ? 1 : 0
     visible: opacity > 0.01
     MotionBehavior on opacity {
@@ -31,7 +35,8 @@ Item {
     }
 
     Rectangle {
-        anchors.fill: parent
+        width: Metrics.devicePx(root.width, root._dpr)
+        height: Metrics.devicePx(root.height, root._dpr)
         radius: Theme.radiusInline
         antialiasing: true
         color: Theme.withAlpha(Theme.accent, ShellSettings.highContrast ? 0.18 : 0.095)

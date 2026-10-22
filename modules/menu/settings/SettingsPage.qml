@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import "../../../config"
 import "../../../services"
 import "../../common"
@@ -52,6 +53,9 @@ PageShell {
         id: _search
         width: root.width
         y: expanded ? 0 : Math.max(0, (_detailHeader._mainH - toggleHeight) / 2)
+        // centred on the title, so its outline lands wherever the title's line height puts it
+        readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+        transform: PixelSnap { item: _search; dpr: _search._dpr }
         z: 10
         shown: root.active && MenuState.settingsActive && !root.powerOpen
         onExpanding: {
@@ -363,7 +367,7 @@ PageShell {
             readonly property real _mainH: _search.expanded ? _search.fieldHeight
                 : Math.max(30, _hdrText.implicitHeight, _search.toggleHeight)
             readonly property real _contentBottom: _hdrError.visible
-                ? _mainH + 8 + _hdrError.height
+                ? _hdrError.y + _hdrError.height
                 : _mainH
             height: 4 * Math.ceil((_contentBottom + 4) / 4)
             readonly property var _meta: root._sectionMeta[root._shownSection]
@@ -421,9 +425,9 @@ PageShell {
                 id: _hdrError
                 visible: ShellSettings.settingsError.length > 0
                 x: 0
-                y: _detailHeader._mainH + 8
+                y: Metrics.snap4(_detailHeader._mainH + 8)
                 width: parent.width
-                height: _errorText.implicitHeight + 16
+                height: Metrics.snap4Up(_errorText.implicitHeight + 16)
                 radius: Theme.radiusInline
                 color: Theme.withAlpha(Theme.warning, 0.08)
 

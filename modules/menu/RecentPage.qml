@@ -378,10 +378,14 @@ PageShell {
                 spacing: 7
 
                 Rectangle {
+                    id: _emptyDisc
                     anchors.horizontalCenter: parent.horizontalCenter
                     width: 48
                     height: 48
                     radius: 24
+                    // the empty state centres in whatever height the panel has
+                    readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+                    transform: PixelSnap { item: _emptyDisc; dpr: _emptyDisc._dpr }
                     antialiasing: true
                     color: Theme.withAlpha(Theme.subtext, 0.07)
 

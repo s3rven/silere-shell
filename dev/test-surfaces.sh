@@ -54,13 +54,14 @@ default_cfg="$(mktemp -d "${TMPDIR:-/tmp}/silere-surfaces-cfg.XXXXXX")"
 a11y_cfg="$(mktemp -d "${TMPDIR:-/tmp}/silere-surfaces-cfg.XXXXXX")"
 allon_cfg="$(mktemp -d "${TMPDIR:-/tmp}/silere-surfaces-cfg.XXXXXX")"
 scale_cfg="$(mktemp -d "${TMPDIR:-/tmp}/silere-surfaces-cfg.XXXXXX")"
+grid_cfg="$(mktemp -d "${TMPDIR:-/tmp}/silere-surfaces-cfg.XXXXXX")"
 probe_runtime="$(mktemp -d "${TMPDIR:-/tmp}/silere-surfaces-runtime.XXXXXX")"
 chmod 0700 "$probe_runtime"
 probe_pid=""
 cleanup() {
     _probe_stop "${probe_pid:-}"
     rm -f "$log"
-    rm -rf "$default_cfg" "$a11y_cfg" "$allon_cfg" "$scale_cfg" "$probe_runtime"
+    rm -rf "$default_cfg" "$a11y_cfg" "$allon_cfg" "$scale_cfg" "$grid_cfg" "$probe_runtime"
 }
 trap cleanup EXIT
 
@@ -108,13 +109,18 @@ icon_max="$(sed -n 's/.*k: "barIconSize".*max: \([0-9]*\).*/\1/p' services/Shell
 printf '{"__version":1,"uiScale":%s,"barIconSize":%s}\n' "$ui_max" "$icon_max" \
     > "$scale_cfg/silere-shell/settings.json"
 
+# The fractional pass also checks that every outline lands on whole device pixels.
+# Reduce motion settles every glide before the measurement.
+mkdir -p "$grid_cfg/silere-shell"
+printf '{"__version":1,"reduceMotion":true}\n' > "$grid_cfg/silere-shell/settings.json"
+
 # Never pkill — a name match would take down the user's shell.
-run_probe() {  # $1 = label, $2 = XDG_CONFIG_HOME, $3 = Qt scale
+run_probe() {  # $1 = label, $2 = XDG_CONFIG_HOME, $3 = Qt scale, $4 = 1 to check the pixel grid
     local qt_scale="${3:-1}"
     : > "$log"
     XDG_CONFIG_HOME="$2" XDG_STATE_HOME="$2" XDG_CACHE_HOME="$2/cache" XDG_RUNTIME_DIR="$probe_runtime" \
         SILERE_PROBE_ROOT="$ROOT" SILERE_PROBE_LIST="$list" \
-        QT_SCALE_FACTOR="$qt_scale" \
+        QT_SCALE_FACTOR="$qt_scale" SILERE_PROBE_GRID="${4:-0}" \
         QT_FORCE_STDERR_LOGGING=1 QT_QPA_PLATFORM=offscreen \
         qs -p "$PROBE" --no-color >"$log" 2>&1 &
     probe_pid=$!
@@ -152,5 +158,5 @@ run_probe "default" "$default_cfg"
 run_probe "a11y" "$a11y_cfg"
 run_probe "all-on" "$allon_cfg"
 run_probe "max-scale" "$scale_cfg"
-run_probe "fractional" "$default_cfg" "1.25"
-echo "surface probe passed (default + reduce-motion/high-contrast + every option on + largest type + fractional scale)"
+run_probe "fractional" "$grid_cfg" "1.25" 1
+echo "surface probe passed (default + reduce-motion/high-contrast + every option on + largest type + fractional scale on the pixel grid)"
