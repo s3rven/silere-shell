@@ -21,7 +21,7 @@ Item {
     readonly property bool show: ShellSettings.trayWidget
         && root._trayItems.some(i => i && !ShellSettings.trayItemHidden(i.id))
     readonly property bool contentVisible: root.show
-    readonly property bool _canInteract: root.enabled && root.show && root.barActive && !Idle.isIdle
+    readonly property bool _canInteract: root.enabled && root.visible && root.show && root.barActive && !Idle.isIdle
     readonly property bool layoutVisible: show || implicitWidth > 0.5
     // the bar height is a ceiling, not the source: the old barHeight*0.44 ignored uiScale
     // entirely, so tray icons were the one thing that could not follow the interface scale

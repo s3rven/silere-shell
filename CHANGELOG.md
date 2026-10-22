@@ -36,6 +36,8 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- Hidden bars reject retained clock, media, tray and workspace actions and stop their
+  media and workspace animations until shown again.
 - Very dark custom accents keep workspace indicators, update icons and clock seconds readable.
   Switch knobs keep their contrast against the selected track with custom colours and high contrast.
 - A missing or crashed night-light stop helper reports a failure and cancels a queued

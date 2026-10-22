@@ -34,7 +34,7 @@ Item {
     readonly property color tint: root.urgent ? Theme.warning : Theme.barAccent
 
     function _motionAllowed(): bool {
-        return root.shown && root.barActive
+        return root.visible && root.shown && root.barActive
             && !ShellSettings.reduceMotion && !Idle.isIdle
     }
     function _settleMotion(): void {
@@ -282,6 +282,7 @@ Item {
 
     onShownChanged: if (!shown) root._settleMotion()
     onBarActiveChanged: if (!barActive) root._settleMotion()
+    onVisibleChanged: if (!visible) root._settleMotion()
     onShiftEnabledChanged: if (!shiftEnabled) {
         _movePulseDelay.stop()
         _moveAnim.retire()

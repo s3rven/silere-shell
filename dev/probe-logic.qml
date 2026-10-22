@@ -276,6 +276,7 @@ ShellRoot {
     Component { id: rollingTextFactory; RollingText { visible: true; text: "one" } }
     Component { id: collapsingTextFactory; CollapsingText { animate: false; tabularDigits: true; reserveText: ":00" } }
     Component { id: clockFactory; Clock { screen: null } }
+    Component { id: mediaWidgetFactory; MediaWidget { screen: null; height: 36 } }
     Component { id: updatesWidgetFactory; UpdatesWidget { screen: null } }
     Component {
         id: trayItemFactory
@@ -712,6 +713,97 @@ ShellRoot {
                 "a recovered device immediately accepts level changes again")
         }
         quick.destroy()
+    }
+
+    function _checkHiddenBarControls(): void {
+        const reduceWas = ShellSettings.reduceMotion
+        const clockWas = ShellSettings.barShowClock
+        const mediaWas = ShellSettings.barShowMedia
+        const shownWas = Media.shown
+        const shiftWas = ShellSettings.workspaceShift
+        const urgentWas = ShellSettings.wsUrgentPulse
+        ShellSettings.reduceMotion = false
+        ShellSettings.barShowClock = true
+        ShellSettings.barShowMedia = true
+        ShellSettings.workspaceShift = true
+        ShellSettings.wsUrgentPulse = true
+        Media.shown = true
+        CalendarState.close()
+        const host = Qt.createQmlObject("import QtQuick; Item {}", barFixtureHost)
+        const clock = clockFactory.createObject(host)
+        const media = mediaWidgetFactory.createObject(host)
+        const marker = workspaceMarkerFactory.createObject(host)
+        const urgentTick = workspaceUrgentTickFactory.createObject(host, {
+            liveId: 2, rowHeight: 24, barActive: true
+        })
+        const workspace = workspaceButtonFactory.createObject(host, {
+            wsId: 2, monitorReady: true, active: false, occupied: false,
+            urgent: false, apps: [], compact: false, iconSize: 12,
+            cellWidth: 26, rowHeight: 24, barActive: true,
+            initialized: true, paging: false, markerCovers: true
+        })
+        let switches = 0
+        workspace.activateRequested.connect(() => switches++)
+        clock.Accessible.pressAction()
+        workspace.Accessible.pressAction()
+        root._check(CalendarState.open && switches === 1 && media.Accessible.focusable,
+            "visible bar widgets expose their accessible actions")
+        CalendarState.close()
+        clock._datePeek = true
+        const clip = root._findTrayNode(media, item => item.preferredMaxW !== undefined)
+        clip.opacity = 0.4
+        clip._shown = "Previous track"
+        workspace.playMarkerPass(0)
+        marker.pulse()
+        marker.targetX = 80
+        root._check(workspace.markerPassActive && media._animatable,
+            "visible bar widgets allow their transient motion")
+        root._check(marker._travel.running && urgentTick._motionActive,
+            "visible workspace markers allow travel and urgency motion")
+        host.visible = false
+        clock.Accessible.pressAction()
+        clock._openCalendar()
+        workspace.Accessible.pressAction()
+        workspace._activate()
+        root._check(!CalendarState.open && !clock._datePeek && !clock.Accessible.focusable,
+            "hiding the clock's parent clears date peek and rejects retained calendar actions")
+        root._check(switches === 1 && !workspace.Accessible.focusable,
+            "hiding the workspace strip rejects retained workspace actions")
+        root._check(!workspace.markerPassActive && workspace._markerPassCover === 0,
+            "hiding a workspace cell retires its marker hand-off")
+        workspace.playMarkerPass(0)
+        root._check(!workspace.markerPassActive,
+            "a hidden workspace cannot start a new marker hand-off")
+        workspace.playNotificationPulse(true)
+        workspace.urgent = true
+        const urgentFx = root._findTrayNode(workspace, item => item.motionActive !== undefined)
+        root._check(!workspace._notifPulseLoaded && urgentFx && !urgentFx.motionActive,
+            "a hidden workspace runs neither notification nor urgency pulses")
+        root._check(!marker._travel.running && marker._glint === -1.15 && marker._tapScale === 1
+                && !urgentTick._motionActive && urgentTick._pulse === 1,
+            "hiding the workspace strip settles its marker and urgency indicator")
+        marker.pulse()
+        root._check(!marker._motionAllowed() && marker._tapScale === 1,
+            "a hidden workspace marker rejects a retained pulse request")
+        root._check(!media.Accessible.focusable && !media._canInteract && !media._animatable
+                && clip.opacity === 1 && clip._shown === Media.label,
+            "hiding media controls disables input and settles their label transition")
+        root._check(!clock._animatable,
+            "a hidden clock disables its readout animations")
+        host.visible = true
+        clock.Accessible.pressAction()
+        workspace.Accessible.pressAction()
+        root._check(CalendarState.open && switches === 2 && media.Accessible.focusable
+                && media._animatable && clock._animatable,
+            "revealing the bar restores its controls and motion gates")
+        CalendarState.close()
+        host.destroy()
+        Media.shown = shownWas
+        ShellSettings.workspaceShift = shiftWas
+        ShellSettings.wsUrgentPulse = urgentWas
+        ShellSettings.barShowMedia = mediaWas
+        ShellSettings.barShowClock = clockWas
+        ShellSettings.reduceMotion = reduceWas
     }
 
     function _checkWifiScanners(): void {
@@ -1512,6 +1604,7 @@ ShellRoot {
         root._checkSmoothGlide()
         root._checkPageLayout()
         root._checkAccessibleControls()
+        root._checkHiddenBarControls()
         root._checkWifiScanners()
         root._checkOsdLifetime()
         root._checkWifiDraft()
@@ -7572,7 +7665,7 @@ ShellRoot {
         state.second = trayItemFactory.createObject(root, { id: "probe-b", title: "Second app", icon: source })
         root._trayProbeItems = [state.first, state.second]
         const zoneComponent = Qt.createComponent("modules/bar/BarZone.qml")
-        state.zone = zoneComponent.createObject(root, {
+        state.zone = zoneComponent.createObject(barFixtureHost, {
             orderKeys: ["tray"], widgetComponents: { tray: trayWidgetFactory },
             compact: true, height: 36
         })
@@ -7737,6 +7830,19 @@ ShellRoot {
                 }
                 root._check(s.first.activations === 1 && !TrayMenuState.open,
                     "a sleeping tray rejects both app activation and menu opening")
+                widget.barActive = true
+                s.zone.visible = false
+                tile.Accessible.pressAction()
+                widget._activateItem(s.first, tile)
+                widget._openMenu(s.first, tile)
+                root._check(s.first.activations === 1 && !TrayMenuState.open
+                        && !tile.Accessible.focusable,
+                    "hiding the tray's parent rejects retained app and menu actions")
+                TrayMenuState.close()
+                s.first.activations = 1
+                s.zone.visible = true
+                root._check(tile.Accessible.focusable,
+                    "revealing the tray's parent restores its app controls")
                 s.first.icon = "file://" + trayIconFixture.path
                 break
             case 11: {

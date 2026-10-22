@@ -34,7 +34,7 @@ Item {
     readonly property bool _hoverFx: hovered && ShellSettings.barHoverHighlight
     // a slot with no workspace behind it collapses instead of being destroyed, so the strip can grow and shrink without the row rebuilding under the motion
     readonly property bool present: wsId >= 0
-    readonly property bool canActivate: root.enabled && root.present && root.barActive && !Idle.isIdle
+    readonly property bool canActivate: root.enabled && root.visible && root.present && root.barActive && !Idle.isIdle
     // an underline marker leaves the cell centre free, so the active workspace keeps its own content
     readonly property bool _blanked: active && markerCovers
     readonly property bool _iconCell: ShellSettings.wsShowAppIcons && apps.length > 0
@@ -50,7 +50,7 @@ Item {
     visible: root.width > 0.5 || root._presence > 0.01
 
     function _motionAllowed(): bool {
-        return root.barActive
+        return root.visible && root.barActive
             && Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)
     }
 
@@ -159,6 +159,7 @@ Item {
     onActiveChanged: if (root.active) root.clearMarkerPass()
     onPagingChanged: if (root.paging) root.clearMarkerPass()
     onBarActiveChanged: if (!root.barActive) root._settleMotion()
+    onVisibleChanged: if (!root.visible) root._settleMotion()
 
     Connections {
         target: ShellSettings
@@ -183,9 +184,8 @@ Item {
     property bool _notifPulseCritical: false
 
     function playMarkerPass(delayMs: int): void {
-        if (!root.barActive || root.active || root.paging || !root.markerCovers
-                || !ShellSettings.workspaceShift || ShellSettings.reduceMotion
-                || Idle.isIdle) return
+        if (!root._motionAllowed() || root.active || root.paging || !root.markerCovers
+                || !ShellSettings.workspaceShift) return
         // restart from full opacity; a second jump must not resume the first one's fade
         _markerPassAnim.stop()
         root._markerPassCover = 0
@@ -200,8 +200,7 @@ Item {
     }
 
     function playNotificationPulse(critical: bool): void {
-        if (!root.barActive || !ShellSettings.wsNotifPulse
-                || ShellSettings.reduceMotion || Idle.isIdle) return
+        if (!root._motionAllowed() || !ShellSettings.wsNotifPulse) return
         _pulseUnload.stop()
         root._notifPulseCritical = critical
         if (_notifPulse.item) _notifPulse.item.play(critical)
@@ -228,7 +227,7 @@ Item {
         onLoaded: if (item) item.play(root._notifPulseCritical)
         sourceComponent: Component {
             WorkspaceNotifPulse {
-                barActive: root.barActive
+                barActive: root.visible && root.barActive
                 onFinished: _pulseUnload.restart()
             }
         }
@@ -263,7 +262,7 @@ Item {
         id: _urgentFx
         active: root.urgent && !root.active && ShellSettings.wsUrgentPulse
         sourceComponent: Component {
-            WorkspaceUrgentFx { barActive: root.barActive }
+            WorkspaceUrgentFx { barActive: root.visible && root.barActive }
         }
     }
 

@@ -21,12 +21,12 @@ Item {
 
     property var screen: null
     property bool barActive: true
-    readonly property bool _canInteract: root.enabled && root.show && root.barActive && !Idle.isIdle
+    readonly property bool _canInteract: root.enabled && root.visible && root.show && root.barActive && !Idle.isIdle
     readonly property bool _onActiveBar: Monitors.isActive(root.screen)
     readonly property bool _visualizerActive: ShellSettings.mediaProgress
         && ShellSettings.mediaVisualizerPosition === "media"
         && !ShellSettings.reduceMotion && !Idle.isQuiet
-        && root.barActive && root.show && Media.playing && Media.cavaReady && root._onActiveBar
+        && root.visible && root.barActive && root.show && Media.playing && Media.cavaReady && root._onActiveBar
     readonly property bool _vizVisible: _visualizerActive
     readonly property bool _helperEnabled: ShellSettings.mediaWidgetHelper
     readonly property string _playGlyph: Media.playing ? "󰏤" : "󰐊"
@@ -44,7 +44,7 @@ Item {
 
     // one condition rather than a web of handlers: every transition that can strand the
     // marquee mid-slide (idle, monitor switch, sleeping bar, reduce-motion) flows through it
-    readonly property bool _animatable: root.barActive && root.show
+    readonly property bool _animatable: root.visible && root.barActive && root.show
         && !ShellSettings.reduceMotion && !Idle.isQuiet && root._onActiveBar
 
     on_AnimatableChanged: {

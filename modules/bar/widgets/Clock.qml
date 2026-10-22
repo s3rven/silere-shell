@@ -9,8 +9,8 @@ Item {
     property var screen: null
     property bool compact: ShellSettings.barCompact
     property bool barActive: true
-    readonly property bool _canInteract: root.enabled && root.show && root.barActive && !Idle.isIdle
-    readonly property bool _animatable: root.barActive && !Idle.isIdle
+    readonly property bool _canInteract: root.enabled && root.visible && root.show && root.barActive && !Idle.isIdle
+    readonly property bool _animatable: root.visible && root.barActive && !Idle.isIdle
     property real menuAnchorX: 0
     readonly property int _horizontalPadding: Metrics.pillPadFor(compact)
 

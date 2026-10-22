@@ -42,7 +42,7 @@ Item {
 
     property real _pulse: 1.0
     property bool _pulseSettled: false
-    readonly property bool _motionActive: root.shown && !root._pulseSettled
+    readonly property bool _motionActive: root.visible && root.shown && !root._pulseSettled
         && ShellSettings.wsUrgentPulse && root.barActive
         && Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)
     onShownChanged: if (shown) _pulseSettled = false
