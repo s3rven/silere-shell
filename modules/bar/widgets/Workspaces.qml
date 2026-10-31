@@ -94,6 +94,8 @@ Item {
     readonly property bool monitorReady: monitorName.length > 0 && Compositor.activeWorkspaceId(monitorName) > 0
     // a named hyprland workspace has an id below -1337; only -1 means no data yet
     readonly property bool monitorLive: monitorName.length > 0 && rawActiveId !== -1
+    // no number to mark, so the marker holds the last one and rings it, as it does for a special workspace
+    readonly property bool onNamedWorkspace: monitorName.length > 0 && rawActiveId < -1
     readonly property bool show: true
     readonly property int  rawActiveId:  Compositor.activeWorkspaceId(root.monitorName)
     readonly property int  activeId:     rawActiveId > 0 ? rawActiveId : _lastNormalActiveId
@@ -540,8 +542,8 @@ Item {
         cellWidth: root._btnW(root._displayActiveId)
         targetX: root.activeIndex >= 0 ? root._markerX(marker.markerWidth) : 0
         layoutOffsetX: -root._leadTrim
-        shown: root.monitorReady && root.activeIndex >= 0
-        inSpecial: root.inSpecial
+        shown: (root.monitorReady || root.onNamedWorkspace) && root.activeIndex >= 0
+        inSpecial: root.inSpecial || root.onNamedWorkspace
         urgent: root.urgent(root._displayActiveId)
         barActive: root.barActive
         paging: root._paging

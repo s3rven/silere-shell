@@ -9,6 +9,27 @@ import "../config"
 
 QtObject {
     id: root
+    property string keyboardLayout: ""
+    function cycleKeyboardLayout(): void {
+        Quickshell.execDetached(["hyprctl", "switchxkblayout", "all", "next"])
+    }
+    property bool _keyboardWanted: ShellSettings.barShowKeyboard
+    on_KeyboardWantedChanged: if (root._keyboardWanted) _keyboardProbe.running = true
+    property BoundedProcess _keyboardProbe: BoundedProcess {
+        id: _keyboardProbe
+        timeoutMs: 3000
+        command: ["hyprctl", "devices", "-j"]
+        stdout: StdioCollector { id: _keyboardOut }
+        onExited: code => {
+            if (!_keyboardProbe.completedSuccessfully(code)) return
+            try {
+                const devices = JSON.parse(_keyboardOut.text)
+                const keyboards = devices.keyboards || []
+                const main = keyboards.find(k => k.main) || keyboards[0]
+                root.keyboardLayout = main ? SafeText.singleLineText(main.active_keymap || "", 128) : ""
+            } catch (e) { root.keyboardLayout = "" }
+        }
+    }
 
     signal workspaceActivated(string output)
     signal overviewRaw(bool open)
@@ -318,7 +339,7 @@ QtObject {
 
     readonly property int focusedWorkspaceRef: {
         void root._layoutTick
-        return Hyprland.focusedWorkspace ? (Hyprland.focusedWorkspace.id ?? -1) : -1
+        return Hyprland.focusedWorkspace ? root._workspaceId(Hyprland.focusedWorkspace) : -1
     }
 
     // hyprland has no compositor-side overview; OverviewState drives its own (overviewIsLive is false)
@@ -392,13 +413,22 @@ QtObject {
         return /^-?[0-9]+$/.test(addr) ? Number(addr) : -1
     }
 
+    // hyprland 0.57 gives a named or special workspace no id and quickshell reads that as -1, which
+    // the bar takes for "no data yet". Named ids ran below -1337 before that, so they stay there
+    readonly property int namedWorkspaceId: -1338
+    function _workspaceId(ws): int {
+        if (!ws) return -1
+        return ws.id === -1 && String(ws.name ?? "").length > 0 ? root.namedWorkspaceId : ws.id
+    }
+
     readonly property var workspaces: {
         void root._layoutTick
         const mons = Hyprland.monitors ? (Hyprland.monitors.values ?? []) : []
+        // the workspace itself, not its id: every named workspace shares one
         const activeByOutput = {}
         for (let i = 0; i < mons.length; i++) {
             const m = mons[i]
-            if (m && m.name && m.activeWorkspace) activeByOutput[m.name] = m.activeWorkspace.id
+            if (m && m.name && m.activeWorkspace) activeByOutput[m.name] = m.activeWorkspace
         }
         // hyprland keeps a workspace object alive after its last window closes, so existence is
         // not occupancy; count real toplevels or an emptied workspace stays lit like a full one
@@ -416,11 +446,12 @@ QtObject {
             const ws = vals[i]
             if (!ws) continue
             const output = ws.monitor ? (ws.monitor.name ?? "") : ""
+            const id = root._workspaceId(ws)
             out.push({
-                wsId: ws.id, name: ws.name ?? "", output: output,
-                active: activeByOutput[output] === ws.id,
+                wsId: id, name: ws.name ?? "", output: output,
+                active: activeByOutput[output] === ws,
                 urgent: ws.urgent ?? false,
-                occupied: (winCount[ws.id] ?? 0) > 0, ref: ws.id
+                occupied: (winCount[id] ?? 0) > 0, ref: id
             })
         }
         return out
@@ -429,11 +460,15 @@ QtObject {
     // shared layout base built once; the title-facing list below only overlays the sampled strings
     readonly property var workspaceToplevels: {
         void root._layoutTick
-        const wsOut = {}
+        // by name too: named and special workspaces share an id, and each can sit on its own monitor
+        const wsOut = Object.create(null)
         const wsVals = Hyprland.workspaces ? (Hyprland.workspaces.values ?? []) : []
         for (let i = 0; i < wsVals.length; i++) {
             const ws = wsVals[i]
-            if (ws) wsOut[ws.id] = ws.monitor ? (ws.monitor.name ?? "") : ""
+            if (!ws) continue
+            const output = ws.monitor ? (ws.monitor.name ?? "") : ""
+            wsOut[ws.id] = output
+            wsOut[ws.name ?? ""] = output
         }
         const tops = root._liveToplevels()
         const out = []
@@ -441,15 +476,17 @@ QtObject {
             const t = tops[i]
             const c = t ? t.lastIpcObject : null
             if (!c || !c.address) continue
-            const wsId = root._wsNumber(c.workspace)
+            const wsName = c.workspace ? String(c.workspace.name ?? "") : ""
+            // -1 is reserved for a window with no workspace, which window matching skips
+            const wsId = root._workspaceId({ id: root._wsNumber(c.workspace), name: wsName })
             out.push({
                 appId: root._identity((t.wayland && t.wayland.appId)
                     || c.class || c.initialClass),
                 cls: root._identity(c.class),
                 initialClass: root._identity(c.initialClass),
                 pid: c.pid ?? -1, ref: c.address,
-                wsRef: wsId, wsId: wsId, output: wsOut[wsId] ?? "",
-                wsName: c.workspace ? String(c.workspace.name ?? "") : "",
+                wsRef: wsId, wsId: wsId, output: (wsId > 0 ? wsOut[wsId] : wsOut[wsName]) ?? "",
+                wsName: wsName,
                 focused: !root._unfocused && !!(Hyprland.activeToplevel && Hyprland.activeToplevel === t),
                 focusRank: c.focusHistoryID ?? 9999,
                 // hyprland's fullscreen is a mode bitmask: 1 maximized, 2 fullscreen, 3 both
@@ -481,6 +518,7 @@ QtObject {
     }
 
     Component.onCompleted: {
+        if (root._keyboardWanted) _keyboardProbe.running = true
         root._probeUnit()
         root.checkBlur()
         Qt.callLater(function() {
@@ -525,6 +563,11 @@ QtObject {
         function onRawEvent(event) {
             root._eventSeq++
             const n = event.name
+            if (n === "activelayout") {
+                const value = String(event.data || "")
+                root.keyboardLayout = SafeText.singleLineText(value.slice(value.indexOf(",") + 1), 128)
+                return
+            }
             // hyprland pairs each event with its v2 form; only v2 carries the title
             if (n === "windowtitle") return
             if (n === "windowtitlev2") {

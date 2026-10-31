@@ -4744,6 +4744,18 @@ ShellRoot {
         root._check(Media.nextLoopState(L.None) === L.Playlist
                 && Media.nextLoopState(L.Playlist) === L.Track
                 && Media.nextLoopState(L.Track) === L.None,
+            root._check(hypr._workspaceId({ id: 3, name: "3" }) === 3
+                    && hypr._workspaceId({ id: -1, name: "mail" }) === hypr.namedWorkspaceId
+                    && hypr.namedWorkspaceId < -1337
+                    && hypr._workspaceId({ id: -1340, name: "mail" }) === -1340
+                    && hypr._workspaceId({ id: -1, name: "" }) === -1
+                    && hypr._workspaceId(null) === -1,
+                "a 0.57 named workspace reads as named, and only a missing one as no data")
+            const onNamed = { ref: "0xa", wsId: hypr.namedWorkspaceId, wsRef: hypr.namedWorkspaceId, focusRank: 2 }
+            const noWorkspace = { ref: "0xb", wsId: -1, wsRef: -1, focusRank: 0 }
+            root._check(WindowActions._chooseSource([noWorkspace, onNamed]) === onNamed
+                    && WindowActions._chooseSource([noWorkspace]) === null,
+                "a window on a named or special workspace can be found, and one on no workspace cannot")
             "repeat cycles off, all, then one track")
         const firstMember = stableListMemberFactory.createObject(root)
         const secondMember = stableListMemberFactory.createObject(root)
