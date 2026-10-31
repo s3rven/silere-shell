@@ -387,7 +387,7 @@ test_headless_qml_import_roots() (
 
     if ! PATH="$stubs:$PATH" QML2_IMPORT_PATH="$first:$second" QML_IMPORT_PATH="" \
             SILERE_EXPECTED_IMPORT_ROOT="$second" SILERE_REQUIRE_QML_TOOLS=1 \
-            SILERE_QMLLINT_HELP="$lint_help" \
+            SILERE_QMLLINT_HELP="${lint_help// / <level> } <level>" \
             bash "$ROOT/scripts/test-qml-headless.sh" >/dev/null; then
         fail "headless QML tools did not receive every configured import root"
     fi
