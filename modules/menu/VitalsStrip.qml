@@ -29,7 +29,7 @@ SettingsCard {
         const rows = Battery.available ? [_cpu, _memory, _disk, _battery] : [_cpu, _memory, _disk]
         for (let i = 0; i < rows.length; i++) rows[i].intro(Motion.ms(40 + 35 * i))
     }
-    readonly property int _rowH: Metrics.rowHeightFor(48)
+    readonly property int _rowH: Metrics.rowHeightFor(40)
 
     function sizeText(kb: real): string {
         if (!isFinite(kb) || kb <= 0) return ""
@@ -60,12 +60,25 @@ SettingsCard {
         property real   progress: 0
         property int    status: 0
         property real   pulse: 0
+        // 0, 0.5 or 1: the wave rests calm and stirs with load; coarse steps, as each change eases the whole path
+        property real   activity: 0
         property bool   live: true
+        // a reading that has a fuller view opens the system monitor
+        property bool   openable: false
+        property real   topRadius: 0
+        signal activated()
 
         readonly property color tint: status === 2 ? Theme.error
                                     : status === 1 ? Theme.warning
                                     : Theme.menuTextMuted
 
+        TextMetrics {
+            id: _labelMetrics
+            font.family: Settings.font
+            font.pixelSize: Settings.fontSize
+            font.weight: Font.DemiBold
+            text: tile.label
+        }
         TextMetrics {
             id: _detailMetrics
             font.family: Settings.font
@@ -75,11 +88,33 @@ SettingsCard {
         }
 
         width: parent ? parent.width : 0
-        height: root._rowH
+        height: _textCol.inline ? root._rowH : Metrics.rowHeightFor(48)
         implicitHeight: height
-        Accessible.role: Accessible.StaticText
+        Accessible.role: tile.openable ? Accessible.Button : Accessible.StaticText
         Accessible.name: tile.label + " " + tile.value
-        Accessible.description: tile.sub
+        Accessible.description: tile.openable && tile.sub.length > 0
+            ? tile.sub + ". Opens the system monitor"
+            : tile.openable ? "Opens the system monitor" : tile.sub
+        Accessible.focusable: tile.openable && root.active
+        Accessible.onPressAction: if (tile.openable) tile.activated()
+        KeyboardFocus { interactive: tile.openable && root.active; onActivated: tile.activated() }
+
+        RowHoverBg {
+            anchors.fill: parent
+            topRadius: tile.topRadius
+            active: tile.openable && _tileHover.hovered
+            pressed: tile.openable && _tileTap.pressed
+        }
+        HoverHandler {
+            id: _tileHover
+            enabled: tile.openable && root.active
+            cursorShape: Qt.PointingHandCursor
+        }
+        TapHandler {
+            id: _tileTap
+            enabled: tile.openable && root.active
+            onTapped: tile.activated()
+        }
 
         // the bar grows in from empty each time the page shows; a one-shot, never a loop
         property real _grow: 1
@@ -135,17 +170,22 @@ SettingsCard {
             }
         }
 
-        Column {
+        // the detail follows its label on one line, and drops under it only where large text leaves no room
+        Item {
             id: _textCol
             anchors.left: _iconSlot.right
             anchors.leftMargin: 10
             anchors.right: _bar.left
             anchors.rightMargin: 12
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 1
+            readonly property bool inline: tile.sub.length === 0
+                || Math.ceil(_labelMetrics.advanceWidth) + 8 + Math.ceil(_detailMetrics.advanceWidth) <= width
+            height: inline || !_detailText.visible ? _labelText.height
+                : _labelText.height + 1 + _detailText.height
 
             ShellText {
-                width: parent.width
+                id: _labelText
+                width: Math.min(implicitWidth, parent.width)
                 text: tile.label
                 color: Theme.withAlpha(Theme.text, 0.85)
                 font.pixelSize: Settings.fontSize
@@ -153,8 +193,11 @@ SettingsCard {
                 elide: Text.ElideRight
             }
             ShellText {
-                visible: tile.sub.length > 0
-                width: parent.width
+                id: _detailText
+                visible: tile.sub.length > 0 && width > 12
+                x: _textCol.inline ? _labelText.width + 8 : 0
+                y: _textCol.inline ? _labelText.baselineOffset - baselineOffset : _labelText.height + 1
+                width: Math.max(0, parent.width - x)
                 text: tile.sub
                 color: tile.status > 0 ? Theme.mix(Theme.menuTextDetail, tile.tint, 0.5)
                     : Theme.menuTextDetail
@@ -171,13 +214,14 @@ SettingsCard {
             anchors.verticalCenter: parent.verticalCenter
             // give the reading's caption room before sizing its progress bar. Rounding up the text and down the bar avoids fractional elision
             width: Metrics.snap4Down(Math.max(48, Math.min(136, tile.width * 0.38,
-                _val.x - 64 - Math.max(96, Math.ceil(_detailMetrics.advanceWidth) + 1))))
+                _val.x - 64 - Math.max(96, Math.ceil(_labelMetrics.advanceWidth + 8
+                    + _detailMetrics.advanceWidth) + 1))))
             height: implicitHeight
             value: tile._disp
             reveal: tile._grow
             thickness: 3
-            amplitude: 2
-            wavelength: 12
+            amplitude: tile.status > 0 ? 2 : 0.9 + tile.activity * 1.1
+            wavelength: tile.status > 0 ? 12 : 16
             trackColor: Theme.menuTrack
             color: tile.status > 0 ? Theme.withAlpha(tile.tint, 0.85) : Theme.withAlpha(Theme.accent, 0.55)
             ColorFade on color {}
@@ -204,14 +248,24 @@ SettingsCard {
         }
     }
 
+    function openMonitor(): void {
+        if (Settings.systemMonitorCommand.length === 0) return
+        SystemTools.runOrNotify(Settings.systemMonitorCommand, "System monitor failed to start")
+        MenuState.close()
+    }
+
     Vital {
         id: _cpu
         live: root.active
+        openable: Settings.systemMonitorCommand.length > 0
+        topRadius: Theme.radiusCard
+        onActivated: root.openMonitor()
         glyph: "󰔏"
         label: "CPU"
         value: SysInfo.cpuReady ? Math.round(SysInfo.cpuPct * 100) + "%" : "—"
         sub: CpuTemp.available ? Math.round(CpuTemp.temp) + "°" : ""
         progress: SysInfo.cpuReady ? SysInfo.cpuPct : 0
+        activity: !SysInfo.cpuReady ? 0 : SysInfo.cpuPct >= 0.7 ? 1 : SysInfo.cpuPct >= 0.3 ? 0.5 : 0
         status: CpuTemp.critical ? 2 : (CpuTemp.hot ? 1 : 0)
         pulse: CpuTemp.alertPulse
     }
@@ -219,10 +273,16 @@ SettingsCard {
     Vital {
         id: _memory
         live: root.active
+        openable: Settings.systemMonitorCommand.length > 0
+        onActivated: root.openMonitor()
         glyph: "󰘚"
         label: "Memory"
         value: SysInfo.memTotalKb > 0 ? Math.round(SysInfo.memPct * 100) + "%" : "—"
-        sub: SysInfo.memTotalKb > 0 ? root.sizeText(SysInfo.memTotalKb - SysInfo.memAvailKb) + " used" : ""
+        // swap only joins the line while memory is actually stalling work, so a healthy machine stays quiet
+        sub: SysInfo.memTotalKb > 0
+            ? root.sizeText(SysInfo.memTotalKb - SysInfo.memAvailKb) + " used"
+                + (SysInfo.swapActive ? " · " + root.sizeText(SysInfo.swapUsedKb) + " swap" : "")
+            : ""
         progress: SysInfo.memPct
         status: SysInfo.memPct > 0.9 ? 2 : (SysInfo.memPct > 0.75 ? 1 : 0)
     }

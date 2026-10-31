@@ -22,7 +22,8 @@ Singleton {
     readonly property bool _persistentNeed: root.temperatureDemand(
         ShellSettings.osdTempWarn,
         ShellSettings.underlineGlow && ShellSettings.underlineTempGlow,
-        OverviewState.active, false)
+        OverviewState.active,
+        ShellSettings.barShowSystem && ShellSettings.systemShowTemp && !OverviewState.active)
     readonly property bool _wanted: _started && (_persistentNeed || needed) && !Idle.isIdle
     property string _sensorPath: ""
     property bool _reading: false

@@ -9,6 +9,15 @@ Singleton {
 
     property real memTotalKb: 0
     property real memAvailKb: 0
+    property real swapTotalKb: 0
+    property real swapUsedKb: 0
+    // percent of the last 10 s that some task spent stalled on memory, from the kernel's own pressure counter
+    property real memPressure: 0
+    // enters on a real stall and leaves only once it has eased, so a reading near the line never flickers
+    property bool _memStalled: false
+    // used swap alone is not news: zram with a high swappiness fills it on a healthy machine, and
+    // pages stay there long after a squeeze ends, so the figure needs a stall to be worth showing
+    readonly property bool swapActive: _memStalled && swapTotalKb > 0 && swapUsedKb >= 65536
     property real uptimeSecs: 0
     property real diskUsedKb: 0
     property real diskTotalKb: 0
@@ -37,11 +46,21 @@ Singleton {
     }
 
     property bool _active: false
-    readonly property bool _wanted: MenuState.homeActive && !Idle.isIdle
+    readonly property bool _homeWanted: MenuState.homeActive && !Idle.isIdle
+    // the bar's monitor reads only /proc; disk and uptime stay with Home, so the bar never spawns df
+    readonly property bool _barWanted: ShellSettings.barShowSystem
+        && (ShellSettings.systemShowCpu || ShellSettings.systemShowMemory)
+        && !Idle.isIdle && !OverviewState.active
+    readonly property bool _wanted: _homeWanted || _barWanted
 
     on_WantedChanged: {
         if (_wanted) _startDelay.restart()
         else root._deactivate()
+    }
+    on_HomeWantedChanged: {
+        if (!root._active) return
+        if (root._homeWanted) root._refreshHome()
+        else _uptimePoll.stop()
     }
 
     function _activate(): void {
@@ -49,10 +68,14 @@ Singleton {
         _active = true
         cpuReady = false
         _refreshFast()
-        _uptimeFile.reload()
-        _refreshSlow()
+        if (_homeWanted) _refreshHome()
         // cpuPct is a delta between two /proc/stat reads; without a quick second sample the tile shows the last session's figure
         _cpuPrime.restart()
+    }
+
+    function _refreshHome(): void {
+        _uptimeFile.reload()
+        _refreshSlow()
     }
 
     function _deactivate(): void {
@@ -71,7 +94,7 @@ Singleton {
 
     Timer { id: _startDelay; interval: 120; onTriggered: root._activate() }
     Timer { id: _cpuPrime; interval: 250; onTriggered: if (root._active) _statFile.reload() }
-    Timer { id: _uptimePoll; onTriggered: if (root._active) _uptimeFile.reload() }
+    Timer { id: _uptimePoll; onTriggered: if (root._active && root._homeWanted) _uptimeFile.reload() }
 
     Timer {
         id: _poll
@@ -85,7 +108,7 @@ Singleton {
         id: _slowPoll
         interval: root._diskRefreshMs
         repeat: true
-        running: root._active
+        running: root._active && root._homeWanted
         onTriggered: root._refreshSlow()
     }
 
@@ -96,7 +119,21 @@ Singleton {
         blockAllReads: false
         printErrors: false
         onLoaded: root._applyMeminfo(_meminfoFile.text())
-        onLoadFailed: if (root._active) { root.memTotalKb = 0; root.memAvailKb = 0 }
+        onLoadFailed: if (root._active) {
+            root.memTotalKb = 0; root.memAvailKb = 0
+            root.swapTotalKb = 0; root.swapUsedKb = 0
+        }
+    }
+
+    // absent on a kernel built without PSI, which simply leaves swap unreported
+    FileView {
+        id: _pressureFile
+        path: "/proc/pressure/memory"
+        blockLoading: false
+        blockAllReads: false
+        printErrors: false
+        onLoaded: root._applyPressure(_pressureFile.text())
+        onLoadFailed: if (root._active) root._applyPressure("")
     }
 
     FileView {
@@ -107,7 +144,7 @@ Singleton {
         printErrors: false
         onLoaded: root._applyUptime(_uptimeFile.text())
         onLoadFailed: {
-            if (!root._active) return
+            if (!root._active || !root._homeWanted) return
             _uptimePoll.interval = 2000
             _uptimePoll.restart()
         }
@@ -126,6 +163,7 @@ Singleton {
     function _refreshFast(): void {
         if (!_active) return
         _meminfoFile.reload()
+        _pressureFile.reload()
         _statFile.reload()
     }
 
@@ -138,12 +176,29 @@ Singleton {
         root.memTotalKb = isFinite(totalKb) && totalKb > 0 && isFinite(availKb) ? totalKb : 0
         root.memAvailKb = root.memTotalKb > 0
             ? Math.max(0, Math.min(root.memTotalKb, availKb)) : 0
+        // SwapFree, not SwapCached: cached pages are still resident, only used = total - free is pressure
+        const swapTotal = mem.match(/^SwapTotal:\s+(\d+)/m)
+        const swapFree = mem.match(/^SwapFree:\s+(\d+)/m)
+        const swapTotalKb = swapTotal ? Number(swapTotal[1]) : 0
+        const swapFreeKb = swapFree ? Number(swapFree[1]) : NaN
+        root.swapTotalKb = isFinite(swapTotalKb) && swapTotalKb > 0 && isFinite(swapFreeKb) ? swapTotalKb : 0
+        root.swapUsedKb = root.swapTotalKb > 0
+            ? Math.max(0, Math.min(root.swapTotalKb, root.swapTotalKb - swapFreeKb)) : 0
+    }
+
+    function _applyPressure(raw: string): void {
+        if (!root._active) return
+        const some = raw.match(/^some avg10=([0-9.]+)/m)
+        const pressure = some ? Number(some[1]) : 0
+        root.memPressure = isFinite(pressure) ? pressure : 0
+        root._memStalled = root.memPressure >= 10 || (root._memStalled && root.memPressure >= 5)
     }
 
     function _applyUptime(raw: string): void {
         if (!root._active) return
         const up = raw.trim().split(/\s+/)
         root.uptimeSecs = parseFloat(up[0]) || 0
+        if (!root._homeWanted) return
         _uptimePoll.interval = root.uptimeSecs < 60 ? 2000
             : Math.max(1000, Math.ceil((60 - root.uptimeSecs % 60) * 1000) + 100)
         _uptimePoll.restart()
