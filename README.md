@@ -70,9 +70,22 @@ Silere doesn't include an app launcher, wallpaper picker, lock screen, clipboard
 or AI assistant. It calls the tools you already use, and Settings is where you point it
 at them. It won't set up your system or replace your dotfiles either.
 
-If you'd rather have one project run the whole desktop, look at
-[end-4's dots-hyprland](https://github.com/end-4/dots-hyprland) or
-[Dux Shell](https://duxlabs.dev/).
+This is what I run next to it. None of it is required, and any of it can be swapped.
+
+| For | I use |
+|---|---|
+| Launcher, clipboard history, file search, window switching | [Vicinae](https://github.com/vicinaehq/vicinae) |
+| Wallpaper | [awww](https://codeberg.org/LGFae/awww) |
+| Colours from the wallpaper | [Matugen](https://github.com/InioX/matugen) |
+| Lock screen and idle | [hyprlock](https://github.com/hyprwm/hyprlock) and [hypridle](https://github.com/hyprwm/hypridle) |
+| Night light | [hyprsunset](https://github.com/hyprwm/hyprsunset) |
+| Screenshots | [grim](https://gitlab.freedesktop.org/emersion/grim), [slurp](https://github.com/emersion/slurp) and [Satty](https://github.com/gabm/Satty) |
+| Audio visualizer | [cava](https://github.com/karlstav/cava) |
+
+If you'd rather have one project run the whole desktop,
+[Noctalia](https://github.com/noctalia-dev/noctalia) is the one I'd try first.
+[end-4's dots-hyprland](https://github.com/end-4/dots-hyprland) and
+[Dux Shell](https://duxlabs.dev/) are worth a look too.
 
 ## Getting around
 
