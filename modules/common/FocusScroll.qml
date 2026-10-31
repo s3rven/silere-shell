@@ -1,6 +1,6 @@
 import QtQuick
 
-// Native text fields and custom controls share scroll behavior while retaining their own keys.
+// native text fields and custom controls share scroll behavior while retaining their own keys
 Item {
     id: root
 

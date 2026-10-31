@@ -36,7 +36,7 @@ function parseCoord(s) {
     }
 }
 
-// America/Argentina/Buenos_Aires reads as Buenos Aires
+// the last part of a zone reads as its place: America/Argentina/Buenos_Aires is Buenos Aires
 function placeName(zone) {
     var parts = String(zone || "").trim().split("/")
     return parts[parts.length - 1].replace(/_/g, " ")
