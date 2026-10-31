@@ -27,10 +27,11 @@ jobs:
     steps:
       - name: Install build and probe dependencies
         # The minimum runtime needs a compatible Qt too; 0.3.1 does not build on Qt 6.12.
-        # This snapshot supplies Qt 6.10.0 and checks the documented Qt 6.10 floor.
+        # This snapshot supplies Qt 6.10.2 and checks the documented Qt 6.10 floor; 6.10.0 itself
+        # crashes in QColor reading a value type, inside Qt.
         run: |
           # shellcheck disable=SC2016
-          printf 'Server = https://archive.archlinux.org/repos/2025/11/01/$repo/os/$arch\n' > /etc/pacman.d/mirrorlist
+          printf 'Server = https://archive.archlinux.org/repos/2026/02/15/$repo/os/$arch\n' > /etc/pacman.d/mirrorlist
           # today's keyring has disabled keys that signed this snapshot, so rebuild it from
           # the snapshot's own. Only this one package skips the check; the rest are verified
           cp /etc/pacman.conf /tmp/pacman.conf.verified
@@ -41,7 +42,7 @@ jobs:
           pacman-key --init
           pacman-key --populate archlinux
           pacman -Syyuu --noconfirm --overwrite '*' --ignore archlinux-keyring gdb git cmake ninja gcc pkgconf cli11 qt6-declarative qt6-shadertools qt6-wayland qt6-svg libdrm pipewire wayland wayland-protocols vulkan-headers fontconfig ttf-jetbrains-mono-nerd
-          test "$(pacman -Q qt6-base)" = 'qt6-base 6.10.0-2'
+          pacman -Q qt6-base | grep '^qt6-base 6\.10\.'
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false

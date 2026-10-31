@@ -87,7 +87,11 @@ EOF
         kill -0 "$shell_pid" 2>/dev/null || break
         sleep 0.1
     done
-    [ "$ready" = 1 ] || { cat "$scratch/shell.log" >&2; exit 1; }
+    if [ "$ready" != 1 ]; then
+        cat "$scratch/shell.log" >&2
+        [ ! -s "$scratch/child.log" ] || tail -n 30 "$scratch/child.log" >&2
+        exit 1
+    fi
     if [ -n "$benchmark" ]; then
         mkdir -p "$benchmark"
         bash "$ROOT/scripts/bench.sh" 10 --json --label "$backend-development-cold" > "$benchmark/$backend-cold.json"
