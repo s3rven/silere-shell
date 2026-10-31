@@ -57,6 +57,7 @@ jobs:
           PATH: /opt/minimum-quickshell/bin:/usr/local/sbin:/usr/local/bin:/usr/bin
           QML2_IMPORT_PATH: /opt/minimum-quickshell/qml
           SILERE_REQUIRE_QML_TOOLS: "1"
+          SILERE_ALLOW_OLD_QMLLINT: "1"
         run: |
           qs --version
           bash scripts/test-qml-headless.sh

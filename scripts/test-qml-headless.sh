@@ -183,11 +183,21 @@ else
     )
     qmllint_help="$("$QMLLINT" --help 2>&1 || true)"
     unsupported_lint_args=()
+    supported_lint_args=()
     for ((i = 0; i < ${#qmllint_args[@]}; i += 2)); do
-        if ! grep -Fq -- "${qmllint_args[i]}" <<< "$qmllint_help"; then
+        if grep -Fq -- "${qmllint_args[i]}" <<< "$qmllint_help"; then
+            supported_lint_args+=("${qmllint_args[i]}" "${qmllint_args[i + 1]}")
+        else
             unsupported_lint_args+=("${qmllint_args[i]}")
         fi
     done
+    # the minimum-runtime job checks the floor with the floor's own tools, which predate some
+    # diagnostics; everywhere else an old qmllint would quietly weaken the check, so it fails
+    if [ "${#unsupported_lint_args[@]}" -gt 0 ] && [ "${SILERE_ALLOW_OLD_QMLLINT:-0}" = 1 ]; then
+        printf 'note: this qmllint lacks %s\n' "${unsupported_lint_args[*]}"
+        qmllint_args=("${supported_lint_args[@]}")
+        unsupported_lint_args=()
+    fi
     if [ "${#unsupported_lint_args[@]}" -gt 0 ]; then
         printf 'FAIL: installed qmllint is too old for required diagnostics: %s\n' \
             "${unsupported_lint_args[*]}" >&2
