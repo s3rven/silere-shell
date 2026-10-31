@@ -219,10 +219,10 @@ for module in "${SILERE_REQUIRED_QML_MODULES[@]}"; do
 done
 [ "$missing_modules" -gt 0 ] || ok "QML modules" "all ${#SILERE_REQUIRED_QML_MODULES[@]} required imports found"
 qt_floor=0
-_qml_type_exported QtQuick.Effects RectangularShadow || qt_floor=$?
+_qt_floor_met || qt_floor=$?
 case "$qt_floor" in
     0) ok "Qt" "$SILERE_MIN_QT or newer" ;;
-    1) fail "Qt" "older than $SILERE_MIN_QT; the bar, OSD and popups cannot load" ;;
+    1) fail "Qt" "older than $SILERE_MIN_QT; the menu, notifications and popups cannot load" ;;
 esac
 
 # a dev checkout beside an installed copy: the shell on screen is Silere, just not this one

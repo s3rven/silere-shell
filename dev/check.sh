@@ -436,11 +436,11 @@ for _module in "${SILERE_REQUIRED_QML_MODULES[@]}"; do
 done
 
 qt_floor=0
-_qml_type_exported QtQuick.Effects RectangularShadow || qt_floor=$?
+_qt_floor_met || qt_floor=$?
 case "$qt_floor" in
-  0) ok "qt floor" "QtQuick.Effects exports RectangularShadow (Qt $SILERE_MIN_QT+)" ;;
-  1) fail "qt floor" "Qt is older than $SILERE_MIN_QT; RectangularShadow is missing" ;;
-  *) warn "qt floor" "no QtQuick.Effects qmltypes to confirm Qt $SILERE_MIN_QT or newer" ;;
+  0) ok "qt floor" "QtQuick.Shapes has ShapePath trim (Qt $SILERE_MIN_QT+)" ;;
+  1) fail "qt floor" "Qt is older than $SILERE_MIN_QT; ShapePath trim is missing" ;;
+  *) warn "qt floor" "no QtQuick.Shapes qmltypes to confirm Qt $SILERE_MIN_QT or newer" ;;
 esac
 
 if command -v wireplumber >/dev/null 2>&1; then

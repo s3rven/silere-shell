@@ -361,6 +361,17 @@ test_qml_type_floor() (
     _silere_qml_import_roots=("$bare")
     rc=0; _qml_type_exported QtQuick.Effects RectangularShadow || rc=$?
     assert_eq 2 "$rc" "a module without qmltypes is unknown, not a failure"
+
+    local shapes="$TMP/qml-qt610"
+    mkdir -p "$shapes/QtQuick/Shapes"
+    printf 'module QtQuick.Shapes\n' > "$shapes/QtQuick/Shapes/qmldir"
+    printf 'name: "QQuickShapePath"\n' > "$shapes/QtQuick/Shapes/plugins.qmltypes"
+    _silere_qml_import_roots=("$shapes")
+    rc=0; _qt_floor_met || rc=$?
+    assert_eq 1 "$rc" "a Qt without ShapePath trim is below the floor"
+    printf 'name: "QQuickShapeTrim"\n' >> "$shapes/QtQuick/Shapes/plugins.qmltypes"
+    rc=0; _qt_floor_met || rc=$?
+    assert_eq 0 "$rc" "ShapePath trim meets the floor"
 )
 
 test_headless_qml_import_roots() (

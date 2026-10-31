@@ -1,7 +1,7 @@
 # Installing
 
 You need Hyprland or niri, `git`, and Quickshell 0.3.1 or newer, built against at least
-Qt 6.9. The one-line installer below also needs `curl`; installing from a clone does not.
+Qt 6.10. The one-line installer below also needs `curl`; installing from a clone does not.
 On Arch and its derivatives, use `sudo pacman -S --needed quickshell git curl`.
 For other distributions, see [Quickshell's install guide](https://quickshell.org/docs/v0.3.1/guide/install-setup/).
 

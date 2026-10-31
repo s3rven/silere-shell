@@ -8,10 +8,10 @@
 # step with this value; check.sh compares it against the Quickshell actually installed.
 # shellcheck disable=SC2034
 SILERE_MIN_QUICKSHELL="0.3.1"
-# Quickshell 0.3.1 builds on older Qt, but FloatingShadow's RectangularShadow is 6.9+
-# and every shadowed surface (bar, osd, popups, notification cards) fails to load without it.
+# Quickshell 0.3.1 builds on older Qt, but PerimeterProgress trims its ShapePath, which is 6.10+,
+# and the menu, notification cards and confirm buttons all fail to load without it.
 # shellcheck disable=SC2034
-SILERE_MIN_QT="6.9"
+SILERE_MIN_QT="6.10"
 
 # Reads the version out of `qs --version`, e.g. "Quickshell 0.3.1 (revision ...)".
 # Prints nothing when the binary is missing or the format is one we don't know.
@@ -114,13 +114,22 @@ _qml_module_available() {
 # 0 when the module Qt would load exports the type, 1 when it does not, 2 when there is
 # no module or no qmltypes to tell. Only the first root holding the module counts.
 _qml_type_exported() { # $1 = module, $2 = type
+    _qml_types_mention "$1" "\"$1/$2 "
+}
+
+# the trim group has no QML name of its own to look up, so match the type Qt registers for it
+_qt_floor_met() {
+    _qml_types_mention QtQuick.Shapes '"QQuickShapeTrim"'
+}
+
+_qml_types_mention() { # $1 = module, $2 = text
     local module_path="${1//./\/}" root file seen=0
     for root in "${_silere_qml_import_roots[@]}"; do
         [ -n "$root" ] && [ -r "$root/$module_path/qmldir" ] || continue
         for file in "$root/$module_path"/*.qmltypes; do
             [ -r "$file" ] || continue
             seen=1
-            grep -qF "\"$1/$2 " "$file" && return 0
+            grep -qF "$2" "$file" && return 0
         done
         [ "$seen" -eq 1 ] && return 1
         return 2

@@ -27,7 +27,7 @@ compositor config, launcher, wallpaper tool and lock screen stay as they are.
 ## Install
 
 You need a Hyprland or niri session, and Quickshell 0.3.1 or newer built against at least
-Qt 6.9. On Arch:
+Qt 6.10. On Arch:
 
 ```bash
 sudo pacman -S --needed quickshell git curl
