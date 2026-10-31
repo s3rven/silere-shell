@@ -246,7 +246,9 @@ PageShell {
                 ControlRow {
                     id: _vpnRow
                     // nothing to pick without a saved profile, so the row waits for one
-                    visible: Network.hasVpn || (Vpn.available && Vpn.profiles.length > 0)
+                    // a failed read leaves no profiles, and the picker is what shows that error
+                    visible: Network.hasVpn
+                        || (Vpn.available && (Vpn.profiles.length > 0 || Vpn.lastError.length > 0))
                     property bool copied: false
                     active: Network.hasVpn
                     glyph: "󰦝"
