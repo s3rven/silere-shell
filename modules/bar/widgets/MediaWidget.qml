@@ -238,9 +238,9 @@ Item {
     }
 
     Accessible.role: Accessible.Button
-    Accessible.name: Media.label.length > 0
-        ? (Media.playing ? "Pause " : "Play ") + Media.label
-        : (Media.playing ? "Pause" : "Play")
+    readonly property string _playAction: !Media.canTogglePlaying ? ""
+        : Media.playing ? "Pause" : "Play"
+    Accessible.name: [root._playAction, Media.label].filter(part => part.length > 0).join(" ") || "Media"
     Accessible.focusable: root._canInteract
     Accessible.onPressAction: if (root._canInteract) Media.togglePlay()
     KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
