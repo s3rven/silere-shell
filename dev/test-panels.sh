@@ -76,10 +76,14 @@ if grep -qE 'Failed to create wl_display|Failed to connect to Wayland display' "
 fi
 if ! grep -q 'PROBE-PANELS built' "$log" 2>/dev/null; then
     cat "$log" >&2
-    # the stack lives only in the report, and the cleanup above takes that with the config
-    for report in "$probe_cfg"/cache/quickshell/crashes/*/report.txt; do
-        [ -f "$report" ] && sed -n '/===== Stacktrace/,$p' "$report" | head -40 >&2
+    # the stack lives only in the report, which a helper writes just after the crash, and
+    # the cleanup above takes it with the config
+    for _ in $(seq 60); do
+        report="$(find "$probe_cfg" -name report.txt -print -quit 2>/dev/null)"
+        [ -z "$report" ] || break
+        sleep 0.1
     done
+    [ -z "$report" ] || sed -n '/===== Stacktrace/,$p' "$report" | head -40 >&2
     echo "FAIL: panel probe did not finish" >&2
     exit 1
 fi
