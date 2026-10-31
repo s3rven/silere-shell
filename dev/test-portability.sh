@@ -2299,8 +2299,11 @@ case "\$1" in
 esac
 STUB
     chmod +x "$t/stubs/systemctl" "$t/stubs/qs"
+    # the fake HOME hides any safe.directory that lets a container trust this checkout,
+    # and without it git cannot read the repository and the checkout looks packaged
     cli() {
         env -u LC_ALL -u XDG_CONFIG_HOME HOME="$t/home" XDG_CONFIG_HOME="$t/config" PATH="$t/stubs:$PATH" \
+            GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$ROOT" \
             WAYLAND_DISPLAY=wayland-test bash "$ROOT/scripts/silere" "$@"
     }
 
