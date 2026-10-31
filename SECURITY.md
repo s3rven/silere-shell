@@ -20,6 +20,8 @@ no network listener, and no privileged helper. What's in scope:
   `$XDG_CACHE_HOME`, and the `~/.local` paths the installer creates (the `silere`
   command and the bundled font).
 - The installer and updater scripts under `scripts/`.
+- Responses to the optional weather lookup, which is off by default and asks Open-Meteo
+  over HTTPS only when the calendar opens.
 
 Out of scope: Quickshell, the compositor, and anything requiring an attacker who
 already runs code as the user.

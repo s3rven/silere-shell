@@ -35,6 +35,11 @@ Launches through `silere run` hold the loaded shell steady while an update repla
 files; run `silere restart` after an update if you do not use the systemd user service.
 For a development checkout, `SILERE_WATCH_FILES=1 silere run` enables live QML reloads.
 `silere restart` uses an existing `silere-shell.service` when it runs this checkout.
+With two copies, such as an installed one and a development clone, `silere status` shows
+which one is running, and `silere use` in the other copy makes it the one that runs. It
+repoints the `~/.local/bin/silere` link, points the service at that copy through a drop-in
+(`silere-shell.service.d/silere-use.conf`, the unit file itself is left alone), and restarts.
+`silere use /path/to/copy` switches back.
 Silere ships an optional update timer; create the shell service yourself if you want one.
 
 ## Previewing the install
@@ -52,6 +57,7 @@ same reviewed scripts in the checkout—there is no daemon:
 silere run
 silere link
 silere restart
+silere use [checkout]
 silere status
 silere log --follow
 silere doctor

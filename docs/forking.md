@@ -47,6 +47,29 @@ isn't on.
 **A new component** must be listed in its folder's `qmldir`. Forget it and it fails
 only when running, as `X is not a type` — that one confuses everybody once.
 
+**Readable layouts.** Use `Metrics.rowHeightFor()` as a minimum, then let text's
+`implicitHeight` grow the space above a slider or beside a control. A fixed text
+container can cut off larger glyphs even when nothing reports `truncated`.
+`dev/test-layout-fit.sh` checks horizontal overflow and text cut off by local
+clipping containers across the supported text sizes. Keep scrolling viewports
+free to clip offscreen rows.
+
+**Keyboard focus.** Custom buttons, toggles and sliders use `KeyboardFocus` for
+guarded key actions, a focus ring and scroll visibility. Native `TextInput` fields
+use `FocusScroll`; keep their editing keys on the input itself. Set its
+`revealTarget` to the enclosing field when the border and padding should scroll
+into view too. Both paths stop an active flick before revealing the focused
+control. [Qt keyboard focus](https://doc.qt.io/qt-6/qtquick-input-focus.html).
+
+**Deferred work.** Keep expensive surfaces behind loaders and release them when
+their retention period ends. Reading a loading `LazyLoader.item` forces the load
+to finish synchronously; wait for activation when preparing a hidden surface.
+Use viewport-sized delegates for long lists, and stop timers/animations and clear
+focus when a row is pooled. Profile active workloads before changing rendering
+strategies. [Quickshell LazyLoader](https://quickshell.org/docs/v0.3.1/types/Quickshell/LazyLoader/),
+[Qt list reuse](https://doc.qt.io/qt-6/qml-qtquick-listview.html#reusing-items),
+[Qt Quick profiling](https://doc.qt.io/qt-6/qtquick-performance.html#profiling).
+
 **Controls that change targets.** The service owns the confirmed value and its
 write queue; a slider owns only the unfinished gesture. Bind `interactionKey` to
 the actual device or track, so changing it cancels the old drag. For example:

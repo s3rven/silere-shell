@@ -126,7 +126,8 @@ repair.
 
 ## The screen is unlocked after sleep
 
-Sleep in the power menu suspends without locking. Have your idle daemon lock first, for
+Use **Lock & sleep** to wait for the session's lock confirmation before suspending.
+The separate **Sleep** action suspends directly. Have your idle daemon lock first for other sleep requests, for
 example `before_sleep_cmd = loginctl lock-session` in hypridle.
 
 ## The network widget stops updating
