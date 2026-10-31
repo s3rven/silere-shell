@@ -29,9 +29,17 @@ jobs:
         # The minimum runtime needs a compatible Qt too; 0.3.1 does not build on Qt 6.12.
         # This snapshot supplies Qt 6.9.2 and checks the documented Qt 6.9 floor.
         run: |
-          pacman -Sy --noconfirm archlinux-keyring
           # shellcheck disable=SC2016
           printf 'Server = https://archive.archlinux.org/repos/2025/10/01/$repo/os/$arch\n' > /etc/pacman.d/mirrorlist
+          # today's keyring has disabled keys that signed this snapshot, so rebuild it from
+          # the snapshot's own. Only this one package skips the check; the rest are verified
+          cp /etc/pacman.conf /tmp/pacman.conf.verified
+          sed -i 's/^SigLevel.*/SigLevel = Never/' /etc/pacman.conf
+          pacman -Syy --noconfirm archlinux-keyring
+          cp /tmp/pacman.conf.verified /etc/pacman.conf
+          rm -rf /etc/pacman.d/gnupg
+          pacman-key --init
+          pacman-key --populate archlinux
           pacman -Syyuu --noconfirm --ignore archlinux-keyring git cmake ninja gcc pkgconf cli11 qt6-declarative qt6-shadertools qt6-wayland qt6-svg libdrm pipewire wayland wayland-protocols vulkan-headers fontconfig ttf-jetbrains-mono-nerd
           test "$(pacman -Q qt6-base)" = 'qt6-base 6.9.2-1'
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -66,6 +74,8 @@ jobs:
       - name: Install compositor test dependencies
         run: |
           pacman -Syu --noconfirm git quickshell kwin libkscreen dbus mesa libglvnd niri hyprland fontconfig ttf-jetbrains-mono-nerd util-linux
+          # a file capability cannot be exec'd without privileges, and this container has none to give
+          setcap -r "$(command -v kwin_wayland)"
           useradd --create-home silere-test
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
