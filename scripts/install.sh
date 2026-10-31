@@ -952,7 +952,12 @@ fi
 _optdep fc-list       "font picker + font checks"
 _optdep brightnessctl "brightness control + popup"
 _optdep inotifywait   "screenshot flash + Hyprland restart recovery"
-_optdep nmcli         "VPN indicator"
+_optdep nmcli         "VPN indicator + saved VPN controls"
+_optdep blueman-manager "PIN and passkey pairing"
+_optdep nm-connection-editor "advanced Wi-Fi + VPN settings"
+_optdep nmtui         "terminal network settings"
+_optdep xdg-terminal-exec "terminal tool hand-off"
+_optdep ddcutil       "optional external monitor brightness"
 _optdep cava          "audio visualizer (auto-configured at runtime)"
 _optdep_any "updates" "update count" checkupdates apt dnf zypper xbps-install
 _optdep_any "AUR helper" "AUR update count" paru yay

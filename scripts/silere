@@ -29,7 +29,12 @@ _usage_text() {
 Usage: silere <command> [options]
 
   run [--startup]        Start Silere once; --startup waits for the compositor
+  run --supervised       Start through the optional user service
+  service install        Install the optional service; --dry-run previews it
+  service status         Show the optional service state
+  service remove         Stop and remove the owned service
   restart                Stop the running shell and start it again
+  use [checkout]         Make this checkout (or the given one) the one that runs
   status                 Show installation and updater state
   log [--follow]         Print the running shell's log
   doctor                 Run read-only installation diagnostics
@@ -54,21 +59,36 @@ die() {
 }
 
 run_shell() {
-    local startup=0
+    local startup=0 supervised=0
 
-    if [ "${1:-}" = --startup ]; then
-        startup=1
-        shift
-    fi
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            --startup) startup=1; shift ;;
+            --supervised) supervised=1; shift ;;
+            *) break ;;
+        esac
+    done
     [ -f "$ROOT/shell.qml" ] || die "shell.qml is missing from $ROOT"
     command -v qs >/dev/null 2>&1 || die "Quickshell is not installed"
 
     # at compositor boot the wayland endpoints can lag the autostart event
     [ "$startup" -eq 0 ] || sleep 1
 
+    if [ "$supervised" -eq 1 ]; then
+        [ "$#" -eq 0 ] || die "--supervised does not accept Quickshell arguments"
+        if ! systemctl --user is-active --quiet silere-shell.service && pid="$(running_pid)"; then
+            die "stop the running shell (pid $pid) before switching to supervised startup"
+        fi
+        restore_locale
+        exec bash "$ROOT/scripts/service.sh" start
+    fi
+
     if [ "$startup" -eq 0 ] && pid="$(running_pid)"; then
         printf 'Silere is already running (pid %s); silere restart starts it again\n' "$pid"
         exit 0
+    fi
+    if [ "$startup" -eq 0 ] && other="$(other_shell)"; then
+        die "Silere is already running from $(dirname "$other"); silere use switches to this checkout"
     fi
 
     restore_locale
@@ -190,6 +210,10 @@ restart_shell() {
     qs_error="$(user_qs --version 2>&1 >/dev/null)" \
         || die "Quickshell cannot start, so the running shell was left alone: ${qs_error%%$'\n'*}"
     old_pid="$(running_pid)" || old_pid=""
+    # restarting here would leave the other copy on screen and start a second bar beside it
+    if [ -z "$old_pid" ] && ! unit_runs_shell && other="$(other_shell)"; then
+        die "the shell on screen runs from $(dirname "$other"), not $ROOT; silere use switches to this checkout"
+    fi
     if unit_runs_shell; then
         systemctl --user is-active --quiet silere-shell.service 2>/dev/null \
             || stop_stray_shell "$old_pid"
@@ -211,6 +235,101 @@ restart_shell() {
     else
         printf '%sSilere started%s (pid %s)\n' "$GREEN" "$R" "$pid"
     fi
+}
+
+# a drop-in, so a unit written by hand or by another installer is left as it is
+use_checkout() {
+    local target="$ROOT" dry=0 link_dir link_path current config_home dropin unit_root="" unit_known=0 other
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            --dry-run) dry=1 ;;
+            -*) usage >&2; exit 2 ;;
+            *) [ "$target" = "$ROOT" ] || { usage >&2; exit 2; }
+                target="$(cd -- "$1" 2>/dev/null && pwd -P)" || die "$1 is not a directory" ;;
+        esac
+        shift
+    done
+    [ -f "$target/shell.qml" ] && [ -x "$target/scripts/silere" ] || die "$target is not a Silere checkout"
+    case "$target" in *$'\n'*|*$'\r'*) die "the checkout path cannot contain a newline" ;; esac
+    ! is_packaged || die "the $(package_manager) package decides which copy runs"
+    [ "${HOME#/}" != "$HOME" ] || die "HOME must be absolute"
+    config_home="$(_silere_xdg_home "${XDG_CONFIG_HOME:-}" .config)" || die "HOME must be absolute"
+    dropin="$config_home/systemd/user/silere-shell.service.d/silere-use.conf"
+    link_dir="$HOME/.local/bin"
+    link_path="$link_dir/silere"
+
+    current="$(readlink -f -- "$link_path" 2>/dev/null || true)"
+    if [ "$current" = "$target/scripts/silere" ]; then
+        printf 'silere on PATH: already %s\n' "$target"
+    elif { [ -L "$link_path" ] && [ "${current%/scripts/silere}" != "$current" ] \
+            && [ -f "${current%/scripts/silere}/shell.qml" ]; } \
+            || { [ ! -e "$link_path" ] && [ ! -L "$link_path" ]; }; then
+        if [ "$dry" -eq 1 ]; then
+            printf 'silere on PATH: would link %s -> %s\n' "$link_path" "$target/scripts/silere"
+        else
+            (umask 077 && mkdir -p -- "$link_dir") || die "could not create $link_dir"
+            ln -sfn -- "$target/scripts/silere" "$link_path" || die "could not link $link_path"
+            printf 'silere on PATH: %s\n' "$target"
+        fi
+    else
+        printf '%snote:%s %s is not a link to a Silere checkout; left it alone\n' "$YELLOW" "$R" "$link_path"
+    fi
+
+    if command -v systemctl >/dev/null 2>&1 \
+            && [ "$(systemctl --user show silere-shell.service -p LoadState --value 2>/dev/null)" = loaded ]; then
+        unit_known=1
+        if [ -e "$dropin" ] && ! grep -qx '# generated by silere use' "$dropin"; then
+            die "$dropin was not written by silere use; edit it by hand"
+        fi
+        unit_root="$(_silere_unit_checkout)" || unit_root=""
+    fi
+    if [ "$unit_known" -eq 1 ] && [ "$unit_root" != "$target" ]; then
+        if [ "$dry" -eq 1 ]; then
+            printf 'service: would start %s (drop-in %s)\n' "$target" "$dropin"
+        else
+            # the unit's own command may already be the target; only then is no override needed
+            if [ -e "$dropin" ]; then
+                rm -f -- "$dropin"
+                rmdir -- "${dropin%/*}" 2>/dev/null || true
+                systemctl --user daemon-reload || die "systemd could not reload the user units"
+                unit_root="$(_silere_unit_checkout)" || unit_root=""
+            fi
+            if [ "$unit_root" != "$target" ]; then
+                mkdir -p -- "${dropin%/*}" || die "could not create ${dropin%/*}"
+                { printf '%s\n' '# generated by silere use' '[Unit]' 'ConditionPathExists=' \
+                    "ConditionPathExists=${target//%/%%}/shell.qml" '[Service]' 'ExecStart=' \
+                    "ExecStart=$(_silere_unit_exec_quote "$target/scripts/silere") run" > "$dropin.tmp" \
+                    && mv -- "$dropin.tmp" "$dropin"; } || die "could not write $dropin"
+                systemctl --user daemon-reload || die "systemd could not reload the user units"
+            fi
+            printf 'service: starts %s\n' "$target"
+        fi
+    elif [ "$unit_known" -eq 1 ]; then
+        printf 'service: already starts %s\n' "$target"
+    fi
+    # the service is covered above; a compositor startup line is the user's file and names one path
+    if [ "$unit_known" -eq 0 ] || ! systemctl --user is-enabled --quiet silere-shell.service 2>/dev/null; then
+        printf '%snote:%s a startup line in your compositor config keeps its own path; point it at %s/scripts/silere\n' \
+            "$YELLOW" "$R" "$target"
+    fi
+
+    [ "$dry" -eq 0 ] || return 0
+    # systemd replaces the unit's own shell; an unsupervised one from another copy has to stop first
+    if [ "$unit_known" -eq 0 ] || ! systemctl --user is-active --quiet silere-shell.service 2>/dev/null; then
+        local paths p
+        paths="$(user_qs list --all --json 2>/dev/null \
+            | sed -n 's/^ *"config_path": "\(.*\)",\{0,1\}$/\1/p')" || true
+        while IFS= read -r p; do
+            [ -n "$p" ] && [ "$p" != "$target/shell.qml" ] && [ -x "$(dirname "$p")/scripts/silere" ] || continue
+            user_qs kill -p "$p" >/dev/null 2>&1 || true
+            for _ in $(seq 50); do
+                [[ "$(user_qs list -p "$p" 2>/dev/null)" == *"Process ID"* ]] || break
+                sleep 0.1
+            done
+        done <<< "$paths"
+    fi
+    restore_locale
+    exec bash "$target/scripts/silere" restart
 }
 
 link_completions() {
@@ -332,9 +451,15 @@ case "$command_name" in
     run)
         run_shell "$@"
         ;;
+    service)
+        exec bash "$ROOT/scripts/service.sh" "$@"
+        ;;
     restart)
         [ "$#" -eq 0 ] || { usage >&2; exit 2; }
         restart_shell
+        ;;
+    use)
+        use_checkout "$@"
         ;;
     log)
         follow=()
@@ -368,9 +493,18 @@ case "$command_name" in
         if shell_pid="$(running_pid)"; then
             printf 'Shell: %srunning%s (pid %s)\n' "$GREEN" "$R" "$shell_pid"
         elif other="$(other_shell)"; then
-            printf 'Shell: %srunning from another copy%s, %s\n' "$YELLOW" "$R" "$(dirname "$other")"
+            printf 'Shell: %srunning from another copy%s, %s; silere use switches to this one\n' \
+                "$YELLOW" "$R" "$(dirname "$other")"
         else
             printf 'Shell: %snot running%s\n' "$RED" "$R"
+        fi
+        printf 'Location: %s\n' "$ROOT"
+        if command -v systemctl >/dev/null 2>&1 && unit_root="$(_silere_unit_checkout)"; then
+            if [ "$unit_root" = "$ROOT" ]; then
+                printf 'Service: silere-shell.service starts this checkout\n'
+            else
+                printf 'Service: silere-shell.service starts %s%s%s\n' "$YELLOW" "$unit_root" "$R"
+            fi
         fi
         if grep -q '^packaged=1$' <<<"$info"; then
             printf 'Updates: managed by %s; Silere self-update is disabled\n' "$(package_manager)"
@@ -494,7 +628,7 @@ case "$command_name" in
     *)
         printf '%ssilere:%s unknown command: %s\n' "$ERED" "$ER" "$command_name" >&2
         # within two edits of a real command is a typo, not a guess
-        near="$(printf '%s\n' run restart status log doctor ipc link update repair version uninstall help \
+        near="$(printf '%s\n' run restart use status log doctor ipc link update repair version uninstall help \
             | awk -v w="$command_name" '
                 function dist(a, b,   i, j, m, n, d, c) {
                     m = length(a); n = length(b)

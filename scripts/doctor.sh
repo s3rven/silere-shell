@@ -325,7 +325,12 @@ if command -v fc-list >/dev/null 2>&1; then
     fi
 fi
 optional_tool inotifywait "screenshot feedback + Hyprland restart recovery"
-optional_tool nmcli "VPN indicator"
+optional_tool nmcli "VPN indicator + saved VPN controls"
+optional_tool blueman-manager "PIN and passkey pairing"
+optional_tool nm-connection-editor "advanced Wi-Fi + VPN settings"
+optional_tool nmtui "terminal network settings"
+optional_tool xdg-terminal-exec "terminal tool hand-off"
+optional_tool ddcutil "optional external monitor brightness"
 optional_tool busctl "notification daemon check"
 optional_any "power actions" "suspend, reboot, shut down" systemctl loginctl
 optional_any "updates" "update count widget" checkupdates apt dnf zypper xbps-install
