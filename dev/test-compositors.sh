@@ -123,6 +123,11 @@ for tool in qs kwin_wayland dbus-run-session; do
     command -v "$tool" >/dev/null 2>&1 || { echo "FAIL: integration requires $tool" >&2; exit 1; }
 done
 case "$backend" in hyprland) command -v Hyprland >/dev/null ;; niri) command -v niri >/dev/null ;; esac
+# Hyprland cannot start without a render node, even nested; a hosted runner has none
+if [ "$backend" = hyprland ] && ! compgen -G '/dev/dri/renderD*' >/dev/null; then
+    printf 'SKIP: Hyprland integration needs a GPU render node\n'
+    exit 0
+fi
 # Hyprland appends its long instance signature to this path before binding a Unix socket.
 scratch="$(mktemp -d /tmp/sc.XXXXXX)"
 inner_pid=""
