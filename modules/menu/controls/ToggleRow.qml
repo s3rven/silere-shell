@@ -12,6 +12,10 @@ MenuRow {
     property bool   checked:      root.key.length > 0 ? !!ShellSettings[root.key] : false
     property bool   available:    true
     property string dependsNote:  ""
+    // for a row that refuses on its own: enabled also goes false with the whole page during a
+    // transition, so reading it here flashed the note and resized the panel on every page switch
+    property bool   blocked:      false
+    enabled: !root.blocked
 
     rowHovered:     _hover.hovered
     rowPressed:     _tap.pressed
@@ -29,7 +33,7 @@ MenuRow {
 
     readonly property bool _canToggle: root.enabled && root.visible && (root.available || root.checked)
     readonly property bool _showDependsNote: root.dependsNote.length > 0
-                                            && (!root.enabled || !root.available)
+                                            && (root.blocked || !root.available)
     readonly property bool _hasDetail: root.description.length > 0
                                     || root._showDependsNote
     readonly property string _detailText: {
@@ -48,7 +52,7 @@ MenuRow {
     // a description grows the row to fit its wrapping subtitle, still on the shared grid
     readonly property int _descPadV: 11
     height:         _hasDetail ? 4 * Math.ceil((_descPadV * 2 + _textCol.implicitHeight) / 4)
-                               : Metrics.rowHeightFor(44)
+                               : Math.max(Metrics.rowHeightFor(44), Metrics.snap4Up(_textCol.implicitHeight + 22))
     // a live dependsNote lengthens the detail text mid-interaction (toggling the update
     // timer appends "Working"), which can rewrap and change this height under the cursor
     // armed a tick late, or every row animates its first layout when a page opens
@@ -73,6 +77,7 @@ MenuRow {
     Accessible.checked: root.checked
     Accessible.onPressAction: root._activate()
     Accessible.onToggleAction: root._activate()
+    KeyboardFocus { interactive: root._canToggle; onActivated: root._activate() }
 
     HoverHandler { id: _hover; cursorShape: root._canToggle ? Qt.PointingHandCursor : Qt.ArrowCursor }
     TapHandler {
@@ -88,7 +93,7 @@ MenuRow {
         anchors.left:           parent.left
         anchors.leftMargin:     14
         anchors.verticalCenter: parent.verticalCenter
-        width: 18
+        width: Metrics.glyphSlotWidth
         horizontalAlignment: Text.AlignHCenter
         text:           root.glyph
         opacity: root._showDependsNote ? root._controlOpacity : 1.0
@@ -113,7 +118,7 @@ MenuRow {
             width: parent.width
             text:           root.label
             opacity: root._showDependsNote ? root._controlOpacity : 1.0
-            elide:          Text.ElideRight
+            wrapMode:       Text.WrapAtWordBoundaryOrAnywhere
             color:          root.checked
                 ? Theme.text
                 : Theme.withAlpha(Theme.text, 0.85)

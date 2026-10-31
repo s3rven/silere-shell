@@ -62,6 +62,7 @@ FittedPopupWindow {
         Accessible.checkable: _row.checkable
         Accessible.checked: _row.checkable && _row.active
         Accessible.onPressAction: _row._activate()
+        KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
 
         HoverHandler {
             id: _rowHover
@@ -172,10 +173,11 @@ FittedPopupWindow {
 
         readonly property int pad: 6
         // label and state pill both grow with the font, so a fixed width elides three of the
-        // four rows at raised uiScale. never below 236: the pill's padding and floor do not
-        // shrink with the font, so scaling down costs the label more than it saves
-        readonly property int contentW: Math.max(236,
-            Metrics.snap4(236 * Settings.fontSize / 12))
+        // four rows at raised uiScale. never below 260: the pill's padding and floor do not
+        // shrink with the font, so scaling down costs the label more than it saves. 260 seats
+        // Do Not Disturb beside its longest states, Sharing screen and a 12-hour Until time
+        readonly property int contentW: Math.max(260,
+            Metrics.snap4(260 * Settings.fontSize / 12))
         width: contentW + pad * 2
         height: _heightGlide.value
         SmoothGlide {
@@ -206,6 +208,13 @@ FittedPopupWindow {
                 onTriggered: Notifications.toggleDnd()
             }
             QuickActionRow {
+                glyph: "󱒃"
+                label: "Presentation Mode"
+                active: Notifications.presentationMode
+                stateText: Notifications.presentationMode ? "On" : "Off"
+                onTriggered: Notifications.togglePresentation()
+            }
+            QuickActionRow {
                 glyph: Idle.keepAwake ? "󰅶" : "󰛊"
                 label: "Keep Awake"
                 active: Idle.keepAwake
@@ -215,7 +224,7 @@ FittedPopupWindow {
             }
             QuickActionRow {
                 visible: NightLight.toolAvailable
-                glyph: "󰖔"
+                glyph: NightLight.enabled ? "󰖔" : "󰖙"
                 label: "Night Light"
                 active: NightLight.enabled
                 error: NightLight.lastError.length > 0

@@ -60,7 +60,7 @@ MenuRow {
             && mapped.y >= -4 && mapped.y <= _badge.height + 4
     }
 
-    height:         Metrics.rowHeightFor(48)
+    height: Math.max(Metrics.rowHeightFor(48), Metrics.snap4Up(_textCol.implicitHeight + 16))
 
     // visibility gates input, but should not change the resting appearance
     opacity: root.passive || (root.enabled && root.available) ? 1.0 : Theme.disabledOpacity
@@ -77,6 +77,7 @@ MenuRow {
     Accessible.checked: root.showSwitch && root.active
     Accessible.onPressAction: root._activate()
     Accessible.onToggleAction: if (root.showSwitch) root._activate()
+    KeyboardFocus { interactive: root._canTap; onActivated: root._activate() }
 
     HoverHandler { id: _hover; cursorShape: root._canTap ? Qt.PointingHandCursor : Qt.ArrowCursor }
     TapHandler {
@@ -94,7 +95,7 @@ MenuRow {
         anchors.left:           parent.left
         anchors.leftMargin:     14
         anchors.verticalCenter: parent.verticalCenter
-        width: 18; height: 18
+        width: Metrics.glyphSlotWidth; height: 18
 
         ShellText {
             id: _glyph
@@ -121,7 +122,7 @@ MenuRow {
             // whole device pixels at a snapped position: 15px is 18.75 at 1.25 and blurs one side
             readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
             width:  Metrics.devicePx(Math.max(height, _badgeTxt.implicitWidth + 7), _dpr)
-            height: Metrics.devicePx(15, _dpr)
+            height: Metrics.devicePx(Math.max(15, Settings.fontTiny + 4), _dpr)
             radius: height / 2
             transform: PixelSnap { item: _badge; dpr: _badge._dpr }
             antialiasing: true
@@ -160,6 +161,7 @@ MenuRow {
                     ? "1 missed notification" : root.badgeCount + " missed notifications"
                 Accessible.focusable: enabled
                 Accessible.onPressAction: root._activateBadge()
+                KeyboardFocus { onActivated: root._activateBadge() }
                 onClicked: {
                     root._activateBadge()
                 }
@@ -182,7 +184,7 @@ MenuRow {
             color:          root.active ? Theme.text : Theme.withAlpha(Theme.text, 0.85)
             font.pixelSize: Settings.fontSize
             font.weight:    Font.DemiBold
-            elide:          Text.ElideRight
+            wrapMode:       Text.WrapAtWordBoundaryOrAnywhere
             ColorFade on color {}
         }
 
@@ -197,7 +199,7 @@ MenuRow {
                               : Theme.menuTextDetail
             font.pixelSize: Settings.fontCaption
             font.weight:    Font.Medium
-            elide:          Text.ElideRight
+            wrapMode:       Text.WrapAtWordBoundaryOrAnywhere
             ColorFade on color {}
         }
     }
@@ -283,6 +285,7 @@ MenuRow {
                 Accessible.name: (root.expanded ? "Hide " : "Show ") + root.title + " options"
                 Accessible.focusable: enabled
                 Accessible.onPressAction: root._toggleExpanded()
+                KeyboardFocus { onActivated: root._toggleExpanded() }
                 onClicked: {
                     root._toggleExpanded()
                 }

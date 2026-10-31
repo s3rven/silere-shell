@@ -40,6 +40,7 @@ Item {
     Accessible.name: root.accessibleName
     Accessible.focusable: root._canActivate
     Accessible.onPressAction: root.activate()
+    KeyboardFocus { interactive: root._canActivate; onActivated: root.activate() }
 
     HoverHandler {
         id: _hover

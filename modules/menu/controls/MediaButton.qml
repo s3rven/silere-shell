@@ -28,6 +28,7 @@ Item {
     Accessible.name: root.accessibleName
     Accessible.focusable: root.interactive
     Accessible.onPressAction: if (root.interactive) root.triggered()
+    KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
 
     HoverHandler { id: _hover; enabled: root.interactive; cursorShape: Qt.PointingHandCursor }
     TapHandler {

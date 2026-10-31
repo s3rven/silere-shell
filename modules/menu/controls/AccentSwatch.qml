@@ -32,6 +32,7 @@ Item {
     Accessible.checkable: true
     Accessible.checked: root.active
     Accessible.onPressAction: root._activate()
+    KeyboardFocus { interactive: root._canActivate; listNavigation: true; radius: width / 2; onActivated: root._activate() }
     Accessible.onToggleAction: if (!root.active) root._activate()
 
     HoverHandler {

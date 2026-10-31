@@ -111,7 +111,7 @@ MenuRow {
             ? Math.max(1, root.width - 28)
             : Math.max(1, _choiceGroup.x - x - 10)
         height: Math.max(_glyph.implicitHeight, _label.implicitHeight)
-        readonly property real neededW: (root.glyph.length > 0 ? 28 : 0)
+        readonly property real neededW: (root.glyph.length > 0 ? Metrics.glyphSlotWidth + 10 : 0)
             + Math.ceil(_label.implicitWidth)
 
         ShellText {
@@ -119,7 +119,7 @@ MenuRow {
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
             visible: root.glyph.length > 0
-            width: visible ? 18 : 0
+            width: visible ? Metrics.glyphSlotWidth : 0
             horizontalAlignment: Text.AlignHCenter
             text: root.glyph
             color: Theme.withAlpha(Theme.subtext, 0.82)
@@ -206,6 +206,7 @@ MenuRow {
                     Accessible.checkable: true
                     Accessible.checked: _option.active
                     Accessible.onPressAction: _option._choose()
+                    KeyboardFocus { interactive: _option._canChoose; listNavigation: true; onActivated: _option._choose() }
                     Accessible.onToggleAction: if (!_option.active) _option._choose()
 
                     HoverHandler {

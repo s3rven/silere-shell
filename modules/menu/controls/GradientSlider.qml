@@ -37,6 +37,14 @@ Item {
     Accessible.focusable: root._canInteract
     Accessible.onIncreaseAction: root._nudge(1, 1)
     Accessible.onDecreaseAction: root._nudge(-1, 1)
+    KeyboardFocus {
+        interactive: root._canInteract
+        adjustable: true
+        onStepped: (direction, multiplier) => root._nudge(direction, multiplier)
+        onBounded: maximum => {
+            if (root._canInteract && !root.dragging) root.picked(maximum ? root.maximumValue / root.displayScale : 0)
+        }
+    }
 
     width: parent ? parent.width : 0
     implicitHeight: 20

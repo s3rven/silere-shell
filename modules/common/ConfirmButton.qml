@@ -15,6 +15,8 @@ Rectangle {
     property bool busy: false
     property bool shown: true
     property color tint: Theme.error
+    // off for an action nothing is lost to: one click fires it
+    property bool needsConfirm: true
 
     readonly property bool _interactive: root.enabled && root.shown && root.visible && !root.busy
     readonly property bool armed: root._armed
@@ -27,6 +29,10 @@ Rectangle {
 
     function request(): void {
         if (!root._interactive) return
+        if (!root.needsConfirm) {
+            root.confirmed()
+            return
+        }
         const now = Date.now()
         const age = now - root._armedAtMs
         // input can reach a busy event loop before the expiry timer does
@@ -44,12 +50,19 @@ Rectangle {
         root._armed = true
         root._armedAtMs = now
         _armTimer.restart()
+        root._armLeft = 1
+        if (Motion.ms(1) > 0) _drain.restart()
     }
 
     function disarm(): void {
         root._armed = false
         _armTimer.stop()
+        _drain.stop()
     }
+
+    // the confirm window, drained along the bottom edge; reduced motion keeps it full
+    property real _armLeft: 1
+    NumberAnimation { id: _drain; target: root; property: "_armLeft"; from: 1; to: 0; duration: _armTimer.interval }
 
     Timer { id: _armTimer; interval: 3000; onTriggered: root._armed = false }
 
@@ -112,6 +125,7 @@ Rectangle {
     Accessible.description: root._armed ? root.armedLabel : ""
     Accessible.focusable: root._interactive
     Accessible.onPressAction: root.request()
+    KeyboardFocus { interactive: root._interactive; onActivated: root.request() }
 
     HoverHandler {
         id: _hover
@@ -145,6 +159,19 @@ Rectangle {
             font.pixelSize: Settings.fontCaption
             ColorFade on color {}
         }
+    }
+
+    Rectangle {
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 3
+        x: root.radius
+        width: Math.max(0, root.width - root.radius * 2) * root._armLeft
+        height: 2
+        radius: 1
+        antialiasing: true
+        color: Theme.withAlpha(root.tint, 0.5)
+        opacity: root._armed ? root._armT : 0
+        visible: opacity > 0.001 && width > 0.5
     }
 
     Row {

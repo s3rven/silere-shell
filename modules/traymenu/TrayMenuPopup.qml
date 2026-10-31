@@ -224,6 +224,7 @@ FittedPopupWindow {
             Accessible.checked: _entry.checked
             Accessible.focusable: _entry.on
             Accessible.onPressAction: win._activateEntry(_entry)
+            KeyboardFocus { interactive: _entry.on; listNavigation: true; onActivated: win._activateEntry(_entry) }
 
             TapHandler {
                 id: _entryTap
@@ -503,6 +504,7 @@ FittedPopupWindow {
                     Accessible.name: "Hide from bar"
                     Accessible.focusable: true
                     Accessible.onPressAction: _hideRow.hide()
+                    KeyboardFocus { onActivated: _hideRow.hide() }
 
                     Rectangle {
                         anchors.fill: parent

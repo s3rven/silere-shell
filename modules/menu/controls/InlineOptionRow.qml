@@ -33,7 +33,7 @@ Item {
     property bool motionReady: true
     // the gate must already be shut when the row rebinds, which happens before onReused;
     // stop the pending settle too, or it reopens the gate while the row sits in the pool
-    ListView.onPooled: { _settle.stop(); root.motionReady = false }
+    ListView.onPooled: { _settle.stop(); root.motionReady = false; root.focus = false }
     ListView.onReused: { root.motionReady = false; _settle.restart() }
     Timer { id: _settle; interval: 0; onTriggered: root.motionReady = true }
     Component.onDestruction: _settle.stop()
@@ -62,6 +62,7 @@ Item {
     Accessible.checked: root.accessiblePrefix.length > 0 && root.selected
     Accessible.selected: root.selected
     Accessible.onPressAction: root.trigger()
+    KeyboardFocus { interactive: root._canActivate; listNavigation: true; onActivated: root.trigger() }
     Accessible.onToggleAction: if (root.accessiblePrefix.length > 0 && !root.selected)
         root.trigger()
 
@@ -117,7 +118,7 @@ Item {
         anchors.left: parent.left
         anchors.leftMargin: 14
         anchors.verticalCenter: parent.verticalCenter
-        width: 18
+        width: Metrics.glyphSlotWidth
         visible: root.preview === null
         horizontalAlignment: Text.AlignHCenter
         text: root.glyph
@@ -178,7 +179,7 @@ Item {
         anchors.right: parent.right
         anchors.rightMargin: 12
         anchors.verticalCenter: parent.verticalCenter
-        width: root.selected ? 18 : 0
+        width: root.selected ? Metrics.glyphSlotWidth : 0
         horizontalAlignment: Text.AlignHCenter
         text: "󰄬"
         color: root._attentive ? root._attention : root.accentColor

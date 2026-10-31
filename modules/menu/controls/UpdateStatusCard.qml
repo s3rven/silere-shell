@@ -48,14 +48,14 @@ Rectangle {
         Item {
             id: _main
             width: parent.width
-            height: Metrics.rowHeightFor(56)
+            height: Math.max(Metrics.rowHeightFor(56), Metrics.snap4Up(_txt.implicitHeight + 20))
 
             ShellText {
                 id: _g
                 anchors.left: parent.left
                 anchors.leftMargin: 14
                 anchors.verticalCenter: _txt.verticalCenter
-                width: 18
+                width: Metrics.glyphSlotWidth
                 horizontalAlignment: Text.AlignHCenter
                 text: root.glyph
                 color: root.statusColor
@@ -100,7 +100,7 @@ Rectangle {
                         width: Math.min(implicitWidth, Math.max(40, parent.width
                             - (_sub.visible ? _sub.width + 8 : 0)))
                         text: root.title
-                        elide: Text.ElideRight
+                        wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                         color: Theme.text
                         font.pixelSize: Settings.fontSize
                         font.weight: Font.Medium
@@ -124,7 +124,7 @@ Rectangle {
                     id: _status
                     width: parent.width
                     text: root.status
-                    elide: Text.ElideRight
+                    wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                     color: Theme.withAlpha(root.statusColor, 0.9)
                     font.pixelSize: Settings.fontCaption
                     MotionBehavior on color {

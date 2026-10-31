@@ -29,6 +29,7 @@ UpdateStatusCard 1.0 UpdateStatusCard.qml
 HintText        1.0 HintText.qml
 MenuScrollThumb 1.0 MenuScrollThumb.qml
 RowHoverBg      1.0 RowHoverBg.qml
+ScrollHold      1.0 ScrollHold.qml
 SectionLabel    1.0 SectionLabel.qml
 
 # control-only implementation types

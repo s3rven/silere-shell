@@ -45,7 +45,7 @@ MenuRow {
         anchors.left:           parent.left
         anchors.leftMargin:     14
         anchors.verticalCenter: parent.verticalCenter
-        width: 18; height: 18
+        width: Metrics.glyphSlotWidth; height: 18
 
         ShellText {
             anchors.centerIn: parent
@@ -70,6 +70,7 @@ MenuRow {
             ? (root.muted ? "Unmute " : "Mute ") + root.accessibleName.toLowerCase() : ""
         Accessible.focusable: root._canInteract && root.glyphClickable
         Accessible.onPressAction: root._requestGlyph()
+        KeyboardFocus { interactive: root._canInteract && root.glyphClickable; onActivated: root._requestGlyph() }
     }
 
     TextMetrics { id: _vm; font.family: Settings.font; font.pixelSize: Settings.fontLabel; text: "100%" }
@@ -98,6 +99,7 @@ MenuRow {
             + root.accessibleName.toLowerCase() + " options"
         Accessible.focusable: root._canInteract && root.expandable
         Accessible.onPressAction: root._requestExpand()
+        KeyboardFocus { interactive: root._canInteract && root.expandable; onActivated: root._requestExpand() }
         opacity: (_chevHover.hovered) ? 1.0 : 0.7
         MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
 

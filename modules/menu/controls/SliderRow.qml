@@ -20,6 +20,7 @@ MenuRow {
     property real   max:          root._schema ? Number(root._schema.max) : 1.0
     property real   step:         root._schema && root._schema.t === "int" ? 1 : 0.05
     property bool   commitOnRelease: false
+    property string interactionKey: ""
     readonly property real shownValue: _track.shownValue
     property color  glyphColor:   Theme.withAlpha(Theme.subtext, 0.85)
 
@@ -37,7 +38,8 @@ MenuRow {
     }
 
     // 4px multiple so row.y inside SettingsCard lands on whole physical px and every divider renders one thickness
-    height:         Metrics.rowHeightFor(56)
+    height: Metrics.snap4Up(Math.max(Metrics.rowHeightFor(56),
+        _head.y + _head.height + 4 + _track.height + 4))
     opacity: root.enabled ? 1.0 : Theme.disabledOpacity
     MotionBehavior on opacity {
         NumberAnimation { duration: Motion.medium }
@@ -53,7 +55,7 @@ MenuRow {
         anchors.rightMargin: 10
         anchors.top:        parent.top
         anchors.topMargin:  8
-        height: 20
+        height: Math.max(20, _glyph.implicitHeight, _label.implicitHeight, _valueText.implicitHeight)
         clip: true
 
         ShellText {
@@ -121,6 +123,7 @@ MenuRow {
         max:   root.max
         step:  root.step
         commitOnRelease: root.commitOnRelease
+        interactionKey: root.interactionKey
         wheelKey: "slider:" + root.label
         wheelNeedsRest: true
         onChanged: value => root.changed(value)

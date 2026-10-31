@@ -17,7 +17,8 @@ Item {
     signal picked(real position)
 
     width: parent ? parent.width : 0
-    height: Metrics.rowHeightFor(48)
+    height: Metrics.snap4Up(Math.max(Metrics.rowHeightFor(48),
+        _label.y + _label.height + 4 + _slider.height + 4))
 
     ShellText {
         id: _label
@@ -27,7 +28,7 @@ Item {
         anchors.topMargin: 6
         anchors.right: _value.left
         anchors.rightMargin: 10
-        height: 20
+        height: Math.max(20, implicitHeight, _value.implicitHeight)
         verticalAlignment: Text.AlignVCenter
         text: root.label
         elide: Text.ElideRight

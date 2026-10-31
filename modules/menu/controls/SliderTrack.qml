@@ -69,6 +69,12 @@ Item {
     Accessible.focusable: root._canInteract
     Accessible.onIncreaseAction: root.nudge(1, 1)
     Accessible.onDecreaseAction: root.nudge(-1, 1)
+    KeyboardFocus {
+        interactive: root._canInteract
+        adjustable: true
+        onStepped: (direction, multiplier) => root.nudge(direction, multiplier)
+        onBounded: maximum => { if (root._canInteract && !root.dragging) root._setFromUser(maximum ? root.max : root.min) }
+    }
 
     onValueChanged: if (!root.dragging) _shownValue = value
     onInteractionKeyChanged: root.cancelInteraction()
