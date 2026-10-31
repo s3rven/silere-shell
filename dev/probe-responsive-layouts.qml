@@ -1,5 +1,6 @@
 import QtQuick
 import "../modules/menu/controls"
+import "../config" as Config
 
 // readings and labels the hardware-free surface pass cannot populate; probe-fit scans them
 Item {
@@ -45,14 +46,27 @@ Item {
 
     function layoutFailures(): var {
         const failures = []
+        for (const row of [slider, gradientSlider]) {
+            const label = root.descendants(row, item => item.text === row.label)[0]
+            const track = root.descendants(row, item => item.accessibleName === row.label
+                && item.minimumValue !== undefined)[0]
+            if (!label || !track) { failures.push("slider fixture lacks its label or track"); continue }
+            const labelPos = label.mapToItem(row, 0, 0)
+            const trackPos = track.mapToItem(row, 0, 0)
+            if (label.contentHeight > label.height + 0.5
+                    || labelPos.y + label.height + 3.5 > trackPos.y)
+                failures.push("slider heading is cut off or overlaps its track: " + row.label)
+        }
         for (const loader of [narrowVitals, wideVitals]) {
             if (!loader.item) { failures.push("vitals fixture did not load"); continue }
             const rows = loader.item.rows.filter(child => child.value !== undefined && child.visible)
             if (rows.length !== 4) failures.push("vitals fixture must measure all four readings")
             for (const row of rows) {
-                const names = row.children.find(child => child.spacing !== undefined)
+                const names = row.children.find(child => child.inline !== undefined)
                 const value = row.children.find(child => child.horizontalAlignment === Text.AlignRight)
                 if (!names || !value) { failures.push("a vital row lost its name or value"); continue }
+                if (names.y < -0.5 || names.y + names.height > row.height + 0.5)
+                    failures.push(row.label + " text escapes its row at " + loader.width + "px")
                 if (value.implicitWidth > value.width + 0.5)
                     failures.push(row.label + " reading overflows its reserved width at " + loader.width + "px")
                 if (names.width < 64)
@@ -140,6 +154,18 @@ Item {
     Column {
         id: cases
         spacing: 8
+        SliderRow {
+            id: slider
+            width: 232
+            label: "Bar opacity"
+            glyph: "󰕾"
+        }
+        GradientSliderRow {
+            id: gradientSlider
+            width: 232
+            label: "Hue"
+            displayValue: "359°"
+        }
         ToggleRow {
             id: blockedSetting
             width: 232
@@ -166,9 +192,9 @@ Item {
         }
         Loader {
             id: wideNotification
-            width: 520
+            width: Math.max(520, Config.Metrics.snap4(400 * Config.Settings.fontSize / 12))
             Component.onCompleted: setSource("../modules/notifications/NotificationCard.qml", {
-                width: 520, notification: root.notificationFixture(),
+                width: wideNotification.width, notification: root.notificationFixture(),
                 notifId: 2147483644, createdAt: Date.now()
             })
         }

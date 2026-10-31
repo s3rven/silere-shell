@@ -64,6 +64,8 @@ modules/menu/SettingsNav.qml|160
 dev/probe-responsive-layouts.qml"
 
 scratch="$(mktemp -d)"
+mkdir -p "$scratch/project"
+_probe_project "$ROOT" "$PROBE" "$scratch/project"
 probe_pid=""
 declare -A scale_pid=()
 cleanup() {
@@ -80,7 +82,7 @@ status=0
 # Both ends of the supported type range: labels are sized off font metrics, so the
 # largest scale is where a row first runs out of room. The two share nothing but the
 # read-only tree, so they measure at once rather than one after the other.
-scales=(1.0 1.15)
+scales=(1.0 1.15 1.25 1.5)
 for scale in "${scales[@]}"; do
     conf="$scratch/$scale"
     runtime="$conf/runtime"
@@ -96,7 +98,7 @@ for scale in "${scales[@]}"; do
         XDG_CONFIG_HOME="$conf" XDG_CACHE_HOME="$conf/cache" \
         XDG_STATE_HOME="$conf/state" XDG_RUNTIME_DIR="$runtime" \
         QT_QPA_PLATFORM=offscreen QT_FORCE_STDERR_LOGGING=1 \
-        qs -p "$PROBE" --no-color >"$conf/layout.log" 2>&1 &
+        qs -p "$scratch/project/probe-fit.qml" --no-color >"$conf/layout.log" 2>&1 &
     scale_pid["$scale"]=$!
 done
 
@@ -155,7 +157,7 @@ mkdir -p "$bare_conf/silere-shell" "$bare_conf/cache" "$bare_conf/state" \
     "$bare_conf/runtime" "$bare_bin"
 chmod 0700 "$bare_conf/runtime"
 # the tighter end of the type range only: this pass measures rows, not the range
-printf '{ "__version": 1, "uiScale": 1.15, "reduceMotion": true }\n' > "$bare_conf/silere-shell/settings.json"
+printf '{ "__version": 1, "uiScale": 1.5, "reduceMotion": true }\n' > "$bare_conf/silere-shell/settings.json"
 qs_bin="$(command -v qs)"
 ln -s "$(command -v bash)" "$bare_bin/bash"
 bare_list="modules/menu/settings/SettingsMaintenanceSection.qml
@@ -166,7 +168,7 @@ FIT_ROOT="$ROOT" FIT_LIST="$bare_list" FIT_W="$CONTENT_WIDTH" \
     XDG_CONFIG_HOME="$bare_conf" XDG_CACHE_HOME="$bare_conf/cache" \
     XDG_STATE_HOME="$bare_conf/state" XDG_RUNTIME_DIR="$bare_conf/runtime" \
     QT_QPA_PLATFORM=offscreen QT_FORCE_STDERR_LOGGING=1 \
-    "$qs_bin" -p "$PROBE" --no-color >"$bare_conf/layout.log" 2>&1 &
+    "$qs_bin" -p "$scratch/project/probe-fit.qml" --no-color >"$bare_conf/layout.log" 2>&1 &
 probe_pid=$!
 code=0
 if ! _probe_wait "$bare_conf/layout.log" "$probe_pid" 'FIT-DONE' 240 0.5; then

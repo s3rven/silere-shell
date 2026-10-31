@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import "config"
 
 // Builds each surface at the width it actually ships at and reports any text Qt
 // itself marks as truncated. The surface probe proves a surface builds; this proves
@@ -85,19 +86,27 @@ ShellRoot {
         root.findings++
     }
 
-    // Text.truncated cannot see this: an item pushed past a clipping ancestor is cut
-    // with no elide, so it just goes missing. Horizontal only — the host is 6000 tall
-    // on purpose, so a vertical comparison would measure the probe, not the layout.
+    // Text.truncated cannot see an item cut by a clipping ancestor. Scrolling
+    // viewports intentionally hide rows vertically; a local text container must fit its text.
     function _overflow(child, path: string, clipItem): void {
         if (!clipItem || !(child.width > 0)) return
         root.clipped++
-        const left = child.mapToItem(clipItem, 0, 0).x
-        const right = left + child.width
-        if (left >= -0.5 && right <= clipItem.width + 0.5) return
-        console.warn("FIT-CLIP " + path + " :: " + String(child).split("(")[0]
-            + " spans " + Math.round(left) + ".." + Math.round(right)
-            + " inside " + Math.round(clipItem.width))
-        root.findings++
+        const bounds = child.mapToItem(clipItem, 0, 0, child.width, child.height)
+        const left = bounds.x
+        const right = bounds.x + bounds.width
+        if (left < -0.5 || right > clipItem.width + 0.5) {
+            console.warn("FIT-CLIP " + path + " :: " + String(child).split("(")[0]
+                + " spans " + Math.round(left) + ".." + Math.round(right)
+                + " inside " + Math.round(clipItem.width))
+            root.findings++
+        }
+        if (child.text && clipItem.contentY === undefined && clipItem.height > 0
+                && (bounds.y < -0.5 || bounds.y + bounds.height > clipItem.height + 0.5)) {
+            console.warn("FIT-CLIP-V " + path + " :: \"" + String(child.text).slice(0, 48)
+                + "\" spans " + Math.round(bounds.y) + ".." + Math.round(bounds.y + bounds.height)
+                + " inside " + Math.round(clipItem.height))
+            root.findings++
+        }
     }
 
     // PageShell subclasses declare required properties; widen the set until one takes
@@ -130,7 +139,9 @@ ShellRoot {
         const entry = root.paths[root.index++]
         const split = entry.indexOf("|")
         const path = split < 0 ? entry : entry.slice(0, split)
-        root.paneWidth = split < 0 ? root.contentWidth : Number(entry.slice(split + 1))
+        root.paneWidth = split < 0 ? root.contentWidth + Metrics.menuContentGrowth
+            : Number(entry.slice(split + 1)) + (entry.indexOf("SettingsNav.qml") >= 0
+                ? Metrics.menuTypeGain : Metrics.menuContentGrowth)
         root.component = Qt.createComponent("file://" + root.base + "/" + path)
         if (root.component.status === Component.Error) {
             console.warn("FIT-FAIL " + path + " :: " + root.component.errorString())

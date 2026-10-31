@@ -2263,6 +2263,81 @@ STUB
     true
 )
 
+test_cli_use_switches_checkout() (
+    local t="$TMP/use" out dropin
+    mkdir -p "$t/stubs" "$t/other/scripts" "$t/home/.local/bin" "$t/config"
+    : > "$t/other/shell.qml"
+    printf '#!/bin/sh\necho "other $*" >> "%s/calls"\n' "$t" > "$t/other/scripts/silere"
+    chmod +x "$t/other/scripts/silere"
+    ln -s "$t/other/scripts/silere" "$t/home/.local/bin/silere"
+    dropin="$t/config/systemd/user/silere-shell.service.d/silere-use.conf"
+    # never the real systemctl: the unit follows the drop-in the way systemd would after daemon-reload
+    cat > "$t/stubs/systemctl" <<STUB
+#!/bin/sh
+echo "systemctl \$*" >> "$t/calls"
+unit_exec() {
+    if [ -f "$dropin" ]; then sed -n 's/^ExecStart="\(.*\)" run\$/\1/p' "$dropin"
+    else echo "$t/other/scripts/silere"; fi
+}
+case "\$*" in
+    *"-p LoadState"*) echo loaded ;;
+    *"-p ExecStart"*) p="\$(unit_exec)"; echo "{ path=\$p ; argv[]=\$p run ; ignore_errors=no ; }" ;;
+    *is-active*|*is-enabled*) exit 0 ;;
+    *" restart "*) p="\$(unit_exec)"; echo "\${p%/scripts/silere}/shell.qml" > "$t/running" ;;
+esac
+exit 0
+STUB
+    cat > "$t/stubs/qs" <<STUB
+#!/bin/sh
+case "\$1" in
+    list) if [ "\$2" = --all ]; then
+              printf '[\n    {\n        "config_path": "%s",\n        "pid": 9\n    }\n]\n' "\$(cat "$t/running")"
+          elif [ "\$3" = "\$(cat "$t/running")" ]; then printf 'Instance t:\n  Process ID: 99\n'; fi ;;
+    kill) echo "kill \$*" >> "$t/calls" ;;
+    --version|--no-detailed-logs) exit 0 ;;
+    *) echo "launch \$*" >> "$t/calls" ;;
+esac
+STUB
+    chmod +x "$t/stubs/systemctl" "$t/stubs/qs"
+    cli() {
+        env -u LC_ALL -u XDG_CONFIG_HOME HOME="$t/home" XDG_CONFIG_HOME="$t/config" PATH="$t/stubs:$PATH" \
+            WAYLAND_DISPLAY=wayland-test bash "$ROOT/scripts/silere" "$@"
+    }
+
+    echo "$t/other/shell.qml" > "$t/running"; : > "$t/calls"
+    if out="$(cli restart 2>&1)"; then fail "restart beside another copy's shell claimed success"; fi
+    case "$out" in *"runs from $t/other, not $ROOT"*) ;; *) fail "restart beside another copy said: $out" ;; esac
+    if out="$(cli run 2>&1)"; then fail "run beside another copy's shell claimed success"; fi
+    case "$out" in *"already running from $t/other"*) ;; *) fail "run beside another copy said: $out" ;; esac
+    ! grep -q '^launch\|restart' "$t/calls" || fail "a second shell was started beside another copy: $(cat "$t/calls")"
+
+    out="$(cli use --dry-run)" || fail "use --dry-run failed"
+    case "$out" in *"would start $ROOT"*) ;; *) fail "use --dry-run said: $out" ;; esac
+    [ ! -e "$dropin" ] || fail "use --dry-run wrote the drop-in"
+    assert_eq "$t/other/scripts/silere" "$(readlink "$t/home/.local/bin/silere")" "use --dry-run left the link"
+
+    : > "$t/calls"
+    out="$(cli use)" || fail "use failed: $out"
+    assert_eq "$ROOT/scripts/silere" "$(readlink "$t/home/.local/bin/silere")" "use links this checkout"
+    grep -qFx "ExecStart=\"$ROOT/scripts/silere\" run" "$dropin" || fail "drop-in does not start this checkout"
+    grep -qFx "ConditionPathExists=$ROOT/shell.qml" "$dropin" || fail "drop-in kept the old condition"
+    grep -qFx 'systemctl --user daemon-reload' "$t/calls" || fail "use did not reload the units"
+    grep -qFx 'systemctl --user restart silere-shell.service' "$t/calls" || fail "use did not restart the unit"
+    ! grep -q '^kill' "$t/calls" || fail "use killed the unit's shell behind systemd"
+    assert_eq "$ROOT/shell.qml" "$(cat "$t/running")" "the unit now runs this checkout"
+    case "$out" in *"Silere started (pid 99)"*) ;; *) fail "use said: $out" ;; esac
+
+    : > "$t/calls"
+    cli use "$t/other" >/dev/null || fail "use back to the other copy failed"
+    [ ! -e "$dropin" ] || fail "switching back to the unit's own checkout kept the drop-in"
+    assert_eq "$t/other/scripts/silere" "$(readlink "$t/home/.local/bin/silere")" "use links the other copy back"
+    grep -qFx 'other restart' "$t/calls" || fail "use did not hand the restart to the other copy"
+
+    mkdir -p "${dropin%/*}"; printf '[Service]\nExecStart=\nExecStart=/x run\n' > "$dropin"
+    if cli use >/dev/null 2>&1; then fail "use replaced a drop-in it did not write"; fi
+    grep -qFx 'ExecStart=/x run' "$dropin" || fail "use changed a drop-in it did not write"
+)
+
 test_pooled_motion_scope() (
     command -v python3 >/dev/null 2>&1 || return 0
     local fixture="$TMP/pooled-motion" output
@@ -2400,6 +2475,7 @@ test_atomic_units
 test_shared_launcher
 test_cli_restart_and_log
 test_cli_ipc_resolution
+test_cli_use_switches_checkout
 test_pooled_motion_scope
 test_benchmark_json
 test_hook_timeout_contains_tree

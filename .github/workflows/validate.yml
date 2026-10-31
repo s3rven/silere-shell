@@ -20,6 +20,64 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  minimum-quickshell:
+    runs-on: ubuntu-latest
+    container: archlinux:base
+    timeout-minutes: 30
+    steps:
+      - name: Install build and probe dependencies
+        # The minimum runtime needs a compatible Qt too; 0.3.1 does not build on Qt 6.12.
+        # This snapshot supplies Qt 6.9.2 and checks the documented Qt 6.9 floor.
+        run: |
+          pacman -Sy --noconfirm archlinux-keyring
+          # shellcheck disable=SC2016
+          printf 'Server = https://archive.archlinux.org/repos/2025/10/01/$repo/os/$arch\n' > /etc/pacman.d/mirrorlist
+          pacman -Syyuu --noconfirm --ignore archlinux-keyring git cmake ninja gcc pkgconf cli11 qt6-declarative qt6-shadertools qt6-wayland qt6-svg libdrm pipewire wayland wayland-protocols vulkan-headers fontconfig ttf-jetbrains-mono-nerd
+          test "$(pacman -Q qt6-base)" = 'qt6-base 6.9.2-1'
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build the minimum supported Quickshell
+        run: |
+          git clone --depth 1 --branch v0.3.1 https://github.com/quickshell-mirror/quickshell.git /tmp/minimum-quickshell
+          test "$(git -C /tmp/minimum-quickshell rev-parse HEAD)" = 1a4716cde794a59928d9d9fc15f2afc7a95de360
+          cmake -S /tmp/minimum-quickshell -B /tmp/minimum-quickshell/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/minimum-quickshell -DINSTALL_QML_PREFIX=qml -DCRASH_HANDLER=OFF -DUSE_JEMALLOC=OFF -DSERVICE_PAM=OFF -DSERVICE_POLKIT=OFF
+          cmake --build /tmp/minimum-quickshell/build --parallel 4
+          cmake --install /tmp/minimum-quickshell/build
+      - name: Check QML and behavior against the minimum runtime
+        env:
+          PATH: /opt/minimum-quickshell/bin:/usr/local/sbin:/usr/local/bin:/usr/bin
+          QML2_IMPORT_PATH: /opt/minimum-quickshell/qml
+          SILERE_REQUIRE_QML_TOOLS: "1"
+        run: |
+          qs --version
+          bash scripts/test-qml-headless.sh
+          bash dev/test-logic.sh
+
+  compositor-integration:
+    runs-on: ubuntu-latest
+    container: archlinux:base
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        compositor: [kwin, hyprland, niri]
+    steps:
+      - name: Install compositor test dependencies
+        run: |
+          pacman -Syu --noconfirm git quickshell kwin libkscreen dbus mesa libglvnd niri hyprland fontconfig ttf-jetbrains-mono-nerd util-linux
+          useradd --create-home silere-test
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Exercise isolated compositor sessions
+        env:
+          SILERE_TEST_COMPOSITOR: ${{ matrix.compositor }}
+        run: runuser -u silere-test -- bash dev/test-compositors.sh "$SILERE_TEST_COMPOSITOR"
+      - name: Exercise output removal
+        if: matrix.compositor == 'kwin'
+        run: runuser -u silere-test -- bash dev/test-screens.sh
+
   validate:
     runs-on: ubuntu-latest
     container: archlinux:base

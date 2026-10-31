@@ -91,7 +91,16 @@ _report() { # $1 = job, $2 = label, $3 = failure, $4 = pattern for the ok line
 
 _start lint dev/ci-lint.sh
 if [ "$qs_usable" = 1 ]; then
+  # The behavioral logic probe is the only one that drives synthetic key and
+  # mouse input through Qt's TestCase. Its QTestRootObject singleton is built
+  # lazily as the engine starts, and loses that race to a null pointer when
+  # several qs engines cold-start in the same instant; the probe then has no
+  # input driver and never reaches its sentinel inside the wait window. Let it
+  # clear engine startup before the other qs probes pile on. Its run is bound to
+  # ~25s of animation settle windows, so it still overlaps them and the wall
+  # time barely moves.
   _start logic dev/test-logic.sh
+  sleep 4
   _start ui_stress dev/test-ui-stress.sh
   _start surfaces dev/test-surfaces.sh
   _start panels dev/test-panels.sh

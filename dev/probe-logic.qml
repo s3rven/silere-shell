@@ -11,6 +11,7 @@ import Quickshell.Services.SystemTray as St
 import Quickshell.Services.UPower as Up
 import "config"
 import "config/PixelGeometry.js" as PixelGeometry
+import "services/TimeZonePlace.js" as TimeZonePlace
 import "services"
 import "modules/bar"
 import "modules/common"
@@ -82,7 +83,90 @@ ShellRoot {
         }
     }
     Component { id: sliderTrackFactory; SliderTrack {} }
+    Component {
+        id: keyboardFixtureFactory
+        Window {
+            id: fixture
+            width: 420; height: 360; visible: true
+            property int actions: 0
+            property alias button: action
+            property alias toggle: toggle
+            property alias slider: slider
+            property alias select: select
+            property alias input: input
+            ActionButton { id: action; label: "Keyboard action"; onTriggered: fixture.actions++ }
+            ActionButton { y: 36; visible: false; label: "Hidden" }
+            ActionButton { y: 72; enabled: false; label: "Disabled" }
+            ToggleRow { id: toggle; y: 80; width: 400; label: "Keyboard toggle"; onToggled: nextChecked => checked = nextChecked }
+            SliderTrack { id: slider; y: 140; width: 300; height: 24; value: 0.25; step: 0.25; onChanged: value => slider.value = value }
+            SelectRow { id: select; y: 180; width: 400; label: "Keyboard picker"; model: [{value: 1, label: "First"}, {value: 2, label: "Second"}]; currentValue: 1; onChosen: value => currentValue = value }
+            TestCase { id: input; when: false }
+        }
+    }
     Component { id: fadingRimFactory; FadingRim {} }
+    Component {
+        id: listKeyboardWindowFactory
+        Window {
+            id: fixture
+            visible: true
+            width: 320; height: 220
+            property alias list: list
+            property alias input: input
+            property alias outside: outside
+            property bool onlyFirst: false
+            property var entries: [
+                {label: "First", enabled: true}, {label: "Disabled", enabled: false},
+                {label: "Busy", enabled: true, busy: true}, {label: "Last", enabled: true}
+            ]
+            ShellListView {
+                id: list
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
+                height: 160
+                model: fixture.entries
+                reuseItems: true
+                cacheBuffer: 0
+                delegate: InlineOptionRow {
+                    required property int index
+                    required property var modelData
+                    width: list.width
+                    label: modelData.label
+                    enabled: modelData.enabled && (!fixture.onlyFirst || index === 0)
+                    busy: modelData.busy === true
+                }
+            }
+            ActionButton { id: outside; y: 180; label: "Outside list" }
+            TestCase { id: input; when: false }
+        }
+    }
+    Component {
+        id: focusScrollWindowFactory
+        Window {
+            visible: true
+            width: 380; height: 180
+            property alias scroller: scroller
+            property alias button: above
+            property alias editor: editor.item
+            property alias input: input
+            ShellFlickable {
+                id: scroller
+                anchors.fill: parent
+                contentWidth: width
+                contentHeight: editor.y + editor.height + 24
+                ActionButton { id: above; label: "Before editor" }
+                Loader {
+                    id: editor
+                    y: 300
+                    width: scroller.width
+                    Component.onCompleted: setSource("modules/menu/settings/CommandEditor.qml", {
+                        settingKey: "lockCommandCustom", label: "Lock command"
+                    })
+                }
+            }
+            TestCase { id: input; when: false }
+        }
+    }
     Component { id: perimeterFactory; PerimeterProgress { width: 320; height: 100 } }
     Component {
         id: confirmButtonFactory
@@ -90,6 +174,7 @@ ShellRoot {
     }
     Component { id: gradientSliderFactory; GradientSlider {} }
     Component { id: toggleRowFactory; ToggleRow { width: 320; label: "Probe toggle" } }
+    Component { id: systemWidgetFactory; SystemWidget {} }
     Component { id: controlRowFactory; ControlRow { width: 320; title: "Probe control" } }
     Component { id: inlineOptionFactory; InlineOptionRow { width: 320; label: "Probe option" } }
     Component { id: swatchRowFactory; SwatchRow { options: [{ name: "Probe accent" }] } }
@@ -498,6 +583,16 @@ ShellRoot {
             "dependency explanations can wrap beyond two lines instead of losing their reason")
         ShellSettings.reduceMotion = dependencyMotionWas
         toggle.available = true
+        const togglePage = Qt.createQmlObject("import QtQuick\nItem {}", root)
+        const noteRow = toggleRowFactory.createObject(togglePage, { dependsNote: "Needs a helper" })
+        togglePage.enabled = false
+        root._check(!noteRow.enabled && !noteRow._showDependsNote,
+            "a page disabled for its transition does not flash a row's dependency note")
+        togglePage.enabled = true
+        noteRow.blocked = true
+        root._check(!noteRow.enabled && noteRow._showDependsNote,
+            "a row that refuses on its own explains why")
+        togglePage.destroy()
         toggle.Accessible.pressAction()
         root._check(ShellSettings.showSeconds && toggle.checked,
             "accessible checkbox press and toggle actions share the settings path")
@@ -1180,6 +1275,232 @@ ShellRoot {
         for (const n of [same, plain, other, next]) n.destroy()
     }
 
+    function _checkThreadFolding(): void {
+        // transient: the folded fixtures stay out of the real history
+        const make = (id, app, summary, body) => ({
+            id: id, appName: app, summary: summary, body: body, urgency: 1, hints: {},
+            tracked: true, transient: true, expire() { this.tracked = false }
+        })
+        const listWas = Notifications.list
+        const groupWas = ShellSettings.notifGroupThreads
+        const replyingWas = Notifications.replyingId
+        ShellSettings.notifGroupThreads = true
+        Notifications.replyingId = -1
+
+        const a1 = make(9101, "Chat", "Alex", "one"), mail = make(9102, "Mail", "Alex", "other app")
+        const a2 = make(9103, "Chat", "Alex", "two\n  lines"), a3 = make(9104, "Chat", "Alex", "three")
+        const crit = make(9105, "Chat", "Alex", "urgent"), tagged = make(9106, "Chat", "Alex", "tagged")
+        const progress = make(9107, "Chat", "Alex", "50%"), blank = make(9108, "Chat", "", "no sender")
+        crit.urgency = 2
+        tagged.hints = { "x-dunst-stack-tag": "alex" }
+        progress.hints = { "value": 50 }
+        root._check(Notifications.threadKeyOf(a1) === Notifications.threadKeyOf(a3)
+                && Notifications.threadKeyOf(a1) !== Notifications.threadKeyOf(mail)
+                && Notifications.threadKeyOf(crit) === "" && Notifications.threadKeyOf(tagged) === ""
+                && Notifications.threadKeyOf(progress) === "" && Notifications.threadKeyOf(blank) === ""
+                && Notifications.threadKeyOf(null) === "",
+            "a thread is one app and sender, never a critical, stack-tagged, progress or unnamed card")
+
+        Notifications.list = [a1, mail, a2].map((n, i) => ({ notification: n, id: n.id, time: 1000 + i }))
+        let foldedIn = []
+        const watch = ids => { foldedIn = ids }
+        Notifications.threadFoldedInPlace.connect(watch)
+        const folded = Notifications._foldThread(a3)
+        const thread = Notifications.threadFor(a3.id)
+        root._check(folded && Notifications.list.length === 1 && Notifications.list[0].id === 9102
+                && !a1.tracked && !a2.tracked && mail.tracked
+                && thread && thread.count === 3 && thread.lines.length === 2
+                && thread.lines[0] === "one" && thread.lines[1] === "two lines",
+            "a new message folds the same sender's cards into one thread, oldest line first, and leaves other apps alone")
+        root._check(foldedIn.length === 2 && foldedIn.indexOf("9103") >= 0,
+            "folding the newest card on screen is announced so the stack replaces it in place")
+
+        const a4 = make(9109, "Chat", "Alex", "four")
+        Notifications.list = [{ notification: a3, id: a3.id, time: 1003 }]
+        Notifications.replyingId = a3.id
+        root._check(!Notifications._foldThread(a4) && a3.tracked,
+            "a card with an open reply is never folded away under the person typing")
+        Notifications.replyingId = -1
+        foldedIn = []
+        root._check(Notifications._foldThread(a4) && !a3.tracked
+                && Notifications.threadFor(a4.id).count === 4
+                && Notifications.threadFor(a4.id).lines.join("|") === "one|two lines|three"
+                && Notifications.threadFor(a3.id) === null,
+            "a thread carries its count forward, keeps its last three lines, and drops the folded card's state")
+
+        const a5 = make(9110, "Chat", "Alex", "five")
+        Notifications.list = [{ notification: a4, id: a4.id, time: 1004 }]
+        ShellSettings.notifGroupThreads = false
+        root._check(!Notifications._foldThread(a5) && a4.tracked,
+            "with grouping off every message keeps its own card")
+        Notifications._forgetState(a4.id)
+        root._check(Notifications.threadFor(a4.id) === null,
+            "forgetting a notification forgets its thread")
+
+        const mutedWas = ShellSettings.notifMutedApps
+        const bypassWas = ShellSettings.notifCriticalBypass
+        ShellSettings.notifMutedApps = ""
+        ShellSettings.setNotifAppMuted("Team, Inc.", true)
+        ShellSettings.setNotifAppMuted("Chat", true)
+        ShellSettings.setNotifAppMuted("Chat", true)
+        root._check(ShellSettings.notifMutedAppNames.length === 2
+                && ShellSettings.notifAppMuted("Team, Inc.") && !ShellSettings.notifAppMuted("Team")
+                && ShellSettings._coerced(ShellSettings.schemaFor("notifMutedApps"), ShellSettings.notifMutedApps).ok,
+            "muted app names round-trip through the stored list, commas included, without duplicates")
+        ShellSettings.notifCriticalBypass = true
+        root._check(Notifications.mutesPopup(a1)
+                && !Notifications.mutesPopup(mail) && !Notifications.mutesPopup(null),
+            "a muted app's popups are held back, other apps are not")
+        root._check(!Notifications.mutesPopup(crit),
+            "a critical alert from a muted app follows the same bypass as do not disturb")
+        ShellSettings.notifCriticalBypass = false
+        root._check(Notifications.mutesPopup(crit),
+            "without the critical bypass a muted app stays muted")
+        ShellSettings.setNotifAppMuted("Chat", false)
+        root._check(!Notifications.mutesPopup(a1) && ShellSettings.notifAppMuted("Team, Inc."),
+            "unmuting one app leaves the others muted")
+        ShellSettings.notifCriticalBypass = bypassWas
+        ShellSettings.notifMutedApps = mutedWas
+
+        Notifications.threadFoldedInPlace.disconnect(watch)
+        for (const n of [a1, a2, a3]) Notifications._consumeClosing(n.id, n)
+        Notifications._forgetTrimmed(["9101", "9103", "9104", "9109", "9110"])
+        Notifications.list = listWas
+        Notifications.replyingId = replyingWas
+        ShellSettings.notifGroupThreads = groupWas
+    }
+
+    function _checkAccentPills(): void {
+        const was = ShellSettings.barAccentPills
+        const pill = pillFactory.createObject(root, { text: "48%", glyphColor: Theme.text })
+        ShellSettings.barAccentPills = false
+        root._check(Qt.colorEqual(pill._restGlyphColor, Theme.text),
+            "bar icons rest at the neutral text colour by default")
+        ShellSettings.barAccentPills = true
+        root._check(Qt.colorEqual(pill._restGlyphColor, Theme.barAccent)
+                && Qt.colorEqual(pill.textColor, Theme.subtext),
+            "accent widget icons tint the glyph and leave the text alone")
+        pill.glyphColor = Theme.subtext
+        const inactive = Qt.colorEqual(pill._restGlyphColor, Theme.subtext)
+        pill.glyphColor = Theme.warning
+        const warning = Qt.colorEqual(pill._restGlyphColor, Theme.warning)
+        pill.glyphColor = Theme.error
+        root._check(inactive && warning && Qt.colorEqual(pill._restGlyphColor, Theme.error),
+            "accent widget icons keep inactive, warning and error glyphs meaningful")
+        pill.destroy()
+        ShellSettings.barAccentPills = was
+    }
+
+    function _checkSystemWidget(): void {
+        const was = {
+            show: ShellSettings.barShowSystem, cpu: ShellSettings.systemShowCpu,
+            mem: ShellSettings.systemShowMemory, temp: ShellSettings.systemShowTemp,
+            ready: SysInfo.cpuReady, pct: SysInfo.cpuPct, total: SysInfo.memTotalKb, avail: SysInfo.memAvailKb,
+            hoverValues: ShellSettings.valuesOnHover
+        }
+        ShellSettings.valuesOnHover = false
+        // off, so SysInfo stays inactive and keeps the readings written here
+        ShellSettings.barShowSystem = false
+        ShellSettings.systemShowCpu = true
+        ShellSettings.systemShowMemory = true
+        ShellSettings.systemShowTemp = false
+        SysInfo.cpuReady = true
+        SysInfo.cpuPct = 0.14
+        SysInfo.memTotalKb = 32 * 1048576
+        SysInfo.memAvailKb = 32 * 1048576 * 0.68
+        const w = systemWidgetFactory.createObject(barFixtureHost)
+        root._check(w.text === "14%  󰘚 32%" && w.glyph === "󰍛" && w.severity === 0
+                && w._parts[1].detail === "10 GB of 32 GB",
+            "the system monitor reads CPU then memory, with the amounts on hover")
+        root._check(w.reserveText === "00%  󰘚 00%",
+            "the monitor reserves two digits per reading so ticking values keep its width")
+        SysInfo.cpuPct = 0.95
+        const single = w.severity === 0
+        SysInfo.cpuPct = 0.96
+        const rose = w.severity === 1
+        SysInfo.cpuPct = 0.80
+        const held = w.severity === 1
+        SysInfo.cpuPct = 0.60
+        root._check(single && rose && held && w.severity === 0,
+            "a sustained busy CPU tints the monitor, one spike does not, and it lets go only well below")
+        SysInfo.memAvailKb = 32 * 1048576 * 0.03
+        root._check(w.severity === 2 && Qt.colorEqual(w.glyphColor, Theme.error),
+            "nearly full memory turns the monitor red")
+        ShellSettings.systemShowCpu = false
+        root._check(w.glyph === "󰘚" && w.text === "97%",
+            "with CPU off the monitor leads with memory")
+        SysInfo.cpuReady = false
+        ShellSettings.systemShowCpu = true
+        root._check(w.text.startsWith("—") && w.severity === 2,
+            "a CPU reading not yet sampled shows a dash rather than a stale value")
+        ShellSettings.valuesOnHover = true
+        root._check(w.text === "" && w.glyph === "󰍛",
+            "with values on hover the monitor rests as its glyph, still tinted")
+        w.destroy()
+        ShellSettings.valuesOnHover = was.hoverValues
+        ShellSettings.barShowSystem = was.show
+        ShellSettings.systemShowCpu = was.cpu
+        ShellSettings.systemShowMemory = was.mem
+        ShellSettings.systemShowTemp = was.temp
+        SysInfo.cpuReady = was.ready
+        SysInfo.cpuPct = was.pct
+        SysInfo.memTotalKb = was.total
+        SysInfo.memAvailKb = was.avail
+    }
+
+    function _checkAppHandoffs(): void {
+        const toolsWas = SystemTools._tools
+        SystemTools._tools = { kitty: true, btop: true, nmtui: true }
+        root._check(Settings.systemMonitorCommand.join(" ") === "kitty btop"
+                && Settings.networkSettingsCommand.join(" ") === "kitty nmtui",
+            "without xdg-terminal-exec a terminal app opens in the first common terminal found")
+        SystemTools._tools = { "xdg-terminal-exec": true, kitty: true, htop: true, missioncenter: true }
+        root._check(Settings.systemMonitorCommand.join(" ") === "missioncenter"
+                && Settings.inTerminal(["htop"]).join(" ") === "xdg-terminal-exec htop",
+            "a desktop system monitor wins, and xdg-terminal-exec keeps the user's own terminal")
+        SystemTools._tools = { btop: true }
+        root._check(Settings.systemMonitorCommand.length === 0 && Settings.inTerminal(["btop"]).length === 0,
+            "a terminal monitor with no terminal to host it offers no action")
+        SystemTools._tools = toolsWas
+    }
+
+    function _checkWeather(): void {
+        const codes = [0, 1, 2, 3, 45, 48, 51, 53, 55, 56, 57, 61, 63, 65, 66, 67,
+            71, 73, 75, 77, 80, 81, 82, 85, 86, 95, 96, 99]
+        root._check(codes.every(c => Weather.conditionFor(c).length > 0
+                && Weather.glyphFor(c, true).length > 0 && Weather.glyphFor(c, false).length > 0)
+                && Weather.conditionFor(4) === "" && Weather.glyphFor(-1, true) === "",
+            "every WMO code Open-Meteo reports has a label and a day and night glyph")
+        root._check(Weather.glyphFor(0, true) !== Weather.glyphFor(0, false),
+            "a clear night does not show the sun")
+
+        const reading = Weather.parseForecast({ current: { temperature_2m: 8.6, weather_code: 3, is_day: 0 },
+            daily: { temperature_2m_max: [11.4], temperature_2m_min: [7.5] } })
+        root._check(reading && reading.temperature === 9 && reading.code === 3
+                && reading.high === 11 && reading.low === 8 && reading.isDay === false,
+            "a forecast reads as rounded current, high and low temperatures with the day flag")
+        root._check(Weather.parseForecast(null) === null
+                && Weather.parseForecast({ current: { temperature_2m: "9", weather_code: 3 },
+                    daily: { temperature_2m_max: [11], temperature_2m_min: [7] } }) === null
+                && Weather.parseForecast({ current: { temperature_2m: 9, weather_code: 3 },
+                    daily: { temperature_2m_max: [], temperature_2m_min: [7] } }) === null,
+            "a partial or malformed forecast is rejected rather than shown")
+
+        const url = Weather.forecastUrl(56.9496, 24.1052, true)
+        root._check(url.startsWith("https://api.open-meteo.com/") && url.indexOf("latitude=56.95") > 0
+                && url.indexOf("longitude=24.11") > 0 && url.indexOf("temperature_unit=fahrenheit") > 0
+                && Weather.forecastUrl(1, 2, false).indexOf("temperature_unit") < 0,
+            "requests send rounded coordinates over https")
+
+        const line = TimeZonePlace.parseLine("+5657+02406\tEurope/Riga\n")
+        root._check(line && Math.abs(line.lat - 56.95) < 0.001 && Math.abs(line.lon - 24.1) < 0.001
+                && line.zone === "Europe/Riga" && TimeZonePlace.parseLine("garbage") === null
+                && TimeZonePlace.placeName("America/Argentina/Buenos_Aires") === "Buenos Aires",
+            "the time zone lookup yields coordinates and a readable city name")
+        root._check(!Weather.enabled && !Weather.loading && !Weather.hasData,
+            "weather stays idle while it is switched off")
+    }
+
     function _checkPillTextBaseline(): void {
         let mismatched = []
         for (let h = 28; h <= 44; h++) {
@@ -1653,6 +1974,11 @@ ShellRoot {
         root._checkPowerRail()
         root._checkPillTextBaseline()
         root._checkStackTags()
+        root._checkThreadFolding()
+        root._checkWeather()
+        root._checkAccentPills()
+        root._checkSystemWidget()
+        root._checkAppHandoffs()
         root._checkBluetoothPairing()
         root._checkConnectivityConfirmations()
         root._checkMenuContrast()
@@ -1876,7 +2202,7 @@ ShellRoot {
         root._check(ShellSettings._defaults.barWidgetOrderLeft === "workspaces,media"
                 && ShellSettings._defaults.barWidgetOrderCenter === "windowTitle"
                 && ShellSettings._defaults.barWidgetOrderRight
-                    === "shellUpdate,tray,updates,network,bluetooth,volume,microphone,brightness,battery,clock",
+                    === "shellUpdate,tray,updates,system,network,bluetooth,keyboard,volume,microphone,brightness,battery,clock",
             "the widget catalog derives the shipped default layout")
 
         const workspaceStrip = workspaceStripFactory.createObject(root)
@@ -2209,6 +2535,21 @@ ShellRoot {
         root._check(!pill.hoverEnabled && !pill.hoverActive,
             "a disabled pill clears hover state even without a pointer exit")
         pill.enabled = true
+        {
+            const hoverRow = pill.children.find(item => typeof item.forceLayout === "function")
+            pill.shrinkDelay = 2400
+            pill.text = Qt.binding(() => pill.expanded ? "English (US)" : "us")
+            pill.hoverActive = true
+            hoverRow.forceLayout()
+            const revealedW = pill.rowWidth
+            root._check(pill.expanded && pill._minW >= revealedW,
+                "a hover reveal widens the pill to its full label")
+            pill.hoverActive = false
+            hoverRow.forceLayout()
+            root._check(!pill.expanded && pill._minW <= pill.rowWidth && pill.rowWidth < revealedW,
+                "a hover reveal closes without holding the wide label's width")
+            pill.shrinkDelay = 600
+        }
         pill.text = "A current label"
         pill.animateText = true
         root._check(root._showsText(pill, "A current label"),
@@ -2465,6 +2806,19 @@ ShellRoot {
             "a fractional visualizer resize cannot reuse gradients from the old bounds")
         root._check(edgeContext.globalCompositeOperation === "source-over",
             "audio edge fading restores the normal compositing mode")
+        visualizer.width = 200
+        visualizer.followRim = true
+        visualizer.rimRadius = 16
+        visualizer.rimInset = 3
+        visualizer._fadeEdges(edgeContext)
+        root._check(edgeGradients.length === 8 && edgeGradients[6].start === 3 && edgeGradients[6].end === 15
+                && edgeGradients[7].start === 185 && edgeGradients[7].end === 197,
+            "a rim spectrum fades over its corner arcs, measured from the surface edge, not the canvas")
+        root._check(visualizer._taper(10, 10, 190) === 0 && visualizer._taper(190, 10, 190) === 0
+                && visualizer._taper(100, 10, 190) === 1,
+            "the rim spectrum rests on the edge where the straight run meets each arc")
+        visualizer.rimRadius = 400
+        root._check(visualizer._rimR() === 97, "a rim radius never exceeds half the surface")
         visualizer.destroy()
 
         const glowComponent = Qt.createComponent("modules/bar/GlowLine.qml")
@@ -2866,6 +3220,19 @@ ShellRoot {
         confirmButton.request()
         root._check(!confirmButton.armed && root._confirmActions === 1,
             "a deliberate second request confirms exactly once")
+        confirmButton.request()
+        confirmButton._armLeft = 0.2
+        confirmButton.disarm()
+        confirmButton.request()
+        root._check(confirmButton.armed && confirmButton._armLeft === 1 && root._confirmActions === 1,
+            "rearming starts the confirmation window full again")
+        confirmButton.disarm()
+        confirmButton.needsConfirm = false
+        confirmButton.request()
+        root._check(!confirmButton.armed && root._confirmActions === 2,
+            "a button for an action nothing is lost to fires on the first request")
+        confirmButton.needsConfirm = true
+        root._confirmActions = 1
         confirmButton.shown = false
         confirmButton.request()
         root._check(!confirmButton.armed && !confirmButton._interactive
@@ -3072,7 +3439,7 @@ ShellRoot {
         root._checkCoerce("barHeight", "tall", 36, "a non-numeric int is refused")
         root._checkCoerce("barHeight", 30, 32, "a stepped int snaps to its grid")
         root._checkCoerce("barGap", 5, 4, "the edge gap snaps to the 4px grid")
-        root._checkCoerce("uiScale", 9e99, 1.15, "an over-range real clamps to its maximum")
+        root._checkCoerce("uiScale", 9e99, 1.5, "an over-range real clamps to its maximum")
         root._checkCoerce("uiScale", null, 1.0, "a null real is refused")
         root._checkCoerce("barPosition", "sideways", "top", "an unknown enum value is refused")
         root._checkCoerce("barPosition", "bottom", "bottom", "a known enum value is accepted")
@@ -3117,6 +3484,10 @@ ShellRoot {
         }
         root._check(migrationGapThrew && migrationGapValue === null,
             "a missing migration step throws instead of returning a half-migrated value")
+        const migrationRollback = SettingsMigrations.migrate({ uiScale: 1.5, notifMutedApps: "Slack" }, 1, 2)
+        root._check(migrationRollback.version === 2 && migrationRollback.value.uiScale === 1.5
+                && migrationRollback.value.notifMutedApps === "Slack",
+            "the 1.5 schema step only marks the file, so a rollback to 1.4 keeps what it cannot read")
         const migrationHeld = SettingsMigrations.migrate({ barHeight: 40 }, 1, 1)
         root._check(migrationHeld.applied.length === 0
                 && migrationHeld.version === 1
@@ -3484,10 +3855,6 @@ ShellRoot {
 
         const historySchema = ShellSettings.schemaFor("notifHistoryLimit")
         root._check(historySchema !== null && historySchema.max === 100,
-        const migrationRollback = SettingsMigrations.migrate({ uiScale: 1.5, notifMutedApps: "Slack" }, 1, 2)
-        root._check(migrationRollback.version === 2 && migrationRollback.value.uiScale === 1.5
-                && migrationRollback.value.notifMutedApps === "Slack",
-            "the 1.5 schema step only marks the file, so a rollback to 1.4 keeps what it cannot read")
             "the notification history limit still declares a schema ceiling")
         root._check(Notifications._capacityFor(20, 100, false) === 100
                 && Notifications._capacityFor(20, 100, true) === 20,
@@ -3596,6 +3963,29 @@ ShellRoot {
                     && nav._countFor("__proto__") === 3
                     && nav._appFor("missing sender") === null,
                 "indexed app counts preserve literal sender identities and missing results")
+            const railRows = () => {
+                const rows = {}
+                const walk = item => {
+                    if (typeof item.modelData === "string" && item.isAll !== undefined) rows[item.modelData] = item
+                    for (const child of item.children) walk(child)
+                }
+                walk(nav)
+                return rows
+            }
+            nav._names = ["", "Alpha", "Beta", "Gamma"]
+            const railBefore = railRows()
+            nav._names = ["", "Gamma", "Alpha", "Beta"]
+            const railAfter = railRows()
+            root._check(railBefore["Alpha"] && railAfter["Alpha"] === railBefore["Alpha"]
+                    && railAfter["Gamma"] === railBefore["Gamma"],
+                "a sender moving up the app rail keeps every row, so icons and focus survive")
+            railAfter["Alpha"].parent.forceLayout()
+            root._check(railAfter["Gamma"].y < railAfter["Alpha"].y && railAfter["Alpha"].y < railAfter["Beta"].y,
+                "the app rail draws its rows in the new order")
+            nav._names = ["", "Gamma", "Beta"]
+            const railRemoved = railRows()
+            root._check(railRemoved["Alpha"] === undefined && railRemoved["Beta"] === railBefore["Beta"],
+                "a sender leaving the app rail takes only its own row")
             nav.destroy()
         }
 
@@ -4354,6 +4744,18 @@ ShellRoot {
             root._check(afterV1 === tickWas && hypr._layoutTick === tickWas + 1,
                 "a workspace switch rebuilds the models once, on the v2 event only")
             hypr._eventSeq = seqWas
+            root._check(hypr._workspaceId({ id: 3, name: "3" }) === 3
+                    && hypr._workspaceId({ id: -1, name: "mail" }) === hypr.namedWorkspaceId
+                    && hypr.namedWorkspaceId < -1337
+                    && hypr._workspaceId({ id: -1340, name: "mail" }) === -1340
+                    && hypr._workspaceId({ id: -1, name: "" }) === -1
+                    && hypr._workspaceId(null) === -1,
+                "a 0.57 named workspace reads as named, and only a missing one as no data")
+            const onNamed = { ref: "0xa", wsId: hypr.namedWorkspaceId, wsRef: hypr.namedWorkspaceId, focusRank: 2 }
+            const noWorkspace = { ref: "0xb", wsId: -1, wsRef: -1, focusRank: 0 }
+            root._check(WindowActions._chooseSource([noWorkspace, onNamed]) === onNamed
+                    && WindowActions._chooseSource([noWorkspace]) === null,
+                "a window on a named or special workspace can be found, and one on no workspace cannot")
             root._check(hypr._wsNumber({ id: 3, name: "3" }) === 3
                     && hypr._wsNumber({ id: -98, name: "special:magic" }) === -98
                     && hypr._wsNumber({ address: "4", name: "4" }) === 4
@@ -4463,7 +4865,11 @@ ShellRoot {
             titleWidget.layoutWidthLimit = 0
             root._check(titleWidget._naturalWidth === 0 && titleWidget._measuredContentWidth === 0,
                 "a title can yield all of its space without retaining padding over adjacent controls")
-            titleWidget.destroy()
+            titleWidget.barActive = false
+        root._check(!titleWidget._widthGlide._motionAllowed && !titleWidget._widthGlide.running,
+            "a title under the overview does not run its per-frame width glide")
+        titleWidget.barActive = true
+        titleWidget.destroy()
         }
 
         const mediaComponent = Qt.createComponent("modules/bar/widgets/MediaWidget.qml")
@@ -4699,7 +5105,27 @@ ShellRoot {
             ? homeComponent.createObject(root, { width: 332, active: false, powerOpen: false }) : null
         root._check(home !== null && home.implicitHeight > 0,
             "the home page builds as one column")
-        if (home) home.destroy()
+        if (home) {
+            const host = keyboardFixtureFactory.createObject(root)
+            home.parent = host.contentItem
+            const vpn = root._findTrayNode(home, item => item.title === "VPN" && item.expandable !== undefined)
+            const addressWas = Network.vpnAddress
+            Network.vpnAddress = ""
+            home.active = true
+            home.settleVisual(true)
+            if (vpn) {
+                // The fixture has no NetworkManager; reveal its connectivity group explicitly.
+                for (let item = vpn; item && item !== home; item = item.parent) item.visible = true
+                vpn.expandable = true
+                vpn.Accessible.pressAction()
+            }
+            root._check(vpn && vpn._canTap && home._picker === "vpn",
+                "the disconnected VPN row opens its saved-profile picker through the normal action")
+            Network.vpnAddress = addressWas
+            home.destroy()
+            host.close()
+            host.destroy()
+        }
         root._check(MenuState.tabPosition(MenuState.mediaTab) === 3
                 && MenuState._validTab(MenuState.mediaTab) === MenuState.mediaTab
                 && MenuState.mediaActive === (MenuState.open && MenuState.activeTab === MenuState.mediaTab)
@@ -4748,18 +5174,6 @@ ShellRoot {
         root._check(Media.nextLoopState(L.None) === L.Playlist
                 && Media.nextLoopState(L.Playlist) === L.Track
                 && Media.nextLoopState(L.Track) === L.None,
-            root._check(hypr._workspaceId({ id: 3, name: "3" }) === 3
-                    && hypr._workspaceId({ id: -1, name: "mail" }) === hypr.namedWorkspaceId
-                    && hypr.namedWorkspaceId < -1337
-                    && hypr._workspaceId({ id: -1340, name: "mail" }) === -1340
-                    && hypr._workspaceId({ id: -1, name: "" }) === -1
-                    && hypr._workspaceId(null) === -1,
-                "a 0.57 named workspace reads as named, and only a missing one as no data")
-            const onNamed = { ref: "0xa", wsId: hypr.namedWorkspaceId, wsRef: hypr.namedWorkspaceId, focusRank: 2 }
-            const noWorkspace = { ref: "0xb", wsId: -1, wsRef: -1, focusRank: 0 }
-            root._check(WindowActions._chooseSource([noWorkspace, onNamed]) === onNamed
-                    && WindowActions._chooseSource([noWorkspace]) === null,
-                "a window on a named or special workspace can be found, and one on no workspace cannot")
             "repeat cycles off, all, then one track")
         const firstMember = stableListMemberFactory.createObject(root)
         const secondMember = stableListMemberFactory.createObject(root)
@@ -5285,6 +5699,38 @@ ShellRoot {
         SysInfo._applyMeminfo("MemTotal: 100 kB\n")
         root._check(SysInfo.memTotalKb === 0 && SysInfo.memPct === 0,
             "missing memory fields retire the previous reading")
+        const swapWas = [SysInfo.swapTotalKb, SysInfo.swapUsedKb, SysInfo.memPressure, SysInfo._memStalled]
+        const pressureLine = value => "some avg10=" + value + " avg60=0.00 avg300=0.00 total=1943\n"
+            + "full avg10=99.00 avg60=0.00 avg300=0.00 total=1662\n"
+        SysInfo._applyPressure(pressureLine("0.00"))
+        SysInfo._applyMeminfo("MemTotal: 16000000 kB\nMemAvailable: 9000000 kB\n"
+            + "SwapCached: 900000 kB\nSwapTotal: 16000000 kB\nSwapFree: 14000000 kB\n")
+        root._check(SysInfo.swapUsedKb === 2000000 && !SysInfo.swapActive,
+            "swap sitting in zram with nothing stalled stays out of the memory line")
+        SysInfo._applyPressure(pressureLine("12.50"))
+        root._check(SysInfo.memPressure === 12.5 && SysInfo.swapActive,
+            "swap shows once the kernel reports tasks stalled on memory")
+        SysInfo._applyPressure(pressureLine("6.00"))
+        const heldWhileEasing = SysInfo.swapActive
+        SysInfo._applyPressure(pressureLine("4.99"))
+        root._check(heldWhileEasing && !SysInfo.swapActive,
+            "a stall holds the swap figure until the pressure has really eased")
+        SysInfo._applyPressure(pressureLine("6.00"))
+        root._check(!SysInfo.swapActive,
+            "easing pressure alone does not bring the swap figure back")
+        SysInfo._applyPressure(pressureLine("50.00"))
+        SysInfo._applyPressure("")
+        root._check(SysInfo.memPressure === 0 && !SysInfo.swapActive,
+            "a kernel without pressure accounting leaves swap unreported")
+        SysInfo._applyPressure(pressureLine("50.00"))
+        SysInfo._applyMeminfo("MemTotal: 16000000 kB\nMemAvailable: 9000000 kB\n"
+            + "SwapTotal: 0 kB\nSwapFree: 0 kB\n")
+        root._check(SysInfo.swapUsedKb === 0 && !SysInfo.swapActive,
+            "memory pressure on a machine with no swap names no swap figure")
+        SysInfo.swapTotalKb = swapWas[0]
+        SysInfo.swapUsedKb = swapWas[1]
+        SysInfo.memPressure = swapWas[2]
+        SysInfo._memStalled = swapWas[3]
         SysInfo.memTotalKb = memTotalWas
         SysInfo.memAvailKb = memAvailWas
         SysInfo._active = cpuActiveWas
@@ -5490,6 +5936,23 @@ ShellRoot {
         niri._onLine(JSON.stringify({ OverviewOpenedOrClosed: { is_open: false } }))
         root._check(overviewOpened && !niri.overviewActive,
             "the niri overview flag follows the event both ways")
+
+        niri._onLine(JSON.stringify({ KeyboardLayoutsChanged: { keyboard_layouts: {
+            names: ["English (US)", "Latvian"], current_idx: 0
+        }}}))
+        niri._onLine(JSON.stringify({ KeyboardLayoutSwitched: { idx: 1 } }))
+        root._check(niri.keyboardLayout === "Latvian", "niri layout events update the active input language")
+        const sharingEvents = []
+        niri.sharingState.connect(active => sharingEvents.push(active))
+        niri._onLine(JSON.stringify({ CastsChanged: { casts: [] } }))
+        niri._onLine(JSON.stringify({ CastStartedOrChanged: { cast: { stream_id: 1 } } }))
+        niri._onLine(JSON.stringify({ CastStartedOrChanged: { cast: { stream_id: 1 } } }))
+        niri._onLine(JSON.stringify({ CastStartedOrChanged: { cast: { stream_id: 2 } } }))
+        niri._onLine(JSON.stringify({ CastStopped: { stream_id: 1 } }))
+        root._check(niri.sharingSupported && niri._castIds.length === 1 && sharingEvents[sharingEvents.length - 1],
+            "niri sharing counts streams by identity and stays private while another cast is active")
+        niri._onLine(JSON.stringify({ CastStopped: { stream_id: 2 } }))
+        root._check(!sharingEvents[sharingEvents.length - 1], "niri sharing ends when its last stream stops")
 
         niri._overview = true
         niri._titleSyncTimer.start()
@@ -6189,6 +6652,234 @@ ShellRoot {
         ShellSettings.notifScreenShareSilence = shareSilenceWas
         Compositor.screenSharing = shareWas
 
+        root._check(!Notifications.allowsPopup(true, false, false, true, true)
+                && !Notifications.allowsPopup(false, false, false, true, true)
+                && Notifications.allowsPopup(true, true, true, false, true)
+                && !Notifications.allowsPopup(true, true, false, false, false),
+            "presentation privacy suppresses every app urgency independently of quiet-hours bypass")
+        Notifications.presentationMode = true
+        root._check(Notifications.screenShareSilenced && Notifications.activeCount === 0,
+            "manual presentation mode hides and retires existing popup state on either compositor")
+        Notifications.presentationMode = false
+        root._check(Notifications.activeCount === 0,
+            "ending presentation mode does not replay retired notification cards")
+
+        const keyboard = keyboardFixtureFactory.createObject(root)
+        keyboard.input.wait(1)
+        const railComponent = Qt.createComponent("file://" + Quickshell.shellDir + "/modules/menu/RailNavItem.qml")
+        const railItem = railComponent.status === Component.Ready
+            ? railComponent.createObject(keyboard.toggle.parent, { glyph: "a", label: "Settings" }) : null
+        root._check(railItem !== null, "a rail item is available to the behavior probe")
+        if (railItem !== null) {
+            const railPill = root._findTrayNode(railItem, item => item._keyboardFocus !== undefined)
+            railItem.forceActiveFocus(Qt.TabFocusReason)
+            const shownByTab = railItem.activeFocus && railPill._show
+            railItem.labelPillEnabled = false
+            const hiddenInDrawer = !railPill._show
+            railItem.labelPillEnabled = true
+            keyboard.toggle.forceActiveFocus(Qt.TabFocusReason)
+            const hiddenAfterLeave = !railPill._show
+            root._check(shownByTab && hiddenInDrawer && hiddenAfterLeave,
+                "a rail icon reached by keyboard names itself, unless the drawer already does")
+            keyboard.input.mouseMove(railItem, 10, 10)
+            keyboard.input.wait(120)
+            const railHoverWorked = railItem.hovered
+            railItem.forceActiveFocus(Qt.MouseFocusReason)
+            keyboard.input.mouseMove(keyboard.slider, 10, 10)
+            keyboard.input.wait(120)
+            root._check(railHoverWorked && railItem.activeFocus && !railItem.hovered && !railPill._show,
+                "a rail icon focused by the pointer does not pin its label open")
+            railItem.destroy()
+        }
+        const powerComponent = Qt.createComponent("file://" + Quickshell.shellDir + "/modules/menu/PowerRailRow.qml")
+        const powerFirst = powerComponent.createObject(keyboard.toggle.parent, { width: 200, label: "Lock" })
+        const powerSecond = powerComponent.createObject(keyboard.toggle.parent, { width: 200, y: 40, label: "Sleep" })
+        keyboard.input.wait(1)
+        powerFirst.forceActiveFocus(Qt.TabFocusReason)
+        keyboard.input.keyClick(Qt.Key_Down)
+        root._check(powerSecond.activeFocus, "arrow keys walk the power drawer like the rest of the rail")
+        powerFirst.destroy()
+        powerSecond.destroy()
+        keyboard.requestActivate()
+        keyboard.input.wait(80)
+        keyboard.button.forceActiveFocus(Qt.TabFocusReason)
+        keyboard.input.keyClick(Qt.Key_Return)
+        root._check(keyboard.actions === 1 && keyboard.button.activeFocusOnTab,
+            "a real Enter key activates the shared button through its normal action")
+        const keyOwner = root._findTrayNode(keyboard.button, item => item.canInteract !== undefined && item.handleKey !== undefined)
+        keyOwner.interactive = false
+        keyboard.input.wait(1)
+        root._check(!keyboard.button.activeFocus && !keyboard.button.activeFocusOnTab,
+            "a control that becomes inert releases keyboard focus and its tab stop")
+        keyboard.input.keyClick(Qt.Key_Tab)
+        root._check(keyboard.toggle.activeFocus,
+            "Tab skips hidden and disabled controls and focuses the next usable row")
+        keyboard.input.keyClick(Qt.Key_Space)
+        root._check(keyboard.toggle.checked, "Space toggles the focused setting")
+        keyboard.slider.forceActiveFocus(Qt.TabFocusReason)
+        keyboard.input.keyClick(Qt.Key_Right)
+        root._check(keyboard.slider.value === 0.5, "arrow keys adjust the focused slider by its own step")
+        keyboard.input.keyClick(Qt.Key_End)
+        root._check(keyboard.slider.value === 1, "End reaches the slider maximum")
+        keyboard.select.forceActiveFocus(Qt.TabFocusReason)
+        keyboard.input.keyClick(Qt.Key_Return)
+        keyboard.input.keyClick(Qt.Key_Down)
+        keyboard.input.keyClick(Qt.Key_Return)
+        root._check(keyboard.select.currentValue === 2 && !keyboard.select._open,
+            "Enter and arrows choose an inline picker option without a pointer")
+        keyboard.select.model = Array.from({ length: 40 }, (_, i) => ({ value: i, label: "Option " + i }))
+        keyboard.select.currentValue = 17
+        keyboard.input.mouseClick(keyboard.select, 20, keyboard.select._headerH / 2)
+        keyboard.select.forceActiveFocus(Qt.TabFocusReason)
+        keyboard.input.keyClick(Qt.Key_Return)
+        root._check(keyboard.select.currentValue === 17 && !keyboard.select._open,
+            "Enter after opening a dropdown by pointer keeps its selected option")
+        keyboard.select.currentValue = 0
+        keyboard.select.forceActiveFocus(Qt.TabFocusReason)
+        keyboard.input.keyClick(Qt.Key_Return)
+        keyboard.input.wait(Motion.normal + 60)
+        const typedList = root._findTrayNode(keyboard.select, item => typeof item.positionViewAtIndex === "function")
+        keyboard.input.keyClick(Qt.Key_End)
+        const reachedEnd = typedList.currentIndex === 39
+        keyboard.input.keyClick(Qt.Key_Home)
+        const reachedHome = typedList.currentIndex === 0
+        keyboard.input.keyClick(Qt.Key_PageDown)
+        root._check(reachedEnd && reachedHome && typedList.currentIndex === 7,
+            "Home, End and the page keys walk an open dropdown")
+        for (const c of "option 17") keyboard.input.keyClick(c)
+        root._check(typedList.currentIndex === 17 && keyboard.select._typed === "option 17"
+                && keyboard.select._open,
+            "typing finds a row, and a space in a name does not choose it")
+        keyboard.input.keyClick(Qt.Key_Return)
+        root._check(keyboard.select.currentValue === 17 && !keyboard.select._open
+                && keyboard.select._typed === "",
+            "Enter chooses the row typing found and clears the text")
+        keyboard.input.keyClick(Qt.Key_Return)
+        for (const c of "n 3") keyboard.input.keyClick(c)
+        root._check(typedList.currentIndex === 3,
+            "typing falls back to a match inside a name")
+        keyboard.input.keyClick(Qt.Key_Backspace)
+        root._check(keyboard.select._typed === "n ", "Backspace trims the typed text")
+        keyboard.input.keyClick(Qt.Key_Return)
+        keyboard.button.forceActiveFocus(Qt.TabFocusReason)
+        keyboard.input.mouseMove(keyboard.select, 20, keyboard.select._headerH / 2)
+        keyboard.input.mouseClick(keyboard.select, 20, keyboard.select._headerH / 2)
+        keyboard.input.keyClick("o")
+        root._check(keyboard.select.activeFocus && keyboard.select._pointerFocus && keyboard.select._typed === "o",
+            "a dropdown opened by pointer hears typing without drawing a focus ring")
+        keyboard.input.keyClick(Qt.Key_Return)
+        keyboard.select.currentValue = 0
+        keyboard.select.forceActiveFocus(Qt.TabFocusReason)
+        keyboard.input.keyClick(Qt.Key_Return)
+        for (let i = 0; i < 12; i++) keyboard.input.keyClick(Qt.Key_Down)
+        keyboard.input.wait(Motion.normal + 100)
+        const keyboardList = root._findTrayNode(keyboard.select, item => typeof item.positionViewAtIndex === "function")
+        const keyboardCursor = keyboardList.currentItem
+        const cursorBounds = keyboardCursor ? keyboardCursor.mapToItem(keyboardList, 0, 0,
+            keyboardCursor.width, keyboardCursor.height) : null
+        root._check(keyboardList.currentIndex === 12 && cursorBounds && cursorBounds.y >= -0.5
+                && cursorBounds.y + cursorBounds.height <= keyboardList.height + 0.5,
+            "dropdown expansion keeps the keyboard cursor visible instead of jumping to the committed choice")
+        keyboard.close()
+        keyboard.destroy()
+
+        const listKeyboard = listKeyboardWindowFactory.createObject(root)
+        listKeyboard.requestActivate()
+        listKeyboard.input.wait(60)
+        listKeyboard.list.forceLayout()
+        listKeyboard.list.currentItem.forceActiveFocus(Qt.TabFocusReason)
+        listKeyboard.input.keyClick(Qt.Key_Down)
+        listKeyboard.input.wait(30)
+        root._check(listKeyboard.list.currentIndex === 3 && listKeyboard.list.currentItem.activeFocus,
+            "list arrows skip disabled and busy rows")
+        listKeyboard.input.keyClick(Qt.Key_Up)
+        listKeyboard.input.wait(30)
+        root._check(listKeyboard.list.currentIndex === 0 && listKeyboard.list.currentItem.activeFocus,
+            "list arrows skip inert rows in the reverse direction too")
+        listKeyboard.onlyFirst = true
+        listKeyboard.input.keyClick(Qt.Key_Down)
+        listKeyboard.input.wait(30)
+        root._check(listKeyboard.list.currentIndex === 0 && listKeyboard.list.currentItem.activeFocus,
+            "a list with no later usable row keeps its original focus and current index")
+        listKeyboard.onlyFirst = false
+        listKeyboard.entries = Array.from({ length: 100 }, (_, i) => ({ label: "Row " + i,
+            enabled: i === 0 || i === 99 }))
+        listKeyboard.list.currentIndex = 0
+        listKeyboard.list.forceLayout()
+        listKeyboard.input.wait(20)
+        listKeyboard.list.currentItem.forceActiveFocus(Qt.TabFocusReason)
+        listKeyboard.input.keyClick(Qt.Key_Down)
+        // the search advances one delegate per event-loop turn, so a 98-row
+        // disabled span settles in far more turns than a fixed pause can bound
+        // once other probes share the machine; wait for the destination to
+        // actually arrive rather than guess a duration
+        for (let w = 0; w < 80 && listKeyboard.list.currentIndex !== 99; w++)
+            listKeyboard.input.wait(25)
+        listKeyboard.input.wait(30)
+        root._check(listKeyboard.list.currentIndex === 99 && listKeyboard.list.currentItem
+                && listKeyboard.list.currentItem.activeFocus,
+            "list navigation skips a long disabled range even when its original delegate is pooled")
+        listKeyboard.list.currentIndex = 0
+        listKeyboard.list.positionViewAtIndex(0, ListView.Beginning)
+        listKeyboard.list.forceLayout()
+        listKeyboard.input.wait(20)
+        listKeyboard.list.currentItem.forceActiveFocus(Qt.TabFocusReason)
+        listKeyboard.input.keyClick(Qt.Key_Down)
+        listKeyboard.outside.forceActiveFocus(Qt.TabFocusReason)
+        listKeyboard.input.wait(60)
+        root._check(listKeyboard.outside.activeFocus,
+            "a pending list search cannot steal focus after the user moves to another control")
+        listKeyboard.close()
+        listKeyboard.destroy()
+
+        const launcherWas = ShellSettings.lockCommandCustom
+        ShellSettings.lockCommandCustom = "fuzzel"
+        const focusScroll = focusScrollWindowFactory.createObject(root)
+        focusScroll.requestActivate()
+        focusScroll.input.wait(60)
+        const commandField = root._findTrayNode(focusScroll.editor, item => item.maximumLength !== undefined)
+        focusScroll.button.forceActiveFocus(Qt.TabFocusReason)
+        focusScroll.input.keyClick(Qt.Key_Tab)
+        focusScroll.input.wait(30)
+        const fieldBounds = commandField.parent.mapToItem(focusScroll.scroller, 0, 0,
+            commandField.parent.width, commandField.parent.height)
+        root._check(commandField.activeFocus && fieldBounds.y >= -0.5
+                && fieldBounds.y + fieldBounds.height <= focusScroll.scroller.height + 0.5,
+            "Tab reveals the complete command field when it starts below the viewport")
+        commandField.cursorPosition = commandField.text.length
+        focusScroll.input.keyClick(Qt.Key_Space)
+        focusScroll.input.keyClick(Qt.Key_X)
+        root._check(focusScroll.editor.draft === "fuzzel x" && ShellSettings.lockCommandCustom === "fuzzel",
+            "revealing a native field keeps ordinary typing and spaces in the unsaved draft")
+        focusScroll.scroller.contentY = 0
+        focusScroll.scroller.flick(0, -1000)
+        focusScroll.input.keyClick(Qt.Key_Tab)
+        focusScroll.input.wait(30)
+        root._check(!focusScroll.scroller.flicking && focusScroll.scroller.contentY > 0,
+            "keyboard focus stops an active flick so the revealed control stays visible")
+        focusScroll.close()
+        focusScroll.destroy()
+        ShellSettings.lockCommandCustom = launcherWas
+
+        const vpnProfiles = Vpn.parseProfiles("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa:vpn:Work\\:one:no\n"
+            + "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb:wireguard:Work:yes\n"
+            + "cccccccc-cccc-cccc-cccc-cccccccccccc:ethernet:Ethernet:yes\n"
+            + "invalid:vpn:Invalid:yes")
+        root._check(vpnProfiles.length === 2 && vpnProfiles[0].active
+                && vpnProfiles[1].name === "Work:one" && vpnProfiles[0].uuid !== vpnProfiles[1].uuid,
+            "saved VPN parsing preserves escaped names and identifies multiple profiles by UUID")
+        const vpnWas = Vpn.profiles
+        const vpnAnswer = () => Vpn.parseProfiles("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa:vpn:Work:no\n")
+        Vpn._publishProfiles(vpnAnswer())
+        const vpnPublished = Vpn.profiles
+        Vpn._publishProfiles(vpnAnswer())
+        root._check(vpnPublished.length === 1 && Vpn.profiles === vpnPublished,
+            "an unchanged VPN poll keeps its list, so open rows and focus survive")
+        Vpn._publishProfiles(Vpn.parseProfiles("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa:vpn:Work:yes\n"))
+        root._check(Vpn.profiles !== vpnPublished && Vpn.profiles[0].active,
+            "a VPN that connects does update the list")
+        Vpn.profiles = vpnWas
+
         root._check(PowerProfiles.profileForSource(false, "balanced", "power-saver", "power-saver") === "balanced"
                 && PowerProfiles.profileForSource(true, "balanced", "power-saver", "balanced") === "power-saver"
                 && PowerProfiles.profileForSource(true, "balanced", "", "balanced") === ""
@@ -6575,7 +7266,7 @@ ShellRoot {
 
         const spacing = ShellSettings.schemaFor("barSpacing")
         root._check(spacing !== null && spacing.t === "int"
-                && spacing.min === 4 && spacing.max === 24,
+                && spacing.min === 4 && spacing.max === 12 && spacing.step === 4,
             "settings expose a row's schema by key")
         root._check(ShellSettings.schemaFor("noSuchSetting") === null,
             "settings reject an unknown schema key")
@@ -6583,8 +7274,11 @@ ShellRoot {
             "roundness is attributed to the one page that carries its row")
         const spacingWas = ShellSettings.barSpacing
         ShellSettings.setValue("barSpacing", 999)
-        root._check(ShellSettings.barSpacing === 24,
+        root._check(ShellSettings.barSpacing === 12,
             "a key-bound row clamps to the schema maximum")
+        ShellSettings.setValue("barSpacing", 7)
+        root._check(ShellSettings.barSpacing === 8,
+            "an old widget gap between presets snaps to the nearest one")
         ShellSettings.setValue("barSpacing", -5)
         root._check(ShellSettings.barSpacing === 4,
             "a key-bound row clamps to the schema minimum")
@@ -6595,7 +7289,7 @@ ShellRoot {
         let gapOrderHolds = true
         let gapSaturates = true
         let lastCompactGap = -1
-        for (let s = spacing.min; s <= spacing.max; s++) {
+        for (let s = spacing.min; s <= spacing.max; s += spacing.step) {
             ShellSettings.setValue("barSpacing", s)
             for (let ci = 0; ci < 2; ci++) {
                 const compact = ci === 0
@@ -6685,8 +7379,8 @@ ShellRoot {
                 && ShellSettings._ipcKey("noSuchSetting") === "noSuchSetting",
             "settings IPC trims hand-typed keys and folds known capitalization")
         const ipcSpacingWas = ShellSettings.barSpacing
-        root._check(ShellSettings._ipcSet("BARSPACING", "999") === "24"
-                && ShellSettings.barSpacing === 24,
+        root._check(ShellSettings._ipcSet("BARSPACING", "999") === "12"
+                && ShellSettings.barSpacing === 12,
             "a mixed-case IPC write resolves and reports its clamped value")
         ShellSettings.barSpacing = ipcSpacingWas
 
@@ -6722,7 +7416,7 @@ ShellRoot {
 
         root._check(ShellSettings.constraintOf("barShowClock") === "true|false",
             "a bool key states its constraint")
-        root._check(ShellSettings.constraintOf("barSpacing") === "4..24",
+        root._check(ShellSettings.constraintOf("barSpacing") === "4..12 in steps of 4",
             "an int key states its range")
         root._check(ShellSettings.constraintOf("barGap") === "0..24 in steps of 4",
             "a stepped int key states its step")
@@ -7167,6 +7861,32 @@ ShellRoot {
             "a notification retired with the popup window remains in history")
         Notifications.clearHistory()
 
+        const privateCards = [
+            { transient: false, tracked: true, resident: true, urgency: 2,
+                appName: "Probe", appIcon: "", desktopEntry: "",
+                summary: "Persistent critical card", body: "Private content" },
+            { transient: false, tracked: true, hasInlineReply: true, urgency: 1,
+                appName: "Probe", appIcon: "", desktopEntry: "",
+                summary: "Reply card", body: "Private conversation" }
+        ]
+        Notifications.list = privateCards.map((n, i) => ({ notification: n, id: 63 + i, time: Date.now() }))
+        Notifications.presentationMode = true
+        root._check(Notifications.activeCount === 0 && privateCards.every(n => !n.tracked)
+                && Notifications.historyCount === 2,
+            "presentation mode untracks persistent critical and inline-reply cards while archiving their history")
+        Notifications.presentationMode = false
+        root._check(Notifications.activeCount === 0 && Notifications.historyCount === 2,
+            "ending privacy keeps retired cards in history without replaying their content")
+        Notifications.clearHistory()
+
+        const displayIdentity = "a".repeat(64)
+        const ddcRows = DisplayBrightness.parseDisplays("card1-DP-1\t7\t" + displayIdentity + "\t20\t80\n"
+            + "card1-HDMI-A-1\t9\t" + displayIdentity + "\t101\t100\n"
+            + "card1-DP-2\t7\tinvalid\t20\t100\n")
+        root._check(ddcRows.length === 1 && ddcRows[0].percent === 25
+                && ddcRows[0].key === "card1-DP-1:" + displayIdentity,
+            "external display parsing normalizes non-100 ranges and rejects invalid identities and levels")
+
         Hooks._queued = ({})
         Hooks._queueOrder = []
         Hooks._queue("workspace-changed", ["/hooks/workspace-changed", "1"])
@@ -7320,7 +8040,8 @@ ShellRoot {
     function _startBarLayoutProbe(): void {
         const settings = {}
         for (const key of ["reduceMotion", "barCompact", "barAutoCompact", "barCenterInGap",
-                "osdEnabled", "osdBarIntegrated", "barShowClock", "barShowVolume", "showWindowTitle"])
+                "osdEnabled", "osdBarIntegrated", "osdBatteryWarn", "osdChargedNotify", "osdTempWarn",
+                "barShowClock", "barShowVolume", "showWindowTitle"])
             settings[key] = ShellSettings[key]
         const osd = {}
         for (const key of ["showing", "kind", "label", "muted", "icon", "nextIcon", "value"])
@@ -7329,6 +8050,11 @@ ShellRoot {
         ShellSettings.barCompact = false
         ShellSettings.barAutoCompact = true
         ShellSettings.barCenterInGap = true
+        ShellSettings.osdBatteryWarn = false
+        ShellSettings.osdChargedNotify = false
+        ShellSettings.osdTempWarn = false
+        // a conflict-warning expiry from an earlier test must not replace this fixture's volume state
+        OsdBarState._clearEntries()
         ShellSettings.osdEnabled = true
         ShellSettings.osdBarIntegrated = true
         ShellSettings.barShowClock = true
@@ -7412,7 +8138,11 @@ ShellRoot {
                 const track = root._findTrayNode(osd, item => item.radius === 1.5
                     && item.height === 3)
                 root._check(track && track.width > 0 && track.width < 80,
-                    "a crowded integrated volume track contracts while retaining its reading")
+                    "a crowded integrated volume track contracts while retaining its reading"
+                        + " (track " + (track ? track.width : "missing") + ", room " + room
+                        + ", kind " + OsdBarState.kind + ", label width " + (osd ? osd._labelWidth : 0)
+                        + ", font " + Settings.fontSize + ", bar " + bar.width
+                        + ", edges " + bar.titleFreeLeft + "/" + bar.titleFreeRight + ")")
                 s.track = track
                 OsdBarState.value = 0.01
                 bar.width = 300 + bar.gap * 2 + osd._iconWidth + osd._labelWidth + 17
@@ -7432,7 +8162,8 @@ ShellRoot {
                 }
                 root._check(s.track && Math.abs(s.track.width - 1) < 0.5
                         && s.track.children[0].width <= s.track.width,
-                    "a nearly squeezed-out volume track keeps its fill within its bounds")
+                    "a nearly squeezed-out volume track keeps its fill within its bounds"
+                        + " (track " + (s.track ? s.track.width : "missing") + ")")
                 bar.width = 1
                 bar.fitWidth = 1
                 break
@@ -7538,6 +8269,7 @@ ShellRoot {
                 bar.destroy()
                 for (const key of Object.keys(s.settings)) ShellSettings[key] = s.settings[key]
                 for (const key of Object.keys(s.osd)) OsdBarState[key] = s.osd[key]
+                OsdBarState._clearEntries()
                 root._barLayoutProbe = null
                 root._startTrayProbe()
                 return
@@ -8189,7 +8921,7 @@ ShellRoot {
                 editor.save()
                 root._check(ShellSettings.lockCommandCustom === "" && Settings.lockCommand.length === 0,
                     "saving an empty custom command deliberately disables the lock action")
-                ShellSettings.uiScale = 1.15
+                ShellSettings.uiScale = 1.5
                 ShellSettings.highContrast = true
                 f.width = 232
                 f.input.wait(100)
@@ -8339,7 +9071,7 @@ ShellRoot {
                 MenuState.setSettingsSection("clock")
                 root._check(!search.searching,
                     "retapping the selected settings section also clears search")
-                ShellSettings.uiScale = 1.15
+                ShellSettings.uiScale = 1.5
                 f.width = 232
                 search.query = "notifications"
                 f.input.wait(60)

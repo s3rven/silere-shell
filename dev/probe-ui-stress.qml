@@ -248,7 +248,7 @@ ShellRoot {
         id: cycleTimer
         interval: 1
         onTriggered: {
-            ShellSettings.uiScale = [0.8, 1.0, 1.1, 1.15][root.cycles % 4]
+            ShellSettings.uiScale = [0.8, 1.0, 1.15, 1.25, 1.5][root.cycles % 5]
             ShellSettings.highContrast = root.cycles % 3 === 1
             ShellSettings.neutralTheme = root.cycles % 3 === 2
             ShellSettings.reduceMotion = true

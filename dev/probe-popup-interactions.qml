@@ -178,6 +178,18 @@ Item {
         root._check(detail !== null && detail.wrapMode === Text.Wrap
             && detail.width < row.width && row.height >= detail.y + detail.implicitHeight,
             "long error messages wrap inside the row's bounds")
+        row.error = false
+        row.detailText = ""
+
+        // the state pill's width glides, so this reads the room the settled layout leaves
+        const label = root._find(row, item => item.text === row.label)
+        for (const state of ["Sharing screen", "Until 12:30 PM"]) {
+            row.stateText = state
+            const pill = root._find(row, item => item.text === state)
+            const room = row.width - 10 - 18 - 8 - 8 - (pill ? pill.implicitWidth + 12 : row.width) - 10
+            root._check(label !== null && label.implicitWidth <= room,
+                "Do Not Disturb stays whole beside the long state " + state)
+        }
     }
 
     function _checkTray(): void {
@@ -249,18 +261,6 @@ Item {
             && (area.acceptedButtons & Qt.MiddleButton) !== 0
     }
 
-    function _checkDismissal(): void {
-        const fitted = [
-            { name: "calendar", popup: calendar, state: CalendarState },
-            { name: "quick actions", popup: actions, state: QuickActionsState },
-            { name: "tray menu", popup: tray, state: TrayMenuState }
-        ]
-        for (const f of fitted) {
-            const card = f.popup.popupCard
-            const stage = card.parent
-            const catcher = root._offMonitorCatcher(stage)
-            const origin = catcher ? catcher.mapToItem(stage, 0, 0) : Qt.point(0, 0)
-            root._check(catcher !== null && origin.x < -10000 && origin.y < -10000
     // an unclaimed right press at a window's origin segfaults inside Qt, so reaching the
     // check at all is the result: without the guard this probe never prints its sentinel
     function _checkOriginRightClick(): void {
@@ -276,6 +276,18 @@ Item {
         }
     }
 
+    function _checkDismissal(): void {
+        const fitted = [
+            { name: "calendar", popup: calendar, state: CalendarState },
+            { name: "quick actions", popup: actions, state: QuickActionsState },
+            { name: "tray menu", popup: tray, state: TrayMenuState }
+        ]
+        for (const f of fitted) {
+            const card = f.popup.popupCard
+            const stage = card.parent
+            const catcher = root._offMonitorCatcher(stage)
+            const origin = catcher ? catcher.mapToItem(stage, 0, 0) : Qt.point(0, 0)
+            root._check(catcher !== null && origin.x < -10000 && origin.y < -10000
                     && catcher.width > stage.width + 20000 && catcher.height > stage.height + 20000
                     && root._catchesEveryButton(catcher),
                 f.name + " catches clicks of every button, also those offset onto another monitor")
@@ -435,6 +447,7 @@ Item {
         root._checkCalendar()
         root._checkActions()
         root._checkTray()
+        root._checkOriginRightClick()
         root._checkDismissal()
         root._checkTraySubmenus()
         root._checkReplyFocus()
@@ -444,4 +457,3 @@ Item {
 
     Component.onCompleted: Qt.callLater(root._run)
 }
-        root._checkOriginRightClick()

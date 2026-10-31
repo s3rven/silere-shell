@@ -1030,7 +1030,7 @@ else
 
   # allowlist, not a denylist of known dev tools: a new dev script only this check
   # doesn't yet know the name of must still fail, not pass silently
-  allowed_scripts="install.sh update.sh repair.sh doctor.sh silere silere-update.service silere-update.timer lib completions"
+  allowed_scripts="install.sh update.sh repair.sh doctor.sh session.sh display-brightness.sh service.sh silere silere-update.service silere-update.timer silere-shell.service lib completions"
   payload_extra=""
   while IFS= read -r ref; do
     [ -n "$ref" ] || continue
@@ -1228,11 +1228,12 @@ FILENAME ~ /ShellSettings\.qml$/ {
     next
 }
 !inrow && /SliderRow[ \t]*\{/ {
-    inrow = 1; depth = 1
+    inrow = 1; depth = 1; hardware = 0
     delete keys; delete rmin; delete rmax
     next
 }
 inrow {
+    if ($0 ~ /interactionKey:/) hardware = 1
     depth += braces($0, "{") - braces($0, "}")
     if (match($0, /key: *"[A-Za-z0-9_]+"/)) {
         k = substr($0, RSTART + 6, RLENGTH - 7)
@@ -1255,6 +1256,8 @@ inrow {
     nk = 0
     for (k in keys) { nk++; wmin[canon(smin[k])] = 1; wmax[canon(smax[k])] = 1 }
     if (nk == 0) {
+        # hardware sliders have their own bounds and identify the device they write
+        if (hardware) next
         printf "  row with hand-written bounds %s..%s matches no schema key (%s)\n",
             join(rmin), join(rmax), FILENAME
     } else if (mismatch(rmin, wmin) || mismatch(rmax, wmax)) {
@@ -2200,9 +2203,6 @@ else
   ok "bar edge" "every popup latching the bar edge closes when the bar moves"
 fi
 
-section "popup dismissal"
-# Hyprland routes every click to the layer holding exclusive keyboard focus: outside a fitted
-# card it lands on the card's own window, and on another monitor it arrives offset by the
 section "origin right click"
 # an unclaimed right press at a window's (0,0) segfaults inside Qt 6.11+, and a layer
 # surface has no focus item to save it. A window with input needs the guard at its root.
@@ -2219,6 +2219,9 @@ else
   ok "origin right click" "every input window claims unhandled right presses"
 fi
 
+section "popup dismissal"
+# Hyprland routes every click to the layer holding exclusive keyboard focus: outside a fitted
+# card it lands on the card's own window, and on another monitor it arrives offset by the
 # layout. Pointer handlers drop points outside their window, so an oversized MouseArea has to.
 undismissable_popups=""
 for f in modules/*/*.qml; do
@@ -2282,47 +2285,14 @@ else
   ok "arming" "every armed service and IPC target is read at startup"
 fi
 
-section "pointer-only interaction"
-# Silere is pointer-driven by decision: app-wide keyboard navigation was removed
-# wholesale. Keep this invariant about that interaction model, not accessibility
-# metadata: Accessible.* may return as part of coherent screen-reader support without
-# reviving tab traversal or the old focus machinery.
-readded_navigation="$(grep -rlnE '(^|[^A-Za-z])(activeFocusOnTab|KeyNavigation\.)' \
-  --include='*.qml' modules config services || true)"
-if [ -n "$readded_navigation" ]; then
-  fail "tab stops and key navigation were removed on purpose:"
-  while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$readded_navigation"
+section "keyboard interaction"
+# Focus, key activation, and its visual belong to the same shared helper.
+if [ -f modules/common/KeyboardFocus.qml ] \
+   && grep -q 'activeFocusOnTab' modules/common/KeyboardFocus.qml \
+   && grep -q 'isAutoRepeat' modules/common/KeyboardFocus.qml; then
+  ok "keyboard" "shared traversal and activation ignore held-key repeats"
 else
-  ok "pointer only" "no tab stops or key-navigation attachments"
-fi
-
-# These types were the support layer for the removed navigation model. Check both their
-# definitions and call sites so restoring an old file under another directory cannot
-# quietly bring the parallel focus system back.
-legacy_focus_helpers="$(find modules config services -type f -name '*.qml' -print0 \
-  | xargs -0 -r grep -lE '(^|[^A-Za-z])(FocusVisual|KeyActivation|WorkspaceFocusRing)([^A-Za-z]|$)' \
-  || true)"
-if [ -n "$legacy_focus_helpers" ]; then
-  fail "retired keyboard focus helpers must stay removed:"
-  while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$legacy_focus_helpers"
-else
-  ok "pointer only" "retired focus and key-activation helpers stay removed"
-fi
-
-# Typed text is the one thing that legitimately needs keys, so a Keys handler is allowed
-# only in a file that actually hosts a text field. Everything else is navigation.
-key_handlers="$(grep -rln 'Keys\.on' --include='*.qml' modules config services || true)"
-key_offenders=""
-while IFS= read -r m; do
-  [ -n "$m" ] || continue
-  grep -q 'TextInput' "$m" || key_offenders="$key_offenders$m"$'\n'
-done <<< "$key_handlers"
-key_offenders="$(printf '%s' "$key_offenders" | grep -c . >/dev/null 2>&1 && printf '%s' "$key_offenders" || true)"
-if [ -n "$(printf '%s' "$key_offenders" | grep . || true)" ]; then
-  fail "key handlers belong to text entry only; navigation keys were removed:"
-  while IFS= read -r m; do [ -n "$m" ] && printf '  %s\n' "$m"; done <<< "$key_offenders"
-else
-  ok "key handlers" "only text entry handles keys"
+  fail "shared keyboard focus helper or repeat guard is missing"
 fi
 
 section "spoken value names"
@@ -2493,6 +2463,13 @@ else
   fail "portability regression tests failed"
 fi
 rm -f "$portability_log" "$update_log"
+
+section "daily-driver helper fixtures"
+if bash dev/test-daily-driver.sh; then
+  ok "daily driver" "lock confirmation, DDC identity, and service ownership passed"
+else
+  fail "daily-driver helper fixtures failed"
+fi
 
 if [ "$status" -eq 0 ]; then
   printf '\nlint passed\n'

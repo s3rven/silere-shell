@@ -33,6 +33,7 @@ _probe_project() { # $1 = repo root, $2 = probe source, $3 = destination dir
     ln -s "$1/config" "$3/config"
     ln -s "$1/services" "$3/services"
     ln -s "$1/modules" "$3/modules"
+    ln -s "$1/scripts" "$3/scripts"
 }
 
 # A root-level required property is the one thing a probe cannot supply, so it is
