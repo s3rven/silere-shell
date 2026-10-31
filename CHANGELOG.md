@@ -54,6 +54,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Changed
 
+- Qt 6.10 is now the stated minimum. The menu has needed it since 1.4.3, and `silere doctor` and the installer now check for what it actually uses.
 - Home is shorter: Presentation Mode moved into Do Not Disturb's options, the VPN row appears only when a VPN is connected or saved, the System readings sit on one line each, and rows no longer repeat what their switch already shows.
 - Interface settings lost the workflow shortcuts, the icon font picker and the manual refresh rows, and keep their hints for when something needs attention.
 - Settings rows, page titles, and the Wi-Fi and Bluetooth lists no longer carry text that only restates what is on screen; what is left is privacy, warnings and consequences. Workspaces settings fit in two cards.
@@ -63,6 +64,7 @@ settings file carries its own `__version` and migrates separately.
 
 #### Bar fixes
 
+- The media widget only announces Play or Pause when the player allows it.
 - Workspace clicks and scrolling work again from a named Hyprland 0.57 workspace, which the bar now rings like a special one.
 - The keyboard, workspace and media widgets react when pressed.
 - A bar widget that reveals more on hover, such as the keyboard layout, shrinks back as soon as the pointer leaves instead of holding its wide size for half a second.
@@ -94,6 +96,8 @@ settings file carries its own `__version` and migrates separately.
 
 #### Network fixes
 
+- A Bluetooth row that times out stops saying Connecting… and offers another try.
+- The VPN row stays on Home when reading saved profiles fails, so its error can be seen.
 - The open VPN list keeps its rows between polls, and a hidden window title no longer runs its width animation.
 - Saved VPN controls refresh after overlapping requests and external connection changes.
 - Home checks for saved VPNs and Interface rescans fonts at most once a minute, not on every open.
@@ -106,6 +110,7 @@ settings file carries its own `__version` and migrates separately.
 
 #### System fixes
 
+- Lock & sleep sends an alert when it cancels sleep, since the menu has already closed.
 - External brightness serializes discovery and writes, preserves queued levels, and ignores stale results.
 - Font refresh requests queue behind an active scan and recover cleanly when fontconfig returns.
 - Lock & sleep refreshes readiness after tool checks and rejects late confirmations after required tools disappear.
