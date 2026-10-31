@@ -3090,9 +3090,9 @@ ShellRoot {
             barCornerStyle: "flat",
             untouchedFutureShape: "keep until known-key coercion"
         }, 0)
-        root._check(migratedV1.version === 1
-                && migratedV1.applied.join(",") === "1"
-                && migratedV1.value.__version === 1,
+        root._check(migratedV1.version === 2
+                && migratedV1.applied.join(",") === "1,2"
+                && migratedV1.value.__version === 2,
             "settings migrations apply each target version in order")
         root._check(migratedV1.value.barCenterInGap === true
                 && migratedV1.value.windowTitleCenterGap === undefined
@@ -3111,7 +3111,7 @@ ShellRoot {
         let migrationGapThrew = false
         let migrationGapValue = null
         try {
-            migrationGapValue = SettingsMigrations.migrate({ barHeight: 40 }, 0, 2)
+            migrationGapValue = SettingsMigrations.migrate({ barHeight: 40 }, 0, 99)
         } catch (e) {
             migrationGapThrew = true
         }
@@ -3154,7 +3154,7 @@ ShellRoot {
         ShellSettings._futureTouched = savedTouched
         ShellSettings.barHeight = savedHeight
         const clean = JSON.parse(ShellSettings._serialize())
-        root._check(Object.keys(clean).length === 1 && clean.__version === 1,
+        root._check(Object.keys(clean).length === 1 && clean.__version === ShellSettings._settingsVersion,
             "an unmodified settings file serializes to nothing but its version")
 
         // the sec: on every schema entry exists only to light the nav dots, and ci-lint
@@ -3484,6 +3484,10 @@ ShellRoot {
 
         const historySchema = ShellSettings.schemaFor("notifHistoryLimit")
         root._check(historySchema !== null && historySchema.max === 100,
+        const migrationRollback = SettingsMigrations.migrate({ uiScale: 1.5, notifMutedApps: "Slack" }, 1, 2)
+        root._check(migrationRollback.version === 2 && migrationRollback.value.uiScale === 1.5
+                && migrationRollback.value.notifMutedApps === "Slack",
+            "the 1.5 schema step only marks the file, so a rollback to 1.4 keeps what it cannot read")
             "the notification history limit still declares a schema ceiling")
         root._check(Notifications._capacityFor(20, 100, false) === 100
                 && Notifications._capacityFor(20, 100, true) === 20,

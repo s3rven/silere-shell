@@ -24,8 +24,15 @@ function _v0ToV1(input) {
     return out
 }
 
+// nothing to convert. The number is the change: 1.4 keeps what it cannot read only from a
+// file marked newer than itself, so without this a rollback drops 1.5's settings and clamps its UI scale
+function _v1ToV2(input) {
+    return _copy(input)
+}
+
 const registry = [
-    { from: 0, to: 1, apply: _v0ToV1 }
+    { from: 0, to: 1, apply: _v0ToV1 },
+    { from: 1, to: 2, apply: _v1ToV2 }
 ]
 
 function migrate(input, fromVersion, targetVersion) {

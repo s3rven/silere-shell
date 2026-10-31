@@ -299,7 +299,7 @@ Singleton {
     readonly property bool ready: _loaded
     readonly property string settingsError: ConfigStore.error.length > 0
         ? ConfigStore.error : _writeError.length > 0 ? _writeError : _readError
-    readonly property int _settingsVersion: 1
+    readonly property int _settingsVersion: 2
     property var _defaults: ({})
     property real _loadedVersion: _settingsVersion
     property var _futureSettings: ({})
