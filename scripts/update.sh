@@ -228,11 +228,21 @@ _journal_release_is_trusted() {
     git -C "$ROOT" merge-base --is-ancestor "$JOURNAL_FROM" "$JOURNAL_TO"
 }
 
+# The optional supervised service is started by the compositor rather than enabled, so
+# enablement alone misses it; a unit that is up or has failed is in use either way.
+_service_in_use() {
+    command -v systemctl >/dev/null 2>&1 || return 1
+    local state
+    for state in is-enabled is-active is-failed; do
+        systemctl --user "$state" --quiet silere-shell.service 2>/dev/null && return 0
+    done
+    return 1
+}
+
 # A completed update is only known-good once the shell is up on it. With no unit
 # installed there is nothing this script can watch, so absence counts as running.
 _updated_shell_is_running() {
-    command -v systemctl >/dev/null 2>&1 || return 0
-    systemctl --user is-enabled --quiet silere-shell.service 2>/dev/null || return 0
+    _service_in_use || return 0
     systemctl --user is-active --quiet silere-shell.service 2>/dev/null
 }
 
@@ -311,9 +321,7 @@ _rollback_applied_update() {
     # Only restart a unit that actually runs this checkout; the test suite and a
     # throwaway checkout share one user manager, where is-enabled alone would
     # reach whatever shell is live.
-    if command -v systemctl >/dev/null 2>&1 \
-            && systemctl --user is-enabled --quiet silere-shell.service 2>/dev/null \
-            && _unit_runs_this_checkout; then
+    if _service_in_use && _unit_runs_this_checkout; then
         systemctl --user --no-block restart silere-shell.service || true
     fi
     _notify "Silere Shell rolled back" "restored $JOURNAL_FROM"

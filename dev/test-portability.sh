@@ -1062,6 +1062,24 @@ EOF
         fail "rollback accepted a missing journal"
     fi
 
+    # The optional supervised service is started rather than enabled. When an update
+    # leaves it failed the journal has to stay, or --rollback has nothing to restore.
+    cat > "$stub_dir/systemctl" <<EOF
+#!/bin/sh
+case "\$*" in
+    *is-failed*) exit 0 ;;
+    *) exit 1 ;;
+esac
+EOF
+    _start_apply_transaction "$old_rev" "$new_rev" v1.0.1
+    git -C "$repo" merge --ff-only -q "$new_rev"
+    _write_apply_journal validated "$old_rev" "$new_rev" v1.0.1
+    PATH="$stub_dir:$PATH" _recover_interrupted_apply 2>/dev/null
+    [ -e "$APPLY_JOURNAL" ] || fail "a failed service that was never enabled lost its recovery journal"
+    PATH="$stub_dir:$PATH" _rollback_applied_update >/dev/null 2>&1
+    assert_eq "$old_rev" "$(git -C "$repo" rev-parse HEAD)" \
+        "rollback restores an update whose service failed without being enabled"
+
     # Never turn a user-editable or damaged state file into a reset instruction.
     git -C "$repo" reset --hard -q "$old_rev"
     _start_apply_transaction "$old_rev" "$new_rev" v1.0.1
