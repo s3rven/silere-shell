@@ -64,14 +64,6 @@ Column {
             glyphColor: Battery.critical ? Theme.error : (Battery.low ? Theme.warning : Theme.withAlpha(Theme.subtext, 0.85))
         }
         CollapsibleSection {
-            expanded: root._battAlertMode !== "off"
-            HintText {
-                text: "Escalates to critical at " + Math.max(5, Math.round(ShellSettings.batteryLowThreshold / 2)) + "%."
-                    + (ShellSettings.osdBatteryWarn && Bluetooth.available
-                        ? " Bluetooth devices warn below " + SystemAlerts.btLowPct + "%." : "")
-            }
-        }
-        CollapsibleSection {
             expanded: ShellSettings.osdEnabled
             ToggleRow {
                 glyph: "󰂄"; label: "Fully charged alert"
@@ -99,10 +91,6 @@ Column {
             step: 5
             displayValue: ShellSettings.tempHotThreshold + "°"
             glyphColor: CpuTemp.critical ? Theme.error : (CpuTemp.hot ? Theme.warning : Theme.withAlpha(Theme.subtext, 0.85))
-        }
-        CollapsibleSection {
-            expanded: root._tempAlertMode !== "off"
-            HintText { text: "Escalates to critical at " + (ShellSettings.tempHotThreshold + 8) + "°." }
         }
     }
 
@@ -149,11 +137,6 @@ Column {
                         HintText {
                             visible: SystemTools.ready && !SystemTools.hasNotifySend
                             text: "Desktop notifications need libnotify."
-                        }
-                        HintText {
-                            text: ShellSettings.osdEnabled
-                                ? "Low levels show in the OSD; critical ones come here."
-                                : "Low levels need the OSD; critical ones come here."
                         }
                     }
                 }

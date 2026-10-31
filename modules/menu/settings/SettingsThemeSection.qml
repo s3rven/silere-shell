@@ -13,14 +13,14 @@ Column {
     readonly property string _paletteNote: !SystemTools.ready ? ""
         : !SystemTools.hasMatugen
             ? MatugenTheme.usingFallback
-                ? "Wallpaper theming needs matugen installed. These are Silere's bundled colors."
-                : "Matugen is not installed. The last palette stays loaded, but it cannot follow wallpaper changes."
+                ? "Needs matugen. Showing the built-in colors."
+                : "matugen is missing, so colors no longer follow the wallpaper."
             : MatugenTheme.usingFallback
-                ? "Matugen has not written a palette yet, so these are Silere's bundled colors. Re-run the installer, then set a wallpaper."
+                ? "No palette from matugen yet. Set a wallpaper to make one."
                 : MatugenTheme.paletteStale
-                    ? "The palette file could not be read, so these are the last colors that loaded. Check your matugen template."
+                    ? "The palette file is unreadable. Showing the last colors."
                     : Theme.accentColorless
-                        ? "This palette has no accent color of its own, so accented controls read as plain text."
+                        ? "This palette has no accent color."
                         : ""
 
     // the blur row names what stops it, read fresh each visit since a compositor config can change underneath
@@ -150,7 +150,7 @@ Column {
                     id: _accentGlyph
                     anchors.left:   parent.left; anchors.leftMargin: 14
                     y: Math.round((_accentPicker._titleH - height) / 2)
-                    width: 18
+                    width: Metrics.glyphSlotWidth
                     horizontalAlignment: Text.AlignHCenter
                     text:           "󰔎"
                     color:          Theme.withAlpha(Theme.subtext, 0.85)
@@ -349,7 +349,6 @@ Column {
 
             ToggleRow {
                 glyph: "󰆖"; label: "Balance accent"
-                description: "Even out loud or dull wallpaper accents"
                 key: "matugenAccentBalance"
             }
         }
@@ -382,6 +381,12 @@ Column {
                 else ShellSettings.matugenDepth = options[i].value
             }
         }
+
+        ToggleRow {
+            glyph: "󰃣"; label: "Accent widget icons"
+            key: "barAccentPills"
+            description: "Bar icons take the accent, except warnings"
+        }
     }
 
     SectionLabel { label: "SURFACES" }
@@ -396,7 +401,6 @@ Column {
             expanded: Theme.panelOpacity < 1
             ToggleRow {
                 glyph: "󰂵"; label: "Background blur"
-                description: "Frost what shows through"
                 key: "surfaceBlur"
                 available: Compositor.blurBlocker.length === 0
                 dependsNote: Compositor.blurBlocker
@@ -407,7 +411,7 @@ Column {
                 description: !Theme.frosted ? ""
                     : ShellSettings.popupMatchBarOpacity && Theme.panelOpacity < Theme.glassFloor
                         ? "Held at " + Math.round(Theme.glassFloor * 100) + "% so text stays readable"
-                        : "Menu, notifications, calendar, tray and more"
+                        : ""
                 key: "popupMatchBarOpacity"
                 available: Theme.frosted
                 dependsNote: "Needs background blur"
@@ -422,7 +426,6 @@ Column {
         // shell-wide, not a bar setting: every floating card casts one whether the bar is docked or not, and only the bar's own shadow needs the floating gate
         ToggleRow {
             glyph: "󰘷"; label: "Shell shadows"
-            description: "Popups, notifications, OSD, and the bar"
             key: "barShadow"
         }
         CollapsibleSection {

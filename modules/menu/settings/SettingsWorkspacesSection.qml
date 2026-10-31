@@ -6,7 +6,7 @@ Column {
     width: parent ? parent.width : 0
     spacing: 0
 
-    SectionLabel { label: "LAYOUT"; first: true }
+    SectionLabel { label: "APPEARANCE"; first: true }
     SettingsCard {
         SliderRow {
             glyph: "󰕰"; label: "Workspaces shown"
@@ -24,17 +24,12 @@ Column {
                 { value: "bar", label: "Line" }
             ]
         }
-    }
-
-    SectionLabel { label: "CONTENT" }
-    SettingsCard {
         ToggleRow {
             glyph: "󰎠"; label: "Numbers"
             key: "wsShowNumbers"
         }
         ToggleRow {
             glyph: "󰀻"; label: "App icons"
-            description: "Up to three apps per workspace"
             key: "wsShowAppIcons"
         }
     }
@@ -51,17 +46,11 @@ Column {
         }
         ToggleRow {
             glyph: "󰂟"; label: "Notification pulse"
-            description: "Animate the workspace a notification came from"
             key: "wsNotifPulse"
         }
         ToggleRow {
             glyph: "󰕦"; label: "Urgent window pulse"
-            description: "Animate a workspace demanding attention"
             key: "wsUrgentPulse"
-        }
-        HintText {
-            visible: ShellSettings.reduceMotion
-            text: "Reduce motion is on, so these animations stay off."
         }
     }
 }

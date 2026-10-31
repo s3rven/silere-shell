@@ -614,7 +614,7 @@ Item {
                 anchors.right: _toggleTarget.left
                 anchors.rightMargin: 1
                 anchors.verticalCenter: parent.verticalCenter
-                width: 18
+                width: Metrics.glyphSlotWidth
                 horizontalAlignment: Text.AlignHCenter
                 text: "󰇙"
                 color: Theme.withAlpha(Theme.subtext,
@@ -639,6 +639,7 @@ Item {
                 Accessible.checked: _row.checked
                 Accessible.focusable: enabled
                 Accessible.onPressAction: _toggleTap.activate()
+                KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
                 Accessible.onToggleAction: _toggleTap.activate()
 
                 HoverHandler { id: _toggleHover; cursorShape: Qt.PointingHandCursor }
@@ -767,6 +768,7 @@ Item {
                         Accessible.checked: _sub.checked && ShellSettings.trayWidget
                         Accessible.focusable: enabled
                         Accessible.onPressAction: _sub.toggleShown()
+                        KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
                         Accessible.onToggleAction: _sub.toggleShown()
 
                         Connections {

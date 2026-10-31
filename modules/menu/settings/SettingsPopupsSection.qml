@@ -21,6 +21,11 @@ Column {
             ToggleRow {
                 glyph: "󱒃"; label: "Hide while sharing screen"
                 key: "notifScreenShareSilence"
+                description: Notifications.automaticShareDetection ? "" : "Use Presentation Mode before sharing"
+            }
+            ToggleRow {
+                glyph: "󰠢"; label: "Group conversations"
+                key: "notifGroupThreads"
             }
             SliderRow {
                 glyph: "󰔛"; label: "Dismiss after"
@@ -45,6 +50,28 @@ Column {
                     { value: 5, label: "5"   },
                     { value: 0, label: "All" }
                 ]
+            }
+        }
+    }
+
+    SectionLabel { label: "MUTED APPS" }
+    SettingsCard {
+        ControlRow {
+            visible: ShellSettings.notifMutedAppNames.length === 0
+            glyph: "󰂜"
+            title: "No muted apps"
+            status: "Mute one from its page in history"
+            passive: true
+        }
+        // switching one off unmutes it, and the row leaves with it
+        Repeater {
+            model: ShellSettings.notifMutedAppNames
+            delegate: ToggleRow {
+                required property string modelData
+                glyph: "󰪑"
+                label: modelData
+                checked: true
+                onToggled: nextChecked => ShellSettings.setNotifAppMuted(modelData, nextChecked)
             }
         }
     }
@@ -76,7 +103,7 @@ Column {
         }
         HintText {
             visible: ShellSettings.notifHistoryDays > 0
-            text: "Older history is removed immediately when you shorten this period. Active popups stay open."
+            text: "Shortening this deletes older history now."
         }
     }
 
@@ -105,7 +132,6 @@ Column {
         }
         ToggleRow {
             glyph: "󰀦"; label: "Let critical through"
-            description: "Urgent alerts ignore do not disturb"
             key: "notifCriticalBypass"
         }
     }

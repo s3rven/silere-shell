@@ -220,7 +220,7 @@ Column {
                 description: ShellUpdate.timerError.length > 0
                     ? ShellUpdate.timerError : ShellUpdate.nextCheckText
                 checked: ShellUpdate.timerEnabled
-                enabled: !ShellUpdate.development && !ShellUpdate.timerBusy
+                blocked: ShellUpdate.development || ShellUpdate.timerBusy
                 available: ShellUpdate.timerSupported && !ShellUpdate.development
                 dependsNote: ShellUpdate.development ? "Git managed"
                     : ShellUpdate.timerBusy ? "Working"
@@ -315,7 +315,6 @@ Column {
         }
         ToggleRow {
             glyph: "󰚰"; label: "Track package updates"
-            description: "Show pending count in bar"
             key: "updatesWidget"
             available: !SystemTools.ready || Updates.supported
             dependsNote: "No package manager"
@@ -326,12 +325,8 @@ Column {
                 && Updates.aurHelperAvailable
             ToggleRow {
                 glyph: "󰮯"; label: "Include AUR packages"
-                description: "Query "
-                    + (SystemTools.hasParu ? "paru" : "yay")
-                    + " for foreign package updates"
                 key: "updatesIncludeAur"
             }
         }
-        HintText { text: "Checks are read-only and never install updates." }
     }
 }

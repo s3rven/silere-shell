@@ -79,7 +79,6 @@ Column {
             ToggleRow {
                 key: "hoverLevelBar"
                 glyph: "󰡵"; label: "Level bars"
-                description: "A slim bar while the value is hidden"
             }
         }
     }

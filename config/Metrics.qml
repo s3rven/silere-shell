@@ -10,6 +10,12 @@ Singleton {
     // an arm-then-confirm row must reject the second half of a double-click; not a Motion
     // token because every one of those returns 0 under reduce motion, which would re-arm the trap
     readonly property int confirmGuardMs: 400
+    readonly property int glyphSlotWidth: Math.max(18,
+        Settings.iconSize + (ShellSettings.uiScale > 1.15 ? 6 : 0))
+    readonly property int menuTypeGain: root.snap4(
+        13 * 0.6 * Math.max(0, Settings.fontSize - Settings.fontSizeBase))
+    readonly property int menuContentGrowth: root.snap4Up(
+        388 * Math.max(0, ShellSettings.uiScale / 1.15 - 1))
 
     function widgetGapFor(compact: bool): int {
         return compact ? Math.max(3, Math.round(ShellSettings.barSpacing * 0.5))

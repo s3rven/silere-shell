@@ -51,7 +51,6 @@ Column {
     SettingsCard {
         ToggleRow {
             glyph: "󰍴"; label: "Underline"
-            description: "A line along the bar that can glow on events"
             checked: root._enabled
             onToggled: nextChecked => root._setEnabled(nextChecked)
         }
@@ -87,9 +86,6 @@ Column {
                 expanded: ShellSettings.underlineGlow
                 ToggleRow {
                     glyph: "󱝊"; label: "Full width"
-                    description: ShellSettings.barFloating
-                        ? "Ring the whole bar instead of fading out"
-                        : "Light the whole bar instead of the centre"
                     key: "underlineFullWidth"
                 }
                 ToggleRow {

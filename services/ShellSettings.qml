@@ -28,6 +28,8 @@ Singleton {
     property bool   networkSpeedInline:  false
     property bool   netVpnShowLink:      false
     property string brightnessDevice:    ""
+    property bool ddcBrightnessEnabled:   false
+    property string ddcDisabledDisplays:  ""
     property string lockProvider:        "auto"
     property string lockCommandCustom:   ""
     property string nightLightProvider:  "auto"
@@ -36,8 +38,10 @@ Singleton {
     property bool   clock12h:            false
     property string calendarWeekStart:   "monday"
     property bool   calendarWeekNumbers: true
+    property bool   weatherEnabled:      false
     property bool   showWindowTitle:     false
     property bool   showWindowTitleApp:  false
+    property bool   showWindowTitleIcon: false
     property bool   updatesWidget:       false
     property bool   updatesIncludeAur:   false
     property bool   trayWidget:          false
@@ -52,6 +56,11 @@ Singleton {
     property bool   barShowNetwork:      true
     property bool   barShowBluetooth:   false
     property bool   barShowClock:        true
+    property bool   barShowKeyboard:     false
+    property bool   barShowSystem:       false
+    property bool   systemShowCpu:       true
+    property bool   systemShowMemory:    true
+    property bool   systemShowTemp:      false
     property bool   barShowShellUpdate:  true
     property bool   barShowVolume:       true
     property bool   barShowBrightness:   true
@@ -74,6 +83,8 @@ Singleton {
     property bool   notifPopupEnabled:   true
     property bool   notifFullscreenSilence: true
     property bool   notifScreenShareSilence: true
+    property bool   notifGroupThreads:   true
+    property string notifMutedApps:      ""
     property string notifPosition:       "top-right"
     property int    notifMaxVisible:     3
     property bool   notifHistoryPersistent: true
@@ -121,6 +132,7 @@ Singleton {
     property int    barRadius:           14
     property bool   barShadow:           false
     property real   barShadowStrength:   1.0
+    property bool   barAccentPills:      false
     property string barPosition:         "top"
     property real   barOpacity:          0.88
     property bool   surfaceBlur:         true
@@ -135,8 +147,10 @@ Singleton {
         shellUpdate: { glyph: "󰑐", label: "Shell update",    group: "updates",     zone: "right",  setting: "barShowShellUpdate" },
         tray:        { glyph: "󰇘", label: "System tray",     group: "tray",        zone: "right",  setting: "trayWidget" },
         updates:     { glyph: "󰚰", label: "Package updates", group: "updates",     zone: "right",  setting: "updatesWidget" },
+        system:      { glyph: "󰍛", label: "System monitor",  group: "system",      zone: "right",  setting: "barShowSystem" },
         network:     { glyph: "󰛳", label: "Network",         group: "network",     zone: "right",  setting: "barShowNetwork" },
         bluetooth:   { glyph: "󰂯", label: "Bluetooth",       group: "network",     zone: "right",  setting: "barShowBluetooth" },
+        keyboard:    { glyph: "󰌌", label: "Keyboard",        group: "input",       zone: "right",  setting: "barShowKeyboard" },
         volume:      { glyph: "󰕾", label: "Volume",          group: "levels",      zone: "right",  setting: "barShowVolume" },
         microphone:  { glyph: "󰍬", label: "Microphone",      group: "levels",      zone: "right",  setting: "barShowMic" },
         brightness:  { glyph: "󰃟", label: "Brightness",      group: "levels",      zone: "right",  setting: "barShowBrightness" },
@@ -261,6 +275,23 @@ Singleton {
         root.trayHidden = ids.map(k => encodeURIComponent(k)).join(",")
     }
 
+    // app names as notifications report them; a muted app still reaches history
+    readonly property var notifMutedAppNames: root.notifMutedApps.split(",")
+        .filter(s => s.length > 0).map(s => {
+            try { return decodeURIComponent(s) } catch (e) { return s }
+        })
+
+    function notifAppMuted(name: string): bool {
+        return name.length > 0 && root.notifMutedAppNames.indexOf(name) >= 0
+    }
+
+    function setNotifAppMuted(name: string, muted: bool): void {
+        if (name.length === 0 || root.notifAppMuted(name) === muted) return
+        const names = root.notifMutedAppNames.filter(k => k !== name)
+        if (muted) names.push(name)
+        root.notifMutedApps = names.map(k => encodeURIComponent(k)).join(",")
+    }
+
     function barWidgetConfiguredVisible(key: string): bool {
         const meta = root.barWidgetMeta[key]
         if (!meta) return false
@@ -325,6 +356,8 @@ Singleton {
         { k: "networkSpeedInline",  t: "bool", sec: "indicators", l: "Always show speed" },
         { k: "netVpnShowLink",      t: "bool", sec: "indicators", l: "Connection beside VPN" },
         { k: "brightnessDevice",    t: "re",   re: /^[A-Za-z0-9_.:+@-]*$/, sec: "interface", l: "Brightness display" },
+        { k: "ddcBrightnessEnabled", t: "bool", sec: "interface", l: "External brightness" },
+        { k: "ddcDisabledDisplays", t: "re", re: /^([A-Za-z0-9:-]+(,[A-Za-z0-9:-]+)*)?$/, sec: "interface" },
         { k: "lockProvider",        t: "enum", vals: ["auto", "hyprlock", "swaylock", "gtklock", "loginctl", "custom"], sec: "interface", l: "Screen lock" },
         { k: "lockCommandCustom",   t: "re",   re: /^[^\u0000-\u001F\u007F]{0,256}$/, sec: "interface" },
         { k: "nightLightProvider",  t: "enum", vals: ["auto", "hyprsunset", "wlsunset"], sec: "interface", l: "Night light" },
@@ -333,8 +366,10 @@ Singleton {
         { k: "clock12h",            t: "bool", sec: "clock" },
         { k: "calendarWeekStart",   t: "enum", vals: ["monday", "sunday", "locale"], sec: "clock", l: "Week starts" },
         { k: "calendarWeekNumbers", t: "bool", sec: "clock", l: "Week numbers" },
+        { k: "weatherEnabled",      t: "bool", sec: "clock", l: "Weather" },
         { k: "showWindowTitle",     t: "bool", sec: "widgets,indicators", l: "Window title" },
         { k: "showWindowTitleApp",  t: "bool", sec: "indicators", l: "App name" },
+        { k: "showWindowTitleIcon", t: "bool", sec: "indicators", l: "App icon" },
         { k: "updatesWidget",       t: "bool", sec: "widgets,updates", l: "Track package updates" },
         { k: "updatesIncludeAur",   t: "bool", sec: "updates", l: "Include AUR packages" },
         { k: "trayWidget",          t: "bool", sec: "widgets" },
@@ -346,6 +381,11 @@ Singleton {
         { k: "barShowNetwork",      t: "bool", sec: "widgets" },
         { k: "barShowBluetooth",    t: "bool", sec: "widgets" },
         { k: "barShowClock",        t: "bool", sec: "widgets" },
+        { k: "barShowKeyboard",     t: "bool", sec: "widgets" },
+        { k: "barShowSystem",       t: "bool", sec: "widgets,indicators", l: "System monitor" },
+        { k: "systemShowCpu",       t: "bool", sec: "indicators", l: "CPU usage" },
+        { k: "systemShowMemory",    t: "bool", sec: "indicators", l: "Memory in use" },
+        { k: "systemShowTemp",      t: "bool", sec: "indicators", l: "CPU temperature" },
         { k: "barShowShellUpdate",  t: "bool", sec: "widgets" },
         { k: "barShowVolume",       t: "bool", sec: "widgets" },
         { k: "barShowMic",          t: "bool", sec: "widgets" },
@@ -362,11 +402,13 @@ Singleton {
         { k: "reduceMotion",        t: "bool", sec: "interface", l: "Reduce motion" },
         { k: "highContrast",        t: "bool", sec: "interface", l: "High contrast" },
         { k: "outlineStrength",     t: "real", min: 0.5, max: 2.4, sec: "theme", l: "Outline strength" },
-        { k: "uiScale",             t: "real", min: 0.8, max: 1.15, sec: "interface", l: "UI scale" },
+        { k: "uiScale",             t: "real", min: 0.8, max: 1.5, sec: "interface", l: "UI scale" },
         { k: "fontFamily",          t: "re",   re: /^[^\u0000-\u001F\u007F]{0,128}$/, sec: "interface", l: "Font" },
         { k: "notifPopupEnabled",   t: "bool", sec: "popups", l: "Popup notifications" },
         { k: "notifFullscreenSilence", t: "bool", sec: "popups", l: "Hide in fullscreen" },
         { k: "notifScreenShareSilence", t: "bool", sec: "popups", l: "Hide while sharing screen" },
+        { k: "notifGroupThreads",   t: "bool", sec: "popups", l: "Group conversations" },
+        { k: "notifMutedApps",      t: "re",   re: /^[A-Za-z0-9%._~!*'()-]*(,[A-Za-z0-9%._~!*'()-]+)*$/, sec: "popups", l: "Muted apps" },
         { k: "notifPosition",       t: "enum", vals: ["top-right", "top-left", "top-center"], sec: "popups", l: "Position" },
         { k: "notifMaxVisible",     t: "int",  min: 0, max: 20, sec: "popups", l: "Max shown" },
         { k: "notifHistoryPersistent", t: "bool", sec: "popups", l: "Keep after restart" },
@@ -396,7 +438,7 @@ Singleton {
         { k: "glowStrength",        t: "real", min: 0.5, max: 1.75, sec: "underline" },
         { k: "dotStyle",            t: "enum", vals: ["·", "•", "◦", "|", "slash", "line", "none"], sec: "separators", l: "Style" },
         { k: "barSeparatorMode",    t: "enum", vals: ["groups", "widgets"], sec: "separators", l: "Placement" },
-        { k: "barSpacing",          t: "int",  min: 4, max: 24, sec: "separators", l: "Widget gap" },
+        { k: "barSpacing",          t: "int",  min: 4, max: 12, step: 4, sec: "separators", l: "Widget gap" },
         { k: "barAutoCompact",      t: "bool", sec: "separators", l: "Auto tighten" },
         { k: "barCompact",          t: "bool", sec: "separators", l: "Compact widgets" },
         { k: "barCenterInGap",      t: "bool", sec: "separators", l: "Center between widgets" },
@@ -410,6 +452,7 @@ Singleton {
         { k: "barRadius",           t: "int",  min: 0,    max: 22, sec: "surface" },
         { k: "barShadow",           t: "bool", sec: "theme", l: "Shell shadows" },
         { k: "barShadowStrength",   t: "real", min: 0.3,  max: 1.6, sec: "theme", l: "Depth" },
+        { k: "barAccentPills",      t: "bool", sec: "theme", l: "Accent widget icons" },
         { k: "barPosition",         t: "enum", vals: ["top", "bottom"], sec: "surface", l: "Position" },
         { k: "barOpacity",          t: "real", min: 0.4,  max: 1.0, sec: "theme", l: "Bar opacity" },
         { k: "surfaceBlur",         t: "bool", sec: "theme", l: "Background blur" },
@@ -617,7 +660,7 @@ Singleton {
             { master: "osdBarIntegrated", negate: true, hides: ["osdMatchBar"] }
         ],
         popups: [
-            { master: "notifPopupEnabled", hides: ["notifFullscreenSilence", "notifScreenShareSilence",
+            { master: "notifPopupEnabled", hides: ["notifFullscreenSilence", "notifScreenShareSilence", "notifGroupThreads",
                 "notifPosition", "notifMaxVisible", "notifDefaultTimeout"] },
             { master: "dndSchedule", hides: ["dndFrom", "dndTo"] }
         ],
@@ -641,8 +684,9 @@ Singleton {
             { master: "clockShowDate", hides: ["compactDate"] }
         ],
         indicators: [
-            { master: "showWindowTitle", hides: ["showWindowTitleApp"] },
-            { master: "networkTrafficStats", hides: ["networkSpeedInline"] }
+            { master: "showWindowTitle", hides: ["showWindowTitleApp", "showWindowTitleIcon"] },
+            { master: "networkTrafficStats", hides: ["networkSpeedInline"] },
+            { master: "barShowSystem", hides: ["systemShowCpu", "systemShowMemory", "systemShowTemp"] }
         ],
         media: [
             { master: "mediaProgress", hides: ["mediaVisualizerPosition",

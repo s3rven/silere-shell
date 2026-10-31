@@ -20,27 +20,29 @@ Column {
 
     SectionLabel { label: "GAPS"; first: true }
     SettingsCard {
-        SliderRow {
-            glyph: "󰤼"; label: "Widget gap"
+        // a divider spans twice the gap, so anything past 12 left whole widgets of empty bar
+        ChoiceChipRow {
             key: "barSpacing"
-            displayValue: ShellSettings.barSpacing + "px"
+            glyph: "󰤼"; label: "Widget gap"
+            model: [
+                { value: 4,  label: "Tight"  },
+                { value: 8,  label: "Normal" },
+                { value: 12, label: "Wide"   }
+            ]
         }
         ToggleRow {
             glyph: "󰡍"; label: "Compact widgets"
-            description: "Reduce widget padding and gaps"
             key: "barCompact"
         }
         CollapsibleSection {
             expanded: !ShellSettings.barCompact
             ToggleRow {
                 glyph: "󰡌"; label: "Auto tighten"
-                description: "Tighten when widgets crowd the bar"
                 key: "barAutoCompact"
             }
         }
         ToggleRow {
             glyph: "󰉠"; label: "Center between widgets"
-            description: "Balance the middle zone between both sides"
             key: "barCenterInGap"
         }
     }
@@ -50,7 +52,6 @@ Column {
         SelectRow {
             key: "dotStyle"
             label: "Style"
-            description: "Divider between widgets"
             optionPreview: _dividerPreview
             model: [
                 { value: "line",  label: "Line"       },

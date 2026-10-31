@@ -411,14 +411,6 @@ PageShell {
                     elide: Text.ElideRight
                 }
 
-                ShellText {
-                    width: parent.width
-                    visible: _detailHeader._meta.description.length > 0
-                    text: _detailHeader._meta.description
-                    color: Theme.menuTextDetail
-                    font.pixelSize: Settings.fontCaption
-                    wrapMode: Text.WrapAtWordBoundaryOrAnywhere
-                }
             }
 
             Rectangle {

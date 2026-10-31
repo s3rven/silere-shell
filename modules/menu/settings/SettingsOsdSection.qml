@@ -15,14 +15,12 @@ Column {
             expanded: ShellSettings.osdEnabled
             ToggleRow {
                 glyph: "󰀱"; label: "Show in bar"
-                description: "Use bar center instead of a popup"
                 key: "osdBarIntegrated"
             }
             CollapsibleSection {
                 expanded: !ShellSettings.osdBarIntegrated
                 ToggleRow {
                     glyph: "󰖲"; label: "Match bar shape"
-                    description: "Use the bar's height and roundness"
                     key: "osdMatchBar"
                 }
             }

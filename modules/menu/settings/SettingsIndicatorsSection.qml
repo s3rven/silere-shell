@@ -16,8 +16,11 @@ Column {
             expanded: ShellSettings.showWindowTitle
             ToggleRow {
                 glyph: "󰀻"; label: "App name"
-                description: "Show it beside or instead of the title"
                 key: "showWindowTitleApp"
+            }
+            ToggleRow {
+                glyph: "󰋩"; label: "App icon"
+                key: "showWindowTitleIcon"
             }
         }
     }
@@ -45,9 +48,31 @@ Column {
         ToggleRow {
             key: "netVpnShowLink"
             glyph: "󰦝"; label: "Connection beside VPN"
-            description: "Show Wi-Fi or Ethernet while on VPN"
             available: Network.toolAvailable
             dependsNote: "No NetworkManager"
+        }
+    }
+
+    SectionLabel { label: "SYSTEM MONITOR" }
+    SettingsCard {
+        ToggleRow {
+            glyph: "󰍛"; label: "System monitor"
+            key: "barShowSystem"
+        }
+        CollapsibleSection {
+            expanded: ShellSettings.barShowSystem
+            ToggleRow {
+                glyph: "󰍛"; label: "CPU usage"
+                key: "systemShowCpu"
+            }
+            ToggleRow {
+                glyph: "󰘚"; label: "Memory in use"
+                key: "systemShowMemory"
+            }
+            ToggleRow {
+                glyph: "󰔏"; label: "CPU temperature"
+                key: "systemShowTemp"
+            }
         }
     }
 }

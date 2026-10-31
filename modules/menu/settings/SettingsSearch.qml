@@ -109,7 +109,7 @@ Column {
                 anchors.right: parent.right
                 readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
                 width: Metrics.devicePx(Math.min(root.width, _hintLabel.implicitWidth + 18), _dpr)
-                height: Metrics.devicePx(22, _dpr)
+                height: Metrics.devicePx(Math.max(22, Settings.fontLabel + 8), _dpr)
                 radius: Theme.radiusInline
                 antialiasing: true
                 color: Theme.menuCardSolid
@@ -203,6 +203,7 @@ Column {
                     height: parent.height
                     TextInput {
                         id: _input
+                        activeFocusOnTab: true
                         x: root.fieldHeight - 2
                         width: Math.max(0, (_clear.visible ? _clear.x : _close.x) - x - 4)
                         anchors.verticalCenter: parent.verticalCenter
@@ -217,6 +218,7 @@ Column {
                         font.pixelSize: Settings.fontSize
                         inputMethodHints: Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
                         Accessible.name: "Search settings"
+                        FocusScroll { revealTarget: root }
                         Accessible.description: root.searching ? root.resultSummary : "Search by feature name or setting key"
                         onAccepted: root.submit()
                         Keys.onEscapePressed: event => {

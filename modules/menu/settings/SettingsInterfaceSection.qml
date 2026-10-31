@@ -53,9 +53,12 @@ Column {
         return out
     }
 
+    // opening the page is the refresh: fonts installed since the last visit and newly attached displays show up here
     Component.onCompleted: {
         SystemTools.refreshIfStale(60000)
-        FontScan.requestScan()
+        FontScan.refreshIfStale(60000)
+        if (ShellSettings.ddcBrightnessEnabled) DisplayBrightness.refresh(false)
+        Session.refresh()
     }
 
     SectionLabel { label: "TEXT & ACCESSIBILITY"; first: true }
@@ -90,11 +93,12 @@ Column {
             }
         }
         CollapsibleSection {
-            expanded: FontScan.scanned
+            expanded: FontScan.lastError.length > 0
+                || (FontScan.scanned && FontScan.iconFamilies.length === 0)
             HintText {
-                text: FontScan.families.length > 0
-                    ? "Nerd Fonts only, so the shell's icons render."
+                text: FontScan.lastError.length > 0 ? FontScan.lastError
                     : "No Nerd Font found; shell icons render as boxes until one is installed."
+                textColor: FontScan.lastError.length > 0 ? Theme.menuTextWarning : Theme.menuTextDetail
             }
         }
         SelectRow {
@@ -106,13 +110,14 @@ Column {
                 { value: 0.9,  label: "90%"  },
                 { value: 1.0,  label: "100%" },
                 { value: 1.1,  label: "110%" },
-                { value: 1.15, label: "115%" }
+                { value: 1.15, label: "115%" },
+                { value: 1.25, label: "125%" },
+                { value: 1.5, label: "150% (comfortable)" }
             ]
         }
         SelectRow {
             key: "barIconSize"
             glyph: "󰀻"; label: "Icon size"
-            description: "Tray and workspace app icons"
             fallbackLabel: ShellSettings.barIconSize + "px"
             model: [
                 { value: 12, label: "Normal" },
@@ -126,7 +131,6 @@ Column {
         }
         ToggleRow {
             glyph: "󱖳"; label: "Reduce motion"
-            description: "Disable transitions and animated effects"
             key: "reduceMotion"
         }
     }
@@ -135,7 +139,6 @@ Column {
     SettingsCard {
         ToggleRow {
             glyph: "󱂪"; label: "Keep groups open"
-            description: "Sidebar starts with every group expanded"
             key: "settingsNavPinned"
         }
     }
@@ -150,7 +153,6 @@ Column {
                 SelectRow {
                     key: "brightnessDevice"
                     glyph: "󰃟"; label: "Brightness display"
-                    description: "Backlight the slider adjusts"
                     fallbackLabel: ShellSettings.brightnessDevice + " (unavailable)"
                     model: Brightness.deviceChoices
                 }
@@ -183,7 +185,7 @@ Column {
                         label: "Bar on " + modelData.name
                         checked: Monitors.barEnabled(modelData)
                         // turning off the last one is refused, and a switch that springs back with no reason reads as a broken toggle
-                        enabled: !checked || Monitors.liveBarCount > 1
+                        blocked: checked && Monitors.liveBarCount <= 1
                         dependsNote: "Keeps the menu reachable"
                         onToggled: nextChecked => Monitors.setBarEnabled(
                             modelData.name, nextChecked)
@@ -195,6 +197,29 @@ Column {
 
     SectionLabel { label: "SYSTEM PROGRAMS" }
     SettingsCard {
+        ToggleRow {
+            glyph: "󰹑"; label: "External brightness"
+            key: "ddcBrightnessEnabled"
+            available: SystemTools.hasDdcutil && SystemTools.hasTimeout
+            dependsNote: "Needs ddcutil and timeout"
+        }
+        HintText {
+            visible: ShellSettings.ddcBrightnessEnabled && text.length > 0
+            text: DisplayBrightness.scanning ? "Checking external displays…"
+                : DisplayBrightness.lastError.length > 0 ? DisplayBrightness.lastError
+                : DisplayBrightness.displays.length === 0 ? "No DDC/CI display found. Check its DDC/CI option and I2C access."
+                : ""
+        }
+        Repeater {
+            model: ShellSettings.ddcBrightnessEnabled ? DisplayBrightness.displays : []
+            ToggleRow {
+                required property var modelData
+                glyph: "󰹑"
+                label: "Control " + modelData.label
+                checked: !DisplayBrightness.disabled(modelData.key)
+                onToggled: nextChecked => DisplayBrightness.setEnabled(modelData.key, nextChecked)
+            }
+        }
         SelectRow {
             key: "lockProvider"
             glyph: "󰌾"; label: "Screen lock"
@@ -203,6 +228,11 @@ Column {
         CollapsibleSection {
             expanded: ShellSettings.lockProvider === "custom"
             LockCommandEditor {}
+        }
+        HintText {
+            visible: text.length > 0
+            text: Session.lastError.length > 0 ? Session.lastError
+                : Session.canLockSleep ? "" : Session.readiness
         }
         HintText {
             visible: ShellSettings.lockProvider !== "custom"

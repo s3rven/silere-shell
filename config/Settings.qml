@@ -19,6 +19,15 @@ Singleton {
         if (installed.length === 0 || installed.indexOf(root.defaultFont) >= 0) return root.defaultFont
         return installed[0]
     }
+    readonly property string iconFont: {
+        const installed = FontScan.iconFamilies
+        return installed.length === 0 || installed.indexOf(root.defaultFont) >= 0
+            ? root.defaultFont : installed[0]
+    }
+    function fontForText(value: string): string {
+        // Nerd Font glyphs occupy the private-use planes, including supplementary pairs
+        return /[\uE000-\uF8FF\uDB80-\uDBFF]/.test(value) ? root.iconFont : root.font
+    }
     // normalize on xHeight, not line height (the Meslo LG variants differ only in line gap); 0.55 = JetBrainsMono, so the default scales at 1.0
     readonly property real fontScale: Math.max(0.85, Math.min(1.2, 0.55 / Math.max(0.3, _fm.xHeight / 100)))
     readonly property int fontSize: Math.round(12 * ShellSettings.uiScale * fontScale)
@@ -104,6 +113,34 @@ Singleton {
     // per-app routing is a mixer's job, not a bar's
     readonly property list<string> soundSettingsCommand: SystemTools.hasPwvucontrol
         ? ["pwvucontrol"] : SystemTools.hasPavucontrol ? ["pavucontrol"] : []
+
+    readonly property list<string> bluetoothSettingsCommand: SystemTools.hasBluemanManager
+        ? ["blueman-manager"] : []
+    // a terminal app needs a window to run in: xdg-terminal-exec honours the user's own
+    // choice, and without it the first common terminal found stands in
+    readonly property var terminalPrefix: SystemTools.hasXdgTerminalExec ? ["xdg-terminal-exec"]
+        : SystemTools.has("kitty") ? ["kitty"]
+        : SystemTools.has("foot") ? ["foot"]
+        : SystemTools.has("ghostty") ? ["ghostty", "-e"]
+        : SystemTools.has("alacritty") ? ["alacritty", "-e"]
+        : SystemTools.has("wezterm") ? ["wezterm", "start", "--"]
+        : SystemTools.has("konsole") ? ["konsole", "-e"]
+        : []
+    function inTerminal(argv): var {
+        return root.terminalPrefix.length > 0 ? root.terminalPrefix.concat(argv) : []
+    }
+
+    readonly property list<string> networkSettingsCommand: SystemTools.hasNmConnectionEditor
+        ? ["nm-connection-editor"] : SystemTools.hasNmtui ? root.inTerminal(["nmtui"]) : []
+
+    // a desktop monitor first; a terminal one only where a terminal can host it
+    readonly property list<string> systemMonitorCommand: {
+        for (const app of ["missioncenter", "resources", "gnome-system-monitor", "plasma-systemmonitor"])
+            if (SystemTools.has(app)) return [app]
+        for (const app of ["btop", "htop"])
+            if (SystemTools.has(app)) return root.inTerminal([app])
+        return []
+    }
 
     readonly property list<string> customLockCommand: root.splitCommand(ShellSettings.lockCommandCustom)
 

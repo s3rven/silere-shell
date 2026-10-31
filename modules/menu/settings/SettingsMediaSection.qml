@@ -10,14 +10,12 @@ Column {
     SettingsCard {
         ToggleRow {
             glyph: "󰎇"; label: "Artist"
-            description: "Shown before the track title"
             checked: ShellSettings.mediaWidgetFormat === "artist-title"
             onToggled: nextChecked => ShellSettings.mediaWidgetFormat =
                 nextChecked ? "artist-title" : "title"
         }
         ToggleRow {
             glyph: "󰐊"; label: "Playback status"
-            description: "Show play state and progress"
             key: "mediaWidgetHelper"
         }
         ToggleRow {
@@ -67,11 +65,6 @@ Column {
                     { value: "balanced", label: "Balanced" },
                     { value: "smooth",   label: "Smooth" }
                 ]
-            }
-            // the preset names say nothing about what they cost; the shape changes both
-            HintText {
-                text: Media.visualizerLabel + (Media.vizBatteryEco
-                    ? ", Eco while on battery." : ". Eco uses the least CPU.")
             }
         }
     }

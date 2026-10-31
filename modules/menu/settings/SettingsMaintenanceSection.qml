@@ -62,7 +62,7 @@ Column {
         else if (FontScan.lastError.length > 0)
             add(attention, "󰈵", "Font check", FontScan.lastError,
                 "Fonts", false, "interface", Theme.warning)
-        else if (FontScan.scanned && FontScan.families.length === 0)
+        else if (FontScan.scanned && FontScan.iconFamilies.length === 0)
             add(attention, "󰈵", "Icon font missing",
                 "Bar and menu icons may not render", "Choose font", false,
                 "interface", Theme.warning)
@@ -216,10 +216,6 @@ Column {
                 }
             }
         }
-        HintText {
-            visible: root._attentionIssues.some(i => i.p === true)
-            text: "The value on the right is the package or fallback involved."
-        }
     }
 
     SectionLabel { label: "RECOVERY" }
@@ -253,7 +249,7 @@ Column {
             }
         }
         HintText {
-            text: "Resets appearance, widget order, program choices, and other preferences. Wallpaper colors and notification history stay unchanged."
+            text: "Wallpaper colors and notification history are kept."
         }
     }
     SectionLabel {
@@ -286,9 +282,6 @@ Column {
                     valueText: modelData.v
                     passive: true
                 }
-            }
-            HintText {
-                text: "Install only the features you want. The value on the right names the package or integration involved."
             }
         }
     }

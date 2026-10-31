@@ -66,5 +66,12 @@ Column {
             glyph: "󰨲"; label: "Week numbers"
             key: "calendarWeekNumbers"
         }
+        ToggleRow {
+            glyph: "󰖕"; label: "Weather"
+            // off leaves the Weather service uncreated, so only read it when on
+            description: "Open-Meteo, for " + (ShellSettings.weatherEnabled && Weather.place.length > 0
+                ? Weather.place : "your time zone")
+            key: "weatherEnabled"
+        }
     }
 }
