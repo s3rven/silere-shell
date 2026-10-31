@@ -40,7 +40,7 @@ jobs:
           rm -rf /etc/pacman.d/gnupg
           pacman-key --init
           pacman-key --populate archlinux
-          pacman -Syyuu --noconfirm --ignore archlinux-keyring git cmake ninja gcc pkgconf cli11 qt6-declarative qt6-shadertools qt6-wayland qt6-svg libdrm pipewire wayland wayland-protocols vulkan-headers fontconfig ttf-jetbrains-mono-nerd
+          pacman -Syyuu --noconfirm --overwrite '*' --ignore archlinux-keyring git cmake ninja gcc pkgconf cli11 qt6-declarative qt6-shadertools qt6-wayland qt6-svg libdrm pipewire wayland wayland-protocols vulkan-headers fontconfig ttf-jetbrains-mono-nerd
           test "$(pacman -Q qt6-base)" = 'qt6-base 6.9.2-1'
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
