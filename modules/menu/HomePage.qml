@@ -10,7 +10,10 @@ PageShell {
     id: root
 
     implicitHeight: _col.implicitHeight
-    onPageShown: if (Network.hasVpn) Network.refreshVpnAddress()
+    onPageShown: {
+        if (Network.hasVpn) Network.refreshVpnAddress()
+        Vpn.peek()
+    }
     onPageHidden: {
         _vpnRow.copied = false
         _picker = ""
@@ -19,13 +22,14 @@ PageShell {
     }
 
     property string _picker: ""
-    readonly property bool _avShown: Audio.ready || _brightnessAvailable
+    readonly property bool _avShown: Audio.ready || _brightnessAvailable || DisplayBrightness.displays.length > 0
     readonly property bool _connShown: _wifiAvailable || _btAvailable || _signInShown || Network.hasVpn
+        || (SystemTools.hasNmcli && Network.toolAvailable)
     function _bottom(item, shown: bool): real {
         return item.y + (shown ? item.height : 0)
     }
     // icon inset + glyph slot + gap, where every Home row's text and slider begin
-    readonly property int _rowTextX: 42
+    readonly property int _rowTextX: 14 + Metrics.glyphSlotWidth + 10
     readonly property bool _wifiAvailable: Network.toolAvailable && Network.hasWifiDevice
     readonly property bool _btAvailable: Bluetooth.available
     readonly property bool _signInShown: Network.signInNeeded && Network.canOpenSignIn
@@ -149,6 +153,25 @@ PageShell {
                     text: Brightness.lastError
                     textColor: Theme.withAlpha(Theme.error, 0.90)
                 }
+                Repeater {
+                    model: DisplayBrightness.displays
+                    SliderRow {
+                        required property var modelData
+                        visible: !DisplayBrightness.disabled(modelData.key)
+                        glyph: "󰍹"
+                        label: modelData.label + " brightness"
+                        min: 1; max: 100; step: 1
+                        value: DisplayBrightness.levelFor(modelData.key)
+                        displayValue: Math.round(value) + "%"
+                        interactionKey: modelData.key
+                        commitOnRelease: true
+                        onChanged: value => DisplayBrightness.setPercent(modelData.key, value)
+                    }
+                }
+                HintText {
+                    visible: ShellSettings.ddcBrightnessEnabled && DisplayBrightness.lastError.length > 0
+                    text: DisplayBrightness.lastError
+                }
             }
         }
 
@@ -162,6 +185,7 @@ PageShell {
             SettingsCard {
                 dividerIndent: root._rowTextX
 
+                InlinePicker { mirror: _wifiPicker }
                 ControlRow {
                     id: _wifiRow
                     visible: root._wifiAvailable
@@ -177,9 +201,9 @@ PageShell {
                           : Network.wifiConnecting.length > 0 ? "Connecting to " + SafeText.singleLineText(Network.wifiConnecting, 128)
                           : Network.wifiError.length > 0 ? "Couldn't connect to " + SafeText.singleLineText(Network.wifiError, 128)
                           : Network.wifiEnabled && Network.isWifi && Network.connected ? _withIssue(Network.connectionName)
-                          : _ethActive ? _withIssue("Ethernet active")
+                          : _ethActive ? _withIssue("Ethernet")
                           : Network.wifiEnabled ? "Not connected"
-                          : "Off"
+                          : ""
                     statusColor: Network.wifiHardBlocked ? Theme.warning
                         : Network.wifiConnecting.length > 0 ? Theme.accent
                         : Network.wifiError.length > 0 ? Theme.error
@@ -212,25 +236,32 @@ PageShell {
                     visible: root._signInShown
                     glyph: "󰖟"
                     title: "Sign in to this network"
-                    status: "Opens its login page in your browser"
                     onActivated: {
                         MenuState.close()
                         Network.openSignIn()
                     }
                 }
 
+                InlinePicker { mirror: _vpnPicker }
                 ControlRow {
                     id: _vpnRow
-                    visible: Network.hasVpn
+                    // nothing to pick without a saved profile, so the row waits for one
+                    visible: Network.hasVpn || (Vpn.available && Vpn.profiles.length > 0)
                     property bool copied: false
-                    active: true
+                    active: Network.hasVpn
                     glyph: "󰦝"
                     title: "VPN"
-                    status: copied ? "Address copied"
-                        : Network.vpnName.length > 0 ? Network.vpnName : "Connected"
+                    status: copied ? "Address copied" : Network.vpnName
                     valueText: Network.vpnAddress
-                    passive: Network.vpnAddress.length === 0
+                    passive: !expandable && Network.vpnAddress.length === 0
+                    expandable: SystemTools.hasNmcli && Network.toolAvailable
+                    expanded: root._picker === "vpn"
+                    onExpandToggled: root._togglePicker("vpn")
                     onActivated: {
+                        if (Network.vpnAddress.length === 0) {
+                            root._togglePicker("vpn")
+                            return
+                        }
                         Quickshell.clipboardText = Network.vpnAddress
                         copied = true
                         _copiedHold.restart()
@@ -238,6 +269,13 @@ PageShell {
                     Timer { id: _copiedHold; interval: 1600; onTriggered: _vpnRow.copied = false }
                 }
 
+                InlinePicker {
+                    id: _vpnPicker
+                    open: root._picker === "vpn"
+                    content: Component { VpnList { open: root._picker === "vpn" } }
+                }
+
+                InlinePicker { mirror: _btPicker }
                 ControlRow {
                     id: _btRow
                     visible: root._btAvailable
@@ -247,7 +285,7 @@ PageShell {
                             ? Bluetooth.connectedGlyph : "󰂯"
                     title: "Bluetooth"
                     status: Bluetooth.hardBlocked ? "Blocked by the hardware switch"
-                        : Bluetooth.statusText
+                        : Bluetooth.enabled ? Bluetooth.statusText : ""
                     statusColor: Bluetooth.hardBlocked ? Theme.warning : "transparent"
                     showSwitch: true
                     available: !Bluetooth.hardBlocked
@@ -281,6 +319,7 @@ PageShell {
             SettingsCard {
                 dividerIndent: root._rowTextX
 
+                InlinePicker { mirror: _nightPicker }
                 ControlRow {
                     id: _nightRow
                     visible: NightLight.toolAvailable
@@ -310,6 +349,7 @@ PageShell {
                             ToggleRow {
                                 glyph: "󰖙"
                                 label: "Follow sun position"
+                                description: ShellSettings.nightLightAuto ? NightLight.locationLabel : ""
                                 checked: ShellSettings.nightLightAuto
                                 onToggled: nextChecked => ShellSettings.nightLightAuto = nextChecked
                             }
@@ -328,10 +368,6 @@ PageShell {
                                     onChanged: (v) => ShellSettings.nightLightTemp = v
                                 }
                             }
-                            CollapsibleSection {
-                                expanded: ShellSettings.nightLightAuto
-                                HintText { text: "Temperature tracks sunset and sunrise at " + NightLight.locationLabel + "." }
-                            }
                             SunArc {
                                 shown: root._picker === "nightlight" && MenuState.open
                             }
@@ -339,6 +375,7 @@ PageShell {
                     }
                 }
 
+                InlinePicker { mirror: _dndPicker }
                 ControlRow {
                     id: _dndRow
                     active: Notifications.dnd
@@ -347,6 +384,7 @@ PageShell {
                     status: Notifications.dndUntil > 0 ? Notifications.dndUntilText
                         : Notifications.effectiveDnd && !Notifications.dnd ? "Quiet hours"
                         : Notifications.fullscreenSilenced ? "Fullscreen"
+                        : Notifications.presentationMode ? "Presentation Mode"
                         : Notifications.screenShareSilenced ? "Sharing screen"
                         : ""
                     showSwitch: true
@@ -385,10 +423,18 @@ PageShell {
                                     root._closePicker()
                                 }
                             }
+                            // hides every popup until turned off, for presenting or sharing a screen
+                            ToggleRow {
+                                glyph: "󱒃"
+                                label: "Presentation Mode"
+                                checked: Notifications.presentationMode
+                                onToggled: nextChecked => Notifications.presentationMode = nextChecked
+                            }
                         }
                     }
                 }
 
+                InlinePicker { mirror: _awakePicker }
                 ControlRow {
                     id: _awakeRow
                     active: Idle.keepAwake
@@ -428,6 +474,7 @@ PageShell {
                     }
                 }
 
+                InlinePicker { mirror: _powerPicker }
                 ControlRow {
                     id: _powerRow
                     visible: PowerProfiles.available

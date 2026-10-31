@@ -18,6 +18,9 @@ Item {
     property bool labelPillEnabled: true
     property RailLabelGroup labels: null
     property bool _hoverReady: false
+    // a plain Item has no focus reason, so read it from where the pointer was as focus arrived
+    property bool _pointerFocus: false
+    onActiveFocusChanged: root._pointerFocus = root.activeFocus && (_hover.hovered || _tap.pressed)
 
     readonly property alias hovered: _hover.hovered
     readonly property bool _hot: _hover.hovered
@@ -32,6 +35,7 @@ Item {
     Accessible.focusable: true
     Accessible.selected: root.active
     Accessible.onPressAction: root.tapped()
+    KeyboardFocus { listNavigation: true; onActivated: root.tapped() }
 
     Timer {
         id: _labelDelay
@@ -116,16 +120,17 @@ Item {
 
     Rectangle {
         id: _pill
-        // not focus alone: tapping Power force-focuses it and would pin the label open while the rail stays open
+        // keyboard focus only: focus won by the pointer would pin the label open after it leaves
+        readonly property bool _keyboardFocus: root.activeFocus && !root._pointerFocus
         readonly property bool _show: root.labelPillEnabled
-            && _hover.hovered && root._hoverReady
+            && ((_hover.hovered && root._hoverReady) || _keyboardFocus)
         on_ShowChanged: if (_show && root.labels) root.labels.engage()
 
         x: root.railW + 7
         anchors.verticalCenter: parent.verticalCenter
         readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
         width: Metrics.devicePx(_pillLabel.implicitWidth + 18, _dpr)
-        height: Metrics.devicePx(22, _dpr); radius: Theme.radiusInline
+        height: Metrics.devicePx(Math.max(22, Settings.fontLabel + 8), _dpr); radius: Theme.radiusInline
         color: Theme.menuCardSolid
         antialiasing: true
         opacity: _show ? 1.0 : 0.0

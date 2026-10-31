@@ -152,29 +152,10 @@ Item {
             + leafIndex * (root._navRowH + root._navRowGap)
     }
 
-    function _revealRange(top: real, bottom: real): void {
-        // implicitHeight already caches the same tree calculation for layout
-        const contentH = root.implicitHeight
-        const viewH = _navScroll.height
-        if (contentH <= viewH + 1) {
-            _navScroll.contentY = 0
-            return
-        }
-
-        const margin = 7
-        const maxY = Math.max(0, contentH - viewH)
-        let target = _navScroll.contentY
-        if (bottom - top > viewH - margin * 2) target = top - margin
-        else if (top - margin < target) target = top - margin
-        else if (bottom + margin > target + viewH)
-            target = bottom + margin - viewH
-        _navScroll.contentY = Math.max(0, Math.min(maxY, target))
-    }
-
     function _scrollToSelection(): void {
         if (!root.active) return
         const y = root._sectionRowY(MenuState.settingsSection)
-        root._revealRange(y, y + root._navRowH)
+        _nav.reveal(y, y + root._navRowH)
     }
 
     function _scrollToGroup(index: int): void {
@@ -182,7 +163,7 @@ Item {
         const tree = MenuState.settingsTree
         if (index >= tree.length) return
         const y = root._groupY(index)
-        root._revealRange(y, y + root._groupFinalHeight(index, tree[index]))
+        _nav.reveal(y, y + root._groupFinalHeight(index, tree[index]))
     }
 
     function _settleTo(index: int): void {
@@ -305,310 +286,278 @@ Item {
         }
     }
 
-    ShellFlickable {
-        id: _navScroll
+    NavDrawerScroll {
+        id: _nav
         anchors.fill: parent
-        contentWidth: width
-        contentHeight: _content.height
-        interactive: contentHeight > height + 1
+        title: "Settings"
+        contentHeight: root.implicitHeight
+        onViewportResized: if (root.active) root._queueReveal(-1)
 
-        onHeightChanged: if (root.active) root._queueReveal(-1)
-
-        MotionBehavior on contentY {
-            gate: !_navScroll.moving
-            NumberAnimation {
-                duration: Motion.normal
-                easing.type: Easing.BezierSpline
-                easing.bezierCurve: Motion.standard
-            }
+        RailSelection {
+            id: _selection
+            x: _groupColumn.x
+            width: _groupColumn.width
+            index: root._activeOrdinal
+            rowHeight: root._navRowH
+            rowTop: root._slotTop(_selection.slot)
+            shown: root.active && root._selectionShown
         }
 
-        Item {
-            id: _content
-            width: root.width
-            height: root.implicitHeight
+        Column {
+            id: _groupColumn
+            x: 6
+            y: root._navTop
+            width: parent.width - 12
+            spacing: root._groupGap
 
-            Item {
-                id: _drawerHeader
-                x: 8
-                y: 6
-                width: Math.max(1, parent.width - 16)
-                height: 28
+            Repeater {
+                id: _groupRepeater
+                model: MenuState.settingsTree
+                onItemAdded: root._groupItemsVersion++
 
-                ShellText {
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "Settings"
-                    color: Theme.withAlpha(Theme.text, 0.88)
-                    font.pixelSize: Settings.fontSize
-                    font.weight: Font.DemiBold
-                    elide: Text.ElideRight
-                }
-            }
+                delegate: Item {
+                    id: _grp
 
-            RailSelection {
-                id: _selection
-                x: _groupColumn.x
-                width: _groupColumn.width
-                index: root._activeOrdinal
-                rowHeight: root._navRowH
-                rowTop: root._slotTop(_selection.slot)
-                shown: root.active && root._selectionShown
-            }
+                    required property int index
+                    required property var modelData
 
-            Column {
-                id: _groupColumn
-                x: 6
-                y: root._navTop
-                width: parent.width - 12
-                spacing: root._groupGap
+                    readonly property var leaves: root._leaves(modelData)
+                    readonly property bool expanded: root._isExpanded(index)
+                    readonly property bool groupActive: root._groupContainsSection(
+                        modelData, MenuState.settingsSection)
 
-                Repeater {
-                    id: _groupRepeater
-                    model: MenuState.settingsTree
-                    onItemAdded: root._groupItemsVersion++
+                    width: _groupColumn.width
+                    height: _grpHeader.height + _leafBox.height
 
-                    delegate: Item {
-                        id: _grp
-
-                        required property int index
-                        required property var modelData
-
-                        readonly property var leaves: root._leaves(modelData)
-                        readonly property bool expanded: root._isExpanded(index)
-                        readonly property bool groupActive: root._groupContainsSection(
-                            modelData, MenuState.settingsSection)
-
-                        width: _groupColumn.width
-                        height: _grpHeader.height + _leafBox.height
-
-                        Rectangle {
-                            id: _grpHeader
-                            width: parent.width
-                            height: root._groupH
-                            radius: Theme.radiusInline
-                            antialiasing: true
-                            // hover brightens the current group's marking instead of replacing it
-                            color: !_grp.groupActive
-                                ? (_headerTap.pressed
-                                    ? Theme.withAlpha(Theme.accent, 0.12)
+                    Rectangle {
+                        id: _grpHeader
+                        width: parent.width
+                        height: root._groupH
+                        radius: Theme.radiusInline
+                        antialiasing: true
+                        // hover brightens the current group's marking instead of replacing it
+                        color: !_grp.groupActive
+                            ? (_headerTap.pressed
+                                ? Theme.withAlpha(Theme.accent, 0.12)
+                                : _headerHover.hovered
+                                ? Theme.withAlpha(Theme.text, 0.035) : "transparent")
+                            : _grp.expanded
+                                ? (_headerTap.pressed ? Theme.withAlpha(Theme.accent, 0.12)
                                     : _headerHover.hovered
                                     ? Theme.withAlpha(Theme.text, 0.035) : "transparent")
-                                : _grp.expanded
-                                    ? (_headerTap.pressed ? Theme.withAlpha(Theme.accent, 0.12)
-                                        : _headerHover.hovered
-                                        ? Theme.withAlpha(Theme.text, 0.035) : "transparent")
-                                    : Theme.blend(Theme.menuControl, Theme.accent,
-                                        ShellSettings.highContrast
-                                            ? (_headerTap.pressed ? 0.30
-                                                : _headerHover.hovered ? 0.24 : 0.16)
-                                            : (_headerTap.pressed ? 0.22
-                                                : _headerHover.hovered ? 0.17 : 0.10))
+                                : Theme.blend(Theme.menuControl, Theme.accent,
+                                    ShellSettings.highContrast
+                                        ? (_headerTap.pressed ? 0.30
+                                            : _headerHover.hovered ? 0.24 : 0.16)
+                                        : (_headerTap.pressed ? 0.22
+                                            : _headerHover.hovered ? 0.17 : 0.10))
 
-                            Accessible.role: Accessible.Button
-                            Accessible.name: _grp.modelData.label
-                            Accessible.description: _grp.expanded ? "Expanded" : "Collapsed"
-                            Accessible.focusable: true
-                            Accessible.selected: _grp.groupActive && !_grp.expanded
-                            Accessible.onPressAction: root._toggleGroup(_grp.index)
+                        Accessible.role: Accessible.Button
+                        Accessible.name: _grp.modelData.label
+                        Accessible.description: _grp.expanded ? "Expanded" : "Collapsed"
+                        Accessible.focusable: true
+                        Accessible.selected: _grp.groupActive && !_grp.expanded
+                        Accessible.onPressAction: root._toggleGroup(_grp.index)
+                        KeyboardFocus { listNavigation: true; onActivated: root._toggleGroup(_grp.index) }
 
-                            HoverHandler {
-                                id: _headerHover
-                                cursorShape: Qt.PointingHandCursor
-                            }
-                            TapHandler {
-                                id: _headerTap
-                                onTapped: {
-                                    root._toggleGroup(_grp.index)
-                                }
-                            }
-
-                            ColorFade on color {}
-
-                            // group glyphs repeated their first child's; text headers separate the tiers
-                            ShellText {
-                                anchors.left: parent.left
-                                anchors.leftMargin: 10
-                                anchors.right: _groupDot.visible
-                                    ? _groupDot.left : _groupChevron.left
-                                anchors.rightMargin: 6
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: _grp.modelData.label
-                                // collapsed, the header is the only marker the selection has
-                                color: !_grp.groupActive
-                                    ? Theme.withAlpha(Theme.menuTextMuted,
-                                        _headerHover.hovered ? 1.0 : 0.82)
-                                    : _grp.expanded
-                                        ? Theme.withAlpha(Theme.menuTextMuted,
-                                            _headerHover.hovered ? 1.0 : 0.88)
-                                        : Theme.withAlpha(Theme.mix(
-                                            Theme.text, Theme.accent, 0.22), 0.98)
-                                font.pixelSize: Settings.fontCaption
-                                font.letterSpacing: 0.65
-                                font.weight: Font.DemiBold
-                                font.capitalization: Font.AllUppercase
-                                elide: Text.ElideRight
-                            }
-
-                            // only while collapsed: an expanded group shows its leaves' own dots
-                            Rectangle {
-                                id: _groupDot
-                                visible: !_grp.expanded && root._groupModified(_grp.modelData)
-                                anchors.right: _groupChevron.left
-                                anchors.rightMargin: 5
-                                anchors.verticalCenter: parent.verticalCenter
-                                width: 4; height: 4; radius: 2
-                                antialiasing: true
-                                color: Theme.withAlpha(Theme.accent, 0.72)
-                            }
-
-                            ShellText {
-                                id: _groupChevron
-                                anchors.right: parent.right
-                                anchors.rightMargin: 8
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: "󰅂"
-                                rotation: _grp.expanded ? 90 : 0
-                                transformOrigin: Item.Center
-                                color: Theme.withAlpha(Theme.subtext,
-                                    _headerHover.hovered ? 0.90
-                                    : _grp.expanded ? 0.80 : 0.74)
-                                font.pixelSize: Settings.fontCaption
-
-                                Disclosure on rotation {}
-                                ColorFade on color {}
+                        HoverHandler {
+                            id: _headerHover
+                            cursorShape: Qt.PointingHandCursor
+                        }
+                        TapHandler {
+                            id: _headerTap
+                            onTapped: {
+                                root._toggleGroup(_grp.index)
                             }
                         }
 
-                        Item {
-                            id: _leafBox
-                            anchors.top: _grpHeader.bottom
-                            width: parent.width
-                            height: _grp.expanded
-                                ? _leafColumn.implicitHeight + root._childrenPad * 2
-                                : 0
-                            visible: height > 0
-                            clip: height < _leafColumn.implicitHeight + root._childrenPad * 2
+                        ColorFade on color {}
 
-                            Disclosure on height {
-                                symmetric: !root.allExpanded
-                                enterCurve: Motion.standard
-                                exitCurve: Motion.standard
+                        // group glyphs repeated their first child's; text headers separate the tiers
+                        ShellText {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 10
+                            anchors.right: _groupDot.visible
+                                ? _groupDot.left : _groupChevron.left
+                            anchors.rightMargin: 6
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: _grp.modelData.label
+                            // collapsed, the header is the only marker the selection has
+                            color: !_grp.groupActive
+                                ? Theme.withAlpha(Theme.menuTextMuted,
+                                    _headerHover.hovered ? 1.0 : 0.82)
+                                : _grp.expanded
+                                    ? Theme.withAlpha(Theme.menuTextMuted,
+                                        _headerHover.hovered ? 1.0 : 0.88)
+                                    : Theme.withAlpha(Theme.mix(
+                                        Theme.text, Theme.accent, 0.22), 0.98)
+                            font.pixelSize: Settings.fontCaption
+                            font.letterSpacing: 0.65
+                            font.weight: Font.DemiBold
+                            font.capitalization: Font.AllUppercase
+                            elide: Text.ElideRight
+                        }
+
+                        // only while collapsed: an expanded group shows its leaves' own dots
+                        Rectangle {
+                            id: _groupDot
+                            visible: !_grp.expanded && root._groupModified(_grp.modelData)
+                            anchors.right: _groupChevron.left
+                            anchors.rightMargin: 5
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 4; height: 4; radius: 2
+                            antialiasing: true
+                            color: Theme.withAlpha(Theme.accent, 0.72)
+                        }
+
+                        ShellText {
+                            id: _groupChevron
+                            anchors.right: parent.right
+                            anchors.rightMargin: 8
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "󰅂"
+                            rotation: _grp.expanded ? 90 : 0
+                            transformOrigin: Item.Center
+                            color: Theme.withAlpha(Theme.subtext,
+                                _headerHover.hovered ? 0.90
+                                : _grp.expanded ? 0.80 : 0.74)
+                            font.pixelSize: Settings.fontCaption
+
+                            Disclosure on rotation {}
+                            ColorFade on color {}
+                        }
+                    }
+
+                    Item {
+                        id: _leafBox
+                        anchors.top: _grpHeader.bottom
+                        width: parent.width
+                        height: _grp.expanded
+                            ? _leafColumn.implicitHeight + root._childrenPad * 2
+                            : 0
+                        visible: height > 0
+                        enabled: _grp.expanded && root.active
+                        clip: height < _leafColumn.implicitHeight + root._childrenPad * 2
+
+                        Disclosure on height {
+                            symmetric: !root.allExpanded
+                            enterCurve: Motion.standard
+                            exitCurve: Motion.standard
+                        }
+
+                        Column {
+                            id: _leafColumn
+                            y: root._childrenPad
+                            width: parent.width
+                            spacing: root._navRowGap
+                            opacity: _grp.expanded ? 1 : 0
+
+                            MotionBehavior on opacity {
+                                id: _leafFade
+                                NumberAnimation {
+                                    duration: Motion.fast
+                                    easing.type: Easing.BezierSpline
+                                    easing.bezierCurve: _leafFade.targetValue > 0.5
+                                        ? Motion.standardDecel : Motion.standardAccel
+                                }
                             }
 
-                            Column {
-                                id: _leafColumn
-                                y: root._childrenPad
-                                width: parent.width
-                                spacing: root._navRowGap
-                                opacity: _grp.expanded ? 1 : 0
+                            Repeater {
+                                id: _leafRepeater
+                                model: _grp.expanded || _leafBox.height > 0.5
+                                    ? _grp.leaves : []
 
-                                MotionBehavior on opacity {
-                                    id: _leafFade
-                                    NumberAnimation {
-                                        duration: Motion.fast
-                                        easing.type: Easing.BezierSpline
-                                        easing.bezierCurve: _leafFade.targetValue > 0.5
-                                            ? Motion.standardDecel : Motion.standardAccel
+                                delegate: Rectangle {
+                                    id: _leaf
+
+                                    required property var modelData
+                                    readonly property bool active: MenuState.settingsSection === modelData.section
+                                    readonly property string glyph: modelData.glyph ?? ""
+                                    readonly property bool showDot: ShellSettings.modifiedSections[modelData.section] === true
+                                    width: _leafColumn.width
+                                    height: root._navRowH
+                                    radius: Theme.radiusInline
+                                    antialiasing: true
+                                    // the gliding selection underneath carries the resting fill and outline
+                                    color: _leaf.active
+                                        ? Theme.withAlpha(Theme.accent,
+                                            _leafTap.pressed ? 0.09
+                                                : _leafHover.hovered ? 0.04 : 0)
+                                        : _leafTap.pressed
+                                            ? Theme.withAlpha(Theme.accent, 0.12)
+                                        : _leafHover.hovered
+                                            ? Theme.withAlpha(Theme.text, 0.042)
+                                            : "transparent"
+
+                                    Accessible.role: Accessible.PageTab
+                                    Accessible.name: _leaf.modelData.label
+                                    Accessible.description: _leaf.showDot ? "Changed from its defaults" : ""
+                                    Accessible.focusable: true
+                                    Accessible.selected: _leaf.active
+                                    Accessible.onPressAction: root._activateSection(
+                                        _leaf.modelData.section)
+                                    KeyboardFocus { listNavigation: true; onActivated: root._activateSection(_leaf.modelData.section) }
+
+                                    HoverHandler {
+                                        id: _leafHover
+                                        cursorShape: Qt.PointingHandCursor
                                     }
-                                }
+                                    TapHandler {
+                                        id: _leafTap
+                                        onTapped: {
+                                            root._activateSection(_leaf.modelData.section)
+                                        }
+                                    }
 
-                                Repeater {
-                                    id: _leafRepeater
-                                    model: _grp.expanded || _leafBox.height > 0.5
-                                        ? _grp.leaves : []
+                                    ColorFade on color {}
 
-                                    delegate: Rectangle {
-                                        id: _leaf
-
-                                        required property var modelData
-                                        readonly property bool active: MenuState.settingsSection === modelData.section
-                                        readonly property string glyph: modelData.glyph ?? ""
-                                        readonly property bool showDot: ShellSettings.modifiedSections[modelData.section] === true
-                                        width: _leafColumn.width
-                                        height: root._navRowH
-                                        radius: Theme.radiusInline
-                                        antialiasing: true
-                                        // the gliding selection underneath carries the resting fill and outline
+                                    ShellText {
+                                        id: _leafGlyph
+                                        visible: !root.compact
+                                        anchors.left: parent.left
+                                        anchors.leftMargin: 15
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        // the rail cap is fixed while the label grows with uiScale, so the slot beside it has to give the type its width back
+                                        width: Metrics.iconCellFor(Settings.fontLabel)
+                                        horizontalAlignment: Text.AlignHCenter
+                                        text: _leaf.glyph
                                         color: _leaf.active
-                                            ? Theme.withAlpha(Theme.accent,
-                                                _leafTap.pressed ? 0.09
-                                                    : _leafHover.hovered ? 0.04 : 0)
-                                            : _leafTap.pressed
-                                                ? Theme.withAlpha(Theme.accent, 0.12)
-                                            : _leafHover.hovered
-                                                ? Theme.withAlpha(Theme.text, 0.042)
-                                                : "transparent"
-
-                                        Accessible.role: Accessible.PageTab
-                                        Accessible.name: _leaf.modelData.label
-                                        Accessible.focusable: true
-                                        Accessible.selected: _leaf.active
-                                        Accessible.onPressAction: root._activateSection(
-                                            _leaf.modelData.section)
-
-                                        HoverHandler {
-                                            id: _leafHover
-                                            cursorShape: Qt.PointingHandCursor
-                                        }
-                                        TapHandler {
-                                            id: _leafTap
-                                            onTapped: {
-                                                root._activateSection(_leaf.modelData.section)
-                                            }
-                                        }
-
+                                            ? Theme.mix(Theme.accent, Theme.text, 0.10)
+                                            : Theme.withAlpha(Theme.subtext,
+                                                _leafHover.hovered ? 0.92 : 0.76)
+                                        font.pixelSize: Settings.fontLabel
                                         ColorFade on color {}
+                                    }
 
-                                        ShellText {
-                                            id: _leafGlyph
-                                            visible: !root.compact
-                                            anchors.left: parent.left
-                                            anchors.leftMargin: 15
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            // the rail cap is fixed while the label grows with uiScale, so the slot beside it has to give the type its width back
-                                            width: Metrics.iconCellFor(Settings.fontLabel)
-                                            horizontalAlignment: Text.AlignHCenter
-                                            text: _leaf.glyph
-                                            color: _leaf.active
-                                                ? Theme.mix(Theme.accent, Theme.text, 0.10)
-                                                : Theme.withAlpha(Theme.subtext,
-                                                    _leafHover.hovered ? 0.92 : 0.76)
-                                            font.pixelSize: Settings.fontLabel
-                                            ColorFade on color {}
-                                        }
+                                    // 4px on a 7/5 inset: the rail is a fixed 160 and the dot eats the label's budget, which "Notifications" fills
+                                    Rectangle {
+                                        id: _leafDot
+                                        visible: _leaf.showDot
+                                        anchors.right: parent.right
+                                        anchors.rightMargin: 7
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        width: 4; height: 4; radius: 2
+                                        antialiasing: true
+                                        color: Theme.withAlpha(Theme.accent,
+                                            _leaf.active ? 0.92 : 0.66)
+                                        ColorFade on color {}
+                                    }
 
-                                        // 4px on a 7/5 inset: the rail is a fixed 160 and the dot eats the label's budget, which "Notifications" fills
-                                        Rectangle {
-                                            id: _leafDot
-                                            visible: _leaf.showDot
-                                            anchors.right: parent.right
-                                            anchors.rightMargin: 7
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            width: 4; height: 4; radius: 2
-                                            antialiasing: true
-                                            color: Theme.withAlpha(Theme.accent,
-                                                _leaf.active ? 0.92 : 0.66)
-                                            ColorFade on color {}
-                                        }
-
-                                        ShellText {
-                                            anchors.left: _leafGlyph.visible ? _leafGlyph.right : parent.left
-                                            anchors.leftMargin: _leafGlyph.visible ? 7 : 18
-                                            anchors.right: _leafDot.visible ? _leafDot.left : parent.right
-                                            anchors.rightMargin: _leafDot.visible ? 5 : 6
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            text: _leaf.modelData.label
-                                            elide: Text.ElideRight
-                                            color: _leaf.active
-                                                ? Theme.text
-                                                : Theme.withAlpha(Theme.mix(Theme.subtext, Theme.text, 0.12),
-                                                    _leafHover.hovered ? 1.0 : 0.90)
-                                            font.pixelSize: Settings.fontLabel
-                                            font.weight: _leaf.active ? Font.DemiBold : Font.Normal
-                                            ColorFade on color {}
-                                        }
+                                    ShellText {
+                                        anchors.left: _leafGlyph.visible ? _leafGlyph.right : parent.left
+                                        anchors.leftMargin: _leafGlyph.visible ? 7 : 18
+                                        anchors.right: _leafDot.visible ? _leafDot.left : parent.right
+                                        anchors.rightMargin: _leafDot.visible ? 5 : 6
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: _leaf.modelData.label
+                                        elide: Text.ElideRight
+                                        color: _leaf.active
+                                            ? Theme.text
+                                            : Theme.withAlpha(Theme.mix(Theme.subtext, Theme.text, 0.12),
+                                                _leafHover.hovered ? 1.0 : 0.90)
+                                        font.pixelSize: Settings.fontLabel
+                                        font.weight: _leaf.active ? Font.DemiBold : Font.Normal
+                                        ColorFade on color {}
                                     }
                                 }
                             }
@@ -617,12 +566,5 @@ Item {
                 }
             }
         }
-    }
-
-    ListEdgeLines {
-        anchors.fill: _navScroll
-        z: 2
-        list: _navScroll
-        maxOpacity: 0.72
     }
 }

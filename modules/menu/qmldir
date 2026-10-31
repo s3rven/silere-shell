@@ -8,6 +8,8 @@ internal FilteredHistory FilteredHistory.qml
 internal HomePage HomePage.qml
 internal HomeHeader HomeHeader.qml
 internal MediaPage MediaPage.qml
+internal MenuRail MenuRail.qml
+internal NavDrawerScroll NavDrawerScroll.qml
 internal PowerRailContent PowerRailContent.qml
 internal PowerRailRow PowerRailRow.qml
 internal RailLabelGroup RailLabelGroup.qml
@@ -21,3 +23,4 @@ internal SunArc SunArc.qml
 internal VitalsStrip VitalsStrip.qml
 internal VolumeRow VolumeRow.qml
 internal WifiList WifiList.qml
+internal VpnList VpnList.qml

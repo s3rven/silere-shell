@@ -41,7 +41,7 @@ Item {
         color: Theme.withAlpha(Theme.subtext, 0.78)
         font.pixelSize: Settings.fontLabel
         font.weight: Font.Medium
-        elide: Text.ElideRight
+        wrapMode: Text.WrapAtWordBoundaryOrAnywhere
     }
 
     ShellText {
