@@ -39,6 +39,12 @@ Singleton {
     readonly property bool overviewActive:    _be ? _be.overviewActive : false
     readonly property Component popupGrab:    _be ? _be.popupGrab : null
     readonly property var specialOutputs:     _be ? _be.specialOutputs : []
+    readonly property string keyboardLayout: _be && _be.keyboardLayout !== undefined ? _be.keyboardLayout : ""
+    readonly property bool sharingSupported: root.isHyprland || !!(_be && _be.sharingSupported)
+    function cycleKeyboardLayout(): void {
+        if (Quickshell.env("SILERE_SANDBOX") !== "1" && root._be && root._be.cycleKeyboardLayout)
+            root._be.cycleKeyboardLayout()
+    }
     readonly property bool activeFullscreen: isNiri ? !!(_be && _be.activeFullscreen)
         : !!(activeToplevel && activeToplevel.fullscreen)
 
@@ -147,5 +153,6 @@ Singleton {
         function onWorkspaceActivated(output) { root.workspaceActivated(output) }
         function onOverviewRaw(open) { root.overviewRaw(open) }
         function onScreencast(started) { root._castApply(started ? "start" : "stop") }
+        function onSharingState(active) { root.screenSharing = active }
     }
 }

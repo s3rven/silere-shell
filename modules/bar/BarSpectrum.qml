@@ -9,15 +9,14 @@ Item {
     id: root
 
     property var  screen: null
-    property real inset: 0
+    // the desktop-facing corners the spectrum follows
+    property real rimRadius: 0
     // event glows own the line while they run; the spectrum steps back instead of stacking under them
     property real duck: 0
 
     anchors.left:        parent.left
     anchors.right:       parent.right
     anchors.bottom:      parent.bottom
-    anchors.leftMargin:  inset
-    anchors.rightMargin: inset
     height: Math.max(10, Math.min(20, Math.round((parent ? parent.height : 0) * 0.32)))
 
     readonly property bool wanted: ShellSettings.mediaVisualizerPosition === "underline"
@@ -35,9 +34,9 @@ Item {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         anchors.horizontalCenter: parent.horizontalCenter
-        // snapped to an 8px grid: the Canvas backing this width drops and reallocates its
+        // snapped up to an 8px grid: the Canvas backing this width drops and reallocates its
         // texture on every resize, and surfaceWidth animates through a MotionBehavior
-        width: 8 * Math.round(parent.width / 8)
+        width: 8 * Math.ceil(parent.width / 8)
         // unloading in the same frame the opacity drops leaves the fade animating an empty Loader
         active: root.wanted || _hold.running
         Timer { id: _hold; interval: Motion.slow + 60 }
@@ -48,8 +47,9 @@ Item {
                 screen: root.screen
                 presentationActive: root.wanted
                 holdFrame: true
-                // a hairline across the whole bar dissolves into the track ends rather than stopping at them
-                edgeFadeMax: 140
+                followRim: true
+                rimRadius: root.rimRadius
+                rimInset: Math.max(0, (width - root.width) / 2)
                 // the widget's 7px cap leaves 16 toothpicks stranded in a full-bar slot
                 barWidthMax: 22
                 lowPower: root.width < 520

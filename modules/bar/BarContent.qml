@@ -168,6 +168,8 @@ Item {
     Component { id: _cUpdates;     UpdatesWidget    { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cNetwork;     NetworkWidget    { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cBluetooth;   BluetoothWidget  { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
+    Component { id: _cSystem; SystemWidget { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
+    Component { id: _cKeyboard; KeyboardWidget { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cVolume;      Volume           { anchors.verticalCenter: parent.verticalCenter; height: root.height; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cMic;         MicWidget        { anchors.verticalCenter: parent.verticalCenter; height: root.height; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cBrightness;  BrightnessWidget { anchors.verticalCenter: parent.verticalCenter; height: root.height; compact: root.effectiveCompact; barActive: root.barActive } }
@@ -181,6 +183,7 @@ Item {
         workspaces: _cWorkspaces, windowTitle: _cWindowTitle,
         shellUpdate: _cShellUpdate, tray: _cTray, updates: _cUpdates,
         network: _cNetwork, bluetooth: _cBluetooth, volume: _cVolume, microphone: _cMic,
+        keyboard: _cKeyboard, system: _cSystem,
         brightness: _cBrightness, battery: _cBattery,
         media: _cMedia, clock: _cClock
     })

@@ -144,7 +144,7 @@ Item {
                     ? Theme.withAlpha(Theme.accent, 0.92)
                     : Theme.withAlpha(Theme.subtext, 0.72)
                 font.pixelSize: Settings.iconSize + 1
-                scale: Media.playing ? 1.0 : 0.92
+                scale: _tap.pressed ? 0.84 : Media.playing ? 1.0 : 0.92
                 ColorFade on color {}
                 MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
             }
@@ -243,6 +243,7 @@ Item {
         : (Media.playing ? "Pause" : "Play")
     Accessible.focusable: root._canInteract
     Accessible.onPressAction: if (root._canInteract) Media.togglePlay()
+    KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
 
     HoverHandler {
         id: _rootHover
@@ -251,6 +252,7 @@ Item {
     }
 
     TapHandler {
+        id: _tap
         enabled: root._canInteract
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
         onTapped: (eventPoint, button) => {

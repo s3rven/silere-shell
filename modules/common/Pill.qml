@@ -62,6 +62,7 @@ Item {
     Accessible.name: root.accessibleName
     Accessible.focusable: root.canActivate
     Accessible.onPressAction: if (root.canActivate) root.activated()
+    KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
 
     readonly property int  pillH:   Metrics.barRowHeight
     readonly property bool hasText: text.length > 0
@@ -92,6 +93,8 @@ Item {
     onTextChanged: if (text.length === 0) { _minW = 0; _shrinkDelay.stop() }
     onShrinkDelayChanged: if (shrinkDelay <= 0) { _shrinkDelay.stop(); _minW = rowWidth }
     onCompactChanged: { _shrinkDelay.stop(); _minW = 0 }
+    // the hold is for readings that flicker; a hover reveal closing is deliberate and settles at once
+    onExpandedChanged: if (!expanded) { _shrinkDelay.stop(); _minW = 0 }
     onHoverEnabledChanged: if (!hoverEnabled) {
         _hoverRevealTimer.stop()
         _shrinkDelay.stop()
@@ -233,8 +236,12 @@ Item {
     readonly property bool _contentHot: (root.hovered
         && ShellSettings.barHoverHighlight)
         || root.visualPressed
+    // "pills follow theming": tint only glyphs resting at the neutral text color up
+    // to the bar accent, so inactive, warning and error states keep their own meaning
+    readonly property color _restGlyphColor: ShellSettings.barAccentPills
+        && Qt.colorEqual(glyphColor, Theme.text) ? Theme.barAccent : glyphColor
     readonly property color _hoverGlyphColor: _contentHot
-        ? Theme.mix(glyphColor, Theme.accent, 0.20) : glyphColor
+        ? Theme.mix(_restGlyphColor, Theme.accent, 0.20) : _restGlyphColor
     readonly property color _hoverTextColor: _contentHot
         ? Theme.mix(textColor, Theme.accent, 0.16) : textColor
 

@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import "../../../common"
 import "../../../../config"
 import "../../../../services"
 
@@ -36,6 +37,7 @@ Item {
     Accessible.name: "Go to workspace " + root.targetWs
     Accessible.focusable: root.canActivate
     Accessible.onPressAction: root._jump()
+    KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
 
     HoverHandler { id: _tickHover; enabled: root.canActivate; cursorShape: Qt.PointingHandCursor }
     TapHandler   { enabled: root.canActivate; onTapped: root._jump() }

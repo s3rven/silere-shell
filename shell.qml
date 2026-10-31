@@ -117,6 +117,7 @@ ShellRoot {
         property ShellScreen _latchedScreen: null
         property int unloadDelay: Math.max(40,
             Math.max(Motion.popOut, Motion.popOutFade) + 30)
+        signal unloaded()
 
         function _ensureLoaded(): void {
             _plUnload.stop()
@@ -212,6 +213,7 @@ ShellRoot {
                 if (_pl.wantOpen || _pl.warm) return
                 _plLoader.loading = false
                 _plLoader.active = false
+                _pl.unloaded()
             }
         }
     }
@@ -228,6 +230,7 @@ ShellRoot {
     PopupLoader {
         id: _notificationPopup
         wantOpen: !root.smokeTest && ShellSettings.notifPopupEnabled
+            && !Notifications.screenShareSilenced
             && Notifications.activeCount > 0 && !OverlayCoordinator.notificationsHeld
         requestedScreen: root.activeOverlayScreen
         surface: Component {
@@ -239,6 +242,7 @@ ShellRoot {
 
     PopupLoader {
         id: _menuPopup
+        onUnloaded: _collectAfterUnload.restart()
         warm: !root.smokeTest && MenuState.warmRequested
         wantOpen: !root.smokeTest && MenuState.open
         requestedScreen: root.smokeTest ? null : MenuState.triggerScreen
@@ -249,6 +253,7 @@ ShellRoot {
 
     PopupLoader {
         id: _calendarPopup
+        onUnloaded: _collectAfterUnload.restart()
         wantOpen: !root.smokeTest && CalendarState.open
         requestedScreen: root.smokeTest ? null : CalendarState.triggerScreen ?? root.anchoredPopupScreen
         surface: Component { CalendarPopup { targetScreen: _calendarPopup.latchedScreen } }
@@ -256,6 +261,7 @@ ShellRoot {
 
     PopupLoader {
         id: _trayPopup
+        onUnloaded: _collectAfterUnload.restart()
         wantOpen: !root.smokeTest && TrayMenuState.open
         requestedScreen: root.smokeTest ? null : TrayMenuState.triggerScreen ?? root.anchoredPopupScreen
         surface: Component { TrayMenuPopup { targetScreen: _trayPopup.latchedScreen } }
@@ -263,9 +269,22 @@ ShellRoot {
 
     PopupLoader {
         id: _quickActionsPopup
+        onUnloaded: _collectAfterUnload.restart()
         wantOpen: !root.smokeTest && QuickActionsState.open
         requestedScreen: root.smokeTest ? null : QuickActionsState.triggerScreen ?? root.anchoredPopupScreen
         surface: Component { QuickActionsPopup { targetScreen: _quickActionsPopup.latchedScreen } }
+    }
+
+    // a closed surface frees its objects, but the JS heap keeps their pages until the next
+    // collection. One pass after the large popups unload returned ~3 MB of PSS in testing;
+    // the OSD and notification popups come and go too often to be worth one each
+    Timer {
+        id: _collectAfterUnload
+        interval: 1500
+        onTriggered: {
+            if (MenuState.open || CalendarState.open || TrayMenuState.open || QuickActionsState.open) return
+            gc()
+        }
     }
 
     // any one screen holds the inhibitor; when that output goes away the surface is rebuilt on the next

@@ -11,6 +11,13 @@ QtObject {
 
     signal workspaceActivated(string output)
     signal overviewRaw(bool open)
+    signal sharingState(bool active)
+    property bool sharingSupported: false
+    property var _castIds: []
+    property var _keyboardNames: []
+    property int _keyboardIndex: 0
+    readonly property string keyboardLayout: SafeText.singleLineText(root._keyboardNames[root._keyboardIndex] || "", 128)
+    function cycleKeyboardLayout(): void { root._action(["switch-layout", "next"]) }
 
     readonly property string socketPath: String(Quickshell.env("NIRI_SOCKET") || "")
 
@@ -310,6 +317,35 @@ QtObject {
         let ev
         try { ev = JSON.parse(text) } catch (e) { return }
 
+        if (ev.KeyboardLayoutsChanged) {
+            const layouts = ev.KeyboardLayoutsChanged.keyboard_layouts || {}
+            root._keyboardNames = Array.isArray(layouts.names) ? layouts.names : []
+            root._keyboardIndex = Number(layouts.current_idx || 0)
+            return
+        }
+        if (ev.KeyboardLayoutSwitched) {
+            root._keyboardIndex = Number(ev.KeyboardLayoutSwitched.idx || 0)
+            return
+        }
+        if (ev.CastsChanged) {
+            root.sharingSupported = true
+            root._castIds = (ev.CastsChanged.casts || []).map(c => String(c.stream_id))
+            root.sharingState(root._castIds.length > 0)
+            return
+        }
+        if (ev.CastStartedOrChanged && ev.CastStartedOrChanged.cast) {
+            root.sharingSupported = true
+            const id = String(ev.CastStartedOrChanged.cast.stream_id)
+            if (root._castIds.indexOf(id) < 0) root._castIds = root._castIds.concat([id])
+            root.sharingState(root._castIds.length > 0)
+            return
+        }
+        if (ev.CastStopped) {
+            root._castIds = root._castIds.filter(id => id !== String(ev.CastStopped.stream_id))
+            root.sharingState(root._castIds.length > 0)
+            return
+        }
+
         if (ev.WorkspacesChanged) {
             const next = ev.WorkspacesChanged.workspaces || []
             const changedOutput = NiriEvents.focusedWorkspaceChangeOutput(root._wsRaw, next)
@@ -363,6 +399,10 @@ QtObject {
         root._overview = false
         root._winRaw = []
         root._wsRaw = []
+        root._castIds = []
+        root._keyboardNames = []
+        root.sharingSupported = false
+        // keep the last sharing decision until a fresh snapshot confirms that casts stopped
     }
 
     // Socket.connected is both the current state and the connect request. A

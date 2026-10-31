@@ -18,7 +18,8 @@ Singleton {
     }
     readonly property bool criticalPopsUp: root.criticalPopupFor(
         SystemTools.ready && SystemTools.hasNotifySend && Quickshell.env("SILERE_SANDBOX") !== "1",
-        ShellSettings.notifPopupEnabled, ShellSettings.notifCriticalBypass, Notifications.silencingActive)
+        ShellSettings.notifPopupEnabled && !Notifications.screenShareSilenced,
+        ShellSettings.notifCriticalBypass, Notifications.silencingActive)
     property bool _cpuCritSent:  false
 
     function _send(summary: string, body: string, urgency: string): bool {

@@ -162,7 +162,7 @@ Item {
                 text:     "󱒃 "
                 color:    Theme.error
                 animate:  root._animatable
-                expanded: Compositor.screenSharing
+                expanded: Compositor.screenSharing || Notifications.presentationMode
             }
             CollapsingText {
                 text:     "󰅶 "
@@ -214,6 +214,7 @@ Item {
         + (DateTime.cachedAmPm.length > 0 ? " " + DateTime.cachedAmPm : "")
         + ", " + DateTime.cachedWeekday + " " + DateTime.cachedMonthDay
         + (Compositor.screenSharing ? ", Sharing screen" : "")
+        + (Notifications.presentationMode ? ", Presentation Mode" : "")
         + (Idle.keepAwake ? ", Keep Awake" : "")
         + (Notifications.effectiveDnd ? ", Do Not Disturb" : "")
         + (Notifications.dndUntil > 0 ? " until " + DateTime.clockText(new Date(Notifications.dndUntil)) : "")
@@ -221,6 +222,7 @@ Item {
     Accessible.name: root.accessibleName
     Accessible.focusable: root._canInteract
     Accessible.onPressAction: root._openCalendar()
+    KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
 
     TapHandler {
         id: _calTap

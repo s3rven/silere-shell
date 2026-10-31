@@ -4,8 +4,10 @@ PwVolumeControl         1.0 PwVolumeControl.qml
 singleton Battery       1.0 Battery.qml
 singleton Bluetooth     1.0 Bluetooth.qml
 singleton Brightness    1.0 Brightness.qml
+singleton DisplayBrightness 1.0 DisplayBrightness.qml
 singleton CpuTemp       1.0 CpuTemp.qml
 singleton Network       1.0 Network.qml
+singleton Vpn           1.0 Vpn.qml
 singleton SysInfo       1.0 SysInfo.qml
 
 # compositor
@@ -31,6 +33,8 @@ singleton FontScan      1.0 FontScan.qml
 singleton FullscreenState 1.0 FullscreenState.qml
 singleton Hooks         1.0 Hooks.qml
 singleton Idle          1.0 Idle.qml
+singleton InputState    1.0 InputState.qml
+singleton Session       1.0 Session.qml
 singleton Media         1.0 Media.qml
 singleton MenuState     1.0 MenuState.qml
 singleton Monitors      1.0 Monitors.qml
@@ -47,6 +51,7 @@ singleton SystemAlerts  1.0 SystemAlerts.qml
 singleton SystemTools   1.0 SystemTools.qml
 singleton TrayMenuState 1.0 TrayMenuState.qml
 singleton Updates       1.0 Updates.qml
+singleton Weather       1.0 Weather.qml
 singleton XdgPaths      1.0 XdgPaths.qml
 
 StableObjectList        1.0 StableObjectList.qml

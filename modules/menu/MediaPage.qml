@@ -138,6 +138,7 @@ PageShell {
                 Accessible.role: Accessible.Button
                 Accessible.name: "Open " + Media.sourceLabel
                 Accessible.onPressAction: root._openPlayer()
+                KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
 
                 HoverHandler { id: _openHover; cursorShape: Qt.PointingHandCursor }
                 TapHandler { id: _openTap; onTapped: root._openPlayer() }
@@ -359,7 +360,9 @@ PageShell {
             }
         }
 
-        Item { width: 1; height: 12 }
+        // the title and artist lines decide the height above, so this gap also rounds the seek bar,
+        // the controls and the players card back onto the 4 px grid; off it, a card outline renders soft
+        Item { width: 1; height: 12 + Metrics.snap4Up(y + 12) - (y + 12) }
 
         Item {
             id: _seek
@@ -454,6 +457,7 @@ PageShell {
                     Accessible.name: Media.playing ? "Pause" : "Play"
                     Accessible.focusable: _playBtn._on
                     Accessible.onPressAction: if (_playBtn._on) Media.togglePlay()
+                    KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
                     MotionBehavior on opacity {
                         NumberAnimation { duration: Motion.fast }
                     }

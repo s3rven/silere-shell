@@ -114,6 +114,7 @@ Item {
     Accessible.selected: root.active
     Accessible.focusable: root.canActivate
     Accessible.onPressAction: root._activate()
+    KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
 
     HoverHandler { id: _hover; enabled: root.canActivate; cursorShape: Qt.PointingHandCursor }
     // stable slots can change identity without the pointer moving. Clear the old identity before publishing the new one, including during teardown
@@ -129,6 +130,7 @@ Item {
     onCanActivateChanged: root._syncHoverReport()
 
     TapHandler {
+        id: _tap
         enabled: root.canActivate
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
         onTapped: (eventPoint, button) => {
@@ -278,7 +280,7 @@ Item {
                     ? root._revealAmt
                     : Math.max(ShellSettings.wsShowNumbers ? 1 : 0, root._revealAmt))
                 * root._numberShown * root._pulseOpacity
-            scale:   root._blanked ? 0.6 : (root._hoverFx ? 1.12 : 1)
+            scale:   root._blanked ? 0.6 : _tap.pressed ? 0.9 : (root._hoverFx ? 1.12 : 1)
             color:   root.urgent
                 ? Theme.warning
                 : root.active
@@ -307,7 +309,7 @@ Item {
             color: root.urgent ? Theme.warning
                  : root.active ? Theme.barAccent
                  : Theme.withAlpha(Theme.subtext, 0.85)
-            scale: root._hoverFx ? 1.2 : 1.0
+            scale: _tap.pressed ? 0.9 : (root._hoverFx ? 1.2 : 1.0)
 
             ColorFade on color {}
             MotionBehavior on width {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }

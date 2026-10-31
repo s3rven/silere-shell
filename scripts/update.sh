@@ -240,7 +240,7 @@ _service_in_use() {
 }
 
 # A completed update is only known-good once the shell is up on it. With no unit
-# installed there is nothing this script can watch, so absence counts as running.
+# in use there is nothing this script can watch, so absence counts as running.
 _updated_shell_is_running() {
     _service_in_use || return 0
     systemctl --user is-active --quiet silere-shell.service 2>/dev/null
@@ -319,7 +319,7 @@ _rollback_applied_update() {
     _clear_apply_transaction \
         || _fail "the checkout was restored but the journal could not be cleared"
     # Only restart a unit that actually runs this checkout; the test suite and a
-    # throwaway checkout share one user manager, where is-enabled alone would
+    # throwaway checkout share one user manager, where being in use alone would
     # reach whatever shell is live.
     if _service_in_use && _unit_runs_this_checkout; then
         systemctl --user --no-block restart silere-shell.service || true

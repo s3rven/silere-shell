@@ -592,7 +592,7 @@ Singleton {
         if (ShellSettings.mediaVisualizerPosition === "media" && !ShellSettings.barShowMedia)
             return "Needs the media widget on the bar"
         if (root._fsBlocked) return "Paused while a window is fullscreen"
-        return "Active during playback"
+        return ""
     }
 
     // battery time is worth more than frame rate; the chosen preset returns with the charger
@@ -601,14 +601,6 @@ Singleton {
     }
     readonly property string _vizPreset: root.vizPresetFor(
         ShellSettings.mediaVisualizerPreset, Battery.onBattery)
-    readonly property bool vizBatteryEco: root._vizPreset !== ShellSettings.mediaVisualizerPreset
-
-    // what the active bar runs at, so the settings hint does not have to restate the table
-    readonly property string visualizerLabel: {
-        const p = root.vizProfile(ShellSettings.mediaVisualizerStyle,
-            root._vizPreset, false)
-        return root.vizBarCount(p.bars, false) + " bars at " + p.fps + " fps"
-    }
 
     readonly property var _vizActive: root.vizProfile(
         ShellSettings.mediaVisualizerStyle, root._vizPreset,

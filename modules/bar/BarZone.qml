@@ -21,6 +21,9 @@ Row {
         if (!ShellSettings.barWidgetConfiguredVisible(key)) return false
         if (key === "battery" && !Battery.available) return false
         if (key === "bluetooth" && !Bluetooth.available) return false
+        if (key === "keyboard" && !InputState.available) return false
+        if (key === "system" && !ShellSettings.systemShowCpu && !ShellSettings.systemShowMemory
+                && !ShellSettings.systemShowTemp) return false
         if (key === "brightness" && !Brightness.controllable) return false
         if (key === "media" && !Media.shown) return false
         if (key === "shellUpdate"

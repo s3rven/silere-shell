@@ -109,15 +109,15 @@ AnchoredPopupState {
             { glyph: "󰕰", label: "Workspaces", section: "workspaces",
               description: "Markers, labels, and app icons" },
             { glyph: "󰅐", label: "Clock",      section: "clock",
-              description: "Date, time, and calendar" },
+              description: "Date, time, calendar, and weather" },
             { glyph: "󰝚", label: "Media",      section: "media",
               description: "Track details and visualizer" },
             { glyph: "󰈈", label: "Indicators", section: "indicators",
-              description: "Window title and status" }
+              description: "Window title, status, and system" }
         ]},
         { glyph: "󰂚", label: "Feedback", children: [
             { glyph: "󰂚", label: "Notifications", section: "popups",
-              description: "Position, timeout, and quiet hours" },
+              description: "Popups, muted apps, and quiet hours" },
             { glyph: "󱀅", label: "OSD",    section: "osd",
               description: "Volume and brightness feedback" },
             { glyph: "󰀦", label: "Alerts", section: "warnings",

@@ -34,6 +34,15 @@ AnchoredPopupState {
             return Notifications.dnd ? "on" : "off"
         }
 
+        function presentation(): string {
+            Notifications.togglePresentation()
+            return Notifications.presentationMode ? "on" : "off"
+        }
+        function setPresentation(on: bool): string {
+            Notifications.presentationMode = on
+            return on ? "on" : "off"
+        }
+
         function keepAwake(): string {
             Idle.toggleKeepAwake()
             return Idle.keepAwake ? "on" : "off"

@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
+import Quickshell.Widgets
 import "../../../config"
 import "../../../services"
 import "../../common"
@@ -191,12 +192,14 @@ Item {
     property int  _dir:   1
 
     property string _shownApp:   ""
+    property string _shownAppId: ""
     property string _shownTitle: ""
     property string _shownRef:   ""
     property bool   _shownVisible: false
     property real   _op:         0
     property real   _y:          0
     property string _pendApp:    ""
+    property string _pendAppId:  ""
     property string _pendTitle:  ""
     property string _pendRef:    ""
     property bool   _pendVisible: false
@@ -214,6 +217,7 @@ Item {
         _wsJustChanged = false
         if (monitorWsId > 0) _lastWsId = monitorWsId
         _shownApp = _currentAppName
+        _shownAppId = currentApp
         _shownTitle = currentTitle
         _shownRef = currentRef
         _shownVisible = _titleVisible
@@ -225,6 +229,7 @@ Item {
 
     function _matchesCurrent(): bool {
         return root._shownApp === root._currentAppName
+            && root._shownAppId === root.currentApp
             && root._shownTitle === root.currentTitle
             && root._shownRef === root.currentRef
             && root._shownVisible === root._titleVisible
@@ -234,6 +239,7 @@ Item {
 
     function _capturePending(): void {
         root._pendApp = root._currentAppName
+        root._pendAppId = root.currentApp
         root._pendTitle = root.currentTitle
         root._pendRef = root.currentRef
         root._pendVisible = root._titleVisible
@@ -317,6 +323,7 @@ Item {
         root._syncMediaOwnership()
         _wsJustChanged = false
         _shownApp   = _currentAppName
+        _shownAppId = currentApp
         _shownTitle = currentTitle
         _shownRef   = currentRef
         _shownVisible = _titleVisible
@@ -348,6 +355,7 @@ Item {
         target: ShellSettings
         function onShowWindowTitleChanged() { root._queueTransition() }
         function onShowWindowTitleAppChanged() { root._queueTransition() }
+        function onShowWindowTitleIconChanged() { root._queueTransition() }
         function onReduceMotionChanged() {
             if (ShellSettings.reduceMotion) root._settleCurrent()
         }
@@ -355,7 +363,7 @@ Item {
 
     // entries land after startup, so a title shown before then carries the id's name
     Connections {
-        target: ShellSettings.showWindowTitleApp ? DesktopEntries : null
+        target: ShellSettings.showWindowTitleApp || ShellSettings.showWindowTitleIcon ? DesktopEntries : null
         function onApplicationsChanged() { root._entriesRevision++ }
     }
 
@@ -380,6 +388,7 @@ Item {
 
             const identityChanged = root._shownRef !== root._pendRef
                 || root._shownApp !== root._pendApp
+                || root._shownAppId !== root._pendAppId
                 || root._shownVisible !== root._pendVisible
                 || root._shownShowApp !== root._pendShowApp
             const fullTransition = isWsSwitch || identityChanged
@@ -415,6 +424,7 @@ Item {
         ScriptAction {
             script: {
                 root._shownApp   = root._pendApp
+                root._shownAppId = root._pendAppId
                 root._shownTitle = root._pendTitle
                 root._shownRef   = root._pendRef
                 root._shownVisible = root._pendVisible
@@ -433,29 +443,91 @@ Item {
         }
     }
 
-    readonly property real _contentCap: Math.max(0,
-        Math.min(root._widthCap, root.layoutWidthLimit >= 0 ? root.layoutWidthLimit : Infinity)
-            - root._horizontalPadding * 2)
+    // the app's icon leads the title when asked for, and only where a few characters still fit beside it
+    readonly property int _iconSize: Settings.iconSize + 2
+    readonly property int _iconGap: 7
+    readonly property string _iconSource: {
+        void root._entriesRevision
+        if (!ShellSettings.showWindowTitleIcon || !root._shownVisible
+                || root._shownAppId.length === 0 || root._displayText.length === 0) return ""
+        return IconResolver.appMeta(root._shownAppId)?.icon ?? ""
+    }
+    readonly property real _textRoom: Math.min(root._widthCap,
+        root.layoutWidthLimit >= 0 ? root.layoutWidthLimit : Infinity) - root._horizontalPadding * 2
+    // decided against the readable cap, not the crowded limit: the bar computes that limit from this widget's preferred width
+    readonly property bool _iconShown: root._iconSource.length > 0 && _icon.status !== Image.Error
+        && root._widthCap - root._horizontalPadding * 2 >= root._iconSize + root._iconGap + 24
+    readonly property real _iconSpan: root._iconShown ? root._iconSize + root._iconGap : 0
+
+    readonly property real _contentCap: Math.max(0, root._textRoom - root._iconSpan)
     TextMetrics {
         id: _textMetrics
         font.family: Settings.font
         font.pixelSize: Settings.fontSize
         text: root._displayText
     }
+    readonly property real _fullTextWidth: Math.ceil(_textMetrics.advanceWidth)
     readonly property real _measuredContentWidth: root._displayText.length > 0
         ? Math.ceil(Math.min(_textMetrics.advanceWidth, root._contentCap)) : 0
     readonly property real preferredWidth: root._displayText.length > 0
         ? Math.ceil(Math.min(_textMetrics.advanceWidth,
-            Math.max(0, root._widthCap - root._horizontalPadding * 2))) + root._horizontalPadding * 2 : 0
+            Math.max(0, root._widthCap - root._horizontalPadding * 2 - root._iconSpan)))
+            + root._horizontalPadding * 2 + root._iconSpan : 0
     readonly property real _naturalWidth: root._displayText.length > 0
-        ? Math.min(root._measuredContentWidth + root._horizontalPadding * 2,
+        ? Math.min(root._measuredContentWidth + root._horizontalPadding * 2 + root._iconSpan,
             root.layoutWidthLimit >= 0 ? root.layoutWidthLimit : Infinity)
         : 0
+
+    // a title cut short reads in full under the pointer: it scrolls to its end, rests, and
+    // returns, inside its own width so nothing beside it moves
+    readonly property real _overflow: root._displayText.length > 0
+        ? Math.max(0, root._fullTextWidth - root._measuredContentWidth) : 0
+    readonly property bool _scrolling: _titleHover.hovered && root._overflow > 2
+        && root.barActive && Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)
+    property real _scrollX: 0
+    readonly property bool _marqueeLive: root._scrolling || root._scrollX < -0.5
+    on_ScrollingChanged: {
+        if (root._scrolling) {
+            _scrollBack.stop()
+            _marquee.restart()
+        } else {
+            _marquee.stop()
+            if (root._scrollX < 0) _scrollBack.restart()
+        }
+    }
+    // a new title starts again from its beginning
+    on_DisplayTextChanged: {
+        if (!root._marqueeLive) return
+        _marquee.stop()
+        _scrollBack.stop()
+        root._scrollX = 0
+        if (root._scrolling) _marquee.restart()
+    }
+    HoverHandler { id: _titleHover; enabled: root._overflow > 2 && root.barActive }
+    SequentialAnimation {
+        id: _marquee
+        loops: Animation.Infinite
+        PauseAnimation { duration: Motion.ms(500) }
+        NumberAnimation {
+            target: root; property: "_scrollX"; to: -root._overflow
+            duration: Motion.ms(Math.max(500, root._overflow * 16)); easing.type: Easing.InOutSine
+        }
+        PauseAnimation { duration: Motion.ms(1400) }
+        NumberAnimation {
+            target: root; property: "_scrollX"; to: 0
+            duration: Motion.ms(Math.max(300, root._overflow * 5)); easing.type: Easing.InOutCubic
+        }
+    }
+    NumberAnimation {
+        id: _scrollBack
+        target: root; property: "_scrollX"; to: 0
+        duration: Motion.ms(180); easing.type: Easing.OutCubic
+    }
 
     // a zone widget shoves its neighbours when it resizes, and titles change on every navigation;
     // a glide keeps its speed when focus moves again before the last change settles
     implicitWidth: root._widthGlide.value
-    readonly property SmoothGlide _widthGlide: SmoothGlide { target: root._naturalWidth; duration: Motion.ms(110) }
+    readonly property SmoothGlide _widthGlide: SmoothGlide { target: root._naturalWidth; duration: Motion.ms(110); gate: root.barActive && root.visible }
     // not parent.height: the zone's Loader takes its height from this item, so reading it back collapses to zero and the clip below erases the text
     implicitHeight: ShellSettings.barHeight
 
@@ -463,23 +535,49 @@ Item {
         anchors.fill: parent
         clip: true
 
-        ShellText {
-            id: content
+        Item {
+            id: _group
+            readonly property real _w: root._iconSpan + root._measuredContentWidth
             x: root._zone === "left" ? root._horizontalPadding
                 : root._zone === "right"
-                    ? Math.round(parent.width - width - root._horizontalPadding)
-                    : Math.round((parent.width - width) / 2)
-            anchors.verticalCenter:       parent.verticalCenter
-            anchors.verticalCenterOffset: root._y
-            opacity:         root._op
-            visible:         root._op > 0
+                    ? Math.round(parent.width - _w - root._horizontalPadding)
+                    : Math.round((parent.width - _w) / 2)
+            y: root._y
+            width: _w
+            height: parent.height
+            opacity: root._op
+            visible: root._op > 0
 
-            text:           root._formatted
-            textFormat:     Text.StyledText
-            font.pixelSize: Settings.fontSize
-            elide:          Text.ElideRight
-            // the cap is already in the measured width; following the easing box re-elides every frame of a longer title
-            width:          root._measuredContentWidth
+            IconImage {
+                id: _icon
+                visible: root._iconShown
+                anchors.verticalCenter: parent.verticalCenter
+                width: root._iconSize
+                height: root._iconSize
+                // decode at the drawn size, not the theme's 256px original
+                implicitSize: root._iconSize
+                source: root._iconSource
+                asynchronous: true
+            }
+
+            Item {
+                x: root._iconSpan
+                width: root._measuredContentWidth
+                height: parent.height
+                clip: root._marqueeLive
+
+                ShellText {
+                    id: content
+                    x: root._scrollX
+                    anchors.verticalCenter: parent.verticalCenter
+                    text:           root._formatted
+                    textFormat:     Text.StyledText
+                    font.pixelSize: Settings.fontSize
+                    elide:          root._marqueeLive ? Text.ElideNone : Text.ElideRight
+                    // the cap is already in the measured width; following the easing box re-elides every frame of a longer title
+                    width:          root._marqueeLive ? root._fullTextWidth : root._measuredContentWidth
+                }
+            }
         }
     }
 

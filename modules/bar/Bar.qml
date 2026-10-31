@@ -309,7 +309,7 @@ PanelWindow {
                         }
                         BarSpectrum {
                             screen: bar.targetScreen
-                            inset:  surface.radius
+                            rimRadius: surface.innerRadius
                             duck:   _underline.item ? Math.min(0.82, _underline.item.eventGlow * 1.7) : 0
                         }
                     }

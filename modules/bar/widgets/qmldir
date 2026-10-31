@@ -7,6 +7,8 @@ BatteryWidget     1.0 BatteryWidget.qml
 BrightnessWidget  1.0 BrightnessWidget.qml
 NetworkWidget 1.0 NetworkWidget.qml
 BluetoothWidget 1.0 BluetoothWidget.qml
+KeyboardWidget 1.0 KeyboardWidget.qml
+SystemWidget 1.0 SystemWidget.qml
 MediaWidget   1.0 MediaWidget.qml
 MediaVisualizer 1.0 MediaVisualizer.qml
 UpdatesWidget 1.0 UpdatesWidget.qml

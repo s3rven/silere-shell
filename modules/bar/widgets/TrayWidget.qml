@@ -121,6 +121,7 @@ Item {
                 Accessible.description: SafeText.singleLineText(modelData.tooltipDescription, 256)
                 Accessible.focusable: root._canInteract && !_tile.hidden
                 Accessible.onPressAction: root._activateItem(_tile.modelData, _tile)
+                KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
 
                 width: root.iconSize + (_hoverLabel.width > 0 ? _hoverLabel.width + 5 : 0)
                 height: root.iconSize

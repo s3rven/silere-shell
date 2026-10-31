@@ -22,6 +22,13 @@ Item {
     implicitHeight: _slider.height + _options.height
     height: implicitHeight
     readonly property bool _optionsShown: root.open || _options.height > 0.5
+    // with the bar below, the card grows upward: the choices open above so the slider stays under the pointer
+    readonly property bool _optionsAbove: Metrics.barAtBottom
+    ScrollHold {
+        id: _hold
+        item: _slider
+        watched: root
+    }
 
     readonly property bool _hasOutputs: Audio.sinkCount > 1
     readonly property bool _hasInput:   Audio.micReady || Audio.sourceCount > 0
@@ -69,7 +76,10 @@ Item {
         root._tabDir = root._tabIndex(root._tab) >= root._tabIndex(root._shownTab) ? 1 : -1
         _tabSwap.restart()
     }
-    onOpenChanged: if (!root.open) root._settleTab()
+    onOpenChanged: {
+        if (root._optionsAbove) _hold.arm()
+        if (!root.open) root._settleTab()
+    }
     on_TabMotionChanged: if (!root._tabMotion) root._settleTab()
 
     // the page tokens rather than a local timing: pageIn is pinned at or above the panel resize
@@ -125,10 +135,10 @@ Item {
 
     QuickSlider {
         id: _slider
-        y: 0
         width: parent.width
-        topRadius:    root.topRadius
-        bottomRadius: root._optionsShown ? 0 : root.bottomRadius
+        y: root._optionsAbove ? _options.height : 0
+        topRadius:    root._optionsShown && root._optionsAbove ? 0 : root.topRadius
+        bottomRadius: root._optionsShown && !root._optionsAbove ? 0 : root.bottomRadius
         cardInset:    root.cardInset
         cardLeftBleed: root.cardLeftBleed
         glyph: Audio.icon
@@ -150,21 +160,23 @@ Item {
 
     CollapsibleSection {
         id: _options
-        y: _slider.height
+        y: root._optionsAbove ? 0 : _slider.height
         width: parent.width
         expanded: root.open
 
         Column {
             id: _optCol
             width: parent.width
-            bottomPadding: 2
+            topPadding: root._optionsAbove ? 2 : 0
+            bottomPadding: root._optionsAbove ? 0 : 2
 
             Hairline {
+                visible: !root._optionsAbove
                 x: 14
                 width: parent.width - 28
                 color: Theme.menuDivider
             }
-            Item { width: parent.width; height: 1 }
+            Item { visible: !root._optionsAbove; width: parent.width; height: 1 }
 
             ChoiceChipRow {
                 width: _optCol.width
@@ -308,6 +320,14 @@ Item {
                     root.open = false
                     MenuState.close()
                 }
+            }
+
+            Item { visible: root._optionsAbove; width: parent.width; height: 1 }
+            Hairline {
+                visible: root._optionsAbove
+                x: 14
+                width: parent.width - 28
+                color: Theme.menuDivider
             }
         }
     }
