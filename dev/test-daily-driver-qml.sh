@@ -25,7 +25,21 @@ singleton SafeText 1.0 SafeText.qml
 singleton FontScan 1.0 FontScan.qml
 singleton Session 1.0 Session.qml
 singleton Compositor 1.0 Compositor.qml
+singleton SystemAlerts 1.0 SystemAlerts.qml
 BoundedProcess 1.0 BoundedProcess.qml
+EOF
+cat > "$scratch/services/SystemAlerts.qml" <<'EOF'
+pragma Singleton
+import QtQuick
+import Quickshell
+
+Singleton {
+    property var sent: []
+    function send(summary: string, body: string, urgency: string): bool {
+        sent = sent.concat([{ summary: summary, body: body, urgency: urgency }])
+        return true
+    }
+}
 EOF
 cat > "$scratch/services/SystemTools.qml" <<'EOF'
 pragma Singleton

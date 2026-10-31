@@ -241,6 +241,9 @@ Scope {
         Session.lockAndSleep()
         root.waitFor(() => !Session.busy && Session.lastError.length > 0, "a failed lock confirmation reports cancellation")
         root.check(SystemTools.commands.length === 1, "failed confirmation does not request suspend")
+        root.check(SystemAlerts.sent.length === 1 && SystemAlerts.sent[0].urgency === "critical"
+                && SystemAlerts.sent[0].body === Session.lastError,
+            "a cancelled sleep raises an alert, because the menu that started it has closed")
         root.write("session-wait-fail", "")
 
         root.write("session-wait-hold", "hold")

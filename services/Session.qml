@@ -92,8 +92,12 @@ Singleton {
             const current = root._waitGeneration === root._generation && root.canLockSleep
             if (_wait.completedSuccessfully(code) && current)
                 SystemTools.runOrNotify(Settings.suspendCommand, "Suspend failed")
-            else root.lastError = current ? "Could not confirm screen lock. Sleep was cancelled."
-                : "Session readiness changed. Sleep was cancelled."
+            else {
+                root.lastError = current ? "Could not confirm screen lock. Sleep was cancelled."
+                    : "Session readiness changed. Sleep was cancelled."
+                // the menu closed on the press, and a lid shut on this stays awake and unlocked
+                SystemAlerts.send("Sleep cancelled", root.lastError, "critical")
+            }
             root.refresh()
         }
     }

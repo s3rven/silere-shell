@@ -36,6 +36,11 @@ Singleton {
         return true
     }
 
+    // for a service whose failure happens after the surface that started it has closed
+    function send(summary: string, body: string, urgency: string): bool {
+        return root._send(summary, body, urgency)
+    }
+
     function _checkBattCrit(): void {
         if (Battery.available && Battery.critical && Battery.alertWarning === "critical"
                 && ShellSettings.osdBatteryWarn && !_battCritSent) {
