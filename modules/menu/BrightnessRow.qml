@@ -20,6 +20,14 @@ Item {
     implicitHeight: _slider.height + _options.height
     height: implicitHeight
     readonly property bool _optionsShown: root.open || _options.height > 0.5
+    // with the bar below, the card grows upward: the choices open above so the slider stays under the pointer
+    readonly property bool _optionsAbove: Metrics.barAtBottom
+    ScrollHold {
+        id: _hold
+        item: _slider
+        watched: root
+    }
+    onOpenChanged: if (root._optionsAbove) _hold.arm()
 
     function closeInline(): bool {
         if (!root.open) return false
@@ -37,8 +45,9 @@ Item {
     QuickSlider {
         id: _slider
         width: parent.width
-        topRadius: root.topRadius
-        bottomRadius: root._optionsShown ? 0 : root.bottomRadius
+        y: root._optionsAbove ? _options.height : 0
+        topRadius:    root._optionsShown && root._optionsAbove ? 0 : root.topRadius
+        bottomRadius: root._optionsShown && !root._optionsAbove ? 0 : root.bottomRadius
         cardInset: root.cardInset
         cardLeftBleed: root.cardLeftBleed
         glyph: Brightness.icon
@@ -57,21 +66,23 @@ Item {
 
     CollapsibleSection {
         id: _options
-        y: _slider.height
+        y: root._optionsAbove ? 0 : _slider.height
         width: parent.width
         expanded: root.open
 
         Column {
             id: _optionColumn
             width: parent.width
-            bottomPadding: 2
+            topPadding: root._optionsAbove ? 2 : 0
+            bottomPadding: root._optionsAbove ? 0 : 2
 
             Hairline {
+                visible: !root._optionsAbove
                 x: 14
                 width: parent.width - 28
                 color: Theme.menuDivider
             }
-            Item { width: parent.width; height: 1 }
+            Item { visible: !root._optionsAbove; width: parent.width; height: 1 }
 
             Repeater {
                 id: _deviceRepeater
@@ -93,6 +104,14 @@ Item {
                         root.open = false
                     }
                 }
+            }
+
+            Item { visible: root._optionsAbove; width: parent.width; height: 1 }
+            Hairline {
+                visible: root._optionsAbove
+                x: 14
+                width: parent.width - 28
+                color: Theme.menuDivider
             }
         }
     }
