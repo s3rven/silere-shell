@@ -90,14 +90,24 @@ Start Silere with `QSG_DISTANCEFIELD_ANTIALIASING=gray` in its environment.
 Hyprland fades layers in on top of Silere's own animation. Turn that off for Silere's
 layers only:
 
+```lua
+hl.layer_rule({ name = "silere-no-anim", match = { namespace = "^silere-.*$" }, no_anim = true })
+```
+
+Before Hyprland 0.57, the same rule in a `.conf` config:
+
 ```ini
 layerrule = no_anim on, match:namespace ^silere-.*$
 ```
 
-In a Lua config:
+## The desktop goes black in a virtual machine
+
+Hyprland 0.57 turned on `quirks:skip_non_kms_dmabuf_formats`, which can leave apps inside a
+virtual machine with no transparent surfaces, and Quickshell's windows are transparent. It has
+been [reported on virtio-gpu](https://github.com/omacom/omarchy/issues/17061). Turn the quirk off:
 
 ```lua
-hl.layer_rule({ name = "silere-no-anim", match = { namespace = "^silere-.*$" }, no_anim = true })
+hl.config({ quirks = { skip_non_kms_dmabuf_formats = false } })
 ```
 
 ## No blur behind the bar
