@@ -1370,6 +1370,20 @@ ShellRoot {
         ShellSettings.notifGroupThreads = groupWas
     }
 
+    function _checkBluetoothRowRelease(): void {
+        const connecting = Bt.BluetoothDeviceState.Connecting
+        const disconnecting = Bt.BluetoothDeviceState.Disconnecting
+        const connected = Bt.BluetoothDeviceState.Connected
+        root._check(Bluetooth.deviceBusy(connecting, false, false)
+                && Bluetooth.deviceBusy(disconnecting, false, false)
+                && !Bluetooth.deviceBusy(connected, false, false),
+            "a Bluetooth row is busy only while its device is changing state")
+        root._check(!Bluetooth.deviceBusy(connecting, false, true),
+            "a timed-out Bluetooth attempt releases its row even if the device still says connecting")
+        root._check(!Bluetooth.deviceBusy(connecting, true, false),
+            "a pairing row stays usable so it can be cancelled")
+    }
+
     function _checkAccentPills(): void {
         const was = ShellSettings.barAccentPills
         const pill = pillFactory.createObject(root, { text: "48%", glyphColor: Theme.text })
@@ -1977,6 +1991,7 @@ ShellRoot {
         root._checkThreadFolding()
         root._checkWeather()
         root._checkAccentPills()
+        root._checkBluetoothRowRelease()
         root._checkSystemWidget()
         root._checkAppHandoffs()
         root._checkBluetoothPairing()

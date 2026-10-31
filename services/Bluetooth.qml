@@ -386,6 +386,14 @@ Singleton {
             if (d && d.address === address) { root._beginAttempt(address, "connect"); d.connect(); return }
         }
     }
+    // a timed-out attempt is over even if bluez still reports the device as connecting, so
+    // the row has to offer another try instead of holding its in-progress label
+    function deviceBusy(state, pairing: bool, failed: bool): bool {
+        if (pairing) return false
+        return state === Bt.BluetoothDeviceState.Disconnecting
+            || (state === Bt.BluetoothDeviceState.Connecting && !failed)
+    }
+
     function _clearDeviceAttempt(address: string): void {
         if (root._pendingAddr === address) root._endAttempt()
         if (root.errorAddr === address) root.clearError()

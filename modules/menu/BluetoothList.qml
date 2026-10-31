@@ -128,12 +128,13 @@ Item {
                 readonly property bool   _forgetArmed: root._forgetAddr === modelData.address
                 readonly property bool   _failed: Bluetooth.errorAddr === modelData.address
                 readonly property int _batt: Bluetooth.batteryPercent(modelData)
+                readonly property bool _busy: Bluetooth.deviceBusy(modelData.state, modelData.pairing, _row._failed)
                 readonly property string _state:
                     _forgetArmed ? "Forget?"
                     : _armed ? "Disconnect?"
                     : modelData.pairing ? "Cancel?"
-                    : modelData.state === Bt.BluetoothDeviceState.Connecting    ? "Connecting…"
-                    : modelData.state === Bt.BluetoothDeviceState.Disconnecting ? "Disconnecting…"
+                    : _row._busy && modelData.state === Bt.BluetoothDeviceState.Connecting ? "Connecting…"
+                    : _row._busy ? "Disconnecting…"
                     : modelData.connected ? (_batt >= 0 ? _batt + "%" : "Connected")
                     : _row._failed ? (Bluetooth.errorKind === "pair" ? "Pairing failed" : "Failed")
                     : modelData.paired    ? "Paired"
@@ -145,12 +146,8 @@ Item {
                 selected: modelData.connected
                 warning: _armed || _forgetArmed || modelData.pairing
                 failed:  _failed
-                busy: !modelData.pairing
-                    && (modelData.state === Bt.BluetoothDeviceState.Connecting
-                        || modelData.state === Bt.BluetoothDeviceState.Disconnecting)
-                interactive: modelData.pairing
-                    || (modelData.state !== Bt.BluetoothDeviceState.Connecting
-                        && modelData.state !== Bt.BluetoothDeviceState.Disconnecting)
+                busy: _row._busy
+                interactive: !_row._busy
 
                 function _activate(): void {
                     const addr = modelData.address
