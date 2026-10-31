@@ -1,10 +1,12 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtTest
 import Quickshell
 import Quickshell.Wayland
 import "../config"
 import "../services"
+import "../modules/bar"
 import "../modules/calendar"
 import "../modules/notifications"
 import "../modules/quickactions"
@@ -22,6 +24,8 @@ Item {
     TrayMenuPopup { id: tray; targetScreen: root.targetScreen; visible: false }
     NotificationPopups { id: notificationPopups; targetScreen: root.targetScreen; visible: false }
     OsdWindow { id: osd; targetScreen: root.targetScreen; visible: false }
+    Bar { id: bar; targetScreen: root.targetScreen; visible: false }
+    TestCase { id: input; when: false }
     QtObject { id: traySource; property string id: "popup-probe-tray" }
     QtObject { id: anonymousTraySource; property string id: "" }
 
@@ -257,6 +261,21 @@ Item {
             const catcher = root._offMonitorCatcher(stage)
             const origin = catcher ? catcher.mapToItem(stage, 0, 0) : Qt.point(0, 0)
             root._check(catcher !== null && origin.x < -10000 && origin.y < -10000
+    // an unclaimed right press at a window's origin segfaults inside Qt, so reaching the
+    // check at all is the result: without the guard this probe never prints its sentinel
+    function _checkOriginRightClick(): void {
+        for (const surface of [bar, notificationPopups, calendar.cardWindow]) {
+            if (!surface) continue
+            surface.visible = true
+            input.wait(120)
+            input.mousePress(surface.contentItem, 0, 0, Qt.RightButton)
+            input.mouseRelease(surface.contentItem, 0, 0, Qt.RightButton)
+            input.wait(20)
+            root._check(surface.backingWindowVisible, "a right click at a window's origin leaves the shell running")
+            surface.visible = false
+        }
+    }
+
                     && catcher.width > stage.width + 20000 && catcher.height > stage.height + 20000
                     && root._catchesEveryButton(catcher),
                 f.name + " catches clicks of every button, also those offset onto another monitor")
@@ -425,3 +444,4 @@ Item {
 
     Component.onCompleted: Qt.callLater(root._run)
 }
+        root._checkOriginRightClick()

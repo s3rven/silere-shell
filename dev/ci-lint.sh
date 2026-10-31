@@ -2203,6 +2203,22 @@ fi
 section "popup dismissal"
 # Hyprland routes every click to the layer holding exclusive keyboard focus: outside a fitted
 # card it lands on the card's own window, and on another monitor it arrives offset by the
+section "origin right click"
+# an unclaimed right press at a window's (0,0) segfaults inside Qt 6.11+, and a layer
+# surface has no focus item to save it. A window with input needs the guard at its root.
+unguarded_windows=""
+for f in modules/*/*.qml; do
+  grep -qE '^[[:space:]]*PanelWindow[[:space:]]*\{' "$f" || continue
+  [ "$(basename "$f")" = ScreenDismiss.qml ] && continue
+  grep -qE '^[[:space:]]*mask:[[:space:]]*Region[[:space:]]*\{\}' "$f" && continue
+  grep -qF 'ContextMenuGuard {}' "$f" || unguarded_windows="$unguarded_windows $(basename "$f")"
+done
+if [ -n "$unguarded_windows" ]; then
+  fail "windows with input need ContextMenuGuard at their root:$unguarded_windows"
+else
+  ok "origin right click" "every input window claims unhandled right presses"
+fi
+
 # layout. Pointer handlers drop points outside their window, so an oversized MouseArea has to.
 undismissable_popups=""
 for f in modules/*/*.qml; do

@@ -76,6 +76,8 @@ PanelWindow {
         + bar.insetPad * bar.floatingProgress + bar.effectPad) / 4)
 
     mask: Region { item: bar.concealed ? null : surface }
+    // at full width the bar's origin is the corner of the screen
+    ContextMenuGuard {}
     // blur with no tint over it reads as a frosted slab, so it waits for the fade's midpoint
     BackgroundEffect.blurRegion: Region {
         item: ShellSettings.surfaceBlur && Theme.panelOpacity < 1 && contents.opacity >= 0.5 ? surface : null

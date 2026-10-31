@@ -108,6 +108,8 @@ PanelWindow {
         if (!_tapGuard.ignoring && _outsideCard(p)) win.dismissed()
     }
 
+    ContextMenuGuard {}
+
     TapHandler {
         id: _dismiss
         enabled: win.open
@@ -137,6 +139,8 @@ PanelWindow {
 
         visible: (win.open || (win.popupCard !== null && win.popupCard.opacity > 0.001))
             && (win._grabsClicks || win._cardMayMap)
+
+        ContextMenuGuard {}
 
         Shortcut { sequence: "Escape"; context: Qt.ApplicationShortcut; enabled: win.open; onActivated: win.escapePressed() }
 

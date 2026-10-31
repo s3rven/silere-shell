@@ -210,6 +210,8 @@ PanelWindow {
 
     property var _pendingDismissItems: []
     readonly property int _pendingDismissAll: _pendingDismissItems.length
+    // the mask spans the whole column, so the window's empty top corner takes clicks too
+    ContextMenuGuard {}
     property bool _showAll: false
     property int _batchExits: 0
     readonly property bool _dismissing: win._pendingDismissAll > 0 || _cascadeTimer.running
