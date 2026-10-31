@@ -74,7 +74,7 @@ jobs:
     steps:
       - name: Install compositor test dependencies
         run: |
-          pacman -Syu --noconfirm git quickshell kwin libkscreen dbus mesa libglvnd niri hyprland fontconfig ttf-jetbrains-mono-nerd util-linux
+          pacman -Syu --noconfirm gdb git quickshell kwin libkscreen dbus mesa libglvnd niri hyprland fontconfig ttf-jetbrains-mono-nerd util-linux
           # a file capability cannot be exec'd without privileges, and this container has none to give
           setcap -r "$(command -v kwin_wayland)"
           useradd --create-home silere-test
@@ -84,6 +84,10 @@ jobs:
       - name: Exercise isolated compositor sessions
         env:
           SILERE_TEST_COMPOSITOR: ${{ matrix.compositor }}
+          # the crash reporter cannot save a report in this container, so gdb has to catch the stack
+          QS_DISABLE_CRASH_HANDLER: "1"
+          DEBUGINFOD_URLS: ""
+          SILERE_PROBE_WRAP: gdb -q -batch -ex run -ex bt --args
         run: runuser -u silere-test -- bash dev/test-compositors.sh "$SILERE_TEST_COMPOSITOR"
       - name: Exercise output removal
         if: matrix.compositor == 'kwin'
