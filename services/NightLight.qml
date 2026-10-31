@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import "../config"
+import "TimeZonePlace.js" as TimeZonePlace
 
 Singleton {
     id: root
@@ -127,22 +128,10 @@ Singleton {
     }
 
     function _parseCoord(s: string): bool {
-        const m = /^([+-]\d{2})(\d{2})(\d{2})?([+-]\d{3})(\d{2})(\d{2})?$/.exec((s || "").trim())
-        if (!m) return false
-        const latDeg = Math.abs(Number(m[1]))
-        const latMin = Number(m[2])
-        const latSec = m[3] ? Number(m[3]) : 0
-        const lonDeg = Math.abs(Number(m[4]))
-        const lonMin = Number(m[5])
-        const lonSec = m[6] ? Number(m[6]) : 0
-        if (latMin >= 60 || lonMin >= 60 || latSec >= 60 || lonSec >= 60
-                || latDeg > 90 || lonDeg > 180
-                || (latDeg === 90 && (latMin > 0 || latSec > 0))
-                || (lonDeg === 180 && (lonMin > 0 || lonSec > 0))) return false
-        const latSign = m[1].charAt(0) === "-" ? -1 : 1
-        const lonSign = m[4].charAt(0) === "-" ? -1 : 1
-        root._autoLat = latSign * (latDeg + latMin / 60 + latSec / 3600)
-        root._autoLon = lonSign * (lonDeg + lonMin / 60 + lonSec / 3600)
+        const c = TimeZonePlace.parseCoord(s)
+        if (!c) return false
+        root._autoLat = c.lat
+        root._autoLon = c.lon
         root._geoResolved = true
         return true
     }
@@ -151,24 +140,11 @@ Singleton {
         id: _geoProc
         running: false
         timeoutMs: 5000
-        command: ["bash", "-c",
-            "tz=\"$(timedatectl show -p Timezone --value 2>/dev/null)\"; " +
-            "[ -z \"$tz\" ] && tz=\"$(readlink -f /etc/localtime 2>/dev/null | sed -n 's#.*/zoneinfo/##p')\"; " +
-            "[ -z \"$tz\" ] && [ -r /etc/timezone ] && tz=\"$(cat /etc/timezone)\"; " +
-            "[ -z \"$tz\" ] && exit 0; " +
-            // the tables list only canonical zones; an alias like Asia/Calcutta would fall back to 45°N
-            "for _ in 1 2 3; do " +
-            "  l=\"$(awk -v z=\"$tz\" '$1==\"L\" && $3==z {print $2; exit}' /usr/share/zoneinfo/tzdata.zi 2>/dev/null)\"; " +
-            "  [ -n \"$l\" ] && [ \"$l\" != \"$tz\" ] || break; tz=\"$l\"; " +
-            "done; " +
-            "for f in /usr/share/zoneinfo/zone1970.tab /usr/share/zoneinfo/zone.tab; do " +
-            "  [ -r \"$f\" ] || continue; " +
-            "  c=\"$(awk -v z=\"$tz\" 'BEGIN{FS=\"\\t\"} $0 !~ /^#/ && $3==z {print $2; exit}' \"$f\")\"; " +
-            "  [ -n \"$c\" ] && { printf '%s\\n' \"$c\"; break; }; " +
-            "done"]
+        command: ["bash", "-c", TimeZonePlace.script]
         stdout: StdioCollector { id: _geoOut }
         onExited: code => {
-            if (!_geoProc.completedSuccessfully(code) || !root._parseCoord(_geoOut.text))
+            if (!_geoProc.completedSuccessfully(code)
+                    || !root._parseCoord(String(_geoOut.text).split("\t")[0]))
                 root._geoStarted = false
         }
     }

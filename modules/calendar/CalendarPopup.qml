@@ -108,6 +108,7 @@ FittedPopupWindow {
                 if (CalendarState.open) {
                     card._snapToday()
                     card.forceActiveFocus()
+                    card._requestWeather()
                 } else _gridSwap.stop()
             }
         }
@@ -127,7 +128,14 @@ FittedPopupWindow {
                 card.todayWeekday = Qt.formatDateTime(t, "dddd")
             }
         }
-        Component.onCompleted: card._snapToday()
+        // the popup loads on its first open, after that open edge has passed
+        Component.onCompleted: {
+            card._snapToday()
+            card._requestWeather()
+        }
+        function _requestWeather(): void {
+            if (ShellSettings.weatherEnabled) Weather.request(false)
+        }
 
         SequentialAnimation {
             id: _gridSwap
@@ -189,6 +197,7 @@ FittedPopupWindow {
                     Accessible.name: "Today"
                     Accessible.focusable: CalendarState.open
                     Accessible.onPressAction: card._goToday()
+                    KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
 
                     HoverHandler { id: _todayH; cursorShape: Qt.PointingHandCursor }
                     TapHandler   { id: _todayTap; onTapped: card._goToday() }
@@ -272,6 +281,7 @@ FittedPopupWindow {
                     Accessible.description: "Showing " + card.monthLabel
                     Accessible.focusable: CalendarState.open
                     Accessible.onPressAction: card._goToday()
+                    KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
                     // distinct from the today pill's: two controls reading "Jump to today" are indistinguishable by voice
                     HoverHandler { id: _mH; cursorShape: Qt.PointingHandCursor }
                     TapHandler   { id: _mT; onTapped: card._goToday() }
@@ -426,6 +436,7 @@ FittedPopupWindow {
                                 : "Show " + Qt.formatDateTime(_dayCell.date, "MMMM yyyy")
                             Accessible.focusable: !_dayCell.cur && CalendarState.open && !_gridSwap.running
                             Accessible.onPressAction: card._activateDay(_dayCell.index)
+                            KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
 
                             Rectangle {
                                 anchors.centerIn: parent
@@ -460,6 +471,94 @@ FittedPopupWindow {
                                 }
 
                             }
+                        }
+                    }
+                }
+            }
+
+            // today's weather once it arrives: the grid never waits on the network, and the card's height glide brings the row in
+            Item {
+                id: _weather
+                readonly property bool shown: ShellSettings.weatherEnabled
+                    && (Weather.hasData || Weather.failed)
+                readonly property bool retry: _weather.shown && !Weather.hasData && !Weather.loading
+                visible: _weather.shown
+                width: parent.width
+                height: _weather.shown ? Metrics.rowHeightFor(38) : 0
+
+                Accessible.role: _weather.retry ? Accessible.Button : Accessible.StaticText
+                Accessible.name: !_weather.shown ? ""
+                    : Weather.hasData ? "Weather in " + Weather.place + ", " + Weather.temperature
+                        + Weather.unit + ", " + Weather.condition + ", high " + Weather.high
+                        + ", low " + Weather.low
+                    : "Weather unavailable, " + Weather.failure + ". Retry"
+                Accessible.focusable: _weather.retry && CalendarState.open
+                Accessible.onPressAction: if (_weather.retry) Weather.request(true)
+                KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
+
+                HoverHandler { id: _weatherH; enabled: _weather.retry; cursorShape: Qt.PointingHandCursor }
+                TapHandler { enabled: _weather.retry; onTapped: Weather.request(true) }
+
+                Hairline {
+                    width: parent.width
+                    color: Theme.withAlpha(Theme.subtext, Theme.lineAlpha(0.13))
+                }
+
+                // off means the service is never created; a binding below would otherwise instantiate it
+                Loader {
+                    id: _weatherBody
+                    y: 4
+                    width: parent.width
+                    height: parent.height - 4
+                    active: ShellSettings.weatherEnabled
+                    sourceComponent: Item {
+                        ShellText {
+                            id: _weatherGlyph
+                            x: 4
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: Weather.hasData && Weather.glyph.length > 0 ? Weather.glyph : "󰖐"
+                            color: Weather.hasData ? Theme.withAlpha(Theme.text, 0.86)
+                                : Theme.withAlpha(Theme.subtext, 0.64)
+                            font.pixelSize: Settings.fontSize + 5
+                        }
+
+                        ShellText {
+                            id: _weatherTemp
+                            anchors.left: _weatherGlyph.right
+                            anchors.leftMargin: 8
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: Weather.hasData
+                            text: Weather.temperature + "°"
+                            color: Theme.text
+                            font.pixelSize: Settings.fontSize + 2
+                            font.weight: Font.DemiBold
+                        }
+
+                        ShellText {
+                            id: _weatherRange
+                            anchors.right: parent.right
+                            anchors.rightMargin: 2
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: Weather.hasData
+                            text: "H " + Weather.high + "°  L " + Weather.low + "°"
+                            color: Theme.withAlpha(Theme.subtext, 0.86)
+                            font.pixelSize: Settings.fontCaption
+                        }
+
+                        ShellText {
+                            anchors.left: _weatherTemp.visible ? _weatherTemp.right : _weatherGlyph.right
+                            anchors.leftMargin: 8
+                            anchors.right: _weatherRange.visible ? _weatherRange.left : parent.right
+                            anchors.rightMargin: 8
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: Weather.hasData
+                                ? (Weather.place.length > 0 ? Weather.condition + " · " + Weather.place : Weather.condition)
+                                : Weather.failure
+                            color: _weatherH.hovered ? Theme.withAlpha(Theme.text, 0.92)
+                                : Theme.withAlpha(Theme.subtext, 0.86)
+                            font.pixelSize: Settings.fontCaption
+                            elide: Text.ElideRight
+                            ColorFade on color {}
                         }
                     }
                 }
