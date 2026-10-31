@@ -69,6 +69,7 @@ Rectangle {
     Accessible.description: root.value
     Accessible.focusable: root._canActivate
     Accessible.onPressAction: root.activate()
+    KeyboardFocus { interactive: root._canActivate; listNavigation: true; onActivated: root.activate() }
 
     OutlineBorder {
         radius: root.radius

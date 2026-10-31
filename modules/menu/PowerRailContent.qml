@@ -30,7 +30,7 @@ Item {
         : "Unavailable"
 
     onActiveChanged: {
-        if (active) return
+        if (active) { Session.refresh(); return }
         _powOut.disarm()
         _powReb.disarm()
         _powOff.disarm()
@@ -115,6 +115,15 @@ Item {
                 glyph: "󰍁"
                 enabled: SystemTools.commandAvailable(Settings.lockCommand)
                 onTriggered: root._runAction(Settings.lockCommand, "Lock failed")
+            }
+
+            PowerRailRow {
+                width: parent.width
+                label: "Lock & sleep"
+                glyph: "󰌾"
+                value: Session.busy ? "Locking…" : ""
+                enabled: Session.canLockSleep && !Session.busy
+                onTriggered: { if (Session.lockAndSleep()) MenuState.close() }
             }
 
             PowerRailRow {
