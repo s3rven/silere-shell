@@ -3226,7 +3226,14 @@ ShellRoot {
         confirmButton.request()
         root._check(confirmButton.armed && confirmButton._armLeft === 1 && root._confirmActions === 1,
             "rearming starts the confirmation window full again")
+        confirmButton._armLeft = 0.4
+        const confirmArc = root._findTrayNode(confirmButton, item => item.arcColor !== undefined)
+        root._check(confirmArc !== null && confirmArc.progress === 0.4
+                && confirmArc.cornerRadius === confirmButton.radius,
+            "an armed confirm button runs its window out around its outline")
         confirmButton.disarm()
+        root._check(root._findTrayNode(confirmButton, item => item.arcColor !== undefined) === null,
+            "a confirm button at rest draws no countdown")
         confirmButton.needsConfirm = false
         confirmButton.request()
         root._check(!confirmButton.armed && root._confirmActions === 2,

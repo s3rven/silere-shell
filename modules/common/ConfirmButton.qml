@@ -60,7 +60,7 @@ Rectangle {
         _drain.stop()
     }
 
-    // the confirm window, drained along the bottom edge; reduced motion keeps it full
+    // the confirm window, drained around the outline like a notification's countdown; reduced motion keeps it full
     property real _armLeft: 1
     NumberAnimation { id: _drain; target: root; property: "_armLeft"; from: 1; to: 0; duration: _armTimer.interval }
 
@@ -101,8 +101,9 @@ Rectangle {
     OutlineBorder {
         radius: root.radius
         outlineWidth: root._armedFace ? 2 : 1
+        // the outline steps back to a track once armed, so the running arc is what reads
         outlineColor: root._armedFace
-            ? Theme.withAlpha(root.tint, Theme.focusRingAlpha)
+            ? Theme.withAlpha(root.tint, Theme.lineAlpha(0.30))
             : root.hovered ? Theme.menuControlLineHot : Theme.menuControlLine
         ColorFade on outlineColor {}
     }
@@ -161,17 +162,18 @@ Rectangle {
         }
     }
 
-    Rectangle {
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: 3
-        x: root.radius
-        width: Math.max(0, root.width - root.radius * 2) * root._armLeft
-        height: 2
-        radius: 1
-        antialiasing: true
-        color: Theme.withAlpha(root.tint, 0.5)
-        opacity: root._armed ? root._armT : 0
-        visible: opacity > 0.001 && width > 0.5
+    Loader {
+        id: _confirmArc
+        anchors.fill: parent
+        active: root._armed
+        opacity: root._armT
+        sourceComponent: PerimeterProgress {
+            inset: 1
+            arcWidth: 2
+            cornerRadius: root.radius
+            progress: root._armLeft
+            arcColor: Theme.withAlpha(root.tint, 0.80)
+        }
     }
 
     Row {
