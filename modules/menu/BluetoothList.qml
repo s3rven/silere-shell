@@ -76,6 +76,18 @@ Item {
         width: parent.width
         spacing: 0
 
+        InlineOptionRow {
+            visible: root.open
+            glyph: "󰌌"
+            label: "Pair with a passkey"
+            status: Settings.bluetoothSettingsCommand.length > 0 ? "Open manager" : "Needs blueman"
+            interactive: Settings.bluetoothSettingsCommand.length > 0
+            onTriggered: {
+                MenuState.close()
+                SystemTools.runOrNotify(Settings.bluetoothSettingsCommand, "Bluetooth manager failed")
+            }
+        }
+
         ShellText {
             visible: root.open && (!Bluetooth.available || !Bluetooth.enabled || Bluetooth.devices.length === 0)
             width: parent.width
@@ -202,10 +214,8 @@ Item {
             // the reason never reaches QML: a device that is off or out of range fails the same way
             // as one that lost its pairing key, and only the second is fixed by pairing again
             text: Bluetooth.errorKind === "pair"
-                ? "If this device needs a passkey, start a Bluetooth pairing agent "
-                    + "such as blueman-applet or bt-agent, then try again."
-                : "Check that it is on and nearby. If it keeps failing, right-click it twice "
-                    + "to forget it, then pair it again."
+                ? "Needs a passkey? Start a pairing agent such as blueman-applet, then retry."
+                : "Check it is on and nearby, or right-click it twice to forget and pair again."
         }
     }
 

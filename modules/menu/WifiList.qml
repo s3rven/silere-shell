@@ -106,6 +106,18 @@ Item {
         width: parent.width
         spacing: 0
 
+        InlineOptionRow {
+            visible: root.open
+            glyph: "󰖟"
+            label: "Advanced network settings"
+            status: Settings.networkSettingsCommand.length > 0 ? "Open" : "Needs network editor"
+            interactive: Settings.networkSettingsCommand.length > 0
+            onTriggered: {
+                MenuState.close()
+                SystemTools.runOrNotify(Settings.networkSettingsCommand, "Network settings failed")
+            }
+        }
+
         ShellText {
             visible: root.open && root._networks.length === 0
             width: parent.width
@@ -290,6 +302,7 @@ Item {
 
                         TextInput {
                             id: _pw
+                            activeFocusOnTab: true
                             anchors.left: parent.left; anchors.leftMargin: 12
                             anchors.right: _revealPassword.left; anchors.rightMargin: 8
                             anchors.verticalCenter: parent.verticalCenter
@@ -302,6 +315,7 @@ Item {
                             inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText
                                 | Qt.ImhNoAutoUppercase | (root._passwordVisible ? 0 : Qt.ImhHiddenText)
                             Accessible.name: "Wi-Fi password"
+                            FocusScroll { revealTarget: _pwField }
                             color: Theme.text
                             selectionColor: Theme.withAlpha(Theme.accent, 0.4)
                             font.family: Settings.font; font.pixelSize: Settings.fontSize
@@ -355,6 +369,7 @@ Item {
                             Accessible.name: "Join " + _entry.modelData.label
                             Accessible.focusable: _join.enabled
                             Accessible.onPressAction: _join._activate()
+                            KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
 
                             function _activate(): void {
                                 if (_join.enabled) _entry._submitPassword()
