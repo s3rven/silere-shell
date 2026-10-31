@@ -21,6 +21,7 @@ PanelWindow {
         : _replyGrab.running ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.OnDemand
 
     screen:         targetScreen
+    visible: !Notifications.screenShareSilenced
     color:          "transparent"
     exclusiveZone:  -1
 
@@ -115,6 +116,7 @@ PanelWindow {
         property string label: ""
         property color tint: Theme.accent
         readonly property bool pressed: _tap.pressed
+        readonly property Item surface: _surface
 
         signal triggered()
 
@@ -125,6 +127,14 @@ PanelWindow {
         visible: height > 0.5
 
         Disclosure on height {}
+
+        // glass needs the popup fill under the control tint, as a card has; the chip is not inside one
+        Rectangle {
+            anchors.fill: _surface
+            radius: _surface.radius
+            antialiasing: true
+            color: Theme.popup
+        }
 
         Rectangle {
             id: _surface
@@ -154,6 +164,7 @@ PanelWindow {
             Accessible.name: chip.label
             Accessible.focusable: chip.shown
             Accessible.onPressAction: chip.triggered()
+            KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
 
             HoverHandler { id: _hover; cursorShape: Qt.PointingHandCursor }
             TapHandler   { id: _tap; onTapped: chip.triggered() }
@@ -199,8 +210,24 @@ PanelWindow {
         left:  win._left              ? Math.max(0, win._edgeMargin - win._shadowPad) : 0
     }
     mask: Region { item: outerCol }
+    // the mask spans the whole column, so the window's empty top corner takes clicks too
+    ContextMenuGuard {}
     BackgroundEffect.blurRegion: Region {
-        regions: win._blurShapes.concat([_scrollClip, _viewportClip, _columnClip])
+        regions: [_cardsBlur, _clearBlur, _moreBlur]
+    }
+    Region { id: _cardsBlur; regions: win._blurShapes.concat([_scrollClip, _viewportClip, _columnClip]) }
+    // a region only re-reads its own item's geometry, so each chip nests in its moving slot and the column
+    Region {
+        id: _clearBlur
+        item: _clearChip.visible ? _clearChip : null
+        Region { item: _clearButton; radius: Math.round(_clearButton.radius); intersection: Intersection.Intersect }
+        Region { item: outerCol; intersection: Intersection.Intersect }
+    }
+    Region {
+        id: _moreBlur
+        item: _moreChip.visible ? _moreChip : null
+        Region { item: _moreChip.surface; radius: Math.round(_moreChip.surface.radius); intersection: Intersection.Intersect }
+        Region { item: outerCol; intersection: Intersection.Intersect }
     }
     property var _blurShapes: []
     // an item region only follows its own geometry; these clips re-place the cards when the stack scrolls, shifts or resizes
@@ -210,8 +237,6 @@ PanelWindow {
 
     property var _pendingDismissItems: []
     readonly property int _pendingDismissAll: _pendingDismissItems.length
-    // the mask spans the whole column, so the window's empty top corner takes clicks too
-    ContextMenuGuard {}
     property bool _showAll: false
     property int _batchExits: 0
     readonly property bool _dismissing: win._pendingDismissAll > 0 || _cascadeTimer.running
@@ -222,11 +247,19 @@ PanelWindow {
         id: _countdownClock
         signal tick()
     }
-    // one frame per tick for the whole stack; cards that are paused or done ignore it, so an idle tick draws nothing
+    // one frame per tick for the whole stack, and no wakeups at all while every card on screen is persistent or paused
+    readonly property bool _countdownWanted: {
+        void win._slotsRevision
+        for (let i = 0; i < stack.count; i++) {
+            const slot = stack.itemAt(i)
+            if (slot && slot.cardItem && slot.cardItem._countdownRunning) return true
+        }
+        return false
+    }
     Timer {
         interval: 50
         repeat: true
-        running: win.visible && Notifications.list.length > 0 && !Idle.isIdle
+        running: win.visible && win._countdownWanted && !Idle.isIdle
         onTriggered: _countdownClock.tick()
     }
 
@@ -309,6 +342,19 @@ PanelWindow {
     Connections {
         target: ShellSettings
         function onNotifMaxVisibleChanged(): void { win._showAll = false }
+    }
+
+    // the newest message replaces its own thread's top card, so the stack below keeps its
+    // place instead of holding the old card's gap open under the taller replacement
+    Connections {
+        target: Notifications
+        function onThreadFoldedInPlace(ids): void {
+            for (let i = 0; i < stack.count; i++) {
+                const slot = stack.itemAt(i)
+                if (slot && slot.cardItem && ids.indexOf(String(slot.modelData.id)) >= 0)
+                    slot.cardItem.collapseOnDismiss = false
+            }
+        }
     }
 
     // removing a card the moment its own exit ends snaps the still-animating cards below it upward
@@ -416,11 +462,27 @@ PanelWindow {
 
             Disclosure on height {}
 
+            Rectangle {
+                x: _clearButton.x
+                y: _clearButton.y
+                width: _clearButton.width
+                height: _clearButton.height
+                radius: _clearButton.radius
+                antialiasing: true
+                opacity: _clearButton.opacity
+                visible: _clearButton.visible
+                color: Theme.popup
+            }
+
             ConfirmButton {
+                id: _clearButton
                 anchors.verticalCenter: parent.verticalCenter
                 x: win._alignedX(parent.width, width)
                 glyph: "󰆴"
                 label: "Clear all"
+                // dismissed cards stay in history, so there is nothing to confirm
+                needsConfirm: false
+                tint: Theme.accent
                 onConfirmed: win.dismissAll()
             }
         }

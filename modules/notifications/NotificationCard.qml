@@ -89,9 +89,11 @@ Item {
     Accessible.role: Accessible.Notification
     Accessible.name: card.appNameText.length > 0
         ? card.appNameText + ": " + card.summaryText : card.summaryText
-    Accessible.description: card.bodyText
+    Accessible.description: card.earlierCount > 0
+        ? card.bodyText + ". " + card.earlierCount + " earlier" : card.bodyText
     Accessible.focusable: true
     Accessible.onPressAction: card.activatePrimary()
+    KeyboardFocus { onActivated: card.activatePrimary() }
 
     readonly property string summaryText: Notifications.plainText(notification.summary, 2048)
     readonly property string bodyText:    Notifications.plainText(notification.body)
@@ -99,6 +101,10 @@ Item {
     readonly property string fallbackInitial: SafeText.initial(
         card.appNameText || card.summaryText, "N")
     readonly property bool hasBody:       bodyText.length > 0
+    // messages this card folded in from the same app and sender, oldest first
+    readonly property var  _thread:       Notifications.threadFor(card.notifId)
+    readonly property int  earlierCount:  card._thread ? card._thread.count - 1 : 0
+    readonly property var  earlierLines:  card._thread ? card._thread.lines : []
     readonly property bool isCritical: notification.urgency === NotificationUrgency.Critical
     readonly property bool hasInlineReply: notification.hasInlineReply === true
     property bool _replyOpen: false
@@ -260,7 +266,10 @@ Item {
         if (card._replyOpen) card.cancelReply()
         else _replyInput.text = ""
     }
-    Component.onDestruction: card.replyFocusRequested(card, false)
+    Component.onDestruction: {
+        if (Notifications.replyingId === card.notifId) Notifications.replyingId = -1
+        card.replyFocusRequested(card, false)
+    }
 
     NumberAnimation {
         id: _collapseAnim
@@ -402,7 +411,11 @@ Item {
         }
     }
     // closing the reply from the keyboard leaves no hover edge to collapse the card on
-    on_ReplyOpenChanged: if (!card._replyOpen && !_cardHover.hovered) _collapseHold.restart()
+    on_ReplyOpenChanged: {
+        if (card._replyOpen) Notifications.replyingId = card.notifId
+        else if (Notifications.replyingId === card.notifId) Notifications.replyingId = -1
+        if (!card._replyOpen && !_cardHover.hovered) _collapseHold.restart()
+    }
 
     onTimeoutStartedAtChanged: {
         card._hoverPausedMs = 0
@@ -584,6 +597,27 @@ Item {
                 }
             }
 
+            // the conversation reads downward to the newest message; hovering shows every line the card kept
+            Column {
+                id: _earlier
+                visible: card.earlierLines.length > 0
+                width: parent.width
+                spacing: 2
+
+                Repeater {
+                    model: card._expanded ? card.earlierLines : card.earlierLines.slice(-2)
+                    delegate: ShellText {
+                        required property string modelData
+                        width: _earlier.width
+                        text: modelData
+                        color: Theme.withAlpha(Theme.menuTextMuted, 0.50)
+                        font.pixelSize: Settings.fontLabel
+                        maximumLineCount: 1
+                        elide: Text.ElideRight
+                    }
+                }
+            }
+
             ShellText {
                 visible:          card.hasBody
                 width:            parent.width
@@ -721,6 +755,7 @@ Item {
                         Accessible.name: card._actionText(_actBtn.modelData)
                         Accessible.focusable: true
                         Accessible.onPressAction: card.invokeAction(_actBtn.modelData)
+                        KeyboardFocus { onActivated: card.invokeAction(_actBtn.modelData) }
 
                         MouseArea {
                             id: _actMa
@@ -762,6 +797,7 @@ Item {
 
                 TextInput {
                     id: _replyInput
+                    activeFocusOnTab: true
                     anchors.left: parent.left
                     anchors.leftMargin: 11
                     anchors.right: _replyCancel.left
@@ -780,6 +816,7 @@ Item {
                     }
 
                     Accessible.name: "Reply to " + (card.appNameText || "notification")
+                    FocusScroll { revealTarget: _replyField }
 
                     ShellText {
                         anchors.fill: parent
@@ -833,7 +870,8 @@ Item {
                     font.capitalization: Font.AllUppercase
                     font.letterSpacing:  0.6
                     elide:          Text.ElideRight
-                    width: Math.min(implicitWidth, Math.max(0, parent.width - _capDot.implicitWidth - _capTime.implicitWidth - parent.spacing * 2))
+                    width: Math.min(implicitWidth, Math.max(0, parent.width - _capDot.implicitWidth - _capTime.implicitWidth - parent.spacing * 2
+                        - (_capThread.visible ? _capThreadDot.implicitWidth + _capThread.implicitWidth + parent.spacing * 2 : 0)))
                 }
 
                 ShellText {
@@ -849,6 +887,24 @@ Item {
                     id: _capTime
                     anchors.verticalCenter: parent.verticalCenter
                     text:           card._timeLabel
+                    color:          Theme.withAlpha(Theme.menuTextFaint, 0.82)
+                    font.pixelSize: Settings.fontMicro
+                }
+
+                ShellText {
+                    id: _capThreadDot
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: _capThread.visible
+                    text:  "·"
+                    color: Theme.withAlpha(Theme.menuTextFaint, 0.62)
+                    font.pixelSize: Settings.fontMicro
+                }
+
+                ShellText {
+                    id: _capThread
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible:        card.earlierCount > 0
+                    text:           card.earlierCount + " earlier"
                     color:          Theme.withAlpha(Theme.menuTextFaint, 0.82)
                     font.pixelSize: Settings.fontMicro
                 }
@@ -926,6 +982,7 @@ Item {
             Accessible.name: "Dismiss notification"
             Accessible.focusable: true
             Accessible.onPressAction: card.dismiss()
+            KeyboardFocus { onActivated: card.dismiss() }
 
             HoverHandler { id: _closeHover; cursorShape: Qt.PointingHandCursor }
             TapHandler   { id: _closeTap; onTapped: card.dismiss() }

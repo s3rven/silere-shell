@@ -203,7 +203,8 @@ Singleton {
         const seen = root._cloneMap(root._seen)
         const times = root._cloneMap(root._times)
         const updates = root._cloneMap(root._updateTimes)
-        let cutSeen = false, cutTimes = false, cutUpdates = false
+        const threads = root._cloneMap(root._threads)
+        let cutSeen = false, cutTimes = false, cutUpdates = false, cutThreads = false
 
         for (let i = 0; i < keys.length; i++) {
             const key = keys[i]
@@ -211,11 +212,13 @@ Singleton {
             if (key in seen)    { delete seen[key];    cutSeen = true }
             if (key in times)   { delete times[key];   cutTimes = true }
             if (key in updates) { delete updates[key]; cutUpdates = true }
+            if (key in threads) { delete threads[key]; cutThreads = true }
         }
 
         if (cutSeen)    root._seen = seen
         if (cutTimes)   root._times = times
         if (cutUpdates) root._updateTimes = updates
+        if (cutThreads) root._threads = threads
     }
 
     // by arrival, not by close: the popup stack shows the newest first, so a burst closes newest first
@@ -419,6 +422,11 @@ Singleton {
             delete nextUpdates[key]
             root._updateTimes = nextUpdates
         }
+        if (key in root._threads) {
+            const nextThreads = root._cloneMap(root._threads)
+            delete nextThreads[key]
+            root._threads = nextThreads
+        }
     }
 
     function updateTimeFor(id: int): real {
@@ -562,11 +570,30 @@ Singleton {
     signal sourcePulse(int wsId, bool critical)
     signal contentUpdated(int notifId)
     signal notificationShown(string appName, string summary, bool critical)
+    // emitted before the folded cards close, while the stack can still tell them apart
+    signal threadFoldedInPlace(var ids)
 
     readonly property bool fullscreenSilenced: ShellSettings.notifFullscreenSilence
         && FullscreenState.active
-    readonly property bool screenShareSilenced: ShellSettings.notifScreenShareSilence
-        && Compositor.screenSharing
+    // presentation mode is session-only: restarting never leaves a hidden preference behind
+    property bool presentationMode: false
+    readonly property bool automaticShareDetection: Compositor.sharingSupported
+    readonly property bool screenShareSilenced: root.presentationMode
+        || (ShellSettings.notifScreenShareSilence && Compositor.screenSharing)
+    function togglePresentation(): void { root.presentationMode = !root.presentationMode }
+    onScreenShareSilencedChanged: {
+        // retire existing cards as well as incoming ones, including persistent cards and replies
+        if (root.screenShareSilenced) root._retireActiveNotifications()
+    }
+    function allowsPopup(critical: bool, quiet: bool, fullscreen: bool,
+                         privateScreen: bool, criticalBypass: bool): bool {
+        return !privateScreen && ((!quiet && !fullscreen) || (critical && criticalBypass))
+    }
+    function mutesPopup(notification): bool {
+        if (!notification || !ShellSettings.notifAppMuted(root.identityText(notification.appName)))
+            return false
+        return notification.urgency !== NotificationUrgency.Critical || !ShellSettings.notifCriticalBypass
+    }
     function toggleDnd(): void { root.setDnd(!ShellSettings.dnd, 0) }
 
     function setDnd(on: bool, until: real): void {
@@ -708,6 +735,74 @@ Singleton {
             stale[i].notification.tracked = false
         }
         root._forgetTrimmed(ids)
+        return true
+    }
+
+    // a conversation takes one card: the same app and sender fold into the newest message,
+    // and the card keeps the last few earlier lines. History still keeps every message
+    property var _threads: Object.create(null)
+    readonly property int _threadLineMax: 3
+    // a card with an open reply keeps its own card: folding it would discard the draft
+    property int replyingId: -1
+
+    // a stack tag already replaces by design, a progress sender's earlier lines are stale
+    // percentages, and a critical card is never hidden inside another one
+    function threadKeyOf(notification): string {
+        if (!notification || notification.urgency === NotificationUrgency.Critical) return ""
+        if (root.stackTagOf(notification).length > 0) return ""
+        const hints = notification.hints ?? {}
+        if (hints["value"] !== undefined && hints["value"] !== null) return ""
+        const summary = root.plainText(notification.summary, 256)
+        if (summary.length === 0) return ""
+        return root.identityText(notification.appName) + "\n" + summary
+    }
+
+    function threadFor(id: int): var {
+        return root._threads[String(id)] ?? null
+    }
+
+    function _foldThread(notification): bool {
+        if (!ShellSettings.notifGroupThreads) return false
+        const key = root.threadKeyOf(notification)
+        if (key.length === 0) return false
+        const folded = root.list.filter(e => e.notification && e.id !== notification.id
+            && e.id !== root.replyingId && root.threadKeyOf(e.notification) === key)
+        if (folded.length === 0) return false
+        folded.sort((a, b) => (root._times[a.id] ?? a.time) - (root._times[b.id] ?? b.time))
+
+        let count = 1
+        let lines = []
+        for (let i = 0; i < folded.length; i++) {
+            const earlier = root._threads[String(folded[i].id)]
+            count += earlier ? earlier.count : 1
+            if (earlier) lines = lines.concat(earlier.lines)
+            const body = root.plainText(folded[i].notification.body, 512).replace(/\s+/g, " ").trim()
+            if (body.length > 0) lines.push(body)
+        }
+        const ids = folded.map(e => String(e.id))
+        const threads = root._cloneMap(root._threads)
+        for (let i = 0; i < ids.length; i++) delete threads[ids[i]]
+        threads[String(notification.id)] = { count: count, lines: lines.slice(-root._threadLineMax) }
+        root._threads = threads
+
+        // the newest card already on screen turns into this one in place instead of a second card sliding in
+        const newest = root.list.length > 0 ? root.list[root.list.length - 1] : null
+        if (newest && ids.indexOf(String(newest.id)) >= 0) {
+            root.markSeen(notification.id)
+            root.threadFoldedInPlace(ids)
+        }
+
+        // expired, not dismissed: a superseded message was not necessarily read
+        let archived = false
+        for (let i = 0; i < folded.length; i++) {
+            const entry = root._historyEntry(folded[i])
+            root._markClosing(folded[i].id, folded[i].notification)
+            folded[i].notification.expire()
+            if (entry) { root._prependHistory(entry); archived = true }
+        }
+        root._dropFromList(ids)
+        root._forgetTrimmed(ids)
+        if (archived) root._saveHistory()
         return true
     }
 
@@ -1015,18 +1110,25 @@ Singleton {
         onTrackedNotificationsChanged: Qt.callLater(root._settleServer)
 
         onNotification: (n) => {
-            if (n.lastGeneration) { root._adoptKept(n); return }
+            if (n.lastGeneration) {
+                if (root.screenShareSilenced) {
+                    root._archiveNotification(n, n.id, Date.now())
+                    n.expire()
+                } else root._adoptKept(n)
+                return
+            }
             root._ensurePersistentState()
-            const bypasses = ShellSettings.notifCriticalBypass
-                && n.urgency === NotificationUrgency.Critical
-            // expired, not dismissed: a sender may read a dismissal as the user having seen it
-            if (root.effectiveDnd && !bypasses) {
-                if (root._archiveNotification(n, n.id, Date.now()) || n.transient)
-                    root.missedCount++
+            // a muted app is quiet by choice, not missed: it goes to history without counting.
+            // Urgency follows the same critical setting as do not disturb
+            if (root.mutesPopup(n)) {
+                root._archiveNotification(n, n.id, Date.now())
                 n.expire()
                 return
             }
-            if ((root.fullscreenSilenced || root.screenShareSilenced) && !bypasses) {
+            // expired, not dismissed: a sender may read a dismissal as the user having seen it
+            if (!root.allowsPopup(n.urgency === NotificationUrgency.Critical,
+                    root.effectiveDnd, root.fullscreenSilenced,
+                    root.screenShareSilenced, ShellSettings.notifCriticalBypass)) {
                 if (root._archiveNotification(n, n.id, Date.now()) || n.transient)
                     root.missedCount++
                 n.expire()
@@ -1043,6 +1145,7 @@ Singleton {
             root._recordUpdateTime(n.id, Date.now())
             // an update like replaces_id: no hook run or arrival glow per keypress of a volume script
             const restacked = root._retireStacked(n)
+            if (!restacked) root._foldThread(n)
             const isNewObject = root._upsertActiveNotification(n, arrivalTime)
             // connect once per object — stacked handlers fire _onClosed twice
             if (isNewObject) root._watchNotification(n)

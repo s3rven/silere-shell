@@ -245,7 +245,8 @@ PageShell {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
                 width: Math.max(1, Math.min(implicitWidth,
-                    (_clearButton.visible ? _clearButton.x - 10 : _header.width)
+                    (_muteButton.visible ? _muteButton.x - 10
+                        : _clearButton.visible ? _clearButton.x - 10 : _header.width)
                     - (_countChip.visible ? _countChip.width + 9 : 0)))
                 text: root.filter.length > 0 ? root.filter : "Notifications"
                 color: Theme.text
@@ -260,9 +261,9 @@ PageShell {
                 anchors.leftMargin: 9
                 anchors.verticalCenter: _headerTitle.verticalCenter
                 visible: root.rowCount > 0
-                width:  Math.max(18, _countTxt.implicitWidth + 12)
-                height: 18
-                radius: 9
+                width:  Math.max(height, _countTxt.implicitWidth + 12)
+                height: Math.max(18, Settings.fontMicro + 4)
+                radius: height / 2
                 antialiasing: true
                 color: Theme.withAlpha(Theme.subtext, 0.12)
 
@@ -276,6 +277,75 @@ PageShell {
                 }
             }
 
+            // muting belongs to one app, so it only appears once the rail picks one
+            Rectangle {
+                id: _muteButton
+                readonly property bool muted: ShellSettings.notifAppMuted(root.filter)
+                readonly property bool _interactive: visible && enabled
+                visible: root.filter.length > 0
+                anchors.right: _clearButton.visible ? _clearButton.left : parent.right
+                anchors.rightMargin: _clearButton.visible ? 8 : 0
+                anchors.verticalCenter: parent.verticalCenter
+                width: _muteRow.implicitWidth + 20
+                height: Metrics.rowHeightFor(30)
+                radius: Theme.radiusControl
+                antialiasing: true
+                color: _muteTap.pressed ? Theme.blend(Theme.menuControl, Theme.accent, 0.20)
+                    : _muteButton.muted ? Theme.blend(Theme.menuControl, Theme.accent, 0.12)
+                    : _muteHover.hovered ? Theme.blend(Theme.menuControl, Theme.subtext, 0.16)
+                    : Theme.menuControl
+                ColorFade on color {}
+
+                function toggle(): void {
+                    if (_muteButton._interactive)
+                        ShellSettings.setNotifAppMuted(root.filter, !_muteButton.muted)
+                }
+
+                OutlineBorder {
+                    radius: _muteButton.radius
+                    outlineColor: _muteButton.muted ? Theme.withAlpha(Theme.accent, 0.42)
+                        : _muteHover.hovered ? Theme.menuControlLineHot : Theme.menuControlLine
+                    ColorFade on outlineColor {}
+                }
+
+                Accessible.role: Accessible.CheckBox
+                Accessible.name: "Mute popups from " + root.filter
+                Accessible.description: "Notifications still reach history"
+                Accessible.checkable: true
+                Accessible.checked: _muteButton.muted
+                Accessible.focusable: _muteButton._interactive
+                Accessible.onPressAction: _muteButton.toggle()
+                Accessible.onToggleAction: _muteButton.toggle()
+                KeyboardFocus { interactive: _muteButton._interactive; onActivated: _muteButton.toggle() }
+
+                HoverHandler { id: _muteHover; cursorShape: Qt.PointingHandCursor }
+                TapHandler { id: _muteTap; onTapped: _muteButton.toggle() }
+
+                Row {
+                    id: _muteRow
+                    anchors.centerIn: parent
+                    spacing: 4
+
+                    ShellText {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: _muteButton.muted ? "󰪑" : "󰂜"
+                        color: _muteButton.muted ? Theme.accent
+                            : _muteHover.hovered ? Theme.withAlpha(Theme.text, 0.88)
+                            : Theme.withAlpha(Theme.subtext, 0.72)
+                        font.pixelSize: Settings.fontSize
+                        ColorFade on color {}
+                    }
+                    ShellText {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: _muteButton.muted ? "Muted" : "Mute"
+                        color: _muteButton.muted || _muteHover.hovered
+                            ? Theme.withAlpha(Theme.text, 0.88) : Theme.withAlpha(Theme.text, 0.76)
+                        font.pixelSize: Settings.fontCaption
+                        ColorFade on color {}
+                    }
+                }
+            }
+
             ConfirmButton {
                 id: _clearButton
                 anchors.right: parent.right
@@ -284,6 +354,7 @@ PageShell {
                 glyph: "󰆴"
                 label: root.searching ? "Clear matches"
                     : root.filter.length > 0 ? "Clear app" : "Clear all"
+                armedLabel: "Clear " + root.rowCount + "?"
                 busy:  root._clearing || root._swapping
                 onConfirmed: root.clearAll()
             }
@@ -322,6 +393,7 @@ PageShell {
 
             TextInput {
                 id: _searchInput
+                activeFocusOnTab: true
                 anchors.left: parent.left
                 anchors.leftMargin: _searchBox.height - 2
                 anchors.right: _resetSearch.left
@@ -336,6 +408,7 @@ PageShell {
                 clip: true
                 inputMethodHints: Qt.ImhNoAutoUppercase
                 Accessible.name: "Search notifications"
+                FocusScroll { revealTarget: _searchBox }
 
                 ShellText {
                     anchors.fill: parent
@@ -645,6 +718,7 @@ PageShell {
                         Accessible.description: _body.text
                         Accessible.focusable: true
                         Accessible.onPressAction: _entry._toggleExpand()
+                        KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
 
                         HoverHandler {
                             id: _entryHover
@@ -814,6 +888,7 @@ PageShell {
                                 Accessible.name: "Remove notification"
                                 Accessible.focusable: true
                                 Accessible.onPressAction: _entry.removeSelf()
+                                KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
 
                                 HoverHandler { id: _removeHover; cursorShape: Qt.PointingHandCursor }
                                 TapHandler { id: _removeTap; enabled: !root._clearing && !_entry._removing; onTapped: _entry.removeSelf() }
