@@ -40,7 +40,7 @@ jobs:
           rm -rf /etc/pacman.d/gnupg
           pacman-key --init
           pacman-key --populate archlinux
-          pacman -Syyuu --noconfirm --overwrite '*' --ignore archlinux-keyring git cmake ninja gcc pkgconf cli11 qt6-declarative qt6-shadertools qt6-wayland qt6-svg libdrm pipewire wayland wayland-protocols vulkan-headers fontconfig ttf-jetbrains-mono-nerd
+          pacman -Syyuu --noconfirm --overwrite '*' --ignore archlinux-keyring gdb git cmake ninja gcc pkgconf cli11 qt6-declarative qt6-shadertools qt6-wayland qt6-svg libdrm pipewire wayland wayland-protocols vulkan-headers fontconfig ttf-jetbrains-mono-nerd
           test "$(pacman -Q qt6-base)" = 'qt6-base 6.10.0-2'
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -58,6 +58,9 @@ jobs:
           QML2_IMPORT_PATH: /opt/minimum-quickshell/qml
           SILERE_REQUIRE_QML_TOOLS: "1"
           SILERE_ALLOW_OLD_QMLLINT: "1"
+          QS_DISABLE_CRASH_HANDLER: "1"
+          DEBUGINFOD_URLS: ""
+          SILERE_PROBE_WRAP: gdb -q -batch -ex run -ex bt --args
         run: |
           qs --version
           bash scripts/test-qml-headless.sh

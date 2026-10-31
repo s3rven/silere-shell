@@ -79,10 +79,10 @@ EOF
     bash "$ROOT/dev/test-panels.sh" > "$scratch/panels.log" 2>&1 \
         || { cat "$scratch/panels.log" >&2; exit 1; }
     if grep -q '^SKIP' "$scratch/panels.log"; then cat "$scratch/panels.log" >&2; exit 1; fi
-    qs -p "$ROOT/shell.qml" --no-duplicate --no-color > "$scratch/shell.log" 2>&1 &
+    ${SILERE_PROBE_WRAP:-} qs -p "$ROOT/shell.qml" --no-duplicate --no-color > "$scratch/shell.log" 2>&1 &
     shell_pid=$!
     ready=0
-    for _ in $(seq 1 120); do
+    for _ in $(seq 1 300); do
         if qs ipc -p "$ROOT/shell.qml" show 2>/dev/null | grep -q 'target menu'; then ready=1; break; fi
         kill -0 "$shell_pid" 2>/dev/null || break
         sleep 0.1
