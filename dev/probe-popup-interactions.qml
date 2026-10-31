@@ -264,16 +264,25 @@ Item {
     // an unclaimed right press at a window's origin segfaults inside Qt, so reaching the
     // check at all is the result: without the guard this probe never prints its sentinel
     function _checkOriginRightClick(): void {
+        let clicked = 0
         for (const surface of [bar, notificationPopups, calendar.cardWindow]) {
             if (!surface) continue
             surface.visible = true
+            // the compositor sizes a window in its own time, and a real press needs a real window
+            for (let i = 0; i < 100 && surface.contentItem.width < 1; i++) input.wait(20)
             input.wait(120)
+            if (surface.contentItem.width < 1 || surface.contentItem.height < 1) {
+                surface.visible = false
+                continue
+            }
+            clicked++
             input.mousePress(surface.contentItem, 0, 0, Qt.RightButton)
             input.mouseRelease(surface.contentItem, 0, 0, Qt.RightButton)
             input.wait(20)
             root._check(surface.backingWindowVisible, "a right click at a window's origin leaves the shell running")
             surface.visible = false
         }
+        root._check(clicked > 0, "the origin right click reached at least one sized window")
     }
 
     function _checkDismissal(): void {
