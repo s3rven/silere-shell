@@ -91,9 +91,17 @@ Item {
         ? card.appNameText + ": " + card.summaryText : card.summaryText
     Accessible.description: card.earlierCount > 0
         ? card.bodyText + ". " + card.earlierCount + " earlier" : card.bodyText
-    Accessible.focusable: true
+    Accessible.focusable: card.enabled && card.visible
     Accessible.onPressAction: card.activatePrimary()
     KeyboardFocus { onActivated: card.activatePrimary() }
+    Keys.onPressed: event => {
+        if (!card.enabled || !card.visible || card._replyOpen
+                || (event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))) return
+        if (event.key === Qt.Key_Delete) {
+            event.accepted = true
+            if (!event.isAutoRepeat) card.dismiss(false)
+        }
+    }
 
     readonly property string summaryText: Notifications.plainText(notification.summary, 2048)
     readonly property string bodyText:    Notifications.plainText(notification.body)
@@ -334,8 +342,15 @@ Item {
 
     // reading one card holds the whole stack: cards expiring out from under the pointer reflow what is being read
     property bool stackHovered: false
+    readonly property bool _keyboardFocused: {
+        const window = card.Window.window
+        if (!card.enabled || !card.visible || !window || !window.active) return false
+        for (let item = window.activeFocusItem; item; item = item.parent)
+            if (item === card) return true
+        return false
+    }
     // an abandoned empty reply lets the card go; one being typed or holding text keeps it
-    readonly property bool _paused: _cardHover.hovered || card.stackHovered || Idle.isQuiet
+    readonly property bool _paused: _cardHover.hovered || card.stackHovered || card._keyboardFocused || Idle.isQuiet
         || (card._replyOpen && (_replyInput.activeFocus || _replyInput.text.length > 0))
 
     property real _hoverPausedMs: 0
@@ -361,7 +376,7 @@ Item {
             return t > 0 ? Math.min(t, 30000) : ShellSettings.notifDefaultTimeout
         }
         interval: Math.max(400, fullInterval - card._shownMs() + card._hoverPausedMs)
-        running:  shouldRun && !card._paused
+        running: card.enabled && shouldRun && !card._paused
         onTriggered: card.dismiss(true)
     }
 
@@ -402,7 +417,16 @@ Item {
     // that reading shrinks straight back under the cursor and the card oscillates. Plain
     // ms, not a Motion token: those return 0 under reduce motion and re-open the trap
     property bool _expanded: false
-    Timer { id: _collapseHold; interval: 260; onTriggered: if (!card._replyOpen) card._expanded = false }
+    Timer {
+        id: _collapseHold
+        interval: 260
+        onTriggered: if (!card._replyOpen && !card._keyboardFocused && !_cardHover.hovered)
+            card._expanded = false
+    }
+    on_KeyboardFocusedChanged: {
+        if (card._keyboardFocused) { _collapseHold.stop(); card._expanded = true }
+        else if (!_cardHover.hovered) _collapseHold.restart()
+    }
     Connections {
         target: _cardHover
         function onHoveredChanged() {
