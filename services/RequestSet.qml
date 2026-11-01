@@ -6,7 +6,7 @@ QtObject {
     property var _owners: []
     readonly property bool active: root._owners.length > 0
 
-    // A closing view releases its own request, including during a picker handover.
+    // a closing view releases its own request, including during a picker handover
     function set(owner, wanted: bool): bool {
         if (!owner) return false
         const index = root._owners.indexOf(owner)
