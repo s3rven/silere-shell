@@ -44,28 +44,39 @@ Singleton {
 
     function processControlWheel(event, key: string): int {
         if (!event) return 0
+        if (event.phase === Qt.ScrollBegin) _forgetKey(key)
+        const finished = event.phase === Qt.ScrollEnd
         const touchpad = _isTouchpad(event)
         const axes = _wheelAxes(event, touchpad)
         if (Math.abs(axes.x) > Math.abs(axes.y) * horizontalRejectRatio) {
             _forgetKey(key)
             return 0
         }
-        if (!axes.y) return 0
-        return _processDelta(
+        if (!axes.y) {
+            if (finished) _forgetKey(key)
+            return 0
+        }
+        const steps = _processDelta(
             axes.y, key,
             touchpad ? controlTouchpadNotch : notch,
             touchpad ? 1 : 2,
             touchpad ? controlTouchpadMinStepMs : 0
         )
+        if (finished) _forgetKey(key)
+        return steps
     }
 
     // a tray app steps once per Scroll call, so a touchpad's stream of small deltas has to arrive as whole notches
     function processTrayWheel(event, key: string): var {
         if (!event) return { steps: 0, horizontal: false }
+        if (event.phase === Qt.ScrollBegin) {
+            _forgetKey(key + ":h")
+            _forgetKey(key + ":v")
+        }
         const touchpad = _isTouchpad(event)
         const axes = _wheelAxes(event, touchpad)
         const horizontal = Math.abs(axes.x) > Math.abs(axes.y)
-        return {
+        const result = {
             steps: _processDelta(
                 horizontal ? axes.x : axes.y, key + (horizontal ? ":h" : ":v"),
                 touchpad ? controlTouchpadNotch : notch,
@@ -73,6 +84,12 @@ Singleton {
                 touchpad ? controlTouchpadMinStepMs : 0),
             horizontal: horizontal
         }
+        // a zero-delta end has no axis of its own; retire both remainders
+        if (event.phase === Qt.ScrollEnd) {
+            _forgetKey(key + ":h")
+            _forgetKey(key + ":v")
+        }
+        return result
     }
 
     function _processDelta(deltaY: real, key: string, threshold: real, maxSteps: int, minStepMs: int): int {

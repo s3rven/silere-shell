@@ -81,6 +81,7 @@ Item {
             return
         }
         _revealDefer.stop()
+        _typedReset.stop()
         _options.cancelFlick()
         const returnFocus = !next && _options.currentItem && _options.currentItem.activeFocus
         if (next) MenuState.claimSettingsSelect(root)
@@ -111,16 +112,35 @@ Item {
     // the font list runs to thousands of rows. Typing lands on the first that starts with the text, or failing that contains it
     property string _typed: ""
     Timer { id: _typedReset; interval: 1000; onTriggered: root._typed = "" }
-    function _typeAhead(text: string): void {
-        root._typed += text.toLowerCase()
-        _typedReset.restart()
+    function _searchText(text: string): string {
+        return text.normalize("NFD").toLowerCase().replace(/[\u0300-\u036F]/g, "")
+    }
+    function _matchTyped(start: int): void {
+        const query = root._searchText(root._typed)
+        if (!root._open || query.length === 0 || root._optionCount <= 0) return
         let contains = -1
-        for (let i = 0; i < root._optionCount; i++) {
-            const label = String(root.model[i].label ?? "").toLowerCase()
-            if (label.startsWith(root._typed)) { root._moveTo(i); return }
-            if (contains < 0 && label.indexOf(root._typed) >= 0) contains = i
+        for (let step = 0; step < root._optionCount; step++) {
+            const i = (Math.max(0, start) + step) % root._optionCount
+            const label = root._searchText(String(root.model[i].label ?? ""))
+            if (label.startsWith(query)) { root._moveTo(i); return }
+            if (contains < 0 && label.indexOf(query) >= 0) contains = i
         }
         if (contains >= 0) root._moveTo(contains)
+    }
+    function _typeAhead(text: string): void {
+        if (!root._open || !root._canOpen || text.length === 0) return
+        const previous = root._searchText(root._typed)
+        const added = root._searchText(text)
+        const cycle = added.length === 1 && previous === added
+        root._typed = cycle ? text.toLowerCase() : (root._typed + text.toLowerCase()).slice(0, 256)
+        _typedReset.restart()
+        root._matchTyped(cycle ? _options.currentIndex + 1 : 0)
+    }
+    function _backspaceTypeAhead(): void {
+        if (!root._open || !root._canOpen || root._typed.length === 0) return
+        root._typed = root._typed.slice(0, -1)
+        _typedReset.restart()
+        root._matchTyped(0)
     }
 
     Keys.onPressed: event => {
@@ -131,8 +151,7 @@ Item {
         else if (event.key === Qt.Key_PageUp) root._moveTo(at - 7)
         else if (event.key === Qt.Key_PageDown) root._moveTo(at + 7)
         else if (event.key === Qt.Key_Backspace && root._typed.length > 0) {
-            root._typed = root._typed.slice(0, -1)
-            _typedReset.restart()
+            root._backspaceTypeAhead()
         } else if (event.text.length === 1 && event.text > " " || (event.text === " " && root._typed.length > 0))
             root._typeAhead(event.text)
         else return

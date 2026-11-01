@@ -17,6 +17,7 @@ Item {
     readonly property real stepSize: root.step > 0
         ? root.step : Math.max(0.01, (root.max - root.min) / 100)
     property string wheelKey: ""
+    property string _previousWheelKey: ""
     property bool wheelNeedsRest: false
     property bool commitOnRelease: false
     // changing the device or track invalidates an unfinished gesture
@@ -78,11 +79,16 @@ Item {
 
     onValueChanged: if (!root.dragging) _shownValue = value
     onInteractionKeyChanged: root.cancelInteraction()
-    onWheelKeyChanged: root.cancelInteraction()
+    onWheelKeyChanged: {
+        Scroll.resetControl(root._previousWheelKey)
+        root._previousWheelKey = root.wheelKey
+        root.cancelInteraction()
+    }
     onMinChanged: root.cancelInteraction()
     onMaxChanged: root.cancelInteraction()
     onStepChanged: root.cancelInteraction()
     on_CanInteractChanged: if (!root._canInteract) root.cancelInteraction()
+    Component.onCompleted: root._previousWheelKey = root.wheelKey
 
     function cancelInteraction(): void {
         Scroll.resetControl(root.wheelKey)
@@ -137,7 +143,17 @@ Item {
     }
     function nudge(dir: int, mult: int): void {
         if (!root._canInteract || root.dragging) return
-        _setFromUser(_shownValue + dir * root.stepSize * mult)
+        const steps = dir * mult
+        if (steps === 0) return
+        let next = _shownValue + steps * root.stepSize
+        if (root.step > 0) {
+            // an uneven endpoint is one stop beyond the grid, not a full step
+            // beyond it: 1 -> 0.9 -> 0.6 when the increment is 0.3
+            const at = (_shownValue - root.min) / root.step
+            const base = steps > 0 ? Math.floor(at + 0.000001) : Math.ceil(at - 0.000001)
+            next = root.min + (base + steps) * root.step
+        }
+        _setFromUser(next)
     }
 
     WaveLine {

@@ -14,6 +14,7 @@ Item {
     // hue is a circle, saturation is not: one wraps past the end, the other stops
     property bool wraps: true
     property string wheelKey: "accent-hue"
+    property string _previousWheelKey: ""
     property string accessibleName: ""
     property string accessibleValueText: String(root.value)
 
@@ -76,6 +77,12 @@ Item {
         root._grab = 0
         Scroll.resetControl(root.wheelKey)
     }
+    onWheelKeyChanged: {
+        Scroll.resetControl(root._previousWheelKey)
+        root._previousWheelKey = root.wheelKey
+        Scroll.resetControl(root.wheelKey)
+    }
+    Component.onCompleted: root._previousWheelKey = root.wheelKey
 
     function _pickAt(mx: real): void {
         if (!root._canInteract) return
