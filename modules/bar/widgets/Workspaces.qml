@@ -14,10 +14,15 @@ Item {
 
     required property ShellScreen screen
 
+    readonly property string accessibleName: "Workspaces"
+    Accessible.role: Accessible.Grouping
+    Accessible.name: root.accessibleName
+
     readonly property int minVisible: ShellSettings.wsMinVisible
     readonly property int btnH:       Metrics.barRowHeight
     readonly property int btnW:       btnH + 2
-    readonly property int _iconSz:    Math.round(ShellSettings.barIconSize * ShellSettings.uiScale) + 2
+    readonly property int _iconSz: Math.min(root.btnH - 4,
+        Math.round(ShellSettings.barIconSize * ShellSettings.uiScale) + 2)
     readonly property int gap:        3
     // updated imperatively because mapToItem() does not expose ancestor geometry dependencies to the QML binding engine
     property real menuAnchorX: 0
@@ -58,7 +63,7 @@ Item {
     property bool _initialized: false
 
     // the cells ease their own widths; a Behavior on their sum restarts every frame and stalls until they settle
-    property real _tickRoom: urgentOffPage > 0 ? 12 : 0
+    property real _tickRoom: urgentOffPage > 0 ? urgentTick.implicitWidth + 4 : 0
     MotionBehavior on _tickRoom {
         gate: root.barActive
         NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
@@ -146,6 +151,9 @@ Item {
 
     function wsObjFor(id: int): var { return root._wsMap[id] ?? null }
     function appsFor(id: int): var { return appModel.appsFor(id) }
+    function hiddenAppsFor(id: int): int {
+        return Math.max(0, appModel.appCountFor(id) - (root.compact ? 1 : 3))
+    }
     function occupied(id: int): bool {
         const ws = root.wsObjFor(id)
         return (ws !== null && ws.occupied) || root.appsFor(id).length > 0
@@ -211,13 +219,20 @@ Item {
 
     function _btnW(wsId: int): int {
         if (wsId < 0) return 0
+        const canShowContent = !(wsId === root._displayActiveId && root.markerCovers)
+        const numberWidth = canShowContent && (ShellSettings.wsShowNumbers || ShellSettings.valuesOnHover)
+            ? Math.ceil(String(wsId).length * _digitM.advanceWidth * 1.12) + 10 : 0
+        let width = Math.max(btnW, numberWidth)
         if (ShellSettings.wsShowAppIcons && !(wsId === root._displayActiveId && root.markerCovers)) {
             const apps = root.appsFor(wsId)
-            if (apps && apps.length > 0)
-                return (root.compact ? 1 : apps.length) * _iconSz
-                    + (root.compact ? 0 : (apps.length - 1) * 4) + 10
+            if (apps && apps.length > 0) {
+                const count = root.compact ? 1 : apps.length
+                const overflow = root.hiddenAppsFor(wsId)
+                width = Math.max(width, count * _iconSz + (count - 1) * 4 + 10
+                    + (overflow > 0 ? Metrics.workspaceOverflowWidthFor(overflow, _iconSz) + 4 : 0))
+            }
         }
-        return btnW
+        return width
     }
     // untrimmed: the trim eases, and feeding it into the marker's target restarts the slide every frame; the marker takes it as an offset instead
     function _cellCenterX(wsId: int): real {
@@ -572,6 +587,8 @@ Item {
                 occupied:     root.occupied(wsId)
                 urgent:       root.urgent(wsId)
                 apps:         root.appsFor(wsId)
+                hiddenAppCount: root.hiddenAppsFor(wsId)
+                workspaceName: SafeText.singleLineText(root.wsObjFor(wsId)?.name ?? "", 128)
                 compact:      root.compact
                 iconSize:     root._iconSz
                 cellWidth:    root._btnW(wsId)
@@ -595,8 +612,10 @@ Item {
     }
 
     WorkspaceUrgentTick {
+        id: urgentTick
         x: wsRow.x + wsRow.implicitWidth + 2
         liveId: root.urgentOffPage
+        before: root._displayIds.length > 0 && root.urgentOffPage < root._displayIds[0]
         rowHeight: root.btnH
         barActive: root.barActive
         onJumpRequested: id => root.activate(id)

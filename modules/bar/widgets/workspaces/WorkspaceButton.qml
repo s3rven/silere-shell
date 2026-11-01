@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import "../../../../config"
 import "../../../../services"
 import "../../../common"
@@ -22,6 +23,9 @@ Item {
     required property bool initialized
     required property bool paging
     required property bool markerCovers
+    property int hiddenAppCount: 0
+    property string workspaceName: ""
+    readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
 
     signal activateRequested()
     signal moveWindowRequested()
@@ -111,6 +115,16 @@ Item {
 
     Accessible.role: Accessible.Button
     Accessible.name: "Workspace " + root.wsId
+        + (root.workspaceName.length > 0 && root.workspaceName !== String(root.wsId)
+            ? ", " + root.workspaceName : "")
+    Accessible.description: {
+        const parts = [root.occupied ? "Occupied" : "Empty"]
+        if (root.urgent) parts.push("Needs attention")
+        const shownApps = root.compact ? root.apps.slice(0, 1) : root.apps
+        if (shownApps.length > 0) parts.push(shownApps.map(app => app.name).join(", "))
+        if (root.hiddenAppCount > 0) parts.push(root.hiddenAppCount + " more applications")
+        return parts.join(". ")
+    }
     Accessible.selected: root.active
     Accessible.focusable: root.canActivate
     Accessible.onPressAction: root._activate()
@@ -218,7 +232,7 @@ Item {
         && !_blanked && (_showIcons || !ShellSettings.wsShowNumbers)
     property real _revealAmt: _hoverReveal ? 1 : 0
     MotionBehavior on _revealAmt {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-    property real _dotAlpha: urgent ? 0.95 : active ? 1.0 : occupied ? 0.65 : 0.28
+    property real _dotAlpha: urgent || active ? 1.0 : occupied ? 0.9 : 0.55
     MotionBehavior on _dotAlpha {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
 
     Loader {
@@ -286,8 +300,8 @@ Item {
                 : root.active
                 ? Theme.barAccent
                 : (root.occupied
-                    ? (root._hoverFx ? Theme.barAccent : Theme.withAlpha(Theme.text, 0.85))
-                    : (root._hoverFx ? Theme.withAlpha(Theme.barAccent, 0.65) : Theme.withAlpha(Theme.subtext, 0.45)))
+                    ? (root._hoverFx ? Theme.barAccent : Theme.barText)
+                    : (root._hoverFx ? Theme.barAccent : Theme.barSubtext))
             font.pixelSize: Settings.fontLabel
 
             MotionBehavior on scale   {NumberAnimation { duration: Motion.ms(120); easing.type: Easing.OutCubic } }
@@ -295,9 +309,13 @@ Item {
         }
 
         Rectangle {
+            id: _dot
+            objectName: "workspace-dot"
             anchors.centerIn: parent
-            transform: Translate { x: root._shakeX }
-            width:  root.urgent ? 6 : (root.active || root.occupied ? 5 : 4)
+            anchors.alignWhenCentered: false
+            transform: [Translate { x: root._shakeX }, PixelSnap { item: _dot; dpr: root._dpr }]
+            width: Metrics.devicePx(Math.max(4, root.rowHeight
+                * (root.urgent ? 0.29 : root.active || root.occupied ? 0.24 : 0.16)), root._dpr)
             height: width
             radius: width / 2
             antialiasing: true
@@ -308,8 +326,12 @@ Item {
                 * root._pulseOpacity
             color: root.urgent ? Theme.warning
                  : root.active ? Theme.barAccent
-                 : Theme.withAlpha(Theme.subtext, 0.85)
+                 : root.occupied ? Theme.barSubtext : "transparent"
             scale: _tap.pressed ? 0.9 : (root._hoverFx ? 1.2 : 1.0)
+            OutlineBorder {
+                radius: _dot.radius
+                outlineColor: !root.occupied && !root.urgent && !root.active ? Theme.barSubtext : "transparent"
+            }
 
             ColorFade on color {}
             MotionBehavior on width {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
@@ -324,10 +346,24 @@ Item {
             sourceComponent: Component {
                 WorkspaceAppIcons {
                     apps: root.compact ? root.apps.slice(0, 1) : root.apps
+                    overflowCount: root.hiddenAppCount
                     iconSize: root.iconSize
                     pulseOpacity: root._pulseOpacity
                 }
             }
+        }
+
+        Rectangle {
+            id: _urgentMark
+            objectName: "workspace-urgent-mark"
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: root.rowHeight - height
+            width: Metrics.devicePx(Math.max(6, root.iconSize * 0.5), root._dpr)
+            height: Metrics.devicePx(2, root._dpr)
+            radius: height / 2
+            color: Theme.warning
+            visible: root.urgent && !root.active && root._iconCell
+            transform: PixelSnap { item: _urgentMark; dpr: root._dpr }
         }
     }
 }

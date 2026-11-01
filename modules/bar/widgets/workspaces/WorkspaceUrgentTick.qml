@@ -11,6 +11,7 @@ Item {
     required property int liveId
     required property real rowHeight
     required property bool barActive
+    property bool before: false
 
     signal jumpRequested(int wsId)
 
@@ -23,7 +24,8 @@ Item {
     }
     Component.onCompleted: if (liveId > 0) targetWs = liveId
 
-    width: 10
+    implicitWidth: Math.max(rowHeight, Math.ceil(_label.implicitWidth) + 12)
+    width: implicitWidth
     height: rowHeight
     opacity: shown ? 1 : 0
     visible: opacity > 0.01
@@ -35,6 +37,7 @@ Item {
 
     Accessible.role: Accessible.Button
     Accessible.name: "Go to workspace " + root.targetWs
+    Accessible.description: "Needs attention. " + (root.before ? "Before" : "After") + " the current page"
     Accessible.focusable: root.canActivate
     Accessible.onPressAction: root._jump()
     KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
@@ -61,15 +64,14 @@ Item {
         onTriggered: root._pulseSettled = true
     }
 
-    Rectangle {
+    ShellText {
+        id: _label
         anchors.centerIn: parent
-        width:  5
-        height: 5
-        radius: 2.5
-        antialiasing: true
+        text: (root.before ? "‹ " : "› ") + root.targetWs
+        font.pixelSize: Settings.fontLabel
         color: Theme.warning
         opacity: root._pulse * ((_tickHover.hovered) ? 1.0 : 0.9)
-        scale: (_tickHover.hovered && ShellSettings.barHoverHighlight) ? 1.25 : 1.0
+        scale: (_tickHover.hovered && ShellSettings.barHoverHighlight) ? 1.08 : 1.0
         MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
     }
 }
