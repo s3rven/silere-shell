@@ -18,6 +18,7 @@ Singleton {
     readonly property bool changing: _set.running && root._setIsSlow
     property bool _setIsSlow: false
     property string lastError: ""
+    property var _pendingPreference: null
 
     function profileName(value): string {
         switch (value) {
@@ -90,13 +91,18 @@ Singleton {
         if (!root.available || _set.running) return
         const want = String(name)
         if (root._cycleOrder.indexOf(want) < 0) return
-        if (ShellSettings.powerProfileRemember && Battery.available)
-            ShellSettings[Battery.onBattery ? "powerProfileBattery" : "powerProfileAc"] = want
-        if (want !== root.profile) root._apply(want)
+        const rememberFor = ShellSettings.powerProfileRemember && Battery.available
+            ? Battery.onBattery ? "powerProfileBattery" : "powerProfileAc" : ""
+        if (want !== root.profile) root._apply(want, rememberFor)
+        else {
+            root.lastError = ""
+            if (rememberFor.length > 0) ShellSettings[rememberFor] = want
+        }
     }
 
-    function _apply(want: string): void {
+    function _apply(want: string, rememberFor: string): void {
         root.lastError = ""
+        root._pendingPreference = rememberFor.length > 0 ? { key: rememberFor, name: want } : null
         _set.exec(root.commandFor(want, SystemTools.hasPowerProfilesCtl, SystemTools.hasBusctl))
     }
 
@@ -121,7 +127,7 @@ Singleton {
             if (!Battery.available) return
             const want = root.profileForSource(Battery.onBattery, ShellSettings.powerProfileAc,
                 ShellSettings.powerProfileBattery, root.profile)
-            if (root._cycleOrder.indexOf(want) >= 0) root._apply(want)
+            if (root._cycleOrder.indexOf(want) >= 0) root._apply(want, "")
         }
     }
 
@@ -141,13 +147,18 @@ Singleton {
     }
 
     function _acceptSetResult(code: int, timedOut: bool, error: string): void {
+        const preference = root._pendingPreference
+        root._pendingPreference = null
         if (!root.available) return
         root.lastError = timedOut ? "Power mode change timed out"
             : code === 0 ? "" : SafeText.lastNonEmptyLine(
                 error, "Could not change the power mode", 160)
+        if (!timedOut && code === 0 && preference && ShellSettings.powerProfileRemember)
+            ShellSettings[preference.key] = preference.name
     }
 
     onAvailableChanged: if (!root.available) {
+        root._pendingPreference = null
         if (_set.running) _set.running = false
         root.lastError = ""
     }
