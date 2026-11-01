@@ -22,7 +22,7 @@ Item {
         : Battery.onAc ? "AC"
         : "Battery"
     readonly property string _batteryValue: Battery.label
-    // the rail caps this at 86px and "Performance · throttled" needs 138, so the suffix
+    // "Performance · throttled" overflows the rail's value column at every size, so the suffix
     // could never render; degraded rides the row tint here and the Now page says the word
     readonly property string _profileValue: PowerProfiles.changing ? "Changing…"
         : PowerProfiles.lastError.length > 0 ? "Failed"

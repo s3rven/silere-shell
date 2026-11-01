@@ -25,9 +25,9 @@ Rectangle {
     readonly property bool _canActivate: root.enabled && root.visible && root.interactive
     readonly property bool _hot: root.enabled && root.interactive && (_hover.hovered)
     readonly property bool _showValue: root.value.length > 0 && !root.armed
-    // the rail's width is fixed while its text grows, so at raised uiScale the value crowded
-    // the label out; a clipped "Mod…" loses the row's identity where a clipped value still
-    // reads, so the value yields first. 62 = the label's left offset plus the gap before it
+    // a clipped "Mod…" loses the row's identity where a clipped value still reads, so the value
+    // yields first. No fixed cap: the rail widens with the type, and "Power Saver" outgrew one.
+    // 62 = the label's left offset plus the gap before it
     TextMetrics {
         id: _labelInk
         font.family:    Settings.font
@@ -35,8 +35,7 @@ Rectangle {
         font.weight:    root.armed ? Font.DemiBold : Font.Normal
         text:           root.armed ? root.confirmLabel : root.label
     }
-    readonly property int _valueMaxW: Math.max(42, Math.min(86,
-        Math.round(root.width * 0.52),
+    readonly property int _valueMaxW: Math.max(42, Math.min(Math.round(root.width * 0.52),
         root.width - 62 - Math.ceil(_labelInk.advanceWidth) - 1))
     property real _shift: root._hot || root.armed ? 0.5 : 0.0
     readonly property color _fg: root.armed
