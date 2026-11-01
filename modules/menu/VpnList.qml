@@ -7,9 +7,9 @@ Column {
     id: root
     property bool open: false
     width: parent ? parent.width : 0
-    onOpenChanged: Vpn.requested = root.open
-    Component.onCompleted: Vpn.requested = root.open
-    Component.onDestruction: Vpn.requested = false
+    onOpenChanged: Vpn.requestList(root, root.open)
+    Component.onCompleted: Vpn.requestList(root, root.open)
+    Component.onDestruction: Vpn.requestList(root, false)
 
     Repeater {
         model: root.open ? Vpn.profiles : []

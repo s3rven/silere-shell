@@ -40,14 +40,12 @@ Item {
     }
 
     function _syncScanState(): void {
-        if (_canScan()) {
-            Network.scanWifi(true)
-        } else if (root.open) {
+        Network.requestWifiScan(root, _canScan())
+        if (!_canScan() && root.open) {
             _selected = ""
             _disarmTimer.stop()
             _armedSsid = ""
             _forgetSsid = ""
-            Network.clearWifiScan()
         }
     }
 
@@ -57,18 +55,17 @@ Item {
         _syncNetworks()
     }
     onOpenChanged: {
-        if (open) _syncScanState()
-        else      {
+        _syncScanState()
+        if (!open) {
             _selected = ""
             _disarmTimer.stop()
             _armedSsid = ""
             _forgetSsid = ""
-            Network.clearWifiScan()
         }
     }
     Component.onCompleted: { _syncScanState(); _syncNetworks() }
     Component.onDestruction: {
-        if (open) Network.clearWifiScan()
+        Network.requestWifiScan(root, false)
     }
 
     Timer {

@@ -55,6 +55,7 @@ singleton Weather       1.0 Weather.qml
 singleton XdgPaths      1.0 XdgPaths.qml
 
 StableObjectList        1.0 StableObjectList.qml
+RequestSet              1.0 RequestSet.qml
 
 # service-only implementation types
 internal AnchoredPopupState AnchoredPopupState.qml

@@ -37,12 +37,11 @@ Item {
     }
 
     function _syncScanState(): void {
-        Bluetooth.setScan(root.open && Bluetooth.available && Bluetooth.enabled && !Idle.isIdle)
+        Bluetooth.requestScan(root, root.open && Bluetooth.available && Bluetooth.enabled && !Idle.isIdle)
         if (!Bluetooth.available || !Bluetooth.enabled) {
             _disarmTimer.stop()
             root._armedAddr = ""
             root._forgetAddr = ""
-            Bluetooth.abandonAttempt()
         }
     }
 
@@ -52,13 +51,11 @@ Item {
             _disarmTimer.stop()
             root._armedAddr = ""
             root._forgetAddr = ""
-            Bluetooth.abandonAttempt()
         }
     }
     Component.onCompleted: _syncScanState()
     Component.onDestruction: {
-        Bluetooth.setScan(false)
-        Bluetooth.abandonAttempt()
+        Bluetooth.requestScan(root, false)
     }
 
     Connections {

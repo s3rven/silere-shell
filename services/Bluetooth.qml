@@ -169,6 +169,16 @@ Singleton {
 
     property bool _scanRequested: false
     property var _scanAdapter: null
+    readonly property RequestSet _scanRequests: RequestSet {}
+
+    function requestScan(owner, wanted: bool): void {
+        const wasActive = root._scanRequests.active
+        root._scanRequests.set(owner, wanted)
+        if (wasActive === root._scanRequests.active) return
+        root.setScan(root._scanRequests.active)
+        if (!root._scanRequests.active) root.abandonAttempt()
+    }
+
     function setScan(on: bool): void {
         // coalesce: onOpenChanged and Component.onCompleted can request the same state in one pass and BlueZ answers "Operation already in progress"
         _scanRequested = !!on

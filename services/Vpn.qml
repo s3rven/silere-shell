@@ -8,7 +8,11 @@ Singleton {
     id: root
 
     readonly property bool available: SystemTools.hasNmcli && Network.toolAvailable
-    property bool requested: false
+    readonly property RequestSet _requests: RequestSet {}
+    readonly property bool requested: root._requests.active
+    function requestList(owner, wanted: bool): void {
+        root._requests.set(owner, wanted)
+    }
     // one list run, so Home can leave the VPN row out when nothing is saved
     property bool _peek: false
     property real _peekedAt: 0

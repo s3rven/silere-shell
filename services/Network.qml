@@ -193,6 +193,16 @@ Singleton {
     }
 
     property bool _scannerWanted: false
+    readonly property RequestSet _scanRequests: RequestSet {}
+
+    function requestWifiScan(owner, wanted: bool): void {
+        if (!owner) return
+        const wasActive = root._scanRequests.active
+        root._scanRequests.set(owner, wanted)
+        if (wanted && (!wasActive || !root._scannerWanted)) root.scanWifi(true)
+        else if (wasActive && !root._scanRequests.active) root.clearWifiScan()
+    }
+
     property string wifiConnecting: ""
     property string wifiError: ""
     property int wifiErrorReason: ConnectionFailReason.Unknown
