@@ -429,6 +429,31 @@ Item {
             "a closed tray menu stops being shown and forgets its held submenu room")
     }
 
+    // editing the bar from inside a popup must not drag the popup away from the control being edited
+    function _checkHoldsPlace(): void {
+        ShellSettings.reduceMotion = true
+        const card = tray.popupCard
+        const saved = [ShellSettings.barFloating, ShellSettings.barWidth]
+        ShellSettings.barFloating = true
+        ShellSettings.barWidth = 0.6
+        TrayMenuState.toggleAt(card.winW * 0.25, root.targetScreen, null, false, null, traySource)
+        input.wait(50)
+        const placed = card.x
+        ShellSettings.barWidth = 0.9
+        TrayMenuState.anchorX = card.winW * 0.35
+        input.wait(50)
+        root._check(TrayMenuState.open && card.x === placed,
+            "an open card holds still while the bar's width and its anchor move (" + placed + " -> " + card.x + ")")
+        TrayMenuState.close()
+        TrayMenuState.toggleAt(card.winW * 0.35, root.targetScreen, null, false, null, traySource)
+        input.wait(50)
+        root._check(card.x === Metrics.snap4(card._targetX()) && card.x !== placed,
+            "reopening places the card for the bar and anchor as they are now")
+        TrayMenuState.close()
+        ShellSettings.barFloating = saved[0]
+        ShellSettings.barWidth = saved[1]
+    }
+
     function _checkReplyFocus(): void {
         const popups = notificationPopups
         const focus = () => popups.WlrLayershell.keyboardFocus
@@ -509,6 +534,7 @@ Item {
         root._checkOriginRightClick()
         root._checkDismissal()
         root._checkTraySubmenus()
+        root._checkHoldsPlace()
         root._checkReplyFocus()
         root._checkPopupOpacity()
         console.warn("PROBE-POPUP-INTERACTIONS checked " + root._checks + " behaviors")

@@ -100,13 +100,16 @@ Rectangle {
     }
 
     // a floating bar stops short of the screen, and a card hanging past its end reads as detached from it.
-    // A card wider than the bar has only the screen to keep to
+    // A card wider than the bar has only the screen to keep to. Applied when placing, never live:
+    // a card that chases the bar's ends slides away from the width slider being dragged
     readonly property int _barSide: Metrics.barPresent(win.screen) ? Metrics.barSideGap(winW) : 0
     readonly property bool _fitsBar: winW - _barSide * 2 >= targetWidth
-    on_BarSideChanged: if (open) place()
 
+    function _screenClampedX(px: real): real {
+        return Math.max(_minX, Math.min(px, _maxX))
+    }
     function _clampedX(px: real): real {
-        if (!_fitsBar) return Math.max(_minX, Math.min(px, _maxX))
+        if (!_fitsBar) return root._screenClampedX(px)
         const low = Math.max(_minX, _barSide)
         return Math.max(low, Math.min(px, Math.min(_maxX, winW - _barSide - targetWidth)))
     }
@@ -124,8 +127,9 @@ Rectangle {
         x = to
         _spanTo(from, to)
     }
+    // only keeps the card on screen; the bar's ends were met when it was placed
     function reclamp(): void {
-        const nx = Metrics.snap4(_clampedX(x))
+        const nx = Metrics.snap4(_screenClampedX(x))
         if (Math.abs(nx - x) <= 0.5) return
         // clamp corrections are geometry invariants, not placement motion. Snapping also avoids retargeting x on every radius-animation frame
         _hardClamping = true
@@ -140,7 +144,9 @@ Rectangle {
     }
     // place() not reclamp(): clamping the old x makes a widening card grow from its left edge
     onTargetWidthChanged: if (open) place()
-    onAnchorXChanged: place()
+    // the anchor moves with the bar it sits in; once the card has settled it holds still, so a
+    // bar edited from inside the menu does not drag the control being edited out from under the pointer
+    onAnchorXChanged: if (!open || !_placementSettled) place()
     onOpenChanged: {
         if (open) {
             _placementSettled = false
