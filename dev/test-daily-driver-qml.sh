@@ -238,6 +238,11 @@ else
     [ ! -s "$fixtures/session-wait-fail" ]
 fi
 EOF
+# PowerProfiles reads the live daemon through UPower, which answers the first read with
+# its default; the probe waits for this value before picking a mode to request.
+# Read here, outside the stub PATH, so the real tool answers
+timeout 2 powerprofilesctl get > "$scratch/fixtures/power-live" 2>/dev/null \
+    || : > "$scratch/fixtures/power-live"
 
 # This project loads only the copied services and their mocks. Every action
 # resolves to a private helper; lock and suspend requests are recorded without execution.

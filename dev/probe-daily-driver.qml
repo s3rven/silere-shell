@@ -93,6 +93,10 @@ Scope {
     }
 
     function powerChecks(): void {
+        // a target picked from UPower's default can turn out to be the live mode, and then no request runs
+        const live = root.read("power-live").trim()
+        if (live.length > 0)
+            root.waitFor(() => PowerProfiles.profile === live, "the power mode settles on the live daemon's value")
         const want = PowerProfiles.profile === "balanced" ? "power-saver" : "balanced"
         ShellSettings.powerProfileAc = want === "balanced" ? "power-saver" : "balanced"
         ShellSettings.powerProfileBattery = ShellSettings.powerProfileAc
