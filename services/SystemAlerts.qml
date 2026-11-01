@@ -41,6 +41,18 @@ Singleton {
         return root._send(summary, body, urgency)
     }
 
+    // the way into the menu is the active workspace, and otherwise only the installer's terminal output says so.
+    // The delay keeps it clear of the bar settling in on a first login
+    Timer {
+        interval: 2000
+        running: ShellSettings.firstRun && SystemTools.ready
+        onTriggered: {
+            if (root._send("Welcome to Silere",
+                "Click the active workspace to open the menu, or right-click it for quick actions.",
+                "normal")) ShellSettings.markFirstRunSeen()
+        }
+    }
+
     function _checkBattCrit(): void {
         if (Battery.available && Battery.critical && Battery.alertWarning === "critical"
                 && ShellSettings.osdBatteryWarn && !_battCritSent) {
@@ -60,6 +72,7 @@ Singleton {
     function _checkCurrentWarnings(): void {
         if (Battery.alertWarning === "critical") _checkBattCrit()
         _checkCpuCrit()
+        _checkBtBatteries()
     }
 
     Component.onCompleted: Qt.callLater(root._checkCurrentWarnings)
@@ -113,6 +126,10 @@ Singleton {
         const alerts = []
         for (let i = 0; i < readings.length; i++) {
             const r = readings[i]
+            if (typeof r.pct !== "number" || !isFinite(r.pct) || r.pct < 0 || r.pct > 100) {
+                if (warned[r.address] === true) next[r.address] = true
+                continue
+            }
             if (r.pct >= rearm) continue
             if (warned[r.address] === true) next[r.address] = true
             else if (r.pct < low) {
@@ -129,18 +146,22 @@ Singleton {
         const devs = Bluetooth._devices
         for (let i = 0; i < devs.length; i++) {
             const d = devs[i]
-            const pct = d && d.connected ? Bluetooth.batteryPercent(d) : -1
-            if (pct >= 0) out.push({ address: String(d.address), name: Bluetooth.deviceLabel(d), pct: pct })
+            if (!d || !d.connected) continue
+            out.push({ address: String(d.address), name: Bluetooth.deviceLabel(d),
+                pct: Bluetooth.batteryPercent(d) })
         }
         return out
     }
     on_BtReadingsChanged: Qt.callLater(root._checkBtBatteries)
     function _checkBtBatteries(): void {
-        if (!ShellSettings.osdBatteryWarn) return
         const step = root.btAlertStep(root._btWarned, root._btReadings, root.btLowPct, root.btRearmPct)
+        for (let i = 0; i < step.alerts.length; i++) {
+            const alert = step.alerts[i]
+            if (!ShellSettings.osdBatteryWarn
+                    || !root._send(alert.name + " battery low", alert.pct + "%", "normal"))
+                delete step.warned[alert.address]
+        }
         root._btWarned = step.warned
-        for (let i = 0; i < step.alerts.length; i++)
-            root._send(step.alerts[i].name + " battery low", step.alerts[i].pct + "%", "normal")
     }
 
     Connections {
@@ -157,6 +178,7 @@ Singleton {
 
         function onOsdBatteryWarnChanged(): void {
             if (Battery.alertWarning === "critical") root._checkBattCrit()
+            root._checkBtBatteries()
         }
         function onOsdTempWarnChanged(): void {
             root._checkCpuCrit()

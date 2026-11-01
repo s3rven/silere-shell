@@ -328,6 +328,9 @@ Singleton {
     property string _diskText: ""
     property string _appliedText: ""
     readonly property bool ready: _loaded
+    property bool _firstRun: false
+    // no settings file on the first read: this profile has never run Silere
+    readonly property bool firstRun: _firstRun
     readonly property string settingsError: ConfigStore.error.length > 0
         ? ConfigStore.error : _writeError.length > 0 ? _writeError : _readError
     readonly property int _settingsVersion: 2
@@ -836,6 +839,8 @@ Singleton {
         }
         onLoadFailed: error => {
             _store.writeAllowed = error === FileViewError.FileNotFound
+            // the first read only: a file deleted mid-session is not a new profile
+            if (!root._loaded) root._firstRun = _store.writeAllowed
             root._readError = _store.writeAllowed ? ""
                 : "Could not read settings.json. Existing data was left untouched."
             root._loaded = true
@@ -849,6 +854,12 @@ Singleton {
             root._writeError = "Could not save settings. Changes may be lost."
             console.warn("silere-shell: failed to save settings.json:", error)
         }
+    }
+
+    // written now: a session ended by the compositor going away never reaches the save on exit
+    function markFirstRunSeen(): void {
+        root._firstRun = false
+        _store.queue()
     }
 
     function _migrateSettingsObject(value, fromVersion: int): var {
