@@ -125,6 +125,16 @@ Singleton {
         }
     }
 
+    // absent before the kernel counted this pool, which leaves the reading as MemAvailable gives it
+    FileView {
+        id: _vmstatFile
+        path: "/proc/vmstat"
+        blockLoading: false
+        blockAllReads: false
+        printErrors: false
+        onLoaded: root._vmstat = _vmstatFile.text()
+    }
+
     // absent on a kernel built without PSI, which simply leaves swap unreported
     FileView {
         id: _pressureFile
@@ -162,9 +172,25 @@ Singleton {
 
     function _refreshFast(): void {
         if (!_active) return
+        _vmstatFile.reload()
         _meminfoFile.reload()
         _pressureFile.reload()
         _statFile.reload()
+    }
+
+    property string _vmstat: ""
+
+    // freed GPU buffers the driver keeps and hands back under pressure. MemAvailable leaves them out, which
+    // read as a third of all memory in use on a desktop with free GB to spare
+    function gpuReclaimKb(vmstat: string, mem: string): real {
+        const reclaim = vmstat.match(/^nr_gpu_reclaim (\d+)$/m)
+        if (!reclaim) return 0
+        // vmstat counts pages; page tables are the one figure both files give, so their ratio is the page size
+        const tablesKb = mem.match(/^PageTables:\s+(\d+)/m)
+        const tablePages = vmstat.match(/^nr_page_table_pages (\d+)$/m)
+        const pageKb = tablesKb && tablePages && Number(tablePages[1]) > 0
+            ? Math.max(1, Math.round(Number(tablesKb[1]) / Number(tablePages[1]))) : 4
+        return Number(reclaim[1]) * pageKb
     }
 
     function _applyMeminfo(mem: string): void {
@@ -175,7 +201,7 @@ Singleton {
         const availKb = avail ? Number(avail[1]) : NaN
         root.memTotalKb = isFinite(totalKb) && totalKb > 0 && isFinite(availKb) ? totalKb : 0
         root.memAvailKb = root.memTotalKb > 0
-            ? Math.max(0, Math.min(root.memTotalKb, availKb)) : 0
+            ? Math.max(0, Math.min(root.memTotalKb, availKb + root.gpuReclaimKb(root._vmstat, mem))) : 0
         // SwapFree, not SwapCached: cached pages are still resident, only used = total - free is pressure
         const swapTotal = mem.match(/^SwapTotal:\s+(\d+)/m)
         const swapFree = mem.match(/^SwapFree:\s+(\d+)/m)
