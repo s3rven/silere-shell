@@ -82,11 +82,6 @@ This is what I run next to it. None of it is required, and any of it can be swap
 | Screenshots | [grim](https://gitlab.freedesktop.org/emersion/grim), [slurp](https://github.com/emersion/slurp) and [Satty](https://github.com/gabm/Satty) |
 | Audio visualizer | [cava](https://github.com/karlstav/cava) |
 
-If you'd rather have one project run the whole desktop,
-[Noctalia](https://github.com/noctalia-dev/noctalia) is the one I'd try first.
-[end-4's dots-hyprland](https://github.com/end-4/dots-hyprland) and
-[Dux Shell](https://duxlabs.dev/) are worth a look too.
-
 ## Getting around
 
 | To open | Do this |

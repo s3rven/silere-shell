@@ -19,6 +19,10 @@ interface scale, contrast and theme settings. `QT_SCALE_FACTOR=1.25` also exerci
 fractional display scaling. Set `SILERE_UI_STRESS_CAPTURE=/tmp/silere-ui.png` to
 save a rendered preview at the end. The regular checks run a shorter 120-cycle version.
 
+`bash dev/test-compositors.sh kwin` checks startup, popups and IPC in a private
+session. Replace `kwin` with `hyprland` or `niri` to test those backends. The runner
+needs KWin and `dbus-run-session`, plus the selected compositor.
+
 If you're changing more than one file, [`docs/forking.md`](docs/forking.md) maps the tree
 and lists what a change actually touches — a new setting, a new component and a new bar
 widget each have a chain to follow.

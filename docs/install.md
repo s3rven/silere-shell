@@ -99,6 +99,22 @@ later update checks can run again.
 A checkout the installer marked as a development install — or any checkout not on
 `main` — is left to Git; Updates shows its branch and state but self-update is disabled.
 
+## Crash recovery
+
+To restart Silere automatically after a crash, install its user service:
+
+```bash
+silere service install --dry-run
+silere service install
+```
+
+Replace your compositor's existing Silere startup command with
+`silere run --supervised --startup`. Keep only one startup command.
+
+The service restarts failed runs with a delay and a retry limit.
+`silere service status` shows its state; `silere service remove` stops and removes
+the generated service. Installation does not edit compositor startup settings.
+
 ## Unattended installs
 
 Bootstrapping from a dotfiles script or a container? `SILERE_ASSUME_YES=1` answers the

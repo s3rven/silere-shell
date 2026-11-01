@@ -1,10 +1,7 @@
 # Performance
 
-Background work only runs when it has something to do. CPU sits near zero when nothing is
-happening and rises with what is on screen: a playing track costs about four times idle,
-and the media visualizer costs more than everything else combined. Once the session goes
-idle, or the bar steps aside for the compositor overview, every animation stops on its own
-until you come back.
+The visualizer, animations and system readings pause when the session goes idle.
+Hidden menus and popups unload their content after closing.
 
 ## Reference numbers
 
@@ -49,43 +46,10 @@ CPU percentages use the measured elapsed time, including collection overhead, ra
 than assuming every sample takes exactly one second. JSON reports include both the
 requested `sample_seconds` and the measured `elapsed_seconds`.
 
-## Development memory check
-
-On 2026-10-04, revision `466bec2` was measured on reference machine A with kernel
-`7.2.8-2-cachyos`, the live user's settings, and no other Quickshell instances. These
-are short development samples, separate from the release measurements above.
-
-| State | Sample | PSS | RSS average | USS |
-|---|---|---|---|---|
-| Existing process, about 3.8 hours old | 5 seconds | 121 MiB | 220 MiB | 98 MiB |
-| Updated process after restart | 10 seconds | 85 MiB | 175 MiB | 66 MiB |
-| Updated process after Home opened and closed | 10 seconds | 93 MiB | 184 MiB | 73 MiB |
-
-Restarting also clears caches, so the old and new process measurements do not isolate
-the savings from a code change or prove a long-running leak is gone. Repeated menu
-load/unload cycles in an isolated 20-cycle fixture levelled off after warming.
-
-An isolated GPU render with a synthetic 1,000-option dropdown using one font created
-7 option rows after virtualization instead of 1,000. Its process PSS fell from about
-171 MiB to 73 MiB. This exercises the large-list case; it is not the normal idle saving
-for a font picker with only a few installed families.
-
-## Fonts
-
-The interface font is mapped into the process, so its file size lands in the numbers. Each
-JetBrainsMono Nerd Font face is about 2.6 MB; each IosevkaTerm Nerd Font face is about
-14.5 MB. With three weights loaded that is roughly 9 MB PSS and 37 MB RSS between them.
-The font picker loads previews as they scroll into view, so opening it does not immediately
-load every installed family.
-
 ## Animation driver
 
-Keep Awake uses a transparent, input-free pixel on the overlay layer. A background
-pixel can be covered by the wallpaper and receive delayed frame callbacks, slowing
-other animated windows in the same Qt process. A small render probe on the 240 Hz
-reference display measured median animation intervals of 8 ms with the covered
-background pixel and 4 ms with the overlay pixel. This isolates frame pacing; it is
-not a measurement of every shell animation or its CPU cost.
+Keep Awake uses an input-free overlay window so it keeps receiving frame callbacks
+even when other windows cover the desktop.
 
 Silere defaults to Qt's elapsed-time animation driver. Qt otherwise moves regular QML
 animations to a roughly 16 ms timer when the bar and a popup are visible as separate

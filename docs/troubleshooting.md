@@ -29,6 +29,34 @@ A Qt update can leave the installed Quickshell unable to run, because it builds 
 Qt's private API. Reinstall Quickshell to rebuild it against the new Qt; `silere doctor`
 reports this under Quickshell.
 
+Silere is your notification daemon, so it cannot report its own failure to start. If the
+shell is not up 20 seconds after login, Hyprland shows a message pointing at `silere doctor`.
+niri has no equivalent, so there the message only appears if another notification daemon
+can show it.
+
+## The desktop feels slow on a high refresh panel
+
+A compositor without VRR shows a frame that misses a refresh one refresh later, so a frame that
+takes just over 4.17 ms at 240 Hz drops the whole desktop to 120. An integrated GPU can stay in
+its lowest clock throughout, because at half rate it looks idle. Stop other apps redrawing to
+check, and try VRR on the panel.
+
+Lowering blur passes rarely helps, because each pass runs at a quarter of the size of the one
+before. Check for a background job too: Steam's shader pre-caching runs `fossilize_replay` on
+every core and can drag a desktop below 50 fps, even though it runs at idle priority.
+
+## Blur spreads past the bar and panels
+
+Hyprland's `render:use_shader_blur_blend` skips the blur regions Silere declares, so each layer
+blurs as a whole: a band under the bar, and a tall column behind notifications. Leave it off, or
+limit blur to the cards by alpha:
+
+```lua
+hl.layer_rule({ name = "silere-blur-alpha", match = { namespace = "^silere-.*$" }, ignore_alpha = 0.3 })
+```
+
+Silere's bar opacity stops at 0.4, so 0.3 never cuts into a card.
+
 ## The shell does not come back after an update
 
 The updater keeps the signed transaction journal until it sees the shell running on the

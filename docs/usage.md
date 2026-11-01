@@ -18,7 +18,9 @@ and arrows to navigate lists or adjust sliders. Sliders also accept Home/End and
 Page Up/Down. **Ctrl+F** searches notification history and Settings. Escape steps
 back or closes the popup. Controls expose the same actions to accessibility tools.
 
-[Presentation privacy, connection handoffs, Lock & sleep, external displays, and optional crash recovery](daily-driver-changes.md).
+In an open dropdown, repeat an initial to cycle matches; Backspace corrects the search.
+Keyboard focus expands a notification and pauses its timeout. **Delete** dismisses
+the focused notification; it edits text normally while writing a reply.
 
 | area | pointer |
 |---|---|
@@ -54,6 +56,15 @@ scroll through it. Hovering it makes the handle wider and easier to grab.
 History search ignores case and accents: `cafe` finds `Café`. Words can match across
 the sender, title and message. Selecting an app in the rail further narrows the results.
 
+## Connections
+
+Expand **VPN** in Home to connect or disconnect saved NetworkManager profiles.
+Use **Network settings** in the Wi-Fi list for hidden networks, enterprise Wi-Fi
+and IP/DNS configuration. This opens `nm-connection-editor`, or `nmtui` in a terminal.
+
+For Bluetooth devices needing a PIN or confirmation, **Pair with a passkey** opens
+`blueman-manager`. Install Blueman to enable that action.
+
 ## Settings
 
 Open **Settings** in the menu. Most changes apply immediately and are saved to
@@ -69,9 +80,13 @@ search open for another query; the close button folds it away. Hover the compact
 icon to see its label and Ctrl+F shortcut.
 Escape collapses search first, then closes the menu. Search resets when you leave Settings.
 
-On a crowded bar, window and media titles shorten to leave room for controls and
-regain their width when space returns. **Compact widgets** and **Auto tighten**
-under **Bar › Spacing** control density.
+On a crowded bar, window and media titles shorten to leave room for controls.
+**Compact widgets** and **Auto tighten** under **Bar › Spacing** control density.
+The bar grows when larger text needs more height.
+
+Empty workspaces use rings; filled dots have windows. With app icons enabled,
+`+N` counts additional apps and an amber underline marks urgency. An arrow and
+workspace number point to an urgent workspace outside the current page.
 
 - **Appearance**: colours, opacity, blur, font, interface scale and reduced motion.
 - **Bar**: position, width, widget placement, spacing and underline effects.
@@ -88,6 +103,10 @@ Quote arguments that contain spaces, for example `swaylock --image "/home/me/Loc
 Custom commands run directly: use an absolute path instead of `~`, and use a script
 if you need shell operators or environment variable expansion. An empty saved command
 disables the lock action.
+
+**Lock & sleep** waits for the session to confirm it is locked before suspending.
+If locking fails or times out, sleep is cancelled. Configure your idle daemon's
+lock-before-sleep action separately for lid-close and other suspend requests.
 
 To reset one setting, delete its key from `settings.json`. To reset preferences together,
 use Restore defaults in Overview; it keeps notification history and wallpaper colours.
@@ -115,6 +134,13 @@ active popups stay open. The period also applies when saved history is restored.
 answer for 30 minutes; nothing runs in the background. It sends the coordinates of your
 time zone's main city, rounded to about a kilometre, the same place Night Light follows.
 Units follow your locale. Click the row to retry after a failure.
+
+Under **Appearance › Interface**, enable **External brightness** to control DDC/CI
+monitors with `ddcutil`. Enable DDC/CI in the monitor's own menu. Available displays
+get brightness sliders in Home; opening Interface retries detection.
+
+The optional **Keyboard** bar widget shows the input language and, when available,
+Caps Lock. Click it to switch to the next configured layout.
 
 [The scripting guide](scripting.md) lists IPC calls, setting names and event hooks.
 
