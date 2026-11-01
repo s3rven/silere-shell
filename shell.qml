@@ -68,6 +68,8 @@ ShellRoot {
         void CalendarState.armed
         void TrayMenuState.armed
         void QuickActionsState.armed
+        // audio shortcuts must work even when every audio widget is hidden
+        void Audio.armed
         // nothing else references Hooks: unarmed it never scans, and no hook ever fires
         void Hooks.armed
         root.armNightLightIfNeeded()

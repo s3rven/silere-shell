@@ -37,6 +37,8 @@ without a panel appearing.
 | call | does |
 |---|---|
 | `quickActions dnd` | turns Do Not Disturb on or off |
+| `quickActions presentation` | toggles Presentation Mode for this session |
+| `quickActions setPresentation <true/false>` | sets Presentation Mode without toggling |
 | `quickActions keepAwake` | holds off idle dimming, locking and sleep until called again or the shell restarts |
 | `quickActions nightLight` | turns night light on or off |
 | `quickActions powerMode` | steps to the next power profile |
@@ -51,6 +53,36 @@ Bluetooth adapter, a Wi-Fi radio blocked in hardware, or a missing night light t
 ```bash
 qs ipc -p "$SILERE_DIR/shell.qml" call quickActions dnd
 ```
+
+## Audio
+
+These calls control the default output and microphone, even with their widgets hidden.
+
+```bash
+silere ipc audio volumeUp
+silere ipc audio toggleMute
+silere ipc audio cycleOutput
+silere ipc audio setVolume 40
+```
+
+| call | does |
+|---|---|
+| `volumeUp` / `volumeDown` | moves output volume to the next 5% step |
+| `setVolume <percent>` | requests an output level from 0 to 100 |
+| `toggleMute` | mutes or unmutes the output |
+| `cycleOutput` | requests the next output device |
+| `micUp` / `micDown` | moves microphone volume to the next 5% step |
+| `setMicVolume <percent>` | requests a microphone level from 0 to 100 |
+| `toggleMicMute` | mutes or unmutes the microphone |
+| `cycleInput` | requests the next input device |
+| `status` | prints JSON with `output` and `input` objects: `ready`, `name`, `volume`, `muted` |
+
+Increasing a muted level unmutes it; decreasing it preserves mute. Setting a
+positive level also unmutes. `status` reports the level before mute, as an integer
+percentage, so a muted device can have a nonzero `volume`.
+
+Actions return the requested percentage, mute state or device name. Missing devices
+and percentages outside 0–100 return `error:` replies and exit 1.
 
 ## Settings
 

@@ -103,6 +103,14 @@ EOF
         mkdir -p "$benchmark"
         bash "$ROOT/scripts/bench.sh" 10 --json --label "$backend-development-cold" > "$benchmark/$backend-cold.json"
     fi
+    # Read-only and rejected calls verify the audio target without touching host audio.
+    audio_status="$(qs ipc -p "$ROOT/shell.qml" call audio status)"
+    case "$audio_status" in
+        *'"output":{'*'"input":{'*) ;;
+        *) printf 'FAIL: audio IPC returned no device state: %s\n' "$audio_status" >&2; exit 1 ;;
+    esac
+    test "$(qs ipc -p "$ROOT/shell.qml" call audio setVolume 101)" = 'error: volume must be between 0 and 100'
+    test "$(qs ipc -p "$ROOT/shell.qml" call audio setMicVolume 101)" = 'error: volume must be between 0 and 100'
     test "$(qs ipc -p "$ROOT/shell.qml" call menu tab 0)" = ok
     sleep 0.5
     qs ipc -p "$ROOT/shell.qml" call menu close > /dev/null
@@ -119,7 +127,7 @@ EOF
     fi
     errors="$(_probe_errors "$scratch/shell.log")"
     [ -z "$errors" ] || { printf '%s\n' "$errors" >&2; exit 1; }
-    printf 'compositor integration passed (%s; panels, popup interactions, startup, menu IPC)\n' "$backend"
+    printf 'compositor integration passed (%s; panels, popup interactions, startup, menu/audio IPC)\n' "$backend"
     exit 0
 fi
 

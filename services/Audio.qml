@@ -3,12 +3,14 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Services.Pipewire
 import "../config"
 
 Singleton {
     id: root
 
+    readonly property bool armed: true
     readonly property real stepPct: 0.05
 
     readonly property PwNode      sink:  Pipewire.defaultAudioSink
@@ -220,21 +222,22 @@ Singleton {
     readonly property var captureModel:
         captureStreams.map(n => ({ value: n, label: root.streamLabel(n) }))
 
-    // the streams are tracked too: without it a per-app row has no audio interface to move
-    readonly property var _tracked: {
+    function trackedNodes(defaultSink, defaultSource, sinks, sources, playback, capture): var {
         const out = []
-        if (root.sink) out.push(root.sink)
-        if (root.source) out.push(root.source)
-        // a handful of device nodes; untracked, the output list cannot tell a virtual sink by its properties
-        const devices = root.sinks
-        for (let i = 0; i < devices.length; i++)
-            if (devices[i] !== root.sink) out.push(devices[i])
-        const play = root._outputStreams
-        for (let i = 0; i < play.length; i++) out.push(play[i])
-        const cap = root._inputStreams
-        for (let i = 0; i < cap.length; i++) out.push(cap[i])
+        function add(node) {
+            if (node && out.indexOf(node) < 0) out.push(node)
+        }
+        add(defaultSink)
+        add(defaultSource)
+        for (const group of [sinks, sources, playback, capture])
+            for (const node of group) add(node)
         return out
     }
+
+    // both device pickers read node properties before a device becomes the default;
+    // streams also need binding so their per-app controls can change audio
+    readonly property var _tracked: root.trackedNodes(root.sink, root.source,
+        root.sinks, root.sources, root._outputStreams, root._inputStreams)
 
     PwObjectTracker { objects: root._tracked }
 
@@ -246,18 +249,22 @@ Singleton {
         if (node) Pipewire.preferredDefaultAudioSource = node
     }
 
-    function cycleSink(): void {
+    function cycleSink(): string {
         const list = root.sinks
-        if (list.length < 2) return
+        if (list.length < 2) return ""
         const i = list.indexOf(root.sink)
-        root.setSink(list[(i + 1) % list.length])
+        const next = list[(i + 1) % list.length]
+        root.setSink(next)
+        return root.sinkLabel(next)
     }
 
-    function cycleSource(): void {
+    function cycleSource(): string {
         const list = root.sources
-        if (list.length < 2) return
+        if (list.length < 2) return ""
         const i = list.indexOf(root.source)
-        root.setSource(list[(i + 1) % list.length])
+        const next = list[(i + 1) % list.length]
+        root.setSource(next)
+        return root.sinkLabel(next)
     }
 
     function openSoundSettings(): bool {
@@ -295,4 +302,67 @@ Singleton {
     function micBumpBy(delta: real): void { root._in.bumpBy(delta) }
     function setMicVolume(v: real): void  { root._in.setVolume(v) }
     function toggleMicMute(): void        { root._in.toggleMute() }
+
+    function _ipcSetVolume(percent: int, microphone: bool): string {
+        if (percent < 0 || percent > 100) return "error: volume must be between 0 and 100"
+        const control = microphone ? root._in : root._out
+        if (!control.ready) return microphone ? "error: no audio input available" : "error: no audio output available"
+        control.setVolume(percent / 100)
+        if (microphone) root._ipcMicFeedback()
+        return Math.round(control.effectiveVolume * 100) + "%"
+    }
+
+    function _ipcStepVolume(direction: int, microphone: bool): string {
+        const control = microphone ? root._in : root._out
+        if (!control.ready) return microphone ? "error: no audio input available" : "error: no audio output available"
+        control.bumpBy(direction * root.stepPct)
+        if (microphone) root._ipcMicFeedback()
+        return Math.round(control.effectiveVolume * 100) + "%"
+    }
+
+    function _ipcToggleMute(microphone: bool): string {
+        const control = microphone ? root._in : root._out
+        if (!control.ready) return microphone ? "error: no audio input available" : "error: no audio output available"
+        control.toggleMute()
+        if (microphone) root._ipcMicFeedback()
+        return control.muted ? "muted" : "unmuted"
+    }
+
+    function _ipcCycleDevice(microphone: bool): string {
+        const devices = microphone ? root.sources : root.sinks
+        if (devices.length === 0) return microphone ? "error: no audio input available" : "error: no audio output available"
+        if (devices.length < 2) return microphone ? "error: only one audio input available" : "error: only one audio output available"
+        // defaults change asynchronously; return the device requested by this call
+        return microphone ? root.cycleSource() : root.cycleSink()
+    }
+
+    function _ipcMicFeedback(): void {
+        OsdBarState.show("microphone", root.micIcon, root.micVolume,
+            root.micMuted ? "Microphone muted" : "Microphone · " + root.micLabel, root.micMuted)
+    }
+
+    readonly property IpcHandler _ipc: IpcHandler {
+        target: "audio"
+
+        function setVolume(percent: int): string { return root._ipcSetVolume(percent, false) }
+        function volumeUp(): string { return root._ipcStepVolume(1, false) }
+        function volumeDown(): string { return root._ipcStepVolume(-1, false) }
+        function toggleMute(): string { return root._ipcToggleMute(false) }
+        function cycleOutput(): string { return root._ipcCycleDevice(false) }
+
+        function setMicVolume(percent: int): string { return root._ipcSetVolume(percent, true) }
+        function micUp(): string { return root._ipcStepVolume(1, true) }
+        function micDown(): string { return root._ipcStepVolume(-1, true) }
+        function toggleMicMute(): string { return root._ipcToggleMute(true) }
+        function cycleInput(): string { return root._ipcCycleDevice(true) }
+
+        function status(): string {
+            return JSON.stringify({
+                output: { ready: root.ready, name: root.sinkName,
+                    volume: Math.round(root._out.effectiveVolume * 100), muted: root.muted },
+                input: { ready: root.micReady, name: root.sourceName,
+                    volume: Math.round(root._in.effectiveVolume * 100), muted: root.micMuted }
+            })
+        }
+    }
 }
