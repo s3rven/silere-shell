@@ -370,6 +370,18 @@ Scope {
         root.write("session-status-hold", "")
         root.waitFor(() => Session.locked, "a readiness refresh queued during a read gets the latest lock state")
 
+        // the hint still reads locked from before the press: nothing can confirm the new lock
+        root.check(Session.lockAndSleep(), "a session whose hint is already locked still takes the press")
+        root.waitFor(() => !Session.busy && Session.lastError.indexOf("already marked locked") >= 0,
+            "a hint already set before the lock request cancels sleep")
+        root.check(Compositor.commands.length === 1 && SystemTools.commands.length === 0
+                && root.read("session-calls").indexOf("wait") < 0,
+            "a stale hint still locks the screen but never waits on it or suspends")
+        root.waitFor(() => root.alertCalls().length === 1, "a stale hint's cancelled sleep raises an alert")
+        root.write("alert-calls", "")
+        root.write("session-state", "no")
+        Compositor.commands = []
+
         root.check(Session.lockAndSleep(), "a ready session starts its fixture lock request")
         root.waitFor(() => !Session.busy && SystemTools.commands.length === 1,
             "a confirmed fixture lock reaches the mocked suspend action")
@@ -388,9 +400,10 @@ Scope {
         root.write("session-wait-fail", "")
 
         root.write("session-wait-hold", "hold")
-        const waits = root.read("session-calls").length
+        // the pre-lock status read lands in the same log, so count waits alone
+        const waits = root.read("session-calls").split("wait").length
         Session.lockAndSleep()
-        root.waitFor(() => root.read("session-calls").length > waits, "a lock confirmation is pending")
+        root.waitFor(() => root.read("session-calls").split("wait").length > waits, "a lock confirmation is pending")
         SystemTools.hasLoginctl = false
         root.write("session-wait-hold", "")
         root.waitFor(() => !Session.busy, "losing session tools releases a pending lock request")

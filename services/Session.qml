@@ -47,6 +47,7 @@ Singleton {
             root.lockStateKnown = false
             root.locked = false
             if (_status.running) _status.running = false
+            if (_before.running) _before.running = false
             if (_wait.running) _wait.running = false
         }
     }
@@ -61,10 +62,33 @@ Singleton {
         root.busy = true
         root.lastError = ""
         root._waitGeneration = root._generation
-        // a cached hint may predate an unlock, so request the lock on every action
-        Compositor.launch(Settings.lockCommand)
-        _wait.running = true
+        _before.running = true
         return true
+    }
+    function _cancelSleep(message: string): void {
+        root.busy = false
+        root.lastError = message
+        // the menu closed on the press, and a lid shut on this stays awake and unlocked
+        SystemAlerts.send("Sleep cancelled", message, "critical")
+        root.refresh()
+    }
+    // read before locking: a hint a crashed locker left set would confirm the new lock before it is drawn
+    BoundedProcess {
+        id: _before
+        timeoutMs: 4000
+        command: ["bash", Quickshell.shellDir + "/scripts/session.sh", "status"]
+        stdout: StdioCollector { id: _beforeOut }
+        onExited: code => {
+            // a cached hint may predate an unlock, so request the lock on every action
+            Compositor.launch(Settings.lockCommand)
+            const current = root._waitGeneration === root._generation && root.canLockSleep
+            const state = _before.completedSuccessfully(code)
+                ? (/(^|\n)locked=(yes|no)(\n|$)/.exec(_beforeOut.text) || [])[2] : undefined
+            if (current && state === "no") _wait.running = true
+            else root._cancelSleep(!current ? "Session readiness changed. Sleep was cancelled."
+                : state === "yes" ? "The session was already marked locked, so the new lock could not be confirmed. Sleep was cancelled."
+                : "Could not confirm screen lock. Sleep was cancelled.")
+        }
     }
     BoundedProcess {
         id: _status
@@ -88,16 +112,14 @@ Singleton {
         timeoutMs: 15000
         command: ["bash", Quickshell.shellDir + "/scripts/session.sh", "wait-locked"]
         onExited: code => {
-            root.busy = false
             const current = root._waitGeneration === root._generation && root.canLockSleep
-            if (_wait.completedSuccessfully(code) && current)
-                SystemTools.runOrNotify(Settings.suspendCommand, "Suspend failed")
-            else {
-                root.lastError = current ? "Could not confirm screen lock. Sleep was cancelled."
-                    : "Session readiness changed. Sleep was cancelled."
-                // the menu closed on the press, and a lid shut on this stays awake and unlocked
-                SystemAlerts.send("Sleep cancelled", root.lastError, "critical")
+            if (!_wait.completedSuccessfully(code) || !current) {
+                root._cancelSleep(current ? "Could not confirm screen lock. Sleep was cancelled."
+                    : "Session readiness changed. Sleep was cancelled.")
+                return
             }
+            root.busy = false
+            SystemTools.runOrNotify(Settings.suspendCommand, "Suspend failed")
             root.refresh()
         }
     }
