@@ -2155,6 +2155,82 @@ test_unit_identity() (
     return 0
 )
 
+test_launcher_uses_real_name() (
+    local stubs="$TMP/name-stubs" calls="$TMP/name-calls"
+    mkdir -p "$stubs"
+    printf '#!/bin/sh\n[ "$1" != --no-duplicate ] || echo "$0" >> "$SILERE_TEST_CALLS"\nexit 0\n' > "$stubs/quickshell"
+    chmod +x "$stubs/quickshell"
+    ln -s quickshell "$stubs/qs"
+    : > "$calls"
+    env -u NIRI_SOCKET -u HYPRLAND_INSTANCE_SIGNATURE PATH="$stubs:$PATH" SILERE_TEST_CALLS="$calls" \
+        bash "$ROOT/scripts/silere" run >/dev/null 2>&1 || fail "the launcher failed behind a qs link"
+    assert_eq "$(readlink -f "$stubs")/quickshell" "$(cat "$calls")" \
+        "the shell starts as quickshell, which ananicy rules for qs do not reach"
+)
+
+test_startup_failure_report() (
+    local stubs="$TMP/startup-stubs" bare="$TMP/startup-bare" calls="$TMP/startup-calls" tool
+    mkdir -p "$stubs" "$bare"
+    printf '%s\n' \
+        '#!/bin/sh' \
+        'case "$1" in' \
+        '    list) [ -z "${SILERE_TEST_SHELL_UP-}" ] || printf "Instance t:\n  Process ID: 777\n"; exit 0 ;;' \
+        'esac' \
+        'exit 1' > "$stubs/qs"
+    # never the real hyprctl: it would draw on the desktop of whoever runs the tests
+    printf '#!/bin/sh\necho "hyprctl $*" >> "$SILERE_TEST_CALLS"\n' > "$stubs/hyprctl"
+    printf '#!/bin/sh\necho "notify-send $*" >> "$SILERE_TEST_CALLS"\n' > "$stubs/notify-send"
+    chmod +x "$stubs/qs" "$stubs/hyprctl" "$stubs/notify-send"
+    # a PATH with no qs, which the machine running the tests may well have
+    for tool in bash dirname env grep readlink sed sleep timeout; do
+        ln -s "$(command -v "$tool")" "$bare/$tool"
+    done
+    cp "$stubs/hyprctl" "$bare/hyprctl"
+
+    # the report runs detached, so the launcher returning says nothing about it
+    await_report() {
+        for _ in $(seq 40); do [ -s "$calls" ] && return 0; sleep 0.1; done
+        return 1
+    }
+    startup() {
+        : > "$calls"
+        env -u NIRI_SOCKET -u HYPRLAND_INSTANCE_SIGNATURE PATH="$stubs:$PATH" SILERE_STARTUP_GRACE=0 \
+            SILERE_TEST_CALLS="$calls" "$@" >/dev/null 2>&1 || true
+    }
+
+    startup HYPRLAND_INSTANCE_SIGNATURE=test bash "$ROOT/scripts/silere" run --startup
+    await_report || fail "a failed start on Hyprland reported nothing"
+    case "$(cat "$calls")" in
+        "hyprctl notify 3 60000 0 Silere did not start."*"doctor in a terminal to see why.") ;;
+        *) fail "a failed start on Hyprland drew the wrong message: $(cat "$calls")" ;;
+    esac
+
+    startup bash "$ROOT/scripts/silere" run --startup
+    await_report || fail "a failed start off Hyprland reported nothing"
+    case "$(cat "$calls")" in
+        "notify-send --urgency=critical --app-name=silere-shell Silere did not start"*) ;;
+        *) fail "a failed start off Hyprland sent the wrong message: $(cat "$calls")" ;;
+    esac
+
+    startup SILERE_TEST_SHELL_UP=1 HYPRLAND_INSTANCE_SIGNATURE=test bash "$ROOT/scripts/silere" run --startup
+    sleep 0.5
+    assert_eq "" "$(cat "$calls")" "a shell that came up reports nothing"
+
+    startup HYPRLAND_INSTANCE_SIGNATURE=test bash "$ROOT/scripts/silere" run
+    sleep 0.5
+    assert_eq "" "$(cat "$calls")" "only a login start reports, since a person is reading silere run"
+
+    : > "$calls"
+    env -u NIRI_SOCKET PATH="$bare" HYPRLAND_INSTANCE_SIGNATURE=test SILERE_STARTUP_GRACE=0 \
+        SILERE_TEST_CALLS="$calls" "$(command -v bash)" "$ROOT/scripts/silere" run --startup >/dev/null 2>&1 \
+        && fail "a start with no Quickshell claimed success"
+    await_report || fail "a start with no Quickshell reported nothing"
+    case "$(cat "$calls")" in
+        *"Run $ROOT/scripts/silere doctor in a terminal"*) ;;
+        *) fail "with silere off PATH, the report does not give the full path: $(cat "$calls")" ;;
+    esac
+)
+
 test_cli_restart_and_log() (
     local stubs="$TMP/cli-stubs" state="$TMP/cli-state" out
     mkdir -p "$stubs"
@@ -2487,6 +2563,8 @@ test_hypr_discovery
 test_niri_config_discovery
 test_atomic_units
 test_shared_launcher
+test_launcher_uses_real_name
+test_startup_failure_report
 test_cli_restart_and_log
 test_cli_ipc_resolution
 test_cli_use_switches_checkout

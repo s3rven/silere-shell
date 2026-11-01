@@ -243,6 +243,12 @@ if [ "$qs_usable" -eq 1 ]; then
     fi
     if "${ipc_probe[@]}" >/dev/null 2>&1; then
         ok "shell IPC" "Silere is running and answers"
+        shell_pid="$(env -u LC_ALL qs list -p "$ROOT/shell.qml" 2>/dev/null \
+            | sed -n 's/^  Process ID: \([0-9][0-9]*\)$/\1/p' | head -n 1)"
+        shell_nice="$(ps -o ni= -p "${shell_pid:-0}" 2>/dev/null | tr -d ' ')" || shell_nice=""
+        if [ "${shell_nice:-0}" -gt 0 ] 2>/dev/null; then
+            warn "shell priority" "running at nice $shell_nice, so the bar and menus stutter under load; start it with silere run"
+        fi
         # the stale build only says so in its own log, so read it while the shell runs
         qt_drift="$(_silere_quickshell_qt_drift "$ROOT/shell.qml" || true)"
         if [ -n "$qt_drift" ]; then
@@ -269,6 +275,8 @@ if command -v busctl >/dev/null 2>&1; then
         IFS= read -r notif_comm < "/proc/$notif_pid/comm" 2>/dev/null || true
         notif_cmd="$(tr '\0' ' ' < "/proc/$notif_pid/cmdline" 2>/dev/null || true)"
     fi
+    # silere run starts qs under its real name, quickshell, to dodge ananicy's rule for qs
+    case "$notif_comm" in quickshell) notif_comm=qs ;; esac
     if [ -z "$notif_owner" ]; then
         warn "notifications" "no notification daemon is running"
     elif [ "$notif_comm" = qs ] && [[ "$notif_cmd" == *"$ROOT/shell.qml"* || "$notif_cmd" == *"$ROOT "* ]]; then

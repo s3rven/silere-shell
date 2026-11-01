@@ -298,6 +298,8 @@ if command -v busctl >/dev/null 2>&1; then
     IFS= read -r notif_comm < "/proc/$notif_pid/comm" 2>/dev/null || true
     notif_cmd="$(tr '\0' ' ' < "/proc/$notif_pid/cmdline" 2>/dev/null || true)"
   fi
+  # silere run starts qs under its real name, quickshell, to dodge ananicy's rule for qs
+  case "$notif_comm" in quickshell) notif_comm=qs ;; esac
   if [ -z "$notif_owner" ]; then
     warn "notifications" "no D-Bus notification owner"
   elif [ "$notif_comm" = qs ] && [[ "$notif_cmd" == *"$ROOT/shell.qml"* || "$notif_cmd" == *"$ROOT "* ]]; then

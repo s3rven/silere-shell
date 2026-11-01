@@ -68,6 +68,8 @@ run_shell() {
             *) break ;;
         esac
     done
+    # ahead of the checks below: at login, nobody reads what they print
+    [ "$startup" -eq 0 ] || ( report_failed_start </dev/null >/dev/null 2>&1 & )
     [ -f "$ROOT/shell.qml" ] || die "shell.qml is missing from $ROOT"
     command -v qs >/dev/null 2>&1 || die "Quickshell is not installed"
 
@@ -101,7 +103,28 @@ run_shell() {
     # the flag is hidden, and an unknown flag stops qs from starting, so probe it first
     local detail=()
     qs --no-detailed-logs --version >/dev/null 2>&1 && detail=(--no-detailed-logs)
-    exec qs --no-duplicate "${detail[@]}" -p "$ROOT/shell.qml" "$@"
+    # CachyOS ananicy rules send a process named qs to nice 10, and a bar is not a background job.
+    # qs links to quickshell where both exist, so start it under its own name
+    local shell_bin
+    shell_bin="$(readlink -f -- "$(command -v qs)")" || shell_bin=qs
+    exec "$shell_bin" --no-duplicate "${detail[@]}" -p "$ROOT/shell.qml" "$@"
+}
+
+# Silere is the notification daemon, so nothing else on the desktop can say it failed to start.
+# One look once login has settled, then this exits; nothing stays behind watching the shell
+report_failed_start() {
+    local doctor="silere doctor" message
+    sleep "${SILERE_STARTUP_GRACE:-20}"
+    if running_pid >/dev/null || other_shell >/dev/null; then return 0; fi
+    command -v silere >/dev/null 2>&1 || doctor="$ROOT/scripts/silere doctor"
+    message="Silere did not start. Run $doctor in a terminal to see why."
+    # Hyprland first: notify-send could wake another installed daemon, which then keeps Silere's place on the bus
+    if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && command -v hyprctl >/dev/null 2>&1; then
+        hyprctl notify 3 60000 0 "$message"
+    elif command -v notify-send >/dev/null 2>&1; then
+        timeout 5 notify-send --urgency=critical --app-name=silere-shell "Silere did not start" \
+            "Run $doctor in a terminal to see why."
+    fi
 }
 
 # LC_ALL=C is for this script's parsing; programs the shell launches get the user's locale
