@@ -86,6 +86,7 @@ PageShell {
     }
 
     function _openPlayer(): void {
+        if (!root.enabled || !root.visible || !MenuState.mediaActive || Media.playerName.length === 0) return
         MenuState.close()
         WindowActions.focusMediaPlayer(Media.playerName, Media.title)
     }
@@ -137,6 +138,7 @@ PageShell {
                 visible: Media.playerName.length > 0
                 Accessible.role: Accessible.Button
                 Accessible.name: "Open " + Media.sourceLabel
+                Accessible.focusable: _open.enabled && _open.visible && MenuState.mediaActive
                 Accessible.onPressAction: root._openPlayer()
                 KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
 
@@ -508,6 +510,14 @@ PageShell {
                     onTriggered: Media.cycleLoop()
                 }
             }
+        }
+
+        // turning the music down is the first thing reached for here, and Home is a page away
+        SettingsCard {
+            width: parent.width
+            visible: Audio.ready
+
+            VolumeRow {}
         }
 
         Column {
