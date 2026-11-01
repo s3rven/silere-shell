@@ -44,7 +44,7 @@ Rectangle {
     MotionBehavior on _barInset {
         NumberAnimation { duration: Motion.barMorph; easing.type: Easing.OutCubic }
     }
-    readonly property real _edgeY: _barInset + ShellSettings.barHeight + 8
+    readonly property real _edgeY: _barInset + Metrics.barHeight + 8
     readonly property real _minX: Metrics.snap4Up(radius + 4)
     readonly property real _maxX: Math.max(_minX,
         Metrics.snap4Down(winW - targetWidth - _minX))
@@ -99,8 +99,16 @@ Rectangle {
         else _exitAnimation.restart()
     }
 
+    // a floating bar stops short of the screen, and a card hanging past its end reads as detached from it.
+    // A card wider than the bar has only the screen to keep to
+    readonly property int _barSide: Metrics.barPresent(win.screen) ? Metrics.barSideGap(winW) : 0
+    readonly property bool _fitsBar: winW - _barSide * 2 >= targetWidth
+    on_BarSideChanged: if (open) place()
+
     function _clampedX(px: real): real {
-        return Math.max(_minX, Math.min(px, _maxX))
+        if (!_fitsBar) return Math.max(_minX, Math.min(px, _maxX))
+        const low = Math.max(_minX, _barSide)
+        return Math.max(low, Math.min(px, Math.min(_maxX, winW - _barSide - targetWidth)))
     }
     function _targetX(): real {
         const t = Math.max(0, Math.min(winW, anchorX))
