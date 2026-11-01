@@ -2,8 +2,11 @@ import os, re, subprocess, sys
 
 # comments are lowercase single lines without a closing period: the house style every
 # cleanup restored, and the drift that came back each time nothing checked it
-files = [f for f in subprocess.check_output(["git", "ls-files", "*.qml", "*.js"], text=True).split()
-         if not f.startswith("dev/")]
+# untracked too: a new file has to pass before its first commit, not in CI after it
+files = [f for f in subprocess.check_output(
+             ["git", "ls-files", "--cached", "--others", "--exclude-standard", "*.qml", "*.js"],
+             text=True).split()
+         if not f.startswith("dev/") and os.path.isfile(f)]
 components = {os.path.basename(f)[:-4] for f in files if f.endswith(".qml")}
 keep = components | {
     "Qt", "Hyprland", "Spotify", "Cava", "Quickshell", "Maintenance", "Nerd", "Connections", "Repeater",
