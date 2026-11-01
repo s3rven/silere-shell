@@ -83,6 +83,8 @@ ShellRoot {
         }
     }
     Component { id: sliderTrackFactory; SliderTrack {} }
+    Component { id: requestSetFactory; RequestSet {} }
+    TestCase { id: discoveryClock; when: false }
     Component {
         id: keyboardFixtureFactory
         Window {
@@ -469,6 +471,39 @@ ShellRoot {
         }
     }
 
+    Component {
+        id: notificationKeyboardFactory
+        Window {
+            id: fixture
+            visible: true
+            width: 400; height: 500
+            property int timeout: 300
+            property int dismissed: 0
+            property int actions: 0
+            property alias card: card
+            property alias outside: outside
+            property alias input: input
+            NotificationCard {
+                id: card
+                x: 20; y: 20; width: 360
+                notification: ({
+                    actions: [{ identifier: "open", text: "Open details", invoke: function() { fixture.actions++ } }],
+                    hints: ({}), appIcon: "", image: "", appName: "Keyboard probe",
+                    desktopEntry: "", summary: "Read this notification",
+                    body: "First line\nSecond line\nThird line\nFourth line\nFifth line",
+                    urgency: 1, expireTimeout: fixture.timeout, resident: false, transient: false,
+                    hasInlineReply: true, inlineReplyPlaceholder: "Reply",
+                    sendInlineReply: function(text) {}
+                })
+                notifId: 2147483643
+                createdAt: Date.now()
+                onDismissRequested: fixture.dismissed++
+            }
+            ActionButton { id: outside; y: 450; label: "Outside notification" }
+            TestCase { id: input; when: false }
+        }
+    }
+
     property var _timeoutProbe: null
     property var _killProbe: null
     property var _orphanCheck: null
@@ -811,6 +846,65 @@ ShellRoot {
         quick.destroy()
     }
 
+    function _checkNotificationKeyboard(): void {
+        const motionWas = ShellSettings.reduceMotion
+        ShellSettings.reduceMotion = true
+        const fixture = notificationKeyboardFactory.createObject(root)
+        fixture.requestActivate()
+        fixture.input.wait(60)
+        fixture.input.mouseMove(fixture.outside, 5, 5)
+        fixture.card.forceActiveFocus(Qt.TabFocusReason)
+        fixture.input.wait(20)
+        root._check(fixture.card.activeFocus && fixture.card._paused && fixture.card._expanded,
+            "keyboard focus pauses and expands a notification without pointer hover")
+        fixture.input.wait(460)
+        root._check(fixture.card.enabled && fixture.dismissed === 0,
+            "a keyboard-focused notification survives its original expiry deadline")
+        const action = root._findTrayNode(fixture.card, item => item.Accessible.name === "Open details")
+        if (action) action.forceActiveFocus(Qt.TabFocusReason)
+        fixture.input.wait(20)
+        root._check(action && action.activeFocus && fixture.card._paused && fixture.card._expanded,
+            "focus on a notification action keeps its card readable and paused")
+        const otherWindow = Qt.createQmlObject('import QtQuick; Window { visible: true; width: 100; height: 100 }', root)
+        otherWindow.requestActivate()
+        fixture.input.wait(40)
+        root._check(!fixture.card._paused,
+            "a notification stops holding its timeout when another window takes focus")
+        otherWindow.close()
+        otherWindow.destroy()
+        fixture.requestActivate()
+        fixture.input.wait(20)
+        fixture.outside.forceActiveFocus(Qt.TabFocusReason)
+        fixture.input.wait(300)
+        root._check(!fixture.card._paused && !fixture.card._expanded && fixture.card.enabled,
+            "leaving notification focus collapses it and resumes its remaining timeout")
+        fixture.input.wait(160)
+        root._check(!fixture.card.enabled && fixture.dismissed === 1
+                && !root._notificationExpiryTimer(fixture.card).running,
+            "a notification expires once focus leaves and its timeout finishes")
+        fixture.close()
+        fixture.destroy()
+
+        const reply = notificationKeyboardFactory.createObject(root, { timeout: 0 })
+        reply.requestActivate()
+        reply.input.wait(60)
+        reply.card.beginReply()
+        reply.card.focusReplyInput()
+        const field = root._findTrayNode(reply.card, item => item.maximumLength === 2048)
+        if (field) { field.text = "reply"; field.cursorPosition = 0 }
+        reply.input.keyClick(Qt.Key_Delete)
+        root._check(field && field.text === "eply" && reply.card.enabled && reply.card._replyOpen,
+            "Delete edits an inline reply without dismissing its notification")
+        reply.card.cancelReply()
+        reply.card.forceActiveFocus(Qt.TabFocusReason)
+        reply.input.keyClick(Qt.Key_Delete)
+        root._check(!reply.card.enabled && reply.dismissed === 1 && reply.actions === 0,
+            "Delete dismisses a focused notification without running an action")
+        reply.close()
+        reply.destroy()
+        ShellSettings.reduceMotion = motionWas
+    }
+
     function _checkHiddenBarControls(): void {
         const reduceWas = ShellSettings.reduceMotion
         const clockWas = ShellSettings.barShowClock
@@ -936,6 +1030,77 @@ ShellRoot {
         Network._applyScannerState([replacement, second, closed], false)
         root._check(writes === 5 && !closed.scannerEnabled,
             "enumeration with discovery closed leaves scanners stopped without writes")
+    }
+
+    function _checkDiscoveryRequests(): void {
+        const requests = requestSetFactory.createObject(root)
+        const first = {}
+        const second = {}
+        root._check(!requests.active && !requests.set(null, true) && !requests.set(first, false),
+            "discovery demand ignores missing owners and unmatched releases")
+        requests.set(first, true)
+        root._check(requests.active && !requests.set(first, true),
+            "a repeated open from one list does not add a second request")
+        requests.set(second, true)
+        requests.set(first, false)
+        requests.set(first, false)
+        root._check(requests.active,
+            "closing or destroying an old list cannot release a replacement list's request")
+        requests.set(second, false)
+        root._check(!requests.active, "discovery demand stops when its last list releases it")
+        requests.destroy()
+
+        const scannerWas = Network._scannerWanted
+        const bluetoothScanWas = Bluetooth._scanRequested
+        const bluetoothErrorWas = Bluetooth.errorAddr
+        const bluetoothKindWas = Bluetooth.errorKind
+        const wifiErrorWas = Network.wifiError
+        const wifiReasonWas = Network.wifiErrorReason
+        for (const kind of ["Wifi", "Bluetooth", "Vpn"]) {
+            const component = Qt.createComponent("modules/menu/" + kind + "List.qml")
+            const oldList = component.status === Component.Ready
+                ? component.createObject(barFixtureHost, { width: 320, open: false }) : null
+            const newList = component.status === Component.Ready
+                ? component.createObject(barFixtureHost, { width: 320, open: false }) : null
+            root._check(oldList !== null && newList !== null, kind + " list handover fixtures build")
+            if (oldList && newList) {
+                // Seed demand without enabling real radios; exercise each list's actual teardown.
+                const demand = kind === "Wifi" ? Network._scanRequests
+                    : kind === "Bluetooth" ? Bluetooth._scanRequests : Vpn._requests
+                demand.set(oldList, true)
+                demand.set(newList, true)
+                if (kind === "Wifi") Network._scannerWanted = true
+                if (kind === "Bluetooth") {
+                    Bluetooth._scanRequested = true
+                    Bluetooth.errorAddr = "__handover__"
+                    Bluetooth.errorKind = "pair"
+                }
+                oldList.destroy()
+                discoveryClock.wait(1)
+                root._check(demand.active
+                        && (kind !== "Wifi" || Network._scannerWanted)
+                        && (kind !== "Bluetooth" || (Bluetooth._scanRequested && Bluetooth.errorAddr === "__handover__"))
+                        && (kind !== "Vpn" || Vpn.requested),
+                    kind + " list destruction preserves its replacement's updates and state")
+                newList.destroy()
+                discoveryClock.wait(1)
+                root._check(!demand.active
+                        && (kind !== "Wifi" || !Network._scannerWanted)
+                        && (kind !== "Bluetooth" || (!Bluetooth._scanRequested && Bluetooth.errorAddr === ""))
+                        && (kind !== "Vpn" || !Vpn.requested),
+                    kind + " list destruction releases the final request")
+            } else {
+                if (oldList) oldList.destroy()
+                if (newList) newList.destroy()
+            }
+            component.destroy()
+        }
+        Network._scannerWanted = scannerWas
+        Bluetooth._scanRequested = bluetoothScanWas
+        Bluetooth.errorAddr = bluetoothErrorWas
+        Bluetooth.errorKind = bluetoothKindWas
+        Network.wifiError = wifiErrorWas
+        Network.wifiErrorReason = wifiReasonWas
     }
 
     function _checkOsdLifetime(): void {
@@ -1100,6 +1265,14 @@ ShellRoot {
                     && Theme.contrastRatio(Theme.barAccent, Theme.background) >= (hc ? 6.99 : 4.49)
                     && marker && Qt.colorEqual(marker.tint, Theme.barAccent),
                 "bar indicators stay readable without changing the chosen accent: " + context)
+            const barOverWhite = Theme.mix(Qt.color("#ffffff"), Theme.background, Theme.panelOpacity)
+            const barOverBlack = Theme.mix(Qt.color("#000000"), Theme.background, Theme.panelOpacity)
+            root._check(Theme.contrastRatio(Theme.barAccent, barOverWhite) >= (hc ? 6.99 : 4.49)
+                    && Theme.contrastRatio(Theme.barText, barOverWhite) >= (hc ? 6.99 : 4.49)
+                    && Theme.contrastRatio(Theme.barText, barOverBlack) >= (hc ? 6.99 : 4.49)
+                    && Theme.contrastRatio(Theme.barSubtext, barOverWhite) >= (hc ? 6.99 : 2.99)
+                    && Theme.contrastRatio(Theme.barSubtext, barOverBlack) >= (hc ? 6.99 : 2.99),
+                "bar labels and accents remain readable over light and dark wallpapers: " + context)
             let lowest = Infinity
             for (const hovered of [false, true]) for (const pressed of [false, true]) {
                 const knob = Theme.controlKnobFill(Theme.accent, true, hovered, pressed)
@@ -1384,6 +1557,113 @@ ShellRoot {
             "a pairing row stays usable so it can be cancelled")
     }
 
+    function _checkBarSizing(): void {
+        const scaleWas = ShellSettings.uiScale
+        const heightWas = ShellSettings.barHeight
+        const motionWas = ShellSettings.reduceMotion
+        const helperWas = ShellSettings.mediaWidgetHelper
+        ShellSettings.reduceMotion = true
+        ShellSettings.mediaWidgetHelper = true
+        const media = mediaWidgetFactory.createObject(barFixtureHost)
+        for (const scale of [1, 1.25, 1.5]) {
+            ShellSettings.uiScale = scale
+            for (const height of [24, 28, 36, 44]) {
+                ShellSettings.barHeight = height
+                const actualHeight = Metrics.barHeight ?? ShellSettings.barHeight
+                root._check(actualHeight >= Metrics.barRowHeight + 4 && actualHeight >= height,
+                    "bar height leaves room for its controls at " + scale + "x / " + height + "px")
+                root._check(Metrics.popupClearance(8) >= Metrics.barEdgeInset + actualHeight + 8,
+                    "popups clear the actual bar height at " + scale + "x / " + height + "px")
+            }
+            const icon = root._findTrayNode(media, item => item.text === media._playGlyph && item.font !== undefined)
+            root._check(icon && icon.parent.width >= Metrics.iconCellFor(icon.font.pixelSize),
+                "the media helper keeps a full icon cell at " + scale + "x")
+        }
+        media.destroy()
+        ShellSettings.uiScale = scaleWas
+        ShellSettings.barHeight = heightWas
+        ShellSettings.reduceMotion = motionWas
+        ShellSettings.mediaWidgetHelper = helperWas
+    }
+
+    function _checkWorkspaceIndicators(): void {
+        const keys = ["reduceMotion", "wsShowNumbers", "wsShowAppIcons", "wsUrgentPulse",
+            "valuesOnHover", "uiScale", "barIconSize"]
+        const saved = keys.map(key => ShellSettings[key])
+        ShellSettings.reduceMotion = true
+        ShellSettings.wsShowNumbers = false
+        ShellSettings.wsShowAppIcons = false
+        ShellSettings.wsUrgentPulse = false
+        const cell = workspaceButtonFactory.createObject(barFixtureHost, {
+            wsId: 12, monitorReady: true, active: false, occupied: false,
+            urgent: false, apps: [], compact: false, iconSize: 14,
+            cellWidth: 40, rowHeight: 24, barActive: true,
+            initialized: true, paging: false, markerCovers: true,
+            workspaceName: "Research"
+        })
+        const dot = root._findTrayNode(cell, item => item.objectName === "workspace-dot")
+        const urgent = root._findTrayNode(cell, item => item.objectName === "workspace-urgent-mark")
+        root._check(dot && dot.color.a === 0 && dot.children.some(child => child.outlineColor?.a > 0),
+            "an empty workspace uses an outlined indicator rather than a dim occupied dot")
+        const emptyWidth = dot ? dot.width : 0
+        cell.occupied = true
+        root._check(dot && dot.color.a > 0 && dot.width > emptyWidth,
+            "an occupied workspace has a larger filled indicator")
+        ShellSettings.wsShowAppIcons = true
+        cell.apps = [{ icon: "", fallback: "F", name: "Firefox", count: 1 }]
+        cell.hiddenAppCount = 2
+        cell.urgent = true
+        root._check(urgent && urgent.visible && cell._pulseOpacity === 1
+                && !ShellSettings.wsUrgentPulse,
+            "an urgent workspace remains marked with app icons and urgency animation disabled")
+        root._check(cell.Accessible.name.indexOf("Research") >= 0
+                && cell.Accessible.description.indexOf("Needs attention") >= 0
+                && cell.Accessible.description.indexOf("Firefox") >= 0
+                && cell.Accessible.description.indexOf("2 more applications") >= 0,
+            "workspace accessibility exposes its name, urgency and hidden applications")
+        const overflow = root._findTrayNode(cell, item => item.objectName === "workspace-app-overflow")
+        root._check(overflow && overflow.visible && overflow.text === "+2" && overflow.width >= overflow.implicitWidth,
+            "hidden workspace apps have a readable overflow count")
+        cell.hiddenAppCount = 20
+        root._check(overflow && overflow.text === "9+",
+            "large app overflow counts stay within their reserved cell")
+        cell.apps = cell.apps.concat([{ icon: "", fallback: "T", name: "Terminal", count: 1 }])
+        cell.compact = true
+        root._check(cell.Accessible.description.indexOf("Firefox") >= 0
+                && cell.Accessible.description.indexOf("Terminal") < 0,
+            "compact workspace descriptions count hidden icons without listing them twice")
+        cell.urgent = false
+        root._check(urgent && !urgent.visible,
+            "the persistent urgent indicator clears when the workspace no longer needs attention")
+        cell.destroy()
+        const strip = workspaceStripFactory.createObject(barFixtureHost)
+        ShellSettings.wsShowNumbers = true
+        for (const scale of [1, 1.5]) {
+            ShellSettings.uiScale = scale
+            const measure = Qt.createQmlObject('import QtQuick; TextMetrics {}', root)
+            measure.font.family = Settings.font
+            measure.font.pixelSize = Settings.fontLabel
+            measure.text = "1000000"
+            root._check(strip._btnW(1000000) >= Math.ceil(measure.advanceWidth * 1.12) + 10,
+                "long workspace numbers fit their cells at " + scale + "x")
+            ShellSettings.barIconSize = 20
+            root._check(strip._iconSz <= strip.btnH - 4,
+                "large workspace icons leave room for state indicators at " + scale + "x")
+            measure.destroy()
+        }
+        strip.destroy()
+        const tick = workspaceUrgentTickFactory.createObject(barFixtureHost, {
+            liveId: 17, rowHeight: 24, barActive: true, before: true
+        })
+        root._check(tick.Accessible.description.indexOf("Before") >= 0 && tick.width >= 24,
+            "an urgent workspace outside the page has a full-size directional target")
+        tick.before = false
+        root._check(tick.Accessible.description.indexOf("After") >= 0,
+            "the urgent target follows its side of the current page")
+        tick.destroy()
+        for (let i = 0; i < keys.length; i++) ShellSettings[keys[i]] = saved[i]
+    }
+
     function _checkAccentPills(): void {
         const was = ShellSettings.barAccentPills
         const pill = pillFactory.createObject(root, { text: "48%", glyphColor: Theme.text })
@@ -1506,6 +1786,24 @@ ShellRoot {
                 && Weather.forecastUrl(1, 2, false).indexOf("temperature_unit") < 0,
             "requests send rounded coordinates over https")
 
+        const fetched = new Date(2026, 10, 1, 12, 0).getTime()
+        const key = Weather._key(fetched)
+        root._check(Weather.cacheFresh(fetched, key, fetched)
+                && Weather.cacheFresh(fetched, key, fetched + Weather.maxAgeMs - 1)
+                && !Weather.cacheFresh(fetched, key, fetched + Weather.maxAgeMs),
+            "weather cache reuse ends at its thirty-minute boundary")
+        root._check(!Weather.cacheFresh(fetched, key, fetched - 1)
+                && !Weather.cacheFresh(0, key, fetched)
+                && !Weather.cacheFresh(NaN, key, fetched)
+                && !Weather.cacheFresh(fetched, "another unit", fetched),
+            "a clock adjustment, missing timestamp, or different units cannot reuse a reading")
+        const midnight = new Date(2026, 10, 2, 0, 0).getTime()
+        root._check(!Weather.cacheFresh(midnight - 60000, Weather._key(midnight - 60000), midnight),
+            "yesterday's daily high and low expire at midnight even inside the cache lifetime")
+        const newYear = new Date(2027, 0, 1, 0, 0).getTime()
+        root._check(!Weather.cacheFresh(newYear - 60000, Weather._key(newYear - 60000), newYear),
+            "weather cache dates include the year when the calendar rolls over")
+
         const line = TimeZonePlace.parseLine("+5657+02406\tEurope/Riga\n")
         root._check(line && Math.abs(line.lat - 56.95) < 0.001 && Math.abs(line.lon - 24.1) < 0.001
                 && line.zone === "Europe/Riga" && TimeZonePlace.parseLine("garbage") === null
@@ -1513,6 +1811,32 @@ ShellRoot {
             "the time zone lookup yields coordinates and a readable city name")
         root._check(!Weather.enabled && !Weather.loading && !Weather.hasData,
             "weather stays idle while it is switched off")
+        const lookup = Weather._zoneLookup
+        if (lookup) {
+            const commandWas = lookup.command.slice()
+            const placeWas = Weather._place
+            lookup.command = ["sleep", "2"]
+            // Park the request before enabling the row, even if another fixture left the calendar open.
+            Weather.loading = true
+            ShellSettings.weatherEnabled = true
+            Weather._place = null
+            Weather._fetchedAt = Date.now()
+            Weather._fetchedFor = Weather._key(Weather._fetchedAt)
+            Weather.loading = false
+            Weather.request(false)
+            root._check(!Weather.loading && !lookup.running,
+                "opening a calendar with a fresh forecast does not start a lookup")
+            Weather.failed = true
+            Weather.request(false)
+            root._check(Weather.loading && lookup.running,
+                "reopening after a failed refresh retries even when its previous reading is inside the cache lifetime")
+            ShellSettings.weatherEnabled = false
+            if (lookup.running) lookup.running = false
+            lookup.command = commandWas
+            Weather._place = placeWas
+            root._check(!Weather.loading && !Weather.failed && !Weather.hasData,
+                "disabling weather clears a retried request and its previous reading")
+        }
     }
 
     function _checkPillTextBaseline(): void {
@@ -1981,8 +2305,10 @@ ShellRoot {
         root._checkSmoothGlide()
         root._checkPageLayout()
         root._checkAccessibleControls()
+        root._checkNotificationKeyboard()
         root._checkHiddenBarControls()
         root._checkWifiScanners()
+        root._checkDiscoveryRequests()
         root._checkOsdLifetime()
         root._checkWifiDraft()
         root._checkPowerRail()
@@ -1990,6 +2316,8 @@ ShellRoot {
         root._checkStackTags()
         root._checkThreadFolding()
         root._checkWeather()
+        root._checkBarSizing()
+        root._checkWorkspaceIndicators()
         root._checkAccentPills()
         root._checkBluetoothRowRelease()
         root._checkSystemWidget()
@@ -2130,6 +2458,33 @@ ShellRoot {
                 && Settings.soundSettingsCommand.length
                     === (SystemTools.hasPwvucontrol || SystemTools.hasPavucontrol ? 1 : 0),
             "the sound settings hand-off resolves to one mixer, or to none")
+
+        const speakerNode = { id: 1 }
+        const builtInMic = { id: 2 }
+        const usbMic = { id: 3 }
+        const playbackNode = { id: 4 }
+        const recordingNode = { id: 5 }
+        const trackedAudio = Audio.trackedNodes(speakerNode, builtInMic, [speakerNode],
+            [builtInMic, usbMic], [playbackNode], [recordingNode])
+        root._check(trackedAudio.length === 5 && trackedAudio.indexOf(usbMic) >= 0
+                && trackedAudio.indexOf(playbackNode) >= 0 && trackedAudio.indexOf(recordingNode) >= 0,
+            "audio tracking binds non-default microphones as well as devices and application streams")
+        root._check(trackedAudio.filter(node => node === speakerNode).length === 1
+                && trackedAudio.filter(node => node === builtInMic).length === 1,
+            "default devices and repeated node roles bind only once")
+        root._check(Audio.trackedNodes(null, null, [null], [], [], []).length === 0,
+            "a disconnected PipeWire graph leaves no tracked devices")
+        const replacementMic = { id: 3 }
+        const replacedAudio = Audio.trackedNodes(speakerNode, replacementMic, [speakerNode],
+            [replacementMic], [], [])
+        root._check(replacedAudio.indexOf(replacementMic) >= 0 && replacedAudio.indexOf(usbMic) < 0
+                && replacedAudio.indexOf(builtInMic) < 0,
+            "a microphone replacement tracks the new object and releases retired inputs")
+        let metadataReads = 0
+        const unboundMic = { get properties() { metadataReads++; return {} } }
+        Audio.trackedNodes(null, null, [], [unboundMic], [], [])
+        root._check(metadataReads === 0,
+            "choosing nodes to track never depends on metadata that tracking itself populates")
 
         const cap = (p) => Audio.capturesOutput(p)
         root._check(cap({ "stream.capture.sink": true })
@@ -2320,6 +2675,28 @@ ShellRoot {
         root._check(workspaceApps.appsFor(5)[0].count === 2
                 && workspaceApps.appsFor(5) !== pageIconsBefore,
             "a visible app count change refreshes its workspace icons")
+        workspaceApps.visibleIdsKey = "1"
+        workspaceApps.visibleIndexById = ({ 1: 0 })
+        const workspaceWindows = ["app.one", "app.two", "app.three", "app.four", "app.five"]
+            .map(appId => ({ output: "DP-1", wsId: 1, appId: appId }))
+        workspaceApps.workspaceToplevels = workspaceWindows
+        workspaceApps.rebuild()
+        root._check(workspaceApps.appsFor(1).length === 3 && workspaceApps.appCountFor(1) === 5,
+            "workspace icons keep three delegates while counting apps beyond the visible limit")
+        const orderedApps = workspaceApps.appsFor(1)
+        workspaceApps.workspaceToplevels = workspaceWindows.slice().reverse()
+        workspaceApps.rebuild()
+        root._check(workspaceApps.appsFor(1) === orderedApps,
+            "compositor window reordering keeps workspace icon positions and delegates stable")
+        workspaceApps.workspaceToplevels = workspaceWindows.slice(1)
+        workspaceApps.rebuild()
+        root._check(workspaceApps.appsFor(1).map(app => app.appId).join(",") === "app.two,app.three,app.four"
+                && workspaceApps.appCountFor(1) === 4,
+            "closing an app retains surviving icons and fills only the released slot")
+        workspaceApps.workspaceToplevels = workspaceWindows.slice(1).concat(workspaceWindows[1])
+        workspaceApps.rebuild()
+        root._check(workspaceApps.appCountFor(1) === 4 && workspaceApps.appsFor(1)[0].count === 2,
+            "multiple windows of an app affect its badge without inflating app overflow")
         workspaceApps.destroy()
         ShellSettings.wsShowAppIcons = appIconsWere
 
@@ -5117,6 +5494,40 @@ ShellRoot {
                 root._check(!mediaPage._coverWanted,
                     "a departing media page stops cover decoding and retries")
             }
+            const host = keyboardFixtureFactory.createObject(root)
+            mediaPage.parent = host.contentItem
+            ShellSettings.reduceMotion = true
+            mediaPage.active = true
+            mediaPage.settleVisual(true)
+            const openPlayer = root._findTrayNode(mediaPage,
+                item => item.Accessible.name.indexOf("Open ") === 0)
+            root._check(openPlayer !== null, "the media page exposes its open-player action")
+            if (openPlayer) {
+                // Reveal the real control without requiring a player on the desktop's bus.
+                openPlayer.visible = true
+                host.requestActivate()
+                host.input.wait(10)
+                const previous = openPlayer.nextItemInFocusChain(false)
+                previous.forceActiveFocus(Qt.TabFocusReason)
+                host.input.keyClick(Qt.Key_Tab)
+                root._check(openPlayer.Accessible.focusable && openPlayer.activeFocusOnTab && openPlayer.activeFocus,
+                    "Tab reaches the media page's open-player action")
+                MenuState.close()
+                host.input.wait(10)
+                root._check(!openPlayer.Accessible.focusable && !openPlayer.activeFocusOnTab && !openPlayer.activeFocus,
+                    "closing the menu releases its open-player keyboard focus")
+                MenuState.open = true
+                mediaPage.active = false
+                openPlayer.Accessible.pressAction()
+                host.input.wait(10)
+                root._check(!openPlayer.Accessible.focusable && !openPlayer.activeFocusOnTab && !openPlayer.activeFocus,
+                    "leaving the media page releases its open-player keyboard focus")
+                root._check(MenuState.open,
+                    "a stale open-player accessibility action cannot close the menu from an inactive page")
+            }
+            mediaPage.parent = null
+            host.close()
+            host.destroy()
             ShellSettings.reduceMotion = motionWas
             MenuState.selectTab(tabWas)
             MenuState.open = openWas
@@ -5307,6 +5718,38 @@ ShellRoot {
                 && Audio.sinkLabel({ description: "Speakers" }) === "Speakers",
             "a bluetooth output on its hands-free profile is named as call mode, a microphone never is")
 
+        const audioStatus = JSON.parse(Audio._ipc.status())
+        root._check(audioStatus.output.ready === Audio.ready
+                && audioStatus.input.ready === Audio.micReady
+                && audioStatus.output.name === Audio.sinkName
+                && audioStatus.input.name === Audio.sourceName
+                && audioStatus.output.volume >= 0 && audioStatus.output.volume <= 100
+                && audioStatus.input.volume >= 0 && audioStatus.input.volume <= 100,
+            "audio IPC reports bounded output and microphone state without opening a surface")
+        const audioVolumeWas = Audio._out.targetVolume
+        const micVolumeWas = Audio._in.targetVolume
+        root._check(Audio._ipc.setVolume(-1).indexOf("error:") === 0
+                && Audio._ipc.setVolume(101).indexOf("error:") === 0
+                && Audio._ipc.setMicVolume(-1).indexOf("error:") === 0
+                && Audio._ipc.setMicVolume(101).indexOf("error:") === 0
+                && Audio._out.targetVolume === audioVolumeWas && Audio._in.targetVolume === micVolumeWas,
+            "audio IPC rejects out-of-range percentages before changing either device")
+        if (!Audio.ready) {
+            root._check([Audio._ipc.setVolume(50), Audio._ipc.volumeUp(),
+                    Audio._ipc.volumeDown(), Audio._ipc.toggleMute()].every(reply => reply.indexOf("error:") === 0),
+                "audio IPC reports an unavailable output without pretending to change it")
+        }
+        if (!Audio.micReady) {
+            root._check([Audio._ipc.setMicVolume(50), Audio._ipc.micUp(),
+                    Audio._ipc.micDown(), Audio._ipc.toggleMicMute()].every(reply => reply.indexOf("error:") === 0),
+                "audio IPC reports an unavailable microphone without pretending to change it")
+        }
+        if (Audio.sinks.length < 2 && Audio.sources.length < 2) {
+            root._check(Audio._ipc.cycleOutput().indexOf("error:") === 0
+                    && Audio._ipc.cycleInput().indexOf("error:") === 0,
+                "audio IPC explains when there is no alternative device to cycle to")
+        }
+
         const track = sliderTrackFactory.createObject(root, {
             width: 100, value: 0.5, min: 0, max: 1, step: 0.1
         })
@@ -5343,6 +5786,15 @@ ShellRoot {
         track.Accessible.decreaseAction()
         root._check(track.shownValue === 0 && trackChanged === 0,
             "accessible slider decrease uses the configured increment")
+        track.step = 0.3
+        track.value = 1
+        track.nudge(-1, 1)
+        root._check(near(track.shownValue, 0.9),
+            "stepping back from an uneven slider maximum reaches the nearest grid point")
+        track.nudge(-1, 2)
+        root._check(near(track.shownValue, 0.3),
+            "larger slider nudges count grid steps after leaving an uneven endpoint")
+        track.value = 0
         track.step = 0
         track.max = 200
         track.Accessible.increaseAction()
@@ -5409,6 +5861,12 @@ ShellRoot {
                 "changing slider " + rangeChange.key + " cancels its drag and wheel remainder")
             Scroll.resetControl(track.wheelKey)
         }
+        track.wheelKey = "probe-slider-old-key"
+        Scroll._processDelta(60, track.wheelKey, 120, 2, 0)
+        track.wheelKey = "probe-slider-new-key"
+        root._check(Scroll._processDelta(60, "probe-slider-old-key", 120, 2, 0) === 0,
+            "changing a slider wheel key clears the old control's unfinished gesture")
+        Scroll.resetControl("probe-slider-old-key")
         track.destroy()
 
         const deviceSlider = quickSliderFactory.createObject(barFixtureHost, {
@@ -5515,6 +5973,12 @@ ShellRoot {
         gradient.Accessible.decreaseAction()
         root._check(picked >= 0,
             "a color slider becomes interactive again when it is shown")
+        const oldGradientKey = gradient.wheelKey
+        Scroll._processDelta(60, oldGradientKey, 120, 2, 0)
+        gradient.wheelKey = "probe-gradient-new-key"
+        root._check(Scroll._processDelta(60, oldGradientKey, 120, 2, 0) === 0,
+            "changing a colour slider wheel key clears the old control's unfinished gesture")
+        Scroll.resetControl(oldGradientKey)
         gradient.destroy()
 
         const toolsWas = SystemTools._tools
@@ -6213,6 +6677,24 @@ ShellRoot {
             "natural scrolling flips a level control but not content navigation")
         const pad = (x, y) => ({ angleDelta: { x: x, y: y }, pixelDelta: { x: x / 8, y: y / 8 },
             device: { type: PointerDevice.TouchPad } })
+        const phaseKey = "probe-gesture-phase"
+        Scroll.processControlWheel(pad(0, 40), phaseKey)
+        Scroll.processControlWheel(Object.assign(pad(0, 0), { phase: Qt.ScrollEnd }), phaseKey)
+        root._check(Scroll.processControlWheel(pad(0, 20), phaseKey) === 0,
+            "a completed touchpad gesture cannot lend its remainder to the next gesture")
+        Scroll.processControlWheel(Object.assign(pad(0, 40), { phase: Qt.ScrollBegin }), phaseKey)
+        root._check(Scroll._accums[phaseKey] === 40,
+            "a touchpad begin discards old state while retaining its own delta")
+        Scroll.resetControl(phaseKey)
+        const trayPhaseKey = "probe-tray-gesture-phase"
+        Scroll.processTrayWheel(pad(0, 40), trayPhaseKey)
+        Scroll.processTrayWheel(pad(40, 0), trayPhaseKey)
+        Scroll.processTrayWheel(Object.assign(pad(0, 0), { phase: Qt.ScrollEnd }), trayPhaseKey)
+        root._check(Scroll.processTrayWheel(pad(0, 20), trayPhaseKey).steps === 0
+                && Scroll.processTrayWheel(pad(20, 0), trayPhaseKey).steps === 0,
+            "a tray gesture end clears both axis remainders")
+        Scroll.resetControl(trayPhaseKey + ":h")
+        Scroll.resetControl(trayPhaseKey + ":v")
         for (const axes of [[80, 0], [80, 10]]) {
             const key = "probe-horizontal:" + axes[1]
             Scroll.processControlWheel(pad(0, 40), key)
@@ -6802,6 +7284,46 @@ ShellRoot {
         root._check(keyboardList.currentIndex === 12 && cursorBounds && cursorBounds.y >= -0.5
                 && cursorBounds.y + cursorBounds.height <= keyboardList.height + 0.5,
             "dropdown expansion keeps the keyboard cursor visible instead of jumping to the committed choice")
+        keyboard.select._setOpen(false)
+        keyboard.select.model = [
+            { value: 0, label: "Apple" }, { value: 1, label: "Apricot" },
+            { value: 2, label: "Banana" }, { value: 3, label: "Blueberry" },
+            { value: 4, label: "Cafeteria" }, { value: 5, label: "Café Noir" }
+        ]
+        keyboard.select.currentValue = 0
+        keyboard.select.forceActiveFocus(Qt.TabFocusReason)
+        keyboard.input.keyClick(Qt.Key_Return)
+        keyboard.input.keyClick("b")
+        const firstInitial = keyboardList.currentIndex
+        keyboard.input.keyClick("b")
+        const secondInitial = keyboardList.currentIndex
+        keyboard.input.keyClick("b")
+        root._check(firstInitial === 2 && secondInitial === 3 && keyboardList.currentIndex === 2
+                && keyboard.select._typed === "b",
+            "repeating an initial cycles matching dropdown choices and wraps")
+        keyboard.input.keyClick("l")
+        root._check(keyboardList.currentIndex === 3 && keyboard.select._typed === "bl",
+            "typing another letter resumes prefix search after cycling")
+        keyboard.select._setOpen(false)
+        keyboard.select._setOpen(true)
+        keyboard.input.keyClick("b")
+        keyboard.input.keyClick("l")
+        keyboard.input.keyClick(Qt.Key_Backspace)
+        root._check(keyboardList.currentIndex === 2 && keyboard.select._typed === "b",
+            "Backspace updates the dropdown selection to match the corrected query")
+        keyboard.select._typed = ""
+        for (const character of "cafe noir") keyboard.input.keyClick(character)
+        root._check(keyboardList.currentIndex === 5,
+            "dropdown search finds accented labels from unaccented typing")
+        keyboard.select._setOpen(false)
+        keyboard.select._typeAhead("a")
+        root._check(keyboard.select._typed === "",
+            "a closed dropdown ignores retained typeahead requests")
+        keyboard.select._setOpen(true)
+        keyboard.select._typeAhead("x".repeat(1000))
+        root._check(keyboard.select._typed.length <= 256,
+            "dropdown typeahead keeps a bounded query while typing continues")
+        keyboard.select._setOpen(false)
         keyboard.close()
         keyboard.destroy()
 
@@ -6921,6 +7443,15 @@ ShellRoot {
             SystemAlerts.btAlertStep(btStep.warned, [], 20, 25).warned, bt(18), 20, 25).alerts.length === 1
         root._check(btFirst && btOnce && btHeld && btRearmed && btReconnect,
             "a bluetooth device warns once when low, and again only after charging or reconnecting")
+        const missingBattery = SystemAlerts.btAlertStep({ AA: true }, bt(-1), 20, 25)
+        root._check(missingBattery.warned.AA === true && missingBattery.alerts.length === 0
+                && SystemAlerts.btAlertStep(missingBattery.warned, bt(18), 20, 25).alerts.length === 0,
+            "a missing connected Bluetooth battery reading cannot rearm a sent warning")
+        root._check([-1, NaN, Infinity, null, "18", 101].every(value =>
+                SystemAlerts.btAlertStep({}, bt(value), 20, 25).alerts.length === 0),
+            "missing or invalid Bluetooth battery readings never become low-battery alerts")
+        root._check(SystemAlerts.btAlertStep({}, bt(0), 20, 25).alerts.length === 1,
+            "a real zero-percent Bluetooth reading still warns")
 
         // a minute tick armed before suspend fires late after wake; catching up re-reads the wall clock
         DateTime._lastMinute = "190001010000"
@@ -7211,6 +7742,27 @@ ShellRoot {
             "a critical alert takes the desktop popup only where one appears, and the OSD otherwise")
         root._check(!SystemAlerts.criticalPopsUp,
             "a sandboxed run never sends a desktop alert, so its critical alerts stay in the OSD")
+        root._check(OsdBarState.menuCarries("volume", false, true)
+                && OsdBarState.menuCarries("microphone", false, true)
+                && !OsdBarState.menuCarries("brightness", false, true)
+                && OsdBarState.menuCarries("brightness", true, false)
+                && !OsdBarState.menuCarries("volume", false, false),
+            "the OSD stays out of a page already showing that level, and only there")
+        const gpuMem = "MemTotal: 1000 kB\nPageTables: 400 kB\n"
+        root._check(SysInfo.gpuReclaimKb("nr_page_table_pages 100\nnr_gpu_reclaim 25\n", gpuMem) === 100,
+            "the GPU pool converts from pages at the size this machine uses")
+        root._check(SysInfo.gpuReclaimKb("nr_page_table_pages 25\nnr_gpu_reclaim 25\n", gpuMem) === 400,
+            "a 16K page kernel reads the same pool correctly")
+        root._check(SysInfo.gpuReclaimKb("nr_gpu_reclaim 25\n", "") === 100,
+            "without page tables to compare, the pool assumes ordinary pages")
+        root._check(SysInfo.gpuReclaimKb("nr_anon_pages 25\n", gpuMem) === 0,
+            "a kernel that does not count the pool leaves the reading alone")
+        root._check(!ShellSettings.firstRun,
+            "a profile that already has a settings file is not greeted as a new one")
+        ShellSettings._firstRun = true
+        ShellSettings.markFirstRunSeen()
+        root._check(!ShellSettings.firstRun,
+            "the welcome is spent once sent, so a later start in the same session cannot repeat it")
         const dropout = SystemAlerts.batteryRearmState(false, false, 0, 20, 10, true, true)
         const plugged = SystemAlerts.batteryRearmState(true, false, 0, 20, 10, true, true)
         root._check(dropout.low && dropout.critical

@@ -19,6 +19,8 @@ Scope {
 
     function write(name, value): void {
         file.path = root.fixtures + "/" + name
+        file.reload()
+        file.text()
         file.setText(value)
     }
     function read(name): string {
@@ -48,7 +50,7 @@ Scope {
         root.write("vpn-profiles", root.profile(false))
         root.write("vpn-after-action", root.profile(true))
         root.write("vpn-calls", "")
-        Vpn.requested = true
+        Vpn.requestList(root, true)
         root.waitFor(() => Vpn.profiles.length === 1 && !Vpn.refreshing, "VPN profiles load from the private helper")
 
         // An action completes while an older read still holds the inactive snapshot.
@@ -78,16 +80,93 @@ Scope {
         root.write("vpn-profiles", root.profile(false))
         root.waitFor(() => Vpn.profiles.length === 1 && !Vpn.profiles[0].active && !Vpn.refreshing,
             "foreground polling catches external VPN changes without a bar state change", 7000)
-        Vpn.requested = false
+        Vpn.requestList(root, false)
         root.check(!Vpn._wanted && !Vpn._refreshPending, "the closed VPN picker stops foreground refresh demand")
         root.write("vpn-calls", "")
         input.wait(5200)
         root.check(root.read("vpn-calls").length === 0, "the closed VPN picker launches no recurring helper")
         Idle.isIdle = true
-        Vpn.requested = true
+        Vpn.requestList(root, true)
         root.check(!Vpn._wanted, "idle sessions do not poll VPN profiles")
-        Vpn.requested = false
+        Vpn.requestList(root, false)
         Idle.isIdle = false
+    }
+
+    function powerChecks(): void {
+        const want = PowerProfiles.profile === "balanced" ? "power-saver" : "balanced"
+        ShellSettings.powerProfileAc = want === "balanced" ? "power-saver" : "balanced"
+        ShellSettings.powerProfileBattery = ShellSettings.powerProfileAc
+        const originalAc = ShellSettings.powerProfileAc
+        const originalBattery = ShellSettings.powerProfileBattery
+        root.write("power-calls", "")
+        root.write("power-hold", "hold")
+        root.write("power-fail", "fail")
+        PowerProfiles.setProfile(want)
+        root.waitFor(() => root.read("power-calls").length > 0, "a power-mode request reaches the private helper")
+        root.check(ShellSettings.powerProfileAc === originalAc,
+            "an unfinished power-mode request does not replace the remembered AC preference")
+        root.write("power-hold", "")
+        root.waitFor(() => !PowerProfiles._setter.running && PowerProfiles.lastError === "Permission denied",
+            "a rejected power change reports its useful error")
+        root.check(ShellSettings.powerProfileAc === originalAc && ShellSettings.powerProfileBattery === originalBattery,
+            "a rejected power change leaves both source preferences intact")
+
+        root.write("power-calls", "")
+        root.write("power-fail", "")
+        root.write("power-hold", "hold")
+        PowerProfiles.setProfile(want)
+        root.waitFor(() => root.read("power-calls").length > 0, "a power-mode retry starts")
+        Battery.onBattery = true
+        PowerProfiles._sourceSettleTimer.stop()
+        root.write("power-hold", "")
+        root.waitFor(() => !PowerProfiles._setter.running, "the power-mode retry completes")
+        root.check(PowerProfiles.lastError === "" && ShellSettings.powerProfileAc === want
+                && ShellSettings.powerProfileBattery === originalBattery,
+            "success remembers the source where the request began even if the charger changes")
+
+        root.write("power-calls", "")
+        root.write("power-hold", "hold")
+        PowerProfiles.setProfile(want)
+        root.waitFor(() => root.read("power-calls").length > 0, "a battery power-mode request is pending")
+        ShellSettings.powerProfileRemember = false
+        root.write("power-hold", "")
+        root.waitFor(() => !PowerProfiles._setter.running, "a request can finish after remembering is disabled")
+        root.check(ShellSettings.powerProfileBattery === originalBattery,
+            "disabling remembered modes prevents an in-flight success from saving a preference")
+
+        ShellSettings.powerProfileRemember = true
+        ShellSettings.powerProfileBattery = ""
+        root.write("power-hold", "hold")
+        PowerProfiles._setter.timeoutMs = 100
+        PowerProfiles.setProfile(want)
+        root.waitFor(() => !PowerProfiles._setter.running && PowerProfiles.lastError === "Power mode change timed out",
+            "a hung power helper times out", 5000)
+        root.check(ShellSettings.powerProfileBattery === "" && PowerProfiles._pendingPreference === null,
+            "a timeout discards the pending preference even if the terminated helper later exits")
+        root.write("power-hold", "")
+        PowerProfiles._setter.timeoutMs = 8000
+
+        root.write("power-calls", "")
+        root.write("power-hold", "hold")
+        PowerProfiles.setProfile(want)
+        root.waitFor(() => root.read("power-calls").length > 0, "a power change can be interrupted by service removal")
+        SystemTools.hasPowerProfilesCtl = false
+        root.waitFor(() => !PowerProfiles._setter.running, "service removal releases its writer")
+        root.write("power-hold", "")
+        SystemTools.hasPowerProfilesCtl = true
+        PowerProfiles._acceptSetResult(0, false, "")
+        root.check(ShellSettings.powerProfileBattery === "" && PowerProfiles._pendingPreference === null,
+            "a late success cannot save a preference from a retired service")
+        if (PowerProfiles.profile.length > 0) {
+            root.write("power-calls", "")
+            PowerProfiles.lastError = "Previous failure"
+            PowerProfiles.setProfile(PowerProfiles.profile)
+            root.check(PowerProfiles.lastError === "" && ShellSettings.powerProfileBattery === PowerProfiles.profile
+                    && root.read("power-calls").length === 0,
+                "selecting the active mode remembers it and clears an old error without another helper")
+        }
+        Battery.onBattery = false
+        PowerProfiles._sourceSettleTimer.stop()
     }
 
     function brightnessChecks(): void {
@@ -210,7 +289,67 @@ Scope {
             "font discovery recovers with a fresh catalogue instead of the cancelled scan")
     }
 
+    function alertCalls(): var {
+        return root.read("alert-calls").split("\n").filter(line => line.length > 0)
+    }
+    function alertChecks(): void {
+        root.write("alert-calls", "")
+        root.check(!SystemAlerts.armed, "the alert fixture starts with its notification tool unavailable")
+        const headset = percent => ({ address: "AA", name: "Fixture headset", connected: true, percent: percent })
+        Bluetooth._devices = [headset(18)]
+        input.wait(30)
+        root.check(SystemAlerts._btWarned.AA !== true && root.alertCalls().length === 0,
+            "an unavailable notification tool does not consume a Bluetooth battery warning")
+        SystemTools.hasNotifySend = true
+        SystemTools.scanRevision++
+        root.waitFor(() => root.alertCalls().length === 1 && SystemAlerts._btWarned.AA === true,
+            "a completed tool scan sends the waiting Bluetooth battery warning")
+
+        Bluetooth._devices = [headset(-1)]
+        input.wait(30)
+        root.check(SystemAlerts._btReadings.length === 1 && SystemAlerts._btWarned.AA === true,
+            "a connected device retains its warning through a missing battery reading")
+        Bluetooth._devices = [headset(17)]
+        input.wait(60)
+        root.check(root.alertCalls().length === 1,
+            "recovering the same low battery reading does not send another warning")
+
+        ShellSettings.osdBatteryWarn = false
+        Bluetooth._devices = [headset(30)]
+        input.wait(30)
+        root.check(SystemAlerts._btWarned.AA !== true,
+            "a charging device rearms its warning even while battery alerts are disabled")
+        Bluetooth._devices = [headset(18)]
+        input.wait(30)
+        root.check(SystemAlerts._btWarned.AA !== true && root.alertCalls().length === 1,
+            "disabled alerts do not consume a new low battery warning")
+        ShellSettings.osdBatteryWarn = true
+        root.waitFor(() => root.alertCalls().length === 2 && SystemAlerts._btWarned.AA === true,
+            "reenabling battery alerts reports the connected device's low battery")
+
+        const keyboard = { address: "BB", name: "Fixture keyboard", connected: true, percent: 8 }
+        Bluetooth._devices = [headset(18), keyboard]
+        root.waitFor(() => root.alertCalls().length === 3 && SystemAlerts._btWarned.BB === true,
+            "a second low device receives its own warning")
+        const keyboardAlert = root.alertCalls()[2] || ""
+        root.check(keyboardAlert.indexOf("Fixture keyboard battery low") >= 0
+                && keyboardAlert.indexOf("8%") >= 0,
+            "the queued alert names the device and its actual reading")
+        Bluetooth._devices = [headset(18)]
+        input.wait(30)
+        root.check(SystemAlerts._btWarned.BB !== true && SystemAlerts._btWarned.AA === true,
+            "disconnecting one Bluetooth device rearms only its own warning")
+        Bluetooth._devices = [headset(18), keyboard]
+        root.waitFor(() => root.alertCalls().length === 4,
+            "reconnecting a still-low device warns once for the new connection")
+        Bluetooth._devices = []
+        input.wait(30)
+        root.check(Object.keys(SystemAlerts._btWarned).length === 0,
+            "disconnecting all Bluetooth devices releases their warning state")
+    }
+
     function sessionChecks(): void {
+        root.write("alert-calls", "")
         root.write("session-state", "no")
         root.write("session-calls", "")
         root.check(!Session.canLockSleep, "lock and sleep is unavailable without its required tools")
@@ -241,8 +380,10 @@ Scope {
         Session.lockAndSleep()
         root.waitFor(() => !Session.busy && Session.lastError.length > 0, "a failed lock confirmation reports cancellation")
         root.check(SystemTools.commands.length === 1, "failed confirmation does not request suspend")
-        root.check(SystemAlerts.sent.length === 1 && SystemAlerts.sent[0].urgency === "critical"
-                && SystemAlerts.sent[0].body === Session.lastError,
+        root.waitFor(() => root.alertCalls().length === 1, "cancelled sleep reaches the private notification helper")
+        const sleepAlert = root.alertCalls()[0] || ""
+        root.check(sleepAlert.indexOf("--urgency=critical") >= 0
+                && sleepAlert.indexOf(Session.lastError) >= 0,
             "a cancelled sleep raises an alert, because the menu that started it has closed")
         root.write("session-wait-fail", "")
 
@@ -269,8 +410,10 @@ Scope {
 
     Component.onCompleted: Qt.callLater(function() {
         root.vpnChecks()
+        root.powerChecks()
         root.brightnessChecks()
         root.fontChecks()
+        root.alertChecks()
         root.sessionChecks()
         if (root.failures === 0) console.info("PROBE-DAILY passed", root.checks, "checks")
         else console.error("PROBE-DAILY failed", root.failures, "of", root.checks, "checks")

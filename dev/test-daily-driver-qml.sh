@@ -12,7 +12,9 @@ mkdir -p "$scratch/fixtures" "$scratch/services" "$scratch/config" "$scratch/bin
 chmod 0700 "$scratch/run"
 cp "$ROOT/dev/probe-daily-driver.qml" "$scratch/probe.qml"
 cp "$ROOT/services/Vpn.qml" "$ROOT/services/DisplayBrightness.qml" "$ROOT/services/FontScan.qml" \
-    "$ROOT/services/Session.qml" "$ROOT/services/BoundedProcess.qml" "$scratch/services/"
+    "$ROOT/services/Session.qml" "$ROOT/services/BoundedProcess.qml" "$ROOT/services/RequestSet.qml" \
+    "$ROOT/services/PowerProfiles.qml" "$ROOT/services/SafeText.qml" "$ROOT/services/SystemAlerts.qml" \
+    "$scratch/services/"
 cat > "$scratch/services/qmldir" <<'EOF'
 singleton Vpn 1.0 Vpn.qml
 singleton DisplayBrightness 1.0 DisplayBrightness.qml
@@ -27,18 +29,36 @@ singleton Session 1.0 Session.qml
 singleton Compositor 1.0 Compositor.qml
 singleton SystemAlerts 1.0 SystemAlerts.qml
 BoundedProcess 1.0 BoundedProcess.qml
+RequestSet 1.0 RequestSet.qml
+singleton PowerProfiles 1.0 PowerProfiles.qml
+singleton Battery 1.0 Battery.qml
+singleton Bluetooth 1.0 Bluetooth.qml
+singleton CpuTemp 1.0 CpuTemp.qml
+singleton Notifications 1.0 Notifications.qml
 EOF
-cat > "$scratch/services/SystemAlerts.qml" <<'EOF'
+cat > "$scratch/services/Bluetooth.qml" <<'EOF'
 pragma Singleton
-import QtQuick
 import Quickshell
-
 Singleton {
-    property var sent: []
-    function send(summary: string, body: string, urgency: string): bool {
-        sent = sent.concat([{ summary: summary, body: body, urgency: urgency }])
-        return true
-    }
+    property var _devices: []
+    function batteryPercent(device) { return device.percent }
+    function deviceLabel(device) { return device.name }
+}
+EOF
+cat > "$scratch/services/CpuTemp.qml" <<'EOF'
+pragma Singleton
+import Quickshell
+Singleton {
+    property bool critical: false
+    property real temp: 40
+}
+EOF
+cat > "$scratch/services/Notifications.qml" <<'EOF'
+pragma Singleton
+import Quickshell
+Singleton {
+    property bool screenShareSilenced: false
+    property bool silencingActive: false
 }
 EOF
 cat > "$scratch/services/SystemTools.qml" <<'EOF'
@@ -53,6 +73,10 @@ Singleton {
     property bool hasNmcli: true
     property bool hasDdcutil: true
     property bool hasTimeout: true
+    property bool hasPowerProfilesCtl: true
+    property bool hasPowerProfilesService: false
+    property bool hasBusctl: false
+    property bool hasNotifySend: false
     property var commands: []
     function runOrNotify(command, title) { commands = commands.concat([command]) }
 }
@@ -109,13 +133,48 @@ import Quickshell
 Singleton {
     property bool ddcBrightnessEnabled: false
     property string ddcDisabledDisplays: ""
+    property bool powerProfileRemember: true
+    property string powerProfileAc: "balanced"
+    property string powerProfileBattery: "power-saver"
+    property bool osdBatteryWarn: true
+    property bool osdTempWarn: true
+    property bool notifPopupEnabled: true
+    property bool notifCriticalBypass: true
+    property int sysAlertTimeout: 5000
+    property real batteryLowThreshold: 20
+    property bool firstRun: false
+    function markFirstRunSeen() { firstRun = false }
 }
 EOF
-cat > "$scratch/services/SafeText.qml" <<'EOF'
+cat > "$scratch/services/Battery.qml" <<'EOF'
 pragma Singleton
 import Quickshell
-Singleton { function singleLineText(raw, limit) { return String(raw).slice(0, limit) } }
+Singleton {
+    property bool available: true
+    property bool onBattery: false
+    property bool critical: false
+    property string alertWarning: ""
+    property real pct: 100
+    property real _critPct: 10
+}
 EOF
+cat > "$scratch/bin/notify-send" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$SILERE_DAILY_FIXTURES/alert-calls"
+EOF
+chmod +x "$scratch/bin/notify-send"
+cat > "$scratch/bin/powerprofilesctl" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+fixtures="$SILERE_DAILY_FIXTURES"
+printf '%s\n' "$*" >> "$fixtures/power-calls"
+while [ -s "$fixtures/power-hold" ]; do sleep 0.02; done
+if [ -s "$fixtures/power-fail" ]; then
+    printf 'Permission denied\n' >&2
+    exit 1
+fi
+EOF
+chmod +x "$scratch/bin/powerprofilesctl"
 cat > "$scratch/bin/nmcli" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail

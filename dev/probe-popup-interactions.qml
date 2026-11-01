@@ -137,7 +137,56 @@ Item {
             "date targets and grid width grow with interface scaling")
         root._check(monthButton !== null && monthButton.height > baseMonthHeight,
             "month navigation targets also grow with interface scaling")
+        const barHeightWas = ShellSettings.barHeight
+        ShellSettings.barHeight = 24
+        root._check(bar.surfaceHeight >= Metrics.barRowHeight + 4
+                && bar.exclusiveZone >= bar.surfaceHeight + bar.surfaceInset,
+            "large text expands a short bar and its reserved screen space together")
+        root._check(card._edgeY >= bar.surfaceHeight + 8,
+            "calendar placement clears the expanded bar")
+        ShellSettings.barHeight = barHeightWas
         ShellSettings.uiScale = 1
+
+        // Keep requests parked while exercising the real weather row offline.
+        Weather.loading = true
+        ShellSettings.weatherEnabled = true
+        CalendarState.open = true
+        Weather._fetchedAt = Date.now()
+        Weather.place = "Riga"
+        Weather.temperature = 8
+        Weather.high = 11
+        Weather.low = 4
+        Weather.code = 3
+        Weather.failed = true
+        Weather.failure = "Can't reach Open-Meteo"
+        Weather.loading = false
+        const weather = root._find(card, item => item.retry !== undefined && item.shown !== undefined)
+        root._check(weather !== null && weather.retry && weather.Accessible.focusable
+                && weather.Accessible.role === Accessible.Button
+                && weather.Accessible.name.indexOf("Previous reading") >= 0
+                && weather.Accessible.name.indexOf("Retry") >= 0,
+            "a failed refresh labels the retained forecast as old and offers keyboard retry")
+        const retryText = weather ? root._find(weather, item => item.text === "Update failed · Retry") : null
+        root._check(retryText !== null,
+            "a failed weather refresh has a visible retry label alongside the previous temperatures")
+        Weather.loading = true
+        root._check(weather !== null && !weather.retry && !weather.Accessible.focusable
+                && weather.Accessible.name.indexOf("Updating") >= 0
+                && root._find(weather, item => item.text === "Updating…") !== null,
+            "retrying weather reports progress and disables another request")
+        Weather.failed = false
+        Weather.failure = ""
+        Weather.loading = false
+        root._check(weather !== null && !weather.retry && weather.Accessible.role === Accessible.StaticText
+                && weather.Accessible.name.indexOf("Previous reading") < 0,
+            "a successful forecast removes its retry state")
+        Weather._fetchedAt = 0
+        Weather.failed = true
+        Weather.failure = "Can't reach Open-Meteo"
+        root._check(weather !== null && weather.retry && weather.Accessible.name.indexOf("Weather unavailable") === 0,
+            "a first weather failure still offers retry without inventing a temperature")
+        ShellSettings.weatherEnabled = false
+        CalendarState.close()
     }
 
     function _checkActions(): void {

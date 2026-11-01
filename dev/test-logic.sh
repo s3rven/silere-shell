@@ -31,8 +31,9 @@ XDG_CONFIG_HOME="$cfg" XDG_STATE_HOME="$cfg" XDG_CACHE_HOME="$cfg/cache" XDG_RUN
     ${SILERE_PROBE_WRAP:-} qs -p "$probe_project/probe-logic.qml" --no-color >"$log" 2>&1 &
 probe_pid=$!
 
-# Animation and asynchronous-loader regressions need their full settle windows.
-_probe_wait "$log" "$probe_pid" 'PROBE-LOGIC' 120 0.25 || true
+# Focus/expiry and animation checks need real settle time, including while check.sh
+# runs the other probes alongside them.
+_probe_wait "$log" "$probe_pid" 'PROBE-LOGIC' 180 0.25 || true
 
 if ! grep -q 'PROBE-LOGIC passed' "$log" 2>/dev/null; then
     cat "$log" >&2
