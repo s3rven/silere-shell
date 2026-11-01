@@ -32,7 +32,7 @@ Singleton {
 
     property real _fetchedAt: 0
     property string _fetchedFor: ""
-    // one place per query: a typed city is looked up once, the time zone once per session
+    // the time zone's principal city is resolved once per session
     property var _place: null
     property var _xhr: null
 
@@ -98,15 +98,19 @@ Singleton {
         }
     }
 
-    function _key(): string {
-        return root.unit
+    function _key(nowMs: real): string {
+        return root.unit + ":" + Qt.formatDateTime(new Date(nowMs), "yyyy-MM-dd")
+    }
+
+    function cacheFresh(fetchedAt: real, fetchedFor: string, nowMs: real): bool {
+        const age = nowMs - fetchedAt
+        return fetchedAt > 0 && age >= 0 && age < root.maxAgeMs
+            && fetchedFor === root._key(nowMs)
     }
 
     function request(force: bool): void {
         if (!root.enabled || root.loading) return
-        const fresh = root._fetchedFor === root._key()
-            && Date.now() - root._fetchedAt < root.maxAgeMs && Date.now() >= root._fetchedAt
-        if (fresh && !force) return
+        if (!force && !root.failed && root.cacheFresh(root._fetchedAt, root._fetchedFor, Date.now())) return
         root.loading = true
         if (root._place) root._fetchForecast()
         else _zoneProc.running = true
@@ -138,7 +142,7 @@ Singleton {
 
     function _fetchForecast(): void {
         const place = root._place
-        const key = root._key()
+        const key = root._key(Date.now())
         root._get(root.forecastUrl(place.lat, place.lon, root.fahrenheit), data => {
             const reading = root.parseForecast(data)
             if (!reading) { root._fail("Can't reach Open-Meteo"); return }
@@ -153,6 +157,9 @@ Singleton {
             root.failed = false
             root.failure = ""
             root.loading = false
+            // a lookup can straddle midnight while the calendar stays open
+            if (CalendarState.open && key !== root._key(Date.now()))
+                Qt.callLater(root.request, false)
         })
     }
 
@@ -167,7 +174,7 @@ Singleton {
         }
     }
 
-    BoundedProcess {
+    readonly property BoundedProcess _zoneLookup: BoundedProcess {
         id: _zoneProc
         running: false
         timeoutMs: 5000

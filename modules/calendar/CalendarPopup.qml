@@ -126,6 +126,7 @@ FittedPopupWindow {
                 card._todayY = t.getFullYear(); card._todayM = t.getMonth(); card._todayD = t.getDate()
                 card._todayWeek = DateTime.isoWeek(t)
                 card.todayWeekday = Qt.formatDateTime(t, "dddd")
+                card._requestWeather()
             }
         }
         // the popup loads on its first open, after that open edge has passed
@@ -481,7 +482,7 @@ FittedPopupWindow {
                 id: _weather
                 readonly property bool shown: ShellSettings.weatherEnabled
                     && (Weather.hasData || Weather.failed)
-                readonly property bool retry: _weather.shown && !Weather.hasData && !Weather.loading
+                readonly property bool retry: _weather.shown && Weather.failed && !Weather.loading
                 visible: _weather.shown
                 width: parent.width
                 height: _weather.shown ? Metrics.rowHeightFor(38) : 0
@@ -490,7 +491,9 @@ FittedPopupWindow {
                 Accessible.name: !_weather.shown ? ""
                     : Weather.hasData ? "Weather in " + Weather.place + ", " + Weather.temperature
                         + Weather.unit + ", " + Weather.condition + ", high " + Weather.high
-                        + ", low " + Weather.low
+                        + ", low " + Weather.low + (Weather.failed
+                            ? ". Previous reading. " + (Weather.loading ? "Updating" : Weather.failure + ". Retry") : "")
+                    : Weather.loading ? "Updating weather"
                     : "Weather unavailable, " + Weather.failure + ". Retry"
                 Accessible.focusable: _weather.retry && CalendarState.open
                 Accessible.onPressAction: if (_weather.retry) Weather.request(true)
@@ -551,10 +554,13 @@ FittedPopupWindow {
                             anchors.right: _weatherRange.visible ? _weatherRange.left : parent.right
                             anchors.rightMargin: 8
                             anchors.verticalCenter: parent.verticalCenter
-                            text: Weather.hasData
+                            text: Weather.loading && Weather.failed ? "Updating…"
+                                : Weather.hasData && Weather.failed ? "Update failed · Retry"
+                                : Weather.hasData
                                 ? (Weather.place.length > 0 ? Weather.condition + " · " + Weather.place : Weather.condition)
                                 : Weather.failure
                             color: _weatherH.hovered ? Theme.withAlpha(Theme.text, 0.92)
+                                : Weather.failed && !Weather.loading ? Theme.warning
                                 : Theme.withAlpha(Theme.subtext, 0.86)
                             font.pixelSize: Settings.fontCaption
                             elide: Text.ElideRight
