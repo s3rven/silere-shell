@@ -34,7 +34,7 @@ Column {
             key: "barRadius"
             displayValue: ShellSettings.barRadius === 0 ? "Flat"
                 : ShellSettings.barRadius >= (ShellSettings.barFloating
-                    ? ShellSettings.barHeight / 2 : Metrics.barRowHeight / 2) ? "Round"
+                    ? Metrics.barHeight / 2 : Metrics.barRowHeight / 2) ? "Round"
                 : ShellSettings.barRadius + "px"
         }
     }

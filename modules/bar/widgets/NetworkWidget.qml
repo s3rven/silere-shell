@@ -92,8 +92,8 @@ Pill {
     shrinkDelay:    2400
 
     MotionBehavior on opacity { gate: !root._isPulsing; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
-    glyphColor:  canRead && Network.connected ? Theme.text : Theme.subtext
-    textColor:   Theme.subtext
+    glyphColor:  canRead && Network.connected ? Theme.barText : Theme.barSubtext
+    textColor:   Theme.barSubtext
 
     animateText: false
 

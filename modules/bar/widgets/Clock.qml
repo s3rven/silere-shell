@@ -59,11 +59,11 @@ Item {
     readonly property bool _pressed: _calTap.pressed || _cycleTap.pressed
     readonly property bool _hov: root.barActive && root.show
         && _hover.hovered && ShellSettings.barHoverHighlight
-    readonly property color _cSub:   _hov ? Theme.mix(Theme.subtext, Theme.accent, 0.30) : Theme.subtext
-    readonly property color _cText:  _hov ? Theme.mix(Theme.text,    Theme.accent, 0.30) : Theme.text
-    readonly property color _cFaint: _hov ? Theme.mix(Theme.withAlpha(Theme.text, 0.65), Theme.accent, 0.30)
-                                          : Theme.withAlpha(Theme.text, 0.65)
-    readonly property color _cSec:   _hov ? Theme.mix(Theme.barAccent, Theme.text, 0.22)
+    readonly property color _cSub:   _hov ? Theme.mix(Theme.barSubtext, Theme.barAccent, 0.30) : Theme.barSubtext
+    readonly property color _cText:  _hov ? Theme.mix(Theme.barText,    Theme.barAccent, 0.30) : Theme.barText
+    readonly property color _cFaint: _hov ? Theme.mix(Theme.withAlpha(Theme.barText, 0.65), Theme.barAccent, 0.30)
+                                          : Theme.withAlpha(Theme.barText, 0.65)
+    readonly property color _cSec:   _hov ? Theme.mix(Theme.barAccent, Theme.barText, 0.22)
                                           : Theme.withAlpha(Theme.barAccent, 0.82)
 
     HoverHandler {
@@ -103,9 +103,8 @@ Item {
         width: parent.width
         height: Metrics.barRowHeight
         radius: Metrics.hoverRadiusFor(height)
-        color: root._pressed ? Theme.withAlpha(Theme.accent, 0.18)
-            : root._calendarOpen ? Theme.withAlpha(Theme.accent, 0.12)
-            : Theme.withAlpha(Theme.mix(Theme.text, Theme.accent, 0.30), 0.07)
+        color: root._pressed ? Theme.barPressed
+            : root._calendarOpen ? Theme.barSelected : Theme.barHover
         opacity: root._pressed || root._calendarOpen || root._hov ? 1 : 0
         visible: opacity > 0.001
         MotionBehavior on opacity {

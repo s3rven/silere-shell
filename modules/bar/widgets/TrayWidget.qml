@@ -26,7 +26,7 @@ Item {
     // the bar height is a ceiling, not the source: the old barHeight*0.44 ignored uiScale
     // entirely, so tray icons were the one thing that could not follow the interface scale
     readonly property int iconSize: Math.max(12,
-        Math.min(Math.round(ShellSettings.barHeight * 0.62),
+        Math.min(Math.round(Metrics.barHeight * 0.62),
             Math.round(ShellSettings.barIconSize * ShellSettings.uiScale) + 4))
     readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
     readonly property int _pillPad: Metrics.pillPadFor(compact)
@@ -154,8 +154,8 @@ Item {
                     height: Metrics.barRowHeight
                     radius: Metrics.hoverRadiusFor(height)
                     color: _tile.needsAttention ? Theme.withAlpha(Theme.accent, 0.20)
-                         : _ma.pressed           ? Theme.withAlpha(Theme.accent, 0.18)
-                         : Theme.withAlpha(Theme.mix(Theme.text, Theme.accent, 0.30), 0.07)
+                         : _ma.pressed           ? Theme.barPressed
+                         : Theme.barHover
                     opacity: _tile.needsAttention ? _tile.attnPulse
                            : _ma.pressed          ? 1.0
                            : (_iconHover.hovered && ShellSettings.barHoverHighlight) ? 1.0
@@ -203,13 +203,13 @@ Item {
                     height: root.iconSize
                     anchors.verticalCenter: parent.verticalCenter
                     radius: Math.min(width, height) / 2
-                    color: Theme.withAlpha(Theme.subtext, 0.12)
+                    color: Theme.withAlpha(Theme.barSubtext, 0.12)
                     visible: _tile.fallbackVisible
 
                     ShellText {
                         anchors.centerIn: parent
                         text: SafeText.initial(_tile.label, "?")
-                        color: Theme.subtext
+                        color: Theme.barSubtext
                         font.pixelSize: Math.max(9, Math.round(root.iconSize * 0.68))
                     }
                 }
@@ -217,7 +217,7 @@ Item {
                 CollapsingText {
                     id: _hoverLabel
                     x: root.iconSize + 5
-                    color: Theme.subtext
+                    color: Theme.barSubtext
                     text: SafeText.boundedText(_tile.label, 22)
                     expanded: ((_tile._dwelled && !root.compact))
                         && _tile.label.length > 0 && !TrayMenuState.open

@@ -78,7 +78,7 @@ PanelWindow {
                 required property int serial
                 required property var fillColor
 
-                readonly property int pillH: ShellSettings.osdMatchBar ? Math.max(28, ShellSettings.barHeight) : 36
+                readonly property int pillH: ShellSettings.osdMatchBar ? Math.max(28, Metrics.barHeight) : 36
                 readonly property int chromeW: hasBar ? 216 : 70
                 // a multiple of 8 so centring on the screen leaves the left edge on the 4px grid
                 readonly property int pillW: 2 * Metrics.snap4(

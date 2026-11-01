@@ -76,7 +76,9 @@ Singleton {
     function clockDateGapFor(compact: bool): int { return compact ? 4 : 8 }
 
     // a proportional cap alone lets one client own an ultrawide bar
-    function windowTitleWidthFor(compact: bool): int { return compact ? 280 : 420 }
+    function windowTitleWidthFor(compact: bool): int {
+        return Math.round((compact ? 280 : 420) * ShellSettings.uiScale)
+    }
 
     // 4px multiples land on whole physical px at 1.25/1.5/1.75/2, not at 1.6; grows only with the font
     function rowHeightFor(design: real): int {
@@ -118,9 +120,13 @@ Singleton {
 
     // fixed icon cell: Nerd glyph ink spans 0.64-1.08x the px size, so a natural-width slot shoves the row on every glyph swap
     function iconCellFor(pixelSize: int): int { return Math.ceil(pixelSize * 1.1) }
+    function workspaceOverflowWidthFor(count: int, iconSize: int): int {
+        return count > 0 ? Math.max(iconSize, Settings.fontCaption * 2) : 0
+    }
 
     // one height for every bar capsule, focus ring and workspace cell, on the menu rows' grid
     readonly property int barRowHeight: rowHeightFor(24)
+    readonly property int barHeight: Math.max(ShellSettings.barHeight, root.barRowHeight + 4)
 
     // how far the bar surface sits from the screen edge; every surface that hugs the bar derives from this,
     // so bar geometry has one definition instead of a copy per popup
@@ -135,7 +141,7 @@ Singleton {
     }
 
     function popupClearance(extraGap: real): real {
-        return root.barEdgeInset + ShellSettings.barHeight + Math.max(0, extraGap)
+        return root.barEdgeInset + root.barHeight + Math.max(0, extraGap)
     }
 
     // nothing to clear on a screen with the bar off; a null screen is still settling, so it keeps the full clearance
@@ -163,5 +169,8 @@ Singleton {
 
     // the track title sizes to its text and marquees past this; a reserved slot left the pill
     // padded out on short titles and dragged the visualiser along with it
-    readonly property int mediaTrackWidth: 160
+    readonly property int mediaTrackWidth: Math.round(160 * ShellSettings.uiScale)
+    function mediaTrackWidthFor(compact: bool): int {
+        return compact ? Math.round(120 * ShellSettings.uiScale) : root.mediaTrackWidth
+    }
 }

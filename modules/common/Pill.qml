@@ -9,8 +9,8 @@ Item {
 
     property string glyph:      ""
     property string text:       ""
-    property color  glyphColor: Theme.text
-    property color  textColor:  Theme.subtext
+    property color  glyphColor: Theme.barText
+    property color  textColor:  Theme.barSubtext
     property bool   interactive: false
     // scroll-only: still a control under the pointer, but no button to a screen reader
     property bool   adjustable: false
@@ -37,12 +37,12 @@ Item {
     property string reserveText: ""
     readonly property real _reserveW: reserveText.length > 0 ? Math.ceil(_reserveMetrics.advanceWidth) : 0
     property bool   contentScanEnabled: false
-    property color  contentScanColor: Theme.text
+    property color  contentScanColor: Theme.barText
     property real   contentScanProgress: 0.0
     property real   contentScanWidth: 10.0
     property real   levelValue: -1.0
     property bool   levelVisible: false
-    property color  levelColor: Theme.accent
+    property color  levelColor: Theme.barAccent
 
     property bool   hoverActive: false
     readonly property bool hoverEnabled: root.enabled && root.visible && root.barActive
@@ -171,8 +171,7 @@ Item {
         radius: Metrics.hoverRadiusFor(height)
         readonly property bool _hover: root.hovered
             && ShellSettings.barHoverHighlight
-        color: root.visualPressed ? Theme.withAlpha(Theme.accent, 0.18)
-             : Theme.withAlpha(Theme.mix(Theme.text, Theme.accent, 0.30), 0.07)
+        color: root.visualPressed ? Theme.barPressed : Theme.barHover
         opacity: (_hover || root.visualPressed) ? 1.0 : 0.0
         scale: root.visualPressed ? 0.985
              : _hover ? 1.0 : 0.96
@@ -216,7 +215,7 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: 1
-            color: Theme.withAlpha(Theme.subtext, 0.16)
+            color: Theme.withAlpha(Theme.barSubtext, 0.16)
         }
 
         Rectangle {
@@ -239,11 +238,11 @@ Item {
     // "pills follow theming": tint only glyphs resting at the neutral text color up
     // to the bar accent, so inactive, warning and error states keep their own meaning
     readonly property color _restGlyphColor: ShellSettings.barAccentPills
-        && Qt.colorEqual(glyphColor, Theme.text) ? Theme.barAccent : glyphColor
+        && Qt.colorEqual(glyphColor, Theme.barText) ? Theme.barAccent : glyphColor
     readonly property color _hoverGlyphColor: _contentHot
-        ? Theme.mix(_restGlyphColor, Theme.accent, 0.20) : _restGlyphColor
+        ? Theme.mix(_restGlyphColor, Theme.barAccent, 0.20) : _restGlyphColor
     readonly property color _hoverTextColor: _contentHot
-        ? Theme.mix(textColor, Theme.accent, 0.16) : textColor
+        ? Theme.mix(textColor, Theme.barAccent, 0.16) : textColor
 
     // full height, so glyph and text each centre once on the bar like the clock; centring a glyph-tall row
     // first rounds twice and drops the text a pixel below every other label on the bar

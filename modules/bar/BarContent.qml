@@ -59,7 +59,7 @@ Item {
 
     readonly property bool _compact: effectiveCompact
 
-    readonly property int mediaTextBudget: _compact ? 120 : Metrics.mediaTrackWidth
+    readonly property int mediaTextBudget: Metrics.mediaTrackWidthFor(_compact)
     // the configured span, not the grown one: the title feeds the width it would measure against
     readonly property real titleWidthBudget: fitWidth > 0 ? fitWidth : 0
 

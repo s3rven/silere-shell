@@ -71,9 +71,18 @@ Singleton {
     PaletteFade on accent { gate: root._paletteReady }
     // keep the chosen accent for fills, but lift very dark colours where the
     // bar uses them as small text, glyphs or the active workspace marker
-    readonly property color _tBarAccent: root.readableText(_tAccent, _tBackground, _hc ? 7.0 : 4.5)
+    readonly property color _barDark: mix(Qt.rgba(0, 0, 0, 1), _tBackground, panelOpacity)
+    readonly property color _barLight: mix(Qt.rgba(1, 1, 1, 1), _tBackground, panelOpacity)
+    readonly property color _tBarAccent: root._readableAcross(_tAccent, _barDark, _barLight, _hc ? 7.0 : 4.5)
     property color barAccent: root._tBarAccent
     PaletteFade on barAccent { gate: root._paletteReady }
+    property color barText: root._readableAcross(_tText, _barDark, _barLight, _hc ? 7.0 : 4.5)
+    property color barSubtext: root._readableAcross(_tSubtextSolid, _barDark, _barLight, _hc ? 7.0 : 3.0)
+    PaletteFade on barText    { gate: root._paletteReady }
+    PaletteFade on barSubtext { gate: root._paletteReady }
+    readonly property color barHover: withAlpha(mix(barText, accent, 0.30), _hc ? 0.13 : 0.07)
+    readonly property color barPressed: withAlpha(accent, _hc ? 0.26 : 0.18)
+    readonly property color barSelected: withAlpha(accent, _hc ? 0.20 : 0.12)
     // read off the target, not the eased value: a lerp between opposite hues passes through low chroma, and this must not flicker on the way
     readonly property bool accentColorless: lchOf(_tAccent).C < 4
     // matugen warning/success are M3 tertiary/secondary with no semantic meaning, so anchor the hue and let it tint; error is real

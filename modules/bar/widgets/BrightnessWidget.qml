@@ -17,17 +17,17 @@ Pill {
     glyph:           Brightness.icon
     accessibleName: root.canControl
         ? "Brightness " + Brightness.label : "Brightness unavailable"
-    glyphColor:      canControl ? Theme.text : Theme.subtext
+    glyphColor:      canControl ? Theme.barText : Theme.barSubtext
     reserveText: "00%"
     text:        (ShellSettings.valuesOnHover && !expanded) ? ""
                  : (canControl ? Brightness.label : "—")
-    textColor:   Theme.subtext
+    textColor:   Theme.barSubtext
     // scroll controls brightness and a click does nothing, so it takes the pointer but is no button
     interactive: false
     adjustable: canControl
     levelValue: canControl ? Brightness.pct : -1
     levelVisible: canControl && ShellSettings.valuesOnHover && ShellSettings.hoverLevelBar && !expanded
-    levelColor: Theme.accent
+    levelColor: Theme.barAccent
 
     MotionBehavior on _baseOpacity {NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
 

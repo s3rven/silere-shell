@@ -12,7 +12,7 @@ Pill {
     opacity: show ? 1 : 0
     MotionBehavior on opacity { NumberAnimation { duration: Motion.fast } }
     glyph: InputState.capsLock ? "󰘲" : "󰌌"
-    glyphColor: InputState.capsLock ? Theme.warning : Theme.subtext
+    glyphColor: InputState.capsLock ? Theme.warning : Theme.barSubtext
     text: (root.expanded ? InputState.layout : InputState.shortLayout) + (InputState.capsLock ? " CAPS" : "")
     accessibleName: "Keyboard, " + InputState.layout
         + (InputState.capsAvailable ? (InputState.capsLock ? ", Caps Lock on" : ", Caps Lock off") : "")

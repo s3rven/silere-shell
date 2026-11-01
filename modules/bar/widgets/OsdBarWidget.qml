@@ -9,7 +9,7 @@ Item {
     readonly property bool _shouldShow: ShellSettings.osdEnabled
         && ShellSettings.osdBarIntegrated && OsdBarState.showing
         && !OsdBarState.barConcealed && !Idle.isIdle
-    readonly property int  _barH: ShellSettings.barHeight
+    readonly property int  _barH: Metrics.barHeight
 
     readonly property real _slide: 5
     readonly property int _iconWidth: Settings.iconSize + 6
@@ -151,7 +151,7 @@ Item {
             horizontalAlignment: Text.AlignHCenter
             transformOrigin:     Item.Center
             text:           OsdBarState.icon
-            color:          OsdBarState.hasBar ? Theme.text : OsdBarState.fillColor
+            color:          OsdBarState.hasBar ? Theme.barText : OsdBarState.fillColor
             font.pixelSize: Settings.iconSize + 2
             MotionBehavior on color {
                 ColorAnimation { duration: Motion.medium }
@@ -165,7 +165,7 @@ Item {
                 Math.max(0, root._availableWidth - root._labelWidth)) : 0
             height: 3
             radius: 1.5
-            color:  Theme.withAlpha(Theme.text, 0.22)
+            color:  Theme.withAlpha(Theme.barText, 0.22)
 
             Rectangle {
                 id: _fill
@@ -181,7 +181,7 @@ Item {
                 height: parent.height
                 radius: parent.radius
                 color: OsdBarState.muted
-                    ? Theme.withAlpha(Theme.subtext, 0.58)
+                    ? Theme.withAlpha(Theme.barSubtext, 0.58)
                     : Theme.withAlpha(OsdBarState.fillColor, 0.88)
             }
         }
@@ -195,8 +195,8 @@ Item {
             elide: Text.ElideRight
             horizontalAlignment: OsdBarState.hasBar ? Text.AlignRight : Text.AlignLeft
             color:          OsdBarState.muted
-                                ? Theme.withAlpha(Theme.subtext, 0.7)
-                                : (OsdBarState.hasBar ? Theme.text : OsdBarState.fillColor)
+                                ? Theme.withAlpha(Theme.barSubtext, 0.7)
+                                : (OsdBarState.hasBar ? Theme.barText : OsdBarState.fillColor)
             font.pixelSize: Settings.fontSize
             font.weight:    Font.Medium
             MotionBehavior on color {

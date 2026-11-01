@@ -28,8 +28,8 @@ Pill {
         : root._linked && Bluetooth.connectedCount === 1
               && Bluetooth.connectedGlyph.length > 0 && !root._glyphEchoesVolume
             ? Bluetooth.connectedGlyph : "󰂯"
-    glyphColor: root._linked ? Theme.text : Theme.subtext
-    textColor:  Theme.subtext
+    glyphColor: root._linked ? Theme.barText : Theme.barSubtext
+    textColor:  Theme.barSubtext
     animateText: false
     maxTextWidth: compact ? 130 : 220
 

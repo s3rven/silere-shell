@@ -12,7 +12,7 @@ Item {
     property bool compact: ShellSettings.barCompact
     implicitWidth: root.show ? Math.min(_content.implicitWidth + root._pillPad * 2,
         root.layoutWidthLimit >= 0 ? root.layoutWidthLimit : Infinity) : 0
-    implicitHeight: parent ? parent.height : ShellSettings.barHeight
+    implicitHeight: parent ? parent.height : Metrics.barHeight
     clip: true
     enabled: root.show
 
@@ -32,7 +32,10 @@ Item {
     readonly property string _playGlyph: Media.playing ? "󰏤" : "󰐊"
     property real textBudget: -1
     property real layoutWidthLimit: -1
-    readonly property real _contentOverhead: root._pillPad * 2 + (root._helperEnabled ? 19 : 0)
+    readonly property int _helperWidth: Metrics.iconCellFor(Settings.iconSize + 1)
+    readonly property int _helperGap: Metrics.pillGapFor(root.compact)
+    readonly property real _contentOverhead: root._pillPad * 2
+        + (root._helperEnabled ? root._helperWidth + root._helperGap : 0)
     readonly property real preferredWidth: root.show
         ? Math.ceil(Math.min(trackText.implicitWidth, textClip.preferredMaxW)) + root._contentOverhead : 0
     readonly property int _pillPad: Metrics.pillPadFor(compact)
@@ -77,7 +80,7 @@ Item {
             radius: height / 2
             antialiasing: true
             opacity: Media.lengthKnown ? 1.0 : 0.75
-            color: Theme.withAlpha(Theme.accent,
+            color: Theme.withAlpha(Theme.barAccent,
                 Media.lengthKnown ? 0.22 : 0.80)
         }
 
@@ -90,7 +93,7 @@ Item {
             height: 1.5
             radius: height / 2
             antialiasing: true
-            color: Theme.accent
+            color: Theme.barAccent
         }
     }
 
@@ -126,23 +129,23 @@ Item {
         id: _content
         x: root._pillPad
         anchors.verticalCenter: parent.verticalCenter
-        spacing: root._helperEnabled ? 5 : 0
+        spacing: root._helperEnabled ? root._helperGap : 0
         height: Math.max(_playIcon.implicitHeight, textClip.height)
 
         Item {
             id: _playIconSlot
             anchors.verticalCenter: parent.verticalCenter
             visible: root._helperEnabled
-            width: root._helperEnabled ? 14 : 0
-            height: 16
+            width: root._helperEnabled ? root._helperWidth : 0
+            height: _playIcon.implicitHeight
 
             ShellText {
                 id: _playIcon
                 anchors.centerIn: parent
                 text: root._playGlyph
                 color: Media.playing
-                    ? Theme.withAlpha(Theme.accent, 0.92)
-                    : Theme.withAlpha(Theme.subtext, 0.72)
+                    ? Theme.withAlpha(Theme.barAccent, 0.92)
+                    : Theme.withAlpha(Theme.barSubtext, 0.72)
                 font.pixelSize: Settings.iconSize + 1
                 scale: _tap.pressed ? 0.84 : Media.playing ? 1.0 : 0.92
                 ColorFade on color {}
@@ -154,7 +157,7 @@ Item {
             id: textClip
             anchors.verticalCenter: parent.verticalCenter
             readonly property int preferredMaxW: Math.round(Math.max(52, Math.min(
-                root.compact ? 120 : Metrics.mediaTrackWidth,
+                Metrics.mediaTrackWidthFor(root.compact),
                 root.textBudget > 0 ? root.textBudget : 9999
             )))
             readonly property real maxW: Math.min(preferredMaxW, root.layoutWidthLimit >= 0
@@ -181,9 +184,9 @@ Item {
             ShellText {
                 id: trackText
                 text:           textClip._shown
-                readonly property color _base: Media.playing ? Theme.text
-                                                              : Theme.mix(Theme.text, Theme.subtext, 0.55)
-                color:          ((_rootHover.hovered && ShellSettings.barHoverHighlight)) ? Theme.mix(_base, Theme.accent, 0.30) : _base
+                readonly property color _base: Media.playing ? Theme.barText
+                                                              : Theme.mix(Theme.barText, Theme.barSubtext, 0.55)
+                color:          ((_rootHover.hovered && ShellSettings.barHoverHighlight)) ? Theme.mix(_base, Theme.barAccent, 0.30) : _base
                 ColorFade on color {}
                 font.pixelSize: Settings.fontSize
                 width: ShellSettings.reduceMotion ? textClip.maxW : implicitWidth

@@ -20,7 +20,7 @@ Pill {
 
     glyphPixelSize: Settings.iconSize + 1
     glyphColor:     Theme.barAccent
-    textColor:      Theme.text
+    textColor:      Theme.barText
     interactive:    show && !busy
     animateGlyph:   false
     shrinkDelay:    0

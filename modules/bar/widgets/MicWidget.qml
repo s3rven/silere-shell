@@ -30,8 +30,8 @@ Pill {
     }
 
     glyph:      Audio.micIcon
-    glyphColor: root._live ? Theme.error : Theme.subtext
-    textColor:  Theme.subtext
+    glyphColor: root._live ? Theme.error : Theme.barSubtext
+    textColor:  Theme.barSubtext
     interactive: Audio.micReady
     reserveText: "00%"
     accessibleName: {
@@ -51,7 +51,7 @@ Pill {
     levelValue: Audio.micReady ? Audio.micVolume : -1
     levelVisible: Audio.micReady && ShellSettings.valuesOnHover
         && ShellSettings.hoverLevelBar && !expanded
-    levelColor: Audio.micMuted ? Theme.subtext : Theme.error
+    levelColor: Audio.micMuted ? Theme.barSubtext : Theme.error
 
     wheelKey: "microphone:" + (Audio.source ? String(Audio.source.id) : "")
 

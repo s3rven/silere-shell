@@ -304,8 +304,8 @@ Item {
             : root._shownShowApp ? root._shownApp : ""
     readonly property string _formatted: {
         if (root._displayText.length === 0) return ""
-        const appCol   = _hex(Theme.subtext, 1.0)
-        const titleCol = _hex(Theme.text, 1.0)
+        const appCol   = _hex(Theme.barSubtext, 1.0)
+        const titleCol = _hex(Theme.barText, 1.0)
         if (root._showAppAndTitle) {
             const dotCol = _hex(Theme.barSeparator, Theme.barSeparator.a)
             return '<font color="' + appCol   + '">' + _esc(_shownApp) + '</font> '
@@ -529,7 +529,7 @@ Item {
     implicitWidth: root._widthGlide.value
     readonly property SmoothGlide _widthGlide: SmoothGlide { target: root._naturalWidth; duration: Motion.ms(110); gate: root.barActive && root.visible }
     // not parent.height: the zone's Loader takes its height from this item, so reading it back collapses to zero and the clip below erases the text
-    implicitHeight: ShellSettings.barHeight
+    implicitHeight: Metrics.barHeight
 
     Item {
         anchors.fill: parent

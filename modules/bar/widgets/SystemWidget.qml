@@ -68,8 +68,8 @@ Pill {
     }
 
     glyph: root._parts.length > 0 ? root._parts[0].glyph : "󰍛"
-    glyphColor: root.severity === 2 ? Theme.error : root.severity === 1 ? Theme.warning : Theme.text
-    textColor: Theme.subtext
+    glyphColor: root.severity === 2 ? Theme.error : root.severity === 1 ? Theme.warning : Theme.barText
+    textColor: Theme.barSubtext
     animateGlyph: false
     // two digits per reading: the pill keeps its width as values tick, and only grows at 100%
     reserveText: root._parts.map((p, i) => (i > 0 ? p.glyph + " " : "") + "00%").join("  ")
