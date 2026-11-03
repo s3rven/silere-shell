@@ -111,7 +111,7 @@ PageShell {
         return true
     }
 
-    function _keyRow(top, key: string) {
+    function _keyRow(top, key: string): var {
         const stack = [top]
         while (stack.length > 0) {
             const it = stack.pop()
