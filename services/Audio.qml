@@ -281,7 +281,7 @@ Singleton {
     function sinkLabel(node): string {
         if (!node) return ""
         const name = SafeText.singleLineText(
-            node.description || node.nickname || node.name || "Output", 256)
+            node.description || node.nickname || node.name || (node.isSink ? "Output" : "Input"), 256)
         const profile = String((node.properties || {})["api.bluez5.profile"] || "")
         return node.isSink && profile.indexOf("headset") === 0 ? name + " · Call mode" : name
     }
