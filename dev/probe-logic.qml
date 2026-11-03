@@ -7742,12 +7742,6 @@ ShellRoot {
             "a critical alert takes the desktop popup only where one appears, and the OSD otherwise")
         root._check(!SystemAlerts.criticalPopsUp,
             "a sandboxed run never sends a desktop alert, so its critical alerts stay in the OSD")
-        root._check(OsdBarState.menuCarries("volume", false, true)
-                && OsdBarState.menuCarries("microphone", false, true)
-                && !OsdBarState.menuCarries("brightness", false, true)
-                && OsdBarState.menuCarries("brightness", true, false)
-                && !OsdBarState.menuCarries("volume", false, false),
-            "the OSD stays out of a page already showing that level, and only there")
         const gpuMem = "MemTotal: 1000 kB\nPageTables: 400 kB\n"
         root._check(SysInfo.gpuReclaimKb("nr_page_table_pages 100\nnr_gpu_reclaim 25\n", gpuMem) === 100,
             "the GPU pool converts from pages at the size this machine uses")

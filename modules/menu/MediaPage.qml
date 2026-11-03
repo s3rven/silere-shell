@@ -512,14 +512,6 @@ PageShell {
             }
         }
 
-        // turning the music down is the first thing reached for here, and Home is a page away
-        SettingsCard {
-            width: parent.width
-            visible: Audio.ready
-
-            VolumeRow {}
-        }
-
         Column {
             width: parent.width
             visible: Media.playerCount > 1

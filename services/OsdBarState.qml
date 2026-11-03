@@ -217,15 +217,11 @@ Singleton {
         return true
     }
 
-    // the home page has a row for every level and Now Playing the audio ones; elsewhere the menu replaces nothing
-    function menuCarries(kind: string, home: bool, media: bool): bool {
-        return home || (media && (kind === "volume" || kind === "microphone"))
-    }
-
     function show(kind: string, icon: string, value: real, label: string, muted: bool): void {
         if (!_armed) return
         if (!root._presentationAllowed(Idle.isIdle, ShellSettings.osdEnabled)) return
-        if (root.menuCarries(kind, MenuState.homeActive, MenuState.mediaActive)) return
+        // only the home page carries the volume/brightness rows; elsewhere the menu replaces nothing
+        if (MenuState.homeActive) return
 
         const refreshFullscreen = ShellSettings.osdBarIntegrated && !root._hasActiveBarEntry()
         root.fillColor = Theme.accent
