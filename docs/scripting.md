@@ -37,7 +37,7 @@ without a panel appearing.
 | call | does |
 |---|---|
 | `quickActions dnd` | turns Do Not Disturb on or off |
-| `quickActions presentation` | toggles Presentation Mode for this session |
+| `quickActions presentation` | toggles Presentation Mode for this session; it hides popups and keeps the screen awake |
 | `quickActions setPresentation <true/false>` | sets Presentation Mode without toggling |
 | `quickActions keepAwake` | holds off idle dimming, locking and sleep until called again or the shell restarts |
 | `quickActions nightLight` | turns night light on or off |

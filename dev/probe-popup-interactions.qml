@@ -232,7 +232,7 @@ Item {
 
         // the state pill's width glides, so this reads the room the settled layout leaves
         const label = root._find(row, item => item.text === row.label)
-        for (const state of ["Sharing screen", "Until 12:30 PM"]) {
+        for (const state of ["Sharing screen", "Presenting", "Until 12:30 PM"]) {
             row.stateText = state
             const pill = root._find(row, item => item.text === state)
             const room = row.width - 10 - 18 - 8 - 8 - (pill ? pill.implicitWidth + 12 : row.width) - 10

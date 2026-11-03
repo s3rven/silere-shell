@@ -204,22 +204,24 @@ FittedPopupWindow {
                     : Notifications.dnd ? "On"
                     : Notifications.effectiveDnd ? "Quiet hours"
                     : Notifications.fullscreenSilenced ? "Fullscreen"
+                    : Notifications.presentationMode ? "Presenting"
                     : Notifications.screenShareSilenced ? "Sharing screen" : "Off"
                 onTriggered: Notifications.toggleDnd()
             }
             QuickActionRow {
-                glyph: "󱒃"
+                glyph: "󰐨"
                 label: "Presentation Mode"
                 active: Notifications.presentationMode
                 stateText: Notifications.presentationMode ? "On" : "Off"
                 onTriggered: Notifications.togglePresentation()
             }
             QuickActionRow {
-                glyph: Idle.keepAwake ? "󰅶" : "󰛊"
+                glyph: Idle.keepAwake || Notifications.presentationMode ? "󰅶" : "󰛊"
                 label: "Keep Awake"
                 active: Idle.keepAwake
                 stateText: Idle.keepAwakeUntil > 0 ? Idle.keepAwakeUntilText
-                    : Idle.keepAwake ? "On" : "Off"
+                    : Idle.keepAwake ? "On"
+                    : Notifications.presentationMode ? "Presenting" : "Off"
                 onTriggered: Idle.toggleKeepAwake()
             }
             QuickActionRow {

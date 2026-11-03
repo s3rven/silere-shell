@@ -425,10 +425,10 @@ PageShell {
                                     root._closePicker()
                                 }
                             }
-                            // hides every popup until turned off, for presenting or sharing a screen
                             ToggleRow {
-                                glyph: "󱒃"
+                                glyph: "󰐨"
                                 label: "Presentation Mode"
+                                description: "Hides all popups and keeps the screen awake"
                                 checked: Notifications.presentationMode
                                 onToggled: nextChecked => Notifications.presentationMode = nextChecked
                             }
@@ -440,9 +440,10 @@ PageShell {
                 ControlRow {
                     id: _awakeRow
                     active: Idle.keepAwake
-                    glyph: Idle.keepAwake ? "󰅶" : "󰛊"
+                    glyph: Idle.keepAwake || Notifications.presentationMode ? "󰅶" : "󰛊"
                     title: "Keep Awake"
-                    status: Idle.keepAwakeUntilText
+                    status: Idle.keepAwake || !Notifications.presentationMode ? Idle.keepAwakeUntilText
+                        : "Presentation Mode"
                     showSwitch: true
                     expandable: true
                     expanded: root._picker === "awake"

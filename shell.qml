@@ -289,10 +289,11 @@ ShellRoot {
         }
     }
 
-    // any one screen holds the inhibitor; when that output goes away the surface is rebuilt on the next
+    // any one screen holds the inhibitor; when that output goes away the surface is rebuilt on the next.
+    // Presentation Mode holds it too: a talk can run longer than the lock stage without touching the keyboard
     Variants {
         id: _keepAwakeSurfaces
-        model: Idle.keepAwake && !root.smokeTest && Quickshell.screens.length > 0
+        model: (Idle.keepAwake || Notifications.presentationMode) && !root.smokeTest && Quickshell.screens.length > 0
             ? [Quickshell.screens[0]] : []
         delegate: KeepAwakeSurface {
             required property ShellScreen modelData
